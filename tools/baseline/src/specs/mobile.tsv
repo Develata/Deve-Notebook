@@ -558,9 +558,9 @@ contains	apps/web/src/components/editor_tabs.rs	11_ui_design/03_mobile#mobile-su
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn editor_tab_runtime_scope(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn scope_changed(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn active_editor_tab_key(
-contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_resets_on_repo_branch_or_scope_change()
-contains	apps/web/src/components/editor_tabs/tests.rs	PeerId::new("peer-a")
-contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
+contains	apps/web/src/components/editor_tabs/tests/runtime_policy.rs	fn editor_tab_runtime_resets_on_repo_branch_or_scope_change()
+contains	apps/web/src/components/editor_tabs/tests/runtime_policy.rs	PeerId::new("peer-a")
+contains	apps/web/src/components/editor_tabs/tests/runtime_policy.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
@@ -581,7 +581,7 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobi
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_shows_surface_type_and_count()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_uses_tabs_page_copy_in_zh()
-contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
+contains	apps/web/src/components/editor_tabs/tests/diff_ops.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	pub(super) fn collapse_surface_switcher_on_runtime_transition(
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_runtime_scope_transitions()
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_pending_branch_or_repo_switch()
