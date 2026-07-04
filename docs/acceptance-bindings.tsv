@@ -76,6 +76,7 @@ UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff F7 navigation work
 UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff cache ratio workflow
 UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff repo-scope cache isolation workflow
 UI-GEN-001|manual-chrome|docs/features/08_ui_design.md|global shell workflow
+UI-GEN-004|manual-cli|docs/features/08_ui_design.md|web runtime domain contract boundary
 UI-MOB-001|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile shell workflow
 UI-MOB-002|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile navigation workflow
 UI-MOB-003|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor workflow

@@ -14,7 +14,8 @@ mod external_changes;
 mod source_control;
 mod sync;
 
-pub use branch::{BranchContext, RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
+pub use crate::runtime::domain::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
+pub use branch::BranchContext;
 pub use chat::ChatContext;
 pub use dashboard::{DashboardContext, SystemMetricsData};
 pub use doc::DocContext;

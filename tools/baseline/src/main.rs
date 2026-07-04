@@ -59,6 +59,7 @@ mod ui_focus;
 mod ui_spa_routing;
 mod ui_token;
 mod ui_z_index;
+mod web_runtime_boundary;
 mod ws_structured_errors;
 
 fn main() -> ExitCode {
@@ -140,12 +141,13 @@ fn run() -> Result<()> {
         "ui-desktop" => ui_desktop::run(),
         "ui-disconnect" => ui_disconnect::run(),
         "ui-spa-routing" => ui_spa_routing::run(),
+        "web-runtime-boundary" => web_runtime_boundary::run(),
         "ws-structured-errors" => ws_structured_errors::run(),
         "all" => run_text_baselines(),
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
             );
             Ok(())
         }
@@ -192,6 +194,7 @@ fn run_text_baselines() -> Result<()> {
     ui_desktop::run_text()?;
     ui_disconnect::run_text()?;
     ui_spa_routing::run_text()?;
+    web_runtime_boundary::run_text()?;
     ws_structured_errors::run()
 }
 
@@ -233,5 +236,6 @@ fn run_full_baselines() -> Result<()> {
     ui_desktop::run()?;
     ui_disconnect::run()?;
     ui_spa_routing::run()?;
+    web_runtime_boundary::run()?;
     ws_structured_errors::run()
 }

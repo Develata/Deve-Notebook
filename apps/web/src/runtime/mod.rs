@@ -15,6 +15,7 @@
 
 pub mod document;
 pub mod document_client;
+pub mod domain;
 pub mod external_changes_client;
 pub mod rendering_client;
 pub mod scope_client;
@@ -29,4 +30,114 @@ pub struct CoreRuntimeClients {
     pub source_control: source_control_client::SourceControlClient,
     pub external_changes: external_changes_client::ExternalChangesClient,
     pub rendering: rendering_client::RenderingClient,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::Path;
+
+    #[test]
+    fn web_runtime_boundary_does_not_import_use_core_internals() {
+        let runtime_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runtime");
+        let mut violations = Vec::new();
+        collect_rs_files(&runtime_dir, &mut |path| {
+            let content = fs::read_to_string(path).expect("read runtime source");
+            if imports_use_core_internals(&content) {
+                violations.push(path.strip_prefix(&runtime_dir).unwrap().to_path_buf());
+            }
+        });
+
+        assert!(
+            violations.is_empty(),
+            "apps/web/src/runtime must not import hooks/use_core internals: {violations:?}"
+        );
+    }
+
+    fn collect_rs_files(root: &Path, visit: &mut impl FnMut(&Path)) {
+        for entry in fs::read_dir(root).expect("read runtime dir") {
+            let path = entry.expect("runtime dir entry").path();
+            if path.is_dir() {
+                collect_rs_files(&path, visit);
+            } else if path.extension().and_then(|value| value.to_str()) == Some("rs") {
+                visit(&path);
+            }
+        }
+    }
+
+    fn imports_use_core_internals(content: &str) -> bool {
+        let compact = content
+            .chars()
+            .filter(|value| !value.is_whitespace())
+            .collect::<String>();
+        let hooks_path = hooks_path();
+        let use_core = use_core_segment();
+        if compact.contains(&format!("{hooks_path}::{use_core}")) {
+            return true;
+        }
+        grouped_import_contains(&compact, &format!("{hooks_path}::{{"), use_core)
+    }
+
+    fn grouped_import_contains(content: &str, prefix: &str, needle: &str) -> bool {
+        let mut offset = 0;
+        while let Some(index) = content[offset..].find(prefix) {
+            let body_start = offset + index + prefix.len();
+            if let Some(body_end) = grouped_import_end(&content[body_start..]) {
+                if content[body_start..body_start + body_end].contains(needle) {
+                    return true;
+                }
+                offset = body_start + body_end + 1;
+            } else {
+                return content[body_start..].contains(needle);
+            }
+        }
+        false
+    }
+
+    fn grouped_import_end(content: &str) -> Option<usize> {
+        let mut depth = 1usize;
+        for (index, value) in content.char_indices() {
+            match value {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(index);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn hooks_path() -> &'static str {
+        concat!("crate::", "hooks")
+    }
+
+    fn use_core_segment() -> &'static str {
+        concat!("use_", "core")
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_direct_use_core_import() {
+        let source = format!("use {}::{}::LoadPhase;", hooks_path(), use_core_segment());
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_grouped_use_core_import() {
+        let source = format!(
+            "use {}::{{ runtime, {}::LoadPhase }};",
+            hooks_path(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_allows_runtime_domain_import() {
+        let source = "use crate::runtime::domain::LoadPhase;";
+        assert!(!imports_use_core_internals(source));
+    }
 }

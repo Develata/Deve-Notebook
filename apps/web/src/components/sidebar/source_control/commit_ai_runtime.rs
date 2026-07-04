@@ -2,7 +2,8 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!
-use crate::api::{BackendSendDecision, ai_backend_to_plugin_id};
+use crate::api::BackendSendDecision;
+use crate::runtime::domain::AiBackendMode;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum CommitAiBackendPlan {
@@ -59,15 +60,19 @@ pub(super) trait CommitAiEffectRunner {
 pub(super) fn plan_commit_ai_backend_call(decision: BackendSendDecision) -> CommitAiBackendPlan {
     match decision {
         BackendSendDecision::Use(backend) => CommitAiBackendPlan::Call {
-            plugin_id: ai_backend_to_plugin_id(backend),
+            plugin_id: plugin_id_for_backend(backend),
         },
         BackendSendDecision::Switch { backend, reason } => CommitAiBackendPlan::Switch {
             backend,
-            plugin_id: ai_backend_to_plugin_id(backend),
+            plugin_id: plugin_id_for_backend(backend),
             notice: reason,
         },
         BackendSendDecision::Block { reason } => CommitAiBackendPlan::Block { reason },
     }
+}
+
+fn plugin_id_for_backend(backend: &'static str) -> &'static str {
+    AiBackendMode::from_backend_str_or_native(backend).plugin_id()
 }
 
 pub(super) fn plan_commit_ai_runtime(decision: BackendSendDecision) -> CommitAiRuntimePlan {

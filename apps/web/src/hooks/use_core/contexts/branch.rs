@@ -1,48 +1,10 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 //!
-use deve_core::models::{PeerId, RepoId};
+use crate::runtime::domain::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
+use deve_core::models::PeerId;
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RepoSwitchRequest {
-    pub selector_name: String,
-    pub expected_name: String,
-    pub repo_id: Option<RepoId>,
-}
-
-impl RepoSwitchRequest {
-    pub fn by_name(name: String) -> Self {
-        Self {
-            selector_name: name.clone(),
-            expected_name: name,
-            repo_id: None,
-        }
-    }
-
-    pub fn exact(selector_name: String, expected_name: String, repo_id: RepoId) -> Self {
-        Self {
-            selector_name,
-            expected_name,
-            repo_id: Some(repo_id),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RepoRenameRequest {
-    pub repo_id: RepoId,
-    pub current_name: String,
-    pub new_name: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RepoRemoveRequest {
-    pub repo_id: RepoId,
-    pub current_name: String,
-    pub fallback_name: Option<String>,
-}
 
 #[derive(Clone)]
 pub struct BranchContext {

@@ -7,7 +7,7 @@
 //! This adapter coordinates repo/branch scope and stale-scope recovery inputs.
 //! Server/core remain the authority for repo identity and writable state.
 
-use crate::hooks::use_core::{
+use crate::runtime::domain::{
     PendingRepoSwitch, RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest,
 };
 use deve_core::models::{DocId, PeerId};

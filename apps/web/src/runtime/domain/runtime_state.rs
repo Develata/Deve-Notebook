@@ -2,6 +2,8 @@
 //!   - 07_network#web-ws-runtime
 //!   - 09_web_thin_client_ledger#write-readiness
 //!
+//! Runtime display and wire-state contract shared by Web runtime clients.
+
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -68,6 +70,13 @@ impl LoadPhase {
         }
     }
 
+    pub fn is_ready(self) -> bool {
+        self == Self::Ready
+    }
+}
+
+#[cfg(test)]
+impl LoadPhase {
     pub fn from_wire(value: &str) -> Option<Self> {
         match value {
             "ready" => Some(Self::Ready),
@@ -79,10 +88,6 @@ impl LoadPhase {
 
     pub fn from_wire_or_ready(value: &str) -> Self {
         Self::from_wire(value).unwrap_or(Self::Ready)
-    }
-
-    pub fn is_ready(self) -> bool {
-        self == Self::Ready
     }
 }
 

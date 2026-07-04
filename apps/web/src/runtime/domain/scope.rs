@@ -1,7 +1,51 @@
 //! plan_ref:
+//!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#write-readiness
 //!
+//! Repo and branch scope request/state contract for Web runtime clients.
+
+use deve_core::models::RepoId;
 use std::ops::Deref;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoSwitchRequest {
+    pub selector_name: String,
+    pub expected_name: String,
+    pub repo_id: Option<RepoId>,
+}
+
+impl RepoSwitchRequest {
+    pub fn by_name(name: String) -> Self {
+        Self {
+            selector_name: name.clone(),
+            expected_name: name,
+            repo_id: None,
+        }
+    }
+
+    pub fn exact(selector_name: String, expected_name: String, repo_id: RepoId) -> Self {
+        Self {
+            selector_name,
+            expected_name,
+            repo_id: Some(repo_id),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoRenameRequest {
+    pub repo_id: RepoId,
+    pub current_name: String,
+    pub new_name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoRemoveRequest {
+    pub repo_id: RepoId,
+    pub current_name: String,
+    pub fallback_name: Option<String>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PendingBranchTarget {

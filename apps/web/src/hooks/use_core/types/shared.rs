@@ -8,8 +8,8 @@ use deve_core::models::{DocId, PeerId, VersionVector};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
-use super::pending_switch::{PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
+use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeerSession {

@@ -7,7 +7,7 @@
 //! mutate pending writes or decide write success.
 
 use crate::editor::EditorStats;
-use crate::hooks::use_core::LoadPhase;
+use crate::runtime::domain::LoadPhase;
 use leptos::prelude::*;
 
 #[allow(dead_code)]
