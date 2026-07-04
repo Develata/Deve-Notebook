@@ -29,6 +29,7 @@ ctrlc = "3.4"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls-webpki-roots"] }
 reqwest-eventsource = "0.6"
 tokio-tungstenite = "0.24"
+quick-xml = "0.39.4"
 
 [dev-dependencies]
 tempfile = "3.24"

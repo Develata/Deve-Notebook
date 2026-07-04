@@ -41,6 +41,14 @@ impl SyncManager {
         scan::scan_all_local_repos_excluding(&self.repo, &self.vfs, &degraded_set)
     }
 
+    pub fn scan_repo(&self, repo_name: &str) -> Result<()> {
+        let degraded = projection_fault_journal::load_degraded_repo_names(&self.repo)?;
+        if degraded.iter().any(|name| name == repo_name) {
+            anyhow::bail!("Projection workspace for repo {repo_name} is degraded; scan aborted");
+        }
+        scan::scan_local_repo(&self.repo, &self.vfs, repo_name)
+    }
+
     fn load_durable_projection_faults(&self) -> Result<()> {
         let degraded = projection_fault_journal::load_degraded_repo_names(&self.repo)?;
         for repo_name in degraded {

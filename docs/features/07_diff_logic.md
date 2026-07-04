@@ -111,8 +111,12 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - 未接线的 provider/direction 必须显示 `provider_io_ready=false` 并 fail-closed，不能伪装成
   已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
   workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
+- 当前 backend/CLI 已接线 `webdav:push` 与 `webdav:pull`；`s3:push` 与 `s3:pull` 在 provider
+  adapter 完成前必须继续 fail-closed。
 - push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
 - pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。
+- pull adapter 必须对远端文件数、单文件字节数与总下载字节数设置硬预算；超过预算时必须在写 Projection Workspace 前 fail-closed。
+- pull 覆盖 Projection Workspace 必须避免半写入可见：目标 parent/path 安全检查、staging 与 rollback 属于 backend/core runtime 职责。
 - pull 不直接写 ledger、不创建 commit anchor、不自动 Apply to Ledger，也不直接写 Git main mirror queue。
 - Web 只发送 typed intent；provider IO、覆盖策略、locator gate、identity gate 与 External Changes 触发均属于 backend/core runtime。
 

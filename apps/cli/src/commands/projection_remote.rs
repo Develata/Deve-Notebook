@@ -16,6 +16,7 @@ use deve_core::remote_projection::{
     plan_remote_projection_transport,
 };
 use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum ProjectionRemoteAction {
@@ -58,7 +59,7 @@ fn run_with_provider(
     ledger_dir: &Path,
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
-    webdav_provider: &mut dyn webdav::WebDavProjectionPushAdapter,
+    webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
 ) -> Result<()> {
     let request = request_from_action(action);
     let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
@@ -68,8 +69,8 @@ fn run_with_provider(
     })?;
     let provider_direction_wired = provider_direction_wired_for(&request);
 
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    let repo_names = resolve_local_repo_args(&repo, request.repo.as_deref())?;
+    let repo = Arc::new(RepoManager::init(ledger_dir, snapshot_depth, None, None)?);
+    let repo_names = resolve_local_repo_args(repo.as_ref(), request.repo.as_deref())?;
     if provider_direction_wired && request.repo.is_none() && repo_names.len() != 1 {
         bail!(
             "remote projection provider I/O requires an explicit --repo when multiple local repos are present"
@@ -77,39 +78,79 @@ fn run_with_provider(
     }
     for repo_name in repo_names {
         ensure_local_repo_workspace_identity_for_write(
-            &repo,
+            repo.as_ref(),
             &repo_name,
             "remote projection transport",
         )?;
         let workspace = repo.local_repo_workspace_root(&repo_name)?;
         if provider_direction_wired {
-            let files = webdav::collect_markdown_projection_files(&workspace)?;
-            println!(
-                "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false planned_files={}",
-                plan.provider.as_str(),
-                plan.direction.as_str(),
-                plan.projection_scope,
-                workspace.display(),
-                plan.writes_ledger,
-                plan.external_changes_confirmation_required,
-                files.len(),
-            );
-            let outcome =
-                webdav_provider.push_projection_files(request.provider, &plan.locator, &files)?;
-            println!(
-                "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
-                plan.provider.as_str(),
-                plan.direction.as_str(),
-                plan.projection_scope,
-                workspace.display(),
-                plan.writes_ledger,
-                plan.external_changes_confirmation_required,
-                outcome.uploaded_files,
-                outcome.effects.writes_source_control_staging,
-                outcome.effects.writes_commit_anchor,
-                outcome.effects.writes_git_main_mirror,
-                outcome.provider_metadata_is_diagnostic_only,
-            );
+            match request.direction {
+                RemoteProjectionDirection::Push => {
+                    let files = webdav::collect_markdown_projection_files(&workspace)?;
+                    println!(
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false planned_files={}",
+                        plan.provider.as_str(),
+                        plan.direction.as_str(),
+                        plan.projection_scope,
+                        workspace.display(),
+                        plan.writes_ledger,
+                        plan.external_changes_confirmation_required,
+                        files.len(),
+                    );
+                    let outcome = webdav_provider.push_projection_files(
+                        request.provider,
+                        &plan.locator,
+                        &files,
+                    )?;
+                    println!(
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
+                        plan.provider.as_str(),
+                        plan.direction.as_str(),
+                        plan.projection_scope,
+                        workspace.display(),
+                        plan.writes_ledger,
+                        plan.external_changes_confirmation_required,
+                        outcome.uploaded_files,
+                        outcome.effects.writes_source_control_staging,
+                        outcome.effects.writes_commit_anchor,
+                        outcome.effects.writes_git_main_mirror,
+                        outcome.provider_metadata_is_diagnostic_only,
+                    );
+                }
+                RemoteProjectionDirection::Pull => {
+                    println!(
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false",
+                        plan.provider.as_str(),
+                        plan.direction.as_str(),
+                        plan.projection_scope,
+                        workspace.display(),
+                        plan.writes_ledger,
+                        plan.external_changes_confirmation_required,
+                    );
+                    let outcome = webdav_provider.pull_projection_files(
+                        request.provider,
+                        &plan.locator,
+                        &workspace,
+                    )?;
+                    let sync_manager = deve_core::sync::SyncManager::new_checked(repo.clone())?;
+                    sync_manager.scan_repo(&repo_name)?;
+                    println!(
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true downloaded_files={} overwrites_projection_workspace={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={} external_changes_scan_triggered=true",
+                        plan.provider.as_str(),
+                        plan.direction.as_str(),
+                        plan.projection_scope,
+                        workspace.display(),
+                        plan.writes_ledger,
+                        plan.external_changes_confirmation_required,
+                        outcome.files.len(),
+                        outcome.overwrites_projection_workspace,
+                        outcome.effects.writes_source_control_staging,
+                        outcome.effects.writes_commit_anchor,
+                        outcome.effects.writes_git_main_mirror,
+                        outcome.provider_metadata_is_diagnostic_only,
+                    );
+                }
+            }
         } else {
             println!(
                 "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=false",
@@ -174,6 +215,9 @@ fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
         (
             RemoteProjectionProvider::WebDav,
             RemoteProjectionDirection::Push
+        ) | (
+            RemoteProjectionProvider::WebDav,
+            RemoteProjectionDirection::Pull
         )
     )
 }

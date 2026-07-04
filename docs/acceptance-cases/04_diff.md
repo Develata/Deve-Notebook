@@ -188,8 +188,15 @@
     - run: cargo test -p deve_cli webdav_push_puts_projection_files_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_push_rejects_failed_put -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
+    - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
     - run: cargo test -p deve_cli run_reports_provider_io_fail_closed_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
@@ -275,6 +282,15 @@
     - api_assert: webdav_push_authority_effects_absent true
     - cli_assert: webdav_push_failure_does_not_report_provider_io_ready true
     - cli_assert: webdav_push_provider_io_ready true
+    - api_assert: webdav_pull_downloads_markdown_projection_only true
+    - api_assert: webdav_pull_writes_projection_workspace_only true
+    - api_assert: webdav_pull_authority_effects_absent true
+    - api_assert: webdav_pull_scan_creates_external_changes true
+    - api_assert: webdav_pull_partial_apply_rolls_back true
+    - api_assert: webdav_pull_resource_budget_fails_before_workspace_write true
+    - api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
+    - cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
+    - cli_assert: webdav_pull_provider_io_ready true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true

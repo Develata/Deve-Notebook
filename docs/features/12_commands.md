@@ -55,7 +55,9 @@
 - Command Palette 提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
 - 四个命令只发送 typed intent；不得在前端直接列举、上传、下载或覆盖文件。
 - push/pull 的实际 provider IO 与 Projection Workspace 写入由 backend/core runtime 执行；未接线的 provider/direction 必须报告 `provider_io_ready=false` 并 fail-closed，已接线的 provider/direction 必须在执行成功后报告 `provider_io_ready=true`。
+- 当前 backend/CLI 已接线 WebDAV push/pull；S3 push/pull 在 provider adapter 完成前继续 fail-closed。
 - pull 完成后只能通过 watcher/scan 进入 External Changes，用户必须另行 Apply to Ledger。
+- pull 失败不得报告 `provider_io_ready=true`，并且不得留下未进入 External Changes 的半覆盖文件。
 
 ## 非目标
 

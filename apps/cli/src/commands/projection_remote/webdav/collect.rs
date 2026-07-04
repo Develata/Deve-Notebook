@@ -64,7 +64,7 @@ fn collect_markdown_projection_files_inner(
             .strip_prefix(workspace)
             .with_context(|| format!("failed to relativize projection path {}", path.display()))?;
         let rel = path_to_forward_slash(rel);
-        if rules.is_ignored(&rel) || rel.split('/').any(is_reserved_projection_segment) {
+        if rules.is_ignored(&rel) || is_reserved_projection_path(&rel) {
             continue;
         }
         if file_type.is_dir() {
@@ -84,8 +84,12 @@ fn collect_markdown_projection_files_inner(
     Ok(())
 }
 
-fn is_markdown_path(path: &str) -> bool {
+pub(super) fn is_markdown_path(path: &str) -> bool {
     path.ends_with(".md") || path.ends_with(".markdown")
+}
+
+pub(super) fn is_reserved_projection_path(path: &str) -> bool {
+    path.split('/').any(is_reserved_projection_segment)
 }
 
 fn is_reserved_projection_segment(segment: &str) -> bool {

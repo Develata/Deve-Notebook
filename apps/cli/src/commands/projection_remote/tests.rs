@@ -1,5 +1,9 @@
 use super::*;
-use deve_core::remote_projection::{RemoteProjectionProviderError, RemoteProjectionPushOutcome};
+use deve_core::remote_projection::{
+    RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProviderError,
+    RemoteProjectionPullOutcome, RemoteProjectionPushOutcome,
+};
+use deve_core::source_control::ChangeStatus;
 use std::path::PathBuf;
 
 #[test]
@@ -34,7 +38,7 @@ fn s3_pull_builds_provider_request() {
 fn run_reports_provider_io_fail_closed_after_workspace_gate() {
     let repo = initialized_default_repo();
 
-    let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
+    let err = run(&repo.ledger_dir(), s3_pull_action(), 8)
         .expect_err("provider I/O must remain fail-closed");
 
     let message = err.to_string();
@@ -50,7 +54,7 @@ fn run_checks_workspace_identity_before_provider_io() {
     ))
     .expect("remove identity marker");
 
-    let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
+    let err = run(&repo.ledger_dir(), s3_pull_action(), 8)
         .expect_err("workspace identity gate must fail before provider I/O");
 
     let message = err.to_string();
@@ -93,12 +97,57 @@ fn run_webdav_push_returns_provider_error_before_success_report() {
     assert!(err.to_string().contains("simulated WebDAV failure"));
 }
 
+#[test]
+fn run_webdav_pull_scans_written_files_into_external_changes() {
+    let repo = initialized_default_repo();
+    let mut provider = PullWritingProvider;
+
+    run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
+        .expect("webdav pull");
+
+    let repo_manager =
+        deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
+    let pending = repo_manager
+        .list_pending_fs_in_local_repo("default")
+        .expect("pending");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "remote.md");
+    assert_eq!(pending[0].status, ChangeStatus::Added);
+    assert!(
+        repo_manager
+            .list_staged_in_local_repo("default")
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn run_webdav_pull_returns_provider_error_before_scan() {
+    let repo = initialized_default_repo();
+    let mut provider = PullFailingProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
+        .expect_err("provider failure");
+
+    assert!(err.to_string().contains("simulated WebDAV pull failure"));
+    let repo_manager =
+        deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
+    assert!(
+        repo_manager
+            .list_pending_fs_in_local_repo("default")
+            .expect("pending")
+            .is_empty()
+    );
+}
+
 #[derive(Default)]
 struct RecordingProvider {
     uploaded_paths: Vec<(String, Vec<String>)>,
 }
 
 struct FailingProvider;
+struct PullWritingProvider;
+struct PullFailingProvider;
 
 impl webdav::WebDavProjectionPushAdapter for FailingProvider {
     fn push_projection_files(
@@ -112,6 +161,17 @@ impl webdav::WebDavProjectionPushAdapter for FailingProvider {
         Err(RemoteProjectionProviderError::ProviderIo(
             "simulated WebDAV failure".into(),
         ))
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for FailingProvider {
+    fn pull_projection_files(
+        &self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _workspace: &std::path::Path,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        unreachable!("push-only failing provider")
     }
 }
 
@@ -134,6 +194,72 @@ impl webdav::WebDavProjectionPushAdapter for RecordingProvider {
                 ),
             provider_metadata_is_diagnostic_only: true,
         })
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for RecordingProvider {
+    fn pull_projection_files(
+        &self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _workspace: &std::path::Path,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        unreachable!("push-only recording provider")
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for PullWritingProvider {
+    fn push_projection_files(
+        &mut self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        unreachable!("pull-only writing provider")
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for PullWritingProvider {
+    fn pull_projection_files(
+        &self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+        workspace: &std::path::Path,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        std::fs::write(workspace.join("remote.md"), "remote").expect("remote file");
+        Ok(RemoteProjectionPullOutcome {
+            files: vec![RemoteProjectionFile::new("remote.md", b"remote").expect("file")],
+            effects: RemoteProjectionAuthorityEffects::projection_transport(),
+            overwrites_projection_workspace: true,
+            external_changes_confirmation_required: true,
+            provider_metadata_is_diagnostic_only: true,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for PullFailingProvider {
+    fn push_projection_files(
+        &mut self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        unreachable!("pull-only failing provider")
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for PullFailingProvider {
+    fn pull_projection_files(
+        &self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+        _workspace: &std::path::Path,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Err(RemoteProjectionProviderError::ProviderIo(
+            "simulated WebDAV pull failure".into(),
+        ))
     }
 }
 
@@ -176,6 +302,15 @@ fn initialized_default_repo() -> ProjectionRemoteHarness {
         _dir: dir,
         root,
         workspace,
+    }
+}
+
+fn s3_pull_action() -> ProjectionRemoteAction {
+    ProjectionRemoteAction::S3 {
+        action: ProjectionRemoteDirectionAction::Pull {
+            repo: Some("default".into()),
+            locator: "s3://bucket/notebooks/main".into(),
+        },
     }
 }
 
