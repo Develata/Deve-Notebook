@@ -497,7 +497,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: external_chan
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: mobile_external_changes_row_actions_visible_without_hover true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: external_changes_rows_and_actions_min_size "44x44"
 contains	apps/web/src/components/sidebar/external_changes/row.rs	data-deve-mobile-touch-target="external-changes-action"
-contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-mobile-touch-target="external-changes-section-header"
+contains	apps/web/src/components/sidebar/external_changes/section.rs	data-deve-mobile-touch-target="external-changes-section-header"
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	SidebarView::ExternalChanges
 contains	apps/web/src/components/sidebar/source_control/changes.rs	fn mobile_source_control_read_gate_allows_readonly_refresh()
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobile_source_control_read_gate_renders_panel()

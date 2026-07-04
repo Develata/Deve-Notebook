@@ -35,11 +35,12 @@ fn path_display_splits_name_and_directory() {
 #[test]
 fn mobile_external_changes_touch_targets_min_size_bound() {
     let row_source = include_str!("row.rs");
-    let view_source = include_str!("../external_changes.rs");
+    let section_source = include_str!("section.rs");
 
     assert!(row_source.contains("data-deve-mobile-touch-target=\"external-changes-action\""));
     assert!(
-        view_source.contains("data-deve-mobile-touch-target=\"external-changes-section-header\"")
+        section_source
+            .contains("data-deve-mobile-touch-target=\"external-changes-section-header\"")
     );
     assert!(row_source.contains("class=\"inline-flex h-11 w-11"));
     assert!(row_source.contains("md:h-7 md:w-7"));
