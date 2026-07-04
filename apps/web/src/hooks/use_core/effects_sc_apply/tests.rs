@@ -59,8 +59,8 @@ fn commit_refresh_blocks_native_recovery_state() {
 }
 
 #[test]
-fn commit_refresh_requires_writer_ready() {
-    assert!(!source_control_refresh_allowed(
+fn commit_refresh_uses_read_gate_without_writer_ready() {
+    assert!(source_control_refresh_allowed(
         7,
         7,
         gate_state(ConnectionStatus::Connected, true, false),

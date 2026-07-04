@@ -3,7 +3,6 @@
 //!   - 08_auth#unauthorized-disconnected-ui
 //!
 
-use deve_core::native_adapter::NativeRuntimeReadiness;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 #[cfg(test)]
 use futures::channel::mpsc::UnboundedReceiver;
@@ -13,15 +12,11 @@ use std::collections::VecDeque;
 #[cfg(test)]
 use std::sync::{Arc, Mutex};
 
-use self::readiness::{
-    NativeRuntimeConnectionState, NativeRuntimeReadinessTarget,
-    native_runtime_readiness_from_parts, writer_ready_matches,
-};
 use self::service_ping::spawn_ping_loop;
 use super::connection::{ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager};
 use super::status::ConnectionStatus;
 use super::write_gate::WriterReadyResetSignals;
-use super::writer_id::{derive_writer_client_id, new_writer_session_nonce};
+use super::writer_id::new_writer_session_nonce;
 
 mod readiness;
 mod service_ping;
@@ -142,143 +137,12 @@ impl WsService {
         }
     }
 
-    pub fn mark_unauthorized(&self) {
-        self.clear_writer_ready();
-        self.reset_node_role_state(false);
-        self.set_status.set(ConnectionStatus::Unauthorized);
-    }
-
-    pub fn mark_writer_ready(&self, repo_id: impl Into<String>, scope_nonce: u64, peer_id: &str) {
-        self.set_writer_ready_repo_id.set(Some(repo_id.into()));
-        self.set_writer_ready_scope_nonce.set(Some(scope_nonce));
-        self.set_writer_client_id.set(Some(derive_writer_client_id(
-            peer_id,
-            self.writer_session_nonce,
-        )));
-    }
-
-    pub fn clear_writer_ready(&self) {
-        let _ = self.writer_ready_reset_signals().clear();
-    }
-
-    pub(crate) fn begin_foreground_reprobe(&self) {
-        self.clear_writer_ready();
-        self.reset_node_role_state(true);
-    }
-
-    pub(crate) fn complete_foreground_node_role_reprobe(
-        &self,
-        summary: impl Into<String>,
-        source_control_git_bridge: impl Into<String>,
-        host_file_copy_absolute_path: bool,
-        host_file_reveal_in_system_explorer: bool,
-    ) {
-        self.set_node_role.set(summary.into());
-        self.set_source_control_git_bridge
-            .set(source_control_git_bridge.into());
-        self.set_host_file_copy_absolute_path
-            .set(host_file_copy_absolute_path);
-        self.set_host_file_reveal_in_system_explorer
-            .set(host_file_reveal_in_system_explorer);
-        self.set_node_role_probe_failed.set(false);
-    }
-
-    pub(crate) fn fail_foreground_node_role_reprobe(&self) {
-        self.reset_node_role_state(true);
-    }
-
-    fn reset_node_role_state(&self, probe_failed: bool) {
-        self.set_node_role.set(String::new());
-        self.set_source_control_git_bridge
-            .set("unknown".to_string());
-        self.set_host_file_copy_absolute_path.set(false);
-        self.set_host_file_reveal_in_system_explorer.set(false);
-        self.set_node_role_probe_failed.set(probe_failed);
-    }
-
-    pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {
-        let ready_repo_id = self.writer_ready_repo_id.get_untracked();
-        writer_ready_matches(
-            ready_repo_id.as_deref(),
-            self.writer_ready_scope_nonce.get_untracked(),
-            repo_id,
-            scope_nonce,
-        )
-    }
-
-    pub fn native_runtime_readiness_for(
-        &self,
-        repo_id: Option<&str>,
-        scope_nonce: Option<u64>,
-        handshake_ready: bool,
-    ) -> NativeRuntimeReadiness {
-        native_runtime_readiness_from_parts(
-            NativeRuntimeConnectionState {
-                status: self.status.get(),
-                node_role: self.node_role.get(),
-                node_role_probe_failed: self.node_role_probe_failed.get(),
-                ready_repo_id: self.writer_ready_repo_id.get(),
-                ready_scope_nonce: self.writer_ready_scope_nonce.get(),
-            },
-            NativeRuntimeReadinessTarget {
-                repo_id,
-                scope_nonce,
-                handshake_ready,
-            },
-        )
-    }
-
-    pub fn native_runtime_readiness_for_untracked(
-        &self,
-        repo_id: Option<&str>,
-        scope_nonce: Option<u64>,
-        handshake_ready: bool,
-    ) -> NativeRuntimeReadiness {
-        native_runtime_readiness_from_parts(
-            NativeRuntimeConnectionState {
-                status: self.status.get_untracked(),
-                node_role: self.node_role.get_untracked(),
-                node_role_probe_failed: self.node_role_probe_failed.get_untracked(),
-                ready_repo_id: self.writer_ready_repo_id.get_untracked(),
-                ready_scope_nonce: self.writer_ready_scope_nonce.get_untracked(),
-            },
-            NativeRuntimeReadinessTarget {
-                repo_id,
-                scope_nonce,
-                handshake_ready,
-            },
-        )
-    }
-
-    pub fn writer_client_id_for(
-        &self,
-        repo_id: Option<&str>,
-        scope_nonce: Option<u64>,
-    ) -> Option<u64> {
-        match (self.writer_client_id.get_untracked(), repo_id, scope_nonce) {
-            (Some(client_id), Some(repo_id), Some(scope_nonce))
-                if self.writer_ready_for(Some(repo_id), Some(scope_nonce)) =>
-            {
-                Some(client_id)
-            }
-            _ => None,
-        }
-    }
-
     pub fn messages_since(&self, after_seq: u64) -> Vec<(u64, u64, ServerMessage)> {
         self.msg_queue
             .get_untracked()
             .into_iter()
             .filter(|(seq, _, _)| *seq > after_seq)
             .collect()
-    }
-
-    fn writer_ready_reset_signals(&self) -> WriterReadyResetSignals {
-        WriterReadyResetSignals::new(
-            self.set_writer_ready_repo_id,
-            self.set_writer_ready_scope_nonce,
-            self.set_writer_client_id,
-        )
     }
 }
 
