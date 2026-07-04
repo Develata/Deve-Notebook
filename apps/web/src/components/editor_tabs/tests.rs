@@ -5,7 +5,8 @@ use super::{
     model::display_name,
     ops::{
         evict_lru_document_tab, ordered_editor_tab_items, reconcile_document_tabs_with_docs,
-        remove_diff_tab, remove_document_tab, reorder_visible_tab, touch_document_access_order,
+        remove_diff_tab, remove_diff_tab_with_order, remove_document_tab,
+        remove_document_tab_with_order, reorder_visible_tab, touch_document_access_order,
         upsert_document_tab, upsert_visible_tab_order,
     },
     policy::{
@@ -75,6 +76,48 @@ fn removing_tab_returns_right_neighbor_then_left_neighbor() {
     assert_eq!(remove_document_tab(&mut tabs, second), Some(third));
     assert_eq!(remove_document_tab(&mut tabs, third), Some(first));
     assert_eq!(remove_document_tab(&mut tabs, first), None);
+}
+
+#[test]
+fn removing_document_tab_with_visible_order_returns_right_neighbor_then_left_neighbor() {
+    let first = DocId::from_u128(1);
+    let second = DocId::from_u128(2);
+    let third = DocId::from_u128(3);
+    let mut tabs = vec![
+        EditorDocumentTab {
+            doc_id: first,
+            title: "a.md".into(),
+            tooltip: "a.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: second,
+            title: "b.md".into(),
+            tooltip: "b.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: third,
+            title: "c.md".into(),
+            tooltip: "c.md".into(),
+        },
+    ];
+    let mut visible_order = vec![
+        EditorTabKey::Document(third),
+        EditorTabKey::Document(first),
+        EditorTabKey::Document(second),
+    ];
+
+    assert_eq!(
+        remove_document_tab_with_order(&mut tabs, &mut visible_order, first),
+        Some(second)
+    );
+    assert_eq!(
+        remove_document_tab_with_order(&mut tabs, &mut visible_order, second),
+        Some(third)
+    );
+    assert_eq!(
+        remove_document_tab_with_order(&mut tabs, &mut visible_order, third),
+        None
+    );
 }
 
 #[test]
@@ -264,6 +307,48 @@ fn removing_diff_tab_returns_neighbor_session() {
             .path,
         second_path
     );
+}
+
+#[test]
+fn removing_diff_tab_with_visible_order_returns_right_neighbor_then_left_neighbor() {
+    let first = diff_tab_from_session(DiffSessionWire::new(
+        "a.md".into(),
+        "old".into(),
+        "new".into(),
+    ));
+    let second = diff_tab_from_session(DiffSessionWire::new(
+        "b.md".into(),
+        "old".into(),
+        "new".into(),
+    ));
+    let third = diff_tab_from_session(DiffSessionWire::new(
+        "c.md".into(),
+        "old".into(),
+        "new".into(),
+    ));
+    let first_key = first.key.clone();
+    let second_key = second.key.clone();
+    let third_key = third.key.clone();
+    let mut tabs = vec![first, second, third];
+    let mut visible_order = vec![
+        EditorTabKey::Diff(third_key.clone()),
+        EditorTabKey::Diff(first_key.clone()),
+        EditorTabKey::Diff(second_key.clone()),
+    ];
+
+    assert_eq!(
+        remove_diff_tab_with_order(&mut tabs, &mut visible_order, &first_key)
+            .expect("right neighbor")
+            .path,
+        "b.md"
+    );
+    assert_eq!(
+        remove_diff_tab_with_order(&mut tabs, &mut visible_order, &second_key)
+            .expect("left neighbor")
+            .path,
+        "c.md"
+    );
+    assert!(remove_diff_tab_with_order(&mut tabs, &mut visible_order, &third_key).is_none());
 }
 
 #[test]
