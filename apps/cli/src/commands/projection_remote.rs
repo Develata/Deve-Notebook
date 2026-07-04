@@ -76,7 +76,7 @@ pub fn run(ledger_dir: &Path, action: ProjectionRemoteAction, snapshot_depth: us
         );
     }
     bail!(
-        "remote projection provider I/O is not wired yet; no projection files were pushed or pulled"
+        "remote projection provider I/O is not wired yet (provider_io_ready=false); no projection files were pushed or pulled"
     );
 }
 
@@ -121,6 +121,7 @@ fn direction_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn webdav_push_builds_provider_request() {
@@ -148,5 +149,85 @@ mod tests {
         assert_eq!(request.provider, RemoteProjectionProvider::S3);
         assert_eq!(request.direction, RemoteProjectionDirection::Pull);
         assert_eq!(request.locator, "s3://bucket/notebooks/main");
+    }
+
+    #[test]
+    fn run_reports_provider_io_fail_closed_after_workspace_gate() {
+        let repo = initialized_default_repo();
+
+        let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
+            .expect_err("provider I/O must remain fail-closed");
+
+        let message = err.to_string();
+        assert!(message.contains("provider I/O is not wired yet"));
+        assert!(message.contains("provider_io_ready=false"));
+    }
+
+    #[test]
+    fn run_checks_workspace_identity_before_provider_io() {
+        let repo = initialized_default_repo();
+        std::fs::remove_file(deve_core::utils::notegit::repo_identity_path(
+            &repo.workspace,
+        ))
+        .expect("remove identity marker");
+
+        let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
+            .expect_err("workspace identity gate must fail before provider I/O");
+
+        let message = err.to_string();
+        assert!(message.contains("Projection workspace identity marker is invalid"));
+        assert!(message.contains("identity marker"));
+        assert!(!message.contains("provider_io_ready=false"));
+    }
+
+    struct ProjectionRemoteHarness {
+        _dir: tempfile::TempDir,
+        root: PathBuf,
+        workspace: PathBuf,
+    }
+
+    impl ProjectionRemoteHarness {
+        fn ledger_dir(&self) -> PathBuf {
+            self.root.join("ledger")
+        }
+    }
+
+    fn initialized_default_repo() -> ProjectionRemoteHarness {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path().to_path_buf();
+        crate::commands::init::run(
+            &root.join("ledger"),
+            "default",
+            &root.join("notes"),
+            root.clone(),
+            8,
+            None,
+            None,
+        )
+        .expect("init");
+        let workspace = std::fs::read_dir(root.join("notes"))
+            .expect("notes dir")
+            .map(|entry| entry.expect("workspace entry").path())
+            .find(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with("default--"))
+            })
+            .expect("default workspace");
+
+        ProjectionRemoteHarness {
+            _dir: dir,
+            root,
+            workspace,
+        }
+    }
+
+    fn webdav_pull_action() -> ProjectionRemoteAction {
+        ProjectionRemoteAction::Webdav {
+            action: ProjectionRemoteDirectionAction::Pull {
+                repo: Some("default".into()),
+                locator: "webdav+https://dav.example.com/notebooks/main".into(),
+            },
+        }
     }
 }
