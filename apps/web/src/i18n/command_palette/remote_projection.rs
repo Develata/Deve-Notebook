@@ -32,13 +32,13 @@ pub fn s3_pull(locale: Locale) -> &'static str {
     }
 }
 
-pub fn remote_projection_cli_only_reason(locale: Locale) -> &'static str {
+pub fn remote_projection_backend_intent(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "CLI/backend-only: pull writes projection files, then External Changes must be confirmed"
+            "Sends a backend/core remote projection intent; provider_io_ready=false until provider I/O is wired, and pull must enter External Changes."
         }
         Locale::Zh => {
-            "仅 CLI/backend：pull 覆盖 projection 文件，之后必须通过 External Changes 确认"
+            "发送 backend/core remote projection intent；provider I/O 接线前 provider_io_ready=false，pull 必须进入 External Changes。"
         }
     }
 }

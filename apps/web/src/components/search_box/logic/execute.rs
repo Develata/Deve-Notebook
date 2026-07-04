@@ -2,6 +2,7 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
+use crate::components::command_palette::Command;
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
 use crate::components::search_box::runtime::SearchRuntime;
@@ -26,7 +27,7 @@ pub(crate) fn execute_action(
             runtime.document.on_doc_select.run(*id);
             set_show.set(false);
         }
-        SearchAction::RunCommand(cmd) => cmd.action.run(()),
+        SearchAction::RunCommand(cmd) => execute_run_command(cmd, set_show),
         SearchAction::SwitchBranch(branch) => {
             if branch == LOCAL_BRANCH_LABEL {
                 runtime.branch.on_switch_branch.run(None);
@@ -103,6 +104,11 @@ pub(crate) fn execute_action(
         }
         SearchAction::Noop => {}
     }
+}
+
+fn execute_run_command(cmd: &Command, set_show: WriteSignal<bool>) {
+    cmd.action.run(());
+    set_show.set(false);
 }
 
 fn update_recent_move_dirs(set_recent_move_dirs: WriteSignal<Vec<String>>, dst: &str) {

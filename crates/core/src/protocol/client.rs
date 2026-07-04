@@ -5,6 +5,8 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
+use crate::protocol::RemoteProjectionDirection;
+use crate::protocol::RemoteProjectionProvider;
 use crate::protocol::ScPathTarget;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
@@ -286,6 +288,12 @@ pub enum ClientMessage {
     },
     CommitAndPush {
         message: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
+    RemoteProjectionTransport {
+        provider: RemoteProjectionProvider,
+        direction: RemoteProjectionDirection,
         #[serde(default)]
         scope_nonce: Option<u64>,
     },

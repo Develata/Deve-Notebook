@@ -17,6 +17,7 @@ pub use super::source_control_git::*;
 pub use super::source_control_graph::*;
 pub use super::source_control_history::*;
 pub use super::source_control_native::*;
+pub use super::source_control_remote_projection::*;
 pub use actions::*;
 pub use gate::*;
 

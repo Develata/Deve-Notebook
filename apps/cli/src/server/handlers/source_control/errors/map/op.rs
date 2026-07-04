@@ -14,4 +14,5 @@ pub enum ScOp {
     CommitDiff(String),
     Commit,
     ApplyExternalChanges,
+    RemoteProjection,
 }

@@ -1,4 +1,5 @@
-use super::{normalize_executable_file_op_action, update_recent_move_dirs};
+use super::{execute_run_command, normalize_executable_file_op_action, update_recent_move_dirs};
+use crate::components::command_palette::Command;
 use crate::components::search_box::types::{FileOpAction, FileOpKind};
 use leptos::prelude::*;
 
@@ -123,5 +124,23 @@ fn recent_move_dirs_uses_shared_forward_slash_policy() {
             recent_move_dirs.get_untracked(),
             vec!["archive/nested/".to_string()]
         );
+    });
+}
+
+#[test]
+fn run_command_execution_closes_search_box() {
+    let owner = leptos::reactive::owner::Owner::new();
+
+    owner.with(|| {
+        let (show, set_show) = signal(true);
+        let (ran, set_ran) = signal(false);
+        let command = Command::available("test:command", "Test Command", move || {
+            set_ran.set(true);
+        });
+
+        execute_run_command(&command, set_show);
+
+        assert!(ran.get_untracked());
+        assert!(!show.get_untracked());
     });
 }

@@ -35,6 +35,7 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::ResolveConflict { .. }
             | ClientMessage::ResolveMergeConflict { .. }
             | ClientMessage::MergePeer { .. }
+            | ClientMessage::RemoteProjectionTransport { .. }
             | ClientMessage::DeletePeer { .. }
             | ClientMessage::SwitchBranch { .. }
             | ClientMessage::SwitchRepo { .. }

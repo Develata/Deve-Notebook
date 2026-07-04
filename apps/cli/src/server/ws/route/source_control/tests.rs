@@ -1,6 +1,10 @@
 use super::route_source_control;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{
+    REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, RemoteProjectionDirection,
+    RemoteProjectionProvider,
+};
 use deve_core::source_control::ConflictResolution;
 use tokio::time::{Duration, timeout};
 
@@ -61,6 +65,11 @@ fn extracts_scope_nonce_from_source_control_messages() {
             message: "msg".into(),
             scope_nonce: Some(7),
         },
+        ClientMessage::RemoteProjectionTransport {
+            provider: RemoteProjectionProvider::WebDav,
+            direction: RemoteProjectionDirection::Pull,
+            scope_nonce: Some(7),
+        },
     ];
     for msg in cases {
         let gate = msg.source_control_scope_gate().expect("scope gate");
@@ -107,6 +116,48 @@ async fn resolve_conflict_rejects_stale_scope_before_handler() -> anyhow::Result
                     .as_deref()
                     .expect("detail")
                     .contains("source control scope nonce is stale")
+            );
+        }
+        other => panic!("expected ProtocolError, got {other:?}"),
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_projection_transport_returns_backend_provider_io_gate() -> anyhow::Result<()> {
+    let (_dir, state, _repo_id) = build_state()?;
+    state.repo.ensure_local_repo_workspace_identity("notes")?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = crate::server::session::WsSession::new();
+
+    route_source_control(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::RemoteProjectionTransport {
+            provider: RemoteProjectionProvider::WebDav,
+            direction: RemoteProjectionDirection::Pull,
+            scope_nonce: Some(17),
+        },
+    )
+    .await;
+
+    match recv_protocol_error(&mut uni_rx).await? {
+        ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        } => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(scope_nonce, None);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
+            );
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .expect("detail")
+                    .contains("provider_io_ready=false")
             );
         }
         other => panic!("expected ProtocolError, got {other:?}"),
@@ -211,6 +262,11 @@ fn source_control_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMes
         },
         ClientMessage::CommitAndPush {
             message: "msg".into(),
+            scope_nonce,
+        },
+        ClientMessage::RemoteProjectionTransport {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Push,
             scope_nonce,
         },
     ]

@@ -6,7 +6,7 @@ use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
     is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
     is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
-    is_git_status_cli_notice,
+    is_git_status_cli_notice, is_remote_projection_provider_io_pending_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
@@ -35,10 +35,16 @@ pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_establish_branch_unavailable_notice(notice) {
         return sc::establish_branch_unavailable_title(locale).to_string();
     }
+    if is_remote_projection_provider_io_pending_notice(notice) {
+        return sc::remote_projection_provider_io_pending_title(locale).to_string();
+    }
     server_error::message(locale, notice.code).to_string()
 }
 
 pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
+    if is_remote_projection_provider_io_pending_notice(notice) {
+        return sc::remote_projection_provider_io_pending_hint(locale).to_string();
+    }
     if is_establish_branch_unavailable_notice(notice) {
         return sc::establish_branch_unavailable_hint(locale).to_string();
     }
@@ -184,5 +190,22 @@ mod tests {
             sc::establish_branch_unavailable_title(Locale::En)
         );
         assert!(hint(Locale::Zh, &notice).contains("P2P: Merge Peer"));
+    }
+
+    #[test]
+    fn remote_projection_notice_uses_provider_io_copy() {
+        let notice = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(
+                deve_core::protocol::REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL.to_string(),
+            ),
+        };
+
+        assert_eq!(
+            title(Locale::En, &notice),
+            sc::remote_projection_provider_io_pending_title(Locale::En)
+        );
+        assert!(hint(Locale::En, &notice).contains("provider_io_ready=false"));
+        assert!(hint(Locale::Zh, &notice).contains("External Changes"));
     }
 }

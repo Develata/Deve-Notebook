@@ -2,6 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 08_auth#unauthorized-handling
 //!
+pub use deve_core::protocol::REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
@@ -12,7 +13,6 @@ pub const GIT_IMPORT_CLI_NOTICE_DETAIL: &str = "git-import-cli-only";
 pub const GIT_PUSH_CLI_NOTICE_DETAIL: &str = "git-push-cli-only";
 pub const GIT_REPAIR_CLI_NOTICE_DETAIL: &str = "git-repair-cli-only";
 pub const ESTABLISH_BRANCH_UNAVAILABLE_DETAIL: &str = "establish-branch-unavailable";
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlNotice {
     pub code: ServerErrorCode,
@@ -126,6 +126,10 @@ pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> b
     notice.detail.as_deref() == Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
 }
 
+pub fn is_remote_projection_provider_io_pending_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
+}
+
 pub fn is_local_command_notice(notice: &SourceControlNotice) -> bool {
     matches!(
         notice.detail.as_deref(),
@@ -162,10 +166,11 @@ mod tests {
         DELETED_NO_DOC_ID_NOTICE_PREFIX, ESTABLISH_BRANCH_UNAVAILABLE_DETAIL,
         GIT_EXPORT_CLI_NOTICE_DETAIL, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_MIRROR_CLI_NOTICE_DETAIL,
         GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL, GIT_STATUS_CLI_NOTICE_DETAIL,
-        SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-        is_establish_branch_unavailable_notice, is_git_cli_notice, is_git_export_cli_notice,
-        is_git_import_cli_notice, is_git_mirror_cli_notice, is_git_push_cli_notice,
-        is_git_repair_cli_notice, is_git_status_cli_notice, is_local_command_notice,
+        REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, SourceControlNotice, deleted_no_doc_id_path,
+        is_deleted_no_doc_id_notice, is_establish_branch_unavailable_notice, is_git_cli_notice,
+        is_git_export_cli_notice, is_git_import_cli_notice, is_git_mirror_cli_notice,
+        is_git_push_cli_notice, is_git_repair_cli_notice, is_git_status_cli_notice,
+        is_local_command_notice, is_remote_projection_provider_io_pending_notice,
         is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -269,6 +274,20 @@ mod tests {
         ));
         assert!(!is_git_cli_notice(&establish_branch_notice));
         assert!(is_local_command_notice(&establish_branch_notice));
+
+        let remote_projection_notice = SourceControlNotice {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL.to_string()),
+        };
+        assert_eq!(
+            remote_projection_notice.detail.as_deref(),
+            Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
+        );
+        assert!(is_remote_projection_provider_io_pending_notice(
+            &remote_projection_notice
+        ));
+        assert!(!is_git_cli_notice(&remote_projection_notice));
+        assert!(!is_local_command_notice(&remote_projection_notice));
 
         let server_notice = SourceControlNotice {
             code: ServerErrorCode::ScDocNotFound,

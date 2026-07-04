@@ -79,6 +79,16 @@ pub(super) async fn route_source_control(
         } => {
             source_control::handle_get_doc_diff(state, ch, session, request_id, target).await;
         }
+        ClientMessage::RemoteProjectionTransport {
+            provider,
+            direction,
+            ..
+        } => {
+            source_control::handle_remote_projection_transport(
+                state, ch, session, provider, direction,
+            )
+            .await;
+        }
         other => super::core::route_core(state, ch, session, other).await,
     }
 }

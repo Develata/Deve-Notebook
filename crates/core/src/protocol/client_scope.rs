@@ -98,7 +98,8 @@ impl ClientMessage {
             | Self::GetDocDiff { scope_nonce, .. }
             | Self::GetCommitDiff { scope_nonce, .. }
             | Self::ResolveConflict { scope_nonce, .. }
-            | Self::CommitAndPush { scope_nonce, .. } => {
+            | Self::CommitAndPush { scope_nonce, .. }
+            | Self::RemoteProjectionTransport { scope_nonce, .. } => {
                 Some(ClientMessageScopeGate::new(*scope_nonce, "source control"))
             }
             _ => None,

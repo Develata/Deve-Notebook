@@ -11,17 +11,10 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum RemoteProjectionProvider {
-    WebDav,
-    S3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum RemoteProjectionDirection {
-    Push,
-    Pull,
-}
+pub use crate::protocol::{
+    REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, RemoteProjectionDirection,
+    RemoteProjectionProvider,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteProjectionPlanInput {
@@ -118,24 +111,6 @@ fn locator_has_unsafe_path_segment(locator: &str) -> bool {
     };
     let mut parts = after_scheme.split('/').skip(1);
     parts.any(|segment| matches!(segment, "" | "." | ".."))
-}
-
-impl RemoteProjectionProvider {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            RemoteProjectionProvider::WebDav => "webdav",
-            RemoteProjectionProvider::S3 => "s3",
-        }
-    }
-}
-
-impl RemoteProjectionDirection {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            RemoteProjectionDirection::Push => "push",
-            RemoteProjectionDirection::Pull => "pull",
-        }
-    }
 }
 
 #[cfg(test)]
