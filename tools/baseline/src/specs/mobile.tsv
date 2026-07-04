@@ -123,8 +123,8 @@ contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobil
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-col-source="placeholder"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_fields_fit_without_horizontal_scroll()
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_summary_exposes_required_fields()
-contains	apps/web/src/i18n/bottom_bar.rs	pub fn branch(locale: Locale) -> &'static str
-contains	apps/web/src/i18n/bottom_bar.rs	pub fn col(locale: Locale) -> &'static str
+contains	apps/web/src/i18n/bottom_bar/labels.rs	pub fn branch(locale: Locale) -> &'static str
+contains	apps/web/src/i18n/bottom_bar/labels.rs	pub fn col(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-008
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-008	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-008	run: cargo test -p deve_web mobile_bottom_bar_expand -- --nocapture
@@ -188,7 +188,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	cli_assert: mobile_i18n_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	cli_assert: mobile_layout_hardcoded_copy_absent true
 contains	apps/web/src/i18n/header.rs	fn mobile_i18n_header_action_copy_has_facade_keys()
 contains	apps/web/src/i18n/sidebar.rs	fn mobile_i18n_sidebar_drawer_copy_has_facade_keys()
-contains	apps/web/src/i18n/bottom_bar.rs	fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key()
+contains	apps/web/src/i18n/bottom_bar/tests.rs	fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key()
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::file_tree(locale.get())
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::home(locale.get())
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::open(locale.get())

@@ -16,6 +16,7 @@ Internationalization strings organized by UI feature. Provides localized text fo
 | `header.rs` | Header strings |
 | `sidebar.rs` | Sidebar strings |
 | `bottom_bar.rs` | Bottom bar strings |
+| `bottom_bar/` | Bottom bar string groups |
 | `login.rs` | Login page strings |
 | `dashboard.rs` | Dashboard strings |
 | `source_control.rs` | Source control strings |
