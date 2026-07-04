@@ -4,15 +4,15 @@
 
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Version`: `0.0.2`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
 
 ## 1. Meta (版本与状态)
 
-**版本**: 0.0.1
+**版本**: 0.0.2
 **核心理念**: 账本为真源 + **三位一体隔离 (Trinity Isolation)** + **Git-Flow 数据主权** + 工业级内核。
 
 ## 2. Positioning (项目定位)
@@ -44,6 +44,10 @@
     *   **Command Palette**: 全局指令系统。
     *   **Editor**: Markdown 编辑器（集成 TeX 公式渲染）。
 *   **Ledger Consistency (账本一致性)**: 核心 **MUST** 维护 Ledger 与 repo-scoped Projection Workspace 的一致性，覆盖写入 (Write)、同步 (Sync)、和解 (Reconciliation)、冲突处理 (Conflict Resolution) 及可恢复性。
+*   **Frontend Thin Shell / Infra-Owned Decision (前端薄壳层 / 基础设施裁决)**: Web / Desktop / Mobile 前端 **MUST** 只负责显示 UI、收集用户 intent、维护局部交互状态并调用 backend/core infra 暴露的 typed API。
+    *   计算、状态迁移、ledger / Source Control / External Changes / diff / commit-anchor / scope / write-readiness 裁决 **MUST** 归属 backend/core infra 或拥有该 authority 的 runtime。
+    *   UI、JS、adapter、hook 与 command palette entry **MUST NOT** 为了交互便利而自行判断业务事实是否已写入、已提交、已确认或可写。
+    *   DOM、CodeMirror、KaTeX、Mermaid、browser storage、clipboard、drag/drop 与 native WebView bridge 只能作为 Object Plane adapter；它们 **MUST NOT** 成为业务真值源、authority mutation 入口、pending overlay 确认者或 projection repair 执行者。
 *   **Extensibility Host**: 提供稳定的 Host Functions、Event Bus、Job Queue 与 Capability 校验机制。
 *   **Linux Path Normalization (Linux 路径标准化)**:
     *   **Input Handling**: 非 Linux 平台接收到的任何路径输入 **MUST** 在第一时间转换为 Linux 风格路径（Forward Slash `/`）。

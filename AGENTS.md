@@ -1,4 +1,4 @@
-<!-- Generated: 2026-03-22 | Updated: 2026-06-07 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-07-05 -->
 
 # Deve-Notebook
 
@@ -68,13 +68,13 @@ For implementation, debugging, review, architecture-convergence, or commit-produ
 
 1. Read `docs/plan/00_engineering_constitution.md`.
 2. Read `docs/plan/01_terminology.md`.
-3. Read the matching `docs/plan/` contract.
+3. Read the matching `docs/plan/` contract and confirm the authority, runtime boundary, source of truth, failure path, and verification entrypoint.
 4. Read matching `docs/` feature / acceptance / registry / overview / task documents.
-5. Implement `docs/plan/` -> `docs/` -> code, keeping code as a projection of contracts.
+5. Implement `docs/plan/` -> `docs/` -> code/docs, keeping implementation as a projection of contracts.
 6. Run review with a single review subagent when available; close that subagent after it returns a final result or is no longer needed. Do not spawn multiple review subagents for one work item unless the user explicitly authorizes parallel review. If unavailable, perform an explicit self-review and report that the subagent was unavailable.
 7. Fix review findings.
 8. Run targeted tests and relevant contract/baseline checks.
-9. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior.
+9. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior. For pure docs or non-UI backend work, explicitly report why Chrome MCP is not applicable.
 10. If verification finds problems, return to the relevant `docs/plan/` -> `docs/` -> code step and repeat.
 11. If verification passes, stage only relevant files and create a git commit.
 
@@ -87,6 +87,7 @@ Architecture constraints for this workflow:
 - The frontend is a thin shell: render UI, collect user intent, and dispatch typed intents.
 - Computation, state transitions, ledger/source-control authority mutations, diff/external-change decisions, and commit-anchor business decisions belong in backend/core infra.
 - Do not move ledger, External Changes, Source Control, diff, or commit-anchor business judgment into the frontend for UI convenience.
+- Do not bypass authority, runtime boundaries, writer gates, or Object Plane adapters to ship faster, fix small bugs, simplify tests, or make UI wiring convenient. If the required path crosses those boundaries, update the relevant plan/registry contract or stop for a USER decision before implementation.
 - Review subagents must focus on high cohesion, low coupling, boundary drift, file size, failure paths, and verification coverage, and completed review subagents must be closed promptly.
 
 ### Testing Requirements
