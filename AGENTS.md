@@ -64,23 +64,26 @@ Rust workspace for a self-hosted collaborative Markdown notebook targeting low-r
 
 ### User-Requested Implementation Workflow
 
-For implementation, debugging, review, architecture-convergence, or commit-producing work items where code or docs may be changed, follow this scoped workflow:
+For implementation, debugging, review, architecture-convergence, module/function audit, planned follow-up completion, or commit-producing work items where code or docs may be changed, follow this scoped workflow:
 
 1. Read `docs/plan/00_engineering_constitution.md`.
 2. Read `docs/plan/01_terminology.md`.
-3. Read the matching `docs/plan/` contract and confirm the authority, runtime boundary, source of truth, failure path, and verification entrypoint.
-4. Read matching `docs/` feature / acceptance / registry / overview / task documents.
+3. Read the matching `docs/plan/` contract, confirm the authority, runtime boundary, source of truth, failure path, and verification entrypoint, then decide whether the plan contract itself must be updated before code.
+4. Read matching `docs/` feature / acceptance / registry / overview / task documents, then decide whether those projection documents must be updated before code.
 5. Implement `docs/plan/` -> `docs/` -> code/docs, keeping implementation as a projection of contracts.
-6. Run review with a single review subagent when available; close that subagent after it returns a final result or is no longer needed. Do not spawn multiple review subagents for one work item unless the user explicitly authorizes parallel review. If unavailable, perform an explicit self-review and report that the subagent was unavailable.
-7. Fix review findings.
-8. Run targeted tests and relevant contract/baseline checks.
-9. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior. For pure docs or non-UI backend work, explicitly report why Chrome MCP is not applicable.
-10. If verification finds problems, return to the relevant `docs/plan/` -> `docs/` -> code step and repeat.
-11. If verification passes, stage only relevant files and create a git commit.
+6. Run a quick gate sized to the touched surface, such as formatting/diff checks, targeted tests, and the nearest baseline scripts.
+7. Run review with at most three review subagents when available. Scope them to high cohesion, low coupling, boundary drift, file size, failure paths, verification coverage, and frontend-thin-shell violations. If subagents are unavailable, perform an explicit self-review and report that they were unavailable.
+8. The main agent fixes accepted review findings and closes every review subagent promptly after it returns a final result or is no longer needed.
+9. Run final baseline and contract checks after fixes, including targeted tests, relevant baseline scripts, and required plan/docs/code checks.
+10. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior. For pure docs or non-UI backend work, explicitly report why Chrome MCP is not applicable.
+11. If verification finds problems, return to the relevant `docs/plan/` -> `docs/` -> code step and repeat.
+12. If verification passes, stage only relevant files and create a git commit.
 
 This workflow is not required for pure explanation, planning, read-only investigation, or user-directed no-code discussion.
 
-Small, bounded bugs may be fixed through this workflow. Changes touching authority, ledger, protocol, Source Control semantics, module boundaries, data migrations, or architecture models MUST stop for user decision before implementation.
+When the USER puts this repo into continuous main-branch audit/fix mode, work on `main` module by module and function by function: review, investigate, fix small bounded issues, and complete planned-but-unfinished items that are already covered by the current contracts. Small, bounded bugs may be fixed through this workflow. Large bugs, architecture decisions, major behavior changes, or changes touching authority, ledger, protocol, Source Control semantics, module boundaries, data migrations, or architecture models MUST stop for USER analysis and approval before implementation.
+
+No formal version has been released yet, so this repo does not require preserving backward compatibility with old released versions during this workflow. That does not relax data-safety, authority, migration/fallback analysis, or verification requirements.
 
 Architecture constraints for this workflow:
 

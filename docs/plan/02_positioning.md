@@ -4,7 +4,7 @@
 
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
-- `Version`: `0.0.2`
+- `Version`: `0.0.3`
 - `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
@@ -12,7 +12,7 @@
 
 ## 1. Meta (版本与状态)
 
-**版本**: 0.0.2
+**版本**: 0.0.3
 **核心理念**: 账本为真源 + **三位一体隔离 (Trinity Isolation)** + **Git-Flow 数据主权** + 工业级内核。
 
 ## 2. Positioning (项目定位)
@@ -48,12 +48,18 @@
     *   计算、状态迁移、ledger / Source Control / External Changes / diff / commit-anchor / scope / write-readiness 裁决 **MUST** 归属 backend/core infra 或拥有该 authority 的 runtime。
     *   UI、JS、adapter、hook 与 command palette entry **MUST NOT** 为了交互便利而自行判断业务事实是否已写入、已提交、已确认或可写。
     *   DOM、CodeMirror、KaTeX、Mermaid、browser storage、clipboard、drag/drop 与 native WebView bridge 只能作为 Object Plane adapter；它们 **MUST NOT** 成为业务真值源、authority mutation 入口、pending overlay 确认者或 projection repair 执行者。
+    *   连续审查 / 排查 / 修复工作流中发现的 UI 便利性问题 **MUST** 通过 typed intent 与 backend/core infra 能力修复；不得把计算、状态迁移或 authority 裁决下沉到前端以缩短实现路径。
 *   **Extensibility Host**: 提供稳定的 Host Functions、Event Bus、Job Queue 与 Capability 校验机制。
 *   **Linux Path Normalization (Linux 路径标准化)**:
     *   **Input Handling**: 非 Linux 平台接收到的任何路径输入 **MUST** 在第一时间转换为 Linux 风格路径（Forward Slash `/`）。
     *   **Execution**: 内部逻辑与命令执行 **MUST** 仅针对 Linux 路径格式编写。
     *   **Adapter**: 仅在最终调用 OS API 时，通过 Adapter 还原为平台原生格式。
 *   **Code Modularity & Documentation (模块化与文档铁律)**：代码文件 **MUST** 按职责/API/基础设施边界保持内聚；核心模块 **SHOULD** 用中文文档注释说明架构职责与能力层；实现 plan 条款的 Rust 模块 **MUST** 遵守 `docs/plan/AGENTS.md` 的 `plan_ref` 规则。
+*   **Continuous Main-Branch Work Governance (main 分支连续工作治理)**：在未发布首个正式版本前，日常工作 **MUST** 在当前 plan 合同约束下逐模块、逐功能审查、排查、修复，并完成计划内但尚未落地的局部项。
+    *   小型、局部、合同内 bug **MAY** 直接修复；大型 bug、架构决策、重大行为变化、authority / ledger / protocol / Source Control / module boundary / data migration 变化 **MUST** 先停止实现，提交 USER 决策。
+    *   尚无正式版本发布时，核心实现 **MAY** 不保留旧 released version 兼容层；但 **MUST NOT** 因此跳过数据安全、authority 边界、迁移/回退分析或验证。
+    *   每次实现型 work item **MUST** 经过 quick gate、review、主 agent 修复、final baseline/contract checks、Chrome MCP 或明确的不适用说明，然后才能进入 commit。
+*   **Cohesion / Coupling Fuse (内聚耦合熔断)**：实现 **MUST** 优先按职责、API、infra boundary 与 authority ownership 组织代码；不得为了局部 UI、测试或短期交付便利引入跨层直连、重复真值源、隐式全局状态或高耦合聚合文件。
 *   **UUID-First Retrieval (UUID 优先核心约束)**:
     *   **Rule**: 后端对于任意 File/Folder/Repo 的操作，**MUST** 仅通过 UUID 完成，严禁直接使用 File Path 作为主键。
     *   **Resolution Flow**: 前端传递 `Name` -> 后端查询映射表 (`Name` -> `UUID`) -> 执行业务逻辑。
