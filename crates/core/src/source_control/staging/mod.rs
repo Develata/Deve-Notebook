@@ -39,6 +39,8 @@ pub struct StagedEntry {
     pub status: ChangeStatus,
     pub content_hash: String,
     pub has_conflict: bool,
+    #[serde(default)]
+    pub resolved_conflict: bool,
 }
 
 /// 初始化暂存区表
@@ -61,6 +63,20 @@ pub fn stage_pending_entry(db: &Database, entry: &PendingFsEntry) -> Result<()> 
         status: entry.change_type,
         content_hash: entry.content_hash.clone(),
         has_conflict: entry.has_conflict,
+        resolved_conflict: false,
+    };
+    stage_entry(db, &entry.path, &staged)
+}
+
+pub fn stage_resolved_pending_entry(db: &Database, entry: &PendingFsEntry) -> Result<()> {
+    let staged = StagedEntry {
+        timestamp: chrono::Utc::now().timestamp_millis(),
+        renamed_from: entry.renamed_from.clone(),
+        doc_id: entry.doc_id,
+        status: entry.change_type,
+        content_hash: entry.content_hash.clone(),
+        has_conflict: false,
+        resolved_conflict: true,
     };
     stage_entry(db, &entry.path, &staged)
 }

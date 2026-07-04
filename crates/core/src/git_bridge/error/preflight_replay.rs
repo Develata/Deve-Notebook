@@ -41,6 +41,8 @@ pub(in crate::git_bridge) enum GitPreflightError {
     CommitDecode { commit_id: String, message: String },
     #[error("Git mirror refuses to include path(s) outside {scope}: {paths}")]
     ProjectionScope { scope: String, paths: String },
+    #[error("Git mirror terminal projection mismatch for {path}: {reason}")]
+    ProjectionContentMismatch { path: String, reason: String },
 }
 
 impl From<GitPreflightError> for String {
@@ -66,75 +68,15 @@ impl From<GitReplayError> for String {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub(in crate::git_bridge) enum GitReplayPlanError {
-    #[error(transparent)]
-    GitCommand(#[from] GitCommandError),
-    #[error(transparent)]
-    GitPreflight(#[from] GitPreflightError),
-    #[error(transparent)]
-    GitReplay(#[from] GitReplayError),
-    #[error(
-        "Git mirror record ledger_seq {record_seq} does not match Deve commit ledger_seq {commit_seq}"
-    )]
-    MirrorRecordSeqMismatch { record_seq: u64, commit_seq: u64 },
-    #[error(
-        "queued Git mirror records are not a contiguous Deve commit chain: {commit_id} parent is {parent:?}, expected {expected}"
-    )]
-    NonContiguousCommitChain {
-        commit_id: String,
-        parent: Option<String>,
-        expected: String,
-    },
-    #[error("failed to read parent Git mirror record {parent_id}: {message}")]
-    ParentRecordRead { parent_id: String, message: String },
-    #[error("first queued Git mirror commit parent {parent_id} is not mirrored")]
-    ParentNotMirrored { parent_id: String },
-    #[error("first queued Git mirror commit parent {parent_id} is {state}")]
-    ParentStateNotCommitted { parent_id: String, state: String },
-    #[error("committed parent Git mirror record {parent_id} has no git_commit_id")]
-    ParentMissingGitCommit { parent_id: String },
-    #[error(
-        "Git HEAD does not match mirrored parent {parent_id}: head={head:?} expected={expected}"
-    )]
-    HeadMismatch {
-        parent_id: String,
-        head: Option<String>,
-        expected: String,
-    },
-}
-
-impl From<GitReplayPlanError> for String {
-    fn from(err: GitReplayPlanError) -> Self {
-        err.to_string()
-    }
-}
-
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub(in crate::git_bridge) enum GitProjectionReplayError {
-    #[error(transparent)]
-    GitCommand(#[from] GitCommandError),
-    #[error(transparent)]
-    GitReplay(#[from] GitReplayError),
-    #[error("failed to compute projection diff for {commit_id}: {message}")]
-    ProjectionDiff { commit_id: String, message: String },
-    #[error("failed to read projection diff data for {commit_id}: {message}")]
-    ProjectionDiffStorage { commit_id: String, message: String },
-    #[error("Deve commit {commit_id} has no projection diff to mirror")]
-    EmptyProjectionDiff { commit_id: String },
-}
-
-impl From<GitProjectionReplayError> for String {
-    fn from(err: GitProjectionReplayError) -> Self {
-        err.to_string()
-    }
-}
-
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(in crate::git_bridge) enum GitMirrorCommitError {
     #[error(transparent)]
     GitCommand(#[from] GitCommandError),
     #[error(transparent)]
     GitPreflight(#[from] GitPreflightError),
+    #[error(transparent)]
+    GitReplay(#[from] GitReplayError),
+    #[error("failed to create temporary Git mirror index: {message}")]
+    TempIndex { message: String },
     #[error("git mirror has no staged changes for queued Deve commit")]
     NoStagedChanges,
 }

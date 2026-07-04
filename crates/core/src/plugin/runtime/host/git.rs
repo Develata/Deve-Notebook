@@ -136,7 +136,7 @@ fn resolve_sc_target_for_host(path: &str) -> Result<ScPathTarget, Box<EvalAltRes
             doc_id: None,
             domain: None,
         }),
-        Ok(super::SourceControlHostMode::Local { .. }) | Err(_) => {
+        Ok(super::SourceControlHostMode::Local) | Err(_) => {
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             target::resolve_local_sc_target(repo_manager.as_ref(), path)
         }

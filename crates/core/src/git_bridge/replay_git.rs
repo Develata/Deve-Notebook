@@ -2,11 +2,10 @@
 //!   - 03_storage/index#git-ecosystem-coexistence
 //!   - 05_diff_logic#git-mirror-lifecycle
 //!
-//! Git index and tree primitives for projection replay.
+//! Git index and tree primitives for mirror snapshot bootstrap.
 
 use super::error::{GitReplayError, GitReplayResult};
 use super::git_cmd;
-use crate::source_control::{ChangeStatus, CommitFileDiff};
 use crate::utils::{notegit, path::to_forward_slash};
 use std::path::Path;
 
@@ -21,35 +20,6 @@ pub(super) fn read_parent_tree(
         None => git_cmd::run_env(repo_root, &["read-tree", "--empty"], &envs)?,
     };
     Ok(())
-}
-
-pub(super) fn apply_diff_to_index(
-    repo_root: &Path,
-    index_path: &Path,
-    diff: &CommitFileDiff,
-) -> GitReplayResult<()> {
-    match diff.status {
-        ChangeStatus::Deleted => remove_path_from_index(repo_root, index_path, &diff.path),
-        ChangeStatus::Renamed => {
-            if let Some(previous_path) = diff.previous_path.as_deref()
-                && to_forward_slash(previous_path) != to_forward_slash(&diff.path)
-            {
-                remove_path_from_index(repo_root, index_path, previous_path)?;
-            }
-            add_blob_to_index(
-                repo_root,
-                index_path,
-                &diff.path,
-                diff.new_content.as_bytes(),
-            )
-        }
-        ChangeStatus::Added | ChangeStatus::Modified => add_blob_to_index(
-            repo_root,
-            index_path,
-            &diff.path,
-            diff.new_content.as_bytes(),
-        ),
-    }
 }
 
 pub(super) fn add_gitignore_to_index(repo_root: &Path, index_path: &Path) -> GitReplayResult<()> {
@@ -81,16 +51,6 @@ pub(super) fn add_blob_to_index(
             &blob,
             &path,
         ],
-        &[("GIT_INDEX_FILE", index_path)],
-    )?;
-    Ok(())
-}
-
-fn remove_path_from_index(repo_root: &Path, index_path: &Path, path: &str) -> GitReplayResult<()> {
-    let path = validate_mirror_path(path)?;
-    git_cmd::run_env(
-        repo_root,
-        &["update-index", "--force-remove", "--", &path],
         &[("GIT_INDEX_FILE", index_path)],
     )?;
     Ok(())
@@ -140,12 +100,6 @@ pub(super) fn update_head(
 
 pub(super) fn sync_main_index_to_head(repo_root: &Path) -> GitReplayResult<()> {
     git_cmd::run(repo_root, &["read-tree", "--reset", "HEAD"])?;
-    Ok(())
-}
-
-pub(super) fn ensure_git_commit_exists(repo_root: &Path, git_commit: &str) -> GitReplayResult<()> {
-    let commit_object = format!("{git_commit}^{{commit}}");
-    git_cmd::run(repo_root, &["cat-file", "-e", &commit_object])?;
     Ok(())
 }
 

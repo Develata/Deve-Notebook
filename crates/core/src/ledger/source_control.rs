@@ -21,6 +21,11 @@ use crate::source_control::{
 use anyhow::Result;
 use redb::Database;
 
+pub(crate) struct StagedChangeProjection {
+    pub change: ChangeEntry,
+    pub resolved_conflict: bool,
+}
+
 /// 初始化 Source Control 相关的数据库表
 pub fn init_tables(db: &Database) -> Result<()> {
     staging::init_table(db)?;
@@ -55,18 +60,28 @@ pub fn take_staged_entry(db: &Database, path: &str) -> Result<Option<staging::St
 
 /// 获取已暂存的文件列表 (含正确的变更状态)
 pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
+    Ok(list_staged_projection(db)?
+        .into_iter()
+        .map(|entry| entry.change)
+        .collect())
+}
+
+pub(crate) fn list_staged_projection(db: &Database) -> Result<Vec<StagedChangeProjection>> {
     let entries = staging::list_staged_entries(db)?;
     Ok(entries
         .into_iter()
-        .map(|(path, entry)| ChangeEntry {
-            path,
-            renamed_from: entry.renamed_from,
-            doc_id: entry.doc_id,
-            status: entry.status,
-            has_conflict: entry.has_conflict,
-            domain: ChangeDomain::Staged,
-            base_seq: None,
-            target_seq: None,
+        .map(|(path, entry)| StagedChangeProjection {
+            resolved_conflict: entry.resolved_conflict,
+            change: ChangeEntry {
+                path,
+                renamed_from: entry.renamed_from,
+                doc_id: entry.doc_id,
+                status: entry.status,
+                has_conflict: entry.has_conflict,
+                domain: ChangeDomain::Staged,
+                base_seq: None,
+                target_seq: None,
+            },
         })
         .collect())
 }

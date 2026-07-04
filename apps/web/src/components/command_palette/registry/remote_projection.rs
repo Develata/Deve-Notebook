@@ -22,56 +22,54 @@ pub(super) fn remote_projection_commands(
     let enabled_when = (t::command_palette::remote_projection_backend_intent)(locale);
     let group = (t::command_palette::group_remote_projection)(locale);
     let session = use_context::<SessionClient>();
+    let context = RemoteProjectionCommandContext {
+        enabled_when,
+        group,
+        set_show,
+        set_notice,
+        sidebar_control,
+        session,
+    };
     vec![
         remote_projection_command(
             "webdav:push",
             (t::command_palette::webdav_push)(locale),
             RemoteProjectionProvider::WebDav,
             RemoteProjectionDirection::Push,
-            enabled_when,
-            group,
-            set_show,
-            set_notice,
-            sidebar_control,
-            session.clone(),
+            context.clone(),
         ),
         remote_projection_command(
             "webdav:pull",
             (t::command_palette::webdav_pull)(locale),
             RemoteProjectionProvider::WebDav,
             RemoteProjectionDirection::Pull,
-            enabled_when,
-            group,
-            set_show,
-            set_notice,
-            sidebar_control,
-            session.clone(),
+            context.clone(),
         ),
         remote_projection_command(
             "s3:push",
             (t::command_palette::s3_push)(locale),
             RemoteProjectionProvider::S3,
             RemoteProjectionDirection::Push,
-            enabled_when,
-            group,
-            set_show,
-            set_notice,
-            sidebar_control,
-            session.clone(),
+            context.clone(),
         ),
         remote_projection_command(
             "s3:pull",
             (t::command_palette::s3_pull)(locale),
             RemoteProjectionProvider::S3,
             RemoteProjectionDirection::Pull,
-            enabled_when,
-            group,
-            set_show,
-            set_notice,
-            sidebar_control,
-            session.clone(),
+            context,
         ),
     ]
+}
+
+#[derive(Clone)]
+struct RemoteProjectionCommandContext {
+    enabled_when: &'static str,
+    group: &'static str,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+    session: Option<SessionClient>,
 }
 
 fn remote_projection_command(
@@ -79,16 +77,18 @@ fn remote_projection_command(
     title: &'static str,
     provider: RemoteProjectionProvider,
     direction: RemoteProjectionDirection,
-    enabled_when: &'static str,
-    group: &'static str,
-    set_show: WriteSignal<bool>,
-    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
-    sidebar_control: Option<SidebarControl>,
-    session: Option<SessionClient>,
+    context: RemoteProjectionCommandContext,
 ) -> Command {
+    let group = context.group;
+    let enabled_when = context.enabled_when;
     Command::available(id, title, move || {
-        send_remote_projection_transport_intent(session.as_ref(), set_notice, provider, direction);
-        show_source_control_surface(sidebar_control, set_show);
+        send_remote_projection_transport_intent(
+            context.session.as_ref(),
+            context.set_notice,
+            provider,
+            direction,
+        );
+        show_source_control_surface(context.sidebar_control, context.set_show);
     })
     .with_group(group)
     .with_enabled_when(enabled_when)

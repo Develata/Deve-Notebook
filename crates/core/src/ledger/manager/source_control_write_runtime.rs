@@ -123,15 +123,10 @@ impl<'a> SourceControlWriteRuntime<'a> {
                     }
                 }
             }
-            let confirmed = ledger_dirty::list_confirmed(db)?;
-            for entry in &selected {
-                ensure_pending_entry_stageable(entry)?;
-                ensure_pending_entry_not_confirmed_overlap(entry, &confirmed)?;
-            }
             for mut entry in selected {
                 pending_fs::remove(db, &entry.path)?;
                 entry.has_conflict = false;
-                source_control::stage_pending_entry(db, &entry)?;
+                staging::stage_resolved_pending_entry(db, &entry)?;
             }
             Ok(())
         })

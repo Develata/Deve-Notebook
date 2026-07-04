@@ -43,9 +43,22 @@ impl<'a> CommitRuntime<'a> {
         if message.is_empty() {
             anyhow::bail!("source control commit requires a non-empty message");
         }
-        let confirmed = self
+        let staged = self
             .manager
-            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+            .run_on_local_repo(repo_name, staging::list_staged_entries)?;
+        let has_resolved_conflict_staged = staged.iter().any(|(_, entry)| entry.resolved_conflict);
+        if has_resolved_conflict_staged && !staged.iter().all(|(_, entry)| entry.resolved_conflict)
+        {
+            anyhow::bail!(
+                "Cannot commit mixed resolved-conflict and ordinary external staged changes"
+            );
+        }
+        let confirmed = if staged.is_empty() || !has_resolved_conflict_staged {
+            self.manager
+                .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?
+        } else {
+            self.apply_external_changes_in_local_repo(repo_name)?
+        };
         if confirmed.is_empty() {
             anyhow::bail!("Nothing to commit: confirmed ledger changes are empty");
         }
@@ -135,6 +148,9 @@ fn ensure_external_targets_do_not_overlap_confirmed(
     confirmed: &[ChangeEntry],
 ) -> Result<()> {
     for target in targets {
+        if target.allow_confirmed_overlap {
+            continue;
+        }
         if external_overlap::fields_overlap_any_confirmed(
             target.doc_id,
             &target.path,

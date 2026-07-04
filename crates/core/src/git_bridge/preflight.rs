@@ -130,7 +130,7 @@ pub(super) fn expected_mirror_paths(
     Ok(paths)
 }
 
-fn map_commit_diff_error(err: source_control::CommitDiffError) -> GitPreflightError {
+pub(super) fn map_commit_diff_error(err: source_control::CommitDiffError) -> GitPreflightError {
     match err {
         source_control::CommitDiffError::CommitTable { action, message } => {
             GitPreflightError::CommitTable { action, message }

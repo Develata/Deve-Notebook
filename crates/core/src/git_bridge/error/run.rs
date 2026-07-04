@@ -4,7 +4,7 @@
 
 use super::{
     GitMirrorCommitError, GitMirrorStatusError, GitMirrorStoreError, GitPreflightError,
-    GitProjectionReplayError, GitReplayPlanError, GitSnapshotBootstrapError,
+    GitSnapshotBootstrapError,
 };
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -28,8 +28,6 @@ pub enum GitMirrorRunError {
     CommitDiffStorage { message: String },
     #[error("Git mirror executor failed to create temporary Git mirror index: {message}")]
     TempIndex { message: String },
-    #[error("Git mirror executor failed to read parent Git mirror record {parent_id}: {message}")]
-    ParentRecordRead { parent_id: String, message: String },
     #[error(transparent)]
     Store(#[from] GitMirrorStoreError),
 }
@@ -49,28 +47,10 @@ impl GitMirrorRunFailure {
     pub(in crate::git_bridge) fn from_commit_error(err: GitMirrorCommitError) -> Self {
         match err {
             GitMirrorCommitError::GitPreflight(err) => Self::from_preflight_error(err),
-            other => Self::OutOfSync(other.to_string()),
-        }
-    }
-
-    pub(in crate::git_bridge) fn from_replay_plan_error(err: GitReplayPlanError) -> Self {
-        match err {
-            GitReplayPlanError::GitPreflight(err) => Self::from_preflight_error(err),
-            GitReplayPlanError::ParentRecordRead { parent_id, message } => {
-                Self::Propagate(GitMirrorRunError::ParentRecordRead { parent_id, message })
+            GitMirrorCommitError::TempIndex { message } => {
+                Self::Propagate(GitMirrorRunError::TempIndex { message })
             }
             other => Self::OutOfSync(other.to_string()),
-        }
-    }
-
-    pub(in crate::git_bridge) fn from_projection_replay_error(
-        err: GitProjectionReplayError,
-    ) -> Self {
-        match err {
-            GitProjectionReplayError::ProjectionDiffStorage { message, .. } => {
-                Self::Propagate(GitMirrorRunError::CommitDiffStorage { message })
-            }
-            other => Self::OutOfSync(format!("Git mirror projection replay failed: {other}")),
         }
     }
 

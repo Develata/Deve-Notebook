@@ -27,7 +27,9 @@ use self::session::ConnectedSessionSignals;
 use super::ConnectionStatus;
 use super::auth_probe::{AuthProbe, probe_auth_status_with_http_base};
 use super::backoff::BackoffStrategy;
-use super::connection_role::{fetch_node_role, fetch_node_role_for_http_base};
+use super::connection_role::{
+    NodeRoleProbeContext, fetch_node_role, fetch_node_role_for_http_base,
+};
 use super::connection_urls::{build_same_origin_ws_url, build_ws_urls_for_native_state};
 use super::native_bootstrap::read_native_bootstrap;
 use super::native_http::preferred_http_base;
@@ -120,25 +122,33 @@ pub fn spawn_connection_manager(
                         spawn_local(fetch_node_role_for_http_base(
                             signals.lifecycle.clone(),
                             http_base,
-                            signals.set_node_role,
-                            signals.set_source_control_authority,
-                            signals.set_host_file_copy_absolute_path,
-                            signals.set_host_file_reveal_in_system_explorer,
-                            signals.set_node_role_probe_failed,
-                            signals.current_connection_epoch,
-                            connection_epoch,
+                            NodeRoleProbeContext {
+                                set_node_role: signals.set_node_role,
+                                set_source_control_authority: signals.set_source_control_authority,
+                                set_host_file_copy_absolute_path: signals
+                                    .set_host_file_copy_absolute_path,
+                                set_host_file_reveal_in_system_explorer: signals
+                                    .set_host_file_reveal_in_system_explorer,
+                                set_node_role_probe_failed: signals.set_node_role_probe_failed,
+                                current_connection_epoch: signals.current_connection_epoch,
+                                probe_connection_epoch: connection_epoch,
+                            },
                         ));
                     } else {
                         spawn_local(fetch_node_role(
                             signals.lifecycle.clone(),
                             url.clone(),
-                            signals.set_node_role,
-                            signals.set_source_control_authority,
-                            signals.set_host_file_copy_absolute_path,
-                            signals.set_host_file_reveal_in_system_explorer,
-                            signals.set_node_role_probe_failed,
-                            signals.current_connection_epoch,
-                            connection_epoch,
+                            NodeRoleProbeContext {
+                                set_node_role: signals.set_node_role,
+                                set_source_control_authority: signals.set_source_control_authority,
+                                set_host_file_copy_absolute_path: signals
+                                    .set_host_file_copy_absolute_path,
+                                set_host_file_reveal_in_system_explorer: signals
+                                    .set_host_file_reveal_in_system_explorer,
+                                set_node_role_probe_failed: signals.set_node_role_probe_failed,
+                                current_connection_epoch: signals.current_connection_epoch,
+                                probe_connection_epoch: connection_epoch,
+                            },
                         ));
                     }
                     backoff.reset();

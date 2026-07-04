@@ -20,41 +20,28 @@ const NODE_ROLE_PROBE_RETRIES: usize = 3;
 const NODE_ROLE_PROBE_RETRY_DELAY_MS: u32 = 150;
 const NODE_ROLE_PROBE_TIMEOUT_MS: u32 = 1_500;
 
+pub(super) struct NodeRoleProbeContext {
+    pub set_node_role: WriteSignal<String>,
+    pub set_source_control_authority: WriteSignal<String>,
+    pub set_host_file_copy_absolute_path: WriteSignal<bool>,
+    pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    pub set_node_role_probe_failed: WriteSignal<bool>,
+    pub current_connection_epoch: ReadSignal<u64>,
+    pub probe_connection_epoch: u64,
+}
+
 pub(super) async fn fetch_node_role(
     lifecycle: ConnectionLifecycle,
     ws_url: String,
-    set_node_role: WriteSignal<String>,
-    set_source_control_authority: WriteSignal<String>,
-    set_host_file_copy_absolute_path: WriteSignal<bool>,
-    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
-    set_node_role_probe_failed: WriteSignal<bool>,
-    current_connection_epoch: ReadSignal<u64>,
-    probe_connection_epoch: u64,
+    context: NodeRoleProbeContext,
 ) {
-    fetch_node_role_for_http_base(
-        lifecycle,
-        http_base_from_ws_url(&ws_url),
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_node_role_probe_failed,
-        current_connection_epoch,
-        probe_connection_epoch,
-    )
-    .await;
+    fetch_node_role_for_http_base(lifecycle, http_base_from_ws_url(&ws_url), context).await;
 }
 
 pub(super) async fn fetch_node_role_for_http_base(
     lifecycle: ConnectionLifecycle,
     http_base: String,
-    set_node_role: WriteSignal<String>,
-    set_source_control_authority: WriteSignal<String>,
-    set_host_file_copy_absolute_path: WriteSignal<bool>,
-    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
-    set_node_role_probe_failed: WriteSignal<bool>,
-    current_connection_epoch: ReadSignal<u64>,
-    probe_connection_epoch: u64,
+    context: NodeRoleProbeContext,
 ) {
     let url = node_role_url_for_http_base(&http_base);
     let summary = probe_node_role_summary_with_retries(&url, || lifecycle.is_active()).await;
@@ -63,30 +50,11 @@ pub(super) async fn fetch_node_role_for_http_base(
     }
 
     if let Some(summary) = summary {
-        apply_node_role_probe_success(
-            &lifecycle,
-            set_node_role,
-            set_source_control_authority,
-            set_host_file_copy_absolute_path,
-            set_host_file_reveal_in_system_explorer,
-            set_node_role_probe_failed,
-            current_connection_epoch,
-            probe_connection_epoch,
-            summary,
-        );
+        apply_node_role_probe_success(&lifecycle, context, summary);
         return;
     }
     leptos::logging::error!("Node role probe failed after retries: {}", url);
-    apply_node_role_probe_failure(
-        &lifecycle,
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_node_role_probe_failed,
-        current_connection_epoch,
-        probe_connection_epoch,
-    );
+    apply_node_role_probe_failure(&lifecycle, context);
 }
 
 pub(crate) async fn probe_node_role_for_http_base(
@@ -136,52 +104,40 @@ async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Valu
 
 fn apply_node_role_probe_success(
     lifecycle: &ConnectionLifecycle,
-    set_node_role: WriteSignal<String>,
-    set_source_control_authority: WriteSignal<String>,
-    set_host_file_copy_absolute_path: WriteSignal<bool>,
-    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
-    set_node_role_probe_failed: WriteSignal<bool>,
-    current_connection_epoch: ReadSignal<u64>,
-    probe_connection_epoch: u64,
+    context: NodeRoleProbeContext,
     result: NodeRoleProbeResult,
 ) -> bool {
-    if lifecycle.try_get(current_connection_epoch) != Some(probe_connection_epoch) {
+    if lifecycle.try_get(context.current_connection_epoch) != Some(context.probe_connection_epoch) {
         return false;
     }
-    lifecycle.try_set(set_node_role, result.summary)
+    lifecycle.try_set(context.set_node_role, result.summary)
         && lifecycle.try_set(
-            set_source_control_authority,
+            context.set_source_control_authority,
             result.source_control_authority,
         )
         && lifecycle.try_set(
-            set_host_file_copy_absolute_path,
+            context.set_host_file_copy_absolute_path,
             result.host_file_copy_absolute_path,
         )
         && lifecycle.try_set(
-            set_host_file_reveal_in_system_explorer,
+            context.set_host_file_reveal_in_system_explorer,
             result.host_file_reveal_in_system_explorer,
         )
-        && lifecycle.try_set(set_node_role_probe_failed, false)
+        && lifecycle.try_set(context.set_node_role_probe_failed, false)
 }
 
 fn apply_node_role_probe_failure(
     lifecycle: &ConnectionLifecycle,
-    set_node_role: WriteSignal<String>,
-    set_source_control_authority: WriteSignal<String>,
-    set_host_file_copy_absolute_path: WriteSignal<bool>,
-    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
-    set_node_role_probe_failed: WriteSignal<bool>,
-    current_connection_epoch: ReadSignal<u64>,
-    probe_connection_epoch: u64,
+    context: NodeRoleProbeContext,
 ) -> bool {
-    if lifecycle.try_get(current_connection_epoch) != Some(probe_connection_epoch) {
+    if lifecycle.try_get(context.current_connection_epoch) != Some(context.probe_connection_epoch) {
         return false;
     }
-    lifecycle.try_set(set_node_role, String::new())
-        && lifecycle.try_set(set_source_control_authority, "unknown".to_string())
-        && lifecycle.try_set(set_host_file_copy_absolute_path, false)
-        && lifecycle.try_set(set_host_file_reveal_in_system_explorer, false)
-        && lifecycle.try_set(set_node_role_probe_failed, true)
+    lifecycle.try_set(context.set_node_role, String::new())
+        && lifecycle.try_set(context.set_source_control_authority, "unknown".to_string())
+        && lifecycle.try_set(context.set_host_file_copy_absolute_path, false)
+        && lifecycle.try_set(context.set_host_file_reveal_in_system_explorer, false)
+        && lifecycle.try_set(context.set_node_role_probe_failed, true)
 }
 
 #[cfg(test)]

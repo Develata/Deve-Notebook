@@ -145,6 +145,9 @@
     - run: cargo test -p deve_cli ngit_import_export_push_resolved_publish_roundtrip -- --nocapture
     - run: cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_ngit_only -- --nocapture
+    - run: cargo test -p deve_core run_pending_mirror_commits_terminal_projection_for_multiple_queued_records -- --nocapture
+    - run: cargo test -p deve_core run_pending_mirror_rejects_terminal_projection_workspace_content_mismatch -- --nocapture
+    - run: cargo test -p deve_core run_pending_mirror_creates_terminal_commit_instead_of_reusing_unmapped_head -- --nocapture
     - run: cargo test -p deve_cli http_source_control_commit_always_queues_git_main_mirror -- --nocapture
     - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
     - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture

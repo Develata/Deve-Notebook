@@ -89,47 +89,6 @@ fn git_replay_error_preserves_legacy_messages() {
 }
 
 #[test]
-fn git_replay_plan_error_preserves_legacy_messages() {
-    assert_eq!(
-        super::GitReplayPlanError::NonContiguousCommitChain {
-            commit_id: "c2".into(),
-            parent: Some("old".into()),
-            expected: "c1".into(),
-        }
-        .to_string(),
-        "queued Git mirror records are not a contiguous Deve commit chain: c2 parent is Some(\"old\"), expected c1"
-    );
-    assert_eq!(
-        super::GitReplayPlanError::HeadMismatch {
-            parent_id: "p1".into(),
-            head: Some("abc".into()),
-            expected: "def".into(),
-        }
-        .to_string(),
-        "Git HEAD does not match mirrored parent p1: head=Some(\"abc\") expected=def"
-    );
-}
-
-#[test]
-fn git_projection_replay_error_preserves_legacy_messages() {
-    assert_eq!(
-        super::GitProjectionReplayError::ProjectionDiff {
-            commit_id: "c1".into(),
-            message: "table missing".into(),
-        }
-        .to_string(),
-        "failed to compute projection diff for c1: table missing"
-    );
-    assert_eq!(
-        super::GitProjectionReplayError::EmptyProjectionDiff {
-            commit_id: "c1".into(),
-        }
-        .to_string(),
-        "Deve commit c1 has no projection diff to mirror"
-    );
-}
-
-#[test]
 fn git_mirror_commit_error_preserves_legacy_messages() {
     assert_eq!(
         super::GitMirrorCommitError::NoStagedChanges.to_string(),

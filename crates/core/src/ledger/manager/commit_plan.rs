@@ -18,6 +18,7 @@ pub(super) struct CommitTarget {
     pub doc_id: Option<DocId>,
     pub delete_only: bool,
     pub has_rename_evidence: bool,
+    pub allow_confirmed_overlap: bool,
 }
 
 pub(super) fn build_targets(staged: Vec<(String, StagedEntry)>) -> Vec<CommitTarget> {
@@ -47,6 +48,7 @@ fn resolve_group(entries: Vec<(String, StagedEntry)>) -> CommitTarget {
     let has_delete_side = entries
         .iter()
         .any(|(_, entry)| entry.status == ChangeStatus::Deleted);
+    let allow_confirmed_overlap = entries.iter().any(|(_, entry)| entry.resolved_conflict);
     CommitTarget {
         path: path.clone(),
         renamed_from: entry.renamed_from.clone(),
@@ -55,6 +57,7 @@ fn resolve_group(entries: Vec<(String, StagedEntry)>) -> CommitTarget {
             .iter()
             .all(|(_, entry)| entry.status == ChangeStatus::Deleted),
         has_rename_evidence: has_delete_side || entry.renamed_from.is_some(),
+        allow_confirmed_overlap,
     }
 }
 
@@ -70,6 +73,7 @@ mod tests {
             status,
             content_hash: String::new(),
             has_conflict: false,
+            resolved_conflict: false,
         }
     }
 
@@ -91,5 +95,17 @@ mod tests {
         assert_eq!(targets[0].renamed_from, None);
         assert!(!targets[0].delete_only);
         assert!(targets[0].has_rename_evidence);
+    }
+
+    #[test]
+    fn marks_resolved_conflict_targets_for_confirmed_overlap_override() {
+        let doc_id = DocId::new();
+        let mut staged = entry(Some(doc_id), ChangeStatus::Modified);
+        staged.resolved_conflict = true;
+
+        let targets = build_targets(vec![("notes/a.md".into(), staged)]);
+
+        assert_eq!(targets.len(), 1);
+        assert!(targets[0].allow_confirmed_overlap);
     }
 }

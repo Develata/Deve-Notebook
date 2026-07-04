@@ -5,7 +5,27 @@
 //!
 
 use super::super::*;
-use leptos::prelude::{GetUntracked, Set, signal};
+use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal, signal};
+
+fn probe_context(
+    set_node_role: WriteSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    set_node_role_probe_failed: WriteSignal<bool>,
+    current_connection_epoch: ReadSignal<u64>,
+    probe_connection_epoch: u64,
+) -> NodeRoleProbeContext {
+    NodeRoleProbeContext {
+        set_node_role,
+        set_source_control_authority,
+        set_host_file_copy_absolute_path,
+        set_host_file_reveal_in_system_explorer,
+        set_node_role_probe_failed,
+        current_connection_epoch,
+        probe_connection_epoch,
+    }
+}
 
 #[test]
 fn stale_node_role_probe_results_do_not_mutate_current_connection() {
@@ -22,13 +42,15 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
 
     assert!(!apply_node_role_probe_failure(
         &lifecycle,
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_probe_failed,
-        connection_epoch,
-        1,
+        probe_context(
+            set_node_role,
+            set_source_control_authority,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
+            set_probe_failed,
+            connection_epoch,
+            1,
+        ),
     ));
     assert_eq!(node_role.get_untracked(), "main");
     assert_eq!(source_control_authority.get_untracked(), "ngit");
@@ -38,13 +60,15 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
 
     assert!(apply_node_role_probe_failure(
         &lifecycle,
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_probe_failed,
-        connection_epoch,
-        2,
+        probe_context(
+            set_node_role,
+            set_source_control_authority,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
+            set_probe_failed,
+            connection_epoch,
+            2,
+        ),
     ));
     assert_eq!(node_role.get_untracked(), "");
     assert_eq!(source_control_authority.get_untracked(), "unknown");
@@ -55,13 +79,15 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     set_connection_epoch.set(3);
     assert!(!apply_node_role_probe_success(
         &lifecycle,
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_probe_failed,
-        connection_epoch,
-        2,
+        probe_context(
+            set_node_role,
+            set_source_control_authority,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
+            set_probe_failed,
+            connection_epoch,
+            2,
+        ),
         NodeRoleProbeResult {
             summary: "proxy".to_string(),
             source_control_authority: "ngit".to_string(),
@@ -77,13 +103,15 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
 
     assert!(apply_node_role_probe_success(
         &lifecycle,
-        set_node_role,
-        set_source_control_authority,
-        set_host_file_copy_absolute_path,
-        set_host_file_reveal_in_system_explorer,
-        set_probe_failed,
-        connection_epoch,
-        3,
+        probe_context(
+            set_node_role,
+            set_source_control_authority,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
+            set_probe_failed,
+            connection_epoch,
+            3,
+        ),
         NodeRoleProbeResult {
             summary: "main".to_string(),
             source_control_authority: "ngit".to_string(),

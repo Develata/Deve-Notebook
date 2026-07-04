@@ -15,12 +15,11 @@ mod preflight;
 mod push;
 mod repair_action;
 mod repair_review;
-mod replay;
 mod replay_git;
-mod replay_plan;
 mod replay_snapshot;
 mod status;
 mod store;
+mod terminal_mirror;
 
 pub use error::{
     GitImportApplyError, GitImportApplyResult, GitImportPlanError, GitImportPlanResult,

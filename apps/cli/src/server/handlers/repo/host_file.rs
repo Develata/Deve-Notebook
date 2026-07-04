@@ -241,17 +241,17 @@ struct RevealCommandSpec {
 fn reveal_command(target: &Path) -> Result<RevealCommandSpec, HostFileError> {
     #[cfg(target_os = "windows")]
     {
-        return Ok(RevealCommandSpec {
+        Ok(RevealCommandSpec {
             program: "explorer.exe",
             args: vec![format!("/select,{}", display_absolute_path(target))],
-        });
+        })
     }
     #[cfg(target_os = "macos")]
     {
-        return Ok(RevealCommandSpec {
+        Ok(RevealCommandSpec {
             program: "open",
             args: vec!["-R".into(), display_absolute_path(target)],
-        });
+        })
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
@@ -262,10 +262,10 @@ fn reveal_command(target: &Path) -> Result<RevealCommandSpec, HostFileError> {
                 HostFileError::conflict("host file target has no parent directory")
             })?
         };
-        return Ok(RevealCommandSpec {
+        Ok(RevealCommandSpec {
             program: "xdg-open",
             args: vec![display_absolute_path(open_target)],
-        });
+        })
     }
     #[cfg(not(any(unix, target_os = "windows")))]
     {

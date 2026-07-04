@@ -13,12 +13,12 @@ use super::preflight::{
     ensure_git_changes_match_deve_commit, ensure_git_worktree, ensure_notegit_is_not_tracked,
     ensure_source_control_clean,
 };
-use super::replay::run_projection_replay;
 use super::replay_snapshot::run_snapshot_bootstrap;
 use super::status::{GitMirrorState, inspect_repo_root};
 use super::store::{
     GitMirrorCommitState, GitMirrorRecord, list_records, mark_committed, mark_out_of_sync,
 };
+use super::terminal_mirror::commit_terminal_worktree;
 use crate::models::RepoId;
 use redb::Database;
 use std::path::Path;
@@ -61,7 +61,7 @@ pub fn run_pending_mirror(
     }
 
     if candidates.len() > 1 {
-        return run_projection_replay(db, repo_root, candidates);
+        return run_terminal_candidate_batch(db, repo_root, candidates);
     }
 
     run_one_candidate(db, repo_root, &candidates[0])
@@ -134,6 +134,34 @@ fn mark_all_out_of_sync(
         let updated = mark_out_of_sync(db, &record.deve_commit_id, reason.clone())?;
         report.out_of_sync += 1;
         report.records.push(updated);
+    }
+    Ok(report)
+}
+
+fn run_terminal_candidate_batch(
+    db: &Database,
+    repo_root: &Path,
+    records: Vec<GitMirrorRecord>,
+) -> GitMirrorRunResult<GitMirrorRunReport> {
+    let mut report = GitMirrorRunReport {
+        attempted: records.len(),
+        ..GitMirrorRunReport::default()
+    };
+    match commit_terminal_worktree(db, repo_root, &records) {
+        Ok(git_commit_id) => {
+            for record in records {
+                let updated = mark_committed(db, &record.deve_commit_id, &git_commit_id)?;
+                report.committed += 1;
+                report.records.push(updated);
+            }
+        }
+        Err(err) => {
+            let reason = match GitMirrorRunFailure::from_commit_error(err) {
+                GitMirrorRunFailure::OutOfSync(reason) => reason,
+                GitMirrorRunFailure::Propagate(err) => return Err(err),
+            };
+            return mark_all_out_of_sync(db, records, reason);
+        }
     }
     Ok(report)
 }

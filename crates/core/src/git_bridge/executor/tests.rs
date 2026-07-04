@@ -4,7 +4,7 @@ use crate::git_bridge::{
 };
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
-use crate::source_control::{ChangeStatus, CommitInfo, commits};
+use crate::source_control::{ChangeStatus, CommitInfo};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
@@ -49,6 +49,17 @@ fn git(path: &Path, args: &[&str]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+fn git_success(path: &Path, args: &[&str]) -> bool {
+    Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .args(args)
+        .output()
+        .expect("run git")
+        .status
+        .success()
 }
 
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
@@ -188,7 +199,34 @@ fn run_pending_mirror_commits_single_queued_record() {
 }
 
 #[test]
-fn run_pending_mirror_replays_multiple_queued_records() {
+fn run_pending_mirror_propagates_single_commit_table_error_without_marking_record() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo_root = dir.path().join("repo");
+    init_git_repo(&repo_root);
+    std::fs::write(repo_root.join("note.md"), "hello\n").expect("write note");
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    pending_fs::init_table(&db).expect("pending table");
+    crate::source_control::staging::init_table(&db).expect("staged table");
+    let repo_id = uuid::Uuid::new_v4();
+    queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue");
+
+    let err = run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default())
+        .expect_err("missing commit table should propagate");
+
+    assert!(
+        matches!(err, GitMirrorRunError::CommitTable { action: "open", .. }),
+        "{err:?}"
+    );
+    let record = get_record(&db, "deve-1")
+        .expect("get")
+        .expect("record remains queued");
+    assert_eq!(record.state, GitMirrorCommitState::Queued, "{record:?}");
+    assert_eq!(record.attempts, 0, "{record:?}");
+    assert!(record.last_error.is_none(), "{record:?}");
+}
+
+#[test]
+fn run_pending_mirror_commits_terminal_projection_for_multiple_queued_records() {
     let (_dir, repo, repo_root) = new_repo();
     let first = commit_deve_file(&repo, "note.md", "hello\n");
     let second = commit_deve_modification(&repo, "note.md", "hello world\n");
@@ -208,18 +246,93 @@ fn run_pending_mirror_replays_multiple_queued_records() {
     assert_eq!(first_record.state, GitMirrorCommitState::Committed);
     assert_eq!(second_record.state, GitMirrorCommitState::Committed);
     let first_git = first_record.git_commit_id.expect("first git commit");
-    let first_spec = format!("{first_git}:note.md");
-    assert_eq!(git(&repo_root, &["show", &first_spec]), "hello\n");
+    let second_git = second_record.git_commit_id.expect("second git commit");
+    assert_eq!(first_git, second_git);
+    assert_eq!(git(&repo_root, &["show", "HEAD:note.md"]), "hello world\n");
+    assert_eq!(
+        git(&repo_root, &["rev-list", "--count", "HEAD"]).trim(),
+        "1"
+    );
+    let body = git(&repo_root, &["log", "-1", "--pretty=%B"]);
+    assert!(body.contains(&format!("Deve-Commit-Id: {}", second.id)));
+    assert!(body.contains(&format!("Deve-Ledger-Seq: {}", second.ledger_seq)));
+    assert!(!body.contains(&format!("Deve-Commit-Id: {}", first.id)));
+    assert_eq!(git(&repo_root, &["status", "--porcelain"]), "");
+}
+
+#[test]
+fn run_pending_mirror_rejects_terminal_projection_workspace_content_mismatch() {
+    let (_dir, repo, repo_root) = new_repo();
+    let first = commit_deve_file(&repo, "note.md", "hello\n");
+    let second = commit_deve_modification(&repo, "note.md", "hello world\n");
+    write_workspace_file(&repo, "note.md", "stale workspace\n");
+
+    let report = run_for_default_repo(&repo, &repo_root);
+
+    assert_eq!(report.attempted, 2);
+    assert_eq!(report.committed, 0);
+    assert_eq!(report.out_of_sync, 2);
+    assert!(!git_success(&repo_root, &["rev-parse", "--verify", "HEAD"]));
+    for id in [first.id.as_str(), second.id.as_str()] {
+        let record = repo
+            .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, id)?))
+            .expect("get")
+            .expect("record");
+        assert_eq!(record.state, GitMirrorCommitState::OutOfSync, "{record:?}");
+        assert!(
+            record
+                .last_error
+                .as_deref()
+                .is_some_and(|error| error.contains("terminal projection mismatch")),
+            "{record:?}"
+        );
+    }
+}
+
+#[test]
+fn run_pending_mirror_creates_terminal_commit_instead_of_reusing_unmapped_head() {
+    let (_dir, repo, repo_root) = new_repo();
+    let first = commit_deve_file(&repo, "note.md", "hello\n");
+    let second = commit_deve_modification(&repo, "note.md", "hello world\n");
+    git(&repo_root, &["add", "-A"]);
+    git(
+        &repo_root,
+        &["commit", "--no-gpg-sign", "-m", "manual git commit"],
+    );
+    let manual_head = git(&repo_root, &["rev-parse", "HEAD"]).trim().to_string();
+
+    let report = run_for_default_repo(&repo, &repo_root);
+
+    assert_eq!(report.attempted, 2);
+    assert_eq!(report.committed, 2);
+    let first_record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &first.id)?))
+        .expect("get first")
+        .expect("first record");
+    let second_record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &second.id)?))
+        .expect("get second")
+        .expect("second record");
+    let terminal_git = second_record.git_commit_id.expect("terminal git commit");
+    assert_eq!(
+        first_record.git_commit_id.as_deref(),
+        Some(terminal_git.as_str())
+    );
+    assert_ne!(terminal_git, manual_head);
+    assert_eq!(git(&repo_root, &["rev-parse", "HEAD"]).trim(), terminal_git);
     assert_eq!(git(&repo_root, &["show", "HEAD:note.md"]), "hello world\n");
     assert_eq!(
         git(&repo_root, &["rev-list", "--count", "HEAD"]).trim(),
         "2"
     );
+    let body = git(&repo_root, &["log", "-1", "--pretty=%B"]);
+    assert!(body.contains(&format!("Deve-Commit-Id: {}", second.id)));
+    assert!(!body.contains("manual git commit"));
     assert_eq!(git(&repo_root, &["status", "--porcelain"]), "");
 }
 
 #[test]
-fn run_pending_mirror_rejects_multiple_queued_records_without_fake_mapping() {
+fn run_pending_mirror_propagates_terminal_commit_table_error_without_marking_records() {
     let dir = tempfile::tempdir().expect("tempdir");
     let repo_root = dir.path().join("repo");
     init_git_repo(&repo_root);
@@ -227,65 +340,12 @@ fn run_pending_mirror_rejects_multiple_queued_records_without_fake_mapping() {
     let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
     pending_fs::init_table(&db).expect("pending table");
     crate::source_control::staging::init_table(&db).expect("staged table");
-    commits::init_table(&db).expect("commits table");
     let repo_id = uuid::Uuid::new_v4();
     queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue first");
     queue_deve_commit(&db, repo_id, &commit("deve-2", 8)).expect("queue second");
-
-    let report =
-        run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default()).expect("run mirror");
-
-    assert_eq!(report.committed, 0);
-    assert_eq!(report.out_of_sync, 2);
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(&repo_root)
-        .args(["rev-list", "--count", "HEAD"])
-        .output()
-        .expect("run git rev-list");
-    assert!(!output.status.success());
-}
-
-#[test]
-fn run_pending_mirror_propagates_single_commit_table_error_without_marking_record() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let repo_root = dir.path().join("repo");
-    init_git_repo(&repo_root);
-    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
-    pending_fs::init_table(&db).expect("pending table");
-    crate::source_control::staging::init_table(&db).expect("staged table");
-    let repo_id = uuid::Uuid::new_v4();
-    queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue");
 
     let err = run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default())
         .expect_err("missing commit table should propagate");
-
-    assert!(
-        matches!(err, GitMirrorRunError::CommitTable { action: "open", .. }),
-        "{err:?}"
-    );
-    let record = get_record(&db, "deve-1")
-        .expect("get")
-        .expect("record remains queued");
-    assert_eq!(record.state, GitMirrorCommitState::Queued);
-    assert_eq!(record.attempts, 0);
-    assert!(record.last_error.is_none(), "{record:?}");
-}
-
-#[test]
-fn run_pending_mirror_propagates_replay_commit_table_error_without_marking_records() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let repo_root = dir.path().join("repo");
-    init_git_repo(&repo_root);
-    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
-    pending_fs::init_table(&db).expect("pending table");
-    crate::source_control::staging::init_table(&db).expect("staged table");
-    let repo_id = uuid::Uuid::new_v4();
-    queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue first");
-    queue_deve_commit(&db, repo_id, &commit("deve-2", 8)).expect("queue second");
-
-    let err = run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default())
-        .expect_err("missing commit table should propagate from replay preflight");
 
     assert!(
         matches!(err, GitMirrorRunError::CommitTable { action: "open", .. }),

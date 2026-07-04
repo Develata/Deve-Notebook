@@ -94,6 +94,7 @@ pub(super) fn commit_deve_file(
         )
     })?;
     repo.stage_pending(path)?;
+    repo.apply_external_changes()?;
     repo.commit_source_control_changes("initial")?;
     Ok(())
 }

@@ -28,9 +28,9 @@ impl<'a> SourceControlReadRuntime<'a> {
 
     pub(crate) fn list_staged_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
         let confirmed = self.list_confirmed_ledger_in_local_repo(repo_name)?;
-        let mut entries = self.list_staged_raw_in_local_repo(repo_name)?;
-        external_overlap::mark_entries_with_confirmed_overlap(&mut entries, &confirmed);
-        Ok(entries)
+        let mut entries = self.list_staged_projection_in_local_repo(repo_name)?;
+        mark_unresolved_staged_entries_with_confirmed_overlap(&mut entries, &confirmed);
+        Ok(entries.into_iter().map(|entry| entry.change).collect())
     }
 
     pub(crate) fn list_pending_fs_in_local_repo(
@@ -53,10 +53,13 @@ impl<'a> SourceControlReadRuntime<'a> {
 
     pub(crate) fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
         let confirmed = self.list_confirmed_ledger_in_local_repo(repo_name)?;
-        let mut staged = self.list_staged_raw_in_local_repo(repo_name)?;
-        external_overlap::mark_entries_with_confirmed_overlap(&mut staged, &confirmed);
-        let staged_keys: HashSet<_> = staged.iter().map(change_identity_key).collect();
-        let mut changes = staged;
+        let mut staged = self.list_staged_projection_in_local_repo(repo_name)?;
+        mark_unresolved_staged_entries_with_confirmed_overlap(&mut staged, &confirmed);
+        let staged_keys: HashSet<_> = staged
+            .iter()
+            .map(|entry| change_identity_key(&entry.change))
+            .collect();
+        let mut changes: Vec<_> = staged.into_iter().map(|entry| entry.change).collect();
         let mut pending = self.list_pending_fs_raw_in_local_repo(repo_name)?;
         external_overlap::mark_entries_with_confirmed_overlap(&mut pending, &confirmed);
         changes.extend(
@@ -68,9 +71,12 @@ impl<'a> SourceControlReadRuntime<'a> {
         Ok(changes)
     }
 
-    fn list_staged_raw_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
+    fn list_staged_projection_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<source_control::StagedChangeProjection>> {
         self.manager
-            .run_on_local_repo(repo_name, source_control::list_staged)
+            .run_on_local_repo(repo_name, source_control::list_staged_projection)
     }
 
     fn list_pending_fs_raw_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
@@ -173,5 +179,24 @@ impl<'a> SourceControlReadRuntime<'a> {
         self.manager.run_on_local_repo(repo_name, |db| {
             crate::source_control::commit_diff::compare_commits(db, commit_a.as_deref(), &commit_b)
         })
+    }
+}
+
+fn mark_unresolved_staged_entries_with_confirmed_overlap(
+    entries: &mut [source_control::StagedChangeProjection],
+    confirmed: &[ChangeEntry],
+) {
+    for entry in entries {
+        if entry.resolved_conflict {
+            continue;
+        }
+        if external_overlap::fields_overlap_any_confirmed(
+            entry.change.doc_id,
+            &entry.change.path,
+            entry.change.renamed_from.as_deref(),
+            confirmed,
+        ) {
+            entry.change.has_conflict = true;
+        }
     }
 }
