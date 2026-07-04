@@ -53,6 +53,30 @@ fn external_changes_section_headers_are_accessible_toggles() {
 }
 
 #[test]
+fn external_changes_view_keeps_source_control_history_graph_out() {
+    let source = include_str!("../external_changes.rs");
+
+    assert!(source.contains(concat!("data-deve-", "external-changes-view")));
+    assert!(!source.contains(concat!("source_control::", "History")));
+    assert!(!source.contains(concat!("source_control::", "Graph")));
+    assert!(!source.contains(concat!("source_control_", "history")));
+    assert!(!source.contains(concat!("source_control_", "graph")));
+    assert!(!source.contains(concat!("data-deve-sc-panel-body=", "\"history\"")));
+    assert!(!source.contains(concat!("data-deve-sc-panel-body=", "\"graph\"")));
+}
+
+#[test]
+fn external_changes_apply_label_is_not_commit() {
+    let source = include_str!("../external_changes.rs");
+
+    assert!(source.contains(concat!("data-deve-", "external-apply")));
+    assert!(source.contains("t::external_changes::apply_to_ledger"));
+    assert!(source.contains("core_for_apply_click.on_apply_to_ledger.run(())"));
+    assert!(!source.contains("t::source_control::commit"));
+    assert!(!source.contains("on_commit"));
+}
+
+#[test]
 fn apply_to_ledger_fails_closed_when_any_external_change_overlaps() {
     let staged = vec![entry("clean.md", false)];
     let unstaged = vec![entry("overlap.md", true)];
