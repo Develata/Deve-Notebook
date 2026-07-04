@@ -4,12 +4,13 @@
 (function () {
   const bridge = window.__deveWebBridge;
   if (!bridge || typeof bridge.registerFallback !== "function") {
-    window.renderChatMath = window.renderChatMath || (() => false);
-    return;
+    throw new Error("web bridge registry unavailable before registering renderChatMath");
   }
 
   bridge.registerFallback("renderChatMath", () => false, {
-    runtime: "rendering_client",
-    boundary: "object-plane-adapter",
+    runtime: "render_projection_runtime",
+    source: "chat_math_bootstrap",
+    authority: "none",
+    role: "chat-math-fallback",
   });
 })();

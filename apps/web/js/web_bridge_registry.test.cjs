@@ -6,6 +6,8 @@ const vm = require("node:vm");
 const root = __dirname;
 const registrySource = fs.readFileSync(path.join(root, "web_bridge_registry.js"), "utf8");
 const editorAdapterSource = fs.readFileSync(path.join(root, "editor_adapter.js"), "utf8");
+const chatMathBootstrapSource = fs.readFileSync(path.join(root, "chat_math_bootstrap.js"), "utf8");
+const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
 const gutterDiffSource = fs.readFileSync(path.join(root, "extensions", "gutter_diff.js"), "utf8");
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 
@@ -66,6 +68,58 @@ assert.equal(
       meta: { runtime: "render_projection_runtime", source: "test" },
     },
   ])
+);
+
+const chatMathRuntimeContext = { window: {} };
+vm.runInNewContext(registrySource, chatMathRuntimeContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(chatMathBootstrapSource, chatMathRuntimeContext, {
+  filename: "chat_math_bootstrap.js",
+});
+vm.runInNewContext(chatMathSource, chatMathRuntimeContext, {
+  filename: "chat_math.js",
+});
+const chatMathEntries = chatMathRuntimeContext.window.__deveWebBridge
+  .describe()
+  .filter((entry) => ["renderChatMath", "__deveChatMath"].includes(entry.name));
+assert.equal(
+  JSON.stringify(chatMathEntries),
+  JSON.stringify([
+    {
+      name: "renderChatMath",
+      meta: {
+        runtime: "render_projection_runtime",
+        source: "chat_math",
+        authority: "none",
+        role: "chat-math-render-pass",
+      },
+    },
+    {
+      name: "__deveChatMath",
+      meta: {
+        runtime: "render_projection_runtime",
+        source: "chat_math",
+        authority: "none",
+        role: "test-support",
+      },
+    },
+  ]),
+  "chat math scripts must preserve registry ownership after ordered loading"
+);
+assert.throws(
+  () => vm.runInNewContext(chatMathBootstrapSource, { window: {} }, {
+    filename: "chat_math_bootstrap.js",
+  }),
+  /web bridge registry unavailable before registering renderChatMath/,
+  "chat math bootstrap must fail closed without the registry"
+);
+assert.throws(
+  () => vm.runInNewContext(chatMathSource, { window: {} }, {
+    filename: "chat_math.js",
+  }),
+  /web bridge registry unavailable before registering chat math/,
+  "chat math must fail closed without the registry"
 );
 
 assert.match(
@@ -130,6 +184,45 @@ assert.doesNotMatch(
   gutterDiffSource,
   /window\.updateGutterDiff\s*=/,
   "gutter diff extension must not bypass the adapter bridge registration"
+);
+
+assert.match(
+  chatMathBootstrapSource,
+  /registerFallback\("renderChatMath"/,
+  "chat math bootstrap fallback must be registered through the bridge registry"
+);
+assert.match(
+  chatMathBootstrapSource,
+  /web bridge registry unavailable before registering renderChatMath/,
+  "chat math bootstrap must fail closed when the bridge registry is missing"
+);
+assert.doesNotMatch(
+  chatMathBootstrapSource,
+  /window\.renderChatMath\s*=/,
+  "chat math bootstrap must not assign renderChatMath directly"
+);
+
+for (const name of ["renderChatMath", "__deveChatMath"]) {
+  assert.match(
+    chatMathSource,
+    new RegExp(`bridge\\.register\\("${name}"`),
+    `${name} must be registered through the browser bridge registry`
+  );
+  assert.doesNotMatch(
+    chatMathSource,
+    new RegExp(`window\\.${name}\\s*=`),
+    `${name} must not be assigned directly by chat_math.js`
+  );
+}
+assert.match(
+  chatMathSource,
+  /web bridge registry unavailable before registering chat math/,
+  "chat math must fail closed when the bridge registry is missing"
+);
+assert.match(
+  chatMathSource,
+  /authority:\s*"none"/,
+  "chat math bridge entries must not claim authority ownership"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");

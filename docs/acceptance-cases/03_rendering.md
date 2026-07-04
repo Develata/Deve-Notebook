@@ -205,6 +205,8 @@
     - cli_assert: index_editor_wrappers_registered_through_bridge true
     - cli_assert: bridge_registry_missing_fails_closed true
     - cli_assert: gutter_diff_extension_does_not_bypass_bridge true
+    - cli_assert: chat_math_globals_registered_through_bridge true
+    - cli_assert: chat_math_missing_registry_fails_closed true
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。

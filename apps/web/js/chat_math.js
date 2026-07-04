@@ -170,15 +170,18 @@
   const bridge = window.__deveWebBridge;
   if (bridge && typeof bridge.register === "function") {
     bridge.register("renderChatMath", renderChatMath, {
-      runtime: "rendering_client",
-      boundary: "object-plane-adapter",
+      runtime: "render_projection_runtime",
+      source: "chat_math",
+      authority: "none",
+      role: "chat-math-render-pass",
     });
     bridge.register("__deveChatMath", { splitMath }, {
-      runtime: "rendering_client",
-      boundary: "test-support",
+      runtime: "render_projection_runtime",
+      source: "chat_math",
+      authority: "none",
+      role: "test-support",
     });
   } else {
-    window.renderChatMath = renderChatMath;
-    window.__deveChatMath = { splitMath };
+    throw new Error("web bridge registry unavailable before registering chat math");
   }
 })();
