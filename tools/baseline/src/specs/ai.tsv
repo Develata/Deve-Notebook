@@ -46,7 +46,7 @@ contains	apps/web/src/components/chat/actions/apply/tests.rs	chat_apply_append_m
 contains	apps/web/src/components/chat/actions/apply/tests.rs	chat_apply_edit_message_carries_current_scope_nonce
 contains	apps/web/src/components/chat/actions/apply.rs	apply_local_programmatic_op
 contains	apps/web/src/components/chat/actions/apply.rs	sync_editor_state_to_rust
-contains	apps/web/js/editor_adapter.js	window.syncEditorStateToRust = syncEditorStateToRust
+contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("syncEditorStateToRust", syncEditorStateToRust
 contains	apps/web/src/components/chat/message_item.rs	chat_apply_label_is_build_only_for_assistant_messages
 contains	apps/web/src/components/chat/message_list.rs	chat_apply_click_is_consumed_only_in_build_mode
 contains	apps/web/src/i18n/write_gate/reasons.rs	file reader is unavailable

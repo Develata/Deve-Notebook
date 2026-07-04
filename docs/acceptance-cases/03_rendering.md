@@ -194,6 +194,18 @@
     - ui_assert: code_menu_empty_state_marker_visible true
     - ui_assert: code_menu_empty_state_uses_i18n_key "noActionsAvailable"
 
+- case_id: RENDER-BRIDGE-001
+  goal: Editor / widget browser globals 必须经 bridge registry 暴露。
+  preconditions:
+    - Web bridge registry 已在 editor adapter 之前加载。
+  steps:
+    - run: node apps/web/js/web_bridge_registry.test.cjs
+  assertions:
+    - cli_assert: editor_adapter_globals_registered_through_bridge true
+    - cli_assert: index_editor_wrappers_registered_through_bridge true
+    - cli_assert: bridge_registry_missing_fails_closed true
+    - cli_assert: gutter_diff_extension_does_not_bypass_bridge true
+
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。
   preconditions:

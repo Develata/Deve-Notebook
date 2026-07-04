@@ -135,25 +135,38 @@
         window.logToOverlay(`Unhandled Rejection: ${event.reason}`, true);
       });
 
+      const registerEditorBridgeGlobal = (name, value, meta = {}) => {
+        const bridge = window.__deveWebBridge;
+        if (!bridge || typeof bridge.register !== "function") {
+          throw new Error(`web bridge registry unavailable before registering ${name}`);
+        }
+        return bridge.register(name, value, {
+          runtime: "render_projection_runtime",
+          source: "index-editor-bootstrap",
+          authority: "none",
+          ...meta,
+        });
+      };
+
       // 1. Synchronous Bridge (Queue Logic only)
       window._editor_queue = [];
       window._pending_editor_actions = [];
       window._cm_loaded = false;
       window._editor_bridge_ready = false;
 
-      window.queueEditorAction = (kind, payload) => {
+      registerEditorBridgeGlobal("queueEditorAction", (kind, payload) => {
         window._pending_editor_actions.push({ kind, payload });
         if (window._pending_editor_actions.length > 256) {
           window._pending_editor_actions.shift();
         }
-      };
+      }, { role: "editor-bootstrap-queue" });
 
-      window.queueEditorMount = (element, onUpdate) => {
+      registerEditorBridgeGlobal("queueEditorMount", (element, onUpdate) => {
         window._editor_queue = [{ element, onUpdate }];
-      };
+      }, { role: "editor-bootstrap-mount-queue" });
 
       // Rust calls this immediately, so we queue it until Modules are loaded
-      window.setupCodeMirror = function (element, onUpdate) {
+      registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate) {
         window.logToOverlay("Rust called setupCodeMirror");
         if (window._cm_loaded && window._realInit) {
           window._realInit(element, onUpdate);
@@ -163,30 +176,36 @@
             window.ensureEditorAdapter();
           }
         }
-      };
+      }, { role: "wasm-editor-mount" });
 
       // Safety Stubs
-      window.applyRemoteContent = (text) => {
+      registerEditorBridgeGlobal("applyRemoteContent", (text) => {
         window.queueEditorAction("content", String(text ?? ""));
-      };
-      window.applyRemoteOp = (opJson) => {
+      }, { role: "wasm-editor-snapshot" });
+      registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
         window.queueEditorAction("op", String(opJson ?? ""));
-      };
-      window.applyRemoteOpsBatch = (opsJson) => {
+      }, { role: "wasm-editor-op" });
+      registerEditorBridgeGlobal("applyRemoteOpsBatch", (opsJson) => {
         return false;
-      };
-      window.getEditorContent = () => "";
-      window.scrollGlobal = () => {};
-      window.updateGutterDiff = () => {};
-      window.setReadOnly = (readOnly) => {
+      }, { role: "wasm-editor-op-batch" });
+      registerEditorBridgeGlobal("getEditorContent", () => "", { role: "wasm-editor-query" });
+      registerEditorBridgeGlobal("scrollGlobal", () => {}, {
+        runtime: "widget_bridge_runtime",
+        role: "wasm-editor-navigation",
+      });
+      registerEditorBridgeGlobal("updateGutterDiff", () => {}, {
+        runtime: "widget_bridge_runtime",
+        role: "wasm-editor-diff-projection",
+      });
+      registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
         window.queueEditorAction("readOnly", !!readOnly);
-      };
-      window.destroyEditor = () => {
+      }, { role: "wasm-editor-readonly" });
+      registerEditorBridgeGlobal("destroyEditor", () => {
         window._editor_bridge_ready = false;
         window._pending_editor_actions = [];
-      };
+      }, { role: "wasm-editor-lifecycle" });
 
-      window.mobileInsertText = (text) => {
+      registerEditorBridgeGlobal("mobileInsertText", (text) => {
         const view = window._debug_view;
         if (!view || typeof text !== "string") return false;
         if (view.state?.readOnly) return false;
@@ -197,9 +216,9 @@
         });
         view.focus();
         return true;
-      };
+      }, { runtime: "widget_bridge_runtime", role: "wasm-editor-mobile-input" });
 
-      window.mobileWrapSelection = (prefix, suffix) => {
+      registerEditorBridgeGlobal("mobileWrapSelection", (prefix, suffix) => {
         const view = window._debug_view;
         if (!view) return false;
         if (view.state?.readOnly) return false;
@@ -215,9 +234,9 @@
         });
         view.focus();
         return true;
-      };
+      }, { runtime: "widget_bridge_runtime", role: "wasm-editor-mobile-input" });
 
-      window.mobileUndo = () => {
+      registerEditorBridgeGlobal("mobileUndo", () => {
         const view = window._debug_view;
         if (!view) return false;
         if (view.state?.readOnly) return false;
@@ -237,9 +256,9 @@
         });
         view.contentDOM.dispatchEvent(evt);
         return true;
-      };
+      }, { runtime: "widget_bridge_runtime", role: "wasm-editor-history" });
 
-      window.mobileRedo = () => {
+      registerEditorBridgeGlobal("mobileRedo", () => {
         const view = window._debug_view;
         if (!view) return false;
         if (view.state?.readOnly) return false;
@@ -260,13 +279,26 @@
         });
         view.contentDOM.dispatchEvent(evt);
         return true;
-      };
+      }, { runtime: "widget_bridge_runtime", role: "wasm-editor-history" });
     </script>
 
     <!-- 3. Module Initialization -->
     <script src="js/init.js"></script>
     <script type="module">
       window.logToOverlay("Module Script Started. Adapter will lazy-load on demand.");
+
+      const registerEditorBridgeGlobal = (name, value, meta = {}) => {
+        const bridge = window.__deveWebBridge;
+        if (!bridge || typeof bridge.register !== "function") {
+          throw new Error(`web bridge registry unavailable before registering ${name}`);
+        }
+        return bridge.register(name, value, {
+          runtime: "render_projection_runtime",
+          source: "index-editor-adapter",
+          authority: "none",
+          ...meta,
+        });
+      };
 
       const attachEditorAdapter = (module) => {
         const {
@@ -329,42 +361,50 @@
           }
         };
 
-        window.applyRemoteContent = (text) => {
+        registerEditorBridgeGlobal("applyRemoteContent", (text) => {
           if (!window._editor_bridge_ready) {
             window.queueEditorAction("content", String(text ?? ""));
             return;
           }
           applyRemoteContent(text);
-        };
-        window.applyRemoteOp = (opJson) => {
+        }, { role: "wasm-editor-snapshot" });
+        registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
           if (!window._editor_bridge_ready) {
             window.queueEditorAction("op", String(opJson ?? ""));
             return;
           }
           rawApplyRemoteOp(opJson);
-        };
-        window.applyRemoteOpsBatch = (opsJson) => {
+        }, { role: "wasm-editor-op" });
+        registerEditorBridgeGlobal("applyRemoteOpsBatch", (opsJson) => {
           if (!window._editor_bridge_ready) {
             return false;
           }
           return rawApplyRemoteOpsBatch(opsJson) === true;
-        };
-        window.getEditorContent = getEditorContent;
-        window.scrollGlobal = scrollGlobal;
-        window.setReadOnly = (readOnly) => {
+        }, { role: "wasm-editor-op-batch" });
+        registerEditorBridgeGlobal("getEditorContent", getEditorContent, { role: "wasm-editor-query" });
+        registerEditorBridgeGlobal("scrollGlobal", scrollGlobal, {
+          runtime: "widget_bridge_runtime",
+          role: "wasm-editor-navigation",
+        });
+        registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
           if (!window._editor_bridge_ready) {
             window.queueEditorAction("readOnly", !!readOnly);
             return;
           }
           rawSetReadOnly(readOnly);
-        };
-        window.destroyEditor = () => {
+        }, { role: "wasm-editor-readonly" });
+        registerEditorBridgeGlobal("destroyEditor", () => {
           window._editor_bridge_ready = false;
           window._pending_editor_actions = [];
           rawDestroyEditor();
-        };
-        window.updateGutterDiff = updateGutterDiff || (() => {});
-        window.getEditorSelection = getEditorSelection || (() => "null");
+        }, { role: "wasm-editor-lifecycle" });
+        registerEditorBridgeGlobal("updateGutterDiff", updateGutterDiff || (() => {}), {
+          runtime: "widget_bridge_runtime",
+          role: "wasm-editor-diff-projection",
+        });
+        registerEditorBridgeGlobal("getEditorSelection", getEditorSelection || (() => "null"), {
+          role: "wasm-editor-selection",
+        });
 
         if (typeof initCodeMirror !== "function") {
           throw new Error(
@@ -397,10 +437,10 @@
           }
         };
 
-        // The adapter bundle assigns `window.setupCodeMirror = initCodeMirror`
-        // at module top-level. Re-route later mounts back through the bridge so
-        // queue replay and readiness state still work after editor remounts.
-        window.setupCodeMirror = (element, onUpdate) => {
+        // The adapter bundle registers a raw mount function at module top-level.
+        // Re-route later mounts through the bootstrap wrapper so queue replay and
+        // readiness state still work after editor remounts.
+        registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate) => {
           window.logToOverlay("Rust called setupCodeMirror");
           if (window._realInit) {
             window._realInit(element, onUpdate);
@@ -410,7 +450,7 @@
           if (window.ensureEditorAdapter) {
             window.ensureEditorAdapter();
           }
-        };
+        }, { role: "wasm-editor-mount" });
 
         window._cm_loaded = true;
 
@@ -425,7 +465,7 @@
         }
       };
 
-      window.ensureEditorAdapter = () => {
+      registerEditorBridgeGlobal("ensureEditorAdapter", () => {
         if (window._cm_loaded) {
           return Promise.resolve();
         }
@@ -460,7 +500,7 @@
           });
 
         return window._adapter_loading;
-      };
+      }, { runtime: "widget_bridge_runtime", role: "editor-adapter-loader" });
 
       window.addEventListener("TrunkApplicationStarted", () => {
         if (window.__DEVE_DEBUG_OVERLAY__) {

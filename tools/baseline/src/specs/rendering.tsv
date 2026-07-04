@@ -91,6 +91,23 @@ contains	apps/web/js/editor_adapter.js	history()
 contains	apps/web/js/editor_adapter.js	historyKeymap
 contains	apps/web/js/editor_adapter.js	export function mobileUndo()
 contains	apps/web/js/editor_adapter.js	export function mobileRedo()
+contains	apps/web/js/editor_adapter.js	function registerBrowserBridgeGlobal(name, value, meta = {})
+contains	apps/web/js/editor_adapter.js	runtime: "render_projection_runtime"
+contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("setupCodeMirror"
+contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("applyRemoteOpsBatch"
+contains	apps/web/index.html	const registerEditorBridgeGlobal = (name, value, meta = {}) =>
+contains	apps/web/index.html	registerEditorBridgeGlobal("setupCodeMirror"
+contains	apps/web/index.html	registerEditorBridgeGlobal("ensureEditorAdapter"
+absent	apps/web/index.html	window.applyRemoteOpsBatch =
+absent	apps/web/index.html	window.setupCodeMirror =
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	run: node apps/web/js/web_bridge_registry.test.cjs
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_globals_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
+contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
+absent	apps/web/js/editor_adapter.js	window.applyRemoteOpsBatch =
+contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-globals: ok
+contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis
+absent	apps/web/js/extensions/gutter_diff.js	window.updateGutterDiff =
 contains	apps/web/js/editor_remote_ops.js	Transaction.addToHistory.of(false)
 contains	apps/web/src/utils/markdown.rs	Options::ENABLE_TABLES
 contains	apps/web/src/utils/markdown.rs	Options::ENABLE_STRIKETHROUGH

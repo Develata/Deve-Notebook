@@ -52,6 +52,23 @@ import {
   setReadOnly,
 } from "./editor_remote_ops.js";
 
+function registerBrowserBridgeGlobal(name, value, meta = {}) {
+  const target = typeof window !== "undefined" ? window : globalThis;
+  const bridge = target.__deveWebBridge;
+  const bridgeMeta = {
+    runtime: "render_projection_runtime",
+    source: "editor_adapter",
+    authority: "none",
+    ...meta,
+  };
+
+  if (bridge && typeof bridge.register === "function") {
+    return bridge.register(name, value, bridgeMeta);
+  }
+
+  throw new Error(`web bridge registry unavailable before registering ${name}`);
+}
+
 // --- 基础设置 (Basic Setup) ---
 function closeBrackets() {
   return [];
@@ -134,7 +151,9 @@ export function initCodeMirror(element, onDelta) {
 
     const view = new EditorView({ state: startState, parent: element });
     ctx.activeView = view;
-    window._debug_view = view;
+    registerBrowserBridgeGlobal("_debug_view", view, {
+      role: "debug-active-editor-view",
+    });
     return view;
   } catch (e) {
     console.error("Init Error:", e);
@@ -196,17 +215,28 @@ export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatc
 export { updateGutterDiff };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
-window.setupCodeMirror = initCodeMirror;
-window.destroyEditor = destroyEditor;
-window.getEditorContent = getEditorContent;
-window.applyRemoteContent = applyRemoteContent;
-window.applyRemoteOp = applyRemoteOp;
-window.applyRemoteOpsBatch = applyRemoteOpsBatch;
-globalThis.applyRemoteOpsBatch = applyRemoteOpsBatch;
-window.syncEditorStateToRust = syncEditorStateToRust;
-window.scrollGlobal = scrollGlobal;
-window.setReadOnly = setReadOnly;
-window.updateGutterDiff = updateGutterDiff;
-window.getEditorSelection = getEditorSelection;
-window.mobileUndo = mobileUndo;
-window.mobileRedo = mobileRedo;
+registerBrowserBridgeGlobal("setupCodeMirror", initCodeMirror, { role: "wasm-editor-mount" });
+registerBrowserBridgeGlobal("destroyEditor", destroyEditor, { role: "wasm-editor-lifecycle" });
+registerBrowserBridgeGlobal("getEditorContent", getEditorContent, { role: "wasm-editor-query" });
+registerBrowserBridgeGlobal("applyRemoteContent", applyRemoteContent, { role: "wasm-editor-snapshot" });
+registerBrowserBridgeGlobal("applyRemoteOp", applyRemoteOp, { role: "wasm-editor-op" });
+registerBrowserBridgeGlobal("applyRemoteOpsBatch", applyRemoteOpsBatch, { role: "wasm-editor-op-batch" });
+registerBrowserBridgeGlobal("syncEditorStateToRust", syncEditorStateToRust, { role: "wasm-editor-sync" });
+registerBrowserBridgeGlobal("scrollGlobal", scrollGlobal, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-navigation",
+});
+registerBrowserBridgeGlobal("setReadOnly", setReadOnly, { role: "wasm-editor-readonly" });
+registerBrowserBridgeGlobal("updateGutterDiff", updateGutterDiff, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-diff-projection",
+});
+registerBrowserBridgeGlobal("getEditorSelection", getEditorSelection, { role: "wasm-editor-selection" });
+registerBrowserBridgeGlobal("mobileUndo", mobileUndo, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-history",
+});
+registerBrowserBridgeGlobal("mobileRedo", mobileRedo, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-history",
+});

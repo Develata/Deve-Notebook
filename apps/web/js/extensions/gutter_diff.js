@@ -77,5 +77,3 @@ export function updateGutterDiff(rangesJson) {
   }
   ctx.activeView.dispatch({ effects: updateGutterDiffEffect.of(parsed) });
 }
-
-window.updateGutterDiff = updateGutterDiff;
