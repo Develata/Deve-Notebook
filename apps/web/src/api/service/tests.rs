@@ -127,7 +127,12 @@ fn mark_unauthorized_resets_stale_node_role_runtime_summary() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
-    ws.complete_foreground_node_role_reprobe("main | git:mirror", "mirror", true, true);
+    ws.complete_foreground_node_role_reprobe(
+        "main | sc:stale-authority",
+        "stale-authority",
+        true,
+        true,
+    );
     ws.mark_writer_ready("repo-a", 7, "web-light-peer");
 
     ws.mark_unauthorized();

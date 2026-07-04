@@ -169,7 +169,8 @@ mod tests {
         let (_msg_queue, set_msg_queue) =
             signal(VecDeque::<(u64, u64, deve_core::protocol::ServerMessage)>::new());
         let (node_role, set_node_role) = signal("main".to_string());
-        let (source_control_authority, set_source_control_authority) = signal("mirror".to_string());
+        let (source_control_authority, set_source_control_authority) =
+            signal("stale-authority".to_string());
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
             signal(true);

@@ -91,7 +91,7 @@ fn command_provider_matches_visible_unavailable_reason() {
 #[test]
 fn command_provider_detail_includes_unavailable_enabled_condition() {
     let reason = "Unavailable: use the CLI";
-    let enabled_when = "CLI-only notice; source_control.authority=off";
+    let enabled_when = "CLI-only notice; source_control.authority=ngit";
     let provider = CommandProvider::new(
         vec![
             unavailable_command("ngit_status", "ngit: Status", reason)
@@ -100,7 +100,7 @@ fn command_provider_detail_includes_unavailable_enabled_condition() {
         Locale::En,
     );
 
-    let results = provider.search(">source_control.authority=off");
+    let results = provider.search(">source_control.authority=ngit");
 
     let detail = results
         .first()

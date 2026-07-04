@@ -19,7 +19,8 @@ fn non_connected_status_resets_node_role_runtime_summary() {
     let (connection_epoch, set_connection_epoch) = signal(1u64);
     let (_endpoint, set_endpoint) = signal("ws://127.0.0.1:3001/ws".to_string());
     let (node_role, set_node_role) = signal("main".to_string());
-    let (source_control_authority, set_source_control_authority) = signal("mirror".to_string());
+    let (source_control_authority, set_source_control_authority) =
+        signal("stale-authority".to_string());
     let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
     let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
         signal(true);
