@@ -7,6 +7,7 @@ import {
   rectangularSelection,
   crosshairCursor,
   lineNumbers,
+  highlightActiveLine,
   highlightActiveLineGutter,
 } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -58,6 +59,7 @@ function closeBrackets() {
 
 const manualBasicSetup = [
   lineNumbers(),
+  highlightActiveLine(),
   highlightActiveLineGutter(),
   highlightSpecialChars(),
   history(),

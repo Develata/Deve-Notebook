@@ -26,6 +26,8 @@ const context = {
 };
 const hybridSourcePath = path.join(__dirname, "hybrid.js");
 const hybridSource = fs.readFileSync(hybridSourcePath, "utf8");
+const editorAdapterPath = path.join(__dirname, "../editor_adapter.js");
+const editorAdapterSource = fs.readFileSync(editorAdapterPath, "utf8");
 const typographyCssPath = path.join(__dirname, "../../style/_typography.css");
 const baseCssPath = path.join(__dirname, "../../style/_base.css");
 const typographyCss = fs.readFileSync(typographyCssPath, "utf8");
@@ -174,6 +176,11 @@ assert.doesNotMatch(
   hybridSource,
   /cm-heading-line/,
   "hybrid plugin must not duplicate the block styling heading line projection"
+);
+assert.match(
+  editorAdapterSource,
+  /\bhighlightActiveLine\s*\(\s*\)/,
+  "editor adapter must emit .cm-activeLine so active source headings keep heading line height"
 );
 
 function cssRule(css, selector) {
