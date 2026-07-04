@@ -8,18 +8,18 @@
 
 mod ai;
 mod core;
-mod git;
 mod keyboard;
 mod metadata;
+mod ngit;
 mod peer;
 mod remote_projection;
 mod source_control;
 
 pub use ai::*;
 pub use core::*;
-pub use git::*;
 pub use keyboard::*;
 pub use metadata::*;
+pub use ngit::*;
 pub use peer::*;
 pub use remote_projection::*;
 pub use source_control::*;

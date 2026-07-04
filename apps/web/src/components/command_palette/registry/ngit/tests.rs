@@ -1,6 +1,6 @@
 use super::{
-    git_export_command, git_import_command, git_mirror_command, git_push_command,
-    git_repair_command, git_status_command, show_git_status_notice_for_viewport,
+    ngit_export_command, ngit_import_command, ngit_mirror_command, ngit_push_command,
+    ngit_repair_command, ngit_status_command, show_ngit_status_notice_for_viewport,
 };
 use crate::api::{ConnectionStatus, WsService};
 use crate::components::activity_bar::SidebarView;
@@ -152,7 +152,7 @@ fn create_commands(set_show: WriteSignal<bool>) -> Memo<Vec<Command>> {
     )
 }
 
-fn git_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
+fn ngit_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
     commands
         .get_untracked()
         .into_iter()
@@ -162,13 +162,13 @@ fn git_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
 }
 
 #[test]
-fn git_import_command_sets_cli_only_notice() {
+fn ngit_import_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_import_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_import_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_import_cli_notice);
@@ -176,13 +176,13 @@ fn git_import_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_status_command_sets_cli_only_notice() {
+fn ngit_status_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_status_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert!(
@@ -195,14 +195,14 @@ fn git_status_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_status_command_routes_mobile_to_source_control_drawer() {
+fn ngit_status_command_routes_mobile_to_source_control_drawer() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(true);
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_status_command(Locale::En, set_show, source_control, sidebar_control);
 
         command.action.run(());
 
@@ -215,7 +215,7 @@ fn git_status_command_routes_mobile_to_source_control_drawer() {
 }
 
 #[test]
-fn git_status_command_clears_stale_cli_notice_on_mobile() {
+fn ngit_status_command_clears_stale_cli_notice_on_mobile() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
@@ -226,7 +226,7 @@ fn git_status_command_clears_stale_cli_notice_on_mobile() {
         let (_, mobile_visible, active_view) = provide_sidebar_control_context(true);
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_status_command(Locale::En, set_show, source_control, sidebar_control);
 
         command.action.run(());
 
@@ -238,7 +238,7 @@ fn git_status_command_clears_stale_cli_notice_on_mobile() {
 }
 
 #[test]
-fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_context() {
+fn ngit_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_context() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
@@ -246,7 +246,7 @@ fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_c
         let (source_control, sidebar_control) = command_contexts();
 
         assert!(sidebar_control.is_none());
-        show_git_status_notice_for_viewport(
+        show_ngit_status_notice_for_viewport(
             source_control,
             sidebar_control,
             use_context::<SourceControlContext>(),
@@ -260,7 +260,7 @@ fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_c
 }
 
 #[test]
-fn git_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
+fn ngit_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
@@ -268,7 +268,7 @@ fn git_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
         let (source_control, sidebar_control) = command_contexts();
 
         assert!(sidebar_control.is_none());
-        show_git_status_notice_for_viewport(
+        show_ngit_status_notice_for_viewport(
             source_control,
             sidebar_control,
             use_context::<SourceControlContext>(),
@@ -283,14 +283,14 @@ fn git_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
 }
 
 #[test]
-fn git_status_command_routes_notice_to_source_control_sidebar_on_desktop() {
+fn ngit_status_command_routes_notice_to_source_control_sidebar_on_desktop() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(false);
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_status_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert_cli_notice_command(command, show, notice, is_git_status_cli_notice);
         assert!(sidebar_visible.get_untracked());
@@ -300,7 +300,7 @@ fn git_status_command_routes_notice_to_source_control_sidebar_on_desktop() {
 }
 
 #[test]
-fn git_status_detail_text_exposes_ngit_authority() {
+fn ngit_status_detail_text_exposes_ngit_authority() {
     let owner = Owner::new();
     owner.with(|| {
         provide_source_control_context();
@@ -324,13 +324,13 @@ fn git_status_detail_text_exposes_ngit_authority() {
 }
 
 #[test]
-fn git_mirror_command_sets_cli_only_notice() {
+fn ngit_mirror_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_mirror_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_mirror_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_mirror_cli_notice);
@@ -338,13 +338,13 @@ fn git_mirror_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_export_command_sets_cli_only_notice() {
+fn ngit_export_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_export_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_export_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_export_cli_notice);
@@ -352,13 +352,13 @@ fn git_export_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_push_command_sets_cli_only_notice() {
+fn ngit_push_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_push_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
@@ -366,14 +366,14 @@ fn git_push_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_push_command_routes_notice_to_source_control_sidebar() {
+fn ngit_push_command_routes_notice_to_source_control_sidebar() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(false);
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_push_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
         assert!(sidebar_visible.get_untracked());
@@ -383,14 +383,14 @@ fn git_push_command_routes_notice_to_source_control_sidebar() {
 }
 
 #[test]
-fn git_push_command_routes_notice_to_mobile_source_control_drawer() {
+fn ngit_push_command_routes_notice_to_mobile_source_control_drawer() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(true);
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_push_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
         assert!(!sidebar_visible.get_untracked());
@@ -400,13 +400,13 @@ fn git_push_command_routes_notice_to_mobile_source_control_drawer() {
 }
 
 #[test]
-fn git_repair_command_sets_cli_only_notice() {
+fn ngit_repair_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
         let (source_control, sidebar_control) = command_contexts();
-        let command = git_repair_command(Locale::En, set_show, source_control, sidebar_control);
+        let command = ngit_repair_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_repair_cli_notice);
@@ -423,7 +423,7 @@ fn command_palette_source_control_authority_reads_session_signal() {
         provide_session_client(ws);
         let (_, set_show) = signal(true);
 
-        let enabled_when = git_status_enabled_when(create_commands(set_show));
+        let enabled_when = ngit_status_enabled_when(create_commands(set_show));
 
         assert!(enabled_when.contains("source_control.authority=ngit"));
     });
@@ -439,10 +439,10 @@ fn command_palette_source_control_authority_updates_after_node_role_probe() {
         let (_, set_show) = signal(true);
         let commands = create_commands(set_show);
 
-        assert!(git_status_enabled_when(commands).contains("source_control.authority=unknown"));
+        assert!(ngit_status_enabled_when(commands).contains("source_control.authority=unknown"));
 
         ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
 
-        assert!(git_status_enabled_when(commands).contains("source_control.authority=ngit"));
+        assert!(ngit_status_enabled_when(commands).contains("source_control.authority=ngit"));
     });
 }

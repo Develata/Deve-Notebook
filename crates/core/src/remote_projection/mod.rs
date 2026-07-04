@@ -58,11 +58,11 @@ pub enum RemoteProjectionError {
 pub fn plan_remote_projection_transport(
     input: RemoteProjectionPlanInput,
 ) -> Result<RemoteProjectionTransportPlan, RemoteProjectionError> {
-    validate_locator(input.provider, &input.locator)?;
+    let locator = validate_locator(input.provider, &input.locator)?.to_string();
     Ok(RemoteProjectionTransportPlan {
         provider: input.provider,
         direction: input.direction,
-        locator: input.locator,
+        locator,
         projection_scope: "markdown".into(),
         writes_ledger: false,
         writes_git_main_mirror: false,
@@ -75,7 +75,7 @@ pub fn plan_remote_projection_transport(
 fn validate_locator(
     provider: RemoteProjectionProvider,
     locator: &str,
-) -> Result<(), RemoteProjectionError> {
+) -> Result<&str, RemoteProjectionError> {
     let locator = locator.trim();
     if locator.is_empty() {
         return Err(RemoteProjectionError::EmptyLocator);
@@ -92,7 +92,7 @@ fn validate_locator(
     if locator_has_unsafe_path_segment(locator) {
         return Err(RemoteProjectionError::UnsafeRemotePath);
     }
-    Ok(())
+    Ok(locator)
 }
 
 fn locator_scheme_matches(provider: RemoteProjectionProvider, locator: &str) -> bool {
@@ -172,6 +172,18 @@ mod tests {
         assert!(plan.external_changes_confirmation_required);
         assert!(!plan.writes_ledger);
         assert!(!plan.provider_io_ready);
+    }
+
+    #[test]
+    fn normalizes_locator_before_returning_plan() {
+        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Push,
+            locator: "  s3://bucket/notebooks/main\n".into(),
+        })
+        .expect("plan");
+
+        assert_eq!(plan.locator, "s3://bucket/notebooks/main");
     }
 
     #[test]

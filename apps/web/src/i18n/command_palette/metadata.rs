@@ -39,7 +39,7 @@ pub fn group_source_control(locale: Locale) -> &'static str {
     }
 }
 
-pub fn group_git(locale: Locale) -> &'static str {
+pub fn group_ngit(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "ngit Mirror",
         Locale::Zh => "ngit Mirror",

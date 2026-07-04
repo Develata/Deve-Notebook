@@ -13,19 +13,19 @@ use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
 mod branch;
-mod git;
 mod merge;
+mod ngit;
 mod remote_projection;
 mod reserved;
 #[cfg(test)]
 mod tests;
 
 use branch::establish_branch_command;
-use git::{
-    git_export_command, git_import_command, git_mirror_command, git_push_command,
-    git_repair_command, git_status_command,
-};
 use merge::merge_peer_commands;
+use ngit::{
+    ngit_export_command, ngit_import_command, ngit_mirror_command, ngit_push_command,
+    ngit_repair_command, ngit_status_command,
+};
 use remote_projection::remote_projection_commands;
 use reserved::{ai_reserved_commands, source_control_reserved_commands};
 
@@ -129,12 +129,12 @@ pub fn create_static_commands(
         sync_merge_context,
     ));
     commands.extend(vec![
-        git_status_command(locale, set_show, set_source_control_notice, sidebar_control),
-        git_mirror_command(locale, set_show, set_source_control_notice, sidebar_control),
-        git_export_command(locale, set_show, set_source_control_notice, sidebar_control),
-        git_import_command(locale, set_show, set_source_control_notice, sidebar_control),
-        git_push_command(locale, set_show, set_source_control_notice, sidebar_control),
-        git_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_status_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_mirror_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_export_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_import_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_push_command(locale, set_show, set_source_control_notice, sidebar_control),
+        ngit_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
     ]);
     commands.extend(remote_projection_commands(locale));
 

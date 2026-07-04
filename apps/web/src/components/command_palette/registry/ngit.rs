@@ -4,7 +4,7 @@
 //!
 mod notice;
 
-use self::notice::{show_git_status_notice, show_source_control_notice};
+use self::notice::{show_ngit_status_notice, show_source_control_notice};
 use crate::components::command_palette::types::Command;
 use crate::components::main_layout::SidebarControl;
 use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
@@ -13,7 +13,7 @@ use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 #[cfg(test)]
-use self::notice::show_git_status_notice_for_viewport;
+use self::notice::show_ngit_status_notice_for_viewport;
 
 fn ngit_enabled_when(locale: Locale) -> String {
     let authority = use_context::<SessionClient>()
@@ -35,7 +35,7 @@ fn source_control_authority_from_value(authority: &str) -> &'static str {
     }
 }
 
-pub(super) fn git_import_command(
+pub(super) fn ngit_import_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -43,8 +43,8 @@ pub(super) fn git_import_command(
 ) -> Command {
     Command::unavailable(
         "ngit_import_changes",
-        (t::command_palette::git_import_changes)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_import_changes)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
             show_source_control_notice(
                 set_notice,
@@ -54,11 +54,11 @@ pub(super) fn git_import_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 
-pub(super) fn git_status_command(
+pub(super) fn ngit_status_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -67,10 +67,10 @@ pub(super) fn git_status_command(
     let source_control = use_context::<SourceControlContext>();
     Command::unavailable(
         "ngit_status",
-        (t::command_palette::git_status)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_status)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
-            show_git_status_notice(
+            show_ngit_status_notice(
                 set_notice,
                 sidebar_control,
                 source_control.clone(),
@@ -78,11 +78,11 @@ pub(super) fn git_status_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 
-pub(super) fn git_mirror_command(
+pub(super) fn ngit_mirror_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -90,8 +90,8 @@ pub(super) fn git_mirror_command(
 ) -> Command {
     Command::unavailable(
         "ngit_mirror",
-        (t::command_palette::git_mirror)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_mirror)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
             show_source_control_notice(
                 set_notice,
@@ -101,11 +101,11 @@ pub(super) fn git_mirror_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 
-pub(super) fn git_export_command(
+pub(super) fn ngit_export_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -113,8 +113,8 @@ pub(super) fn git_export_command(
 ) -> Command {
     Command::unavailable(
         "ngit_export_mirror",
-        (t::command_palette::git_export_mirror)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_export_mirror)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
             show_source_control_notice(
                 set_notice,
@@ -124,11 +124,11 @@ pub(super) fn git_export_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 
-pub(super) fn git_push_command(
+pub(super) fn ngit_push_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -136,8 +136,8 @@ pub(super) fn git_push_command(
 ) -> Command {
     Command::unavailable(
         "ngit_push_mirror",
-        (t::command_palette::git_push_mirror)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_push_mirror)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
             show_source_control_notice(
                 set_notice,
@@ -147,11 +147,11 @@ pub(super) fn git_push_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 
-pub(super) fn git_repair_command(
+pub(super) fn ngit_repair_command(
     locale: Locale,
     set_show: WriteSignal<bool>,
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
@@ -159,8 +159,8 @@ pub(super) fn git_repair_command(
 ) -> Command {
     Command::unavailable(
         "ngit_repair_mirror",
-        (t::command_palette::git_repair_mirror)(locale),
-        (t::command_palette::git_cli_only_reason)(locale),
+        (t::command_palette::ngit_repair_mirror)(locale),
+        (t::command_palette::ngit_cli_only_reason)(locale),
         move || {
             show_source_control_notice(
                 set_notice,
@@ -170,7 +170,7 @@ pub(super) fn git_repair_command(
             );
         },
     )
-    .with_group((t::command_palette::group_git)(locale))
+    .with_group((t::command_palette::group_ngit)(locale))
     .with_enabled_when(ngit_enabled_when(locale))
 }
 

@@ -224,7 +224,7 @@ cargo run -p deve_cli --bin deve_cli -- <command>
 | `node-check` | 检查 repo/projection 健康状态 |
 | `repair --check` | 运行 repair readiness check |
 | `sc-status` | 输出 Deve source-control 计数 |
-| `git status/export/import/push` | 操作 Git mirror bridge |
+| `ngit status/mirror/export/import/push` | 查看并操作 NoteGit Git main mirror |
 | `config print/set` | 查看或更新白名单配置项 |
 
 ## Docker

@@ -31,6 +31,7 @@ Implements all CLI subcommands. Each subcommand is a separate module that initia
 | `config/schema.rs` | `deve_cli config set` schema whitelist |
 | `config/tests.rs` | Config command tests |
 | `graph/tests.rs` | Graph command tests |
+| `ngit.rs` | NoteGit/ngit CLI adapter for Git main mirror diagnostics and explicit executor commands |
 | `git_output.rs` | Git mirror CLI output facade |
 | `git_output/` | Git mirror status/import/export/push output modules and tests |
 

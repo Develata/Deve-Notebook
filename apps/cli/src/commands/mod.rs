@@ -8,7 +8,6 @@ pub mod backup;
 pub mod config;
 pub mod dump;
 pub mod export;
-pub mod git;
 #[cfg(test)]
 mod git_import_smoke_support;
 #[cfg(test)]
@@ -18,6 +17,7 @@ pub mod graph;
 pub mod init;
 pub mod live_proxy;
 pub mod merge_conflict_fixture;
+pub mod ngit;
 pub mod node_check;
 pub mod projection_remote;
 pub mod recover;

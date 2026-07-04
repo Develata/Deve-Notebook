@@ -5,7 +5,7 @@
 //!
 //! Test support for the explicit Git mirror import/export/push command surface.
 
-use super::git;
+use super::ngit;
 use anyhow::Result;
 use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorPushOptions, GitMirrorPushReport, get_record, push_mirror,
@@ -114,7 +114,7 @@ pub(super) fn prepare_exported_baseline(
         init_git_repo(repo_root);
         commit_deve_file(repo_root, &repo, "note.md", "hello\n")?;
     }
-    git::export(ledger_dir, Some("default"), false, 10)?;
+    ngit::export(ledger_dir, Some("default"), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
     Ok(())
@@ -148,7 +148,7 @@ pub(super) fn resolve_imported_change_to_queued_commit(
     let repo = open_repo(ledger_dir, projection_base)?;
     let repo_root = repo.local_repo_workspace_root("default")?;
     write_workspace_file(&repo_root, "note.md", "git import\n");
-    git::import(ledger_dir, Some("default"), true, 10)?;
+    ngit::import(ledger_dir, Some("default"), true, 10)?;
 
     let repo = open_repo(ledger_dir, projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;

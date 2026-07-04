@@ -240,7 +240,7 @@ Common commands:
 | `node-check` | Inspect repo/projection health |
 | `repair --check` | Run repair readiness checks |
 | `sc-status` | Print Deve source-control counts |
-| `git status/export/import/push` | Operate the Git mirror bridge |
+| `ngit status/mirror/export/import/push` | Inspect and operate the NoteGit Git main mirror |
 | `config print/set` | Inspect or update whitelisted config keys |
 
 ## Docker

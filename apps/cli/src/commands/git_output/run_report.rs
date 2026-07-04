@@ -6,7 +6,7 @@
 
 use deve_core::git_bridge::GitMirrorRunReport;
 
-use super::command::git_command;
+use super::command::ngit_command;
 use super::record::record_detail_lines;
 
 pub(super) fn mirror_report_lines(repo_name: &str, report: &GitMirrorRunReport) -> Vec<String> {
@@ -54,7 +54,7 @@ fn run_report_lines(
         "{}[{repo_name}]: attempted={} committed={} out_of_sync={} skipped={}",
         copy.header, report.attempted, report.committed, report.out_of_sync, report.skipped
     )];
-    let retry_command = git_command(copy.retry_action, repo_name, true);
+    let retry_command = ngit_command(copy.retry_action, repo_name, true);
     for (index, record) in report.records.iter().enumerate() {
         lines.extend(record_detail_lines(
             "record",

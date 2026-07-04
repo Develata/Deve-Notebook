@@ -3,7 +3,7 @@
 //!   - 05_diff_logic#git-mirror-lifecycle
 //!   - 14_commands#cli-commands
 //!
-//! ngit-facing Git main mirror diagnostics and explicit executor commands.
+//! ngit CLI adapter for Git main mirror diagnostics and explicit executor commands.
 
 use super::git_output::{
     print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,

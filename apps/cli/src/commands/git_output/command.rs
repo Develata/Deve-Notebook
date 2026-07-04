@@ -16,7 +16,7 @@ pub(super) fn mirror_command(repo_name: &str, retry_out_of_sync: bool) -> String
     )
 }
 
-pub(super) fn git_command(action: &str, repo_name: &str, retry_out_of_sync: bool) -> String {
+pub(super) fn ngit_command(action: &str, repo_name: &str, retry_out_of_sync: bool) -> String {
     let retry = if retry_out_of_sync {
         " --retry-out-of-sync"
     } else {

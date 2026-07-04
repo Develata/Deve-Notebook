@@ -9,7 +9,7 @@ use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorRecord, GitMirrorStatus, GitMirrorSummary,
 };
 
-use super::command::{git_command, mirror_command};
+use super::command::{mirror_command, ngit_command};
 use super::record::record_detail_lines;
 
 pub(super) fn status_lines(
@@ -50,7 +50,7 @@ pub(super) fn status_lines_at(
     }
     lines.push(format!("  repo_root: {}", status.repo_root.display()));
 
-    let retry_command = git_command("export", repo_name, true);
+    let retry_command = ngit_command("export", repo_name, true);
     let mut lagging_count = 0usize;
     let mut lagging_lines = Vec::new();
     for record in records.iter().filter(|record| {

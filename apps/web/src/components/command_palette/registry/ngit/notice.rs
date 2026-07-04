@@ -26,13 +26,13 @@ pub(super) fn show_source_control_notice(
     set_show.set(false);
 }
 
-pub(super) fn show_git_status_notice(
+pub(super) fn show_ngit_status_notice(
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
     source_control: Option<SourceControlContext>,
     set_show: WriteSignal<bool>,
 ) {
-    show_git_status_notice_for_viewport(
+    show_ngit_status_notice_for_viewport(
         set_notice,
         sidebar_control,
         source_control,
@@ -41,7 +41,7 @@ pub(super) fn show_git_status_notice(
     );
 }
 
-pub(super) fn show_git_status_notice_for_viewport(
+pub(super) fn show_ngit_status_notice_for_viewport(
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
     source_control: Option<SourceControlContext>,

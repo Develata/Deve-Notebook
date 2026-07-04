@@ -104,8 +104,8 @@ DeveStaged
 - `.notegit/` 必须被 `.gitignore` 忽略，且不得被 Git tracked；检测到泄漏必须 fail-closed。
 - Core Source Control writer API 不得接收 legacy bridge mode 或 Git authority policy；CLI `sc commit`、
   HTTP commit、plugin-host HTTP mutation 与 Rhai `sc_commit` 均走同一 NoteGit/ngit commit path。
-- NoteGit/ngit 回退 N 个 commit anchor 时，Git main mirror 应回退 N 个由 NoteGit/ngit
-  生成的 mirror commits；该 parity 依赖 mirror mapping metadata，而不是比较提交消息或路径猜测。
+- 当前 v1 不开放 NoteGit/ngit rollback / revert / reset 命令；若未来开放按 commit anchor
+  回退 N 步，Git main mirror 的对应回退必须只依赖 mirror mapping metadata，而不是比较提交消息或路径猜测。
 - `GitMirrorOutOfSync` 必须能被 `status` / `repair` / retry 路径观测。
 - 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。

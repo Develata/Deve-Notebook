@@ -103,12 +103,12 @@ pub async fn run(
         },
         Some(Commands::Ngit { action }) => match action {
             NgitAction::Status { repo } => {
-                commands::git::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
+                commands::ngit::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
             }
             NgitAction::Mirror {
                 repo,
                 retry_out_of_sync,
-            } => commands::git::mirror(
+            } => commands::ngit::mirror(
                 ledger_dir,
                 repo.as_deref(),
                 retry_out_of_sync,
@@ -117,20 +117,20 @@ pub async fn run(
             NgitAction::Export {
                 repo,
                 retry_out_of_sync,
-            } => commands::git::export(
+            } => commands::ngit::export(
                 ledger_dir,
                 repo.as_deref(),
                 retry_out_of_sync,
                 config.snapshot_depth,
             )?,
             NgitAction::Import { repo, apply } => {
-                commands::git::import(ledger_dir, repo.as_deref(), apply, config.snapshot_depth)?
+                commands::ngit::import(ledger_dir, repo.as_deref(), apply, config.snapshot_depth)?
             }
             NgitAction::Push {
                 repo,
                 remote,
                 branch,
-            } => commands::git::push(
+            } => commands::ngit::push(
                 ledger_dir,
                 repo.as_deref(),
                 remote.as_deref(),

@@ -17,8 +17,8 @@ fn unavailable_command(id: &str, title: &str, reason: &str) -> Command {
 fn command_provider_matches_stable_command_id_words() {
     let provider = CommandProvider::new(
         vec![command(
-            "git_import_changes",
-            t::command_palette::git_import_changes(Locale::Zh),
+            "ngit_import_changes",
+            t::command_palette::ngit_import_changes(Locale::Zh),
         )],
         Locale::Zh,
     );
@@ -27,7 +27,7 @@ fn command_provider_matches_stable_command_id_words() {
 
     assert_eq!(
         results.first().map(|result| result.id.as_str()),
-        Some("git_import_changes")
+        Some("ngit_import_changes")
     );
 }
 
@@ -35,8 +35,8 @@ fn command_provider_matches_stable_command_id_words() {
 fn command_provider_matches_command_id_even_when_title_is_localized() {
     let provider = CommandProvider::new(
         vec![command(
-            "git_push_mirror",
-            t::command_palette::git_push_mirror(Locale::Zh),
+            "ngit_push_mirror",
+            t::command_palette::ngit_push_mirror(Locale::Zh),
         )],
         Locale::Zh,
     );
@@ -45,7 +45,7 @@ fn command_provider_matches_command_id_even_when_title_is_localized() {
 
     assert_eq!(
         results.first().map(|result| result.id.as_str()),
-        Some("git_push_mirror")
+        Some("ngit_push_mirror")
     );
 }
 
@@ -94,7 +94,7 @@ fn command_provider_detail_includes_unavailable_enabled_condition() {
     let enabled_when = "CLI-only notice; source_control.authority=off";
     let provider = CommandProvider::new(
         vec![
-            unavailable_command("git_status", "ngit: Status", reason)
+            unavailable_command("ngit_status", "ngit: Status", reason)
                 .with_enabled_when(enabled_when),
         ],
         Locale::En,
@@ -114,7 +114,7 @@ fn command_provider_detail_includes_unavailable_enabled_condition() {
 fn command_detail_deduplicates_unavailable_reason_enabled_condition() {
     let reason = "Unavailable: use the CLI";
     let command =
-        unavailable_command("git_status", "ngit: Status", reason).with_enabled_when(reason);
+        unavailable_command("ngit_status", "ngit: Status", reason).with_enabled_when(reason);
 
     assert_eq!(command.detail_text(), reason);
 }

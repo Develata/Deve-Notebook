@@ -7,7 +7,7 @@
 
 use deve_core::git_bridge::GitMirrorPushReport;
 
-use super::command::{git_command, shell_quote};
+use super::command::{ngit_command, shell_quote};
 
 pub(crate) fn print_push_report(repo_name: &str, report: &GitMirrorPushReport) {
     for line in push_report_lines(repo_name, report) {
@@ -58,7 +58,7 @@ fn push_blocker_hint(repo_name: &str, location: &str) -> String {
     match location {
         "mirror_not_ready" => format!(
             "run `{}` and ensure `.git` exists with `.gitignore` protecting `.notegit/`",
-            git_command("status", repo_name, false)
+            ngit_command("status", repo_name, false)
         ),
         "deve_source_control" => {
             "stage/commit/discard current Deve Source Control changes before pushing".to_string()
@@ -69,8 +69,8 @@ fn push_blocker_hint(repo_name: &str, location: &str) -> String {
         ),
         "git_history_mapping" => format!(
             "run `{}` or `{}` so Git HEAD maps to latest Deve commit",
-            git_command("export", repo_name, false),
-            git_command("export", repo_name, true)
+            ngit_command("export", repo_name, false),
+            ngit_command("export", repo_name, true)
         ),
         "git_remote" => {
             "configure branch upstream/origin, or pass `--remote <remote> --branch <branch>`"
