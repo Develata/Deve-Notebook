@@ -102,7 +102,7 @@
     - ui_command: "ngit:export"
     - ui_command: "webdav:pull"
     - ui_command: "s3:pull"
-    - cli_projection_remote_provider_io_ready: false
+    - cli_projection_remote_s3_pull_provider_io_ready: false
     - run: scripts/check-source-control-baseline.sh
     - run: cargo test -p deve_web ngit_commands -- --nocapture
     - run: cargo test -p deve_web remote_projection_commands -- --nocapture
@@ -114,7 +114,7 @@
     - ui_assert: command_available "s3_pull"
     - ui_assert: web_git_writer_absent true
     - ui_assert: web_remote_projection_io_absent true
-    - ui_assert: provider_io_not_wired_fails_closed true
+    - cli_assert: s3_pull_provider_io_not_wired_fails_closed true
 
 - case_id: CMD-004C
   goal: Source Control 与 AI 的未接线命令入口必须明确显示 unavailable 状态。
