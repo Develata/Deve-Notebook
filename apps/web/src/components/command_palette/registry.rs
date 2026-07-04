@@ -139,6 +139,7 @@ pub fn create_static_commands(
     commands.extend(remote_projection_commands(
         locale,
         set_show,
+        set_source_control_notice,
         sidebar_control,
     ));
 

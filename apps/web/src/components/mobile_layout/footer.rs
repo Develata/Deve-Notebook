@@ -17,6 +17,8 @@ use crate::runtime::{document_client::DocumentClient, rendering_client::Renderin
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
+use super::footer_read::read_footer_signal;
+
 pub(super) fn bottom_bar_state_attrs(expanded: bool) -> (&'static str, &'static str) {
     if expanded {
         ("expanded", "multi")
@@ -87,7 +89,7 @@ pub fn MobileFooter() -> impl IntoView {
     let on_to_end = Callback::new(move |_| set_ver.set(max_ver.get_untracked()));
 
     let footer_class = move || {
-        if expanded.get() {
+        if read_footer_signal(expanded, false) {
             "relative z-[calc(var(--z-overlay)_+_1)] bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
         } else {
             "relative z-[var(--z-panels)] bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
@@ -95,7 +97,7 @@ pub fn MobileFooter() -> impl IntoView {
     };
 
     view! {
-        <Show when=move || expanded.get()>
+        <Show when=move || read_footer_signal(expanded, false)>
             <div
                 data-deve-mobile-bottom-bar-dismiss="outside_bottom_bar"
                 class="fixed inset-0 z-[var(--z-overlay)]"
@@ -104,8 +106,8 @@ pub fn MobileFooter() -> impl IntoView {
         </Show>
 
         <footer
-            data-deve-mobile-bottom-bar=move || bottom_bar_state_attrs(expanded.get()).0
-            data-deve-mobile-bottom-bar-lines=move || bottom_bar_state_attrs(expanded.get()).1
+            data-deve-mobile-bottom-bar=move || bottom_bar_state_attrs(read_footer_signal(expanded, false)).0
+            data-deve-mobile-bottom-bar-lines=move || bottom_bar_state_attrs(read_footer_signal(expanded, false)).1
             class=footer_class
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
@@ -117,7 +119,7 @@ pub fn MobileFooter() -> impl IntoView {
                 displayed_stats=displayed_stats
             />
 
-            <Show when=move || expanded.get()>
+            <Show when=move || read_footer_signal(expanded, false)>
                 <FooterDetails
                     load_state=rendering.load_state
                     load_progress=rendering.load_progress

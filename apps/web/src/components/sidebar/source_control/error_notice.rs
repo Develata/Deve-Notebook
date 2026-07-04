@@ -199,10 +199,15 @@ mod tests {
     #[test]
     fn local_cli_notice_displays_even_when_read_gate_is_blocked() {
         let notice = SourceControlNotice::git_push_cli_only();
+        let remote_projection = SourceControlNotice::remote_projection_session_unavailable();
 
         assert!(should_show_notice(
             Some(RepoWriteBlock::HandshakingRepo),
             Some(&notice)
+        ));
+        assert!(should_show_notice(
+            Some(RepoWriteBlock::HandshakingRepo),
+            Some(&remote_projection)
         ));
     }
 
@@ -225,6 +230,7 @@ mod tests {
         let status = SourceControlNotice::git_status_cli_only();
         let push = SourceControlNotice::git_push_cli_only();
         let establish_branch = SourceControlNotice::establish_branch_unavailable();
+        let remote_projection = SourceControlNotice::remote_projection_session_unavailable();
         let server = SourceControlNotice {
             code: ServerErrorCode::ScDocNotFound,
             detail: None,
@@ -235,6 +241,11 @@ mod tests {
         assert!(!should_show_visible_notice(
             None,
             Some(&establish_branch),
+            true
+        ));
+        assert!(!should_show_visible_notice(
+            None,
+            Some(&remote_projection),
             true
         ));
         assert!(should_show_visible_notice(None, Some(&server), true));

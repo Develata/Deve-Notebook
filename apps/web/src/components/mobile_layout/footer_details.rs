@@ -3,6 +3,7 @@
 //!   - 18_release#runtime-observability
 //!
 use super::footer_playback::{PlaybackNarrow, PlaybackWide};
+use super::footer_read::{read_footer_signal, read_footer_value};
 use super::footer_status::LoadStatus;
 use crate::hooks::use_core::LoadPhase;
 use crate::i18n::Locale;
@@ -29,7 +30,7 @@ pub fn FooterDetails(
             data-deve-mobile-bottom-bar-details="expanded"
             class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none"
         >
-            <Show when=move || !load_state.get().is_ready()>
+            <Show when=move || !read_footer_signal(load_state, LoadPhase::Ready).is_ready()>
                 <div class="shrink-0 px-2 h-7 rounded-md bg-sidebar border border-default flex items-center">
                     <LoadStatus
                         load_state=load_state
@@ -41,12 +42,18 @@ pub fn FooterDetails(
                 </div>
             </Show>
             <div class="shrink-0 text-[10px] text-muted font-mono px-1">
-                {move || format!("v{}/{}", displayed_curr_ver.get(), displayed_max_ver.get())}
+                {move || {
+                    format!(
+                        "v{}/{}",
+                        read_footer_value(displayed_curr_ver, 0),
+                        read_footer_value(displayed_max_ver, 0),
+                    )
+                }}
             </div>
         </div>
 
         <Show
-            when=move || is_narrow.get()
+            when=move || read_footer_signal(is_narrow, false)
             fallback=move || view! {
                 <PlaybackWide
                     curr_ver=displayed_curr_ver

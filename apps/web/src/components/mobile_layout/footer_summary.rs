@@ -2,6 +2,7 @@
 //!   - 11_ui_design/03_mobile#mobile-responsive-layout
 //!   - 18_release#runtime-observability
 //!
+use super::footer_read::{read_footer_signal, read_footer_value};
 use super::footer_status::StatusView;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::components::icons::{ChevronDown, ChevronUp};
@@ -60,7 +61,14 @@ pub fn FooterSummaryRow(
 ) -> impl IntoView {
     let stat_label = move |compact: &'static str, full: fn(Locale) -> &'static str| {
         let locale = locale;
-        move || mobile_summary_stat_label(is_narrow.get(), compact, full(locale.get())).to_string()
+        move || {
+            mobile_summary_stat_label(
+                read_footer_signal(is_narrow, false),
+                compact,
+                full(locale.get()),
+            )
+            .to_string()
+        }
     };
 
     view! {
@@ -82,11 +90,11 @@ pub fn FooterSummaryRow(
                 </div>
                 <div data-deve-mobile-bottom-bar-field="words" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("W", t::bottom_bar::words)}</span>
-                    <span class="font-mono text-primary">{move || displayed_stats.get().words}</span>
+                    <span class="font-mono text-primary">{move || read_footer_value(displayed_stats, EditorStats::default()).words}</span>
                 </div>
                 <div data-deve-mobile-bottom-bar-field="lines" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("L", t::bottom_bar::lines)}</span>
-                    <span class="font-mono text-primary">{move || displayed_stats.get().lines}</span>
+                    <span class="font-mono text-primary">{move || read_footer_value(displayed_stats, EditorStats::default()).lines}</span>
                 </div>
                 <div
                     data-deve-mobile-bottom-bar-field="col"
@@ -106,10 +114,10 @@ pub fn FooterSummaryRow(
                 title=move || t::bottom_bar::toggle_status_details(locale.get())
                 aria-label=move || t::bottom_bar::toggle_status_details(locale.get())
                 aria-controls="deve-mobile-bottom-bar-details"
-                aria-expanded=move || bottom_bar_expanded_state(expanded.get())
+                aria-expanded=move || bottom_bar_expanded_state(read_footer_signal(expanded, false))
                 on:click=move |_| set_expanded.update(|v| *v = bottom_bar_after_toggle(*v))
             >
-                {move || if expanded.get() {
+                {move || if read_footer_signal(expanded, false) {
                     view! {
                         <span class="h-8 w-8 rounded-md border border-default bg-panel text-secondary flex items-center justify-center">
                             <ChevronDown class="w-4 h-4"/>

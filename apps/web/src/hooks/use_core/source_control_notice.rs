@@ -13,6 +13,8 @@ pub const GIT_IMPORT_CLI_NOTICE_DETAIL: &str = "git-import-cli-only";
 pub const GIT_PUSH_CLI_NOTICE_DETAIL: &str = "git-push-cli-only";
 pub const GIT_REPAIR_CLI_NOTICE_DETAIL: &str = "git-repair-cli-only";
 pub const ESTABLISH_BRANCH_UNAVAILABLE_DETAIL: &str = "establish-branch-unavailable";
+pub const REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL: &str =
+    "remote-projection-session-unavailable";
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlNotice {
     pub code: ServerErrorCode,
@@ -75,6 +77,21 @@ impl SourceControlNotice {
             detail: Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL.to_string()),
         }
     }
+
+    #[cfg(test)]
+    pub fn remote_projection_provider_io_pending() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL.to_string()),
+        }
+    }
+
+    pub fn remote_projection_session_unavailable() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL.to_string()),
+        }
+    }
 }
 
 pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
@@ -130,6 +147,10 @@ pub fn is_remote_projection_provider_io_pending_notice(notice: &SourceControlNot
     notice.detail.as_deref() == Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
 }
 
+pub fn is_remote_projection_session_unavailable_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL)
+}
+
 pub fn is_local_command_notice(notice: &SourceControlNotice) -> bool {
     matches!(
         notice.detail.as_deref(),
@@ -140,6 +161,7 @@ pub fn is_local_command_notice(notice: &SourceControlNotice) -> bool {
             | Some(GIT_PUSH_CLI_NOTICE_DETAIL)
             | Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
             | Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
+            | Some(REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL)
     )
 }
 
@@ -166,12 +188,13 @@ mod tests {
         DELETED_NO_DOC_ID_NOTICE_PREFIX, ESTABLISH_BRANCH_UNAVAILABLE_DETAIL,
         GIT_EXPORT_CLI_NOTICE_DETAIL, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_MIRROR_CLI_NOTICE_DETAIL,
         GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL, GIT_STATUS_CLI_NOTICE_DETAIL,
-        REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, SourceControlNotice, deleted_no_doc_id_path,
-        is_deleted_no_doc_id_notice, is_establish_branch_unavailable_notice, is_git_cli_notice,
-        is_git_export_cli_notice, is_git_import_cli_notice, is_git_mirror_cli_notice,
-        is_git_push_cli_notice, is_git_repair_cli_notice, is_git_status_cli_notice,
-        is_local_command_notice, is_remote_projection_provider_io_pending_notice,
-        is_source_control_error,
+        REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL,
+        SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
+        is_establish_branch_unavailable_notice, is_git_cli_notice, is_git_export_cli_notice,
+        is_git_import_cli_notice, is_git_mirror_cli_notice, is_git_push_cli_notice,
+        is_git_repair_cli_notice, is_git_status_cli_notice, is_local_command_notice,
+        is_remote_projection_provider_io_pending_notice,
+        is_remote_projection_session_unavailable_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -288,6 +311,18 @@ mod tests {
         ));
         assert!(!is_git_cli_notice(&remote_projection_notice));
         assert!(!is_local_command_notice(&remote_projection_notice));
+
+        let remote_projection_session_notice =
+            SourceControlNotice::remote_projection_session_unavailable();
+        assert_eq!(
+            remote_projection_session_notice.detail.as_deref(),
+            Some(REMOTE_PROJECTION_SESSION_UNAVAILABLE_DETAIL)
+        );
+        assert!(is_remote_projection_session_unavailable_notice(
+            &remote_projection_session_notice
+        ));
+        assert!(!is_git_cli_notice(&remote_projection_session_notice));
+        assert!(is_local_command_notice(&remote_projection_session_notice));
 
         let server_notice = SourceControlNotice {
             code: ServerErrorCode::ScDocNotFound,

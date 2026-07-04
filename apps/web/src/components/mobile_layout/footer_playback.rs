@@ -5,6 +5,7 @@
 //!
 //! # Mobile Footer — Time-Travel Playback Controls
 
+use super::footer_read::read_footer_value;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -40,8 +41,8 @@ pub fn PlaybackWide(
                 name="mobile-time-travel"
                 type="range"
                 min="0"
-                max=move || max_ver.get().to_string()
-                value=move || curr_ver.get().to_string()
+                max=move || read_footer_value(max_ver, 0).to_string()
+                value=move || read_footer_value(curr_ver, 0).to_string()
                 on:input=move |ev| {
                     let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
                     set_ver.set(val);
@@ -81,7 +82,13 @@ pub fn PlaybackNarrow(
                     "‹"
                 </button>
                 <span class="text-[9px] text-muted font-mono px-0.5 min-w-12 text-center">
-                    {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
+                    {move || {
+                        format!(
+                            "v{}/{}",
+                            read_footer_value(curr_ver, 0),
+                            read_footer_value(max_ver, 0),
+                        )
+                    }}
                 </span>
                 <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::next(locale.get()) aria-label=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
                     "›"
@@ -94,8 +101,8 @@ pub fn PlaybackNarrow(
                 name="mobile-time-travel-narrow"
                 type="range"
                 min="0"
-                max=move || max_ver.get().to_string()
-                value=move || curr_ver.get().to_string()
+                max=move || read_footer_value(max_ver, 0).to_string()
+                value=move || read_footer_value(curr_ver, 0).to_string()
                 on:input=move |ev| {
                     let val = event_target_value(&ev).parse::<u64>().unwrap_or(0);
                     set_ver.set(val);

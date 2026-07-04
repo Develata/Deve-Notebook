@@ -12,6 +12,7 @@ mod effects;
 mod footer;
 mod footer_details;
 mod footer_playback;
+mod footer_read;
 mod footer_status;
 mod footer_summary;
 mod gesture;

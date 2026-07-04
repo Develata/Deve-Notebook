@@ -21,3 +21,21 @@ pub fn remote_projection_provider_io_pending_hint(locale: Locale) -> &'static st
         }
     }
 }
+
+pub fn remote_projection_session_unavailable_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remote projection command was not sent",
+        Locale::Zh => "远端 Projection 命令未发送",
+    }
+}
+
+pub fn remote_projection_session_unavailable_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "The browser has no active backend session, so no WebDAV/S3 files were pushed or pulled. Reconnect before running the command; pull still requires External Changes confirmation."
+        }
+        Locale::Zh => {
+            "浏览器当前没有可用 backend session，因此未执行 WebDAV/S3 文件 push/pull。请重新连接后再运行命令；pull 仍必须经 External Changes 确认。"
+        }
+    }
+}

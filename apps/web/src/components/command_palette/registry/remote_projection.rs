@@ -7,6 +7,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::types::Command;
 use crate::components::main_layout::SidebarControl;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
 use crate::runtime::session_client::SessionClient;
 use deve_core::protocol::{ClientMessage, RemoteProjectionDirection, RemoteProjectionProvider};
@@ -15,6 +16,7 @@ use leptos::prelude::*;
 pub(super) fn remote_projection_commands(
     locale: Locale,
     set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
 ) -> Vec<Command> {
     let enabled_when = (t::command_palette::remote_projection_backend_intent)(locale);
@@ -29,6 +31,7 @@ pub(super) fn remote_projection_commands(
             enabled_when,
             group,
             set_show,
+            set_notice,
             sidebar_control,
             session.clone(),
         ),
@@ -40,6 +43,7 @@ pub(super) fn remote_projection_commands(
             enabled_when,
             group,
             set_show,
+            set_notice,
             sidebar_control,
             session.clone(),
         ),
@@ -51,6 +55,7 @@ pub(super) fn remote_projection_commands(
             enabled_when,
             group,
             set_show,
+            set_notice,
             sidebar_control,
             session.clone(),
         ),
@@ -62,6 +67,7 @@ pub(super) fn remote_projection_commands(
             enabled_when,
             group,
             set_show,
+            set_notice,
             sidebar_control,
             session.clone(),
         ),
@@ -76,11 +82,12 @@ fn remote_projection_command(
     enabled_when: &'static str,
     group: &'static str,
     set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
     session: Option<SessionClient>,
 ) -> Command {
     Command::available(id, title, move || {
-        send_remote_projection_transport_intent(session.as_ref(), provider, direction);
+        send_remote_projection_transport_intent(session.as_ref(), set_notice, provider, direction);
         show_source_control_surface(sidebar_control, set_show);
     })
     .with_group(group)
@@ -89,10 +96,16 @@ fn remote_projection_command(
 
 fn send_remote_projection_transport_intent(
     session: Option<&SessionClient>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     provider: RemoteProjectionProvider,
     direction: RemoteProjectionDirection,
 ) {
     let Some(session) = session else {
+        if let Some(set_notice) = set_notice {
+            set_notice.set(Some(
+                SourceControlNotice::remote_projection_session_unavailable(),
+            ));
+        }
         return;
     };
     session.ws.send(ClientMessage::RemoteProjectionTransport {
@@ -129,7 +142,7 @@ mod tests {
 
         owner.with(|| {
             let (_, set_show) = signal(true);
-            let commands = remote_projection_commands(Locale::En, set_show, None);
+            let commands = remote_projection_commands(Locale::En, set_show, None, None);
             let ids = commands
                 .iter()
                 .map(|command| command.id.as_str())
@@ -169,8 +182,12 @@ mod tests {
                 set_mobile_visible,
                 set_active_view,
             };
-            let commands =
-                remote_projection_commands(Locale::En, set_show_palette, Some(sidebar_control));
+            let commands = remote_projection_commands(
+                Locale::En,
+                set_show_palette,
+                None,
+                Some(sidebar_control),
+            );
             let pull = commands
                 .iter()
                 .find(|command| command.id == "webdav:pull")
@@ -188,6 +205,30 @@ mod tests {
                     direction: RemoteProjectionDirection::Pull,
                     scope_nonce: Some(9),
                 }]
+            ));
+        });
+    }
+
+    #[test]
+    fn remote_projection_command_without_session_reports_fail_closed_notice() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (show_palette, set_show_palette) = signal(true);
+            let (notice, set_notice) = signal(None);
+            let commands =
+                remote_projection_commands(Locale::En, set_show_palette, Some(set_notice), None);
+            let s3_pull = commands
+                .iter()
+                .find(|command| command.id == "s3:pull")
+                .expect("s3 pull command");
+
+            s3_pull.action.run(());
+
+            assert!(!show_palette.get_untracked());
+            assert!(matches!(
+                notice.get_untracked(),
+                Some(notice) if crate::hooks::use_core::source_control_notice::is_remote_projection_session_unavailable_notice(&notice)
             ));
         });
     }

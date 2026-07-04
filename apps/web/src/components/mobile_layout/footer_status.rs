@@ -5,6 +5,7 @@
 //!
 //! # Mobile Footer — Status & Load Indicators
 
+use super::footer_read::read_footer_signal;
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
@@ -175,12 +176,18 @@ pub fn LoadStatus(
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
     move || {
-        if load_state.get().is_ready() {
+        if read_footer_signal(load_state, crate::hooks::use_core::LoadPhase::Ready).is_ready() {
             return view! {}.into_any();
         }
-        let (done, total) = load_progress.get();
-        let eta_ms = load_eta_ms.get();
-        let text = mobile_load_status_text(locale.get(), done, total, eta_ms, is_narrow.get());
+        let (done, total) = read_footer_signal(load_progress, (0, 0));
+        let eta_ms = read_footer_signal(load_eta_ms, 0);
+        let text = mobile_load_status_text(
+            locale.get(),
+            done,
+            total,
+            eta_ms,
+            read_footer_signal(is_narrow, false),
+        );
         view! { <div class="text-[10px] text-muted font-mono">{text}</div> }.into_any()
     }
 }
