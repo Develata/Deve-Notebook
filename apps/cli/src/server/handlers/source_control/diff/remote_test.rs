@@ -42,11 +42,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
             domain: None,
         },
     )?;
-    repo.commit_staged_in_repo_with_git_bridge(
-        &selector,
-        "rename",
-        deve_core::config::GitBridgeMode::Mirror,
-    )?;
+    repo.commit_source_control_changes_in_repo(&selector, "rename")?;
 
     let content = local_counterpart_content(&repo, doc_id, repo.local_repo_name())?;
     assert_eq!(content.as_deref(), Some("hello renamed"));

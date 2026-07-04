@@ -48,4 +48,4 @@
 ## Notes
 
 - `CommitAndPush` wire frame 仅作为兼容入口保留，避免协议枚举形状变化；它不是可执行 Git push 能力。
-- 正常发布流程是先执行 Web `Commit` 或 CLI `deve sc commit`，再通过显式 CLI `deve git push` 发布 Git mirror。
+- 正常发布流程是先执行 Web `Commit` 或 CLI `deve sc commit`，再通过显式 CLI `deve ngit push` 发布 Git mirror。

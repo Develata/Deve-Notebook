@@ -1,4 +1,3 @@
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -55,7 +54,7 @@ pub(crate) fn seed_initial_commit(repo: &RepoManager) -> DocId {
     repo.stage_pending("notes/a.md").expect("stage initial");
     repo.apply_external_changes()
         .expect("apply initial external change");
-    repo.commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
+    repo.commit_source_control_changes("initial")
         .expect("initial commit");
     repo.get_tracked_docid_in_local_repo(repo.local_repo_name(), "notes/a.md")
         .expect("doc id lookup")

@@ -11,14 +11,11 @@ use std::sync::Arc;
 
 use crate::server::{notegit, setup};
 
-pub(crate) fn install_repo_host_apis(
-    repo: &Arc<RepoManager>,
-    git_bridge: deve_core::config::GitBridgeMode,
-) -> anyhow::Result<()> {
+pub(crate) fn install_repo_host_apis(repo: &Arc<RepoManager>) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
     let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = repo.clone();
-    host::set_source_control_api(source_control_api, git_bridge)?;
+    host::set_source_control_api(source_control_api)?;
     host::set_repo_manager(repo.clone())?;
     Ok(())
 }

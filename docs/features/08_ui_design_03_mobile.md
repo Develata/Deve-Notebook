@@ -19,10 +19,10 @@
 
 - Outline、External Changes、Source Control、Search 等入口必须在移动端可达。
 - 移动端不应因为手势或边缘滑动吞掉关键按钮点击。
-- 移动端 Source Control 入口应显示同一套 Source Control 面板，不应被 `Git: Status` 这类 Git mirror CLI-only 诊断提示替代。
+- 移动端 Source Control 入口应显示同一套 Source Control 面板，不应被 `ngit: Status` 这类 Git mirror CLI-only 诊断提示替代。
 - 移动端 External Changes 入口应显示外部投影文件夹修改的最小操作集：Open Diff、Stage / Unstage、Discard、确认外部修改。
 - 顶部当前 surface 胶囊应显示当前文档或差异；点击后通过底部面板在已打开文档和差异之间切换。
-- 移动端 Source Control 必须显示与桌面相同的 Source Control read surface；只读或远端视角只禁用写动作，不得用 `Git status 只能通过 CLI 查看` 这类 Git bridge notice 替代正常变更列表。
+- 移动端 Source Control 必须显示与桌面相同的 Source Control read surface；只读或远端视角只禁用写动作，不得用 `ngit status 只能通过 CLI 查看` 这类 ngit CLI-only 诊断替代正常变更列表。
 - 移动端 Source Control 与 External Changes 是同级入口：Source Control 显示 ledger/version-anchor 状态、Commit、history/graph；External Changes 显示外部投影偏差，不显示 history/graph。
 
 ### 3. Bottom Bar 与状态折叠
@@ -131,7 +131,7 @@
 
 - Source Control 显示 `Confirmed Ledger Changes` 或 clean empty state，并保留 commit/history/graph read surface。
 - 只读或远端视角下写动作被禁用，但 read list / diff 仍走 Source Control read gate。
-- 未显式触发 Git bridge 命令时，不显示 `Git status 只能通过 CLI 查看` 作为 Source Control 的替代内容。
+- 未显式触发 ngit 诊断命令时，不显示 `ngit status 只能通过 CLI 查看` 作为 Source Control 的替代内容。
 
 ### MOBILE-UI-06: Mobile External Changes 正常显示
 

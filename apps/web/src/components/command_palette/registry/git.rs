@@ -15,20 +15,21 @@ use leptos::prelude::*;
 #[cfg(test)]
 use self::notice::show_git_status_notice_for_viewport;
 
-fn git_bridge_enabled_when(locale: Locale) -> String {
-    let mode = use_context::<SessionClient>()
-        .map(|session| git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get()))
+fn ngit_enabled_when(locale: Locale) -> String {
+    let authority = use_context::<SessionClient>()
+        .map(|session| {
+            source_control_authority_from_value(&session.ws.source_control_authority.get())
+        })
         .unwrap_or("unknown");
     format!(
-        "{}; source_control.git_bridge={mode}",
+        "{}; source_control.authority={authority}",
         (t::command_palette::enabled_cli_only_notice)(locale)
     )
 }
 
-fn git_bridge_mode_from_value(mode: &str) -> &'static str {
-    match mode {
-        "mirror" => "mirror",
-        "off" => "off",
+fn source_control_authority_from_value(authority: &str) -> &'static str {
+    match authority {
+        "ngit" => "ngit",
         "unknown" => "unknown",
         _ => "unknown",
     }
@@ -41,7 +42,7 @@ pub(super) fn git_import_command(
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
     Command::unavailable(
-        "git_import_changes",
+        "ngit_import_changes",
         (t::command_palette::git_import_changes)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -54,7 +55,7 @@ pub(super) fn git_import_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 pub(super) fn git_status_command(
@@ -65,7 +66,7 @@ pub(super) fn git_status_command(
 ) -> Command {
     let source_control = use_context::<SourceControlContext>();
     Command::unavailable(
-        "git_status",
+        "ngit_status",
         (t::command_palette::git_status)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -78,7 +79,7 @@ pub(super) fn git_status_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 pub(super) fn git_mirror_command(
@@ -88,7 +89,7 @@ pub(super) fn git_mirror_command(
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
     Command::unavailable(
-        "git_mirror",
+        "ngit_mirror",
         (t::command_palette::git_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -101,7 +102,7 @@ pub(super) fn git_mirror_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 pub(super) fn git_export_command(
@@ -111,7 +112,7 @@ pub(super) fn git_export_command(
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
     Command::unavailable(
-        "git_export_mirror",
+        "ngit_export_mirror",
         (t::command_palette::git_export_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -124,7 +125,7 @@ pub(super) fn git_export_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 pub(super) fn git_push_command(
@@ -134,7 +135,7 @@ pub(super) fn git_push_command(
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
     Command::unavailable(
-        "git_push_mirror",
+        "ngit_push_mirror",
         (t::command_palette::git_push_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -147,7 +148,7 @@ pub(super) fn git_push_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 pub(super) fn git_repair_command(
@@ -157,7 +158,7 @@ pub(super) fn git_repair_command(
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
     Command::unavailable(
-        "git_repair_mirror",
+        "ngit_repair_mirror",
         (t::command_palette::git_repair_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
@@ -170,7 +171,7 @@ pub(super) fn git_repair_command(
         },
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when(git_bridge_enabled_when(locale))
+    .with_enabled_when(ngit_enabled_when(locale))
 }
 
 #[cfg(test)]

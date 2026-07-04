@@ -110,7 +110,7 @@ mod tests {
                 "retryable_after_fix": true,
                 "subject": "git commit",
                 "next_step": "inspect_git_command_output",
-                "retry_command": "deve_cli git export --repo default --retry-out-of-sync",
+                "retry_command": "deve_cli ngit export --repo default --retry-out-of-sync",
                 "failure_stage": "git_command",
                 "failure_command": "git commit",
                 "failure_exit_status": "128",

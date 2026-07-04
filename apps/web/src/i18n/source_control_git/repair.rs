@@ -1,4 +1,4 @@
-//! Git mirror repair copy.
+//! ngit mirror repair copy.
 //! plan_ref:
 //!   - 13_i18n#i18n-keys-reference
 //!   - 14_commands#cli-commands
@@ -7,18 +7,18 @@ use crate::i18n::Locale;
 
 pub fn git_repair_cli_only_title(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git mirror repair is CLI-only",
-        Locale::Zh => "Git mirror 修复只能通过 CLI 执行",
+        Locale::En => "ngit mirror repair is CLI-only",
+        Locale::Zh => "ngit mirror 修复只能通过 CLI 执行",
     }
 }
 
 pub fn git_repair_cli_only_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Run `deve_cli git status --repo <repo>` to inspect `repair_action[...]`, fix the subject, then run `deve_cli git export --repo <repo> --retry-out-of-sync`."
+            "Run `deve_cli ngit status --repo <repo>` to inspect `repair_action[...]`, fix the subject, then run `deve_cli ngit export --repo <repo> --retry-out-of-sync`."
         }
         Locale::Zh => {
-            "请运行 `deve_cli git status --repo <repo>` 查看 `repair_action[...]`，修复 subject 后再运行 `deve_cli git export --repo <repo> --retry-out-of-sync`。"
+            "请运行 `deve_cli ngit status --repo <repo>` 查看 `repair_action[...]`，修复 subject 后再运行 `deve_cli ngit export --repo <repo> --retry-out-of-sync`。"
         }
     }
 }
@@ -26,16 +26,16 @@ pub fn git_repair_cli_only_hint(locale: Locale) -> &'static str {
 pub fn git_repair_cli_only_details(locale: Locale) -> [&'static str; 4] {
     match locale {
         Locale::En => [
-            "`repair_action[...]` is diagnostic only; Web never runs Git repair automatically.",
+            "`repair_action[...]` is diagnostic only; Web never runs ngit repair automatically.",
             "Projection/path blockers must be fixed in Deve or the workspace before retry.",
-            "Dirty Git worktree blockers must be cleaned or imported with `deve_cli git import --apply --repo <repo>`.",
-            "Retry export only after blockers are fixed: `deve_cli git export --repo <repo> --retry-out-of-sync`.",
+            "Dirty Git main worktree blockers must be cleaned or imported with `deve_cli ngit import --apply --repo <repo>`.",
+            "Retry export only after blockers are fixed: `deve_cli ngit export --repo <repo> --retry-out-of-sync`.",
         ],
         Locale::Zh => [
             "`repair_action[...]` 只用于诊断；Web 不会自动执行 Git 修复。",
             "projection/path blocker 必须先在 Deve 或 workspace 中修复，再重试。",
-            "Git 工作区脏 blocker 需要先清理，或用 `deve_cli git import --apply --repo <repo>` 导入。",
-            "blocker 修复后再重试导出：`deve_cli git export --repo <repo> --retry-out-of-sync`。",
+            "Git 工作区脏 blocker 需要先清理，或用 `deve_cli ngit import --apply --repo <repo>` 导入。",
+            "blocker 修复后再重试导出：`deve_cli ngit export --repo <repo> --retry-out-of-sync`。",
         ],
     }
 }
@@ -155,14 +155,14 @@ pub fn git_repair_retry_command_label(locale: Locale) -> &'static str {
 }
 
 pub fn git_repair_retry_command() -> &'static str {
-    "deve_cli git export --repo <repo> --retry-out-of-sync"
+    "deve_cli ngit export --repo <repo> --retry-out-of-sync"
 }
 
 pub fn git_repair_authority_note(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "This panel is read-only: Web does not run Git repair, and `.notegit` remains the authority."
+            "This panel is read-only: Web does not run ngit repair, and `.notegit` remains the authority."
         }
-        Locale::Zh => "此面板只读：Web 不执行 Git repair，`.notegit` 仍是 authority。",
+        Locale::Zh => "此面板只读：Web 不执行 ngit repair，`.notegit` 仍是 authority。",
     }
 }

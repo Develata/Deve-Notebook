@@ -163,17 +163,17 @@ mod tests {
     #[test]
     fn unavailable_detail_exposes_reason_and_distinct_enabled_condition() {
         let command = Command::unavailable(
-            "git_status",
-            "Git: Status",
-            "CLI-only: Web does not execute Git writer commands",
+            "ngit_status",
+            "ngit: status",
+            "CLI-only: Web sends no Git writer authority",
             || {},
         )
-        .with_enabled_when("Shows a CLI-only notice; source_control.git_bridge=mirror");
+        .with_enabled_when("Shows a CLI-only notice; source_control.authority=ngit");
 
         let detail = command.detail_text();
 
-        assert!(detail.contains("CLI-only: Web does not execute Git writer commands"));
-        assert!(detail.contains("source_control.git_bridge=mirror"));
+        assert!(detail.contains("CLI-only: Web sends no Git writer authority"));
+        assert!(detail.contains("source_control.authority=ngit"));
     }
 
     #[test]

@@ -5,7 +5,6 @@
 //!
 //! # Source Control API 实现 (RepoManager)
 
-use crate::config::GitBridgeMode;
 use crate::ledger::RepoManager;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
@@ -63,24 +62,13 @@ impl SourceControlApi for RepoManager {
             .diff_commits_in_repo(repo, commit_a_id, commit_b_id)
     }
 
-    fn commit_staged_in_repo_with_git_bridge(
+    fn commit_source_control_changes_in_repo(
         &self,
         repo: &RepoSelector,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         self.source_control_scoped_runtime()
-            .commit_staged_in_repo_with_git_bridge(repo, message, git_bridge)
-    }
-
-    fn commit_source_control_changes_in_repo_with_git_bridge(
-        &self,
-        repo: &RepoSelector,
-        message: &str,
-        git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.source_control_scoped_runtime()
-            .commit_source_control_changes_in_repo_with_git_bridge(repo, message, git_bridge)
+            .commit_source_control_changes_in_repo(repo, message)
     }
 
     fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {

@@ -9,7 +9,7 @@ use crate::server::{
     NativeLoopbackAuthMaterial, ServerLaunchOptions, start_server_with_bound_listener,
 };
 use anyhow::Context;
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, P2pConfig, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::init::RepoInitOptions;
 use deve_core::plugin::loader::PluginLoader;
@@ -36,7 +36,6 @@ pub struct NativeLocalBackendOptions {
     pub snapshot_depth: usize,
     pub profile: AppProfile,
     pub sync_mode: SyncMode,
-    pub git_bridge: GitBridgeMode,
     pub p2p: P2pConfig,
     pub session_bound: bool,
     pub auth_material: Option<NativeLoopbackAuthMaterial>,
@@ -67,7 +66,6 @@ impl NativeLocalBackendOptions {
             snapshot_depth: 100,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
-            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             session_bound: false,
             auth_material: None,
@@ -155,7 +153,6 @@ pub async fn start_native_loopback_backend_with_listener(
         plugins,
         options.profile,
         options.sync_mode,
-        options.git_bridge,
         options.p2p,
         listener,
     )

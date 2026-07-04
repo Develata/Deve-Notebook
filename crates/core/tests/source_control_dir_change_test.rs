@@ -51,7 +51,7 @@ fn dir_change_rescan_records_child_rename_candidates() {
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage file");
     repo.apply_external_changes().expect("apply external file");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit file");
     let doc_id = repo
         .get_docid("notes/a.md")

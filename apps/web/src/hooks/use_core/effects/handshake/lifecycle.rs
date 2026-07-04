@@ -88,7 +88,7 @@ fn spawn_node_role_reprobe(ws: WsService) {
         match result {
             Some(result) => ws.complete_foreground_node_role_reprobe(
                 result.summary,
-                result.source_control_git_bridge,
+                result.source_control_authority,
                 result.host_file_copy_absolute_path,
                 result.host_file_reveal_in_system_explorer,
             ),
@@ -168,7 +168,7 @@ mod tests {
         assert!(signals.handshake_scope_nonce.get_untracked().is_none());
         assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
         assert_eq!(ws.node_role.get_untracked(), "");
-        assert_eq!(ws.source_control_git_bridge.get_untracked(), "unknown");
+        assert_eq!(ws.source_control_authority.get_untracked(), "unknown");
         assert!(ws.node_role_probe_failed.get_untracked());
     }
 

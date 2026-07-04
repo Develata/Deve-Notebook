@@ -1,4 +1,3 @@
-use deve_core::config::GitBridgeMode;
 use deve_core::git_bridge::{self, GitMirrorCommitState};
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::ChangeStatus;
@@ -66,7 +65,7 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("initial")
         .expect("commit");
     let repo_info = repo.get_repo_info().expect("repo info").expect("metadata");
 
@@ -92,7 +91,7 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("initial")
         .expect("commit");
 
     let record = repo
@@ -104,7 +103,7 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
 }
 
 #[test]
-fn source_control_git_bridge_off_skips_mirror_queue_when_git_ready() {
+fn ngit_commit_always_queues_git_main_mirror_when_ready() {
     let (_dir, repo) = new_repo();
     let root = repo_root(&repo);
     std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
@@ -116,7 +115,7 @@ fn source_control_git_bridge_off_skips_mirror_queue_when_git_ready() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
+        .commit_source_control_changes("initial")
         .expect("commit");
 
     let record = repo
@@ -124,7 +123,7 @@ fn source_control_git_bridge_off_skips_mirror_queue_when_git_ready() {
             Ok(git_bridge::get_record(db, &commit.id)?)
         })
         .expect("read mirror record");
-    assert!(record.is_none());
+    assert!(record.is_some());
     assert!(repo.list_staged().expect("staged after commit").is_empty());
     assert!(
         repo.list_commits(10)
@@ -156,10 +155,7 @@ fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_staged_with_git_bridge(
-            "initial despite mirror queue failure",
-            deve_core::config::GitBridgeMode::Mirror,
-        )
+        .commit_source_control_changes("initial despite mirror queue failure")
         .expect("commit must not roll back on mirror queue failure");
 
     assert!(repo.list_staged().expect("staged after commit").is_empty());

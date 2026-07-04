@@ -38,7 +38,7 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
     let (active_branch, _) = signal(None::<PeerId>);
     let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
     let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
-    let (git_bridge_mode, _) = signal("unknown".to_string());
+    let (source_control_authority, _) = signal("unknown".to_string());
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
     let clear_notice = Callback::new(move |_| set_notice.set(None));
@@ -54,7 +54,7 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
         can_write: Signal::derive(|| true),
         write_block: Signal::derive(|| None::<RepoWriteBlock>),
         read_block: Signal::derive(|| None::<RepoWriteBlock>),
-        git_bridge_mode,
+        source_control_authority,
         notice,
         set_notice,
         clear_notice,
@@ -156,8 +156,8 @@ fn git_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
     commands
         .get_untracked()
         .into_iter()
-        .find(|command| command.id == "git_status")
-        .expect("git status command")
+        .find(|command| command.id == "ngit_status")
+        .expect("ngit status command")
         .enabled_when
 }
 
@@ -188,7 +188,7 @@ fn git_status_command_sets_cli_only_notice() {
         assert!(
             command
                 .enabled_when
-                .contains("source_control.git_bridge=unknown")
+                .contains("source_control.authority=unknown")
         );
         assert_cli_notice_command(command, show, notice, is_git_status_cli_notice);
     });
@@ -300,25 +300,25 @@ fn git_status_command_routes_notice_to_source_control_sidebar_on_desktop() {
 }
 
 #[test]
-fn git_status_detail_text_exposes_bridge_mode() {
+fn git_status_detail_text_exposes_ngit_authority() {
     let owner = Owner::new();
     owner.with(|| {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        ws.complete_foreground_node_role_reprobe("main", "off", false, false);
+        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
         provide_session_client(ws);
         let (show, set_show) = signal(true);
         let command = create_commands(set_show)
             .get_untracked()
             .into_iter()
-            .find(|command| command.id == "git_status")
-            .expect("git status command");
+            .find(|command| command.id == "ngit_status")
+            .expect("ngit status command");
 
         let reason = command.availability.reason().expect("unavailable reason");
         let detail = command.detail_text();
 
         assert!(detail.contains(reason));
-        assert!(detail.contains("source_control.git_bridge=off"));
+        assert!(detail.contains("source_control.authority=ngit"));
         assert!(show.get_untracked());
     });
 }
@@ -414,23 +414,23 @@ fn git_repair_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn command_palette_git_bridge_mode_reads_session_signal() {
+fn command_palette_source_control_authority_reads_session_signal() {
     let owner = Owner::new();
     owner.with(|| {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        ws.complete_foreground_node_role_reprobe("main", "off", false, false);
+        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
         provide_session_client(ws);
         let (_, set_show) = signal(true);
 
         let enabled_when = git_status_enabled_when(create_commands(set_show));
 
-        assert!(enabled_when.contains("source_control.git_bridge=off"));
+        assert!(enabled_when.contains("source_control.authority=ngit"));
     });
 }
 
 #[test]
-fn command_palette_git_bridge_mode_updates_after_node_role_probe() {
+fn command_palette_source_control_authority_updates_after_node_role_probe() {
     let owner = Owner::new();
     owner.with(|| {
         provide_source_control_context();
@@ -439,10 +439,10 @@ fn command_palette_git_bridge_mode_updates_after_node_role_probe() {
         let (_, set_show) = signal(true);
         let commands = create_commands(set_show);
 
-        assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=unknown"));
+        assert!(git_status_enabled_when(commands).contains("source_control.authority=unknown"));
 
-        ws.complete_foreground_node_role_reprobe("main", "off", false, false);
+        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
 
-        assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=off"));
+        assert!(git_status_enabled_when(commands).contains("source_control.authority=ngit"));
     });
 }

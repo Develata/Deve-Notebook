@@ -18,7 +18,7 @@
 
 - 插件或外部扩展即使存在，也应与核心 authority、repo scope、写入主链隔离。
 - 用户不应被误导为“插件可以直接替代核心工作流”。
-- 插件 host 暴露 Source Control writer 时，必须经由当前 writer gate 与 Git bridge mode policy；缺失 gate 的本地 writer 必须拒绝。
+- 插件 host 暴露 Source Control writer 时，必须经由当前 writer gate 与 NoteGit/ngit authority；缺失 gate 的本地 writer 必须拒绝。
 
 ### 3. 未来预留
 

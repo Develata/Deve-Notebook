@@ -56,7 +56,8 @@ fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
             "degraded": r.repo_health.degraded,
         },
         "source_control": {
-            "git_bridge": r.source_control.git_bridge,
+            "authority": r.source_control.authority,
+            "git_main_mirror": r.source_control.git_main_mirror,
         },
         "host_file_actions": host_file_actions_payload(&node_role::host_file_actions_for(r)),
         "p2p": p2p_payload(&r.p2p),
@@ -120,9 +121,7 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::from_degraded_count(2, 1),
-            source_control: node_role::SourceControlSummary::from_git_bridge(
-                deve_core::config::GitBridgeMode::Mirror,
-            ),
+            source_control: node_role::SourceControlSummary::ngit_authority(),
             p2p: node_role::P2pSummary::disabled(),
             native_service: None,
         });
@@ -136,7 +135,8 @@ mod tests {
         assert_eq!(payload["repo_health"]["local_total"], 2);
         assert_eq!(payload["repo_health"]["healthy"], 1);
         assert_eq!(payload["repo_health"]["degraded"], 1);
-        assert_eq!(payload["source_control"]["git_bridge"], "mirror");
+        assert_eq!(payload["source_control"]["authority"], "ngit");
+        assert_eq!(payload["source_control"]["git_main_mirror"], "main");
         assert_eq!(payload["host_file_actions"]["copy_absolute_path"], true);
         assert_eq!(payload["native_service"], serde_json::Value::Null);
     }
@@ -153,9 +153,7 @@ mod tests {
                 delivery: "embedded-frontend".into(),
                 environment: "development".into(),
                 repo_health: node_role::RepoHealthSummary::from_degraded_count(1, 0),
-                source_control: node_role::SourceControlSummary::from_git_bridge(
-                    deve_core::config::GitBridgeMode::Mirror,
-                ),
+                source_control: node_role::SourceControlSummary::ngit_authority(),
                 p2p: node_role::P2pSummary::disabled(),
                 native_service: None,
             },
@@ -179,9 +177,7 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::unknown(),
-            source_control: node_role::SourceControlSummary::from_git_bridge(
-                deve_core::config::GitBridgeMode::Mirror,
-            ),
+            source_control: node_role::SourceControlSummary::ngit_authority(),
             p2p: node_role::P2pSummary::disabled(),
             native_service: Some(node_role::NativeServiceSummary {
                 state: "endpoint_ready".into(),
@@ -215,9 +211,7 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::unknown(),
-            source_control: node_role::SourceControlSummary::from_git_bridge(
-                deve_core::config::GitBridgeMode::Off,
-            ),
+            source_control: node_role::SourceControlSummary::ngit_authority(),
             p2p: node_role::P2pSummary {
                 enabled: true,
                 peers: vec![node_role::P2pPeerSummary {
@@ -238,7 +232,7 @@ mod tests {
         });
 
         assert_eq!(payload["p2p"]["enabled"], true);
-        assert_eq!(payload["source_control"]["git_bridge"], "off");
+        assert_eq!(payload["source_control"]["authority"], "ngit");
         assert_eq!(payload["p2p"]["peers"][0]["label"], "peer-b");
         assert_eq!(payload["p2p"]["peers"][0]["state"], "connected");
         let serialized = payload.to_string();
@@ -257,9 +251,7 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::unknown(),
-            source_control: node_role::SourceControlSummary::from_git_bridge(
-                deve_core::config::GitBridgeMode::Mirror,
-            ),
+            source_control: node_role::SourceControlSummary::ngit_authority(),
             p2p: node_role::P2pSummary::disabled(),
             native_service: Some(node_role::NativeServiceSummary {
                 state: "service_offline".into(),

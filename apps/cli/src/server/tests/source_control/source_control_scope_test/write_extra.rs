@@ -246,7 +246,7 @@ async fn commit_and_push_ws_returns_cli_only_blocker_without_commit() -> anyhow:
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert!(error.detail.as_deref().is_some_and(|detail| {
-                detail.contains("CLI-only") && detail.contains("deve git push")
+                detail.contains("CLI-only") && detail.contains("deve ngit push")
             }));
             assert_eq!(scope_nonce, Some(47));
         }

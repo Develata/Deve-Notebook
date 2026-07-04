@@ -6,7 +6,6 @@
 //!
 //! 把历史单 repo 便捷方法与 repo-scoped 执行路径隔离。
 
-use crate::config::GitBridgeMode;
 use crate::ledger::RepoManager;
 use crate::source_control::{ChangeEntry, CommitInfo};
 use anyhow::Result;
@@ -28,16 +27,8 @@ impl RepoManager {
     }
 
     /// 创建 Source Control 版本锚点；只覆盖 confirmed ledger changes。
-    pub fn commit_staged_with_git_bridge(
-        &self,
-        message: &str,
-        git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_in_local_repo_with_git_bridge(
-            self.local_repo_name(),
-            message,
-            git_bridge,
-        )
+    pub fn commit_source_control_changes(&self, message: &str) -> Result<CommitInfo> {
+        self.commit_source_control_changes_in_local_repo(self.local_repo_name(), message)
     }
 
     /// 将 External Changes staging 显式写入 ledger，但不创建 Source Control commit anchor。

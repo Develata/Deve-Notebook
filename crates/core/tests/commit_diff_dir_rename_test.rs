@@ -54,7 +54,7 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     repo.apply_external_changes()
         .expect("apply external initial");
     let first = repo
-        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("initial")
         .expect("commit initial");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -76,7 +76,7 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     repo.apply_external_changes()
         .expect("apply external rename");
     let second = repo
-        .commit_staged_with_git_bridge("rename dir", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("rename dir")
         .expect("commit rename");
 
     let diffs = repo

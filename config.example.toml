@@ -15,10 +15,6 @@ sync_mode = "auto"
 # Merge Strategy (manual | auto)
 merge_strategy = "manual"
 
-[source_control]
-# Git bridge mode (mirror | off). Deve ledger/.notegit remains the authority.
-git_bridge = "mirror"
-
 # Performance Tuning
 # Number of changes to keep in history
 snapshot_depth = 100

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-03`
+- `Last Review`: `2026-07-04`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`, `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/sidebar/source_control/`, `apps/web/src/hooks/use_core/`
@@ -156,7 +156,7 @@ Commit surface 规则：
 
 - commit message input **MUST** 位于 resource groups 之前。
 - primary action 是 `Commit` 或当前 gate 允许的等价 commit action。
-- `Commit & Push` 是 secondary action；它不得暗示 Web Git mirror push authority。
+- `Commit & Push` 是 secondary action；它不得暗示 Web 直接拥有 Git push authority。
 - AI-generated commit message 是辅助输入，必须服从 `16_ai_agent.md` 的 capability gate。
 - message empty、staged empty and confirmed empty、readonly、writer-not-ready、scope switching、service offline 都必须显示结构化 disabled reason。
 - commit button 在 confirmed ledger changes 非空时可用；confirmed-only commit 采用整锚提交。
@@ -186,11 +186,19 @@ Future command id（首批不启用）：
 
 - `source_control.revert_confirmed_ledger`
 
-Git mirror command ids 必须保持独立：
+NoteGit/Git main mirror diagnostic command ids 必须保持独立，不得表示 Source Control authority：
 
-- `git.import_changes`
-- `git.push_mirror`
-- `git.repair_mirror`
+- `ngit.mirror_status`
+- `ngit.import_changes`
+- `ngit.push_mirror`
+- `ngit.repair_mirror`
+
+Remote Projection Transport command ids 必须保持独立：
+
+- `webdav:push`
+- `webdav:pull`
+- `s3:push`
+- `s3:pull`
 
 External Changes command ids 必须保持独立：
 
@@ -203,7 +211,9 @@ External Changes command ids 必须保持独立：
 - `external_changes.apply_to_ledger`
 - `external_changes.open_diff`
 
-Web Git mirror commands 当前只能打开 CLI-only notice 或 read-only repair review；不得直接升级为 Git writer。
+Web ngit/Git-main-mirror diagnostic commands 当前只能打开 backend/runtime intent 或 read-only repair review；
+不得直接升级为 Git writer。WebDAV/S3 commands 只能发送 typed intent，上传、下载、覆盖 projection
+workspace 与 External Changes 触发均属于 backend/core infra。
 
 ## 8. Failure and Boundary States
 
@@ -217,7 +227,7 @@ Source Control view 必须显式展示以下状态：
 - service offline
 - session invalid / unauthorized
 - source-control runtime error
-- Git mirror queued / out-of-sync / CLI-only repair notice
+- Git main mirror queued / out-of-sync / read-only repair notice
 
 External Changes view 必须显式展示以下状态：
 
@@ -284,6 +294,7 @@ External Changes view 必须显式展示以下状态：
 - structured external-change notices
 
 View layer 不得直接操作 repo state、ledger state、pending/staged side tables、Git mirror state 或 `.notegit`。
+View layer 也不得直接枚举、上传、下载或覆盖 WebDAV/S3 projection files。
 
 ## 11. Refactor Target
 
@@ -312,6 +323,10 @@ External Changes UI 应登记为独立 `external_changes_client` / runtime facad
 - `Source Control: Commit`
 - `Source Control: Open History`
 - `Source Control: Open Graph`
+- `webdav:push`
+- `webdav:pull`
+- `s3:push`
+- `s3:pull`
 
 ## 本章相关配置
 

@@ -135,8 +135,8 @@ fn export_report_lines_use_export_semantics_and_retry_command() {
             "  record[1]: deve_commit=deve-1 state=out_of_sync ledger_seq=7 attempts=1 git_commit=- queued_at_ms=1 updated_at_ms=2",
             "  failure[1]: location=deve_source_control error=Git mirror refuses to run with 1 pending source-control change(s)",
             "  repair_action[1]: code=clean_deve_source_control retryable_after_fix=yes subject=deve_source_control",
-            "  repair_guidance[1]: manual_only=yes next=stage_commit_or_discard_deve_source_control_changes retry_command=`deve_cli git export --repo default --retry-out-of-sync`",
-            "  repair_hint: fix the reported failure_location/error; retry with `deve_cli git export --repo default --retry-out-of-sync`",
+            "  repair_guidance[1]: manual_only=yes next=stage_commit_or_discard_deve_source_control_changes retry_command=`deve_cli ngit export --repo default --retry-out-of-sync`",
+            "  repair_hint: fix the reported failure_location/error; retry with `deve_cli ngit export --repo default --retry-out-of-sync`",
         ]
     );
 }

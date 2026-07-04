@@ -78,32 +78,42 @@
 - 冲突必须以显式方式显示。
 - 只读或 spectator 场景下不能假装支持 commit/merge 写入。
 
-### 5. Git Mirror Repair UI Boundary
+### 5. NoteGit / Git Main Mirror Repair UI Boundary
 
-Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror`
-的 CLI-only notice。可点击 Git mirror repair UI 只有满足以下边界后才能进入验收：
+Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
+的 backend/runtime intent 或 read-only notice。可点击 Git main mirror repair UI 只有满足以下边界后才能进入验收：
 
 - UI 第一阶段只能展示 `repair_action[...]` / `repair_guidance[...]` 的只读解释与 copyable CLI command，不得直接执行 Git。
 - 只读 review 只能读取 server-side mirror status 与 repair-action schema，不运行 Git，不写 `.git` / `.notegit`，Web 不解析 CLI 输出。
 - loading、load failed、empty record fallback 只影响展示，不授予 Web repair 写权限。
-- Git import/push/repair 写操作只允许通过显式 CLI surface 触发。
+- Git import/push/repair 写操作只允许通过显式 backend/runtime surface 触发。
 - 若后续进入可执行 UI，必须有明确 manual confirmation，且确认内容包含 repo、repair action code、subject、retry command 与 `.notegit` authority 提醒。
 - 任何可执行 repair flow 都必须 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` Git tracking leak 与 stale scope nonce。
-- 后台自动 Git writer 不是该 UI 的一部分；`.git` 仍只是 projection mirror，`.notegit` / ledger source-control state 仍是 authority。
+- 后台自动 Git writer 不是该 UI 的一部分；`.git` main 仍只是 projection mirror，`.notegit` / ledger source-control state 仍是 authority。
 
-### 6. Git Bridge Mode
+### 6. NoteGit-only Git Main Mirror
 
-- 默认 `source_control.git_bridge = "mirror"` 时，Deve commit 后仍可排队 Git mirror record，Git mirror/import/export/push 只通过显式 CLI bridge 执行。
-- `source_control.git_bridge = "off"` 时，Source Control 的 stage、commit、diff、history 与 merge 仍可用，但不会自动排队 Git mirror。
-- `off` 模式下，Git status 与 import dry-run 只能作为诊断；Git mirror/export/import apply/push 必须明确显示 disabled blocker。
-- Git bridge 写命令在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
+- Source Control 固定使用 NoteGit/ngit authority，不再暴露 `source_control.git_bridge` / mirror/off 设置。
+- NoteGit/ngit commit 成功后始终尝试排队 Git main mirror record；排队或执行失败只形成诊断，不回滚 ledger commit。
+- Git main mirror 只要求 Markdown Projection Workspace 的终态与 NoteGit/ngit 终态一致，不要求历史轨迹逐条一致。
+- ngit status/import/mirror/export/push 在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
   `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
-- Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer；Source Control header 的 badge 应写成 `NoteGit + Git mirror` / `NoteGit only` 这类 authority-first 文案，避免把 Git bridge mode 误读成 Git authority 切换。
+- Web Command Palette 与 Source Control UI 不展示 legacy bridge mode；Source Control header 应写成 NoteGit/ngit authority-first 文案，避免把 Git main mirror 误读成 Git authority 切换。
 - Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
   menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
-- Web `Commit & Push` 入口只展示 Git push CLI-only notice；兼容期旧 WS `CommitAndPush` frame 不得等价为普通 commit，服务端必须返回结构化 blocker 且无 source-control 写副作用。
-- 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
-- 后端 commit writer API 不提供无策略默认 `mirror` 入口；新增 CLI、HTTP、WS 或插件提交路径时必须显式传入当前 Git bridge mode，代理路径只能转发到主进程策略。
+- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice；旧 WS `CommitAndPush` frame 不得等价为普通 commit，服务端必须返回结构化 blocker 且无 source-control 写副作用。
+- 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须走同一个 NoteGit/ngit commit path；代理模式必须展示 delegated/unknown/readonly 状态，而不能硬编码为 mirror mode。
+- 后端 commit writer API 不接收 legacy bridge policy；新增 CLI、HTTP、WS 或插件提交路径时必须复用 NoteGit/ngit source-control writer gate。
+
+### 7. WebDAV/S3 Remote Projection Transport
+
+- Command Palette 应提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
+- 当前 v1 只允许 backend/core 生成 admission plan；provider I/O 未接线时必须显示
+  `provider_io_ready=false` 并 fail-closed，不能伪装成已经 push/pull 成功。
+- push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
+- pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。
+- pull 不直接写 ledger、不创建 commit anchor、不自动 Apply to Ledger，也不直接写 Git main mirror queue。
+- Web 只发送 typed intent；provider IO、覆盖策略、locator gate、identity gate 与 External Changes 触发均属于 backend/core runtime。
 
 ### 7. HTTP Source Control Write Grant
 

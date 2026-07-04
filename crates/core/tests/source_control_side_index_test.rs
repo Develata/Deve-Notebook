@@ -49,7 +49,7 @@ fn seed_rename_pair(_dir: &TempDir, repo: &RepoManager) -> DocId {
     seed_pending(repo, "notes/a.md", None, ChangeStatus::Added);
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -139,7 +139,7 @@ fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added);
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")

@@ -4,7 +4,6 @@
 //! Remote diff test fixtures.
 
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
@@ -44,7 +43,6 @@ pub(super) fn build_state(dir: &TempDir, repo: RepoManager) -> anyhow::Result<Ar
         #[cfg(feature = "search")]
         search_available: false,
         identity_key,
-        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     }))
 }
 
@@ -110,6 +108,6 @@ pub(super) fn commit_added_file(
     );
     let selector = RepoSelector::default();
     repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path(path))?;
-    repo.commit_staged_in_repo_with_git_bridge(&selector, message, GitBridgeMode::Mirror)?;
+    repo.commit_source_control_changes_in_repo(&selector, message)?;
     Ok(repo.get_docid(path)?.expect("existing doc id"))
 }

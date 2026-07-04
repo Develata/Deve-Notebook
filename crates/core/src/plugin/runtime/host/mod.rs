@@ -36,8 +36,6 @@ use crate::plugin::manifest::PluginManifest;
 use rhai::Engine;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::config::GitBridgeMode;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::traits::{RepoSelector, Repository};
@@ -66,7 +64,7 @@ static SYNC_MANAGER: OnceLock<Arc<SyncManager>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SourceControlHostMode {
-    Local { git_bridge: GitBridgeMode },
+    Local,
     RemoteDelegated,
 }
 
@@ -78,11 +76,8 @@ pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn set_source_control_api(
-    api: Arc<dyn SourceControlApi>,
-    git_bridge: GitBridgeMode,
-) -> Result<(), anyhow::Error> {
-    set_source_control_api_with_mode(api, SourceControlHostMode::Local { git_bridge })
+pub fn set_source_control_api(api: Arc<dyn SourceControlApi>) -> Result<(), anyhow::Error> {
+    set_source_control_api_with_mode(api, SourceControlHostMode::Local)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -139,7 +134,7 @@ pub fn source_control_api() -> Result<Arc<dyn SourceControlApi>, anyhow::Error> 
 pub fn ensure_source_control_write_allowed(selector: &RepoSelector) -> Result<(), ServerError> {
     match SOURCE_CONTROL_MODE.get().copied() {
         Some(SourceControlHostMode::RemoteDelegated) => return Ok(()),
-        Some(SourceControlHostMode::Local { .. }) => {}
+        Some(SourceControlHostMode::Local) => {}
         None => {
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
@@ -158,19 +153,18 @@ pub fn ensure_source_control_write_allowed(selector: &RepoSelector) -> Result<()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn commit_staged_in_repo(
+pub fn commit_source_control_changes_in_repo(
     repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     message: &str,
 ) -> Result<CommitInfo, anyhow::Error> {
     match source_control_mode()? {
-        SourceControlHostMode::Local { git_bridge } => {
-            repo.commit_staged_in_repo_with_git_bridge(selector, message, git_bridge)
+        SourceControlHostMode::Local => {
+            repo.commit_source_control_changes_in_repo(selector, message)
         }
         SourceControlHostMode::RemoteDelegated => {
-            // RemoteSourceControlApi forwards to the authoritative main process;
-            // if a non-proxy implementation is miswired here, fail closed for Git writes.
-            repo.commit_staged_in_repo_with_git_bridge(selector, message, GitBridgeMode::Off)
+            // RemoteSourceControlApi forwards to the authoritative main process.
+            repo.commit_source_control_changes_in_repo(selector, message)
         }
     }
 }

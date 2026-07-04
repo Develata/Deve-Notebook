@@ -74,12 +74,12 @@ fn status_lines_include_cli_only_repair_action() {
     }));
     assert!(lines.iter().any(|line| {
         line.contains(
-            "repair_guidance[1]: manual_only=yes next=fix_projection_or_path_subject retry_command=`deve_cli git export --repo default --retry-out-of-sync`",
+            "repair_guidance[1]: manual_only=yes next=fix_projection_or_path_subject retry_command=`deve_cli ngit export --repo default --retry-out-of-sync`",
         )
     }));
     assert!(lines.iter().any(|line| {
         line.contains(
-            "repair_hint: fix the reported repair_action subject, then run `deve_cli git export --repo default --retry-out-of-sync`",
+            "repair_hint: fix the reported repair_action subject, then run `deve_cli ngit export --repo default --retry-out-of-sync`",
         )
     }));
 }

@@ -97,7 +97,7 @@ pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) 
         >
             <SourceControlHeader
                 locale
-                git_bridge_mode=core.git_bridge_mode
+                source_control_authority=core.source_control_authority
                 show_menu
                 show_repos
                 show_changes

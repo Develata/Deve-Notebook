@@ -24,12 +24,7 @@ pub(super) async fn commit_with_ack(
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
     let selector = super::service::selector_from_scope(&scope);
-    match super::service::commit_staged_with_git_bridge(
-        state.repo.as_ref(),
-        &selector,
-        &message,
-        state.git_bridge,
-    ) {
+    match super::service::commit_source_control_changes(state.repo.as_ref(), &selector, &message) {
         Ok(info) => {
             tracing::info!("{}: {} - {}", success_label, info.id, info.message);
             ch.broadcast(ServerMessage::CommitAck {

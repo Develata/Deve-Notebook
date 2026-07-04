@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::manifest::{Capability, PluginManifest};
@@ -11,12 +10,15 @@ use deve_core::sync::SyncManager;
 
 #[derive(Default)]
 struct RecordingSourceControlApi {
-    commit_mode: Mutex<Option<GitBridgeMode>>,
+    commit_message: Mutex<Option<String>>,
 }
 
 impl RecordingSourceControlApi {
-    fn commit_mode(&self) -> Option<GitBridgeMode> {
-        *self.commit_mode.lock().expect("commit mode lock")
+    fn commit_message(&self) -> Option<String> {
+        self.commit_message
+            .lock()
+            .expect("commit message lock")
+            .clone()
     }
 
     fn unused<T>(&self) -> anyhow::Result<T> {
@@ -86,13 +88,12 @@ impl SourceControlApi for RecordingSourceControlApi {
         self.unused()
     }
 
-    fn commit_staged_in_repo_with_git_bridge(
+    fn commit_source_control_changes_in_repo(
         &self,
         _repo: &RepoSelector,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> anyhow::Result<CommitInfo> {
-        *self.commit_mode.lock().expect("commit mode lock") = Some(git_bridge);
+        *self.commit_message.lock().expect("commit message lock") = Some(message.to_string());
         Ok(commit_info(message))
     }
 
@@ -116,7 +117,7 @@ fn commit_info(message: &str) -> CommitInfo {
 }
 
 #[test]
-fn plugin_sc_commit_respects_git_bridge_off() {
+fn plugin_sc_commit_uses_ngit_authority_api() {
     let dir = tempfile::tempdir().expect("temp dir");
     let ledger = dir.path().join("ledger");
     let projection = dir.path().join("notes");
@@ -130,7 +131,7 @@ fn plugin_sc_commit_respects_git_bridge_off() {
     let sync = Arc::new(SyncManager::new_checked(repo.clone()).expect("sync manager"));
     let api = Arc::new(RecordingSourceControlApi::default());
 
-    host::set_source_control_api(api.clone(), GitBridgeMode::Off).expect("source control api");
+    host::set_source_control_api(api.clone()).expect("source control api");
     host::set_repo_manager(repo).expect("repo manager");
     host::set_sync_manager(sync).expect("sync manager");
 
@@ -151,5 +152,5 @@ fn plugin_sc_commit_respects_git_bridge_off() {
         .eval::<rhai::Dynamic>("sc_commit(\"plugin commit\")")
         .expect("plugin sc_commit");
 
-    assert_eq!(api.commit_mode(), Some(GitBridgeMode::Off));
+    assert_eq!(api.commit_message().as_deref(), Some("plugin commit"));
 }

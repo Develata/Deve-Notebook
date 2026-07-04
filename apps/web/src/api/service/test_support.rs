@@ -31,7 +31,7 @@ impl WsService {
         let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
-        let (source_control_git_bridge, set_source_control_git_bridge) =
+        let (source_control_authority, set_source_control_authority) =
             signal("unknown".to_string());
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
@@ -51,8 +51,8 @@ impl WsService {
             endpoint,
             node_role,
             set_node_role,
-            source_control_git_bridge,
-            set_source_control_git_bridge,
+            source_control_authority,
+            set_source_control_authority,
             host_file_copy_absolute_path,
             set_host_file_copy_absolute_path,
             host_file_reveal_in_system_explorer,
@@ -81,8 +81,7 @@ impl WsService {
 
     pub(crate) fn set_node_role_probe_failed_for_test(&self) {
         self.set_node_role.set(String::new());
-        self.set_source_control_git_bridge
-            .set("unknown".to_string());
+        self.set_source_control_authority.set("unknown".to_string());
         self.set_host_file_actions_for_test(false, false);
         self.set_node_role_probe_failed.set(true);
     }

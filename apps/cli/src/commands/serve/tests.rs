@@ -2,7 +2,7 @@ use super::{
     ServeOptions, detect_main_node_role, detect_main_port, proxy_auth_config, proxy_node_role, run,
 };
 use axum::{Json, Router, routing::get};
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
+use deve_core::config::{AppProfile, P2pConfig, RuntimeEnvironment, SyncMode};
 use std::ffi::OsString;
 use std::net::{SocketAddr, TcpListener};
 use std::sync::Mutex;
@@ -49,20 +49,19 @@ async fn spawn_json_server(payload: serde_json::Value) -> SocketAddr {
 }
 
 async fn spawn_node_role_server(role: &'static str) -> SocketAddr {
-    spawn_node_role_server_with_git_bridge(role, "mirror").await
+    spawn_node_role_server_with_authority(role, "ngit").await
 }
 
-async fn spawn_node_role_server_with_git_bridge(
+async fn spawn_node_role_server_with_authority(
     role: &'static str,
-    git_bridge: &'static str,
+    authority: &'static str,
 ) -> SocketAddr {
-    spawn_node_role_server_with_git_bridge_and_repo_health(role, git_bridge, "healthy", 1, 1, 0)
-        .await
+    spawn_node_role_server_with_authority_and_repo_health(role, authority, "healthy", 1, 1, 0).await
 }
 
-async fn spawn_node_role_server_with_git_bridge_and_repo_health(
+async fn spawn_node_role_server_with_authority_and_repo_health(
     role: &'static str,
-    git_bridge: &'static str,
+    authority: &'static str,
     repo_health_status: &'static str,
     local_total: u64,
     healthy: u64,
@@ -79,7 +78,7 @@ async fn spawn_node_role_server_with_git_bridge_and_repo_health(
             Json(node_role_payload_with_repo_health(
                 role,
                 port,
-                git_bridge,
+                authority,
                 repo_health_status,
                 local_total,
                 healthy,
@@ -96,7 +95,7 @@ async fn spawn_node_role_server_with_git_bridge_and_repo_health(
 fn node_role_payload_with_repo_health(
     role: &str,
     port: u16,
-    git_bridge: &str,
+    authority: &str,
     repo_health_status: &str,
     local_total: u64,
     healthy: u64,
@@ -117,7 +116,8 @@ fn node_role_payload_with_repo_health(
             "degraded": degraded,
         },
         "source_control": {
-            "git_bridge": git_bridge,
+            "authority": authority,
+            "git_main_mirror": "main",
         },
     })
 }
@@ -141,22 +141,22 @@ async fn detect_main_port_accepts_native_main_node_role() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn detect_main_node_role_preserves_source_control_git_bridge_mode() {
-    let addr = spawn_node_role_server_with_git_bridge("main", "off").await;
+async fn detect_main_node_role_preserves_source_control_git_authority() {
+    let addr = spawn_node_role_server_with_authority("main", "ngit").await;
     let detected = detect_main_node_role(addr.port())
         .await
         .expect("main node role");
 
     assert_eq!(detected.port, addr.port());
-    assert_eq!(detected.source_control.git_bridge, "off");
+    assert_eq!(detected.source_control.authority, "ngit");
+    assert_eq!(detected.source_control.git_main_mirror, "main");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn detect_main_node_role_preserves_repo_health_summary() {
-    let addr = spawn_node_role_server_with_git_bridge_and_repo_health(
-        "main", "mirror", "degraded", 3, 2, 1,
-    )
-    .await;
+    let addr =
+        spawn_node_role_server_with_authority_and_repo_health("main", "ngit", "degraded", 3, 2, 1)
+            .await;
 
     let detected = detect_main_node_role(addr.port())
         .await
@@ -221,13 +221,14 @@ async fn detect_main_port_rejects_node_role_for_different_port() {
 }
 
 #[test]
-fn proxy_node_role_uses_delegated_git_bridge_mode() {
+fn proxy_node_role_preserves_delegated_source_control_authority() {
     let role = proxy_node_role(
         3002,
         3001,
         crate::server::node_role::RepoHealthSummary::from_degraded_count(2, 1),
         crate::server::node_role::SourceControlSummary {
-            git_bridge: "off".into(),
+            authority: "ngit".into(),
+            git_main_mirror: "main".into(),
         },
         RuntimeEnvironment::Development,
     );
@@ -237,7 +238,8 @@ fn proxy_node_role_uses_delegated_git_bridge_mode() {
     assert_eq!(role.main_port, 3001);
     assert_eq!(role.delivery, "plugin-host-proxy");
     assert_eq!(role.environment, "development");
-    assert_eq!(role.source_control.git_bridge, "off");
+    assert_eq!(role.source_control.authority, "ngit");
+    assert_eq!(role.source_control.git_main_mirror, "main");
     assert_eq!(role.repo_health.status, "degraded");
     assert_eq!(role.repo_health.local_total, 2);
     assert_eq!(role.repo_health.degraded, 1);
@@ -275,7 +277,6 @@ async fn serve_dry_run_validates_runtime_without_binding() {
             dry_run: true,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
-            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             native_loopback: false,
         },
@@ -300,7 +301,6 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
             dry_run: false,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
-            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             native_loopback: true,
         },
@@ -335,7 +335,6 @@ async fn serve_dev_does_not_mutate_existing_deve_env() {
             dry_run: true,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
-            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             native_loopback: false,
         },

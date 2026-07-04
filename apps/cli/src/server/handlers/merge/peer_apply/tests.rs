@@ -187,7 +187,6 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
             #[cfg(feature = "search")]
             search_available: false,
             identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
-            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
         doc_id,
         repo_id,

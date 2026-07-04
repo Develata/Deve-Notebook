@@ -36,8 +36,8 @@ pub struct WsService {
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
     set_node_role: WriteSignal<String>,
-    pub source_control_git_bridge: ReadSignal<String>,
-    set_source_control_git_bridge: WriteSignal<String>,
+    pub source_control_authority: ReadSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
     pub host_file_copy_absolute_path: ReadSignal<bool>,
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub host_file_reveal_in_system_explorer: ReadSignal<bool>,
@@ -64,7 +64,7 @@ impl WsService {
         let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
-        let (source_control_git_bridge, set_source_control_git_bridge) =
+        let (source_control_authority, set_source_control_authority) =
             signal("unknown".to_string());
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
@@ -91,7 +91,7 @@ impl WsService {
                 set_connection_epoch,
                 set_endpoint,
                 set_node_role,
-                set_source_control_git_bridge,
+                set_source_control_authority,
                 set_host_file_copy_absolute_path,
                 set_host_file_reveal_in_system_explorer,
                 set_node_role_probe_failed,
@@ -113,8 +113,8 @@ impl WsService {
             endpoint,
             node_role,
             set_node_role,
-            source_control_git_bridge,
-            set_source_control_git_bridge,
+            source_control_authority,
+            set_source_control_authority,
             host_file_copy_absolute_path,
             set_host_file_copy_absolute_path,
             host_file_reveal_in_system_explorer,

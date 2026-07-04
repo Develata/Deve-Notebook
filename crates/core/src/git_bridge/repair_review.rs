@@ -72,7 +72,7 @@ fn repair_review_record(
 
 fn retry_command(repo_name: &str) -> String {
     format!(
-        "deve_cli git export --repo {} --retry-out-of-sync",
+        "deve_cli ngit export --repo {} --retry-out-of-sync",
         shell_quote(repo_name)
     )
 }
@@ -113,7 +113,7 @@ mod tests {
         );
         assert_eq!(
             review.records[0].retry_command.as_deref(),
-            Some("deve_cli git export --repo 'repo name' --retry-out-of-sync")
+            Some("deve_cli ngit export --repo 'repo name' --retry-out-of-sync")
         );
     }
 

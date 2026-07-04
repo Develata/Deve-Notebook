@@ -23,7 +23,7 @@ pub(super) struct ConnectedSessionSignals {
     pub set_msg_seq: WriteSignal<u64>,
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
     pub set_node_role: WriteSignal<String>,
-    pub set_source_control_git_bridge: WriteSignal<String>,
+    pub set_source_control_authority: WriteSignal<String>,
     pub set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
@@ -130,7 +130,7 @@ fn reset_node_role_runtime(signals: &ConnectedSessionSignals) -> bool {
         .try_set(signals.set_node_role, String::new())
         && signals
             .lifecycle
-            .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
+            .try_set(signals.set_source_control_authority, "unknown".to_string())
         && signals
             .lifecycle
             .try_set(signals.set_host_file_copy_absolute_path, false)
@@ -169,8 +169,7 @@ mod tests {
         let (_msg_queue, set_msg_queue) =
             signal(VecDeque::<(u64, u64, deve_core::protocol::ServerMessage)>::new());
         let (node_role, set_node_role) = signal("main".to_string());
-        let (source_control_git_bridge, set_source_control_git_bridge) =
-            signal("mirror".to_string());
+        let (source_control_authority, set_source_control_authority) = signal("mirror".to_string());
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
             signal(true);
@@ -185,7 +184,7 @@ mod tests {
             set_msg_seq,
             set_msg_queue,
             set_node_role,
-            set_source_control_git_bridge,
+            set_source_control_authority,
             set_host_file_copy_absolute_path,
             set_host_file_reveal_in_system_explorer,
             set_node_role_probe_failed,
@@ -204,7 +203,7 @@ mod tests {
 
         assert_eq!(status.get_untracked(), ConnectionStatus::Disconnected);
         assert_eq!(node_role.get_untracked(), "");
-        assert_eq!(source_control_git_bridge.get_untracked(), "unknown");
+        assert_eq!(source_control_authority.get_untracked(), "unknown");
         assert!(!host_file_copy_absolute_path.get_untracked());
         assert!(!host_file_reveal_in_system_explorer.get_untracked());
         assert!(!node_role_probe_failed.get_untracked());

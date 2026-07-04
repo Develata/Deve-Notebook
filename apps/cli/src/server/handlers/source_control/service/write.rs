@@ -3,7 +3,6 @@
 //!   - 03_storage/index#repo-runtime-layout
 
 use super::super::errors::{self, ScOp};
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, CommitInfo, SourceControlApi};
@@ -103,13 +102,12 @@ pub fn unstage_many(
     Ok(visible_paths)
 }
 
-pub fn commit_staged_with_git_bridge(
+pub fn commit_source_control_changes(
     repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     message: &str,
-    git_bridge: GitBridgeMode,
 ) -> super::ScResult<CommitInfo> {
-    repo.commit_source_control_changes_in_repo_with_git_bridge(selector, message, git_bridge)
+    repo.commit_source_control_changes_in_repo(selector, message)
         .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
 }
 

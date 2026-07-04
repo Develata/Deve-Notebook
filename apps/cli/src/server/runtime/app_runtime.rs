@@ -7,7 +7,6 @@
 #[cfg(not(test))]
 use crate::server::source_control_grants::SourceControlWriteGrants;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
@@ -35,7 +34,6 @@ pub(crate) struct AppStateParts {
     #[cfg(feature = "search")]
     pub search_available: bool,
     pub identity_key: Arc<IdentityKeyPair>,
-    pub git_bridge: GitBridgeMode,
 }
 
 pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
@@ -49,7 +47,6 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         #[cfg(feature = "search")]
         search_available: parts.search_available,
         identity_key: parts.identity_key,
-        git_bridge: parts.git_bridge,
         #[cfg(not(test))]
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
     })

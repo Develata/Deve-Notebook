@@ -85,9 +85,9 @@ mod tests {
         );
         assert_eq!(
             git_import_cli_only_title(Locale::En),
-            "Git import is CLI-only"
+            "ngit import is CLI-only"
         );
-        assert!(git_import_cli_only_hint(Locale::En).contains("deve_cli git import --apply"));
+        assert!(git_import_cli_only_hint(Locale::En).contains("deve_cli ngit import --apply"));
         assert_eq!(
             establish_branch_unavailable_title(Locale::En),
             "P2P branch creation is unavailable"
@@ -95,9 +95,9 @@ mod tests {
         assert!(establish_branch_unavailable_hint(Locale::Zh).contains("P2P: Merge Peer"));
         assert_eq!(
             git_push_cli_only_title(Locale::Zh),
-            "Git mirror 推送只能通过 CLI 执行"
+            "ngit mirror 推送只能通过 CLI 执行"
         );
-        assert!(git_push_cli_only_hint(Locale::Zh).contains("deve_cli git push"));
+        assert!(git_push_cli_only_hint(Locale::Zh).contains("deve_cli ngit push"));
         assert_eq!(refresh_change_list(Locale::Zh), "请刷新更改列表后再试。");
     }
 

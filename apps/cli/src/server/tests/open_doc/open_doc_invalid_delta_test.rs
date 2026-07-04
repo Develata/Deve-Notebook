@@ -35,7 +35,6 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
             #[cfg(feature = "search")]
             search_available: false,
             identity_key: security::load_or_generate_identity_key(&host_dir)?,
-            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
         default_id,
     ))

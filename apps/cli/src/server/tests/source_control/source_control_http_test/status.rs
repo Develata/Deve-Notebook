@@ -136,7 +136,7 @@ async fn test_git_mirror_repair_review_is_readonly_record_source() -> anyhow::Re
     assert_eq!(body.records[0].subject, "docs/example.md");
     assert_eq!(
         body.records[0].retry_command.as_deref(),
-        Some("deve_cli git export --repo default --retry-out-of-sync")
+        Some("deve_cli ngit export --repo default --retry-out-of-sync")
     );
     harness.shutdown().await;
     Ok(())

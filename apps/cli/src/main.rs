@@ -15,11 +15,12 @@
 //! - `dump`: 调试工具，用于检查 ops 记录
 //! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
 //! - `graph`: 输出当前 repo 的只读 GraphProjection JSON
-//! - `git status`: 检查 Git ecosystem mirror bridge 状态
-//! - `git mirror`: 手动执行 queued Git mirror commits
-//! - `git export`: 将 queued Deve commits 导出到 Git mirror
-//! - `git import`: 规划或显式 apply 外部 Git/worktree changes
-//! - `git push`: 将 Git mirror 发布到远端
+//! - `ngit status`: 检查 NoteGit authority 的 Git main mirror 状态
+//! - `ngit mirror`: 手动执行 queued Git main mirror commits
+//! - `ngit export`: 将 queued NoteGit commits 导出到 Git main mirror
+//! - `ngit import`: 规划或显式 apply 外部 Git/worktree changes
+//! - `ngit push`: 将 Git main mirror 发布到远端
+//! - `projection-remote webdav|s3 push|pull`: 同步 Markdown projection transport
 //! - `backup bind/inspect/list/verify/run/restore/unbind`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore candidate admission
 
 use clap::{Parser, Subcommand};
@@ -37,6 +38,7 @@ mod repo_init;
 mod server;
 
 pub(crate) use commands::backup::BackupAction;
+pub(crate) use commands::projection_remote::ProjectionRemoteAction;
 pub(crate) use commands::sc::ScAction;
 
 #[derive(Parser, Debug)]
@@ -172,10 +174,15 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         action: ScAction,
     },
-    /// Inspect Git ecosystem mirror bridge state
-    Git {
+    /// Inspect NoteGit Git main mirror state
+    Ngit {
         #[command(subcommand)]
-        action: GitAction,
+        action: NgitAction,
+    },
+    /// Push or pull Markdown projection folders through a remote projection transport
+    ProjectionRemote {
+        #[command(subcommand)]
+        action: ProjectionRemoteAction,
     },
     /// Inspect backup locator state without network access
     Backup {
@@ -252,13 +259,13 @@ pub(crate) enum RepoProjectionAction {
 }
 
 #[derive(Subcommand, Debug)]
-pub(crate) enum GitAction {
-    /// Print read-only Git mirror bridge status
+pub(crate) enum NgitAction {
+    /// Print read-only Git main mirror status
     Status {
         #[arg(long)]
         repo: Option<String>,
     },
-    /// Execute queued Git mirror commit records
+    /// Execute queued Git main mirror commit records
     #[command(visible_alias = "flush")]
     Mirror {
         #[arg(long)]
@@ -266,7 +273,7 @@ pub(crate) enum GitAction {
         #[arg(long)]
         retry_out_of_sync: bool,
     },
-    /// Export queued Deve commits into the Git mirror
+    /// Export queued NoteGit commits into the Git main mirror
     Export {
         #[arg(long)]
         repo: Option<String>,
@@ -280,7 +287,7 @@ pub(crate) enum GitAction {
         #[arg(long)]
         apply: bool,
     },
-    /// Push the exported Git mirror to a remote
+    /// Push the exported Git main mirror to a remote
     Push {
         #[arg(long)]
         repo: Option<String>,

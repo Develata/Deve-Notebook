@@ -44,7 +44,7 @@ pub(super) fn diff_commits(
     Ok(res)
 }
 
-pub(super) fn commit_staged(
+pub(super) fn commit_source_control_changes(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,
     message: &str,

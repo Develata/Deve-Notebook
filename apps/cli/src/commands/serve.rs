@@ -8,7 +8,7 @@
 //!   - 18_release#runtime-observability
 
 use crate::server;
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
+use deve_core::config::{AppProfile, P2pConfig, RuntimeEnvironment, SyncMode};
 use deve_core::plugin::runtime::host;
 use deve_core::security::AuthConfig;
 use reqwest::Client;
@@ -32,7 +32,6 @@ pub struct ServeOptions {
     pub dry_run: bool,
     pub profile: AppProfile,
     pub sync_mode: SyncMode,
-    pub git_bridge: GitBridgeMode,
     pub p2p: P2pConfig,
     pub native_loopback: bool,
 }
@@ -52,7 +51,6 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         dry_run,
         profile,
         sync_mode,
-        git_bridge,
         p2p,
         native_loopback,
     } = options;
@@ -97,7 +95,7 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
     }
     server::start_server_with_bound_listener(
-        repo_arc, launch, plugins, profile, sync_mode, git_bridge, p2p, listener,
+        repo_arc, launch, plugins, profile, sync_mode, p2p, listener,
     )
     .await?;
     Ok(())
@@ -266,15 +264,47 @@ fn repo_health_usize_field(repo_health: Option<&serde_json::Value>, key: &str) -
 fn source_control_summary_from_payload(
     payload: &serde_json::Value,
 ) -> crate::server::node_role::SourceControlSummary {
-    let git_bridge = payload
-        .get("source_control")
-        .and_then(|source_control| source_control.get("git_bridge"))
+    let source_control = payload.get("source_control");
+    let authority = source_control
+        .and_then(|source_control| source_control.get("authority"))
         .and_then(serde_json::Value::as_str)
-        .filter(|mode| matches!(*mode, "mirror" | "off" | "unknown"))
+        .filter(|authority| matches!(*authority, "ngit" | "unknown"))
+        .unwrap_or("unknown");
+    let git_main_mirror = source_control
+        .and_then(|source_control| source_control.get("git_main_mirror"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|mirror| matches!(*mirror, "main" | "unknown"))
         .unwrap_or("unknown");
     crate::server::node_role::SourceControlSummary {
-        git_bridge: git_bridge.into(),
+        authority: authority.into(),
+        git_main_mirror: git_main_mirror.into(),
     }
+}
+
+fn has_source_control_shape(payload: &serde_json::Value) -> bool {
+    let authority_ok = payload
+        .get("authority")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|authority| matches!(authority, "ngit" | "unknown"));
+    let mirror_ok = payload
+        .get("git_main_mirror")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|mirror| matches!(mirror, "main" | "unknown"));
+    authority_ok && mirror_ok
+}
+
+fn has_str_field(payload: &serde_json::Value, key: &str) -> bool {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+}
+
+fn has_u64_field(payload: &serde_json::Value, key: &str) -> bool {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_u64)
+        .is_some()
 }
 
 fn is_main_node_role_payload(payload: &serde_json::Value, probed_port: u16) -> bool {
@@ -312,25 +342,4 @@ fn has_repo_health_shape(payload: &serde_json::Value) -> bool {
         && has_u64_field(payload, "local_total")
         && has_u64_field(payload, "healthy")
         && has_u64_field(payload, "degraded")
-}
-
-fn has_source_control_shape(payload: &serde_json::Value) -> bool {
-    payload
-        .get("git_bridge")
-        .and_then(serde_json::Value::as_str)
-        .is_some_and(|mode| matches!(mode, "mirror" | "off" | "unknown"))
-}
-
-fn has_str_field(payload: &serde_json::Value, key: &str) -> bool {
-    payload
-        .get(key)
-        .and_then(serde_json::Value::as_str)
-        .is_some()
-}
-
-fn has_u64_field(payload: &serde_json::Value, key: &str) -> bool {
-    payload
-        .get(key)
-        .and_then(serde_json::Value::as_u64)
-        .is_some()
 }

@@ -13,7 +13,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     runtime.set();
     let lifecycle = ConnectionLifecycle::new();
     let (node_role, set_node_role) = signal("main".to_string());
-    let (source_control_git_bridge, set_source_control_git_bridge) = signal("mirror".to_string());
+    let (source_control_authority, set_source_control_authority) = signal("ngit".to_string());
     let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
     let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
         signal(true);
@@ -23,7 +23,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     assert!(!apply_node_role_probe_failure(
         &lifecycle,
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_probe_failed,
@@ -31,7 +31,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
         1,
     ));
     assert_eq!(node_role.get_untracked(), "main");
-    assert_eq!(source_control_git_bridge.get_untracked(), "mirror");
+    assert_eq!(source_control_authority.get_untracked(), "ngit");
     assert!(host_file_copy_absolute_path.get_untracked());
     assert!(host_file_reveal_in_system_explorer.get_untracked());
     assert!(!probe_failed.get_untracked());
@@ -39,7 +39,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     assert!(apply_node_role_probe_failure(
         &lifecycle,
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_probe_failed,
@@ -47,7 +47,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
         2,
     ));
     assert_eq!(node_role.get_untracked(), "");
-    assert_eq!(source_control_git_bridge.get_untracked(), "unknown");
+    assert_eq!(source_control_authority.get_untracked(), "unknown");
     assert!(!host_file_copy_absolute_path.get_untracked());
     assert!(!host_file_reveal_in_system_explorer.get_untracked());
     assert!(probe_failed.get_untracked());
@@ -56,7 +56,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     assert!(!apply_node_role_probe_success(
         &lifecycle,
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_probe_failed,
@@ -64,13 +64,13 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
         2,
         NodeRoleProbeResult {
             summary: "proxy".to_string(),
-            source_control_git_bridge: "off".to_string(),
+            source_control_authority: "ngit".to_string(),
             host_file_copy_absolute_path: true,
             host_file_reveal_in_system_explorer: true,
         },
     ));
     assert_eq!(node_role.get_untracked(), "");
-    assert_eq!(source_control_git_bridge.get_untracked(), "unknown");
+    assert_eq!(source_control_authority.get_untracked(), "unknown");
     assert!(!host_file_copy_absolute_path.get_untracked());
     assert!(!host_file_reveal_in_system_explorer.get_untracked());
     assert!(probe_failed.get_untracked());
@@ -78,7 +78,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     assert!(apply_node_role_probe_success(
         &lifecycle,
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_probe_failed,
@@ -86,13 +86,13 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
         3,
         NodeRoleProbeResult {
             summary: "main".to_string(),
-            source_control_git_bridge: "off".to_string(),
+            source_control_authority: "ngit".to_string(),
             host_file_copy_absolute_path: true,
             host_file_reveal_in_system_explorer: false,
         },
     ));
     assert_eq!(node_role.get_untracked(), "main");
-    assert_eq!(source_control_git_bridge.get_untracked(), "off");
+    assert_eq!(source_control_authority.get_untracked(), "ngit");
     assert!(host_file_copy_absolute_path.get_untracked());
     assert!(!host_file_reveal_in_system_explorer.get_untracked());
     assert!(!probe_failed.get_untracked());

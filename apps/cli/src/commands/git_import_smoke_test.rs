@@ -5,7 +5,6 @@ use super::git_import_smoke_support::{
     resolve_imported_change_to_queued_commit, write_workspace_file,
 };
 use anyhow::Result;
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -30,13 +29,7 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     write_workspace_file(&repo_root, "note.md", "hello import\n");
     write_workspace_file(&repo_root, "new.md", "new file\n");
 
-    git::import(
-        &ledger_dir,
-        Some("default"),
-        false,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::import(&ledger_dir, Some("default"), false, 10)?;
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
@@ -44,13 +37,7 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
         assert!(pending.is_empty(), "{pending:?}");
     }
 
-    git::import(
-        &ledger_dir,
-        Some("default"),
-        true,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::import(&ledger_dir, Some("default"), true, 10)?;
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;
@@ -108,13 +95,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
         })?;
     }
 
-    git::import(
-        &ledger_dir,
-        Some("default"),
-        true,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::import(&ledger_dir, Some("default"), true, 10)?;
 
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
@@ -126,7 +107,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
 }
 
 #[test]
-fn git_import_apply_rejects_broken_workspace_identity() -> Result<()> {
+fn ngit_import_apply_rejects_broken_workspace_identity() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
@@ -144,14 +125,8 @@ fn git_import_apply_rejects_broken_workspace_identity() -> Result<()> {
     write_workspace_file(&repo_root, "note.md", "hello import\n");
     corrupt_workspace_identity(&repo_root)?;
 
-    let err = git::import(
-        &ledger_dir,
-        Some("default"),
-        true,
-        10,
-        GitBridgeMode::Mirror,
-    )
-    .expect_err("git import --apply must reject a broken workspace identity");
+    let err = git::import(&ledger_dir, Some("default"), true, 10)
+        .expect_err("git import --apply must reject a broken workspace identity");
 
     assert_identity_gate_error(&err);
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
@@ -162,7 +137,7 @@ fn git_import_apply_rejects_broken_workspace_identity() -> Result<()> {
 }
 
 #[test]
-fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
+fn ngit_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
@@ -176,13 +151,7 @@ fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let imported_commit_id =
         resolve_imported_change_to_queued_commit(&ledger_dir, &projection_base)?;
 
-    git::export(
-        &ledger_dir,
-        Some("default"),
-        false,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::export(&ledger_dir, Some("default"), false, 10)?;
     assert_clean_resolved_import_export(
         &ledger_dir,
         &projection_base,
@@ -213,7 +182,7 @@ fn assert_identity_gate_error(err: &anyhow::Error) {
 }
 
 #[test]
-fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
+fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
@@ -241,7 +210,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         Some("origin"),
         Some(&branch),
         10,
-        GitBridgeMode::Mirror,
     )?;
     let report = push_report(&ledger_dir, &projection_base, &repo_root, "origin", &branch)?;
     assert!(!report.pushed, "{report:?}");
@@ -252,13 +220,7 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         &["rev-parse", "--verify", &branch_ref]
     ));
 
-    git::export(
-        &ledger_dir,
-        Some("default"),
-        false,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::export(&ledger_dir, Some("default"), false, 10)?;
     let git_commit_id = assert_clean_resolved_import_export(
         &ledger_dir,
         &projection_base,
@@ -273,7 +235,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         Some("origin"),
         Some(&branch),
         10,
-        GitBridgeMode::Mirror,
     )?;
     let report = push_report(&ledger_dir, &projection_base, &repo_root, "origin", &branch)?;
     assert!(!report.pushed, "{report:?}");
@@ -290,7 +251,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         Some("origin"),
         Some(&branch),
         10,
-        GitBridgeMode::Mirror,
     )?;
     assert_eq!(
         git_cmd(&remote, &["rev-parse", &branch_ref]).trim(),

@@ -6,7 +6,6 @@
 //!
 //! Source Control commit orchestration runtime.
 
-use crate::config::GitBridgeMode;
 use crate::ledger::manager::commit_plan::CommitTarget;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::manager::git_mirror_queue_runtime;
@@ -31,23 +30,14 @@ impl<'a> CommitRuntime<'a> {
         Self { manager }
     }
 
-    pub(crate) fn commit_source_control_changes_with_git_bridge(
-        &self,
-        message: &str,
-        git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.commit_source_control_changes_in_local_repo_with_git_bridge(
-            self.manager.local_repo_name(),
-            message,
-            git_bridge,
-        )
+    pub(crate) fn commit_source_control_changes(&self, message: &str) -> Result<CommitInfo> {
+        self.commit_source_control_changes_in_local_repo(self.manager.local_repo_name(), message)
     }
 
-    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_in_local_repo(
         &self,
         repo_name: &str,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         let message = message.trim();
         if message.is_empty() {
@@ -60,11 +50,7 @@ impl<'a> CommitRuntime<'a> {
             anyhow::bail!("Nothing to commit: confirmed ledger changes are empty");
         }
         #[cfg(not(target_arch = "wasm32"))]
-        let git_mirror_repo_id = if git_bridge == GitBridgeMode::Mirror {
-            git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name)
-        } else {
-            None
-        };
+        let git_mirror_repo_id = git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name);
 
         let final_confirmed = self
             .manager

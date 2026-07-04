@@ -24,7 +24,7 @@ pub struct SourceControlContext {
     pub can_write: Signal<bool>,
     pub write_block: Signal<Option<RepoWriteBlock>>,
     pub read_block: Signal<Option<RepoWriteBlock>>,
-    pub git_bridge_mode: ReadSignal<String>,
+    pub source_control_authority: ReadSignal<String>,
     pub notice: ReadSignal<Option<SourceControlNotice>>,
     pub set_notice: WriteSignal<Option<SourceControlNotice>>,
     pub clear_notice: Callback<()>,

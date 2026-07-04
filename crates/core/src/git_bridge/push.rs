@@ -129,7 +129,7 @@ fn collect_preflight_blockers(db: &Database, repo_root: &Path, report: &mut GitM
         Ok(Some(head)) => report.head = Some(head),
         Ok(None) => report.blockers.push(blocker(
             "git_history_mapping",
-            "Git push mirror requires Git HEAD; run `deve_cli git export` first",
+            "Git push mirror requires Git HEAD; run `deve_cli ngit export` first",
         )),
         Err(reason) => report.blockers.push(blocker("git_worktree", reason)),
     }
@@ -148,7 +148,7 @@ fn collect_mapping_blockers(records: &[GitMirrorRecord], report: &mut GitMirrorP
         report.blockers.push(blocker(
             "git_history_mapping",
             format!(
-                "Git push mirror refuses unpublished mirror records: queued={queued} out_of_sync={out_of_sync}; run `deve_cli git export` or repair first"
+                "Git push mirror refuses unpublished mirror records: queued={queued} out_of_sync={out_of_sync}; run `deve_cli ngit export` or repair first"
             ),
         ));
     }
@@ -163,7 +163,7 @@ fn collect_mapping_blockers(records: &[GitMirrorRecord], report: &mut GitMirrorP
     else {
         report.blockers.push(blocker(
             "git_history_mapping",
-            "Git push mirror refuses Git history without Deve mirror mapping; run `deve_cli git export` first",
+            "Git push mirror refuses Git history without Deve mirror mapping; run `deve_cli ngit export` first",
         ));
         return;
     };

@@ -119,44 +119,9 @@ impl FromStr for SyncMode {
     }
 }
 
-/// Git bridge mode for Source Control.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum GitBridgeMode {
-    /// Queue and execute explicit Git mirror/import/export/push bridge operations.
-    #[default]
-    Mirror,
-    /// Keep Deve Source Control active but disable Git mirror queueing and Git bridge writes.
-    Off,
-}
-
-impl FromStr for GitBridgeMode {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.eq_ignore_ascii_case("mirror") {
-            Ok(GitBridgeMode::Mirror)
-        } else if s.eq_ignore_ascii_case("off") {
-            Ok(GitBridgeMode::Off)
-        } else {
-            Err("invalid git bridge mode")
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SourceControlConfig {
-    #[serde(default)]
-    pub git_bridge: GitBridgeMode,
-}
-
-impl Default for SourceControlConfig {
-    fn default() -> Self {
-        Self {
-            git_bridge: GitBridgeMode::Mirror,
-        }
-    }
-}
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceControlConfig {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct P2pPeerConfig {
@@ -266,7 +231,7 @@ pub struct Config {
     /// 后台压缩并发度。
     #[serde(default = "defaults::concurrency")]
     pub concurrency: usize,
-    /// Source Control bridge policy.
+    /// Source Control configuration. NoteGit/ngit authority is not configurable.
     #[serde(default)]
     pub source_control: SourceControlConfig,
     /// 静态 FullPeer mesh 配置，默认关闭。

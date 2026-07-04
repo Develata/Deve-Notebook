@@ -4,7 +4,6 @@
 //!   - 04_repository#repo-selector-resolution-contract
 //!   - 05_diff_logic#source-control-runtime
 
-use crate::config::GitBridgeMode;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
@@ -25,26 +24,15 @@ pub trait SourceControlApi: Send + Sync {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>>;
-    /// Legacy method name kept for older callers. Semantically this commits
-    /// confirmed ledger changes only; External Changes must be applied through
-    /// `apply_external_changes_in_repo` first.
-    fn commit_staged_in_repo_with_git_bridge(
+    /// Create a NoteGit/ngit Source Control commit anchor for confirmed ledger changes.
+    /// External Changes must be applied through `apply_external_changes_in_repo` first.
+    fn commit_source_control_changes_in_repo(
         &self,
         repo: &RepoSelector,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo>;
 
     fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>>;
-
-    fn commit_source_control_changes_in_repo_with_git_bridge(
-        &self,
-        repo: &RepoSelector,
-        message: &str,
-        git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_in_repo_with_git_bridge(repo, message, git_bridge)
-    }
 }
 
 pub trait DelegatedSourceControlApi: SourceControlApi {}

@@ -113,13 +113,13 @@ impl WsService {
     pub(crate) fn complete_foreground_node_role_reprobe(
         &self,
         summary: impl Into<String>,
-        source_control_git_bridge: impl Into<String>,
+        source_control_authority: impl Into<String>,
         host_file_copy_absolute_path: bool,
         host_file_reveal_in_system_explorer: bool,
     ) {
         self.set_node_role.set(summary.into());
-        self.set_source_control_git_bridge
-            .set(source_control_git_bridge.into());
+        self.set_source_control_authority
+            .set(source_control_authority.into());
         self.set_host_file_copy_absolute_path
             .set(host_file_copy_absolute_path);
         self.set_host_file_reveal_in_system_explorer
@@ -133,8 +133,7 @@ impl WsService {
 
     fn reset_node_role_state(&self, probe_failed: bool) {
         self.set_node_role.set(String::new());
-        self.set_source_control_git_bridge
-            .set("unknown".to_string());
+        self.set_source_control_authority.set("unknown".to_string());
         self.set_host_file_copy_absolute_path.set(false);
         self.set_host_file_reveal_in_system_explorer.set(false);
         self.set_node_role_probe_failed.set(probe_failed);

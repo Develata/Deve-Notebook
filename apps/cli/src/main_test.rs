@@ -1,4 +1,7 @@
-use super::{Args, Commands, ConfigAction, GitAction, run_pre_config_command};
+use super::{
+    Args, Commands, ConfigAction, NgitAction, ProjectionRemoteAction, run_pre_config_command,
+};
+use crate::commands::projection_remote::ProjectionRemoteDirectionAction;
 use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
@@ -115,23 +118,23 @@ fn config_set_runs_before_loading_runtime_config() {
 }
 
 #[test]
-fn git_status_accepts_repo_selector() {
+fn ngit_status_accepts_repo_selector() {
     let args =
-        Args::try_parse_from(["deve", "git", "status", "--repo", "default"]).expect("parse args");
+        Args::try_parse_from(["deve", "ngit", "status", "--repo", "default"]).expect("parse args");
 
     match args.command {
-        Some(Commands::Git {
-            action: GitAction::Status { repo },
+        Some(Commands::Ngit {
+            action: NgitAction::Status { repo },
         }) => assert_eq!(repo.as_deref(), Some("default")),
         other => panic!("unexpected command: {other:?}"),
     }
 }
 
 #[test]
-fn git_mirror_accepts_retry_out_of_sync() {
+fn ngit_mirror_accepts_retry_out_of_sync() {
     let args = Args::try_parse_from([
         "deve",
-        "git",
+        "ngit",
         "mirror",
         "--repo",
         "default",
@@ -140,9 +143,9 @@ fn git_mirror_accepts_retry_out_of_sync() {
     .expect("parse args");
 
     match args.command {
-        Some(Commands::Git {
+        Some(Commands::Ngit {
             action:
-                GitAction::Mirror {
+                NgitAction::Mirror {
                     repo,
                     retry_out_of_sync,
                 },
@@ -155,10 +158,10 @@ fn git_mirror_accepts_retry_out_of_sync() {
 }
 
 #[test]
-fn git_export_accepts_retry_out_of_sync() {
+fn ngit_export_accepts_retry_out_of_sync() {
     let args = Args::try_parse_from([
         "deve",
-        "git",
+        "ngit",
         "export",
         "--repo",
         "default",
@@ -167,9 +170,9 @@ fn git_export_accepts_retry_out_of_sync() {
     .expect("parse args");
 
     match args.command {
-        Some(Commands::Git {
+        Some(Commands::Ngit {
             action:
-                GitAction::Export {
+                NgitAction::Export {
                     repo,
                     retry_out_of_sync,
                 },
@@ -182,13 +185,13 @@ fn git_export_accepts_retry_out_of_sync() {
 }
 
 #[test]
-fn git_import_accepts_repo_selector() {
-    let args = Args::try_parse_from(["deve", "git", "import", "--repo", "default", "--apply"])
+fn ngit_import_accepts_repo_selector() {
+    let args = Args::try_parse_from(["deve", "ngit", "import", "--repo", "default", "--apply"])
         .expect("parse args");
 
     match args.command {
-        Some(Commands::Git {
-            action: GitAction::Import { repo, apply },
+        Some(Commands::Ngit {
+            action: NgitAction::Import { repo, apply },
         }) => {
             assert_eq!(repo.as_deref(), Some("default"));
             assert!(apply);
@@ -198,16 +201,16 @@ fn git_import_accepts_repo_selector() {
 }
 
 #[test]
-fn git_push_accepts_repo_remote_and_branch() {
+fn ngit_push_accepts_repo_remote_and_branch() {
     let args = Args::try_parse_from([
-        "deve", "git", "push", "--repo", "default", "--remote", "origin", "--branch", "main",
+        "deve", "ngit", "push", "--repo", "default", "--remote", "origin", "--branch", "main",
     ])
     .expect("parse args");
 
     match args.command {
-        Some(Commands::Git {
+        Some(Commands::Ngit {
             action:
-                GitAction::Push {
+                NgitAction::Push {
                     repo,
                     remote,
                     branch,
@@ -216,6 +219,34 @@ fn git_push_accepts_repo_remote_and_branch() {
             assert_eq!(repo.as_deref(), Some("default"));
             assert_eq!(remote.as_deref(), Some("origin"));
             assert_eq!(branch.as_deref(), Some("main"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
+fn projection_remote_webdav_pull_accepts_locator() {
+    let args = Args::try_parse_from([
+        "deve",
+        "projection-remote",
+        "webdav",
+        "pull",
+        "--repo",
+        "default",
+        "--locator",
+        "webdav+https://dav.example.com/notebooks/main",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::ProjectionRemote {
+            action:
+                ProjectionRemoteAction::Webdav {
+                    action: ProjectionRemoteDirectionAction::Pull { repo, locator },
+                },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert_eq!(locator, "webdav+https://dav.example.com/notebooks/main");
         }
         other => panic!("unexpected command: {other:?}"),
     }

@@ -58,7 +58,7 @@ fn commit_emits_create_and_rename_structure_facts() {
     );
     repo.stage_pending("notes/a.md").expect("stage add");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit add");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -107,7 +107,7 @@ fn commit_emits_create_and_rename_structure_facts() {
     repo.stage_pending("notes/b.md").expect("stage rename add");
     repo.apply_external_changes()
         .expect("apply external rename");
-    repo.commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("rename")
         .expect("commit rename");
     assert!(
         structure_ops(&repo, NodeId::from_doc_id(doc_id))

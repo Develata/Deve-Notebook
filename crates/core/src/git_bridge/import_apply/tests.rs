@@ -74,7 +74,7 @@ fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) {
     .expect("seed pending");
     repo.stage_pending(path).expect("stage");
     repo.apply_external_changes().expect("apply external");
-    repo.commit_staged_with_git_bridge("initial", crate::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit");
 }
 

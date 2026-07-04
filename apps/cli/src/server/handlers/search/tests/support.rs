@@ -99,6 +99,5 @@ pub(crate) fn search_enabled_state(source: &Arc<AppState>) -> Arc<AppState> {
         tree_manager: source.tree_manager.clone(),
         search_available: true,
         identity_key: source.identity_key.clone(),
-        git_bridge: source.git_bridge,
     })
 }

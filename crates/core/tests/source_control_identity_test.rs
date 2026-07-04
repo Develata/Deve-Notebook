@@ -53,7 +53,7 @@ fn diff_uses_pending_doc_identity_for_renamed_file() {
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -103,7 +103,7 @@ fn commit_preserves_doc_id_for_rename_candidate() {
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -129,7 +129,7 @@ fn commit_preserves_doc_id_for_rename_candidate() {
     repo.apply_external_changes()
         .expect("apply external rename");
     let commit = repo
-        .commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("rename")
         .expect("commit rename");
 
     assert_eq!(

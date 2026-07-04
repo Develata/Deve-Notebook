@@ -7,7 +7,6 @@
 
 use super::git;
 use anyhow::Result;
-use deve_core::config::GitBridgeMode;
 use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorPushOptions, GitMirrorPushReport, get_record, push_mirror,
 };
@@ -95,7 +94,7 @@ pub(super) fn commit_deve_file(
         )
     })?;
     repo.stage_pending(path)?;
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)?;
+    repo.commit_source_control_changes("initial")?;
     Ok(())
 }
 
@@ -115,13 +114,7 @@ pub(super) fn prepare_exported_baseline(
         init_git_repo(repo_root);
         commit_deve_file(repo_root, &repo, "note.md", "hello\n")?;
     }
-    git::export(
-        ledger_dir,
-        Some("default"),
-        false,
-        10,
-        GitBridgeMode::Mirror,
-    )?;
+    git::export(ledger_dir, Some("default"), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
     Ok(())
@@ -155,7 +148,7 @@ pub(super) fn resolve_imported_change_to_queued_commit(
     let repo = open_repo(ledger_dir, projection_base)?;
     let repo_root = repo.local_repo_workspace_root("default")?;
     write_workspace_file(&repo_root, "note.md", "git import\n");
-    git::import(ledger_dir, Some("default"), true, 10, GitBridgeMode::Mirror)?;
+    git::import(ledger_dir, Some("default"), true, 10)?;
 
     let repo = open_repo(ledger_dir, projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;
@@ -174,11 +167,8 @@ pub(super) fn resolve_imported_change_to_queued_commit(
     assert_eq!(staged.len(), 1, "{staged:?}");
     assert_eq!(staged[0].path, "note.md");
     assert!(!staged[0].has_conflict, "{staged:?}");
-    let commit = repo.commit_staged_in_local_repo_with_git_bridge(
-        "default",
-        "accept imported git content",
-        deve_core::config::GitBridgeMode::Mirror,
-    )?;
+    let commit =
+        repo.commit_source_control_changes_in_local_repo("default", "accept imported git content")?;
     assert!(repo.list_pending_fs_in_local_repo("default")?.is_empty());
     assert!(repo.list_staged_in_local_repo("default")?.is_empty());
     repo.run_on_local_repo("default", |db| {

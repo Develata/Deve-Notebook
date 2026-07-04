@@ -52,7 +52,7 @@ fn scan_records_rename_candidate_by_inode() {
     seed_pending_add(&repo, "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.apply_external_changes().expect("apply external add");
-    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")

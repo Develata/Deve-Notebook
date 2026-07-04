@@ -15,6 +15,7 @@ use leptos::prelude::*;
 mod branch;
 mod git;
 mod merge;
+mod remote_projection;
 mod reserved;
 #[cfg(test)]
 mod tests;
@@ -25,6 +26,7 @@ use git::{
     git_repair_command, git_status_command,
 };
 use merge::merge_peer_commands;
+use remote_projection::remote_projection_commands;
 use reserved::{ai_reserved_commands, source_control_reserved_commands};
 
 /// 创建静态命令列表。
@@ -134,6 +136,7 @@ pub fn create_static_commands(
         git_push_command(locale, set_show, set_source_control_notice, sidebar_control),
         git_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
     ]);
+    commands.extend(remote_projection_commands(locale));
 
     // Add AI Chat toggle command if ChatControl is available
     if let Some(chat_ctrl) = chat_control {

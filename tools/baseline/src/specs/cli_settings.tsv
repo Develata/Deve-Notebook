@@ -14,7 +14,8 @@ contains	apps/cli/src/main.rs	NodeCheck {
 contains	apps/cli/src/main.rs	Recover {
 contains	apps/cli/src/main.rs	Repair {
 contains	apps/cli/src/main.rs	ScStatus {
-contains	apps/cli/src/main.rs	Git {
+contains	apps/cli/src/main.rs	Ngit {
+contains	apps/cli/src/main.rs	ProjectionRemote {
 contains	apps/cli/src/main.rs	Repo {
 contains	apps/cli/src/main.rs	RepoProjectionAction
 contains	apps/cli/src/main.rs	Config {
@@ -25,12 +26,13 @@ contains	apps/cli/src/dispatch.rs	Commands::VerifyP2P
 contains	apps/cli/src/dispatch.rs	Commands::Seed
 contains	apps/cli/src/dispatch.rs	Commands::NodeCheck
 contains	apps/cli/src/dispatch.rs	Commands::ScStatus
-contains	apps/cli/src/dispatch.rs	Commands::Git
-contains	apps/cli/src/dispatch.rs	GitAction::Status
-contains	apps/cli/src/dispatch.rs	GitAction::Mirror
-contains	apps/cli/src/dispatch.rs	GitAction::Export
-contains	apps/cli/src/dispatch.rs	GitAction::Import
-contains	apps/cli/src/dispatch.rs	GitAction::Push
+contains	apps/cli/src/dispatch.rs	Commands::Ngit
+contains	apps/cli/src/dispatch.rs	NgitAction::Status
+contains	apps/cli/src/dispatch.rs	NgitAction::Mirror
+contains	apps/cli/src/dispatch.rs	NgitAction::Export
+contains	apps/cli/src/dispatch.rs	NgitAction::Import
+contains	apps/cli/src/dispatch.rs	NgitAction::Push
+contains	apps/cli/src/dispatch.rs	Commands::ProjectionRemote
 contains	apps/cli/src/dispatch.rs	RepoAction::Projection
 contains	apps/cli/src/dispatch.rs	commands::repo_projection::set
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-007A
@@ -40,11 +42,13 @@ contains	scripts/smoke-web-release-build.sh	CMD-007A Web release build smoke.
 absent	scripts/smoke-web-release-build.sh	REL-004 Web release build smoke.
 contains	docs/acceptance-cases/11_commands_settings.md	deve graph --help
 contains	docs/acceptance-cases/11_commands_settings.md	deve sc-status --help
-contains	docs/acceptance-cases/11_commands_settings.md	deve git status --help
-contains	docs/acceptance-cases/11_commands_settings.md	deve git mirror --help
-contains	docs/acceptance-cases/11_commands_settings.md	deve git export --help
-contains	docs/acceptance-cases/11_commands_settings.md	deve git import --help
-contains	docs/acceptance-cases/11_commands_settings.md	deve git push --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve ngit status --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve ngit mirror --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve ngit export --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve ngit import --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve ngit push --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve projection-remote webdav push --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve projection-remote s3 pull --help
 contains	docs/acceptance-cases/11_commands_settings.md	deve repo projection set --help
 contains	apps/cli/src/commands/watch.rs	install_shutdown_handler()?
 contains	apps/cli/src/commands/watch.rs	Failed to set Ctrl-C handler
@@ -70,9 +74,9 @@ contains	apps/cli/src/commands/config/schema.rs	"p2p.enabled"
 contains	apps/cli/src/commands/config/schema.rs	"p2p.connect_interval_ms"
 contains	apps/cli/src/commands/config/schema.rs	positive_integer("p2p.connect_interval_ms")
 contains	apps/cli/src/commands/config/schema.rs	"p2p.inbound_token_env"
-contains	apps/cli/src/commands/config/schema.rs	"source_control.git_bridge"
-contains	.env.example	DEVE_SOURCE_CONTROL__GIT_BRIDGE
-contains	docs/acceptance-cases/11_commands_settings.md	file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
+absent	apps/cli/src/commands/config/schema.rs	"source_control.git_bridge"
+absent	.env.example	DEVE_SOURCE_CONTROL__GIT_BRIDGE
+contains	docs/acceptance-cases/11_commands_settings.md	unsupported_key_rejected: "source_control.git_bridge"
 contains	apps/cli/src/commands/config/schema.rs	"ai.mode"
 contains	crates/core/src/config/schema.rs	pub struct P2pConfig
 contains	crates/core/src/config/schema.rs	pub struct P2pPeerConfig

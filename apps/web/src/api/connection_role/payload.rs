@@ -5,7 +5,7 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct NodeRoleProbeResult {
     pub summary: String,
-    pub source_control_git_bridge: String,
+    pub source_control_authority: String,
     pub host_file_copy_absolute_path: bool,
     pub host_file_reveal_in_system_explorer: bool,
 }
@@ -14,7 +14,7 @@ impl NodeRoleProbeResult {
     pub(super) fn from_json(json: &serde_json::Value) -> Option<Self> {
         is_node_role_payload(json).then(|| Self {
             summary: format_node_role_summary(json),
-            source_control_git_bridge: source_control_git_bridge(json).to_string(),
+            source_control_authority: source_control_authority(json).to_string(),
             host_file_copy_absolute_path: host_file_action_bool(json, "copy_absolute_path"),
             host_file_reveal_in_system_explorer: host_file_action_bool(
                 json,
@@ -112,14 +112,25 @@ fn format_repo_health(json: &serde_json::Value) -> String {
 }
 
 fn format_source_control(json: &serde_json::Value) -> String {
-    format!("git:{}", source_control_git_bridge(json))
+    format!(
+        "sc:{}/{}",
+        source_control_authority(json),
+        source_control_git_main_mirror(json)
+    )
 }
 
-fn source_control_git_bridge(json: &serde_json::Value) -> &str {
+fn source_control_authority(json: &serde_json::Value) -> &str {
     let Some(source_control) = json.get("source_control") else {
         return "unknown";
     };
-    normalize_git_bridge_mode(str_field(source_control, "git_bridge", "unknown"))
+    normalize_source_control_authority(str_field(source_control, "authority", "unknown"))
+}
+
+fn source_control_git_main_mirror(json: &serde_json::Value) -> &str {
+    let Some(source_control) = json.get("source_control") else {
+        return "unknown";
+    };
+    normalize_git_main_mirror(str_field(source_control, "git_main_mirror", "unknown"))
 }
 
 fn host_file_action_bool(json: &serde_json::Value, key: &str) -> bool {
@@ -137,9 +148,15 @@ fn is_repo_health_payload(json: &serde_json::Value) -> bool {
 }
 
 fn is_source_control_payload(json: &serde_json::Value) -> bool {
-    json.get("git_bridge")
+    let authority_ok = json
+        .get("authority")
         .and_then(serde_json::Value::as_str)
-        .is_some_and(|mode| matches!(mode, "mirror" | "off" | "unknown"))
+        .is_some_and(|authority| matches!(authority, "ngit" | "unknown"));
+    let mirror_ok = json
+        .get("git_main_mirror")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|mirror| matches!(mirror, "main" | "unknown"));
+    authority_ok && mirror_ok
 }
 
 fn is_host_file_actions_payload(json: &serde_json::Value) -> bool {
@@ -160,10 +177,17 @@ fn has_u64_field(json: &serde_json::Value, key: &str) -> bool {
     json.get(key).and_then(serde_json::Value::as_u64).is_some()
 }
 
-fn normalize_git_bridge_mode(mode: &str) -> &'static str {
+fn normalize_source_control_authority(mode: &str) -> &'static str {
     match mode {
-        "mirror" => "mirror",
-        "off" => "off",
+        "ngit" => "ngit",
+        "unknown" => "unknown",
+        _ => "unknown",
+    }
+}
+
+fn normalize_git_main_mirror(mirror: &str) -> &'static str {
+    match mirror {
+        "main" => "main",
         "unknown" => "unknown",
         _ => "unknown",
     }

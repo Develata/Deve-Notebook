@@ -1,4 +1,3 @@
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};
@@ -17,14 +16,12 @@ fn source_control_commit_ignores_external_staged_when_confirmed_is_empty() {
     repo.stage_pending("notes/external.md")
         .expect("stage external add");
 
-    let err =
-        <RepoManager as SourceControlApi>::commit_source_control_changes_in_repo_with_git_bridge(
-            &repo,
-            &RepoSelector::default(),
-            "version anchor",
-            GitBridgeMode::Off,
-        )
-        .expect_err("Source Control commit must not consume external staged changes");
+    let err = <RepoManager as SourceControlApi>::commit_source_control_changes_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        "version anchor",
+    )
+    .expect_err("Source Control commit must not consume external staged changes");
 
     assert!(
         err.to_string()
@@ -51,14 +48,12 @@ fn source_control_commit_preserves_external_staging_while_committing_confirmed()
     append_confirmed_ledger_edit(&repo, doc_id);
     let dirty_head = ledger_head(&repo);
 
-    let commit =
-        <RepoManager as SourceControlApi>::commit_source_control_changes_in_repo_with_git_bridge(
-            &repo,
-            &RepoSelector::default(),
-            "version anchor",
-            GitBridgeMode::Off,
-        )
-        .expect("confirmed ledger commit should ignore external staging");
+    let commit = <RepoManager as SourceControlApi>::commit_source_control_changes_in_repo(
+        &repo,
+        &RepoSelector::default(),
+        "version anchor",
+    )
+    .expect("confirmed ledger commit should ignore external staging");
 
     assert_eq!(commit.ledger_seq, dirty_head);
     assert_eq!(commit.doc_count, 1);

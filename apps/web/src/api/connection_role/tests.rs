@@ -7,7 +7,7 @@ mod epoch;
 mod payload;
 mod urls;
 
-fn complete_node_role_payload(git_bridge: &str) -> serde_json::Value {
+fn complete_node_role_payload(authority: &str) -> serde_json::Value {
     serde_json::json!({
         "role": "main",
         "ws_port": 3001,
@@ -17,7 +17,8 @@ fn complete_node_role_payload(git_bridge: &str) -> serde_json::Value {
         "delivery": "embedded-frontend",
         "environment": "development",
         "source_control": {
-            "git_bridge": git_bridge
+            "authority": authority,
+            "git_main_mirror": "main"
         },
         "repo_health": {
             "status": "healthy",

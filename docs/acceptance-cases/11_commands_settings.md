@@ -17,11 +17,15 @@
     - run: deve seed --help
     - run: deve node-check --help
     - run: deve sc-status --help
-    - run: deve git status --help
-    - run: deve git mirror --help
-    - run: deve git export --help
-    - run: deve git import --help
-    - run: deve git push --help
+    - run: deve ngit status --help
+    - run: deve ngit mirror --help
+    - run: deve ngit export --help
+    - run: deve ngit import --help
+    - run: deve ngit push --help
+    - run: deve projection-remote webdav push --help
+    - run: deve projection-remote webdav pull --help
+    - run: deve projection-remote s3 push --help
+    - run: deve projection-remote s3 pull --help
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli main -- --nocapture
   assertions:
@@ -88,24 +92,29 @@
     - ui_assert: source_control_notice_eq "establish-branch-unavailable"
 
 - case_id: CMD-004B
-  goal: Git mirror Command Palette 入口只能作为 CLI-only notice，不得执行 Web Git writer。
+  goal: ngit / remote projection Command Palette 入口不得执行前端 writer。
   preconditions:
     - Command Palette 可用
   steps:
     - ui_keypress: "Ctrl+Shift+P"
-    - ui_command: "Git: Status"
-    - ui_command: "Git: Mirror"
-    - ui_command: "Git: Export Mirror"
+    - ui_command: "ngit:status"
+    - ui_command: "ngit:mirror"
+    - ui_command: "ngit:export"
+    - ui_command: "webdav:pull"
+    - ui_command: "s3:pull"
+    - cli_projection_remote_provider_io_ready: false
     - run: scripts/check-source-control-baseline.sh
-    - run: cargo test -p deve_web git_status_command -- --nocapture
-    - run: cargo test -p deve_web git_mirror_command -- --nocapture
-    - run: cargo test -p deve_web git_export_command -- --nocapture
+    - run: cargo test -p deve_web ngit_commands -- --nocapture
+    - run: cargo test -p deve_web remote_projection_commands -- --nocapture
   assertions:
-    - ui_assert: command_unavailable "git_status"
-    - ui_assert: command_unavailable "git_mirror"
-    - ui_assert: command_unavailable "git_export_mirror"
-    - ui_assert: source_control_notice_eq "git-*-cli-only"
+    - ui_assert: command_available "ngit_status"
+    - ui_assert: command_available "ngit_mirror"
+    - ui_assert: command_available "ngit_export_mirror"
+    - ui_assert: command_available "webdav_pull"
+    - ui_assert: command_available "s3_pull"
     - ui_assert: web_git_writer_absent true
+    - ui_assert: web_remote_projection_io_absent true
+    - ui_assert: provider_io_not_wired_fails_closed true
 
 - case_id: CMD-004C
   goal: Source Control 与 AI 的未接线命令入口必须明确显示 unavailable 状态。
@@ -250,18 +259,17 @@
     - config.toml 可写
   steps:
     - run: deve config set ui.sidebar_width 300
-    - run: deve config set source_control.git_bridge off
     - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
-    - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
+    - run: cargo test -p deve_core source_control_ngit_only -- --nocapture
     - run: cargo test -p deve_cli set_rejects_empty_env_reference_without_rewriting_config -- --nocapture
     - run: cargo test -p deve_cli set_rejects_zero_p2p_connect_interval_without_rewriting_config -- --nocapture
     - run: cargo test -p deve_cli set_rejects_existing_invalid_runtime_config_without_rewriting -- --nocapture
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
-    - file_contains: config.toml 'git_bridge = "off"'
-    - file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
+    - unsupported_key_rejected: "source_control.git_bridge"
+    - file_not_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
     - config_assert: empty_env_reference_rejected_without_rewrite true
     - config_assert: zero_p2p_connect_interval_rejected_without_rewrite true
     - config_assert: existing_invalid_runtime_config_rejected_without_rewrite true

@@ -69,11 +69,7 @@ fn dispatch_batch_does_not_reopen_committed_crlf_file_as_modified() -> anyhow::R
     crate::sync::scan::scan_local_repo(&repo, &sync.vfs, &repo_name)?;
     repo.stage_pending_in_local_repo(&repo_name, "notes/crlf.md")?;
     repo.apply_external_changes_in_local_repo(&repo_name)?;
-    repo.commit_staged_in_local_repo_with_git_bridge(
-        &repo_name,
-        "add crlf file",
-        crate::config::GitBridgeMode::Mirror,
-    )?;
+    repo.commit_source_control_changes_in_local_repo(&repo_name, "add crlf file")?;
     assert!(
         repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty(),
         "commit should leave no pending source-control entries"

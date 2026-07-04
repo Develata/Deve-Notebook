@@ -121,7 +121,7 @@ fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) -> CommitInfo
     seed_pending(repo, path, ChangeStatus::Added, content);
     repo.stage_pending(path).expect("stage");
     repo.apply_external_changes().expect("apply external");
-    repo.commit_staged_with_git_bridge("initial", crate::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("initial")
         .expect("commit")
 }
 
@@ -131,7 +131,7 @@ fn commit_deve_modification(repo: &RepoManager, path: &str, content: &str) -> Co
     seed_pending_with_doc(repo, path, Some(doc_id), ChangeStatus::Modified, content);
     repo.stage_pending(path).expect("stage");
     repo.apply_external_changes().expect("apply external");
-    repo.commit_staged_with_git_bridge("modify", crate::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("modify")
         .expect("commit")
 }
 

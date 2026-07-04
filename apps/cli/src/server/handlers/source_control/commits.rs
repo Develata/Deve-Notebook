@@ -9,8 +9,7 @@ use crate::server::session::WsSession;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
-const COMMIT_AND_PUSH_CLI_ONLY_DETAIL: &str =
-    "Commit & Push is CLI-only; create a Deve commit first, then run `deve git push` explicitly.";
+const COMMIT_AND_PUSH_CLI_ONLY_DETAIL: &str = "Commit & Push is CLI-only; create a NoteGit commit first, then run `deve ngit push` explicitly.";
 
 /// 创建提交 (保存快照)
 pub async fn handle_commit(
@@ -121,7 +120,7 @@ pub async fn handle_get_commit_diff(
 /// 拒绝兼容期 `CommitAndPush` wire frame。
 ///
 /// Web `Commit & Push` 只展示 CLI-only notice。旧客户端若仍发送该消息，
-/// 服务端保留 scope / write gate 校验，但不得创建 commit 或触发 Git bridge。
+/// 服务端保留 scope / write gate 校验，但不得创建 commit 或触发 Git main mirror write。
 pub async fn handle_commit_and_push(
     state: &Arc<AppState>,
     ch: &DualChannel,

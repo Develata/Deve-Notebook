@@ -61,7 +61,6 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
             #[cfg(feature = "search")]
             search_available: false,
             identity_key,
-            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
     })
 }

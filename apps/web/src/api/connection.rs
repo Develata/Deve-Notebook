@@ -48,7 +48,7 @@ pub(super) struct ConnectionManagerSignals {
     pub set_connection_epoch: WriteSignal<u64>,
     pub set_endpoint: WriteSignal<String>,
     pub set_node_role: WriteSignal<String>,
-    pub set_source_control_git_bridge: WriteSignal<String>,
+    pub set_source_control_authority: WriteSignal<String>,
     pub set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
@@ -103,7 +103,7 @@ pub fn spawn_connection_manager(
                             .try_set(signals.set_node_role, String::new())
                         || !signals
                             .lifecycle
-                            .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
+                            .try_set(signals.set_source_control_authority, "unknown".to_string())
                         || !signals
                             .lifecycle
                             .try_set(signals.set_host_file_copy_absolute_path, false)
@@ -121,7 +121,7 @@ pub fn spawn_connection_manager(
                             signals.lifecycle.clone(),
                             http_base,
                             signals.set_node_role,
-                            signals.set_source_control_git_bridge,
+                            signals.set_source_control_authority,
                             signals.set_host_file_copy_absolute_path,
                             signals.set_host_file_reveal_in_system_explorer,
                             signals.set_node_role_probe_failed,
@@ -133,7 +133,7 @@ pub fn spawn_connection_manager(
                             signals.lifecycle.clone(),
                             url.clone(),
                             signals.set_node_role,
-                            signals.set_source_control_git_bridge,
+                            signals.set_source_control_authority,
                             signals.set_host_file_copy_absolute_path,
                             signals.set_host_file_reveal_in_system_explorer,
                             signals.set_node_role_probe_failed,
@@ -154,7 +154,7 @@ pub fn spawn_connection_manager(
                             set_msg_seq: signals.set_msg_seq,
                             set_msg_queue: signals.set_msg_queue,
                             set_node_role: signals.set_node_role,
-                            set_source_control_git_bridge: signals.set_source_control_git_bridge,
+                            set_source_control_authority: signals.set_source_control_authority,
                             set_host_file_copy_absolute_path: signals
                                 .set_host_file_copy_absolute_path,
                             set_host_file_reveal_in_system_explorer: signals
@@ -233,7 +233,7 @@ fn reset_node_role_runtime(signals: &ConnectionManagerSignals) -> bool {
         .try_set(signals.set_node_role, String::new())
         && signals
             .lifecycle
-            .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
+            .try_set(signals.set_source_control_authority, "unknown".to_string())
         && signals
             .lifecycle
             .try_set(signals.set_host_file_copy_absolute_path, false)

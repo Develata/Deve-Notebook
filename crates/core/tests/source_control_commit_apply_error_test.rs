@@ -176,7 +176,7 @@ fn apply_external_changes_rejects_delete_target_when_doc_id_path_mismatches() {
         .apply_file_structure_in_local_repo("default", "notes/b.md", None, "test")
         .expect("doc b");
     assert_ne!(doc_a, doc_b);
-    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("baseline")
         .expect("commit baseline");
     repo.run_on_local_repo("default", |db| {
         staging::stage_pending_entry(
@@ -229,7 +229,7 @@ fn apply_external_changes_rejects_upsert_target_when_path_is_bound_to_another_do
         .apply_file_structure_in_local_repo("default", "notes/b.md", None, "test")
         .expect("doc b");
     assert_ne!(doc_a, doc_b);
-    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("baseline")
         .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/b.md")
@@ -283,7 +283,7 @@ fn apply_external_changes_rejects_upsert_move_without_rename_evidence() {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
-    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("baseline")
         .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/c.md")
@@ -337,7 +337,7 @@ fn apply_external_changes_rejects_docless_upsert_on_tracked_path() {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
-    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+    repo.commit_source_control_changes("baseline")
         .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/a.md")

@@ -10,7 +10,7 @@ pub(super) fn mirror_command(repo_name: &str, retry_out_of_sync: bool) -> String
         ""
     };
     format!(
-        "deve_cli git mirror --repo {}{}",
+        "deve_cli ngit mirror --repo {}{}",
         shell_quote(repo_name),
         retry
     )
@@ -23,7 +23,7 @@ pub(super) fn git_command(action: &str, repo_name: &str, retry_out_of_sync: bool
         ""
     };
     format!(
-        "deve_cli git {} --repo {}{}",
+        "deve_cli ngit {} --repo {}{}",
         action,
         shell_quote(repo_name),
         retry

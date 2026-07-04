@@ -11,7 +11,6 @@ mod queries;
 
 use crate::server::auth::delegated_source_control::DELEGATED_SC_SCOPE_NONCE;
 use anyhow::Result;
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
@@ -130,24 +129,13 @@ impl SourceControlApi for RemoteSourceControlApi {
         commits::diff_commits(self, repo, commit_a_id, commit_b_id)
     }
 
-    fn commit_staged_in_repo_with_git_bridge(
+    fn commit_source_control_changes_in_repo(
         &self,
         repo: &RepoSelector,
         message: &str,
-        _git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
-        // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
-        commits::commit_staged(self, repo, message)
-    }
-
-    fn commit_source_control_changes_in_repo_with_git_bridge(
-        &self,
-        repo: &RepoSelector,
-        message: &str,
-        _git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
-        commits::commit_staged(self, repo, message)
+        // Delegated proxy commits run on the authoritative main process.
+        commits::commit_source_control_changes(self, repo, message)
     }
 
     fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {

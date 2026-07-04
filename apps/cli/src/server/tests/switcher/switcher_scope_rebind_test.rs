@@ -46,7 +46,6 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
         #[cfg(feature = "search")]
         search_available: false,
         identity_key,
-        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);

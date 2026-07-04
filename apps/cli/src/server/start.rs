@@ -7,7 +7,7 @@
 
 use super::{plugin_host, runtime};
 use crate::server::launch::ServerLaunchOptions;
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, P2pConfig, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::plugin::runtime::PluginRuntime;
@@ -21,15 +21,14 @@ pub async fn start_server_with_bound_listener(
     plugins: Vec<Box<dyn PluginRuntime>>,
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
     sync_mode: SyncMode,
-    git_bridge: GitBridgeMode,
     p2p: P2pConfig,
     listener: tokio::net::TcpListener,
 ) -> anyhow::Result<()> {
     let bound_port = listener.local_addr()?.port();
     let launch = launch.with_port(bound_port);
     let port = launch.port();
-    runtime::install_repo_host_apis(&repo, git_bridge)?;
-    runtime::init_node_role(&launch, profile, git_bridge);
+    runtime::install_repo_host_apis(&repo)?;
+    runtime::init_node_role(&launch, profile);
     runtime::init_observability_runtime()?;
     let host_dir = runtime::prepare_host_layout(repo.as_ref(), port)?;
     let auth = runtime::init_auth_runtime(&launch)?;
@@ -62,7 +61,6 @@ pub async fn start_server_with_bound_listener(
         #[cfg(feature = "search")]
         search_available,
         identity_key: key_pair,
-        git_bridge,
     });
 
     let p2p_inbound_token_env = p2p.inbound_token_env.clone();

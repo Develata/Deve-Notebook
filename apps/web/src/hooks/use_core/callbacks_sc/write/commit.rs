@@ -165,7 +165,7 @@ mod tests {
 
         assert_eq!(
             sync_banner.get_untracked().as_deref(),
-            Some("Commit & Push 只能通过 CLI 完成；请先创建提交，再运行 `deve_cli git push`。")
+            Some("Commit & Push 只能通过 CLI 完成；请先创建提交，再运行 `deve_cli ngit push`。")
         );
     }
 }

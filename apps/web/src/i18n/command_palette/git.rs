@@ -6,49 +6,49 @@ use crate::i18n::Locale;
 
 pub fn git_status(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Status",
-        Locale::Zh => "Git: 状态",
+        Locale::En => "ngit: status",
+        Locale::Zh => "ngit: 状态",
     }
 }
 
 pub fn git_mirror(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Mirror",
-        Locale::Zh => "Git: 执行 Mirror",
+        Locale::En => "ngit: mirror",
+        Locale::Zh => "ngit: 执行 mirror",
     }
 }
 
 pub fn git_export_mirror(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Export Mirror",
-        Locale::Zh => "Git: 导出 Mirror",
+        Locale::En => "ngit: export mirror",
+        Locale::Zh => "ngit: 导出 mirror",
     }
 }
 
 pub fn git_cli_only_reason(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "CLI-only: Web does not execute Git writer commands",
-        Locale::Zh => "CLI-only：Web 不执行 Git 写命令",
+        Locale::En => "CLI-only: Web sends no Git writer authority",
+        Locale::Zh => "CLI-only：Web 不持有 Git 写 authority",
     }
 }
 
 pub fn git_import_changes(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Import Changes",
-        Locale::Zh => "Git: 导入外部变更",
+        Locale::En => "ngit: import changes",
+        Locale::Zh => "ngit: 导入外部变更",
     }
 }
 
 pub fn git_push_mirror(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Push Mirror",
-        Locale::Zh => "Git: 推送 Mirror",
+        Locale::En => "ngit: push mirror",
+        Locale::Zh => "ngit: 推送 mirror",
     }
 }
 
 pub fn git_repair_mirror(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git: Repair Mirror",
-        Locale::Zh => "Git: 修复 Mirror",
+        Locale::En => "ngit: repair mirror",
+        Locale::Zh => "ngit: 修复 mirror",
     }
 }

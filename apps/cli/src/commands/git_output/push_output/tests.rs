@@ -59,7 +59,7 @@ fn push_report_lines_keep_git_as_mirror_only() {
         vec![
             "git_push[default]: pushed=false remote=origin branch=main head=abc123 blockers=1",
             "  blocker[1]: location=git_history_mapping reason=unpublished mirror records",
-            "    hint: run `deve_cli git export --repo default` or `deve_cli git export --repo default --retry-out-of-sync` so Git HEAD maps to latest Deve commit",
+            "    hint: run `deve_cli ngit export --repo default` or `deve_cli ngit export --repo default --retry-out-of-sync` so Git HEAD maps to latest Deve commit",
             "  push_hint: no remote push was performed; fix the blocker hint(s) above first",
         ]
     );
@@ -95,7 +95,7 @@ fn push_report_lines_explain_remote_and_worktree_blockers() {
             "  blocker[1]: location=git_remote reason=remote origin not configured",
             "    hint: configure branch upstream/origin, or pass `--remote <remote> --branch <branch>`",
             "  blocker[2]: location=git_worktree reason=worktree has changes",
-            "    hint: clean Git worktree or run `deve_cli git import --apply --repo default` before pushing",
+            "    hint: clean Git worktree or run `deve_cli ngit import --apply --repo default` before pushing",
             "  push_hint: no remote push was performed; fix the blocker hint(s) above first",
         ]
     );

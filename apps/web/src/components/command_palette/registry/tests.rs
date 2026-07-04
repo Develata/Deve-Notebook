@@ -6,8 +6,8 @@ use crate::i18n::Locale;
 use leptos::prelude::*;
 
 #[test]
-fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
-    // CMD-004B: Git mirror palette entries remain CLI-only command notices.
+fn acc_cmd_004b_static_commands_include_ngit_and_remote_projection_notices() {
+    // CMD-004B: ngit and remote projection palette entries remain CLI-only command notices.
     let owner = leptos::reactive::owner::Owner::new();
 
     owner.with(|| {
@@ -27,12 +27,16 @@ fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
             .map(|command| command.id.as_str())
             .collect::<Vec<_>>();
 
-        assert!(ids.contains(&"git_import_changes"));
-        assert!(ids.contains(&"git_status"));
-        assert!(ids.contains(&"git_mirror"));
-        assert!(ids.contains(&"git_export_mirror"));
-        assert!(ids.contains(&"git_push_mirror"));
-        assert!(ids.contains(&"git_repair_mirror"));
+        assert!(ids.contains(&"ngit_import_changes"));
+        assert!(ids.contains(&"ngit_status"));
+        assert!(ids.contains(&"ngit_mirror"));
+        assert!(ids.contains(&"ngit_export_mirror"));
+        assert!(ids.contains(&"ngit_push_mirror"));
+        assert!(ids.contains(&"ngit_repair_mirror"));
+        assert!(ids.contains(&"webdav:push"));
+        assert!(ids.contains(&"webdav:pull"));
+        assert!(ids.contains(&"s3:push"));
+        assert!(ids.contains(&"s3:pull"));
     });
 }
 

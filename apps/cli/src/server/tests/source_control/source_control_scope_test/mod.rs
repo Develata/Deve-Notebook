@@ -49,10 +49,9 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
     state
         .repo
         .stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
-    state.repo.commit_staged_in_repo_with_git_bridge(
+    state.repo.commit_source_control_changes_in_repo(
         &selector,
         "initial",
-        deve_core::config::GitBridgeMode::Mirror,
     )?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);

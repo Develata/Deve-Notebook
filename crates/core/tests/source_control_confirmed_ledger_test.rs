@@ -1,4 +1,3 @@
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::protocol::ScPathTarget;
@@ -52,7 +51,7 @@ fn seed_initial_commit(repo: &RepoManager) -> deve_core::models::DocId {
     repo.stage_pending("notes/a.md").expect("stage initial");
     repo.apply_external_changes()
         .expect("apply initial external change");
-    repo.commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
+    repo.commit_source_control_changes("initial")
         .expect("initial commit");
     repo.get_tracked_docid_in_local_repo(repo.local_repo_name(), "notes/a.md")
         .expect("doc id lookup")
@@ -189,7 +188,7 @@ fn source_control_confirmed_only_commit_creates_anchor_without_new_ledger_facts(
     let dirty_head = ledger_head(&repo);
 
     let commit = repo
-        .commit_staged_with_git_bridge("confirmed", GitBridgeMode::Off)
+        .commit_source_control_changes("confirmed")
         .expect("confirmed-only commit");
 
     assert_eq!(commit.ledger_seq, dirty_head);
@@ -208,7 +207,7 @@ fn source_control_confirmed_only_commit_updates_committed_snapshot_base() {
     let doc_id = seed_initial_commit(&repo);
     append_confirmed_ledger_edit(&repo, doc_id);
 
-    repo.commit_staged_with_git_bridge("confirmed", GitBridgeMode::Off)
+    repo.commit_source_control_changes("confirmed")
         .expect("confirmed-only commit");
 
     let pending_hash = pending_fs::content_hash("external edit");
@@ -232,7 +231,7 @@ fn source_control_confirmed_only_commit_rejects_empty_message() {
     let dirty_head = ledger_head(&repo);
 
     let err = repo
-        .commit_staged_with_git_bridge("   ", GitBridgeMode::Off)
+        .commit_source_control_changes("   ")
         .expect_err("empty confirmed-only commit message must fail");
 
     assert!(

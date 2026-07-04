@@ -131,7 +131,7 @@ fn status_lines_keep_ordered_lagging_output_contract() {
             "  repo_root: notes/default",
             "  lagging_records=1",
             "  lag[1]: deve_commit=deve-1 state=queued ledger_seq=7 attempts=1 git_commit=- queued_lag_ms=10 updated_lag_ms=9 queued_at_ms=1 updated_at_ms=2",
-            "  next_action: run `deve_cli git mirror --repo default` to mirror queued Deve commit(s)",
+            "  next_action: run `deve_cli ngit mirror --repo default` to mirror queued Deve commit(s)",
         ]
     );
 }

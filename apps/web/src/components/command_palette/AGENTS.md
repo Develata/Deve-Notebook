@@ -19,6 +19,6 @@ Command palette UI (Ctrl/Cmd+Shift+P). Fuzzy search over registered commands.
 
 | Directory | Purpose |
 |-----------|---------|
-| `registry/` | Git bridge and merge command registration helpers |
+| `registry/` | ngit mirror, remote projection, and merge command registration helpers |
 
 <!-- MANUAL: -->

@@ -4,7 +4,6 @@
 //!
 //! Source Control write/commit runtime.
 
-use crate::config::GitBridgeMode;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
@@ -30,23 +29,20 @@ impl<'a> SourceControlWriteRuntime<'a> {
         self.unstage_file_target_in_local_repo(repo_name, &target)
     }
 
-    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_in_local_repo(
         &self,
         repo_name: &str,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         if repo_name == self.manager.local_repo_name() {
             return self
                 .manager
                 .commit_runtime()
-                .commit_source_control_changes_with_git_bridge(message, git_bridge);
+                .commit_source_control_changes(message);
         }
         self.manager
             .commit_runtime()
-            .commit_source_control_changes_in_local_repo_with_git_bridge(
-                repo_name, message, git_bridge,
-            )
+            .commit_source_control_changes_in_local_repo(repo_name, message)
     }
 
     pub(crate) fn apply_external_changes_in_local_repo(

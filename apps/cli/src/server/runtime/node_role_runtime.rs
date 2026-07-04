@@ -5,14 +5,10 @@
 //! Node role and repo-health runtime assembly.
 
 use crate::server::{launch::ServerLaunchOptions, node_role, static_files};
-use deve_core::config::{AppProfile, GitBridgeMode};
+use deve_core::config::AppProfile;
 use deve_core::ledger::RepoManager;
 
-pub(crate) fn init_node_role(
-    launch: &ServerLaunchOptions,
-    profile: AppProfile,
-    git_bridge: GitBridgeMode,
-) {
+pub(crate) fn init_node_role(launch: &ServerLaunchOptions, profile: AppProfile) {
     let port = launch.port();
     node_role::set_node_role(node_role::NodeRole {
         role: launch.node_role_label().into(),
@@ -23,7 +19,7 @@ pub(crate) fn init_node_role(
         delivery: static_files::delivery_shape().into(),
         environment: launch.runtime_environment().as_str().into(),
         repo_health: node_role::RepoHealthSummary::unknown(),
-        source_control: node_role::SourceControlSummary::from_git_bridge(git_bridge),
+        source_control: node_role::SourceControlSummary::ngit_authority(),
         p2p: node_role::P2pSummary::disabled(),
         native_service: launch.native_service_summary(),
     });

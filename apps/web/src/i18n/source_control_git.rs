@@ -2,7 +2,7 @@
 //!   - 13_i18n#i18n-keys-reference
 //!   - 14_commands#command-palette-shortcuts
 //!
-//! Git bridge and mirror command copy.
+//! ngit authority and Git main mirror command copy.
 
 mod cli_only;
 mod mode;

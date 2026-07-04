@@ -1,6 +1,6 @@
 use crate::server::p2p::ExchangeStats;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
-use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
+use deve_core::config::{P2pPeerConfig, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
 use deve_core::protocol::{ScopeNonce, ServerMessage};
@@ -48,7 +48,6 @@ pub(crate) fn test_state_with_dir(
             #[cfg(feature = "search")]
             search_available: false,
             identity_key: identity,
-            git_bridge: GitBridgeMode::Mirror,
         }),
     ))
 }

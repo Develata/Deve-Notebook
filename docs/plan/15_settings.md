@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-26`
+- `Last Review`: `2026-07-04`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -50,8 +50,6 @@
 | **TLS (可选)**                   |                  |                                                                     |
 | `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
-| **Source Control**               |                  |                                                                     |
-| `DEVE_SOURCE_CONTROL__GIT_BRIDGE` | `mirror`        | Git bridge 模式: `mirror` 或 `off`。                                |
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
 
@@ -90,7 +88,6 @@
 | `mem_cache_mb`          | Number | `128`      | 内存缓存上限 (MB).                                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
 | `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `05_diff_logic.md §Conflict Resolution`。 |
-| `source_control.git_bridge` | String | `mirror` | Git bridge 模式: `mirror` 排队/执行显式 bridge；`off` 保留 Deve Source Control 并阻止 Git 写命令。 |
 | `p2p.enabled`           | Bool   | `false`    | 静态 FullPeer mesh 开关；默认关闭，启用边界见 `07_network.md#static-peer-config`。 |
 | `p2p.inbound_token_env` | String | `DEVE_P2P_INBOUND_TOKEN` | 入站 FullPeer bearer token 的环境变量名；配置只保存非空 env 名称，**MUST NOT** 保存 token material。 |
 | `p2p.connect_interval_ms` | Number | `5000`   | 静态 peer connector 重连间隔；配置值 **MUST** 大于 0，否则运行配置加载与 `deve config set` **MUST** fail-closed；实现 **MUST** 避免 busy loop。 |
@@ -100,6 +97,10 @@
 | `p2p.peers[].ws_url`    | String | *(none)*   | 对端 FullPeer `/ws` endpoint；scheme 必须为 `ws://` 或 `wss://`。 |
 | `p2p.peers[].auth_token_env` | String | *(none)* | 出站 bearer token 的环境变量名；配置只保存 env 名称，**MUST NOT** 保存 token material。 |
 | `p2p.peers[].enabled`   | Bool   | `true`     | 单个静态 peer connector 开关。 |
+
+Source Control 不再暴露 `source_control.git_bridge` 或等价环境变量。NoteGit/ngit 是唯一
+Source Control authority，Git main mirror 是固定外部生态投影；不得通过 Settings 把系统切换为
+Git authority 或 NoteGit-only/off mode。
 
 `p2p.peers[]` 中 `peer_id + repo_id + ws_url` 组成静态 peer identity tuple；重复 tuple 必须在
 runtime config 加载时 fail-closed，避免多个 peer entry 共享同一 connector 诊断状态。

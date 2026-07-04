@@ -7,7 +7,6 @@ use crate::server::{
     handlers::source_control::{handle_get_changes, handle_get_doc_diff},
     session::WsSession,
 };
-use deve_core::config::GitBridgeMode;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -40,7 +39,7 @@ fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(Stri
     state.repo.stage_pending(&path)?;
     state
         .repo
-        .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)?;
+        .commit_source_control_changes("initial")?;
 
     let doc_id = state
         .repo

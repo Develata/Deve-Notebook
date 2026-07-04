@@ -35,11 +35,10 @@ pub(crate) async fn commit(
     ) {
         return errors::http(error);
     }
-    match service::commit_staged_with_git_bridge(
+    match service::commit_source_control_changes(
         state.repo.as_ref(),
         &payload.repo,
         &payload.message,
-        state.git_bridge,
     ) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
         Err(e) => errors::http(e),
@@ -62,11 +61,10 @@ pub async fn commit_delegated(
     ) {
         return errors::http(error);
     }
-    match service::commit_staged_with_git_bridge(
+    match service::commit_source_control_changes(
         state.repo.as_ref(),
         &payload.repo,
         &payload.message,
-        state.git_bridge,
     ) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
         Err(e) => errors::http(e),
@@ -85,7 +83,11 @@ pub async fn commit_plugin_host(
     }
     match host::source_control_api() {
         Ok(repo) => {
-            match host::commit_staged_in_repo(repo.as_ref(), &payload.repo, &payload.message) {
+            match host::commit_source_control_changes_in_repo(
+                repo.as_ref(),
+                &payload.repo,
+                &payload.message,
+            ) {
                 Ok(info) => Json::<CommitInfo>(info).into_response(),
                 Err(e) => errors::http(errors::map_repo_error(errors::ScOp::Commit, e)),
             }

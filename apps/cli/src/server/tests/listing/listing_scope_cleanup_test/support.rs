@@ -35,7 +35,6 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
             #[cfg(feature = "search")]
             search_available: false,
             identity_key,
-            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
     ))
 }

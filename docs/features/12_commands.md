@@ -36,25 +36,33 @@
 - CLI 命令是系统控制面的正式组成部分。
 - 它不只是调试工具，也服务于多端共享的 application/control 路径。
 
-### 4. Git Mirror Repair Command Boundary
+### 4. NoteGit / Git Main Mirror Repair Command Boundary
 
-- `Git: Repair Mirror` 当前是 Command Palette 可发现入口，但只打开 Source Control 的 CLI-only notice。
-- 该 notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` /
-  `repair_guidance[...]`，以及 `deve_cli git export --repo <repo> --retry-out-of-sync`。
+- `ngit:repair` 当前是 Command Palette 可发现入口，但只打开 Source Control 的 read-only notice/review。
+- 该 notice 指向 `deve_cli ngit status --repo <repo>` 的 `repair_action[...]` /
+  `repair_guidance[...]`，以及 `deve_cli ngit export --repo <repo> --retry-out-of-sync`。
 - 下一阶段若加入可点击 repair UI，Command Palette 只能进入 repair review flow，不能绕过 Source Control gate 直接写 Git。
 - 可执行 repair 必须要求 manual confirmation；confirmation 前只能展示诊断、subject、next step 与 copyable retry command。
 
-### 5. Git Mirror Import/Export/Push Command Chain
+### 5. NoteGit Mirror Import/Export/Push Command Chain
 
-- 当前 resolved import 发布链路必须通过 CLI 显式执行：`deve_cli git import --apply` 只写 pending/import；Source Control resolved stage/commit 生成 Deve commit；`deve_cli git export` 建立 Git mirror mapping；`deve_cli git push` 发布已映射 Git HEAD。
-- `deve_cli git push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty Deve Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
-- Web Command Palette 只能显示 Git import / push / repair 的 CLI-only notice，不得直接触发 Git writer；notice metadata 中的 `source_control.git_bridge` 必须跟随当前 node role / session mode 更新。
+- 当前 resolved import 发布链路必须通过 runtime 显式执行：`deve_cli ngit import --apply` 只写 pending/import；External Changes / Apply to Ledger / Source Control commit 生成 NoteGit/ngit facts 与 commit anchor；`deve_cli ngit export` 建立 Git main mirror mapping；`deve_cli ngit push` 发布已映射 Git HEAD。
+- `deve_cli ngit push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty NoteGit Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
+- Web Command Palette 只能显示 ngit import / push / repair 的 backend/runtime intent 或 read-only notice，不得直接触发 Git writer；不再读取 `source_control.git_bridge` mode。
+
+### 6. WebDAV/S3 Projection Commands
+
+- Command Palette 提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
+- 四个命令只发送 typed intent；不得在前端直接列举、上传、下载或覆盖文件。
+- push/pull 的实际 provider IO 与 Projection Workspace 写入由 backend/core runtime 执行；当前 provider I/O 尚未接线时必须报告 `provider_io_ready=false` 并 fail-closed。
+- pull 完成后只能通过 watcher/scan 进入 External Changes，用户必须另行 Apply to Ledger。
 
 ## 非目标
 
 - 当前阶段不允许只有显示层按钮能做、命令层做不到的核心能力。
 - 当前阶段不要求把所有未来扩展命令都默认暴露给用户。
 - 当前阶段不允许 Command Palette 触发后台自动 Git repair。
+- 当前阶段不允许 Command Palette 直接访问 WebDAV/S3 provider。
 
 ## Chrome MCP 验收实例
 

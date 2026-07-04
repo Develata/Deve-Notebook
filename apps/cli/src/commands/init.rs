@@ -65,10 +65,6 @@ sync_mode = "auto"
 # Merge Strategy (manual | auto)
 merge_strategy = "manual"
 
-[source_control]
-# Git bridge mode (mirror | off). Deve ledger/.notegit remains the authority.
-git_bridge = "mirror"
-
 # Performance Tuning
 # Number of changes to keep in history
 snapshot_depth = 100
@@ -160,8 +156,8 @@ mod tests {
 
         let config = std::fs::read_to_string(root.join("config.toml")).expect("config");
         assert!(config.contains("merge_strategy = \"manual\""));
-        assert!(config.contains("[source_control]"));
-        assert!(config.contains("git_bridge = \"mirror\""));
+        assert!(!config.contains("[source_control]"));
+        assert!(!config.contains("git_bridge"));
         assert!(config.contains("[p2p]"));
         assert!(config.contains("enabled = false"));
         assert!(config.contains("inbound_token_env = \"DEVE_P2P_INBOUND_TOKEN\""));

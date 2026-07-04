@@ -27,8 +27,8 @@ mod validation;
 
 pub use runtime_environment::RuntimeEnvironment;
 pub use schema::{
-    AgentBridgeConfig, AiConfig, AppProfile, Config, GitBridgeMode, MergeStrategy, P2pConfig,
-    P2pPeerConfig, SourceControlConfig, SyncMode, UiConfig,
+    AgentBridgeConfig, AiConfig, AppProfile, Config, MergeStrategy, P2pConfig, P2pPeerConfig,
+    SourceControlConfig, SyncMode, UiConfig,
 };
 
 impl Config {

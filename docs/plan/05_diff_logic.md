@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-03`
+- `Last Review`: `2026-07-04`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -52,9 +52,9 @@ authority 仍是 ledger facts 与 commit anchors。
 - `Ledger Commit Domain`
   - 来源：已确认 ledger facts 与 commit anchors
   - 状态：`commits`, `commit_diff`
-- `Git Mirror Domain`
-  - 来源：已完成 Deve commit 的外部生态映射
-  - 状态：mirror queue、out-of-sync diagnostics、只读 status / repair review
+- `Git Main Mirror Domain`
+  - 来源：已完成 NoteGit/ngit commit 的外部生态终态映射
+  - 状态：main branch mirror queue、out-of-sync diagnostics、只读 status / repair review
 
 ### 2.2 Core State
 
@@ -73,58 +73,91 @@ authority 仍是 ledger facts 与 commit anchors。
 - rename / move / create / delete 最终必须收敛为 `Structure Facts`。
 - `pending_fs_ops`、`staging`、`diff cache` 都不是 authority。
 - `ConfirmedLedgerChange` 不是 runtime side table；它只能由 commit anchor 与 ledger head 派生。
-- Git mirror commit 不是 authority；它只是已确认 Deve commit 的外部生态映射。
+- Git main mirror commit 不是 authority；它只是已确认 NoteGit/ngit commit 的外部生态终态映射。
 - Source Control commit 是版本锚点创建动作；External Changes 的 `Apply to Ledger`
   只是把 staged external changes 写入 ledger facts，**MUST NOT** 同时创建 commit anchor。
 - 若同一文档同时存在 external change 与 confirmed ledger dirty，External Changes
   **MUST** fail-closed：禁止普通 stage / apply-to-ledger，只允许打开 diff 或丢弃外部修改。
 
-### 2.3.1 Git Mirror Lifecycle {#git-mirror-lifecycle}
+### 2.3.1 Git Main Mirror Lifecycle {#git-mirror-lifecycle}
 
-Git mirror 生命周期必须挂在 Source Control authority 之后：
+Git main mirror 生命周期必须挂在 Source Control authority 之后：
 
 ```text
 DeveStaged
-  -> DeveLedgerCommit
+  -> NoteGitLedgerCommit
   -> ProjectionPersisted
   -> GitMirrorQueued
   -> GitMirrorCommitted | GitMirrorOutOfSync
 ```
 
-- `DeveLedgerCommit` 一旦成功，不得因为 Git mirror 失败而回滚。
-- `source_control.git_bridge = "mirror"` 是兼容默认值：`DeveLedgerCommit` 成功后，
-  如果 `.git` mirror ready，则 **MAY** 排队 `GitMirrorQueued` record；后续显式
-  `deve git mirror/export/push` 仍必须经过本节 preflight。
-- `source_control.git_bridge = "off"` 表示 Deve-only / NoteGit-only 运行：stage、
-  commit、diff、history 与 merge 仍完全走 ledger authority；commit 成功后
-  **MUST NOT** 排队 Git mirror record，也不得执行 Git bridge 写操作。
-- `source_control.git_bridge` 是 source-control writer 的显式 runtime policy；CLI `sc commit`、
-  HTTP commit、plugin-host HTTP mutation 与 Rhai `sc_commit` 等所有 commit writer surface
-  必须接收同一个 effective policy，不能通过默认 `mirror` 入口绕过 `off`。
-- Core Source Control writer API **MUST NOT** 暴露无 policy 的 commit 方法；新增或重构的
-  commit writer 必须在编译期显式选择 `GitBridgeMode`，delegated remote proxy 只能在独立
-  delegated path 内转发到主进程 effective policy。
-- `off` 模式下，`deve git status` 与 `deve git import` dry-run 可作为只读诊断；
-  `deve git mirror/export/import --apply/push` 必须返回结构化 disabled blocker，并提示
-  需要将 `source_control.git_bridge` 切回 `mirror`。
+- `NoteGitLedgerCommit` 一旦成功，不得因为 Git main mirror 失败而回滚。
+- Source Control 只有 NoteGit/ngit authority；不再存在 `source_control.git_bridge`
+  或 mirror/off 二选一配置。
+- NoteGit/ngit commit 成功后，如果 `.git` mirror ready，则 **MUST** 排队
+  `GitMirrorQueued` record。排队失败只能形成诊断，不得回滚 ledger commit。
+- Git main mirror 只关心 Markdown Projection Workspace 终态与 NoteGit/ngit 终态一致；
+  不要求 Git 历史轨迹与 NoteGit/ngit 历史逐条同构。
+- Git main mirror writer 采用“终态例外提交”：每次执行 mirror 时提交当前尚未被
+  Git main 覆盖的 projection 终态；其它由外部 Git main drift 造成的差异只进入
+  diagnostic / External Changes / explicit import 路径，不直接写 ledger。
+- `.notegit/` 必须被 `.gitignore` 忽略，且不得被 Git tracked；检测到泄漏必须 fail-closed。
+- Core Source Control writer API 不得接收 legacy bridge mode 或 Git authority policy；CLI `sc commit`、
+  HTTP commit、plugin-host HTTP mutation 与 Rhai `sc_commit` 均走同一 NoteGit/ngit commit path。
+- NoteGit/ngit 回退 N 个 commit anchor 时，Git main mirror 应回退 N 个由 NoteGit/ngit
+  生成的 mirror commits；该 parity 依赖 mirror mapping metadata，而不是比较提交消息或路径猜测。
 - `GitMirrorOutOfSync` 必须能被 `status` / `repair` / retry 路径观测。
 - 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。
 
-Git mirror 命令面必须遵守以下边界：
-
-- `git status` 只能观测 mirror readiness、queue state 与 out-of-sync 诊断，**MUST NOT** 写 `.git/`、`.notegit/` 或 ledger。
-- `git mirror` / `git export` **MAY** 把已完成的 Deve commit projection 导出为 Git commit；导出失败只能产生 `GitMirrorOutOfSync`，**MUST NOT** 回滚 Deve commit。
-- `git import` dry-run 只能生成 change/blocker plan；默认 **MUST NOT** 写 ledger、`pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 `.notegit/`。
-- `git import --apply` 只能把安全 changes 写入 pending/import，并保留冲突标记；后续 **MUST** 通过 Deve stage/commit 生成 ledger facts。
-- Git bridge 写命令（`git mirror/export/import --apply/push`）在写 pending/import、`.git` mirror
-  或发布 mirror HEAD 之前 **MUST** 复用本地 Projection Workspace identity gate；
+- ngit mirror status 只能观测 mirror readiness、queue state 与 out-of-sync 诊断，
+  **MUST NOT** 写 `.git/`、`.notegit/` 或 ledger。
+- ngit mirror/export **MAY** 把已完成的 NoteGit/ngit projection 终态导出为 Git main commit；
+  导出失败只能产生 `GitMirrorOutOfSync`，**MUST NOT** 回滚 NoteGit/ngit commit。
+- ngit import dry-run 只能生成 change/blocker plan；默认 **MUST NOT** 写 ledger、
+  `pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 `.notegit/`。
+- ngit import --apply 只能把安全 changes 写入 pending/import，并保留冲突标记；后续
+  **MUST** 通过 External Changes / Apply to Ledger / Source Control commit 生成 ledger facts 与 commit anchor。
+- Git mirror 写命令在写 pending/import、`.git` mirror 或发布 mirror HEAD 之前
+  **MUST** 复用本地 Projection Workspace identity gate；
   Projection Locator 或 `.notegit` identity marker 破损时必须 fail-closed。
-- `git push` 只能发布已映射的 `.git` mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit` tracked 泄漏或 Git HEAD 未映射到最新 Deve commit。
+- Git push 只能发布已映射的 `.git` main mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、
+  Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit`
+  tracked 泄漏或 Git HEAD 未映射到最新 NoteGit/ngit commit。
 - repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
 - 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。
-- Proxy / plugin-host node role 摘要必须展示主进程 effective `source_control.git_bridge`
-  或明确的 delegated/unknown 状态，不得硬编码为 `mirror` 并误导 Web surface。
+- Proxy / plugin-host node role 摘要不得展示 legacy bridge mode；如果需要描述 Source Control，
+  必须展示 NoteGit/ngit authority 与 delegated/readonly 状态。
+
+### 2.3.2 Remote Projection Transport Lifecycle {#remote-projection-transport}
+
+Remote Projection Transport 是 WebDAV/S3 上的 Markdown Projection Workspace 传输层，
+独立于 `06_backup` 的加密 backup pack。
+
+```text
+RemoteProjectionCommand
+  -> ProjectionLocatorResolved
+  -> TransportProviderResolved
+  -> PushProjection | PullProjection
+  -> ProjectionWorkspaceWritten
+  -> WatcherOrScanDetected
+  -> ExternalChanges
+```
+
+约束：
+
+- 当前 v1 只开放 admission plan 与命令入口；WebDAV/S3 provider I/O 未接线时必须显式
+  fail-closed，并报告 `provider_io_ready=false`。不得把 plan 输出伪装成已完成 push/pull。
+- `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
+  不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
+- `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
+  覆盖后由 watcher/scan 生成 External Changes。
+- pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue
+  或直接确认 External Changes。
+- push/pull 在执行前必须复用 Projection Locator 与 `.notegit` identity gate；locator 缺失、
+  workspace 不可 canonicalize、repo scope 不匹配或 remote provider 未配置时必须 fail-closed。
+- Web surface 只发送 typed command intent；远端列举、上传、下载、覆盖与 drift 计算均属于
+  backend/core infra，不得在前端实现。
 
 ### 2.4 Diff Identity Model
 
@@ -168,7 +201,7 @@ PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
 - `Apply to Ledger` / `确认外部修改` **MUST** 使用 core/server 写入路径把 staged external changes
   转换为 ledger facts；成功后清空 External Changes staging，并让 Source Control 从 commit anchor 到
   ledger head 派生 `ConfirmedLedgerChange`。
-- `Apply to Ledger` **MUST NOT** 创建 commit anchor、更新 history、写 Git mirror queue 或把 staged
+- `Apply to Ledger` **MUST NOT** 创建 commit anchor、更新 history、写 Git main mirror queue 或把 staged
   external changes 伪装成 Source Control commit。
 - 当 external change 与 confirmed ledger dirty 指向同一 `DocId`，或缺失 `DocId` 时指向同一 canonical
   path，普通 stage/apply **MUST** 禁用；UI 和 API 都必须保留 fail-closed 语义，不得由前端自行覆盖。
@@ -567,7 +600,12 @@ workspace diff 与 confirmed ledger diff 必须分离；core manager、CLI proxy
 ## 本章相关命令
 
 - `P2P: Merge Peer`
+- `webdav:push`
+- `webdav:pull`
+- `s3:push`
+- `s3:pull`
 
 ## 本章相关配置
 
 - `diff.merge_strategy`: `manual` | `auto`
+- Remote projection transport credentials are runtime/admission inputs, not Source Control authority.

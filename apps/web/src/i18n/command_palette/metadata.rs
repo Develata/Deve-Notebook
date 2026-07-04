@@ -41,8 +41,15 @@ pub fn group_source_control(locale: Locale) -> &'static str {
 
 pub fn group_git(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git Mirror",
-        Locale::Zh => "Git Mirror",
+        Locale::En => "ngit Mirror",
+        Locale::Zh => "ngit Mirror",
+    }
+}
+
+pub fn group_remote_projection(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remote Projection",
+        Locale::Zh => "远端 Projection",
     }
 }
 

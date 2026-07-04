@@ -148,7 +148,7 @@ mod tests {
         );
         assert_eq!(
             review.records[0].retry_command,
-            "deve_cli git export --repo <repo> --retry-out-of-sync"
+            "deve_cli ngit export --repo <repo> --retry-out-of-sync"
         );
     }
 
@@ -212,7 +212,7 @@ mod tests {
             subject: format!("docs/{deve_commit_id}.md"),
             next_step: "fix_projection_or_path_subject".to_string(),
             retry_command: Some(
-                "deve_cli git export --repo default --retry-out-of-sync".to_string(),
+                "deve_cli ngit export --repo default --retry-out-of-sync".to_string(),
             ),
             failure_stage: Some("projection_scope".to_string()),
             failure_command: None,

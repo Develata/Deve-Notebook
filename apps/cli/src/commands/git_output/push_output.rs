@@ -85,7 +85,7 @@ fn push_blocker_hint(repo_name: &str, location: &str) -> String {
 
 fn import_apply_command(repo_name: &str) -> String {
     format!(
-        "deve_cli git import --apply --repo {}",
+        "deve_cli ngit import --apply --repo {}",
         shell_quote(repo_name)
     )
 }

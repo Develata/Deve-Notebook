@@ -17,7 +17,8 @@ fn formats_main_runtime_summary() {
         "delivery": "embedded-frontend",
         "environment": "development",
         "source_control": {
-            "git_bridge": "mirror"
+            "authority": "ngit",
+            "git_main_mirror": "main"
         },
         "repo_health": {
             "status": "healthy",
@@ -29,7 +30,7 @@ fn formats_main_runtime_summary() {
 
     assert_eq!(
         summary,
-        "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development | repos:healthy (0/1) | git:mirror"
+        "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development | repos:healthy (0/1) | sc:ngit/main"
     );
 }
 
@@ -47,7 +48,7 @@ fn formats_proxy_runtime_summary() {
 
     assert_eq!(
         summary,
-        "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production | repos:unknown | git:unknown"
+        "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production | repos:unknown | sc:unknown/unknown"
     );
 }
 
@@ -62,7 +63,8 @@ fn formats_degraded_repo_health() {
         "delivery": "embedded-frontend",
         "environment": "development",
         "source_control": {
-            "git_bridge": "off"
+            "authority": "ngit",
+            "git_main_mirror": "main"
         },
         "repo_health": {
             "status": "degraded",
@@ -73,31 +75,31 @@ fn formats_degraded_repo_health() {
     }));
 
     assert!(summary.contains("repos:degraded (1/2)"));
-    assert!(summary.contains("git:off"));
+    assert!(summary.contains("sc:ngit/main"));
 }
 
 #[test]
-fn node_role_probe_result_carries_source_control_git_bridge() {
-    let result = NodeRoleProbeResult::from_json(&complete_node_role_payload("off"))
+fn node_role_probe_result_carries_source_control_authority() {
+    let result = NodeRoleProbeResult::from_json(&complete_node_role_payload("ngit"))
         .expect("valid node role payload");
 
-    assert!(result.summary.contains("git:off"));
-    assert_eq!(result.source_control_git_bridge, "off");
+    assert!(result.summary.contains("sc:ngit/main"));
+    assert_eq!(result.source_control_authority, "ngit");
     assert!(result.host_file_copy_absolute_path);
     assert!(!result.host_file_reveal_in_system_explorer);
 }
 
 #[test]
-fn node_role_probe_result_accepts_explicit_unknown_source_control_git_bridge() {
+fn node_role_probe_result_accepts_explicit_unknown_source_control_authority() {
     let result = NodeRoleProbeResult::from_json(&complete_node_role_payload("unknown"))
         .expect("valid node role payload");
 
-    assert!(result.summary.contains("git:unknown"));
-    assert_eq!(result.source_control_git_bridge, "unknown");
+    assert!(result.summary.contains("sc:unknown/main"));
+    assert_eq!(result.source_control_authority, "unknown");
 }
 
 #[test]
-fn node_role_probe_result_rejects_unknown_source_control_git_bridge_mode() {
+fn node_role_probe_result_rejects_unknown_source_control_authority_mode() {
     assert!(NodeRoleProbeResult::from_json(&complete_node_role_payload("native")).is_none());
 }
 
@@ -125,7 +127,8 @@ fn node_role_probe_result_rejects_partial_release_runtime_shape() {
             "delivery": "embedded-frontend",
             "environment": "development",
             "source_control": {
-                "git_bridge": "mirror"
+                "authority": "ngit",
+                "git_main_mirror": "main"
             }
         }))
         .is_none()
@@ -149,7 +152,8 @@ fn node_role_probe_result_rejects_partial_release_runtime_shape() {
                 "reveal_in_system_explorer": true
             },
             "source_control": {
-                "git_bridge": "mirror"
+                "authority": "ngit",
+                "git_main_mirror": "main"
             }
         }))
         .is_none()
@@ -191,7 +195,8 @@ fn node_role_probe_result_rejects_partial_release_runtime_shape() {
                 "degraded": 0
             },
             "source_control": {
-                "git_bridge": "mirror"
+                "authority": "ngit",
+                "git_main_mirror": "main"
             }
         }))
         .is_none()

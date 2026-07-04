@@ -134,7 +134,7 @@ fn mark_unauthorized_resets_stale_node_role_runtime_summary() {
 
     assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
     assert_eq!(ws.node_role.get_untracked(), "");
-    assert_eq!(ws.source_control_git_bridge.get_untracked(), "unknown");
+    assert_eq!(ws.source_control_authority.get_untracked(), "unknown");
     assert!(!ws.host_file_copy_absolute_path.get_untracked());
     assert!(!ws.host_file_reveal_in_system_explorer.get_untracked());
     assert!(!ws.node_role_probe_failed.get_untracked());

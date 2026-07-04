@@ -2,7 +2,7 @@
 //!   - 14_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction, ScAction};
+use crate::{Commands, ConfigAction, NgitAction, RepoAction, RepoProjectionAction, ScAction};
 use std::path::PathBuf;
 
 mod backup;
@@ -50,7 +50,6 @@ pub async fn run(
                     dry_run,
                     profile: config.profile,
                     sync_mode: config.sync_mode,
-                    git_bridge: config.source_control.git_bridge,
                     p2p: config.p2p.clone(),
                     native_loopback,
                 },
@@ -98,19 +97,15 @@ pub async fn run(
             ScAction::Stage { repo, all } => {
                 commands::sc::stage(ledger_dir, repo.as_deref(), all, config.snapshot_depth)?
             }
-            ScAction::Commit { repo, message } => commands::sc::commit(
-                ledger_dir,
-                repo.as_deref(),
-                &message,
-                config.snapshot_depth,
-                config.source_control.git_bridge,
-            )?,
+            ScAction::Commit { repo, message } => {
+                commands::sc::commit(ledger_dir, repo.as_deref(), &message, config.snapshot_depth)?
+            }
         },
-        Some(Commands::Git { action }) => match action {
-            GitAction::Status { repo } => {
+        Some(Commands::Ngit { action }) => match action {
+            NgitAction::Status { repo } => {
                 commands::git::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
             }
-            GitAction::Mirror {
+            NgitAction::Mirror {
                 repo,
                 retry_out_of_sync,
             } => commands::git::mirror(
@@ -118,9 +113,8 @@ pub async fn run(
                 repo.as_deref(),
                 retry_out_of_sync,
                 config.snapshot_depth,
-                config.source_control.git_bridge,
             )?,
-            GitAction::Export {
+            NgitAction::Export {
                 repo,
                 retry_out_of_sync,
             } => commands::git::export(
@@ -128,16 +122,11 @@ pub async fn run(
                 repo.as_deref(),
                 retry_out_of_sync,
                 config.snapshot_depth,
-                config.source_control.git_bridge,
             )?,
-            GitAction::Import { repo, apply } => commands::git::import(
-                ledger_dir,
-                repo.as_deref(),
-                apply,
-                config.snapshot_depth,
-                config.source_control.git_bridge,
-            )?,
-            GitAction::Push {
+            NgitAction::Import { repo, apply } => {
+                commands::git::import(ledger_dir, repo.as_deref(), apply, config.snapshot_depth)?
+            }
+            NgitAction::Push {
                 repo,
                 remote,
                 branch,
@@ -147,9 +136,11 @@ pub async fn run(
                 remote.as_deref(),
                 branch.as_deref(),
                 config.snapshot_depth,
-                config.source_control.git_bridge,
             )?,
         },
+        Some(Commands::ProjectionRemote { action }) => {
+            commands::projection_remote::run(ledger_dir, action, config.snapshot_depth)?
+        }
         Some(Commands::Backup { action }) => backup::run(action)?,
         Some(Commands::VerifyP2P {
             live_ledger_dir,

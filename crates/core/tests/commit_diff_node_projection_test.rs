@@ -163,7 +163,7 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     repo.stage_pending("notes/a.md").expect("stage first");
     repo.apply_external_changes().expect("apply external first");
     let first = repo
-        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("first")
         .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
@@ -187,7 +187,7 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     repo.apply_external_changes()
         .expect("apply external second");
     let second = repo
-        .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("second")
         .expect("commit second");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -235,7 +235,7 @@ fn commit_diff_rejects_reversed_commit_order() {
     repo.stage_pending("notes/a.md").expect("stage first");
     repo.apply_external_changes().expect("apply external first");
     let first = repo
-        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("first")
         .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
@@ -259,7 +259,7 @@ fn commit_diff_rejects_reversed_commit_order() {
     repo.apply_external_changes()
         .expect("apply external second");
     let second = repo
-        .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("second")
         .expect("commit second");
 
     let err = repo
@@ -295,7 +295,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
     repo.stage_pending("notes/a.md").expect("stage first");
     repo.apply_external_changes().expect("apply external first");
     let first = repo
-        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("first")
         .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
@@ -337,7 +337,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
     repo.apply_external_changes()
         .expect("apply external rename");
     let second = repo
-        .commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
+        .commit_source_control_changes("rename")
         .expect("commit rename");
 
     let diffs = repo

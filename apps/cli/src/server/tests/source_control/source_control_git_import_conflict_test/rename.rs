@@ -26,10 +26,9 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
         .stage_pending_in_local_repo(&repo_name, "note.md")?;
     state
         .repo
-        .commit_staged_in_local_repo_with_git_bridge(
+        .commit_source_control_changes_in_local_repo(
             &repo_name,
             "baseline",
-            deve_core::config::GitBridgeMode::Mirror,
         )?;
     git(&repo_root, &["add", "."]);
     git(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
@@ -143,10 +142,9 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
         .stage_pending_in_local_repo(&repo_name, "notes/a.md")?;
     state
         .repo
-        .commit_staged_in_local_repo_with_git_bridge(
+        .commit_source_control_changes_in_local_repo(
             &repo_name,
             "baseline",
-            deve_core::config::GitBridgeMode::Mirror,
         )?;
     let doc_id = state
         .repo

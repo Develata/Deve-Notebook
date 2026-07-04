@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-03`
+- `Last Review`: `2026-07-04`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -18,7 +18,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 命令面分为三类：
 
 *   **Baseline CLI Contract**：与 core authority、配置读取、诊断和修复直接相关的 CLI surface；启用时 **MUST** fail-closed 并返回结构化错误。
-*   **Optional Bridge Contract**：Git mirror、AI backend、Trusted CLI 等外围能力；启用时 **MUST** 服从对应章节的 authority 边界。
+*   **Optional Bridge Contract**：Git main mirror、WebDAV/S3 projection transport、AI backend、Trusted CLI 等外围能力；启用时 **MUST** 服从对应章节的 authority 边界。
 *   **Future UI Surface**：Command Palette 中未绑定后端能力的入口 **MAY** 以 disabled/unavailable 状态出现，但 **MUST NOT** 伪装成可执行能力。
 
 ## 1. CLI Commands {#cli-commands}
@@ -41,19 +41,20 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve recover`: 从 ledger 数据恢复 repo projection workspace 文件。
     *   `deve sc status --repo <selector>`: 只读输出 Deve Source Control staged / unstaged 状态；`deve sc-status` 可作为兼容别名保留。
     *   `deve sc stage --repo <selector> --all`: 将当前 repo 的 pending / working changes 显式移入 staged；执行面必须复用 `05_diff_logic` 的 target resolution 与 stage 边界。
-    *   `deve sc commit --repo <selector> --message <message>`: 将 staged changes 提交为 Deve ledger-backed commit anchor；不得执行 Git mirror push，也不得直接写 Git index。
+    *   `deve sc commit --repo <selector> --message <message>`: 将 staged/confirmed changes 提交为 NoteGit/ngit ledger-backed commit anchor；不得执行 Git push，也不得直接写 Git index。
     *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 *   **Optional Bridge Contract**:
-    *   Git mirror 命令的 lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
-    *   Git mirror 命令必须读取 `source_control.git_bridge`：`mirror` 保持兼容行为；`off` 下只读 status 与 import dry-run 可用，所有 Git bridge 写命令返回 disabled blocker。
-    *   `deve git status`: 只读检查 Git mirror readiness 与 queue/out-of-sync summary。
-    *   `deve git mirror`: 显式执行 queued/out-of-sync Git mirror records。
-    *   `deve git export`: 显式导出 Deve commits 到 Git mirror。
-    *   `deve git import`: 只读规划外部 Git/worktree changes。
-    *   `deve git import --apply`: 显式把安全 Git changes 写入 pending/import；不得直接生成 ledger facts。
-    *   `deve git push`: 显式发布已映射 `.git` mirror HEAD。
+    *   Git main mirror lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
+    *   Git main mirror 不再有 `source_control.git_bridge` 配置；NoteGit/ngit commit 成功后始终尝试排队 mirror record。
+    *   `deve ngit status`: 只读检查 NoteGit authority、Git main mirror readiness 与 queue/out-of-sync summary。
+    *   `deve ngit mirror`: 显式执行 queued/out-of-sync Git main mirror records。
+    *   `deve ngit export`: 显式导出 NoteGit/ngit projection 终态到 Git main mirror。
+    *   `deve ngit import`: 只读规划外部 Git/worktree changes。
+    *   `deve ngit import --apply`: 显式把安全 Git changes 写入 pending/import；不得直接生成 ledger facts。
+    *   `deve ngit push`: 显式发布已映射 `.git` main mirror HEAD。
+    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 同步 Markdown Projection Workspace；pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -62,20 +63,21 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `Cmd+P` / `Ctrl+P`: 呼出 Quick Open (文件跳转)。
     *   `Cmd+Shift+K` / `Ctrl+Shift+K`: 呼出 branch 切换。
 
-*   **Source Control / Git-like Workflow**:
+*   **Source Control / NoteGit-like Workflow**:
     *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
     *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
-    *   `Source Control: Push`: 推送 Deve source-control state；不得被解释为 Web 直接执行 Git mirror push；Git mirror publish 只由显式 `deve git push` surface 承担。
-    *   `Git: Status`: 只读查看 `.git` mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
-    *   `Git: Mirror`: 显式执行 queued Git mirror commit；执行面 **MUST** 复用 `05_diff_logic` 的 Git mirror preflight 与 out-of-sync 边界。
-    *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
-    *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve stage/commit；该命令不得直接生成 ledger commit。
-    *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
-    *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
-    *   Command Palette / Source Control UI 可展示当前 `source_control.git_bridge` mode 与 CLI-only Git bridge notice；该 mode 必须来自当前 node role / session signal，且在 role reprobe 后同步刷新，不得停留在命令创建时的旧值；Source Control header 的 mode copy **MUST** 明确 `.notegit` / Deve 仍是 authority、Git 只是 bridge；Web surface **MUST NOT** 直接执行 Git writer。
-    *   兼容期内若旧客户端仍发送 `ClientMessage::CommitAndPush`，服务端 **MUST** 先复用当前 Source Control write gate，然后返回结构化 CLI-only blocker；不得创建 Deve commit、排队 Git mirror record 或执行 Git push。
-    *   代理 / plugin-host 模式下，Command Palette 读取到的 node role mode 必须来自主进程 effective mode 或明确标记为 delegated/unknown，不得把缺省值当成 mirror mode。
-    *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
+    *   `Source Control: Push`: 推送 Deve source-control state；不得被解释为 Web 直接执行 Git push；Git main mirror publish 只由显式 backend/runtime surface 承担。
+    *   `ngit:status`: 只读查看 `.git` main mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
+    *   `ngit:mirror`: 显式执行 queued Git main mirror commit；执行面 **MUST** 复用 `05_diff_logic` 的 Git mirror preflight 与 out-of-sync 边界。
+    *   `ngit:export`: 将 queued NoteGit/ngit projection 终态导出到 Git main mirror，并建立 NoteGit/ngit commit 到 Git commit 的映射。
+    *   `ngit:import`: 将外部 Git/worktree 变化转成 pending/import，再进入 External Changes / Apply to Ledger / Source Control commit；该命令不得直接生成 ledger commit。
+    *   `ngit:push`: 将已映射的 `.git` main mirror HEAD 推送到远端；不得绕过 NoteGit/ngit authority。
+    *   `ngit:repair`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
+    *   `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull`: 发送 remote projection transport intent；前端不得直接访问 WebDAV/S3 provider。
+    *   Command Palette / Source Control UI 不再展示 `source_control.git_bridge` mode；Source Control header copy **MUST** 明确 `.notegit` / NoteGit/ngit 是 authority、Git main 只是终态 mirror；Web surface **MUST NOT** 直接执行 Git writer。
+    *   若旧客户端仍发送 `ClientMessage::CommitAndPush`，服务端 **MUST** 先复用当前 Source Control write gate，然后返回结构化 unsupported blocker；不得创建重复 NoteGit/ngit commit、排队重复 Git mirror record 或执行 Git push。
+    *   代理 / plugin-host 模式下，Command Palette 不得读取或展示 legacy bridge mode；delegated/readonly 状态必须来自 runtime typed state。
+    *   `Git:*` 文案不再作为 v1 command surface 出现；需要 Git ecosystem mirror 诊断时使用 `ngit:*`。
 
 *   **P2P / Branch**:
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
@@ -87,8 +89,8 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 
 *   **命令执行边界**:
     *   Command Palette 入口启用时 **MUST** 调用明确 backend contract；未启用时 **MUST** 显示 disabled/unavailable 状态。
-    *   CLI-only notice 只能作为可发现性入口，**MUST NOT** 被解释为 Web 已能直接执行 Git import/push/repair。
-    *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
+    *   ngit / Git-main-mirror notice 只能作为可发现性入口或只读 review 入口，**MUST NOT** 被解释为 Web 已能直接执行 Git import/push/repair。
+    *   Git mirror repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
     *   每个 Command Palette entry **MUST** 暴露稳定 `id`、本地化 `title`、用户可见 `group`、启用条件说明、可选快捷键文本，以及 unavailable reason（若不可用）。
     *   Command Palette 与 Unified Search 的 `>` 命令入口 **MUST** 使用同一 command registry metadata；不得让两个入口展示不同的可用性或 writer 边界。
     *   File tree context menu、Command Palette、shortcut 与 toolbar 共享 `ContextAction` metadata 与 resolver；surface 只能用当前 `surface + target + readonly + repo scope + write readiness` 投影 `ProjectedContextAction` 并触发 `ContextActionIntent`，不得各自发明执行语义或提交裸 `action_id`。

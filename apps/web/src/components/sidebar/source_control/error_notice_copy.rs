@@ -115,21 +115,21 @@ mod tests {
             title(Locale::En, &status),
             sc::git_status_cli_only_title(Locale::En)
         );
-        assert!(hint(Locale::En, &status).contains("deve_cli git status"));
+        assert!(hint(Locale::En, &status).contains("deve_cli ngit status"));
 
         let mirror = SourceControlNotice::git_mirror_cli_only();
         assert_eq!(
             title(Locale::Zh, &mirror),
             sc::git_mirror_cli_only_title(Locale::Zh)
         );
-        assert!(hint(Locale::Zh, &mirror).contains("deve_cli git mirror"));
+        assert!(hint(Locale::Zh, &mirror).contains("deve_cli ngit mirror"));
 
         let export = SourceControlNotice::git_export_cli_only();
         assert_eq!(
             title(Locale::En, &export),
             sc::git_export_cli_only_title(Locale::En)
         );
-        assert!(hint(Locale::En, &export).contains("deve_cli git export"));
+        assert!(hint(Locale::En, &export).contains("deve_cli ngit export"));
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod tests {
             title(Locale::En, &notice),
             sc::git_import_cli_only_title(Locale::En)
         );
-        assert!(hint(Locale::En, &notice).contains("deve_cli git import --apply"));
+        assert!(hint(Locale::En, &notice).contains("deve_cli ngit import --apply"));
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
         assert!(
             details(Locale::Zh, &notice)
                 .iter()
-                .any(|line| line.contains("deve_cli git export --repo <repo>"))
+                .any(|line| line.contains("deve_cli ngit export --repo <repo>"))
         );
     }
 

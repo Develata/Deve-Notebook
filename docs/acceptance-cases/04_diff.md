@@ -141,12 +141,11 @@
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
     - run: cargo test -p deve_cli test_git_mirror_repair_review_is_readonly_record_source -- --nocapture
-    - run: cargo test -p deve_cli git_import_apply_resolved_commit_exports_roundtrip -- --nocapture
-    - run: cargo test -p deve_cli git_import_export_push_resolved_publish_roundtrip -- --nocapture
-    - run: cargo test -p deve_cli git_import_apply_rejects_broken_workspace_identity -- --nocapture
-    - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
-    - run: cargo test -p deve_cli git_bridge_off -- --nocapture
-    - run: cargo test -p deve_cli http_source_control_commit_respects_git_bridge_off -- --nocapture
+    - run: cargo test -p deve_cli ngit_import_apply_resolved_commit_exports_roundtrip -- --nocapture
+    - run: cargo test -p deve_cli ngit_import_export_push_resolved_publish_roundtrip -- --nocapture
+    - run: cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
+    - run: cargo test -p deve_core source_control_ngit_only -- --nocapture
+    - run: cargo test -p deve_cli http_source_control_commit_always_queues_git_main_mirror -- --nocapture
     - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
     - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture
     - run: cargo test -p deve_cli source_control_write_grant_creation_fails_closed -- --nocapture
@@ -163,19 +162,20 @@
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
     - run: cargo test -p deve_cli delegated_source_control_proxy_api_is_type_marked -- --nocapture
     - run: cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
-    - run: cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_respects_git_bridge_off -- --nocapture
+    - run: cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_uses_ngit_authority -- --nocapture
     - run: cargo check -p deve_core --tests
     - run: cargo test -p deve_core --lib source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
     - run: cargo test -p deve_core --lib source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
-    - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
+    - run: cargo test -p deve_cli proxy_node_role_reports_ngit_authority -- --nocapture
     - run: cargo test -p deve_cli role_payload_exposes_runtime_release_shape -- --nocapture
     - run: cargo test -p deve_core pending_doc_target_prefers_live_successor_over_exact_deleted_doc_path -- --nocapture
     - run: cargo test -p deve_core staged_doc_target_prefers_live_successor_over_exact_deleted_doc_path -- --nocapture
     - run: cargo test -p deve_core stage_wrapper_stages_tracked_rename_pair_from_old_path -- --nocapture
     - run: cargo test -p deve_core commit_diff_rejects_reversed_commit_order -- --nocapture
-    - run: cargo test -p deve_web command_palette_git_bridge_mode_reads_session_signal -- --nocapture
-    - run: cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
-    - run: cargo test -p deve_web source_control_header_git_bridge_mode_badge -- --nocapture
+    - run: cargo test -p deve_web command_palette_ngit_commands_do_not_read_bridge_mode -- --nocapture
+    - run: cargo test -p deve_web command_palette_source_control_authority_updates_after_node_role_probe -- --nocapture
+    - run: cargo test -p deve_web source_control_header_ngit_authority_badge -- --nocapture
+    - run: cargo test -p deve_web remote_projection_commands -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
@@ -187,13 +187,14 @@
     - ui_assert: source_control_commit_shortcut_prevents_textarea_default true
     - ui_assert: source_control_commit_and_push_cli_only_notice true
     - ui_assert: command_palette_git_sync_absent true
-    - cli_assert: git_import_apply_pending_only true
-    - cli_assert: git_bridge_writes_reject_broken_workspace_identity true
+    - cli_assert: ngit_import_apply_pending_only true
+    - cli_assert: ngit_writes_reject_broken_workspace_identity true
     - cli_assert: git_push_dirty_worktree_blocker true
     - cli_assert: git_push_unexported_queue_blocker true
     - ui_assert: command_palette_git_commit_absent true
-    - ui_assert: command_palette_git_import_cli_notice_available true
-    - ui_assert: command_palette_git_push_cli_notice_available true
+    - ui_assert: command_palette_ngit_import_notice_available true
+    - ui_assert: command_palette_ngit_push_notice_available true
+    - ui_assert: command_palette_remote_projection_commands_visible true
     - ui_assert: source_control_git_push_blocker_details_available true
     - api_assert: readonly_remote_source_control_writes_rejected true
     - ui_assert: readonly_remote_change_diff_uses_read_gate true
@@ -212,9 +213,9 @@
     - ui_assert: git_mirror_repair_review_loading_error_empty_fallback true
     - ui_assert: git_mirror_executable_repair_ui_deferred true
     - ui_assert: git_mirror_web_repair_writer_absent true
-    - cli_assert: source_control_git_bridge_off_skips_mirror_queue true
-    - cli_assert: git_bridge_off_blocks_writer_commands true
-    - api_assert: http_source_control_commit_respects_git_bridge_off true
+    - cli_assert: source_control_ngit_commit_queues_git_main_mirror true
+    - cli_assert: git_bridge_mode_config_absent true
+    - api_assert: http_source_control_commit_always_queues_git_main_mirror true
     - api_assert: browser_http_source_control_requires_session_bound_grant true
     - api_assert: source_control_write_grant_creation_fails_closed true
     - api_assert: source_control_write_grant_revoked_on_failed_scope_cleanup true
@@ -235,20 +236,20 @@
     - api_assert: stage_unresolved_conflict_fails_closed true
     - cli_assert: sc_stage_all_unresolved_conflict_fails_closed true
     - cli_assert: sc_write_rejects_broken_workspace_identity true
-    - plugin_assert: sc_commit_respects_git_bridge_off true
-    - api_assert: source_control_commit_writer_requires_explicit_git_bridge_policy true
+    - plugin_assert: sc_commit_uses_ngit_authority true
+    - api_assert: source_control_commit_writer_uses_ngit_authority true
     - api_assert: commit_and_push_ws_legacy_frame_has_no_write_side_effect true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
-    - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true
-    - api_assert: node_role_exposes_source_control_git_bridge true
+    - api_assert: proxy_node_role_reports_ngit_authority true
+    - api_assert: node_role_omits_source_control_git_bridge true
     - api_assert: doc_id_source_control_targets_prefer_live_rename_successor true
     - api_assert: source_control_rename_pair_stage_is_atomic_and_idempotent true
     - api_assert: commit_diff_reversed_order_fails_closed true
-    - ui_assert: command_palette_git_bridge_mode_visible true
-    - ui_assert: command_palette_git_bridge_mode_reactive_after_node_role_probe true
-    - ui_assert: source_control_git_bridge_mode_visible true
-    - ui_assert: source_control_git_bridge_badge_authority_first true
+    - ui_assert: command_palette_legacy_bridge_mode_absent true
+    - ui_assert: command_palette_source_control_authority_reactive_after_node_role_probe true
+    - ui_assert: source_control_legacy_bridge_mode_absent true
+    - ui_assert: source_control_ngit_authority_badge_present true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true

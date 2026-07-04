@@ -14,7 +14,7 @@ fn path_wrapper_preserves_doc_identity_from_exact_pending_entry() -> anyhow::Res
         None,
         "test",
     )?;
-    repo.commit_staged_with_git_bridge("baseline", crate::config::GitBridgeMode::Off)?;
+    repo.commit_source_control_changes("baseline")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -46,7 +46,7 @@ fn path_wrapper_preserves_doc_identity_from_renamed_from_pending_entry() -> anyh
         None,
         "test",
     )?;
-    repo.commit_staged_with_git_bridge("baseline", crate::config::GitBridgeMode::Off)?;
+    repo.commit_source_control_changes("baseline")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -123,7 +123,7 @@ fn stage_wrapper_stages_renamed_entry_from_old_path() -> anyhow::Result<()> {
         None,
         "test",
     )?;
-    repo.commit_staged_with_git_bridge("baseline", crate::config::GitBridgeMode::Off)?;
+    repo.commit_source_control_changes("baseline")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -161,7 +161,7 @@ fn stage_wrapper_stages_tracked_rename_pair_from_old_path() -> anyhow::Result<()
         None,
         "test",
     )?;
-    repo.commit_staged_with_git_bridge("baseline", crate::config::GitBridgeMode::Off)?;
+    repo.commit_source_control_changes("baseline")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,

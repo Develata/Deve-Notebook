@@ -24,7 +24,7 @@ pub(super) async fn fetch_node_role(
     lifecycle: ConnectionLifecycle,
     ws_url: String,
     set_node_role: WriteSignal<String>,
-    set_source_control_git_bridge: WriteSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -35,7 +35,7 @@ pub(super) async fn fetch_node_role(
         lifecycle,
         http_base_from_ws_url(&ws_url),
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_node_role_probe_failed,
@@ -49,7 +49,7 @@ pub(super) async fn fetch_node_role_for_http_base(
     lifecycle: ConnectionLifecycle,
     http_base: String,
     set_node_role: WriteSignal<String>,
-    set_source_control_git_bridge: WriteSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -66,7 +66,7 @@ pub(super) async fn fetch_node_role_for_http_base(
         apply_node_role_probe_success(
             &lifecycle,
             set_node_role,
-            set_source_control_git_bridge,
+            set_source_control_authority,
             set_host_file_copy_absolute_path,
             set_host_file_reveal_in_system_explorer,
             set_node_role_probe_failed,
@@ -80,7 +80,7 @@ pub(super) async fn fetch_node_role_for_http_base(
     apply_node_role_probe_failure(
         &lifecycle,
         set_node_role,
-        set_source_control_git_bridge,
+        set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
         set_node_role_probe_failed,
@@ -137,7 +137,7 @@ async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Valu
 fn apply_node_role_probe_success(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
-    set_source_control_git_bridge: WriteSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -150,8 +150,8 @@ fn apply_node_role_probe_success(
     }
     lifecycle.try_set(set_node_role, result.summary)
         && lifecycle.try_set(
-            set_source_control_git_bridge,
-            result.source_control_git_bridge,
+            set_source_control_authority,
+            result.source_control_authority,
         )
         && lifecycle.try_set(
             set_host_file_copy_absolute_path,
@@ -167,7 +167,7 @@ fn apply_node_role_probe_success(
 fn apply_node_role_probe_failure(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
-    set_source_control_git_bridge: WriteSignal<String>,
+    set_source_control_authority: WriteSignal<String>,
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -178,7 +178,7 @@ fn apply_node_role_probe_failure(
         return false;
     }
     lifecycle.try_set(set_node_role, String::new())
-        && lifecycle.try_set(set_source_control_git_bridge, "unknown".to_string())
+        && lifecycle.try_set(set_source_control_authority, "unknown".to_string())
         && lifecycle.try_set(set_host_file_copy_absolute_path, false)
         && lifecycle.try_set(set_host_file_reveal_in_system_explorer, false)
         && lifecycle.try_set(set_node_role_probe_failed, true)

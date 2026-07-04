@@ -7,7 +7,6 @@
 //!
 //! # Node Role State
 
-use deve_core::config::GitBridgeMode;
 use deve_core::config::RuntimeEnvironment;
 use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -44,7 +43,8 @@ pub struct NativeServiceSummary {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlSummary {
-    pub git_bridge: String,
+    pub authority: String,
+    pub git_main_mirror: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -98,19 +98,17 @@ impl RepoHealthSummary {
 }
 
 impl SourceControlSummary {
-    pub fn from_git_bridge(mode: GitBridgeMode) -> Self {
-        let git_bridge = match mode {
-            GitBridgeMode::Mirror => "mirror",
-            GitBridgeMode::Off => "off",
-        };
+    pub fn ngit_authority() -> Self {
         Self {
-            git_bridge: git_bridge.into(),
+            authority: "ngit".into(),
+            git_main_mirror: "main".into(),
         }
     }
 
     pub fn unknown() -> Self {
         Self {
-            git_bridge: "unknown".into(),
+            authority: "unknown".into(),
+            git_main_mirror: "unknown".into(),
         }
     }
 }
@@ -237,7 +235,6 @@ mod tests {
         NodeRole, P2pSummary, RepoHealthSummary, SourceControlSummary, host_file_actions_for,
         runtime_environment_label,
     };
-    use deve_core::config::GitBridgeMode;
 
     #[test]
     fn unknown_repo_health_uses_zero_counts() {
@@ -292,16 +289,11 @@ mod tests {
     }
 
     #[test]
-    fn source_control_summary_supports_explicit_unknown_mode() {
-        assert_eq!(
-            SourceControlSummary::from_git_bridge(GitBridgeMode::Mirror).git_bridge,
-            "mirror"
-        );
-        assert_eq!(
-            SourceControlSummary::from_git_bridge(GitBridgeMode::Off).git_bridge,
-            "off"
-        );
-        assert_eq!(SourceControlSummary::unknown().git_bridge, "unknown");
+    fn source_control_summary_reports_ngit_authority() {
+        let summary = SourceControlSummary::ngit_authority();
+        assert_eq!(summary.authority, "ngit");
+        assert_eq!(summary.git_main_mirror, "main");
+        assert_eq!(SourceControlSummary::unknown().authority, "unknown");
     }
 
     #[test]

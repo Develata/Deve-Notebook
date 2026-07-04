@@ -4,7 +4,6 @@
 //!
 //! Source Control facade runtime.
 
-use crate::config::GitBridgeMode;
 use crate::ledger::manager::source_control_read_runtime::SourceControlReadRuntime;
 use crate::ledger::manager::source_control_write_runtime::SourceControlWriteRuntime;
 use crate::ledger::manager::types::RepoManager;
@@ -111,28 +110,13 @@ impl<'a> SourceControlRuntime<'a> {
         self.write().unstage_file_in_local_repo(repo_name, path)
     }
 
-    pub(crate) fn commit_staged_in_local_repo_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_in_local_repo(
         &self,
         repo_name: &str,
         message: &str,
-        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         self.write()
-            .commit_source_control_changes_in_local_repo_with_git_bridge(
-                repo_name, message, git_bridge,
-            )
-    }
-
-    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
-        &self,
-        repo_name: &str,
-        message: &str,
-        git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.write()
-            .commit_source_control_changes_in_local_repo_with_git_bridge(
-                repo_name, message, git_bridge,
-            )
+            .commit_source_control_changes_in_local_repo(repo_name, message)
     }
 
     pub(crate) fn apply_external_changes_in_local_repo(

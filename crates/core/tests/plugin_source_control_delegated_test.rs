@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::manifest::{Capability, PluginManifest};
 use deve_core::plugin::runtime::host;
@@ -96,11 +95,10 @@ impl SourceControlApi for RecordingDelegatedSourceControlApi {
         self.unused()
     }
 
-    fn commit_staged_in_repo_with_git_bridge(
+    fn commit_source_control_changes_in_repo(
         &self,
         _repo: &RepoSelector,
         _message: &str,
-        _git_bridge: GitBridgeMode,
     ) -> anyhow::Result<CommitInfo> {
         self.unused()
     }

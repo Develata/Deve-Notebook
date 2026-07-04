@@ -1,4 +1,4 @@
-contains	docs/plan/14_commands.md	Source Control / Git-like Workflow
+contains	docs/plan/14_commands.md	Source Control / NoteGit-like Workflow
 contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
 contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode
 contains	docs/plan/14_commands.md	不负责切换 `native / trusted-cli` 后端
@@ -22,9 +22,9 @@ contains	apps/web/src/i18n/command_palette/git.rs	git_export_mirror
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web establish_branch_command -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004B
-contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_status_command -- --nocapture
-contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_mirror_command -- --nocapture
-contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_export_command -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web ngit_commands -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web remote_projection_commands -- --nocapture
+contains	.gitignore	.notegit/
 absent	apps/web/src/components/command_palette/registry.rs	P2P: Establish Branch (Placeholder)
 absent	docs/acceptance-cases/04_diff.md	deve merge --peer
 absent	docs/acceptance-cases/04_diff.md	deve dump --doc
@@ -33,10 +33,10 @@ absent	apps/web/src/components/command_palette/registry.rs	Git: Sync
 absent	apps/web/src/components/command_palette/registry.rs	Git: Commit
 absent	apps/web/src/i18n/command_palette/git.rs	Git: Sync
 absent	apps/web/src/i18n/command_palette/git.rs	Git: Commit
-contains	apps/web/src/i18n/command_palette/git.rs	Git: Status
-contains	apps/web/src/i18n/command_palette/git.rs	Git: Mirror
-contains	apps/web/src/i18n/command_palette/git.rs	Git: Export Mirror
-contains	apps/web/src/i18n/command_palette/git.rs	Git: Push Mirror
+contains	apps/web/src/i18n/command_palette/git.rs	ngit: status
+contains	apps/web/src/i18n/command_palette/git.rs	ngit: mirror
+contains	apps/web/src/i18n/command_palette/git.rs	ngit: export mirror
+contains	apps/web/src/i18n/command_palette/git.rs	ngit: push mirror
 contains	apps/web/src/components/command_palette/registry/git.rs	git_status_command
 contains	apps/web/src/components/command_palette/registry/git.rs	git_mirror_command
 contains	apps/web/src/components/command_palette/registry/git.rs	git_export_command
@@ -44,7 +44,7 @@ contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_impor
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_push_command_sets_cli_only_notice
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_repair_command_sets_cli_only_notice
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004A
-contains	docs/features/07_diff_logic.md	Git import/push/repair 写操作只允许通过显式 CLI surface 触发
+contains	docs/features/07_diff_logic.md	Git import/push/repair 写操作只允许通过显式 backend/runtime surface 触发
 contains	docs/features/07_diff_logic.md	当前阶段不实现 Web 后端直接 Git import/push/repair，也不实现后台自动 Git mirror repair
 contains	docs/plan/17_tech_stack.md	Web/后台不得从只读 status/review surface 隐式升级为 Git writer
 contains	docs/plan/17_tech_stack.md	任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认
@@ -52,7 +52,7 @@ contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	Web 只提供 C
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	不得后台执行 Git，不得让 Command Palette 直接写 Git
 contains	apps/cli/src/server/router.rs	"/api/sc/git-mirror/repair-review"
 contains	apps/web/src/components/sidebar/source_control/error_notice/repair_review.rs	data-deve-git-repair-review="readonly"
-contains	apps/web/src/i18n/source_control_git/repair.rs	Git mirror repair is CLI-only
+contains	apps/web/src/i18n/source_control_git/repair.rs	ngit mirror repair is CLI-only
 contains	docs/plan/05_diff_logic.md	CommitStaged
 contains	docs/features/operations/sc_commit.md	ClientMessage::Commit { scope_nonce }
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::Commit
@@ -86,9 +86,9 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli source_control_
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_commit_rejects_broken_workspace_identity -- --nocapture
-contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli git_import_apply_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --lib source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
-contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_respects_git_bridge_off -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_uses_ngit_authority -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli delegated_source_control_proxy_api_is_type_marked -- --nocapture
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	delegated_source_control_requires_proxy_capability
@@ -97,9 +97,9 @@ contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage
 contains	apps/cli/src/server/source_control_grants/tests.rs	source_control_write_grant_creation_fails_closed
 contains	apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs	source_control_scope_cleanup_revokes_write_grant
 contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs	switch_branch_failure_revokes_source_control_write_grant
-contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_requires_explicit_git_bridge_policy
-contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
-contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_uses_ngit_authority
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_source_control_authority_updates_after_node_role_probe -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	command_palette_source_control_authority_reactive_after_node_role_probe
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
 contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	fn commit_input_placeholder
@@ -108,6 +108,10 @@ contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	enum ChangeItemActionSurface
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
+contains	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_source_control_changes(
+contains	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_source_control_changes_in_local_repo(
+contains	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_source_control_changes_in_local_repo(
+contains	crates/core/src/ledger/manager/source_control_write_runtime.rs	fn commit_source_control_changes_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(
@@ -117,7 +121,7 @@ absent_tree	crates/core/tests	.commit_staged(
 absent_tree	apps/cli/src	.commit_staged(
 contains	apps/cli/src/commands/sc.rs	sc_stage_all_rejects_broken_workspace_identity
 contains	apps/cli/src/commands/sc.rs	sc_commit_rejects_broken_workspace_identity
-contains	apps/cli/src/commands/git_import_smoke_test.rs	git_import_apply_rejects_broken_workspace_identity
+contains	apps/cli/src/commands/git_import_smoke_test.rs	ngit_import_apply_rejects_broken_workspace_identity
 absent	apps/cli/src/server/source_control_proxy/client.rs	expect("build source control HTTP client")
 absent	apps/cli/src/server/handlers/source_control/repo_scope.rs	expect("checked active branch")
 absent	apps/cli/src/server/repo_scope/sync.rs	expect("checked active branch")
