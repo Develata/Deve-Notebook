@@ -1,5 +1,5 @@
 contains	docs/acceptance-cases/09_i18n.md	scripts/check-i18n-hardcoded-baseline.sh
-contains	apps/web/src/i18n/command_palette.rs	pub fn keyboard_navigate_hint
+contains	apps/web/src/i18n/command_palette/keyboard.rs	pub fn keyboard_navigate_hint
 contains	apps/web/src/i18n/search.rs	pub fn command_detail
 contains	apps/web/src/i18n/search.rs	pub fn file_op_detail
 contains	apps/web/src/i18n/common.rs	pub fn status

@@ -140,8 +140,8 @@ contains	apps/web/src/components/command_palette/registry/tests.rs	static_comman
 contains	apps/web/src/components/command_palette/registry/reserved.rs	source_control_reserved_commands
 contains	apps/web/src/components/command_palette/registry/reserved.rs	ai_reserved_commands
 contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_partition_reserved_surfaces
-contains	apps/web/src/i18n/command_palette.rs	Source Control: Commit
-contains	apps/web/src/i18n/command_palette.rs	AI: Switch to BUILD Mode
+contains	apps/web/src/i18n/command_palette/source_control.rs	Source Control: Commit
+contains	apps/web/src/i18n/command_palette/ai.rs	AI: Switch to BUILD Mode
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004C
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004D
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web reserved_commands -- --nocapture

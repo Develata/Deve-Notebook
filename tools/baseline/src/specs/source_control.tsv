@@ -15,10 +15,10 @@ contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_STATUS_CLI_NOT
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_MIRROR_CLI_NOTICE_DETAIL
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_EXPORT_CLI_NOTICE_DETAIL
 contains	apps/web/src/components/sidebar/source_control/error_notice_copy.rs	is_establish_branch_unavailable_notice
-contains	apps/web/src/i18n/command_palette.rs	establish_branch_unavailable_reason
-contains	apps/web/src/i18n/command_palette.rs	git_status
-contains	apps/web/src/i18n/command_palette.rs	git_mirror
-contains	apps/web/src/i18n/command_palette.rs	git_export_mirror
+contains	apps/web/src/i18n/command_palette/peer.rs	establish_branch_unavailable_reason
+contains	apps/web/src/i18n/command_palette/git.rs	git_status
+contains	apps/web/src/i18n/command_palette/git.rs	git_mirror
+contains	apps/web/src/i18n/command_palette/git.rs	git_export_mirror
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web establish_branch_command -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004B
@@ -31,12 +31,12 @@ absent	docs/acceptance-cases/04_diff.md	deve dump --doc
 absent	docs/acceptance-cases/04_diff.md	--field last_op
 absent	apps/web/src/components/command_palette/registry.rs	Git: Sync
 absent	apps/web/src/components/command_palette/registry.rs	Git: Commit
-absent	apps/web/src/i18n/command_palette.rs	Git: Sync
-absent	apps/web/src/i18n/command_palette.rs	Git: Commit
-contains	apps/web/src/i18n/command_palette.rs	Git: Status
-contains	apps/web/src/i18n/command_palette.rs	Git: Mirror
-contains	apps/web/src/i18n/command_palette.rs	Git: Export Mirror
-contains	apps/web/src/i18n/command_palette.rs	Git: Push Mirror
+absent	apps/web/src/i18n/command_palette/git.rs	Git: Sync
+absent	apps/web/src/i18n/command_palette/git.rs	Git: Commit
+contains	apps/web/src/i18n/command_palette/git.rs	Git: Status
+contains	apps/web/src/i18n/command_palette/git.rs	Git: Mirror
+contains	apps/web/src/i18n/command_palette/git.rs	Git: Export Mirror
+contains	apps/web/src/i18n/command_palette/git.rs	Git: Push Mirror
 contains	apps/web/src/components/command_palette/registry/git.rs	git_status_command
 contains	apps/web/src/components/command_palette/registry/git.rs	git_mirror_command
 contains	apps/web/src/components/command_palette/registry/git.rs	git_export_command

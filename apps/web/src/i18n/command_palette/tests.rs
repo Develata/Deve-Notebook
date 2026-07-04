@@ -1,4 +1,5 @@
 use super::*;
+use crate::i18n::Locale;
 
 #[test]
 fn git_bridge_commands_are_localized() {
