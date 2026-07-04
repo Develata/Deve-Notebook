@@ -103,6 +103,8 @@ absent	apps/web/index.html	window.setupCodeMirror =
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	run: node apps/web/js/web_bridge_registry.test.cjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_error_handler_does_not_assign_window_onerror true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_missing_registry_fails_closed true
 contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
@@ -110,6 +112,22 @@ absent	apps/web/js/editor_adapter.js	window.applyRemoteOpsBatch =
 contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-globals: ok
 contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis
 contains	apps/web/js/web_bridge_registry.test.cjs	chat math scripts must preserve registry ownership after ordered loading
+contains	apps/web/js/web_bridge_registry.test.cjs	index boot helpers must use the bridge registry helper
+contains	apps/web/index.html	const registerIndexBridgeGlobal = (name, value, meta = {}) =>
+contains	apps/web/index.html	source: "index-boot-bootstrap"
+contains	apps/web/index.html	registerIndexBridgeGlobal("__DEVE_DEBUG_OVERLAY__"
+contains	apps/web/index.html	registerIndexBridgeGlobal("showOverlay"
+contains	apps/web/index.html	registerIndexBridgeGlobal("setBootPanel"
+contains	apps/web/index.html	registerIndexBridgeGlobal("hideBootPanel"
+contains	apps/web/index.html	registerIndexBridgeGlobal("hideOverlay"
+contains	apps/web/index.html	registerIndexBridgeGlobal("logToOverlay"
+absent	apps/web/index.html	window.__DEVE_DEBUG_OVERLAY__ =
+absent	apps/web/index.html	window.showOverlay =
+absent	apps/web/index.html	window.setBootPanel =
+absent	apps/web/index.html	window.hideBootPanel =
+absent	apps/web/index.html	window.hideOverlay =
+absent	apps/web/index.html	window.logToOverlay =
+absent	apps/web/index.html	window.onerror =
 absent	apps/web/js/extensions/gutter_diff.js	window.updateGutterDiff =
 contains	apps/web/js/chat_math_bootstrap.js	registerFallback("renderChatMath"
 contains	apps/web/js/chat_math_bootstrap.js	web bridge registry unavailable before registering renderChatMath

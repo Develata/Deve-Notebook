@@ -47,6 +47,15 @@ const indexBridgeNames = [
   "queueEditorMount",
 ];
 
+const indexBootBridgeNames = [
+  "__DEVE_DEBUG_OVERLAY__",
+  "showOverlay",
+  "setBootPanel",
+  "hideBootPanel",
+  "hideOverlay",
+  "logToOverlay",
+];
+
 const registryContext = { window: {} };
 vm.runInNewContext(registrySource, registryContext, { filename: "web_bridge_registry.js" });
 assert.equal(
@@ -165,6 +174,45 @@ assert.match(
   indexHtmlSource,
   /web bridge registry unavailable before registering/,
   "index bootstrap must fail closed when the bridge registry is missing"
+);
+assert.match(
+  indexHtmlSource,
+  /const registerIndexBridgeGlobal = \(name, value, meta = \{\}\) =>/,
+  "index boot helpers must use the bridge registry helper"
+);
+const indexBootHelperMatch = indexHtmlSource.match(
+  /const registerIndexBridgeGlobal = \(name, value, meta = \{\}\) => \{[\s\S]*?\n      \};/
+);
+assert.ok(indexBootHelperMatch, "index boot helper registration block must be present");
+const indexBootHelperSource = indexBootHelperMatch[0];
+assert.match(
+  indexBootHelperSource,
+  /source:\s*"index-boot-bootstrap"/,
+  "index boot helper bridge entries must declare their bootstrap source"
+);
+assert.match(
+  indexBootHelperSource,
+  /authority:\s*"none"/,
+  "index boot helper bridge entries must not claim authority ownership"
+);
+
+for (const name of indexBootBridgeNames) {
+  assert.match(
+    indexHtmlSource,
+    new RegExp(`registerIndexBridgeGlobal\\("${name}"`),
+    `${name} boot helper must be registered through the browser bridge registry`
+  );
+  assert.doesNotMatch(
+    indexHtmlSource,
+    new RegExp(`window\\.${name}\\s*=`),
+    `${name} boot helper must not be assigned directly in index.html`
+  );
+}
+
+assert.doesNotMatch(
+  indexHtmlSource,
+  /window\.onerror\s*=/,
+  "index boot error handling must not assign window.onerror directly"
 );
 
 for (const name of indexBridgeNames) {

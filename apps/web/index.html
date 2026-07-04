@@ -71,16 +71,31 @@
 
     <script>
       // 0. Global Error Handler
-      window.__DEVE_DEBUG_OVERLAY__ = false;
+      const registerIndexBridgeGlobal = (name, value, meta = {}) => {
+        const bridge = window.__deveWebBridge;
+        if (!bridge || typeof bridge.register !== "function") {
+          throw new Error(`web bridge registry unavailable before registering ${name}`);
+        }
+        return bridge.register(name, value, {
+          runtime: "widget_bridge_runtime",
+          source: "index-boot-bootstrap",
+          authority: "none",
+          ...meta,
+        });
+      };
 
-      window.showOverlay = () => {
+      registerIndexBridgeGlobal("__DEVE_DEBUG_OVERLAY__", false, {
+        role: "boot-debug-flag",
+      });
+
+      registerIndexBridgeGlobal("showOverlay", () => {
         const el = document.getElementById("loading-overlay");
         if (!el) return;
         el.classList.remove("hidden");
         el.style.display = "flex";
-      };
+      }, { role: "boot-overlay-show" });
 
-      window.setBootPanel = (title, detail, tone = "info") => {
+      registerIndexBridgeGlobal("setBootPanel", (title, detail, tone = "info") => {
         const panel = document.getElementById("boot-panel");
         const titleEl = document.getElementById("boot-panel-title");
         const detailEl = document.getElementById("boot-panel-detail");
@@ -94,22 +109,22 @@
           "fixed top-4 left-4 z-[var(--z-toast)] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg";
         titleEl.textContent = title;
         detailEl.textContent = detail;
-      };
+      }, { role: "boot-error-panel-set" });
 
-      window.hideBootPanel = () => {
+      registerIndexBridgeGlobal("hideBootPanel", () => {
         const panel = document.getElementById("boot-panel");
         if (!panel) return;
         panel.style.display = "none";
-      };
+      }, { role: "boot-error-panel-hide" });
 
-      window.hideOverlay = () => {
+      registerIndexBridgeGlobal("hideOverlay", () => {
         const el = document.getElementById("loading-overlay");
         if (!el) return;
         el.classList.add("hidden");
         el.style.display = "none";
-      };
+      }, { role: "boot-overlay-hide" });
 
-      window.logToOverlay = (msg, isError = false) => {
+      registerIndexBridgeGlobal("logToOverlay", (msg, isError = false) => {
         const el = document.getElementById("loading-overlay");
         if (el && (isError || window.__DEVE_DEBUG_OVERLAY__)) {
           if (isError) window.showOverlay();
@@ -124,12 +139,14 @@
         } else if (window.__DEVE_DEBUG_OVERLAY__) {
           console.log("[Overlay]", msg);
         }
-      };
+      }, { role: "boot-overlay-log" });
 
-      window.onerror = function (msg, url, line, col, error) {
+      window.addEventListener("error", function (event) {
+        const msg = event.message || String(event.error || "unknown error");
+        const line = event.lineno ?? 0;
+        const col = event.colno ?? 0;
         window.logToOverlay(`Global Error: ${msg} @ ${line}:${col}`, true);
-        return false;
-      };
+      });
 
       window.addEventListener("unhandledrejection", function (event) {
         window.logToOverlay(`Unhandled Rejection: ${event.reason}`, true);

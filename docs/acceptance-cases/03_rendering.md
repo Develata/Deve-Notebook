@@ -203,6 +203,8 @@
   assertions:
     - cli_assert: editor_adapter_globals_registered_through_bridge true
     - cli_assert: index_editor_wrappers_registered_through_bridge true
+    - cli_assert: index_boot_helpers_registered_through_bridge true
+    - cli_assert: index_error_handler_does_not_assign_window_onerror true
     - cli_assert: bridge_registry_missing_fails_closed true
     - cli_assert: gutter_diff_extension_does_not_bypass_bridge true
     - cli_assert: chat_math_globals_registered_through_bridge true
