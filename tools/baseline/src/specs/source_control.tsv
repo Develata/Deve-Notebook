@@ -52,7 +52,7 @@ contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	Web 只提供 C
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	不得后台执行 Git，不得让 Command Palette 直接写 Git
 contains	apps/cli/src/server/router.rs	"/api/sc/git-mirror/repair-review"
 contains	apps/web/src/components/sidebar/source_control/error_notice/repair_review.rs	data-deve-git-repair-review="readonly"
-contains	apps/web/src/i18n/source_control_git.rs	Git mirror repair is CLI-only
+contains	apps/web/src/i18n/source_control_git/repair.rs	Git mirror repair is CLI-only
 contains	docs/plan/05_diff_logic.md	CommitStaged
 contains	docs/features/operations/sc_commit.md	ClientMessage::Commit { scope_nonce }
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::Commit

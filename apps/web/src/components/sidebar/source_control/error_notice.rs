@@ -58,41 +58,56 @@ pub fn ErrorNotice(
     #[prop(optional)] suppress_local_command_notice: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let repair_review = RwSignal::new(GitRepairReviewFetchState::Idle);
+    let repair_review = ArcRwSignal::new(GitRepairReviewFetchState::Idle);
+    let repair_review_for_effect = repair_review.clone();
 
     Effect::new(move |_| {
         let notice_value = notice.get();
         let should_fetch =
             block.get().is_none() && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
         let repo_id = current_repo_id.get();
+        let repair_review = repair_review_for_effect.clone();
 
         if !should_fetch {
-            repair_review.set(GitRepairReviewFetchState::Idle);
+            repair_review.try_set(GitRepairReviewFetchState::Idle);
             return;
         }
 
-        repair_review.set(GitRepairReviewFetchState::Loading);
+        repair_review.try_set(GitRepairReviewFetchState::Loading);
         let scope_nonce = current_scope_nonce.get_untracked();
+        let repair_review_for_fetch = repair_review.clone();
         spawn_local(async move {
             let fetched = fetch_git_mirror_repair_review(repo_id.clone(), scope_nonce).await;
-            let current_repo = current_repo_id.get_untracked();
-            let current_notice = notice.get_untracked();
+            let Some(current_repo) = current_repo_id.try_get_untracked() else {
+                return;
+            };
+            let Some(current_notice) = notice.try_get_untracked() else {
+                return;
+            };
+            let Some(current_block) = block.try_get_untracked() else {
+                return;
+            };
+            let Some(current_scope_nonce) = current_scope_nonce.try_get_untracked() else {
+                return;
+            };
             let still_current = repair_review_fetch_still_current(
-                block.get_untracked(),
+                current_block,
                 repo_id.as_deref(),
                 current_repo.as_deref(),
                 scope_nonce,
-                current_scope_nonce.get_untracked(),
+                current_scope_nonce,
                 current_notice.as_ref(),
             );
             if still_current {
-                repair_review.set(match fetched {
+                repair_review_for_fetch.try_set(match fetched {
                     Ok(review) => GitRepairReviewFetchState::Loaded(review),
                     Err(_) => GitRepairReviewFetchState::Failed,
                 });
             }
         });
     });
+
+    let repair_review_for_view = repair_review.clone();
 
     view! {
         <Show when=move || should_show_visible_notice(
@@ -140,18 +155,22 @@ pub fn ErrorNotice(
                             }}
                         </div>
                         <div>
-                            {move || {
-                                notice
-                                    .get()
-                                    .filter(is_git_repair_cli_notice)
-                                    .map(|_| repair_copy::git_repair_review(locale.get(), &repair_review.get()))
-                                    .map(|review| {
+                            {{
+                                let repair_review_for_view = repair_review_for_view.clone();
+                                move || {
+                                    if notice.get().as_ref().is_some_and(is_git_repair_cli_notice) {
+                                        let state = repair_review_for_view
+                                            .try_get()
+                                            .unwrap_or(GitRepairReviewFetchState::Idle);
+                                        let review = repair_copy::git_repair_review(locale.get(), &state);
                                         view! {
                                             <GitRepairReviewPanel review=review locale=locale/>
                                         }
                                         .into_any()
-                                    })
-                                    .unwrap_or_else(|| view! {}.into_any())
+                                    } else {
+                                        view! {}.into_any()
+                                    }
+                                }
                             }}
                         </div>
                     </div>

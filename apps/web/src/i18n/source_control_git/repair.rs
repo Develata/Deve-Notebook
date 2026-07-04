@@ -3,7 +3,7 @@
 //!   - 13_i18n#i18n-keys-reference
 //!   - 14_commands#cli-commands
 
-use super::Locale;
+use crate::i18n::Locale;
 
 pub fn git_repair_cli_only_title(locale: Locale) -> &'static str {
     match locale {
