@@ -28,6 +28,7 @@ Internationalization strings organized by UI feature. Provides localized text fo
 | `chat.rs` | Chat strings |
 | `command_palette.rs` | Command palette strings |
 | `settings.rs` | Settings strings |
+| `settings/` | Settings string groups |
 | `merge.rs` | Merge strings |
 | `playback.rs` | Playback strings |
 | `context_menu.rs` | Context menu strings |

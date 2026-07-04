@@ -167,13 +167,13 @@ contains	apps/web/src/components/settings.rs	data-deve-setting-disabled
 contains	apps/web/src/components/settings.rs	aria-disabled
 contains	apps/web/src/components/settings_sections.rs	data-deve-setting-disabled-reason="ai_backend"
 contains	apps/web/src/components/settings_sections_policy/tests.rs	settings_buttons_keep_mobile_safe_touch_targets
-contains	apps/web/src/i18n/settings.rs	deve config set
-contains	apps/web/src/i18n/settings.rs	config.toml
+contains	apps/web/src/i18n/settings/core.rs	deve config set
+contains	apps/web/src/i18n/settings/core.rs	config.toml
 contains	apps/web/src/i18n/settings/local_prefs.rs	Runtime Diagnostics
 contains	apps/web/src/i18n/settings/local_prefs.rs	settings_v1_copy_marks_local_browser_boundaries_and_runtime_smoke
-contains	apps/web/src/i18n/settings.rs	Future setting: not available in the current release
+contains	apps/web/src/i18n/settings/core.rs	Future setting: not available in the current release
 contains	apps/web/src/i18n/settings/tests.rs	reserved_setting_copy_marks_future_boundary
-absent	apps/web/src/i18n/settings.rs	Coming in Phase 6
+absent	apps/web/src/i18n/settings/core.rs	Coming in Phase 6
 contains	apps/web/src/components/settings_sections_policy/tests.rs	language_buttons_reflect_current_locale
 contains	apps/web/src/components/settings_sections_policy/tests.rs	theme_buttons_reflect_browser_local_preference
 contains	apps/web/src/components/settings_sections_policy/tests.rs	editor_preference_buttons_reflect_local_feedback_state

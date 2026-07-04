@@ -4,7 +4,7 @@
 
 use crate::i18n::Locale;
 
-use super::native_backend_unavailable;
+use super::backend::native_backend_unavailable;
 
 pub fn native_backend_error(locale: Locale, error: Option<&str>) -> String {
     let Some(error) = error.map(str::trim).filter(|error| !error.is_empty()) else {

@@ -1,7 +1,8 @@
 use super::{
-    Locale, chinese_language_label, coming_soon, current_boundary_desc, english_language_label,
+    chinese_language_label, coming_soon, current_boundary_desc, english_language_label,
     native_backend_unavailable, remote_backend_requires_validation,
 };
+use crate::i18n::Locale;
 
 #[test]
 fn boundary_copy_mentions_config_toml_and_cli_set() {
