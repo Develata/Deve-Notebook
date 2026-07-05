@@ -30,6 +30,7 @@ const adapterBridgeNames = [
 ];
 
 const indexBridgeNames = [
+  "__deveEditorBootstrap",
   "setupCodeMirror",
   "destroyEditor",
   "getEditorContent",
@@ -227,6 +228,30 @@ assert.match(
   /web bridge registry unavailable before registering/,
   "index bootstrap must fail closed when the bridge registry is missing"
 );
+assert.match(
+  indexHtmlSource,
+  /registerEditorBridgeGlobal\("__deveEditorBootstrap", editorBootstrapState,\s*\{\s*runtime:\s*"widget_bridge_runtime"/,
+  "index editor bootstrap state must be registered through the bridge registry"
+);
+assert.match(
+  indexHtmlSource,
+  /role:\s*"editor-bootstrap-state"/,
+  "index editor bootstrap state must declare its bridge role"
+);
+for (const name of [
+  "_editor_queue",
+  "_pending_editor_actions",
+  "_cm_loaded",
+  "_editor_bridge_ready",
+  "_realInit",
+  "_adapter_loading",
+]) {
+  assert.doesNotMatch(
+    indexHtmlSource,
+    new RegExp(`window\\.${name}\\b`),
+    `${name} bootstrap state must not be stored directly on window`
+  );
+}
 assert.match(
   indexHtmlSource,
   /const registerIndexBridgeGlobal = \(name, value, meta = \{\}\) =>/,

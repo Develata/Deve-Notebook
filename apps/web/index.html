@@ -166,27 +166,60 @@
       };
 
       // 1. Synchronous Bridge (Queue Logic only)
-      window._editor_queue = [];
-      window._pending_editor_actions = [];
-      window._cm_loaded = false;
-      window._editor_bridge_ready = false;
+      const editorBootstrapState = {
+        editorQueue: [],
+        pendingEditorActions: [],
+        cmLoaded: false,
+        editorBridgeReady: false,
+        realInit: null,
+        adapterLoading: null,
+        queueAction(kind, payload) {
+          this.pendingEditorActions.push({ kind, payload });
+          if (this.pendingEditorActions.length > 256) {
+            this.pendingEditorActions.shift();
+          }
+        },
+        queueMount(element, onUpdate) {
+          this.editorQueue = [{ element, onUpdate }];
+        },
+        resetBridge() {
+          this.editorBridgeReady = false;
+          this.pendingEditorActions = [];
+        },
+        takePendingActions() {
+          const pending = this.pendingEditorActions.slice();
+          this.pendingEditorActions = [];
+          return pending;
+        },
+        takeLatestMount() {
+          if (this.editorQueue.length === 0) return null;
+          const pendingMounts = this.editorQueue.slice();
+          this.editorQueue = [];
+          return {
+            latestMount: pendingMounts[pendingMounts.length - 1],
+            queuedCount: pendingMounts.length,
+          };
+        },
+      };
+
+      registerEditorBridgeGlobal("__deveEditorBootstrap", editorBootstrapState, {
+        runtime: "widget_bridge_runtime",
+        role: "editor-bootstrap-state",
+      });
 
       registerEditorBridgeGlobal("queueEditorAction", (kind, payload) => {
-        window._pending_editor_actions.push({ kind, payload });
-        if (window._pending_editor_actions.length > 256) {
-          window._pending_editor_actions.shift();
-        }
+        editorBootstrapState.queueAction(kind, payload);
       }, { role: "editor-bootstrap-queue" });
 
       registerEditorBridgeGlobal("queueEditorMount", (element, onUpdate) => {
-        window._editor_queue = [{ element, onUpdate }];
+        editorBootstrapState.queueMount(element, onUpdate);
       }, { role: "editor-bootstrap-mount-queue" });
 
       // Rust calls this immediately, so we queue it until Modules are loaded
       registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate) {
         window.logToOverlay("Rust called setupCodeMirror");
-        if (window._cm_loaded && window._realInit) {
-          window._realInit(element, onUpdate);
+        if (editorBootstrapState.cmLoaded && editorBootstrapState.realInit) {
+          editorBootstrapState.realInit(element, onUpdate);
         } else {
           window.queueEditorMount(element, onUpdate);
           if (window.ensureEditorAdapter) {
@@ -218,8 +251,7 @@
         window.queueEditorAction("readOnly", !!readOnly);
       }, { role: "wasm-editor-readonly" });
       registerEditorBridgeGlobal("destroyEditor", () => {
-        window._editor_bridge_ready = false;
-        window._pending_editor_actions = [];
+        editorBootstrapState.resetBridge();
       }, { role: "wasm-editor-lifecycle" });
 
       registerEditorBridgeGlobal("mobileInsertText", (text) => {
@@ -316,6 +348,10 @@
           ...meta,
         });
       };
+      const editorBootstrapState = window.__deveEditorBootstrap;
+      if (!editorBootstrapState) {
+        throw new Error("editor bootstrap state unavailable before loading adapter");
+      }
 
       const attachEditorAdapter = (module) => {
         const {
@@ -379,21 +415,21 @@
         };
 
         registerEditorBridgeGlobal("applyRemoteContent", (text) => {
-          if (!window._editor_bridge_ready) {
+          if (!editorBootstrapState.editorBridgeReady) {
             window.queueEditorAction("content", String(text ?? ""));
             return;
           }
           applyRemoteContent(text);
         }, { role: "wasm-editor-snapshot" });
         registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
-          if (!window._editor_bridge_ready) {
+          if (!editorBootstrapState.editorBridgeReady) {
             window.queueEditorAction("op", String(opJson ?? ""));
             return;
           }
           rawApplyRemoteOp(opJson);
         }, { role: "wasm-editor-op" });
         registerEditorBridgeGlobal("applyRemoteOpsBatch", (opsJson) => {
-          if (!window._editor_bridge_ready) {
+          if (!editorBootstrapState.editorBridgeReady) {
             return false;
           }
           return rawApplyRemoteOpsBatch(opsJson) === true;
@@ -404,15 +440,14 @@
           role: "wasm-editor-navigation",
         });
         registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
-          if (!window._editor_bridge_ready) {
+          if (!editorBootstrapState.editorBridgeReady) {
             window.queueEditorAction("readOnly", !!readOnly);
             return;
           }
           rawSetReadOnly(readOnly);
         }, { role: "wasm-editor-readonly" });
         registerEditorBridgeGlobal("destroyEditor", () => {
-          window._editor_bridge_ready = false;
-          window._pending_editor_actions = [];
+          editorBootstrapState.resetBridge();
           rawDestroyEditor();
         }, { role: "wasm-editor-lifecycle" });
         registerEditorBridgeGlobal("updateGutterDiff", updateGutterDiff || (() => {}), {
@@ -431,17 +466,16 @@
 
         window.logToOverlay("Adapter imported successfully.");
 
-        window._realInit = (element, onUpdate) => {
+        editorBootstrapState.realInit = (element, onUpdate) => {
           window.logToOverlay("Initializing Editor View");
           window.hideOverlay();
 
           try {
             initCodeMirror(element, onUpdate);
-            window._editor_bridge_ready = true;
+            editorBootstrapState.editorBridgeReady = true;
             rawSetReadOnly(true);
-            if (window._pending_editor_actions.length > 0) {
-              const pending = window._pending_editor_actions.slice();
-              window._pending_editor_actions = [];
+            if (editorBootstrapState.pendingEditorActions.length > 0) {
+              const pending = editorBootstrapState.takePendingActions();
               window.logToOverlay(
                 `Replaying ${pending.length} queued editor actions...`,
               );
@@ -459,8 +493,8 @@
         // readiness state still work after editor remounts.
         registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate) => {
           window.logToOverlay("Rust called setupCodeMirror");
-          if (window._realInit) {
-            window._realInit(element, onUpdate);
+          if (editorBootstrapState.realInit) {
+            editorBootstrapState.realInit(element, onUpdate);
             return;
           }
           window.queueEditorMount(element, onUpdate);
@@ -469,25 +503,26 @@
           }
         }, { role: "wasm-editor-mount" });
 
-        window._cm_loaded = true;
+        editorBootstrapState.cmLoaded = true;
 
-        if (window._editor_queue.length > 0) {
-          const pendingMounts = window._editor_queue.slice();
-          const latestMount = pendingMounts[pendingMounts.length - 1];
+        const queuedMount = editorBootstrapState.takeLatestMount();
+        if (queuedMount) {
           window.logToOverlay(
-            `Flushing latest editor mount from ${pendingMounts.length} queued item(s)...`,
+            `Flushing latest editor mount from ${queuedMount.queuedCount} queued item(s)...`,
           );
-          window._realInit(latestMount.element, latestMount.onUpdate);
-          window._editor_queue = [];
+          editorBootstrapState.realInit(
+            queuedMount.latestMount.element,
+            queuedMount.latestMount.onUpdate,
+          );
         }
       };
 
       registerEditorBridgeGlobal("ensureEditorAdapter", () => {
-        if (window._cm_loaded) {
+        if (editorBootstrapState.cmLoaded) {
           return Promise.resolve();
         }
-        if (window._adapter_loading) {
-          return window._adapter_loading;
+        if (editorBootstrapState.adapterLoading) {
+          return editorBootstrapState.adapterLoading;
         }
 
         window.setBootPanel(
@@ -497,7 +532,7 @@
         );
         window.logToOverlay("Lazy-loading editor adapter bundle...");
 
-        window._adapter_loading = import("./js/editor.bundle.js?rev=20260703-heading-lineheight")
+        editorBootstrapState.adapterLoading = import("./js/editor.bundle.js?rev=20260703-heading-lineheight")
           .then((module) => {
             attachEditorAdapter(module);
           })
@@ -511,12 +546,12 @@
             throw e;
           })
           .finally(() => {
-            if (!window._cm_loaded) {
-              window._adapter_loading = null;
+            if (!editorBootstrapState.cmLoaded) {
+              editorBootstrapState.adapterLoading = null;
             }
           });
 
-        return window._adapter_loading;
+        return editorBootstrapState.adapterLoading;
       }, { runtime: "widget_bridge_runtime", role: "editor-adapter-loader" });
 
       window.addEventListener("TrunkApplicationStarted", () => {

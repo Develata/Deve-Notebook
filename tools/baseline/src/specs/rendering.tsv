@@ -103,6 +103,8 @@ absent	apps/web/index.html	window.setupCodeMirror =
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	run: node apps/web/js/web_bridge_registry.test.cjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_error_handler_does_not_assign_window_onerror true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_code_actions_registered_through_bridge true
@@ -117,6 +119,8 @@ contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-glo
 contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis
 contains	apps/web/js/web_bridge_registry.test.cjs	chat math scripts must preserve registry ownership after ordered loading
 contains	apps/web/js/web_bridge_registry.test.cjs	index boot helpers must use the bridge registry helper
+contains	apps/web/js/web_bridge_registry.test.cjs	index editor bootstrap state must be registered through the bridge registry
+contains	apps/web/js/web_bridge_registry.test.cjs	bootstrap state must not be stored directly on window
 contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be registered through the browser bridge registry
 contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry before init and init before the lazy editor adapter
 contains	apps/web/js/web_bridge_registry.test.cjs	code menu must not initialize the code action registry directly
@@ -135,6 +139,15 @@ absent	apps/web/index.html	window.hideBootPanel =
 absent	apps/web/index.html	window.hideOverlay =
 absent	apps/web/index.html	window.logToOverlay =
 absent	apps/web/index.html	window.onerror =
+contains	apps/web/index.html	registerEditorBridgeGlobal("__deveEditorBootstrap"
+contains	apps/web/index.html	runtime: "widget_bridge_runtime"
+contains	apps/web/index.html	role: "editor-bootstrap-state"
+absent	apps/web/index.html	window._editor_queue
+absent	apps/web/index.html	window._pending_editor_actions
+absent	apps/web/index.html	window._cm_loaded
+absent	apps/web/index.html	window._editor_bridge_ready
+absent	apps/web/index.html	window._realInit
+absent	apps/web/index.html	window._adapter_loading
 contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_code_actions"
 contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_i18n"
 contains	apps/web/js/init.js	source: "init-bootstrap"
