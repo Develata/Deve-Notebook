@@ -14,7 +14,6 @@ use crate::backup::BackupPackArtifactDownloadVerifyResult;
 use crate::backup::branch_manifest::{BackupBranchManifest, BackupBranchManifestPackRef};
 use crate::backup::pack::BackupDigest;
 use crate::models::RepoId;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,13 +22,61 @@ pub struct BackupDownloadedPacksInput<'a> {
     pub verified_packs: Vec<BackupPackArtifactDownloadVerifyResult>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BackupDownloadedPackRef {
+    pack_sequence: u64,
+    object_path: String,
+    payload_digest: BackupDigest,
+}
+
+impl BackupDownloadedPackRef {
+    pub fn pack_sequence(&self) -> u64 {
+        self.pack_sequence
+    }
+
+    pub fn object_path(&self) -> &str {
+        &self.object_path
+    }
+
+    pub fn payload_digest(&self) -> &BackupDigest {
+        &self.payload_digest
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackupDownloadedPacksResult {
-    pub repo_id: RepoId,
-    pub writer_identity: String,
-    pub branch_path: String,
-    pub pack_count: u64,
-    pub pack_digests: Vec<BackupDigest>,
+    repo_id: RepoId,
+    writer_identity: String,
+    branch_path: String,
+    pack_count: u64,
+    pack_refs: Vec<BackupDownloadedPackRef>,
+    pack_digests: Vec<BackupDigest>,
+}
+
+impl BackupDownloadedPacksResult {
+    pub fn repo_id(&self) -> RepoId {
+        self.repo_id
+    }
+
+    pub fn writer_identity(&self) -> &str {
+        &self.writer_identity
+    }
+
+    pub fn branch_path(&self) -> &str {
+        &self.branch_path
+    }
+
+    pub fn pack_count(&self) -> u64 {
+        self.pack_count
+    }
+
+    pub fn pack_refs(&self) -> &[BackupDownloadedPackRef] {
+        &self.pack_refs
+    }
+
+    pub fn pack_digests(&self) -> &[BackupDigest] {
+        &self.pack_digests
+    }
 }
 
 pub fn verify_downloaded_backup_packs(
@@ -70,17 +117,28 @@ pub fn verify_downloaded_backup_packs(
         return Err(BackupVerificationError::MissingDownloadedPack);
     }
 
+    let pack_refs = input
+        .branch_manifest
+        .packs
+        .iter()
+        .map(|pack| BackupDownloadedPackRef {
+            pack_sequence: pack.pack_sequence,
+            object_path: pack.object_path.clone(),
+            payload_digest: pack.payload_digest.clone(),
+        })
+        .collect::<Vec<_>>();
+    let pack_digests = pack_refs
+        .iter()
+        .map(|pack| pack.payload_digest.clone())
+        .collect();
+
     Ok(BackupDownloadedPacksResult {
         repo_id: input.branch_manifest.repo_id,
         writer_identity: input.branch_manifest.writer_identity.clone(),
         branch_path: input.branch_manifest.branch_path.clone(),
         pack_count: u64::try_from(input.branch_manifest.packs.len()).unwrap_or(u64::MAX),
-        pack_digests: input
-            .branch_manifest
-            .packs
-            .iter()
-            .map(|pack| pack.payload_digest.clone())
-            .collect(),
+        pack_refs,
+        pack_digests,
     })
 }
 
@@ -247,12 +305,12 @@ mod tests {
         })
         .expect("downloaded pack evidence");
 
-        assert_eq!(result.repo_id, manifest.repo_id);
-        assert_eq!(result.writer_identity, "writer-1");
-        assert_eq!(result.branch_path, "deve/branches/writer-1");
-        assert_eq!(result.pack_count, 2);
+        assert_eq!(result.repo_id(), manifest.repo_id);
+        assert_eq!(result.writer_identity(), "writer-1");
+        assert_eq!(result.branch_path(), "deve/branches/writer-1");
+        assert_eq!(result.pack_count(), 2);
         assert_eq!(
-            result.pack_digests,
+            result.pack_digests(),
             verified_packs
                 .iter()
                 .map(|pack| pack.computed_digest().clone())
@@ -274,7 +332,7 @@ mod tests {
         .expect("provider order must not affect branch manifest evidence");
 
         assert_eq!(
-            result.pack_digests,
+            result.pack_digests(),
             verified_packs
                 .iter()
                 .map(|pack| pack.computed_digest().clone())
@@ -293,9 +351,9 @@ mod tests {
         })
         .expect("artifact download verification result is the gate input");
 
-        assert_eq!(result.pack_count, 1);
+        assert_eq!(result.pack_count(), 1);
         assert_eq!(
-            result.pack_digests,
+            result.pack_digests(),
             vec![verified_pack.computed_digest().clone()]
         );
     }

@@ -14,12 +14,18 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
 
+mod decrypted_packs;
 mod downloaded_packs;
 #[cfg(test)]
 mod tests;
 
+pub use decrypted_packs::{
+    BackupDecryptedPackPayload, BackupDecryptedPacksInput, BackupDecryptedPacksResult,
+    verify_decrypted_backup_packs,
+};
 pub use downloaded_packs::{
-    BackupDownloadedPacksInput, BackupDownloadedPacksResult, verify_downloaded_backup_packs,
+    BackupDownloadedPackRef, BackupDownloadedPacksInput, BackupDownloadedPacksResult,
+    verify_downloaded_backup_packs,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +81,12 @@ pub enum BackupVerificationError {
     MissingDownloadedPack,
     #[error("backup verification downloaded pack is unexpected")]
     UnexpectedDownloadedPack,
+    #[error("backup verification decrypted pack is missing")]
+    MissingDecryptedPack,
+    #[error("backup verification decrypted pack is unexpected")]
+    UnexpectedDecryptedPack,
+    #[error("backup verification decrypted pack plaintext is empty")]
+    EmptyDecryptedPack,
     #[error("backup verification pack hash mismatch")]
     PackHashMismatch,
     #[error("backup verification pack authentication failed")]

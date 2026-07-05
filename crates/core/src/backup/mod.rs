@@ -45,9 +45,9 @@ mod verification;
 pub use artifact::{
     BackupArtifactKey, BackupEncryptedPackArtifact, BackupPackArtifactDownloadVerifyInput,
     BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError, BackupPackArtifactInput,
-    BackupPackArtifactOpenInput, BackupPackArtifactUploadVerifyInput, decrypt_backup_pack_artifact,
-    encrypt_backup_pack_artifact, verify_backup_pack_artifact_for_upload,
-    verify_downloaded_pack_artifact_digest_and_routing,
+    BackupPackArtifactOpenInput, BackupPackArtifactOpenResult, BackupPackArtifactUploadVerifyInput,
+    decrypt_backup_pack_artifact, encrypt_backup_pack_artifact, open_backup_pack_artifact,
+    verify_backup_pack_artifact_for_upload, verify_downloaded_pack_artifact_digest_and_routing,
 };
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,
@@ -108,7 +108,9 @@ pub use upload::{
     BackupUploadState, plan_backup_upload,
 };
 pub use verification::{
-    BackupDownloadedPacksInput, BackupDownloadedPacksResult, BackupPackVerificationEvidence,
-    BackupVerificationError, BackupVerificationInput, BackupVerificationResult,
-    verify_backup_artifacts, verify_downloaded_backup_packs,
+    BackupDecryptedPackPayload, BackupDecryptedPacksInput, BackupDecryptedPacksResult,
+    BackupDownloadedPackRef, BackupDownloadedPacksInput, BackupDownloadedPacksResult,
+    BackupPackVerificationEvidence, BackupVerificationError, BackupVerificationInput,
+    BackupVerificationResult, verify_backup_artifacts, verify_decrypted_backup_packs,
+    verify_downloaded_backup_packs,
 };

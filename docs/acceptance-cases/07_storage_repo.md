@@ -348,4 +348,20 @@
     - cli_assert: backup_downloaded_packs_reject_missing_or_unexpected_pack true
     - cli_assert: backup_downloaded_packs_reject_path_or_digest_mismatch true
     - cli_assert: backup_downloaded_packs_reject_duplicate_sequence_or_path true
+
+- case_id: STORE-024
+  goal: Backup PacksDecrypted evidence 必须来自真实 artifact open result，并与 PacksDownloaded refs 一一匹配。
+  preconditions:
+    - branch manifest pack refs 已通过 PacksDownloaded gate
+    - encrypted artifact bytes 已通过 manifest/routing/digest 校验后执行 decrypt
+  steps:
+    - run: cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
+  assertions:
+    - cli_assert: backup_decrypted_packs_match_downloaded_pack_refs true
+    - cli_assert: backup_decrypted_packs_accept_provider_order_independent_open_results true
+    - cli_assert: backup_decrypted_packs_consume_open_artifact_results_only true
+    - cli_assert: backup_decrypted_packs_reject_missing_or_unexpected_pack true
+    - cli_assert: backup_decrypted_packs_reject_path_or_digest_mismatch true
+    - cli_assert: backup_decrypted_packs_reject_duplicate_sequence true
+    - cli_assert: backup_decrypted_packs_open_result_cannot_be_empty_plaintext true
 ```

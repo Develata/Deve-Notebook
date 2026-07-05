@@ -19,6 +19,7 @@ use aes_gcm::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fmt;
 use thiserror::Error;
 
 #[cfg(test)]
@@ -92,6 +93,53 @@ pub struct BackupPackArtifactUploadVerifyInput<'a> {
 pub struct BackupPackArtifactDownloadVerifyInput<'a> {
     pub manifest: &'a BackupPackManifest,
     pub artifact_bytes: &'a [u8],
+}
+
+/// Verified and decrypted pack artifact bytes.
+///
+/// This result is produced only after manifest/routing/digest verification and
+/// AEAD decrypt. It carries plaintext for restore assembly, but no credential
+/// or key material.
+#[derive(PartialEq, Eq)]
+pub struct BackupPackArtifactOpenResult {
+    pack_sequence: u64,
+    object_path: String,
+    computed_digest: BackupDigest,
+    plaintext: Vec<u8>,
+}
+
+impl fmt::Debug for BackupPackArtifactOpenResult {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BackupPackArtifactOpenResult")
+            .field("pack_sequence", &self.pack_sequence)
+            .field("object_path", &self.object_path)
+            .field("computed_digest", &self.computed_digest)
+            .field("plaintext_len", &self.plaintext.len())
+            .finish()
+    }
+}
+
+impl BackupPackArtifactOpenResult {
+    pub fn pack_sequence(&self) -> u64 {
+        self.pack_sequence
+    }
+
+    pub fn object_path(&self) -> &str {
+        &self.object_path
+    }
+
+    pub fn computed_digest(&self) -> &BackupDigest {
+        &self.computed_digest
+    }
+
+    pub fn plaintext(&self) -> &[u8] {
+        &self.plaintext
+    }
+
+    pub fn into_plaintext(self) -> Vec<u8> {
+        self.plaintext
+    }
 }
 
 /// Digest/routing evidence for downloaded encrypted pack bytes.
@@ -195,13 +243,30 @@ pub fn encrypt_backup_pack_artifact(
 pub fn decrypt_backup_pack_artifact(
     input: BackupPackArtifactOpenInput<'_>,
 ) -> Result<Vec<u8>, BackupPackArtifactError> {
-    let (artifact, _) = verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
+    Ok(open_backup_pack_artifact(input)?.into_plaintext())
+}
+
+pub fn open_backup_pack_artifact(
+    input: BackupPackArtifactOpenInput<'_>,
+) -> Result<BackupPackArtifactOpenResult, BackupPackArtifactError> {
+    let (artifact, computed_digest) =
+        verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
     let nonce = Nonce::from_slice(&artifact.nonce);
-    input
+    let plaintext = input
         .key
         .cipher()
         .decrypt(nonce, artifact.ciphertext.as_ref())
-        .map_err(|_| BackupPackArtifactError::DecryptFailed)
+        .map_err(|_| BackupPackArtifactError::DecryptFailed)?;
+    if plaintext.is_empty() {
+        return Err(BackupPackArtifactError::EmptyPlaintext);
+    }
+
+    Ok(BackupPackArtifactOpenResult {
+        pack_sequence: artifact.pack_sequence,
+        object_path: input.manifest.pack_object_path(),
+        computed_digest,
+        plaintext,
+    })
 }
 
 pub fn verify_backup_pack_artifact_for_upload(
