@@ -36,7 +36,20 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-016	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_core remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_core remote_repo_listing_fails_closed_on_unexpected_non_redb_entry -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_cli quarantines_nil_shadow_repo_into_invalid_peer_dir -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_core backup_binding_store -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli backup_bind -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli plans_writable_binding_dry_run_without_persisting -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli backup_unbind -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_dry_run_and_known_mode -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	run: scripts/check-storage-repo-baseline.sh
@@ -87,6 +100,45 @@ contains	crates/core/tests/durable_projection_fault_test.rs	fn durable_projectio
 contains	crates/core/tests/remote_repo_catalog_missing_test.rs	fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()
 contains	crates/core/tests/repo_catalog_entry_fail_closed_test.rs	fn remote_repo_listing_fails_closed_on_unexpected_non_redb_entry()
 contains	apps/cli/src/commands/repair/shadow.rs	fn quarantines_nil_shadow_repo_into_invalid_peer_dir()
+contains	crates/core/src/backup/binding_store/tests.rs	fn backup_binding_store_persists_secret_free_host_local_metadata()
+contains	crates/core/src/backup/binding_store/tests.rs	fn backup_binding_store_rejects_duplicate_writable_branch()
+contains	crates/core/src/backup/binding_store/tests.rs	fn backup_binding_store_rejects_cross_repo_same_writable_physical_prefix()
+contains	apps/cli/src/commands/backup/bind.rs	fn plans_writable_binding_dry_run_without_persisting()
+contains	apps/cli/src/commands/backup/bind.rs	fn backup_bind_persists_host_local_metadata_without_authority_writes()
+contains	apps/cli/src/commands/backup/unbind.rs	fn backup_unbind_removes_host_local_metadata_without_authority_writes()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_roundtrips_encrypted_bytes()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_tamper_before_decrypt()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_upload_verify_checks_digest_before_provider_io()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_checks_digest_before_decrypt()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_rejects_routing_metadata_tamper()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_wrong_key_after_verified_digest()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_secret_and_metadata_drift()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_unknown_plaintext_fields_before_decrypt()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_requires_pack_aead_protection()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_requires_artifact_for_provider_upload()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload()
+contains	apps/cli/src/commands/backup/restore.rs	backup restore currently requires --dry-run because provider IO and import/merge execution are not implemented
+contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_dry_run_and_known_mode()
+contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_returns_encrypted_bytes_only()
+contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_returns_encrypted_bytes_only()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_accept_provider_order_independent_verified_results()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_consume_verified_artifact_results_only()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_reject_missing_or_unexpected_pack()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_reject_path_or_digest_mismatch()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_reject_duplicate_sequence_or_path()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_match_downloaded_pack_refs()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_accept_provider_order_independent_open_results()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_consume_open_artifact_results_only()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_missing_or_unexpected_pack()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_path_or_digest_mismatch()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_duplicate_sequence()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_open_result_cannot_be_empty_plaintext()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_consumes_verified_and_decrypted_evidence()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_preserves_repo_and_write_gates()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_rejects_manifest_and_decrypted_pack_mismatch()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_writes_no_local_authority()
 contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
 contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test
 contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_web

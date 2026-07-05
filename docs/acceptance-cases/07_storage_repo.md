@@ -273,6 +273,7 @@
   steps:
     - run: cargo test -p deve_core backup_binding_store -- --nocapture
     - run: cargo test -p deve_cli backup_bind -- --nocapture
+    - run: cargo test -p deve_cli plans_writable_binding_dry_run_without_persisting -- --nocapture
     - run: cargo test -p deve_cli backup_unbind -- --nocapture
   assertions:
     - cli_assert: backup_bind_persists_host_local_metadata true
@@ -316,6 +317,7 @@
   steps:
     - run: cargo test -p deve_cli provider_io -- --nocapture
     - run: cargo test -p deve_cli backup_restore -- --nocapture
+    - run: cargo test -p deve_cli requires_dry_run_and_known_mode -- --nocapture
   assertions:
     - cli_assert: backup_provider_download_returns_encrypted_bytes_only true
     - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
