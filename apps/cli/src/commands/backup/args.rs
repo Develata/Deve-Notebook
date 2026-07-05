@@ -8,7 +8,7 @@ use clap::Subcommand;
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum BackupAction {
-    /// Plan a backup branch binding without persisting binding state
+    /// Bind a backup branch target; use --dry-run to plan without persistence
     Bind {
         #[arg(long)]
         locator: String,
@@ -116,7 +116,7 @@ pub(crate) enum BackupAction {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Plan backup branch binding removal without persisting mutation
+    /// Remove a backup branch binding; use --dry-run to plan without persistence
     Unbind {
         #[arg(long)]
         locator: String,

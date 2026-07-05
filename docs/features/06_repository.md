@@ -50,11 +50,14 @@
 - 远端 repo 的只读限制不能影响本地 repo 的正常可写。
 - 当前 repo 损坏或失效时，系统应提示恢复或回退，而不是静默绑定到别的 repo。
 
-### 6. Backup Locator 诊断
+### 6. Backup Locator 与 Binding
 
 - Backup locator 只作为 repo/branch 备份发现与恢复线索，不成为 repo authority。
-- CLI 可用 `backup inspect/list/verify/bind/run/restore/unbind --dry-run`
-  检查 WebDAV/S3 locator、branch binding、pack 计划、restore candidate admission。
+- CLI 可用 `backup inspect/list/verify/bind/run/restore/unbind` 检查 WebDAV/S3
+  locator、branch binding、pack 计划、restore candidate admission。
+- `backup bind` / `backup unbind` 在未传 `--dry-run` 时只写 host-local
+  backup binding metadata；该 metadata 不成为 repo authority，不得包含
+  credential/key material，不得写 ledger、staging 或 Projection Workspace。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
   或 Projection Workspace。
 

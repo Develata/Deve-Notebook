@@ -22,7 +22,7 @@ mod run;
 mod unbind;
 
 pub(crate) use args::BackupAction;
-pub use bind::bind;
+pub use bind::{BindBackupCommandInput, bind};
 pub use restore::{RestoreCommandInput, restore};
 pub use run::{RunBackupCommandInput, run_backup};
 pub use unbind::{UnbindBackupCommandInput, unbind};

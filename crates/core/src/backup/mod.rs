@@ -24,6 +24,7 @@
 //! write ledger state, modify staging, or touch Projection Workspaces.
 
 mod binding;
+mod binding_store;
 mod branch_manifest;
 mod discovery;
 mod layout;
@@ -42,6 +43,10 @@ mod verification;
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,
     plan_backup_branch_binding, validate_backup_branch_bindings,
+};
+pub use binding_store::{
+    BackupBindingRecord, BackupBindingStoreError, backup_binding_store_path_for,
+    list_backup_binding_records, persist_backup_branch_binding, remove_backup_branch_binding,
 };
 pub use branch_manifest::{
     BACKUP_BRANCH_MANIFEST_FORMAT_VERSION, BackupBranchManifest, BackupBranchManifestError,

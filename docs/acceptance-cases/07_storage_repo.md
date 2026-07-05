@@ -264,4 +264,19 @@
     - cli_assert: missing_remote_catalog_fails_closed true
     - cli_assert: unexpected_remote_catalog_entry_fails_closed true
     - cli_assert: nil_shadow_repo_quarantined_not_deleted true
+
+- case_id: STORE-018
+  goal: Backup binding persistence 只写 host-local metadata。
+  preconditions:
+    - backup locator 不含 credential/key material
+    - ledger_dir 可在临时目录创建
+  steps:
+    - run: cargo test -p deve_core backup_binding_store -- --nocapture
+    - run: cargo test -p deve_cli backup_bind -- --nocapture
+    - run: cargo test -p deve_cli backup_unbind -- --nocapture
+  assertions:
+    - cli_assert: backup_bind_persists_host_local_metadata true
+    - cli_assert: backup_unbind_removes_host_local_metadata true
+    - cli_assert: backup_dry_run_does_not_write_binding_state true
+    - cli_assert: backup_binding_store_contains_no_secret_refs true
 ```

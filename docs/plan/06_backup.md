@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core / Backup Transport`
 - `Status`: `Planned Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`
@@ -92,6 +92,10 @@ prefix 的 1:1 映射。
 - 一个可写 backup folder/prefix **MUST NOT** 被两个 active writers 共享。
 - 多端备份必须表现为同一 `RepoId` 下的多个 branch backup bindings。
 - 非本 writer 的 branch backup 只能进入 `RemoteReadonly` 或 restore candidate。
+- Binding persistence 是 host-local backup runtime metadata，不是 ledger facts、
+  Source Control state 或 Projection Workspace 内容；它只能保存 secret-free locator
+  与 branch/writer/path/access 元数据，不能保存 credential ref、key ref 或任何 key
+  material。
 
 ### 3.3 Backup Pack {#backup-pack-contract}
 

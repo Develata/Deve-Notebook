@@ -6,8 +6,9 @@
 
 use crate::BackupAction;
 use crate::commands;
+use std::path::Path;
 
-pub fn run(action: BackupAction) -> anyhow::Result<()> {
+pub fn run(ledger_dir: &Path, action: BackupAction) -> anyhow::Result<()> {
     match action {
         BackupAction::Bind {
             locator,
@@ -18,13 +19,16 @@ pub fn run(action: BackupAction) -> anyhow::Result<()> {
             access,
             dry_run,
         } => commands::backup::bind(
-            &locator,
-            &repo_id,
-            &branch_name,
-            &writer,
-            &local_writer,
-            &access,
-            dry_run,
+            ledger_dir,
+            commands::backup::BindBackupCommandInput {
+                locator: &locator,
+                repo_id: &repo_id,
+                branch_name: &branch_name,
+                writer_identity: &writer,
+                local_writer_identity: &local_writer,
+                access: &access,
+                dry_run,
+            },
         )?,
         BackupAction::Inspect {
             locator,
@@ -114,15 +118,18 @@ pub fn run(action: BackupAction) -> anyhow::Result<()> {
             local_writer,
             access,
             dry_run,
-        } => commands::backup::unbind(commands::backup::UnbindBackupCommandInput {
-            locator: &locator,
-            repo_id: &repo_id,
-            branch_name: &branch_name,
-            writer_identity: &writer,
-            local_writer_identity: &local_writer,
-            access: &access,
-            dry_run,
-        })?,
+        } => commands::backup::unbind(
+            ledger_dir,
+            commands::backup::UnbindBackupCommandInput {
+                locator: &locator,
+                repo_id: &repo_id,
+                branch_name: &branch_name,
+                writer_identity: &writer,
+                local_writer_identity: &local_writer,
+                access: &access,
+                dry_run,
+            },
+        )?,
     }
     Ok(())
 }
