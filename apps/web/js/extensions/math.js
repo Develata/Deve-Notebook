@@ -1,6 +1,7 @@
 import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { findMathRanges } from "./utils.js";
+import { renderKatex } from "../rendering_bridge.js";
 
 const MAX_NESTED_MATH_DEPTH = 10;
 
@@ -33,20 +34,10 @@ export class MathWidget extends WidgetType {
   toDOM(view) {
     let span = document.createElement("span");
     span.className = "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
-    try {
-      if (window.katex) {
-        // 使用 KaTeX 渲染
-        window.katex.render(this.content, span, {
-          throwOnError: false,
-          displayMode: this.isBlock,
-        });
-      } else {
-        // 降级处理：如果没有加载 KaTeX，直接显示源码
-        span.innerText = mathSourceText(this.content, this.isBlock);
-      }
-    } catch (e) {
-      span.innerText = mathSourceText(this.content, this.isBlock);
-    }
+    renderKatex(this.content, span, {
+      throwOnError: false,
+      displayMode: this.isBlock,
+    }, mathSourceText(this.content, this.isBlock));
 
     // [Block Math] 使用 wrapper + padding 代替 margin
     // 这样 offsetHeight 能正确包含间距，确保行号对齐

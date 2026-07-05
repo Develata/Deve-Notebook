@@ -218,6 +218,10 @@
     - cli_assert: code_menu_does_not_assign_action_registry true
     - cli_assert: bridge_registry_missing_fails_closed true
     - cli_assert: gutter_diff_extension_does_not_bypass_bridge true
+    - cli_assert: katex_facade_registered_through_bridge true
+    - cli_assert: chat_math_uses_katex_bridge_facade true
+    - cli_assert: editor_math_extensions_use_katex_bridge_facade true
+    - cli_assert: image_widget_does_not_read_debug_view_global true
     - cli_assert: chat_math_globals_registered_through_bridge true
     - cli_assert: chat_math_missing_registry_fails_closed true
     - cli_assert: native_backend_config_global_registered_through_bridge true

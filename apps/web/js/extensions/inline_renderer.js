@@ -1,5 +1,6 @@
 import { findMathRanges } from "./utils.js";
 import { flushText, findBacktickClose, findMathClose, findStyleClose } from "./inline_utils.js";
+import { renderKatex } from "../rendering_bridge.js";
 
 /**
  * 渲染行内内容 - 模块化重构版 (Modularized Renderer)
@@ -60,13 +61,10 @@ export function renderInline(content, container) {
                  const mathContent = content.slice(i + 1, closeIndex);
                  const span = document.createElement("span");
                  span.className = "cm-math-widget";
-                 try {
-                    if (window.katex) {
-                        window.katex.render(mathContent, span, { throwOnError: false, displayMode: false });
-                    } else {
-                        span.textContent = `$${mathContent}$`;
-                    }
-                 } catch(e) { span.textContent = "Math Error"; }
+                 renderKatex(mathContent, span, {
+                    throwOnError: false,
+                    displayMode: false,
+                 }, `$${mathContent}$`);
                  
                  container.appendChild(span);
                  i = closeIndex + 1;

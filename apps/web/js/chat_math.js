@@ -107,22 +107,37 @@
     return Boolean(parent.closest(SKIP_SELECTOR));
   }
 
+  function katexFacade() {
+    const bridge = window.__deveWebBridge;
+    if (!bridge || typeof bridge.get !== "function") {
+      return null;
+    }
+    const facade = bridge.get("__deveKatex");
+    if (!facade || typeof facade.render !== "function") {
+      return null;
+    }
+    return facade;
+  }
+
   function renderMathNode(part) {
     const wrapper = document.createElement("span");
     wrapper.className = part.display ? "chat-math chat-math-block" : "chat-math";
 
-    const katex = window.katex;
-    if (!katex || typeof katex.render !== "function") {
+    const katex = katexFacade();
+    if (!katex) {
       wrapper.textContent = part.raw;
       return wrapper;
     }
 
     try {
-      katex.render(part.value, wrapper, {
+      const rendered = katex.render(part.value, wrapper, {
         displayMode: part.display,
         throwOnError: false,
         trust: false,
       });
+      if (rendered === false) {
+        wrapper.textContent = part.raw;
+      }
     } catch (_err) {
       wrapper.textContent = part.raw;
     }

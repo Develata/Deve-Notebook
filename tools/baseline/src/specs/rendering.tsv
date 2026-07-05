@@ -120,8 +120,30 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: code_menu_does_not_assign_action_registry true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_missing_registry_fails_closed true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: katex_facade_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_uses_katex_bridge_facade true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_math_extensions_use_katex_bridge_facade true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: image_widget_does_not_read_debug_view_global true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: native_backend_config_global_registered_through_bridge true
 contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
+contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/katex_bridge.js
+contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/rendering_bridge.js
+contains	apps/web/index.html	src="js/katex_bridge.js"
+contains	apps/web/js/katex_bridge.js	bridge.register("__deveKatex"
+contains	apps/web/js/katex_bridge.js	role: "katex-render-facade"
+contains	apps/web/js/rendering_bridge.js	getRenderingBridgeGlobal("__deveKatex")
+contains	apps/web/js/web_bridge_registry.test.cjs	KaTeX facade must be registered through the browser bridge registry
+contains	apps/web/js/web_bridge_registry.test.cjs	chat math rendering must read KaTeX through the bridge facade
+contains	apps/web/js/web_bridge_registry.test.cjs	math extension must render KaTeX through the rendering bridge helper
+contains	apps/web/js/web_bridge_registry.test.cjs	inline renderer must render KaTeX through the rendering bridge helper
+contains	apps/web/js/web_bridge_registry.test.cjs	image widget must use the CodeMirror view parameter instead of the debug global
+contains	apps/web/js/chat_math.js	bridge.get("__deveKatex")
+absent	apps/web/js/chat_math.js	window.katex
+contains	apps/web/js/extensions/math.js	renderKatex(this.content, span
+absent	apps/web/js/extensions/math.js	window.katex
+contains	apps/web/js/extensions/inline_renderer.js	renderKatex(mathContent, span
+absent	apps/web/js/extensions/inline_renderer.js	window.katex
+absent	apps/web/js/extensions/image.js	window._debug_view
 absent	apps/web/js/editor_adapter.js	window.applyRemoteOpsBatch =
 contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-globals: ok
 contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis
@@ -131,7 +153,7 @@ contains	apps/web/js/web_bridge_registry.test.cjs	index editor bootstrap state m
 contains	apps/web/js/web_bridge_registry.test.cjs	bootstrap state must not be stored directly on window
 contains	apps/web/js/web_bridge_registry.test.cjs	index mobile editor stubs must not read the adapter-owned CodeMirror view directly
 contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be registered through the browser bridge registry
-contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry, index bootstrap, init, then lazy editor adapter
+contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry, KaTeX bridge, chat math bootstrap, index bootstrap, init, then lazy editor adapter
 contains	apps/web/js/web_bridge_registry.test.cjs	code menu must not initialize the code action registry directly
 contains	apps/web/js/index_bootstrap.js	const registerIndexBridgeGlobal = (name, value, meta = {}) =>
 contains	apps/web/js/index_bootstrap.js	source: "index-boot-bootstrap"

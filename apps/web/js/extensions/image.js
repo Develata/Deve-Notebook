@@ -18,7 +18,7 @@ class ImageWidget extends WidgetType {
     return this.url === other.url && this.title === other.title;
   }
 
-  toDOM() {
+  toDOM(view) {
     let container = document.createElement("span");
     container.className = "cm-image-widget inline-block my-2";
     
@@ -35,10 +35,11 @@ class ImageWidget extends WidgetType {
     container.onclick = (e) => {
         // e.preventDefault(); // Don't prevent default completely (image drag?)
         // but ensure cursor position is set to avoid "dead zones"
-        const pos = window._debug_view.posAtDOM(container);
+        if (!view || typeof view.posAtDOM !== "function") return;
+        const pos = view.posAtDOM(container);
         if (pos !== null) {
-            window._debug_view.dispatch({ selection: { anchor: pos } });
-            window._debug_view.focus();
+            view.dispatch({ selection: { anchor: pos } });
+            view.focus();
         }
     };
 

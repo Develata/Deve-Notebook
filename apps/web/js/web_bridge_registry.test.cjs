@@ -5,10 +5,18 @@ const vm = require("node:vm");
 
 const root = __dirname;
 const registrySource = fs.readFileSync(path.join(root, "web_bridge_registry.js"), "utf8");
+const katexBridgeSource = fs.readFileSync(path.join(root, "katex_bridge.js"), "utf8");
+const renderingBridgeSource = fs.readFileSync(path.join(root, "rendering_bridge.js"), "utf8");
 const editorAdapterSource = fs.readFileSync(path.join(root, "editor_adapter.js"), "utf8");
 const chatMathBootstrapSource = fs.readFileSync(path.join(root, "chat_math_bootstrap.js"), "utf8");
 const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
 const gutterDiffSource = fs.readFileSync(path.join(root, "extensions", "gutter_diff.js"), "utf8");
+const mathExtensionSource = fs.readFileSync(path.join(root, "extensions", "math.js"), "utf8");
+const inlineRendererSource = fs.readFileSync(
+  path.join(root, "extensions", "inline_renderer.js"),
+  "utf8"
+);
+const imageExtensionSource = fs.readFileSync(path.join(root, "extensions", "image.js"), "utf8");
 const initSource = fs.readFileSync(path.join(root, "init.js"), "utf8");
 const codeMenuSource = fs.readFileSync(path.join(root, "extensions", "code_menu.js"), "utf8");
 const nativeBackendBridgeSource = fs.readFileSync(
@@ -130,6 +138,69 @@ assert.equal(
       meta: { runtime: "render_projection_runtime", source: "test" },
     },
   ])
+);
+
+const katexBridgeRuntimeContext = {
+  window: {
+    katex: {
+      render(content, element, options) {
+        element.rendered = { content, options };
+      },
+    },
+  },
+};
+vm.runInNewContext(registrySource, katexBridgeRuntimeContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(katexBridgeSource, katexBridgeRuntimeContext, {
+  filename: "katex_bridge.js",
+});
+const katexEntries = katexBridgeRuntimeContext.window.__deveWebBridge
+  .describe()
+  .filter((entry) => entry.name === "__deveKatex");
+assert.equal(
+  JSON.stringify(katexEntries),
+  JSON.stringify([
+    {
+      name: "__deveKatex",
+      meta: {
+        runtime: "render_projection_runtime",
+        source: "katex_bridge",
+        authority: "none",
+        role: "katex-render-facade",
+      },
+    },
+  ]),
+  "KaTeX facade must be registered through the browser bridge registry"
+);
+const katexFacade = katexBridgeRuntimeContext.window.__deveWebBridge.get("__deveKatex");
+const katexTarget = {};
+assert.equal(katexFacade.available(), true, "KaTeX facade must preserve availability probing");
+assert.equal(
+  katexFacade.render("a^2", katexTarget, { displayMode: true }),
+  true,
+  "KaTeX facade must report successful rendering"
+);
+assert.deepEqual(katexTarget.rendered, {
+  content: "a^2",
+  options: { displayMode: true },
+});
+const missingKatexContext = { window: {} };
+vm.runInNewContext(registrySource, missingKatexContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(katexBridgeSource, missingKatexContext, {
+  filename: "katex_bridge.js",
+});
+const missingKatexFacade = missingKatexContext.window.__deveWebBridge.get("__deveKatex");
+assert.equal(missingKatexFacade.available(), false);
+assert.equal(missingKatexFacade.render("x", {}, {}), false);
+assert.throws(
+  () => vm.runInNewContext(katexBridgeSource, { window: {} }, {
+    filename: "katex_bridge.js",
+  }),
+  /web bridge registry unavailable before registering katex facade/,
+  "KaTeX bridge must fail closed without the registry"
 );
 
 const initRuntimeContext = { window: {} };
@@ -485,6 +556,57 @@ assert.match(
   /authority:\s*"none"/,
   "chat math bridge entries must not claim authority ownership"
 );
+assert.match(
+  chatMathSource,
+  /bridge\.get\("__deveKatex"\)/,
+  "chat math rendering must read KaTeX through the bridge facade"
+);
+assert.doesNotMatch(
+  chatMathSource,
+  /window\.katex\b/,
+  "chat math rendering must not read window.katex directly"
+);
+
+assert.match(
+  renderingBridgeSource,
+  /bridge\.get\(name\)/,
+  "rendering bridge helper must centralize registry reads"
+);
+assert.match(
+  renderingBridgeSource,
+  /getRenderingBridgeGlobal\("__deveKatex"\)/,
+  "rendering bridge helper must read the KaTeX facade through the registry"
+);
+assert.match(
+  mathExtensionSource,
+  /renderKatex\(this\.content, span/,
+  "math extension must render KaTeX through the rendering bridge helper"
+);
+assert.doesNotMatch(
+  mathExtensionSource,
+  /window\.katex\b/,
+  "math extension must not read window.katex directly"
+);
+assert.match(
+  inlineRendererSource,
+  /renderKatex\(mathContent, span/,
+  "inline renderer must render KaTeX through the rendering bridge helper"
+);
+assert.doesNotMatch(
+  inlineRendererSource,
+  /window\.katex\b/,
+  "inline renderer must not read window.katex directly"
+);
+assert.doesNotMatch(
+  imageExtensionSource,
+  /window\._debug_view\b/,
+  "image widget must use the CodeMirror view parameter instead of the debug global"
+);
+assert.match(
+  imageExtensionSource,
+  /toDOM\(view\)/,
+  "image widget must accept the CodeMirror view parameter"
+);
 
 assert.match(
   nativeBackendBridgeSource,
@@ -539,11 +661,15 @@ assert.match(
 );
 
 const registryScriptIndex = indexHtmlSource.indexOf('src="js/web_bridge_registry.js"');
+const katexBridgeScriptIndex = indexHtmlSource.indexOf('src="js/katex_bridge.js"');
+const chatMathBootstrapScriptIndex = indexHtmlSource.indexOf('src="js/chat_math_bootstrap.js"');
 const indexBootstrapScriptIndex = indexHtmlSource.indexOf('src="js/index_bootstrap.js"');
 const initScriptIndex = indexHtmlSource.indexOf('src="js/init.js"');
 const indexEditorAdapterScriptIndex = indexHtmlSource.indexOf('src="js/index_editor_adapter.js"');
 const lazyEditorBundleIndex = indexEditorAdapterSource.indexOf('import("./editor.bundle.js');
 assert.ok(registryScriptIndex >= 0, "index.html must load web_bridge_registry.js");
+assert.ok(katexBridgeScriptIndex >= 0, "index.html must load katex_bridge.js");
+assert.ok(chatMathBootstrapScriptIndex >= 0, "index.html must load chat_math_bootstrap.js");
 assert.ok(indexBootstrapScriptIndex >= 0, "index.html must load index_bootstrap.js");
 assert.ok(initScriptIndex >= 0, "index.html must load init.js");
 assert.ok(
@@ -556,9 +682,12 @@ assert.ok(
 );
 assert.ok(
   registryScriptIndex < indexBootstrapScriptIndex &&
+    registryScriptIndex < katexBridgeScriptIndex &&
+    katexBridgeScriptIndex < chatMathBootstrapScriptIndex &&
+    chatMathBootstrapScriptIndex < indexBootstrapScriptIndex &&
     indexBootstrapScriptIndex < initScriptIndex &&
     initScriptIndex < indexEditorAdapterScriptIndex,
-  "index script order must load registry, index bootstrap, init, then lazy editor adapter"
+  "index script order must load registry, KaTeX bridge, chat math bootstrap, index bootstrap, init, then lazy editor adapter"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");
