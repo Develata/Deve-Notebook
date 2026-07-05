@@ -28,6 +28,7 @@ pub struct BackupDecryptedPackPayload {
     pack_sequence: u64,
     object_path: String,
     encrypted_digest: BackupDigest,
+    encrypted_bytes: usize,
     plaintext: Vec<u8>,
 }
 
@@ -38,6 +39,7 @@ impl fmt::Debug for BackupDecryptedPackPayload {
             .field("pack_sequence", &self.pack_sequence)
             .field("object_path", &self.object_path)
             .field("encrypted_digest", &self.encrypted_digest)
+            .field("encrypted_bytes", &self.encrypted_bytes)
             .field("plaintext_len", &self.plaintext.len())
             .finish()
     }
@@ -56,6 +58,10 @@ impl BackupDecryptedPackPayload {
         &self.encrypted_digest
     }
 
+    pub fn encrypted_bytes(&self) -> usize {
+        self.encrypted_bytes
+    }
+
     pub fn plaintext(&self) -> &[u8] {
         &self.plaintext
     }
@@ -68,6 +74,8 @@ pub struct BackupDecryptedPacksResult {
     branch_path: String,
     pack_count: u64,
     pack_digests: Vec<BackupDigest>,
+    encrypted_bytes_total: usize,
+    plaintext_bytes_total: usize,
     plaintext_packs: Vec<BackupDecryptedPackPayload>,
 }
 
@@ -80,6 +88,8 @@ impl fmt::Debug for BackupDecryptedPacksResult {
             .field("branch_path", &self.branch_path)
             .field("pack_count", &self.pack_count)
             .field("pack_digests", &self.pack_digests)
+            .field("encrypted_bytes_total", &self.encrypted_bytes_total)
+            .field("plaintext_bytes_total", &self.plaintext_bytes_total)
             .field("plaintext_pack_count", &self.plaintext_packs.len())
             .finish()
     }
@@ -104,6 +114,14 @@ impl BackupDecryptedPacksResult {
 
     pub fn pack_digests(&self) -> &[BackupDigest] {
         &self.pack_digests
+    }
+
+    pub fn encrypted_bytes_total(&self) -> usize {
+        self.encrypted_bytes_total
+    }
+
+    pub fn plaintext_bytes_total(&self) -> usize {
+        self.plaintext_bytes_total
     }
 
     pub fn plaintext_packs(&self) -> &[BackupDecryptedPackPayload] {
@@ -158,15 +176,22 @@ pub fn verify_decrypted_backup_packs(
     }
 
     let mut plaintext_packs = Vec::with_capacity(input.downloaded_packs.pack_refs().len());
+    let mut encrypted_bytes_total = 0usize;
+    let mut plaintext_bytes_total = 0usize;
     for expected in input.downloaded_packs.pack_refs() {
         let pack = opened_by_sequence
             .remove(&expected.pack_sequence())
             .ok_or(BackupVerificationError::MissingDecryptedPack)?;
+        let encrypted_bytes = pack.encrypted_bytes();
+        let plaintext = pack.into_plaintext();
+        encrypted_bytes_total = encrypted_bytes_total.saturating_add(encrypted_bytes);
+        plaintext_bytes_total = plaintext_bytes_total.saturating_add(plaintext.len());
         plaintext_packs.push(BackupDecryptedPackPayload {
             pack_sequence: expected.pack_sequence(),
             object_path: expected.object_path().to_owned(),
             encrypted_digest: expected.payload_digest().clone(),
-            plaintext: pack.into_plaintext(),
+            encrypted_bytes,
+            plaintext,
         });
     }
 
@@ -176,6 +201,8 @@ pub fn verify_decrypted_backup_packs(
         branch_path: input.downloaded_packs.branch_path().to_owned(),
         pack_count: input.downloaded_packs.pack_count(),
         pack_digests: input.downloaded_packs.pack_digests().to_vec(),
+        encrypted_bytes_total,
+        plaintext_bytes_total,
         plaintext_packs,
     })
 }

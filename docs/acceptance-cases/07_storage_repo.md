@@ -310,7 +310,7 @@
     - cli_assert: backup_run_writes_no_local_authority true
 
 - case_id: STORE-021
-  goal: Backup restore provider download 先验证 branch manifest，再只进入 PacksDownloaded evidence。
+  goal: Backup restore provider download 先验证 branch manifest，再经 pack decrypt admission 为 remote-readonly RestoreCandidate。
   preconditions:
     - branch.manifest.enc 已指向 provider object path
     - provider credential ref 指向 env resolver
@@ -328,7 +328,8 @@
     - cli_assert: backup_restore_download_opens_branch_manifest_before_pack_download true
     - cli_assert: backup_restore_download_verifies_branch_manifest_digest_and_routing true
     - cli_assert: backup_restore_download_selects_pack_from_branch_manifest true
-    - cli_assert: backup_restore_download_stops_before_decrypt_or_candidate true
+    - cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
+    - cli_assert: backup_restore_download_rejects_resource_budget_excess true
     - cli_assert: backup_restore_download_rejects_manual_evidence_before_provider_get true
     - cli_assert: backup_restore_download_rejects_manual_pack_metadata_before_provider_get true
     - cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
@@ -371,14 +372,17 @@
     - encrypted artifact bytes 已通过 manifest/routing/digest 校验后执行 decrypt
   steps:
     - run: cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
+    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
   assertions:
     - cli_assert: backup_decrypted_packs_match_downloaded_pack_refs true
     - cli_assert: backup_decrypted_packs_accept_provider_order_independent_open_results true
     - cli_assert: backup_decrypted_packs_consume_open_artifact_results_only true
+    - cli_assert: backup_restore_download_opens_pack_artifacts_from_branch_manifest_refs true
     - cli_assert: backup_decrypted_packs_reject_missing_or_unexpected_pack true
     - cli_assert: backup_decrypted_packs_reject_path_or_digest_mismatch true
     - cli_assert: backup_decrypted_packs_reject_duplicate_sequence true
     - cli_assert: backup_decrypted_packs_open_result_cannot_be_empty_plaintext true
+    - cli_assert: backup_decrypted_packs_tracks_encrypted_and_plaintext_bytes true
 
 - case_id: STORE-025
   goal: Backup RestoreCandidate admission 必须从 manifest verification 与 PacksDecrypted typed evidence 派生。
@@ -388,9 +392,12 @@
     - encrypted artifact bytes 已通过 open gate 产生 PacksDecrypted result
   steps:
     - run: cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
+    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
   assertions:
     - cli_assert: backup_restore_candidate_admission_consumes_verified_and_decrypted_evidence true
     - cli_assert: backup_restore_candidate_admission_preserves_repo_and_write_gates true
     - cli_assert: backup_restore_candidate_admission_rejects_manifest_and_decrypted_pack_mismatch true
+    - cli_assert: backup_restore_candidate_rejects_resource_budget_excess true
     - cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
+    - cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
 ```

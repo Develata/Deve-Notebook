@@ -191,8 +191,8 @@ reports its current state.
 
 ## Backup Dry-Run Diagnostics
 
-Backup commands currently expose locator/runtime admission checks only. They do
-not contact WebDAV/S3 providers, upload/download artifacts, mutate binding
+Backup dry-run commands expose locator/runtime admission checks only. Dry-run
+does not contact WebDAV/S3 providers, upload/download artifacts, mutate binding
 state, append ledger entries, stage source-control changes, or touch Projection
 Workspaces.
 
@@ -226,9 +226,12 @@ cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-nam
 
 The non-dry-run remote-readonly path downloads and opens
 `branch.manifest.enc`, then downloads encrypted pack artifacts referenced by the
-verified branch manifest. It stops at `PacksDownloaded`; it does not create a
-RestoreCandidate or write ledger, staging, Source Control, Git mirror, or
-Projection Workspace state.
+verified branch manifest. Pack artifacts are then opened through the same branch
+manifest pack refs and admitted as an in-memory remote-readonly
+RestoreCandidate. This path still does not write ledger, staging, Source
+Control, Git mirror, or Projection Workspace state. Core-owned restore resource
+budget limits pack count, encrypted aggregate bytes, and plaintext aggregate
+bytes before admission.
 
 `explicit-import` and `explicit-merge` modes require `--write-gate` and still
 remain dry-run at this surface until RestoreCandidate import/merge authority is

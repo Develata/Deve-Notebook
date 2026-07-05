@@ -1,7 +1,10 @@
 use super::{
-    BackupDigest, BackupRestoreError, RestoreAdmissionMode, RestoreAdmissionState,
+    BACKUP_RESTORE_MAX_ENCRYPTED_BYTES, BACKUP_RESTORE_MAX_PACKS,
+    BACKUP_RESTORE_MAX_PLAINTEXT_BYTES, BackupDigest, BackupRestoreError,
+    BackupRestoreResourceBudgetInput, RestoreAdmissionMode, RestoreAdmissionState,
     RestoreCandidateFromVerifiedPacksInput, RestoreCandidateInput, RestoreEvidence,
     admit_restore_candidate, admit_verified_restore_candidate,
+    validate_backup_restore_resource_budget,
 };
 use crate::backup::BackupLocator;
 use crate::backup::{
@@ -38,6 +41,10 @@ fn digest(seed: char) -> BackupDigest {
 
 fn uppercase_digest(seed: char) -> BackupDigest {
     BackupDigest::sha256(seed.to_ascii_uppercase().to_string().repeat(64))
+}
+
+fn numbered_digest(index: u64) -> BackupDigest {
+    BackupDigest::sha256(format!("{index:064x}"))
 }
 
 fn artifact_key() -> BackupArtifactKey {
@@ -311,6 +318,34 @@ fn backup_restore_candidate_admission_rejects_manifest_and_decrypted_pack_mismat
     })
     .expect_err("manifest/decrypted pack mismatch must fail closed");
     assert_eq!(err, BackupRestoreError::TypedEvidenceMismatch);
+}
+
+#[test]
+fn backup_restore_candidate_rejects_resource_budget_excess() {
+    let mut candidate_input = input();
+    candidate_input.pack_count = BACKUP_RESTORE_MAX_PACKS + 1;
+    candidate_input.pack_digests = (1..=candidate_input.pack_count)
+        .map(numbered_digest)
+        .collect();
+    let err = admit_restore_candidate(candidate_input)
+        .expect_err("restore candidate pack count budget must fail closed");
+    assert_eq!(err, BackupRestoreError::PackCountBudgetExceeded);
+
+    let err = validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+        pack_count: 1,
+        encrypted_bytes: BACKUP_RESTORE_MAX_ENCRYPTED_BYTES + 1,
+        plaintext_bytes: 0,
+    })
+    .expect_err("encrypted bytes budget must fail closed");
+    assert_eq!(err, BackupRestoreError::EncryptedBytesBudgetExceeded);
+
+    let err = validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+        pack_count: 1,
+        encrypted_bytes: 0,
+        plaintext_bytes: BACKUP_RESTORE_MAX_PLAINTEXT_BYTES + 1,
+    })
+    .expect_err("plaintext bytes budget must fail closed");
+    assert_eq!(err, BackupRestoreError::PlaintextBytesBudgetExceeded);
 }
 
 #[test]

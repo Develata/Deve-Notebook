@@ -102,6 +102,13 @@ pub struct BackupPackArtifactRefDownloadVerifyInput<'a> {
     pub artifact_bytes: &'a [u8],
 }
 
+pub struct BackupPackArtifactRefOpenInput<'a> {
+    pub branch_manifest: &'a BackupBranchManifest,
+    pub pack_ref: &'a BackupBranchManifestPackRef,
+    pub key: &'a BackupArtifactKey,
+    pub artifact_bytes: &'a [u8],
+}
+
 /// Verified and decrypted pack artifact bytes.
 ///
 /// This result is produced only after manifest/routing/digest verification and
@@ -112,6 +119,7 @@ pub struct BackupPackArtifactOpenResult {
     pack_sequence: u64,
     object_path: String,
     computed_digest: BackupDigest,
+    encrypted_bytes: usize,
     plaintext: Vec<u8>,
 }
 
@@ -122,6 +130,7 @@ impl fmt::Debug for BackupPackArtifactOpenResult {
             .field("pack_sequence", &self.pack_sequence)
             .field("object_path", &self.object_path)
             .field("computed_digest", &self.computed_digest)
+            .field("encrypted_bytes", &self.encrypted_bytes)
             .field("plaintext_len", &self.plaintext.len())
             .finish()
     }
@@ -138,6 +147,10 @@ impl BackupPackArtifactOpenResult {
 
     pub fn computed_digest(&self) -> &BackupDigest {
         &self.computed_digest
+    }
+
+    pub fn encrypted_bytes(&self) -> usize {
+        self.encrypted_bytes
     }
 
     pub fn plaintext(&self) -> &[u8] {
@@ -272,6 +285,34 @@ pub fn open_backup_pack_artifact(
         pack_sequence: artifact.pack_sequence,
         object_path: input.manifest.pack_object_path(),
         computed_digest,
+        encrypted_bytes: input.artifact_bytes.len(),
+        plaintext,
+    })
+}
+
+pub fn open_backup_pack_artifact_ref(
+    input: BackupPackArtifactRefOpenInput<'_>,
+) -> Result<BackupPackArtifactOpenResult, BackupPackArtifactError> {
+    let (artifact, computed_digest) = verified_pack_artifact_for_branch_manifest_ref(
+        input.branch_manifest,
+        input.pack_ref,
+        input.artifact_bytes,
+    )?;
+    let nonce = Nonce::from_slice(&artifact.nonce);
+    let plaintext = input
+        .key
+        .cipher()
+        .decrypt(nonce, artifact.ciphertext.as_ref())
+        .map_err(|_| BackupPackArtifactError::DecryptFailed)?;
+    if plaintext.is_empty() {
+        return Err(BackupPackArtifactError::EmptyPlaintext);
+    }
+
+    Ok(BackupPackArtifactOpenResult {
+        pack_sequence: artifact.pack_sequence,
+        object_path: input.pack_ref.object_path.clone(),
+        computed_digest,
+        encrypted_bytes: input.artifact_bytes.len(),
         plaintext,
     })
 }
@@ -299,18 +340,11 @@ pub fn verify_downloaded_pack_artifact_digest_and_routing(
 pub fn verify_downloaded_pack_artifact_ref_and_routing(
     input: BackupPackArtifactRefDownloadVerifyInput<'_>,
 ) -> Result<BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError> {
-    if !input.pack_ref.payload_digest.is_valid_sha256() {
-        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
-    }
-    let computed_digest = sha256_digest(input.artifact_bytes);
-    if !computed_digest.same_sha256(&input.pack_ref.payload_digest) {
-        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
-    }
-
-    let artifact: BackupEncryptedPackArtifact = serde_json::from_slice(input.artifact_bytes)
-        .map_err(|_| BackupPackArtifactError::DeserializeFailed)?;
-    artifact.validate_against_branch_manifest_ref(input.branch_manifest, input.pack_ref)?;
-    artifact.validate_cipher_envelope()?;
+    let (artifact, computed_digest) = verified_pack_artifact_for_branch_manifest_ref(
+        input.branch_manifest,
+        input.pack_ref,
+        input.artifact_bytes,
+    )?;
     Ok(BackupPackArtifactDownloadVerifyResult {
         pack_sequence: artifact.pack_sequence,
         object_path: input.pack_ref.object_path.clone(),
@@ -329,6 +363,26 @@ fn verified_pack_artifact_for_manifest(
     if !computed_digest.same_sha256(&manifest.payload_digest) {
         return Err(BackupPackArtifactError::ArtifactDigestMismatch);
     }
+    artifact.validate_cipher_envelope()?;
+    Ok((artifact, computed_digest))
+}
+
+fn verified_pack_artifact_for_branch_manifest_ref(
+    branch_manifest: &BackupBranchManifest,
+    pack_ref: &BackupBranchManifestPackRef,
+    artifact_bytes: &[u8],
+) -> Result<(BackupEncryptedPackArtifact, BackupDigest), BackupPackArtifactError> {
+    if !pack_ref.payload_digest.is_valid_sha256() {
+        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
+    }
+    let computed_digest = sha256_digest(artifact_bytes);
+    if !computed_digest.same_sha256(&pack_ref.payload_digest) {
+        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
+    }
+
+    let artifact: BackupEncryptedPackArtifact = serde_json::from_slice(artifact_bytes)
+        .map_err(|_| BackupPackArtifactError::DeserializeFailed)?;
+    artifact.validate_against_branch_manifest_ref(branch_manifest, pack_ref)?;
     artifact.validate_cipher_envelope()?;
     Ok((artifact, computed_digest))
 }

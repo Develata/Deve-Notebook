@@ -6,10 +6,11 @@
 //! Remote-readonly encrypted backup artifact download admission.
 //!
 //! This module performs provider download of encrypted branch manifest and pack
-//! bytes and feeds them through core verification gates. It opens only the branch
-//! manifest required to derive typed pack refs. It does not decrypt pack
-//! payloads, create restore candidates, append ledger state, stage source-control
-//! changes, or touch Projection Workspaces.
+//! bytes and feeds them through core verification gates. It opens the branch
+//! manifest required to derive typed pack refs, opens pack artifacts through
+//! those refs, and admits only a remote-readonly in-memory RestoreCandidate. It
+//! does not append ledger state, stage source-control changes, import branches,
+//! merge branches, or touch Projection Workspaces.
 
 use super::{RestoreCommandInput, RestoreContext, required_str};
 use crate::commands::backup::provider_io::{
@@ -18,11 +19,15 @@ use crate::commands::backup::provider_io::{
 };
 use anyhow::bail;
 use deve_core::backup::{
-    BackupBindingStatus, BackupBranchManifest, BackupCommandKind, BackupDownloadedPacksInput,
-    BackupPackArtifactRefDownloadVerifyInput, BackupPlanInput, BackupRestoreFlowEvidence,
-    BackupRestoreFlowInput, RestoreAdmissionMode, backup_command_plan,
-    open_backup_branch_manifest_artifact, parse_backup_credential_ref, parse_backup_key_ref,
-    plan_backup_restore_flow, verify_downloaded_backup_packs,
+    BackupBindingStatus, BackupBranchManifest, BackupCommandKind, BackupDecryptedPacksInput,
+    BackupDownloadedPacksInput, BackupPackArtifactRefDownloadVerifyInput,
+    BackupPackArtifactRefOpenInput, BackupPackVerificationEvidence, BackupPlanInput,
+    BackupRestoreFlowEvidence, BackupRestoreFlowInput, BackupRestoreResourceBudgetInput,
+    BackupVerificationInput, RestoreAdmissionMode, RestoreCandidateFromVerifiedPacksInput,
+    admit_verified_restore_candidate, backup_command_plan, open_backup_branch_manifest_artifact,
+    open_backup_pack_artifact_ref, parse_backup_credential_ref, parse_backup_key_ref,
+    plan_backup_restore_flow, validate_backup_restore_resource_budget, verify_backup_artifacts,
+    verify_decrypted_backup_packs, verify_downloaded_backup_packs,
     verify_downloaded_pack_artifact_ref_and_routing,
 };
 
@@ -58,11 +63,19 @@ pub(super) fn restore_download_lines(
             artifact_bytes: &manifest_download.artifact_bytes,
         },
     )?;
+    let computed_manifest_digest = opened_manifest.computed_digest().clone();
     let branch_manifest = opened_manifest.into_branch_manifest();
     validate_requested_pack_digests(&context.pack_digests, &branch_manifest)?;
+    let pack_count = u64::try_from(branch_manifest.packs.len()).unwrap_or(u64::MAX);
+    validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+        pack_count,
+        encrypted_bytes: 0,
+        plaintext_bytes: 0,
+    })?;
 
     let mut pack_downloaded_bytes = 0usize;
     let mut verified_packs = Vec::with_capacity(branch_manifest.packs.len());
+    let mut pack_artifacts = Vec::with_capacity(branch_manifest.packs.len());
     for pack_ref in &branch_manifest.packs {
         let download = downloader.download_artifact(BackupArtifactDownloadRequest {
             locator: &context.locator,
@@ -73,7 +86,12 @@ pub(super) fn restore_download_lines(
         if !download.provider_metadata_is_diagnostic_only {
             bail!("backup provider download metadata must remain diagnostic-only");
         }
-        pack_downloaded_bytes += download.downloaded_bytes;
+        pack_downloaded_bytes = pack_downloaded_bytes.saturating_add(download.downloaded_bytes);
+        validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+            pack_count,
+            encrypted_bytes: pack_downloaded_bytes,
+            plaintext_bytes: 0,
+        })?;
         verified_packs.push(verify_downloaded_pack_artifact_ref_and_routing(
             BackupPackArtifactRefDownloadVerifyInput {
                 branch_manifest: &branch_manifest,
@@ -81,11 +99,59 @@ pub(super) fn restore_download_lines(
                 artifact_bytes: &download.artifact_bytes,
             },
         )?);
+        pack_artifacts.push((pack_ref, download.artifact_bytes));
     }
 
     let downloaded = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
         branch_manifest: &branch_manifest,
         verified_packs,
+    })?;
+    let mut opened_packs = Vec::with_capacity(pack_artifacts.len());
+    let mut plaintext_bytes = 0usize;
+    for (pack_ref, artifact_bytes) in pack_artifacts {
+        let opened = open_backup_pack_artifact_ref(BackupPackArtifactRefOpenInput {
+            branch_manifest: &branch_manifest,
+            pack_ref,
+            key: &key,
+            artifact_bytes: &artifact_bytes,
+        })?;
+        plaintext_bytes = plaintext_bytes.saturating_add(opened.plaintext().len());
+        validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+            pack_count,
+            encrypted_bytes: pack_downloaded_bytes,
+            plaintext_bytes,
+        })?;
+        opened_packs.push(opened);
+    }
+    let decrypted = verify_decrypted_backup_packs(BackupDecryptedPacksInput {
+        downloaded_packs: &downloaded,
+        opened_packs,
+    })?;
+    let manifest_verification = verify_backup_artifacts(BackupVerificationInput {
+        expected_repo_id: context.repo_id,
+        manifest_repo_id: context.manifest_repo_id,
+        expected_manifest_digest: context.manifest_digest.clone(),
+        computed_manifest_digest,
+        manifest_authenticated: true,
+        packs: decrypted
+            .plaintext_packs()
+            .iter()
+            .map(|pack| BackupPackVerificationEvidence {
+                pack_sequence: pack.pack_sequence(),
+                expected_digest: pack.encrypted_digest().clone(),
+                computed_digest: pack.encrypted_digest().clone(),
+                authenticated: true,
+                decrypted: true,
+            })
+            .collect(),
+        decrypt_required: true,
+    })?;
+    let candidate = admit_verified_restore_candidate(RestoreCandidateFromVerifiedPacksInput {
+        expected_repo_id: context.repo_id,
+        manifest_verification: &manifest_verification,
+        decrypted_packs: &decrypted,
+        admission_mode: RestoreAdmissionMode::RemoteReadonly,
+        write_gate_confirmed: false,
     })?;
     let flow = plan_backup_restore_flow(BackupRestoreFlowInput {
         expected_repo_id: context.repo_id,
@@ -93,13 +159,13 @@ pub(super) fn restore_download_lines(
         writer_identity: context.writer_identity.clone(),
         branch_path: context.branch_path.clone(),
         manifest_digest: Some(context.manifest_digest.clone()),
-        pack_digests: downloaded.pack_digests().to_vec(),
+        pack_digests: candidate.pack_digests.clone(),
         evidence: BackupRestoreFlowEvidence {
             remote_discovered: true,
             manifest_verified: true,
             packs_downloaded: true,
-            packs_decrypted: false,
-            candidate_admitted: false,
+            packs_decrypted: true,
+            candidate_admitted: true,
         },
         admission_mode: context.admission_mode,
         write_gate_confirmed: false,
@@ -122,7 +188,9 @@ pub(super) fn restore_download_lines(
         "artifact_io=true".to_string(),
         format!(
             "downloaded_bytes={}",
-            manifest_download.downloaded_bytes + pack_downloaded_bytes
+            manifest_download
+                .downloaded_bytes
+                .saturating_add(pack_downloaded_bytes)
         ),
         format!(
             "branch_manifest_downloaded_bytes={}",
@@ -136,10 +204,12 @@ pub(super) fn restore_download_lines(
         format!("branch_path={}", context.branch_path),
         format!("restore_flow_state={:?}", flow.state),
         format!("admission_mode={:?}", flow.admission_mode),
-        "candidate_admission=not_created_download_verify_only".to_string(),
+        "packs_decrypted=true".to_string(),
+        "candidate_admission=created_remote_readonly".to_string(),
+        format!("restore_candidate_state={:?}", candidate.state),
         format!("manifest_digest={}", context.manifest_digest.hex),
         format!("branch_manifest_object_path={branch_manifest_path}"),
-        format!("pack_count={}", downloaded.pack_count()),
+        format!("pack_count={}", candidate.pack_count),
         "write_gate_confirmed=false".to_string(),
         format!("writes_local_authority={}", plan.writes_local_authority),
     ];

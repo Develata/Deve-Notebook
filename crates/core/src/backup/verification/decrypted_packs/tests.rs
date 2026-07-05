@@ -153,6 +153,14 @@ fn downloaded_result(fixtures: &[PackFixture]) -> BackupDownloadedPacksResult {
 fn backup_decrypted_packs_match_downloaded_pack_refs() {
     let fixtures = pack_fixtures();
     let downloaded = downloaded_result(&fixtures);
+    let expected_encrypted_bytes = fixtures
+        .iter()
+        .map(|fixture| fixture.open_result.encrypted_bytes())
+        .sum::<usize>();
+    let expected_plaintext_bytes = fixtures
+        .iter()
+        .map(|fixture| fixture.open_result.plaintext().len())
+        .sum::<usize>();
 
     let result = verify_decrypted_backup_packs(BackupDecryptedPacksInput {
         downloaded_packs: &downloaded,
@@ -168,6 +176,9 @@ fn backup_decrypted_packs_match_downloaded_pack_refs() {
     assert_eq!(result.branch_path(), "deve/branches/writer-1");
     assert_eq!(result.pack_count(), 2);
     assert_eq!(result.pack_digests(), downloaded.pack_digests());
+    assert_eq!(result.encrypted_bytes_total(), expected_encrypted_bytes);
+    assert_eq!(result.plaintext_bytes_total(), expected_plaintext_bytes);
+    assert!(result.plaintext_packs()[0].encrypted_bytes() > 0);
     assert_eq!(result.plaintext_packs()[0].plaintext(), b"ledger facts one");
     assert_eq!(result.plaintext_packs()[1].plaintext(), b"ledger facts two");
 }

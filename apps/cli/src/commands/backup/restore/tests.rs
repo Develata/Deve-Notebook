@@ -4,7 +4,7 @@ use crate::commands::backup::provider_io::{
     BackupArtifactDownloadRequest, BackupArtifactDownloader, BackupArtifactKeyResolver,
 };
 use deve_core::backup::{
-    BackupArtifactKey, BackupArtifactKind, BackupArtifactProtectionInput,
+    BACKUP_RESTORE_MAX_PACKS, BackupArtifactKey, BackupArtifactKind, BackupArtifactProtectionInput,
     BackupBranchManifestArtifactInput, BackupBranchManifestPackRef, BackupLocator,
     BackupProtectionMechanism, BackupSecretRef, encrypt_backup_branch_manifest_artifact,
     encrypt_backup_pack_artifact, parse_backup_key_ref, plan_backup_artifact_protection,
@@ -174,9 +174,26 @@ fn encrypted_pack_fixture(
 }
 
 fn download_fixture() -> DownloadFixture {
+    download_fixture_with_pack_count(2)
+}
+
+fn download_fixture_with_pack_count(pack_count: u64) -> DownloadFixture {
     let key = artifact_key();
-    let (pack_one_ref, pack_one_bytes) = encrypted_pack_fixture(&key, 1);
-    let (pack_two_ref, pack_two_bytes) = encrypted_pack_fixture(&key, 2);
+    download_fixture_with_pack_key(pack_count, &key, key.clone())
+}
+
+fn download_fixture_with_pack_key(
+    pack_count: u64,
+    pack_key: &BackupArtifactKey,
+    manifest_key: BackupArtifactKey,
+) -> DownloadFixture {
+    let mut pack_refs = Vec::new();
+    let mut pack_artifacts = Vec::new();
+    for pack_sequence in 1..=pack_count {
+        let (pack_ref, pack_bytes) = encrypted_pack_fixture(pack_key, pack_sequence);
+        pack_artifacts.push((pack_ref.object_path.clone(), pack_bytes));
+        pack_refs.push(pack_ref);
+    }
     let branch = BackupLocator::parse("s3://bucket-name/deve/")
         .unwrap()
         .branch_locator("writer-1")
@@ -188,29 +205,26 @@ fn download_fixture() -> DownloadFixture {
             repo_id: REPO_ID.parse().expect("repo id"),
             writer_identity: "writer-1",
             branch_path: "deve/branches/writer-1",
-            packs: vec![pack_one_ref.clone(), pack_two_ref.clone()],
+            packs: pack_refs.clone(),
             protection: &protection(BackupArtifactKind::BranchManifest),
-            key: &key,
+            key: &manifest_key,
         })
         .expect("encrypted branch manifest");
     let manifest_digest = branch_manifest
         .payload_digest()
         .expect("manifest digest")
         .hex;
-    let artifacts = vec![
-        (
-            branch_manifest_path,
-            branch_manifest.to_bytes().expect("manifest bytes"),
-        ),
-        (pack_one_ref.object_path.clone(), pack_one_bytes),
-        (pack_two_ref.object_path.clone(), pack_two_bytes),
-    ];
-    let pack_digests = vec![
-        pack_one_ref.payload_digest.hex,
-        pack_two_ref.payload_digest.hex,
-    ];
+    let mut artifacts = vec![(
+        branch_manifest_path,
+        branch_manifest.to_bytes().expect("manifest bytes"),
+    )];
+    artifacts.extend(pack_artifacts);
+    let pack_digests = pack_refs
+        .into_iter()
+        .map(|pack_ref| pack_ref.payload_digest.hex)
+        .collect();
 
-    (key, manifest_digest, artifacts, pack_digests)
+    (manifest_key, manifest_digest, artifacts, pack_digests)
 }
 
 fn download_input<'a>(
@@ -342,7 +356,18 @@ fn backup_restore_download_opens_branch_manifest_before_pack_download() {
     assert!(
         lines
             .iter()
-            .any(|line| line == "restore_flow_state=PacksDownloaded")
+            .any(|line| line == "restore_flow_state=RestoreCandidate")
+    );
+    assert!(lines.iter().any(|line| line == "packs_decrypted=true"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "candidate_admission=created_remote_readonly")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "restore_candidate_state=RemoteReadonly")
     );
 }
 
@@ -376,7 +401,7 @@ fn backup_restore_download_verifies_branch_manifest_digest_and_routing() {
 }
 
 #[test]
-fn backup_restore_download_stops_before_decrypt_or_candidate() {
+fn backup_restore_download_rejects_manual_decrypt_evidence_before_provider_get() {
     let (key, manifest_digest, artifacts, pack_digests) = download_fixture();
     let mut command = download_input(&manifest_digest, &pack_digests);
     command.packs_decrypted = true;
@@ -387,6 +412,78 @@ fn backup_restore_download_stops_before_decrypt_or_candidate() {
 
     assert!(err.to_string().contains("precomputed evidence"));
     assert!(downloader.requests.is_empty());
+}
+
+#[test]
+fn backup_restore_download_opens_pack_artifacts_from_branch_manifest_refs() {
+    let (key, manifest_digest, artifacts, pack_digests) = download_fixture();
+    let command = download_input(&manifest_digest, &pack_digests);
+    let (lines, downloader, _key_resolver) =
+        restore_with_fixture(command, artifacts, key).expect("provider download restore");
+
+    assert_eq!(downloader.requests.len(), 3);
+    assert!(lines.iter().any(|line| line == "packs_decrypted=true"));
+    assert!(lines.iter().any(|line| line == "pack_count=2"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "candidate_admission=created_remote_readonly")
+    );
+}
+
+#[test]
+fn backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt() {
+    let (key, manifest_digest, artifacts, pack_digests) = download_fixture();
+    let command = download_input(&manifest_digest, &pack_digests);
+    let (lines, _downloader, _key_resolver) =
+        restore_with_fixture(command, artifacts, key).expect("provider download restore");
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "restore_flow_state=RestoreCandidate")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "restore_candidate_state=RemoteReadonly")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "writes_local_authority=false")
+    );
+}
+
+#[test]
+fn backup_restore_download_rejects_wrong_key_before_candidate() {
+    let wrong_pack_key = BackupArtifactKey::from_bytes(&[8; 32]).expect("wrong pack key");
+    let (manifest_key, manifest_digest, artifacts, pack_digests) =
+        download_fixture_with_pack_key(2, &wrong_pack_key, artifact_key());
+    let command = download_input(&manifest_digest, &pack_digests);
+    let mut downloader = RecordingDownloader::new(artifacts);
+    let mut key_resolver = FixedKeyResolver::new(manifest_key);
+    let err = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)
+        .expect_err("wrong key must fail before candidate admission");
+
+    assert!(err.to_string().contains("decryption failed"));
+    assert_eq!(key_resolver.requests, vec!["env:<redacted>".to_string()]);
+    assert_eq!(downloader.requests.len(), 3);
+}
+
+#[test]
+fn backup_restore_download_rejects_resource_budget_excess() {
+    let pack_count = BACKUP_RESTORE_MAX_PACKS + 1;
+    let (key, manifest_digest, artifacts, pack_digests) =
+        download_fixture_with_pack_count(pack_count);
+    let command = download_input(&manifest_digest, &pack_digests);
+    let mut downloader = RecordingDownloader::new(artifacts);
+    let mut key_resolver = FixedKeyResolver::new(key);
+    let err = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)
+        .expect_err("resource budget excess must fail closed before pack download");
+
+    assert!(err.to_string().contains("resource budget"));
+    assert_eq!(downloader.requests.len(), 1);
 }
 
 #[test]

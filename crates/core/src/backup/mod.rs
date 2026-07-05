@@ -46,8 +46,9 @@ pub use artifact::{
     BackupArtifactKey, BackupEncryptedPackArtifact, BackupPackArtifactDownloadVerifyInput,
     BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError, BackupPackArtifactInput,
     BackupPackArtifactOpenInput, BackupPackArtifactOpenResult,
-    BackupPackArtifactRefDownloadVerifyInput, BackupPackArtifactUploadVerifyInput,
-    decrypt_backup_pack_artifact, encrypt_backup_pack_artifact, open_backup_pack_artifact,
+    BackupPackArtifactRefDownloadVerifyInput, BackupPackArtifactRefOpenInput,
+    BackupPackArtifactUploadVerifyInput, decrypt_backup_pack_artifact,
+    encrypt_backup_pack_artifact, open_backup_pack_artifact, open_backup_pack_artifact_ref,
     verify_backup_pack_artifact_for_upload, verify_downloaded_pack_artifact_digest_and_routing,
     verify_downloaded_pack_artifact_ref_and_routing,
 };
@@ -95,8 +96,11 @@ pub use provider::{
     dispatch_backup_provider_adapter,
 };
 pub use restore::{
-    BackupRestoreError, RestoreAdmissionMode, RestoreAdmissionState, RestoreCandidate,
+    BACKUP_RESTORE_MAX_ENCRYPTED_BYTES, BACKUP_RESTORE_MAX_PACKS,
+    BACKUP_RESTORE_MAX_PLAINTEXT_BYTES, BackupRestoreError, BackupRestoreResourceBudgetInput,
+    RestoreAdmissionMode, RestoreAdmissionState, RestoreCandidate,
     RestoreCandidateFromVerifiedPacksInput, admit_verified_restore_candidate,
+    validate_backup_restore_resource_budget,
 };
 pub use restore_flow::{
     BackupRestoreFlowError, BackupRestoreFlowEvidence, BackupRestoreFlowInput,

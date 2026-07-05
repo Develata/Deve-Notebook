@@ -9,10 +9,9 @@
 //! This command surface validates caller-supplied flow metadata for dry-runs and
 //! can perform a remote-readonly provider download of encrypted branch manifest
 //! and pack bytes. Manifest bytes are opened through core verification before
-//! pack refs are trusted; pack bytes are checked against typed manifest refs,
-//! then the command stops at PacksDownloaded evidence. Candidate admission still
-//! requires PacksDecrypted evidence in core. This command does not import,
-//! merge, append ledger state, or touch Projection Workspaces.
+//! pack refs are trusted; pack bytes are opened through typed manifest refs and
+//! admitted as an in-memory remote-readonly RestoreCandidate. This command does
+//! not import, merge, append ledger state, or touch Projection Workspaces.
 
 mod download;
 

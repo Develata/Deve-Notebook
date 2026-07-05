@@ -177,6 +177,9 @@ RemoteDiscovered
 - `PacksDownloaded` 必须由 branch manifest 中的 pack object refs 驱动，逐个下载
   encrypted pack artifact bytes；下载结果在通过 manifest digest、artifact digest、
   authentication 与 decrypt gate 前，不得暴露为 plaintext 或 restore candidate。
+- restore candidate admission MUST 由 core-owned resource budget 约束 pack 数、
+  encrypted aggregate bytes 与 plaintext aggregate bytes；超出预算必须
+  fail-closed，且不得继续导入、合并或写本地 authority。
 - 默认下载不得 append local ledger。
 - `ExplicitImport` 与 `ExplicitMerge` 必须复用 repo scope、writer gate 与
   source-control / merge authority。

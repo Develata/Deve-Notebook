@@ -66,14 +66,22 @@
   backup upload state，不写 ledger、staging、Source Control 或 Projection Workspace。
 - Backup provider download 只能把 remote object 读成 encrypted artifact bytes，供
   后续 manifest/hash/authentication/decrypt gate 使用；GET 成功本身不是 restore
-  success，也不能创建 restore candidate 或写入当前 repo。
+  success，也不能创建 restore candidate 或写入当前 repo。只有 core 完成
+  branch manifest verify、pack download verify、pack open/decrypt 与
+  RestoreCandidate admission 后，才可呈现 remote-readonly candidate。
 - `backup restore --dry-run` 只能展示 flow planning。非 dry-run 的
   `remote-readonly` restore 必须先下载并打开 `branch.manifest.enc`，经
   expected digest、routing 与 AEAD authentication 校验后进入 `ManifestVerified`
   evidence，再按 typed branch manifest pack refs 下载 encrypted pack artifact
   bytes 并做 manifest/routing/digest 校验；只有下载结果与 branch manifest pack
-  refs 一一匹配后，才可进入 `PacksDownloaded` evidence。在 pack artifact open
-  与 PacksDecrypted evidence 全链路完成前，不得呈现为 RestoreCandidate 已创建。
+  refs 一一匹配后，才可进入 `PacksDownloaded` evidence。随后 pack artifact open
+  必须继续使用 branch manifest pack refs 做 verify-before-decrypt，产生
+  `PacksDecrypted` typed evidence 后，才能 admission 为内存态 remote-readonly
+  RestoreCandidate；该 candidate 不得写 ledger、staging、Source Control、Git
+  mirror 或 Projection Workspace。
+- remote-readonly RestoreCandidate 还必须通过 core-owned resource budget；
+  pack 数、encrypted aggregate bytes 或 plaintext aggregate bytes 超出预算时
+  必须 fail-closed，不得继续下载/导入/合并。
 - `backup restore --mode explicit-import|explicit-merge` 在 writer gate 与完整
   RestoreCandidate admission 执行链路落地前必须 fail-closed。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state

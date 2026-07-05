@@ -19,6 +19,10 @@ use thiserror::Error;
 #[cfg(test)]
 mod tests;
 
+pub const BACKUP_RESTORE_MAX_PACKS: u64 = 64;
+pub const BACKUP_RESTORE_MAX_ENCRYPTED_BYTES: usize = 128 * 1024 * 1024;
+pub const BACKUP_RESTORE_MAX_PLAINTEXT_BYTES: usize = 128 * 1024 * 1024;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RestoreAdmissionMode {
     RemoteReadonly,
@@ -77,6 +81,13 @@ pub struct RestoreCandidateFromVerifiedPacksInput<'a> {
     pub write_gate_confirmed: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BackupRestoreResourceBudgetInput {
+    pub pack_count: u64,
+    pub encrypted_bytes: usize,
+    pub plaintext_bytes: usize,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RestoreCandidate {
     pub repo_id: RepoId,
@@ -106,6 +117,12 @@ pub enum BackupRestoreError {
     DuplicatePackDigest,
     #[error("backup restore candidate typed verification evidence does not match decrypted packs")]
     TypedEvidenceMismatch,
+    #[error("backup restore candidate pack count exceeds resource budget")]
+    PackCountBudgetExceeded,
+    #[error("backup restore candidate encrypted bytes exceed resource budget")]
+    EncryptedBytesBudgetExceeded,
+    #[error("backup restore candidate plaintext bytes exceed resource budget")]
+    PlaintextBytesBudgetExceeded,
     #[error("backup restore import or merge requires an explicit write gate")]
     WriteGateRequired,
     #[error(transparent)]
@@ -122,6 +139,11 @@ fn admit_restore_candidate(
         return Err(BackupRestoreError::IncompleteRestoreEvidence);
     }
     validate_pack_count(input.pack_count, input.pack_digests.len())?;
+    validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+        pack_count: input.pack_count,
+        encrypted_bytes: 0,
+        plaintext_bytes: 0,
+    })?;
     validate_digest(&input.manifest_digest)?;
     validate_pack_digests(&input.pack_digests)?;
     if requires_write_gate(input.admission_mode) && !input.write_gate_confirmed {
@@ -147,6 +169,11 @@ pub fn admit_verified_restore_candidate(
         input.manifest_verification,
         input.decrypted_packs,
     )?;
+    validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
+        pack_count: input.decrypted_packs.pack_count(),
+        encrypted_bytes: input.decrypted_packs.encrypted_bytes_total(),
+        plaintext_bytes: input.decrypted_packs.plaintext_bytes_total(),
+    })?;
 
     admit_restore_candidate(RestoreCandidateInput {
         repo_id: input.decrypted_packs.repo_id(),
@@ -160,6 +187,21 @@ pub fn admit_verified_restore_candidate(
         admission_mode: input.admission_mode,
         write_gate_confirmed: input.write_gate_confirmed,
     })
+}
+
+pub fn validate_backup_restore_resource_budget(
+    input: BackupRestoreResourceBudgetInput,
+) -> Result<(), BackupRestoreError> {
+    if input.pack_count > BACKUP_RESTORE_MAX_PACKS {
+        return Err(BackupRestoreError::PackCountBudgetExceeded);
+    }
+    if input.encrypted_bytes > BACKUP_RESTORE_MAX_ENCRYPTED_BYTES {
+        return Err(BackupRestoreError::EncryptedBytesBudgetExceeded);
+    }
+    if input.plaintext_bytes > BACKUP_RESTORE_MAX_PLAINTEXT_BYTES {
+        return Err(BackupRestoreError::PlaintextBytesBudgetExceeded);
+    }
+    Ok(())
 }
 
 fn validate_typed_evidence(

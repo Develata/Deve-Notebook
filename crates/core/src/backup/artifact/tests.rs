@@ -261,6 +261,68 @@ fn backup_pack_artifact_ref_download_verify_uses_branch_manifest_ref() {
 }
 
 #[test]
+fn backup_pack_artifact_ref_open_verifies_before_decrypt() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let plaintext = b"ledger facts from branch ref";
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, plaintext)).unwrap();
+    let artifact_bytes = artifact.to_bytes().unwrap();
+    let branch_manifest = branch_manifest_for(&artifact);
+    let pack_ref = &branch_manifest.packs[0];
+
+    let opened = open_backup_pack_artifact_ref(BackupPackArtifactRefOpenInput {
+        branch_manifest: &branch_manifest,
+        pack_ref,
+        key: &key,
+        artifact_bytes: &artifact_bytes,
+    })
+    .unwrap();
+
+    assert_eq!(opened.pack_sequence(), artifact.pack_sequence);
+    assert_eq!(opened.object_path(), pack_ref.object_path.as_str());
+    assert!(
+        opened
+            .computed_digest()
+            .same_sha256(&pack_ref.payload_digest)
+    );
+    assert_eq!(opened.plaintext(), plaintext);
+
+    let mut tampered = artifact_bytes;
+    tampered.push(b'\n');
+    let err = open_backup_pack_artifact_ref(BackupPackArtifactRefOpenInput {
+        branch_manifest: &branch_manifest,
+        pack_ref,
+        key: &key,
+        artifact_bytes: &tampered,
+    })
+    .expect_err("digest mismatch must stop before decrypt");
+    assert_eq!(err, BackupPackArtifactError::ArtifactDigestMismatch);
+}
+
+#[test]
+fn backup_pack_artifact_ref_open_rejects_wrong_key_after_verified_digest() {
+    let key = artifact_key(7);
+    let wrong_key = artifact_key(8);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let artifact_bytes = artifact.to_bytes().unwrap();
+    let branch_manifest = branch_manifest_for(&artifact);
+    let pack_ref = &branch_manifest.packs[0];
+
+    let err = open_backup_pack_artifact_ref(BackupPackArtifactRefOpenInput {
+        branch_manifest: &branch_manifest,
+        pack_ref,
+        key: &wrong_key,
+        artifact_bytes: &artifact_bytes,
+    })
+    .expect_err("wrong key must fail after digest/routing verification");
+
+    assert_eq!(err, BackupPackArtifactError::DecryptFailed);
+}
+
+#[test]
 fn backup_pack_artifact_rejects_wrong_key_after_verified_digest() {
     let key = artifact_key(7);
     let wrong_key = artifact_key(8);
