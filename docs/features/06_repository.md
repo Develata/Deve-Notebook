@@ -60,6 +60,9 @@
   credential/key material，不得写 ledger、staging 或 Projection Workspace。
 - Backup pack artifact 必须先加密再进入上传状态；pack manifest 中的 payload
   digest 用于 verify-before-decrypt，不是明文 payload digest。
+- 非 dry-run `backup run` 只能上传显式提供的 encrypted pack artifact 文件；
+  上传前必须验证 artifact bytes 与 manifest metadata/digest 一致，成功后只进入
+  backup upload state，不写 ledger、staging、Source Control 或 Projection Workspace。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
   或 Projection Workspace。
 

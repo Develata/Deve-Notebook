@@ -44,8 +44,9 @@ mod verification;
 
 pub use artifact::{
     BackupArtifactKey, BackupEncryptedPackArtifact, BackupPackArtifactError,
-    BackupPackArtifactInput, BackupPackArtifactOpenInput, decrypt_backup_pack_artifact,
-    encrypt_backup_pack_artifact,
+    BackupPackArtifactInput, BackupPackArtifactOpenInput, BackupPackArtifactUploadVerifyInput,
+    decrypt_backup_pack_artifact, encrypt_backup_pack_artifact,
+    verify_backup_pack_artifact_for_upload,
 };
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,

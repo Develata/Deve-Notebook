@@ -115,6 +115,8 @@ pack artifact 字节级约束：
 
 - 上传到 provider 的 pack artifact MUST 是加密后的 artifact bytes，而不是明文
   ledger/snapshot payload。
+- provider upload runtime MUST 在 PUT 前验证 artifact bytes 可被解析为 encrypted
+  pack artifact，且 artifact routing metadata 与 `BackupPackManifest` 一致。
 - `BackupPackManifest.payload_digest` MUST 是序列化后的 encrypted pack artifact
   bytes 的 sha256 digest；不得使用明文 payload digest 作为远端校验依据。
 - encrypted pack artifact 的明文字段只允许包含 routing / verification 所需的
@@ -148,6 +150,8 @@ Unbound
 
 - `BindingValidated` 必须校验 `RepoId`、branch role 与 writer identity。
 - `PackPlanned` 只能读取 ledger / snapshot authority，不得读取 stale UI state。
+- `Uploaded` 只能在 encrypted pack artifact bytes 已通过 manifest / routing /
+  digest 校验且 provider PUT 成功后进入。
 - `RemoteVerified` 必须确认 remote manifest 与 uploaded pack hash 一致。
 - upload 失败不得回滚 local ledger 或 source-control state。
 
@@ -179,6 +183,7 @@ RemoteDiscovered
 - `WriterIdentity`
 - `BackupCredentialRef`
 - `BackupKeyRef`
+- `BackupEncryptedPackArtifactFile`
 
 `BackupCredentialRef` 与 `BackupKeyRef` 是 secret/config 引用，不是 locator 的一部分。
 
@@ -191,6 +196,11 @@ RemoteDiscovered
 - `VerifyBackupTarget`
 - `RestoreBackup`
 - `UnbindBackupTarget`
+
+`BackupBranch` 可以先以 dry-run 输出 pack / upload plan；真实 provider upload
+只能上传显式传入且已通过 manifest/digest 校验的 encrypted pack artifact file。
+该阶段不读取 stale UI state，不把 provider metadata 当 authority，也不写 ledger、
+staging、commit anchor 或 Projection Workspace。
 
 ### 5.3 Outputs {#backup-command-output-contract}
 
@@ -227,6 +237,8 @@ RemoteDiscovered
 - backup artifacts **MUST** be encrypted before upload。
 - manifests and packs **MUST** be authenticated by signature, AEAD tag, or an
   equivalent integrity mechanism owned by `08_auth.md`。
+- provider upload credential resolution 初始只允许 `env:` ref；`keyring:` 与
+  `config:` 必须 fail-closed，直到对应 resolver 被纳入本章合同。
 - download 必须先 verify，再允许 decrypt/import effect 暴露给 runtime。
 - credentials, tokens and key material **MUST NOT** be stored in repo catalog,
   locator string, localStorage, URL query, normal logs or crash reports。

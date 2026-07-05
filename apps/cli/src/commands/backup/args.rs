@@ -5,6 +5,7 @@
 //! Backup CLI action shape.
 
 use clap::Subcommand;
+use std::path::PathBuf;
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum BackupAction {
@@ -54,7 +55,7 @@ pub(crate) enum BackupAction {
         #[arg(long = "pack")]
         expected_packs: Vec<String>,
     },
-    /// Plan a branch backup upload without provider IO
+    /// Plan or upload a branch backup encrypted pack artifact
     Run {
         #[arg(long)]
         locator: String,
@@ -82,6 +83,8 @@ pub(crate) enum BackupAction {
         snapshot_count: u64,
         #[arg(long = "payload-digest")]
         payload_digest: String,
+        #[arg(long)]
+        artifact: Option<PathBuf>,
         #[arg(long)]
         encrypted: bool,
         #[arg(long)]

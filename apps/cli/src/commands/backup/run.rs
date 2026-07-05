@@ -10,21 +10,29 @@
 //! Backup branch dry-run planning.
 //!
 //! This command surface validates the writable branch binding, provider refs,
-//! pack manifest metadata, artifact protection evidence, and upload state. It
-//! intentionally does not read ledger facts, encrypt payloads, call providers,
-//! upload objects, mutate source control, or touch Projection Workspaces.
+//! pack manifest metadata, artifact protection evidence, and upload state. In
+//! dry-run mode it does not perform provider I/O. In non-dry-run mode it only
+//! uploads an explicitly supplied encrypted pack artifact after manifest/digest
+//! verification. It intentionally does not read ledger facts, encrypt payloads,
+//! mutate source control, or touch Projection Workspaces.
 
-use anyhow::bail;
+#[cfg(test)]
+use super::provider_io::FailClosedBackupPackUploader;
+use super::provider_io::{BackupPackUploadRequest, BackupPackUploader, RealBackupPackUploader};
+use anyhow::{Context, bail};
 use deve_core::backup::{
     BackupArtifactKind, BackupArtifactProtectionInput, BackupBindingAccess, BackupBindingStatus,
-    BackupBranchBindingInput, BackupCommandKind, BackupDigest, BackupLocator, BackupPackPlanInput,
-    BackupPlanEffect, BackupPlanInput, BackupProtectionMechanism, BackupProviderDispatchInput,
-    BackupSeqRange, BackupUploadEvidence, BackupUploadPlanInput, backup_command_plan,
-    dispatch_backup_provider_adapter, parse_backup_credential_ref, parse_backup_key_ref,
-    plan_backup_artifact_protection, plan_backup_branch_binding, plan_backup_pack,
-    plan_backup_upload, validate_backup_branch_bindings,
+    BackupBranchBindingInput, BackupCommandKind, BackupDigest, BackupLocator,
+    BackupPackArtifactUploadVerifyInput, BackupPackPlanInput, BackupPlanEffect, BackupPlanInput,
+    BackupProtectionMechanism, BackupProviderDispatchInput, BackupSeqRange, BackupUploadEvidence,
+    BackupUploadPlanInput, backup_command_plan, dispatch_backup_provider_adapter,
+    parse_backup_credential_ref, parse_backup_key_ref, plan_backup_artifact_protection,
+    plan_backup_branch_binding, plan_backup_pack, plan_backup_upload,
+    validate_backup_branch_bindings, verify_backup_pack_artifact_for_upload,
 };
 use deve_core::models::RepoId;
+use std::fs;
+use std::path::Path;
 
 #[cfg(test)]
 mod tests;
@@ -44,26 +52,35 @@ pub struct RunBackupCommandInput<'a> {
     pub ledger_event_count: u64,
     pub snapshot_count: u64,
     pub payload_digest: &'a str,
+    pub artifact_path: Option<&'a Path>,
     pub encrypted: bool,
     pub authenticated: bool,
     pub dry_run: bool,
 }
 
 pub fn run_backup(input: RunBackupCommandInput<'_>) -> anyhow::Result<()> {
-    for line in run_backup_lines(input)? {
+    let mut uploader = RealBackupPackUploader;
+    for line in run_backup_lines_with_uploader(input, &mut uploader)? {
         println!("{line}");
     }
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn run_backup_lines(input: RunBackupCommandInput<'_>) -> anyhow::Result<Vec<String>> {
-    if !input.dry_run {
-        bail!(
-            "backup run currently requires --dry-run because provider upload execution is not implemented"
-        );
+    let mut uploader = FailClosedBackupPackUploader;
+    run_backup_lines_with_uploader(input, &mut uploader)
+}
+
+pub(crate) fn run_backup_lines_with_uploader(
+    input: RunBackupCommandInput<'_>,
+    uploader: &mut dyn BackupPackUploader,
+) -> anyhow::Result<Vec<String>> {
+    if !input.dry_run && input.artifact_path.is_none() {
+        bail!("backup run provider upload requires --artifact with encrypted pack artifact bytes");
     }
     if !(input.encrypted && input.authenticated) {
-        bail!("backup run dry-run requires --encrypted and --authenticated protection evidence");
+        bail!("backup run requires --encrypted and --authenticated protection evidence");
     }
 
     let locator = BackupLocator::parse(input.locator)?;
@@ -104,17 +121,48 @@ pub(crate) fn run_backup_lines(input: RunBackupCommandInput<'_>) -> anyhow::Resu
         authenticated: input.authenticated,
         mechanism: BackupProtectionMechanism::AeadTag,
     })?;
+    let artifact_bytes = match (input.dry_run, input.artifact_path) {
+        (true, _) => None,
+        (false, Some(path)) => Some(read_artifact_bytes(path)?),
+        (false, None) => unreachable!("checked above"),
+    };
+    let mut evidence = BackupUploadEvidence {
+        pack_encrypted: true,
+        uploaded_payload_digest: None,
+        remote_manifest_payload_digest: None,
+        completion_recorded: false,
+    };
     let upload = plan_backup_upload(BackupUploadPlanInput {
         binding: binding.clone(),
         manifest: manifest.clone(),
         protection: Some(protection.clone()),
-        evidence: BackupUploadEvidence {
-            pack_encrypted: true,
-            uploaded_payload_digest: None,
-            remote_manifest_payload_digest: None,
-            completion_recorded: false,
-        },
+        evidence: evidence.clone(),
     })?;
+    let mut upload = upload;
+    let mut uploaded_bytes = None;
+    let mut provider_metadata_is_diagnostic_only = None;
+    if let Some(artifact_bytes) = artifact_bytes.as_deref() {
+        let uploaded_digest =
+            verify_backup_pack_artifact_for_upload(BackupPackArtifactUploadVerifyInput {
+                manifest: &manifest,
+                artifact_bytes,
+            })?;
+        let outcome = uploader.upload_pack(BackupPackUploadRequest {
+            locator: &locator,
+            credential_ref: &adapter.credential_ref,
+            object_path: &upload.pack_object_path,
+            artifact_bytes,
+        })?;
+        evidence.uploaded_payload_digest = Some(uploaded_digest);
+        upload = plan_backup_upload(BackupUploadPlanInput {
+            binding: binding.clone(),
+            manifest: manifest.clone(),
+            protection: Some(protection.clone()),
+            evidence,
+        })?;
+        uploaded_bytes = Some(outcome.uploaded_bytes);
+        provider_metadata_is_diagnostic_only = Some(outcome.provider_metadata_is_diagnostic_only);
+    }
     let plan = backup_command_plan(BackupPlanInput {
         command: BackupCommandKind::BackupBranch,
         binding_status: BackupBindingStatus::Writable,
@@ -126,7 +174,7 @@ pub(crate) fn run_backup_lines(input: RunBackupCommandInput<'_>) -> anyhow::Resu
         format!("command={:?}", plan.command),
         format!("effect={:?}", plan.effect),
         format!("dry_run={}", input.dry_run),
-        "artifact_io=false".to_string(),
+        format!("artifact_io={}", !input.dry_run),
         format!("adapter_provider={}", adapter.provider.protocol()),
         format!("credential_ref={}", adapter.credential_ref.redacted()),
         format!("key_ref={}", protection.key_ref().redacted()),
@@ -141,8 +189,33 @@ pub(crate) fn run_backup_lines(input: RunBackupCommandInput<'_>) -> anyhow::Resu
         format!("protection_kind={:?}", protection.artifact_kind()),
         format!("protection_mechanism={:?}", protection.mechanism()),
         format!("upload_state={:?}", upload.state),
+        format!(
+            "uploaded_bytes={}",
+            uploaded_bytes
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "<none>".to_string())
+        ),
+        format!(
+            "provider_metadata_diagnostic_only={}",
+            provider_metadata_is_diagnostic_only
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "<none>".to_string())
+        ),
         format!("writes_local_authority={}", plan.writes_local_authority),
     ])
+}
+
+fn read_artifact_bytes(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let bytes = fs::read(path).with_context(|| {
+        format!(
+            "failed to read encrypted backup pack artifact {}",
+            path.display()
+        )
+    })?;
+    if bytes.is_empty() {
+        bail!("backup run encrypted pack artifact file is empty");
+    }
+    Ok(bytes)
 }
 
 fn ledger_range(input: RunBackupCommandInput<'_>) -> anyhow::Result<Option<BackupSeqRange>> {

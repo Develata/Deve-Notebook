@@ -53,6 +53,7 @@ fn backup_run_accepts_upload_plan_args() {
                     ledger_end,
                     ledger_event_count,
                     payload_digest,
+                    artifact,
                     encrypted,
                     authenticated,
                     dry_run,
@@ -74,6 +75,7 @@ fn backup_run_accepts_upload_plan_args() {
                 payload_digest,
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             );
+            assert_eq!(artifact, None);
             assert!(encrypted);
             assert!(authenticated);
             assert!(dry_run);

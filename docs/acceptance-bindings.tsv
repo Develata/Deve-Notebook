@@ -126,6 +126,7 @@ STORE-016|manual-cli|docs/features/04_storage.md|watcher overflow/reconcile/debo
 STORE-017|manual-cli|docs/features/04_storage.md|repo catalog hard-fail / quarantine
 STORE-018|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup bind/unbind host-local secret-free metadata tests
 STORE-019|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup encrypted pack artifact verify-before-decrypt tests
+STORE-020|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup provider upload verifies encrypted pack artifact before PUT
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
 UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom

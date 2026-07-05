@@ -17,6 +17,7 @@ use deve_core::backup::{
 
 mod args;
 mod bind;
+mod provider_io;
 mod restore;
 mod run;
 mod unbind;

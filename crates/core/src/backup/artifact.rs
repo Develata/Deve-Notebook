@@ -84,6 +84,11 @@ pub struct BackupPackArtifactOpenInput<'a> {
     pub artifact_bytes: &'a [u8],
 }
 
+pub struct BackupPackArtifactUploadVerifyInput<'a> {
+    pub manifest: &'a BackupPackManifest,
+    pub artifact_bytes: &'a [u8],
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum BackupPackArtifactError {
     #[error("backup artifact key must be 32 bytes, got {0}")]
@@ -160,21 +165,36 @@ pub fn encrypt_backup_pack_artifact(
 pub fn decrypt_backup_pack_artifact(
     input: BackupPackArtifactOpenInput<'_>,
 ) -> Result<Vec<u8>, BackupPackArtifactError> {
-    let artifact: BackupEncryptedPackArtifact = serde_json::from_slice(input.artifact_bytes)
-        .map_err(|_| BackupPackArtifactError::DeserializeFailed)?;
-    artifact.validate_against_manifest(input.manifest)?;
-    let computed_digest = sha256_digest(input.artifact_bytes);
-    if !computed_digest.same_sha256(&input.manifest.payload_digest) {
-        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
-    }
-    artifact.validate_cipher_envelope()?;
-
+    let (artifact, _) = verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
     let nonce = Nonce::from_slice(&artifact.nonce);
     input
         .key
         .cipher()
         .decrypt(nonce, artifact.ciphertext.as_ref())
         .map_err(|_| BackupPackArtifactError::DecryptFailed)
+}
+
+pub fn verify_backup_pack_artifact_for_upload(
+    input: BackupPackArtifactUploadVerifyInput<'_>,
+) -> Result<BackupDigest, BackupPackArtifactError> {
+    let (_, computed_digest) =
+        verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
+    Ok(computed_digest)
+}
+
+fn verified_pack_artifact_for_manifest(
+    manifest: &BackupPackManifest,
+    artifact_bytes: &[u8],
+) -> Result<(BackupEncryptedPackArtifact, BackupDigest), BackupPackArtifactError> {
+    let artifact: BackupEncryptedPackArtifact = serde_json::from_slice(artifact_bytes)
+        .map_err(|_| BackupPackArtifactError::DeserializeFailed)?;
+    artifact.validate_against_manifest(manifest)?;
+    let computed_digest = sha256_digest(artifact_bytes);
+    if !computed_digest.same_sha256(&manifest.payload_digest) {
+        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
+    }
+    artifact.validate_cipher_envelope()?;
+    Ok((artifact, computed_digest))
 }
 
 impl BackupEncryptedPackArtifact {

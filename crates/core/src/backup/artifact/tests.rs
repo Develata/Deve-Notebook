@@ -103,6 +103,33 @@ fn backup_pack_artifact_rejects_tamper_before_decrypt() {
 }
 
 #[test]
+fn backup_pack_artifact_upload_verify_checks_digest_before_provider_io() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let artifact_bytes = artifact.to_bytes().unwrap();
+    let manifest = manifest_for(&artifact);
+
+    let digest = verify_backup_pack_artifact_for_upload(BackupPackArtifactUploadVerifyInput {
+        manifest: &manifest,
+        artifact_bytes: &artifact_bytes,
+    })
+    .unwrap();
+    assert!(digest.same_sha256(&manifest.payload_digest));
+
+    let mut tampered = artifact;
+    tampered.ciphertext[0] ^= 0x01;
+    let tampered_bytes = tampered.to_bytes().unwrap();
+    let err = verify_backup_pack_artifact_for_upload(BackupPackArtifactUploadVerifyInput {
+        manifest: &manifest,
+        artifact_bytes: &tampered_bytes,
+    })
+    .expect_err("tampered upload payload must be rejected before provider PUT");
+    assert_eq!(err, BackupPackArtifactError::ArtifactDigestMismatch);
+}
+
+#[test]
 fn backup_pack_artifact_rejects_wrong_key_after_verified_digest() {
     let key = artifact_key(7);
     let wrong_key = artifact_key(8);
