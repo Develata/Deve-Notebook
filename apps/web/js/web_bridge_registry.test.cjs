@@ -11,6 +11,10 @@ const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
 const gutterDiffSource = fs.readFileSync(path.join(root, "extensions", "gutter_diff.js"), "utf8");
 const initSource = fs.readFileSync(path.join(root, "init.js"), "utf8");
 const codeMenuSource = fs.readFileSync(path.join(root, "extensions", "code_menu.js"), "utf8");
+const nativeBackendBridgeSource = fs.readFileSync(
+  path.join(root, "native_backend_bridge.js"),
+  "utf8"
+);
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 
 const adapterBridgeNames = [
@@ -132,6 +136,54 @@ assert.throws(
   () => vm.runInNewContext(initSource, { window: {} }, { filename: "init.js" }),
   /web bridge registry unavailable before registering deve_code_actions/,
   "init bootstrap must fail closed without the registry"
+);
+
+const nativeBridgeRuntimeSource = nativeBackendBridgeSource.replace(
+  'import { invoke } from "@tauri-apps/api/core";',
+  "const invoke = async (command, args) => ({ command, args });"
+);
+const nativeBridgeRuntimeContext = {
+  window: {
+    __TAURI_INTERNALS__: {
+      invoke: () => undefined,
+    },
+  },
+};
+vm.runInNewContext(registrySource, nativeBridgeRuntimeContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(nativeBridgeRuntimeSource, nativeBridgeRuntimeContext, {
+  filename: "native_backend_bridge.js",
+});
+const nativeBackendEntries = nativeBridgeRuntimeContext.window.__deveWebBridge
+  .describe()
+  .filter((entry) => entry.name === "__DEVE_NATIVE_BACKEND_CONFIG__");
+assert.equal(
+  JSON.stringify(nativeBackendEntries),
+  JSON.stringify([
+    {
+      name: "__DEVE_NATIVE_BACKEND_CONFIG__",
+      meta: {
+        runtime: "native_shell_mode_runtime",
+        source: "native-backend-bridge",
+        authority: "none",
+        role: "host-local-backend-preference-facade",
+      },
+    },
+  ]),
+  "native backend config facade must be registered through the browser bridge registry"
+);
+assert.equal(
+  nativeBridgeRuntimeContext.window.__DEVE_NATIVE_BACKEND_CONFIG__.available(),
+  true,
+  "native backend facade must preserve Tauri invoke availability probing"
+);
+assert.throws(
+  () => vm.runInNewContext(nativeBridgeRuntimeSource, { window: {} }, {
+    filename: "native_backend_bridge.js",
+  }),
+  /web bridge registry unavailable before registering native backend config/,
+  "native backend bridge must fail closed without the registry"
 );
 
 const chatMathRuntimeContext = { window: {} };
@@ -355,6 +407,27 @@ assert.match(
   chatMathSource,
   /authority:\s*"none"/,
   "chat math bridge entries must not claim authority ownership"
+);
+
+assert.match(
+  nativeBackendBridgeSource,
+  /bridge\.register\("__DEVE_NATIVE_BACKEND_CONFIG__"/,
+  "native backend config facade must be registered through the browser bridge registry"
+);
+assert.match(
+  nativeBackendBridgeSource,
+  /runtime:\s*"native_shell_mode_runtime"/,
+  "native backend config facade must declare the native shell mode runtime"
+);
+assert.match(
+  nativeBackendBridgeSource,
+  /authority:\s*"none"/,
+  "native backend config facade must not claim authority ownership"
+);
+assert.doesNotMatch(
+  nativeBackendBridgeSource,
+  /window\.__DEVE_NATIVE_BACKEND_CONFIG__\s*=/,
+  "native backend config facade must not be assigned directly on window"
 );
 
 assert.match(
