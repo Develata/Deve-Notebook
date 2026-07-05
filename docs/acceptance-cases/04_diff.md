@@ -254,6 +254,9 @@
     - ui_assert: git_mirror_executable_repair_ui_deferred true
     - ui_assert: git_mirror_web_repair_writer_absent true
     - cli_assert: source_control_ngit_commit_queues_git_main_mirror true
+    - cli_assert: git_mirror_multiple_queued_records_terminal_projection true
+    - cli_assert: git_mirror_terminal_projection_mismatch_out_of_sync true
+    - cli_assert: git_mirror_terminal_commit_does_not_reuse_unmapped_head true
     - cli_assert: git_bridge_mode_config_absent true
     - api_assert: http_source_control_commit_always_queues_git_main_mirror true
     - api_assert: browser_http_source_control_requires_session_bound_grant true
