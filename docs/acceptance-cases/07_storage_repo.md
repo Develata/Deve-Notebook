@@ -279,4 +279,17 @@
     - cli_assert: backup_unbind_removes_host_local_metadata true
     - cli_assert: backup_dry_run_does_not_write_binding_state true
     - cli_assert: backup_binding_store_contains_no_secret_refs true
+
+- case_id: STORE-019
+  goal: Backup encrypted pack artifact 支持真实加密并强制 verify-before-decrypt。
+  preconditions:
+    - backup key material 由 runtime 解析后以内存 key 传入 core，不写入 locator/binding/manifest
+    - pack manifest payload_digest 指向 encrypted artifact bytes
+  steps:
+    - run: cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
+  assertions:
+    - cli_assert: backup_pack_artifact_ciphertext_differs_from_plaintext true
+    - cli_assert: backup_pack_manifest_digest_covers_encrypted_artifact true
+    - cli_assert: backup_pack_open_verifies_digest_before_decrypt true
+    - cli_assert: backup_pack_artifact_contains_no_secret_refs true
 ```

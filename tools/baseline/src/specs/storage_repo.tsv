@@ -36,6 +36,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-016	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_core remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_core remote_repo_listing_fails_closed_on_unexpected_non_redb_entry -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p deve_cli quarantines_nil_shadow_repo_into_invalid_peer_dir -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	run: scripts/check-storage-repo-baseline.sh

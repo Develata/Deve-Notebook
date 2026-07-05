@@ -58,6 +58,8 @@
 - `backup bind` / `backup unbind` 在未传 `--dry-run` 时只写 host-local
   backup binding metadata；该 metadata 不成为 repo authority，不得包含
   credential/key material，不得写 ledger、staging 或 Projection Workspace。
+- Backup pack artifact 必须先加密再进入上传状态；pack manifest 中的 payload
+  digest 用于 verify-before-decrypt，不是明文 payload digest。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
   或 Projection Workspace。
 

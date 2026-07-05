@@ -111,6 +111,18 @@ pack 内容可以包含：
 
 pack 内容不得绕过 ledger append 或 source-control authority 直接写入 Projection Workspace。
 
+pack artifact 字节级约束：
+
+- 上传到 provider 的 pack artifact MUST 是加密后的 artifact bytes，而不是明文
+  ledger/snapshot payload。
+- `BackupPackManifest.payload_digest` MUST 是序列化后的 encrypted pack artifact
+  bytes 的 sha256 digest；不得使用明文 payload digest 作为远端校验依据。
+- encrypted pack artifact 的明文字段只允许包含 routing / verification 所需的
+  `format_version / RepoId / writer_identity / branch_path / pack_sequence /
+  nonce / ciphertext`；不得包含 credential、key ref 或 key material。
+- restore 打开 pack 时 MUST 先校验 manifest、artifact routing metadata 与
+  `payload_digest`，只有 digest 匹配后才允许执行 decrypt。
+
 ### 3.4 Restore Candidate {#backup-restore-candidate-contract}
 
 Restore candidate 是下载、验证、解密后尚未导入的备份结果。
