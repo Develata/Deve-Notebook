@@ -92,7 +92,7 @@ pub(crate) enum BackupAction {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Plan backup restore flow from caller-supplied dry-run metadata
+    /// Plan restore flow or perform remote-readonly encrypted pack download admission
     Restore {
         #[arg(long)]
         locator: String,
@@ -106,6 +106,18 @@ pub(crate) enum BackupAction {
         manifest_digest: String,
         #[arg(long = "pack-digest")]
         pack_digests: Vec<String>,
+        #[arg(long = "credential-ref")]
+        credential_ref: Option<String>,
+        #[arg(long = "pack-sequence")]
+        pack_sequence: Option<u64>,
+        #[arg(long = "ledger-start")]
+        ledger_start: Option<u64>,
+        #[arg(long = "ledger-end")]
+        ledger_end: Option<u64>,
+        #[arg(long = "ledger-events")]
+        ledger_event_count: Option<u64>,
+        #[arg(long = "snapshot-count")]
+        snapshot_count: Option<u64>,
         #[arg(long, default_value = "remote-readonly")]
         mode: String,
         #[arg(long = "write-gate")]

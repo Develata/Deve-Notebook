@@ -19,8 +19,6 @@ use anyhow::bail;
 use deve_core::backup::{BackupLocator, BackupProviderKind, BackupSecretRef};
 
 pub(crate) const BACKUP_PACK_CONTENT_TYPE: &str = "application/vnd.deve.backup-pack+json";
-// Staged restore-download primitive: wired after manifest-backed restore pipeline lands.
-#[allow(dead_code)]
 pub(crate) const BACKUP_PACK_MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
 
 pub(crate) struct BackupPackUploadRequest<'a> {
@@ -43,7 +41,6 @@ pub(crate) trait BackupPackUploader {
     ) -> anyhow::Result<BackupPackUploadOutcome>;
 }
 
-#[allow(dead_code)]
 pub(crate) struct BackupPackDownloadRequest<'a> {
     pub locator: &'a BackupLocator,
     pub credential_ref: &'a BackupSecretRef,
@@ -52,14 +49,12 @@ pub(crate) struct BackupPackDownloadRequest<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub(crate) struct BackupPackDownloadOutcome {
     pub artifact_bytes: Vec<u8>,
     pub downloaded_bytes: usize,
     pub provider_metadata_is_diagnostic_only: bool,
 }
 
-#[allow(dead_code)]
 pub(crate) trait BackupPackDownloader {
     fn download_pack(
         &mut self,
@@ -91,10 +86,8 @@ impl BackupPackUploader for RealBackupPackUploader {
     }
 }
 
-#[allow(dead_code)]
 pub(crate) struct RealBackupPackDownloader;
 
-#[allow(dead_code)]
 impl BackupPackDownloader for RealBackupPackDownloader {
     fn download_pack(
         &mut self,

@@ -4,14 +4,19 @@
 //!   - 06_backup#backup-restore-candidate-contract
 //!   - 06_backup#backup-command-output-contract
 //!
-//! Backup restore dry-run flow planning.
+//! Backup restore flow planning and encrypted pack download admission.
 //!
-//! This command surface validates caller-supplied flow metadata without
-//! admitting a RestoreCandidate. Candidate admission requires typed manifest
-//! verification and decrypted pack evidence in core. This command intentionally
-//! does not download, decrypt, import, merge, append ledger state, or touch
-//! Projection Workspaces.
+//! This command surface validates caller-supplied flow metadata and can perform
+//! a remote-readonly provider download of encrypted pack bytes. Downloaded bytes
+//! are checked against manifest routing and digest metadata, then the command
+//! stops at PacksDownloaded evidence. Candidate admission still requires typed
+//! manifest verification and decrypted pack evidence in core. This command does
+//! not decrypt, import, merge, append ledger state, or touch Projection
+//! Workspaces.
 
+mod download;
+
+use super::provider_io::{BackupPackDownloader, RealBackupPackDownloader};
 use anyhow::bail;
 use deve_core::backup::{
     BackupBindingStatus, BackupCommandKind, BackupDigest, BackupLocator, BackupPlanEffect,
@@ -37,45 +42,61 @@ pub struct RestoreCommandInput<'a> {
     pub packs_downloaded: bool,
     pub packs_decrypted: bool,
     pub dry_run: bool,
+    pub credential_ref: Option<&'a str>,
+    pub pack_sequence: Option<u64>,
+    pub ledger_start: Option<u64>,
+    pub ledger_end: Option<u64>,
+    pub ledger_event_count: Option<u64>,
+    pub snapshot_count: Option<u64>,
 }
 
 pub fn restore(input: RestoreCommandInput<'_>) -> anyhow::Result<()> {
-    for line in restore_lines(input)? {
+    let mut downloader = RealBackupPackDownloader;
+    for line in restore_lines_with_downloader(input, &mut downloader)? {
         println!("{line}");
     }
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Vec<String>> {
-    if !input.dry_run {
-        bail!(
-            "backup restore currently requires --dry-run because provider IO and import/merge execution are not implemented"
-        );
+    let mut downloader = FailClosedRestoreDownloader;
+    restore_lines_with_downloader(input, &mut downloader)
+}
+
+pub(crate) fn restore_lines_with_downloader(
+    input: RestoreCommandInput<'_>,
+    downloader: &mut dyn BackupPackDownloader,
+) -> anyhow::Result<Vec<String>> {
+    let context = RestoreContext::parse(input)?;
+    if requires_write_gate(context.admission_mode) && !input.write_gate {
+        bail!("backup restore explicit import or merge requires an explicit write gate");
     }
+
+    if input.dry_run {
+        return restore_dry_run_lines(input, &context);
+    }
+
+    download::restore_download_lines(input, downloader, &context)
+}
+
+fn restore_dry_run_lines(
+    input: RestoreCommandInput<'_>,
+    context: &RestoreContext,
+) -> anyhow::Result<Vec<String>> {
     if !(input.manifest_verified && input.packs_downloaded && input.packs_decrypted) {
         bail!(
             "backup restore dry-run requires --manifest-verified, --packs-downloaded, and --packs-decrypted evidence"
         );
     }
 
-    let locator = BackupLocator::parse(input.locator)?;
-    let branch = locator.branch_locator(input.branch)?;
-    let repo_id: RepoId = input.repo_id.parse()?;
-    let manifest_repo_id: RepoId = input.manifest_repo_id.parse()?;
-    let manifest_digest = BackupDigest::sha256(input.manifest_digest);
-    let pack_digests = parse_pack_digests(input.pack_digests);
-    let (admission_mode, effect) = parse_mode(input.mode)?;
-    if requires_write_gate(admission_mode) && !input.write_gate {
-        bail!("backup restore explicit import or merge requires an explicit write gate");
-    }
-
     let flow = plan_backup_restore_flow(BackupRestoreFlowInput {
-        expected_repo_id: repo_id,
-        manifest_repo_id: Some(manifest_repo_id),
-        writer_identity: branch.writer_identity.clone(),
-        branch_path: branch.branch_path.clone(),
-        manifest_digest: Some(manifest_digest.clone()),
-        pack_digests: pack_digests.clone(),
+        expected_repo_id: context.repo_id,
+        manifest_repo_id: Some(context.manifest_repo_id),
+        writer_identity: context.writer_identity.clone(),
+        branch_path: context.branch_path.clone(),
+        manifest_digest: Some(context.manifest_digest.clone()),
+        pack_digests: context.pack_digests.clone(),
         evidence: BackupRestoreFlowEvidence {
             remote_discovered: true,
             manifest_verified: input.manifest_verified,
@@ -83,29 +104,32 @@ pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Ve
             packs_decrypted: input.packs_decrypted,
             candidate_admitted: false,
         },
-        admission_mode,
+        admission_mode: context.admission_mode,
         write_gate_confirmed: input.write_gate,
         local_ledger_append_requested: false,
     })?;
     let plan = backup_command_plan(BackupPlanInput {
         command: BackupCommandKind::RestoreBackup,
         binding_status: BackupBindingStatus::Unbound,
-        effect,
+        effect: context.effect,
     })?;
 
     Ok(vec![
-        format!("backup_locator: provider={}", locator.provider.protocol()),
+        format!(
+            "backup_locator: provider={}",
+            context.locator.provider.protocol()
+        ),
         format!("command={:?}", plan.command),
         format!("effect={:?}", plan.effect),
         format!("dry_run={}", input.dry_run),
         "artifact_io=false".to_string(),
         format!("repo_id={}", flow.repo_id),
-        format!("branch_writer={}", flow.writer_identity),
-        format!("branch_path={}", flow.branch_path),
+        format!("branch_writer={}", context.writer_identity),
+        format!("branch_path={}", context.branch_path),
         format!("restore_flow_state={:?}", flow.state),
         format!("admission_mode={:?}", flow.admission_mode),
         "candidate_admission=typed_verification_and_decrypted_evidence_required".to_string(),
-        format!("manifest_digest={}", manifest_digest.hex),
+        format!("manifest_digest={}", context.manifest_digest.hex),
         format!("pack_count={}", flow.pack_count),
         format!("write_gate_confirmed={}", input.write_gate),
         format!("writes_local_authority={}", plan.writes_local_authority),
@@ -144,4 +168,78 @@ fn requires_write_gate(mode: RestoreAdmissionMode) -> bool {
         mode,
         RestoreAdmissionMode::ExplicitImport | RestoreAdmissionMode::ExplicitMerge
     )
+}
+
+pub(super) struct RestoreContext {
+    pub locator: BackupLocator,
+    pub writer_identity: String,
+    pub branch_path: String,
+    pub repo_id: RepoId,
+    pub manifest_repo_id: RepoId,
+    pub manifest_digest: BackupDigest,
+    pub pack_digests: Vec<BackupDigest>,
+    pub admission_mode: RestoreAdmissionMode,
+    pub effect: BackupPlanEffect,
+}
+
+impl RestoreContext {
+    fn parse(input: RestoreCommandInput<'_>) -> anyhow::Result<Self> {
+        let locator = BackupLocator::parse(input.locator)?;
+        let branch = locator.branch_locator(input.branch)?;
+        let repo_id: RepoId = input.repo_id.parse()?;
+        let manifest_repo_id: RepoId = input.manifest_repo_id.parse()?;
+        let manifest_digest = BackupDigest::sha256(input.manifest_digest);
+        let pack_digests = parse_pack_digests(input.pack_digests);
+        let (admission_mode, effect) = parse_mode(input.mode)?;
+
+        Ok(Self {
+            locator,
+            writer_identity: branch.writer_identity,
+            branch_path: branch.branch_path,
+            repo_id,
+            manifest_repo_id,
+            manifest_digest,
+            pack_digests,
+            admission_mode,
+            effect,
+        })
+    }
+}
+
+pub(super) fn required_str<'a>(value: Option<&'a str>, flag: &str) -> anyhow::Result<&'a str> {
+    value.ok_or_else(|| anyhow::anyhow!("backup restore provider download requires {flag}"))
+}
+
+pub(super) fn required_u64(value: Option<u64>, flag: &str) -> anyhow::Result<u64> {
+    value.ok_or_else(|| anyhow::anyhow!("backup restore provider download requires {flag}"))
+}
+
+pub(super) fn ledger_range(
+    ledger_start: Option<u64>,
+    ledger_end: Option<u64>,
+    ledger_event_count: u64,
+) -> anyhow::Result<Option<deve_core::backup::BackupSeqRange>> {
+    if ledger_event_count == 0 {
+        if ledger_start.is_some() || ledger_end.is_some() {
+            bail!("backup restore ledger range requires --ledger-events greater than zero");
+        }
+        return Ok(None);
+    }
+
+    let start = required_u64(ledger_start, "--ledger-start")?;
+    let end = required_u64(ledger_end, "--ledger-end")?;
+    Ok(Some(deve_core::backup::BackupSeqRange { start, end }))
+}
+
+#[cfg(test)]
+struct FailClosedRestoreDownloader;
+
+#[cfg(test)]
+impl BackupPackDownloader for FailClosedRestoreDownloader {
+    fn download_pack(
+        &mut self,
+        _request: super::provider_io::BackupPackDownloadRequest<'_>,
+    ) -> anyhow::Result<super::provider_io::BackupPackDownloadOutcome> {
+        bail!("backup provider download is unavailable in this execution path")
+    }
 }

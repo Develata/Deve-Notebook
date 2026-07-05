@@ -310,19 +310,25 @@
     - cli_assert: backup_run_writes_no_local_authority true
 
 - case_id: STORE-021
-  goal: Backup provider download 只读取 encrypted artifact bytes，不能跳过 restore admission。
+  goal: Backup provider download 只读取 encrypted artifact bytes，且只能进入 PacksDownloaded evidence。
   preconditions:
     - branch manifest pack refs 已指向 provider object path
     - provider credential ref 指向 env resolver
   steps:
     - run: cargo test -p deve_cli provider_io -- --nocapture
     - run: cargo test -p deve_cli backup_restore -- --nocapture
-    - run: cargo test -p deve_cli requires_dry_run_and_known_mode -- --nocapture
+    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
   assertions:
     - cli_assert: backup_provider_download_returns_encrypted_bytes_only true
     - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
     - cli_assert: backup_provider_download_does_not_write_local_authority true
-    - cli_assert: backup_restore_non_dry_run_still_fail_closed_without_manifest_backed_pipeline true
+    - cli_assert: backup_restore_download_verifies_manifest_digest_and_routing true
+    - cli_assert: backup_restore_download_stops_before_decrypt_or_candidate true
+    - cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
+    - cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
+    - cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
+    - cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
+    - cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
 
 - case_id: STORE-022
   goal: Backup downloaded artifact 必须先通过 manifest/routing/digest 校验且不得解密。
