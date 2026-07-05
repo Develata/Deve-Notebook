@@ -5,11 +5,11 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-07-05`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (DR/恢复步骤)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
-- `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (REL-002)`
+- `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (REL-013)`
 - `Primary Code Areas`: `crates/core/src/` 各 runtime 的 tracing / log / metric 实现位置；`apps/cli/src/server/` observability endpoint
 
 ## 1. Scope & Authority {#reliability-observability-scope}

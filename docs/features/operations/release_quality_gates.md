@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.release.quality-gates`
 - `Domain`: `release`
 - `Related Feature Chapters`: `docs/features/15_release.md`, `docs/features/14_tech_stack.md`
-- `Related Acceptance Cases`: `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`
+- `Related Acceptance Cases`: `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
 
 ## Operations
 
@@ -72,14 +72,23 @@
 - `Immediate Result`: degraded write gates, stale sync-scope cleanup, reconnect gates, and auth-probe separation are verified
 - `Application Entry`: `scripts/smoke-runtime-recovery-path.sh`
 
+### `op.release.quality.run-reliability-observability-baseline`
+
+- `Name`: `Run Reliability / Observability Governance Baseline`
+- `Surface`: `github-actions`, `local-or-ci-script`
+- `Trigger`: maintainer or CI verifies governance contracts before release
+- `Preconditions`: `docs/plan/22_reliability_observability.md` and Rust baseline checker are readable
+- `Immediate Result`: SLO/SLI, telemetry schema, metric taxonomy, tracing boundary, health mapping, alert tier, and DR index drift block release checks
+- `Application Entry`: `scripts/check-reliability-observability-baseline.sh`, `tools/baseline/src/reliability_observability.rs`
+
 ## Response Flow
 
 1. Release dispatch enters the `test` job.
 2. Instruction interface is the CI job surface and its ordered verification steps.
-3. Flow coordination enforces lint, web WASM compatibility, dependency audit, and test gates before publish; runtime happy-path and recovery smokes remain explicit local/CI script gates.
-4. Execution domains are CI release logic, quality gates, and runtime budget policy.
+3. Flow coordination enforces lint, web WASM compatibility, dependency audit, governance baselines, and test gates before publish; runtime happy-path and recovery smokes remain explicit local/CI script gates.
+4. Execution domains are CI release logic, quality gates, runtime budget policy, and reliability/observability governance.
 
 ## Notes
 
-- Current workflow explicitly models `clippy`, `deve_web` WASM check, dependency audit, and `cargo test`; runtime smoke scripts are local/CI gates that can be run before broader release verification.
-- Main objects: `quality::gate`, `ci::workflow`, `runtime::budget`.
+- Current workflow explicitly models `clippy`, `deve_web` WASM check, dependency audit, governance baseline checks, and `cargo test`; runtime smoke scripts are local/CI gates that can be run before broader release verification.
+- Main objects: `quality::gate`, `ci::workflow`, `runtime::budget`, `observability::contract`.

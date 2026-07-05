@@ -987,6 +987,7 @@ scripts/check-repo-file-ops-baseline.sh
 scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-perf-budget-baseline.sh
+scripts/check-reliability-observability-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-native-process-adapter-gate.sh

@@ -53,6 +53,7 @@ jobs:
           scripts/plan-coverage.sh --check-metadata-completeness
           scripts/plan-coverage.sh --check-perf-budget
           scripts/check-perf-budget-baseline.sh
+          scripts/check-reliability-observability-baseline.sh
           scripts/plan-coverage.sh --check-no-adr-plan-ref
           scripts/plan-coverage.sh --check-md-links
           scripts/plan-coverage-selftest.sh

@@ -1,0 +1,62 @@
+contains	docs/plan/22_reliability_observability.md	- `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index`
+contains	docs/plan/22_reliability_observability.md	- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (DR/恢复步骤)`
+contains	docs/plan/22_reliability_observability.md	## 2. SLO / SLI Catalog
+contains	docs/plan/22_reliability_observability.md	| Edit-ack 可用性 | `ack` 成功率（非 `SYNC_EDIT_REJECTED` 协议错误占比） | ≥ 99.5% / 7d | 0.5% / 7d |
+contains	docs/plan/22_reliability_observability.md	| Edit-ack 延迟 | P99 edit→ack（对照 `21_perf_budget`） | 达标率 ≥ 99% | 1% / 7d |
+contains	docs/plan/22_reliability_observability.md	| Sync 成功率 | sync-transfer apply 成功 / 总尝试 | ≥ 99% / 7d | 1% / 7d |
+contains	docs/plan/22_reliability_observability.md	| Repair 收敛 | repair 后 repo 回到 `Healthy` 占比 | ≥ 95% / 30d | 5% / 30d |
+contains	docs/plan/22_reliability_observability.md	| Cold mount 可用性 | cold mount 成功且 ≤ P99（§ `21_perf_budget`） | ≥ 99% / 7d | 1% / 7d |
+contains	docs/plan/22_reliability_observability.md	SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值。
+contains	docs/plan/22_reliability_observability.md	## 3. Telemetry Schema
+contains	docs/plan/22_reliability_observability.md	| `ts` | RFC3339 | MUST | 事件时间戳 |
+contains	docs/plan/22_reliability_observability.md	| `level` | enum(`error`/`warn`/`info`/`debug`) | MUST | 级别 |
+contains	docs/plan/22_reliability_observability.md	| `runtime` | string | MUST | 产生事件的 runtime（authority/projection/watcher/repair/sync/auth…） |
+contains	docs/plan/22_reliability_observability.md	| `scope_nonce` | int | SHOULD | 当前 `scope_nonce`（写路径事件 MUST） |
+contains	docs/plan/22_reliability_observability.md	| `error_code` | string | 条件 | 失败事件 MUST；取值唯一引用 `13_i18n#i18n-error-code-catalog`，本章不定义 |
+contains	docs/plan/22_reliability_observability.md	| `span_id` / `trace_id` | string | SHOULD | 关联 §4 tracing span |
+contains	docs/plan/22_reliability_observability.md	## 4. Metrics Taxonomy
+contains	docs/plan/22_reliability_observability.md	命名前缀 `deve_<runtime>_<subject>_<unit>`。
+contains	docs/plan/22_reliability_observability.md	`deve_edit_ack_latency_ms`
+contains	docs/plan/22_reliability_observability.md	`deve_open_doc_latency_ms`
+contains	docs/plan/22_reliability_observability.md	高基数标签（如 doc_id）**MUST NOT** 作为标签。
+contains	docs/plan/22_reliability_observability.md	## 5. Tracing Span Boundary
+contains	docs/plan/22_reliability_observability.md	每个 **Flow Coordination**（第三层）入口开一个 **root span**
+contains	docs/plan/22_reliability_observability.md	跨 Web↔CLI 的写确认链（edit→ack）SHOULD 透传 `trace_id`
+contains	docs/plan/22_reliability_observability.md	## 6. Observation-to-Health Mapping
+contains	docs/plan/22_reliability_observability.md	本节只声明「什么观测对应哪个已定义状态」，不新增状态、不定义迁移。
+contains	docs/plan/22_reliability_observability.md	| Projection Locator 缺失 / 冲突 | `DegradedLocator` |
+contains	docs/plan/22_reliability_observability.md	| 全部校验通过、authority 与 projection 一致 | `Healthy` |
+contains	docs/plan/22_reliability_observability.md	### 6.1 DurableProjectionFault Boundary
+contains	docs/plan/22_reliability_observability.md	它 **不是** ledger authority，不能新增、撤销或改写业务事实
+contains	docs/plan/22_reliability_observability.md	## 7. Alerting Tier
+contains	docs/plan/22_reliability_observability.md	| `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`、`STORAGE_DB_LOCKED`、`SYNC_DECRYPT_FAILED`（数据完整性，显式纳入） | 立即 page + 阻断发布 |
+contains	docs/plan/22_reliability_observability.md	| `T2` 警告 | 409 冲突 / 作用域失效 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH` | 工单 + 观察 Error Budget |
+contains	docs/plan/22_reliability_observability.md	| `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
+contains	docs/plan/22_reliability_observability.md	`Quarantined` → `T1`
+contains	docs/plan/22_reliability_observability.md	其余 `Degraded*` → `T2`
+contains	docs/plan/22_reliability_observability.md	## 8. DR Playbook Index
+contains	docs/plan/22_reliability_observability.md	`06_backup#backup-restore-candidate-contract`
+contains	docs/coverage-matrix.md	| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |
+contains	docs/features/operation-coverage.md	| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013` |
+contains	docs/features/operations/release_quality_gates.md	- `Related Acceptance Cases`: `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
+contains	docs/features/operations/release_quality_gates.md	### `op.release.quality.run-reliability-observability-baseline`
+contains	docs/features/15_release.md	`REL-013` reliability/observability governance baseline
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	scripts/check-reliability-observability-baseline.sh
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	cargo run -p deve_baseline -- reliability-observability
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: slo_sli_catalog_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: telemetry_schema_required_fields_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: metrics_taxonomy_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: high_cardinality_metric_labels_forbidden true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: tracing_span_boundary_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: observation_health_mapping_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: alerting_tier_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: dr_playbook_index_bound true
+contains	scripts/check-reliability-observability-baseline.sh	run_deve_baseline "$ROOT_DIR" "reliability-observability" "reliability-observability-baseline-check"
+contains	scripts/AGENTS.md	`check-reliability-observability-baseline.sh`
+contains	scripts/check-deep-audit-gate.sh	scripts/check-reliability-observability-baseline.sh
+contains	.github/workflows/check.yml	scripts/check-reliability-observability-baseline.sh
+contains	.github/workflows/release.yml	scripts/check-reliability-observability-baseline.sh
+contains	tools/baseline/src/main.rs	mod reliability_observability;
+contains	tools/baseline/src/main.rs	"reliability-observability" => reliability_observability::run()
+contains	tools/baseline/src/main.rs	reliability_observability::run_text()?
+contains	tools/baseline/src/main.rs	reliability_observability::run()?

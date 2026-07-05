@@ -47,10 +47,10 @@
 | --- | --- | --- | --- |
 | `20_operations_catalog` | `operation-coverage.md`（章 20 的投影） | `14_operation_flow_refs` / `00_index`（op-flow ↔ case 绑定） | operation bijection（`check-architecture-registry.sh`）+ `--check-reverse-coverage` |
 | `21_perf_budget` | `operation-coverage.md`（perf-sensitive flows） | `12_tech_release`（`PERF-001`） | `plan-coverage.sh --check-perf-budget` |
-| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-002`） | `--check-reverse-coverage` + `--check-metadata-completeness` |
+| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |
 | `23_threat_model` | `operation-coverage.md`（auth / security flows） | `10_plugins`（`PLUG-001`）、`08_auth`（`AUTH-*`） | `--check-no-adr-plan-ref` + auth/security automation |
 
-> 上述治理 acceptance 用例（`PERF-001` / `REL-002` / `PLUG-001` / `AUTH-*`）均已在所列
+> 上述治理 acceptance 用例（`PERF-001` / `REL-013` / `PLUG-001` / `AUTH-*`）均已在所列
 > `docs/acceptance-cases/` 文件中定义并绑定（automated / walkthrough），由
 > `scripts/check-acceptance-bindings.sh` 校验（0 unbound）。
 

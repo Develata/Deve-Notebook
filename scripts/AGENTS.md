@@ -64,6 +64,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-dev-runbook-baseline.sh` | Verifies current startup, auth, frontend, Chrome MCP, search, and verification runbook boundaries |
 | `check-feature-operation-paths.sh` | Verifies feature operation and acceptance docs do not point at removed source/script/doc paths |
 | `check-i18n-formatting-baseline.sh` | Verifies visible frontend time formatting goes through the locale-aware formatting utility |
+| `check-reliability-observability-baseline.sh` | Verifies reliability/observability governance covers SLO/SLI, telemetry schema, metrics taxonomy, tracing, health mapping, alert tier, and DR index |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
 | `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |
 | `smoke-web-runtime-paths.sh` | Prints the repeatable CMD-007A/CMD-007B browser runtime smoke command sequence |

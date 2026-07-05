@@ -67,6 +67,7 @@ baseline_scripts=(
   scripts/check-source-control-smoke-hygiene.sh
   scripts/check-repo-file-ops-baseline.sh
   scripts/check-dev-data-health-baseline.sh
+  scripts/check-reliability-observability-baseline.sh
   scripts/check-graph-baseline.sh
   scripts/check-diff-color-baseline.sh
   scripts/check-large-doc-baseline.sh

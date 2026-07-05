@@ -280,4 +280,23 @@
     - stdout_contains: "deve_baseline -- all"
     - release_assert: push_ci_check_only true
     - release_assert: push_ci_no_package_publish_or_production true
+
+- case_id: REL-013
+  goal: Reliability / Observability 治理合同可由发布前基线验证。
+  preconditions:
+    - `docs/plan/22_reliability_observability.md` 可读
+    - Rust baseline checker 可运行
+  steps:
+    - run: scripts/check-reliability-observability-baseline.sh
+    - run: cargo run -p deve_baseline -- reliability-observability
+  assertions:
+    - stdout_contains: "reliability-observability-baseline-check: ok"
+    - contract_assert: slo_sli_catalog_bound true
+    - contract_assert: telemetry_schema_required_fields_bound true
+    - contract_assert: metrics_taxonomy_bound true
+    - contract_assert: high_cardinality_metric_labels_forbidden true
+    - contract_assert: tracing_span_boundary_bound true
+    - contract_assert: observation_health_mapping_bound true
+    - contract_assert: alerting_tier_bound true
+    - contract_assert: dr_playbook_index_bound true
 ```
