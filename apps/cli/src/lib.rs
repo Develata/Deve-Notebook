@@ -6,6 +6,8 @@
 //! Library entrypoints shared by native shells.
 
 mod admin_api;
+#[allow(dead_code)]
+mod commands;
 mod dump_support;
 mod export_entries;
 mod graph_projection;

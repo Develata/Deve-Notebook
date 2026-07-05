@@ -22,10 +22,15 @@ mod restore;
 mod run;
 mod unbind;
 
+#[allow(unused_imports)]
 pub(crate) use args::BackupAction;
+#[allow(unused_imports)]
 pub use bind::{BindBackupCommandInput, bind};
+#[allow(unused_imports)]
 pub use restore::{RestoreCommandInput, restore};
+#[allow(unused_imports)]
 pub use run::{RunBackupCommandInput, run_backup};
+#[allow(unused_imports)]
 pub use unbind::{UnbindBackupCommandInput, unbind};
 
 pub fn inspect(

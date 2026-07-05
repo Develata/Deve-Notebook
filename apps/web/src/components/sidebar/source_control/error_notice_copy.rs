@@ -3,10 +3,11 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::source_control_notice::{
-    SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-    is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
-    is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
-    is_git_status_cli_notice, is_remote_projection_provider_io_pending_notice,
+    REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, SourceControlNotice, deleted_no_doc_id_path,
+    is_deleted_no_doc_id_notice, is_establish_branch_unavailable_notice, is_git_export_cli_notice,
+    is_git_import_cli_notice, is_git_mirror_cli_notice, is_git_push_cli_notice,
+    is_git_repair_cli_notice, is_git_status_cli_notice,
+    is_remote_projection_provider_io_pending_notice,
     is_remote_projection_session_unavailable_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
@@ -100,6 +101,11 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
 }
 
 pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
+    if is_remote_projection_provider_io_pending_notice(notice) {
+        return remote_projection_provider_io_detail(notice)
+            .into_iter()
+            .collect();
+    }
     if is_git_push_cli_notice(notice) {
         return sc::git_push_cli_only_details(locale)
             .into_iter()
@@ -113,6 +119,15 @@ pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
             .collect();
     }
     Vec::new()
+}
+
+fn remote_projection_provider_io_detail(notice: &SourceControlNotice) -> Option<String> {
+    let detail = notice.detail.as_deref()?;
+    let suffix = detail
+        .strip_prefix(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)?
+        .trim_start_matches([';', ' '])
+        .trim();
+    (!suffix.is_empty()).then(|| suffix.to_string())
 }
 
 #[cfg(test)]
@@ -209,6 +224,23 @@ mod tests {
         );
         assert!(hint(Locale::En, &notice).contains("provider_io_ready=false"));
         assert!(hint(Locale::Zh, &notice).contains("External Changes"));
+    }
+
+    #[test]
+    fn remote_projection_notice_details_surface_backend_reason() {
+        let notice = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(format!(
+                "{}; current repo_url does not match selected provider",
+                crate::hooks::use_core::source_control_notice::REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL
+            )),
+        };
+
+        assert!(
+            details(Locale::En, &notice)
+                .iter()
+                .any(|line| line.contains("repo_url does not match"))
+        );
     }
 
     #[test]

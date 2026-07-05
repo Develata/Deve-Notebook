@@ -1,5 +1,6 @@
 use super::transport::{WebDavHttpResponse, WebDavTransport};
 use super::*;
+use crate::commands::projection_remote::workspace_apply::write_pull_files;
 use deve_core::remote_projection::{
     RemoteProjectionFile, RemoteProjectionProvider, RemoteProjectionProviderAdapter,
     RemoteProjectionProviderError, RemoteProjectionPullRequest, RemoteProjectionPushRequest,
@@ -134,9 +135,10 @@ fn webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_
         .pull_projection_files(
             RemoteProjectionProvider::WebDav,
             "webdav+https://dav.example.com/notebooks/main",
-            dir.path(),
         )
         .expect("pull");
+    let applied = write_pull_files(dir.path(), &outcome.files).expect("workspace apply");
+    applied.commit();
 
     assert_eq!(outcome.files.len(), 2);
     assert!(!outcome.effects.writes_ledger);
@@ -193,13 +195,13 @@ fn webdav_pull_rejects_partial_apply_without_overwriting_existing_file() {
         .with_get_body(b"blocked".to_vec());
     let provider = WebDavProjectionProvider::new_for_test(transport);
 
-    let err = provider
+    let outcome = provider
         .pull_projection_files(
             RemoteProjectionProvider::WebDav,
             "webdav+https://dav.example.com/notebooks/main",
-            dir.path(),
         )
-        .expect_err("blocked parent");
+        .expect("pull files");
+    let err = write_pull_files(dir.path(), &outcome.files).expect_err("blocked parent");
 
     assert!(
         err.to_string()
@@ -227,7 +229,6 @@ fn webdav_pull_rejects_oversized_file_before_workspace_write() {
         .pull_projection_files(
             RemoteProjectionProvider::WebDav,
             "webdav+https://dav.example.com/notebooks/main",
-            dir.path(),
         )
         .expect_err("oversized body");
 
@@ -250,13 +251,13 @@ fn webdav_pull_rejects_symlinked_parent_when_supported() {
         .with_get_body(b"escape".to_vec());
     let provider = WebDavProjectionProvider::new_for_test(transport);
 
-    let err = provider
+    let outcome = provider
         .pull_projection_files(
             RemoteProjectionProvider::WebDav,
             "webdav+https://dav.example.com/notebooks/main",
-            dir.path(),
         )
-        .expect_err("symlink parent");
+        .expect("pull files");
+    let err = write_pull_files(dir.path(), &outcome.files).expect_err("symlink parent");
 
     assert!(err.to_string().contains("symlink"));
     assert!(!outside.path().join("a.md").exists());

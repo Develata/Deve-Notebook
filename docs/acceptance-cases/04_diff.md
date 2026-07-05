@@ -216,6 +216,8 @@
     - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
+    - run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
+    - run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
@@ -331,6 +333,8 @@
     - api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
     - cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
     - cli_assert: webdav_pull_provider_io_ready true
+    - api_assert: web_remote_projection_uses_repo_url_locator true
+    - api_assert: web_remote_projection_missing_transport_url_fails_closed true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true

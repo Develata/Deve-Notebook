@@ -144,7 +144,10 @@ pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> b
 }
 
 pub fn is_remote_projection_provider_io_pending_notice(notice: &SourceControlNotice) -> bool {
-    notice.detail.as_deref() == Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
+    notice
+        .detail
+        .as_deref()
+        .is_some_and(|detail| detail.starts_with(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL))
 }
 
 pub fn is_remote_projection_session_unavailable_notice(notice: &SourceControlNotice) -> bool {

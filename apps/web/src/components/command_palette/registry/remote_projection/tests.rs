@@ -30,11 +30,7 @@ fn remote_projection_commands_are_backend_intent_entries() {
                 .all(|command| !command.availability.is_unavailable())
         );
         assert!(commands[1].title.contains("webdav:pull"));
-        assert!(
-            commands[1]
-                .detail_text()
-                .contains("provider_io_ready=false")
-        );
+        assert!(commands[1].detail_text().contains("current repo URL"));
         assert!(commands[1].detail_text().contains("External Changes"));
     });
 }

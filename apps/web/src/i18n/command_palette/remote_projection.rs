@@ -35,10 +35,10 @@ pub fn s3_pull(locale: Locale) -> &'static str {
 pub fn remote_projection_backend_intent(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Sends a backend/core remote projection intent; provider_io_ready=false until provider I/O is wired, and pull must enter External Changes."
+            "Sends a backend/core remote projection intent; the backend uses the current repo URL as locator, and pull must enter External Changes."
         }
         Locale::Zh => {
-            "发送 backend/core remote projection intent；provider I/O 接线前 provider_io_ready=false，pull 必须进入 External Changes。"
+            "发送 backend/core remote projection intent；后端使用当前 repo URL 作为 locator，pull 必须进入 External Changes。"
         }
     }
 }

@@ -133,7 +133,7 @@ contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_custom_https_
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_signed_request_matches_golden_vector()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_signed_get_request_includes_canonical_query()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_signed_request_changes_with_payload()
-contains	apps/cli/src/commands/projection_remote/workspace_apply.rs	fn write_pull_files_overwrites_existing_file_without_temp_artifacts()
+contains	apps/cli/src/commands/projection_remote/workspace_apply_tests.rs	fn write_pull_files_overwrites_existing_file_without_temp_artifacts()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_push_returns_provider_error_before_success_report()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()

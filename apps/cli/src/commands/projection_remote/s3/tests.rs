@@ -1,6 +1,7 @@
 use super::provider::S3ProjectionProvider;
 use super::pull::S3ProjectionPullAdapter;
 use super::url::{s3_file_url, s3_list_url};
+use crate::commands::projection_remote::workspace_apply::write_pull_files;
 use deve_core::remote_projection::{
     RemoteProjectionFile, RemoteProjectionProvider, RemoteProjectionProviderAdapter,
     RemoteProjectionPullRequest, RemoteProjectionPushRequest,
@@ -92,12 +93,10 @@ fn s3_pull_downloads_markdown_files_and_writes_projection_workspace_without_auth
         S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
 
     let outcome = provider
-        .pull_projection_files(
-            RemoteProjectionProvider::S3,
-            "s3://bucket/notebooks/main",
-            dir.path(),
-        )
+        .pull_projection_files(RemoteProjectionProvider::S3, "s3://bucket/notebooks/main")
         .expect("pull");
+    let applied = write_pull_files(dir.path(), &outcome.files).expect("workspace apply");
+    applied.commit();
 
     assert_eq!(outcome.files.len(), 2);
     assert!(!outcome.effects.writes_ledger);
@@ -162,13 +161,10 @@ fn s3_pull_rejects_partial_apply_without_overwriting_existing_file() {
     let provider =
         S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
 
-    let err = provider
-        .pull_projection_files(
-            RemoteProjectionProvider::S3,
-            "s3://bucket/notebooks/main",
-            dir.path(),
-        )
-        .expect_err("blocked parent");
+    let outcome = provider
+        .pull_projection_files(RemoteProjectionProvider::S3, "s3://bucket/notebooks/main")
+        .expect("pull files");
+    let err = write_pull_files(dir.path(), &outcome.files).expect_err("blocked parent");
 
     assert!(
         err.to_string()
@@ -191,11 +187,7 @@ fn s3_pull_rejects_oversized_file_before_workspace_write() {
         S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
 
     let err = provider
-        .pull_projection_files(
-            RemoteProjectionProvider::S3,
-            "s3://bucket/notebooks/main",
-            dir.path(),
-        )
+        .pull_projection_files(RemoteProjectionProvider::S3, "s3://bucket/notebooks/main")
         .expect_err("oversized body");
 
     assert!(err.to_string().contains("S3 response body exceeds"));

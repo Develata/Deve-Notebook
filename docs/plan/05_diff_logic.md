@@ -152,6 +152,10 @@ RemoteProjectionCommand
   `provider_io_ready=true`。不得把 admission plan 输出伪装成已完成 push/pull。
 - `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
   不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
+- Web/Command Palette 发出的 Remote Projection intent 不携带 locator。Backend MUST 从当前
+  local repo 的 characteristic `repo_url` 解析 remote projection locator；`repo_url` 缺失、
+  使用 `urn:*`/非 transport URL，或 scheme 与用户选择的 provider 不匹配时 MUST fail-closed
+  并报告 `provider_io_ready=false`。CLI 可以继续通过显式 `--locator` 覆盖该 host 操作输入。
 - 当前 `s3:push` / `s3:pull` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime
   环境凭证执行；push 使用 SigV4 PUT，pull 使用 SigV4 ListObjectsV2 + GET。
   `s3+https://` custom endpoint 在显式 credential binding/profile 合同完成前必须

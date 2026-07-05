@@ -5,7 +5,6 @@ use super::provider::WebDavProjectionProvider;
 use super::transport::WebDavTransport;
 use super::url::{relative_path_from_href, webdav_file_url, webdav_locator_to_https_url};
 use crate::commands::projection_remote::collect::{is_markdown_path, is_reserved_projection_path};
-use crate::commands::projection_remote::workspace_apply::write_pull_files;
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProvider,
     RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
@@ -14,7 +13,6 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 use reqwest::{StatusCode, Url};
 use std::collections::{BTreeSet, VecDeque};
-use std::path::Path;
 
 pub(super) const MAX_PULL_FILES: usize = 2_048;
 pub(super) const MAX_PULL_FILE_BYTES: usize = 4 * 1024 * 1024;
@@ -27,7 +25,6 @@ pub(crate) trait WebDavProjectionPullAdapter {
         &self,
         provider: RemoteProjectionProvider,
         locator: &str,
-        workspace: &Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError>;
 }
 
@@ -36,15 +33,12 @@ impl<T: WebDavTransport> WebDavProjectionPullAdapter for WebDavProjectionProvide
         &self,
         provider: RemoteProjectionProvider,
         locator: &str,
-        workspace: &Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         if provider != RemoteProjectionProvider::WebDav {
             return Err(RemoteProjectionProviderError::ProviderMismatch);
         }
         let request = RemoteProjectionPullRequest::new(provider, locator)?;
-        let outcome = pull_request(&self.transport, request)?;
-        write_pull_files(workspace, &outcome.files)?;
-        Ok(outcome)
+        pull_request(&self.transport, request)
     }
 }
 

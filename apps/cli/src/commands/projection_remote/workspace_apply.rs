@@ -10,9 +10,9 @@ use uuid::Uuid;
 pub(in crate::commands::projection_remote) fn write_pull_files(
     workspace: &Path,
     files: &[RemoteProjectionFile],
-) -> Result<(), RemoteProjectionProviderError> {
+) -> Result<AppliedPullFiles, RemoteProjectionProviderError> {
     if files.is_empty() {
-        return Ok(());
+        return Ok(AppliedPullFiles::empty());
     }
     let workspace_root = workspace.canonicalize().map_err(|err| {
         RemoteProjectionProviderError::ProviderIo(format!(
@@ -22,9 +22,69 @@ pub(in crate::commands::projection_remote) fn write_pull_files(
     })?;
     let targets = validate_pull_targets(&workspace_root, files)?;
     let staging = stage_pull_files(&workspace_root, files)?;
-    let result = apply_staged_pull_files(&workspace_root, &staging, &targets);
-    let _ = fs::remove_dir_all(&staging);
-    result
+    match apply_staged_pull_files(&workspace_root, &staging, &targets) {
+        Ok((applied, created_dirs)) => Ok(AppliedPullFiles {
+            staging: Some(staging),
+            applied,
+            created_dirs,
+            committed: false,
+        }),
+        Err(err) => {
+            let _ = fs::remove_dir_all(&staging);
+            Err(err)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(in crate::commands::projection_remote) struct AppliedPullFiles {
+    staging: Option<PathBuf>,
+    applied: Vec<AppliedPullFile>,
+    created_dirs: Vec<PathBuf>,
+    committed: bool,
+}
+
+impl AppliedPullFiles {
+    fn empty() -> Self {
+        Self {
+            staging: None,
+            applied: Vec::new(),
+            created_dirs: Vec::new(),
+            committed: true,
+        }
+    }
+
+    pub(in crate::commands::projection_remote) fn commit(mut self) {
+        self.committed = true;
+        self.cleanup_staging();
+    }
+
+    pub(in crate::commands::projection_remote) fn rollback_after_failed_scan(
+        mut self,
+    ) -> Result<(), RemoteProjectionProviderError> {
+        self.committed = true;
+        let result = rollback_applied_pull_files(&mut self.applied, &mut self.created_dirs);
+        self.cleanup_staging();
+        result
+    }
+
+    fn cleanup_staging(&mut self) {
+        if let Some(staging) = self.staging.take() {
+            let _ = fs::remove_dir_all(staging);
+        }
+    }
+}
+
+impl Drop for AppliedPullFiles {
+    fn drop(&mut self) {
+        if self.committed {
+            return;
+        }
+        if let Err(err) = rollback_applied_pull_files(&mut self.applied, &mut self.created_dirs) {
+            tracing::warn!("failed to roll back remote projection pull workspace apply: {err}");
+        }
+        self.cleanup_staging();
+    }
 }
 
 #[derive(Debug)]
@@ -94,7 +154,7 @@ fn apply_staged_pull_files(
     workspace_root: &Path,
     staging: &Path,
     targets: &[PullTarget],
-) -> Result<(), RemoteProjectionProviderError> {
+) -> Result<(Vec<AppliedPullFile>, Vec<PathBuf>), RemoteProjectionProviderError> {
     let backup_root = staging.join(format!("__backup-{}", Uuid::new_v4()));
     fs::create_dir(&backup_root).map_err(|err| {
         RemoteProjectionProviderError::ProviderIo(format!(
@@ -104,14 +164,28 @@ fn apply_staged_pull_files(
     })?;
 
     let mut applied = Vec::new();
+    let mut created_dirs = Vec::new();
     for target in targets {
+        let mut target_created_dirs = Vec::new();
         if let Err(err) = create_safe_parent(workspace_root, &target.target)
+            .map(|dirs| {
+                target_created_dirs = dirs;
+            })
             .and_then(|_| replace_from_staging(staging, &backup_root, target, &mut applied))
         {
-            rollback_applied_pull_files(&mut applied, err)?;
+            created_dirs.extend(target_created_dirs);
+            rollback_applied_pull_files(&mut applied, &mut created_dirs).map_err(
+                |rollback_err| {
+                    RemoteProjectionProviderError::ProviderIo(format!(
+                        "{err}; rollback failed: {rollback_err}"
+                    ))
+                },
+            )?;
+            return Err(err);
         }
+        created_dirs.extend(target_created_dirs);
     }
-    Ok(())
+    Ok((applied, created_dirs))
 }
 
 fn replace_from_staging(
@@ -171,7 +245,7 @@ fn replace_from_staging(
 
 fn rollback_applied_pull_files(
     applied: &mut Vec<AppliedPullFile>,
-    original: RemoteProjectionProviderError,
+    created_dirs: &mut Vec<PathBuf>,
 ) -> Result<(), RemoteProjectionProviderError> {
     let mut rollback_errors = Vec::new();
     while let Some(item) = applied.pop() {
@@ -195,13 +269,19 @@ fn rollback_applied_pull_files(
             ));
         }
     }
+    while let Some(dir) = created_dirs.pop() {
+        match fs::remove_dir(&dir) {
+            Ok(()) => {}
+            Err(err) if err.kind() == ErrorKind::NotFound => {}
+            Err(err) => rollback_errors.push(format!("remove dir {}: {err}", dir.display())),
+        }
+    }
     if rollback_errors.is_empty() {
-        Err(original)
+        Ok(())
     } else {
-        Err(RemoteProjectionProviderError::ProviderIo(format!(
-            "{original}; rollback failed: {}",
-            rollback_errors.join("; ")
-        )))
+        Err(RemoteProjectionProviderError::ProviderIo(
+            rollback_errors.join("; "),
+        ))
     }
 }
 
@@ -263,7 +343,7 @@ fn validate_existing_parent_chain(
 fn create_safe_parent(
     workspace_root: &Path,
     target: &Path,
-) -> Result<(), RemoteProjectionProviderError> {
+) -> Result<Vec<PathBuf>, RemoteProjectionProviderError> {
     let parent = target.parent().ok_or_else(|| {
         RemoteProjectionProviderError::ProviderIo(format!(
             "projection file has no parent: {}",
@@ -277,6 +357,7 @@ fn create_safe_parent(
         ))
     })?;
     let mut current = workspace_root.to_path_buf();
+    let mut created_dirs = Vec::new();
     for component in relative_parent.components() {
         let Component::Normal(segment) = component else {
             return Err(RemoteProjectionProviderError::InvalidProjectionPath);
@@ -303,6 +384,7 @@ fn create_safe_parent(
                         current.display()
                     ))
                 })?;
+                created_dirs.push(current.clone());
             }
             Err(err) => {
                 return Err(RemoteProjectionProviderError::ProviderIo(format!(
@@ -319,7 +401,7 @@ fn create_safe_parent(
         ))
     })?;
     if canonical.starts_with(workspace_root) {
-        Ok(())
+        Ok(created_dirs)
     } else {
         Err(RemoteProjectionProviderError::ProviderIo(format!(
             "projection parent escapes workspace: {}",
@@ -368,31 +450,5 @@ fn temporary_target_path(target: &Path) -> Result<PathBuf, RemoteProjectionProvi
 }
 
 #[cfg(test)]
-mod tests {
-    use super::write_pull_files;
-    use deve_core::remote_projection::RemoteProjectionFile;
-    use std::fs;
-
-    #[test]
-    fn write_pull_files_overwrites_existing_file_without_temp_artifacts() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let workspace = dir.path().join("workspace");
-        fs::create_dir(&workspace).expect("workspace");
-        fs::write(workspace.join("a.md"), "old").expect("old");
-        let files = vec![RemoteProjectionFile::new("a.md", b"new").expect("file")];
-
-        write_pull_files(&workspace, &files).expect("write");
-
-        assert_eq!(
-            fs::read_to_string(workspace.join("a.md")).expect("content"),
-            "new"
-        );
-        let leftovers = fs::read_dir(dir.path())
-            .expect("parent")
-            .filter_map(|entry| entry.ok())
-            .filter_map(|entry| entry.file_name().into_string().ok())
-            .filter(|name| name.starts_with(".deve-projection-pull-"))
-            .collect::<Vec<_>>();
-        assert!(leftovers.is_empty(), "leftover staging dirs: {leftovers:?}");
-    }
-}
+#[path = "workspace_apply_tests.rs"]
+mod tests;

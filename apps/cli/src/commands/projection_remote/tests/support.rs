@@ -44,7 +44,6 @@ impl webdav::WebDavProjectionPullAdapter for FailingProvider {
         &self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         unreachable!("push-only failing provider")
     }
@@ -75,7 +74,6 @@ impl webdav::WebDavProjectionPullAdapter for RecordingProvider {
         &self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         unreachable!("push-only recording provider")
     }
@@ -106,7 +104,6 @@ impl s3::S3ProjectionPullAdapter for RecordingS3Provider {
         &self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         unreachable!("push-only S3 recording provider")
     }
@@ -128,10 +125,8 @@ impl s3::S3ProjectionPullAdapter for S3PullWritingProvider {
         &self,
         provider: RemoteProjectionProvider,
         _locator: &str,
-        workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         assert_eq!(provider, RemoteProjectionProvider::S3);
-        std::fs::write(workspace.join("remote-s3.md"), "remote s3").expect("remote file");
         Ok(RemoteProjectionPullOutcome {
             files: vec![RemoteProjectionFile::new("remote-s3.md", b"remote s3").expect("file")],
             effects: RemoteProjectionAuthorityEffects::projection_transport(),
@@ -158,7 +153,6 @@ impl s3::S3ProjectionPullAdapter for S3PullFailingProvider {
         &self,
         provider: RemoteProjectionProvider,
         _locator: &str,
-        _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         assert_eq!(provider, RemoteProjectionProvider::S3);
         Err(RemoteProjectionProviderError::ProviderIo(
@@ -183,10 +177,8 @@ impl webdav::WebDavProjectionPullAdapter for PullWritingProvider {
         &self,
         provider: RemoteProjectionProvider,
         _locator: &str,
-        workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
-        std::fs::write(workspace.join("remote.md"), "remote").expect("remote file");
         Ok(RemoteProjectionPullOutcome {
             files: vec![RemoteProjectionFile::new("remote.md", b"remote").expect("file")],
             effects: RemoteProjectionAuthorityEffects::projection_transport(),
@@ -213,7 +205,6 @@ impl webdav::WebDavProjectionPullAdapter for PullFailingProvider {
         &self,
         provider: RemoteProjectionProvider,
         _locator: &str,
-        _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
         Err(RemoteProjectionProviderError::ProviderIo(

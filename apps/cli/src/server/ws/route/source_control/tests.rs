@@ -148,16 +148,12 @@ async fn remote_projection_transport_returns_backend_provider_io_gate() -> anyho
         } => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(scope_nonce, None);
-            assert_eq!(
-                error.detail.as_deref(),
-                Some(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
-            );
             assert!(
                 error
                     .detail
                     .as_deref()
                     .expect("detail")
-                    .contains("provider_io_ready=false")
+                    .starts_with(REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL)
             );
         }
         other => panic!("expected ProtocolError, got {other:?}"),
