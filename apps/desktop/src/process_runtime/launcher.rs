@@ -11,8 +11,10 @@ use super::process_group::{
 };
 use super::validation::validate_desktop_service_command;
 use super::{DesktopProcessLauncher, DesktopProcessRuntimeError};
+use std::time::Duration;
 
 const DEVE_DESKTOP_SERVICE_STDIO_INHERIT_ENV: &str = "DEVE_DESKTOP_SERVICE_STDIO_INHERIT";
+const DESKTOP_SERVICE_STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Default)]
 pub struct DesktopCommandProcessLauncher {
@@ -28,7 +30,11 @@ impl DesktopCommandProcessLauncher {
         let process_group = self.process_group.take();
         let _ = child.kill();
         drop(process_group);
-        child.wait().map(Some)
+        let status = child.wait_timeout(DESKTOP_SERVICE_STOP_TIMEOUT);
+        if status.is_err() {
+            let _ = child.kill();
+        }
+        status.map(Some)
     }
 }
 

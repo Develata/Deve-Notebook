@@ -117,6 +117,14 @@ fn desktop_local_backend_option_overrides_remote_preference() {
 }
 
 #[test]
+fn desktop_main_window_close_requests_process_exit() {
+    assert!(desktop_main_window_close_exits_process(
+        DESKTOP_TAURI_MAIN_WINDOW_LABEL
+    ));
+    assert!(!desktop_main_window_close_exits_process("secondary"));
+}
+
+#[test]
 fn desktop_remote_env_overrides_host_backend_preference() {
     let _lock = ENV_LOCK.lock().expect("env lock");
     let _guard = EnvGuard::set(

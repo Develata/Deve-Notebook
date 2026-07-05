@@ -10,8 +10,9 @@ use std::mem::{size_of, zeroed};
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr::{null, null_mut};
+use std::time::Duration;
 
-use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_FAILED};
+use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_FAILED, WAIT_TIMEOUT};
 use windows_sys::Win32::System::Console::{
     GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
 };
@@ -22,7 +23,7 @@ use windows_sys::Win32::System::JobObjects::{
 };
 use windows_sys::Win32::System::Threading::{
     CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessW, DeleteProcThreadAttributeList,
-    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, INFINITE, InitializeProcThreadAttributeList,
+    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, InitializeProcThreadAttributeList,
     LPPROC_THREAD_ATTRIBUTE_LIST, PROC_THREAD_ATTRIBUTE_JOB_LIST, PROCESS_INFORMATION,
     ResumeThread, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, TerminateProcess,
     UpdateProcThreadAttribute, WaitForSingleObject,
@@ -232,16 +233,30 @@ impl JobChildProcess {
         Ok(())
     }
 
-    pub(super) fn wait(&mut self) -> std::io::Result<NativeProcessExitStatus> {
+    pub(super) fn wait_timeout(
+        &mut self,
+        timeout: Duration,
+    ) -> std::io::Result<NativeProcessExitStatus> {
+        let timeout_ms = timeout.as_millis().min(u32::MAX as u128) as u32;
+        self.wait_for_millis(timeout_ms)
+    }
+
+    fn wait_for_millis(&mut self, timeout_ms: u32) -> std::io::Result<NativeProcessExitStatus> {
         if self.process_handle.is_null() {
             return Ok(NativeProcessExitStatus {
                 code: None,
                 signal: None,
             });
         }
-        let wait_result = unsafe { WaitForSingleObject(self.process_handle, INFINITE) };
+        let wait_result = unsafe { WaitForSingleObject(self.process_handle, timeout_ms) };
         if wait_result == WAIT_FAILED {
             return Err(std::io::Error::last_os_error());
+        }
+        if wait_result == WAIT_TIMEOUT {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "desktop local service did not exit before stop timeout",
+            ));
         }
         let mut exit_code = 0u32;
         let got_exit_code = unsafe { GetExitCodeProcess(self.process_handle, &mut exit_code) };
@@ -436,7 +451,7 @@ mod tests {
             }
             if Instant::now() >= deadline {
                 let _ = child.kill();
-                let _ = child.wait();
+                let _ = child.wait_timeout(Duration::from_secs(1));
                 panic!("job close did not terminate child");
             }
             sleep(Duration::from_millis(50));

@@ -5,6 +5,9 @@ use deve_core::native_adapter::{NativeProcessExitStatus, NativeProcessSpawnSpec}
 
 #[cfg(not(windows))]
 use std::process::{Child, Command, Stdio};
+use std::time::Duration;
+#[cfg(not(windows))]
+use std::time::Instant;
 
 #[cfg(windows)]
 mod windows;
@@ -97,15 +100,29 @@ impl DesktopChildProcess {
         }
     }
 
-    pub(super) fn wait(&mut self) -> std::io::Result<NativeProcessExitStatus> {
+    pub(super) fn wait_timeout(
+        &mut self,
+        timeout: Duration,
+    ) -> std::io::Result<NativeProcessExitStatus> {
         #[cfg(windows)]
         {
-            self.process.wait()
+            self.process.wait_timeout(timeout)
         }
         #[cfg(not(windows))]
         {
-            let status = self.child.wait()?;
-            Ok(exit_status_from_process_status(status))
+            let deadline = Instant::now() + timeout;
+            loop {
+                if let Some(status) = self.child.try_wait()? {
+                    return Ok(exit_status_from_process_status(status));
+                }
+                if Instant::now() >= deadline {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "desktop local service did not exit before stop timeout",
+                    ));
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
         }
     }
 }

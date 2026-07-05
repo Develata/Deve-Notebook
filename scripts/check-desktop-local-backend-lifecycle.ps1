@@ -1,7 +1,9 @@
 param(
     [string]$DesktopExe = "target\debug\deve_desktop.exe",
     [int]$StartupTimeoutSeconds = 30,
-    [int]$ExitTimeoutSeconds = 8
+    [int]$ExitTimeoutSeconds = 8,
+    [ValidateSet("Force", "CloseMainWindow")]
+    [string]$ShutdownMode = "Force"
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,6 +31,24 @@ function Stop-ProcessIfAlive($ProcessId) {
     if ($null -ne $process) {
         Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Request-DesktopExit($Process, $Mode) {
+    if ($Mode -eq "Force") {
+        Stop-Process -Id $Process.Id -Force
+        return
+    }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $Process.Refresh()
+        if ($Process.MainWindowHandle -ne 0 -and $Process.CloseMainWindow()) {
+            return
+        }
+        Start-Sleep -Milliseconds 250
+    }
+
+    Fail "desktop main window was not closeable"
 }
 
 $desktopPath = Resolve-Path -LiteralPath $DesktopExe -ErrorAction Stop
@@ -91,8 +111,11 @@ try {
         Fail "unexpected node role response: $roleBody"
     }
 
-    Stop-Process -Id $desktop.Id -Force
-    $desktop.WaitForExit($ExitTimeoutSeconds * 1000) | Out-Null
+    Request-DesktopExit $desktop $ShutdownMode
+    $desktopExited = $desktop.WaitForExit($ExitTimeoutSeconds * 1000)
+    if (-not $desktopExited) {
+        Fail "desktop process remained alive after $ShutdownMode shutdown request"
+    }
 
     $exitDeadline = [DateTime]::UtcNow.AddSeconds($ExitTimeoutSeconds)
     while ([DateTime]::UtcNow -lt $exitDeadline) {

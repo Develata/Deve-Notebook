@@ -26,7 +26,7 @@ use deve_core::native_adapter::{
     native_shell_mode_for_backend_preference,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager, Runtime, State, Wry};
+use tauri::{AppHandle, Manager, RunEvent, Runtime, State, WindowEvent, Wry};
 use thiserror::Error;
 
 mod smoke;
@@ -209,7 +209,9 @@ pub fn run_desktop_tauri_app_with_launch_options(
             }
             _ => {}
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())?
+        .run(handle_desktop_run_event::<Wry>);
+    Ok(())
 }
 
 fn remote_browser_bootstrap_for_launch_options(
@@ -327,6 +329,36 @@ fn apply_shell_effect<R: Runtime>(app: &AppHandle<R>, effect: DesktopTauriShellE
         DesktopTauriShellEffect::ShowMainWindow => show_main_window(app),
         DesktopTauriShellEffect::ToggleMainWindowVisibility => toggle_main_window_visibility(app),
         DesktopTauriShellEffect::QuitRequested => app.exit(0),
+    }
+}
+
+fn handle_desktop_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+    match event {
+        RunEvent::WindowEvent {
+            label,
+            event: WindowEvent::CloseRequested { api, .. },
+            ..
+        } if desktop_main_window_close_exits_process(&label) => {
+            api.prevent_close();
+            stop_local_backend_for_app(app, current_unix_time_millis());
+            app.exit(0);
+        }
+        RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+            stop_local_backend_for_app(app, current_unix_time_millis());
+        }
+        _ => {}
+    }
+}
+
+fn desktop_main_window_close_exits_process(label: &str) -> bool {
+    label == DESKTOP_TAURI_MAIN_WINDOW_LABEL
+}
+
+fn stop_local_backend_for_app<R: Runtime>(app: &AppHandle<R>, timestamp_unix_ms: i64) {
+    if let Some(local_state) = app.try_state::<crate::DesktopLocalServiceTauriState>()
+        && let Err(error) = local_state.stop(timestamp_unix_ms)
+    {
+        eprintln!("desktop local service stop failed during app shutdown: {error}");
     }
 }
 

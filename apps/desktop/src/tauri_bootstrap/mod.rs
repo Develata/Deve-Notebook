@@ -44,19 +44,18 @@ pub struct DesktopTauriLocalServiceBootstrap<L = DesktopCommandProcessLauncher> 
 }
 
 #[derive(Debug)]
-pub struct DesktopLocalServiceTauriState<L = DesktopCommandProcessLauncher> {
+pub struct DesktopLocalServiceTauriState<L: DesktopProcessLauncher = DesktopCommandProcessLauncher>
+{
     runtime: Mutex<DesktopLocalServiceRuntime<L>>,
 }
 
-impl<L> DesktopLocalServiceTauriState<L> {
+impl<L: DesktopProcessLauncher> DesktopLocalServiceTauriState<L> {
     pub fn new(runtime: DesktopLocalServiceRuntime<L>) -> Self {
         Self {
             runtime: Mutex::new(runtime),
         }
     }
-}
 
-impl<L: DesktopProcessLauncher> DesktopLocalServiceTauriState<L> {
     pub fn runtime_snapshot(&self) -> Option<NativeProcessRuntimeSnapshot> {
         self.runtime.lock().ok().map(|runtime| runtime.snapshot())
     }
@@ -74,6 +73,16 @@ impl<L: DesktopProcessLauncher> DesktopLocalServiceTauriState<L> {
                     ),
                 })?;
         runtime.stop(timestamp_unix_ms)
+    }
+}
+
+impl<L: DesktopProcessLauncher> Drop for DesktopLocalServiceTauriState<L> {
+    fn drop(&mut self) {
+        if let Ok(runtime) = self.runtime.get_mut()
+            && runtime.snapshot().handle.is_some()
+        {
+            let _ = runtime.stop(0);
+        }
     }
 }
 
