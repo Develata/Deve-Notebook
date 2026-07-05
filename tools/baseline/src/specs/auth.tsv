@@ -44,6 +44,13 @@ contains	docs/acceptance-cases/08_auth.md	security_md_private_report_channel_pre
 contains	docs/acceptance-cases/08_auth.md	security_md_response_sla_present true
 contains	docs/acceptance-cases/08_auth.md	security_md_key_lifecycle_policy_present true
 contains	docs/acceptance-cases/08_auth.md	security_md_supply_chain_policy_present true
+contains	docs/plan/23_threat_model.md	key lifecycle 高层流程（§4）
+contains	docs/plan/23_threat_model.md	supply chain policy（§6）
+contains	docs/plan/23_threat_model.md	CVD policy（§7）
+contains	docs/plan/23_threat_model.md	本章 **MUST NOT** 重写 auth/network/backup 的运行时合同
+contains	docs/plan/23_threat_model.md	## 4. Key Lifecycle (高层流程) {#key-lifecycle}
+contains	docs/plan/23_threat_model.md	## 6. Supply Chain {#supply-chain}
+contains	docs/plan/23_threat_model.md	## 7. Coordinated Vulnerability Disclosure {#coordinated-vulnerability-disclosure}
 contains	SECURITY.md	https://github.com/Develata/Deve-Notebook/security/advisories/new
 contains	SECURITY.md	Do not open a public issue
 contains	SECURITY.md	Response Targets
