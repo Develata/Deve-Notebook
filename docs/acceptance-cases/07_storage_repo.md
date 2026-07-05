@@ -320,6 +320,7 @@
     - run: cargo test -p deve_core --lib backup_pack_artifact_ref_download_verify -- --nocapture
     - run: cargo test -p deve_cli provider_io -- --nocapture
     - run: cargo test -p deve_cli backup_restore -- --nocapture
+    - run: cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
     - run: cargo test -p deve_cli backup_restore_download -- --nocapture
   assertions:
     - cli_assert: backup_provider_download_returns_encrypted_bytes_only true

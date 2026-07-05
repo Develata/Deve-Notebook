@@ -45,7 +45,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_dry_run_and_known_mode -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
@@ -118,8 +118,8 @@ contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_requir
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_requires_artifact_for_provider_upload()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload()
-contains	apps/cli/src/commands/backup/restore.rs	backup restore currently requires --dry-run because provider IO and import/merge execution are not implemented
-contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_dry_run_and_known_mode()
+contains	apps/cli/src/commands/backup/restore.rs	remote-readonly provider download of encrypted branch manifest
+contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_download_refs_and_known_mode()
 contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_returns_encrypted_bytes_only()
 contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_returns_encrypted_bytes_only()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
