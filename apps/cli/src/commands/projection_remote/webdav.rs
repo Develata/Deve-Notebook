@@ -14,6 +14,7 @@ mod workspace_apply;
 
 #[cfg(test)]
 pub(crate) use collect::MarkdownProjectionFileRef;
+#[cfg(test)]
 pub(crate) use collect::collect_markdown_projection_files;
 pub(crate) use provider::WebDavProjectionProvider;
 pub(crate) use pull::WebDavProjectionPullAdapter;

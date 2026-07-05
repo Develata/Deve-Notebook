@@ -152,6 +152,9 @@ RemoteProjectionCommand
   `provider_io_ready=true`。不得把 admission plan 输出伪装成已完成 push/pull。
 - `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
   不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
+- 当前 `s3:push` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime 环境凭证
+  与 SigV4 PUT 执行；`s3+https://` custom endpoint 在显式 credential binding/profile
+  合同完成前必须 fail-closed，避免将默认 AWS 环境密钥签给任意 host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。
 - pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue

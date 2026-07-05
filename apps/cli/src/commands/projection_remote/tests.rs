@@ -98,6 +98,72 @@ fn run_webdav_push_returns_provider_error_before_success_report() {
 }
 
 #[test]
+fn run_s3_push_uses_s3_provider_after_workspace_gate() {
+    let repo = initialized_default_repo();
+    std::fs::create_dir_all(repo.workspace.join("notes")).expect("notes");
+    std::fs::write(repo.workspace.join("notes").join("a.md"), "a").expect("a");
+    for reserved in [
+        ".git",
+        ".notegit",
+        "ledger",
+        "snapshot",
+        "snapshots",
+        "staging",
+    ] {
+        std::fs::create_dir_all(repo.workspace.join(reserved)).expect("reserved dir");
+        std::fs::write(repo.workspace.join(reserved).join("leak.md"), "leak").expect("leak");
+    }
+    let mut webdav_provider = RecordingProvider::default();
+    let mut s3_provider = RecordingS3Provider::default();
+
+    run_with_providers(
+        &repo.ledger_dir(),
+        s3_push_action(),
+        8,
+        &mut webdav_provider,
+        &mut s3_provider,
+    )
+    .expect("s3 push");
+
+    assert_eq!(
+        webdav_provider.uploaded_paths,
+        Vec::<(String, Vec<String>)>::new()
+    );
+    assert_eq!(
+        s3_provider.uploaded_paths,
+        vec![(
+            "s3://bucket/notebooks/main".to_string(),
+            vec!["notes/a.md".to_string()]
+        )]
+    );
+}
+
+#[test]
+fn run_s3_push_checks_workspace_identity_before_provider_io() {
+    let repo = initialized_default_repo();
+    std::fs::write(repo.workspace.join("a.md"), "a").expect("a");
+    std::fs::remove_file(deve_core::utils::notegit::repo_identity_path(
+        &repo.workspace,
+    ))
+    .expect("remove identity marker");
+    let mut webdav_provider = RecordingProvider::default();
+    let mut s3_provider = RecordingS3Provider::default();
+
+    let err = run_with_providers(
+        &repo.ledger_dir(),
+        s3_push_action(),
+        8,
+        &mut webdav_provider,
+        &mut s3_provider,
+    )
+    .expect_err("workspace identity gate must fail before S3 provider I/O");
+
+    let message = err.to_string();
+    assert!(message.contains("Projection workspace identity marker is invalid"));
+    assert!(s3_provider.uploaded_paths.is_empty());
+}
+
+#[test]
 fn run_webdav_pull_scans_written_files_into_external_changes() {
     let repo = initialized_default_repo();
     let mut provider = PullWritingProvider;
@@ -142,6 +208,11 @@ fn run_webdav_pull_returns_provider_error_before_scan() {
 
 #[derive(Default)]
 struct RecordingProvider {
+    uploaded_paths: Vec<(String, Vec<String>)>,
+}
+
+#[derive(Default)]
+struct RecordingS3Provider {
     uploaded_paths: Vec<(String, Vec<String>)>,
 }
 
@@ -205,6 +276,28 @@ impl webdav::WebDavProjectionPullAdapter for RecordingProvider {
         _workspace: &std::path::Path,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         unreachable!("push-only recording provider")
+    }
+}
+
+impl s3::S3ProjectionPushAdapter for RecordingS3Provider {
+    fn push_projection_files(
+        &mut self,
+        provider: RemoteProjectionProvider,
+        locator: &str,
+        files: &[collect::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::S3);
+        self.uploaded_paths.push((
+            locator.to_string(),
+            files.iter().map(|file| file.path().to_string()).collect(),
+        ));
+        Ok(RemoteProjectionPushOutcome {
+            uploaded_files: files.len(),
+            effects:
+                deve_core::remote_projection::RemoteProjectionAuthorityEffects::projection_transport(
+                ),
+            provider_metadata_is_diagnostic_only: true,
+        })
     }
 }
 
@@ -328,6 +421,15 @@ fn webdav_push_action() -> ProjectionRemoteAction {
         action: ProjectionRemoteDirectionAction::Push {
             repo: Some("default".into()),
             locator: "webdav+https://dav.example.com/notebooks/main".into(),
+        },
+    }
+}
+
+fn s3_push_action() -> ProjectionRemoteAction {
+    ProjectionRemoteAction::S3 {
+        action: ProjectionRemoteDirectionAction::Push {
+            repo: Some("default".into()),
+            locator: "s3://bucket/notebooks/main".into(),
         },
     }
 }

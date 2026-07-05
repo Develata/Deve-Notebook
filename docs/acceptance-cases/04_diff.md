@@ -188,6 +188,11 @@
     - run: cargo test -p deve_cli webdav_push_puts_projection_files_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_push_rejects_failed_put -- --nocapture
+    - run: cargo test -p deve_cli s3_push_puts_projection_files_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_cli s3_push_rejects_failed_put -- --nocapture
+    - run: cargo test -p deve_cli s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
+    - run: cargo test -p deve_cli s3_signed_request_matches_golden_vector -- --nocapture
+    - run: cargo test -p deve_cli s3_signed_request_changes_with_payload -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
@@ -195,6 +200,8 @@
     - run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
+    - run: cargo test -p deve_cli run_s3_push_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
     - run: cargo test -p deve_cli run_reports_provider_io_fail_closed_after_workspace_gate -- --nocapture
@@ -282,6 +289,13 @@
     - api_assert: webdav_push_authority_effects_absent true
     - cli_assert: webdav_push_failure_does_not_report_provider_io_ready true
     - cli_assert: webdav_push_provider_io_ready true
+    - api_assert: s3_push_uploads_markdown_projection_only true
+    - api_assert: s3_push_skips_internal_state_directories true
+    - api_assert: s3_push_signs_put_requests true
+    - api_assert: s3_custom_endpoint_requires_explicit_credential_binding true
+    - api_assert: s3_push_authority_effects_absent true
+    - cli_assert: s3_push_provider_io_ready true
+    - cli_assert: s3_push_workspace_identity_gate_before_provider_io true
     - api_assert: webdav_pull_downloads_markdown_projection_only true
     - api_assert: webdav_pull_writes_projection_workspace_only true
     - api_assert: webdav_pull_authority_effects_absent true

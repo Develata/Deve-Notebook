@@ -1,11 +1,11 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
 
-use super::collect::{is_markdown_path, is_reserved_projection_path};
 use super::provider::WebDavProjectionProvider;
 use super::transport::WebDavTransport;
 use super::url::{relative_path_from_href, webdav_file_url, webdav_locator_to_https_url};
 use super::workspace_apply::write_pull_files;
+use crate::commands::projection_remote::collect::{is_markdown_path, is_reserved_projection_path};
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProvider,
     RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,

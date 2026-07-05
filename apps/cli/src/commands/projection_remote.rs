@@ -4,6 +4,8 @@
 //!
 //! CLI shell for remote Markdown projection transport intents.
 
+mod collect;
+mod s3;
 mod webdav;
 
 use crate::commands::repo_arg::resolve_local_repo_args;
@@ -52,14 +54,50 @@ pub(crate) enum ProjectionRemoteDirectionAction {
 
 pub fn run(ledger_dir: &Path, action: ProjectionRemoteAction, snapshot_depth: usize) -> Result<()> {
     let mut webdav_provider = webdav::WebDavProjectionProvider::new()?;
-    run_with_provider(ledger_dir, action, snapshot_depth, &mut webdav_provider)
+    if action_is_s3_push(&action) {
+        let mut s3_provider = s3::S3ProjectionProvider::new()?;
+        run_with_providers(
+            ledger_dir,
+            action,
+            snapshot_depth,
+            &mut webdav_provider,
+            &mut s3_provider,
+        )
+    } else {
+        let mut s3_provider = s3::FailClosedS3ProjectionProvider;
+        run_with_providers(
+            ledger_dir,
+            action,
+            snapshot_depth,
+            &mut webdav_provider,
+            &mut s3_provider,
+        )
+    }
 }
 
+#[cfg(test)]
 fn run_with_provider(
     ledger_dir: &Path,
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
     webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
+) -> Result<()> {
+    let mut s3_provider = s3::FailClosedS3ProjectionProvider;
+    run_with_providers(
+        ledger_dir,
+        action,
+        snapshot_depth,
+        webdav_provider,
+        &mut s3_provider,
+    )
+}
+
+fn run_with_providers(
+    ledger_dir: &Path,
+    action: ProjectionRemoteAction,
+    snapshot_depth: usize,
+    webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
+    s3_provider: &mut dyn s3::S3ProjectionPushAdapter,
 ) -> Result<()> {
     let request = request_from_action(action);
     let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
@@ -86,7 +124,7 @@ fn run_with_provider(
         if provider_direction_wired {
             match request.direction {
                 RemoteProjectionDirection::Push => {
-                    let files = webdav::collect_markdown_projection_files(&workspace)?;
+                    let files = collect::collect_markdown_projection_files(&workspace)?;
                     println!(
                         "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false planned_files={}",
                         plan.provider.as_str(),
@@ -97,11 +135,16 @@ fn run_with_provider(
                         plan.external_changes_confirmation_required,
                         files.len(),
                     );
-                    let outcome = webdav_provider.push_projection_files(
-                        request.provider,
-                        &plan.locator,
-                        &files,
-                    )?;
+                    let outcome =
+                        match request.provider {
+                            RemoteProjectionProvider::WebDav => webdav_provider
+                                .push_projection_files(request.provider, &plan.locator, &files)?,
+                            RemoteProjectionProvider::S3 => s3_provider.push_projection_files(
+                                request.provider,
+                                &plan.locator,
+                                &files,
+                            )?,
+                        };
                     println!(
                         "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
                         plan.provider.as_str(),
@@ -127,11 +170,14 @@ fn run_with_provider(
                         plan.writes_ledger,
                         plan.external_changes_confirmation_required,
                     );
-                    let outcome = webdav_provider.pull_projection_files(
-                        request.provider,
-                        &plan.locator,
-                        &workspace,
-                    )?;
+                    let outcome = match request.provider {
+                        RemoteProjectionProvider::WebDav => webdav_provider.pull_projection_files(
+                            request.provider,
+                            &plan.locator,
+                            &workspace,
+                        )?,
+                        RemoteProjectionProvider::S3 => unreachable!("S3 pull is not wired"),
+                    };
                     let sync_manager = deve_core::sync::SyncManager::new_checked(repo.clone())?;
                     sync_manager.scan_repo(&repo_name)?;
                     println!(
@@ -209,6 +255,15 @@ fn direction_request(
     }
 }
 
+fn action_is_s3_push(action: &ProjectionRemoteAction) -> bool {
+    matches!(
+        action,
+        ProjectionRemoteAction::S3 {
+            action: ProjectionRemoteDirectionAction::Push { .. }
+        }
+    )
+}
+
 fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
     matches!(
         (request.provider, request.direction),
@@ -218,6 +273,9 @@ fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
         ) | (
             RemoteProjectionProvider::WebDav,
             RemoteProjectionDirection::Pull
+        ) | (
+            RemoteProjectionProvider::S3,
+            RemoteProjectionDirection::Push
         )
     )
 }
