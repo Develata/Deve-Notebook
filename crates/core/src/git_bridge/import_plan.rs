@@ -106,14 +106,13 @@ fn parse_name_status_fields(plan: &mut GitImportPlan, fields: &[String]) {
                 push_rename_entry(plan, previous_path, path, git_status);
             }
             'C' => {
-                let path = take_field(fields, &mut index, &git_status, plan)
-                    .unwrap_or_else(|| "-".to_string());
-                let _ = take_field(fields, &mut index, &git_status, plan);
-                push_blocker(
-                    plan,
-                    path,
-                    "copy changes are not supported by Git import dry-run yet",
-                );
+                let Some(_previous_path) = take_field(fields, &mut index, &git_status, plan) else {
+                    break;
+                };
+                let Some(path) = take_field(fields, &mut index, &git_status, plan) else {
+                    break;
+                };
+                push_regular_entry(plan, path, git_status, ChangeStatus::Added);
             }
             _ => {
                 let path = take_field(fields, &mut index, &git_status, plan)

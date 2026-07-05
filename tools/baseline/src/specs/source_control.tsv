@@ -207,6 +207,7 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli source_control_
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_commit_rejects_broken_workspace_identity -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --lib git_bridge::import_plan::tests::plan_import_treats_git_copy_record_as_added -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --lib source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_uses_ngit_authority -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
@@ -218,6 +219,7 @@ contains	apps/cli/src/server/source_control_grants/tests.rs	source_control_write
 contains	apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs	source_control_scope_cleanup_revokes_write_grant
 contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs	switch_branch_failure_revokes_source_control_write_grant
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_uses_ngit_authority
+contains	docs/acceptance-cases/04_diff.md	ngit_import_name_status_copy_record_planned_as_added
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_source_control_authority_updates_after_node_role_probe -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	command_palette_source_control_authority_reactive_after_node_role_probe
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture

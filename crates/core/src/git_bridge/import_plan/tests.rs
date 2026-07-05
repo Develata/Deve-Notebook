@@ -1,6 +1,6 @@
-use super::{GitImportPlan, plan_import, validate_import_path};
+use super::{GitImportPlan, parse_name_status_fields, plan_import, validate_import_path};
 use crate::source_control::ChangeStatus;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn git(path: &Path, args: &[&str]) -> String {
@@ -40,6 +40,52 @@ fn entry<'a>(plan: &'a GitImportPlan, path: &str) -> &'a super::GitImportPlanEnt
         .iter()
         .find(|entry| entry.path == path)
         .unwrap_or_else(|| panic!("missing entry {path}: {:?}", plan.entries))
+}
+
+fn empty_plan() -> GitImportPlan {
+    GitImportPlan {
+        repo_root: PathBuf::from("repo"),
+        entries: Vec::new(),
+        blockers: Vec::new(),
+    }
+}
+
+#[test]
+fn plan_import_treats_git_copy_record_as_added() {
+    let mut plan = empty_plan();
+    parse_name_status_fields(
+        &mut plan,
+        &[
+            "C100".to_string(),
+            "source.md".to_string(),
+            "copy.md".to_string(),
+        ],
+    );
+
+    assert!(plan.blockers.is_empty(), "{:?}", plan.blockers);
+    assert_eq!(plan.entries.len(), 1);
+    let copied = entry(&plan, "copy.md");
+    assert_eq!(copied.status, ChangeStatus::Added);
+    assert_eq!(copied.previous_path, None);
+    assert_eq!(copied.git_status, "C100");
+}
+
+#[test]
+fn plan_import_copy_record_ignores_unsafe_source_path() {
+    let mut plan = empty_plan();
+    parse_name_status_fields(
+        &mut plan,
+        &[
+            "C100".to_string(),
+            "../source.md".to_string(),
+            "copy.md".to_string(),
+        ],
+    );
+
+    assert!(plan.blockers.is_empty(), "{:?}", plan.blockers);
+    let copied = entry(&plan, "copy.md");
+    assert_eq!(copied.status, ChangeStatus::Added);
+    assert_eq!(copied.previous_path, None);
 }
 
 #[test]

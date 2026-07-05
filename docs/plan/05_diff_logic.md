@@ -116,6 +116,9 @@ DeveStaged
   导出失败只能产生 `GitMirrorOutOfSync`，**MUST NOT** 回滚 NoteGit/ngit commit。
 - ngit import dry-run 只能生成 change/blocker plan；默认 **MUST NOT** 写 ledger、
   `pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 `.notegit/`。
+- 当 Git name-status 已报告 copy record（`C* old new`）时，ngit import dry-run
+  **MUST** 将当前路径 `new` 作为 `Added` change 进入 plan；Git copy source
+  `old` 只属于 Git 诊断上下文，不得成为 ledger copy authority 或 `previous_path`。
 - ngit import --apply 只能把安全 changes 写入 pending/import，并保留冲突标记；后续
   **MUST** 通过 External Changes / Apply to Ledger / Source Control commit 生成 ledger facts 与 commit anchor。
 - Git mirror 写命令在写 pending/import、`.git` mirror 或发布 mirror HEAD 之前

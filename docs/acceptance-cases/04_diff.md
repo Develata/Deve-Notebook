@@ -143,6 +143,7 @@
     - run: cargo test -p deve_cli test_git_mirror_repair_review_is_readonly_record_source -- --nocapture
     - run: cargo test -p deve_cli ngit_import_apply_resolved_commit_exports_roundtrip -- --nocapture
     - run: cargo test -p deve_cli ngit_import_export_push_resolved_publish_roundtrip -- --nocapture
+    - run: cargo test -p deve_core --lib git_bridge::import_plan::tests::plan_import_treats_git_copy_record_as_added -- --nocapture
     - run: cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_ngit_only -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_commits_terminal_projection_for_multiple_queued_records -- --nocapture
@@ -230,6 +231,7 @@
     - ui_assert: source_control_commit_and_push_cli_only_notice true
     - ui_assert: command_palette_git_sync_absent true
     - cli_assert: ngit_import_apply_pending_only true
+    - cli_assert: ngit_import_name_status_copy_record_planned_as_added true
     - cli_assert: ngit_writes_reject_broken_workspace_identity true
     - cli_assert: git_push_dirty_worktree_blocker true
     - cli_assert: git_push_unexported_queue_blocker true
