@@ -8,7 +8,7 @@ import { editorCopy } from "../i18n.js";
  * Code Toolbar Widget (代码块工具栏)
  * 
  * Renders a floating toolbar (Copy / Menu) on the top-right of Fenced Code blocks.
- * Plugin actions can be registered via `window.deve_code_actions`.
+ * Plugin actions can be registered via the bridge-registered `window.deve_code_actions`.
  */
 class CodeToolbarWidget extends WidgetType {
     constructor(language, from, to) {

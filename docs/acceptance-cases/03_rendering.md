@@ -205,6 +205,10 @@
     - cli_assert: index_editor_wrappers_registered_through_bridge true
     - cli_assert: index_boot_helpers_registered_through_bridge true
     - cli_assert: index_error_handler_does_not_assign_window_onerror true
+    - cli_assert: init_code_actions_registered_through_bridge true
+    - cli_assert: init_i18n_registered_through_bridge true
+    - cli_assert: init_script_order_keeps_registry_before_init true
+    - cli_assert: code_menu_does_not_assign_action_registry true
     - cli_assert: bridge_registry_missing_fails_closed true
     - cli_assert: gutter_diff_extension_does_not_bypass_bridge true
     - cli_assert: chat_math_globals_registered_through_bridge true

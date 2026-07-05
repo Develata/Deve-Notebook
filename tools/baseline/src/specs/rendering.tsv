@@ -105,6 +105,10 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_error_handler_does_not_assign_window_onerror true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_code_actions_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_i18n_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_script_order_keeps_registry_before_init true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: code_menu_does_not_assign_action_registry true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_missing_registry_fails_closed true
 contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
@@ -113,6 +117,9 @@ contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-glo
 contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis
 contains	apps/web/js/web_bridge_registry.test.cjs	chat math scripts must preserve registry ownership after ordered loading
 contains	apps/web/js/web_bridge_registry.test.cjs	index boot helpers must use the bridge registry helper
+contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be registered through the browser bridge registry
+contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry before init and init before the lazy editor adapter
+contains	apps/web/js/web_bridge_registry.test.cjs	code menu must not initialize the code action registry directly
 contains	apps/web/index.html	const registerIndexBridgeGlobal = (name, value, meta = {}) =>
 contains	apps/web/index.html	source: "index-boot-bootstrap"
 contains	apps/web/index.html	registerIndexBridgeGlobal("__DEVE_DEBUG_OVERLAY__"
@@ -128,6 +135,14 @@ absent	apps/web/index.html	window.hideBootPanel =
 absent	apps/web/index.html	window.hideOverlay =
 absent	apps/web/index.html	window.logToOverlay =
 absent	apps/web/index.html	window.onerror =
+contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_code_actions"
+contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_i18n"
+contains	apps/web/js/init.js	source: "init-bootstrap"
+contains	apps/web/js/init.js	role: "code-toolbar-action-registry"
+contains	apps/web/js/init.js	role: "browser-i18n-copy-registry"
+absent	apps/web/js/init.js	window.deve_code_actions =
+absent	apps/web/js/init.js	window.deve_i18n =
+absent	apps/web/js/extensions/code_menu.js	window.deve_code_actions =
 absent	apps/web/js/extensions/gutter_diff.js	window.updateGutterDiff =
 contains	apps/web/js/chat_math_bootstrap.js	registerFallback("renderChatMath"
 contains	apps/web/js/chat_math_bootstrap.js	web bridge registry unavailable before registering renderChatMath
@@ -254,7 +269,7 @@ contains	apps/web/js/extensions/code_menu.js	editorCopy("noActionsAvailable")
 contains	apps/web/js/extensions/code_menu.js	menuHostFor(anchor).appendChild(menu)
 contains	apps/web/js/i18n.js	noActionsAvailable: "No actions available"
 contains	apps/web/js/i18n.js	noActionsAvailable: "暂无可用操作"
-contains	apps/web/js/init.js	window.deve_code_actions = window.deve_code_actions || [];
+contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_code_actions"
 absent	apps/web/js/init.js	Run Code
 absent	apps/web/js/init.js	Send to AI
 absent	apps/web/js/init.js	TODO: Connect to backend

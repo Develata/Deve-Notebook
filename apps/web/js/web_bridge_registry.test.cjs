@@ -9,6 +9,8 @@ const editorAdapterSource = fs.readFileSync(path.join(root, "editor_adapter.js")
 const chatMathBootstrapSource = fs.readFileSync(path.join(root, "chat_math_bootstrap.js"), "utf8");
 const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
 const gutterDiffSource = fs.readFileSync(path.join(root, "extensions", "gutter_diff.js"), "utf8");
+const initSource = fs.readFileSync(path.join(root, "init.js"), "utf8");
+const codeMenuSource = fs.readFileSync(path.join(root, "extensions", "code_menu.js"), "utf8");
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 
 const adapterBridgeNames = [
@@ -56,6 +58,8 @@ const indexBootBridgeNames = [
   "logToOverlay",
 ];
 
+const initBridgeNames = ["deve_code_actions", "deve_i18n"];
+
 const registryContext = { window: {} };
 vm.runInNewContext(registrySource, registryContext, { filename: "web_bridge_registry.js" });
 assert.equal(
@@ -77,6 +81,54 @@ assert.equal(
       meta: { runtime: "render_projection_runtime", source: "test" },
     },
   ])
+);
+
+const initRuntimeContext = { window: {} };
+vm.runInNewContext(registrySource, initRuntimeContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(initSource, initRuntimeContext, { filename: "init.js" });
+const initEntries = initRuntimeContext.window.__deveWebBridge
+  .describe()
+  .filter((entry) => initBridgeNames.includes(entry.name));
+assert.equal(
+  JSON.stringify(initEntries),
+  JSON.stringify([
+    {
+      name: "deve_code_actions",
+      meta: {
+        runtime: "widget_bridge_runtime",
+        source: "init-bootstrap",
+        authority: "none",
+        role: "code-toolbar-action-registry",
+      },
+    },
+    {
+      name: "deve_i18n",
+      meta: {
+        runtime: "widget_bridge_runtime",
+        source: "init-bootstrap",
+        authority: "none",
+        role: "browser-i18n-copy-registry",
+      },
+    },
+  ]),
+  "init bootstrap globals must be registered through the browser bridge registry"
+);
+assert.equal(
+  Array.isArray(initRuntimeContext.window.deve_code_actions),
+  true,
+  "init bootstrap must expose a code action array through the registry"
+);
+assert.equal(
+  initRuntimeContext.window.deve_i18n.editor.noActionsAvailable,
+  "No actions available",
+  "init bootstrap must expose editor i18n copy through the registry"
+);
+assert.throws(
+  () => vm.runInNewContext(initSource, { window: {} }, { filename: "init.js" }),
+  /web bridge registry unavailable before registering deve_code_actions/,
+  "init bootstrap must fail closed without the registry"
 );
 
 const chatMathRuntimeContext = { window: {} };
@@ -271,6 +323,48 @@ assert.match(
   chatMathSource,
   /authority:\s*"none"/,
   "chat math bridge entries must not claim authority ownership"
+);
+
+assert.match(
+  initSource,
+  /registerInitBridgeGlobal\("deve_code_actions"/,
+  "code toolbar action registry must be registered through the browser bridge registry"
+);
+assert.match(
+  initSource,
+  /registerInitBridgeGlobal\("deve_i18n"/,
+  "browser i18n copy registry must be registered through the browser bridge registry"
+);
+assert.doesNotMatch(
+  initSource,
+  /window\.deve_code_actions\s*=/,
+  "init bootstrap must not assign deve_code_actions directly"
+);
+assert.doesNotMatch(
+  initSource,
+  /window\.deve_i18n\s*=/,
+  "init bootstrap must not assign deve_i18n directly"
+);
+assert.doesNotMatch(
+  codeMenuSource,
+  /window\.deve_code_actions\s*=/,
+  "code menu must not initialize the code action registry directly"
+);
+assert.match(
+  codeMenuSource,
+  /Array\.isArray\(window\.deve_code_actions\)/,
+  "code menu may only read the bridge-registered action registry"
+);
+
+const registryScriptIndex = indexHtmlSource.indexOf('src="js/web_bridge_registry.js"');
+const initScriptIndex = indexHtmlSource.indexOf('src="js/init.js"');
+const lazyEditorBundleIndex = indexHtmlSource.indexOf('import("./js/editor.bundle.js');
+assert.ok(registryScriptIndex >= 0, "index.html must load web_bridge_registry.js");
+assert.ok(initScriptIndex >= 0, "index.html must load init.js");
+assert.ok(lazyEditorBundleIndex >= 0, "index.html must lazy-load the editor bundle");
+assert.ok(
+  registryScriptIndex < initScriptIndex && initScriptIndex < lazyEditorBundleIndex,
+  "index script order must load registry before init and init before the lazy editor adapter"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");

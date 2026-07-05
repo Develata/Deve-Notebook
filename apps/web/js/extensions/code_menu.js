@@ -2,7 +2,7 @@
  * Code Menu Module (代码块菜单)
  * 
  * Provides dynamic menu rendering for code toolbar actions.
- * Supports plugin registration via `window.deve_code_actions`.
+ * Supports plugin registration via the bridge-registered `window.deve_code_actions`.
  * 
  * Action Protocol:
  * ```js
@@ -15,11 +15,6 @@
  */
 
 import { editorCopy } from "../i18n.js";
-
-// Initialize global registry
-if (typeof window !== 'undefined') {
-    window.deve_code_actions = window.deve_code_actions || [];
-}
 
 let activeAnchor = null;
 
