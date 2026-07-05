@@ -11,7 +11,9 @@
 mod runtime_state;
 mod scope;
 
-pub use runtime_state::{AiBackendMode, LoadPhase, PendingOpsPreview, SearchHit, SyncModeState};
+pub use runtime_state::{
+    AiBackendMode, ChatMessage, LoadPhase, PeerSession, PendingOpsPreview, SearchHit, SyncModeState,
+};
 pub use scope::{
     PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch, RepoRemoveRequest,
     RepoRenameRequest, RepoSwitchRequest,

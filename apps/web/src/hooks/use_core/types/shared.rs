@@ -11,21 +11,6 @@ use super::super::navigation::PendingNavigation;
 use crate::runtime::document::pending::PendingLocalEdits;
 use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct PeerSession {
-    pub id: PeerId,
-    pub vector: VersionVector,
-    pub last_seen: u64,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ChatMessage {
-    pub role: String,
-    pub content: String,
-    pub req_id: Option<String>,
-    pub ts_ms: u64,
-}
-
 #[derive(Clone, Copy)]
 pub struct SwitchScopeSignals {
     pub current_doc: ReadSignal<Option<DocId>>,

@@ -9,10 +9,8 @@ mod core_state_chat;
 mod shared;
 
 pub use crate::runtime::domain::{
-    AiBackendMode, LoadPhase, PendingBranchSwitch, PendingBranchTarget, PendingOpsPreview,
-    PendingRepoSwitch, SearchHit, SyncModeState,
+    AiBackendMode, ChatMessage, LoadPhase, PeerSession, PendingBranchSwitch, PendingBranchTarget,
+    PendingOpsPreview, PendingRepoSwitch, SearchHit, SyncModeState,
 };
 pub use core_state::CoreState;
-pub use shared::{
-    ChatMessage, HandshakeSignals, PeerSession, RepoSwitchSignals, SwitchScopeSignals,
-};
+pub use shared::{HandshakeSignals, RepoSwitchSignals, SwitchScopeSignals};

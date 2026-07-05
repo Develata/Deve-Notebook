@@ -76,6 +76,7 @@ mod tests {
             return true;
         }
         grouped_import_contains(&compact, &format!("{hooks_path}::{{"), use_core)
+            || root_grouped_import_contains(&compact, use_core)
     }
 
     fn grouped_import_contains(content: &str, prefix: &str, needle: &str) -> bool {
@@ -89,6 +90,27 @@ mod tests {
                 offset = body_start + body_end + 1;
             } else {
                 return content[body_start..].contains(needle);
+            }
+        }
+        false
+    }
+
+    fn root_grouped_import_contains(content: &str, use_core: &str) -> bool {
+        let root_prefix = format!("{}::{{", crate_root());
+        let mut offset = 0;
+        while let Some(index) = content[offset..].find(&root_prefix) {
+            let body_start = offset + index + root_prefix.len();
+            if let Some(body_end) = grouped_import_end(&content[body_start..]) {
+                let body = &content[body_start..body_start + body_end];
+                if body.contains(&format!("hooks::{use_core}"))
+                    || grouped_import_contains(body, "hooks::{", use_core)
+                {
+                    return true;
+                }
+                offset = body_start + body_end + 1;
+            } else {
+                return content[body_start..].contains(&format!("hooks::{use_core}"))
+                    || grouped_import_contains(&content[body_start..], "hooks::{", use_core);
             }
         }
         false
@@ -111,8 +133,12 @@ mod tests {
         None
     }
 
+    fn crate_root() -> &'static str {
+        "crate"
+    }
+
     fn hooks_path() -> &'static str {
-        concat!("crate::", "hooks")
+        concat!("crate", "::", "hooks")
     }
 
     fn use_core_segment() -> &'static str {
@@ -130,6 +156,26 @@ mod tests {
         let source = format!(
             "use {}::{{ runtime, {}::LoadPhase }};",
             hooks_path(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_root_grouped_use_core_import() {
+        let source = format!(
+            "use {}::{{ hooks::{}::LoadPhase }};",
+            crate_root(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_nested_root_grouped_use_core_import() {
+        let source = format!(
+            "use {}::{{ runtime, hooks::{{{}::LoadPhase}} }};",
+            crate_root(),
             use_core_segment()
         );
         assert!(imports_use_core_internals(&source));

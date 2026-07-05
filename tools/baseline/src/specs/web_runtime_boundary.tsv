@@ -6,8 +6,13 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_runtime_
 contains	docs/features/08_ui_design.md	Web runtime 共享 request/state 类型应归属于 runtime/domain contract
 contains	apps/web/src/runtime/mod.rs	pub mod domain;
 contains	apps/web/src/runtime/domain/scope.rs	pub struct RepoSwitchRequest
+contains	apps/web/src/runtime/domain/runtime_state.rs	pub struct ChatMessage
+contains	apps/web/src/runtime/domain/runtime_state.rs	pub struct PeerSession
+absent	apps/web/src/hooks/use_core/types/shared.rs	pub struct ChatMessage
+absent	apps/web/src/hooks/use_core/types/shared.rs	pub struct PeerSession
 contains	apps/web/src/runtime/domain/runtime_state.rs	pub enum LoadPhase
 contains	apps/web/src/runtime/domain/scope.rs	pub struct PendingRepoSwitch
 contains	apps/web/src/hooks/use_core/types.rs	pub use crate::runtime::domain::{
 contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_does_not_import_use_core_internals()
 regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))
+regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))

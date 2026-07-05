@@ -6,8 +6,9 @@ use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::runtime::CoreRuntimeClients;
 use crate::runtime::domain::{
-    AiBackendMode, LoadPhase, PendingBranchSwitch, PendingOpsPreview, PendingRepoSwitch,
-    RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest, SearchHit, SyncModeState,
+    AiBackendMode, ChatMessage, LoadPhase, PeerSession, PendingBranchSwitch, PendingOpsPreview,
+    PendingRepoSwitch, RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest, SearchHit,
+    SyncModeState,
 };
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
@@ -20,7 +21,6 @@ use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::PluginResponse;
-use super::shared::{ChatMessage, PeerSession};
 use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone)]

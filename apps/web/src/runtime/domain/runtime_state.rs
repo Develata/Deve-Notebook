@@ -1,9 +1,11 @@
 //! plan_ref:
 //!   - 07_network#web-ws-runtime
 //!   - 09_web_thin_client_ledger#write-readiness
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 //! Runtime display and wire-state contract shared by Web runtime clients.
 
+use deve_core::models::{PeerId, VersionVector};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -51,6 +53,21 @@ impl PartialEq<&str> for AiBackendMode {
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+    pub req_id: Option<String>,
+    pub ts_ms: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeerSession {
+    pub id: PeerId,
+    pub vector: VersionVector,
+    pub last_seen: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
