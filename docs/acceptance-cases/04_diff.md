@@ -192,7 +192,16 @@
     - run: cargo test -p deve_cli s3_push_rejects_failed_put -- --nocapture
     - run: cargo test -p deve_cli s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_matches_golden_vector -- --nocapture
+    - run: cargo test -p deve_cli s3_signed_get_request_includes_canonical_query -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_changes_with_payload -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_failed_get -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_paginates_list_objects -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
+    - run: cargo test -p deve_cli write_pull_files_overwrites_existing_file_without_temp_artifacts -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
@@ -202,9 +211,10 @@
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_checks_workspace_identity_before_provider_io -- --nocapture
+    - run: cargo test -p deve_cli run_s3_pull_scans_written_files_into_external_changes -- --nocapture
+    - run: cargo test -p deve_cli run_s3_pull_returns_provider_error_before_scan -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
-    - run: cargo test -p deve_cli run_reports_provider_io_fail_closed_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
@@ -296,6 +306,19 @@
     - api_assert: s3_push_authority_effects_absent true
     - cli_assert: s3_push_provider_io_ready true
     - cli_assert: s3_push_workspace_identity_gate_before_provider_io true
+    - api_assert: s3_pull_downloads_markdown_projection_only true
+    - api_assert: s3_pull_writes_projection_workspace_only true
+    - api_assert: s3_pull_authority_effects_absent true
+    - api_assert: s3_pull_scan_creates_external_changes true
+    - api_assert: s3_pull_partial_apply_rolls_back true
+    - api_assert: s3_pull_resource_budget_fails_before_workspace_write true
+    - api_assert: s3_pull_paginates_list_objects true
+    - api_assert: s3_pull_decodes_list_xml_entities true
+    - api_assert: s3_pull_truncated_list_without_token_fails_closed true
+    - api_assert: s3_pull_signs_get_requests true
+    - api_assert: projection_pull_workspace_apply_uses_same_volume_staging true
+    - cli_assert: s3_pull_failure_does_not_scan_or_report_ready true
+    - cli_assert: s3_pull_provider_io_ready true
     - api_assert: webdav_pull_downloads_markdown_projection_only true
     - api_assert: webdav_pull_writes_projection_workspace_only true
     - api_assert: webdav_pull_authority_effects_absent true

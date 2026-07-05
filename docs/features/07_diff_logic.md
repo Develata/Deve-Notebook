@@ -111,8 +111,8 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - 未接线的 provider/direction 必须显示 `provider_io_ready=false` 并 fail-closed，不能伪装成
   已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
   workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
-- 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull` 与 AWS `s3://` `s3:push`；
-  `s3+https://` custom endpoint 与 `s3:pull` 在 provider adapter/credential binding 完成前必须继续 fail-closed。
+- 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull` 与 AWS `s3://` `s3:push`/`s3:pull`；
+  `s3+https://` custom endpoint 在显式 credential binding 完成前必须继续 fail-closed。
 - push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
 - pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。
 - pull adapter 必须对远端文件数、单文件字节数与总下载字节数设置硬预算；超过预算时必须在写 Projection Workspace 前 fail-closed。

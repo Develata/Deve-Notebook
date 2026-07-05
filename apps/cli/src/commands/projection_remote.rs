@@ -7,6 +7,7 @@
 mod collect;
 mod s3;
 mod webdav;
+mod workspace_apply;
 
 use crate::commands::repo_arg::resolve_local_repo_args;
 use crate::commands::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
@@ -54,7 +55,7 @@ pub(crate) enum ProjectionRemoteDirectionAction {
 
 pub fn run(ledger_dir: &Path, action: ProjectionRemoteAction, snapshot_depth: usize) -> Result<()> {
     let mut webdav_provider = webdav::WebDavProjectionProvider::new()?;
-    if action_is_s3_push(&action) {
+    if action_is_s3(&action) {
         let mut s3_provider = s3::S3ProjectionProvider::new()?;
         run_with_providers(
             ledger_dir,
@@ -97,7 +98,7 @@ fn run_with_providers(
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
     webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
-    s3_provider: &mut dyn s3::S3ProjectionPushAdapter,
+    s3_provider: &mut dyn s3::S3ProjectionAdapter,
 ) -> Result<()> {
     let request = request_from_action(action);
     let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
@@ -176,7 +177,11 @@ fn run_with_providers(
                             &plan.locator,
                             &workspace,
                         )?,
-                        RemoteProjectionProvider::S3 => unreachable!("S3 pull is not wired"),
+                        RemoteProjectionProvider::S3 => s3_provider.pull_projection_files(
+                            request.provider,
+                            &plan.locator,
+                            &workspace,
+                        )?,
                     };
                     let sync_manager = deve_core::sync::SyncManager::new_checked(repo.clone())?;
                     sync_manager.scan_repo(&repo_name)?;
@@ -255,13 +260,8 @@ fn direction_request(
     }
 }
 
-fn action_is_s3_push(action: &ProjectionRemoteAction) -> bool {
-    matches!(
-        action,
-        ProjectionRemoteAction::S3 {
-            action: ProjectionRemoteDirectionAction::Push { .. }
-        }
-    )
+fn action_is_s3(action: &ProjectionRemoteAction) -> bool {
+    matches!(action, ProjectionRemoteAction::S3 { .. })
 }
 
 fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
@@ -276,6 +276,9 @@ fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
         ) | (
             RemoteProjectionProvider::S3,
             RemoteProjectionDirection::Push
+        ) | (
+            RemoteProjectionProvider::S3,
+            RemoteProjectionDirection::Pull
         )
     )
 }

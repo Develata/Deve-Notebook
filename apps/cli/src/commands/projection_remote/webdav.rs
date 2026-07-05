@@ -10,7 +10,6 @@ mod pull;
 mod push;
 mod transport;
 mod url;
-mod workspace_apply;
 
 #[cfg(test)]
 pub(crate) use collect::MarkdownProjectionFileRef;

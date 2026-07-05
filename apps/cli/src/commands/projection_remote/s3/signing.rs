@@ -18,6 +18,13 @@ pub(super) struct S3SignedPutRequest {
     pub(super) headers: Vec<(String, String)>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct S3SignedGetRequest {
+    pub(super) url: Url,
+    pub(super) headers: Vec<(String, String)>,
+    pub(super) max_body_bytes: usize,
+}
+
 pub(super) fn signed_put_request(
     url: Url,
     body: Vec<u8>,
@@ -26,18 +33,61 @@ pub(super) fn signed_put_request(
     now: DateTime<Utc>,
 ) -> Result<S3SignedPutRequest, RemoteProjectionProviderError> {
     let payload_hash = sha256_hex(&body);
-    let amz_date = now.format("%Y%m%dT%H%M%SZ").to_string();
-    let short_date = now.format("%Y%m%d").to_string();
-    let host = canonical_host(&url)?;
-    let mut signed_headers = BTreeMap::from([
-        (
+    let headers = signed_headers(
+        "PUT",
+        &url,
+        payload_hash.clone(),
+        BTreeMap::from([(
             "content-type".to_string(),
             "text/markdown; charset=utf-8".to_string(),
-        ),
-        ("host".to_string(), host),
-        ("x-amz-content-sha256".to_string(), payload_hash.clone()),
-        ("x-amz-date".to_string(), amz_date.clone()),
-    ]);
+        )]),
+        credentials,
+        region,
+        now,
+    )?;
+
+    Ok(S3SignedPutRequest { url, body, headers })
+}
+
+pub(super) fn signed_get_request(
+    url: Url,
+    credentials: &S3Credentials,
+    region: &str,
+    now: DateTime<Utc>,
+    max_body_bytes: usize,
+) -> Result<S3SignedGetRequest, RemoteProjectionProviderError> {
+    let headers = signed_headers(
+        "GET",
+        &url,
+        sha256_hex(b""),
+        BTreeMap::new(),
+        credentials,
+        region,
+        now,
+    )?;
+
+    Ok(S3SignedGetRequest {
+        url,
+        headers,
+        max_body_bytes,
+    })
+}
+
+fn signed_headers(
+    method: &str,
+    url: &Url,
+    payload_hash: String,
+    mut signed_headers: BTreeMap<String, String>,
+    credentials: &S3Credentials,
+    region: &str,
+    now: DateTime<Utc>,
+) -> Result<Vec<(String, String)>, RemoteProjectionProviderError> {
+    let amz_date = now.format("%Y%m%dT%H%M%SZ").to_string();
+    let short_date = now.format("%Y%m%d").to_string();
+    let host = canonical_host(url)?;
+    signed_headers.insert("host".to_string(), host);
+    signed_headers.insert("x-amz-content-sha256".to_string(), payload_hash.clone());
+    signed_headers.insert("x-amz-date".to_string(), amz_date.clone());
     if let Some(token) = &credentials.session_token {
         signed_headers.insert("x-amz-security-token".to_string(), token.trim().to_string());
     }
@@ -52,8 +102,9 @@ pub(super) fn signed_put_request(
         .collect::<Vec<_>>()
         .join(";");
     let canonical_request = format!(
-        "PUT\n{}\n\n{}\n{}\n{}",
-        canonical_uri(&url),
+        "{method}\n{}\n{}\n{}\n{}\n{}",
+        canonical_uri(url),
+        canonical_query(url),
         canonical_headers,
         signed_header_names,
         payload_hash
@@ -74,7 +125,7 @@ pub(super) fn signed_put_request(
 
     let mut headers = signed_headers.into_iter().collect::<Vec<_>>();
     headers.push(("authorization".into(), authorization));
-    Ok(S3SignedPutRequest { url, body, headers })
+    Ok(headers)
 }
 
 fn signing_key(secret: &str, short_date: &str, region: &str) -> Vec<u8> {
@@ -100,6 +151,10 @@ fn canonical_uri(url: &Url) -> &str {
     } else {
         url.path()
     }
+}
+
+fn canonical_query(url: &Url) -> &str {
+    url.query().unwrap_or("")
 }
 
 fn normalize_header_value(value: &str) -> String {

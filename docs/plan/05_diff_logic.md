@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-04`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -152,9 +152,10 @@ RemoteProjectionCommand
   `provider_io_ready=true`。不得把 admission plan 输出伪装成已完成 push/pull。
 - `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
   不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
-- 当前 `s3:push` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime 环境凭证
-  与 SigV4 PUT 执行；`s3+https://` custom endpoint 在显式 credential binding/profile
-  合同完成前必须 fail-closed，避免将默认 AWS 环境密钥签给任意 host。
+- 当前 `s3:push` / `s3:pull` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime
+  环境凭证执行；push 使用 SigV4 PUT，pull 使用 SigV4 ListObjectsV2 + GET。
+  `s3+https://` custom endpoint 在显式 credential binding/profile 合同完成前必须
+  fail-closed，避免将默认 AWS 环境密钥签给任意 host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。
 - pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue

@@ -7,7 +7,7 @@ use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 use uuid::Uuid;
 
-pub(super) fn write_pull_files(
+pub(in crate::commands::projection_remote) fn write_pull_files(
     workspace: &Path,
     files: &[RemoteProjectionFile],
 ) -> Result<(), RemoteProjectionProviderError> {
@@ -21,7 +21,7 @@ pub(super) fn write_pull_files(
         ))
     })?;
     let targets = validate_pull_targets(&workspace_root, files)?;
-    let staging = stage_pull_files(files)?;
+    let staging = stage_pull_files(&workspace_root, files)?;
     let result = apply_staged_pull_files(&workspace_root, &staging, &targets);
     let _ = fs::remove_dir_all(&staging);
     result
@@ -58,12 +58,14 @@ fn validate_pull_targets(
 }
 
 fn stage_pull_files(
+    workspace_root: &Path,
     files: &[RemoteProjectionFile],
 ) -> Result<PathBuf, RemoteProjectionProviderError> {
-    let staging = std::env::temp_dir().join(format!("deve-webdav-pull-{}", Uuid::new_v4()));
+    let staging_parent = workspace_root.parent().unwrap_or(workspace_root);
+    let staging = staging_parent.join(format!(".deve-projection-pull-{}", Uuid::new_v4()));
     fs::create_dir(&staging).map_err(|err| {
         RemoteProjectionProviderError::ProviderIo(format!(
-            "failed to create WebDAV pull staging directory {}: {err}",
+            "failed to create projection pull staging directory {}: {err}",
             staging.display()
         ))
     })?;
@@ -96,7 +98,7 @@ fn apply_staged_pull_files(
     let backup_root = staging.join(format!("__backup-{}", Uuid::new_v4()));
     fs::create_dir(&backup_root).map_err(|err| {
         RemoteProjectionProviderError::ProviderIo(format!(
-            "failed to create WebDAV pull backup directory {}: {err}",
+            "failed to create projection pull backup directory {}: {err}",
             backup_root.display()
         ))
     })?;
@@ -363,4 +365,34 @@ fn temporary_target_path(target: &Path) -> Result<PathBuf, RemoteProjectionProvi
             ))
         })?;
     Ok(parent.join(format!(".{file_name}.deve-pull-{}.tmp", Uuid::new_v4())))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_pull_files;
+    use deve_core::remote_projection::RemoteProjectionFile;
+    use std::fs;
+
+    #[test]
+    fn write_pull_files_overwrites_existing_file_without_temp_artifacts() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let workspace = dir.path().join("workspace");
+        fs::create_dir(&workspace).expect("workspace");
+        fs::write(workspace.join("a.md"), "old").expect("old");
+        let files = vec![RemoteProjectionFile::new("a.md", b"new").expect("file")];
+
+        write_pull_files(&workspace, &files).expect("write");
+
+        assert_eq!(
+            fs::read_to_string(workspace.join("a.md")).expect("content"),
+            "new"
+        );
+        let leftovers = fs::read_dir(dir.path())
+            .expect("parent")
+            .filter_map(|entry| entry.ok())
+            .filter_map(|entry| entry.file_name().into_string().ok())
+            .filter(|name| name.starts_with(".deve-projection-pull-"))
+            .collect::<Vec<_>>();
+        assert!(leftovers.is_empty(), "leftover staging dirs: {leftovers:?}");
+    }
 }
