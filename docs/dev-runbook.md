@@ -212,15 +212,27 @@ cargo run -p deve_cli --bin deve_cli -- backup run --locator s3://bucket-name/de
 cargo run -p deve_cli --bin deve_cli -- backup unbind --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --access writable --dry-run
 ```
 
-Restore candidate planning:
+Restore flow planning:
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-name/deve/ --repo-id <repo-id> --manifest-repo-id <repo-id> --branch writer-1 --manifest-digest <sha256-hex> --pack-digest <sha256-hex> --mode remote-readonly --manifest-verified --packs-downloaded --packs-decrypted --dry-run
 ```
 
+Remote-readonly provider download:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-name/deve/ --repo-id <repo-id> --manifest-repo-id <repo-id> --branch writer-1 --manifest-digest <branch-manifest-artifact-sha256-hex> --credential-ref env:DEVE_BACKUP_TOKEN --key-ref env:DEVE_BACKUP_KEY
+```
+
+The non-dry-run remote-readonly path downloads and opens
+`branch.manifest.enc`, then downloads encrypted pack artifacts referenced by the
+verified branch manifest. It stops at `PacksDownloaded`; it does not create a
+RestoreCandidate or write ledger, staging, Source Control, Git mirror, or
+Projection Workspace state.
+
 `explicit-import` and `explicit-merge` modes require `--write-gate` and still
-remain dry-run at this surface. Actual provider IO and explicit import/merge
-execution require later runtime work.
+remain dry-run at this surface until RestoreCandidate import/merge authority is
+implemented.
 
 ## Docker Release Smoke
 

@@ -1,8 +1,9 @@
 use super::*;
 use crate::backup::{
-    BackupArtifactKind, BackupArtifactProtectionInput, BackupBlobRef, BackupPackPlanInput,
-    BackupProtectionMechanism, BackupSeqRange, parse_backup_key_ref,
-    plan_backup_artifact_protection, plan_backup_pack,
+    BACKUP_BRANCH_MANIFEST_FORMAT_VERSION, BackupArtifactKind, BackupArtifactProtectionInput,
+    BackupBlobRef, BackupBranchManifestInput, BackupBranchManifestPackRef, BackupLocator,
+    BackupPackPlanInput, BackupProtectionMechanism, BackupSeqRange, parse_backup_key_ref,
+    plan_backup_artifact_protection, plan_backup_pack, validate_backup_branch_manifest,
 };
 
 fn artifact_key(seed: u8) -> BackupArtifactKey {
@@ -53,6 +54,30 @@ fn manifest_for(artifact: &BackupEncryptedPackArtifact) -> BackupPackManifest {
             path: "blobs/aa.bin".into(),
             size_bytes: 12,
             digest: artifact.payload_digest().unwrap(),
+        }],
+    })
+    .unwrap()
+}
+
+fn branch_manifest_for(
+    artifact: &BackupEncryptedPackArtifact,
+) -> crate::backup::BackupBranchManifest {
+    let locator = BackupLocator::parse("s3://bucket-name/deve/").unwrap();
+    let branch = locator.branch_locator(&artifact.writer_identity).unwrap();
+    validate_backup_branch_manifest(BackupBranchManifestInput {
+        branch,
+        expected_repo_id: artifact.repo_id,
+        manifest_repo_id: artifact.repo_id,
+        manifest_writer_identity: artifact.writer_identity.clone(),
+        manifest_branch_path: artifact.branch_path.clone(),
+        format_version: BACKUP_BRANCH_MANIFEST_FORMAT_VERSION,
+        packs: vec![BackupBranchManifestPackRef {
+            pack_sequence: artifact.pack_sequence,
+            object_path: format!(
+                "{}/packs/{:06}.pack.enc",
+                artifact.branch_path, artifact.pack_sequence
+            ),
+            payload_digest: artifact.payload_digest().unwrap(),
         }],
     })
     .unwrap()
@@ -195,6 +220,44 @@ fn backup_pack_artifact_download_verify_rejects_routing_metadata_tamper() {
         .expect_err("routing metadata drift must fail before decrypt");
 
     assert_eq!(err, BackupPackArtifactError::WriterIdentityMismatch);
+}
+
+#[test]
+fn backup_pack_artifact_ref_download_verify_uses_branch_manifest_ref() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let artifact_bytes = artifact.to_bytes().unwrap();
+    let branch_manifest = branch_manifest_for(&artifact);
+    let pack_ref = &branch_manifest.packs[0];
+
+    let result =
+        verify_downloaded_pack_artifact_ref_and_routing(BackupPackArtifactRefDownloadVerifyInput {
+            branch_manifest: &branch_manifest,
+            pack_ref,
+            artifact_bytes: &artifact_bytes,
+        })
+        .unwrap();
+
+    assert_eq!(result.pack_sequence(), artifact.pack_sequence);
+    assert_eq!(result.object_path(), pack_ref.object_path.as_str());
+    assert!(
+        result
+            .computed_digest()
+            .same_sha256(&pack_ref.payload_digest)
+    );
+
+    let mut tampered = artifact_bytes;
+    tampered.push(b'\n');
+    let err =
+        verify_downloaded_pack_artifact_ref_and_routing(BackupPackArtifactRefDownloadVerifyInput {
+            branch_manifest: &branch_manifest,
+            pack_ref,
+            artifact_bytes: &tampered,
+        })
+        .expect_err("tampered artifact must fail before decrypt");
+    assert_eq!(err, BackupPackArtifactError::ArtifactDigestMismatch);
 }
 
 #[test]

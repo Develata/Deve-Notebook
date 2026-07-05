@@ -9,6 +9,7 @@
 //! not resolve key refs, contact providers, write ledger state, modify source
 //! control state, or touch Projection Workspaces.
 
+use super::branch_manifest::{BackupBranchManifest, BackupBranchManifestPackRef};
 use super::locator::{normalize_remote_path, safe_writer_identity};
 use super::pack::{BackupDigest, BackupPackError, BackupPackManifest, validate_pack_manifest};
 use super::protection::{BackupArtifactKind, BackupArtifactProtection, BackupProtectionMechanism};
@@ -41,7 +42,7 @@ impl BackupArtifactKey {
         Ok(Self { key_bytes })
     }
 
-    fn cipher(&self) -> Aes256Gcm {
+    pub(crate) fn cipher(&self) -> Aes256Gcm {
         let key = Key::<Aes256Gcm>::from_slice(&self.key_bytes);
         Aes256Gcm::new(key)
     }
@@ -92,6 +93,12 @@ pub struct BackupPackArtifactUploadVerifyInput<'a> {
 
 pub struct BackupPackArtifactDownloadVerifyInput<'a> {
     pub manifest: &'a BackupPackManifest,
+    pub artifact_bytes: &'a [u8],
+}
+
+pub struct BackupPackArtifactRefDownloadVerifyInput<'a> {
+    pub branch_manifest: &'a BackupBranchManifest,
+    pub pack_ref: &'a BackupBranchManifestPackRef,
     pub artifact_bytes: &'a [u8],
 }
 
@@ -289,6 +296,28 @@ pub fn verify_downloaded_pack_artifact_digest_and_routing(
     })
 }
 
+pub fn verify_downloaded_pack_artifact_ref_and_routing(
+    input: BackupPackArtifactRefDownloadVerifyInput<'_>,
+) -> Result<BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError> {
+    if !input.pack_ref.payload_digest.is_valid_sha256() {
+        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
+    }
+    let computed_digest = sha256_digest(input.artifact_bytes);
+    if !computed_digest.same_sha256(&input.pack_ref.payload_digest) {
+        return Err(BackupPackArtifactError::ArtifactDigestMismatch);
+    }
+
+    let artifact: BackupEncryptedPackArtifact = serde_json::from_slice(input.artifact_bytes)
+        .map_err(|_| BackupPackArtifactError::DeserializeFailed)?;
+    artifact.validate_against_branch_manifest_ref(input.branch_manifest, input.pack_ref)?;
+    artifact.validate_cipher_envelope()?;
+    Ok(BackupPackArtifactDownloadVerifyResult {
+        pack_sequence: artifact.pack_sequence,
+        object_path: input.pack_ref.object_path.clone(),
+        computed_digest,
+    })
+}
+
 fn verified_pack_artifact_for_manifest(
     manifest: &BackupPackManifest,
     artifact_bytes: &[u8],
@@ -330,6 +359,31 @@ impl BackupEncryptedPackArtifact {
             return Err(BackupPackArtifactError::BranchPathMismatch);
         }
         if self.pack_sequence != manifest.pack_sequence {
+            return Err(BackupPackArtifactError::PackSequenceMismatch);
+        }
+        Ok(())
+    }
+
+    fn validate_against_branch_manifest_ref(
+        &self,
+        branch_manifest: &BackupBranchManifest,
+        pack_ref: &BackupBranchManifestPackRef,
+    ) -> Result<(), BackupPackArtifactError> {
+        if self.format_version != BACKUP_PACK_ARTIFACT_FORMAT_VERSION {
+            return Err(BackupPackArtifactError::UnsupportedFormatVersion(
+                self.format_version,
+            ));
+        }
+        if self.repo_id != branch_manifest.repo_id {
+            return Err(BackupPackArtifactError::RepoIdMismatch);
+        }
+        if self.writer_identity != branch_manifest.writer_identity {
+            return Err(BackupPackArtifactError::WriterIdentityMismatch);
+        }
+        if self.branch_path != branch_manifest.branch_path {
+            return Err(BackupPackArtifactError::BranchPathMismatch);
+        }
+        if self.pack_sequence != pack_ref.pack_sequence {
             return Err(BackupPackArtifactError::PackSequenceMismatch);
         }
         Ok(())

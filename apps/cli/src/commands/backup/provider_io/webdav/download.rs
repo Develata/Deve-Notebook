@@ -2,7 +2,7 @@
 //!   - 06_backup#backup-provider-dispatch-contract
 //!   - 06_backup#backup-restore-state-machine-contract
 
-use super::super::BackupPackDownloadOutcome;
+use super::super::BackupArtifactDownloadOutcome;
 use super::super::credentials::webdav_authorization_header;
 use super::transport::{ReqwestWebDavBackupTransport, WebDavBackupDownloadTransport};
 use super::url::{webdav_endpoint, webdav_object_url};
@@ -15,7 +15,7 @@ pub(super) fn download_webdav_pack(
     credential_ref: &BackupSecretRef,
     object_path: &str,
     max_bytes: usize,
-) -> anyhow::Result<BackupPackDownloadOutcome> {
+) -> anyhow::Result<BackupArtifactDownloadOutcome> {
     let authorization = webdav_authorization_header(credential_ref)?;
     let transport = ReqwestWebDavBackupTransport::new()?;
     download_webdav_pack_with_transport(locator, &authorization, object_path, max_bytes, &transport)
@@ -28,7 +28,7 @@ fn download_webdav_pack_with_transport<T: WebDavBackupDownloadTransport>(
     object_path: &str,
     max_bytes: usize,
     transport: &T,
-) -> anyhow::Result<BackupPackDownloadOutcome> {
+) -> anyhow::Result<BackupArtifactDownloadOutcome> {
     let base = webdav_endpoint(locator)?;
     let target = webdav_object_url(&base, object_path)?;
     let response = transport.get(&target, authorization, max_bytes)?;
@@ -42,7 +42,7 @@ fn download_webdav_pack_with_transport<T: WebDavBackupDownloadTransport>(
         bail!("Backup WebDAV GET {object_path} exceeded max download bytes");
     }
     let downloaded_bytes = response.body.len();
-    Ok(BackupPackDownloadOutcome {
+    Ok(BackupArtifactDownloadOutcome {
         artifact_bytes: response.body,
         downloaded_bytes,
         provider_metadata_is_diagnostic_only: true,
@@ -114,6 +114,33 @@ mod tests {
             calls.as_slice(),
             &[(
                 "https://dav.example.com/deve/branches/writer-1/packs/000001.pack.enc".to_string(),
+                1024
+            )]
+        );
+    }
+
+    #[test]
+    fn backup_provider_download_accepts_branch_manifest_artifact_path() {
+        let locator = BackupLocator::parse("webdav+https://dav.example.com/deve").unwrap();
+        let transport =
+            RecordingWebDavTransport::with_response(StatusCode::OK, b"manifest-json".to_vec());
+
+        let outcome = download_webdav_pack_with_transport(
+            &locator,
+            "Bearer token",
+            "deve/branches/writer-1/branch.manifest.enc",
+            1024,
+            &transport,
+        )
+        .unwrap();
+
+        assert_eq!(outcome.artifact_bytes, b"manifest-json");
+        assert!(outcome.provider_metadata_is_diagnostic_only);
+        let calls = transport.get_calls.lock().expect("get calls");
+        assert_eq!(
+            calls.as_slice(),
+            &[(
+                "https://dav.example.com/deve/branches/writer-1/branch.manifest.enc".to_string(),
                 1024
             )]
         );

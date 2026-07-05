@@ -4,19 +4,22 @@
 //!   - 06_backup#backup-restore-candidate-contract
 //!   - 06_backup#backup-command-output-contract
 //!
-//! Backup restore flow planning and encrypted pack download admission.
+//! Backup restore flow planning and encrypted artifact download admission.
 //!
-//! This command surface validates caller-supplied flow metadata and can perform
-//! a remote-readonly provider download of encrypted pack bytes. Downloaded bytes
-//! are checked against manifest routing and digest metadata, then the command
-//! stops at PacksDownloaded evidence. Candidate admission still requires typed
-//! manifest verification and decrypted pack evidence in core. This command does
-//! not decrypt, import, merge, append ledger state, or touch Projection
-//! Workspaces.
+//! This command surface validates caller-supplied flow metadata for dry-runs and
+//! can perform a remote-readonly provider download of encrypted branch manifest
+//! and pack bytes. Manifest bytes are opened through core verification before
+//! pack refs are trusted; pack bytes are checked against typed manifest refs,
+//! then the command stops at PacksDownloaded evidence. Candidate admission still
+//! requires PacksDecrypted evidence in core. This command does not import,
+//! merge, append ledger state, or touch Projection Workspaces.
 
 mod download;
 
-use super::provider_io::{BackupPackDownloader, RealBackupPackDownloader};
+use super::provider_io::{
+    BackupArtifactDownloader, BackupArtifactKeyResolver, EnvBackupArtifactKeyResolver,
+    RealBackupArtifactDownloader,
+};
 use anyhow::bail;
 use deve_core::backup::{
     BackupBindingStatus, BackupCommandKind, BackupDigest, BackupLocator, BackupPlanEffect,
@@ -43,6 +46,7 @@ pub struct RestoreCommandInput<'a> {
     pub packs_decrypted: bool,
     pub dry_run: bool,
     pub credential_ref: Option<&'a str>,
+    pub key_ref: Option<&'a str>,
     pub pack_sequence: Option<u64>,
     pub ledger_start: Option<u64>,
     pub ledger_end: Option<u64>,
@@ -51,8 +55,9 @@ pub struct RestoreCommandInput<'a> {
 }
 
 pub fn restore(input: RestoreCommandInput<'_>) -> anyhow::Result<()> {
-    let mut downloader = RealBackupPackDownloader;
-    for line in restore_lines_with_downloader(input, &mut downloader)? {
+    let mut downloader = RealBackupArtifactDownloader;
+    let mut key_resolver = EnvBackupArtifactKeyResolver;
+    for line in restore_lines_with_runtime(input, &mut downloader, &mut key_resolver)? {
         println!("{line}");
     }
     Ok(())
@@ -61,12 +66,14 @@ pub fn restore(input: RestoreCommandInput<'_>) -> anyhow::Result<()> {
 #[cfg(test)]
 pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Vec<String>> {
     let mut downloader = FailClosedRestoreDownloader;
-    restore_lines_with_downloader(input, &mut downloader)
+    let mut key_resolver = FailClosedRestoreKeyResolver;
+    restore_lines_with_runtime(input, &mut downloader, &mut key_resolver)
 }
 
-pub(crate) fn restore_lines_with_downloader(
+pub(crate) fn restore_lines_with_runtime(
     input: RestoreCommandInput<'_>,
-    downloader: &mut dyn BackupPackDownloader,
+    downloader: &mut dyn BackupArtifactDownloader,
+    key_resolver: &mut dyn BackupArtifactKeyResolver,
 ) -> anyhow::Result<Vec<String>> {
     let context = RestoreContext::parse(input)?;
     if requires_write_gate(context.admission_mode) && !input.write_gate {
@@ -77,7 +84,7 @@ pub(crate) fn restore_lines_with_downloader(
         return restore_dry_run_lines(input, &context);
     }
 
-    download::restore_download_lines(input, downloader, &context)
+    download::restore_download_lines(input, downloader, key_resolver, &context)
 }
 
 fn restore_dry_run_lines(
@@ -210,36 +217,28 @@ pub(super) fn required_str<'a>(value: Option<&'a str>, flag: &str) -> anyhow::Re
     value.ok_or_else(|| anyhow::anyhow!("backup restore provider download requires {flag}"))
 }
 
-pub(super) fn required_u64(value: Option<u64>, flag: &str) -> anyhow::Result<u64> {
-    value.ok_or_else(|| anyhow::anyhow!("backup restore provider download requires {flag}"))
-}
-
-pub(super) fn ledger_range(
-    ledger_start: Option<u64>,
-    ledger_end: Option<u64>,
-    ledger_event_count: u64,
-) -> anyhow::Result<Option<deve_core::backup::BackupSeqRange>> {
-    if ledger_event_count == 0 {
-        if ledger_start.is_some() || ledger_end.is_some() {
-            bail!("backup restore ledger range requires --ledger-events greater than zero");
-        }
-        return Ok(None);
-    }
-
-    let start = required_u64(ledger_start, "--ledger-start")?;
-    let end = required_u64(ledger_end, "--ledger-end")?;
-    Ok(Some(deve_core::backup::BackupSeqRange { start, end }))
-}
-
 #[cfg(test)]
 struct FailClosedRestoreDownloader;
 
 #[cfg(test)]
-impl BackupPackDownloader for FailClosedRestoreDownloader {
-    fn download_pack(
+impl BackupArtifactDownloader for FailClosedRestoreDownloader {
+    fn download_artifact(
         &mut self,
-        _request: super::provider_io::BackupPackDownloadRequest<'_>,
-    ) -> anyhow::Result<super::provider_io::BackupPackDownloadOutcome> {
+        _request: super::provider_io::BackupArtifactDownloadRequest<'_>,
+    ) -> anyhow::Result<super::provider_io::BackupArtifactDownloadOutcome> {
         bail!("backup provider download is unavailable in this execution path")
+    }
+}
+
+#[cfg(test)]
+struct FailClosedRestoreKeyResolver;
+
+#[cfg(test)]
+impl BackupArtifactKeyResolver for FailClosedRestoreKeyResolver {
+    fn resolve_key(
+        &mut self,
+        _key_ref: &deve_core::backup::BackupSecretRef,
+    ) -> anyhow::Result<deve_core::backup::BackupArtifactKey> {
+        bail!("backup key resolution is unavailable in this execution path")
     }
 }

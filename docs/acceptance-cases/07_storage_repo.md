@@ -310,11 +310,14 @@
     - cli_assert: backup_run_writes_no_local_authority true
 
 - case_id: STORE-021
-  goal: Backup provider download 只读取 encrypted artifact bytes，且只能进入 PacksDownloaded evidence。
+  goal: Backup restore provider download 先验证 branch manifest，再只进入 PacksDownloaded evidence。
   preconditions:
-    - branch manifest pack refs 已指向 provider object path
+    - branch.manifest.enc 已指向 provider object path
     - provider credential ref 指向 env resolver
+    - backup key ref 指向 runtime key resolver
   steps:
+    - run: cargo test -p deve_core --lib backup_branch_manifest_artifact -- --nocapture
+    - run: cargo test -p deve_core --lib backup_pack_artifact_ref_download_verify -- --nocapture
     - run: cargo test -p deve_cli provider_io -- --nocapture
     - run: cargo test -p deve_cli backup_restore -- --nocapture
     - run: cargo test -p deve_cli backup_restore_download -- --nocapture
@@ -322,8 +325,12 @@
     - cli_assert: backup_provider_download_returns_encrypted_bytes_only true
     - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
     - cli_assert: backup_provider_download_does_not_write_local_authority true
-    - cli_assert: backup_restore_download_verifies_manifest_digest_and_routing true
+    - cli_assert: backup_restore_download_opens_branch_manifest_before_pack_download true
+    - cli_assert: backup_restore_download_verifies_branch_manifest_digest_and_routing true
+    - cli_assert: backup_restore_download_selects_pack_from_branch_manifest true
     - cli_assert: backup_restore_download_stops_before_decrypt_or_candidate true
+    - cli_assert: backup_restore_download_rejects_manual_evidence_before_provider_get true
+    - cli_assert: backup_restore_download_rejects_manual_pack_metadata_before_provider_get true
     - cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
     - cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
     - cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
@@ -345,7 +352,7 @@
 - case_id: STORE-023
   goal: Backup PacksDownloaded evidence 必须与 branch manifest pack refs 一一匹配。
   preconditions:
-    - branch manifest 已验证并列出 pack object refs
+    - branch.manifest.enc 已通过 expected digest、routing 与 AEAD authentication 校验
     - provider download 与 artifact digest/routing 校验已产生 per-pack evidence
   steps:
     - run: cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture

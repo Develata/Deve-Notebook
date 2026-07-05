@@ -7,7 +7,7 @@ mod transport;
 mod upload;
 mod url;
 
-use super::{BackupPackDownloadOutcome, BackupPackUploadOutcome};
+use super::{BackupArtifactDownloadOutcome, BackupPackUploadOutcome};
 use deve_core::backup::{BackupLocator, BackupSecretRef};
 
 pub(super) fn upload_s3_pack(
@@ -25,6 +25,6 @@ pub(super) fn download_s3_pack(
     credential_ref: &BackupSecretRef,
     object_path: &str,
     max_bytes: usize,
-) -> anyhow::Result<BackupPackDownloadOutcome> {
+) -> anyhow::Result<BackupArtifactDownloadOutcome> {
     download::download_s3_pack(locator, credential_ref, object_path, max_bytes)
 }

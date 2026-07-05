@@ -108,6 +108,8 @@ pub(crate) enum BackupAction {
         pack_digests: Vec<String>,
         #[arg(long = "credential-ref")]
         credential_ref: Option<String>,
+        #[arg(long = "key-ref")]
+        key_ref: Option<String>,
         #[arg(long = "pack-sequence")]
         pack_sequence: Option<u64>,
         #[arg(long = "ledger-start")]

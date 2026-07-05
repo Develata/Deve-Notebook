@@ -2,7 +2,7 @@
 //!   - 06_backup#backup-provider-dispatch-contract
 //!   - 06_backup#backup-restore-state-machine-contract
 
-use super::super::BackupPackDownloadOutcome;
+use super::super::BackupArtifactDownloadOutcome;
 use super::super::credentials::{S3BackupCredentials, s3_credentials};
 use super::signing::signed_get_request;
 use super::transport::{ReqwestS3BackupTransport, S3BackupDownloadTransport};
@@ -17,7 +17,7 @@ pub(super) fn download_s3_pack(
     credential_ref: &BackupSecretRef,
     object_path: &str,
     max_bytes: usize,
-) -> anyhow::Result<BackupPackDownloadOutcome> {
+) -> anyhow::Result<BackupArtifactDownloadOutcome> {
     let credentials = s3_credentials(credential_ref)?;
     let transport = ReqwestS3BackupTransport::new()?;
     download_s3_pack_with_transport(locator, &credentials, object_path, max_bytes, &transport)
@@ -30,7 +30,7 @@ fn download_s3_pack_with_transport<T: S3BackupDownloadTransport>(
     object_path: &str,
     max_bytes: usize,
     transport: &T,
-) -> anyhow::Result<BackupPackDownloadOutcome> {
+) -> anyhow::Result<BackupArtifactDownloadOutcome> {
     let target = s3_pack_url(locator, &credentials.region, object_path)?;
     let request = signed_get_request(target, credentials, Utc::now())?;
     let response = transport.get(request, max_bytes)?;
@@ -44,7 +44,7 @@ fn download_s3_pack_with_transport<T: S3BackupDownloadTransport>(
         bail!("Backup S3 GET {object_path} exceeded max download bytes");
     }
     let downloaded_bytes = response.body.len();
-    Ok(BackupPackDownloadOutcome {
+    Ok(BackupArtifactDownloadOutcome {
         artifact_bytes: response.body,
         downloaded_bytes,
         provider_metadata_is_diagnostic_only: true,
@@ -133,6 +133,32 @@ mod tests {
                 .iter()
                 .any(|(name, _)| name == "content-type")
         );
+    }
+
+    #[test]
+    fn s3_download_accepts_branch_manifest_artifact_path() {
+        let locator = BackupLocator::parse("s3://bucket-name/deve").unwrap();
+        let transport =
+            RecordingS3Transport::with_response(StatusCode::OK, b"manifest-json".to_vec());
+
+        let outcome = download_s3_pack_with_transport(
+            &locator,
+            &credentials(),
+            "deve/branches/writer-1/branch.manifest.enc",
+            1024,
+            &transport,
+        )
+        .unwrap();
+
+        assert_eq!(outcome.artifact_bytes, b"manifest-json");
+        assert!(outcome.provider_metadata_is_diagnostic_only);
+        let calls = transport.calls.lock().expect("calls");
+        assert_eq!(calls.len(), 1);
+        assert_eq!(
+            calls[0].0.url.as_str(),
+            "https://bucket-name.s3.us-east-1.amazonaws.com/deve/branches/writer-1/branch.manifest.enc"
+        );
+        assert_eq!(calls[0].1, 1024);
     }
 
     #[test]

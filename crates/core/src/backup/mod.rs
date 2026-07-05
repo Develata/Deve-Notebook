@@ -45,9 +45,11 @@ mod verification;
 pub use artifact::{
     BackupArtifactKey, BackupEncryptedPackArtifact, BackupPackArtifactDownloadVerifyInput,
     BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError, BackupPackArtifactInput,
-    BackupPackArtifactOpenInput, BackupPackArtifactOpenResult, BackupPackArtifactUploadVerifyInput,
+    BackupPackArtifactOpenInput, BackupPackArtifactOpenResult,
+    BackupPackArtifactRefDownloadVerifyInput, BackupPackArtifactUploadVerifyInput,
     decrypt_backup_pack_artifact, encrypt_backup_pack_artifact, open_backup_pack_artifact,
     verify_backup_pack_artifact_for_upload, verify_downloaded_pack_artifact_digest_and_routing,
+    verify_downloaded_pack_artifact_ref_and_routing,
 };
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,
@@ -58,8 +60,12 @@ pub use binding_store::{
     list_backup_binding_records, persist_backup_branch_binding, remove_backup_branch_binding,
 };
 pub use branch_manifest::{
-    BACKUP_BRANCH_MANIFEST_FORMAT_VERSION, BackupBranchManifest, BackupBranchManifestError,
-    BackupBranchManifestInput, BackupBranchManifestPackRef, validate_backup_branch_manifest,
+    BACKUP_BRANCH_MANIFEST_FORMAT_VERSION, BackupBranchManifest, BackupBranchManifestArtifactError,
+    BackupBranchManifestArtifactInput, BackupBranchManifestArtifactOpenInput,
+    BackupBranchManifestArtifactOpenResult, BackupBranchManifestError, BackupBranchManifestInput,
+    BackupBranchManifestPackRef, BackupEncryptedBranchManifestArtifact,
+    encrypt_backup_branch_manifest_artifact, open_backup_branch_manifest_artifact,
+    validate_backup_branch_manifest,
 };
 pub use discovery::{
     BackupBranchDiscoveryDiagnostic, BackupBranchDiscoveryDiagnosticKind,

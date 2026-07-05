@@ -5,7 +5,7 @@
 //!
 //! Backup-owned provider transfer adapters.
 //!
-//! This module only transfers previously sealed encrypted backup pack artifacts.
+//! This module only transfers previously sealed encrypted backup artifacts.
 //! Downloaded bytes stay encrypted and must still pass manifest/hash/auth/decrypt
 //! admission before any restore candidate exists. Provider metadata is diagnostic
 //! only. This module does not read ledger facts, decrypt artifacts, write
@@ -16,10 +16,10 @@ mod s3;
 mod webdav;
 
 use anyhow::bail;
-use deve_core::backup::{BackupLocator, BackupProviderKind, BackupSecretRef};
+use deve_core::backup::{BackupArtifactKey, BackupLocator, BackupProviderKind, BackupSecretRef};
 
 pub(crate) const BACKUP_PACK_CONTENT_TYPE: &str = "application/vnd.deve.backup-pack+json";
-pub(crate) const BACKUP_PACK_MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
 
 pub(crate) struct BackupPackUploadRequest<'a> {
     pub locator: &'a BackupLocator,
@@ -41,7 +41,7 @@ pub(crate) trait BackupPackUploader {
     ) -> anyhow::Result<BackupPackUploadOutcome>;
 }
 
-pub(crate) struct BackupPackDownloadRequest<'a> {
+pub(crate) struct BackupArtifactDownloadRequest<'a> {
     pub locator: &'a BackupLocator,
     pub credential_ref: &'a BackupSecretRef,
     pub object_path: &'a str,
@@ -49,17 +49,21 @@ pub(crate) struct BackupPackDownloadRequest<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct BackupPackDownloadOutcome {
+pub(crate) struct BackupArtifactDownloadOutcome {
     pub artifact_bytes: Vec<u8>,
     pub downloaded_bytes: usize,
     pub provider_metadata_is_diagnostic_only: bool,
 }
 
-pub(crate) trait BackupPackDownloader {
-    fn download_pack(
+pub(crate) trait BackupArtifactDownloader {
+    fn download_artifact(
         &mut self,
-        request: BackupPackDownloadRequest<'_>,
-    ) -> anyhow::Result<BackupPackDownloadOutcome>;
+        request: BackupArtifactDownloadRequest<'_>,
+    ) -> anyhow::Result<BackupArtifactDownloadOutcome>;
+}
+
+pub(crate) trait BackupArtifactKeyResolver {
+    fn resolve_key(&mut self, key_ref: &BackupSecretRef) -> anyhow::Result<BackupArtifactKey>;
 }
 
 pub(crate) struct RealBackupPackUploader;
@@ -86,13 +90,13 @@ impl BackupPackUploader for RealBackupPackUploader {
     }
 }
 
-pub(crate) struct RealBackupPackDownloader;
+pub(crate) struct RealBackupArtifactDownloader;
 
-impl BackupPackDownloader for RealBackupPackDownloader {
-    fn download_pack(
+impl BackupArtifactDownloader for RealBackupArtifactDownloader {
+    fn download_artifact(
         &mut self,
-        request: BackupPackDownloadRequest<'_>,
-    ) -> anyhow::Result<BackupPackDownloadOutcome> {
+        request: BackupArtifactDownloadRequest<'_>,
+    ) -> anyhow::Result<BackupArtifactDownloadOutcome> {
         if request.max_bytes == 0 {
             bail!("backup provider download max_bytes must be greater than zero");
         }
@@ -114,11 +118,19 @@ impl BackupPackDownloader for RealBackupPackDownloader {
     }
 }
 
+pub(crate) struct EnvBackupArtifactKeyResolver;
+
+impl BackupArtifactKeyResolver for EnvBackupArtifactKeyResolver {
+    fn resolve_key(&mut self, key_ref: &BackupSecretRef) -> anyhow::Result<BackupArtifactKey> {
+        credentials::backup_artifact_key(key_ref)
+    }
+}
+
 fn normalize_download_limit(requested: usize) -> anyhow::Result<usize> {
     if requested == 0 {
         bail!("backup provider download max_bytes must be greater than zero");
     }
-    Ok(requested.min(BACKUP_PACK_MAX_DOWNLOAD_BYTES))
+    Ok(requested.min(BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES))
 }
 
 #[cfg(test)]
@@ -136,15 +148,15 @@ impl BackupPackUploader for FailClosedBackupPackUploader {
 
 #[cfg(test)]
 #[allow(dead_code)]
-pub(crate) struct FailClosedBackupPackDownloader;
+pub(crate) struct FailClosedBackupArtifactDownloader;
 
 #[cfg(test)]
 #[allow(dead_code)]
-impl BackupPackDownloader for FailClosedBackupPackDownloader {
-    fn download_pack(
+impl BackupArtifactDownloader for FailClosedBackupArtifactDownloader {
+    fn download_artifact(
         &mut self,
-        _request: BackupPackDownloadRequest<'_>,
-    ) -> anyhow::Result<BackupPackDownloadOutcome> {
+        _request: BackupArtifactDownloadRequest<'_>,
+    ) -> anyhow::Result<BackupArtifactDownloadOutcome> {
         bail!("backup provider download is unavailable in this execution path")
     }
 }
@@ -162,9 +174,9 @@ mod tests {
 
     #[test]
     fn backup_provider_download_limit_caps_to_runtime_budget() {
-        let limit = normalize_download_limit(BACKUP_PACK_MAX_DOWNLOAD_BYTES + 1)
+        let limit = normalize_download_limit(BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES + 1)
             .expect("download limit capped");
 
-        assert_eq!(limit, BACKUP_PACK_MAX_DOWNLOAD_BYTES);
+        assert_eq!(limit, BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES);
     }
 }
