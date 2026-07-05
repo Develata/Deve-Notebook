@@ -17,6 +17,14 @@ if (typeof window !== 'undefined') {
         });
     }
 
+    function getRegisteredInitBridgeGlobal(name) {
+        const bridge = window.__deveWebBridge;
+        if (!bridge || typeof bridge.get !== "function") {
+            throw new Error(`web bridge registry unavailable before reading ${name}`);
+        }
+        return bridge.get(name);
+    }
+
     const defaultI18n = {
         locale: "en-US",
         editor: {
@@ -27,8 +35,8 @@ if (typeof window !== 'undefined') {
         },
     };
 
-    const existingCodeActions = window.deve_code_actions;
-    const existingI18n = window.deve_i18n;
+    const existingCodeActions = getRegisteredInitBridgeGlobal("deve_code_actions");
+    const existingI18n = getRegisteredInitBridgeGlobal("deve_i18n");
     const codeActions = Array.isArray(existingCodeActions)
         ? existingCodeActions
         : [];

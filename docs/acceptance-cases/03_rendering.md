@@ -204,6 +204,7 @@
     - cli_assert: editor_adapter_globals_registered_through_bridge true
     - cli_assert: index_editor_wrappers_registered_through_bridge true
     - cli_assert: index_html_bridge_logic_externalized true
+    - cli_assert: index_html_theme_bootstrap_externalized true
     - cli_assert: index_editor_bootstrap_state_registered_through_bridge true
     - cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
     - cli_assert: index_editor_wrappers_avoid_direct_window_calls true
@@ -214,6 +215,7 @@
     - cli_assert: index_error_handler_does_not_assign_window_onerror true
     - cli_assert: init_code_actions_registered_through_bridge true
     - cli_assert: init_i18n_registered_through_bridge true
+    - cli_assert: init_rejects_unregistered_window_facades true
     - cli_assert: init_script_order_keeps_registry_before_init true
     - cli_assert: code_menu_does_not_assign_action_registry true
     - cli_assert: widget_bridge_helper_centralizes_facade_reads true

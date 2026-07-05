@@ -9,39 +9,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link data-trunk rel="copy-file" href="public/favicon.svg" data-target-path="." />
     <link data-trunk rel="copy-file" href="public/manifest.json" data-target-path="." />
-    <script>
-      (() => {
-        const normalizeThemePref = (value) => {
-          switch (value) {
-            case "warm":
-            case "cold":
-            case "night":
-              return value;
-            case "dark":
-              return "night";
-            case "auto":
-            case "light":
-              return "warm";
-            default:
-              return "warm";
-          }
-        };
-
-        // Always set the marker pre-paint (default warm) so the first paint
-        // carries data-deve-theme-pref and its color-scheme, even before any
-        // theme is stored. normalizeThemePref(null) resolves to "warm".
-        let stored = null;
-        try {
-          stored = window.localStorage?.getItem("deve.ui.theme");
-        } catch (_) {
-          // localStorage can be unavailable in private or restricted contexts.
-        }
-        document.documentElement.setAttribute(
-          "data-deve-theme-pref",
-          normalizeThemePref(stored),
-        );
-      })();
-    </script>
+    <script src="js/index_theme_bootstrap.js?rev=20260705-bridge-policy"></script>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
     <link data-trunk rel="css" href="style/_variables.css" />
     <link data-trunk rel="css" href="style/_variables-cold.css" />

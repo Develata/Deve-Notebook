@@ -26,6 +26,10 @@ const nativeBackendBridgeSource = fs.readFileSync(
   "utf8"
 );
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
+const indexThemeBootstrapSource = fs.readFileSync(
+  path.join(root, "index_theme_bootstrap.js"),
+  "utf8"
+);
 const indexBootstrapSource = fs.readFileSync(path.join(root, "index_bootstrap.js"), "utf8");
 const indexEditorAdapterSource = fs.readFileSync(
   path.join(root, "index_editor_adapter.js"),
@@ -445,8 +449,34 @@ assert.equal(
 );
 assert.throws(
   () => vm.runInNewContext(initSource, { window: {} }, { filename: "init.js" }),
-  /web bridge registry unavailable before registering deve_code_actions/,
+  /web bridge registry unavailable before reading deve_code_actions/,
   "init bootstrap must fail closed without the registry"
+);
+const initUnregisteredWindowContext = {
+  window: {
+    deve_code_actions: [{ id: "unsafe-unregistered-action" }],
+    deve_i18n: {
+      locale: "zz-ZZ",
+      editor: { noActionsAvailable: "unsafe unregistered copy" },
+    },
+  },
+};
+vm.runInNewContext(registrySource, initUnregisteredWindowContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(initSource, initUnregisteredWindowContext, { filename: "init.js" });
+const unregisteredCodeActions =
+  initUnregisteredWindowContext.window.__deveWebBridge.get("deve_code_actions");
+assert.equal(
+  Array.isArray(unregisteredCodeActions) && unregisteredCodeActions.length === 0,
+  true,
+  "init bootstrap must not adopt unregistered window code actions"
+);
+assert.equal(
+  initUnregisteredWindowContext.window.__deveWebBridge.get("deve_i18n").editor
+    .noActionsAvailable,
+  "No actions available",
+  "init bootstrap must not adopt unregistered window i18n copy"
 );
 
 const nativeBridgeRuntimeSource = nativeBackendBridgeSource.replace(
@@ -709,6 +739,16 @@ assert.doesNotMatch(
   /register(?:Index|Editor)BridgeGlobal|__deveEditorBootstrap|ensureEditorAdapter/,
   "index.html must stay a script loader and not carry bridge implementation logic"
 );
+assert.doesNotMatch(
+  indexHtmlSource,
+  /normalizeThemePref|localStorage|data-deve-theme-pref/,
+  "index.html must externalize pre-paint theme bootstrap logic"
+);
+assert.match(
+  indexThemeBootstrapSource,
+  /data-deve-theme-pref/,
+  "theme bootstrap script must own the pre-paint theme marker"
+);
 
 assert.doesNotMatch(
   gutterDiffSource,
@@ -844,8 +884,18 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(
   initSource,
+  /window\.deve_code_actions\b/,
+  "init bootstrap must not read deve_code_actions directly"
+);
+assert.doesNotMatch(
+  initSource,
   /window\.deve_i18n\s*=/,
   "init bootstrap must not assign deve_i18n directly"
+);
+assert.doesNotMatch(
+  initSource,
+  /window\.deve_i18n\b/,
+  "init bootstrap must not read deve_i18n directly"
 );
 assert.doesNotMatch(
   codeMenuSource,
@@ -908,6 +958,7 @@ function scriptIndex(src) {
   return indexHtmlSource.indexOf(`src="${src}?rev=${bridgeScriptRev}"`);
 }
 
+const themeBootstrapScriptIndex = scriptIndex("js/index_theme_bootstrap.js");
 const registryScriptIndex = scriptIndex("js/web_bridge_registry.js");
 const katexBridgeScriptIndex = scriptIndex("js/katex_bridge.js");
 const chatMathBootstrapScriptIndex = scriptIndex("js/chat_math_bootstrap.js");
@@ -917,6 +968,10 @@ const indexBootstrapScriptIndex = scriptIndex("js/index_bootstrap.js");
 const initScriptIndex = scriptIndex("js/init.js");
 const indexEditorAdapterScriptIndex = scriptIndex("js/index_editor_adapter.js");
 const lazyEditorBundleIndex = indexEditorAdapterSource.indexOf('import("./editor.bundle.js');
+assert.ok(
+  themeBootstrapScriptIndex >= 0,
+  "index.html must load index_theme_bootstrap.js with the bridge policy rev"
+);
 assert.ok(
   registryScriptIndex >= 0,
   "index.html must load web_bridge_registry.js with a bridge policy rev"
@@ -951,7 +1006,8 @@ assert.ok(
   "index editor adapter must lazy-load the editor bundle"
 );
 assert.ok(
-  registryScriptIndex < indexBootstrapScriptIndex &&
+  themeBootstrapScriptIndex < registryScriptIndex &&
+    registryScriptIndex < indexBootstrapScriptIndex &&
     registryScriptIndex < katexBridgeScriptIndex &&
     katexBridgeScriptIndex < chatMathBootstrapScriptIndex &&
     chatMathBootstrapScriptIndex < chatMathScriptIndex &&
@@ -959,7 +1015,7 @@ assert.ok(
     nativeBackendBridgeScriptIndex < indexBootstrapScriptIndex &&
     indexBootstrapScriptIndex < initScriptIndex &&
     initScriptIndex < indexEditorAdapterScriptIndex,
-  "index script order must load registry, KaTeX bridge, chat math bootstrap, chat math, native bridge, index bootstrap, init, then lazy editor adapter"
+  "index script order must load theme bootstrap, registry, KaTeX bridge, chat math bootstrap, chat math, native bridge, index bootstrap, init, then lazy editor adapter"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");
