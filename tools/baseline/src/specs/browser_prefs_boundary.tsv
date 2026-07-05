@@ -1,7 +1,14 @@
 regex_absent_tree_ext_skip	apps/web/src	rs	window\(\)\.local_storage|\.local_storage\(|globalThis\.localStorage|sessionStorage	apps/web/src/storage/prefs.rs|apps/web/src/storage/js_bridge.rs
-contains	apps/web/index.html	window.localStorage?.getItem("deve.ui.theme")
-contains	apps/web/index.html	data-deve-theme-pref
-absent	apps/web/index.html	localStorage?.setItem
+regex_absent_tree_ext_skip	apps/web/js	js	(?:globalThis\.|window\.)?localStorage|sessionStorage	apps/web/js/index_theme_bootstrap.js
+contains	apps/web/js/index_theme_bootstrap.js	globalThis.localStorage?.getItem("deve.ui.theme")
+contains	apps/web/js/index_theme_bootstrap.js	data-deve-theme-pref
+regex_absent	apps/web/js/index_theme_bootstrap.js	(?:globalThis\.|window\.)?localStorage\s*(?:\?\.|\.)\s*(?:setItem|removeItem|clear)|localStorage\s*\[\s*["'](?:setItem|removeItem|clear)["']\s*\]|sessionStorage
+absent	apps/web/js/index_theme_bootstrap.js	AUTH_SECRET
+absent	apps/web/js/index_theme_bootstrap.js	AUTH_PASS
+absent	apps/web/js/index_theme_bootstrap.js	repo_id
+absent	apps/web/js/index_theme_bootstrap.js	scope_nonce
+absent	apps/web/index.html	window.localStorage
+absent	apps/web/index.html	globalThis.localStorage
 absent	apps/web/index.html	sessionStorage
 absent	apps/web/index.html	AUTH_SECRET
 absent	apps/web/index.html	AUTH_PASS
