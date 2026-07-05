@@ -155,6 +155,11 @@ Unbound
 - `RemoteVerified` 必须确认 remote manifest 与 uploaded pack hash 一致。
 - upload 失败不得回滚 local ledger 或 source-control state。
 
+Provider adapter 的 PUT / GET 只是 Backup Runtime 的传输原语。GET 成功只表示
+encrypted artifact bytes 已从 remote object 读入内存，并附带 diagnostic-only provider
+metadata；它不能代替 manifest/hash/signature verification，不能触发 decrypt，也不能创建
+restore candidate。
+
 ### 4.2 Restore / Import {#backup-restore-state-machine-contract}
 
 ```text
@@ -169,6 +174,9 @@ RemoteDiscovered
 约束：
 
 - verification、hash check、signature check 或 decrypt 失败必须 fail-closed。
+- `PacksDownloaded` 必须由 branch manifest 中的 pack object refs 驱动，逐个下载
+  encrypted pack artifact bytes；下载结果在通过 manifest digest、artifact digest、
+  authentication 与 decrypt gate 前，不得暴露为 plaintext 或 restore candidate。
 - 默认下载不得 append local ledger。
 - `ExplicitImport` 与 `ExplicitMerge` 必须复用 repo scope、writer gate 与
   source-control / merge authority。
@@ -201,6 +209,12 @@ RemoteDiscovered
 只能上传显式传入且已通过 manifest/digest 校验的 encrypted pack artifact file。
 该阶段不读取 stale UI state，不把 provider metadata 当 authority，也不写 ledger、
 staging、commit anchor 或 Projection Workspace。
+
+`RestoreBackup` 的 provider download 只能由 Backup Runtime 自有 adapter 执行，
+并且只返回 encrypted artifact bytes 给 verification / decrypt pipeline。未完成
+manifest-backed verification、artifact authentication 与 decrypt gate 前，CLI/UI 不得把
+download success 呈现为 restore success，也不得写 ledger、staging、commit anchor、
+Projection Workspace 或 Git mirror queue。
 
 ### 5.3 Outputs {#backup-command-output-contract}
 

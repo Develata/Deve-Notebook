@@ -1,17 +1,33 @@
 //! plan_ref:
 //!   - 06_backup#backup-provider-dispatch-contract
 
-use super::signing::S3SignedBackupPutRequest;
-use anyhow::Context;
+use super::signing::{S3SignedBackupGetRequest, S3SignedBackupPutRequest};
+use anyhow::{Context, bail};
 use reqwest::{
     StatusCode,
     blocking::Client,
     header::{HeaderMap, HeaderName, HeaderValue},
 };
+use std::io::Read;
 use std::time::Duration;
 
-pub(super) trait S3BackupTransport {
+pub(super) trait S3BackupUploadTransport {
     fn put(&self, request: S3SignedBackupPutRequest) -> anyhow::Result<StatusCode>;
+}
+
+pub(super) trait S3BackupDownloadTransport {
+    #[allow(dead_code)]
+    fn get(
+        &self,
+        request: S3SignedBackupGetRequest,
+        max_body_bytes: usize,
+    ) -> anyhow::Result<S3BackupHttpResponse>;
+}
+
+#[allow(dead_code)]
+pub(super) struct S3BackupHttpResponse {
+    pub(super) status: StatusCode,
+    pub(super) body: Vec<u8>,
 }
 
 pub(super) struct ReqwestS3BackupTransport {
@@ -29,7 +45,7 @@ impl ReqwestS3BackupTransport {
     }
 }
 
-impl S3BackupTransport for ReqwestS3BackupTransport {
+impl S3BackupUploadTransport for ReqwestS3BackupTransport {
     fn put(&self, request: S3SignedBackupPutRequest) -> anyhow::Result<StatusCode> {
         Ok(self
             .client
@@ -39,6 +55,38 @@ impl S3BackupTransport for ReqwestS3BackupTransport {
             .send()
             .context("Backup S3 PUT failed")?
             .status())
+    }
+}
+
+impl S3BackupDownloadTransport for ReqwestS3BackupTransport {
+    fn get(
+        &self,
+        request: S3SignedBackupGetRequest,
+        max_body_bytes: usize,
+    ) -> anyhow::Result<S3BackupHttpResponse> {
+        let mut response = self
+            .client
+            .get(request.url)
+            .headers(header_map(request.headers)?)
+            .send()
+            .context("Backup S3 GET failed")?;
+        let status = response.status();
+        let mut body = Vec::new();
+        if status.is_success() {
+            response
+                .by_ref()
+                .take(
+                    u64::try_from(max_body_bytes)
+                        .unwrap_or(u64::MAX)
+                        .saturating_add(1),
+                )
+                .read_to_end(&mut body)
+                .context("Backup S3 GET response read failed")?;
+            if body.len() > max_body_bytes {
+                bail!("Backup S3 GET response exceeded max download bytes");
+            }
+        }
+        Ok(S3BackupHttpResponse { status, body })
     }
 }
 

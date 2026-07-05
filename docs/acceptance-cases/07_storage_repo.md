@@ -307,4 +307,18 @@
     - cli_assert: backup_run_uploads_encrypted_artifact_bytes_only true
     - cli_assert: backup_run_provider_metadata_diagnostic_only true
     - cli_assert: backup_run_writes_no_local_authority true
+
+- case_id: STORE-021
+  goal: Backup provider download 只读取 encrypted artifact bytes，不能跳过 restore admission。
+  preconditions:
+    - branch manifest pack refs 已指向 provider object path
+    - provider credential ref 指向 env resolver
+  steps:
+    - run: cargo test -p deve_cli provider_io -- --nocapture
+    - run: cargo test -p deve_cli backup_restore -- --nocapture
+  assertions:
+    - cli_assert: backup_provider_download_returns_encrypted_bytes_only true
+    - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
+    - cli_assert: backup_provider_download_does_not_write_local_authority true
+    - cli_assert: backup_restore_non_dry_run_still_fail_closed_without_manifest_backed_pipeline true
 ```

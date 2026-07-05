@@ -19,6 +19,13 @@ pub(super) struct S3SignedBackupPutRequest {
     pub(super) headers: Vec<(String, String)>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(super) struct S3SignedBackupGetRequest {
+    pub(super) url: Url,
+    pub(super) headers: Vec<(String, String)>,
+}
+
 pub(super) fn signed_put_request(
     url: Url,
     body: Vec<u8>,
@@ -39,6 +46,18 @@ pub(super) fn signed_put_request(
     )?;
 
     Ok(S3SignedBackupPutRequest { url, body, headers })
+}
+
+#[allow(dead_code)]
+pub(super) fn signed_get_request(
+    url: Url,
+    credentials: &S3BackupCredentials,
+    now: DateTime<Utc>,
+) -> anyhow::Result<S3SignedBackupGetRequest> {
+    let payload_hash = sha256_hex([]);
+    let headers = signed_headers("GET", &url, payload_hash, BTreeMap::new(), credentials, now)?;
+
+    Ok(S3SignedBackupGetRequest { url, headers })
 }
 
 fn signed_headers(
