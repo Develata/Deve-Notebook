@@ -5,11 +5,11 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-07-05`
 - `Authority Owns`: `op 维度 latency / RSS budget；CI fuse 阈值`
 - `Authority Defers To`: `17_tech_stack#performance-profiles-and-feature-matrix (profile 枚举与 feature matrix)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (perf-sensitive flows)`
-- `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (PERF-001)`
+- `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (PERF-001)`
 - `Primary Code Areas`: `scripts/plan-coverage.sh`（--check-perf-budget enforcing）；CI 性能基准入口见 18_release
 
 ## 1. Scope & Authority {#perf-budget-scope}

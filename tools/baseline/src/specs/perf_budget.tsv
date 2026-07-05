@@ -7,6 +7,8 @@ contains	docs/plan/21_perf_budget.md	| cold mount (repo open → ready) | `low-s
 contains	docs/plan/21_perf_budget.md	**RSS baseline
 contains	docs/plan/21_perf_budget.md	`standard` ≤ 128MB
 contains	docs/plan/21_perf_budget.md	`low-spec` ≤ 64MB
+contains	docs/plan/21_perf_budget.md	- `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (PERF-001)`
+absent	docs/plan/21_perf_budget.md	docs/acceptance-cases/00_index.md (PERF-001)
 case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	scripts/plan-coverage.sh --check-perf-budget
 case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	scripts/check-perf-budget-baseline.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	cargo run -p deve_baseline -- perf-budget
