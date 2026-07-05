@@ -7,7 +7,9 @@
     existing &&
     typeof existing.register === "function" &&
     typeof existing.registerFallback === "function" &&
-    typeof existing.describe === "function"
+    typeof existing.describe === "function" &&
+    typeof existing.get === "function" &&
+    typeof existing.call === "function"
   ) {
     return;
   }
@@ -26,6 +28,22 @@
       return window[name];
     }
     return register(name, value, meta);
+  }
+
+  function get(name) {
+    const entry = entries.get(name);
+    if (!entry) {
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  function call(name, ...args) {
+    const value = get(name);
+    if (typeof value !== "function") {
+      throw new Error(`web bridge global ${name} is not callable`);
+    }
+    return value(...args);
   }
 
   function describe() {
@@ -49,6 +67,8 @@
   window.__deveWebBridge = {
     register,
     registerFallback,
+    get,
+    call,
     describe,
   };
 })();

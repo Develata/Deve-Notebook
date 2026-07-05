@@ -1,0 +1,261 @@
+// index_editor_adapter.js
+// Lazy editor adapter binding. Projection/widget bridge only; no authority.
+
+const getEditorBridgeGlobal = (name) => {
+  const bridge = window.__deveWebBridge;
+  if (!bridge || typeof bridge.get !== "function") {
+    throw new Error(`web bridge registry unavailable before reading ${name}`);
+  }
+  return bridge.get(name);
+};
+
+const callEditorBridgeGlobal = (name, ...args) => {
+  const bridge = window.__deveWebBridge;
+  if (!bridge || typeof bridge.call !== "function") {
+    throw new Error(`web bridge registry unavailable before calling ${name}`);
+  }
+  return bridge.call(name, ...args);
+};
+
+const logToOverlay = (...args) => callEditorBridgeGlobal("logToOverlay", ...args);
+const hideOverlay = () => callEditorBridgeGlobal("hideOverlay");
+const setBootPanel = (...args) => callEditorBridgeGlobal("setBootPanel", ...args);
+const queueEditorAction = (...args) => callEditorBridgeGlobal("queueEditorAction", ...args);
+const queueEditorMount = (...args) => callEditorBridgeGlobal("queueEditorMount", ...args);
+const requestEditorAdapter = () => {
+  const ensureEditorAdapter = getEditorBridgeGlobal("ensureEditorAdapter");
+  if (typeof ensureEditorAdapter === "function") {
+    return ensureEditorAdapter();
+  }
+  return false;
+};
+
+logToOverlay("Module Script Started. Adapter will lazy-load on demand.");
+
+const registerEditorBridgeGlobal = (name, value, meta = {}) => {
+  const bridge = window.__deveWebBridge;
+  if (!bridge || typeof bridge.register !== "function") {
+    throw new Error(`web bridge registry unavailable before registering ${name}`);
+  }
+  return bridge.register(name, value, {
+    runtime: "render_projection_runtime",
+    source: "index-editor-adapter",
+    authority: "none",
+    ...meta,
+  });
+};
+
+const editorBootstrapState = getEditorBridgeGlobal("__deveEditorBootstrap");
+if (!editorBootstrapState) {
+  throw new Error("editor bootstrap state unavailable before loading adapter");
+}
+
+const attachEditorAdapter = (module) => {
+  const {
+    initCodeMirror,
+    applyRemoteContent,
+    applyRemoteOp,
+    applyRemoteOpsBatch,
+    getEditorContent,
+    syncEditorStateToRust,
+    scrollGlobal,
+    setReadOnly,
+    destroyEditor,
+    updateGutterDiff,
+    getEditorSelection,
+  } = module;
+
+  const rawApplyRemoteOp = (opJson) => {
+    applyRemoteOp(opJson);
+  };
+  const rawApplyRemoteOpsBatch =
+    applyRemoteOpsBatch ||
+    ((opsJson) => {
+      try {
+        const ops = JSON.parse(opsJson);
+        if (!Array.isArray(ops)) return false;
+        for (const op of ops) {
+          if (!op || (!op.Insert && !op.Delete)) return false;
+          rawApplyRemoteOp(JSON.stringify(op));
+        }
+        return true;
+      } catch (e) {
+        console.error("applyRemoteOpsBatch Fallback Error:", e);
+        return false;
+      }
+    });
+  const rawSetReadOnly = (readOnly) => {
+    setReadOnly(readOnly);
+  };
+  const rawDestroyEditor = () => {
+    destroyEditor();
+  };
+  const replayEditorAction = (action) => {
+    switch (action.kind) {
+      case "content":
+        applyRemoteContent(action.payload);
+        break;
+      case "op":
+        rawApplyRemoteOp(action.payload);
+        break;
+      case "opsBatch":
+        if (rawApplyRemoteOpsBatch(action.payload) !== true) {
+          console.warn("Queued editor ops batch replay failed");
+        }
+        break;
+      case "readOnly":
+        rawSetReadOnly(action.payload);
+        break;
+      default:
+        break;
+    }
+  };
+
+  registerEditorBridgeGlobal("applyRemoteContent", (text) => {
+    if (!editorBootstrapState.editorBridgeReady) {
+      queueEditorAction("content", String(text ?? ""));
+      return;
+    }
+    applyRemoteContent(text);
+  }, { role: "wasm-editor-snapshot" });
+
+  registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
+    if (!editorBootstrapState.editorBridgeReady) {
+      queueEditorAction("op", String(opJson ?? ""));
+      return;
+    }
+    rawApplyRemoteOp(opJson);
+  }, { role: "wasm-editor-op" });
+
+  registerEditorBridgeGlobal("applyRemoteOpsBatch", (opsJson) => {
+    if (!editorBootstrapState.editorBridgeReady) {
+      return false;
+    }
+    return rawApplyRemoteOpsBatch(opsJson) === true;
+  }, { role: "wasm-editor-op-batch" });
+
+  registerEditorBridgeGlobal("getEditorContent", getEditorContent, {
+    role: "wasm-editor-query",
+  });
+
+  registerEditorBridgeGlobal("scrollGlobal", scrollGlobal, {
+    runtime: "widget_bridge_runtime",
+    role: "wasm-editor-navigation",
+  });
+
+  registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
+    if (!editorBootstrapState.editorBridgeReady) {
+      queueEditorAction("readOnly", !!readOnly);
+      return;
+    }
+    rawSetReadOnly(readOnly);
+  }, { role: "wasm-editor-readonly" });
+
+  registerEditorBridgeGlobal("destroyEditor", () => {
+    editorBootstrapState.resetBridge();
+    rawDestroyEditor();
+  }, { role: "wasm-editor-lifecycle" });
+
+  registerEditorBridgeGlobal("updateGutterDiff", updateGutterDiff || (() => {}), {
+    runtime: "widget_bridge_runtime",
+    role: "wasm-editor-diff-projection",
+  });
+
+  registerEditorBridgeGlobal("getEditorSelection", getEditorSelection || (() => "null"), {
+    role: "wasm-editor-selection",
+  });
+
+  if (typeof initCodeMirror !== "function") {
+    throw new Error("initCodeMirror is not a function in exported module!");
+  }
+
+  logToOverlay("Adapter imported successfully.");
+
+  editorBootstrapState.realInit = (element, onUpdate) => {
+    logToOverlay("Initializing Editor View");
+    hideOverlay();
+
+    try {
+      initCodeMirror(element, onUpdate);
+      editorBootstrapState.editorBridgeReady = true;
+      rawSetReadOnly(true);
+      if (editorBootstrapState.pendingEditorActions.length > 0) {
+        const pending = editorBootstrapState.takePendingActions();
+        logToOverlay(
+          `Replaying ${pending.length} queued editor actions...`,
+        );
+        pending.forEach(replayEditorAction);
+      }
+      syncEditorStateToRust?.();
+    } catch (e) {
+      logToOverlay("Init call failed: " + e.message, true);
+      throw e;
+    }
+  };
+
+  registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate) => {
+    logToOverlay("Rust called setupCodeMirror");
+    if (editorBootstrapState.realInit) {
+      editorBootstrapState.realInit(element, onUpdate);
+      return;
+    }
+    queueEditorMount(element, onUpdate);
+    requestEditorAdapter();
+  }, { role: "wasm-editor-mount" });
+
+  editorBootstrapState.cmLoaded = true;
+
+  const queuedMount = editorBootstrapState.takeLatestMount();
+  if (queuedMount) {
+    logToOverlay(
+      `Flushing latest editor mount from ${queuedMount.queuedCount} queued item(s)...`,
+    );
+    editorBootstrapState.realInit(
+      queuedMount.latestMount.element,
+      queuedMount.latestMount.onUpdate,
+    );
+  }
+};
+
+registerEditorBridgeGlobal("ensureEditorAdapter", () => {
+  if (editorBootstrapState.cmLoaded) {
+    return Promise.resolve();
+  }
+  if (editorBootstrapState.adapterLoading) {
+    return editorBootstrapState.adapterLoading;
+  }
+
+  setBootPanel(
+    "Loading Editor Adapter",
+    "Editor requested CodeMirror. Loading adapter bundle now.",
+    "success",
+  );
+  logToOverlay("Lazy-loading editor adapter bundle...");
+
+  editorBootstrapState.adapterLoading = import("./editor.bundle.js?rev=20260703-heading-lineheight")
+    .then((module) => {
+      attachEditorAdapter(module);
+    })
+    .catch((e) => {
+      console.error("Failed to load editor adapter:", e);
+      logToOverlay(
+        "Failed to load editor adapter: " + e.message,
+        true,
+      );
+      if (e.stack) logToOverlay(e.stack, true);
+      throw e;
+    })
+    .finally(() => {
+      if (!editorBootstrapState.cmLoaded) {
+        editorBootstrapState.adapterLoading = null;
+      }
+    });
+
+  return editorBootstrapState.adapterLoading;
+}, { runtime: "widget_bridge_runtime", role: "editor-adapter-loader" });
+
+window.addEventListener("TrunkApplicationStarted", () => {
+  if (getEditorBridgeGlobal("__DEVE_DEBUG_OVERLAY__") === true) {
+    console.log("[Overlay]", "TrunkApplicationStarted event received.");
+  }
+}, { once: true });

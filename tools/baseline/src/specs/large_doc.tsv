@@ -41,8 +41,8 @@ contains	apps/web/src/editor/sync/snapshot_apply.rs	snapshot_apply_failure_does_
 contains	apps/web/src/editor/sync/snapshot/tests.rs	snapshot_delta_fallback_reconstructs_full_content
 contains	apps/web/src/editor/sync/history_replay.rs	Pending overlay replay batch failed
 contains	apps/web/src/editor/ffi.rs	pub fn applyRemoteOpsBatch(ops_json: &str) -> bool;
-contains	apps/web/index.html	return false;
-contains	apps/web/index.html	Queued editor ops batch replay failed
+contains	apps/web/js/index_bootstrap.js	return false;
+contains	apps/web/js/index_editor_adapter.js	Queued editor ops batch replay failed
 contains	apps/web/js/editor_remote_ops.js	return false;
 contains	apps/web/js/editor_remote_ops.js	ensureValidRange
 contains	apps/web/js/editor_remote_ops.js	Unsupported remote op

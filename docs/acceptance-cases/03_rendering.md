@@ -203,10 +203,14 @@
   assertions:
     - cli_assert: editor_adapter_globals_registered_through_bridge true
     - cli_assert: index_editor_wrappers_registered_through_bridge true
+    - cli_assert: index_html_bridge_logic_externalized true
     - cli_assert: index_editor_bootstrap_state_registered_through_bridge true
     - cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
+    - cli_assert: index_editor_wrappers_avoid_direct_window_calls true
+    - cli_assert: bridge_registry_get_call_facade_bound true
     - cli_assert: index_mobile_editor_stubs_do_not_read_debug_view true
     - cli_assert: index_boot_helpers_registered_through_bridge true
+    - cli_assert: index_boot_helpers_avoid_direct_window_calls true
     - cli_assert: index_error_handler_does_not_assign_window_onerror true
     - cli_assert: init_code_actions_registered_through_bridge true
     - cli_assert: init_i18n_registered_through_bridge true

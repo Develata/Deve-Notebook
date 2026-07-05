@@ -16,6 +16,12 @@ const nativeBackendBridgeSource = fs.readFileSync(
   "utf8"
 );
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
+const indexBootstrapSource = fs.readFileSync(path.join(root, "index_bootstrap.js"), "utf8");
+const indexEditorAdapterSource = fs.readFileSync(
+  path.join(root, "index_editor_adapter.js"),
+  "utf8"
+);
+const indexBridgeSource = `${indexBootstrapSource}\n${indexEditorAdapterSource}`;
 
 const adapterBridgeNames = [
   "setupCodeMirror",
@@ -74,12 +80,48 @@ assert.equal(
   "function",
   "web bridge registry must expose register()"
 );
+assert.equal(
+  typeof registryContext.window.__deveWebBridge?.get,
+  "function",
+  "web bridge registry must expose get()"
+);
+assert.equal(
+  typeof registryContext.window.__deveWebBridge?.call,
+  "function",
+  "web bridge registry must expose call()"
+);
 const registeredValue = registryContext.window.__deveWebBridge.register(
   "setupCodeMirror",
   () => true,
   { runtime: "render_projection_runtime", source: "test" }
 );
 assert.equal(registryContext.window.setupCodeMirror, registeredValue);
+assert.equal(
+  registryContext.window.__deveWebBridge.get("setupCodeMirror"),
+  registeredValue,
+  "registry get() must read registered globals through the bridge boundary"
+);
+assert.equal(
+  registryContext.window.__deveWebBridge.call("setupCodeMirror"),
+  true,
+  "registry call() must invoke registered functions through the bridge boundary"
+);
+registryContext.window.setupCodeMirror = () => "overwritten";
+assert.equal(
+  registryContext.window.__deveWebBridge.get("setupCodeMirror"),
+  registeredValue,
+  "registry get() must not let later window overwrites replace the registered bridge value"
+);
+assert.equal(
+  registryContext.window.__deveWebBridge.call("setupCodeMirror"),
+  true,
+  "registry call() must not dispatch to later direct window overwrites"
+);
+assert.throws(
+  () => registryContext.window.__deveWebBridge.call("missingBridgeGlobal"),
+  /web bridge global missingBridgeGlobal is not callable/,
+  "registry call() must fail closed for missing bridge globals"
+);
 assert.equal(
   JSON.stringify(registryContext.window.__deveWebBridge.describe()),
   JSON.stringify([
@@ -273,27 +315,27 @@ for (const name of adapterBridgeNames) {
 }
 
 assert.match(
-  indexHtmlSource,
+  indexBridgeSource,
   /const registerEditorBridgeGlobal = \(name, value, meta = \{\}\) =>/,
   "index bootstrap must use the bridge registry helper"
 );
 assert.match(
-  indexHtmlSource,
+  indexBridgeSource,
   /web bridge registry unavailable before registering/,
   "index bootstrap must fail closed when the bridge registry is missing"
 );
 assert.match(
-  indexHtmlSource,
+  indexBootstrapSource,
   /registerEditorBridgeGlobal\("__deveEditorBootstrap", editorBootstrapState,\s*\{\s*runtime:\s*"widget_bridge_runtime"/,
   "index editor bootstrap state must be registered through the bridge registry"
 );
 assert.match(
-  indexHtmlSource,
+  indexBootstrapSource,
   /role:\s*"editor-bootstrap-state"/,
   "index editor bootstrap state must declare its bridge role"
 );
 assert.doesNotMatch(
-  indexHtmlSource,
+  indexBridgeSource,
   /window\._debug_view\b/,
   "index mobile editor stubs must not read the adapter-owned CodeMirror view directly"
 );
@@ -306,17 +348,17 @@ for (const name of [
   "_adapter_loading",
 ]) {
   assert.doesNotMatch(
-    indexHtmlSource,
+    indexBridgeSource,
     new RegExp(`window\\.${name}\\b`),
     `${name} bootstrap state must not be stored directly on window`
   );
 }
 assert.match(
-  indexHtmlSource,
+  indexBootstrapSource,
   /const registerIndexBridgeGlobal = \(name, value, meta = \{\}\) =>/,
   "index boot helpers must use the bridge registry helper"
 );
-const indexBootHelperMatch = indexHtmlSource.match(
+const indexBootHelperMatch = indexBootstrapSource.match(
   /const registerIndexBridgeGlobal = \(name, value, meta = \{\}\) => \{[\s\S]*?\n      \};/
 );
 assert.ok(indexBootHelperMatch, "index boot helper registration block must be present");
@@ -334,35 +376,70 @@ assert.match(
 
 for (const name of indexBootBridgeNames) {
   assert.match(
-    indexHtmlSource,
+    indexBootstrapSource,
     new RegExp(`registerIndexBridgeGlobal\\("${name}"`),
     `${name} boot helper must be registered through the browser bridge registry`
   );
   assert.doesNotMatch(
-    indexHtmlSource,
+    indexBridgeSource,
     new RegExp(`window\\.${name}\\s*=`),
     `${name} boot helper must not be assigned directly in index.html`
   );
+  assert.doesNotMatch(
+    indexBridgeSource,
+    new RegExp(`window\\.${name}\\s*\\(`),
+    `${name} boot helper must not be called through scattered window globals in index.html`
+  );
 }
+assert.doesNotMatch(
+  indexBridgeSource,
+  /window\.__DEVE_DEBUG_OVERLAY__\b/,
+  "index boot code must read the debug flag through the bridge facade"
+);
 
 assert.doesNotMatch(
-  indexHtmlSource,
+  indexBridgeSource,
   /window\.onerror\s*=/,
   "index boot error handling must not assign window.onerror directly"
 );
 
 for (const name of indexBridgeNames) {
   assert.match(
-    indexHtmlSource,
+    indexBridgeSource,
     new RegExp(`registerEditorBridgeGlobal\\("${name}"`),
     `${name} wrapper must be registered through the browser bridge registry`
   );
   assert.doesNotMatch(
-    indexHtmlSource,
+    indexBridgeSource,
     new RegExp(`window\\.${name}\\s*=`),
     `${name} wrapper must not be assigned directly in index.html`
   );
+  assert.doesNotMatch(
+    indexBridgeSource,
+    new RegExp(`window\\.${name}\\s*\\(`),
+    `${name} wrapper must not be called through scattered window globals in index.html`
+  );
 }
+assert.doesNotMatch(
+  indexBridgeSource,
+  /window\.__deveEditorBootstrap\b/,
+  "index editor adapter bootstrap must read state through the bridge facade"
+);
+assert.match(
+  indexBridgeSource,
+  /bridge\.get\(name\)/,
+  "index bootstrap must centralize bridge global reads through registry get()"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /bridge\.call\(name, \.\.\.args\)/,
+  "index bootstrap must centralize bridge function calls through registry call()"
+);
+assert.doesNotMatch(
+  indexHtmlSource,
+  /register(?:Index|Editor)BridgeGlobal|__deveEditorBootstrap|ensureEditorAdapter/,
+  "index.html must stay a script loader and not carry bridge implementation logic"
+);
 
 assert.doesNotMatch(
   gutterDiffSource,
@@ -462,14 +539,26 @@ assert.match(
 );
 
 const registryScriptIndex = indexHtmlSource.indexOf('src="js/web_bridge_registry.js"');
+const indexBootstrapScriptIndex = indexHtmlSource.indexOf('src="js/index_bootstrap.js"');
 const initScriptIndex = indexHtmlSource.indexOf('src="js/init.js"');
-const lazyEditorBundleIndex = indexHtmlSource.indexOf('import("./js/editor.bundle.js');
+const indexEditorAdapterScriptIndex = indexHtmlSource.indexOf('src="js/index_editor_adapter.js"');
+const lazyEditorBundleIndex = indexEditorAdapterSource.indexOf('import("./editor.bundle.js');
 assert.ok(registryScriptIndex >= 0, "index.html must load web_bridge_registry.js");
+assert.ok(indexBootstrapScriptIndex >= 0, "index.html must load index_bootstrap.js");
 assert.ok(initScriptIndex >= 0, "index.html must load init.js");
-assert.ok(lazyEditorBundleIndex >= 0, "index.html must lazy-load the editor bundle");
 assert.ok(
-  registryScriptIndex < initScriptIndex && initScriptIndex < lazyEditorBundleIndex,
-  "index script order must load registry before init and init before the lazy editor adapter"
+  indexEditorAdapterScriptIndex >= 0,
+  "index.html must load index_editor_adapter.js"
+);
+assert.ok(
+  lazyEditorBundleIndex >= 0,
+  "index editor adapter must lazy-load the editor bundle"
+);
+assert.ok(
+  registryScriptIndex < indexBootstrapScriptIndex &&
+    indexBootstrapScriptIndex < initScriptIndex &&
+    initScriptIndex < indexEditorAdapterScriptIndex,
+  "index script order must load registry, index bootstrap, init, then lazy editor adapter"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");

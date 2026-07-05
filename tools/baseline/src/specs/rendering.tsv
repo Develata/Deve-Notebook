@@ -50,7 +50,7 @@ contains	apps/web/js/extensions/block_styling.test.cjs	#申话
 contains	apps/web/js/extensions/block_styling.test.cjs	hybrid plugin must not duplicate the block styling heading line projection
 contains	apps/web/js/extensions/block_styling.test.cjs	# 申话
 contains	apps/web/js/extensions/block_styling.test.cjs	headingLineRule
-contains	apps/web/index.html	editor.bundle.js?rev=20260703-heading-lineheight
+contains	apps/web/js/index_editor_adapter.js	editor.bundle.js?rev=20260703-heading-lineheight
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
 absent	apps/web/js/extensions/hybrid.js	cm-heading-line
@@ -97,18 +97,22 @@ contains	apps/web/js/editor_adapter.js	function registerBrowserBridgeGlobal(name
 contains	apps/web/js/editor_adapter.js	runtime: "render_projection_runtime"
 contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("setupCodeMirror"
 contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("applyRemoteOpsBatch"
-contains	apps/web/index.html	const registerEditorBridgeGlobal = (name, value, meta = {}) =>
-contains	apps/web/index.html	registerEditorBridgeGlobal("setupCodeMirror"
-contains	apps/web/index.html	registerEditorBridgeGlobal("ensureEditorAdapter"
+contains	apps/web/js/index_bootstrap.js	const registerEditorBridgeGlobal = (name, value, meta = {}) =>
+contains	apps/web/js/index_bootstrap.js	registerEditorBridgeGlobal("setupCodeMirror"
+contains	apps/web/js/index_editor_adapter.js	registerEditorBridgeGlobal("ensureEditorAdapter"
 absent	apps/web/index.html	window.applyRemoteOpsBatch =
 absent	apps/web/index.html	window.setupCodeMirror =
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	run: node apps/web/js/web_bridge_registry.test.cjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_globals_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_html_bridge_logic_externalized true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_avoid_direct_window_calls true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_get_call_facade_bound true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_mobile_editor_stubs_do_not_read_debug_view true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_avoid_direct_window_calls true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_error_handler_does_not_assign_window_onerror true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_code_actions_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_i18n_registered_through_bridge true
@@ -127,16 +131,16 @@ contains	apps/web/js/web_bridge_registry.test.cjs	index editor bootstrap state m
 contains	apps/web/js/web_bridge_registry.test.cjs	bootstrap state must not be stored directly on window
 contains	apps/web/js/web_bridge_registry.test.cjs	index mobile editor stubs must not read the adapter-owned CodeMirror view directly
 contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be registered through the browser bridge registry
-contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry before init and init before the lazy editor adapter
+contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry, index bootstrap, init, then lazy editor adapter
 contains	apps/web/js/web_bridge_registry.test.cjs	code menu must not initialize the code action registry directly
-contains	apps/web/index.html	const registerIndexBridgeGlobal = (name, value, meta = {}) =>
-contains	apps/web/index.html	source: "index-boot-bootstrap"
-contains	apps/web/index.html	registerIndexBridgeGlobal("__DEVE_DEBUG_OVERLAY__"
-contains	apps/web/index.html	registerIndexBridgeGlobal("showOverlay"
-contains	apps/web/index.html	registerIndexBridgeGlobal("setBootPanel"
-contains	apps/web/index.html	registerIndexBridgeGlobal("hideBootPanel"
-contains	apps/web/index.html	registerIndexBridgeGlobal("hideOverlay"
-contains	apps/web/index.html	registerIndexBridgeGlobal("logToOverlay"
+contains	apps/web/js/index_bootstrap.js	const registerIndexBridgeGlobal = (name, value, meta = {}) =>
+contains	apps/web/js/index_bootstrap.js	source: "index-boot-bootstrap"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("__DEVE_DEBUG_OVERLAY__"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("showOverlay"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("setBootPanel"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("hideBootPanel"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("hideOverlay"
+contains	apps/web/js/index_bootstrap.js	registerIndexBridgeGlobal("logToOverlay"
 absent	apps/web/index.html	window.__DEVE_DEBUG_OVERLAY__ =
 absent	apps/web/index.html	window.showOverlay =
 absent	apps/web/index.html	window.setBootPanel =
@@ -144,9 +148,9 @@ absent	apps/web/index.html	window.hideBootPanel =
 absent	apps/web/index.html	window.hideOverlay =
 absent	apps/web/index.html	window.logToOverlay =
 absent	apps/web/index.html	window.onerror =
-contains	apps/web/index.html	registerEditorBridgeGlobal("__deveEditorBootstrap"
-contains	apps/web/index.html	runtime: "widget_bridge_runtime"
-contains	apps/web/index.html	role: "editor-bootstrap-state"
+contains	apps/web/js/index_bootstrap.js	registerEditorBridgeGlobal("__deveEditorBootstrap"
+contains	apps/web/js/index_bootstrap.js	runtime: "widget_bridge_runtime"
+contains	apps/web/js/index_bootstrap.js	role: "editor-bootstrap-state"
 absent	apps/web/index.html	window._editor_queue
 absent	apps/web/index.html	window._pending_editor_actions
 absent	apps/web/index.html	window._cm_loaded
