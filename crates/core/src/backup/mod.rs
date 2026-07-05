@@ -33,6 +33,7 @@ mod layout;
 mod locator;
 mod output;
 mod pack;
+mod plaintext;
 mod protection;
 mod provider;
 mod restore;
@@ -86,6 +87,12 @@ pub use output::{
 pub use pack::{
     BACKUP_PACK_FORMAT_VERSION, BackupBlobRef, BackupDigest, BackupPackError, BackupPackManifest,
     BackupPackPlanInput, BackupSeqRange, plan_backup_pack, validate_pack_manifest,
+};
+pub use plaintext::{
+    BACKUP_PACK_PLAINTEXT_FORMAT_VERSION, BackupPackPlaintext, BackupPackPlaintextEncodeInput,
+    BackupPackPlaintextError, BackupPackPlaintextLedgerEntry, BackupPackPlaintextOpenInput,
+    BackupPackPlaintextValidateInput, encode_backup_pack_plaintext, open_backup_pack_plaintext,
+    validate_backup_pack_plaintext,
 };
 pub use protection::{
     BackupArtifactKind, BackupArtifactProtection, BackupArtifactProtectionError,

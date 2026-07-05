@@ -41,6 +41,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli plans_writable_binding_dry_run_without_persisting -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli backup_unbind -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_plaintext -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
@@ -115,6 +116,11 @@ contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_reject
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_secret_and_metadata_drift()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_unknown_plaintext_fields_before_decrypt()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_requires_pack_aead_protection()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_roundtrips_manifest_aligned_ledger_entries()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_rejects_manifest_mismatch()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_rejects_unversioned_or_invalid_ledger_entries()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_rejects_non_contiguous_ledger_sequences()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_writes_no_local_authority()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_requires_artifact_for_provider_upload()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload()

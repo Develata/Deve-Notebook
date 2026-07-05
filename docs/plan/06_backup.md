@@ -125,6 +125,25 @@ pack artifact 字节级约束：
 - restore 打开 pack 时 MUST 先校验 manifest、artifact routing metadata 与
   `payload_digest`，只有 digest 匹配后才允许执行 decrypt。
 
+pack plaintext schema gate 约束 {#backup-pack-plaintext-schema-contract}：
+
+- decrypt 后的 pack plaintext MUST 使用 backup runtime 拥有的版本化 schema；
+  任意未带 backup plaintext magic / format version 的 bytes 不得进入
+  RestoreCandidate 或 import/merge planning。
+- plaintext schema MUST 显式携带 `format_version / RepoId / writer_identity /
+  branch_path / pack_sequence / ledger_seq_range / ledger_entries /
+  snapshot_refs / blob_refs`。
+- plaintext 中的 repo、writer、branch、pack sequence、ledger range、ledger entry
+  count、snapshot count 与 blob refs MUST 与 `BackupPackManifest` 完全一致；
+  任一不一致必须 fail-closed。
+- `ledger_entries` MUST 逐条携带 `global_seq` 与 `serialize_ledger_entry` 产生的
+  versioned ledger entry bytes；打开 plaintext 时必须逐条执行
+  `deserialize_ledger_entry` 校验。未版本化、损坏或 sequence 不连续的 ledger entry
+  不得进入 RestoreCandidate。
+- plaintext schema validation 只是解密后的 typed evidence gate。它不得 append
+  ledger，不得写 staging，不得写 Projection Workspace，不得创建 commit anchor 或
+  Git mirror queue。
+
 ### 3.4 Restore Candidate {#backup-restore-candidate-contract}
 
 Restore candidate 是下载、验证、解密后尚未导入的备份结果。

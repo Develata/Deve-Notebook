@@ -61,6 +61,11 @@
   credential/key material，不得写 ledger、staging 或 Projection Workspace。
 - Backup pack artifact 必须先加密再进入上传状态；pack manifest 中的 payload
   digest 用于 verify-before-decrypt，不是明文 payload digest。
+- Backup pack 解密后的 plaintext 必须继续通过版本化 schema gate：repo/writer/
+  branch/pack sequence、ledger range/count、snapshot count 与 blob refs 必须与
+  manifest 完全一致，ledger entry bytes 必须是 `serialize_ledger_entry` 产生的
+  versioned bytes；该 gate 不写 ledger、staging、Source Control、Git mirror 或
+  Projection Workspace。
 - 非 dry-run `backup run` 只能上传显式提供的 encrypted pack artifact 文件；
   上传前必须验证 artifact bytes 与 manifest metadata/digest 一致，成功后只进入
   backup upload state，不写 ledger、staging、Source Control 或 Projection Workspace。

@@ -288,11 +288,16 @@
     - pack manifest payload_digest 指向 encrypted artifact bytes
   steps:
     - run: cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
+    - run: cargo test -p deve_core --lib backup_pack_plaintext -- --nocapture
   assertions:
     - cli_assert: backup_pack_artifact_ciphertext_differs_from_plaintext true
     - cli_assert: backup_pack_manifest_digest_covers_encrypted_artifact true
     - cli_assert: backup_pack_open_verifies_digest_before_decrypt true
     - cli_assert: backup_pack_artifact_contains_no_secret_refs true
+    - cli_assert: backup_pack_plaintext_schema_matches_manifest true
+    - cli_assert: backup_pack_plaintext_requires_versioned_ledger_entries true
+    - cli_assert: backup_pack_plaintext_rejects_manifest_mismatch true
+    - cli_assert: backup_pack_plaintext_writes_no_local_authority true
 
 - case_id: STORE-020
   goal: Backup provider upload 只上传已验证 encrypted pack artifact bytes。
