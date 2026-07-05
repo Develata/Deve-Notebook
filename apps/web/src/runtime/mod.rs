@@ -70,13 +70,24 @@ mod tests {
             .chars()
             .filter(|value| !value.is_whitespace())
             .collect::<String>();
-        let hooks_path = hooks_path();
         let use_core = use_core_segment();
-        if compact.contains(&format!("{hooks_path}::{use_core}")) {
+        if imports_hooks_alias(&compact) {
             return true;
         }
-        grouped_import_contains(&compact, &format!("{hooks_path}::{{"), use_core)
-            || root_grouped_import_contains(&compact, use_core)
+        contains_hooks_use_core_path(&compact, use_core)
+    }
+
+    fn imports_hooks_alias(content: &str) -> bool {
+        let alias_marker = hooks_alias_marker();
+        content.contains(&format!("::{alias_marker}"))
+            || content.contains(&format!("{{{alias_marker}"))
+            || content.contains(&format!(",{alias_marker}"))
+            || grouped_import_contains(content, &hooks_group_prefix(), "selfas")
+    }
+
+    fn contains_hooks_use_core_path(content: &str, use_core: &str) -> bool {
+        content.contains(&hooks_use_core_path(use_core))
+            || grouped_import_contains(content, &hooks_group_prefix(), use_core)
     }
 
     fn grouped_import_contains(content: &str, prefix: &str, needle: &str) -> bool {
@@ -90,27 +101,6 @@ mod tests {
                 offset = body_start + body_end + 1;
             } else {
                 return content[body_start..].contains(needle);
-            }
-        }
-        false
-    }
-
-    fn root_grouped_import_contains(content: &str, use_core: &str) -> bool {
-        let root_prefix = format!("{}::{{", crate_root());
-        let mut offset = 0;
-        while let Some(index) = content[offset..].find(&root_prefix) {
-            let body_start = offset + index + root_prefix.len();
-            if let Some(body_end) = grouped_import_end(&content[body_start..]) {
-                let body = &content[body_start..body_start + body_end];
-                if body.contains(&format!("hooks::{use_core}"))
-                    || grouped_import_contains(body, "hooks::{", use_core)
-                {
-                    return true;
-                }
-                offset = body_start + body_end + 1;
-            } else {
-                return content[body_start..].contains(&format!("hooks::{use_core}"))
-                    || grouped_import_contains(&content[body_start..], "hooks::{", use_core);
             }
         }
         false
@@ -145,9 +135,59 @@ mod tests {
         concat!("use_", "core")
     }
 
+    fn hooks_segment() -> &'static str {
+        concat!("hoo", "ks")
+    }
+
+    fn hooks_alias_marker() -> String {
+        format!("{}as", hooks_segment())
+    }
+
+    fn hooks_group_prefix() -> String {
+        format!("{}::{{", hooks_segment())
+    }
+
+    fn hooks_use_core_path(use_core: &str) -> String {
+        format!("{}::{use_core}", hooks_segment())
+    }
+
+    fn relative_hooks_path(depth: usize) -> String {
+        format!("{}{}", "super::".repeat(depth), hooks_segment())
+    }
+
     #[test]
     fn web_runtime_boundary_detects_direct_use_core_import() {
         let source = format!("use {}::{}::LoadPhase;", hooks_path(), use_core_segment());
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_hooks_alias_import() {
+        let source = format!(
+            "use {} as hooks_alias; use hooks_alias::{}::LoadPhase;",
+            hooks_path(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_use_core_import() {
+        let source = format!(
+            "use {}::{}::LoadPhase;",
+            relative_hooks_path(1),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_deep_relative_hooks_alias_import() {
+        let source = format!(
+            "use {} as hooks_alias; use hooks_alias::{}::LoadPhase;",
+            relative_hooks_path(2),
+            use_core_segment()
+        );
         assert!(imports_use_core_internals(&source));
     }
 
@@ -164,8 +204,31 @@ mod tests {
     #[test]
     fn web_runtime_boundary_detects_root_grouped_use_core_import() {
         let source = format!(
-            "use {}::{{ hooks::{}::LoadPhase }};",
+            "use {}::{{ {}::{}::LoadPhase }};",
             crate_root(),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_root_grouped_hooks_alias_import() {
+        let source = format!(
+            "use {}::{{ {} as hooks_alias }}; use hooks_alias::{}::LoadPhase;",
+            crate_root(),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_nested_hooks_self_alias_import() {
+        let source = format!(
+            "use {}::{{ {}::{{ self as hooks_alias }} }}; use hooks_alias::{}::LoadPhase;",
+            crate_root(),
+            hooks_segment(),
             use_core_segment()
         );
         assert!(imports_use_core_internals(&source));
@@ -174,8 +237,74 @@ mod tests {
     #[test]
     fn web_runtime_boundary_detects_nested_root_grouped_use_core_import() {
         let source = format!(
-            "use {}::{{ runtime, hooks::{{{}::LoadPhase}} }};",
+            "use {}::{{ runtime, {}::{{{}::LoadPhase}} }};",
             crate_root(),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_fully_qualified_use_core_path() {
+        let source = format!(
+            "type State = {}::{}::LoadPhase;",
+            relative_hooks_path(3),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_crate_alias_use_core_path() {
+        let source = format!(
+            "use {} as app; type State = self::app::{}::{}::LoadPhase;",
+            crate_root(),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_grouped_use_core_import() {
+        let source = format!(
+            "use {}::{{ {}::{}::LoadPhase }};",
+            relative_module_path(1),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_nested_grouped_use_core_import() {
+        let source = format!(
+            "use {}::{{ {}::{{ self, {}::LoadPhase }} }};",
+            relative_module_path(1),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_grouped_hooks_alias_import() {
+        let source = format!(
+            "use {}::{{ {} as hooks_alias }}; use hooks_alias::{}::LoadPhase;",
+            relative_module_path(2),
+            hooks_segment(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_internals(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_detects_relative_nested_hooks_self_alias_import() {
+        let source = format!(
+            "use {}::{{ {}::{{ self as hooks_alias }} }}; use hooks_alias::{}::LoadPhase;",
+            relative_module_path(1),
+            hooks_segment(),
             use_core_segment()
         );
         assert!(imports_use_core_internals(&source));
@@ -185,5 +314,9 @@ mod tests {
     fn web_runtime_boundary_allows_runtime_domain_import() {
         let source = "use crate::runtime::domain::LoadPhase;";
         assert!(!imports_use_core_internals(source));
+    }
+
+    fn relative_module_path(depth: usize) -> String {
+        "super::".repeat(depth).trim_end_matches("::").to_string()
     }
 }

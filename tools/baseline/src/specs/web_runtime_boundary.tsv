@@ -14,6 +14,29 @@ contains	apps/web/src/runtime/domain/runtime_state.rs	pub enum LoadPhase
 contains	apps/web/src/runtime/domain/scope.rs	pub struct PendingRepoSwitch
 contains	apps/web/src/hooks/use_core/types.rs	pub use crate::runtime::domain::{
 contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_does_not_import_use_core_internals()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_hooks_alias_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_use_core_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_deep_relative_hooks_alias_import()
 contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_nested_root_grouped_use_core_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_root_grouped_hooks_alias_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_nested_hooks_self_alias_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_grouped_use_core_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_nested_grouped_use_core_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_grouped_hooks_alias_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_nested_hooks_self_alias_import()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_relative_fully_qualified_use_core_path()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_crate_alias_use_core_path()
+regex_absent_tree_ext	apps/web/src/runtime	rs	hooks\s*::\s*use_core
+regex_absent_tree_ext	apps/web/src/runtime	rs	hooks\s*::\s*\{(?s:.*\buse_core\b)
+regex_absent_tree_ext	apps/web/src/runtime	rs	hooks\s+as\s+
+regex_absent_tree_ext	apps/web/src/runtime	rs	hooks\s*::\s*\{\s*self\s+as\s+
 regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))
 regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{(?s:.*\bhooks\s*::\s*(use_core|\{.*\buse_core\b))
+regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*hooks\s+as\s+
+regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{(?s:.*\bhooks\s+as\s+)
+regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{(?s:.*\bhooks\s*::\s*\{\s*self\s+as\s+)
+regex_absent_tree_ext	apps/web/src/runtime	rs	\buse\s+super(?s:(?:::\s*super)*)\s*::\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))
+regex_absent_tree_ext	apps/web/src/runtime	rs	\buse\s+super(?s:(?:::\s*super)*)\s*::\s*hooks\s+as\s+
+regex_absent_tree_ext	apps/web/src/runtime	rs	\buse\s+super(?s:(?:::\s*super)*)\s*::\s*\{(?s:.*\bhooks\s*::\s*(use_core|\{.*\buse_core\b))
+regex_absent_tree_ext	apps/web/src/runtime	rs	\buse\s+super(?s:(?:::\s*super)*)\s*::\s*\{(?s:.*\bhooks\s+as\s+)
+regex_absent_tree_ext	apps/web/src/runtime	rs	\buse\s+super(?s:(?:::\s*super)*)\s*::\s*\{(?s:.*\bhooks\s*::\s*\{\s*self\s+as\s+)
