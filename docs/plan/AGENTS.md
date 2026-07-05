@@ -192,6 +192,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#backup-root-contract` | `### 3.1 Backup Root` | remote repo-level namespace 的 locator、expected RepoId、format_version、provider_kind 校验边界 |
 | `06_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
 | `06_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
+| `06_backup#backup-pack-plaintext-schema-contract` | `### 3.3 Backup Pack` | decrypt 后 backup pack plaintext 的版本化 schema gate、manifest 一致性、versioned ledger entry 与禁写本地 authority 边界 |
 | `06_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
 | `06_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
 | `06_backup#backup-restore-state-machine-contract` | `### 4.2 Restore / Import` | backup restore 从 RemoteDiscovered 到 RestoreCandidate 的状态推进、下载阶段禁写 ledger 与显式写 gate 边界 |

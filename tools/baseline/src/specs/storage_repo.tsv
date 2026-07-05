@@ -153,10 +153,11 @@ contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_open_result_cannot_be_empty_plaintext()
 contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs()
 contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_reject_raw_or_mismatched_plaintext()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_preserves_repo_and_write_gates()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_rejects_manifest_and_plaintext_pack_mismatch()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_writes_no_local_authority()
+contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
+contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_preserves_repo_and_write_gates()
+contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_rejects_manifest_and_plaintext_pack_mismatch()
+contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_writes_no_local_authority()
+contains	crates/core/src/backup/restore/tests/budget.rs	fn backup_restore_candidate_rejects_resource_budget_excess()
 contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
 contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test
 contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_web
