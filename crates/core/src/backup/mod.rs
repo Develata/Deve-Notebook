@@ -127,7 +127,8 @@ pub use upload::{
 pub use verification::{
     BackupDecryptedPackPayload, BackupDecryptedPacksInput, BackupDecryptedPacksResult,
     BackupDownloadedPackRef, BackupDownloadedPacksInput, BackupDownloadedPacksResult,
-    BackupPackVerificationEvidence, BackupVerificationError, BackupVerificationInput,
-    BackupVerificationResult, verify_backup_artifacts, verify_decrypted_backup_packs,
-    verify_downloaded_backup_packs,
+    BackupPackVerificationEvidence, BackupPlaintextPackPayload, BackupPlaintextPacksInput,
+    BackupPlaintextPacksResult, BackupVerificationError, BackupVerificationInput,
+    BackupVerificationResult, BackupVerifiedPackRef, verify_backup_artifacts,
+    verify_decrypted_backup_packs, verify_downloaded_backup_packs, verify_plaintext_backup_packs,
 };

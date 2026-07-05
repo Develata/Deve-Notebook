@@ -50,6 +50,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_plaintext_packs -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
@@ -128,6 +129,7 @@ contains	apps/cli/src/commands/backup/restore.rs	remote-readonly provider downlo
 contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_download_refs_and_known_mode()
 contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_returns_encrypted_bytes_only()
 contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_returns_encrypted_bytes_only()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_verifies_pack_plaintext_schema_before_candidate()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_accept_provider_order_independent_verified_results()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_consume_verified_artifact_results_only()
@@ -141,9 +143,11 @@ contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_path_or_digest_mismatch()
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_duplicate_sequence()
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_open_result_cannot_be_empty_plaintext()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_consumes_verified_and_decrypted_evidence()
+contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs()
+contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_reject_raw_or_mismatched_plaintext()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
 contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_preserves_repo_and_write_gates()
-contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_rejects_manifest_and_decrypted_pack_mismatch()
+contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_rejects_manifest_and_plaintext_pack_mismatch()
 contains	crates/core/src/backup/restore/tests.rs	fn backup_restore_candidate_admission_writes_no_local_authority()
 contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
 contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test

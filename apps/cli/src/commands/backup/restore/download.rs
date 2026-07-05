@@ -21,14 +21,15 @@ use anyhow::bail;
 use deve_core::backup::{
     BackupBindingStatus, BackupBranchManifest, BackupCommandKind, BackupDecryptedPacksInput,
     BackupDownloadedPacksInput, BackupPackArtifactRefDownloadVerifyInput,
-    BackupPackArtifactRefOpenInput, BackupPackVerificationEvidence, BackupPlanInput,
-    BackupRestoreFlowEvidence, BackupRestoreFlowInput, BackupRestoreResourceBudgetInput,
-    BackupVerificationInput, RestoreAdmissionMode, RestoreCandidateFromVerifiedPacksInput,
-    admit_verified_restore_candidate, backup_command_plan, open_backup_branch_manifest_artifact,
-    open_backup_pack_artifact_ref, parse_backup_credential_ref, parse_backup_key_ref,
-    plan_backup_restore_flow, validate_backup_restore_resource_budget, verify_backup_artifacts,
+    BackupPackArtifactRefOpenInput, BackupPackVerificationEvidence, BackupPlaintextPacksInput,
+    BackupPlanInput, BackupRestoreFlowEvidence, BackupRestoreFlowInput,
+    BackupRestoreResourceBudgetInput, BackupVerificationInput, RestoreAdmissionMode,
+    RestoreCandidateFromVerifiedPacksInput, admit_verified_restore_candidate, backup_command_plan,
+    open_backup_branch_manifest_artifact, open_backup_pack_artifact_ref,
+    parse_backup_credential_ref, parse_backup_key_ref, plan_backup_restore_flow,
+    validate_backup_restore_resource_budget, verify_backup_artifacts,
     verify_decrypted_backup_packs, verify_downloaded_backup_packs,
-    verify_downloaded_pack_artifact_ref_and_routing,
+    verify_downloaded_pack_artifact_ref_and_routing, verify_plaintext_backup_packs,
 };
 
 pub(super) fn restore_download_lines(
@@ -127,13 +128,17 @@ pub(super) fn restore_download_lines(
         downloaded_packs: &downloaded,
         opened_packs,
     })?;
+    let plaintext = verify_plaintext_backup_packs(BackupPlaintextPacksInput {
+        branch_manifest: &branch_manifest,
+        decrypted_packs: &decrypted,
+    })?;
     let manifest_verification = verify_backup_artifacts(BackupVerificationInput {
         expected_repo_id: context.repo_id,
         manifest_repo_id: context.manifest_repo_id,
         expected_manifest_digest: context.manifest_digest.clone(),
         computed_manifest_digest,
         manifest_authenticated: true,
-        packs: decrypted
+        packs: plaintext
             .plaintext_packs()
             .iter()
             .map(|pack| BackupPackVerificationEvidence {
@@ -149,7 +154,7 @@ pub(super) fn restore_download_lines(
     let candidate = admit_verified_restore_candidate(RestoreCandidateFromVerifiedPacksInput {
         expected_repo_id: context.repo_id,
         manifest_verification: &manifest_verification,
-        decrypted_packs: &decrypted,
+        plaintext_packs: &plaintext,
         admission_mode: RestoreAdmissionMode::RemoteReadonly,
         write_gate_confirmed: false,
     })?;
@@ -165,6 +170,7 @@ pub(super) fn restore_download_lines(
             manifest_verified: true,
             packs_downloaded: true,
             packs_decrypted: true,
+            packs_plaintext_verified: true,
             candidate_admitted: true,
         },
         admission_mode: context.admission_mode,
@@ -205,6 +211,7 @@ pub(super) fn restore_download_lines(
         format!("restore_flow_state={:?}", flow.state),
         format!("admission_mode={:?}", flow.admission_mode),
         "packs_decrypted=true".to_string(),
+        "pack_plaintext_schema_verified=true".to_string(),
         "candidate_admission=created_remote_readonly".to_string(),
         format!("restore_candidate_state={:?}", candidate.state),
         format!("manifest_digest={}", context.manifest_digest.hex),
@@ -268,6 +275,7 @@ fn validate_download_entry(
             manifest_verified: false,
             packs_downloaded: false,
             packs_decrypted: false,
+            packs_plaintext_verified: false,
             candidate_admitted: false,
         },
         admission_mode: context.admission_mode,

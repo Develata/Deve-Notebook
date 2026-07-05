@@ -16,6 +16,7 @@ use thiserror::Error;
 
 mod decrypted_packs;
 mod downloaded_packs;
+mod plaintext_packs;
 #[cfg(test)]
 mod tests;
 
@@ -27,6 +28,10 @@ pub use downloaded_packs::{
     BackupDownloadedPackRef, BackupDownloadedPacksInput, BackupDownloadedPacksResult,
     verify_downloaded_backup_packs,
 };
+pub use plaintext_packs::{
+    BackupPlaintextPackPayload, BackupPlaintextPacksInput, BackupPlaintextPacksResult,
+    verify_plaintext_backup_packs,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackupPackVerificationEvidence {
@@ -35,6 +40,22 @@ pub struct BackupPackVerificationEvidence {
     pub computed_digest: BackupDigest,
     pub authenticated: bool,
     pub decrypted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BackupVerifiedPackRef {
+    pack_sequence: u64,
+    digest: BackupDigest,
+}
+
+impl BackupVerifiedPackRef {
+    pub fn pack_sequence(&self) -> u64 {
+        self.pack_sequence
+    }
+
+    pub fn digest(&self) -> &BackupDigest {
+        &self.digest
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +74,7 @@ pub struct BackupVerificationResult {
     repo_id: RepoId,
     manifest_digest: BackupDigest,
     pack_count: u64,
+    pack_refs: Vec<BackupVerifiedPackRef>,
     pack_digests: Vec<BackupDigest>,
     decrypted: bool,
 }
@@ -72,6 +94,10 @@ impl BackupVerificationResult {
 
     pub fn pack_digests(&self) -> &[BackupDigest] {
         &self.pack_digests
+    }
+
+    pub fn pack_refs(&self) -> &[BackupVerifiedPackRef] {
+        &self.pack_refs
     }
 
     pub fn decrypted(&self) -> bool {
@@ -117,6 +143,10 @@ pub enum BackupVerificationError {
     DecryptBeforeVerifyForbidden,
     #[error("backup verification decrypt evidence is required")]
     DecryptFailure,
+    #[error(transparent)]
+    BranchManifest(#[from] super::BackupBranchManifestError),
+    #[error(transparent)]
+    PackPlaintext(#[from] super::BackupPackPlaintextError),
 }
 
 pub fn verify_backup_artifacts(
@@ -140,7 +170,7 @@ pub fn verify_backup_artifacts(
         return Err(BackupVerificationError::EmptyPackList);
     }
 
-    let mut pack_digests = Vec::with_capacity(input.packs.len());
+    let mut pack_refs = Vec::with_capacity(input.packs.len());
     let mut all_decrypted = true;
     let mut pack_sequences = HashSet::with_capacity(input.packs.len());
     for pack in input.packs {
@@ -149,17 +179,25 @@ pub fn verify_backup_artifacts(
         }
         verify_pack(&pack)?;
         all_decrypted &= pack.decrypted;
-        pack_digests.push(pack.expected_digest);
+        pack_refs.push(BackupVerifiedPackRef {
+            pack_sequence: pack.pack_sequence,
+            digest: pack.expected_digest,
+        });
     }
 
     if input.decrypt_required && !all_decrypted {
         return Err(BackupVerificationError::DecryptFailure);
     }
 
+    let pack_digests = pack_refs
+        .iter()
+        .map(|pack| pack.digest.clone())
+        .collect::<Vec<_>>();
     Ok(BackupVerificationResult {
         repo_id: input.expected_repo_id,
         manifest_digest: input.expected_manifest_digest,
         pack_count: u64::try_from(pack_digests.len()).unwrap_or(u64::MAX),
+        pack_refs,
         pack_digests,
         decrypted: all_decrypted,
     })

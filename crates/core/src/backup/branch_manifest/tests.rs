@@ -7,8 +7,8 @@ use super::{
 };
 use crate::backup::{
     BackupArtifactKey, BackupArtifactKind, BackupArtifactProtection, BackupArtifactProtectionInput,
-    BackupDigest, BackupLocator, BackupProtectionMechanism, parse_backup_key_ref,
-    plan_backup_artifact_protection,
+    BackupBlobRef, BackupDigest, BackupLocator, BackupProtectionMechanism, BackupSeqRange,
+    parse_backup_key_ref, plan_backup_artifact_protection,
 };
 
 fn repo_id() -> uuid::Uuid {
@@ -31,6 +31,17 @@ fn pack(sequence: u64) -> BackupBranchManifestPackRef {
         pack_sequence: sequence,
         object_path: format!("deve/branches/writer-1/packs/{sequence:06}.pack.enc"),
         payload_digest: digest('a'),
+        ledger_seq_range: Some(BackupSeqRange {
+            start: sequence,
+            end: sequence,
+        }),
+        ledger_event_count: 1,
+        snapshot_count: 1,
+        blob_refs: vec![BackupBlobRef {
+            path: format!("blobs/{sequence:06}.bin"),
+            size_bytes: 12,
+            digest: digest('b'),
+        }],
     }
 }
 
@@ -145,11 +156,27 @@ fn rejects_duplicate_pack_sequence_and_object_path() {
             pack_sequence: 1,
             object_path: "deve/branches/writer-1/packs/000001.pack.enc".into(),
             payload_digest: digest('a'),
+            ledger_seq_range: Some(BackupSeqRange { start: 1, end: 1 }),
+            ledger_event_count: 1,
+            snapshot_count: 1,
+            blob_refs: vec![BackupBlobRef {
+                path: "blobs/000001.bin".into(),
+                size_bytes: 12,
+                digest: digest('b'),
+            }],
         },
         BackupBranchManifestPackRef {
             pack_sequence: 2,
             object_path: "deve/branches/writer-1/packs/000001.pack.enc".into(),
             payload_digest: digest('b'),
+            ledger_seq_range: Some(BackupSeqRange { start: 2, end: 2 }),
+            ledger_event_count: 1,
+            snapshot_count: 1,
+            blob_refs: vec![BackupBlobRef {
+                path: "blobs/000002.bin".into(),
+                size_bytes: 12,
+                digest: digest('c'),
+            }],
         },
     ];
     assert!(matches!(

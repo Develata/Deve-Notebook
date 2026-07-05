@@ -39,6 +39,11 @@ fn backup_restore_download_opens_branch_manifest_before_pack_download() {
     assert!(
         lines
             .iter()
+            .any(|line| line == "pack_plaintext_schema_verified=true")
+    );
+    assert!(
+        lines
+            .iter()
             .any(|line| line == "candidate_admission=created_remote_readonly")
     );
     assert!(
@@ -46,6 +51,49 @@ fn backup_restore_download_opens_branch_manifest_before_pack_download() {
             .iter()
             .any(|line| line == "restore_candidate_state=RemoteReadonly")
     );
+}
+
+#[test]
+fn backup_restore_download_verifies_pack_plaintext_schema_before_candidate() {
+    let key = artifact_key();
+    let (pack_ref, pack_bytes) =
+        encrypted_pack_fixture_with_plaintext(&key, 1, b"raw plaintext without schema");
+    let branch = BackupLocator::parse("s3://bucket-name/deve/")
+        .unwrap()
+        .branch_locator("writer-1")
+        .unwrap();
+    let branch_manifest_path = branch.branch_manifest_path();
+    let branch_manifest =
+        encrypt_backup_branch_manifest_artifact(BackupBranchManifestArtifactInput {
+            branch,
+            repo_id: REPO_ID.parse().expect("repo id"),
+            writer_identity: "writer-1",
+            branch_path: "deve/branches/writer-1",
+            packs: vec![pack_ref.clone()],
+            protection: &protection(BackupArtifactKind::BranchManifest),
+            key: &key,
+        })
+        .expect("encrypted branch manifest");
+    let manifest_digest = branch_manifest
+        .payload_digest()
+        .expect("manifest digest")
+        .hex;
+    let artifacts = vec![
+        (
+            branch_manifest_path,
+            branch_manifest.to_bytes().expect("manifest bytes"),
+        ),
+        (pack_ref.object_path.clone(), pack_bytes),
+    ];
+    let pack_digests = vec![pack_ref.payload_digest.hex.clone()];
+    let command = download_input(&manifest_digest, &pack_digests);
+    let mut downloader = RecordingDownloader::new(artifacts);
+    let mut key_resolver = FixedKeyResolver::new(key);
+    let err = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)
+        .expect_err("raw plaintext must fail before candidate admission");
+
+    assert!(err.to_string().contains("plaintext"));
+    assert_eq!(downloader.requests.len(), 2);
 }
 
 #[test]

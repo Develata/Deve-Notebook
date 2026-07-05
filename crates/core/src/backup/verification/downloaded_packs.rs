@@ -174,6 +174,12 @@ mod tests {
         plan_backup_pack, verify_downloaded_pack_artifact_digest_and_routing,
     };
 
+    #[derive(Clone)]
+    struct PackFixture {
+        manifest: BackupPackManifest,
+        download_result: BackupPackArtifactDownloadVerifyResult,
+    }
+
     fn digest(fill: char) -> BackupDigest {
         BackupDigest::sha256(fill.to_string().repeat(64))
     }
@@ -239,11 +245,7 @@ mod tests {
         .unwrap()
     }
 
-    fn verified_pack(
-        pack_sequence: u64,
-        writer_identity: &str,
-        plaintext: &[u8],
-    ) -> BackupPackArtifactDownloadVerifyResult {
+    fn verified_pack(pack_sequence: u64, writer_identity: &str, plaintext: &[u8]) -> PackFixture {
         let key = artifact_key();
         let protection = protection();
         let branch_path = format!("deve/branches/{writer_identity}");
@@ -259,23 +261,28 @@ mod tests {
         let artifact_bytes = artifact.to_bytes().unwrap();
         let manifest = pack_manifest_for(&artifact);
 
-        verify_downloaded_pack_artifact_digest_and_routing(BackupPackArtifactDownloadVerifyInput {
-            manifest: &manifest,
-            artifact_bytes: &artifact_bytes,
-        })
-        .unwrap()
+        let download_result = verify_downloaded_pack_artifact_digest_and_routing(
+            BackupPackArtifactDownloadVerifyInput {
+                manifest: &manifest,
+                artifact_bytes: &artifact_bytes,
+            },
+        )
+        .unwrap();
+
+        PackFixture {
+            manifest,
+            download_result,
+        }
     }
 
-    fn verified_packs() -> Vec<BackupPackArtifactDownloadVerifyResult> {
+    fn verified_packs() -> Vec<PackFixture> {
         vec![
             verified_pack(1, "writer-1", b"ledger facts one"),
             verified_pack(2, "writer-1", b"ledger facts two"),
         ]
     }
 
-    fn branch_manifest(
-        verified_packs: &[BackupPackArtifactDownloadVerifyResult],
-    ) -> BackupBranchManifest {
+    fn branch_manifest(verified_packs: &[PackFixture]) -> BackupBranchManifest {
         BackupBranchManifest {
             repo_id: repo_id(),
             writer_identity: "writer-1".into(),
@@ -285,13 +292,23 @@ mod tests {
             format_version: crate::backup::BACKUP_BRANCH_MANIFEST_FORMAT_VERSION,
             packs: verified_packs
                 .iter()
-                .map(|pack| BackupBranchManifestPackRef {
-                    pack_sequence: pack.pack_sequence(),
-                    object_path: pack.object_path().to_owned(),
-                    payload_digest: pack.computed_digest().clone(),
-                })
+                .map(|pack| BackupBranchManifestPackRef::from_pack_manifest(&pack.manifest))
                 .collect(),
         }
+    }
+
+    fn download_results(fixtures: &[PackFixture]) -> Vec<BackupPackArtifactDownloadVerifyResult> {
+        fixtures
+            .iter()
+            .map(|fixture| fixture.download_result.clone())
+            .collect()
+    }
+
+    fn pack_digests(fixtures: &[PackFixture]) -> Vec<BackupDigest> {
+        fixtures
+            .iter()
+            .map(|fixture| fixture.download_result.computed_digest().clone())
+            .collect()
     }
 
     #[test]
@@ -301,7 +318,7 @@ mod tests {
 
         let result = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: verified_packs.clone(),
+            verified_packs: download_results(&verified_packs),
         })
         .expect("downloaded pack evidence");
 
@@ -309,20 +326,14 @@ mod tests {
         assert_eq!(result.writer_identity(), "writer-1");
         assert_eq!(result.branch_path(), "deve/branches/writer-1");
         assert_eq!(result.pack_count(), 2);
-        assert_eq!(
-            result.pack_digests(),
-            verified_packs
-                .iter()
-                .map(|pack| pack.computed_digest().clone())
-                .collect::<Vec<_>>()
-        );
+        assert_eq!(result.pack_digests(), pack_digests(&verified_packs));
     }
 
     #[test]
     fn backup_downloaded_packs_accept_provider_order_independent_verified_results() {
         let verified_packs = verified_packs();
         let manifest = branch_manifest(&verified_packs);
-        let mut reversed = verified_packs.clone();
+        let mut reversed = download_results(&verified_packs);
         reversed.reverse();
 
         let result = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
@@ -331,13 +342,7 @@ mod tests {
         })
         .expect("provider order must not affect branch manifest evidence");
 
-        assert_eq!(
-            result.pack_digests(),
-            verified_packs
-                .iter()
-                .map(|pack| pack.computed_digest().clone())
-                .collect::<Vec<_>>()
-        );
+        assert_eq!(result.pack_digests(), pack_digests(&verified_packs));
     }
 
     #[test]
@@ -347,14 +352,14 @@ mod tests {
 
         let result = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: vec![verified_pack.clone()],
+            verified_packs: vec![verified_pack.download_result.clone()],
         })
         .expect("artifact download verification result is the gate input");
 
         assert_eq!(result.pack_count(), 1);
         assert_eq!(
             result.pack_digests(),
-            vec![verified_pack.computed_digest().clone()]
+            vec![verified_pack.download_result.computed_digest().clone()]
         );
     }
 
@@ -364,7 +369,7 @@ mod tests {
         let manifest = branch_manifest(&verified_packs);
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: vec![verified_packs[0].clone()],
+            verified_packs: vec![verified_packs[0].download_result.clone()],
         })
         .expect_err("missing downloaded pack must fail closed");
         assert_eq!(err, BackupVerificationError::MissingDownloadedPack);
@@ -372,7 +377,10 @@ mod tests {
         let unexpected_pack = verified_pack(99, "writer-1", b"unexpected pack");
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: vec![verified_packs[0].clone(), unexpected_pack],
+            verified_packs: vec![
+                verified_packs[0].download_result.clone(),
+                unexpected_pack.download_result,
+            ],
         })
         .expect_err("unexpected downloaded pack must fail closed");
         assert_eq!(err, BackupVerificationError::UnexpectedDownloadedPack);
@@ -385,7 +393,10 @@ mod tests {
         let wrong_path = verified_pack(1, "writer-2", b"ledger facts one");
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: vec![wrong_path, verified_packs[1].clone()],
+            verified_packs: vec![
+                wrong_path.download_result,
+                verified_packs[1].download_result.clone(),
+            ],
         })
         .expect_err("wrong object path must fail closed");
         assert_eq!(err, BackupVerificationError::PackObjectPathMismatch);
@@ -394,7 +405,7 @@ mod tests {
         manifest.packs[0].payload_digest = digest('f');
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs,
+            verified_packs: download_results(&verified_packs),
         })
         .expect_err("wrong digest must fail closed");
         assert_eq!(err, BackupVerificationError::PackHashMismatch);
@@ -406,7 +417,10 @@ mod tests {
         let manifest = branch_manifest(&verified_packs);
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs: vec![verified_packs[0].clone(), verified_packs[0].clone()],
+            verified_packs: vec![
+                verified_packs[0].download_result.clone(),
+                verified_packs[0].download_result.clone(),
+            ],
         })
         .expect_err("duplicate sequence must fail closed");
         assert_eq!(err, BackupVerificationError::DuplicatePackSequence);
@@ -415,7 +429,7 @@ mod tests {
         manifest.packs[1].object_path = manifest.packs[0].object_path.clone();
         let err = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
             branch_manifest: &manifest,
-            verified_packs,
+            verified_packs: download_results(&verified_packs),
         })
         .expect_err("duplicate path must fail closed");
         assert_eq!(err, BackupVerificationError::DuplicatePackObjectPath);

@@ -10,7 +10,7 @@
 
 use super::locator::{normalize_remote_path, safe_writer_identity};
 use super::pack::BackupDigest;
-use super::verification::{BackupDecryptedPacksResult, BackupVerificationResult};
+use super::verification::{BackupPlaintextPacksResult, BackupVerificationResult};
 use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -35,19 +35,24 @@ struct RestoreEvidence {
     pub manifest_verified: bool,
     pub packs_downloaded: bool,
     pub packs_decrypted: bool,
+    pub packs_plaintext_verified: bool,
 }
 
 impl RestoreEvidence {
-    fn verified_downloaded_decrypted() -> Self {
+    fn verified_downloaded_decrypted_plaintext() -> Self {
         Self {
             manifest_verified: true,
             packs_downloaded: true,
             packs_decrypted: true,
+            packs_plaintext_verified: true,
         }
     }
 
     fn is_complete(self) -> bool {
-        self.manifest_verified && self.packs_downloaded && self.packs_decrypted
+        self.manifest_verified
+            && self.packs_downloaded
+            && self.packs_decrypted
+            && self.packs_plaintext_verified
     }
 }
 
@@ -76,7 +81,7 @@ struct RestoreCandidateInput {
 pub struct RestoreCandidateFromVerifiedPacksInput<'a> {
     pub expected_repo_id: RepoId,
     pub manifest_verification: &'a BackupVerificationResult,
-    pub decrypted_packs: &'a BackupDecryptedPacksResult,
+    pub plaintext_packs: &'a BackupPlaintextPacksResult,
     pub admission_mode: RestoreAdmissionMode,
     pub write_gate_confirmed: bool,
 }
@@ -104,7 +109,7 @@ pub enum BackupRestoreError {
     #[error("backup restore candidate repo id does not match expected repo")]
     RepoIdMismatch,
     #[error(
-        "backup restore candidate requires verified manifest, downloaded packs, and decrypted packs"
+        "backup restore candidate requires verified manifest, downloaded packs, decrypted packs, and plaintext schema verification"
     )]
     IncompleteRestoreEvidence,
     #[error("backup restore candidate must contain at least one pack digest")]
@@ -115,7 +120,7 @@ pub enum BackupRestoreError {
     InvalidDigest,
     #[error("backup restore candidate pack digest is duplicated")]
     DuplicatePackDigest,
-    #[error("backup restore candidate typed verification evidence does not match decrypted packs")]
+    #[error("backup restore candidate typed verification evidence does not match plaintext packs")]
     TypedEvidenceMismatch,
     #[error("backup restore candidate pack count exceeds resource budget")]
     PackCountBudgetExceeded,
@@ -167,23 +172,23 @@ pub fn admit_verified_restore_candidate(
     validate_typed_evidence(
         input.expected_repo_id,
         input.manifest_verification,
-        input.decrypted_packs,
+        input.plaintext_packs,
     )?;
     validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
-        pack_count: input.decrypted_packs.pack_count(),
-        encrypted_bytes: input.decrypted_packs.encrypted_bytes_total(),
-        plaintext_bytes: input.decrypted_packs.plaintext_bytes_total(),
+        pack_count: input.plaintext_packs.pack_count(),
+        encrypted_bytes: input.plaintext_packs.encrypted_bytes_total(),
+        plaintext_bytes: input.plaintext_packs.plaintext_bytes_total(),
     })?;
 
     admit_restore_candidate(RestoreCandidateInput {
-        repo_id: input.decrypted_packs.repo_id(),
+        repo_id: input.plaintext_packs.repo_id(),
         expected_repo_id: input.expected_repo_id,
-        writer_identity: input.decrypted_packs.writer_identity().to_owned(),
-        branch_path: input.decrypted_packs.branch_path().to_owned(),
+        writer_identity: input.plaintext_packs.writer_identity().to_owned(),
+        branch_path: input.plaintext_packs.branch_path().to_owned(),
         manifest_digest: input.manifest_verification.manifest_digest().clone(),
-        pack_count: input.decrypted_packs.pack_count(),
-        pack_digests: input.decrypted_packs.pack_digests().to_vec(),
-        evidence: RestoreEvidence::verified_downloaded_decrypted(),
+        pack_count: input.plaintext_packs.pack_count(),
+        pack_digests: input.plaintext_packs.pack_digests().to_vec(),
+        evidence: RestoreEvidence::verified_downloaded_decrypted_plaintext(),
         admission_mode: input.admission_mode,
         write_gate_confirmed: input.write_gate_confirmed,
     })
@@ -207,27 +212,29 @@ pub fn validate_backup_restore_resource_budget(
 fn validate_typed_evidence(
     expected_repo_id: RepoId,
     manifest_verification: &BackupVerificationResult,
-    decrypted_packs: &BackupDecryptedPacksResult,
+    plaintext_packs: &BackupPlaintextPacksResult,
 ) -> Result<(), BackupRestoreError> {
     if manifest_verification.repo_id() != expected_repo_id
-        || decrypted_packs.repo_id() != expected_repo_id
+        || plaintext_packs.repo_id() != expected_repo_id
     {
         return Err(BackupRestoreError::RepoIdMismatch);
     }
     if !manifest_verification.decrypted() {
         return Err(BackupRestoreError::IncompleteRestoreEvidence);
     }
-    if manifest_verification.pack_count() != decrypted_packs.pack_count()
-        || manifest_verification.pack_digests().len() != decrypted_packs.pack_digests().len()
+    if manifest_verification.pack_count() != plaintext_packs.pack_count()
+        || manifest_verification.pack_refs().len() != plaintext_packs.pack_refs().len()
     {
         return Err(BackupRestoreError::TypedEvidenceMismatch);
     }
-    for (verified, decrypted) in manifest_verification
-        .pack_digests()
+    for (verified, plaintext) in manifest_verification
+        .pack_refs()
         .iter()
-        .zip(decrypted_packs.pack_digests())
+        .zip(plaintext_packs.pack_refs())
     {
-        if !verified.same_sha256(decrypted) {
+        if verified.pack_sequence() != plaintext.pack_sequence()
+            || !verified.digest().same_sha256(plaintext.digest())
+        {
             return Err(BackupRestoreError::TypedEvidenceMismatch);
         }
     }

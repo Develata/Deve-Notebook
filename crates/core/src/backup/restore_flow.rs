@@ -25,6 +25,7 @@ pub enum BackupRestoreFlowState {
     ManifestVerified,
     PacksDownloaded,
     PacksDecrypted,
+    PacksPlaintextVerified,
     RestoreCandidate,
 }
 
@@ -34,6 +35,7 @@ pub struct BackupRestoreFlowEvidence {
     pub manifest_verified: bool,
     pub packs_downloaded: bool,
     pub packs_decrypted: bool,
+    pub packs_plaintext_verified: bool,
     pub candidate_admitted: bool,
 }
 
@@ -44,6 +46,7 @@ impl BackupRestoreFlowEvidence {
             manifest_verified: false,
             packs_downloaded: false,
             packs_decrypted: false,
+            packs_plaintext_verified: false,
             candidate_admitted: false,
         }
     }
@@ -135,7 +138,8 @@ fn validate_evidence_order(
     }
     if (evidence.packs_downloaded && !evidence.manifest_verified)
         || (evidence.packs_decrypted && !evidence.packs_downloaded)
-        || (evidence.candidate_admitted && !evidence.packs_decrypted)
+        || (evidence.packs_plaintext_verified && !evidence.packs_decrypted)
+        || (evidence.candidate_admitted && !evidence.packs_plaintext_verified)
     {
         return Err(BackupRestoreFlowError::EvidenceOutOfOrder);
     }
@@ -177,7 +181,11 @@ fn validate_pack_digests(
             return Err(BackupRestoreFlowError::DuplicatePackDigest);
         }
     }
-    if !evidence.packs_downloaded && !evidence.packs_decrypted && !evidence.candidate_admitted {
+    if !evidence.packs_downloaded
+        && !evidence.packs_decrypted
+        && !evidence.packs_plaintext_verified
+        && !evidence.candidate_admitted
+    {
         return Ok(());
     }
     if pack_digests.is_empty() {
@@ -224,6 +232,9 @@ fn validate_digest(digest: &BackupDigest) -> Result<(), BackupRestoreFlowError> 
 fn flow_state(evidence: BackupRestoreFlowEvidence) -> BackupRestoreFlowState {
     if evidence.candidate_admitted {
         return BackupRestoreFlowState::RestoreCandidate;
+    }
+    if evidence.packs_plaintext_verified {
+        return BackupRestoreFlowState::PacksPlaintextVerified;
     }
     if evidence.packs_decrypted {
         return BackupRestoreFlowState::PacksDecrypted;

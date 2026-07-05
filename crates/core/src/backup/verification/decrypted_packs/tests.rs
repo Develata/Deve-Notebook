@@ -12,6 +12,7 @@ use crate::backup::{
 };
 
 struct PackFixture {
+    pack_manifest: BackupPackManifest,
     download_result: crate::backup::BackupPackArtifactDownloadVerifyResult,
     open_result: BackupPackArtifactOpenResult,
 }
@@ -106,6 +107,7 @@ fn pack_fixture(pack_sequence: u64, writer_identity: &str, plaintext: &[u8]) -> 
     .unwrap();
 
     PackFixture {
+        pack_manifest: manifest,
         download_result,
         open_result,
     }
@@ -128,11 +130,7 @@ fn branch_manifest(fixtures: &[PackFixture]) -> BackupBranchManifest {
         format_version: BACKUP_BRANCH_MANIFEST_FORMAT_VERSION,
         packs: fixtures
             .iter()
-            .map(|fixture| BackupBranchManifestPackRef {
-                pack_sequence: fixture.download_result.pack_sequence(),
-                object_path: fixture.download_result.object_path().to_owned(),
-                payload_digest: fixture.download_result.computed_digest().clone(),
-            })
+            .map(|fixture| BackupBranchManifestPackRef::from_pack_manifest(&fixture.pack_manifest))
             .collect(),
     }
 }

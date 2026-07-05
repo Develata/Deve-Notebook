@@ -143,6 +143,11 @@ pack plaintext schema gate 约束 {#backup-pack-plaintext-schema-contract}：
 - plaintext schema validation 只是解密后的 typed evidence gate。它不得 append
   ledger，不得写 staging，不得写 Projection Workspace，不得创建 commit anchor 或
   Git mirror queue。
+- branch manifest pack refs MUST carry the pack manifest metadata required to
+  validate decrypted plaintext (`ledger_seq_range / ledger_event_count /
+  snapshot_count / blob_refs`). Restore 只能从已验证的 branch manifest pack ref
+  还原 `BackupPackManifest` 并打开 plaintext；不得信任 plaintext 自带 metadata
+  来完成自证。
 
 ### 3.4 Restore Candidate {#backup-restore-candidate-contract}
 
@@ -150,6 +155,10 @@ Restore candidate 是下载、验证、解密后尚未导入的备份结果。
 
 Restore candidate 不是 local branch，也不是 current scope。只有显式 restore /
 import / merge intent 通过 gate 后，才允许进入本地 repo runtime。
+
+RestoreCandidate admission MUST consume manifest verification 与
+`PacksPlaintextVerified` typed evidence。只有 `PacksDecrypted` 而没有版本化
+plaintext schema evidence 的 pack，不得进入 RestoreCandidate。
 
 ## 4. State Machines
 
@@ -186,6 +195,7 @@ RemoteDiscovered
   -> ManifestVerified
   -> PacksDownloaded
   -> PacksDecrypted
+  -> PacksPlaintextVerified
   -> RestoreCandidate
   -> RemoteReadonly | ExplicitImport | ExplicitMerge
 ```
@@ -196,6 +206,9 @@ RemoteDiscovered
 - `PacksDownloaded` 必须由 branch manifest 中的 pack object refs 驱动，逐个下载
   encrypted pack artifact bytes；下载结果在通过 manifest digest、artifact digest、
   authentication 与 decrypt gate 前，不得暴露为 plaintext 或 restore candidate。
+- `PacksPlaintextVerified` 必须由 core 通过已验证 branch manifest pack refs
+  还原 pack manifest 后打开 plaintext schema；任意 raw plaintext、metadata
+  mismatch、损坏 ledger entry 或 plaintext 自证失败都不得进入 RestoreCandidate。
 - restore candidate admission MUST 由 core-owned resource budget 约束 pack 数、
   encrypted aggregate bytes 与 plaintext aggregate bytes；超出预算必须
   fail-closed，且不得继续导入、合并或写本地 authority。

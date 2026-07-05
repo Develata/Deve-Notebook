@@ -58,6 +58,7 @@ fn progresses_to_restore_candidate_after_verify_download_decrypt() {
         manifest_verified: true,
         packs_downloaded: true,
         packs_decrypted: true,
+        packs_plaintext_verified: true,
         candidate_admitted: true,
     };
 
@@ -74,6 +75,7 @@ fn rejects_out_of_order_restore_evidence() {
         manifest_verified: false,
         packs_downloaded: false,
         packs_decrypted: true,
+        packs_plaintext_verified: false,
         candidate_admitted: false,
     };
 
@@ -97,6 +99,7 @@ fn rejects_manifest_repo_or_digest_mismatch() {
         manifest_verified: true,
         packs_downloaded: false,
         packs_decrypted: false,
+        packs_plaintext_verified: false,
         candidate_admitted: false,
     };
     let mut restore_input = verified_input(evidence);
@@ -123,6 +126,7 @@ fn rejects_empty_pack_download_after_download_phase() {
         manifest_verified: true,
         packs_downloaded: true,
         packs_decrypted: false,
+        packs_plaintext_verified: false,
         candidate_admitted: false,
     };
     let mut restore_input = verified_input(evidence);
@@ -157,6 +161,7 @@ fn blocks_ledger_append_until_explicit_write_gate() {
         manifest_verified: true,
         packs_downloaded: true,
         packs_decrypted: true,
+        packs_plaintext_verified: false,
         candidate_admitted: false,
     };
     let mut restore_input = verified_input(evidence);
@@ -169,6 +174,7 @@ fn blocks_ledger_append_until_explicit_write_gate() {
 
     let evidence = BackupRestoreFlowEvidence {
         candidate_admitted: true,
+        packs_plaintext_verified: true,
         ..evidence
     };
     let mut restore_input = verified_input(evidence);

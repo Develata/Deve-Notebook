@@ -71,14 +71,9 @@ fn branch_manifest_for(
         manifest_writer_identity: artifact.writer_identity.clone(),
         manifest_branch_path: artifact.branch_path.clone(),
         format_version: BACKUP_BRANCH_MANIFEST_FORMAT_VERSION,
-        packs: vec![BackupBranchManifestPackRef {
-            pack_sequence: artifact.pack_sequence,
-            object_path: format!(
-                "{}/packs/{:06}.pack.enc",
-                artifact.branch_path, artifact.pack_sequence
-            ),
-            payload_digest: artifact.payload_digest().unwrap(),
-        }],
+        packs: vec![BackupBranchManifestPackRef::from_pack_manifest(
+            &manifest_for(artifact),
+        )],
     })
     .unwrap()
 }

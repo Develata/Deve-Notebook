@@ -14,7 +14,10 @@
 
 use super::artifact::BackupArtifactKey;
 use super::locator::{BranchBackupLocator, normalize_remote_path, safe_writer_identity};
-use super::pack::{BackupDigest, pack_file_name};
+use super::pack::{
+    BackupBlobRef, BackupDigest, BackupPackError, BackupPackManifest, BackupPackPlanInput,
+    BackupSeqRange, pack_file_name, plan_backup_pack, validate_pack_manifest,
+};
 use super::protection::{BackupArtifactKind, BackupArtifactProtection, BackupProtectionMechanism};
 use crate::models::RepoId;
 use aes_gcm::{Aes256Gcm, Nonce, aead::Aead, aead::AeadCore, aead::OsRng};
@@ -36,6 +39,24 @@ pub struct BackupBranchManifestPackRef {
     pub pack_sequence: u64,
     pub object_path: String,
     pub payload_digest: BackupDigest,
+    pub ledger_seq_range: Option<BackupSeqRange>,
+    pub ledger_event_count: u64,
+    pub snapshot_count: u64,
+    pub blob_refs: Vec<BackupBlobRef>,
+}
+
+impl BackupBranchManifestPackRef {
+    pub fn from_pack_manifest(manifest: &BackupPackManifest) -> Self {
+        Self {
+            pack_sequence: manifest.pack_sequence,
+            object_path: manifest.pack_object_path(),
+            payload_digest: manifest.payload_digest.clone(),
+            ledger_seq_range: manifest.ledger_seq_range,
+            ledger_event_count: manifest.ledger_event_count,
+            snapshot_count: manifest.snapshot_count,
+            blob_refs: manifest.blob_refs.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +87,35 @@ impl BackupBranchManifest {
             .iter()
             .map(|pack| pack.object_path.clone())
             .collect()
+    }
+
+    pub fn pack_manifest_for_ref(
+        &self,
+        pack_ref: &BackupBranchManifestPackRef,
+    ) -> Result<BackupPackManifest, BackupBranchManifestError> {
+        let manifest = BackupPackManifest {
+            format_version: super::pack::BACKUP_PACK_FORMAT_VERSION,
+            repo_id: self.repo_id,
+            writer_identity: self.writer_identity.clone(),
+            branch_path: self.branch_path.clone(),
+            pack_sequence: pack_ref.pack_sequence,
+            pack_file_name: pack_file_name(pack_ref.pack_sequence),
+            ledger_seq_range: pack_ref.ledger_seq_range,
+            ledger_event_count: pack_ref.ledger_event_count,
+            snapshot_count: pack_ref.snapshot_count,
+            payload_digest: pack_ref.payload_digest.clone(),
+            blob_refs: pack_ref.blob_refs.clone(),
+        };
+        validate_pack_manifest(
+            &manifest,
+            self.repo_id,
+            &self.writer_identity,
+            &self.branch_path,
+        )?;
+        if manifest.pack_object_path() != pack_ref.object_path {
+            return Err(BackupBranchManifestError::PackObjectPathMismatch);
+        }
+        Ok(manifest)
     }
 }
 
@@ -163,6 +213,8 @@ pub enum BackupBranchManifestError {
     #[error("backup branch manifest digest must be sha256 hex")]
     InvalidDigest,
     #[error(transparent)]
+    Pack(#[from] BackupPackError),
+    #[error(transparent)]
     Locator(#[from] super::BackupLocatorError),
 }
 
@@ -227,7 +279,13 @@ pub fn validate_backup_branch_manifest(
     }
 
     let pack_prefix = input.branch.pack_prefix();
-    let packs = validate_pack_refs(&pack_prefix, input.packs)?;
+    let packs = validate_pack_refs(
+        &pack_prefix,
+        input.expected_repo_id,
+        &writer_identity,
+        &branch_path,
+        input.packs,
+    )?;
 
     Ok(BackupBranchManifest {
         repo_id: input.expected_repo_id,
@@ -320,6 +378,9 @@ pub fn open_backup_branch_manifest_artifact(
 
 fn validate_pack_refs(
     pack_prefix: &str,
+    repo_id: RepoId,
+    writer_identity: &str,
+    branch_path: &str,
     packs: Vec<BackupBranchManifestPackRef>,
 ) -> Result<Vec<BackupBranchManifestPackRef>, BackupBranchManifestError> {
     if packs.is_empty() {
@@ -336,10 +397,6 @@ fn validate_pack_refs(
         if !sequences.insert(pack.pack_sequence) {
             return Err(BackupBranchManifestError::DuplicatePackSequence);
         }
-        if !pack.payload_digest.is_valid_sha256() {
-            return Err(BackupBranchManifestError::InvalidDigest);
-        }
-
         let object_path = normalize_remote_path(&pack.object_path)?;
         if object_path == pack_prefix || !object_path.starts_with(&format!("{pack_prefix}/")) {
             return Err(BackupBranchManifestError::PackPathOutsideBranchPrefix);
@@ -351,10 +408,32 @@ fn validate_pack_refs(
             return Err(BackupBranchManifestError::PackObjectPathMismatch);
         }
 
-        normalized.push(BackupBranchManifestPackRef {
+        if !pack.payload_digest.is_valid_sha256() {
+            return Err(BackupBranchManifestError::InvalidDigest);
+        }
+        let manifest = plan_backup_pack(BackupPackPlanInput {
+            repo_id,
+            writer_identity: writer_identity.to_owned(),
+            branch_path: branch_path.to_owned(),
             pack_sequence: pack.pack_sequence,
-            object_path,
+            ledger_seq_range: pack.ledger_seq_range,
+            ledger_event_count: pack.ledger_event_count,
+            snapshot_count: pack.snapshot_count,
             payload_digest: pack.payload_digest,
+            blob_refs: pack.blob_refs,
+        })?;
+        if object_path != manifest.pack_object_path() {
+            return Err(BackupBranchManifestError::PackObjectPathMismatch);
+        }
+
+        normalized.push(BackupBranchManifestPackRef {
+            pack_sequence: manifest.pack_sequence,
+            object_path,
+            payload_digest: manifest.payload_digest,
+            ledger_seq_range: manifest.ledger_seq_range,
+            ledger_event_count: manifest.ledger_event_count,
+            snapshot_count: manifest.snapshot_count,
+            blob_refs: manifest.blob_refs,
         });
     }
     Ok(normalized)

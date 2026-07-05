@@ -55,7 +55,8 @@
 - Backup locator 只作为 repo/branch 备份发现与恢复线索，不成为 repo authority。
 - CLI 可用 `backup inspect/list/verify/bind/run/restore/unbind` 检查 WebDAV/S3
   locator、branch binding、pack 计划与 restore flow planning；RestoreCandidate
-  admission 必须由 manifest verification 与 PacksDecrypted typed evidence 派生。
+  admission 必须由 manifest verification 与 PacksPlaintextVerified typed evidence
+  派生。
 - `backup bind` / `backup unbind` 在未传 `--dry-run` 时只写 host-local
   backup binding metadata；该 metadata 不成为 repo authority，不得包含
   credential/key material，不得写 ledger、staging 或 Projection Workspace。
@@ -81,9 +82,11 @@
   bytes 并做 manifest/routing/digest 校验；只有下载结果与 branch manifest pack
   refs 一一匹配后，才可进入 `PacksDownloaded` evidence。随后 pack artifact open
   必须继续使用 branch manifest pack refs 做 verify-before-decrypt，产生
-  `PacksDecrypted` typed evidence 后，才能 admission 为内存态 remote-readonly
-  RestoreCandidate；该 candidate 不得写 ledger、staging、Source Control、Git
-  mirror 或 Projection Workspace。
+  `PacksDecrypted` typed evidence；再由 core 用已验证 branch manifest pack refs
+  还原 pack manifest 并打开版本化 plaintext schema，产生
+  `PacksPlaintextVerified` typed evidence 后，才能 admission 为内存态
+  remote-readonly RestoreCandidate；该 candidate 不得写 ledger、staging、
+  Source Control、Git mirror 或 Projection Workspace。
 - remote-readonly RestoreCandidate 还必须通过 core-owned resource budget；
   pack 数、encrypted aggregate bytes 或 plaintext aggregate bytes 超出预算时
   必须 fail-closed，不得继续下载/导入/合并。

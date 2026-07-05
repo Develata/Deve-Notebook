@@ -4,11 +4,16 @@ use crate::commands::backup::provider_io::{
     BackupArtifactDownloadRequest, BackupArtifactDownloader, BackupArtifactKeyResolver,
 };
 use deve_core::backup::{
-    BACKUP_RESTORE_MAX_PACKS, BackupArtifactKey, BackupArtifactKind, BackupArtifactProtectionInput,
-    BackupBranchManifestArtifactInput, BackupBranchManifestPackRef, BackupLocator,
-    BackupProtectionMechanism, BackupSecretRef, encrypt_backup_branch_manifest_artifact,
-    encrypt_backup_pack_artifact, parse_backup_key_ref, plan_backup_artifact_protection,
+    BACKUP_PACK_PLAINTEXT_FORMAT_VERSION, BACKUP_RESTORE_MAX_PACKS, BackupArtifactKey,
+    BackupArtifactKind, BackupArtifactProtectionInput, BackupBlobRef,
+    BackupBranchManifestArtifactInput, BackupBranchManifestPackRef, BackupDigest, BackupLocator,
+    BackupPackManifest, BackupPackPlaintext, BackupPackPlaintextEncodeInput,
+    BackupPackPlaintextLedgerEntry, BackupPackPlanInput, BackupProtectionMechanism,
+    BackupSecretRef, BackupSeqRange, encode_backup_pack_plaintext,
+    encrypt_backup_branch_manifest_artifact, encrypt_backup_pack_artifact, parse_backup_key_ref,
+    plan_backup_artifact_protection, plan_backup_pack,
 };
+use deve_core::models::{ContentOp, DocId, LedgerEntry, PeerId, serialize_ledger_entry};
 use std::collections::HashMap;
 
 mod download;
@@ -148,9 +153,96 @@ fn protection(kind: BackupArtifactKind) -> deve_core::backup::BackupArtifactProt
     .expect("artifact protection")
 }
 
+fn digest(fill: char) -> BackupDigest {
+    BackupDigest::sha256(fill.to_string().repeat(64))
+}
+
+fn blob_ref(pack_sequence: u64) -> BackupBlobRef {
+    BackupBlobRef {
+        path: format!("blobs/{pack_sequence:06}.bin"),
+        size_bytes: 12,
+        digest: digest('b'),
+    }
+}
+
+fn snapshot_ref(pack_sequence: u64) -> BackupBlobRef {
+    BackupBlobRef {
+        path: format!("snapshots/{pack_sequence:06}.bin"),
+        size_bytes: 24,
+        digest: digest('c'),
+    }
+}
+
+fn pack_manifest(pack_sequence: u64, payload_digest: BackupDigest) -> BackupPackManifest {
+    plan_backup_pack(BackupPackPlanInput {
+        repo_id: REPO_ID.parse().expect("repo id"),
+        writer_identity: "writer-1".to_string(),
+        branch_path: "deve/branches/writer-1".to_string(),
+        pack_sequence,
+        ledger_seq_range: Some(BackupSeqRange {
+            start: pack_sequence,
+            end: pack_sequence,
+        }),
+        ledger_event_count: 1,
+        snapshot_count: 1,
+        payload_digest,
+        blob_refs: vec![blob_ref(pack_sequence)],
+    })
+    .expect("pack manifest")
+}
+
+fn ledger_entry(global_seq: u64) -> BackupPackPlaintextLedgerEntry {
+    let entry = LedgerEntry::new_content(
+        DocId::from_u128(10_000 + u128::from(global_seq)),
+        ContentOp::Insert {
+            pos: 0,
+            content: format!("restore-entry-{global_seq}").into(),
+        },
+        1_700_000_000 + i64::try_from(global_seq).expect("timestamp seq"),
+        PeerId::new("backup-cli-restore-test-peer"),
+        global_seq,
+        None,
+        None,
+    );
+    BackupPackPlaintextLedgerEntry {
+        global_seq,
+        entry_bytes: serialize_ledger_entry(&entry).expect("versioned ledger entry"),
+    }
+}
+
+fn plaintext_bytes(manifest: &BackupPackManifest) -> Vec<u8> {
+    let seq_range = manifest.ledger_seq_range.expect("ledger range");
+    let plaintext = BackupPackPlaintext {
+        format_version: BACKUP_PACK_PLAINTEXT_FORMAT_VERSION,
+        repo_id: manifest.repo_id,
+        writer_identity: manifest.writer_identity.clone(),
+        branch_path: manifest.branch_path.clone(),
+        pack_sequence: manifest.pack_sequence,
+        ledger_seq_range: manifest.ledger_seq_range,
+        ledger_entries: vec![ledger_entry(seq_range.start)],
+        snapshot_refs: vec![snapshot_ref(manifest.pack_sequence)],
+        blob_refs: manifest.blob_refs.clone(),
+    };
+    encode_backup_pack_plaintext(BackupPackPlaintextEncodeInput {
+        manifest,
+        plaintext: &plaintext,
+    })
+    .expect("backup pack plaintext")
+}
+
 fn encrypted_pack_fixture(
     key: &BackupArtifactKey,
     pack_sequence: u64,
+) -> (BackupBranchManifestPackRef, Vec<u8>) {
+    let provisional_manifest = pack_manifest(pack_sequence, digest('a'));
+    let plaintext = plaintext_bytes(&provisional_manifest);
+    encrypted_pack_fixture_with_plaintext(key, pack_sequence, &plaintext)
+}
+
+fn encrypted_pack_fixture_with_plaintext(
+    key: &BackupArtifactKey,
+    pack_sequence: u64,
+    plaintext: &[u8],
 ) -> (BackupBranchManifestPackRef, Vec<u8>) {
     let artifact = encrypt_backup_pack_artifact(deve_core::backup::BackupPackArtifactInput {
         repo_id: REPO_ID.parse().expect("repo id"),
@@ -159,18 +251,14 @@ fn encrypted_pack_fixture(
         pack_sequence,
         protection: &protection(BackupArtifactKind::Pack),
         key,
-        plaintext: br#"{"ledger":["event"],"snapshots":[]}"#,
+        plaintext,
     })
     .expect("encrypted pack artifact");
     let payload_digest = artifact.payload_digest().expect("payload digest");
-    let object_path = format!("deve/branches/writer-1/packs/{pack_sequence:06}.pack.enc");
+    let manifest = pack_manifest(pack_sequence, payload_digest);
 
     (
-        BackupBranchManifestPackRef {
-            pack_sequence,
-            object_path,
-            payload_digest,
-        },
+        BackupBranchManifestPackRef::from_pack_manifest(&manifest),
         artifact.to_bytes().expect("artifact bytes"),
     )
 }
@@ -270,7 +358,7 @@ fn plans_remote_readonly_restore_flow_without_candidate_admission() {
             .any(|line| line == "restore_flow_state=PacksDecrypted")
     );
     assert!(lines.iter().any(
-        |line| line == "candidate_admission=typed_verification_and_decrypted_evidence_required"
+        |line| line == "candidate_admission=typed_verification_and_plaintext_evidence_required"
     ));
     assert!(
         lines
