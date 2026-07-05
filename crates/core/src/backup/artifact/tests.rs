@@ -130,6 +130,69 @@ fn backup_pack_artifact_upload_verify_checks_digest_before_provider_io() {
 }
 
 #[test]
+fn backup_pack_artifact_download_verify_checks_digest_before_decrypt() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let artifact_bytes = artifact.to_bytes().unwrap();
+    let manifest = manifest_for(&artifact);
+
+    let result =
+        verify_downloaded_pack_artifact_digest_and_routing(BackupPackArtifactDownloadVerifyInput {
+            manifest: &manifest,
+            artifact_bytes: &artifact_bytes,
+        })
+        .unwrap();
+
+    assert_eq!(result.pack_sequence, artifact.pack_sequence);
+    assert!(result.computed_digest.same_sha256(&manifest.payload_digest));
+}
+
+#[test]
+fn backup_pack_artifact_download_verify_rejects_tamper_before_decrypt() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let manifest = manifest_for(&artifact);
+    let mut tampered = artifact;
+    tampered.ciphertext[0] ^= 0x01;
+    let tampered_bytes = tampered.to_bytes().unwrap();
+
+    let err =
+        verify_downloaded_pack_artifact_digest_and_routing(BackupPackArtifactDownloadVerifyInput {
+            manifest: &manifest,
+            artifact_bytes: &tampered_bytes,
+        })
+        .expect_err("tampered downloaded payload must be rejected before decrypt");
+
+    assert_eq!(err, BackupPackArtifactError::ArtifactDigestMismatch);
+}
+
+#[test]
+fn backup_pack_artifact_download_verify_rejects_routing_metadata_tamper() {
+    let key = artifact_key(7);
+    let protection = protection(BackupArtifactKind::Pack, BackupProtectionMechanism::AeadTag);
+    let artifact =
+        encrypt_backup_pack_artifact(encrypt_input(&key, &protection, b"ledger facts")).unwrap();
+    let mut manifest = manifest_for(&artifact);
+    let mut metadata_tampered = artifact;
+    metadata_tampered.writer_identity = "writer-2".into();
+    let tampered_bytes = metadata_tampered.to_bytes().unwrap();
+    manifest.payload_digest = metadata_tampered.payload_digest().unwrap();
+
+    let err =
+        verify_downloaded_pack_artifact_digest_and_routing(BackupPackArtifactDownloadVerifyInput {
+            manifest: &manifest,
+            artifact_bytes: &tampered_bytes,
+        })
+        .expect_err("routing metadata drift must fail before decrypt");
+
+    assert_eq!(err, BackupPackArtifactError::WriterIdentityMismatch);
+}
+
+#[test]
 fn backup_pack_artifact_rejects_wrong_key_after_verified_digest() {
     let key = artifact_key(7);
     let wrong_key = artifact_key(8);

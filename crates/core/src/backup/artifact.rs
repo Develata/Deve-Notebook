@@ -89,6 +89,21 @@ pub struct BackupPackArtifactUploadVerifyInput<'a> {
     pub artifact_bytes: &'a [u8],
 }
 
+pub struct BackupPackArtifactDownloadVerifyInput<'a> {
+    pub manifest: &'a BackupPackManifest,
+    pub artifact_bytes: &'a [u8],
+}
+
+/// Digest/routing evidence for downloaded encrypted pack bytes.
+///
+/// This is not AEAD authentication, not decrypt, and not restore candidate
+/// admission. It intentionally exposes no plaintext.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BackupPackArtifactDownloadVerifyResult {
+    pub pack_sequence: u64,
+    pub computed_digest: BackupDigest,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum BackupPackArtifactError {
     #[error("backup artifact key must be 32 bytes, got {0}")]
@@ -180,6 +195,17 @@ pub fn verify_backup_pack_artifact_for_upload(
     let (_, computed_digest) =
         verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
     Ok(computed_digest)
+}
+
+pub fn verify_downloaded_pack_artifact_digest_and_routing(
+    input: BackupPackArtifactDownloadVerifyInput<'_>,
+) -> Result<BackupPackArtifactDownloadVerifyResult, BackupPackArtifactError> {
+    let (artifact, computed_digest) =
+        verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
+    Ok(BackupPackArtifactDownloadVerifyResult {
+        pack_sequence: artifact.pack_sequence,
+        computed_digest,
+    })
 }
 
 fn verified_pack_artifact_for_manifest(

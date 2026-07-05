@@ -321,4 +321,16 @@
     - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
     - cli_assert: backup_provider_download_does_not_write_local_authority true
     - cli_assert: backup_restore_non_dry_run_still_fail_closed_without_manifest_backed_pipeline true
+
+- case_id: STORE-022
+  goal: Backup downloaded artifact 必须先通过 manifest/routing/digest 校验且不得解密。
+  preconditions:
+    - provider download 已返回 encrypted pack artifact bytes
+    - pack manifest payload_digest 指向 encrypted artifact bytes
+  steps:
+    - run: cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
+  assertions:
+    - cli_assert: backup_pack_download_verify_checks_manifest_digest_before_decrypt true
+    - cli_assert: backup_pack_download_verify_result_exposes_digest_only true
+    - cli_assert: backup_pack_download_verify_rejects_metadata_or_ciphertext_tamper true
 ```
