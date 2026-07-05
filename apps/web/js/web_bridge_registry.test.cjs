@@ -25,6 +25,8 @@ const adapterBridgeNames = [
   "setReadOnly",
   "updateGutterDiff",
   "getEditorSelection",
+  "mobileInsertText",
+  "mobileWrapSelection",
   "mobileUndo",
   "mobileRedo",
 ];
@@ -237,6 +239,11 @@ assert.match(
   indexHtmlSource,
   /role:\s*"editor-bootstrap-state"/,
   "index editor bootstrap state must declare its bridge role"
+);
+assert.doesNotMatch(
+  indexHtmlSource,
+  /window\._debug_view\b/,
+  "index mobile editor stubs must not read the adapter-owned CodeMirror view directly"
 );
 for (const name of [
   "_editor_queue",

@@ -205,6 +205,7 @@
     - cli_assert: index_editor_wrappers_registered_through_bridge true
     - cli_assert: index_editor_bootstrap_state_registered_through_bridge true
     - cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
+    - cli_assert: index_mobile_editor_stubs_do_not_read_debug_view true
     - cli_assert: index_boot_helpers_registered_through_bridge true
     - cli_assert: index_error_handler_does_not_assign_window_onerror true
     - cli_assert: init_code_actions_registered_through_bridge true

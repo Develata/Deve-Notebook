@@ -89,6 +89,8 @@ contains	docs/acceptance-cases/05_ui.md	cli_assert: editor_history_keymap_bound 
 contains	docs/acceptance-bindings.tsv	UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow
 contains	apps/web/js/editor_adapter.js	history()
 contains	apps/web/js/editor_adapter.js	historyKeymap
+contains	apps/web/js/editor_adapter.js	export function mobileInsertText(text)
+contains	apps/web/js/editor_adapter.js	export function mobileWrapSelection(prefix, suffix)
 contains	apps/web/js/editor_adapter.js	export function mobileUndo()
 contains	apps/web/js/editor_adapter.js	export function mobileRedo()
 contains	apps/web/js/editor_adapter.js	function registerBrowserBridgeGlobal(name, value, meta = {})
@@ -105,6 +107,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_wrappers_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_editor_bootstrap_state_avoids_direct_window_fields true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_mobile_editor_stubs_do_not_read_debug_view true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_boot_helpers_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: index_error_handler_does_not_assign_window_onerror true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: init_code_actions_registered_through_bridge true
@@ -121,6 +124,7 @@ contains	apps/web/js/web_bridge_registry.test.cjs	chat math scripts must preserv
 contains	apps/web/js/web_bridge_registry.test.cjs	index boot helpers must use the bridge registry helper
 contains	apps/web/js/web_bridge_registry.test.cjs	index editor bootstrap state must be registered through the bridge registry
 contains	apps/web/js/web_bridge_registry.test.cjs	bootstrap state must not be stored directly on window
+contains	apps/web/js/web_bridge_registry.test.cjs	index mobile editor stubs must not read the adapter-owned CodeMirror view directly
 contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be registered through the browser bridge registry
 contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load registry before init and init before the lazy editor adapter
 contains	apps/web/js/web_bridge_registry.test.cjs	code menu must not initialize the code action registry directly
@@ -148,6 +152,7 @@ absent	apps/web/index.html	window._cm_loaded
 absent	apps/web/index.html	window._editor_bridge_ready
 absent	apps/web/index.html	window._realInit
 absent	apps/web/index.html	window._adapter_loading
+absent	apps/web/index.html	window._debug_view
 contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_code_actions"
 contains	apps/web/js/init.js	registerInitBridgeGlobal("deve_i18n"
 contains	apps/web/js/init.js	source: "init-bootstrap"

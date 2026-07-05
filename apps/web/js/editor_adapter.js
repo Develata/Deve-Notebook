@@ -175,10 +175,45 @@ export function syncEditorStateToRust() {
   }
 }
 
-function runMobileHistoryCommand(command) {
+function activeWritableMobileView() {
   const view = ctx.activeView;
   if (!view) return false;
   if (view.state?.readOnly) return false;
+  return view;
+}
+
+export function mobileInsertText(text) {
+  const view = activeWritableMobileView();
+  if (!view || typeof text !== "string") return false;
+  const sel = view.state.selection.main;
+  view.dispatch({
+    changes: { from: sel.from, to: sel.to, insert: text },
+    selection: { anchor: sel.from + text.length },
+  });
+  view.focus();
+  return true;
+}
+
+export function mobileWrapSelection(prefix, suffix) {
+  const view = activeWritableMobileView();
+  if (!view) return false;
+  const sel = view.state.selection.main;
+  const p = String(prefix || "");
+  const s = String(suffix || "");
+  const selected = view.state.sliceDoc(sel.from, sel.to);
+  const insert = `${p}${selected}${s}`;
+  const anchor = selected.length > 0 ? sel.from + insert.length : sel.from + p.length;
+  view.dispatch({
+    changes: { from: sel.from, to: sel.to, insert },
+    selection: { anchor },
+  });
+  view.focus();
+  return true;
+}
+
+function runMobileHistoryCommand(command) {
+  const view = activeWritableMobileView();
+  if (!view) return false;
   view.focus();
   return command(view);
 }
@@ -232,6 +267,14 @@ registerBrowserBridgeGlobal("updateGutterDiff", updateGutterDiff, {
   role: "wasm-editor-diff-projection",
 });
 registerBrowserBridgeGlobal("getEditorSelection", getEditorSelection, { role: "wasm-editor-selection" });
+registerBrowserBridgeGlobal("mobileInsertText", mobileInsertText, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-mobile-input",
+});
+registerBrowserBridgeGlobal("mobileWrapSelection", mobileWrapSelection, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-mobile-input",
+});
 registerBrowserBridgeGlobal("mobileUndo", mobileUndo, {
   runtime: "widget_bridge_runtime",
   role: "wasm-editor-history",

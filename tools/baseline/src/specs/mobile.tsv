@@ -471,8 +471,10 @@ contains	apps/web/src/components/mobile_layout/toolbar.rs	run_mobile_toolbar_act
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[0]
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[1]
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_write_gate_blocks_actions()
-contains	apps/web/index.html	if (view.state?.readOnly) return false;
-contains	apps/web/index.html	window.mobileRedo = () =>
+contains	apps/web/js/editor_adapter.js	if (view.state?.readOnly) return false;
+contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("mobileRedo"
+contains	apps/web/index.html	registerEditorBridgeGlobal("mobileRedo"
+absent	apps/web/index.html	window._debug_view
 contains	apps/web/src/editor/ffi.rs	pub fn mobile_redo();
 contains	apps/web/src/i18n/common.rs	pub fn redo(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-023
