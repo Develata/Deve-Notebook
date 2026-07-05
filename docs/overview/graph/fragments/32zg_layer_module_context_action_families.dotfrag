@@ -1,0 +1,11 @@
+        subgraph cluster_mod_context_action {
+            label="context action coordination [11_ui_design]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_context_action_registry [label="context_action::catalog", fillcolor="#f0fdf4"];
+            mod_context_action_projection [label="context_action::projection", fillcolor="#f0fdf4"];
+            mod_context_action_resolver [label="context_action::resolver", fillcolor="#f0fdf4"];
+            mod_sidebar_context_action_handler [label="sidebar::action_handler", fillcolor="#f0fdf4"];
+        }

@@ -1,0 +1,5 @@
+    user_context_action_spine [label="context action routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_context_action_spine -> op_context_action_open [style=dashed, color="#f59e0b"];
+    op_context_action_open -> op_context_action_project [style=dashed, color="#f59e0b"];
+    op_context_action_project -> op_context_action_choose [style=dashed, color="#f59e0b"];
+    op_context_action_choose -> op_context_action_resolve [style=dashed, color="#f59e0b"];

@@ -1,0 +1,11 @@
+        subgraph cluster_app_context_action {
+            label="context action interfaces [11_ui_design]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_context_action_open [label="sidebar_menu::open", fillcolor="#eff6ff"];
+            app_context_action_project [label="project_context_actions", fillcolor="#bfdbfe"];
+            app_context_action_choose [label="ContextActionIntent selected", fillcolor="#eff6ff"];
+            app_context_action_resolve [label="resolve_context_action -> dispatch", fillcolor="#bfdbfe"];
+        }

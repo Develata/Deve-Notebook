@@ -1,4 +1,7 @@
-use super::{extract_case_refs, extract_registry, metadata_backtick_value, metadata_line_value};
+use super::{
+    coverage_flow_ids, coverage_operation_rows, extract_case_refs, extract_registry,
+    metadata_backtick_value, metadata_line_value, plan_operation_flow_ids, require_same_flow_ids,
+};
 use std::collections::BTreeSet;
 
 #[test]
@@ -48,4 +51,76 @@ fn case_refs_follow_shell_regex_shape() {
             "REL-003".to_string(),
         ])
     );
+}
+
+#[test]
+fn plan_and_coverage_flow_ids_ignore_headers_and_match() {
+    let plan = "\
+| Flow ID (`flow.*`) | Layer |
+|---|---|
+| `flow.ui.context-action-routing` | II |
+| `flow.repo.switch` | UO |";
+    let coverage = "\
+| Flow ID | Operation File | Acceptance Cases |
+|---|---|---|
+| `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01` |
+| `flow.ui.context-action-routing` | [`ui_context_action_routing.md`](./operations/ui_context_action_routing.md) | `UI-WEB-007` |";
+
+    let plan_ids = plan_operation_flow_ids(plan).expect("plan ids");
+    let coverage_ids = coverage_flow_ids(coverage).expect("coverage ids");
+
+    assert_eq!(plan_ids, coverage_ids);
+    require_same_flow_ids(&plan_ids, &coverage_ids).expect("same flow ids");
+}
+
+#[test]
+fn plan_and_coverage_flow_ids_report_missing_projection() {
+    let plan = "\
+| Flow ID (`flow.*`) | Layer |
+|---|---|
+| `flow.ui.context-action-routing` | II |
+| `flow.repo.switch` | UO |";
+    let coverage = "\
+| Flow ID | Operation File | Acceptance Cases |
+|---|---|---|
+| `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01` |";
+
+    let err = require_same_flow_ids(
+        &plan_operation_flow_ids(plan).expect("plan ids"),
+        &coverage_flow_ids(coverage).expect("coverage ids"),
+    )
+    .expect_err("missing coverage should fail")
+    .to_string();
+
+    assert!(err.contains("missing in coverage: flow.ui.context-action-routing"));
+}
+
+#[test]
+fn coverage_operation_rows_bind_flow_to_file() {
+    let coverage = "\
+| Flow ID | Operation File | Acceptance Cases |
+|---|---|---|
+| `flow.ui.context-action-routing` | [`ui_context_action_routing.md`](./operations/ui_context_action_routing.md) | `UI-WEB-007` |";
+
+    let rows = coverage_operation_rows(coverage).expect("coverage rows");
+
+    assert_eq!(
+        rows.get("flow.ui.context-action-routing")
+            .map(String::as_str),
+        Some("operations/ui_context_action_routing.md")
+    );
+}
+
+#[test]
+fn flow_id_parser_rejects_trailing_or_empty_segments() {
+    let plan = "\
+| Flow ID (`flow.*`) | Layer |
+|---|---|
+| `flow.a.` | II |
+| `flow.a..b` | II |
+| `flow.valid-name` | II |";
+
+    let ids = plan_operation_flow_ids(plan).expect("flow ids");
+
+    assert_eq!(ids, BTreeSet::from(["flow.valid-name".to_string()]));
 }

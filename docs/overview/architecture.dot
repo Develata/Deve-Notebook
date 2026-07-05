@@ -912,6 +912,18 @@ digraph DeveNoteArchitecture {
                 op_repo_fileop_action [label="Build File Operation Action", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_context_action {
+                label="context action routing [11_ui_design]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_context_action_open [label="Open Context Action Menu", fillcolor="#fef9c3"];
+                op_context_action_project [label="Project Context Actions", fillcolor="#fde68a"];
+                op_context_action_choose [label="Choose Context Action", fillcolor="#fef9c3"];
+                op_context_action_resolve [label="Resolve And Dispatch Context Action", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -1535,6 +1547,18 @@ digraph DeveNoteArchitecture {
             app_repo_fileop_action [label="SearchAction::FileOp", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_context_action {
+            label="context action interfaces [11_ui_design]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_context_action_open [label="sidebar_menu::open", fillcolor="#eff6ff"];
+            app_context_action_project [label="project_context_actions", fillcolor="#bfdbfe"];
+            app_context_action_choose [label="ContextActionIntent selected", fillcolor="#eff6ff"];
+            app_context_action_resolve [label="resolve_context_action -> dispatch", fillcolor="#bfdbfe"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [04_repository + 09_web_thin_client_ledger]";
             style="rounded,filled";
@@ -2047,6 +2071,18 @@ digraph DeveNoteArchitecture {
             mod_fileop_parser [label="file_ops::parser", fillcolor="#f0fdf4"];
             mod_fileop_path_utils [label="file_ops::path_utils", fillcolor="#f0fdf4"];
             mod_fileop_results [label="file_ops::results", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_context_action {
+            label="context action coordination [11_ui_design]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_context_action_registry [label="context_action::catalog", fillcolor="#f0fdf4"];
+            mod_context_action_projection [label="context_action::projection", fillcolor="#f0fdf4"];
+            mod_context_action_resolver [label="context_action::resolver", fillcolor="#f0fdf4"];
+            mod_sidebar_context_action_handler [label="sidebar::action_handler", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_targets {
@@ -3539,6 +3575,25 @@ digraph DeveNoteArchitecture {
     mod_fileop_path_utils -> core_commands;
     mod_fileop_results -> core_commands;
 
+    op_context_action_open -> app_context_action_open;
+    op_context_action_project -> app_context_action_project;
+    op_context_action_choose -> app_context_action_choose;
+    op_context_action_resolve -> app_context_action_resolve;
+
+    app_context_action_open -> mod_context_action_registry;
+    app_context_action_open -> mod_context_action_projection;
+    app_context_action_project -> mod_context_action_projection;
+    app_context_action_project -> mod_context_action_resolver;
+    app_context_action_choose -> mod_sidebar_context_action_handler;
+    app_context_action_resolve -> mod_context_action_resolver;
+    app_context_action_resolve -> mod_sidebar_context_action_handler;
+
+    mod_context_action_registry -> core_commands;
+    mod_context_action_projection -> core_commands;
+    mod_context_action_resolver -> core_commands;
+    mod_sidebar_context_action_handler -> core_commands;
+    mod_sidebar_context_action_handler -> core_tree;
+
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
     core_sec_auth_session -> obj_auth_session;
@@ -4263,6 +4318,12 @@ digraph DeveNoteArchitecture {
     op_repo_fileop_enter -> op_repo_fileop_parse [style=dashed, color="#f59e0b"];
     op_repo_fileop_parse -> op_repo_fileop_prefill [style=dashed, color="#f59e0b"];
     op_repo_fileop_prefill -> op_repo_fileop_action [style=dashed, color="#f59e0b"];
+
+    user_context_action_spine [label="context action routing flow", shape=plaintext, fontcolor="#92400e"];
+    user_context_action_spine -> op_context_action_open [style=dashed, color="#f59e0b"];
+    op_context_action_open -> op_context_action_project [style=dashed, color="#f59e0b"];
+    op_context_action_project -> op_context_action_choose [style=dashed, color="#f59e0b"];
+    op_context_action_choose -> op_context_action_resolve [style=dashed, color="#f59e0b"];
 
     // generated drift markers from architecture-diff.md
     // no active drift markers

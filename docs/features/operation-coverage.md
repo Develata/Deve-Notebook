@@ -84,6 +84,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.tech-stack.runtime-budget` | [`tech_stack_runtime_budget.md`](./operations/tech_stack_runtime_budget.md) | `TECH-001`, `PERF-001`, `REL-003` |
 | `flow.tech-stack.runtime-budget-check` | [`tech_stack_runtime_budget_check.md`](./operations/tech_stack_runtime_budget_check.md) | `PERF-001`, `REL-003`, `TECH-001` |
 | `flow.ui.command-palette` | [`ui_command_palette.md`](./operations/ui_command_palette.md) | `UI-GEN-002`, `UI-GEN-003`, `CMD-002` |
+| `flow.ui.context-action-routing` | [`ui_context_action_routing.md`](./operations/ui_context_action_routing.md) | `UI-WEB-007` |
 
 ## Maintenance Rules
 

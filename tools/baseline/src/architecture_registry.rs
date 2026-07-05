@@ -15,6 +15,7 @@ const DOC_LISP: &str = "docs/overview/architecture-doc.lisp";
 const CODE_LISP: &str = "docs/overview/architecture-code.lisp";
 const OPS_DIR: &str = "docs/features/operations";
 const OP_COVERAGE: &str = "docs/features/operation-coverage.md";
+const PLAN_OPERATIONS: &str = "docs/plan/20_operations_catalog.md";
 const ACCEPTANCE_DIR: &str = "docs/acceptance-cases";
 
 pub fn run() -> Result<()> {
@@ -27,6 +28,7 @@ pub fn run() -> Result<()> {
     require_file(root, CODE_LISP)?;
     require_dir(root, OPS_DIR)?;
     require_file(root, OP_COVERAGE)?;
+    require_file(root, PLAN_OPERATIONS)?;
     require_dir(root, ACCEPTANCE_DIR)?;
 
     let diff = read_rel(root, DIFF_FILE)?;
@@ -35,10 +37,17 @@ pub fn run() -> Result<()> {
     let doc_lisp = read_rel(root, DOC_LISP)?;
     let code_lisp = read_rel(root, CODE_LISP)?;
     let op_coverage = read_rel(root, OP_COVERAGE)?;
+    let plan_operations = read_rel(root, PLAN_OPERATIONS)?;
     let case_set = collect_case_ids(&root.join(ACCEPTANCE_DIR))?;
     if case_set.is_empty() {
         return fail("no acceptance case ids found");
     }
+
+    let plan_flow_ids = plan_operation_flow_ids(&plan_operations)?;
+    let coverage_flow_ids = coverage_flow_ids(&op_coverage)?;
+    require_same_flow_ids(&plan_flow_ids, &coverage_flow_ids)?;
+    let coverage_ops = coverage_operation_rows(&op_coverage)?;
+    check_coverage_operation_files(root, &coverage_ops)?;
 
     let flows = extract_registry(
         &diff,
@@ -121,7 +130,14 @@ pub fn run() -> Result<()> {
         }
     }
 
-    check_operation_files(root, &doc_lisp, &code_lisp, &op_coverage, &case_set)?;
+    check_operation_files(
+        root,
+        &doc_lisp,
+        &code_lisp,
+        &op_coverage,
+        &coverage_ops,
+        &case_set,
+    )?;
     println!(
         "{LABEL}: ok ({} flows, {} active drift)",
         flows.len(),
@@ -135,6 +151,7 @@ fn check_operation_files(
     doc_lisp: &str,
     code_lisp: &str,
     op_coverage: &str,
+    coverage_ops: &BTreeMap<String, String>,
     case_set: &BTreeSet<String>,
 ) -> Result<()> {
     for op_file in operation_files(&root.join(OPS_DIR))? {
@@ -161,6 +178,14 @@ fn check_operation_files(
         let Some(flow_id) = metadata_backtick_value(&content, "Flow ID") else {
             return fail(format!("operation file missing Flow ID: {base}"));
         };
+        let Some(coverage_ref) = coverage_ops.get(&flow_id) else {
+            return fail(format!("coverage registry missing flow: {flow_id}"));
+        };
+        if coverage_ref != &op_ref {
+            return fail(format!(
+                "coverage registry maps {flow_id} to {coverage_ref}, expected {op_ref}"
+            ));
+        }
         require_contains(
             op_coverage,
             format!("| `{flow_id}` |"),
@@ -223,6 +248,146 @@ fn check_operation_files(
         }
     }
     Ok(())
+}
+
+fn plan_operation_flow_ids(content: &str) -> Result<BTreeSet<String>> {
+    table_flow_ids(content, "chapter 20 operation catalog")
+}
+
+fn coverage_flow_ids(content: &str) -> Result<BTreeSet<String>> {
+    table_flow_ids(content, "operation coverage registry")
+}
+
+fn table_flow_ids(content: &str, source: &str) -> Result<BTreeSet<String>> {
+    let re = flow_id_regex()?;
+    let mut ids = BTreeSet::new();
+    let mut in_flow_table = false;
+    for line in content.lines() {
+        if !in_flow_table {
+            if line.trim_start().starts_with('|') && line.contains("Flow ID") {
+                in_flow_table = true;
+            }
+            continue;
+        }
+        if !line.trim_start().starts_with('|') {
+            break;
+        }
+        let Some(candidate) = first_table_backtick_value(line) else {
+            continue;
+        };
+        if !re.is_match(&candidate) {
+            continue;
+        }
+        if !ids.insert(candidate.clone()) {
+            return fail(format!("duplicate flow id in {source}: {candidate}"));
+        }
+    }
+    if ids.is_empty() {
+        return fail(format!("no flow ids found in {source}"));
+    }
+    Ok(ids)
+}
+
+fn coverage_operation_rows(content: &str) -> Result<BTreeMap<String, String>> {
+    let flow_re = flow_id_regex()?;
+    let op_re = Regex::new(r"\]\(\./(operations/[A-Za-z0-9_][A-Za-z0-9_-]*\.md)\)")?;
+    let mut rows = BTreeMap::new();
+    let mut in_flow_table = false;
+    for line in content.lines() {
+        if !in_flow_table {
+            if line.trim_start().starts_with('|') && line.contains("Flow ID") {
+                in_flow_table = true;
+            }
+            continue;
+        }
+        if !line.trim_start().starts_with('|') {
+            break;
+        }
+        let Some(flow_id) = first_table_backtick_value(line) else {
+            continue;
+        };
+        if !flow_re.is_match(&flow_id) {
+            continue;
+        }
+        let Some(op_match) = op_re
+            .captures(line)
+            .and_then(|captures| captures.get(1).map(|match_| match_.as_str().to_string()))
+        else {
+            return fail(format!(
+                "coverage registry missing operation file: {flow_id}"
+            ));
+        };
+        if rows.insert(flow_id.clone(), op_match).is_some() {
+            return fail(format!("duplicate coverage registry flow: {flow_id}"));
+        }
+    }
+    if rows.is_empty() {
+        return fail("no operation coverage rows found");
+    }
+    Ok(rows)
+}
+
+fn check_coverage_operation_files(
+    root: &Path,
+    coverage_ops: &BTreeMap<String, String>,
+) -> Result<()> {
+    let feature_root = root.join("docs/features");
+    for (flow_id, op_ref) in coverage_ops {
+        let op_path = feature_root.join(op_ref);
+        if !op_path.is_file() {
+            return fail(format!("coverage operation file missing: {op_ref}"));
+        }
+        let content = fs::read_to_string(&op_path)
+            .with_context(|| format!("{LABEL}: failed to read {}", display_path(&op_path)))?;
+        let Some(metadata_flow_id) = metadata_backtick_value(&content, "Flow ID") else {
+            return fail(format!("coverage operation file missing Flow ID: {op_ref}"));
+        };
+        if metadata_flow_id != *flow_id {
+            return fail(format!(
+                "coverage flow {flow_id} points to {op_ref}, but file declares {metadata_flow_id}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn flow_id_regex() -> Result<Regex> {
+    Ok(Regex::new(r"^flow(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$")?)
+}
+
+fn first_table_backtick_value(line: &str) -> Option<String> {
+    if !line.trim_start().starts_with('|') {
+        return None;
+    }
+    line.split('|')
+        .nth(1)
+        .and_then(|column| column.split('`').nth(1))
+        .map(ToString::to_string)
+}
+
+fn require_same_flow_ids(plan: &BTreeSet<String>, coverage: &BTreeSet<String>) -> Result<()> {
+    let missing_in_coverage = set_difference(plan, coverage);
+    let extra_in_coverage = set_difference(coverage, plan);
+    if missing_in_coverage.is_empty() && extra_in_coverage.is_empty() {
+        return Ok(());
+    }
+    let missing = if missing_in_coverage.is_empty() {
+        "none".to_string()
+    } else {
+        missing_in_coverage.join(", ")
+    };
+    let extra = if extra_in_coverage.is_empty() {
+        "none".to_string()
+    } else {
+        extra_in_coverage.join(", ")
+    };
+    fail(format!(
+        "chapter 20 / operation coverage flow mismatch; missing in coverage: {missing}; extra in coverage: {extra}"
+    ))
+}
+
+fn set_difference(left: &BTreeSet<String>, right: &BTreeSet<String>) -> Vec<String> {
+    left.difference(right).cloned().collect()
 }
 
 fn collect_case_ids(acceptance_dir: &Path) -> Result<BTreeSet<String>> {

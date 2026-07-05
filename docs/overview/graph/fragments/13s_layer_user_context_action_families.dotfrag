@@ -1,0 +1,11 @@
+            subgraph cluster_user_context_action {
+                label="context action routing [11_ui_design]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_context_action_open [label="Open Context Action Menu", fillcolor="#fef9c3"];
+                op_context_action_project [label="Project Context Actions", fillcolor="#fde68a"];
+                op_context_action_choose [label="Choose Context Action", fillcolor="#fef9c3"];
+                op_context_action_resolve [label="Resolve And Dispatch Context Action", fillcolor="#fde68a"];
+            }

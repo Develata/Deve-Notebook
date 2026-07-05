@@ -4,6 +4,7 @@ repo-scoped sync handshake	sync_handshake
 repo-scoped key exchange	key_exchange
 repo-scoped sync transfer	sync_transfer
 command-palette	palette
+context action routing	context_action
 command surface mode routing	command_surface_mode
 command surface action routing	command_surface_action
 branch-switch	branch

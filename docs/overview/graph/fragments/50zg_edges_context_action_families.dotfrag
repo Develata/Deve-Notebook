@@ -1,0 +1,18 @@
+    op_context_action_open -> app_context_action_open;
+    op_context_action_project -> app_context_action_project;
+    op_context_action_choose -> app_context_action_choose;
+    op_context_action_resolve -> app_context_action_resolve;
+
+    app_context_action_open -> mod_context_action_registry;
+    app_context_action_open -> mod_context_action_projection;
+    app_context_action_project -> mod_context_action_projection;
+    app_context_action_project -> mod_context_action_resolver;
+    app_context_action_choose -> mod_sidebar_context_action_handler;
+    app_context_action_resolve -> mod_context_action_resolver;
+    app_context_action_resolve -> mod_sidebar_context_action_handler;
+
+    mod_context_action_registry -> core_commands;
+    mod_context_action_projection -> core_commands;
+    mod_context_action_resolver -> core_commands;
+    mod_sidebar_context_action_handler -> core_commands;
+    mod_sidebar_context_action_handler -> core_tree;
