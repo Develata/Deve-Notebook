@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-26`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -95,7 +95,10 @@ Idle
 *   `EndpointHealthy` 只表示 loopback endpoint 可达且 `/api/node/role` 可读；它不代表 Web 已可写。
 *   `SessionHandoffReady` 必须在 `EndpointHealthy` 后发生，并且要求 session 已绑定；session handoff 失败是 fatal offline，不自动重试。
 *   `BindFailed`、`HealthProbeFailed`、`ProcessExited` 可在 retry budget 内进入 `Restarting`；超过预算后进入 `Offline`。
-*   `SpawnFailed` 与 `SessionHandoffFailed` 默认不可重试，必须进入 `Offline`。
+*   `SpawnFailed`、`ProcessContainmentFailed` 与 `SessionHandoffFailed` 默认不可重试，必须进入 `Offline`。
+*   `LocalBackend` 子进程必须绑定到 Desktop 父进程生命周期：正常退出、切换到 `RemoteBrowser`
+    或 native state drop 时必须停止。Windows target-host 必须使用平台进程约束，在父进程异常终止或被系统关闭时阻止
+    `deve_cli serve --native-loopback` 变成孤儿后端；其它 target-host 在实现等价平台约束前不得声明同等级别的异常终止保护。
 *   supervisor 的 `offline.reason` 是 native 内部诊断；recovery bootstrap 仍不得把 reason、token、secret 或 repo 写权限暴露给 Web。
 *   supervisor 不得写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 

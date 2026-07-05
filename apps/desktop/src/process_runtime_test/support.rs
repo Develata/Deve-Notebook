@@ -36,6 +36,32 @@ pub(super) fn valid_spawn_spec() -> NativeProcessSpawnSpec {
     }
 }
 
+#[cfg(windows)]
+pub(crate) fn windows_cmd_ping_spawn_spec() -> NativeProcessSpawnSpec {
+    let root = std::env::current_dir().expect("current dir");
+    let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+    NativeProcessSpawnSpec {
+        executable: std::path::Path::new("C:\\Windows\\System32\\cmd.exe").to_path_buf(),
+        argv: vec!["/C".to_string(), "ping -n 60 127.0.0.1 >NUL".to_string()],
+        cwd: root.clone(),
+        env_allowlist: vec!["SystemRoot".to_string()],
+        env: vec![NativeProcessEnvBinding {
+            key: "SystemRoot".to_string(),
+            value: system_root,
+        }],
+        profile: "test".to_string(),
+        config_path: root.join("config.toml"),
+        ledger_path: root.join("ledger"),
+        bind_hints: NativeProcessBindHints {
+            http_host: "127.0.0.1".to_string(),
+            http_port: Some(1),
+            ws_host: "127.0.0.1".to_string(),
+            ws_port: Some(1),
+        },
+        path_resolution: NativeProcessPathResolution::AbsoluteOnly,
+    }
+}
+
 pub(super) fn handle() -> NativeProcessRuntimeHandle {
     NativeProcessRuntimeHandle {
         handle_id: "fake-child-1".to_string(),
@@ -136,5 +162,11 @@ pub(super) fn spawn_missing_error() -> DesktopProcessRuntimeError {
     DesktopProcessRuntimeError::SpawnFailed {
         kind: NativeProcessRuntimeFailureKind::SpawnExecutableMissing,
         source: std::io::Error::new(std::io::ErrorKind::NotFound, "missing"),
+    }
+}
+
+pub(super) fn containment_error() -> DesktopProcessRuntimeError {
+    DesktopProcessRuntimeError::ContainmentFailed {
+        source: std::io::Error::other("child process containment failed"),
     }
 }

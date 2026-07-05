@@ -12,6 +12,7 @@ native-packaging = [
   "dep:reqwest",
   "dep:tauri",
   "dep:tauri-build",
+  "dep:windows-sys",
   "tauri/tray-icon",
   "tauri/wry",
 ]
@@ -27,6 +28,9 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
 # needs indexmap/std explicit because indexmap 1.x only auto-detects std via autocfg.
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }
 tauri = { version = "2.11.1", optional = true, default-features = false, features = [] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", optional = true, default-features = false, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [build-dependencies]
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }

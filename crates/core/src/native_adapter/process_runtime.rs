@@ -122,6 +122,7 @@ pub enum NativeProcessRuntimeFailureKind {
     BindFailed,
     HealthProbeFailed,
     ProcessExited,
+    ProcessContainmentFailed,
     SessionHandoffFailed,
     NonLoopbackEndpoint,
 }

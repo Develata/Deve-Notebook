@@ -5,10 +5,18 @@ contains	apps/desktop/src/lib.rs	mod service_bootstrap;
 contains	apps/desktop/src/lib.rs	mod service_entrypoint;
 contains	apps/desktop/src/lib.rs	mod tauri_bootstrap;
 contains	apps/desktop/src/process_runtime.rs	DesktopLocalServiceRuntime
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_with_parent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1
 contains	apps/desktop/src/process_runtime.rs	DesktopCommandProcessLauncher
 contains	apps/desktop/src/process_runtime.rs	validate_desktop_service_command
 contains	apps/desktop/src/process_runtime.rs	stop_service
-contains	apps/desktop/src/process_runtime/launcher.rs	env_clear()
+contains	apps/desktop/src/process_runtime/process_group.rs	env_clear()
+contains	apps/desktop/src/process_runtime/launcher.rs	DesktopChildProcessGroup::new()
+contains	apps/desktop/src/process_runtime/process_group/windows.rs	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+contains	apps/desktop/src/process_runtime/process_group/windows.rs	PROC_THREAD_ATTRIBUTE_JOB_LIST
+contains	apps/desktop/src/process_runtime/process_group/windows.rs	CREATE_SUSPENDED
+contains	apps/desktop/src/process_runtime/process_group/windows.rs	AssignProcessToJobObject
+contains	apps/desktop/src/process_runtime/process_group/windows.rs	ResumeThread
 contains	apps/desktop/src/process_runtime/validation.rs	executable must be deve_cli
 contains	apps/desktop/src/process_runtime/validation.rs	first argv must be serve
 contains	apps/desktop/src/process_runtime/validation.rs	argv must be exactly serve --native-loopback --port <port>

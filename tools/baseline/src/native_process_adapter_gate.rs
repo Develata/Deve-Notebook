@@ -16,6 +16,8 @@ const RUN_DESKTOP_NATIVE_PACKAGING_TESTS_ENV: &str =
 const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
     "apps/desktop/src/process_runtime.rs",
     "apps/desktop/src/process_runtime/launcher.rs",
+    "apps/desktop/src/process_runtime/process_group.rs",
+    "apps/desktop/src/process_runtime/process_group/windows.rs",
 ];
 
 const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
@@ -70,6 +72,13 @@ const DESKTOP_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[
         no_default_features: false,
         lib: false,
         filter: Some("service_bootstrap"),
+    },
+    CargoTest {
+        package: "deve_desktop",
+        features: Some("native-packaging"),
+        no_default_features: false,
+        lib: false,
+        filter: Some("process_runtime_test"),
     },
 ];
 

@@ -6,8 +6,8 @@ use deve_core::native_adapter::{
 use crate::process_runtime::{DesktopLocalServiceRuntime, DesktopProcessRuntimeError};
 
 use super::support::{
-    RecordingLauncher, closed_policy, enabled_policy, endpoint, handle, healthy_probe,
-    spawn_missing_error, valid_spawn_spec,
+    RecordingLauncher, closed_policy, containment_error, enabled_policy, endpoint, handle,
+    healthy_probe, spawn_missing_error, valid_spawn_spec,
 };
 
 #[test]
@@ -196,6 +196,28 @@ fn desktop_local_service_runtime_records_spawn_failure_without_authority() {
     assert_eq!(
         snapshot.last_failure,
         Some(NativeProcessRuntimeFailureKind::SpawnExecutableMissing)
+    );
+    assert!(!snapshot.authority_writes_allowed);
+}
+
+#[test]
+fn desktop_local_service_runtime_records_containment_failure_without_authority() {
+    let launcher = RecordingLauncher::with_error(containment_error());
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(enabled_policy(), 1, launcher);
+
+    let error = runtime
+        .start(&valid_spawn_spec(), 10)
+        .expect_err("containment failure");
+
+    assert!(matches!(
+        error,
+        DesktopProcessRuntimeError::ContainmentFailed { .. }
+    ));
+    let snapshot = runtime.snapshot();
+    assert_eq!(snapshot.state, NativeProcessRuntimeState::Offline);
+    assert_eq!(
+        snapshot.last_failure,
+        Some(NativeProcessRuntimeFailureKind::ProcessContainmentFailed)
     );
     assert!(!snapshot.authority_writes_allowed);
 }

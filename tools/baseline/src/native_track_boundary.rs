@@ -40,6 +40,7 @@ const MANIFEST_DEPENDENCIES: &[(&str, &str, &str)] = &[
     ("apps/desktop/Cargo.toml", "indexmap_1", "1.9.3"),
     ("apps/desktop/Cargo.toml", "tauri", "2.11.1"),
     ("apps/desktop/Cargo.toml", "tauri-build", "2.6.1"),
+    ("apps/desktop/Cargo.toml", "windows-sys", "0.61.2"),
     ("apps/mobile/Cargo.toml", "indexmap_1", "1.9.3"),
     ("apps/mobile/Cargo.toml", "tauri", "2.11.1"),
     ("apps/mobile/Cargo.toml", "tauri-build", "2.6.1"),
@@ -59,6 +60,8 @@ const TAURI_IMPORT_ALLOWED: &[&str] = &[
 const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
     "apps/desktop/src/process_runtime.rs",
     "apps/desktop/src/process_runtime/launcher.rs",
+    "apps/desktop/src/process_runtime/process_group.rs",
+    "apps/desktop/src/process_runtime/process_group/windows.rs",
 ];
 
 pub fn run() -> Result<()> {
@@ -67,6 +70,7 @@ pub fn run() -> Result<()> {
     check_manifest_dependencies(ctx.root())?;
     check_icons_exist(ctx.root())?;
     check_no_packaging_dependency_leak(ctx.root())?;
+    check_no_windows_sys_dependency_leak(ctx.root())?;
     check_no_process_runtime_leak(ctx.root())?;
     ctx.ok();
     Ok(())
@@ -149,6 +153,49 @@ fn check_no_packaging_dependency_leak(root: &Path) -> Result<()> {
         }
         return fail(format!(
             "native packaging runtime import outside native shell binding: {}",
+            line.display()
+        ));
+    }
+
+    Ok(())
+}
+
+fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
+    let manifest_regex = RegexBuilder::new(
+        r#"(^[[:space:]]*["']?windows-sys["']?[[:space:]]*=|package[[:space:]]*=[[:space:]]*["']windows-sys["']|^[[:space:]]*\[[^]]*(dependencies|dev-dependencies|build-dependencies)\.["']?windows-sys["']?[[:space:]]*\])"#,
+    )
+    .case_insensitive(true)
+    .multi_line(true)
+    .build()
+    .with_context(|| format!("{LABEL}: invalid windows-sys manifest regex"))?;
+
+    for cargo_toml in collect_cargo_tomls(root)? {
+        let content = read_path_required(&cargo_toml)?;
+        if !manifest_regex.is_match(&content) {
+            continue;
+        }
+        let rel = display_path(root, &cargo_toml);
+        if rel == "apps/desktop/Cargo.toml" {
+            continue;
+        }
+        return fail(format!(
+            "windows-sys dependency is only allowed in Desktop native-packaging scope: {rel}"
+        ));
+    }
+
+    let import_regex = Regex::new(r"(^|[^[:alnum:]_])windows_sys::")
+        .with_context(|| format!("{LABEL}: invalid windows-sys import regex"))?;
+    for line in matching_lines(
+        root,
+        &["apps", "crates"],
+        &Scan::new().skip_dirs(&["gen", "target", "node_modules", "dist"]),
+        &import_regex,
+    )? {
+        if line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs" {
+            continue;
+        }
+        return fail(format!(
+            "windows-sys runtime import outside Desktop process adapter: {}",
             line.display()
         ));
     }

@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-19`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -115,6 +115,10 @@ Gate 状态：
 - Android/Mobile `LocalBackend` **MAY** 在 `apps/mobile` 的 `native-packaging` scope 内依赖内部 `deve_cli` library entrypoint，以启动 in-process embedded loopback backend；这不允许 native shell 直接调用 ledger/source-control/search writer API。
 - 默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
 - Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
+- Desktop Windows `LocalBackend` **MAY** 在 `apps/desktop` 的 `native-packaging`
+  feature scope 内使用 `windows-sys` Job Object 与 `PROC_THREAD_ATTRIBUTE_JOB_LIST`
+  API，把 `deve_cli` sidecar 在创建时绑定到父 Desktop 进程生命周期；若宿主已有 Job 链拒绝 Job List，fallback
+  必须使用 `CREATE_SUSPENDED -> AssignProcessToJobObject -> ResumeThread`，不得让后端在归组前运行。该依赖不得进入 workspace root、core、cli、web 或 mobile。
 - `LocalBackend` 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
 - 默认 release、target-host package、Android/iOS package execution 不得被解释为 store/physical-device release ready；native 本地后端可用性只表示 LocalBackend peer 语义通过对应 smoke，不代表签名/商店/物理设备发布就绪。
 

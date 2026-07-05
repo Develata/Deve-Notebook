@@ -3,6 +3,7 @@
 
 mod core;
 mod launcher;
+mod process_group;
 mod validation;
 
 use deve_core::native_adapter::{
@@ -28,6 +29,11 @@ pub enum DesktopProcessRuntimeError {
     #[error("failed to spawn desktop local service")]
     SpawnFailed {
         kind: NativeProcessRuntimeFailureKind,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to bind desktop local service to parent process lifetime")]
+    ContainmentFailed {
         #[source]
         source: std::io::Error,
     },
@@ -174,6 +180,9 @@ impl DesktopProcessRuntimeError {
                 Some(NativeProcessRuntimeFailureKind::InvalidExecutablePath)
             }
             Self::SpawnFailed { kind, .. } => Some(*kind),
+            Self::ContainmentFailed { .. } => {
+                Some(NativeProcessRuntimeFailureKind::ProcessContainmentFailed)
+            }
             Self::StopFailed { .. } => None,
         }
     }

@@ -1,4 +1,4 @@
 mod lifecycle;
 mod shell_gate;
-mod support;
+pub(crate) mod support;
 mod validation;
