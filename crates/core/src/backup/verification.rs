@@ -14,8 +14,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
 
+mod downloaded_packs;
 #[cfg(test)]
 mod tests;
+
+pub use downloaded_packs::{
+    BackupDownloadedPacksInput, BackupDownloadedPacksResult, verify_downloaded_backup_packs,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackupPackVerificationEvidence {
@@ -62,6 +67,14 @@ pub enum BackupVerificationError {
     InvalidPackSequence,
     #[error("backup verification pack sequence is duplicated")]
     DuplicatePackSequence,
+    #[error("backup verification downloaded pack object path is duplicated")]
+    DuplicatePackObjectPath,
+    #[error("backup verification downloaded pack object path mismatch")]
+    PackObjectPathMismatch,
+    #[error("backup verification downloaded pack is missing")]
+    MissingDownloadedPack,
+    #[error("backup verification downloaded pack is unexpected")]
+    UnexpectedDownloadedPack,
     #[error("backup verification pack hash mismatch")]
     PackHashMismatch,
     #[error("backup verification pack authentication failed")]

@@ -333,4 +333,19 @@
     - cli_assert: backup_pack_download_verify_checks_manifest_digest_before_decrypt true
     - cli_assert: backup_pack_download_verify_result_exposes_digest_only true
     - cli_assert: backup_pack_download_verify_rejects_metadata_or_ciphertext_tamper true
+
+- case_id: STORE-023
+  goal: Backup PacksDownloaded evidence 必须与 branch manifest pack refs 一一匹配。
+  preconditions:
+    - branch manifest 已验证并列出 pack object refs
+    - provider download 与 artifact digest/routing 校验已产生 per-pack evidence
+  steps:
+    - run: cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
+  assertions:
+    - cli_assert: backup_downloaded_packs_match_manifest_refs true
+    - cli_assert: backup_downloaded_packs_accept_provider_order_independent_verified_results true
+    - cli_assert: backup_downloaded_packs_consume_verified_artifact_results_only true
+    - cli_assert: backup_downloaded_packs_reject_missing_or_unexpected_pack true
+    - cli_assert: backup_downloaded_packs_reject_path_or_digest_mismatch true
+    - cli_assert: backup_downloaded_packs_reject_duplicate_sequence_or_path true
 ```

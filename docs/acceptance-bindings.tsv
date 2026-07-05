@@ -129,6 +129,7 @@ STORE-019|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup encrypted p
 STORE-020|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup provider upload verifies encrypted pack artifact before PUT
 STORE-021|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup provider download reads encrypted artifact bytes only
 STORE-022|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded artifact verifies manifest digest before decrypt
+STORE-023|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded pack evidence matches branch manifest refs
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
 UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom

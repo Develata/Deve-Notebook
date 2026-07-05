@@ -145,8 +145,13 @@ fn backup_pack_artifact_download_verify_checks_digest_before_decrypt() {
         })
         .unwrap();
 
-    assert_eq!(result.pack_sequence, artifact.pack_sequence);
-    assert!(result.computed_digest.same_sha256(&manifest.payload_digest));
+    assert_eq!(result.pack_sequence(), artifact.pack_sequence);
+    assert_eq!(result.object_path(), manifest.pack_object_path());
+    assert!(
+        result
+            .computed_digest()
+            .same_sha256(&manifest.payload_digest)
+    );
 }
 
 #[test]

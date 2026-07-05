@@ -108,6 +108,7 @@ pub use upload::{
     BackupUploadState, plan_backup_upload,
 };
 pub use verification::{
-    BackupPackVerificationEvidence, BackupVerificationError, BackupVerificationInput,
-    BackupVerificationResult, verify_backup_artifacts,
+    BackupDownloadedPacksInput, BackupDownloadedPacksResult, BackupPackVerificationEvidence,
+    BackupVerificationError, BackupVerificationInput, BackupVerificationResult,
+    verify_backup_artifacts, verify_downloaded_backup_packs,
 };

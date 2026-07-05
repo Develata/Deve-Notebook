@@ -100,8 +100,23 @@ pub struct BackupPackArtifactDownloadVerifyInput<'a> {
 /// admission. It intentionally exposes no plaintext.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackupPackArtifactDownloadVerifyResult {
-    pub pack_sequence: u64,
-    pub computed_digest: BackupDigest,
+    pack_sequence: u64,
+    object_path: String,
+    computed_digest: BackupDigest,
+}
+
+impl BackupPackArtifactDownloadVerifyResult {
+    pub fn pack_sequence(&self) -> u64 {
+        self.pack_sequence
+    }
+
+    pub fn object_path(&self) -> &str {
+        &self.object_path
+    }
+
+    pub fn computed_digest(&self) -> &BackupDigest {
+        &self.computed_digest
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -204,6 +219,7 @@ pub fn verify_downloaded_pack_artifact_digest_and_routing(
         verified_pack_artifact_for_manifest(input.manifest, input.artifact_bytes)?;
     Ok(BackupPackArtifactDownloadVerifyResult {
         pack_sequence: artifact.pack_sequence,
+        object_path: input.manifest.pack_object_path(),
         computed_digest,
     })
 }
