@@ -215,12 +215,12 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）; planned/no-code-yet |
 | `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）; planned/no-code-yet |
 | `22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）; planned/no-code-yet |
-| `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）; planned/no-code-yet |
-| `23_threat_model#stride-catalog` | `## 3. STRIDE Catalog` | STRIDE 威胁面与缓解归属目录; planned/no-code-yet |
-| `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）; planned/no-code-yet |
-| `23_threat_model#algorithm-deprecation` | `## 5. Algorithm Deprecation` | 加密原语退役策略与迁移窗口; planned/no-code-yet |
-| `23_threat_model#supply-chain` | `## 6. Supply Chain` | SBOM/reproducible build/dependency gate/signing 策略; planned/no-code-yet |
-| `23_threat_model#coordinated-vulnerability-disclosure` | `## 7. Coordinated Vulnerability Disclosure` | CVD 渠道/embargo/SLA 策略; planned/no-code-yet |
+| `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#stride-catalog` | `## 3. STRIDE Catalog` | STRIDE 威胁面与缓解归属目录；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#algorithm-deprecation` | `## 5. Algorithm Deprecation` | 加密原语退役策略与迁移窗口；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#supply-chain` | `## 6. Supply Chain` | SBOM/reproducible build/dependency gate/signing 策略；SECURITY.md/auth baseline 断言，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#coordinated-vulnerability-disclosure` | `## 7. Coordinated Vulnerability Disclosure` | CVD 渠道/embargo/SLA 策略；SECURITY.md/auth baseline 断言，无 Rust plan_ref; no-rust-plan-ref |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

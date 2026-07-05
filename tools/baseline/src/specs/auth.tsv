@@ -39,6 +39,25 @@ contains	apps/cli/src/server/router.rs	.route("/api/auth/status", get(auth::hand
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-014
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-015
 contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_requires_development_env
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-016
+contains	docs/acceptance-cases/08_auth.md	security_md_private_report_channel_present true
+contains	docs/acceptance-cases/08_auth.md	security_md_response_sla_present true
+contains	docs/acceptance-cases/08_auth.md	security_md_key_lifecycle_policy_present true
+contains	docs/acceptance-cases/08_auth.md	security_md_supply_chain_policy_present true
+contains	SECURITY.md	https://github.com/Develata/Deve-Notebook/security/advisories/new
+contains	SECURITY.md	Do not open a public issue
+contains	SECURITY.md	Response Targets
+contains	SECURITY.md	Acknowledge receipt
+contains	SECURITY.md	3 business days
+contains	SECURITY.md	Initial severity assessment
+contains	SECURITY.md	7 business days
+contains	SECURITY.md	14 calendar days
+contains	SECURITY.md	treated as T1 until triage proves otherwise
+contains	SECURITY.md	Key Lifecycle Policy
+contains	SECURITY.md	Secret material must not be committed, logged, embedded in URLs, stored in
+contains	SECURITY.md	Supply Chain Policy
+contains	SECURITY.md	Cargo.lock
+contains	SECURITY.md	signing rules owned by `docs/plan/18_release.md`
 contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_status_sets_dev_session_cookie
 contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_ws_uses_dev_session_cookie
 contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_auth_prefers_valid_jwt_over_dev_session_cookie

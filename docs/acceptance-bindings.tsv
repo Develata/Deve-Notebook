@@ -114,6 +114,7 @@ REL-012|manual-cli|.github/workflows/check.yml|branch check-only CI boundary
 SET-008|manual-cli|docs/features/13_settings.md|p2p static peer expected identity config review
 AUTH-013|manual-security|docs/features/09_auth.md|host identity key owner-only permission review
 AUTH-015|manual-security|docs/features/09_auth.md|anonymous localhost gated out of production env review
+AUTH-016|manual-security|SECURITY.md|CVD, key lifecycle, and supply chain policy review
 DIFF-009|manual-chrome|docs/features/07_diff_logic.md|source control entry vs git palette CLI-only notice layering
 DIFF-010|manual-cli|docs/features/07_diff_logic.md|source control smoke independent of checked-in dev ledger state
 DIFF-011|manual-chrome|docs/features/07_diff_logic.md|external changes and source control sibling workflow

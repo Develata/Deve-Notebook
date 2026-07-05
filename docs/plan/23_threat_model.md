@@ -5,12 +5,12 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-19`
+- `Last Review`: `2026-07-05`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
 - `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#backup-secret-ref-contract (key custody), 03_storage/authority (ledger append validation), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (AUTH-* / PLUG-001)`
-- `Primary Code Areas`: `crates/core/src/security/`；SECURITY.md（待建）；docs/adr/ 中安全相关 ADR（B4.3 后）
+- `Primary Code Areas`: `crates/core/src/security/`；SECURITY.md；docs/adr/ 中安全相关 ADR（B4.3 后）
 
 ## 1. Scope & Authority {#threat-model-scope}
 
@@ -77,7 +77,7 @@
 
 ## 7. Coordinated Vulnerability Disclosure {#coordinated-vulnerability-disclosure}
 
-- **入口**：`SECURITY.md`（待建）声明私密报告渠道；不在公开 issue 讨论未披露漏洞。
+- **入口**：`SECURITY.md` 声明私密报告渠道；不在公开 issue 讨论未披露漏洞。
 - **Embargo**：修复就绪前对报告内容保密；高危漏洞优先 T1 处理（见 `22_reliability_observability` Alerting Tier）。
 - **SLA**：确认 / 初步评估 / 修复发布的目标时限在 `SECURITY.md` 声明。
 - **披露**：修复发布后公开致谢与 CVE/advisory（如适用）。
