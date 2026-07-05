@@ -300,18 +300,22 @@
     - cli_assert: backup_pack_plaintext_writes_no_local_authority true
 
 - case_id: STORE-020
-  goal: Backup provider upload 只上传已验证 encrypted pack artifact bytes。
+  goal: Backup provider upload 只上传已验证 encrypted pack artifact bytes，并在上传后远端读回校验后才进入 RemoteVerified。
   preconditions:
     - encrypted pack artifact file 已由 backup runtime 生成
     - provider credential ref 指向 env resolver
   steps:
     - run: cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
     - run: cargo test -p deve_cli backup_run -- --nocapture
+    - run: cargo test -p deve_cli provider_io -- --nocapture
   assertions:
     - cli_assert: backup_run_requires_artifact_for_provider_upload true
     - cli_assert: backup_run_verifies_artifact_digest_before_provider_put true
     - cli_assert: backup_run_uploads_encrypted_artifact_bytes_only true
+    - cli_assert: backup_run_remote_verifies_uploaded_artifact_before_remote_verified_state true
+    - cli_assert: backup_run_rejects_remote_verify_mismatch true
     - cli_assert: backup_run_provider_metadata_diagnostic_only true
+    - cli_assert: backup_run_rejects_authoritative_provider_metadata true
     - cli_assert: backup_run_writes_no_local_authority true
 
 - case_id: STORE-021

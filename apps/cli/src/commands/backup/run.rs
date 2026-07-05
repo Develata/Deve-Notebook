@@ -140,6 +140,7 @@ pub(crate) fn run_backup_lines_with_uploader(
     })?;
     let mut upload = upload;
     let mut uploaded_bytes = None;
+    let mut remote_verified_payload_digest = None;
     let mut provider_metadata_is_diagnostic_only = None;
     if let Some(artifact_bytes) = artifact_bytes.as_deref() {
         let uploaded_digest =
@@ -153,7 +154,12 @@ pub(crate) fn run_backup_lines_with_uploader(
             object_path: &upload.pack_object_path,
             artifact_bytes,
         })?;
+        if !outcome.provider_metadata_is_diagnostic_only {
+            bail!("backup provider upload metadata must remain diagnostic-only");
+        }
         evidence.uploaded_payload_digest = Some(uploaded_digest);
+        evidence.remote_manifest_payload_digest =
+            Some(outcome.remote_verified_payload_digest.clone());
         upload = plan_backup_upload(BackupUploadPlanInput {
             binding: binding.clone(),
             manifest: manifest.clone(),
@@ -161,6 +167,7 @@ pub(crate) fn run_backup_lines_with_uploader(
             evidence,
         })?;
         uploaded_bytes = Some(outcome.uploaded_bytes);
+        remote_verified_payload_digest = Some(outcome.remote_verified_payload_digest);
         provider_metadata_is_diagnostic_only = Some(outcome.provider_metadata_is_diagnostic_only);
     }
     let plan = backup_command_plan(BackupPlanInput {
@@ -199,6 +206,12 @@ pub(crate) fn run_backup_lines_with_uploader(
             "provider_metadata_diagnostic_only={}",
             provider_metadata_is_diagnostic_only
                 .map(|value| value.to_string())
+                .unwrap_or_else(|| "<none>".to_string())
+        ),
+        format!(
+            "remote_verified_payload_digest={}",
+            remote_verified_payload_digest
+                .map(|value| value.hex)
                 .unwrap_or_else(|| "<none>".to_string())
         ),
         format!("writes_local_authority={}", plan.writes_local_authority),

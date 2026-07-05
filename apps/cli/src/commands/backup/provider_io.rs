@@ -16,7 +16,10 @@ mod s3;
 mod webdav;
 
 use anyhow::bail;
-use deve_core::backup::{BackupArtifactKey, BackupLocator, BackupProviderKind, BackupSecretRef};
+use deve_core::backup::{
+    BackupArtifactKey, BackupDigest, BackupLocator, BackupProviderKind, BackupSecretRef,
+};
+use sha2::{Digest, Sha256};
 
 pub(crate) const BACKUP_PACK_CONTENT_TYPE: &str = "application/vnd.deve.backup-pack+json";
 pub(crate) const BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
@@ -28,9 +31,10 @@ pub(crate) struct BackupPackUploadRequest<'a> {
     pub artifact_bytes: &'a [u8],
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct BackupPackUploadOutcome {
     pub uploaded_bytes: usize,
+    pub remote_verified_payload_digest: BackupDigest,
     pub provider_metadata_is_diagnostic_only: bool,
 }
 
@@ -133,6 +137,38 @@ fn normalize_download_limit(requested: usize) -> anyhow::Result<usize> {
     Ok(requested.min(BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES))
 }
 
+pub(super) fn verified_upload_readback_digest(
+    object_path: &str,
+    expected_bytes: &[u8],
+    readback_bytes: &[u8],
+) -> anyhow::Result<BackupDigest> {
+    if readback_bytes != expected_bytes {
+        bail!("Backup provider readback {object_path} did not match uploaded artifact bytes");
+    }
+    Ok(BackupDigest::sha256(sha256_hex(readback_bytes)))
+}
+
+pub(super) fn ensure_upload_readback_budget(
+    object_path: &str,
+    artifact_len: usize,
+) -> anyhow::Result<()> {
+    if artifact_len > BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES {
+        bail!("Backup provider upload {object_path} exceeds readback verification max bytes");
+    }
+    Ok(())
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
+}
+
 #[cfg(test)]
 pub(crate) struct FailClosedBackupPackUploader;
 
@@ -178,5 +214,16 @@ mod tests {
             .expect("download limit capped");
 
         assert_eq!(limit, BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES);
+    }
+
+    #[test]
+    fn backup_provider_upload_readback_budget_rejects_oversized_artifact() {
+        let err = ensure_upload_readback_budget(
+            "deve/branches/writer-1/packs/000001.pack.enc",
+            BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES + 1,
+        )
+        .expect_err("oversized upload readback must fail before provider PUT");
+
+        assert!(err.to_string().contains("readback verification max bytes"));
     }
 }

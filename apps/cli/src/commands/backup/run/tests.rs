@@ -3,7 +3,7 @@ use super::{
     BackupPackUploadRequest, BackupPackUploader, RunBackupCommandInput, run_backup_lines,
     run_backup_lines_with_uploader,
 };
-use deve_core::backup::BackupEncryptedPackArtifact;
+use deve_core::backup::{BackupDigest, BackupEncryptedPackArtifact};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
@@ -44,6 +44,11 @@ fn plans_writable_backup_run_without_provider_io() {
         lines
             .iter()
             .any(|line| line == "provider_metadata_diagnostic_only=<none>")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "remote_verified_payload_digest=<none>")
     );
     assert!(
         lines
@@ -124,7 +129,11 @@ fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider() {
     );
     assert_eq!(uploader.calls[0].artifact_bytes, artifact_bytes);
     assert!(lines.iter().any(|line| line == "artifact_io=true"));
-    assert!(lines.iter().any(|line| line == "upload_state=Uploaded"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "upload_state=RemoteVerified")
+    );
     assert!(
         lines
             .iter()
@@ -134,6 +143,11 @@ fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider() {
         lines
             .iter()
             .any(|line| line == "provider_metadata_diagnostic_only=true")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == &format!("remote_verified_payload_digest={digest}"))
     );
     assert!(
         lines
@@ -177,10 +191,50 @@ fn backup_run_does_not_enter_uploaded_when_provider_upload_fails() {
     assert_eq!(uploader.calls.len(), 1);
 }
 
+#[test]
+fn backup_run_rejects_remote_verify_mismatch() {
+    let (_dir, artifact_path, _artifact_bytes, digest) = artifact_file();
+    let mut input = input();
+    input.dry_run = false;
+    input.payload_digest = &digest;
+    input.artifact_path = Some(&artifact_path);
+    let mut uploader = RecordingUploader {
+        remote_digest_override: Some(DIGEST.to_string()),
+        ..RecordingUploader::default()
+    };
+
+    let err = run_backup_lines_with_uploader(input, &mut uploader)
+        .expect_err("remote digest mismatch must fail before RemoteVerified");
+
+    assert!(err.to_string().contains("remote backup manifest digest"));
+    assert_eq!(uploader.calls.len(), 1);
+}
+
+#[test]
+fn backup_run_rejects_authoritative_provider_metadata() {
+    let (_dir, artifact_path, _artifact_bytes, digest) = artifact_file();
+    let mut input = input();
+    input.dry_run = false;
+    input.payload_digest = &digest;
+    input.artifact_path = Some(&artifact_path);
+    let mut uploader = RecordingUploader {
+        authoritative_metadata: true,
+        ..RecordingUploader::default()
+    };
+
+    let err = run_backup_lines_with_uploader(input, &mut uploader)
+        .expect_err("authoritative provider metadata must fail closed");
+
+    assert!(err.to_string().contains("diagnostic-only"));
+    assert_eq!(uploader.calls.len(), 1);
+}
+
 #[derive(Default)]
 struct RecordingUploader {
     calls: Vec<RecordedUpload>,
     fail: bool,
+    remote_digest_override: Option<String>,
+    authoritative_metadata: bool,
 }
 
 struct RecordedUpload {
@@ -200,9 +254,14 @@ impl BackupPackUploader for RecordingUploader {
         if self.fail {
             anyhow::bail!("recording upload failed");
         }
+        let remote_digest = self
+            .remote_digest_override
+            .clone()
+            .unwrap_or_else(|| sha256_hex(request.artifact_bytes));
         Ok(BackupPackUploadOutcome {
             uploaded_bytes: request.artifact_bytes.len(),
-            provider_metadata_is_diagnostic_only: true,
+            remote_verified_payload_digest: BackupDigest::sha256(remote_digest),
+            provider_metadata_is_diagnostic_only: !self.authoritative_metadata,
         })
     }
 }

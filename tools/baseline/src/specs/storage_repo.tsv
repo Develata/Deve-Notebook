@@ -44,6 +44,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_plaintext -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli provider_io -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
@@ -124,11 +125,18 @@ contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_reje
 contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_writes_no_local_authority()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_requires_artifact_for_provider_upload()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_remote_verify_mismatch()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_authoritative_provider_metadata()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload()
 contains	apps/cli/src/commands/backup/restore.rs	remote-readonly provider download of encrypted branch manifest
 contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_download_refs_and_known_mode()
 contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_returns_encrypted_bytes_only()
 contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_returns_encrypted_bytes_only()
+contains	apps/cli/src/commands/backup/provider_io.rs	fn backup_provider_upload_readback_budget_rejects_oversized_artifact()
+contains	apps/cli/src/commands/backup/provider_io/webdav/upload.rs	fn webdav_upload_remote_verifies_readback_bytes()
+contains	apps/cli/src/commands/backup/provider_io/s3/upload.rs	fn s3_upload_remote_verifies_readback_bytes()
+contains	apps/cli/src/commands/backup/provider_io/webdav/upload.rs	fn webdav_upload_rejects_readback_non_success_status()
+contains	apps/cli/src/commands/backup/provider_io/s3/upload.rs	fn s3_upload_rejects_readback_non_success_status()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_verifies_pack_plaintext_schema_before_candidate()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_accept_provider_order_independent_verified_results()

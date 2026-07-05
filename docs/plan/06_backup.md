@@ -180,13 +180,17 @@ Unbound
 - `PackPlanned` 只能读取 ledger / snapshot authority，不得读取 stale UI state。
 - `Uploaded` 只能在 encrypted pack artifact bytes 已通过 manifest / routing /
   digest 校验且 provider PUT 成功后进入。
-- `RemoteVerified` 必须确认 remote manifest 与 uploaded pack hash 一致。
+- `RemoteVerified` 必须确认 remote object 读回的 encrypted pack artifact bytes
+  与 uploaded pack hash 一致；provider metadata、ETag、version 或 mtime 不能作为
+  该确认依据。
 - upload 失败不得回滚 local ledger 或 source-control state。
 
-Provider adapter 的 PUT / GET 只是 Backup Runtime 的传输原语。GET 成功只表示
-encrypted artifact bytes 已从 remote object 读入内存，并附带 diagnostic-only provider
-metadata；它不能代替 manifest/hash/signature verification，不能触发 decrypt，也不能创建
-restore candidate。
+Provider adapter 的 PUT / GET 只是 Backup Runtime 的传输原语。上传后进入
+`RemoteVerified` 前，Backup Runtime 必须对同一 object 执行 readback，并用
+readback bytes 重新计算 sha256，与 manifest `payload_digest` / uploaded digest
+比对；不一致必须 fail-closed。GET 成功只表示 encrypted artifact bytes 已从 remote
+object 读入内存，并附带 diagnostic-only provider metadata；它不能代替
+manifest/hash/signature verification，不能触发 decrypt，也不能创建 restore candidate。
 
 ### 4.2 Restore / Import {#backup-restore-state-machine-contract}
 
