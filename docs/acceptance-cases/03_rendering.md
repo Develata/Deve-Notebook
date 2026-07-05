@@ -225,6 +225,14 @@
     - cli_assert: chat_math_globals_registered_through_bridge true
     - cli_assert: chat_math_missing_registry_fails_closed true
     - cli_assert: native_backend_config_global_registered_through_bridge true
+    - cli_assert: bridge_registry_rejects_authority_globals true
+    - cli_assert: bridge_registry_rejects_authority_names true
+    - cli_assert: bridge_registry_rejects_authority_sources true
+    - cli_assert: bridge_registry_rejects_authority_roles true
+    - cli_assert: bridge_registry_revalidates_existing_policy_marker true
+    - cli_assert: bridge_registry_fallback_refuses_unregistered_window_value true
+    - cli_assert: bridge_registry_legacy_adoption_uses_registered_value true
+    - cli_assert: bridge_registry_scripts_are_rev_versioned true
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。

@@ -89,6 +89,11 @@ assert.equal(
   "web bridge registry must expose register()"
 );
 assert.equal(
+  registryContext.window.__deveWebBridge?.policyVersion,
+  "projection-only-v1",
+  "web bridge registry must expose its projection-only admission policy version"
+);
+assert.equal(
   typeof registryContext.window.__deveWebBridge?.get,
   "function",
   "web bridge registry must expose get()"
@@ -101,7 +106,7 @@ assert.equal(
 const registeredValue = registryContext.window.__deveWebBridge.register(
   "setupCodeMirror",
   () => true,
-  { runtime: "render_projection_runtime", source: "test" }
+  { runtime: "render_projection_runtime", source: "test", authority: "none" }
 );
 assert.equal(registryContext.window.setupCodeMirror, registeredValue);
 assert.equal(
@@ -135,9 +140,200 @@ assert.equal(
   JSON.stringify([
     {
       name: "setupCodeMirror",
-      meta: { runtime: "render_projection_runtime", source: "test" },
+      meta: { runtime: "render_projection_runtime", source: "test", authority: "none" },
     },
   ])
+);
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "commitAnchorState",
+      () => true,
+      { runtime: "render_projection_runtime", source: "test", authority: "ledger" },
+    ),
+  /web bridge global commitAnchorState must declare authority none/,
+  "registry must reject globals that claim business authority"
+);
+assert.equal(
+  typeof registryContext.window.commitAnchorState,
+  "undefined",
+  "rejected authority globals must not be written onto window"
+);
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "safeFacadeName",
+      () => true,
+      {
+        runtime: "widget_bridge_runtime",
+        source: "test",
+        authority: "none",
+        role: "source-control-state",
+      },
+    ),
+  /web bridge global safeFacadeName metadata must stay projection-only/,
+  "registry must reject roles that imply Source Control or writer-state authority"
+);
+assert.equal(
+  typeof registryContext.window.safeFacadeName,
+  "undefined",
+  "rejected authority roles must not be written onto window"
+);
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "sourceControlState",
+      () => true,
+      {
+        runtime: "widget_bridge_runtime",
+        source: "test",
+        authority: "none",
+        role: "ui-facade",
+      },
+    ),
+  /web bridge global sourceControlState metadata must stay projection-only/,
+  "registry must reject names that imply Source Control or writer-state authority"
+);
+assert.equal(
+  typeof registryContext.window.sourceControlState,
+  "undefined",
+  "rejected authority names must not be written onto window"
+);
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "safeFacadeName",
+      () => true,
+      {
+        runtime: "widget_bridge_runtime",
+        source: "commitAnchorBootstrap",
+        authority: "none",
+        role: "ui-facade",
+      },
+    ),
+  /web bridge global safeFacadeName metadata must stay projection-only/,
+  "registry must reject sources that imply Source Control or writer-state authority"
+);
+assert.equal(
+  typeof registryContext.window.safeFacadeName,
+  "undefined",
+  "rejected authority sources must not be written onto window"
+);
+const samePolicyFakeRegistryContext = {
+  window: {
+    __deveWebBridge: {
+      policyVersion: "projection-only-v1",
+      register(name, value) {
+        this[name] = value;
+        return value;
+      },
+      registerFallback() {},
+      get() {},
+      call() {},
+      describe() {
+        return [];
+      },
+    },
+  },
+};
+vm.runInNewContext(registrySource, samePolicyFakeRegistryContext, {
+  filename: "web_bridge_registry.js",
+});
+assert.throws(
+  () =>
+    samePolicyFakeRegistryContext.window.__deveWebBridge.register(
+      "commitAnchorState",
+      () => true,
+      { runtime: "render_projection_runtime", source: "test", authority: "ledger" },
+    ),
+  /web bridge global commitAnchorState must declare authority none/,
+  "same policy marker registries must still be revalidated by the local implementation"
+);
+const unsafeFallback = () => "unsafe";
+const safeFallback = () => false;
+const fallbackContext = { window: { renderChatMath: unsafeFallback } };
+vm.runInNewContext(registrySource, fallbackContext, {
+  filename: "web_bridge_registry.js",
+});
+const fallbackResult = fallbackContext.window.__deveWebBridge.registerFallback(
+  "renderChatMath",
+  safeFallback,
+  {
+    runtime: "render_projection_runtime",
+    source: "chat_math_bootstrap",
+    authority: "none",
+    role: "chat-math-fallback",
+  },
+);
+assert.equal(
+  fallbackResult,
+  safeFallback,
+  "fallback registration must not adopt an unregistered preexisting window value"
+);
+assert.equal(
+  fallbackContext.window.renderChatMath,
+  safeFallback,
+  "fallback registration must overwrite unregistered preexisting window values"
+);
+const trustedLegacyValue = () => "trusted";
+const overwrittenLegacyValue = () => "overwritten";
+const legacyRegistryContext = {
+  window: {
+    setupCodeMirror: overwrittenLegacyValue,
+    __deveWebBridge: {
+      register() {},
+      registerFallback() {},
+      get(name) {
+        return name === "setupCodeMirror" ? trustedLegacyValue : undefined;
+      },
+      call() {},
+      describe() {
+        return [
+          {
+            name: "setupCodeMirror",
+            meta: {
+              runtime: "render_projection_runtime",
+              source: "legacy",
+              authority: "none",
+            },
+          },
+        ];
+      },
+    },
+  },
+};
+vm.runInNewContext(registrySource, legacyRegistryContext, {
+  filename: "web_bridge_registry.js",
+});
+assert.equal(
+  legacyRegistryContext.window.__deveWebBridge.policyVersion,
+  "projection-only-v1",
+  "legacy registries without the policy marker must be replaced by the projection-only registry"
+);
+assert.equal(
+  JSON.stringify(legacyRegistryContext.window.__deveWebBridge.describe()),
+  JSON.stringify([
+    {
+      name: "setupCodeMirror",
+      meta: {
+        runtime: "render_projection_runtime",
+        source: "legacy",
+        authority: "none",
+        adopted: true,
+      },
+    },
+  ]),
+  "legacy registry entries must be adopted only after projection-only policy validation"
+);
+assert.equal(
+  legacyRegistryContext.window.__deveWebBridge.call("setupCodeMirror"),
+  "trusted",
+  "legacy adoption must call the old registry value instead of an overwritten window value"
+);
+assert.equal(
+  legacyRegistryContext.window.setupCodeMirror,
+  trustedLegacyValue,
+  "legacy adoption must restore the old registry value onto window"
 );
 
 const katexBridgeRuntimeContext = {
@@ -660,21 +856,48 @@ assert.match(
   "code menu may only read the bridge-registered action registry"
 );
 
-const registryScriptIndex = indexHtmlSource.indexOf('src="js/web_bridge_registry.js"');
-const katexBridgeScriptIndex = indexHtmlSource.indexOf('src="js/katex_bridge.js"');
-const chatMathBootstrapScriptIndex = indexHtmlSource.indexOf('src="js/chat_math_bootstrap.js"');
-const indexBootstrapScriptIndex = indexHtmlSource.indexOf('src="js/index_bootstrap.js"');
-const initScriptIndex = indexHtmlSource.indexOf('src="js/init.js"');
-const indexEditorAdapterScriptIndex = indexHtmlSource.indexOf('src="js/index_editor_adapter.js"');
+const bridgeScriptRev = "20260705-bridge-policy";
+function scriptIndex(src) {
+  return indexHtmlSource.indexOf(`src="${src}?rev=${bridgeScriptRev}"`);
+}
+
+const registryScriptIndex = scriptIndex("js/web_bridge_registry.js");
+const katexBridgeScriptIndex = scriptIndex("js/katex_bridge.js");
+const chatMathBootstrapScriptIndex = scriptIndex("js/chat_math_bootstrap.js");
+const chatMathScriptIndex = scriptIndex("js/chat_math.js");
+const nativeBackendBridgeScriptIndex = scriptIndex("js/native_backend_bridge.bundle.js");
+const indexBootstrapScriptIndex = scriptIndex("js/index_bootstrap.js");
+const initScriptIndex = scriptIndex("js/init.js");
+const indexEditorAdapterScriptIndex = scriptIndex("js/index_editor_adapter.js");
 const lazyEditorBundleIndex = indexEditorAdapterSource.indexOf('import("./editor.bundle.js');
-assert.ok(registryScriptIndex >= 0, "index.html must load web_bridge_registry.js");
-assert.ok(katexBridgeScriptIndex >= 0, "index.html must load katex_bridge.js");
-assert.ok(chatMathBootstrapScriptIndex >= 0, "index.html must load chat_math_bootstrap.js");
-assert.ok(indexBootstrapScriptIndex >= 0, "index.html must load index_bootstrap.js");
-assert.ok(initScriptIndex >= 0, "index.html must load init.js");
+assert.ok(
+  registryScriptIndex >= 0,
+  "index.html must load web_bridge_registry.js with a bridge policy rev"
+);
+assert.ok(
+  katexBridgeScriptIndex >= 0,
+  "index.html must load katex_bridge.js with the bridge policy rev"
+);
+assert.ok(
+  chatMathBootstrapScriptIndex >= 0,
+  "index.html must load chat_math_bootstrap.js with the bridge policy rev"
+);
+assert.ok(
+  chatMathScriptIndex >= 0,
+  "index.html must load chat_math.js with the bridge policy rev"
+);
+assert.ok(
+  nativeBackendBridgeScriptIndex >= 0,
+  "index.html must load native_backend_bridge.bundle.js with the bridge policy rev"
+);
+assert.ok(
+  indexBootstrapScriptIndex >= 0,
+  "index.html must load index_bootstrap.js with the bridge policy rev"
+);
+assert.ok(initScriptIndex >= 0, "index.html must load init.js with the bridge policy rev");
 assert.ok(
   indexEditorAdapterScriptIndex >= 0,
-  "index.html must load index_editor_adapter.js"
+  "index.html must load index_editor_adapter.js with the bridge policy rev"
 );
 assert.ok(
   lazyEditorBundleIndex >= 0,
@@ -684,10 +907,12 @@ assert.ok(
   registryScriptIndex < indexBootstrapScriptIndex &&
     registryScriptIndex < katexBridgeScriptIndex &&
     katexBridgeScriptIndex < chatMathBootstrapScriptIndex &&
-    chatMathBootstrapScriptIndex < indexBootstrapScriptIndex &&
+    chatMathBootstrapScriptIndex < chatMathScriptIndex &&
+    chatMathScriptIndex < nativeBackendBridgeScriptIndex &&
+    nativeBackendBridgeScriptIndex < indexBootstrapScriptIndex &&
     indexBootstrapScriptIndex < initScriptIndex &&
     initScriptIndex < indexEditorAdapterScriptIndex,
-  "index script order must load registry, KaTeX bridge, chat math bootstrap, index bootstrap, init, then lazy editor adapter"
+  "index script order must load registry, KaTeX bridge, chat math bootstrap, chat math, native bridge, index bootstrap, init, then lazy editor adapter"
 );
 
 console.log("web-bridge-registry-editor-globals: ok");

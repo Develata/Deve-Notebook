@@ -2,32 +2,89 @@
 // Central compatibility registry for browser globals exposed to Rust/WASM.
 
 (function () {
+  const policyVersion = "projection-only-v1";
   const existing = window.__deveWebBridge;
-  if (
-    existing &&
-    typeof existing.register === "function" &&
-    typeof existing.registerFallback === "function" &&
-    typeof existing.describe === "function" &&
-    typeof existing.get === "function" &&
-    typeof existing.call === "function"
-  ) {
-    return;
+  const entries = new Map();
+  const allowedRuntimes = new Set([
+    "render_projection_runtime",
+    "widget_bridge_runtime",
+    "native_shell_mode_runtime",
+  ]);
+  const authoritySequences = [
+    ["pending"],
+    ["ack"],
+    ["reject"],
+    ["write", "success"],
+    ["source", "control"],
+    ["ledger"],
+    ["staging"],
+    ["commit", "anchor"],
+    ["git", "mirror"],
+    ["pending", "fs"],
+    ["pending", "fs", "ops"],
+    ["backup"],
+    ["remote", "projection"],
+  ];
+
+  function semanticTokens(value) {
+    return String(value || "")
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
   }
 
-  const entries = new Map();
+  function containsSequence(tokens, sequence) {
+    for (let i = 0; i <= tokens.length - sequence.length; i += 1) {
+      if (sequence.every((token, offset) => tokens[i + offset] === token)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function containsAuthoritySemantic(value) {
+    const tokens = semanticTokens(value);
+    return authoritySequences.some((sequence) => containsSequence(tokens, sequence));
+  }
+
+  function normalizeMeta(name, meta = {}) {
+    const normalized = { ...meta };
+    if (!allowedRuntimes.has(normalized.runtime)) {
+      throw new Error(`web bridge global ${name} has unsupported runtime`);
+    }
+    if (normalized.authority !== "none") {
+      throw new Error(`web bridge global ${name} must declare authority none`);
+    }
+    if (
+      containsAuthoritySemantic(name) ||
+      containsAuthoritySemantic(normalized.source) ||
+      containsAuthoritySemantic(normalized.role)
+    ) {
+      throw new Error(`web bridge global ${name} metadata must stay projection-only`);
+    }
+    return normalized;
+  }
 
   function register(name, value, meta = {}) {
-    entries.set(name, { value, meta });
+    const normalizedMeta = normalizeMeta(name, meta);
+    entries.set(name, { value, meta: normalizedMeta });
     window[name] = value;
     return value;
   }
 
   function registerFallback(name, value, meta = {}) {
-    if (typeof window[name] !== "undefined") {
-      entries.set(name, { value: window[name], meta: { ...meta, fallbackSkipped: true } });
-      return window[name];
+    const normalizedMeta = normalizeMeta(name, meta);
+    const existingEntry = entries.get(name);
+    if (existingEntry) {
+      entries.set(name, {
+        value: existingEntry.value,
+        meta: { ...normalizedMeta, fallbackSkipped: true },
+      });
+      window[name] = existingEntry.value;
+      return existingEntry.value;
     }
-    return register(name, value, meta);
+    return register(name, value, normalizedMeta);
   }
 
   function get(name) {
@@ -53,18 +110,29 @@
     }));
   }
 
-  if (existing && typeof existing.describe === "function") {
+  if (
+    existing &&
+    typeof existing.describe === "function" &&
+    typeof existing.get === "function"
+  ) {
     for (const entry of existing.describe()) {
-      if (entry && entry.name && typeof window[entry.name] !== "undefined") {
+      if (entry && entry.name) {
+        const value = existing.get(entry.name);
+        if (typeof value === "undefined") {
+          continue;
+        }
+        const adoptedMeta = normalizeMeta(entry.name, { ...(entry.meta || {}), adopted: true });
         entries.set(entry.name, {
-          value: window[entry.name],
-          meta: { ...(entry.meta || {}), adopted: true },
+          value,
+          meta: adoptedMeta,
         });
+        window[entry.name] = value;
       }
     }
   }
 
   window.__deveWebBridge = {
+    policyVersion,
     register,
     registerFallback,
     get,

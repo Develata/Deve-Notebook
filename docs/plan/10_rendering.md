@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-03`
+- `Last Review`: `2026-07-05`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -414,6 +414,14 @@ Baseline contract 的行内支持集合：
 - hybrid decoration
 - math / mermaid / frontmatter parser
 - code toolbar/menu
+
+Browser globals exposed for editor/widget interoperability **MUST** be registered through
+`web_bridge_registry.js`. The registry is admission control for projection-only bridge
+facades: every entry MUST declare `authority: "none"` and a runtime in
+`render_projection_runtime`, `widget_bridge_runtime`, or `native_shell_mode_runtime`.
+Entry names, sources, and roles claiming ledger, pending, ack/reject, write-success,
+Source Control, staging, commit anchor, Git mirror, backup, or remote-projection
+authority MUST fail closed before they are written onto `window`.
 
 ### 12.3 Outline Runtime
 
