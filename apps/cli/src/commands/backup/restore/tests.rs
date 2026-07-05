@@ -27,7 +27,7 @@ fn input<'a>(
 }
 
 #[test]
-fn plans_remote_readonly_restore_candidate_without_io() {
+fn plans_remote_readonly_restore_flow_without_candidate_admission() {
     let pack_digests = vec![DIGEST_B.to_string()];
     let lines = restore_lines(input(&pack_digests, "remote-readonly", false, true))
         .expect("restore dry-run");
@@ -39,13 +39,11 @@ fn plans_remote_readonly_restore_candidate_without_io() {
     assert!(
         lines
             .iter()
-            .any(|line| line == "restore_flow_state=RestoreCandidate")
+            .any(|line| line == "restore_flow_state=PacksDecrypted")
     );
-    assert!(
-        lines
-            .iter()
-            .any(|line| line == "candidate_state=RemoteReadonly")
-    );
+    assert!(lines.iter().any(
+        |line| line == "candidate_admission=typed_verification_and_decrypted_evidence_required"
+    ));
     assert!(
         lines
             .iter()

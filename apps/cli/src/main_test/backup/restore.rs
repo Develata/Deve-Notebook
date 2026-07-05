@@ -2,7 +2,7 @@ use super::{Args, BackupAction, Commands};
 use clap::Parser;
 
 #[test]
-fn backup_restore_accepts_candidate_admission_args() {
+fn backup_restore_accepts_flow_planning_args() {
     let args = Args::try_parse_from([
         "deve",
         "backup",

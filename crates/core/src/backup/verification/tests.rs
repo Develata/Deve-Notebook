@@ -41,11 +41,11 @@ fn input() -> BackupVerificationInput {
 fn verifies_authenticated_decrypted_pack_artifacts() {
     let result = verify_backup_artifacts(input()).expect("verified artifacts");
 
-    assert_eq!(result.repo_id, repo_id());
-    assert_eq!(result.manifest_digest, digest('a'));
-    assert_eq!(result.pack_count, 1);
-    assert_eq!(result.pack_digests, vec![digest('b')]);
-    assert!(result.decrypted);
+    assert_eq!(result.repo_id(), repo_id());
+    assert_eq!(result.manifest_digest(), &digest('a'));
+    assert_eq!(result.pack_count(), 1);
+    assert_eq!(result.pack_digests(), &[digest('b')]);
+    assert!(result.decrypted());
 }
 
 #[test]
@@ -56,8 +56,8 @@ fn accepts_canonical_sha256_case_differences() {
 
     let result = verify_backup_artifacts(input).expect("case-insensitive digest match");
 
-    assert_eq!(result.pack_count, 1);
-    assert!(result.decrypted);
+    assert_eq!(result.pack_count(), 1);
+    assert!(result.decrypted());
 }
 
 #[test]

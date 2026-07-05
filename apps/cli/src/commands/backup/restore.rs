@@ -4,18 +4,19 @@
 //!   - 06_backup#backup-restore-candidate-contract
 //!   - 06_backup#backup-command-output-contract
 //!
-//! Backup restore dry-run planning.
+//! Backup restore dry-run flow planning.
 //!
-//! This command surface validates caller-supplied restore evidence and prints
-//! the planned restore candidate admission. It intentionally does not download,
-//! decrypt, import, merge, append ledger state, or touch Projection Workspaces.
+//! This command surface validates caller-supplied flow metadata without
+//! admitting a RestoreCandidate. Candidate admission requires typed manifest
+//! verification and decrypted pack evidence in core. This command intentionally
+//! does not download, decrypt, import, merge, append ledger state, or touch
+//! Projection Workspaces.
 
 use anyhow::bail;
 use deve_core::backup::{
     BackupBindingStatus, BackupCommandKind, BackupDigest, BackupLocator, BackupPlanEffect,
     BackupPlanInput, BackupRestoreFlowEvidence, BackupRestoreFlowInput, RestoreAdmissionMode,
-    RestoreCandidateInput, RestoreEvidence, admit_restore_candidate, backup_command_plan,
-    plan_backup_restore_flow,
+    backup_command_plan, plan_backup_restore_flow,
 };
 use deve_core::models::RepoId;
 
@@ -64,6 +65,9 @@ pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Ve
     let manifest_digest = BackupDigest::sha256(input.manifest_digest);
     let pack_digests = parse_pack_digests(input.pack_digests);
     let (admission_mode, effect) = parse_mode(input.mode)?;
+    if requires_write_gate(admission_mode) && !input.write_gate {
+        bail!("backup restore explicit import or merge requires an explicit write gate");
+    }
 
     let flow = plan_backup_restore_flow(BackupRestoreFlowInput {
         expected_repo_id: repo_id,
@@ -77,27 +81,11 @@ pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Ve
             manifest_verified: input.manifest_verified,
             packs_downloaded: input.packs_downloaded,
             packs_decrypted: input.packs_decrypted,
-            candidate_admitted: true,
+            candidate_admitted: false,
         },
         admission_mode,
         write_gate_confirmed: input.write_gate,
         local_ledger_append_requested: false,
-    })?;
-    let candidate = admit_restore_candidate(RestoreCandidateInput {
-        repo_id: flow.repo_id,
-        expected_repo_id: repo_id,
-        writer_identity: flow.writer_identity.clone(),
-        branch_path: flow.branch_path.clone(),
-        manifest_digest: manifest_digest.clone(),
-        pack_count: flow.pack_count,
-        pack_digests,
-        evidence: RestoreEvidence {
-            manifest_verified: input.manifest_verified,
-            packs_downloaded: input.packs_downloaded,
-            packs_decrypted: input.packs_decrypted,
-        },
-        admission_mode,
-        write_gate_confirmed: input.write_gate,
     })?;
     let plan = backup_command_plan(BackupPlanInput {
         command: BackupCommandKind::RestoreBackup,
@@ -111,14 +99,14 @@ pub(crate) fn restore_lines(input: RestoreCommandInput<'_>) -> anyhow::Result<Ve
         format!("effect={:?}", plan.effect),
         format!("dry_run={}", input.dry_run),
         "artifact_io=false".to_string(),
-        format!("repo_id={}", candidate.repo_id),
-        format!("branch_writer={}", candidate.writer_identity),
-        format!("branch_path={}", candidate.branch_path),
+        format!("repo_id={}", flow.repo_id),
+        format!("branch_writer={}", flow.writer_identity),
+        format!("branch_path={}", flow.branch_path),
         format!("restore_flow_state={:?}", flow.state),
         format!("admission_mode={:?}", flow.admission_mode),
-        format!("candidate_state={:?}", candidate.state),
-        format!("manifest_digest={}", candidate.manifest_digest.hex),
-        format!("pack_count={}", candidate.pack_count),
+        "candidate_admission=typed_verification_and_decrypted_evidence_required".to_string(),
+        format!("manifest_digest={}", manifest_digest.hex),
+        format!("pack_count={}", flow.pack_count),
         format!("write_gate_confirmed={}", input.write_gate),
         format!("writes_local_authority={}", plan.writes_local_authority),
     ])
@@ -149,4 +137,11 @@ fn parse_mode(mode: &str) -> anyhow::Result<(RestoreAdmissionMode, BackupPlanEff
             bail!("backup restore mode must be remote-readonly, explicit-import, or explicit-merge")
         }
     }
+}
+
+fn requires_write_gate(mode: RestoreAdmissionMode) -> bool {
+    matches!(
+        mode,
+        RestoreAdmissionMode::ExplicitImport | RestoreAdmissionMode::ExplicitMerge
+    )
 }

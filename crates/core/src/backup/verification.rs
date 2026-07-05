@@ -48,13 +48,35 @@ pub struct BackupVerificationInput {
     pub decrypt_required: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BackupVerificationResult {
-    pub repo_id: RepoId,
-    pub manifest_digest: BackupDigest,
-    pub pack_count: u64,
-    pub pack_digests: Vec<BackupDigest>,
-    pub decrypted: bool,
+    repo_id: RepoId,
+    manifest_digest: BackupDigest,
+    pack_count: u64,
+    pack_digests: Vec<BackupDigest>,
+    decrypted: bool,
+}
+
+impl BackupVerificationResult {
+    pub fn repo_id(&self) -> RepoId {
+        self.repo_id
+    }
+
+    pub fn manifest_digest(&self) -> &BackupDigest {
+        &self.manifest_digest
+    }
+
+    pub fn pack_count(&self) -> u64 {
+        self.pack_count
+    }
+
+    pub fn pack_digests(&self) -> &[BackupDigest] {
+        &self.pack_digests
+    }
+
+    pub fn decrypted(&self) -> bool {
+        self.decrypted
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

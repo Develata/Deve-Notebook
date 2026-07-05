@@ -92,7 +92,7 @@ pub(crate) enum BackupAction {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Plan restore candidate admission from verified backup metadata
+    /// Plan backup restore flow from caller-supplied dry-run metadata
     Restore {
         #[arg(long)]
         locator: String,

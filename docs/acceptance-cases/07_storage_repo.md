@@ -364,4 +364,18 @@
     - cli_assert: backup_decrypted_packs_reject_path_or_digest_mismatch true
     - cli_assert: backup_decrypted_packs_reject_duplicate_sequence true
     - cli_assert: backup_decrypted_packs_open_result_cannot_be_empty_plaintext true
+
+- case_id: STORE-025
+  goal: Backup RestoreCandidate admission 必须从 manifest verification 与 PacksDecrypted typed evidence 派生。
+  preconditions:
+    - branch manifest pack refs 已通过 PacksDownloaded gate
+    - manifest verification result 已通过 hash/auth/decrypt gate
+    - encrypted artifact bytes 已通过 open gate 产生 PacksDecrypted result
+  steps:
+    - run: cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
+  assertions:
+    - cli_assert: backup_restore_candidate_admission_consumes_verified_and_decrypted_evidence true
+    - cli_assert: backup_restore_candidate_admission_preserves_repo_and_write_gates true
+    - cli_assert: backup_restore_candidate_admission_rejects_manifest_and_decrypted_pack_mismatch true
+    - cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
 ```

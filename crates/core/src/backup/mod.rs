@@ -90,7 +90,7 @@ pub use provider::{
 };
 pub use restore::{
     BackupRestoreError, RestoreAdmissionMode, RestoreAdmissionState, RestoreCandidate,
-    RestoreCandidateInput, RestoreEvidence, admit_restore_candidate,
+    RestoreCandidateFromVerifiedPacksInput, admit_verified_restore_candidate,
 };
 pub use restore_flow::{
     BackupRestoreFlowError, BackupRestoreFlowEvidence, BackupRestoreFlowInput,

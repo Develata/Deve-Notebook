@@ -21,7 +21,7 @@
 //! - `ngit import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `ngit push`: 将 Git main mirror 发布到远端
 //! - `projection-remote webdav|s3 push|pull`: 同步 Markdown projection transport
-//! - `backup bind/inspect/list/verify/run/restore/unbind`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore candidate admission
+//! - `backup bind/inspect/list/verify/run/restore/unbind`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore flow planning
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
