@@ -14,5 +14,6 @@ contains	apps/web/src/runtime/domain/runtime_state.rs	pub enum LoadPhase
 contains	apps/web/src/runtime/domain/scope.rs	pub struct PendingRepoSwitch
 contains	apps/web/src/hooks/use_core/types.rs	pub use crate::runtime::domain::{
 contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_does_not_import_use_core_internals()
+contains	apps/web/src/runtime/mod.rs	fn web_runtime_boundary_detects_nested_root_grouped_use_core_import()
 regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))
-regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{\s*hooks\s*::\s*(use_core|\{(?s:.*\buse_core\b))
+regex_absent_tree_ext	apps/web/src/runtime	rs	crate\s*::\s*\{(?s:.*\bhooks\s*::\s*(use_core|\{.*\buse_core\b))
