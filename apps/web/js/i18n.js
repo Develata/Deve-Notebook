@@ -1,3 +1,5 @@
+import { getWidgetBridgeGlobal } from "./widget_bridge.js";
+
 const DEFAULT_LOCALE = "en-US";
 
 const FALLBACK_COPY = {
@@ -20,21 +22,17 @@ const FALLBACK_COPY = {
 };
 
 function currentLocale() {
-    if (typeof window !== "undefined") {
-        const locale = window.deve_i18n?.locale;
-        if (typeof locale === "string" && locale.startsWith("zh")) {
-            return "zh-CN";
-        }
+    const locale = getWidgetBridgeGlobal("deve_i18n")?.locale;
+    if (typeof locale === "string" && locale.startsWith("zh")) {
+        return "zh-CN";
     }
     return DEFAULT_LOCALE;
 }
 
 export function editorCopy(key) {
-    if (typeof window !== "undefined") {
-        const value = window.deve_i18n?.editor?.[key];
-        if (typeof value === "string" && value.length > 0) {
-            return value;
-        }
+    const value = getWidgetBridgeGlobal("deve_i18n")?.editor?.[key];
+    if (typeof value === "string" && value.length > 0) {
+        return value;
     }
 
     const locale = currentLocale();

@@ -2,11 +2,11 @@
  * Code Menu Module (代码块菜单)
  * 
  * Provides dynamic menu rendering for code toolbar actions.
- * Supports plugin registration via the bridge-registered `window.deve_code_actions`.
+ * Supports plugin actions via the bridge-registered `deve_code_actions` facade.
  * 
  * Action Protocol:
  * ```js
- * window.deve_code_actions.push({
+ * window.__deveWebBridge.get("deve_code_actions").push({
  *   id: 'unique-id',
  *   label: 'Display Label',
  *   run: ({ code, language, view }) => { ... }
@@ -15,6 +15,7 @@
  */
 
 import { editorCopy } from "../i18n.js";
+import { getWidgetBridgeGlobal } from "../widget_bridge.js";
 
 let activeAnchor = null;
 
@@ -27,9 +28,8 @@ function menuHostFor(anchor) {
  * @returns {Array} Array of action objects
  */
 export function getActions() {
-    return (typeof window !== 'undefined' && Array.isArray(window.deve_code_actions))
-        ? window.deve_code_actions
-        : [];
+    const actions = getWidgetBridgeGlobal("deve_code_actions");
+    return Array.isArray(actions) ? actions : [];
 }
 
 /**

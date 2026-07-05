@@ -7,6 +7,7 @@ const root = __dirname;
 const registrySource = fs.readFileSync(path.join(root, "web_bridge_registry.js"), "utf8");
 const katexBridgeSource = fs.readFileSync(path.join(root, "katex_bridge.js"), "utf8");
 const renderingBridgeSource = fs.readFileSync(path.join(root, "rendering_bridge.js"), "utf8");
+const widgetBridgeSource = fs.readFileSync(path.join(root, "widget_bridge.js"), "utf8");
 const editorAdapterSource = fs.readFileSync(path.join(root, "editor_adapter.js"), "utf8");
 const chatMathBootstrapSource = fs.readFileSync(path.join(root, "chat_math_bootstrap.js"), "utf8");
 const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
@@ -18,6 +19,7 @@ const inlineRendererSource = fs.readFileSync(
 );
 const imageExtensionSource = fs.readFileSync(path.join(root, "extensions", "image.js"), "utf8");
 const initSource = fs.readFileSync(path.join(root, "init.js"), "utf8");
+const i18nSource = fs.readFileSync(path.join(root, "i18n.js"), "utf8");
 const codeMenuSource = fs.readFileSync(path.join(root, "extensions", "code_menu.js"), "utf8");
 const nativeBackendBridgeSource = fs.readFileSync(
   path.join(root, "native_backend_bridge.js"),
@@ -851,9 +853,54 @@ assert.doesNotMatch(
   "code menu must not initialize the code action registry directly"
 );
 assert.match(
+  widgetBridgeSource,
+  /export function getWidgetBridgeGlobal\(name\)/,
+  "widget bridge helper must centralize registry reads"
+);
+assert.match(
+  widgetBridgeSource,
+  /bridge\.get\(name\)/,
+  "widget bridge helper must read browser facades through registry get()"
+);
+assert.doesNotMatch(
+  widgetBridgeSource,
+  /(?:window|globalThis)\s*\[\s*name\s*\]/,
+  "widget bridge helper must not read facade values through dynamic window/globalThis fields"
+);
+assert.doesNotMatch(
+  widgetBridgeSource,
+  /(?:window|globalThis)\s*\[\s*["']deve_(?:code_actions|i18n)["']\s*\]/,
+  "widget bridge helper must not read known widget facades through bracket globals"
+);
+assert.match(
   codeMenuSource,
-  /Array\.isArray\(window\.deve_code_actions\)/,
-  "code menu may only read the bridge-registered action registry"
+  /getWidgetBridgeGlobal\("deve_code_actions"\)/,
+  "code menu must read actions through the widget bridge facade"
+);
+assert.doesNotMatch(
+  codeMenuSource,
+  /window\.deve_code_actions\b/,
+  "code menu must not read the code action registry directly from window"
+);
+assert.doesNotMatch(
+  codeMenuSource,
+  /(?:window|globalThis)\s*\[\s*["']deve_code_actions["']\s*\]/,
+  "code menu must not read the code action registry through bracket globals"
+);
+assert.match(
+  i18nSource,
+  /getWidgetBridgeGlobal\("deve_i18n"\)/,
+  "i18n copy must read its registry through the widget bridge facade"
+);
+assert.doesNotMatch(
+  i18nSource,
+  /window\.deve_i18n\b/,
+  "i18n copy must not read the copy registry directly from window"
+);
+assert.doesNotMatch(
+  i18nSource,
+  /(?:window|globalThis)\s*\[\s*["']deve_i18n["']\s*\]/,
+  "i18n copy must not read the copy registry through bracket globals"
 );
 
 const bridgeScriptRev = "20260705-bridge-policy";
