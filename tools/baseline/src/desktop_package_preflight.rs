@@ -24,6 +24,7 @@ pub fn run() -> Result<()> {
         features: None,
         no_default_features: true,
         lib: false,
+        test_target: None,
         filter: None,
     })?;
     runner.run_check("deve_desktop", Some(NATIVE_PACKAGING), false)?;
@@ -33,6 +34,7 @@ pub fn run() -> Result<()> {
             features: Some(NATIVE_PACKAGING),
             no_default_features: false,
             lib: false,
+            test_target: None,
             filter: Some(filter),
         })?;
     }

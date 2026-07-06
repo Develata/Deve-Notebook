@@ -232,6 +232,15 @@ impl BaselineContext {
         crate::cargo_test::run_lib(&self.root, self.label, package, filter)
     }
 
+    pub fn cargo_test_integration(
+        &self,
+        package: &str,
+        test_target: &str,
+        filter: &str,
+    ) -> Result<()> {
+        crate::cargo_test::run_integration(&self.root, self.label, package, test_target, filter)
+    }
+
     pub fn root(&self) -> &Path {
         &self.root
     }

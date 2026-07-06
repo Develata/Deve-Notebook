@@ -71,22 +71,7 @@ impl CargoRunner {
     }
 
     pub fn run_test(&self, test: &CargoTest<'_>) -> Result<()> {
-        let mut args = vec!["test".to_string()];
-        self.push_target_dir(&mut args);
-        args.extend([
-            "--locked".to_string(),
-            "-p".to_string(),
-            test.package.to_string(),
-        ]);
-        push_feature_args(&mut args, test.features, test.no_default_features);
-        if test.lib {
-            args.push("--lib".to_string());
-        }
-        if let Some(filter) = test.filter {
-            args.push(filter.to_string());
-        }
-        args.push("--".to_string());
-        args.push("--nocapture".to_string());
+        let args = cargo_test_args(test, self.target_dir.as_deref())?;
 
         let combined = self.run_captured(
             args,
@@ -143,11 +128,45 @@ impl CargoRunner {
     }
 }
 
+fn cargo_test_args(test: &CargoTest<'_>, target_dir: Option<&str>) -> Result<Vec<String>> {
+    if test.lib && test.test_target.is_some() {
+        bail!(
+            "cargo test target for {} cannot combine --lib and --test",
+            test.package
+        );
+    }
+
+    let mut args = vec!["test".to_string()];
+    if let Some(target_dir) = target_dir {
+        args.push("--target-dir".to_string());
+        args.push(target_dir.to_string());
+    }
+    args.extend([
+        "--locked".to_string(),
+        "-p".to_string(),
+        test.package.to_string(),
+    ]);
+    push_feature_args(&mut args, test.features, test.no_default_features);
+    if test.lib {
+        args.push("--lib".to_string());
+    } else if let Some(test_target) = test.test_target {
+        args.push("--test".to_string());
+        args.push(test_target.to_string());
+    }
+    if let Some(filter) = test.filter {
+        args.push(filter.to_string());
+    }
+    args.push("--".to_string());
+    args.push("--nocapture".to_string());
+    Ok(args)
+}
+
 pub struct CargoTest<'a> {
     pub package: &'a str,
     pub features: Option<&'a str>,
     pub no_default_features: bool,
     pub lib: bool,
+    pub test_target: Option<&'a str>,
     pub filter: Option<&'a str>,
 }
 
@@ -244,7 +263,7 @@ fn is_wsl_mounted_workspace(root: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{executed_test_count, tree_contains_regex};
+    use super::{CargoTest, cargo_test_args, executed_test_count, tree_contains_regex};
 
     #[test]
     fn counts_all_cargo_test_running_lines() {
@@ -259,5 +278,62 @@ mod tests {
         assert!(tree_contains_regex("test", tree, r"(^| )tauri v").unwrap());
         assert!(tree_contains_regex("test", tree, r"(^| )tray-icon v").unwrap());
         assert!(!tree_contains_regex("test", tree, r"(^| )tauri-build v").unwrap());
+    }
+
+    #[test]
+    fn cargo_test_args_targets_named_integration_test() {
+        let args = cargo_test_args(
+            &CargoTest {
+                package: "deve_core",
+                features: None,
+                no_default_features: false,
+                lib: false,
+                test_target: Some("source_control_external_changes_test"),
+                filter: Some("apply_external_changes_to_ledger"),
+            },
+            None,
+        )
+        .expect("args");
+
+        assert_eq!(
+            args,
+            strings(&[
+                "test",
+                "--locked",
+                "-p",
+                "deve_core",
+                "--test",
+                "source_control_external_changes_test",
+                "apply_external_changes_to_ledger",
+                "--",
+                "--nocapture",
+            ])
+        );
+    }
+
+    #[test]
+    fn cargo_test_args_rejects_lib_with_named_integration_test() {
+        let error = cargo_test_args(
+            &CargoTest {
+                package: "deve_core",
+                features: None,
+                no_default_features: false,
+                lib: true,
+                test_target: Some("source_control_external_changes_test"),
+                filter: Some("apply_external_changes_to_ledger"),
+            },
+            None,
+        )
+        .expect_err("invalid test target");
+
+        assert!(
+            error
+                .to_string()
+                .contains("cannot combine --lib and --test")
+        );
+    }
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| value.to_string()).collect()
     }
 }

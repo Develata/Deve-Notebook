@@ -54,6 +54,15 @@ pub fn run_tsv_with_mode(ctx: &BaselineContext, spec: &str, mode: RunMode) -> Re
                     ctx.cargo_test_lib(package, filter)?;
                 }
             }
+            Operation::CargoTestIntegration {
+                package,
+                test_target,
+                filter,
+            } => {
+                if mode == RunMode::Full {
+                    ctx.cargo_test_integration(package, test_target, filter)?;
+                }
+            }
         }
     }
     Ok(())
@@ -123,6 +132,11 @@ enum Operation<'a> {
         package: &'a str,
         filter: &'a str,
     },
+    CargoTestIntegration {
+        package: &'a str,
+        test_target: &'a str,
+        filter: &'a str,
+    },
 }
 
 fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
@@ -176,6 +190,13 @@ fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
         ["git_not_ignored", rel] => Ok(Operation::GitNotIgnored { rel }),
         ["cargo_test", package, filter] => Ok(Operation::CargoTest { package, filter }),
         ["cargo_test_lib", package, filter] => Ok(Operation::CargoTestLib { package, filter }),
+        ["cargo_test_integration", package, test_target, filter] => {
+            Ok(Operation::CargoTestIntegration {
+                package,
+                test_target,
+                filter,
+            })
+        }
         [op, ..] => {
             if let Some(expected) = expected_field_count(op) {
                 bail!(
@@ -203,6 +224,7 @@ fn expected_field_count(op: &str) -> Option<usize> {
         "regex_absent_tree_skip" => 4,
         "regex_absent_tree_ext_skip" => 5,
         "cargo_test" | "cargo_test_lib" => 3,
+        "cargo_test_integration" => 4,
         _ => return None,
     })
 }
@@ -282,6 +304,22 @@ mod tests {
             Operation::CargoTestLib {
                 package: "deve_core",
                 filter: "settings",
+            }
+        );
+    }
+
+    #[test]
+    fn parses_cargo_test_integration_operation() {
+        assert_eq!(
+            parse_operation(
+                1,
+                "cargo_test_integration\tdeve_core\tsource_control_external_changes_test\tapply_external_changes_to_ledger"
+            )
+            .expect("operation"),
+            Operation::CargoTestIntegration {
+                package: "deve_core",
+                test_target: "source_control_external_changes_test",
+                filter: "apply_external_changes_to_ledger",
             }
         );
     }

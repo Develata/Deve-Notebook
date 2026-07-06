@@ -163,6 +163,7 @@ fn run_cargo_checks_and_tests(runner: &CargoRunner) -> Result<()> {
             features: Some(NATIVE_PACKAGING),
             no_default_features: false,
             lib: false,
+            test_target: None,
             filter: Some(filter),
         })?;
     }
@@ -172,6 +173,7 @@ fn run_cargo_checks_and_tests(runner: &CargoRunner) -> Result<()> {
             features: Some(NATIVE_PACKAGING),
             no_default_features: false,
             lib: false,
+            test_target: None,
             filter: Some(filter),
         })?;
     }
@@ -180,6 +182,7 @@ fn run_cargo_checks_and_tests(runner: &CargoRunner) -> Result<()> {
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("native_session"),
     })
 }

@@ -26,6 +26,7 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: true,
+        test_target: None,
         filter: Some("native_adapter::process_test"),
     },
     CargoTest {
@@ -33,6 +34,7 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("desktop_default_build_defers_real_process_adapter"),
     },
     CargoTest {
@@ -40,6 +42,7 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("mobile_default_build_defers_real_process_adapter"),
     },
     CargoTest {
@@ -47,6 +50,7 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         features: Some("native-packaging"),
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("mobile_embedded_backend"),
     },
     CargoTest {
@@ -54,6 +58,7 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("native_session"),
     },
 ];
@@ -64,6 +69,7 @@ const DESKTOP_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[
         features: Some("native-packaging"),
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("service_entrypoint"),
     },
     CargoTest {
@@ -71,6 +77,7 @@ const DESKTOP_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[
         features: Some("native-packaging"),
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("service_bootstrap"),
     },
     CargoTest {
@@ -78,6 +85,7 @@ const DESKTOP_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[
         features: Some("native-packaging"),
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("process_runtime_test"),
     },
 ];
@@ -88,6 +96,7 @@ const PROCESS_OBSERVATION_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("process_observation"),
     },
     CargoTest {
@@ -95,6 +104,7 @@ const PROCESS_OBSERVATION_TESTS: &[CargoTest] = &[
         features: None,
         no_default_features: false,
         lib: false,
+        test_target: None,
         filter: Some("process_observation"),
     },
 ];
