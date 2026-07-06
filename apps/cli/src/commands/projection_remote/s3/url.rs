@@ -4,6 +4,16 @@
 use deve_core::remote_projection::RemoteProjectionProviderError;
 use reqwest::Url;
 
+pub(super) fn reject_custom_https_endpoint_without_binding(
+    locator: &str,
+) -> Result<(), RemoteProjectionProviderError> {
+    if locator.starts_with("s3+https://") {
+        Err(custom_endpoint_requires_binding_error())
+    } else {
+        Ok(())
+    }
+}
+
 pub(super) fn s3_file_url(
     locator: &str,
     region: &str,
@@ -13,9 +23,7 @@ pub(super) fn s3_file_url(
         return s3_aws_file_url(locator, region, file_path);
     }
     if locator.starts_with("s3+https://") {
-        return Err(RemoteProjectionProviderError::ProviderIo(
-            "S3 custom endpoint requires explicit credential binding before provider I/O (provider_io_ready=false)".into(),
-        ));
+        return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
         "S3 locator scheme is invalid".into(),
@@ -31,9 +39,7 @@ pub(super) fn s3_list_url(
         return s3_aws_list_url(locator, region, continuation_token);
     }
     if locator.starts_with("s3+https://") {
-        return Err(RemoteProjectionProviderError::ProviderIo(
-            "S3 custom endpoint requires explicit credential binding before provider I/O (provider_io_ready=false)".into(),
-        ));
+        return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
         "S3 locator scheme is invalid".into(),
@@ -46,13 +52,17 @@ pub(super) fn s3_locator_prefix(locator: &str) -> Result<String, RemoteProjectio
         return Ok(locator_prefix(&parsed));
     }
     if locator.starts_with("s3+https://") {
-        return Err(RemoteProjectionProviderError::ProviderIo(
-            "S3 custom endpoint requires explicit credential binding before provider I/O (provider_io_ready=false)".into(),
-        ));
+        return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
         "S3 locator scheme is invalid".into(),
     ))
+}
+
+fn custom_endpoint_requires_binding_error() -> RemoteProjectionProviderError {
+    RemoteProjectionProviderError::ProviderIo(
+        "S3 custom endpoint requires explicit credential binding before provider I/O (provider_io_ready=false)".into(),
+    )
 }
 
 fn s3_aws_file_url(

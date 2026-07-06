@@ -7,6 +7,7 @@ use super::credentials::{S3CredentialSource, S3RegionSource};
 use super::pull;
 use super::push;
 use super::transport::{ReqwestS3Transport, S3Transport};
+use super::url::reject_custom_https_endpoint_without_binding;
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
     RemoteProjectionProvider, RemoteProjectionProviderAdapter, RemoteProjectionProviderError,
@@ -58,6 +59,7 @@ impl<T: S3Transport> RemoteProjectionProviderAdapter for S3ProjectionProvider<T>
         &mut self,
         request: RemoteProjectionPushRequest,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        reject_custom_https_endpoint_without_binding(request.locator())?;
         push::push_request(
             &self.transport,
             &self.credentials.resolve()?,
@@ -71,6 +73,7 @@ impl<T: S3Transport> RemoteProjectionProviderAdapter for S3ProjectionProvider<T>
         &self,
         request: RemoteProjectionPullRequest,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        reject_custom_https_endpoint_without_binding(request.locator())?;
         pull::pull_request(
             &self.transport,
             &self.credentials.resolve()?,

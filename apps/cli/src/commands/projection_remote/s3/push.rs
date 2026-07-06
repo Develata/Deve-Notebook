@@ -6,7 +6,7 @@ use super::provider::FailClosedS3ProjectionProvider;
 use super::provider::S3ProjectionProvider;
 use super::signing::signed_put_request;
 use super::transport::S3Transport;
-use super::url::s3_file_url;
+use super::url::{reject_custom_https_endpoint_without_binding, s3_file_url};
 use crate::commands::projection_remote::collect::MarkdownProjectionFileRef;
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
@@ -35,6 +35,7 @@ impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
             return Err(RemoteProjectionProviderError::ProviderMismatch);
         }
         let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())?;
+        reject_custom_https_endpoint_without_binding(request.locator())?;
         let credentials = self.credentials.resolve()?;
         let region = self.region.resolve()?;
         for file in files {
@@ -82,6 +83,7 @@ pub(super) fn push_request<T: S3Transport>(
     if request.provider() != RemoteProjectionProvider::S3 {
         return Err(RemoteProjectionProviderError::ProviderMismatch);
     }
+    reject_custom_https_endpoint_without_binding(request.locator())?;
     for file in request.files() {
         push_payload(
             transport,

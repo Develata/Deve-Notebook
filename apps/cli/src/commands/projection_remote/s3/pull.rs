@@ -6,7 +6,7 @@ use super::list::discover_remote_markdown_files;
 use super::provider::{FailClosedS3ProjectionProvider, S3ProjectionProvider};
 use super::signing::signed_get_request;
 use super::transport::S3Transport;
-use super::url::s3_file_url;
+use super::url::{reject_custom_https_endpoint_without_binding, s3_file_url};
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProvider,
@@ -34,6 +34,7 @@ impl<T: S3Transport> S3ProjectionPullAdapter for S3ProjectionProvider<T> {
             return Err(RemoteProjectionProviderError::ProviderMismatch);
         }
         let request = RemoteProjectionPullRequest::new(provider, locator)?;
+        reject_custom_https_endpoint_without_binding(request.locator())?;
         let credentials = self.credentials.resolve()?;
         let region = self.region.resolve()?;
         pull_request(&self.transport, &credentials, &region, self.now, request)
@@ -63,6 +64,7 @@ pub(super) fn pull_request<T: S3Transport>(
     if request.provider() != RemoteProjectionProvider::S3 {
         return Err(RemoteProjectionProviderError::ProviderMismatch);
     }
+    reject_custom_https_endpoint_without_binding(request.locator())?;
     let paths =
         discover_remote_markdown_files(transport, credentials, region, now, request.locator())?;
     let mut files = Vec::new();

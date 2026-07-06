@@ -26,6 +26,8 @@ pub(super) enum S3CredentialSource {
     Env,
     #[cfg(test)]
     Static(S3Credentials),
+    #[cfg(test)]
+    Fail(&'static str),
 }
 
 impl S3CredentialSource {
@@ -34,6 +36,10 @@ impl S3CredentialSource {
             Self::Env => credentials_from_env(),
             #[cfg(test)]
             Self::Static(credentials) => Ok(credentials.clone()),
+            #[cfg(test)]
+            Self::Fail(label) => Err(RemoteProjectionProviderError::ProviderIo(format!(
+                "S3 credential source {label} should not resolve"
+            ))),
         }
     }
 }
@@ -43,6 +49,8 @@ pub(super) enum S3RegionSource {
     Env,
     #[cfg(test)]
     Static(String),
+    #[cfg(test)]
+    Fail(&'static str),
 }
 
 impl S3RegionSource {
@@ -51,6 +59,10 @@ impl S3RegionSource {
             Self::Env => region_from_env(),
             #[cfg(test)]
             Self::Static(region) => Ok(region.clone()),
+            #[cfg(test)]
+            Self::Fail(label) => Err(RemoteProjectionProviderError::ProviderIo(format!(
+                "S3 region source {label} should not resolve"
+            ))),
         }
     }
 }
