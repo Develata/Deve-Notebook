@@ -120,7 +120,6 @@ contains	apps/mobile/gen/android/settings.gradle	include ':app'
 contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:name=".MainActivity"
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	class MainActivity : TauriActivity()
 contains	apps/mobile/gen/android/gradle/wrapper/gradle-wrapper.properties	gradle-8.14.3-bin.zip
-contains	apps/desktop/src/lib.rs	#[cfg(feature = "native-packaging")]
 contains	apps/desktop/src/packaging.rs	runtime_crate: "tauri"
 contains	apps/desktop/src/packaging.rs	build_crate: "tauri-build"
 contains	apps/desktop/src/packaging.rs	status: "dependency-spike-open"

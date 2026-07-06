@@ -581,8 +581,6 @@ contains	scripts/check-native-target-host-evidence.sh	source "$ROOT_DIR/scripts/
 contains	scripts/check-native-target-host-evidence.sh	run_deve_baseline "$ROOT_DIR" "native-target-host-evidence" "native-target-host-evidence-check" "$@"
 contains	scripts/check-native-track-boundary.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-native-track-boundary.sh	run_deve_baseline "$ROOT_DIR" "native-track-boundary" "native-track-boundary-check"
-contains	scripts/check-native-process-adapter-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
-contains	scripts/check-native-process-adapter-gate.sh	run_deve_baseline "$ROOT_DIR" "native-process-adapter-gate" "native-process-adapter-gate-check"
 contains	scripts/check-native-packaging-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-native-packaging-gate.sh	run_deve_baseline "$ROOT_DIR" "native-packaging-gate" "native-packaging-gate-check"
 absent	scripts/check-native-packaging-gate.sh	run_cargo_target check

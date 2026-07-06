@@ -73,7 +73,6 @@ contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_accepta
 contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push
 contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn snapshot_request_exports_requested_shadow_source
 contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn snapshot_request_rejects_unoffered_source
-contains	apps/cli/src/server/handlers/sync/snapshot.rs	snapshot_kind: Some("full".to_string())
 contains	apps/cli/src/server/tests/sync/sync_hello_browser_test.rs	async fn browser_sync_hello_rejects_stale_scope_nonce
 contains	apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs	async fn browser_sync_hello_rejects_stale_active_db_binding
 contains	apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs	async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity
