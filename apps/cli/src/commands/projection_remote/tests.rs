@@ -80,7 +80,9 @@ fn run_webdav_push_returns_provider_error_before_success_report() {
     let err = run_with_provider(&repo.ledger_dir(), webdav_push_action(), 8, &mut provider)
         .expect_err("provider failure");
 
-    assert!(err.to_string().contains("simulated WebDAV failure"));
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("simulated WebDAV failure"));
 }
 
 #[test]
@@ -195,7 +197,9 @@ fn run_s3_pull_returns_provider_error_before_scan() {
     )
     .expect_err("provider failure");
 
-    assert!(err.to_string().contains("simulated S3 pull failure"));
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("simulated S3 pull failure"));
     let repo_manager =
         deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
     assert!(
@@ -238,7 +242,9 @@ fn run_webdav_pull_returns_provider_error_before_scan() {
     let err = run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
         .expect_err("provider failure");
 
-    assert!(err.to_string().contains("simulated WebDAV pull failure"));
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("simulated WebDAV pull failure"));
     let repo_manager =
         deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
     assert!(

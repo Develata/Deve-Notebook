@@ -143,7 +143,8 @@ contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_pull_returns
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_scans_written_files_into_external_changes()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_returns_provider_error_before_scan()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_checks_workspace_identity_before_provider_io()
-contains	apps/cli/src/commands/projection_remote.rs	provider_direction_wired=true provider_io_ready=false
+contains	apps/cli/src/commands/projection_remote/tests.rs	provider_io_ready=false
+contains	apps/cli/src/commands/projection_remote.rs	provider_direction_wired=true provider_io_state=pending
 contains	apps/cli/src/commands/projection_remote.rs	external_changes_scan_triggered=true
 absent	apps/web/src/components/command_palette/registry.rs	P2P: Establish Branch (Placeholder)
 absent	docs/acceptance-cases/04_diff.md	deve merge --peer

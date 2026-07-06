@@ -131,7 +131,7 @@ fn run_with_providers(
                 RemoteProjectionDirection::Push => {
                     let files = collect::collect_markdown_projection_files(&workspace)?;
                     println!(
-                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false planned_files={}",
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_state=pending planned_files={}",
                         plan.provider.as_str(),
                         plan.direction.as_str(),
                         plan.projection_scope,
@@ -143,13 +143,14 @@ fn run_with_providers(
                     let outcome =
                         match request.provider {
                             RemoteProjectionProvider::WebDav => webdav_provider
-                                .push_projection_files(request.provider, &plan.locator, &files)?,
+                                .push_projection_files(request.provider, &plan.locator, &files),
                             RemoteProjectionProvider::S3 => s3_provider.push_projection_files(
                                 request.provider,
                                 &plan.locator,
                                 &files,
-                            )?,
-                        };
+                            ),
+                        }
+                        .map_err(provider_io_not_ready)?;
                     println!(
                         "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
                         plan.provider.as_str(),
@@ -167,7 +168,7 @@ fn run_with_providers(
                 }
                 RemoteProjectionDirection::Pull => {
                     println!(
-                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false",
+                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_state=pending",
                         plan.provider.as_str(),
                         plan.direction.as_str(),
                         plan.projection_scope,
@@ -176,12 +177,14 @@ fn run_with_providers(
                         plan.external_changes_confirmation_required,
                     );
                     let outcome = match request.provider {
-                        RemoteProjectionProvider::WebDav => webdav_provider
-                            .pull_projection_files(request.provider, &plan.locator)?,
-                        RemoteProjectionProvider::S3 => {
-                            s3_provider.pull_projection_files(request.provider, &plan.locator)?
+                        RemoteProjectionProvider::WebDav => {
+                            webdav_provider.pull_projection_files(request.provider, &plan.locator)
                         }
-                    };
+                        RemoteProjectionProvider::S3 => {
+                            s3_provider.pull_projection_files(request.provider, &plan.locator)
+                        }
+                    }
+                    .map_err(provider_io_not_ready)?;
                     let applied = workspace_apply::write_pull_files(&workspace, &outcome.files)?;
                     let sync_manager = match deve_core::sync::SyncManager::new_checked(repo.clone())
                     {
@@ -301,12 +304,13 @@ fn run_for_resolved_repo_with_providers(
             let files = collect::collect_markdown_projection_files(&workspace)?;
             let outcome = match provider {
                 RemoteProjectionProvider::WebDav => {
-                    webdav_provider.push_projection_files(provider, &plan.locator, &files)?
+                    webdav_provider.push_projection_files(provider, &plan.locator, &files)
                 }
                 RemoteProjectionProvider::S3 => {
-                    s3_provider.push_projection_files(provider, &plan.locator, &files)?
+                    s3_provider.push_projection_files(provider, &plan.locator, &files)
                 }
-            };
+            }
+            .map_err(provider_io_not_ready)?;
             Ok(ProjectionRemoteExecutionSummary {
                 provider,
                 direction,
@@ -319,12 +323,13 @@ fn run_for_resolved_repo_with_providers(
         RemoteProjectionDirection::Pull => {
             let outcome = match provider {
                 RemoteProjectionProvider::WebDav => {
-                    webdav_provider.pull_projection_files(provider, &plan.locator)?
+                    webdav_provider.pull_projection_files(provider, &plan.locator)
                 }
                 RemoteProjectionProvider::S3 => {
-                    s3_provider.pull_projection_files(provider, &plan.locator)?
+                    s3_provider.pull_projection_files(provider, &plan.locator)
                 }
-            };
+            }
+            .map_err(provider_io_not_ready)?;
             let downloaded_files = outcome.files.len();
             let applied = workspace_apply::write_pull_files(&workspace, &outcome.files)?;
             let sync_manager = match deve_core::sync::SyncManager::new_checked(repo.clone()) {
@@ -358,6 +363,12 @@ fn rollback_after_failed_scan(
     applied.rollback_after_failed_scan().with_context(|| {
         format!("remote projection pull scan failed after workspace apply: {scan_error}")
     })
+}
+
+fn provider_io_not_ready(error: impl std::fmt::Display) -> anyhow::Error {
+    anyhow::anyhow!(
+        "remote projection provider I/O did not complete (provider_io_ready=false): {error}"
+    )
 }
 
 struct ProjectionRemoteRequest {
