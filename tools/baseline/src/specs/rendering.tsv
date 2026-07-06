@@ -140,6 +140,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_fallback_refuses_unregistered_window_value true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_legacy_adoption_uses_registered_value true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_scripts_are_rev_versioned true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_ffi_selection_reads_through_bridge_registry true
 contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/katex_bridge.js
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/rendering_bridge.js
@@ -187,6 +188,9 @@ contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap globals must be
 contains	apps/web/js/web_bridge_registry.test.cjs	index script order must load theme bootstrap, registry, KaTeX bridge, chat math bootstrap, chat math, native bridge, index bootstrap, init, then lazy editor adapter
 contains	apps/web/js/web_bridge_registry.test.cjs	init bootstrap must not adopt unregistered window code actions
 contains	apps/web/js/web_bridge_registry.test.cjs	index.html must externalize pre-paint theme bootstrap logic
+contains	apps/web/src/editor/ffi.rs	fn editor_selection_reads_through_bridge_registry()
+contains	apps/web/src/editor/ffi.rs	func.call1(&bridge, &"getEditorSelection".into())
+absent	apps/web/src/editor/ffi.rs	Reflect::get(window.as_ref(), &"getEditorSelection".into())
 contains	apps/web/js/index_theme_bootstrap.js	data-deve-theme-pref
 absent	apps/web/index.html	window.localStorage
 absent	apps/web/index.html	normalizeThemePref

@@ -71,16 +71,41 @@ unsafe extern "C" {
     #[wasm_bindgen(js_namespace = window, js_name = updateGutterDiff)]
     pub fn update_gutter_diff(ranges_json: &str);
 
-    /// 获取当前编辑器选区信息 (JSON)
-    ///
-    /// 返回 `"null"` 表示无选区; 否则返回 `{from, to, text}` JSON
-    #[wasm_bindgen(js_namespace = window, js_name = getEditorSelection)]
-    pub fn get_editor_selection() -> String;
 }
 
 pub fn try_get_editor_selection() -> Option<String> {
     let window = web_sys::window()?;
-    let value = js_sys::Reflect::get(window.as_ref(), &"getEditorSelection".into()).ok()?;
-    let func = value.dyn_ref::<js_sys::Function>()?;
-    func.call0(window.as_ref()).ok()?.as_string()
+    let bridge = js_sys::Reflect::get(window.as_ref(), &"__deveWebBridge".into()).ok()?;
+    let call = js_sys::Reflect::get(&bridge, &"call".into()).ok()?;
+    let func = call.dyn_ref::<js_sys::Function>()?;
+    func.call1(&bridge, &"getEditorSelection".into())
+        .ok()?
+        .as_string()
+}
+
+#[cfg(test)]
+mod tests {
+    fn source_before_tests() -> &'static str {
+        include_str!("ffi.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests")
+    }
+
+    #[test]
+    fn editor_selection_reads_through_bridge_registry() {
+        let source = source_before_tests();
+
+        assert!(source.contains("\"__deveWebBridge\""));
+        assert!(source.contains("\"call\""));
+        assert!(source.contains("func.call1(&bridge, &\"getEditorSelection\".into())"));
+        let direct_window_selection_lookup = [
+            "Reflect::get(window.as_ref(), &",
+            "\"getEditorSelection\"",
+            ".into())",
+        ]
+        .join("");
+        assert!(!source.contains(&direct_window_selection_lookup));
+        assert!(!source.contains("pub fn get_editor_selection()"));
+    }
 }

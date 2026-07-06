@@ -238,6 +238,7 @@
     - cli_assert: bridge_registry_fallback_refuses_unregistered_window_value true
     - cli_assert: bridge_registry_legacy_adoption_uses_registered_value true
     - cli_assert: bridge_registry_scripts_are_rev_versioned true
+    - cli_assert: editor_ffi_selection_reads_through_bridge_registry true
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。
