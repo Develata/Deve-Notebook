@@ -209,13 +209,13 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）; planned/no-code-yet |
 | `21_perf_budget#critical-path-budget` | `## 2. Critical Path Budget` | 关键路径 P50/P99 latency 与 RSS budget 表；由 `deve_baseline perf-budget` / `PERF-001` baseline 绑定（tools/shell 合同，无 crates/apps Rust plan_ref）；no-rust-plan-ref |
 | `21_perf_budget#perf-budget-fuse` | `## 3. CI Fuse Thresholds` | CI fuse 阈值；由 scripts/plan-coverage.sh --check-perf-budget enforcing（shell 合同，无 Rust plan_ref）; no-rust-plan-ref |
-| `22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget; planned/no-code-yet |
-| `22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准; planned/no-code-yet |
-| `22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则; planned/no-code-yet |
-| `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界; planned/no-code-yet |
-| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）; planned/no-code-yet |
-| `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）; planned/no-code-yet |
-| `22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）; planned/no-code-yet |
+| `22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
 | `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
 | `23_threat_model#stride-catalog` | `## 3. STRIDE Catalog` | STRIDE 威胁面与缓解归属目录；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
 | `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
