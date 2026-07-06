@@ -49,6 +49,11 @@ pub fn run_tsv_with_mode(ctx: &BaselineContext, spec: &str, mode: RunMode) -> Re
                     ctx.cargo_test(package, filter)?;
                 }
             }
+            Operation::CargoTestLib { package, filter } => {
+                if mode == RunMode::Full {
+                    ctx.cargo_test_lib(package, filter)?;
+                }
+            }
         }
     }
     Ok(())
@@ -114,6 +119,10 @@ enum Operation<'a> {
         package: &'a str,
         filter: &'a str,
     },
+    CargoTestLib {
+        package: &'a str,
+        filter: &'a str,
+    },
 }
 
 fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
@@ -166,6 +175,7 @@ fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
         ["git_tracked", rel] => Ok(Operation::GitTracked { rel }),
         ["git_not_ignored", rel] => Ok(Operation::GitNotIgnored { rel }),
         ["cargo_test", package, filter] => Ok(Operation::CargoTest { package, filter }),
+        ["cargo_test_lib", package, filter] => Ok(Operation::CargoTestLib { package, filter }),
         [op, ..] => {
             if let Some(expected) = expected_field_count(op) {
                 bail!(
@@ -192,7 +202,7 @@ fn expected_field_count(op: &str) -> Option<usize> {
         "check_scripts_listed" | "git_tracked" | "git_not_ignored" => 2,
         "regex_absent_tree_skip" => 4,
         "regex_absent_tree_ext_skip" => 5,
-        "cargo_test" => 3,
+        "cargo_test" | "cargo_test_lib" => 3,
         _ => return None,
     })
 }
@@ -260,6 +270,17 @@ mod tests {
             parse_operation(1, "cargo_test\tdeve_web\tsettings").expect("operation"),
             Operation::CargoTest {
                 package: "deve_web",
+                filter: "settings",
+            }
+        );
+    }
+
+    #[test]
+    fn parses_cargo_test_lib_operation() {
+        assert_eq!(
+            parse_operation(1, "cargo_test_lib\tdeve_core\tsettings").expect("operation"),
+            Operation::CargoTestLib {
+                package: "deve_core",
                 filter: "settings",
             }
         );

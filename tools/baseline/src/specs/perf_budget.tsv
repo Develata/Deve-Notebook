@@ -31,4 +31,4 @@ contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
 contains	tools/baseline/src/main.rs	mod perf_budget;
 contains	tools/baseline/src/main.rs	"perf-budget" => perf_budget::run()
 contains	tools/baseline/src/main.rs	perf_budget::run_text()?
-cargo_test	deve_core	low_spec_profile_applies_unset_runtime_presets
+cargo_test_lib	deve_core	low_spec_profile_applies_unset_runtime_presets
