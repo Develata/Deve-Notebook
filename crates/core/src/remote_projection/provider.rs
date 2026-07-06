@@ -6,9 +6,6 @@
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-use std::collections::BTreeMap;
-
 use crate::utils::path::to_forward_slash;
 
 use super::{
@@ -180,91 +177,6 @@ pub enum RemoteProjectionProviderError {
     MissingFakeRemote,
     #[error("remote projection provider I/O failed: {0}")]
     ProviderIo(String),
-}
-
-#[cfg(test)]
-#[derive(Debug, Clone)]
-struct FakeRemoteProjectionProvider {
-    provider: RemoteProjectionProvider,
-    remotes: BTreeMap<String, Vec<RemoteProjectionFile>>,
-}
-
-#[cfg(test)]
-impl FakeRemoteProjectionProvider {
-    fn new(provider: RemoteProjectionProvider) -> Self {
-        Self {
-            provider,
-            remotes: BTreeMap::new(),
-        }
-    }
-
-    fn seed_remote(
-        &mut self,
-        locator: impl Into<String>,
-        files: Vec<RemoteProjectionFile>,
-    ) -> Result<(), RemoteProjectionProviderError> {
-        let request = RemoteProjectionPullRequest::new(self.provider, locator)?;
-        validate_unique_paths(&files)?;
-        self.remotes.insert(request.locator, files);
-        Ok(())
-    }
-
-    fn remote_files(&self, locator: &str) -> Option<&[RemoteProjectionFile]> {
-        self.remotes.get(locator.trim()).map(Vec::as_slice)
-    }
-}
-
-#[cfg(test)]
-impl RemoteProjectionProviderAdapter for FakeRemoteProjectionProvider {
-    fn provider(&self) -> RemoteProjectionProvider {
-        self.provider
-    }
-
-    fn push(
-        &mut self,
-        request: RemoteProjectionPushRequest,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
-        validate_provider(self.provider, request.provider)?;
-        validate_unique_paths(&request.files)?;
-        let uploaded_files = request.files.len();
-        self.remotes.insert(request.locator, request.files);
-        Ok(RemoteProjectionPushOutcome {
-            uploaded_files,
-            effects: RemoteProjectionAuthorityEffects::projection_transport(),
-            provider_metadata_is_diagnostic_only: true,
-        })
-    }
-
-    fn pull(
-        &self,
-        request: RemoteProjectionPullRequest,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        validate_provider(self.provider, request.provider)?;
-        let files = self
-            .remotes
-            .get(&request.locator)
-            .ok_or(RemoteProjectionProviderError::MissingFakeRemote)?
-            .clone();
-        Ok(RemoteProjectionPullOutcome {
-            files,
-            effects: RemoteProjectionAuthorityEffects::projection_transport(),
-            overwrites_projection_workspace: true,
-            external_changes_confirmation_required: true,
-            provider_metadata_is_diagnostic_only: true,
-        })
-    }
-}
-
-#[cfg(test)]
-fn validate_provider(
-    expected: RemoteProjectionProvider,
-    actual: RemoteProjectionProvider,
-) -> Result<(), RemoteProjectionProviderError> {
-    if expected == actual {
-        Ok(())
-    } else {
-        Err(RemoteProjectionProviderError::ProviderMismatch)
-    }
 }
 
 fn validate_unique_paths(

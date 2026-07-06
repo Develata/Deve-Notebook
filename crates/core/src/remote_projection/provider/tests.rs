@@ -1,6 +1,10 @@
 use super::*;
 use crate::remote_projection::RemoteProjectionError;
 
+mod support;
+
+use support::FakeRemoteProjectionProvider;
+
 fn file(path: &str, content: &str) -> RemoteProjectionFile {
     RemoteProjectionFile::new(path, content.as_bytes()).expect("projection file")
 }
