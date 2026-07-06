@@ -1,5 +1,9 @@
 contains	docs/acceptance-cases/15_settings_operation_refs.md	case_id: SET-003
 contains	docs/acceptance-cases/15_settings_operation_refs.md	case_id: SET-004
+contains	docs/features/operations/settings_file_config.md	`Trigger`: run `deve init --path <path> --repo <name> --projection-base <path>`
+contains	docs/acceptance-cases/15_settings_operation_refs.md	run: deve init --path /tmp/deve-settings --repo default --projection-base /tmp/deve-settings/notes
+regex_absent	docs/features/operations/settings_file_config.md	(?m)^- `Trigger`: run `deve init --path <path>`$
+regex_absent	docs/acceptance-cases/15_settings_operation_refs.md	(?m)^\s*- run: deve init --path /tmp/deve-settings\s*$
 contains	docs/features/operations/settings_persistence_apply.md	Runtime persistence uses `config.toml`
 contains	apps/cli/src/commands/config.rs	toml::to_string_pretty(config)
 contains	apps/cli/src/commands/config/tests.rs	set_core_key_writes_runtime_config

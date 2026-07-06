@@ -13,7 +13,7 @@
 
 - `Name`: `Create Default Config File`
 - `Surface`: `cli`
-- `Trigger`: run `deve init --path <path>`
+- `Trigger`: run `deve init --path <path> --repo <name> --projection-base <path>`
 - `Preconditions`: target `config.toml` does not exist
 - `Immediate Result`: default config file is written
 - `Application Entry`: `apps/cli/src/commands/init.rs`

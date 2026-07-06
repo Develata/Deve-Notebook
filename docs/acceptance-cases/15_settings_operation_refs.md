@@ -23,7 +23,7 @@
   preconditions:
     - config.toml 可写
   steps:
-    - run: deve init --path /tmp/deve-settings
+    - run: deve init --path /tmp/deve-settings --repo default --projection-base /tmp/deve-settings/notes
     - edit_file: /tmp/deve-settings/config.toml
       set: "profile = \"low-spec\""
     - run: cd /tmp/deve-settings && deve serve --dry-run
