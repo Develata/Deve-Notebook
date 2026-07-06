@@ -248,7 +248,6 @@ contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	com
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	enum ChangeItemActionSurface
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
-contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
 contains	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_source_control_changes(
 contains	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_source_control_changes_in_local_repo(
 contains	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_source_control_changes_in_local_repo(
