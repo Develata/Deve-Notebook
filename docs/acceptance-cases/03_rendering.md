@@ -226,6 +226,7 @@
     - cli_assert: katex_facade_registered_through_bridge true
     - cli_assert: chat_math_uses_katex_bridge_facade true
     - cli_assert: editor_math_extensions_use_katex_bridge_facade true
+    - cli_assert: editor_adapter_does_not_register_debug_view true
     - cli_assert: image_widget_does_not_read_debug_view_global true
     - cli_assert: chat_math_globals_registered_through_bridge true
     - cli_assert: chat_math_missing_registry_fails_closed true

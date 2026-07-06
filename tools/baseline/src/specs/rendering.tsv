@@ -130,6 +130,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: katex_facade_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: chat_math_uses_katex_bridge_facade true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_math_extensions_use_katex_bridge_facade true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_does_not_register_debug_view true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: image_widget_does_not_read_debug_view_global true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: native_backend_config_global_registered_through_bridge true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_rejects_authority_globals true
@@ -157,6 +158,7 @@ contains	apps/web/js/web_bridge_registry.test.cjs	KaTeX facade must be registere
 contains	apps/web/js/web_bridge_registry.test.cjs	chat math rendering must read KaTeX through the bridge facade
 contains	apps/web/js/web_bridge_registry.test.cjs	math extension must render KaTeX through the rendering bridge helper
 contains	apps/web/js/web_bridge_registry.test.cjs	inline renderer must render KaTeX through the rendering bridge helper
+contains	apps/web/js/web_bridge_registry.test.cjs	editor adapter must not expose the raw CodeMirror view through the bridge registry
 contains	apps/web/js/web_bridge_registry.test.cjs	image widget must use the CodeMirror view parameter instead of the debug global
 contains	apps/web/js/chat_math.js	bridge.get("__deveKatex")
 absent	apps/web/js/chat_math.js	window.katex
@@ -165,6 +167,7 @@ absent	apps/web/js/extensions/math.js	window.katex
 contains	apps/web/js/extensions/inline_renderer.js	renderKatex(mathContent, span
 absent	apps/web/js/extensions/inline_renderer.js	window.katex
 absent	apps/web/js/extensions/image.js	window._debug_view
+absent	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("_debug_view"
 absent	apps/web/js/editor_adapter.js	window.applyRemoteOpsBatch =
 contains	apps/web/js/web_bridge_registry.test.cjs	web-bridge-registry-editor-globals: ok
 contains	apps/web/js/web_bridge_registry.test.cjs	must not be assigned directly on window/globalThis

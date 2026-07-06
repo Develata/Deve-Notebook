@@ -151,9 +151,6 @@ export function initCodeMirror(element, onDelta) {
 
     const view = new EditorView({ state: startState, parent: element });
     ctx.activeView = view;
-    registerBrowserBridgeGlobal("_debug_view", view, {
-      role: "debug-active-editor-view",
-    });
     return view;
   } catch (e) {
     console.error("Init Error:", e);

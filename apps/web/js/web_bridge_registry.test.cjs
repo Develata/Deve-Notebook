@@ -1205,6 +1205,11 @@ assert.doesNotMatch(
   /window\._debug_view\b/,
   "image widget must use the CodeMirror view parameter instead of the debug global"
 );
+assert.doesNotMatch(
+  editorAdapterSource,
+  /registerBrowserBridgeGlobal\("_debug_view"/,
+  "editor adapter must not expose the raw CodeMirror view through the bridge registry"
+);
 assert.match(
   imageExtensionSource,
   /toDOM\(view\)/,
