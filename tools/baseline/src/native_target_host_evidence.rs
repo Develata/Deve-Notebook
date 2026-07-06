@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 const LABEL: &str = "native-target-host-evidence-check";
 const DEFAULT_REPORT: &str = "docs/report/native-target-host-evidence-template.md";
+const PROCESS_RUNTIME_BOUNDARY_FIELD: &str = "Process runtime boundary: default no-Tauri closed; Desktop LocalBackend controlled child-process; Mobile child-process closed";
 
 const REQUIRED_FIELDS: &[&str] = &[
     "# Native Target-host Evidence",
@@ -19,7 +20,7 @@ const REQUIRED_FIELDS: &[&str] = &[
     "Artifact paths:",
     "Install result:",
     "Startup result:",
-    "Process runtime gate: closed",
+    PROCESS_RUNTIME_BOUNDARY_FIELD,
     "Native authority writes: closed",
     "Conclusion:",
 ];
@@ -107,7 +108,10 @@ fn fail<T>(message: impl AsRef<str>) -> Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::has_exact_line;
+    use super::{PROCESS_RUNTIME_BOUNDARY_FIELD, has_exact_line, validate_report};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn target_line_requires_exact_match() {
@@ -118,5 +122,66 @@ mod tests {
             "Target: Desktop macOS",
             "Target: Desktop macOS"
         ));
+    }
+
+    #[test]
+    fn report_accepts_exact_process_runtime_boundary() {
+        let report = write_report(&report_with_boundary(PROCESS_RUNTIME_BOUNDARY_FIELD));
+
+        validate_report(&report.root, &report.path).expect("current process boundary should pass");
+    }
+
+    #[test]
+    fn report_rejects_inexact_process_runtime_boundary() {
+        let report = write_report(&report_with_boundary(
+            "Process runtime boundary: Desktop LocalBackend controlled child-process",
+        ));
+
+        let err = validate_report(&report.root, &report.path)
+            .expect_err("missing Mobile/no-Tauri boundary must fail closed");
+
+        assert!(err.to_string().contains(PROCESS_RUNTIME_BOUNDARY_FIELD));
+    }
+
+    fn report_with_boundary(boundary: &str) -> String {
+        format!(
+            "# Native Target-host Evidence - test\n\n\
+             Target: Local diagnostic\n\n\
+             Workflow run: N/A\n\n\
+             Host OS: test\n\n\
+             Tool versions:\n\n\
+             Commands:\n\n\
+             Command results:\n\n\
+             Artifact paths:\n\n\
+             Install result: N/A\n\n\
+             Startup result: N/A\n\n\
+             {boundary}\n\n\
+             Native authority writes: closed\n\n\
+             Conclusion: diagnostic-only\n"
+        )
+    }
+
+    fn write_report(content: &str) -> TempReport {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root =
+            std::env::temp_dir().join(format!("deve-native-target-host-evidence-test-{unique}"));
+        fs::create_dir_all(&root).expect("create temp root");
+        let path = root.join("evidence.md");
+        fs::write(&path, content).expect("write temp evidence");
+        TempReport { root, path }
+    }
+
+    struct TempReport {
+        root: PathBuf,
+        path: PathBuf,
+    }
+
+    impl Drop for TempReport {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
     }
 }

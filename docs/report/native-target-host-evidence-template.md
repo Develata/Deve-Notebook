@@ -32,7 +32,7 @@ Install result: <passed, failed, or explicit N/A with reason>
 
 Startup result: <passed, failed, or explicit N/A with reason>
 
-Process runtime gate: closed
+Process runtime boundary: default no-Tauri closed; Desktop LocalBackend controlled child-process; Mobile child-process closed
 
 Native authority writes: closed
 

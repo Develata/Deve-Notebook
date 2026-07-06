@@ -34,12 +34,16 @@ tool_version() {
     printf -- '- %s: unavailable\n' "$label"
     return
   fi
-  output="$("$@" 2>&1 | head -n1 || true)"
+  output="$("$@" 2>&1 | head -n1 | sanitize_tool_output || true)"
   if [[ -n "$output" ]]; then
     printf -- '- %s: %s\n' "$label" "$output"
   else
     printf -- '- %s: unavailable\n' "$label"
   fi
+}
+
+sanitize_tool_output() {
+  LC_ALL=C tr -cd '\11\12\15\40-\176'
 }
 
 host_os() {
@@ -76,7 +80,7 @@ mkdir -p "$(dirname "$OUT")"
   printf 'Artifact paths:\n\n%s\n\n' "$ARTIFACTS"
   printf 'Install result: %s\n\n' "$INSTALL_RESULT"
   printf 'Startup result: %s\n\n' "$STARTUP_RESULT"
-  printf 'Process runtime gate: closed\n\n'
+  printf 'Process runtime boundary: default no-Tauri closed; Desktop LocalBackend controlled child-process; Mobile child-process closed\n\n'
   printf 'Native authority writes: closed\n\n'
   printf 'Conclusion: %s\n' "$CONCLUSION"
 } >"$OUT"

@@ -143,14 +143,15 @@ contains	scripts/collect-native-target-host-evidence.sh	check-native-target-host
 contains	scripts/collect-native-target-host-evidence.sh	validate_artifact_name
 contains	scripts/collect-native-target-host-evidence.sh	prepare_artifact_dir
 contains	scripts/collect-native-target-host-evidence.sh	invalid artifact name
-contains	tools/baseline/src/native_target_host_evidence.rs	Process runtime gate: closed
+contains	tools/baseline/src/native_target_host_evidence.rs	Process runtime boundary:
 contains	tools/baseline/src/native_target_host_evidence.rs	Native authority writes: closed
 contains	tools/baseline/src/native_target_host_evidence.rs	installer_smoke=
 contains	tools/baseline/src/native_target_host_evidence.rs	invalid_installer_request=
-contains	scripts/write-native-target-host-evidence.sh	Process runtime gate: closed
+contains	scripts/write-native-target-host-evidence.sh	Process runtime boundary: default no-Tauri closed; Desktop LocalBackend controlled child-process; Mobile child-process closed
 contains	scripts/write-native-target-host-evidence.sh	Native authority writes: closed
 contains	scripts/write-native-target-host-evidence.sh	Command results:
 contains	scripts/write-native-target-host-evidence.sh	scripts/check-native-target-host-evidence.sh
+contains	scripts/write-native-target-host-evidence.sh	sanitize_tool_output
 contains	scripts/check-desktop-platform-package-build.sh	cargo build --release --locked -p deve_cli --bin deve_cli
 contains	scripts/check-desktop-platform-package-build.sh	"externalBin": ["binaries/deve_cli"]
 contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1
@@ -348,11 +349,13 @@ contains	docs/dev-runbook.md	cargo test -p deve_desktop --features native-packag
 contains	docs/dev-runbook.md	cargo test -p deve_mobile --features native-packaging -- --nocapture
 absent	docs/dev-runbook.md	native-packaging native_authority
 absent	docs/dev-runbook.md	native-packaging embedded_service
-contains	docs/acceptance-cases/12_tech_release.md	target_host_platform_evidence_shell_only true
+contains	docs/acceptance-cases/12_tech_release.md	target_host_platform_evidence_runtime_boundary_current true
 contains	docs/acceptance-cases/12_tech_release.md	signed_release_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	store_distribution_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	physical_device_readiness_not_claimed true
-contains	docs/acceptance-cases/12_tech_release.md	native_process_runtime_closed true
+contains	docs/acceptance-cases/12_tech_release.md	default_no_tauri_process_runtime_closed true
+contains	docs/acceptance-cases/12_tech_release.md	desktop_localbackend_process_runtime_controlled true
+contains	docs/acceptance-cases/12_tech_release.md	mobile_child_process_runtime_closed true
 contains	docs/acceptance-cases/12_tech_release.md	native_authority_writes_closed true
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-native-target-host-evidence.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/install-native-target-host-tools.sh
@@ -396,14 +399,10 @@ contains	docs/dev-runbook.md	WINDOWS_SIGNING_CERT_BASE64
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_RELEASE_PREFLIGHT_REQUIRED=1
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED=1
 contains	docs/dev-runbook.md	DEVE_ANDROID_KEYSTORE_BASE64
-contains	docs/dev-runbook.md	no-process/no-authority boundary
+contains	docs/dev-runbook.md	Mobile child-process-closed / native-authority-closed
 contains	docs/dev-runbook.md	native-target-host-evidence-template.md
 contains	docs/dev-runbook.md	deve-native-target-host-evidence-
-contains	docs/report/native-target-host-handoff-2026-05-14.md	Native Target-host Handoff
-contains	docs/report/native-target-host-handoff-2026-05-14.md	Desktop macOS
-contains	docs/report/native-target-host-handoff-2026-05-14.md	Desktop Windows
-contains	docs/report/native-target-host-handoff-2026-05-14.md	Mobile iOS
-contains	docs/report/native-target-host-handoff-2026-05-14.md	Process runtime gate remains closed
+contains	docs/plan/11_ui_design/03_mobile.md	Mobile child-process supervision 与 native shell direct authority write path 仍未打开
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOSTS
 contains	scripts/check-desktop-target-host-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
@@ -494,13 +493,12 @@ contains	tools/baseline/src/mobile_android_release_preflight.rs	DEVE_MOBILE_ANDR
 contains	tools/baseline/src/mobile_android_release_preflight.rs	iOS generated project is not allowed in the Android release preflight
 contains	scripts/check-native-process-adapter-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-native-process-adapter-gate.sh	run_deve_baseline "$ROOT_DIR" "native-process-adapter-gate" "native-process-adapter-gate-check"
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Decision: `KeepClosedUntilExplicitRuntimeFeature`
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	No real child-process runtime was opened.
+contains	docs/plan/17_tech_stack.md	Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Desktop macOS
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Desktop Windows
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Android shell APK package execution is closed
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	iOS simulator shell package build is closed
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Mobile process runtime must wait for Android/iOS install/startup evidence
+contains	docs/plan/11_ui_design/03_mobile.md	Mobile child-process supervision 与 native shell direct authority write path 仍未打开
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Command::new
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	tokio::process
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	direct spawn
@@ -579,7 +577,9 @@ contains	scripts/check-acceptance-bindings.sh	run_deve_baseline "$ROOT_DIR" "acc
 contains	scripts/check-architecture-registry.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-architecture-registry.sh	run_deve_baseline "$ROOT_DIR" "architecture-registry" "architecture-registry-check"
 contains	scripts/check-native-target-host-evidence.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
-contains	scripts/check-native-target-host-evidence.sh	run_deve_baseline "$ROOT_DIR" "native-target-host-evidence" "native-target-host-evidence-check" "$@"
+contains	scripts/check-native-target-host-evidence.sh	REPORT_ARGS=("$@")
+contains	scripts/check-native-target-host-evidence.sh	wslpath -w
+contains	scripts/check-native-target-host-evidence.sh	run_deve_baseline "$ROOT_DIR" "native-target-host-evidence" "native-target-host-evidence-check" "${REPORT_ARGS[@]}"
 contains	scripts/check-native-track-boundary.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-native-track-boundary.sh	run_deve_baseline "$ROOT_DIR" "native-track-boundary" "native-track-boundary-check"
 contains	scripts/check-native-packaging-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"

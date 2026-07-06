@@ -115,14 +115,13 @@ contains	crates/core/src/native_adapter/process_runtime.rs	NativeProcessRuntimeE
 contains	crates/core/src/native_adapter/process_runtime.rs	validate_contract
 contains	apps/desktop/src/shell_test/policy.rs	desktop_default_build_defers_real_process_adapter
 contains	apps/mobile/src/shell_test/policy.rs	mobile_default_build_defers_real_process_adapter
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	KeepClosedUntilExplicitRuntimeFeature
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	No real child-process runtime was opened.
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Desktop macOS
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Desktop Windows
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Android shell APK package execution is closed
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	iOS simulator shell package build is closed
-contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Mobile process runtime must wait for Android/iOS install/startup evidence
+contains	docs/plan/11_ui_design/03_mobile.md	Mobile child-process supervision 与 native shell direct authority write path 仍未打开
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Command::new
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	tokio::process
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	direct spawn
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	must be a separate implementation batch
+contains	docs/plan/17_tech_stack.md	Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。

@@ -105,11 +105,12 @@
     - exit_code_eq: 0
 
 - case_id: REL-005
-  goal: Docker、Compose、release workflow 与 target-host platform evidence 保持当前 embedded frontend / shell-only 发布边界。
+  goal: Docker、Compose、release workflow 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
   preconditions:
     - Dockerfile、docker-compose.yml、.github/workflows/release.yml 与 .github/workflows/native-target-host.yml 可读
-    - platform evidence 只声明 target-host shell package、startup、install smoke
-    - platform evidence 不声明 signed release、store distribution、physical-device readiness、native process runtime 或 native authority writes
+    - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
+    - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
+    - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
@@ -144,12 +145,14 @@
     - exit_code_eq: 0
     - stdout_contains: "release-baseline-check: ok"
     - release_assert: embedded_frontend_single_binary_boundary true
-    - release_assert: target_host_platform_evidence_shell_only true
+    - release_assert: target_host_platform_evidence_runtime_boundary_current true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true
     - release_assert: signing_and_physical_device_preflight_diagnostic_only true
-    - release_assert: native_process_runtime_closed true
+    - release_assert: default_no_tauri_process_runtime_closed true
+    - release_assert: desktop_localbackend_process_runtime_controlled true
+    - release_assert: mobile_child_process_runtime_closed true
     - release_assert: native_authority_writes_closed true
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"

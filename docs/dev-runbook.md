@@ -800,7 +800,8 @@ DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-ios-shell-package-
 ```
 
 Capture Android/iOS artifacts or missing prerequisites under `docs/report/`,
-together with the same no-process/no-authority boundary.
+together with the same Mobile child-process-closed / native-authority-closed
+boundary.
 
 Mobile install/startup smoke is separate from package build evidence:
 
