@@ -67,6 +67,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_fake_adapter_markdown_only true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_pull_candidate_external_changes_only true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_provider_metadata_diagnostic_only true
@@ -109,6 +111,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: webdav_pull_provider_io_ready true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: web_remote_projection_uses_repo_url_locator true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: web_remote_projection_missing_transport_url_fails_closed true
 contains	.gitignore	.notegit/
 contains	apps/web/src/components/command_palette/registry/remote_projection/tests.rs	fn remote_projection_commands_are_backend_intent_entries()
 contains	apps/web/src/components/command_palette/registry/remote_projection/tests.rs	fn remote_projection_command_sends_typed_intent_without_frontend_io()
@@ -155,6 +159,8 @@ contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_pull_returns
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_scans_written_files_into_external_changes()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_returns_provider_error_before_scan()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_checks_workspace_identity_before_provider_io()
+contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_uses_repo_url_locator()
+contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_missing_transport_url_fails_closed()
 contains	apps/cli/src/commands/projection_remote/tests.rs	provider_io_ready=false
 contains	apps/cli/src/commands/projection_remote.rs	provider_direction_wired=true provider_io_state=pending
 contains	apps/cli/src/commands/projection_remote.rs	external_changes_scan_triggered=true
