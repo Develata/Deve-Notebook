@@ -33,6 +33,9 @@ pub struct CoreRuntimeClients {
 }
 
 #[cfg(test)]
+mod boundary_scope_tests;
+
+#[cfg(test)]
 mod tests {
     use std::fs;
     use std::path::Path;

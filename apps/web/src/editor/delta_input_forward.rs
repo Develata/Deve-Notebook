@@ -5,8 +5,8 @@
 use super::delta::Delta;
 use super::delta_input::DeltaInputCtx;
 use super::op_id::next_client_op_id;
-use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::runtime::document::pending;
+use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use deve_core::models::RepoId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Update};

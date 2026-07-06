@@ -3,13 +3,13 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::{
     WriteGateAction, WriteGateReason, cannot_send, reason_from_block,
 };
 use crate::i18n::Locale;
+use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use leptos::prelude::{GetUntracked, RwSignal, WriteSignal};
 
 pub(super) fn local_write_scope_nonce(

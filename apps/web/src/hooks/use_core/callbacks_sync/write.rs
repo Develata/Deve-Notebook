@@ -10,11 +10,10 @@ use crate::hooks::use_core::write_gate_banner::{
     WriteGateAction, WriteGateReason, cannot_send, reason_from_block,
 };
 use crate::i18n::Locale;
+use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
-
-use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 
 pub(super) struct SyncWriteCallbacks {
     pub(super) on_set_sync_mode: Callback<String>,

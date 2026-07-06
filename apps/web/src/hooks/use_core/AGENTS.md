@@ -34,7 +34,6 @@ Core application state management hub. The largest hook module — manages WebSo
 | `callbacks_sc_scope/` | SC scope callback tests |
 | `callbacks_sc_target.rs` | SC target callbacks |
 | `callbacks_sc_target/` | SC target callback tests |
-| `callbacks_scope.rs` | Scope-related callbacks |
 | `callbacks_switch.rs` | Repo/branch switch callbacks |
 | `callbacks_switch/` | Repo/branch switch callback slices |
 | `callbacks_sync.rs` | Sync callbacks |
@@ -71,7 +70,7 @@ Core application state management hub. The largest hook module — manages WebSo
 
 - This is the state management core — changes here affect the entire UI.
 - `effects/` processes incoming ServerMessages and updates reactive signals.
-- Scope nonce validation happens in `switch_nonce.rs` and `callbacks_scope.rs`.
+- Scope nonce validation happens in `switch_nonce.rs` and `runtime/scope_client/local_scope.rs`.
 - `switch_nonce.rs` must always generate a nonce strictly greater than the current scope nonce; browser switch requests fail closed on stale values.
 - `scope_prefs.rs` persists only the last `repo_name` display alias for server-side re-resolution; it must not store `repo_id`, active branch / peer id, `scope_nonce`, or any repo authority identity.
 - Session/auth polling should pause while the page is backgrounded and resume when the document becomes active again.

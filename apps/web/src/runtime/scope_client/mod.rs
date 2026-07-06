@@ -14,6 +14,10 @@ use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
 
+mod local_scope;
+
+pub use local_scope::{LocalScopeSignals, stable_local_scope_nonce};
+
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct ScopeClient {

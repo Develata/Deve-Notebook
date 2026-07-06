@@ -1,7 +1,10 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#write-readiness
 //!
-use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
+//! Local scope readiness helpers for Web runtime consumers.
+
+use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, ReadSignal};
 
@@ -28,7 +31,7 @@ fn stable_local_scope_ready(signals: LocalScopeSignals) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{LocalScopeSignals, stable_local_scope_nonce};
-    use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
+    use crate::runtime::domain::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
     use deve_core::models::PeerId;
     use leptos::prelude::*;
 
@@ -83,6 +86,41 @@ mod tests {
                 None
             );
         }
+    }
+
+    #[test]
+    fn returns_none_without_repo_or_for_active_branch() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (current_scope_nonce, _) = signal(7u64);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
+
+        let (missing_repo_id, _) = signal(None::<String>);
+        let (active_branch, _) = signal(None::<PeerId>);
+        assert_eq!(
+            stable_local_scope_nonce(LocalScopeSignals {
+                current_repo_id: missing_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            }),
+            None
+        );
+
+        let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+        assert_eq!(
+            stable_local_scope_nonce(LocalScopeSignals {
+                current_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            }),
+            None
+        );
     }
 
     #[test]

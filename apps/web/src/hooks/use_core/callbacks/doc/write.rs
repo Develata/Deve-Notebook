@@ -4,9 +4,9 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::i18n::Locale;
+use crate::runtime::scope_client::LocalScopeSignals;
 use leptos::prelude::*;
 
 mod create;

@@ -4,7 +4,6 @@
 //!
 use crate::editor::ffi::{applyRemoteOp, getEditorContent, sync_editor_state_to_rust};
 use crate::editor::op_id::next_client_op_id;
-use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::contexts::EditorContext;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
@@ -13,6 +12,7 @@ use crate::hooks::use_core::write_gate_banner::{
 };
 use crate::i18n::Locale;
 use crate::runtime::document::pending;
+use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::runtime::session_client::SessionClient;
 use deve_core::models::{Op, RepoId};
 use deve_core::protocol::ClientMessage;

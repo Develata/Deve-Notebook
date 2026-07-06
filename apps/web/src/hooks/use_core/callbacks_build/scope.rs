@@ -3,10 +3,10 @@
 //!
 use super::super::callbacks::{MiscRequestSignals, SearchScopeSignals};
 use super::super::callbacks_sc::{SourceControlRequestSignals, SourceControlScopeSignals};
-use super::super::callbacks_scope::LocalScopeSignals;
 use super::super::state::CoreSignals;
 use super::super::types::SwitchScopeSignals;
 use super::super::write_gate::RepoWriteSignals;
+use crate::runtime::scope_client::LocalScopeSignals;
 
 pub(super) fn local_scope(signals: &CoreSignals) -> LocalScopeSignals {
     LocalScopeSignals {

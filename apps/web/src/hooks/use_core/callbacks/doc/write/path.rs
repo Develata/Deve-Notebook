@@ -3,10 +3,10 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::hooks::use_core::write_gate_banner::WriteGateAction;
 use crate::i18n::Locale;
+use crate::runtime::scope_client::LocalScopeSignals;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 

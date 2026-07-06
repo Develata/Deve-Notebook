@@ -6,10 +6,9 @@ use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason, cannot_send};
 use crate::i18n::Locale;
+use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
-
-use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 
 pub(super) struct SyncReadCallbacks {
     pub(super) on_get_sync_mode: Callback<()>,

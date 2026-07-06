@@ -11,7 +11,7 @@ use leptos::prelude::*;
 mod read;
 mod write;
 
-use super::callbacks_scope::LocalScopeSignals;
+use crate::runtime::scope_client::LocalScopeSignals;
 
 pub struct SyncCallbacks {
     pub on_get_sync_mode: Callback<()>,
