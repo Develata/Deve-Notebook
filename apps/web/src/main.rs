@@ -36,7 +36,36 @@ mod storage;
 mod utils;
 use app::App;
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
+
+fn web_bridge_call_function() -> Option<(JsValue, js_sys::Function)> {
+    let window = web_sys::window()?;
+    let bridge =
+        js_sys::Reflect::get(window.as_ref(), &JsValue::from_str("__deveWebBridge")).ok()?;
+    let call = js_sys::Reflect::get(&bridge, &JsValue::from_str("call")).ok()?;
+    let function = call.dyn_ref::<js_sys::Function>()?.clone();
+    Some((bridge, function))
+}
+
+fn call_boot_bridge0(name: &str) {
+    let Some((bridge, function)) = web_bridge_call_function() else {
+        return;
+    };
+    let _ = function.call1(&bridge, &JsValue::from_str(name));
+}
+
+fn call_boot_bridge3(name: &str, title: &str, detail: &str, tone: &str) {
+    let Some((bridge, function)) = web_bridge_call_function() else {
+        return;
+    };
+    let _ = function.call4(
+        &bridge,
+        &JsValue::from_str(name),
+        &JsValue::from_str(title),
+        &JsValue::from_str(detail),
+        &JsValue::from_str(tone),
+    );
+}
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -52,19 +81,12 @@ pub fn main() {
         return;
     };
 
-    if let Ok(set_boot_panel) =
-        js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("setBootPanel"))
-        && let Some(func) = set_boot_panel.dyn_ref::<js_sys::Function>()
-    {
-        let _ = func.call3(
-            &window,
-            &wasm_bindgen::JsValue::from_str("Rust/WASM Mounted"),
-            &wasm_bindgen::JsValue::from_str(
-                "Leptos main() has started and mount_to_body is running.",
-            ),
-            &wasm_bindgen::JsValue::from_str("success"),
-        );
-    }
+    call_boot_bridge3(
+        "setBootPanel",
+        "Rust/WASM Mounted",
+        "Leptos main() has started and mount_to_body is running.",
+        "success",
+    );
 
     if let Some(el) = doc.get_element_by_id("loading-overlay") {
         let _ = el.class_list().add_1("hidden");
@@ -74,10 +96,5 @@ pub fn main() {
         view! { <App/> }
     });
 
-    if let Ok(hide_boot_panel) =
-        js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("hideBootPanel"))
-        && let Some(func) = hide_boot_panel.dyn_ref::<js_sys::Function>()
-    {
-        let _ = func.call0(&window);
-    }
+    call_boot_bridge0("hideBootPanel");
 }

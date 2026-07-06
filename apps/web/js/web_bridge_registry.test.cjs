@@ -29,6 +29,7 @@ const outlineKatexSource = fs.readFileSync(
   path.join(root, "..", "src", "components", "outline_render", "katex.rs"),
   "utf8"
 );
+const webMainSource = fs.readFileSync(path.join(root, "..", "src", "main.rs"), "utf8");
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 const indexThemeBootstrapSource = fs.readFileSync(
   path.join(root, "index_theme_bootstrap.js"),
@@ -970,6 +971,36 @@ assert.doesNotMatch(
   outlineKatexSource,
   /JsValue::from_str\("katex"\)/,
   "outline KaTeX projection must not read window.katex directly"
+);
+assert.match(
+  webMainSource,
+  /"__deveWebBridge"/,
+  "web main boot helpers must read through the browser bridge registry"
+);
+assert.match(
+  webMainSource,
+  /Reflect::get\([^;]*"call"/s,
+  "web main boot helpers must invoke the registry call facade"
+);
+assert.match(
+  webMainSource,
+  /"setBootPanel"/,
+  "web main must route setBootPanel by name through the bridge call facade"
+);
+assert.match(
+  webMainSource,
+  /"hideBootPanel"/,
+  "web main must route hideBootPanel by name through the bridge call facade"
+);
+assert.doesNotMatch(
+  webMainSource,
+  /Reflect::get\([^;]*"setBootPanel"/s,
+  "web main must not read setBootPanel directly from window"
+);
+assert.doesNotMatch(
+  webMainSource,
+  /Reflect::get\([^;]*"hideBootPanel"/s,
+  "web main must not read hideBootPanel directly from window"
 );
 assert.doesNotMatch(
   imageExtensionSource,
