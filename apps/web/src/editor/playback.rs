@@ -54,7 +54,9 @@ pub fn handle_playback_change(
         .collect();
 
     let reconstructed = deve_core::state::reconstruct_content(&relevant_ops);
-    applyRemoteContent(&reconstructed);
+    if !applyRemoteContent(&reconstructed) {
+        leptos::logging::warn!("Playback render skipped: editor content bridge unavailable");
+    }
     // 我们在此不更新 `content` 信号，以避免触发 diff 循环。
     // 通过 applyRemoteContent 更新 CodeMirror 足以进行视觉展示。
 }

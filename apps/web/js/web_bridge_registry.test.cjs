@@ -9,6 +9,7 @@ const katexBridgeSource = fs.readFileSync(path.join(root, "katex_bridge.js"), "u
 const renderingBridgeSource = fs.readFileSync(path.join(root, "rendering_bridge.js"), "utf8");
 const widgetBridgeSource = fs.readFileSync(path.join(root, "widget_bridge.js"), "utf8");
 const editorAdapterSource = fs.readFileSync(path.join(root, "editor_adapter.js"), "utf8");
+const editorRemoteOpsSource = fs.readFileSync(path.join(root, "editor_remote_ops.js"), "utf8");
 const chatMathBootstrapSource = fs.readFileSync(path.join(root, "chat_math_bootstrap.js"), "utf8");
 const chatMathSource = fs.readFileSync(path.join(root, "chat_math.js"), "utf8");
 const gutterDiffSource = fs.readFileSync(path.join(root, "extensions", "gutter_diff.js"), "utf8");
@@ -33,6 +34,7 @@ const outlineKatexSource = fs.readFileSync(
   path.join(root, "..", "src", "components", "outline_render", "katex.rs"),
   "utf8"
 );
+const editorFfiSource = fs.readFileSync(path.join(root, "..", "src", "editor", "ffi.rs"), "utf8");
 const webMainSource = fs.readFileSync(path.join(root, "..", "src", "main.rs"), "utf8");
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 const indexThemeBootstrapSource = fs.readFileSync(
@@ -72,6 +74,7 @@ const indexBridgeNames = [
   "applyRemoteContent",
   "applyRemoteOp",
   "applyRemoteOpsBatch",
+  "syncEditorStateToRust",
   "scrollGlobal",
   "setReadOnly",
   "updateGutterDiff",
@@ -842,6 +845,109 @@ for (const name of indexBridgeNames) {
 }
 assert.doesNotMatch(
   indexBridgeSource,
+  /queueEditorAction\("(?:content|op|opsBatch)"/,
+  "index editor bootstrap must not queue state-progressing write actions before the editor is ready"
+);
+assert.match(
+  indexBootstrapSource,
+  /registerEditorBridgeGlobal\("applyRemoteContent", \(\) => \{[\s\S]*?return false;/,
+  "index editor bootstrap must fail closed for snapshot writes before the editor is ready"
+);
+assert.match(
+  indexBootstrapSource,
+  /registerEditorBridgeGlobal\("applyRemoteOp", \(\) => \{[\s\S]*?return false;/,
+  "index editor bootstrap must fail closed for op writes before the editor is ready"
+);
+assert.match(
+  indexBootstrapSource,
+  /registerEditorBridgeGlobal\("getEditorContent", \(\) => null/,
+  "index editor bootstrap must expose null content before a real editor view is ready"
+);
+assert.match(
+  indexBootstrapSource,
+  /registerEditorBridgeGlobal\("syncEditorStateToRust", \(\) => false/,
+  "index editor bootstrap must fail closed for sync before a real editor view is ready"
+);
+assert.doesNotMatch(
+  indexEditorAdapterSource,
+  /queueEditorAction\("(?:content|op|opsBatch)"/,
+  "lazy editor adapter wrapper must not queue state-progressing write actions before the editor is ready"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /registerEditorBridgeGlobal\("applyRemoteContent", \(text\) => \{[\s\S]*?!editorBootstrapState\.editorBridgeReady[\s\S]*?return false;/,
+  "lazy editor adapter must fail closed for snapshot writes before the editor view is ready"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /registerEditorBridgeGlobal\("applyRemoteOp", \(opJson\) => \{[\s\S]*?!editorBootstrapState\.editorBridgeReady[\s\S]*?return false;/,
+  "lazy editor adapter must fail closed for op writes before the editor view is ready"
+);
+assert.match(
+  editorRemoteOpsSource,
+  /return ctx\.activeView \? ctx\.activeView\.state\.doc\.toString\(\) : null;/,
+  "editor content reads must report null when no editor view is ready"
+);
+assert.match(
+  editorRemoteOpsSource,
+  /export function applyRemoteContent\(text\) \{\s*if \(!ctx\.activeView\) return false;/,
+  "remote snapshot writes must fail closed without an active editor view"
+);
+assert.match(
+  editorRemoteOpsSource,
+  /export function applyRemoteOp\(op_json\) \{\s*if \(!ctx\.activeView\) return false;/,
+  "remote op writes must fail closed without an active editor view"
+);
+const indexBootstrapRuntimeContext = {
+  console,
+  document: {
+    getElementById() {
+      return null;
+    },
+    createElement() {
+      return { style: {}, classList: { add() {}, remove() {} } };
+    },
+  },
+  window: {
+    addEventListener() {},
+  },
+};
+vm.runInNewContext(registrySource, indexBootstrapRuntimeContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(indexBootstrapSource, indexBootstrapRuntimeContext, {
+  filename: "index_bootstrap.js",
+});
+const indexBootstrapBridge = indexBootstrapRuntimeContext.window.__deveWebBridge;
+const indexBootstrapState = indexBootstrapBridge.get("__deveEditorBootstrap");
+assert.equal(
+  indexBootstrapBridge.call("applyRemoteContent", "queued?"),
+  false,
+  "index bootstrap snapshot write fallback must return false before editor readiness"
+);
+assert.equal(
+  indexBootstrapBridge.call("applyRemoteOp", "{}"),
+  false,
+  "index bootstrap op write fallback must return false before editor readiness"
+);
+assert.equal(
+  indexBootstrapBridge.call("getEditorContent"),
+  null,
+  "index bootstrap content fallback must map unavailable editor content to null"
+);
+assert.equal(
+  indexBootstrapBridge.call("syncEditorStateToRust"),
+  false,
+  "index bootstrap sync fallback must return false before editor readiness"
+);
+assert.equal(
+  Array.isArray(indexBootstrapState.pendingEditorActions) &&
+    indexBootstrapState.pendingEditorActions.length === 0,
+  true,
+  "index bootstrap fail-closed write fallbacks must not enqueue state-progressing editor actions"
+);
+assert.doesNotMatch(
+  indexBridgeSource,
   /window\.__deveEditorBootstrap\b/,
   "index editor adapter bootstrap must read state through the bridge facade"
 );
@@ -949,6 +1055,69 @@ assert.doesNotMatch(
   chatMessageItemSource,
   /Reflect::get\([^;]*"renderChatMath"/s,
   "chat message math projection must not read renderChatMath directly from window"
+);
+
+const editorFfiBridgeCalls = [
+  ["setupCodeMirror", /bridge_call2\("setupCodeMirror"/],
+  ["destroyEditor", /bridge_call0\("destroyEditor"/],
+  ["applyRemoteContent", /bridge_call1\("applyRemoteContent"/],
+  ["applyRemoteOp", /bridge_call1\("applyRemoteOp"/],
+  ["getEditorContent", /bridge_call0\("getEditorContent"/],
+  ["scrollGlobal", /bridge_call1\("scrollGlobal"/],
+  ["setReadOnly", /bridge_call1\("setReadOnly"/],
+  ["applyRemoteOpsBatch", /bridge_call1\("applyRemoteOpsBatch"/],
+  ["syncEditorStateToRust", /bridge_call0\("syncEditorStateToRust"/],
+  ["mobileInsertText", /bridge_call1\("mobileInsertText"/],
+  ["mobileWrapSelection", /bridge_call2\(\s*"mobileWrapSelection"/],
+  ["mobileUndo", /bridge_call0\("mobileUndo"/],
+  ["mobileRedo", /bridge_call0\("mobileRedo"/],
+  ["updateGutterDiff", /bridge_call1\("updateGutterDiff"/],
+  ["getEditorSelection", /bridge_call0\("getEditorSelection"/],
+];
+assert.doesNotMatch(
+  editorFfiSource,
+  /unsafe\s+extern\s+"C"/,
+  "editor Rust FFI must not bind browser globals through wasm-bindgen externs"
+);
+for (const [name] of editorFfiBridgeCalls) {
+  const rustIdent = name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  assert.doesNotMatch(
+    editorFfiSource,
+    new RegExp(`pub\\s+fn\\s+${rustIdent}\\s*\\([^)]*\\)\\s*;`),
+    `${name} Rust FFI call must not remain as a snake_case extern declaration`
+  );
+  assert.doesNotMatch(
+    editorFfiSource,
+    new RegExp(`pub\\s+fn\\s+${name}\\s*\\([^)]*\\)\\s*;`),
+    `${name} Rust FFI call must not remain as a camelCase extern declaration`
+  );
+}
+for (const [name, bridgeCallPattern] of editorFfiBridgeCalls) {
+  assert.match(
+    editorFfiSource,
+    bridgeCallPattern,
+    `${name} Rust FFI call must route through the browser bridge registry`
+  );
+  assert.doesNotMatch(
+    editorFfiSource,
+    new RegExp(`js_namespace\\s*=\\s*window,\\s*js_name\\s*=\\s*${name}`),
+    `${name} Rust FFI call must not bind directly from window`
+  );
+  assert.doesNotMatch(
+    editorFfiSource,
+    new RegExp(`Reflect::get\\(window\\.as_ref\\(\\),\\s*&"${name}"\\.into\\(\\)\\)`),
+    `${name} Rust FFI call must not read directly from window`
+  );
+}
+assert.match(
+  editorFfiSource,
+  /"__deveWebBridge"/,
+  "editor Rust FFI must read through the browser bridge registry"
+);
+assert.match(
+  editorFfiSource,
+  /"call"/,
+  "editor Rust FFI must invoke the registry call facade"
 );
 
 assert.match(

@@ -65,8 +65,9 @@ const attachEditorAdapter = (module) => {
     getEditorSelection,
   } = module;
 
+  const rawApplyRemoteContent = (text) => applyRemoteContent(text) === true;
   const rawApplyRemoteOp = (opJson) => {
-    applyRemoteOp(opJson);
+    return applyRemoteOp(opJson) === true;
   };
   const rawApplyRemoteOpsBatch =
     applyRemoteOpsBatch ||
@@ -75,25 +76,28 @@ const attachEditorAdapter = (module) => {
         const ops = JSON.parse(opsJson);
         if (!Array.isArray(ops)) return false;
         for (const op of ops) {
-          if (!op || (!op.Insert && !op.Delete)) return false;
-          rawApplyRemoteOp(JSON.stringify(op));
-        }
-        return true;
+        if (!op || (!op.Insert && !op.Delete)) return false;
+        if (!rawApplyRemoteOp(JSON.stringify(op))) return false;
+      }
+      return true;
       } catch (e) {
         console.error("applyRemoteOpsBatch Fallback Error:", e);
         return false;
       }
     });
   const rawSetReadOnly = (readOnly) => {
-    setReadOnly(readOnly);
+    return setReadOnly(readOnly) === true;
   };
   const rawDestroyEditor = () => {
     destroyEditor();
+    return true;
   };
   const replayEditorAction = (action) => {
     switch (action.kind) {
       case "content":
-        applyRemoteContent(action.payload);
+        if (!rawApplyRemoteContent(action.payload)) {
+          console.warn("Queued editor content replay failed");
+        }
         break;
       case "op":
         rawApplyRemoteOp(action.payload);
@@ -113,18 +117,18 @@ const attachEditorAdapter = (module) => {
 
   registerEditorBridgeGlobal("applyRemoteContent", (text) => {
     if (!editorBootstrapState.editorBridgeReady) {
-      queueEditorAction("content", String(text ?? ""));
-      return;
+      requestEditorAdapter();
+      return false;
     }
-    applyRemoteContent(text);
+    return rawApplyRemoteContent(text);
   }, { role: "wasm-editor-snapshot" });
 
   registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
     if (!editorBootstrapState.editorBridgeReady) {
-      queueEditorAction("op", String(opJson ?? ""));
-      return;
+      requestEditorAdapter();
+      return false;
     }
-    rawApplyRemoteOp(opJson);
+    return rawApplyRemoteOp(opJson);
   }, { role: "wasm-editor-op" });
 
   registerEditorBridgeGlobal("applyRemoteOpsBatch", (opsJson) => {
@@ -138,6 +142,14 @@ const attachEditorAdapter = (module) => {
     role: "wasm-editor-query",
   });
 
+  registerEditorBridgeGlobal("syncEditorStateToRust", () => {
+    if (!editorBootstrapState.editorBridgeReady || typeof syncEditorStateToRust !== "function") {
+      return false;
+    }
+    syncEditorStateToRust();
+    return true;
+  }, { role: "wasm-editor-sync" });
+
   registerEditorBridgeGlobal("scrollGlobal", scrollGlobal, {
     runtime: "widget_bridge_runtime",
     role: "wasm-editor-navigation",
@@ -146,14 +158,14 @@ const attachEditorAdapter = (module) => {
   registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
     if (!editorBootstrapState.editorBridgeReady) {
       queueEditorAction("readOnly", !!readOnly);
-      return;
+      return false;
     }
-    rawSetReadOnly(readOnly);
+    return rawSetReadOnly(readOnly);
   }, { role: "wasm-editor-readonly" });
 
   registerEditorBridgeGlobal("destroyEditor", () => {
     editorBootstrapState.resetBridge();
-    rawDestroyEditor();
+    return rawDestroyEditor();
   }, { role: "wasm-editor-lifecycle" });
 
   registerEditorBridgeGlobal("updateGutterDiff", updateGutterDiff || (() => {}), {
@@ -187,6 +199,7 @@ const attachEditorAdapter = (module) => {
         pending.forEach(replayEditorAction);
       }
       syncEditorStateToRust?.();
+      return true;
     } catch (e) {
       logToOverlay("Init call failed: " + e.message, true);
       throw e;
@@ -196,11 +209,11 @@ const attachEditorAdapter = (module) => {
   registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate) => {
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.realInit) {
-      editorBootstrapState.realInit(element, onUpdate);
-      return;
+      return editorBootstrapState.realInit(element, onUpdate) === true;
     }
     queueEditorMount(element, onUpdate);
     requestEditorAdapter();
+    return true;
   }, { role: "wasm-editor-mount" });
 
   editorBootstrapState.cmLoaded = true;

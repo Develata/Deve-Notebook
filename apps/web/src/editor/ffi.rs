@@ -16,71 +16,117 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-unsafe extern "C" {
-    /// 初始化 CodeMirror 编辑器
-    ///
-    /// `on_delta`: 接收 JSON 格式的 Delta 数组: `[{from, to, insert}, ...]`
-    pub fn setupCodeMirror(element: &web_sys::HtmlElement, on_delta: &Closure<dyn FnMut(String)>);
+/// 初始化 CodeMirror 编辑器
+///
+/// `on_delta`: 接收 JSON 格式的 Delta 数组: `[{from, to, insert}, ...]`
+#[allow(non_snake_case)]
+pub fn setupCodeMirror(
+    element: &web_sys::HtmlElement,
+    on_delta: &Closure<dyn FnMut(String)>,
+) -> bool {
+    bridge_call2("setupCodeMirror", element.as_ref(), on_delta.as_ref())
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
 
-    /// 销毁编辑器实例，释放资源
-    pub fn destroyEditor();
+/// 销毁编辑器实例，释放资源
+#[allow(non_snake_case)]
+pub fn destroyEditor() -> bool {
+    bridge_call0("destroyEditor").is_some()
+}
 
-    /// 应用远程快照 (全量替换)
-    pub fn applyRemoteContent(text: &str);
+/// 应用远程快照 (全量替换)
+#[allow(non_snake_case)]
+pub fn applyRemoteContent(text: &str) -> bool {
+    bridge_call1("applyRemoteContent", &JsValue::from_str(text))
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
 
-    /// 应用远程操作 (增量)
-    pub fn applyRemoteOp(op_json: &str);
+pub fn try_apply_remote_op(op_json: &str) -> bool {
+    bridge_call1("applyRemoteOp", &JsValue::from_str(op_json))
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
 
-    /// 批量应用远程操作 (增量)
-    #[wasm_bindgen(js_namespace = window, js_name = applyRemoteOpsBatch)]
-    pub fn applyRemoteOpsBatch(ops_json: &str) -> bool;
+pub fn try_get_editor_content() -> Option<String> {
+    bridge_call0("getEditorContent").and_then(|value| value.as_string())
+}
 
-    /// 将当前编辑器全文状态同步回 Rust signals，不产生新的写入 delta
-    #[wasm_bindgen(js_namespace = window, js_name = syncEditorStateToRust)]
-    pub fn sync_editor_state_to_rust();
+/// 滚动到指定行
+pub fn scroll_global(line: usize) {
+    let _ = bridge_call1("scrollGlobal", &JsValue::from_f64(line as f64));
+}
 
-    /// 获取当前编辑器内容
-    pub fn getEditorContent() -> String;
+/// 设置只读状态
+pub fn set_read_only(read_only: bool) -> bool {
+    bridge_call1("setReadOnly", &JsValue::from_bool(read_only))
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
 
-    /// 滚动到指定行
-    #[wasm_bindgen(js_name = scrollGlobal)]
-    pub fn scroll_global(line: usize);
+#[allow(non_snake_case)]
+pub fn applyRemoteOpsBatch(ops_json: &str) -> bool {
+    bridge_call1("applyRemoteOpsBatch", &JsValue::from_str(ops_json))
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
 
-    /// 设置只读状态
-    #[wasm_bindgen(js_name = setReadOnly)]
-    pub fn set_read_only(read_only: bool);
+pub fn sync_editor_state_to_rust() -> bool {
+    bridge_call0("syncEditorStateToRust")
+        .map(|value| value.as_bool().unwrap_or(true))
+        .unwrap_or(false)
+}
 
-    /// Mobile: 在光标处插入文本
-    #[wasm_bindgen(js_namespace = window, js_name = mobileInsertText)]
-    pub fn mobile_insert_text(text: &str);
+pub fn mobile_insert_text(text: &str) {
+    let _ = bridge_call1("mobileInsertText", &JsValue::from_str(text));
+}
 
-    /// Mobile: 包裹当前选区
-    #[wasm_bindgen(js_namespace = window, js_name = mobileWrapSelection)]
-    pub fn mobile_wrap_selection(prefix: &str, suffix: &str);
+pub fn mobile_wrap_selection(prefix: &str, suffix: &str) {
+    let prefix = JsValue::from_str(prefix);
+    let suffix = JsValue::from_str(suffix);
+    let _ = bridge_call2("mobileWrapSelection", &prefix, &suffix);
+}
 
-    /// Mobile: 撤销一步
-    #[wasm_bindgen(js_namespace = window, js_name = mobileUndo)]
-    pub fn mobile_undo();
+pub fn mobile_undo() {
+    let _ = bridge_call0("mobileUndo");
+}
 
-    /// Mobile: 重做一步
-    #[wasm_bindgen(js_namespace = window, js_name = mobileRedo)]
-    pub fn mobile_redo();
+pub fn mobile_redo() {
+    let _ = bridge_call0("mobileRedo");
+}
 
-    /// 更新行内 Diff Gutter 指示器
-    #[wasm_bindgen(js_namespace = window, js_name = updateGutterDiff)]
-    pub fn update_gutter_diff(ranges_json: &str);
-
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub fn update_gutter_diff(ranges_json: &str) -> bool {
+    bridge_call1("updateGutterDiff", &JsValue::from_str(ranges_json)).is_some()
 }
 
 pub fn try_get_editor_selection() -> Option<String> {
+    bridge_call0("getEditorSelection").and_then(|value| value.as_string())
+}
+
+fn bridge_call0(name: &str) -> Option<JsValue> {
+    let (bridge, func) = bridge_call_function()?;
+    func.call1(&bridge, &JsValue::from_str(name)).ok()
+}
+
+fn bridge_call1(name: &str, arg: &JsValue) -> Option<JsValue> {
+    let (bridge, func) = bridge_call_function()?;
+    func.call2(&bridge, &JsValue::from_str(name), arg).ok()
+}
+
+fn bridge_call2(name: &str, first: &JsValue, second: &JsValue) -> Option<JsValue> {
+    let (bridge, func) = bridge_call_function()?;
+    func.call3(&bridge, &JsValue::from_str(name), first, second)
+        .ok()
+}
+
+fn bridge_call_function() -> Option<(JsValue, js_sys::Function)> {
     let window = web_sys::window()?;
     let bridge = js_sys::Reflect::get(window.as_ref(), &"__deveWebBridge".into()).ok()?;
     let call = js_sys::Reflect::get(&bridge, &"call".into()).ok()?;
-    let func = call.dyn_ref::<js_sys::Function>()?;
-    func.call1(&bridge, &"getEditorSelection".into())
-        .ok()?
-        .as_string()
+    let func = call.dyn_into::<js_sys::Function>().ok()?;
+    Some((bridge, func))
 }
 
 #[cfg(test)]
@@ -93,19 +139,50 @@ mod tests {
     }
 
     #[test]
-    fn editor_selection_reads_through_bridge_registry() {
+    fn editor_browser_calls_read_through_bridge_registry() {
         let source = source_before_tests();
 
+        assert!(!source.contains("unsafe extern \"C\""));
         assert!(source.contains("\"__deveWebBridge\""));
         assert!(source.contains("\"call\""));
-        assert!(source.contains("func.call1(&bridge, &\"getEditorSelection\".into())"));
-        let direct_window_selection_lookup = [
-            "Reflect::get(window.as_ref(), &",
-            "\"getEditorSelection\"",
-            ".into())",
-        ]
-        .join("");
-        assert!(!source.contains(&direct_window_selection_lookup));
+        assert!(source.contains("bridge_call2(\"setupCodeMirror\""));
+        assert!(source.contains("bridge_call0(\"destroyEditor\""));
+        assert!(source.contains("bridge_call1(\"applyRemoteContent\""));
+        assert!(source.contains("bridge_call1(\"applyRemoteOp\""));
+        assert!(source.contains("bridge_call0(\"getEditorContent\""));
+        assert!(source.contains("bridge_call1(\"scrollGlobal\""));
+        assert!(source.contains("bridge_call1(\"setReadOnly\""));
+        assert!(source.contains("bridge_call1(\"applyRemoteOpsBatch\""));
+        assert!(source.contains("bridge_call0(\"syncEditorStateToRust\""));
+        assert!(source.contains("bridge_call1(\"mobileInsertText\""));
+        assert!(source.contains("bridge_call2(\"mobileWrapSelection\""));
+        assert!(source.contains("bridge_call0(\"mobileUndo\""));
+        assert!(source.contains("bridge_call0(\"mobileRedo\""));
+        assert!(source.contains("bridge_call1(\"updateGutterDiff\""));
+        assert!(source.contains("bridge_call0(\"getEditorSelection\""));
+        for name in [
+            "setupCodeMirror",
+            "destroyEditor",
+            "applyRemoteContent",
+            "applyRemoteOp",
+            "getEditorContent",
+            "scrollGlobal",
+            "setReadOnly",
+            "applyRemoteOpsBatch",
+            "syncEditorStateToRust",
+            "mobileInsertText",
+            "mobileWrapSelection",
+            "mobileUndo",
+            "mobileRedo",
+            "updateGutterDiff",
+            "getEditorSelection",
+        ] {
+            assert!(!source.contains(&format!("js_namespace = window, js_name = {name}")));
+            assert!(!source.contains(&format!("js_name = {name}")));
+            let direct_window_lookup =
+                ["Reflect::get(window.as_ref(), &\"", name, "\".into())"].join("");
+            assert!(!source.contains(&direct_window_lookup));
+        }
         assert!(!source.contains("pub fn get_editor_selection()"));
     }
 }

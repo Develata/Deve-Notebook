@@ -4,7 +4,7 @@
 //!
 use super::context::SyncContext;
 use crate::editor::EditorStats;
-use crate::editor::ffi::{applyRemoteOp, getEditorContent};
+use crate::editor::ffi::{try_apply_remote_op, try_get_editor_content};
 use crate::runtime::document::confirm;
 use deve_core::models::RepoId;
 use leptos::prelude::{Callable, GetUntracked, Set, Update};
@@ -29,10 +29,22 @@ pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::Confi
     }
     let echoed = echoed_origin.is_some();
     if !echoed {
-        if let Ok(json) = serde_json::to_string(&entry.op) {
-            applyRemoteOp(&json);
+        match serde_json::to_string(&entry.op) {
+            Ok(json) => {
+                if !try_apply_remote_op(&json) {
+                    leptos::logging::warn!("Live op apply blocked: editor op bridge unavailable");
+                    return;
+                }
+            }
+            Err(err) => {
+                leptos::logging::warn!("Live op serialization failed: {err}");
+                return;
+            }
         }
-        let text = getEditorContent();
+        let Some(text) = try_get_editor_content() else {
+            leptos::logging::warn!("Live op apply blocked: editor content bridge unavailable");
+            return;
+        };
         if let Some(cb) = ctx.on_stats {
             cb.run(EditorStats {
                 chars: text.len(),

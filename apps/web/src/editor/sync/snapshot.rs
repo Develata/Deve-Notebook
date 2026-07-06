@@ -69,8 +69,14 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
 
     let full_fallback_content =
         reconstruct_full_snapshot_content(&message.new_content, &message.delta_ops);
+    if !applyRemoteContent(&message.new_content) {
+        leptos::logging::warn!(
+            "Snapshot apply blocked: editor content bridge unavailable for doc={}",
+            ctx.doc_id
+        );
+        return;
+    }
     emit_stats(ctx.on_stats, &message.new_content);
-    applyRemoteContent(&message.new_content);
     ctx.set_content.set(message.new_content);
     ctx.set_local_version.set(message.base_seq);
     ctx.set_playback_version.set(message.base_seq);
@@ -155,11 +161,15 @@ fn build_delta_failure_fallback(
             leptos::logging::warn!(
                 "Snapshot delta batch apply failed; applying reconstructed full snapshot fallback for doc={doc_id}"
             );
-            applyRemoteContent(&full_content);
-            set_local_version.set(fallback.version);
-            set_history.set(fallback.history.clone());
-            fallback.finish.clone().complete_with_content(full_content);
-            return;
+            if applyRemoteContent(&full_content) {
+                set_local_version.set(fallback.version);
+                set_history.set(fallback.history.clone());
+                fallback.finish.clone().complete_with_content(full_content);
+                return;
+            }
+            leptos::logging::warn!(
+                "Snapshot reconstructed fallback blocked: editor content bridge unavailable for doc={doc_id}"
+            );
         }
         leptos::logging::warn!(
             "Snapshot delta batch apply failed; requesting snapshot reopen fallback for doc={doc_id}"

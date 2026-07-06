@@ -2,7 +2,7 @@
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::editor::ffi::{applyRemoteOp, getEditorContent, sync_editor_state_to_rust};
+use crate::editor::ffi::{sync_editor_state_to_rust, try_apply_remote_op, try_get_editor_content};
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::contexts::EditorContext;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
@@ -56,7 +56,15 @@ pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
             show_apply_block(&runtime.session, runtime.locale, reason_from_block(block));
             return;
         }
-        let op = match build_append_markdown_op(&getEditorContent(), code) {
+        let Some(current_content) = try_get_editor_content() else {
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::FailedApplyCodeLocally,
+            );
+            return;
+        };
+        let op = match build_append_markdown_op(&current_content, code) {
             Ok(op) => op,
             Err(ApplyEditPlanError::DocumentTooLarge) => {
                 show_apply_block(
@@ -145,9 +153,7 @@ fn apply_local_programmatic_op(op: &Op) -> bool {
     let Ok(json) = serde_json::to_string(op) else {
         return false;
     };
-    applyRemoteOp(&json);
-    sync_editor_state_to_rust();
-    true
+    try_apply_remote_op(&json) && sync_editor_state_to_rust()
 }
 
 fn show_apply_block(session: &SessionClient, locale: RwSignal<Locale>, reason: WriteGateReason) {

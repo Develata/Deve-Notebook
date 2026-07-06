@@ -5,7 +5,7 @@
 use super::context::SyncContext;
 use crate::api::WsService;
 use crate::editor::EditorStats;
-use crate::editor::ffi::getEditorContent;
+use crate::editor::ffi::try_get_editor_content;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -48,7 +48,12 @@ impl LoadFinish {
     }
 
     pub(super) fn complete(self) {
-        let text = getEditorContent();
+        let Some(text) = try_get_editor_content() else {
+            leptos::logging::warn!(
+                "Snapshot load finish blocked: editor content bridge unavailable"
+            );
+            return;
+        };
         self.complete_with_content(text);
     }
 

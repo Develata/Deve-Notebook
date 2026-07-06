@@ -176,27 +176,34 @@
   registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate) {
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.cmLoaded && editorBootstrapState.realInit) {
-      editorBootstrapState.realInit(element, onUpdate);
+      return editorBootstrapState.realInit(element, onUpdate) === true;
     } else {
       queueEditorMount(element, onUpdate);
       requestEditorAdapter();
+      return true;
     }
   }, { role: "wasm-editor-mount" });
 
-  registerEditorBridgeGlobal("applyRemoteContent", (text) => {
-    queueEditorAction("content", String(text ?? ""));
+  registerEditorBridgeGlobal("applyRemoteContent", () => {
+    requestEditorAdapter();
+    return false;
   }, { role: "wasm-editor-snapshot" });
 
-  registerEditorBridgeGlobal("applyRemoteOp", (opJson) => {
-    queueEditorAction("op", String(opJson ?? ""));
+  registerEditorBridgeGlobal("applyRemoteOp", () => {
+    requestEditorAdapter();
+    return false;
   }, { role: "wasm-editor-op" });
 
   registerEditorBridgeGlobal("applyRemoteOpsBatch", () => false, {
     role: "wasm-editor-op-batch",
   });
 
-  registerEditorBridgeGlobal("getEditorContent", () => "", {
+  registerEditorBridgeGlobal("getEditorContent", () => null, {
     role: "wasm-editor-query",
+  });
+
+  registerEditorBridgeGlobal("syncEditorStateToRust", () => false, {
+    role: "wasm-editor-sync",
   });
 
   registerEditorBridgeGlobal("scrollGlobal", () => {}, {
@@ -209,12 +216,18 @@
     role: "wasm-editor-diff-projection",
   });
 
+  registerEditorBridgeGlobal("getEditorSelection", () => "null", {
+    role: "wasm-editor-selection",
+  });
+
   registerEditorBridgeGlobal("setReadOnly", (readOnly) => {
     queueEditorAction("readOnly", !!readOnly);
+    return false;
   }, { role: "wasm-editor-readonly" });
 
   registerEditorBridgeGlobal("destroyEditor", () => {
     editorBootstrapState.resetBridge();
+    return true;
   }, { role: "wasm-editor-lifecycle" });
 
   const ensureMobileEditorAdapter = () => {

@@ -50,7 +50,10 @@ pub fn setup_editor_mount_effect(ctx: EditorMountEffectCtx) {
             on_stats: ctx.on_stats,
             set_content: ctx.set_content,
         });
-        setupCodeMirror(raw_element, &on_delta);
+        if !setupCodeMirror(raw_element, &on_delta) {
+            leptos::logging::warn!("CodeMirror setup blocked: editor bridge unavailable");
+            return;
+        }
         let on_delta = StoredValue::new_local(Some(on_delta));
         on_cleanup(move || on_delta.update_value(|value| drop(value.take())));
     });

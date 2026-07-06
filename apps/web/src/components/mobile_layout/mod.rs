@@ -31,7 +31,7 @@ mod toolbar;
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::main_layout::SearchControl;
-use crate::editor::ffi::getEditorContent;
+use crate::editor::ffi::try_get_editor_content;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::Locale;
 use crate::runtime::document_client::DocumentClient;
@@ -120,8 +120,10 @@ pub fn MobileLayout(
     });
 
     Effect::new(move |_| {
-        if show_outline.get() {
-            set_outline_content.set(getEditorContent());
+        if show_outline.get()
+            && let Some(content) = try_get_editor_content()
+        {
+            set_outline_content.set(content);
         }
     });
 

@@ -4,7 +4,7 @@
 //!
 use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
-use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
+use crate::editor::ffi::{try_get_editor_content, try_get_editor_selection};
 use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
 use crate::runtime::document_client::DocumentClient;
@@ -121,7 +121,9 @@ pub fn make_send_text(runtime: ChatSendRuntime, controls: ChatSendControls) -> C
             let current_markdown = if current_doc_path.is_empty() {
                 String::new()
             } else {
-                truncate_markdown_context(getEditorContent())
+                try_get_editor_content()
+                    .map(truncate_markdown_context)
+                    .unwrap_or_default()
             };
             let sel_json = try_get_editor_selection().unwrap_or_else(|| "null".to_string());
             let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);

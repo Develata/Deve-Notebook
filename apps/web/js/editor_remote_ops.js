@@ -8,54 +8,63 @@ import { ctx } from "./editor_state.js";
 const remoteHistoryAnnotation = Transaction.addToHistory.of(false);
 
 export function getEditorContent() {
-  return ctx.activeView ? ctx.activeView.state.doc.toString() : "";
+  return ctx.activeView ? ctx.activeView.state.doc.toString() : null;
 }
 
 export function applyRemoteContent(text) {
-  if (ctx.activeView) {
-    ctx.isRemote = true;
-    try {
-      ctx.activeView.dispatch({
-        changes: {
-          from: 0,
-          to: ctx.activeView.state.doc.length,
-          insert: text,
-        },
-        annotations: remoteHistoryAnnotation,
-      });
-    } catch (e) {
-      console.error("applyRemoteContent Error:", e);
-    } finally {
-      ctx.isRemote = false;
-    }
+  if (!ctx.activeView) return false;
+  ctx.isRemote = true;
+  try {
+    ctx.activeView.dispatch({
+      changes: {
+        from: 0,
+        to: ctx.activeView.state.doc.length,
+        insert: String(text ?? ""),
+      },
+      annotations: remoteHistoryAnnotation,
+    });
+    return true;
+  } catch (e) {
+    console.error("applyRemoteContent Error:", e);
+    return false;
+  } finally {
+    ctx.isRemote = false;
   }
 }
 
 export function applyRemoteOp(op_json) {
-  if (ctx.activeView) {
-    ctx.isRemote = true;
-    try {
-      const op = JSON.parse(op_json);
-      if (op.Insert) {
-        ctx.activeView.dispatch({
-          changes: { from: op.Insert.pos, insert: op.Insert.content },
-          annotations: remoteHistoryAnnotation,
-        });
-      } else if (op.Delete) {
-        ctx.activeView.dispatch({
-          changes: {
-            from: op.Delete.pos,
-            to: op.Delete.pos + op.Delete.len,
-            insert: "",
-          },
-          annotations: remoteHistoryAnnotation,
-        });
-      }
-    } catch (e) {
-      console.error("applyRemoteOp Error:", e);
-    } finally {
-      ctx.isRemote = false;
+  if (!ctx.activeView) return false;
+  ctx.isRemote = true;
+  try {
+    const op = JSON.parse(op_json);
+    if (op.Insert) {
+      const pos = op.Insert.pos;
+      ensureValidRange(pos, pos);
+      ctx.activeView.dispatch({
+        changes: { from: pos, insert: op.Insert.content },
+        annotations: remoteHistoryAnnotation,
+      });
+    } else if (op.Delete) {
+      const from = op.Delete.pos;
+      const to = op.Delete.pos + op.Delete.len;
+      ensureValidRange(from, to);
+      ctx.activeView.dispatch({
+        changes: {
+          from,
+          to,
+          insert: "",
+        },
+        annotations: remoteHistoryAnnotation,
+      });
+    } else {
+      throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);
     }
+    return true;
+  } catch (e) {
+    console.error("applyRemoteOp Error:", e);
+    return false;
+  } finally {
+    ctx.isRemote = false;
   }
 }
 
@@ -131,15 +140,15 @@ export function scrollGlobal(lineNumber) {
 }
 
 export function setReadOnly(readOnly) {
-  if (ctx.activeView) {
-    ctx.activeView.dispatch({
-      effects: ctx.readOnlyCompartment.reconfigure(
-        EditorState.readOnly.of(readOnly),
-      ),
-    });
-    ctx.activeView.contentDOM.setAttribute(
-      "contenteditable",
-      (!readOnly).toString(),
-    );
-  }
+  if (!ctx.activeView) return false;
+  ctx.activeView.dispatch({
+    effects: ctx.readOnlyCompartment.reconfigure(
+      EditorState.readOnly.of(readOnly),
+    ),
+  });
+  ctx.activeView.contentDOM.setAttribute(
+    "contenteditable",
+    (!readOnly).toString(),
+  );
+  return true;
 }

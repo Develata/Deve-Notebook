@@ -6,7 +6,7 @@ use super::context::SyncContext;
 use super::history_replay::{merge_history_tail, replay_buffered_live_ops, replay_pending_overlay};
 use super::history_resend::resend_pending_edits_if_ready;
 use crate::editor::EditorStats;
-use crate::editor::ffi::getEditorContent;
+use crate::editor::ffi::try_get_editor_content;
 use crate::runtime::document::pending;
 use crate::runtime::domain::LoadPhase;
 use deve_core::protocol::ConfirmedOp;
@@ -23,7 +23,10 @@ pub(super) fn handle_history(ctx: &SyncContext, expected_generation: u64, ops: V
         .set(merge_history_tail(&ops, ctx.history.get_untracked()));
     replay_pending_overlay(ctx);
 
-    let txt = getEditorContent();
+    let Some(txt) = try_get_editor_content() else {
+        leptos::logging::warn!("History apply blocked: editor content bridge unavailable");
+        return;
+    };
     emit_stats(ctx.on_stats, &txt);
     ctx.set_content.set(txt);
     ctx.set_playback_version
