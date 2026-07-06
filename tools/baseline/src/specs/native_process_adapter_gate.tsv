@@ -25,8 +25,8 @@ contains	apps/desktop/src/process_runtime/validation.rs	argv must be exactly ser
 contains	apps/desktop/src/process_runtime/validation.rs	argv port must match loopback bind hints
 contains	apps/desktop/src/service_entrypoint/mod.rs	DEVE_DESKTOP_LOCAL_SERVICE
 contains	apps/desktop/src/service_entrypoint/mod.rs	DEVE_NATIVE_AUTHORITY
-contains	apps/desktop/src/service_entrypoint_test.rs	desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_explicit_disable
-contains	apps/desktop/src/service_entrypoint_test.rs	desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value
+contains	apps/desktop/src/service_entrypoint_test/env_policy.rs	desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_explicit_disable
+contains	apps/desktop/src/service_entrypoint_test/env_policy.rs	desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value
 contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	"--native-loopback"
 contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	NATIVE_SESSION_BOOTSTRAP_SECRET_ENV
 contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	generate_native_session_bootstrap_secret
