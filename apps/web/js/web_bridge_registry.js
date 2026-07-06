@@ -25,6 +25,12 @@
     ["backup"],
     ["remote", "projection"],
   ];
+  const singleAuthorityTokens = authoritySequences
+    .filter((sequence) => sequence.length === 1)
+    .map((sequence) => sequence[0]);
+  const collapsedAuthoritySequences = authoritySequences
+    .filter((sequence) => sequence.length > 1)
+    .map((sequence) => sequence.join(""));
 
   function semanticTokens(value) {
     return String(value || "")
@@ -43,9 +49,27 @@
     return false;
   }
 
+  function containsCollapsedSingleAuthorityToken(tokens) {
+    return tokens.some((token) =>
+      singleAuthorityTokens.some((authorityToken) => {
+        if (token === authorityToken || token.startsWith(authorityToken)) {
+          return true;
+        }
+        return authorityToken.length > 3 && token.endsWith(authorityToken);
+      })
+    );
+  }
+
   function containsAuthoritySemantic(value) {
     const tokens = semanticTokens(value);
-    return authoritySequences.some((sequence) => containsSequence(tokens, sequence));
+    if (authoritySequences.some((sequence) => containsSequence(tokens, sequence))) {
+      return true;
+    }
+    if (containsCollapsedSingleAuthorityToken(tokens)) {
+      return true;
+    }
+    const collapsedTokens = tokens.join("");
+    return collapsedAuthoritySequences.some((sequence) => collapsedTokens.includes(sequence));
   }
 
   function normalizeMeta(name, meta = {}) {

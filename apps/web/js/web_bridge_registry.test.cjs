@@ -225,6 +225,80 @@ assert.equal(
   "undefined",
   "rejected authority sources must not be written onto window"
 );
+for (const unsafeName of [
+  "ledgerstate",
+  "pendingstate",
+  "ackstate",
+  "rejectstate",
+  "stagingarea",
+  "backupstatus",
+  "sourcecontrolState",
+  "commitanchorState",
+  "gitmirrorStatus",
+  "pendingfsopsQueue",
+  "remoteprojectionFacade",
+]) {
+  assert.throws(
+    () =>
+      registryContext.window.__deveWebBridge.register(
+        unsafeName,
+        () => true,
+        {
+          runtime: "widget_bridge_runtime",
+          source: "test",
+          authority: "none",
+          role: "ui-facade",
+        },
+      ),
+    new RegExp(`web bridge global ${unsafeName} metadata must stay projection-only`),
+    "registry must reject collapsed authority names without relying on camel-case separators"
+  );
+  assert.equal(
+    typeof registryContext.window[unsafeName],
+    "undefined",
+    "rejected collapsed authority names must not be written onto window"
+  );
+}
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "safeCollapsedSourceFacade",
+      () => true,
+      {
+        runtime: "widget_bridge_runtime",
+        source: "gitmirrorBootstrap",
+        authority: "none",
+        role: "ui-facade",
+      },
+    ),
+  /web bridge global safeCollapsedSourceFacade metadata must stay projection-only/,
+  "registry must reject collapsed authority sources"
+);
+assert.equal(
+  typeof registryContext.window.safeCollapsedSourceFacade,
+  "undefined",
+  "rejected collapsed authority sources must not be written onto window"
+);
+assert.throws(
+  () =>
+    registryContext.window.__deveWebBridge.register(
+      "safeCollapsedRoleFacade",
+      () => true,
+      {
+        runtime: "widget_bridge_runtime",
+        source: "test",
+        authority: "none",
+        role: "remoteprojection-status",
+      },
+    ),
+  /web bridge global safeCollapsedRoleFacade metadata must stay projection-only/,
+  "registry must reject collapsed authority roles"
+);
+assert.equal(
+  typeof registryContext.window.safeCollapsedRoleFacade,
+  "undefined",
+  "rejected collapsed authority roles must not be written onto window"
+);
 const samePolicyFakeRegistryContext = {
   window: {
     __deveWebBridge: {
