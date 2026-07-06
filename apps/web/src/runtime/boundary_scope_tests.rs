@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[test]
 fn web_runtime_boundary_scope_helpers_do_not_import_use_core_callbacks() {
@@ -7,10 +7,12 @@ fn web_runtime_boundary_scope_helpers_do_not_import_use_core_callbacks() {
     let scoped_dirs = [
         manifest_dir.join("src/editor"),
         manifest_dir.join("src/components"),
+        manifest_dir.join("src/hooks"),
     ];
+    let excluded_dirs = [manifest_dir.join("src/hooks/use_core")];
     let mut violations = Vec::new();
     for scoped_dir in scoped_dirs {
-        collect_rs_files(&scoped_dir, &mut |path| {
+        collect_rs_files_excluding(&scoped_dir, &excluded_dirs, &mut |path| {
             let content = fs::read_to_string(path).expect("read web source");
             if imports_use_core_callbacks_scope(&content) {
                 violations.push(path.strip_prefix(manifest_dir).unwrap().to_path_buf());
@@ -24,11 +26,21 @@ fn web_runtime_boundary_scope_helpers_do_not_import_use_core_callbacks() {
     );
 }
 
-fn collect_rs_files(root: &Path, visit: &mut impl FnMut(&Path)) {
+fn collect_rs_files_excluding(
+    root: &Path,
+    excluded_dirs: &[PathBuf],
+    visit: &mut impl FnMut(&Path),
+) {
     for entry in fs::read_dir(root).expect("read runtime dir") {
         let path = entry.expect("runtime dir entry").path();
+        if excluded_dirs
+            .iter()
+            .any(|excluded| path == excluded.as_path() || path.starts_with(excluded))
+        {
+            continue;
+        }
         if path.is_dir() {
-            collect_rs_files(&path, visit);
+            collect_rs_files_excluding(&path, excluded_dirs, visit);
         } else if path.extension().and_then(|value| value.to_str()) == Some("rs") {
             visit(&path);
         }
@@ -46,8 +58,10 @@ fn imports_use_core_callbacks_scope(content: &str) -> bool {
         use_core_segment()
     );
     let alias_path = format!("{}::{}::callbacks_scope", hooks_alias(), use_core_segment());
+    let generic_alias_path = format!("::{}::callbacks_scope", use_core_segment());
     compact.contains(&direct_path)
         || compact.contains(&alias_path)
+        || compact.contains(&generic_alias_path)
         || grouped_import_contains(
             &compact,
             &format!("{}::{}::{{", hooks_segment(), use_core_segment()),
@@ -56,6 +70,11 @@ fn imports_use_core_callbacks_scope(content: &str) -> bool {
         || grouped_import_contains(
             &compact,
             &format!("{}::{}::{{", hooks_alias(), use_core_segment()),
+            "callbacks_scope",
+        )
+        || grouped_import_contains(
+            &compact,
+            &format!("::{}::{{", use_core_segment()),
             "callbacks_scope",
         )
 }
@@ -136,6 +155,16 @@ fn web_runtime_boundary_scope_helper_detects_alias_use_core_callbacks_scope_impo
         hooks_path(),
         hooks_alias(),
         hooks_alias(),
+        use_core_segment()
+    );
+    assert!(imports_use_core_callbacks_scope(&source));
+}
+
+#[test]
+fn web_runtime_boundary_scope_helper_detects_arbitrary_alias_use_core_callbacks_scope_import() {
+    let source = format!(
+        "use {} as h; use h::{}::callbacks_scope::LocalScopeSignals;",
+        hooks_path(),
         use_core_segment()
     );
     assert!(imports_use_core_callbacks_scope(&source));

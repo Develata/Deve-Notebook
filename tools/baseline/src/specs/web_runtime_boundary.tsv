@@ -39,6 +39,7 @@ contains	apps/web/src/runtime/boundary_domain_tests.rs	fn web_runtime_boundary_e
 contains	apps/web/src/runtime/boundary_scope_tests.rs	fn web_runtime_boundary_scope_helpers_do_not_import_use_core_callbacks()
 contains	apps/web/src/runtime/boundary_scope_tests.rs	fn web_runtime_boundary_scope_helper_detects_direct_use_core_callbacks_scope_import()
 contains	apps/web/src/runtime/boundary_scope_tests.rs	fn web_runtime_boundary_scope_helper_detects_alias_use_core_callbacks_scope_import()
+contains	apps/web/src/runtime/boundary_scope_tests.rs	fn web_runtime_boundary_scope_helper_detects_arbitrary_alias_use_core_callbacks_scope_import()
 contains	apps/web/src/runtime/scope_client/local_scope.rs	pub struct LocalScopeSignals
 contains	apps/web/src/runtime/scope_client/local_scope.rs	pub fn stable_local_scope_nonce
 regex_absent_tree_ext	apps/web/src/runtime	rs	hooks\s*::\s*use_core
@@ -69,3 +70,7 @@ regex_absent_tree_ext	apps/web/src/components	rs	hooks\s*::\s*use_core\s*::\s*ca
 regex_absent_tree_ext	apps/web/src/components	rs	hooks\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
 regex_absent_tree_ext	apps/web/src/components	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*callbacks_scope
 regex_absent_tree_ext	apps/web/src/components	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
+regex_absent_tree_ext	apps/web/src/hooks	rs	hooks\s*::\s*use_core\s*::\s*callbacks_scope
+regex_absent_tree_ext	apps/web/src/hooks	rs	hooks\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
+regex_absent_tree_ext	apps/web/src/hooks	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*callbacks_scope
+regex_absent_tree_ext	apps/web/src/hooks	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
