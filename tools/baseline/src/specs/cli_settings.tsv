@@ -2,6 +2,11 @@ contains	apps/cli/src/main.rs	Init {
 contains	apps/cli/src/main.rs	repo_id: Option<uuid::Uuid>
 contains	apps/cli/src/main.rs	repo_url: Option<String>
 contains	apps/cli/src/main.rs	repo-id
+contains	docs/plan/14_commands.md	`deve init --path <data-root> --repo <name> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`
+absent	docs/plan/14_commands.md	`deve init --repo <name> --projection-base <path>`
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	deve init --path <data-root> --repo default --projection-base <projection-base>
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007A	deve init --path <data-root> --repo default --projection-base <projection-base>
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007B	deve init --path <data-root> --repo default --projection-base <projection-base>
 contains	apps/cli/src/main.rs	Scan,
 contains	apps/cli/src/main.rs	Watch {
 contains	apps/cli/src/main.rs	Serve {

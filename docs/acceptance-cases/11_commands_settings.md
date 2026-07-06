@@ -174,7 +174,7 @@
   goal: CLI server runtime options are explicit.
   preconditions:
     - CLI 可用
-    - 当前数据根已通过 `deve init --repo default --projection-base <path>` 或等价流程具备 Projection Locator
+    - 当前数据根已通过 `deve init --path <data-root> --repo default --projection-base <projection-base>` 或等价流程具备 Projection Locator
   steps:
     - run: deve serve --help
     - run: deve serve --dev --dry-run --port 3001
@@ -186,7 +186,7 @@
 - case_id: CMD-007A
   goal: Embedded browser runtime is available from the CLI server.
   preconditions:
-    - 当前 smoke 数据根已通过 `deve init --repo default --projection-base <path>` 初始化 Projection Locator
+    - 当前 smoke 数据根已通过 `deve init --path <data-root> --repo default --projection-base <projection-base>` 初始化 Projection Locator
     - 已运行 `scripts/smoke-web-release-build.sh`
     - 已重新构建 CLI，使 `apps/web/dist` 被编译进二进制
     - 后端通过 `deve serve --dev --port 3001` 运行，且未设置 `DEVE_STATIC_DIR`
@@ -202,7 +202,7 @@
 - case_id: CMD-007B
   goal: Trunk browser dev runtime fallback is explicit.
   preconditions:
-    - 当前 smoke 数据根已通过 `deve init --repo default --projection-base <path>` 初始化 Projection Locator
+    - 当前 smoke 数据根已通过 `deve init --path <data-root> --repo default --projection-base <projection-base>` 初始化 Projection Locator
     - 后端通过 `deve serve --dev --port 3001` 运行
     - 前端通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 运行
   steps:

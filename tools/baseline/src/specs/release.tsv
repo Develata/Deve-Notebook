@@ -241,7 +241,8 @@ absent	docker-compose.mesh.yml	DEVE_VAULT_PATH
 contains	.env.example	AUTH_SECRET=replace-with-at-least-32-random-bytes
 contains	.env.example	AUTH_PASS=$argon2id$v=19$m=65536,t=3,p=1$...
 contains	docs/plan/18_release.md	runtime image 只交付单个嵌入前端静态资源的 `deve_cli` 二进制
-contains	docs/plan/18_release.md	<path>/<safe_repo_name>--<repo_id>/
+contains	docs/plan/18_release.md	`deve init --path <data-root> --repo <name> --projection-base <projection-base>`
+contains	docs/plan/18_release.md	<projection-base>/<safe_repo_name>--<repo_id>/
 contains	docs/plan/18_release.md	delivery shape、environment、ports 与聚合 repo
 contains	docs/plan/18_release.md	health counts。degraded repo
 contains	docs/plan/18_release.md	native/graph boundary scripts

@@ -163,8 +163,8 @@ services:
 ```
 
 容器部署 **MUST NOT** 假设 `/data/vault` 是全局投影根。每个本地 repo 的 projection base 必须先通过
-`deve init --repo <name> --projection-base <path>` 或 `deve repo projection set --repo <selector> --base <path>`
-写入 host-local Projection Locator；实际 workspace root 为 `<path>/<safe_repo_name>--<repo_id>/`。
+`deve init --path <data-root> --repo <name> --projection-base <projection-base>` 或 `deve repo projection set --repo <selector> --base <projection-base>`
+写入 host-local Projection Locator；实际 workspace root 为 `<projection-base>/<safe_repo_name>--<repo_id>/`。
 例如 `--projection-base /notes --repo default` 对应 `/notes/default--<repo_id>/`。
 
 ### 5.3 Build Strategy

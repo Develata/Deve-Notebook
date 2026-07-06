@@ -24,7 +24,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 ## 1. CLI Commands {#cli-commands}
 
 *   **Baseline CLI Contract**:
-    *   `deve init --repo <name> --projection-base <path> [--repo-id <uuid>] [--repo-url <url>]`: 初始化 ledger 与首个本地 repo，并注册该 repo 的 Projection Locator；最终 workspace root 为 `<path>/<safe_repo_name>--<repo_id>/`。`--repo-id` 只允许在创建新 repo 时写入；若既有 repo metadata 与传入 `RepoId` 不一致，必须 fail-closed。
+    *   `deve init --path <data-root> --repo <name> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`: 初始化 `<data-root>` 下的 config / ledger 与首个本地 repo，并注册该 repo 的 host-local Projection Locator；`--path` 选择 CLI 数据/配置根，不是 Projection Workspace authority；最终 workspace root 为 `<projection-base>/<safe_repo_name>--<repo_id>/`。`--repo-id` 只允许在创建新 repo 时写入；若既有 repo metadata 与传入 `RepoId` 不一致，必须 fail-closed。
     *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
     *   `deve repo projection list`: 列出本机 host-local Projection Locator。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
