@@ -1,4 +1,8 @@
-use super::*;
+use super::super::provider::S3ProjectionProvider;
+use super::super::pull::S3ProjectionPullAdapter;
+use super::support::{RecordingS3Transport, now, s3_list_body, test_credentials};
+use deve_core::remote_projection::RemoteProjectionProvider;
+use reqwest::StatusCode;
 
 #[test]
 fn s3_pull_rejects_oversized_file_before_workspace_write() {
