@@ -70,8 +70,8 @@ contains	apps/cli/src/commands/config.rs	const CONFIG_FILE: &str = "config.toml"
 contains	apps/cli/src/commands/config.rs	mod tests;
 contains	apps/cli/src/commands/config.rs	toml::to_string_pretty(config)
 contains	apps/cli/src/commands/config.rs	parse_whitelisted_value
-contains	apps/cli/src/commands/config/tests.rs	supported_config_keys_match_settings_plan_tables
-contains	apps/cli/src/commands/config/tests.rs	supported_config_schema_matches_settings_plan_type_and_choices
+contains	apps/cli/src/commands/config/tests/plan_contract.rs	supported_config_keys_match_settings_plan_tables
+contains	apps/cli/src/commands/config/tests/plan_contract.rs	supported_config_schema_matches_settings_plan_type_and_choices
 contains	apps/cli/src/commands/init.rs	init_config_template_matches_current_settings_schema
 contains	apps/cli/src/commands/init.rs	Projection Locator
 contains	apps/cli/src/commands/init.rs	initialize_local_repo_workspace
@@ -107,8 +107,8 @@ contains	crates/core/src/config/tests/load_tests.rs	load_checked_fails_closed_on
 contains	crates/core/src/config/tests/load_tests.rs	load_checked_fails_closed_on_invalid_runtime_enum_value
 contains	crates/core/src/config/tests/load_tests.rs	runtime_config_value_parsers_reject_unknown_values
 contains	crates/core/src/config/tests/p2p_tests.rs	load_checked_fails_closed_on_zero_p2p_connect_interval_ms
-contains	apps/cli/src/commands/config/tests.rs	set_rejects_zero_p2p_connect_interval_without_rewriting_config
-contains	apps/cli/src/commands/config/tests.rs	set_rejects_existing_invalid_runtime_config_without_rewriting
+contains	apps/cli/src/commands/config/tests/set.rs	set_rejects_zero_p2p_connect_interval_without_rewriting_config
+contains	apps/cli/src/commands/config/tests/set.rs	set_rejects_existing_invalid_runtime_config_without_rewriting
 contains	docs/acceptance-cases/11_commands_settings.md	existing_invalid_runtime_config_rejected_without_rewrite
 absent	apps/cli/src/server/agent_bridge/policy.rs	DEVE_AI_AGENT_BRIDGE_ENABLED
 absent	apps/cli/src/server/agent_bridge/policy.rs	DEVE_AI_AGENT_BRIDGE_TRUSTED

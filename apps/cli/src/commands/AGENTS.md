@@ -29,7 +29,8 @@ Implements all CLI subcommands. Each subcommand is a separate module that initia
 | `live_proxy.rs` | HTTP proxy client for CLI commands when the database is locked by a running server |
 | `live_proxy/tests.rs` | Tests for the live proxy port hint mechanism |
 | `config/schema.rs` | `deve_cli config set` schema whitelist |
-| `config/tests.rs` | Config command tests |
+| `config/tests.rs` | Config command test module entrypoint |
+| `config/tests/` | Config command mutation and Settings plan-contract tests |
 | `graph/tests.rs` | Graph command tests |
 | `ngit.rs` | NoteGit/ngit CLI adapter for Git main mirror diagnostics and explicit executor commands |
 | `git_output.rs` | Git mirror CLI output facade |

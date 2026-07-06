@@ -6,8 +6,8 @@ regex_absent	docs/features/operations/settings_file_config.md	(?m)^- `Trigger`: 
 regex_absent	docs/acceptance-cases/15_settings_operation_refs.md	(?m)^\s*- run: deve init --path /tmp/deve-settings\s*$
 contains	docs/features/operations/settings_persistence_apply.md	Runtime persistence uses `config.toml`
 contains	apps/cli/src/commands/config.rs	toml::to_string_pretty(config)
-contains	apps/cli/src/commands/config/tests.rs	set_core_key_writes_runtime_config
-contains	apps/cli/src/commands/config/tests.rs	set_rejects_unknown_key
+contains	apps/cli/src/commands/config/tests/set.rs	set_core_key_writes_runtime_config
+contains	apps/cli/src/commands/config/tests/set.rs	set_rejects_unknown_key
 contains	apps/cli/src/server/agent_bridge/policy/tests.rs	trusted_cli_untrusted_policy_falls_back_to_native
 contains	apps/cli/src/server/agent_bridge/http_tests.rs	backend_capabilities_http
 contains	docs/acceptance-cases/15_settings_operation_refs.md	case_id: SET-005
@@ -66,7 +66,7 @@ contains	docs/features/13_settings.md	主题、自动换行、编辑器密度、
 contains	docs/features/13_settings.md	AI Chat 面板可见性
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: SET-007
 contains	docs/acceptance-cases/11_commands_settings.md	unsupported_key_rejected: "server.settings.api_enabled"
-contains	apps/cli/src/commands/config/tests.rs	"server.settings.api_enabled"
+contains	apps/cli/src/commands/config/tests/set.rs	"server.settings.api_enabled"
 absent	apps/cli/src/server/router.rs	/api/settings
 cargo_test	deve_cli	config
 cargo_test	deve_cli	trusted_cli_untrusted
