@@ -13,8 +13,8 @@ use crate::components::settings_sections_policy::{
     ai_backend_button_state, ai_chat_visibility_button_state, sync_mode_button_state,
 };
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
-use crate::hooks::use_core::AiBackendMode;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::AiBackendMode;
 use leptos::prelude::*;
 
 mod local_prefs;

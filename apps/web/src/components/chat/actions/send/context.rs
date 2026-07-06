@@ -5,7 +5,7 @@
 //! out of the UI callback while preserving the read-first frontend boundary.
 
 use crate::components::chat::slash_commands::ChatSessionMode;
-use crate::hooks::use_core::ChatMessage;
+use crate::runtime::domain::ChatMessage;
 
 pub(super) const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
 pub(super) const MAX_CHAT_HISTORY_MESSAGES: usize = 8;

@@ -8,8 +8,9 @@ use crate::api::{
     AiBackendCapabilities, BackendSendDecision, fetch_ai_backend_capabilities,
     resolve_backend_for_effective_state,
 };
-use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
+use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 

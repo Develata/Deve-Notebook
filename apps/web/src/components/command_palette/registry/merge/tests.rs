@@ -1,8 +1,9 @@
 use super::merge_peer_commands;
 use crate::components::command_palette::logic::create_filtered_commands_memo;
 use crate::components::command_palette::types::{Command, CommandAvailability};
-use crate::hooks::use_core::{BranchContext, PendingOpsPreview, SyncMergeContext, SyncModeState};
+use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::Locale;
+use crate::runtime::domain::{PendingOpsPreview, SyncModeState};
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 use leptos::reactive::owner::Owner;

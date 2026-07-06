@@ -2,7 +2,8 @@
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 07_network#web-ws-runtime
 //!
-use crate::hooks::use_core::{ChatContext, ChatMessage, EditorContext};
+use crate::hooks::use_core::{ChatContext, EditorContext};
+use crate::runtime::domain::ChatMessage;
 use crate::runtime::scope_client::ScopeClient;
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
@@ -74,7 +75,7 @@ fn chat_response_matches_panel(
 #[cfg(test)]
 mod tests {
     use super::chat_response_matches_panel;
-    use crate::hooks::use_core::ChatMessage;
+    use crate::runtime::domain::ChatMessage;
 
     fn chat_message(req_id: Option<&str>) -> ChatMessage {
         ChatMessage {

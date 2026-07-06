@@ -12,8 +12,9 @@ use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{
     SearchAction, SearchProvider, SearchResult, SearchResultRole,
 };
-use crate::hooks::use_core::{SearchHit, source_control_notice::SourceControlNotice};
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::SearchHit;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 

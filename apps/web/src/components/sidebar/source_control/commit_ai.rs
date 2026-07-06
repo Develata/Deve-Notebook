@@ -6,8 +6,9 @@ use super::commit_ai_runtime::{
     CommitAiEffectRunner, plan_commit_ai_effects, plan_commit_ai_runtime, run_commit_ai_effects,
 };
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
-use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage, SourceControlContext};
+use crate::hooks::use_core::{ChatContext, SourceControlContext};
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 

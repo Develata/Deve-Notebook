@@ -3,9 +3,10 @@ use super::super::commit_ai_runtime::{
 };
 use super::CommitAiSignalEffectRunner;
 use crate::api::{AI_PLUGIN_TRUSTED_CLI, BackendSendDecision};
+use crate::hooks::use_core::ChatContext;
 use crate::hooks::use_core::state::PluginResponse;
-use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::reactive::owner::Owner;
 

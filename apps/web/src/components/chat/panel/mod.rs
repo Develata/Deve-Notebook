@@ -14,6 +14,7 @@ use crate::components::chat::message_list::MessageList;
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::{ChatContext, EditorContext};
 use crate::i18n::Locale;
+use crate::runtime::domain::ChatMessage;
 use crate::runtime::{
     document_client::DocumentClient, scope_client::ScopeClient, session_client::SessionClient,
 };
@@ -142,7 +143,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
 
 fn append_chat_message(chat: &ChatContext, role: &str, content: String, req_id: Option<String>) {
     chat.set_messages.update(|msgs| {
-        msgs.push(crate::hooks::use_core::ChatMessage {
+        msgs.push(ChatMessage {
             role: role.to_string(),
             content,
             req_id,

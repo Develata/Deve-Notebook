@@ -5,8 +5,8 @@
 use super::footer_playback::{PlaybackNarrow, PlaybackWide};
 use super::footer_read::{read_footer_signal, read_footer_value};
 use super::footer_status::LoadStatus;
-use crate::hooks::use_core::LoadPhase;
 use crate::i18n::Locale;
+use crate::runtime::domain::LoadPhase;
 use leptos::prelude::*;
 
 #[component]

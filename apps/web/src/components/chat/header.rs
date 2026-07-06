@@ -4,8 +4,9 @@
 //!
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::components::icons::*;
-use crate::hooks::use_core::{AiBackendMode, ChatContext};
+use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::AiBackendMode;
 use leptos::prelude::*;
 
 #[component]

@@ -6,8 +6,8 @@
 //! Display-mode row for the repository switcher.
 
 use crate::components::icons::{Check, EllipsisVertical};
-use crate::hooks::use_core::RepoSwitchRequest;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::RepoSwitchRequest;
 use deve_core::models::RepoId;
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;

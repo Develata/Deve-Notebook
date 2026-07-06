@@ -4,8 +4,8 @@
 //!   - 10_rendering#markdown-render-whitelist
 //!
 use crate::components::chat::slash_commands::ChatSessionMode;
-use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::ChatMessage;
 use crate::utils::{markdown::render_markdown, time::format_time_of_day};
 use leptos::html;
 use leptos::prelude::*;

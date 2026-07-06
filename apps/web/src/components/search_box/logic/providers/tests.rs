@@ -1,7 +1,7 @@
 use super::{SearchSurfaceMode, create_file_results, full_text_results, search_surface_mode};
 use crate::components::search_box::types::SearchAction;
-use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::SearchHit;
 use deve_core::protocol::doc_file_op_errors as path_err;
 
 fn doc_paths(paths: &[&str]) -> Vec<String> {

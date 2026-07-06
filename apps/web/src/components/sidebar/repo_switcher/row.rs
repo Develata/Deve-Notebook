@@ -9,8 +9,8 @@ mod actions;
 mod display;
 mod rename_form;
 
-use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use crate::i18n::Locale;
+use crate::runtime::domain::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use deve_core::models::RepoId;
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;

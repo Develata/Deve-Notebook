@@ -5,8 +5,8 @@ use super::context::{
 };
 use super::localize_backend_chat_message;
 use crate::components::chat::slash_commands::ChatSessionMode;
-use crate::hooks::use_core::ChatMessage;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::ChatMessage;
 
 #[test]
 fn markdown_context_is_bounded_on_char_boundaries() {

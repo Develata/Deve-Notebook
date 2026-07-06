@@ -3,8 +3,8 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::editor::EditorStats;
-use crate::hooks::use_core::LoadPhase;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::LoadPhase;
 use leptos::prelude::*;
 
 #[component]

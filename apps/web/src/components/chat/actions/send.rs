@@ -5,9 +5,10 @@
 use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{try_get_editor_content, try_get_editor_selection};
-use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
+use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
 use crate::runtime::document_client::DocumentClient;
+use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 

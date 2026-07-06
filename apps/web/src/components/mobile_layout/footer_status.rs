@@ -12,6 +12,7 @@ use crate::i18n::{Locale, t};
 use crate::runtime::document::pending::{
     PendingLocalEdits, PendingScope, pending_count_for_doc_in_scope,
 };
+use crate::runtime::domain::LoadPhase;
 use crate::runtime::{
     document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
     session_client::SessionClient,
@@ -169,14 +170,14 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
 /// Loading progress bar (hidden when `load_state == "ready"`).
 #[component]
 pub fn LoadStatus(
-    load_state: ReadSignal<crate::hooks::use_core::LoadPhase>,
+    load_state: ReadSignal<LoadPhase>,
     load_progress: ReadSignal<(usize, usize)>,
     load_eta_ms: ReadSignal<u64>,
     is_narrow: ReadSignal<bool>,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
     move || {
-        if read_footer_signal(load_state, crate::hooks::use_core::LoadPhase::Ready).is_ready() {
+        if read_footer_signal(load_state, LoadPhase::Ready).is_ready() {
             return view! {}.into_any();
         }
         let (done, total) = read_footer_signal(load_progress, (0, 0));

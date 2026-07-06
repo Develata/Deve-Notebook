@@ -7,8 +7,9 @@ use crate::api::{
 };
 use crate::components::icons::{Terminal, Zap};
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
-use crate::hooks::use_core::{AiBackendMode, ChatContext};
+use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::AiBackendMode;
 use leptos::prelude::*;
 
 #[component]

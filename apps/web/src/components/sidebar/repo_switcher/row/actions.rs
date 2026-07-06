@@ -6,8 +6,8 @@
 //! Action menu for repository switcher rows.
 
 use crate::components::icons::{Pencil, Trash2};
-use crate::hooks::use_core::RepoRemoveRequest;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::RepoRemoveRequest;
 use deve_core::models::RepoId;
 use deve_core::protocol::RepoListEntry;
 use leptos::ev::MouseEvent;

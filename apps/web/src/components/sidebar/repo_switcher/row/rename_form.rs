@@ -5,8 +5,8 @@
 //! Rename form for a repository switcher row.
 
 use crate::components::icons::{Check, X};
-use crate::hooks::use_core::RepoRenameRequest;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::RepoRenameRequest;
 use deve_core::models::RepoId;
 use leptos::ev::{MouseEvent, SubmitEvent};
 use leptos::prelude::*;

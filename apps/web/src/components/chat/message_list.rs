@@ -5,8 +5,8 @@
 use crate::components::chat::empty_state::EmptyState;
 use crate::components::chat::message_item::MessageItem;
 use crate::components::chat::slash_commands::ChatSessionMode;
-use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
+use crate::runtime::domain::ChatMessage;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use leptos::html;
