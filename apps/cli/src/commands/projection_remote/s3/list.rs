@@ -59,7 +59,9 @@ pub(super) fn discover_remote_markdown_files<T: S3Transport>(
                 continue;
             }
             RemoteProjectionFile::new(&path, Vec::new())?;
-            files.insert(path);
+            if !files.insert(path) {
+                return Err(RemoteProjectionProviderError::DuplicateProjectionPath);
+            }
             if files.len() > MAX_PULL_FILES {
                 return Err(list_budget_error(format!(
                     "S3 pull exceeds file budget of {MAX_PULL_FILES}"

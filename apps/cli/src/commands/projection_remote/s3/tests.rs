@@ -4,7 +4,7 @@ use super::url::{s3_file_url, s3_list_url};
 use crate::commands::projection_remote::workspace_apply::write_pull_files;
 use deve_core::remote_projection::{
     RemoteProjectionFile, RemoteProjectionProvider, RemoteProjectionProviderAdapter,
-    RemoteProjectionPullRequest, RemoteProjectionPushRequest,
+    RemoteProjectionProviderError, RemoteProjectionPullRequest, RemoteProjectionPushRequest,
 };
 use reqwest::StatusCode;
 use std::fs;
@@ -146,6 +146,34 @@ fn s3_pull_rejects_failed_get() {
     let err = provider.pull(request).expect_err("get failure");
 
     assert!(err.to_string().contains("S3 GET a.md failed"));
+}
+
+#[test]
+fn s3_pull_rejects_duplicate_remote_markdown_paths_before_get() {
+    let transport = RecordingS3Transport::new(StatusCode::OK).with_get_body(s3_list_body(
+        &["notebooks/main/a.md", "notebooks/main/a.md"],
+        None,
+    ));
+    let provider =
+        S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
+    let request = RemoteProjectionPullRequest::new(
+        RemoteProjectionProvider::S3,
+        "s3://bucket/notebooks/main",
+    )
+    .expect("request");
+
+    let err = provider.pull(request).expect_err("duplicate remote path");
+
+    assert_eq!(err, RemoteProjectionProviderError::DuplicateProjectionPath);
+    assert_eq!(
+        provider
+            .transport
+            .get_calls
+            .lock()
+            .expect("get calls")
+            .len(),
+        1
+    );
 }
 
 #[test]

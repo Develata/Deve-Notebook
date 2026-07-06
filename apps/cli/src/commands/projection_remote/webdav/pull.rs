@@ -118,7 +118,9 @@ fn discover_remote_markdown_files<T: WebDavTransport>(
             }
             if is_markdown_path(&path) {
                 RemoteProjectionFile::new(&path, Vec::new())?;
-                files.insert(path);
+                if !files.insert(path) {
+                    return Err(RemoteProjectionProviderError::DuplicateProjectionPath);
+                }
                 if files.len() > MAX_PULL_FILES {
                     return Err(pull_budget_error(format!(
                         "WebDAV pull exceeds file budget of {MAX_PULL_FILES}"

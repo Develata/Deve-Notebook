@@ -181,6 +181,33 @@ fn webdav_pull_rejects_failed_get() {
 }
 
 #[test]
+fn webdav_pull_rejects_duplicate_remote_markdown_paths_before_get() {
+    let transport = RecordingTransport::new(StatusCode::METHOD_NOT_ALLOWED, StatusCode::CREATED)
+        .with_propfind_body(propfind_body(&[
+            ("https://dav.example.com/notebooks/main/a.md", false),
+            ("https://dav.example.com/notebooks/main/a.md", false),
+        ]));
+    let provider = WebDavProjectionProvider::new_for_test(transport);
+    let request = RemoteProjectionPullRequest::new(
+        RemoteProjectionProvider::WebDav,
+        "webdav+https://dav.example.com/notebooks/main",
+    )
+    .expect("request");
+
+    let err = provider.pull(request).expect_err("duplicate remote path");
+
+    assert_eq!(err, RemoteProjectionProviderError::DuplicateProjectionPath);
+    assert!(
+        provider
+            .transport
+            .get_responses
+            .lock()
+            .expect("get responses")
+            .is_empty()
+    );
+}
+
+#[test]
 fn webdav_pull_rejects_partial_apply_without_overwriting_existing_file() {
     let dir = tempfile::tempdir().expect("tempdir");
     fs::write(dir.path().join("a-good.md"), "old").expect("old");
