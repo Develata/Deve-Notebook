@@ -204,6 +204,7 @@
     - run: cargo test -p deve_cli s3_pull_paginates_list_objects -- --nocapture
     - run: cargo test -p deve_cli s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens -- --nocapture
     - run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
     - run: cargo test -p deve_cli write_pull_files_overwrites_existing_file_without_temp_artifacts -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
@@ -212,6 +213,7 @@
     - run: cargo test -p deve_cli webdav_pull_rejects_too_many_files_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
@@ -328,6 +330,7 @@
     - api_assert: s3_pull_paginates_list_objects true
     - api_assert: s3_pull_decodes_list_xml_entities true
     - api_assert: s3_pull_truncated_list_without_token_fails_closed true
+    - api_assert: s3_pull_duplicate_remote_path_fails_before_payload_get true
     - api_assert: s3_pull_signs_get_requests true
     - api_assert: projection_pull_workspace_apply_uses_same_volume_staging true
     - cli_assert: s3_pull_failure_does_not_scan_or_report_ready true
@@ -341,6 +344,7 @@
     - api_assert: webdav_pull_file_count_budget_fails_before_workspace_write true
     - api_assert: webdav_pull_total_download_budget_fails_before_workspace_write true
     - api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
+    - api_assert: webdav_pull_duplicate_remote_path_fails_before_payload_get true
     - cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
     - cli_assert: webdav_pull_provider_io_ready true
     - api_assert: web_remote_projection_uses_repo_url_locator true

@@ -149,7 +149,7 @@ fn s3_pull_rejects_failed_get() {
 }
 
 #[test]
-fn s3_pull_rejects_duplicate_remote_markdown_paths_before_get() {
+fn s3_pull_rejects_duplicate_remote_markdown_paths_before_payload_get() {
     let transport = RecordingS3Transport::new(StatusCode::OK).with_get_body(s3_list_body(
         &["notebooks/main/a.md", "notebooks/main/a.md"],
         None,

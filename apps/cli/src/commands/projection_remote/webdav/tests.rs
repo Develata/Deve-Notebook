@@ -181,7 +181,7 @@ fn webdav_pull_rejects_failed_get() {
 }
 
 #[test]
-fn webdav_pull_rejects_duplicate_remote_markdown_paths_before_get() {
+fn webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get() {
     let transport = RecordingTransport::new(StatusCode::METHOD_NOT_ALLOWED, StatusCode::CREATED)
         .with_propfind_body(propfind_body(&[
             ("https://dav.example.com/notebooks/main/a.md", false),

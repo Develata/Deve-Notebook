@@ -165,6 +165,8 @@ RemoteProjectionCommand
   fail-closed，避免将默认 AWS 环境密钥签给任意 host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。
+- `webdav:pull` / `s3:pull` 远端枚举结果归一化后若出现重复 Markdown projection
+  path，必须在下载任何 payload 或写 Projection Workspace 前 fail-closed。
 - pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue
   或直接确认 External Changes。
 - push/pull 在执行前必须复用 Projection Locator 与 `.notegit` identity gate；locator 缺失、
