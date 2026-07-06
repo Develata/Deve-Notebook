@@ -25,6 +25,10 @@ const nativeBackendBridgeSource = fs.readFileSync(
   path.join(root, "native_backend_bridge.js"),
   "utf8"
 );
+const chatMessageItemSource = fs.readFileSync(
+  path.join(root, "..", "src", "components", "chat", "message_item.rs"),
+  "utf8"
+);
 const outlineKatexSource = fs.readFileSync(
   path.join(root, "..", "src", "components", "outline_render", "katex.rs"),
   "utf8"
@@ -920,6 +924,31 @@ assert.doesNotMatch(
   chatMathSource,
   /window\.katex\b/,
   "chat math rendering must not read window.katex directly"
+);
+assert.match(
+  chatMessageItemSource,
+  /"__deveWebBridge"/,
+  "chat message math projection must read through the browser bridge registry"
+);
+assert.match(
+  chatMessageItemSource,
+  /Reflect::get\([^;]*"call"/s,
+  "chat message math projection must invoke the registry call facade"
+);
+assert.match(
+  chatMessageItemSource,
+  /"renderChatMath"/,
+  "chat message math projection must route renderChatMath by name through the bridge call facade"
+);
+assert.doesNotMatch(
+  chatMessageItemSource,
+  /js_namespace\s*=\s*window,\s*js_name\s*=\s*renderChatMath/,
+  "chat message math projection must not bind renderChatMath directly from window"
+);
+assert.doesNotMatch(
+  chatMessageItemSource,
+  /Reflect::get\([^;]*"renderChatMath"/s,
+  "chat message math projection must not read renderChatMath directly from window"
 );
 
 assert.match(

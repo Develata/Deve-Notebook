@@ -9,13 +9,31 @@ use crate::i18n::{Locale, t};
 use crate::utils::{markdown::render_markdown, time::format_time_of_day};
 use leptos::html;
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsCast, JsValue};
 
-#[wasm_bindgen]
-unsafe extern "C" {
-    #[wasm_bindgen(js_namespace = window, js_name = renderChatMath)]
-    fn render_chat_math(element: &web_sys::HtmlElement) -> bool;
+fn render_chat_math(element: &web_sys::HtmlElement) -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let Ok(bridge) = js_sys::Reflect::get(window.as_ref(), &JsValue::from_str("__deveWebBridge"))
+    else {
+        return false;
+    };
+    let Ok(call) = js_sys::Reflect::get(&bridge, &JsValue::from_str("call")) else {
+        return false;
+    };
+    let Some(function) = call.dyn_ref::<js_sys::Function>() else {
+        return false;
+    };
+    function
+        .call2(
+            &bridge,
+            &JsValue::from_str("renderChatMath"),
+            element.as_ref(),
+        )
+        .ok()
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
 }
 
 pub(crate) fn should_show_apply_label(
