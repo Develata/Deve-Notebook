@@ -225,8 +225,8 @@ contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	p
 contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	process_probe_timeout_snapshot_consumes_retry_budget
 contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	process_shutdown_snapshot_enters_restart_path
 contains	crates/core/src/native_adapter/validation.rs	fn validate_port(field: &'static str, port: &str) -> Result<(), NativeAdapterError>
-contains	crates/core/src/native_adapter/contract_test.rs	native_endpoint_validation_rejects_invalid_or_zero_ports
-contains	crates/core/src/native_adapter/contract_test.rs	native_reprobe_before_write_requires_full_runtime_readiness
+contains	crates/core/src/native_adapter/contract_test/endpoint_validation.rs	native_endpoint_validation_rejects_invalid_or_zero_ports
+contains	crates/core/src/native_adapter/contract_test/readiness.rs	native_reprobe_before_write_requires_full_runtime_readiness
 contains	apps/web/src/api/service/tests.rs	native_runtime_readiness_requires_node_role_writer_and_current_scope
 contains	apps/web/src/api/native_bootstrap/tests.rs	rejects_native_bootstrap_with_invalid_or_zero_port
 contains	apps/web/src/api/service/readiness.rs	begin_foreground_reprobe
