@@ -67,6 +67,7 @@ struct DownloadRecord {
 struct RecordingDownloader {
     artifacts: HashMap<String, Vec<u8>>,
     metadata_is_diagnostic_only: bool,
+    reported_downloaded_bytes: Option<usize>,
     requests: Vec<DownloadRecord>,
 }
 
@@ -75,12 +76,18 @@ impl RecordingDownloader {
         Self {
             artifacts: artifacts.into_iter().collect(),
             metadata_is_diagnostic_only: true,
+            reported_downloaded_bytes: None,
             requests: Vec::new(),
         }
     }
 
     fn with_authoritative_metadata(mut self) -> Self {
         self.metadata_is_diagnostic_only = false;
+        self
+    }
+
+    fn with_reported_downloaded_bytes(mut self, downloaded_bytes: usize) -> Self {
+        self.reported_downloaded_bytes = Some(downloaded_bytes);
         self
     }
 }
@@ -100,8 +107,11 @@ impl BackupArtifactDownloader for RecordingDownloader {
             .get(request.object_path)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("missing artifact {}", request.object_path))?;
+        let downloaded_bytes = self
+            .reported_downloaded_bytes
+            .unwrap_or(artifact_bytes.len());
         Ok(BackupArtifactDownloadOutcome {
-            downloaded_bytes: artifact_bytes.len(),
+            downloaded_bytes,
             artifact_bytes,
             provider_metadata_is_diagnostic_only: self.metadata_is_diagnostic_only,
         })

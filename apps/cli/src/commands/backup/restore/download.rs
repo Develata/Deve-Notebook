@@ -55,6 +55,7 @@ pub(super) fn restore_download_lines(
     if !manifest_download.provider_metadata_is_diagnostic_only {
         bail!("backup provider download metadata must remain diagnostic-only");
     }
+    let manifest_downloaded_bytes = manifest_download.artifact_bytes.len();
     let opened_manifest = open_backup_branch_manifest_artifact(
         deve_core::backup::BackupBranchManifestArtifactOpenInput {
             branch,
@@ -87,7 +88,8 @@ pub(super) fn restore_download_lines(
         if !download.provider_metadata_is_diagnostic_only {
             bail!("backup provider download metadata must remain diagnostic-only");
         }
-        pack_downloaded_bytes = pack_downloaded_bytes.saturating_add(download.downloaded_bytes);
+        let artifact_bytes = download.artifact_bytes;
+        pack_downloaded_bytes = pack_downloaded_bytes.saturating_add(artifact_bytes.len());
         validate_backup_restore_resource_budget(BackupRestoreResourceBudgetInput {
             pack_count,
             encrypted_bytes: pack_downloaded_bytes,
@@ -97,10 +99,10 @@ pub(super) fn restore_download_lines(
             BackupPackArtifactRefDownloadVerifyInput {
                 branch_manifest: &branch_manifest,
                 pack_ref,
-                artifact_bytes: &download.artifact_bytes,
+                artifact_bytes: &artifact_bytes,
             },
         )?);
-        pack_artifacts.push((pack_ref, download.artifact_bytes));
+        pack_artifacts.push((pack_ref, artifact_bytes));
     }
 
     let downloaded = verify_downloaded_backup_packs(BackupDownloadedPacksInput {
@@ -194,14 +196,9 @@ pub(super) fn restore_download_lines(
         "artifact_io=true".to_string(),
         format!(
             "downloaded_bytes={}",
-            manifest_download
-                .downloaded_bytes
-                .saturating_add(pack_downloaded_bytes)
+            manifest_downloaded_bytes.saturating_add(pack_downloaded_bytes)
         ),
-        format!(
-            "branch_manifest_downloaded_bytes={}",
-            manifest_download.downloaded_bytes
-        ),
+        format!("branch_manifest_downloaded_bytes={manifest_downloaded_bytes}"),
         format!("pack_downloaded_bytes={pack_downloaded_bytes}"),
         "provider_metadata_diagnostic_only=true".to_string(),
         "manifest_verified=true".to_string(),

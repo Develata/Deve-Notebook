@@ -212,6 +212,30 @@ fn backup_restore_download_rejects_resource_budget_excess() {
 }
 
 #[test]
+fn backup_restore_download_budget_uses_actual_artifact_bytes_not_provider_count() {
+    let (key, manifest_digest, artifacts, pack_digests) = download_fixture();
+    let expected_downloaded_bytes: usize = artifacts.iter().map(|(_, bytes)| bytes.len()).sum();
+    let command = download_input(&manifest_digest, &pack_digests);
+    let mut downloader =
+        RecordingDownloader::new(artifacts).with_reported_downloaded_bytes(usize::MAX);
+    let mut key_resolver = FixedKeyResolver::new(key);
+    let lines = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)
+        .expect("provider reported byte count must remain diagnostic-only");
+
+    let expected_downloaded_bytes_line = format!("downloaded_bytes={expected_downloaded_bytes}");
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == &expected_downloaded_bytes_line)
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "provider_metadata_diagnostic_only=true")
+    );
+}
+
+#[test]
 fn backup_restore_download_rejects_manual_evidence_before_provider_get() {
     let forbidden_flags: [ForbiddenFlagCase; 3] = [
         ("manifest", |command| command.manifest_verified = true),
