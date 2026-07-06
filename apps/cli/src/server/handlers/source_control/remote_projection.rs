@@ -111,6 +111,7 @@ fn remote_projection_locator_from_repo_url(
     let repo_url = state.repo.get_repo_url(None, repo_name)?.ok_or_else(|| {
         anyhow::anyhow!("remote projection locator is not configured on repo_url")
     })?;
+    ensure_repo_url_provider_io_supported(provider, &repo_url)?;
     deve_core::remote_projection::plan_remote_projection_transport(
         deve_core::remote_projection::RemoteProjectionPlanInput {
             provider,
@@ -120,6 +121,18 @@ fn remote_projection_locator_from_repo_url(
     )
     .map(|plan| plan.locator)
     .map_err(Into::into)
+}
+
+fn ensure_repo_url_provider_io_supported(
+    provider: RemoteProjectionProvider,
+    locator: &str,
+) -> Result<()> {
+    if provider == RemoteProjectionProvider::S3 && locator.trim().starts_with("s3+https://") {
+        anyhow::bail!(
+            "S3 custom endpoint requires explicit credential binding before Web Remote Projection provider I/O"
+        );
+    }
+    Ok(())
 }
 
 fn remote_projection_provider_io_not_ready_detail(error: impl std::fmt::Display) -> String {
@@ -132,6 +145,7 @@ mod tests {
     use crate::server::sync_hello_test_support::{build_state, unicast_channel};
     use deve_core::protocol::ServerMessage;
     use deve_core::source_control::ChangeStatus;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{Duration, timeout};
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -244,6 +258,83 @@ mod tests {
                 assert_eq!(unstaged[0].status, ChangeStatus::Added);
             }
             other => panic!("expected ChangesList, got {other:?}"),
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor()
+    -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger_dir = dir.path().join("ledger");
+        let projection_base = dir.path().join("notes");
+        let mut repo = deve_core::ledger::RepoManager::init(
+            &ledger_dir,
+            10,
+            Some("notes"),
+            Some("s3+https://minio.example.com/bucket/notebooks/main"),
+        )?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let repo = Arc::new(repo);
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let identity_key =
+            crate::server::security::load_or_generate_identity_key(&dir.path().join("host"))?;
+        let state = Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
+            tx,
+            plugins: vec![],
+            sync_engine: Arc::new(deve_core::sync::repo_scoped::RepoScopedSyncEngine::new(
+                identity_key.peer_id(),
+                repo,
+                deve_core::config::SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(crate::server::tree_state::RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_available: false,
+            identity_key,
+        });
+        state.repo.ensure_local_repo_workspace_identity("notes")?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = crate::server::session::WsSession::new();
+        let executor_called = Arc::new(AtomicBool::new(false));
+        let executor_called_for_closure = executor_called.clone();
+
+        handle_remote_projection_transport_with_executor(
+            &state,
+            &ch,
+            &mut session,
+            RemoteProjectionProvider::S3,
+            RemoteProjectionDirection::Pull,
+            move |_repo, _repo_name, provider, direction, _locator| {
+                executor_called_for_closure.store(true, Ordering::SeqCst);
+                Ok(ProjectionRemoteExecutionSummary {
+                    provider,
+                    direction,
+                    provider_io_ready: true,
+                    uploaded_files: 0,
+                    downloaded_files: 0,
+                    external_changes_scan_triggered: false,
+                })
+            },
+        )
+        .await;
+
+        assert!(!executor_called.load(Ordering::SeqCst));
+        match timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error")
+        {
+            ServerMessage::ProtocolError {
+                error, scope_nonce, ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(scope_nonce, None);
+                let detail = error.detail.as_deref().expect("detail");
+                assert!(detail.contains("provider_io_ready=false"));
+                assert!(detail.contains("explicit credential binding"));
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
         }
         Ok(())
     }
