@@ -25,6 +25,10 @@ const nativeBackendBridgeSource = fs.readFileSync(
   path.join(root, "native_backend_bridge.js"),
   "utf8"
 );
+const outlineKatexSource = fs.readFileSync(
+  path.join(root, "..", "src", "components", "outline_render", "katex.rs"),
+  "utf8"
+);
 const indexHtmlSource = fs.readFileSync(path.join(root, "..", "index.html"), "utf8");
 const indexThemeBootstrapSource = fs.readFileSync(
   path.join(root, "index_theme_bootstrap.js"),
@@ -422,6 +426,9 @@ const katexBridgeRuntimeContext = {
       render(content, element, options) {
         element.rendered = { content, options };
       },
+      renderToString(content, options) {
+        return JSON.stringify({ content, options });
+      },
     },
   },
 };
@@ -461,6 +468,11 @@ assert.deepEqual(katexTarget.rendered, {
   content: "a^2",
   options: { displayMode: true },
 });
+assert.equal(
+  katexFacade.renderToString("a^2", { displayMode: false }),
+  JSON.stringify({ content: "a^2", options: { displayMode: false } }),
+  "KaTeX facade must expose renderToString for Rust outline projection"
+);
 const missingKatexContext = { window: {} };
 vm.runInNewContext(registrySource, missingKatexContext, {
   filename: "web_bridge_registry.js",
@@ -471,6 +483,36 @@ vm.runInNewContext(katexBridgeSource, missingKatexContext, {
 const missingKatexFacade = missingKatexContext.window.__deveWebBridge.get("__deveKatex");
 assert.equal(missingKatexFacade.available(), false);
 assert.equal(missingKatexFacade.render("x", {}, {}), false);
+assert.equal(missingKatexFacade.renderToString("x", {}), null);
+const throwingKatexContext = {
+  window: {
+    katex: {
+      render() {
+        throw new Error("render failed");
+      },
+      renderToString() {
+        throw new Error("renderToString failed");
+      },
+    },
+  },
+};
+vm.runInNewContext(registrySource, throwingKatexContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(katexBridgeSource, throwingKatexContext, {
+  filename: "katex_bridge.js",
+});
+const throwingKatexFacade = throwingKatexContext.window.__deveWebBridge.get("__deveKatex");
+assert.equal(
+  throwingKatexFacade.render("x", {}, {}),
+  false,
+  "KaTeX render facade must fail closed when the engine throws"
+);
+assert.equal(
+  throwingKatexFacade.renderToString("x", {}),
+  null,
+  "KaTeX renderToString facade must fail closed when the engine throws"
+);
 assert.throws(
   () => vm.runInNewContext(katexBridgeSource, { window: {} }, {
     filename: "katex_bridge.js",
@@ -908,6 +950,26 @@ assert.doesNotMatch(
   inlineRendererSource,
   /window\.katex\b/,
   "inline renderer must not read window.katex directly"
+);
+assert.match(
+  outlineKatexSource,
+  /"__deveWebBridge"/,
+  "outline KaTeX projection must read through the browser bridge registry"
+);
+assert.match(
+  outlineKatexSource,
+  /"__deveKatex"/,
+  "outline KaTeX projection must use the registered KaTeX facade"
+);
+assert.match(
+  outlineKatexSource,
+  /"renderToString"/,
+  "outline KaTeX projection must use the facade renderToString method"
+);
+assert.doesNotMatch(
+  outlineKatexSource,
+  /JsValue::from_str\("katex"\)/,
+  "outline KaTeX projection must not read window.katex directly"
 );
 assert.doesNotMatch(
   imageExtensionSource,

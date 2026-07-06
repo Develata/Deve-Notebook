@@ -16,8 +16,23 @@
       if (!katex || typeof katex.render !== "function") {
         return false;
       }
-      katex.render(content, element, options);
-      return true;
+      try {
+        katex.render(content, element, options);
+        return true;
+      } catch (_err) {
+        return false;
+      }
+    },
+    renderToString(content, options = {}) {
+      const katex = window.katex;
+      if (!katex || typeof katex.renderToString !== "function") {
+        return null;
+      }
+      try {
+        return katex.renderToString(content, options);
+      } catch (_err) {
+        return null;
+      }
     },
   };
 
