@@ -189,12 +189,19 @@ cases depend on the checked-in local `default` ledger being clean; use a seeded
 temporary repo for exact counts, or assert only that Source Control loads and
 reports its current state.
 
-## Backup Dry-Run Diagnostics
+## Backup Diagnostics and Remote-Readonly Restore
 
-Backup dry-run commands expose locator/runtime admission checks only. Dry-run
-does not contact WebDAV/S3 providers, upload/download artifacts, mutate binding
-state, append ledger entries, stage source-control changes, or touch Projection
-Workspaces.
+Backup diagnostics have two side-effect classes. Dry-run commands expose
+locator/runtime admission checks only: they do not contact WebDAV/S3 providers,
+upload/download artifacts, mutate binding state, append ledger entries, stage
+source-control changes, or touch Projection Workspaces.
+
+Non-dry-run `remote-readonly` restore may contact WebDAV/S3 providers and
+download encrypted artifacts, but it can only admit an in-memory
+RestoreCandidate after manifest verification, artifact authentication,
+verify-before-decrypt, plaintext schema checks, and resource-budget checks. It
+must not write ledger, staging, Source Control, Git mirror, or Projection
+Workspace state.
 
 Locator and layout diagnostics:
 
@@ -233,9 +240,9 @@ Control, Git mirror, or Projection Workspace state. Core-owned restore resource
 budget limits pack count, encrypted aggregate bytes, and plaintext aggregate
 bytes before admission.
 
-`explicit-import` and `explicit-merge` modes require `--write-gate` and still
-remain dry-run at this surface until RestoreCandidate import/merge authority is
-implemented.
+`explicit-import` and `explicit-merge` modes are only available as dry-run flow
+planning with `--write-gate`; non-dry-run execution remains fail-closed until
+RestoreCandidate import/merge authority is implemented.
 
 ## Docker Release Smoke
 
