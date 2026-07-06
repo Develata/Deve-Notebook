@@ -137,6 +137,9 @@ mod tests {
             "PendingBranchTarget",
             "PendingOpsPreview",
             "PendingRepoSwitch",
+            "RepoRemoveRequest",
+            "RepoRenameRequest",
+            "RepoSwitchRequest",
             "SearchHit",
             "SyncModeState",
         ]
@@ -424,6 +427,16 @@ mod tests {
             hooks_path(),
             hooks_alias(),
             hooks_alias(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_detects_repo_request_reexports() {
+        let source = format!(
+            "use {}::{}::{{ RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest }};",
+            hooks_path(),
             use_core_segment()
         );
         assert!(imports_use_core_domain_type_reexports(&source));
