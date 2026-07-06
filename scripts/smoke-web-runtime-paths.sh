@@ -9,6 +9,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cat <<'MSG'
 web-runtime-paths-smoke:
 
+Fresh smoke data root prep:
+  export DEVE_WEB_RUNTIME_SMOKE_ROOT="${DEVE_WEB_RUNTIME_SMOKE_ROOT:-target/codex-smoke/web-runtime}"
+  mkdir -p "$DEVE_WEB_RUNTIME_SMOKE_ROOT/projection-base"
+  export DEVE_LEDGER_DIR="$DEVE_WEB_RUNTIME_SMOKE_ROOT/config-root/ledger"
+  cargo run -p deve_cli --bin deve_cli -- init --path "$DEVE_WEB_RUNTIME_SMOKE_ROOT/config-root" --repo default --projection-base "$DEVE_WEB_RUNTIME_SMOKE_ROOT/projection-base"
+
 CMD-007A embedded browser path:
   scripts/smoke-web-release-build.sh
   cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001

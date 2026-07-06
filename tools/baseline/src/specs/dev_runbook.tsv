@@ -1,4 +1,7 @@
 contains	docs/dev-runbook.md	cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
+contains	docs/dev-runbook.md	cargo run -p deve_cli --bin deve_cli -- init --path "$DEVE_RUNTIME_ROOT/config-root" --repo default --projection-base "$DEVE_RUNTIME_ROOT/projection-base"
+contains	docs/dev-runbook.md	serve --dev` does not infer a projection base
+contains	docs/dev-runbook.md	global vault path
 contains	docs/dev-runbook.md	cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001
 contains	docs/dev-runbook.md	scripts/smoke-web-release-build.sh
 contains	docs/dev-runbook.md	scripts/smoke-web-runtime-paths.sh

@@ -193,5 +193,7 @@ contains	docs/features/operations/settings_feedback_render.md	aria-disabled
 contains	docs/features/operations/settings_runtime_feedback.md	aria-disabled
 contains	scripts/smoke-web-runtime-paths.sh	CMD-007A embedded browser path
 contains	scripts/smoke-web-runtime-paths.sh	CMD-007B Trunk fallback path
+contains	scripts/smoke-web-runtime-paths.sh	cargo run -p deve_cli --bin deve_cli -- init --path "$DEVE_WEB_RUNTIME_SMOKE_ROOT/config-root" --repo default
+contains	scripts/smoke-web-runtime-paths.sh	--projection-base "$DEVE_WEB_RUNTIME_SMOKE_ROOT/projection-base"
 contains	docs/dev-runbook.md	Settings / Command UI Smoke
 contains	docs/dev-runbook.md	data-deve-settings-surface

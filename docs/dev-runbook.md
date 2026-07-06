@@ -6,7 +6,19 @@ full Tantivy indexing.
 
 ## Local Backend
 
-Use explicit development mode for local runs:
+Fresh local data roots must first create a repo and host-local Projection
+Locator. `serve --dev` does not infer a projection base from `ledger_dir` or a
+global vault path.
+
+```bash
+export DEVE_RUNTIME_ROOT="${DEVE_RUNTIME_ROOT:-target/codex-smoke/web-runtime}"
+mkdir -p "$DEVE_RUNTIME_ROOT/projection-base"
+export DEVE_LEDGER_DIR="$DEVE_RUNTIME_ROOT/config-root/ledger"
+cargo run -p deve_cli --bin deve_cli -- init --path "$DEVE_RUNTIME_ROOT/config-root" --repo default --projection-base "$DEVE_RUNTIME_ROOT/projection-base"
+```
+
+Use explicit development mode for local runs after the data root has a valid
+Projection Locator:
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
@@ -31,6 +43,7 @@ unavailable error.
 Preferred embedded path (`CMD-007A` embedded browser runtime smoke):
 
 ```bash
+# after the Local Backend prep above
 scripts/smoke-web-release-build.sh
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
@@ -46,6 +59,7 @@ or `Login`, and network traffic includes `/api/auth/status` and `/api/node/role`
 Fallback two-process path (`CMD-007B` Trunk browser dev runtime smoke):
 
 ```bash
+# after the Local Backend prep above
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
 
@@ -75,6 +89,7 @@ step before printing the browser smoke commands.
 Use the Trunk fallback path while iterating on Settings or Command Palette UI:
 
 ```bash
+# after the Local Backend prep above
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 cd apps/web
 NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
