@@ -185,4 +185,41 @@ mod tests {
         }
         assert!(!source.contains("pub fn get_editor_selection()"));
     }
+
+    #[test]
+    fn editor_selection_reads_through_bridge_registry() {
+        let source = source_before_tests();
+
+        assert!(source.contains("pub fn try_get_editor_selection() -> Option<String>"));
+        assert!(source.contains("bridge_call0(\"getEditorSelection\")"));
+        assert!(source.contains("fn bridge_call0(name: &str) -> Option<JsValue>"));
+        assert!(source.contains("let (bridge, func) = bridge_call_function()?;"));
+        assert!(source.contains("JsValue::from_str(name)"));
+        assert!(source.contains("\"__deveWebBridge\""));
+        assert!(source.contains("\"call\""));
+        assert!(!source.contains("Reflect::get(window.as_ref(), &\"getEditorSelection\".into())"));
+        assert!(!source.contains("js_name = getEditorSelection"));
+    }
+
+    #[test]
+    fn editor_ffi_unready_write_queries_fail_closed() {
+        let source = source_before_tests();
+
+        assert!(
+            source.contains("fn bridge_call_function() -> Option<(JsValue, js_sys::Function)>")
+        );
+        assert!(source.contains("let window = web_sys::window()?;"));
+        assert!(source.contains(
+            "let bridge = js_sys::Reflect::get(window.as_ref(), &\"__deveWebBridge\".into()).ok()?;"
+        ));
+        assert!(
+            source.contains("let call = js_sys::Reflect::get(&bridge, &\"call\".into()).ok()?;")
+        );
+        assert!(source.contains("let func = call.dyn_into::<js_sys::Function>().ok()?;"));
+        assert!(source.matches(".unwrap_or(false)").count() >= 5);
+        assert!(source.contains("pub fn try_get_editor_content() -> Option<String>"));
+        assert!(source.contains("pub fn try_get_editor_selection() -> Option<String>"));
+        assert!(!source.contains(".expect(\"window\")"));
+        assert!(!source.contains(".unwrap()"));
+    }
 }

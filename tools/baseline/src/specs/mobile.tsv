@@ -475,7 +475,10 @@ contains	apps/web/js/editor_adapter.js	if (view.state?.readOnly) return false;
 contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("mobileRedo"
 contains	apps/web/js/index_bootstrap.js	registerEditorBridgeGlobal("mobileRedo"
 absent	apps/web/index.html	window._debug_view
-contains	apps/web/src/editor/ffi.rs	pub fn mobile_redo();
+contains	apps/web/src/editor/ffi.rs	pub fn mobile_undo() {
+contains	apps/web/src/editor/ffi.rs	pub fn mobile_redo() {
+contains	apps/web/src/editor/ffi.rs	bridge_call0("mobileUndo")
+contains	apps/web/src/editor/ffi.rs	bridge_call0("mobileRedo")
 contains	apps/web/src/i18n/common.rs	pub fn redo(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-023
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	run: scripts/check-mobile-baseline.sh
