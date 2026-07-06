@@ -18,6 +18,7 @@ pub fn native_backend_error(locale: Locale, error: Option<&str>) -> String {
 
 fn is_native_backend_bridge_unavailable(error: &str) -> bool {
     error == "native backend bridge unavailable"
+        || error == "native backend bridge invalid response"
         || error == "native backend bridge call failed"
         || (error.starts_with("native backend bridge method ") && error.ends_with(" unavailable"))
 }
@@ -39,6 +40,10 @@ mod tests {
                 Some("native backend bridge method saveRemote unavailable"),
             ),
             t::settings::native_backend_unavailable(Locale::En)
+        );
+        assert_eq!(
+            native_backend_error(Locale::Zh, Some("native backend bridge invalid response")),
+            t::settings::native_backend_unavailable(Locale::Zh)
         );
         assert_eq!(
             native_backend_error(Locale::Zh, Some("remote backend probe failed")),

@@ -6,6 +6,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 
 const NATIVE_BACKEND_CONFIG_FACADE: &str = "__DEVE_NATIVE_BACKEND_CONFIG__";
+const INVALID_NATIVE_BACKEND_RESPONSE: &str = "native backend bridge invalid response";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeBackendConfig {
@@ -76,14 +77,10 @@ fn parse_config_response(value: &JsValue) -> NativeBackendConfig {
         return NativeBackendConfig::unavailable(string_field(value, "error"));
     }
     let config = object_field(value, "value").unwrap_or_else(|| value.clone());
-    NativeBackendConfig {
-        available: true,
-        mode: string_field(&config, "mode").unwrap_or_else(|| "local".to_string()),
-        remote_url: string_field(&config, "remote_url")
-            .or_else(|| string_field(&config, "remoteUrl"))
-            .unwrap_or_default(),
-        error_message: None,
-    }
+    parse_config_fields(
+        string_field(&config, "mode"),
+        string_field(&config, "remote_url").or_else(|| string_field(&config, "remoteUrl")),
+    )
 }
 
 fn parse_validation_response(value: &JsValue) -> NativeBackendValidation {
@@ -91,16 +88,74 @@ fn parse_validation_response(value: &JsValue) -> NativeBackendValidation {
         return NativeBackendValidation::unavailable(string_field(value, "error"));
     }
     let result = object_field(value, "value").unwrap_or_else(|| value.clone());
+    parse_validation_fields(
+        bool_field(&result, "ok"),
+        string_field(&result, "https_origin").or_else(|| string_field(&result, "httpsOrigin")),
+        string_field(&result, "node_role").or_else(|| string_field(&result, "nodeRole")),
+        string_field(&result, "error"),
+    )
+}
+
+fn parse_config_fields(mode: Option<String>, remote_url: Option<String>) -> NativeBackendConfig {
+    match mode.as_deref() {
+        Some("local") if remote_url.as_deref().unwrap_or_default().is_empty() => {
+            NativeBackendConfig {
+                available: true,
+                mode: "local".to_string(),
+                remote_url: String::new(),
+                error_message: None,
+            }
+        }
+        Some("remote") => {
+            let Some(remote_url) = remote_url.filter(|url| !url.trim().is_empty()) else {
+                return NativeBackendConfig::unavailable(Some(
+                    INVALID_NATIVE_BACKEND_RESPONSE.to_string(),
+                ));
+            };
+            NativeBackendConfig {
+                available: true,
+                mode: "remote".to_string(),
+                remote_url,
+                error_message: None,
+            }
+        }
+        _ => NativeBackendConfig::unavailable(Some(INVALID_NATIVE_BACKEND_RESPONSE.to_string())),
+    }
+}
+
+fn parse_validation_fields(
+    ok: bool,
+    https_origin: Option<String>,
+    node_role: Option<String>,
+    error_message: Option<String>,
+) -> NativeBackendValidation {
+    if !ok {
+        return NativeBackendValidation {
+            available: true,
+            ok: false,
+            https_origin: String::new(),
+            node_role: String::new(),
+            error_message,
+        };
+    }
+
+    let Some(https_origin) = https_origin.filter(|origin| !origin.trim().is_empty()) else {
+        return NativeBackendValidation::unavailable(Some(
+            INVALID_NATIVE_BACKEND_RESPONSE.to_string(),
+        ));
+    };
+    let Some(node_role) = node_role.filter(|role| !role.trim().is_empty()) else {
+        return NativeBackendValidation::unavailable(Some(
+            INVALID_NATIVE_BACKEND_RESPONSE.to_string(),
+        ));
+    };
+
     NativeBackendValidation {
         available: true,
-        ok: bool_field(&result, "ok"),
-        https_origin: string_field(&result, "https_origin")
-            .or_else(|| string_field(&result, "httpsOrigin"))
-            .unwrap_or_default(),
-        node_role: string_field(&result, "node_role")
-            .or_else(|| string_field(&result, "nodeRole"))
-            .unwrap_or_default(),
-        error_message: string_field(&result, "error"),
+        ok: true,
+        https_origin,
+        node_role,
+        error_message: None,
     }
 }
 
@@ -150,34 +205,4 @@ impl NativeBackendValidation {
 }
 
 #[cfg(test)]
-mod tests {
-    fn source_before_tests() -> &'static str {
-        include_str!("native_backend_bridge.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("source before tests")
-    }
-
-    #[test]
-    fn native_backend_facade_reads_through_bridge_registry() {
-        let source = source_before_tests();
-
-        assert!(source.contains("NATIVE_BACKEND_CONFIG_FACADE"));
-        assert!(source.contains("\"__deveWebBridge\""));
-        assert!(source.contains("\"get\""));
-        assert!(
-            source.contains("&JsValue::from_str(NATIVE_BACKEND_CONFIG_FACADE)"),
-            "native backend config facade must be requested through the bridge registry"
-        );
-        assert!(
-            source
-                .match_indices("Reflect::get(window.as_ref(),")
-                .all(|(index, _)| {
-                    let lookup_tail = &source[index..source.len().min(index + 240)];
-                    !lookup_tail.contains(super::NATIVE_BACKEND_CONFIG_FACADE)
-                        && !lookup_tail.contains("__DEVE_NATIVE_BACKEND_CONFIG__")
-                }),
-            "native backend bridge must not read the facade directly from window"
-        );
-    }
-}
+mod tests;
