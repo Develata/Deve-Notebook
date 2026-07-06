@@ -5,6 +5,8 @@ use js_sys::{Array, Function, Promise, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 
+const NATIVE_BACKEND_CONFIG_FACADE: &str = "__DEVE_NATIVE_BACKEND_CONFIG__";
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeBackendConfig {
     pub available: bool,
@@ -59,12 +61,14 @@ async fn call_facade_method(method: &str, args: Array) -> Result<JsValue, String
 
 fn native_backend_facade() -> Option<JsValue> {
     let window = web_sys::window()?;
-    Reflect::get(
-        window.as_ref(),
-        &JsValue::from_str("__DEVE_NATIVE_BACKEND_CONFIG__"),
-    )
-    .ok()
-    .filter(|value| !value.is_null() && !value.is_undefined())
+    let bridge = Reflect::get(window.as_ref(), &JsValue::from_str("__deveWebBridge")).ok()?;
+    let get = Reflect::get(&bridge, &JsValue::from_str("get"))
+        .ok()?
+        .dyn_into::<Function>()
+        .ok()?;
+    get.call1(&bridge, &JsValue::from_str(NATIVE_BACKEND_CONFIG_FACADE))
+        .ok()
+        .filter(|value| !value.is_null() && !value.is_undefined())
 }
 
 fn parse_config_response(value: &JsValue) -> NativeBackendConfig {
@@ -147,11 +151,33 @@ impl NativeBackendValidation {
 
 #[cfg(test)]
 mod tests {
+    fn source_before_tests() -> &'static str {
+        include_str!("native_backend_bridge.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests")
+    }
+
     #[test]
-    fn native_backend_bridge_global_name_is_stable() {
-        assert_eq!(
-            "__DEVE_NATIVE_BACKEND_CONFIG__",
-            "__DEVE_NATIVE_BACKEND_CONFIG__"
+    fn native_backend_facade_reads_through_bridge_registry() {
+        let source = source_before_tests();
+
+        assert!(source.contains("NATIVE_BACKEND_CONFIG_FACADE"));
+        assert!(source.contains("\"__deveWebBridge\""));
+        assert!(source.contains("\"get\""));
+        assert!(
+            source.contains("&JsValue::from_str(NATIVE_BACKEND_CONFIG_FACADE)"),
+            "native backend config facade must be requested through the bridge registry"
+        );
+        assert!(
+            source
+                .match_indices("Reflect::get(window.as_ref(),")
+                .all(|(index, _)| {
+                    let lookup_tail = &source[index..source.len().min(index + 240)];
+                    !lookup_tail.contains(super::NATIVE_BACKEND_CONFIG_FACADE)
+                        && !lookup_tail.contains("__DEVE_NATIVE_BACKEND_CONFIG__")
+                }),
+            "native backend bridge must not read the facade directly from window"
         );
     }
 }
