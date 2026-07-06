@@ -196,14 +196,14 @@ contains	Dockerfile	https://deb.nodesource.com/setup_24.x
 contains	Dockerfile	npm ci --ignore-scripts && npm run build
 contains	Dockerfile	NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build --release
 contains	Dockerfile	COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/
-contains	Dockerfile	cargo build --release --locked --package deve_cli
+contains	Dockerfile	cargo build --release --locked --package deve_cli --bin deve_cli
 contains	Dockerfile	ENV DEVE_LEDGER_DIR=/data/ledger
 absent	Dockerfile	DEVE_VAULT_PATH
 contains	Dockerfile	ENV DEVE_BIND_ADDR=0.0.0.0:3001
 contains	Dockerfile	deve_cli init --repo default --projection-base /notes --path /data
 contains	Dockerfile	deve_cli serve --port 3001
-before	Dockerfile	trunk build --release	cargo build --release --locked --package deve_cli
-before	Dockerfile	COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/	cargo build --release --locked --package deve_cli
+before	Dockerfile	trunk build --release	cargo build --release --locked --package deve_cli --bin deve_cli
+before	Dockerfile	COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/	cargo build --release --locked --package deve_cli --bin deve_cli
 contains	docker-compose.yml	AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}
 contains	docker-compose.yml	AUTH_PASS: ${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}
 contains	docker-compose.yml	image: ghcr.io/develata/deve-notebook:latest

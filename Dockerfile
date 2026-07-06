@@ -24,7 +24,7 @@ FROM build-env AS backend
 COPY . .
 # 将前端 dist 放入 CLI build script 的默认扫描路径，编译进单二进制。
 COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/
-RUN cargo build --release --locked --package deve_cli && \
+RUN cargo build --release --locked --package deve_cli --bin deve_cli && \
     strip target/release/deve_cli
 
 # 阶段 4: runtime — 精简运行时镜像
@@ -41,7 +41,8 @@ RUN useradd -m -u 1000 -s /bin/bash appuser && \
 
 # 复制后端二进制
 COPY --from=backend /app/target/release/deve_cli /usr/local/bin/deve_cli
-RUN chmod +x /usr/local/bin/deve_cli
+RUN chmod +x /usr/local/bin/deve_cli && \
+    ln -s /usr/local/bin/deve_cli /usr/local/bin/deve
 
 # 环境变量配置
 ENV DEVE_LEDGER_DIR=/data/ledger

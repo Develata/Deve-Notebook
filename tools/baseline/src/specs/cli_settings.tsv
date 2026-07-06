@@ -1,29 +1,37 @@
-contains	apps/cli/src/main.rs	Init {
-contains	apps/cli/src/main.rs	repo_id: Option<uuid::Uuid>
-contains	apps/cli/src/main.rs	repo_url: Option<String>
-contains	apps/cli/src/main.rs	repo-id
+contains	apps/cli/Cargo.toml	default-run = "deve"
+contains	apps/cli/Cargo.toml	autobins = false
+contains	apps/cli/Cargo.toml	name = "deve"
+contains	apps/cli/Cargo.toml	name = "deve_cli"
+contains	apps/cli/src/lib.rs	pub use cli::run_cli;
+contains	apps/cli/src/main.rs	deve_cli::run_cli().await
+contains	apps/cli/src/bin/deve.rs	deve_cli::run_cli().await
+contains	Dockerfile	ln -s /usr/local/bin/deve_cli /usr/local/bin/deve
+contains	apps/cli/src/cli.rs	Init {
+contains	apps/cli/src/cli.rs	repo_id: Option<uuid::Uuid>
+contains	apps/cli/src/cli.rs	repo_url: Option<String>
+contains	apps/cli/src/cli.rs	repo-id
 contains	docs/plan/14_commands.md	`deve init --path <data-root> --repo <name> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`
 absent	docs/plan/14_commands.md	`deve init --repo <name> --projection-base <path>`
 case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	deve init --path <data-root> --repo default --projection-base <projection-base>
 case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007A	deve init --path <data-root> --repo default --projection-base <projection-base>
 case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007B	deve init --path <data-root> --repo default --projection-base <projection-base>
-contains	apps/cli/src/main.rs	Scan,
-contains	apps/cli/src/main.rs	Watch {
-contains	apps/cli/src/main.rs	Serve {
-contains	apps/cli/src/main.rs	Dump {
-contains	apps/cli/src/main.rs	Export {
-contains	apps/cli/src/main.rs	Graph {
-contains	apps/cli/src/main.rs	VerifyP2P
-contains	apps/cli/src/main.rs	Seed {
-contains	apps/cli/src/main.rs	NodeCheck {
-contains	apps/cli/src/main.rs	Recover {
-contains	apps/cli/src/main.rs	Repair {
-contains	apps/cli/src/main.rs	ScStatus {
-contains	apps/cli/src/main.rs	Ngit {
-contains	apps/cli/src/main.rs	ProjectionRemote {
-contains	apps/cli/src/main.rs	Repo {
-contains	apps/cli/src/main.rs	RepoProjectionAction
-contains	apps/cli/src/main.rs	Config {
+contains	apps/cli/src/cli.rs	Scan,
+contains	apps/cli/src/cli.rs	Watch {
+contains	apps/cli/src/cli.rs	Serve {
+contains	apps/cli/src/cli.rs	Dump {
+contains	apps/cli/src/cli.rs	Export {
+contains	apps/cli/src/cli.rs	Graph {
+contains	apps/cli/src/cli.rs	VerifyP2P
+contains	apps/cli/src/cli.rs	Seed {
+contains	apps/cli/src/cli.rs	NodeCheck {
+contains	apps/cli/src/cli.rs	Recover {
+contains	apps/cli/src/cli.rs	Repair {
+contains	apps/cli/src/cli.rs	ScStatus {
+contains	apps/cli/src/cli.rs	Ngit {
+contains	apps/cli/src/cli.rs	ProjectionRemote {
+contains	apps/cli/src/cli.rs	Repo {
+contains	apps/cli/src/cli.rs	RepoProjectionAction
+contains	apps/cli/src/cli.rs	Config {
 contains	apps/cli/src/dispatch.rs	ConfigAction::Print => commands::config::print(config)?
 contains	apps/cli/src/dispatch.rs	ConfigAction::Set { key, value } => commands::config::set(&key, &value)?
 contains	apps/cli/src/dispatch.rs	Commands::Graph
