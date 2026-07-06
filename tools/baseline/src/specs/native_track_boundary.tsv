@@ -6,7 +6,9 @@ contains	apps/desktop/src/lib.rs	mod service_entrypoint;
 contains	apps/desktop/src/lib.rs	mod tauri_bootstrap;
 contains	apps/desktop/src/process_runtime.rs	DesktopLocalServiceRuntime
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_with_parent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_after_main_window_close true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1 -ShutdownMode CloseMainWindow
 contains	apps/desktop/src/process_runtime.rs	DesktopCommandProcessLauncher
 contains	apps/desktop/src/process_runtime.rs	validate_desktop_service_command
 contains	apps/desktop/src/process_runtime.rs	stop_service
