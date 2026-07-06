@@ -8,6 +8,7 @@ use anyhow::Result;
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionPullOutcome, RemoteProjectionPushOutcome,
 };
+use std::collections::BTreeSet;
 
 pub(super) fn ensure_projection_transport_push_outcome_contract(
     outcome: &RemoteProjectionPushOutcome,
@@ -20,6 +21,7 @@ pub(super) fn ensure_projection_transport_pull_outcome_contract(
     outcome: &RemoteProjectionPullOutcome,
 ) -> Result<()> {
     ensure_projection_transport_effects_absent(&outcome.effects)?;
+    ensure_unique_pull_paths(outcome)?;
     if !outcome.overwrites_projection_workspace {
         return Err(provider_io_not_ready(
             "provider outcome violates remote projection transport contract: pull must overwrite only the Projection Workspace",
@@ -31,6 +33,19 @@ pub(super) fn ensure_projection_transport_pull_outcome_contract(
         ));
     }
     ensure_diagnostic_metadata(outcome.provider_metadata_is_diagnostic_only)
+}
+
+fn ensure_unique_pull_paths(outcome: &RemoteProjectionPullOutcome) -> Result<()> {
+    let mut paths = BTreeSet::new();
+    for file in &outcome.files {
+        if !paths.insert(file.path()) {
+            return Err(provider_io_not_ready(format!(
+                "provider outcome violates remote projection transport contract: duplicate projection path {}",
+                file.path()
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn ensure_diagnostic_metadata(provider_metadata_is_diagnostic_only: bool) -> Result<()> {

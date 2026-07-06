@@ -285,6 +285,39 @@ fn run_webdav_pull_returns_provider_error_before_scan() {
 }
 
 #[test]
+fn run_rejects_duplicate_pull_paths_before_workspace_write() {
+    let repo = initialized_default_repo();
+    std::fs::write(repo.workspace.join("remote-duplicate.md"), "local sentinel")
+        .expect("local sentinel");
+    let mut provider = PullDuplicatePathProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
+        .expect_err("duplicate pull paths must fail closed");
+
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("duplicate projection path remote-duplicate.md"));
+    assert_eq!(
+        std::fs::read_to_string(repo.workspace.join("remote-duplicate.md")).expect("sentinel"),
+        "local sentinel"
+    );
+    let repo_manager =
+        deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
+    assert!(
+        repo_manager
+            .list_pending_fs_in_local_repo("default")
+            .expect("pending")
+            .is_empty()
+    );
+    assert!(
+        repo_manager
+            .list_staged_in_local_repo("default")
+            .expect("staged")
+            .is_empty()
+    );
+}
+
+#[test]
 fn run_rejects_pull_without_external_changes_confirmation_before_workspace_write() {
     let repo = initialized_default_repo();
     let mut provider = PullWithoutExternalChangesProvider;

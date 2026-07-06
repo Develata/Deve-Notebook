@@ -23,6 +23,7 @@ pub(super) struct AuthorityEffectPushProvider;
 pub(super) struct AuthoritativeMetadataPushProvider;
 pub(super) struct PullWritingProvider;
 pub(super) struct PullFailingProvider;
+pub(super) struct PullDuplicatePathProvider;
 pub(super) struct PullWithoutWorkspaceOverwriteProvider;
 pub(super) struct PullWithoutExternalChangesProvider;
 pub(super) struct S3PullWritingProvider;
@@ -275,6 +276,37 @@ impl webdav::WebDavProjectionPullAdapter for PullWithoutWorkspaceOverwriteProvid
             ],
             effects: RemoteProjectionAuthorityEffects::projection_transport(),
             overwrites_projection_workspace: false,
+            external_changes_confirmation_required: true,
+            provider_metadata_is_diagnostic_only: true,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for PullDuplicatePathProvider {
+    fn push_projection_files(
+        &mut self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        unreachable!("pull-only duplicate-path-contract provider")
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for PullDuplicatePathProvider {
+    fn pull_projection_files(
+        &self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Ok(RemoteProjectionPullOutcome {
+            files: vec![
+                RemoteProjectionFile::new("remote-duplicate.md", b"first").expect("first"),
+                RemoteProjectionFile::new("remote-duplicate.md", b"second").expect("second"),
+            ],
+            effects: RemoteProjectionAuthorityEffects::projection_transport(),
+            overwrites_projection_workspace: true,
             external_changes_confirmation_required: true,
             provider_metadata_is_diagnostic_only: true,
         })
