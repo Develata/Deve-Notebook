@@ -11,7 +11,7 @@ use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
 use crate::editor::ffi::{applyRemoteContent, set_read_only};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
-use crate::hooks::use_core::LoadPhase;
+use crate::runtime::domain::LoadPhase;
 use deve_core::models::{Op, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use leptos::prelude::*;

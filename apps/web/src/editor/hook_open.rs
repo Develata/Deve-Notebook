@@ -5,7 +5,8 @@
 use super::buffered_ops::clear_sync_buffers;
 use super::open_scope::{OpenDocScope, OpenRequestKey, open_request_key};
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::{EditorContext, LoadPhase};
+use crate::hooks::use_core::EditorContext;
+use crate::runtime::domain::LoadPhase;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use deve_core::security::EncryptedOp;

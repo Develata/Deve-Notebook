@@ -2,7 +2,7 @@ use super::{
     ScopedMessageScope, SyncPayloadScope, accepts_sync_payload, matches_scope,
     matches_scoped_message,
 };
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::runtime::domain::PendingBranchTarget;
 use deve_core::models::PeerId;
 
 #[test]

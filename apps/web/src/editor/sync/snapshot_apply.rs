@@ -89,7 +89,7 @@ pub(super) fn build_progress_handler(
 mod tests {
     use super::{SnapshotApplySignals, build_apply_batch_with_applier, build_progress_handler};
     use crate::editor::sync::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
-    use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
+    use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
     use deve_core::models::Op;
     use deve_core::protocol::ConfirmedOp;
     use leptos::prelude::*;

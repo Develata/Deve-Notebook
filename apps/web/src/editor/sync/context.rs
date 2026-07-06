@@ -8,8 +8,8 @@
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::navigation::PendingNavigation;
-use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
+use crate::runtime::domain::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};

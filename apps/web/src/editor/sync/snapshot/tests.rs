@@ -2,7 +2,7 @@ use super::{
     SnapshotRequestMatch, confirmed_history, reconstruct_full_snapshot_content,
     snapshot_request_matches,
 };
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::runtime::domain::PendingBranchTarget;
 use deve_core::models::{Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
 

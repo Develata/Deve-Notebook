@@ -75,10 +75,10 @@ mod tests {
     use super::handle_write_ready_message;
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::navigation::PendingNavigation;
-    use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
     use crate::runtime::document::pending::{
         PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
     };
+    use crate::runtime::domain::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
     use deve_core::models::{DocId, Op, RepoId};
     use deve_core::protocol::ClientMessage;
     use leptos::prelude::{GetUntracked, signal};

@@ -7,8 +7,8 @@ use super::history_replay::{merge_history_tail, replay_buffered_live_ops, replay
 use super::history_resend::resend_pending_edits_if_ready;
 use crate::editor::EditorStats;
 use crate::editor::ffi::getEditorContent;
-use crate::hooks::use_core::LoadPhase;
 use crate::runtime::document::pending;
+use crate::runtime::domain::LoadPhase;
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 

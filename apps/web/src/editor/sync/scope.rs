@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::runtime::domain::PendingBranchTarget;
 use deve_core::models::{PeerId, RepoId};
 
 #[derive(Clone)]

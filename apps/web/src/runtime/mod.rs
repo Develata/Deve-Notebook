@@ -54,6 +54,23 @@ mod tests {
         );
     }
 
+    #[test]
+    fn web_runtime_boundary_editor_domain_types_do_not_import_use_core_reexports() {
+        let editor_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/editor");
+        let mut violations = Vec::new();
+        collect_rs_files(&editor_dir, &mut |path| {
+            let content = fs::read_to_string(path).expect("read editor source");
+            if imports_use_core_domain_type_reexports(&content) {
+                violations.push(path.strip_prefix(&editor_dir).unwrap().to_path_buf());
+            }
+        });
+
+        assert!(
+            violations.is_empty(),
+            "apps/web/src/editor must import runtime/domain shared types directly: {violations:?}"
+        );
+    }
+
     fn collect_rs_files(root: &Path, visit: &mut impl FnMut(&Path)) {
         for entry in fs::read_dir(root).expect("read runtime dir") {
             let path = entry.expect("runtime dir entry").path();
@@ -75,6 +92,51 @@ mod tests {
             return true;
         }
         contains_hooks_use_core_path(&compact, use_core)
+    }
+
+    fn imports_use_core_domain_type_reexports(content: &str) -> bool {
+        let compact = content
+            .chars()
+            .filter(|value| !value.is_whitespace())
+            .collect::<String>();
+        web_domain_type_segments()
+            .iter()
+            .any(|type_name| imports_use_core_domain_type(&compact, type_name))
+    }
+
+    fn imports_use_core_domain_type(content: &str, type_name: &str) -> bool {
+        let use_core = use_core_segment();
+        content.contains(&format!("{}::{use_core}::{type_name}", hooks_segment()))
+            || content.contains(&format!("{}::{use_core}::{type_name}", hooks_alias()))
+            || grouped_import_contains(
+                content,
+                &format!("{}::{use_core}::{{", hooks_segment()),
+                type_name,
+            )
+            || grouped_import_contains(
+                content,
+                &format!("{}::{use_core}::{{", hooks_alias()),
+                type_name,
+            )
+            || grouped_import_contains(content, &hooks_group_prefix(), use_core)
+                && grouped_import_contains(content, &hooks_group_prefix(), type_name)
+            || grouped_import_contains(content, &hooks_alias_group_prefix(), use_core)
+                && grouped_import_contains(content, &hooks_alias_group_prefix(), type_name)
+    }
+
+    fn web_domain_type_segments() -> &'static [&'static str] {
+        &[
+            "AiBackendMode",
+            "ChatMessage",
+            "LoadPhase",
+            "PeerSession",
+            "PendingBranchSwitch",
+            "PendingBranchTarget",
+            "PendingOpsPreview",
+            "PendingRepoSwitch",
+            "SearchHit",
+            "SyncModeState",
+        ]
     }
 
     fn imports_hooks_alias(content: &str) -> bool {
@@ -143,8 +205,16 @@ mod tests {
         format!("{}as", hooks_segment())
     }
 
+    fn hooks_alias() -> &'static str {
+        "hooks_alias"
+    }
+
     fn hooks_group_prefix() -> String {
         format!("{}::{{", hooks_segment())
+    }
+
+    fn hooks_alias_group_prefix() -> String {
+        format!("{}::{{", hooks_alias())
     }
 
     fn hooks_use_core_path(use_core: &str) -> String {
@@ -314,6 +384,62 @@ mod tests {
     fn web_runtime_boundary_allows_runtime_domain_import() {
         let source = "use crate::runtime::domain::LoadPhase;";
         assert!(!imports_use_core_internals(source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_detects_direct_use_core_domain_type_import() {
+        let source = format!("use {}::{}::LoadPhase;", hooks_path(), use_core_segment());
+        assert!(imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_detects_grouped_use_core_domain_type_import() {
+        let source = format!(
+            "use {}::{}::{{ EditorContext, PendingRepoSwitch }};",
+            hooks_path(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_detects_hooks_alias_domain_type_import() {
+        let source = format!(
+            "use {} as {}; use {}::{}::LoadPhase;",
+            hooks_path(),
+            hooks_alias(),
+            hooks_alias(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_detects_hooks_alias_grouped_domain_type_import() {
+        let source = format!(
+            "use {} as {}; use {}::{{ {}::{{ EditorContext, PendingRepoSwitch }} }};",
+            hooks_path(),
+            hooks_alias(),
+            hooks_alias(),
+            use_core_segment()
+        );
+        assert!(imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_allows_use_core_composition_types() {
+        let source = format!(
+            "use {}::{}::EditorContext;",
+            hooks_path(),
+            use_core_segment()
+        );
+        assert!(!imports_use_core_domain_type_reexports(&source));
+    }
+
+    #[test]
+    fn web_runtime_boundary_editor_domain_allows_runtime_domain_import() {
+        let source = "use crate::runtime::domain::PendingRepoSwitch;";
+        assert!(!imports_use_core_domain_type_reexports(source));
     }
 
     fn relative_module_path(depth: usize) -> String {

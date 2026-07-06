@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use super::scope::matches_scope;
-use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
+use crate::runtime::domain::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::*;
 use std::sync::Arc;
