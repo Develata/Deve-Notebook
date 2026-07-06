@@ -71,6 +71,18 @@ changes, provider compromise, or algorithm deprecation. If a rotation or revoke
 protocol is not yet defined by the owning contract, the project must fail closed
 for that release path instead of inventing an ad hoc migration.
 
+## Algorithm Deprecation Policy
+
+Cryptographic algorithm retirement follows `docs/plan/23_threat_model.md`.
+Removing an auth token, password hash, peer signature, backup artifact, or
+transport protection algorithm requires an owner contract update, a migration
+window where old and new material can be handled safely, and a release gate that
+proves the old algorithm is no longer required.
+
+If the owning contract has not defined a migration or verification path, the
+release path must fail closed instead of silently dropping compatibility or
+accepting unverifiable material.
+
 ## Supply Chain Policy
 
 Release artifacts must be built from the checked-in lockfile and include or link

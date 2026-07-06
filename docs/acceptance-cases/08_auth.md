@@ -194,16 +194,17 @@
     - config_assert: production_AUTH_ALLOW_ANONYMOUS_LOCALHOST_fails_closed true
 
 - case_id: AUTH-016
-  goal: Security policy 覆盖 CVD、key lifecycle 与 supply chain release gate。
+  goal: Security policy 覆盖 CVD、key lifecycle、algorithm deprecation 与 supply chain release gate。
   preconditions:
     - SECURITY.md 存在
-    - docs/plan/23_threat_model.md 已声明 CVD / key lifecycle / supply chain policy owner
+    - docs/plan/23_threat_model.md 已声明 CVD / key lifecycle / algorithm deprecation / supply chain policy owner
   steps:
     - run: scripts/check-auth-baseline.sh
   assertions:
     - security_assert: security_md_private_report_channel_present true
     - security_assert: security_md_response_sla_present true
     - security_assert: security_md_key_lifecycle_policy_present true
+    - security_assert: security_md_algorithm_deprecation_policy_present true
     - security_assert: security_md_supply_chain_policy_present true
 
 - case_id: AUTH-013

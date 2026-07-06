@@ -40,15 +40,19 @@ contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-014
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-015
 contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_requires_development_env
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-016
+contains	docs/acceptance-cases/08_auth.md	algorithm deprecation / supply chain policy owner
 contains	docs/acceptance-cases/08_auth.md	security_md_private_report_channel_present true
 contains	docs/acceptance-cases/08_auth.md	security_md_response_sla_present true
 contains	docs/acceptance-cases/08_auth.md	security_md_key_lifecycle_policy_present true
+contains	docs/acceptance-cases/08_auth.md	security_md_algorithm_deprecation_policy_present true
 contains	docs/acceptance-cases/08_auth.md	security_md_supply_chain_policy_present true
 contains	docs/plan/23_threat_model.md	key lifecycle 高层流程（§4）
+contains	docs/plan/23_threat_model.md	algorithm deprecation（§5）
 contains	docs/plan/23_threat_model.md	supply chain policy（§6）
 contains	docs/plan/23_threat_model.md	CVD policy（§7）
 contains	docs/plan/23_threat_model.md	本章 **MUST NOT** 重写 auth/network/backup 的运行时合同
 contains	docs/plan/23_threat_model.md	## 4. Key Lifecycle (高层流程) {#key-lifecycle}
+contains	docs/plan/23_threat_model.md	## 5. Algorithm Deprecation {#algorithm-deprecation}
 contains	docs/plan/23_threat_model.md	## 6. Supply Chain {#supply-chain}
 contains	docs/plan/23_threat_model.md	## 7. Coordinated Vulnerability Disclosure {#coordinated-vulnerability-disclosure}
 contains	SECURITY.md	https://github.com/Develata/Deve-Notebook/security/advisories/new
@@ -62,6 +66,11 @@ contains	SECURITY.md	14 calendar days
 contains	SECURITY.md	treated as T1 until triage proves otherwise
 contains	SECURITY.md	Key Lifecycle Policy
 contains	SECURITY.md	Secret material must not be committed, logged, embedded in URLs, stored in
+contains	SECURITY.md	Algorithm Deprecation Policy
+contains	SECURITY.md	Cryptographic algorithm retirement follows `docs/plan/23_threat_model.md`
+contains	SECURITY.md	owner contract update
+contains	SECURITY.md	migration
+contains	SECURITY.md	release path must fail closed
 contains	SECURITY.md	Supply Chain Policy
 contains	SECURITY.md	Cargo.lock
 contains	SECURITY.md	signing rules owned by `docs/plan/18_release.md`
