@@ -229,6 +229,11 @@ fn backup_restore_download_budget_uses_actual_artifact_bytes_not_provider_count(
             .any(|line| line == &expected_downloaded_bytes_line)
     );
     assert!(
+        !lines
+            .iter()
+            .any(|line| line == &format!("downloaded_bytes={}", usize::MAX))
+    );
+    assert!(
         lines
             .iter()
             .any(|line| line == "provider_metadata_diagnostic_only=true")

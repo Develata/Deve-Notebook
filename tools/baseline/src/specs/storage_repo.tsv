@@ -199,6 +199,7 @@ contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restor
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_wrong_key_before_candidate()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_resource_budget_excess()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_budget_uses_actual_artifact_bytes_not_provider_count()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_manual_evidence_before_provider_get()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_manual_pack_metadata_before_provider_get()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_tampered_artifact_before_candidate()
