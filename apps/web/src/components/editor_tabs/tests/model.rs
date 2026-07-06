@@ -1,5 +1,5 @@
 use crate::components::editor_tabs::{diff_tab_from_session, model::display_name};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 
 #[test]

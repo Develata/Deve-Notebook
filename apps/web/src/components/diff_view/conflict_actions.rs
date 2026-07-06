@@ -2,8 +2,8 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::hooks::use_core::diff_session::MergeConflictSession;
 use crate::i18n::{Locale, t};
+use crate::runtime::source_control_client::diff_session::MergeConflictSession;
 use deve_core::protocol::MergeConflictAction;
 use leptos::prelude::*;
 

@@ -5,7 +5,7 @@ use crate::components::editor_tabs::{
         should_clear_diff_on_document_change,
     },
 };
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::{DocId, PeerId};
 
 #[test]

@@ -3,7 +3,7 @@
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use super::model::{EditorTabKey, diff_tab_key};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::{DocId, PeerId};
 
 pub(crate) type EditorTabRuntimeScope = (Option<String>, u64, Option<PeerId>);

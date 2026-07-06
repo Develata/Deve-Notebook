@@ -4,7 +4,7 @@
 
 use super::super::model::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use super::remove_visible_tab_order;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 
 #[cfg(test)]

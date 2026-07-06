@@ -4,9 +4,9 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::{Callback, WriteSignal};
 

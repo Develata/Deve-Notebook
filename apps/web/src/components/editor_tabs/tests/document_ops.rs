@@ -6,7 +6,7 @@ use crate::components::editor_tabs::{
         touch_document_access_order, upsert_document_tab, upsert_visible_tab_order,
     },
 };
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 
 #[test]

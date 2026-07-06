@@ -8,8 +8,8 @@ pub(crate) use self::model::mobile_surface_sheet_visible;
 
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{ChevronDown, FileText, SourceControl, X};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::i18n::{Locale, t};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 

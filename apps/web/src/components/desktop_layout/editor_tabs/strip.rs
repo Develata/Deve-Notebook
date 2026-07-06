@@ -5,8 +5,8 @@ use crate::components::editor_tabs::{
     DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
 };
 use crate::components::icons::{FileText, SourceControl, X};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::i18n::{Locale, t};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
@@ -73,7 +73,7 @@ mod tests {
                 key: "diff-1".into(),
                 title: "current.diff".into(),
                 tooltip: "current.diff".into(),
-                session: crate::hooks::use_core::diff_session::DiffSessionWire::new(
+                session: crate::runtime::source_control_client::diff_session::DiffSessionWire::new(
                     "current.diff".into(),
                     "old".into(),
                     "new".into(),

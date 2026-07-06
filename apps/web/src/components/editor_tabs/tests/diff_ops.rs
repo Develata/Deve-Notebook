@@ -4,7 +4,7 @@ use crate::components::editor_tabs::{
     diff_tab_from_session,
     ops::{remove_diff_tab, remove_diff_tab_with_order},
 };
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use leptos::prelude::{GetUntracked, signal};
 
 #[test]

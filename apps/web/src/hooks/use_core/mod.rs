@@ -18,7 +18,6 @@ mod callbacks_switch;
 mod callbacks_sync;
 pub mod contexts;
 mod dashboard_context;
-pub mod diff_session;
 pub(crate) mod doc_name;
 pub mod effects;
 pub mod effects_sc;

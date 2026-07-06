@@ -3,8 +3,8 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::hooks::use_core::diff_session::{DiffSessionWire, MergeConflictSession};
 use crate::hooks::use_core::source_control_notice::is_local_command_notice;
+use crate::runtime::source_control_client::diff_session::{DiffSessionWire, MergeConflictSession};
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::{GetUntracked, Set, Update};
 
@@ -188,7 +188,9 @@ fn is_merge_conflict_diff_fallback(
 #[cfg(test)]
 mod tests {
     use super::is_merge_conflict_diff_fallback;
-    use crate::hooks::use_core::diff_session::{DiffSessionWire, MergeConflictSession};
+    use crate::runtime::source_control_client::diff_session::{
+        DiffSessionWire, MergeConflictSession,
+    };
     use deve_core::models::DocId;
     use deve_core::protocol::MergeConflictAction;
 

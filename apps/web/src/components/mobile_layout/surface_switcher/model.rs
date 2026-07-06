@@ -139,8 +139,8 @@ mod tests {
         mobile_surface_switcher_touch_target, mobile_surface_type_label_marker,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
-    use crate::hooks::use_core::diff_session::DiffSessionWire;
     use crate::i18n::{Locale, t};
+    use crate::runtime::source_control_client::diff_session::DiffSessionWire;
     use deve_core::models::DocId;
 
     #[test]

@@ -18,8 +18,8 @@ use super::{
 };
 use crate::components::layout_context::EditorTabLimitControl;
 use crate::hooks::use_core::EditorContext;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use crate::runtime::{
     document_client::DocumentClient, scope_client::ScopeClient,
     source_control_client::SourceControlClient,

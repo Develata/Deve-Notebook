@@ -100,7 +100,7 @@
 1. `User Operation`: 用户选择当前、传入或合并结果。
 2. `Application Response`: 前端使用 conflict `doc_id` 与当前 `scope_nonce` 发送 `ResolveMergeConflict`；服务端校验 pending conflict 与 scope 后写入所选结果。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/diff_session.rs`
+   - `apps/web/src/runtime/source_control_client/diff_session.rs`
    - `apps/web/src/components/desktop_layout/content.rs`
    - `apps/web/src/components/mobile_layout/content.rs`
    - `apps/cli/src/server/ws/route/merge.rs`

@@ -5,9 +5,9 @@ use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, Conflic
 use leptos::prelude::*;
 
 use super::super::callbacks_sc::SourceControlCallbacks;
-use super::super::diff_session::DiffSessionWire;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::CoreSignals;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 
 pub(super) struct SourceControlStateSection {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,

@@ -4,10 +4,10 @@ use super::{
 };
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::callbacks_sc::SourceControlScopeSignals;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::{ClientMessage, ServerErrorCode};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};

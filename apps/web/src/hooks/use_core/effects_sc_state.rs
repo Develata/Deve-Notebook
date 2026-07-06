@@ -3,8 +3,8 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 

@@ -56,7 +56,9 @@ pub fn DiffView(
     #[prop(default = false)] is_readonly: bool,
     #[prop(default = false)] force_unified: bool,
     #[prop(default = false)] mobile: bool,
-    merge_conflict: Option<crate::hooks::use_core::diff_session::MergeConflictSession>,
+    merge_conflict: Option<
+        crate::runtime::source_control_client::diff_session::MergeConflictSession,
+    >,
     on_resolve_merge_conflict: Option<Callback<(MergeConflictAction, Option<String>)>>,
     on_close: Callback<()>,
 ) -> impl IntoView {

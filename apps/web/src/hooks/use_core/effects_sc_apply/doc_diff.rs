@@ -2,7 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 10_rendering#large-document-runtime
 //!
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 

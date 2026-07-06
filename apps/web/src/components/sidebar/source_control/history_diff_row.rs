@@ -4,7 +4,7 @@
 //!
 use crate::components::icons::FileText;
 use crate::hooks::use_core::SourceControlContext;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::source_control::{ChangeStatus, CommitFileDiff};
 use leptos::prelude::*;
 

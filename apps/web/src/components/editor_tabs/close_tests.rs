@@ -5,9 +5,9 @@
 use super::{EditorDocumentTab, EditorTabKey, build_close_document_callback};
 use crate::components::editor_tabs::diff_tab_from_session;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_core::{EditorContext, LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use crate::runtime::{
     document::pending::PendingLocalEdits, document_client::DocumentClient,
     scope_client::ScopeClient, source_control_client::SourceControlClient,

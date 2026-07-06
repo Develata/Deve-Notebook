@@ -4,8 +4,8 @@
 use deve_core::source_control::CommitFileDiff;
 use leptos::prelude::*;
 
-use super::super::diff_session::DiffSessionWire;
 use super::super::source_control_notice::SourceControlNotice;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 
 #[derive(Clone, Copy)]
 pub(super) struct SourceControlSignals {

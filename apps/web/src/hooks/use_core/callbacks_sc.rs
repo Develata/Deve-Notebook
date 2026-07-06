@@ -4,11 +4,11 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
 use crate::i18n::Locale;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
 

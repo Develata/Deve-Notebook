@@ -39,13 +39,13 @@ mod tests {
     use super::establish_branch_command;
     use crate::components::activity_bar::SidebarView;
     use crate::components::main_layout::SidebarControl;
-    use crate::hooks::use_core::diff_session::DiffSessionWire;
     use crate::hooks::use_core::source_control_notice::{
         SourceControlNotice, is_establish_branch_unavailable_notice,
     };
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
     use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch, SourceControlContext};
     use crate::i18n::Locale;
+    use crate::runtime::source_control_client::diff_session::DiffSessionWire;
     use deve_core::models::PeerId;
     use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
     use leptos::prelude::{

@@ -6,13 +6,13 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_read_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
-use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
     DELETED_NO_DOC_ID_NOTICE_PREFIX, SourceControlNotice,
 };
 use crate::hooks::use_core::write_gate::{
     RepoWriteSignals, repo_source_control_read_block_untracked,
 };
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::protocol::{ClientMessage, ServerErrorCode};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::{Callback, Set, WriteSignal};

@@ -8,12 +8,12 @@ use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
-use super::super::diff_session::DiffSessionWire;
 use super::super::effects_sc_scope::matches_current_scope;
 use super::super::effects_sc_state::scoped_ack_matches;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::CoreSignals;
 use super::super::types::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 
 pub(crate) struct ScMessageContext<'a> {
     pub(crate) set_staged: WriteSignal<Vec<ChangeEntry>>,

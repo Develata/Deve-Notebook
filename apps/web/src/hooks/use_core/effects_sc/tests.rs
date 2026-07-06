@@ -3,9 +3,8 @@ use super::super::effects_sc_state::{
     changes_list_matches_request, clear_repo_scoped_state, commit_diff_matches_request,
     commit_history_matches_request, doc_diff_matches_request, scoped_ack_matches,
 };
-use crate::hooks::use_core::{
-    LoadPhase, PendingBranchSwitch, PendingRepoSwitch, diff_session::DiffSessionWire,
-};
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;

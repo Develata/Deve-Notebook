@@ -5,10 +5,10 @@
 //!
 use leptos::prelude::*;
 
-use super::super::diff_session::DiffSessionWire;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::{PendingBranchSwitch, PendingRepoSwitch};
 use super::super::write_gate::RepoWriteBlock;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 

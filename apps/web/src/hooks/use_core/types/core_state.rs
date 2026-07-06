@@ -17,11 +17,11 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
-use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::PluginResponse;
 use crate::runtime::document::pending::PendingLocalEdits;
+use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 
 #[derive(Clone)]
 pub struct CoreState {
