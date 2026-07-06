@@ -1,0 +1,66 @@
+//! plan_ref:
+//!   - 05_diff_logic#remote-projection-transport
+//!
+//! Runtime outcome contract guard for Remote Projection provider I/O.
+
+use super::provider_io_not_ready;
+use anyhow::Result;
+use deve_core::remote_projection::{
+    RemoteProjectionAuthorityEffects, RemoteProjectionPullOutcome, RemoteProjectionPushOutcome,
+};
+
+pub(super) fn ensure_projection_transport_push_outcome_contract(
+    outcome: &RemoteProjectionPushOutcome,
+) -> Result<()> {
+    ensure_projection_transport_effects_absent(&outcome.effects)?;
+    ensure_diagnostic_metadata(outcome.provider_metadata_is_diagnostic_only)
+}
+
+pub(super) fn ensure_projection_transport_pull_outcome_contract(
+    outcome: &RemoteProjectionPullOutcome,
+) -> Result<()> {
+    ensure_projection_transport_effects_absent(&outcome.effects)?;
+    if !outcome.overwrites_projection_workspace {
+        return Err(provider_io_not_ready(
+            "provider outcome violates remote projection transport contract: pull must overwrite only the Projection Workspace",
+        ));
+    }
+    if !outcome.external_changes_confirmation_required {
+        return Err(provider_io_not_ready(
+            "provider outcome violates remote projection transport contract: pull must require External Changes confirmation",
+        ));
+    }
+    ensure_diagnostic_metadata(outcome.provider_metadata_is_diagnostic_only)
+}
+
+fn ensure_diagnostic_metadata(provider_metadata_is_diagnostic_only: bool) -> Result<()> {
+    if provider_metadata_is_diagnostic_only {
+        Ok(())
+    } else {
+        Err(provider_io_not_ready(
+            "provider outcome violates remote projection transport contract: provider metadata must be diagnostic-only",
+        ))
+    }
+}
+
+fn ensure_projection_transport_effects_absent(
+    effects: &RemoteProjectionAuthorityEffects,
+) -> Result<()> {
+    if effects.writes_ledger
+        || effects.writes_source_control_staging
+        || effects.writes_commit_anchor
+        || effects.writes_git_main_mirror
+        || effects.confirms_external_changes
+    {
+        return Err(provider_io_not_ready(format!(
+            "provider outcome violates remote projection transport contract: authority effects must be absent \
+             (writes_ledger={}, writes_source_control_staging={}, writes_commit_anchor={}, writes_git_main_mirror={}, confirms_external_changes={})",
+            effects.writes_ledger,
+            effects.writes_source_control_staging,
+            effects.writes_commit_anchor,
+            effects.writes_git_main_mirror,
+            effects.confirms_external_changes,
+        )));
+    }
+    Ok(())
+}

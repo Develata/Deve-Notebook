@@ -216,12 +216,16 @@
     - run: cargo test -p deve_cli webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli run_rejects_provider_authority_effects_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_cli run_s3_pull_scans_written_files_into_external_changes -- --nocapture
     - run: cargo test -p deve_cli run_s3_pull_returns_provider_error_before_scan -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
     - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
+    - run: cargo test -p deve_cli run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
@@ -306,6 +310,10 @@
     - api_assert: remote_projection_fake_adapter_markdown_only true
     - api_assert: remote_projection_pull_candidate_external_changes_only true
     - api_assert: remote_projection_provider_metadata_diagnostic_only true
+    - cli_assert: remote_projection_provider_authority_effects_fail_closed true
+    - cli_assert: remote_projection_provider_metadata_authoritative_fails_closed true
+    - cli_assert: remote_projection_pull_requires_external_changes_confirmation true
+    - cli_assert: remote_projection_pull_requires_projection_workspace_overwrite true
     - api_assert: webdav_push_uploads_markdown_projection_only true
     - api_assert: webdav_push_skips_deveignore_directories true
     - api_assert: webdav_push_streams_projection_files true

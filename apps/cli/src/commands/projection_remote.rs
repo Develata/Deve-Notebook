@@ -5,6 +5,7 @@
 //! CLI shell for remote Markdown projection transport intents.
 
 mod collect;
+mod outcome_contract;
 mod s3;
 mod webdav;
 mod workspace_apply;
@@ -151,6 +152,7 @@ fn run_with_providers(
                             ),
                         }
                         .map_err(provider_io_not_ready)?;
+                    outcome_contract::ensure_projection_transport_push_outcome_contract(&outcome)?;
                     println!(
                         "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
                         plan.provider.as_str(),
@@ -185,6 +187,7 @@ fn run_with_providers(
                         }
                     }
                     .map_err(provider_io_not_ready)?;
+                    outcome_contract::ensure_projection_transport_pull_outcome_contract(&outcome)?;
                     let applied = workspace_apply::write_pull_files(&workspace, &outcome.files)?;
                     let sync_manager = match deve_core::sync::SyncManager::new_checked(repo.clone())
                     {
@@ -311,6 +314,7 @@ fn run_for_resolved_repo_with_providers(
                 }
             }
             .map_err(provider_io_not_ready)?;
+            outcome_contract::ensure_projection_transport_push_outcome_contract(&outcome)?;
             Ok(ProjectionRemoteExecutionSummary {
                 provider,
                 direction,
@@ -330,6 +334,7 @@ fn run_for_resolved_repo_with_providers(
                 }
             }
             .map_err(provider_io_not_ready)?;
+            outcome_contract::ensure_projection_transport_pull_outcome_contract(&outcome)?;
             let downloaded_files = outcome.files.len();
             let applied = workspace_apply::write_pull_files(&workspace, &outcome.files)?;
             let sync_manager = match deve_core::sync::SyncManager::new_checked(repo.clone()) {

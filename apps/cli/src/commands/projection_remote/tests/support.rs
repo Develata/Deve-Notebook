@@ -19,8 +19,12 @@ pub(super) struct RecordingS3Provider {
 }
 
 pub(super) struct FailingProvider;
+pub(super) struct AuthorityEffectPushProvider;
+pub(super) struct AuthoritativeMetadataPushProvider;
 pub(super) struct PullWritingProvider;
 pub(super) struct PullFailingProvider;
+pub(super) struct PullWithoutWorkspaceOverwriteProvider;
+pub(super) struct PullWithoutExternalChangesProvider;
 pub(super) struct S3PullWritingProvider;
 pub(super) struct S3PullFailingProvider;
 
@@ -76,6 +80,64 @@ impl webdav::WebDavProjectionPullAdapter for RecordingProvider {
         _locator: &str,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
         unreachable!("push-only recording provider")
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for AuthorityEffectPushProvider {
+    fn push_projection_files(
+        &mut self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+        files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Ok(RemoteProjectionPushOutcome {
+            uploaded_files: files.len(),
+            effects: RemoteProjectionAuthorityEffects {
+                writes_ledger: true,
+                writes_source_control_staging: false,
+                writes_commit_anchor: false,
+                writes_git_main_mirror: false,
+                confirms_external_changes: false,
+            },
+            provider_metadata_is_diagnostic_only: true,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for AuthorityEffectPushProvider {
+    fn pull_projection_files(
+        &self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        unreachable!("push-only authority-effect provider")
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for AuthoritativeMetadataPushProvider {
+    fn push_projection_files(
+        &mut self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+        files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Ok(RemoteProjectionPushOutcome {
+            uploaded_files: files.len(),
+            effects: RemoteProjectionAuthorityEffects::projection_transport(),
+            provider_metadata_is_diagnostic_only: false,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for AuthoritativeMetadataPushProvider {
+    fn pull_projection_files(
+        &self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        unreachable!("push-only authoritative-metadata provider")
     }
 }
 
@@ -184,6 +246,66 @@ impl webdav::WebDavProjectionPullAdapter for PullWritingProvider {
             effects: RemoteProjectionAuthorityEffects::projection_transport(),
             overwrites_projection_workspace: true,
             external_changes_confirmation_required: true,
+            provider_metadata_is_diagnostic_only: true,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for PullWithoutWorkspaceOverwriteProvider {
+    fn push_projection_files(
+        &mut self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        unreachable!("pull-only workspace-overwrite-contract provider")
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for PullWithoutWorkspaceOverwriteProvider {
+    fn pull_projection_files(
+        &self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Ok(RemoteProjectionPullOutcome {
+            files: vec![
+                RemoteProjectionFile::new("remote-no-overwrite.md", b"remote").expect("file"),
+            ],
+            effects: RemoteProjectionAuthorityEffects::projection_transport(),
+            overwrites_projection_workspace: false,
+            external_changes_confirmation_required: true,
+            provider_metadata_is_diagnostic_only: true,
+        })
+    }
+}
+
+impl webdav::WebDavProjectionPushAdapter for PullWithoutExternalChangesProvider {
+    fn push_projection_files(
+        &mut self,
+        _provider: RemoteProjectionProvider,
+        _locator: &str,
+        _files: &[webdav::MarkdownProjectionFileRef],
+    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+        unreachable!("pull-only external-changes-contract provider")
+    }
+}
+
+impl webdav::WebDavProjectionPullAdapter for PullWithoutExternalChangesProvider {
+    fn pull_projection_files(
+        &self,
+        provider: RemoteProjectionProvider,
+        _locator: &str,
+    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
+        assert_eq!(provider, RemoteProjectionProvider::WebDav);
+        Ok(RemoteProjectionPullOutcome {
+            files: vec![
+                RemoteProjectionFile::new("remote-unconfirmed.md", b"remote").expect("file"),
+            ],
+            effects: RemoteProjectionAuthorityEffects::projection_transport(),
+            overwrites_projection_workspace: true,
+            external_changes_confirmation_required: false,
             provider_metadata_is_diagnostic_only: true,
         })
     }

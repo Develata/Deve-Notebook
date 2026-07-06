@@ -62,18 +62,26 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_provider_authority_effects_before_success_report -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_s3_push_checks_workspace_identity_before_provider_io -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_s3_pull_scans_written_files_into_external_changes -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_s3_pull_returns_provider_error_before_scan -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_fake_adapter_markdown_only true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_pull_candidate_external_changes_only true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_provider_metadata_diagnostic_only true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: remote_projection_provider_authority_effects_fail_closed true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: remote_projection_provider_metadata_authoritative_fails_closed true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: remote_projection_pull_requires_external_changes_confirmation true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: remote_projection_pull_requires_projection_workspace_overwrite true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_push_uploads_markdown_projection_only true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_push_skips_deveignore_directories true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_push_streams_projection_files true
@@ -158,16 +166,22 @@ contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_signed_reques
 contains	apps/cli/src/commands/projection_remote/workspace_apply_tests.rs	fn write_pull_files_overwrites_existing_file_without_temp_artifacts()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_push_returns_provider_error_before_success_report()
+contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_rejects_provider_authority_effects_before_success_report()
+contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_rejects_authoritative_provider_metadata_before_success_report()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_push_checks_workspace_identity_before_provider_io()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_pull_scans_written_files_into_external_changes()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_s3_pull_returns_provider_error_before_scan()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_scans_written_files_into_external_changes()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_webdav_pull_returns_provider_error_before_scan()
+contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_rejects_pull_without_external_changes_confirmation_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/tests.rs	fn run_checks_workspace_identity_before_provider_io()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_uses_repo_url_locator()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_missing_transport_url_fails_closed()
 contains	apps/cli/src/commands/projection_remote/tests.rs	provider_io_ready=false
+contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_push_outcome_contract
+contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_pull_outcome_contract
 contains	apps/cli/src/commands/projection_remote.rs	provider_direction_wired=true provider_io_state=pending
 contains	apps/cli/src/commands/projection_remote.rs	external_changes_scan_triggered=true
 absent	apps/web/src/components/command_palette/registry.rs	P2P: Establish Branch (Placeholder)

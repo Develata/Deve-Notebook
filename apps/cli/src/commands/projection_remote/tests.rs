@@ -86,6 +86,35 @@ fn run_webdav_push_returns_provider_error_before_success_report() {
 }
 
 #[test]
+fn run_rejects_provider_authority_effects_before_success_report() {
+    let repo = initialized_default_repo();
+    std::fs::write(repo.workspace.join("a.md"), "a").expect("a");
+    let mut provider = AuthorityEffectPushProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_push_action(), 8, &mut provider)
+        .expect_err("provider authority effects must fail closed");
+
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("authority effects must be absent"));
+    assert!(message.contains("writes_ledger=true"));
+}
+
+#[test]
+fn run_rejects_authoritative_provider_metadata_before_success_report() {
+    let repo = initialized_default_repo();
+    std::fs::write(repo.workspace.join("a.md"), "a").expect("a");
+    let mut provider = AuthoritativeMetadataPushProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_push_action(), 8, &mut provider)
+        .expect_err("provider authoritative metadata must fail closed");
+
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("provider metadata must be diagnostic-only"));
+}
+
+#[test]
 fn run_s3_push_uses_s3_provider_after_workspace_gate() {
     let repo = initialized_default_repo();
     std::fs::create_dir_all(repo.workspace.join("notes")).expect("notes");
@@ -245,6 +274,50 @@ fn run_webdav_pull_returns_provider_error_before_scan() {
     let message = err.to_string();
     assert!(message.contains("provider_io_ready=false"));
     assert!(message.contains("simulated WebDAV pull failure"));
+    let repo_manager =
+        deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
+    assert!(
+        repo_manager
+            .list_pending_fs_in_local_repo("default")
+            .expect("pending")
+            .is_empty()
+    );
+}
+
+#[test]
+fn run_rejects_pull_without_external_changes_confirmation_before_workspace_write() {
+    let repo = initialized_default_repo();
+    let mut provider = PullWithoutExternalChangesProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
+        .expect_err("pull without External Changes confirmation must fail closed");
+
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("pull must require External Changes confirmation"));
+    assert!(!repo.workspace.join("remote-unconfirmed.md").exists());
+    let repo_manager =
+        deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
+    assert!(
+        repo_manager
+            .list_pending_fs_in_local_repo("default")
+            .expect("pending")
+            .is_empty()
+    );
+}
+
+#[test]
+fn run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write() {
+    let repo = initialized_default_repo();
+    let mut provider = PullWithoutWorkspaceOverwriteProvider;
+
+    let err = run_with_provider(&repo.ledger_dir(), webdav_pull_action(), 8, &mut provider)
+        .expect_err("pull without Projection Workspace overwrite must fail closed");
+
+    let message = err.to_string();
+    assert!(message.contains("provider_io_ready=false"));
+    assert!(message.contains("pull must overwrite only the Projection Workspace"));
+    assert!(!repo.workspace.join("remote-no-overwrite.md").exists());
     let repo_manager =
         deve_core::ledger::RepoManager::init(repo.ledger_dir(), 8, None, None).expect("repo");
     assert!(
