@@ -15,6 +15,8 @@ use support::{
     s3_truncated_list_body_without_token, test_credentials,
 };
 
+mod budget;
+
 #[test]
 fn s3_push_puts_projection_files_without_authority_effects() {
     let transport = RecordingS3Transport::new(StatusCode::OK);
@@ -175,23 +177,6 @@ fn s3_pull_rejects_partial_apply_without_overwriting_existing_file() {
         "old"
     );
     assert!(!dir.path().join("blocked").join("new.md").exists());
-}
-
-#[test]
-fn s3_pull_rejects_oversized_file_before_workspace_write() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let transport = RecordingS3Transport::new(StatusCode::OK)
-        .with_get_body(s3_list_body(&["notebooks/main/big.md"], None))
-        .with_get_body(vec![b'x'; super::pull::MAX_PULL_FILE_BYTES + 1]);
-    let provider =
-        S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
-
-    let err = provider
-        .pull_projection_files(RemoteProjectionProvider::S3, "s3://bucket/notebooks/main")
-        .expect_err("oversized body");
-
-    assert!(err.to_string().contains("S3 response body exceeds"));
-    assert!(!dir.path().join("big.md").exists());
 }
 
 #[test]

@@ -11,6 +11,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 
+mod budget;
+
 #[test]
 fn collect_markdown_projection_files_uploads_only_markdown_projection_files() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -212,28 +214,6 @@ fn webdav_pull_rejects_partial_apply_without_overwriting_existing_file() {
         "old"
     );
     assert!(!dir.path().join("blocked").join("new.md").exists());
-}
-
-#[test]
-fn webdav_pull_rejects_oversized_file_before_workspace_write() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let transport = RecordingTransport::new(StatusCode::METHOD_NOT_ALLOWED, StatusCode::CREATED)
-        .with_propfind_body(propfind_body(&[(
-            "https://dav.example.com/notebooks/main/big.md",
-            false,
-        )]))
-        .with_get_body(vec![b'x'; super::pull::MAX_PULL_FILE_BYTES + 1]);
-    let provider = WebDavProjectionProvider::new_for_test(transport);
-
-    let err = provider
-        .pull_projection_files(
-            RemoteProjectionProvider::WebDav,
-            "webdav+https://dav.example.com/notebooks/main",
-        )
-        .expect_err("oversized body");
-
-    assert!(err.to_string().contains("WebDAV response body exceeds"));
-    assert!(!dir.path().join("big.md").exists());
 }
 
 #[test]

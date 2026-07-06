@@ -16,7 +16,7 @@ use std::collections::{BTreeSet, VecDeque};
 
 pub(super) const MAX_PULL_FILES: usize = 2_048;
 pub(super) const MAX_PULL_FILE_BYTES: usize = 4 * 1024 * 1024;
-const MAX_PULL_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+pub(super) const MAX_PULL_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 const MAX_PULL_COLLECTIONS: usize = 2_048;
 const MAX_PROPFIND_BODY_BYTES: usize = 4 * 1024 * 1024;
 

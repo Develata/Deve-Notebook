@@ -45,6 +45,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_failed_get -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_too_many_files_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_paginates_list_objects -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
@@ -53,6 +55,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_too_many_files_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
@@ -85,6 +89,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_auth
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_scan_creates_external_changes true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_partial_apply_rolls_back true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_resource_budget_fails_before_workspace_write true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_file_count_budget_fails_before_workspace_write true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_total_download_budget_fails_before_workspace_write true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_paginates_list_objects true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_decodes_list_xml_entities true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: s3_pull_truncated_list_without_token_fails_closed true
@@ -98,6 +104,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_scan_creates_external_changes true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_partial_apply_rolls_back true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_resource_budget_fails_before_workspace_write true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_file_count_budget_fails_before_workspace_write true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_total_download_budget_fails_before_workspace_write true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cli_assert: webdav_pull_provider_io_ready true
@@ -117,7 +125,9 @@ contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_push_
 contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects()
 contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_pull_rejects_failed_get()
 contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_pull_rejects_partial_apply_without_overwriting_existing_file()
-contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_pull_rejects_oversized_file_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/webdav/tests/budget.rs	fn webdav_pull_rejects_oversized_file_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/webdav/tests/budget.rs	fn webdav_pull_rejects_too_many_files_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/webdav/tests/budget.rs	fn webdav_pull_rejects_total_download_budget_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_pull_rejects_symlinked_parent_when_supported()
 contains	apps/cli/src/commands/projection_remote/webdav/tests.rs	fn webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_push_puts_projection_files_without_authority_effects()
@@ -125,7 +135,9 @@ contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_push_rejects_
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_rejects_failed_get()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_rejects_partial_apply_without_overwriting_existing_file()
-contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_rejects_oversized_file_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/s3/tests/budget.rs	fn s3_pull_rejects_oversized_file_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/s3/tests/budget.rs	fn s3_pull_rejects_too_many_files_before_workspace_write()
+contains	apps/cli/src/commands/projection_remote/s3/tests/budget.rs	fn s3_pull_rejects_total_download_budget_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_paginates_list_objects()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens()
 contains	apps/cli/src/commands/projection_remote/s3/tests.rs	fn s3_pull_rejects_truncated_list_without_continuation_token()

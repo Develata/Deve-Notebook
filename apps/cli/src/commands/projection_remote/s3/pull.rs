@@ -14,7 +14,7 @@ use deve_core::remote_projection::{
 };
 
 pub(super) const MAX_PULL_FILE_BYTES: usize = 4 * 1024 * 1024;
-const MAX_PULL_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+pub(super) const MAX_PULL_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 
 pub(crate) trait S3ProjectionPullAdapter {
     fn pull_projection_files(

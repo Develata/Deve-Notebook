@@ -199,6 +199,8 @@
     - run: cargo test -p deve_cli s3_pull_rejects_failed_get -- --nocapture
     - run: cargo test -p deve_cli s3_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
     - run: cargo test -p deve_cli s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_too_many_files_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli s3_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli s3_pull_paginates_list_objects -- --nocapture
     - run: cargo test -p deve_cli s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens -- --nocapture
     - run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
@@ -207,6 +209,8 @@
     - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_too_many_files_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli webdav_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
@@ -319,6 +323,8 @@
     - api_assert: s3_pull_scan_creates_external_changes true
     - api_assert: s3_pull_partial_apply_rolls_back true
     - api_assert: s3_pull_resource_budget_fails_before_workspace_write true
+    - api_assert: s3_pull_file_count_budget_fails_before_workspace_write true
+    - api_assert: s3_pull_total_download_budget_fails_before_workspace_write true
     - api_assert: s3_pull_paginates_list_objects true
     - api_assert: s3_pull_decodes_list_xml_entities true
     - api_assert: s3_pull_truncated_list_without_token_fails_closed true
@@ -332,6 +338,8 @@
     - api_assert: webdav_pull_scan_creates_external_changes true
     - api_assert: webdav_pull_partial_apply_rolls_back true
     - api_assert: webdav_pull_resource_budget_fails_before_workspace_write true
+    - api_assert: webdav_pull_file_count_budget_fails_before_workspace_write true
+    - api_assert: webdav_pull_total_download_budget_fails_before_workspace_write true
     - api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
     - cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
     - cli_assert: webdav_pull_provider_io_ready true

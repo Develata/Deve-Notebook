@@ -12,7 +12,7 @@ use quick_xml::Reader;
 use quick_xml::events::{BytesRef, BytesText, Event};
 use std::collections::BTreeSet;
 
-const MAX_PULL_FILES: usize = 2_048;
+pub(super) const MAX_PULL_FILES: usize = 2_048;
 const MAX_LIST_BODY_BYTES: usize = 4 * 1024 * 1024;
 const MAX_LIST_PAGES: usize = 2_048;
 
