@@ -175,6 +175,7 @@ contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_reje
 contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_writes_no_local_authority()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_requires_artifact_for_provider_upload()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider()
+contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_reports_verified_artifact_bytes_not_provider_reported_bytes()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_remote_verify_mismatch()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_authoritative_provider_metadata()
 contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload()

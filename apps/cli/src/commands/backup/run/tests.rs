@@ -157,6 +157,43 @@ fn backup_run_uploads_verified_encrypted_artifact_with_recording_provider() {
 }
 
 #[test]
+fn backup_run_reports_verified_artifact_bytes_not_provider_reported_bytes() {
+    let (_dir, artifact_path, artifact_bytes, digest) = artifact_file();
+    let mut input = input();
+    input.dry_run = false;
+    input.payload_digest = &digest;
+    input.artifact_path = Some(&artifact_path);
+    let mut uploader = RecordingUploader {
+        reported_uploaded_bytes: Some(usize::MAX),
+        ..RecordingUploader::default()
+    };
+
+    let lines = run_backup_lines_with_uploader(input, &mut uploader).expect("backup upload");
+
+    assert_eq!(uploader.calls.len(), 1);
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "upload_state=RemoteVerified")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == &format!("uploaded_bytes={}", artifact_bytes.len()))
+    );
+    assert!(
+        !lines
+            .iter()
+            .any(|line| line == &format!("uploaded_bytes={}", usize::MAX))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "provider_metadata_diagnostic_only=true")
+    );
+}
+
+#[test]
 fn backup_run_rejects_artifact_digest_mismatch_before_provider_upload() {
     let (_dir, artifact_path, _artifact_bytes, _digest) = artifact_file();
     let mut input = input();
@@ -235,6 +272,7 @@ struct RecordingUploader {
     fail: bool,
     remote_digest_override: Option<String>,
     authoritative_metadata: bool,
+    reported_uploaded_bytes: Option<usize>,
 }
 
 struct RecordedUpload {
@@ -259,7 +297,9 @@ impl BackupPackUploader for RecordingUploader {
             .clone()
             .unwrap_or_else(|| sha256_hex(request.artifact_bytes));
         Ok(BackupPackUploadOutcome {
-            uploaded_bytes: request.artifact_bytes.len(),
+            uploaded_bytes: self
+                .reported_uploaded_bytes
+                .unwrap_or(request.artifact_bytes.len()),
             remote_verified_payload_digest: BackupDigest::sha256(remote_digest),
             provider_metadata_is_diagnostic_only: !self.authoritative_metadata,
         })

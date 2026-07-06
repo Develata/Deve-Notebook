@@ -166,7 +166,7 @@ pub(crate) fn run_backup_lines_with_uploader(
             protection: Some(protection.clone()),
             evidence,
         })?;
-        uploaded_bytes = Some(outcome.uploaded_bytes);
+        uploaded_bytes = Some(artifact_bytes.len());
         remote_verified_payload_digest = Some(outcome.remote_verified_payload_digest);
         provider_metadata_is_diagnostic_only = Some(outcome.provider_metadata_is_diagnostic_only);
     }
