@@ -159,16 +159,13 @@ pub fn node_role_probe_outcome_from_json(
     plan: &DesktopLocalServiceEntrypointPlan,
     json: &Value,
 ) -> Result<DesktopLocalServiceProbeOutcome, DesktopLocalServiceBootstrapError> {
+    let node_role = non_empty_value_field(json, "role")?;
     let endpoint = match json.pointer("/native_service/endpoint") {
         Some(Value::Object(endpoint)) => endpoint_from_json(endpoint)?,
         _ => NativeEndpointReady {
             http_base: plan.http_base.clone(),
             ws_base: plan.ws_base.clone(),
-            node_role: json
-                .get("role")
-                .and_then(Value::as_str)
-                .unwrap_or("native-main")
-                .to_string(),
+            node_role: node_role.to_string(),
             session_bound: false,
         },
     };
@@ -202,7 +199,7 @@ fn endpoint_from_json(
     Ok(NativeEndpointReady {
         http_base: string_field(endpoint, "http_base")?,
         ws_base: string_field(endpoint, "ws_base")?,
-        node_role: string_field(endpoint, "node_role")?,
+        node_role: non_empty_string_field(endpoint, "node_role")?,
         session_bound: endpoint
             .get("session_bound")
             .and_then(Value::as_bool)
@@ -218,5 +215,27 @@ fn string_field(
         .get(field)
         .and_then(Value::as_str)
         .map(str::to_string)
+        .ok_or(DesktopLocalServiceBootstrapError::InvalidNodeRolePayload)
+}
+
+fn non_empty_string_field(
+    object: &serde_json::Map<String, Value>,
+    field: &'static str,
+) -> Result<String, DesktopLocalServiceBootstrapError> {
+    let value = string_field(object, field)?;
+    if value.trim().is_empty() {
+        return Err(DesktopLocalServiceBootstrapError::InvalidNodeRolePayload);
+    }
+    Ok(value)
+}
+
+fn non_empty_value_field<'a>(
+    value: &'a Value,
+    field: &'static str,
+) -> Result<&'a str, DesktopLocalServiceBootstrapError> {
+    value
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
         .ok_or(DesktopLocalServiceBootstrapError::InvalidNodeRolePayload)
 }

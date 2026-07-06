@@ -152,6 +152,71 @@ fn desktop_node_role_payload_maps_native_endpoint() {
 }
 
 #[test]
+fn desktop_node_role_payload_requires_top_level_role() {
+    let plan = plan();
+    let error = node_role_probe_outcome_from_json(
+        &plan,
+        &json!({
+            "native_service": {
+                "state": "session_pending",
+                "endpoint": {
+                    "http_base": "http://127.0.0.1:39101",
+                    "ws_base": "ws://127.0.0.1:39101",
+                    "node_role": "native-main",
+                    "session_bound": false
+                }
+            }
+        }),
+    )
+    .expect_err("missing top-level role fails closed");
+
+    assert!(matches!(
+        error,
+        DesktopLocalServiceBootstrapError::InvalidNodeRolePayload
+    ));
+}
+
+#[test]
+fn desktop_node_role_payload_rejects_empty_fallback_role() {
+    let plan = plan();
+    let error = node_role_probe_outcome_from_json(&plan, &json!({"role": "  "}))
+        .expect_err("empty fallback role fails closed");
+
+    assert!(matches!(
+        error,
+        DesktopLocalServiceBootstrapError::InvalidNodeRolePayload
+    ));
+}
+
+#[test]
+fn desktop_node_role_payload_rejects_empty_endpoint_role() {
+    let plan = plan();
+    for node_role in ["", "  "] {
+        let error = node_role_probe_outcome_from_json(
+            &plan,
+            &json!({
+                "role": "native-main",
+                "native_service": {
+                    "state": "session_pending",
+                    "endpoint": {
+                        "http_base": "http://127.0.0.1:39101",
+                        "ws_base": "ws://127.0.0.1:39101",
+                        "node_role": node_role,
+                        "session_bound": false
+                    }
+                }
+            }),
+        )
+        .expect_err("empty endpoint role fails closed");
+
+        assert!(matches!(
+            error,
+            DesktopLocalServiceBootstrapError::InvalidNodeRolePayload
+        ));
+    }
+}
+
+#[test]
 fn desktop_auth_status_controls_session_material() {
     assert!(session_material_from_auth_status_json(&json!({"authenticated": true})).is_ok());
     assert!(matches!(
