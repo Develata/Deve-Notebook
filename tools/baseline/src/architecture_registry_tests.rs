@@ -1,6 +1,7 @@
 use super::{
-    coverage_flow_ids, coverage_operation_rows, extract_case_refs, extract_registry,
-    metadata_backtick_value, metadata_line_value, plan_operation_flow_ids, require_same_flow_ids,
+    check_operation_catalog_agent_status, coverage_flow_ids, coverage_operation_rows,
+    extract_case_refs, extract_registry, metadata_backtick_value, metadata_line_value,
+    plan_operation_flow_ids, require_same_flow_ids,
 };
 use std::collections::BTreeSet;
 
@@ -93,6 +94,26 @@ fn plan_and_coverage_flow_ids_report_missing_projection() {
     .to_string();
 
     assert!(err.contains("missing in coverage: flow.ui.context-action-routing"));
+}
+
+#[test]
+fn operation_catalog_agent_status_requires_non_runtime_baseline_binding() {
+    let agents = "\
+| `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |";
+
+    check_operation_catalog_agent_status(agents).expect("valid status");
+
+    let stale = agents.replace(
+        "由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref",
+        "planned/no-code-yet",
+    );
+    let err = check_operation_catalog_agent_status(&stale)
+        .expect_err("planned status should fail")
+        .to_string();
+    assert!(err.contains("operation catalog registry status"));
 }
 
 #[test]

@@ -203,10 +203,10 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
 | `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 | `12_source_control_ui#external-changes-sibling-view` | `## 4.1 External Changes Sibling View` | External Changes 同级入口、投影偏差导入 ledger 与 Source Control commit anchor 分离边界 |
-| `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）; planned/no-code-yet |
-| `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引; planned/no-code-yet |
-| `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引; planned/no-code-yet |
-| `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）; planned/no-code-yet |
+| `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
 | `21_perf_budget#critical-path-budget` | `## 2. Critical Path Budget` | 关键路径 P50/P99 latency 与 RSS budget 表；由 `deve_baseline perf-budget` / `PERF-001` baseline 绑定（tools/shell 合同，无 crates/apps Rust plan_ref）；no-rust-plan-ref |
 | `21_perf_budget#perf-budget-fuse` | `## 3. CI Fuse Thresholds` | CI fuse 阈值；由 scripts/plan-coverage.sh --check-perf-budget enforcing（shell 合同，无 Rust plan_ref）; no-rust-plan-ref |
 | `22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |

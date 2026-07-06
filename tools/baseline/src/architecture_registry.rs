@@ -16,6 +16,7 @@ const CODE_LISP: &str = "docs/overview/architecture-code.lisp";
 const OPS_DIR: &str = "docs/features/operations";
 const OP_COVERAGE: &str = "docs/features/operation-coverage.md";
 const PLAN_OPERATIONS: &str = "docs/plan/20_operations_catalog.md";
+const PLAN_AGENTS: &str = "docs/plan/AGENTS.md";
 const ACCEPTANCE_DIR: &str = "docs/acceptance-cases";
 
 pub fn run() -> Result<()> {
@@ -29,6 +30,7 @@ pub fn run() -> Result<()> {
     require_dir(root, OPS_DIR)?;
     require_file(root, OP_COVERAGE)?;
     require_file(root, PLAN_OPERATIONS)?;
+    require_file(root, PLAN_AGENTS)?;
     require_dir(root, ACCEPTANCE_DIR)?;
 
     let diff = read_rel(root, DIFF_FILE)?;
@@ -38,11 +40,13 @@ pub fn run() -> Result<()> {
     let code_lisp = read_rel(root, CODE_LISP)?;
     let op_coverage = read_rel(root, OP_COVERAGE)?;
     let plan_operations = read_rel(root, PLAN_OPERATIONS)?;
+    let plan_agents = read_rel(root, PLAN_AGENTS)?;
     let case_set = collect_case_ids(&root.join(ACCEPTANCE_DIR))?;
     if case_set.is_empty() {
         return fail("no acceptance case ids found");
     }
 
+    check_operation_catalog_agent_status(&plan_agents)?;
     let plan_flow_ids = plan_operation_flow_ids(&plan_operations)?;
     let coverage_flow_ids = coverage_flow_ids(&op_coverage)?;
     require_same_flow_ids(&plan_flow_ids, &coverage_flow_ids)?;
@@ -384,6 +388,34 @@ fn require_same_flow_ids(plan: &BTreeSet<String>, coverage: &BTreeSet<String>) -
     fail(format!(
         "chapter 20 / operation coverage flow mismatch; missing in coverage: {missing}; extra in coverage: {extra}"
     ))
+}
+
+fn check_operation_catalog_agent_status(plan_agents: &str) -> Result<()> {
+    const MARKER: &str = "architecture-registry baseline / tools/shell 合同绑定";
+    const SKIP: &str = "no-rust-plan-ref";
+    const PLANNED: &str = "planned/no-code-yet";
+    const ANCHORS: &[&str] = &[
+        "20_operations_catalog#opid-catalog",
+        "20_operations_catalog#extension-point-index",
+        "20_operations_catalog#replacement-point-index",
+        "20_operations_catalog#configuration-entry-index",
+    ];
+
+    for anchor in ANCHORS {
+        let prefix = format!("| `{anchor}` |");
+        let Some(row) = plan_agents.lines().find(|line| line.starts_with(&prefix)) else {
+            return fail(format!(
+                "docs/plan/AGENTS.md missing registry row: {anchor}"
+            ));
+        };
+        if !row.contains(MARKER) || !row.contains(SKIP) || row.contains(PLANNED) {
+            return fail(format!(
+                "operation catalog registry status must be architecture-registry-bound no-rust-plan-ref: {anchor}"
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn set_difference(left: &BTreeSet<String>, right: &BTreeSet<String>) -> Vec<String> {
