@@ -45,14 +45,61 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli provider_io -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib backup_branch_manifest_artifact -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib backup_pack_artifact_ref_download_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_provider_download_returns_encrypted_bytes_only true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_provider_download_does_not_write_local_authority true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_opens_branch_manifest_before_pack_download true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_verifies_branch_manifest_digest_and_routing true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_selects_pack_from_branch_manifest true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_verifies_pack_plaintext_schema_before_candidate true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_resource_budget_excess true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_manual_evidence_before_provider_get true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_manual_pack_metadata_before_provider_get true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cli_assert: backup_pack_download_verify_checks_manifest_digest_before_decrypt true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cli_assert: backup_pack_download_verify_result_exposes_digest_only true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cli_assert: backup_pack_download_verify_rejects_metadata_or_ciphertext_tamper true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_match_manifest_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_accept_provider_order_independent_verified_results true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_consume_verified_artifact_results_only true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_reject_missing_or_unexpected_pack true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_reject_path_or_digest_mismatch true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cli_assert: backup_downloaded_packs_reject_duplicate_sequence_or_path true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_plaintext_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_match_downloaded_pack_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_accept_provider_order_independent_open_results true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_consume_open_artifact_results_only true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_restore_download_opens_pack_artifacts_from_branch_manifest_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_reject_missing_or_unexpected_pack true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_reject_path_or_digest_mismatch true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_reject_duplicate_sequence true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_open_result_cannot_be_empty_plaintext true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_decrypted_packs_tracks_encrypted_and_plaintext_bytes true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cli_assert: backup_plaintext_packs_reject_raw_or_mismatched_plaintext true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_admission_preserves_repo_and_write_gates true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_admission_rejects_manifest_and_plaintext_pack_mismatch true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_rejects_resource_budget_excess true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	run: scripts/check-storage-repo-baseline.sh
@@ -113,7 +160,10 @@ contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_roundt
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_tamper_before_decrypt()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_upload_verify_checks_digest_before_provider_io()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_checks_digest_before_decrypt()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_rejects_tamper_before_decrypt()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_rejects_routing_metadata_tamper()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_ref_download_verify_uses_branch_manifest_ref()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_ref_open_verifies_before_decrypt()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_wrong_key_after_verified_digest()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_secret_and_metadata_drift()
 contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_rejects_unknown_plaintext_fields_before_decrypt()
@@ -131,13 +181,30 @@ contains	apps/cli/src/commands/backup/run/tests.rs	fn backup_run_rejects_artifac
 contains	apps/cli/src/commands/backup/restore.rs	remote-readonly provider download of encrypted branch manifest
 contains	apps/cli/src/commands/backup/restore/tests.rs	fn requires_download_refs_and_known_mode()
 contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_returns_encrypted_bytes_only()
+contains	apps/cli/src/commands/backup/provider_io/webdav/download.rs	fn backup_provider_download_accepts_branch_manifest_artifact_path()
 contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_returns_encrypted_bytes_only()
+contains	apps/cli/src/commands/backup/provider_io/s3/download.rs	fn s3_download_accepts_branch_manifest_artifact_path()
 contains	apps/cli/src/commands/backup/provider_io.rs	fn backup_provider_upload_readback_budget_rejects_oversized_artifact()
 contains	apps/cli/src/commands/backup/provider_io/webdav/upload.rs	fn webdav_upload_remote_verifies_readback_bytes()
 contains	apps/cli/src/commands/backup/provider_io/s3/upload.rs	fn s3_upload_remote_verifies_readback_bytes()
 contains	apps/cli/src/commands/backup/provider_io/webdav/upload.rs	fn webdav_upload_rejects_readback_non_success_status()
 contains	apps/cli/src/commands/backup/provider_io/s3/upload.rs	fn s3_upload_rejects_readback_non_success_status()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_opens_branch_manifest_before_pack_download()
 contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_verifies_pack_plaintext_schema_before_candidate()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_selects_pack_from_branch_manifest()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_verifies_branch_manifest_digest_and_routing()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_manual_decrypt_evidence_before_provider_get()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_opens_pack_artifacts_from_branch_manifest_refs()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_wrong_key_before_candidate()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_resource_budget_excess()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_manual_evidence_before_provider_get()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_manual_pack_metadata_before_provider_get()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_tampered_artifact_before_candidate()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_authoritative_provider_metadata()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_download_rejects_metadata_before_provider_get()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_explicit_import_non_dry_run_remains_fail_closed()
+contains	apps/cli/src/commands/backup/restore/tests/download.rs	fn backup_restore_explicit_merge_non_dry_run_remains_fail_closed()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_accept_provider_order_independent_verified_results()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_consume_verified_artifact_results_only()
@@ -151,6 +218,8 @@ contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_path_or_digest_mismatch()
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_reject_duplicate_sequence()
 contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_open_result_cannot_be_empty_plaintext()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	result.encrypted_bytes_total()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	result.plaintext_bytes_total()
 contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs()
 contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_reject_raw_or_mismatched_plaintext()
 contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
