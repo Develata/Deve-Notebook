@@ -1,4 +1,7 @@
-use super::*;
+use super::super::{WebDavProjectionProvider, WebDavProjectionPullAdapter};
+use super::support::{RecordingTransport, propfind_body};
+use deve_core::remote_projection::RemoteProjectionProvider;
+use reqwest::StatusCode;
 
 #[test]
 fn webdav_pull_rejects_oversized_file_before_workspace_write() {
