@@ -155,11 +155,14 @@ impl<L: DesktopProcessLauncher> DesktopLocalServiceRuntime<L> {
         &mut self,
         timestamp_unix_ms: i64,
     ) -> Result<NativeProcessRuntimeSnapshot, DesktopProcessRuntimeError> {
-        let exit_status = self.launcher.stop_service()?;
-        Ok(match exit_status {
-            Some(status) => self.core.record_stopped(Some(status), timestamp_unix_ms),
-            None => self.core.record_stopped(None, timestamp_unix_ms),
-        })
+        match self.launcher.stop_service() {
+            Ok(Some(status)) => Ok(self.core.record_stopped(Some(status), timestamp_unix_ms)),
+            Ok(None) => Ok(self.core.record_stopped(None, timestamp_unix_ms)),
+            Err(error) => {
+                self.core.record_stopped(None, timestamp_unix_ms);
+                Err(error)
+            }
+        }
     }
 
     pub fn snapshot(&self) -> NativeProcessRuntimeSnapshot {

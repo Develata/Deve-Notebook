@@ -106,6 +106,7 @@ where
                 NativeServiceFailureKind::HealthProbeFailed,
                 "probe_failed",
             );
+            stop_started_runtime(runtime, timestamp_unix_ms.saturating_add(2));
             return Err(DesktopLocalServiceBootstrapError::HealthProbeFailed);
         }
         Err(error) => {
@@ -114,6 +115,7 @@ where
                 NativeServiceFailureKind::HealthProbeFailed,
                 "probe_failed",
             );
+            stop_started_runtime(runtime, timestamp_unix_ms.saturating_add(2));
             return Err(error);
         }
     };
@@ -123,7 +125,10 @@ where
         probe_outcome.probe,
         timestamp_unix_ms.saturating_add(1),
     );
-    shell.bind_endpoint(probe_outcome.endpoint.clone())?;
+    if let Err(error) = shell.bind_endpoint(probe_outcome.endpoint.clone()) {
+        stop_started_runtime(runtime, timestamp_unix_ms.saturating_add(2));
+        return Err(error.into());
+    }
 
     let session = match handoff.bind_session(plan, &probe_outcome.endpoint) {
         Ok(session) => session,
@@ -133,14 +138,16 @@ where
                 NativeServiceFailureKind::SessionHandoffFailed,
                 "session_not_bound",
             );
+            stop_started_runtime(runtime, timestamp_unix_ms.saturating_add(3));
             return Err(error);
         }
     };
     let session_material = session.clone();
-    shell.bind_session(session).map_err(|error| {
+    if let Err(error) = shell.bind_session(session) {
         runtime.record_session_handoff(false, timestamp_unix_ms.saturating_add(2));
-        DesktopLocalServiceBootstrapError::Shell(error)
-    })?;
+        stop_started_runtime(runtime, timestamp_unix_ms.saturating_add(3));
+        return Err(DesktopLocalServiceBootstrapError::Shell(error));
+    }
     let runtime_snapshot =
         runtime.record_session_handoff(true, timestamp_unix_ms.saturating_add(2));
     let bootstrap = shell.bootstrap_for_web()?;
@@ -153,6 +160,13 @@ where
         session_material,
         runtime_snapshot,
     })
+}
+
+fn stop_started_runtime<L: DesktopProcessLauncher>(
+    runtime: &mut DesktopLocalServiceRuntime<L>,
+    timestamp_unix_ms: i64,
+) {
+    let _ = runtime.stop(timestamp_unix_ms);
 }
 
 pub fn node_role_probe_outcome_from_json(

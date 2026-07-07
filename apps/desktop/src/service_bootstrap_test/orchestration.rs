@@ -85,8 +85,20 @@ fn desktop_local_service_bootstrap_blocks_unhealthy_probe() {
         error,
         DesktopLocalServiceBootstrapError::HealthProbeFailed
     ));
-    assert!(shell.recovery_bootstrap_for_web().is_some());
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
     assert!(!runtime.snapshot().authority_writes_allowed);
+    assert_eq!(runtime.snapshot().state, NativeProcessRuntimeState::Stopped);
+    assert_eq!(
+        runtime.snapshot().last_failure,
+        Some(NativeProcessRuntimeFailureKind::HealthProbeFailed)
+    );
+    assert!(runtime.snapshot().handle.is_none());
 }
 
 #[test]
@@ -123,7 +135,56 @@ fn desktop_local_service_bootstrap_blocks_session_handoff_failure() {
         runtime.snapshot().last_failure,
         Some(NativeProcessRuntimeFailureKind::SessionHandoffFailed)
     );
-    assert!(shell.recovery_bootstrap_for_web().is_some());
+    assert_eq!(runtime.snapshot().state, NativeProcessRuntimeState::Stopped);
+    assert!(runtime.snapshot().handle.is_none());
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+}
+
+#[test]
+fn desktop_local_service_bootstrap_cleanup_failure_keeps_original_error_and_drops_handle() {
+    let plan = plan();
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(
+        enabled_policy(),
+        1,
+        FakeLauncher::with_stop_failure(),
+    );
+    let mut shell = DesktopShell::new();
+    let mut probe = FakeProbe {
+        outcome: DesktopLocalServiceProbeOutcome {
+            endpoint: endpoint(false),
+            probe: NativeServiceHealthProbe::default(),
+        },
+    };
+    let mut handoff = FakeSessionHandoff {
+        session_bound: true,
+    };
+
+    let error = run_desktop_local_service_bootstrap(
+        &plan,
+        &mut runtime,
+        &mut shell,
+        &mut probe,
+        &mut handoff,
+        10,
+    )
+    .expect_err("probe failure blocks bootstrap");
+
+    assert!(matches!(
+        error,
+        DesktopLocalServiceBootstrapError::HealthProbeFailed
+    ));
+    assert_eq!(runtime.snapshot().state, NativeProcessRuntimeState::Stopped);
+    assert_eq!(
+        runtime.snapshot().last_failure,
+        Some(NativeProcessRuntimeFailureKind::HealthProbeFailed)
+    );
+    assert!(runtime.snapshot().handle.is_none());
 }
 
 #[test]

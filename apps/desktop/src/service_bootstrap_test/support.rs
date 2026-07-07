@@ -57,6 +57,16 @@ pub(super) fn healthy_probe() -> NativeServiceHealthProbe {
 #[derive(Debug, Default)]
 pub(super) struct FakeLauncher {
     calls: usize,
+    stop_fails: bool,
+}
+
+impl FakeLauncher {
+    pub(super) fn with_stop_failure() -> Self {
+        Self {
+            calls: 0,
+            stop_fails: true,
+        }
+    }
 }
 
 impl DesktopProcessLauncher for FakeLauncher {
@@ -74,6 +84,11 @@ impl DesktopProcessLauncher for FakeLauncher {
     fn stop_service(
         &mut self,
     ) -> Result<Option<NativeProcessExitStatus>, DesktopProcessRuntimeError> {
+        if self.stop_fails {
+            return Err(DesktopProcessRuntimeError::StopFailed {
+                source: std::io::Error::other("fake stop failure"),
+            });
+        }
         Ok(None)
     }
 }

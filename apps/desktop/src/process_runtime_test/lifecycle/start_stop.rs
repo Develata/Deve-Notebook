@@ -102,3 +102,33 @@ fn desktop_local_service_runtime_stops_started_child_without_authority() {
         ]
     );
 }
+
+#[test]
+fn desktop_local_service_runtime_stop_failure_still_releases_controlled_handle() {
+    let launcher = RecordingLauncher::with_handle_and_stop_error(handle());
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(enabled_policy(), 1, launcher);
+    runtime
+        .start(&valid_spawn_spec(), 10)
+        .expect("start local service");
+
+    let error = runtime.stop(20).expect_err("stop failure is reported");
+
+    assert!(matches!(
+        error,
+        DesktopProcessRuntimeError::StopFailed { .. }
+    ));
+    assert_eq!(runtime.snapshot().state, NativeProcessRuntimeState::Stopped);
+    assert!(runtime.snapshot().handle.is_none());
+    assert_eq!(
+        runtime
+            .events()
+            .iter()
+            .map(|event| event.state)
+            .collect::<Vec<_>>(),
+        [
+            NativeProcessRuntimeState::SpawnRequested,
+            NativeProcessRuntimeState::Spawned,
+            NativeProcessRuntimeState::Stopped,
+        ]
+    );
+}

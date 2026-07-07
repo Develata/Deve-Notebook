@@ -98,6 +98,17 @@ impl RecordingLauncher {
             stop_result: Some(Ok(None)),
         }
     }
+
+    pub(super) fn with_handle_and_stop_error(handle: NativeProcessRuntimeHandle) -> Self {
+        Self {
+            calls: 0,
+            result: Some(Ok(handle)),
+            stop_calls: 0,
+            stop_result: Some(Err(DesktopProcessRuntimeError::StopFailed {
+                source: std::io::Error::other("fake stop failure"),
+            })),
+        }
+    }
 }
 
 impl DesktopProcessLauncher for RecordingLauncher {
