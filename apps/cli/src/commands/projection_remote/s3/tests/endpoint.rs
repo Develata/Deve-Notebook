@@ -1,7 +1,9 @@
 use super::super::credentials::{S3CredentialSource, S3RegionSource};
 use super::super::provider::S3ProjectionProvider;
 use super::super::push::S3ProjectionPushAdapter;
-use super::super::url::{s3_file_url, s3_list_url};
+use super::super::url::{
+    reject_custom_https_endpoint_without_binding, s3_file_url, s3_list_url, s3_locator_prefix,
+};
 use super::support::{RecordingS3Transport, now, test_credentials};
 use crate::commands::projection_remote::collect::collect_markdown_projection_files;
 use deve_core::remote_projection::{
@@ -14,7 +16,7 @@ use std::fs;
 #[test]
 fn s3_custom_https_endpoint_requires_explicit_credential_binding() {
     let err = s3_file_url(
-        "s3+https://minio.example.com/bucket/notebooks/main",
+        "S3+HTTPS://minio.example.com/bucket/notebooks/main",
         "unused-region",
         "notes/a.md",
     )
@@ -24,13 +26,47 @@ fn s3_custom_https_endpoint_requires_explicit_credential_binding() {
     assert!(err.to_string().contains("provider_io_ready=false"));
 
     let err = s3_list_url(
-        "s3+https://minio.example.com/bucket/notebooks/main",
+        "S3+HTTPS://minio.example.com/bucket/notebooks/main",
         "unused-region",
         None,
     )
     .expect_err("custom endpoint list must fail closed");
     assert!(err.to_string().contains("explicit credential binding"));
     assert!(err.to_string().contains("provider_io_ready=false"));
+
+    let err = s3_locator_prefix("S3+HTTPS://minio.example.com/bucket/notebooks/main")
+        .expect_err("custom endpoint prefix must fail closed");
+    assert!(err.to_string().contains("explicit credential binding"));
+    assert!(err.to_string().contains("provider_io_ready=false"));
+
+    let err = reject_custom_https_endpoint_without_binding(
+        "S3+HTTPS://minio.example.com/bucket/notebooks/main",
+    )
+    .expect_err("custom endpoint guard must fail closed");
+    assert!(err.to_string().contains("explicit credential binding"));
+    assert!(err.to_string().contains("provider_io_ready=false"));
+}
+
+#[test]
+fn s3_aws_locator_scheme_matching_is_case_insensitive() {
+    let file_url = s3_file_url("S3://bucket/notebooks/main", "us-east-1", "notes/a.md")
+        .expect("uppercase s3 file URL");
+    assert_eq!(
+        file_url.as_str(),
+        "https://bucket.s3.us-east-1.amazonaws.com/notebooks/main/notes/a.md"
+    );
+
+    let list_url = s3_list_url("S3://bucket/notebooks/main", "us-east-1", None)
+        .expect("uppercase s3 list URL");
+    assert_eq!(
+        list_url.as_str(),
+        "https://bucket.s3.us-east-1.amazonaws.com/?list-type=2&prefix=notebooks%2Fmain%2F"
+    );
+
+    assert_eq!(
+        s3_locator_prefix("S3://bucket/notebooks/main").expect("prefix"),
+        "notebooks/main/"
+    );
 }
 
 #[test]

@@ -7,7 +7,7 @@ use reqwest::Url;
 pub(super) fn reject_custom_https_endpoint_without_binding(
     locator: &str,
 ) -> Result<(), RemoteProjectionProviderError> {
-    if locator.starts_with("s3+https://") {
+    if is_s3_custom_https_locator(locator) {
         Err(custom_endpoint_requires_binding_error())
     } else {
         Ok(())
@@ -19,10 +19,10 @@ pub(super) fn s3_file_url(
     region: &str,
     file_path: &str,
 ) -> Result<Url, RemoteProjectionProviderError> {
-    if locator.starts_with("s3://") {
+    if is_s3_aws_locator(locator) {
         return s3_aws_file_url(locator, region, file_path);
     }
-    if locator.starts_with("s3+https://") {
+    if is_s3_custom_https_locator(locator) {
         return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
@@ -35,10 +35,10 @@ pub(super) fn s3_list_url(
     region: &str,
     continuation_token: Option<&str>,
 ) -> Result<Url, RemoteProjectionProviderError> {
-    if locator.starts_with("s3://") {
+    if is_s3_aws_locator(locator) {
         return s3_aws_list_url(locator, region, continuation_token);
     }
-    if locator.starts_with("s3+https://") {
+    if is_s3_custom_https_locator(locator) {
         return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
@@ -47,16 +47,30 @@ pub(super) fn s3_list_url(
 }
 
 pub(super) fn s3_locator_prefix(locator: &str) -> Result<String, RemoteProjectionProviderError> {
-    if locator.starts_with("s3://") {
+    if is_s3_aws_locator(locator) {
         let parsed = parse_s3_locator(locator)?;
         return Ok(locator_prefix(&parsed));
     }
-    if locator.starts_with("s3+https://") {
+    if is_s3_custom_https_locator(locator) {
         return Err(custom_endpoint_requires_binding_error());
     }
     Err(RemoteProjectionProviderError::ProviderIo(
         "S3 locator scheme is invalid".into(),
     ))
+}
+
+fn is_s3_aws_locator(locator: &str) -> bool {
+    locator_has_scheme(locator, "s3://")
+}
+
+fn is_s3_custom_https_locator(locator: &str) -> bool {
+    locator_has_scheme(locator, "s3+https://")
+}
+
+fn locator_has_scheme(locator: &str, scheme: &str) -> bool {
+    locator
+        .get(..scheme.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(scheme))
 }
 
 fn custom_endpoint_requires_binding_error() -> RemoteProjectionProviderError {

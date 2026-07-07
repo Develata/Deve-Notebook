@@ -147,6 +147,7 @@ contains	apps/cli/src/commands/projection_remote/webdav/tests/budget.rs	fn webda
 contains	apps/cli/src/commands/projection_remote/webdav/tests/pull.rs	fn webdav_pull_rejects_symlinked_parent_when_supported()
 contains	apps/cli/src/commands/projection_remote/webdav/tests/pull.rs	fn webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get()
 contains	apps/cli/src/commands/projection_remote/webdav/tests/push.rs	fn webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects()
+contains	apps/cli/src/commands/projection_remote/webdav/tests/url.rs	fn webdav_locator_scheme_matching_is_case_insensitive()
 contains	apps/cli/src/commands/projection_remote/s3/tests/push.rs	fn s3_push_puts_projection_files_without_authority_effects()
 contains	apps/cli/src/commands/projection_remote/s3/tests/push.rs	fn s3_push_rejects_failed_put()
 contains	apps/cli/src/commands/projection_remote/s3/tests/pull.rs	fn s3_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects()
@@ -160,6 +161,7 @@ contains	apps/cli/src/commands/projection_remote/s3/tests/pull.rs	fn s3_pull_dec
 contains	apps/cli/src/commands/projection_remote/s3/tests/pull.rs	fn s3_pull_rejects_truncated_list_without_continuation_token()
 contains	apps/cli/src/commands/projection_remote/s3/tests/pull.rs	fn s3_pull_rejects_duplicate_remote_markdown_paths_before_payload_get()
 contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
+contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_aws_locator_scheme_matching_is_case_insensitive()
 contains	apps/cli/src/commands/projection_remote/s3/tests/signing.rs	fn s3_signed_request_matches_golden_vector()
 contains	apps/cli/src/commands/projection_remote/s3/tests/signing.rs	fn s3_signed_get_request_includes_canonical_query()
 contains	apps/cli/src/commands/projection_remote/s3/tests/signing.rs	fn s3_signed_request_changes_with_payload()
@@ -181,6 +183,7 @@ contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn rem
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_missing_transport_url_fails_closed()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn s3_custom_endpoint_repo_url_gate_is_case_insensitive()
+contains	crates/core/src/remote_projection/mod.rs	fn transport_locator_scheme_matching_is_case_insensitive()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	provider_io_ready=false
 contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_push_outcome_contract
 contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_pull_outcome_contract

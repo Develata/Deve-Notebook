@@ -7,11 +7,19 @@ use reqwest::Url;
 pub(super) fn webdav_locator_to_https_url(
     locator: &str,
 ) -> Result<Url, RemoteProjectionProviderError> {
-    let https = locator.strip_prefix("webdav+").ok_or_else(|| {
+    let https = strip_locator_scheme(locator, "webdav+").ok_or_else(|| {
         RemoteProjectionProviderError::ProviderIo("WebDAV locator scheme is invalid".into())
     })?;
     Url::parse(https)
         .map_err(|err| RemoteProjectionProviderError::ProviderIo(format!("invalid URL: {err}")))
+}
+
+fn strip_locator_scheme<'a>(locator: &'a str, scheme: &str) -> Option<&'a str> {
+    locator
+        .get(..scheme.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(scheme))
+        .then(|| locator.get(scheme.len()..))
+        .flatten()
 }
 
 pub(super) fn webdav_collection_url(

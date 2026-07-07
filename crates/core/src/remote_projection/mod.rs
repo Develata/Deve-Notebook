@@ -98,11 +98,18 @@ fn validate_locator(
 
 fn locator_scheme_matches(provider: RemoteProjectionProvider, locator: &str) -> bool {
     match provider {
-        RemoteProjectionProvider::WebDav => locator.starts_with("webdav+https://"),
+        RemoteProjectionProvider::WebDav => locator_starts_with_scheme(locator, "webdav+https://"),
         RemoteProjectionProvider::S3 => {
-            locator.starts_with("s3://") || locator.starts_with("s3+https://")
+            locator_starts_with_scheme(locator, "s3://")
+                || locator_starts_with_scheme(locator, "s3+https://")
         }
     }
+}
+
+fn locator_starts_with_scheme(locator: &str, scheme: &str) -> bool {
+    locator
+        .get(..scheme.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(scheme))
 }
 
 fn locator_contains_credentials(locator: &str) -> bool {
@@ -167,6 +174,39 @@ mod tests {
         .expect("plan");
 
         assert_eq!(plan.locator, "s3://bucket/notebooks/main");
+    }
+
+    #[test]
+    fn transport_locator_scheme_matching_is_case_insensitive() {
+        let s3 = plan_remote_projection_transport(RemoteProjectionPlanInput {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Push,
+            locator: "S3://bucket/notebooks/main".into(),
+        })
+        .expect("uppercase s3 scheme");
+        assert_eq!(s3.locator, "S3://bucket/notebooks/main");
+
+        let s3_custom = plan_remote_projection_transport(RemoteProjectionPlanInput {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Pull,
+            locator: "S3+HTTPS://minio.example.com/bucket/notebooks/main".into(),
+        })
+        .expect("uppercase s3 custom endpoint scheme");
+        assert_eq!(
+            s3_custom.locator,
+            "S3+HTTPS://minio.example.com/bucket/notebooks/main"
+        );
+
+        let webdav = plan_remote_projection_transport(RemoteProjectionPlanInput {
+            provider: RemoteProjectionProvider::WebDav,
+            direction: RemoteProjectionDirection::Pull,
+            locator: "WEBDAV+HTTPS://dav.example.com/notebooks/main".into(),
+        })
+        .expect("uppercase webdav scheme");
+        assert_eq!(
+            webdav.locator,
+            "WEBDAV+HTTPS://dav.example.com/notebooks/main"
+        );
     }
 
     #[test]
