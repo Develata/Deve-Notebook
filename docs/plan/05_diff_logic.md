@@ -415,18 +415,24 @@ MergeRequested
 
 `CommitSourceControlChanges` **MUST** 以如下路径完成：
 
-1. 读取当前 repo 的 confirmed projection。
-2. 若存在 staged entries，对 staged entries 计算内容与结构差异。
-3. 若存在 staged entries，生成并追加 `Content Facts` / `Structure Facts`。
-4. 若 staged 为空但存在 confirmed ledger dirty，不追加新 facts。
-5. 生成 commit record，锚定最终 `ledger_seq`。
-6. 清理已消费的 staged / pending 条目。
-7. 重建或增量更新 projection。
+1. 校验 commit message 非空，并解析当前 local repo writer scope。
+2. 读取当前 repo 的 ordinary External Changes staging 与 confirmed ledger dirty。
+3. ordinary External Changes staging **MUST NOT** 被普通 Source Control commit 直接消费；用户必须先通过
+   `ApplyToLedger` 将这些 staged external entries 写入 ledger facts。
+4. 若 staged entries 全部来自显式 resolved-conflict flow，commit runtime **MAY** 在同一 writer gate
+   下先把 resolved result 写入 ledger facts；该例外不得扩展到普通外部文件 staging。
+5. 对 confirmed ledger dirty 创建 commit record，锚定最终 `ledger_seq`。
+6. 清理已被 resolved-conflict flow 消费的 staging；ordinary External Changes staging 必须保留给
+   External Changes runtime。
+7. 重建或增量更新 projection / committed snapshot base。
 
 规则：
 
-- staged 非空或 confirmed ledger dirty 非空时才允许 commit。
-- 两者都为空时必须返回 `SC_NOTHING_TO_COMMIT`。
+- confirmed ledger dirty 非空，或全部 staged entries 为 resolved-conflict flow 且能成功生成 confirmed
+  ledger dirty 时，才允许 commit。
+- ordinary External Changes staging 不构成 Source Control commit 输入；若只存在 ordinary external staged
+  entries，必须返回 `SC_NOTHING_TO_COMMIT` 或等价 no-eligible-changes 结构化错误，并保持 staging 不变。
+- eligible confirmed dirty 为空时必须返回 `SC_NOTHING_TO_COMMIT`。
 - confirmed-only commit **MUST NOT** 重放、复制或改写已存在的 ledger facts。
 
 ### 5.4 Merge Contract

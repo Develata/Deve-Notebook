@@ -12,7 +12,7 @@ use super::ws_source_control_acceptance_support::{
 use super::sync_hello_test_support::signed_hello_for_scope;
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
 
 const SCOPE: u64 = 1;
 const PATH: &str = "sc/ws-added.md";
@@ -58,6 +58,19 @@ async fn ws_source_control_stage_commit_history_roundtrip() -> anyhow::Result<()
 
     send_scoped(
         &mut ws,
+        |scope_nonce| ClientMessage::ApplyExternalChanges { scope_nonce },
+        SCOPE,
+    )
+    .await?;
+    assert_apply_external_changes_list(
+        recv_server_message(&mut ws).await?,
+        harness.repo_id,
+    );
+    request_history(&mut ws).await?;
+    assert_empty_history(recv_server_message(&mut ws).await?, harness.repo_id);
+
+    send_scoped(
+        &mut ws,
         |scope_nonce| ClientMessage::Commit {
             message: COMMIT_MESSAGE.into(),
             scope_nonce,
@@ -68,7 +81,7 @@ async fn ws_source_control_stage_commit_history_roundtrip() -> anyhow::Result<()
     let commit_id = assert_commit_ack(recv_server_message(&mut ws).await?, harness.repo_id);
 
     request_history(&mut ws).await?;
-    assert_history(
+    assert_single_commit_history(
         recv_server_message(&mut ws).await?,
         harness.repo_id,
         &commit_id,
@@ -179,20 +192,70 @@ fn assert_changes(
     staged_paths: &[&str],
     unstaged_paths: &[&str],
 ) {
+    assert_changes_with_optional_request(
+        message,
+        repo_id,
+        Some(request_id),
+        staged_paths,
+        unstaged_paths,
+        &[],
+    );
+}
+
+fn assert_changes_with_optional_request(
+    message: ServerMessage,
+    repo_id: uuid::Uuid,
+    request_id: Option<&str>,
+    staged_paths: &[&str],
+    unstaged_paths: &[&str],
+    confirmed_paths: &[&str],
+) {
     match message {
         ServerMessage::ChangesList {
-            request_id: Some(actual_request),
+            request_id: actual_request,
             repo_id: Some(actual_repo),
             branch,
             scope_nonce,
             staged,
             unstaged,
-            confirmed: _,
+            confirmed,
         } => {
             assert_eq!((actual_repo, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
-            assert_eq!(actual_request, request_id);
+            assert_eq!(actual_request.as_deref(), request_id);
             assert_eq!(paths(staged), staged_paths);
             assert_eq!(paths(unstaged), unstaged_paths);
+            assert_eq!(paths(confirmed), confirmed_paths);
+        }
+        other => panic!("expected ChangesList, got {other:?}"),
+    }
+}
+
+fn assert_apply_external_changes_list(message: ServerMessage, repo_id: uuid::Uuid) {
+    match message {
+        ServerMessage::ChangesList {
+            request_id,
+            repo_id: Some(actual_repo),
+            branch,
+            scope_nonce,
+            staged,
+            unstaged,
+            confirmed,
+        } => {
+            assert_eq!((actual_repo, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
+            assert_eq!(request_id, None);
+            assert!(staged.is_empty(), "staged external changes must be cleared after apply");
+            assert!(
+                unstaged.is_empty(),
+                "unstaged external changes should be empty in this scenario"
+            );
+            assert_eq!(confirmed.len(), 1);
+            let entry = &confirmed[0];
+            assert_eq!(entry.path, PATH);
+            assert_eq!(entry.domain, ChangeDomain::ConfirmedLedger);
+            assert_eq!(entry.status, ChangeStatus::Added);
+            let base_seq = entry.base_seq.expect("confirmed entry base seq");
+            let target_seq = entry.target_seq.expect("confirmed entry target seq");
+            assert!(target_seq > base_seq);
         }
         other => panic!("expected ChangesList, got {other:?}"),
     }
@@ -248,7 +311,7 @@ fn assert_commit_ack(message: ServerMessage, repo_id: uuid::Uuid) -> String {
     }
 }
 
-fn assert_history(message: ServerMessage, repo_id: uuid::Uuid, commit_id: &str) {
+fn assert_empty_history(message: ServerMessage, repo_id: uuid::Uuid) {
     match message {
         ServerMessage::CommitHistory {
             request_id: Some(request_id),
@@ -259,6 +322,27 @@ fn assert_history(message: ServerMessage, repo_id: uuid::Uuid, commit_id: &str) 
         } => {
             assert_eq!((actual, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
             assert_eq!(request_id, "history");
+            assert!(
+                commits.is_empty(),
+                "ApplyExternalChanges must not create a Source Control commit anchor"
+            );
+        }
+        other => panic!("expected CommitHistory, got {other:?}"),
+    }
+}
+
+fn assert_single_commit_history(message: ServerMessage, repo_id: uuid::Uuid, commit_id: &str) {
+    match message {
+        ServerMessage::CommitHistory {
+            request_id: Some(request_id),
+            repo_id: Some(actual),
+            branch,
+            scope_nonce,
+            commits,
+        } => {
+            assert_eq!((actual, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
+            assert_eq!(request_id, "history");
+            assert_eq!(commits.len(), 1);
             let commit = commits
                 .iter()
                 .find(|commit| commit.id == commit_id)
