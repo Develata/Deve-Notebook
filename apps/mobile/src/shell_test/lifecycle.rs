@@ -75,6 +75,22 @@ fn mobile_reprobe_does_not_restore_write_without_current_scope_nonce() {
 }
 
 #[test]
+fn mobile_recovery_bootstrap_for_reprobe_exposes_only_structured_state() {
+    let mut background = bound_shell();
+    assert!(background.mark_runtime_ready(ready_probe()));
+    background.handle_lifecycle_event(MobileLifecycleEvent::Background);
+    assert_eq!(
+        background.snapshot().state,
+        MobileServiceState::BackgroundSuspended
+    );
+    assert_reprobe_recovery_bootstrap_is_minimal(&background);
+
+    let mut foreground = bound_shell();
+    foreground.handle_lifecycle_event(MobileLifecycleEvent::Resumed);
+    assert_reprobe_recovery_bootstrap_is_minimal(&foreground);
+}
+
+#[test]
 fn mobile_network_events_are_hints_not_write_grants() {
     let mut shell = bound_shell();
     let event = shell.handle_lifecycle_event(MobileLifecycleEvent::NetworkOffline);
@@ -82,4 +98,31 @@ fn mobile_network_events_are_hints_not_write_grants() {
     assert_eq!(event, NativePlatformEventKind::NetworkOffline);
     assert_eq!(shell.snapshot().state, MobileServiceState::SessionBound);
     assert!(!shell.snapshot().readiness.writer_ready);
+}
+
+fn assert_reprobe_recovery_bootstrap_is_minimal(shell: &crate::MobileShell) {
+    let script = shell
+        .recovery_bootstrap_for_web()
+        .expect("reprobe recovery bootstrap")
+        .script_tag()
+        .expect("reprobe recovery script");
+
+    assert!(script.contains("\"service_state\":\"foreground_reprobe\""));
+    for forbidden in [
+        "http_base",
+        "ws_base",
+        "node_role",
+        "session_bound",
+        "scope_nonce",
+        "writer",
+        "token",
+        "secret",
+        "http://127.0.0.1",
+        "ws://127.0.0.1",
+    ] {
+        assert!(
+            !script.contains(forbidden),
+            "recovery bootstrap leaked {forbidden}: {script}"
+        );
+    }
 }

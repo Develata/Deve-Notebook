@@ -297,6 +297,7 @@ contains	docs/plan/11_ui_design/03_mobile.md	NativeEndpointReady { http_base, ws
 contains	docs/plan/11_ui_design/03_mobile.md	BackgroundSuspended
 contains	docs/plan/11_ui_design/03_mobile.md	ForegroundReprobe
 contains	docs/plan/11_ui_design/03_mobile.md	writer_ready(repo_id, scope_nonce)
+contains	apps/mobile/src/shell_test/lifecycle.rs	mobile_recovery_bootstrap_for_reprobe_exposes_only_structured_state
 contains	docs/plan/11_ui_design/03_mobile.md	safe-area、keyboard、foreground/background、network online/offline
 contains	docs/plan/11_ui_design/03_mobile.md	Android shell-only package execution gate
 contains	docs/plan/11_ui_design/03_mobile.md	Android package build **MUST NOT** 启动、持有、重启后端子进程
