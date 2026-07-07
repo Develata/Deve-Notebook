@@ -11,6 +11,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1 -ShutdownMode CloseMainWindow
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-native-session-package-smoke.sh
+contains	apps/desktop/src/tauri_entry/tests.rs	desktop_shutdown_action_stops_backend_before_main_window_exit
+contains	apps/desktop/src/tauri_entry/tests.rs	desktop_process_exit_stops_backend_without_recursive_exit_request
+contains	apps/desktop/src/tauri_bootstrap_test/local_service.rs	tauri_state_drop_stops_running_local_service
 contains	apps/desktop/src/process_runtime.rs	DesktopCommandProcessLauncher
 contains	apps/desktop/src/process_runtime.rs	validate_desktop_service_command
 contains	apps/desktop/src/process_runtime.rs	stop_service
