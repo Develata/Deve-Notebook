@@ -12,7 +12,7 @@ use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn browser_invalid_bincode_uses_current_scope_nonce_when_sync_scope_is_stale()
+async fn browser_invalid_binary_uses_current_scope_nonce_when_sync_scope_is_stale()
 -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
@@ -198,7 +198,7 @@ async fn malformed_versioned_binary_reports_invalid_payload() -> anyhow::Result<
             assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
             assert_eq!(
                 error.detail.as_deref(),
-                Some("Invalid bincode client message")
+                Some("Invalid binary client message")
             );
             assert_eq!(scope_nonce, Some(43));
         }

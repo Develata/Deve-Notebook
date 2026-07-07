@@ -3,6 +3,7 @@
 
 use super::handlers::switcher::handle_switch_branch;
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
+use deve_core::codec;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
@@ -82,7 +83,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
         table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
     }

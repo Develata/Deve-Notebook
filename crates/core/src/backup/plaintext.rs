@@ -12,6 +12,7 @@ use super::locator::normalize_remote_path;
 use super::pack::{
     BackupBlobRef, BackupPackError, BackupPackManifest, BackupSeqRange, validate_pack_manifest,
 };
+use crate::codec;
 use crate::models::{LedgerEntry, RepoId, deserialize_ledger_entry};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -20,8 +21,8 @@ use thiserror::Error;
 #[cfg(test)]
 mod tests;
 
-pub const BACKUP_PACK_PLAINTEXT_FORMAT_VERSION: u32 = 1;
-const BACKUP_PACK_PLAINTEXT_MAGIC: &[u8; 8] = b"DEVEBKP1";
+pub const BACKUP_PACK_PLAINTEXT_FORMAT_VERSION: u32 = 2;
+const BACKUP_PACK_PLAINTEXT_MAGIC: &[u8; 8] = b"DEVEBKP2";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackupPackPlaintextLedgerEntry {
@@ -78,7 +79,7 @@ pub struct BackupPackPlaintextValidateInput<'a> {
 pub enum BackupPackPlaintextError {
     #[error("backup pack plaintext is empty")]
     EmptyPlaintext,
-    #[error("backup pack plaintext is missing DEVEBKP1 magic")]
+    #[error("backup pack plaintext is missing DEVEBKP2 magic")]
     MissingMagic,
     #[error("backup pack plaintext format version is unsupported: {0}")]
     UnsupportedFormatVersion(u32),
@@ -124,8 +125,8 @@ pub fn encode_backup_pack_plaintext(
         plaintext: input.plaintext,
     })?;
 
-    let payload = bincode::serialize(input.plaintext)
-        .map_err(|_| BackupPackPlaintextError::SerializeFailed)?;
+    let payload =
+        codec::encode(input.plaintext).map_err(|_| BackupPackPlaintextError::SerializeFailed)?;
     let mut bytes = Vec::with_capacity(BACKUP_PACK_PLAINTEXT_MAGIC.len() + payload.len());
     bytes.extend_from_slice(BACKUP_PACK_PLAINTEXT_MAGIC);
     bytes.extend(payload);
@@ -143,7 +144,7 @@ pub fn open_backup_pack_plaintext(
         .strip_prefix(BACKUP_PACK_PLAINTEXT_MAGIC)
         .ok_or(BackupPackPlaintextError::MissingMagic)?;
     let plaintext: BackupPackPlaintext =
-        bincode::deserialize(payload).map_err(|_| BackupPackPlaintextError::DeserializeFailed)?;
+        codec::decode(payload).map_err(|_| BackupPackPlaintextError::DeserializeFailed)?;
     validate_backup_pack_plaintext(BackupPackPlaintextValidateInput {
         manifest: input.manifest,
         plaintext: &plaintext,

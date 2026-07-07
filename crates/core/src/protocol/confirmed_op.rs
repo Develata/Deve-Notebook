@@ -27,10 +27,11 @@ impl ConfirmedOp {
 #[cfg(test)]
 mod tests {
     use super::{ClientOrigin, ConfirmedOp};
+    use crate::codec;
     use crate::models::Op;
 
     #[test]
-    fn bincode_roundtrip_preserves_none_origin() {
+    fn binary_codec_roundtrip_preserves_none_origin() {
         let op = ConfirmedOp::new(
             7,
             Op::Insert {
@@ -39,13 +40,13 @@ mod tests {
             },
             None,
         );
-        let bytes = bincode::serialize(&op).expect("serialize confirmed op");
-        let decoded = bincode::deserialize::<ConfirmedOp>(&bytes).expect("decode confirmed op");
+        let bytes = codec::encode(&op).expect("serialize confirmed op");
+        let decoded = codec::decode::<ConfirmedOp>(&bytes).expect("decode confirmed op");
         assert_eq!(decoded, op);
     }
 
     #[test]
-    fn bincode_roundtrip_preserves_some_origin() {
+    fn binary_codec_roundtrip_preserves_some_origin() {
         let op = ConfirmedOp::new(
             9,
             Op::Delete { pos: 3, len: 2 },
@@ -54,8 +55,8 @@ mod tests {
                 client_op_id: 13,
             }),
         );
-        let bytes = bincode::serialize(&op).expect("serialize confirmed op");
-        let decoded = bincode::deserialize::<ConfirmedOp>(&bytes).expect("decode confirmed op");
+        let bytes = codec::encode(&op).expect("serialize confirmed op");
+        let decoded = codec::decode::<ConfirmedOp>(&bytes).expect("decode confirmed op");
         assert_eq!(decoded, op);
     }
 }

@@ -4,6 +4,7 @@
 //!
 //! Plaintext sync payload envelope header.
 
+use crate::codec;
 use crate::models::{PeerId, RepoId, VersionVector};
 use crate::security::IdentityKeyPair;
 use crate::security::hashing::sha256_hex;
@@ -183,7 +184,7 @@ impl SyncSourceProof {
 fn encrypted_payload_digest(
     payload: &[crate::security::EncryptedOp],
 ) -> Result<Vec<u8>, SyncSourceProofError> {
-    let bytes = bincode::serialize(payload)
+    let bytes = codec::encode(payload)
         .map_err(|err| SyncSourceProofError::PayloadEncode(err.to_string()))?;
     Ok(Sha256::digest(bytes).to_vec())
 }

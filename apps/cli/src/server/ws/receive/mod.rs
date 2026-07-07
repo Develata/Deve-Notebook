@@ -67,9 +67,9 @@ async fn handle_binary(
             broadcast_filter.sync_from_session(session);
         }
         Err(e) => {
-            tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len());
+            tracing::warn!("Binary WS frame parse error: {:?}, {} bytes", e, bin.len());
             ch.send_protocol_error_with_scope_nonce(
-                invalid_frame_message(&e, "Invalid bincode client message"),
+                invalid_frame_message(&e, "Invalid binary client message"),
                 browser_scope_nonce(session),
             );
         }

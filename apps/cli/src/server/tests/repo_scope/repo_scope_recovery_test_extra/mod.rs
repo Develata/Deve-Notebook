@@ -1,6 +1,7 @@
 use super::repo_scope::resolve_session_repo_and_sync;
 use super::repo_scope_recovery_support::{build_state, seed_remote_shadow};
 use super::session::WsSession;
+use deve_core::codec;
 use deve_core::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
@@ -13,9 +14,9 @@ fn write_repo_metadata(
     let write = db.begin_write()?;
     {
         let mut table = write.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-        let bytes = bincode::serialize(info)?;
+        let bytes = codec::encode(info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     write.commit()?;

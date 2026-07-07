@@ -111,26 +111,27 @@ impl ServerError {
 #[cfg(test)]
 mod tests {
     use super::{ServerError, ServerErrorCode};
+    use crate::codec;
 
     #[test]
-    fn bincode_roundtrip_preserves_none_detail() {
-        let encoded = bincode::serialize(&ServerError::new(
+    fn binary_codec_roundtrip_preserves_none_detail() {
+        let encoded = codec::encode(&ServerError::new(
             ServerErrorCode::ScCommitDiffUnprojectable,
         ))
         .unwrap();
-        let decoded: ServerError = bincode::deserialize(&encoded).unwrap();
+        let decoded: ServerError = codec::decode(&encoded).unwrap();
         assert_eq!(decoded.code, ServerErrorCode::ScCommitDiffUnprojectable);
         assert_eq!(decoded.detail, None);
     }
 
     #[test]
-    fn bincode_roundtrip_preserves_some_detail() {
-        let encoded = bincode::serialize(&ServerError::with_detail(
+    fn binary_codec_roundtrip_preserves_some_detail() {
+        let encoded = codec::encode(&ServerError::with_detail(
             ServerErrorCode::ScDocNotFound,
             "missing doc",
         ))
         .unwrap();
-        let decoded: ServerError = bincode::deserialize(&encoded).unwrap();
+        let decoded: ServerError = codec::decode(&encoded).unwrap();
         assert_eq!(decoded.code, ServerErrorCode::ScDocNotFound);
         assert_eq!(decoded.detail.as_deref(), Some("missing doc"));
     }

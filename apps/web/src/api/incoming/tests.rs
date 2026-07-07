@@ -3,6 +3,7 @@ use super::handle_socket_event;
 use super::push_server_message;
 use crate::api::ConnectionStatus;
 use crate::api::socket::{SocketEvent, SocketMessage};
+use deve_core::codec;
 use deve_core::models::Op;
 use deve_core::protocol::ConfirmedOp;
 use deve_core::protocol::ServerError;
@@ -94,8 +95,8 @@ fn binary_json_legacy_payload_is_rejected() {
 }
 
 #[test]
-fn binary_bincode_legacy_payload_is_rejected() {
-    let bytes = bincode::serialize(&ServerMessage::Pong).unwrap();
+fn binary_raw_codec_payload_is_rejected() {
+    let bytes = codec::encode(&ServerMessage::Pong).unwrap();
     assert!(decode_binary_message(&bytes).is_none());
 }
 
@@ -172,8 +173,8 @@ fn text_unsupported_server_version_surfaces_protocol_error() {
 }
 
 #[test]
-fn binary_bincode_history_legacy_payload_is_rejected() {
-    let bytes = bincode::serialize(&ServerMessage::History {
+fn binary_raw_codec_history_payload_is_rejected() {
+    let bytes = codec::encode(&ServerMessage::History {
         repo_id: uuid::Uuid::nil(),
         branch: None,
         scope_nonce: Some(1),
@@ -193,8 +194,8 @@ fn binary_bincode_history_legacy_payload_is_rejected() {
 }
 
 #[test]
-fn binary_bincode_protocol_error_legacy_payload_is_rejected() {
-    let bytes = bincode::serialize(&ServerMessage::ProtocolError {
+fn binary_raw_codec_protocol_error_payload_is_rejected() {
+    let bytes = codec::encode(&ServerMessage::ProtocolError {
         error: ServerError::new(ServerErrorCode::ScCommitDiffUnprojectable),
         switch_nonce: None,
         scope_nonce: Some(7),

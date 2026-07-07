@@ -2,6 +2,7 @@ use super::{
     LEDGER_ENTRY_FORMAT_MAGIC, LEDGER_ENTRY_FORMAT_VERSION, LedgerEntryEnvelope,
     deserialize_ledger_entry, serialize_ledger_entry,
 };
+use crate::codec;
 use crate::models::{ContentOp, DocId, LedgerEntry, PeerId};
 
 fn entry() -> LedgerEntry {
@@ -9,7 +10,7 @@ fn entry() -> LedgerEntry {
         DocId::from_u128(7),
         ContentOp::Insert {
             pos: 0,
-            content: "v1".into(),
+            content: "v2".into(),
         },
         1,
         PeerId::new("peer-a"),
@@ -20,7 +21,7 @@ fn entry() -> LedgerEntry {
 }
 
 #[test]
-fn ledger_entry_format_roundtrips_v1_envelope() -> anyhow::Result<()> {
+fn ledger_entry_format_roundtrips_v2_envelope() -> anyhow::Result<()> {
     let entry = entry();
     let bytes = serialize_ledger_entry(&entry)?;
 
@@ -36,13 +37,12 @@ fn ledger_entry_format_roundtrips_v1_envelope() -> anyhow::Result<()> {
 }
 
 #[test]
-fn ledger_entry_format_rejects_unversioned_bincode() -> anyhow::Result<()> {
-    let bytes = bincode::serialize(&entry())?;
+fn ledger_entry_format_rejects_unversioned_payload() {
+    let bytes = b"not-a-versioned-ledger-entry".to_vec();
 
     let err = deserialize_ledger_entry(&bytes).expect_err("unversioned entry must fail closed");
 
-    assert!(err.to_string().contains("missing DEVELDG1 magic"));
-    Ok(())
+    assert!(err.to_string().contains("missing DEVELDG2 magic"));
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn ledger_entry_format_rejects_unsupported_version() -> anyhow::Result<()> {
         format_version: LEDGER_ENTRY_FORMAT_VERSION + 1,
         entry: entry(),
     };
-    let payload = bincode::serialize(&envelope)?;
+    let payload = codec::encode(&envelope)?;
     let mut bytes = Vec::new();
     bytes.extend_from_slice(LEDGER_ENTRY_FORMAT_MAGIC);
     bytes.extend(payload);

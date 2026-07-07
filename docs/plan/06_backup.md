@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core / Backup Transport`
 - `Status`: `Planned Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-07`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`
@@ -130,6 +130,9 @@ pack plaintext schema gate 约束 {#backup-pack-plaintext-schema-contract}：
 - decrypt 后的 pack plaintext MUST 使用 backup runtime 拥有的版本化 schema；
   任意未带 backup plaintext magic / format version 的 bytes 不得进入
   RestoreCandidate 或 import/merge planning。
+- 当前首版 plaintext schema 为 `BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2`，
+  使用 project-owned postcard codec payload；pre-1.0 旧 plaintext magic /
+  codec payload 不进入 stable 兼容承诺。
 - plaintext schema MUST 显式携带 `format_version / RepoId / writer_identity /
   branch_path / pack_sequence / ledger_seq_range / ledger_entries /
   snapshot_refs / blob_refs`。

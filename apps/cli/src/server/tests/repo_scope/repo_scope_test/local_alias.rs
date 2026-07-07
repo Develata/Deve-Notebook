@@ -6,6 +6,7 @@ use crate::server::{
     repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync},
     session::WsSession,
 };
+use deve_core::codec;
 use deve_core::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
     RepoInfo, RepoManager,
@@ -21,9 +22,9 @@ fn rewrite_local_metadata(
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-        let bytes = bincode::serialize(&info)?;
+        let bytes = codec::encode(&info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     txn.commit()?;
@@ -47,9 +48,9 @@ fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Res
     session.switch_repo("legacy-test".into(), Some(test_id));
     let err = resolve_session_repo_and_sync(&state, &mut session).expect_err("must fail closed");
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
-    assert_eq!(mapped.code, ServerErrorCode::StoragePersistFailed);
-    assert_eq!(session.active_repo.as_deref(), Some("legacy-test"));
-    assert_eq!(session.active_repo_id, Some(test_id));
+    assert_eq!(mapped.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(session.active_repo, None);
+    assert_eq!(session.active_repo_id, None);
     Ok(())
 }
 

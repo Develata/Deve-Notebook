@@ -93,7 +93,7 @@
     - stdout_contains: "network-baseline-check: ok"
     - stdout_contains: "release-baseline-check: ok"
     - stdout_contains: "repo-file-ops-baseline: ok"
-    - release_assert: stable_data_format_v1_gates_present true
+    - release_assert: stable_data_format_postcard_v2_gates_present true
     - release_assert: validation_script_ownership_policy_classified true
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true

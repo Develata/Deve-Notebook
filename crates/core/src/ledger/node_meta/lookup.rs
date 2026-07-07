@@ -3,6 +3,7 @@
 //!   - 03_storage/projection#projection-contract
 //!   - 03_storage/index#internal-path-normalization
 
+use crate::codec;
 use crate::ledger::schema::{NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use crate::models::{DocId, NodeId, NodeMeta};
 use crate::utils::path::to_forward_slash;
@@ -35,7 +36,7 @@ pub fn get_node_meta(db: &Database, node_id: NodeId) -> Result<Option<NodeMeta>>
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(NODEID_TO_META)?;
     if let Some(v) = table.get(node_id.as_u128())? {
-        let meta: NodeMeta = bincode::deserialize(v.value())?;
+        let meta: NodeMeta = codec::decode(v.value())?;
         Ok(Some(meta))
     } else {
         Ok(None)
@@ -49,7 +50,7 @@ pub(crate) fn get_node_meta_in_txn(
     let table = write_txn.open_table(NODEID_TO_META)?;
     table
         .get(node_id.as_u128())?
-        .map(|v| bincode::deserialize(v.value()).map_err(Into::into))
+        .map(|v| codec::decode(v.value()).map_err(Into::into))
         .transpose()
 }
 

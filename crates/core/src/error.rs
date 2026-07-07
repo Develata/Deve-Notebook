@@ -8,7 +8,7 @@
 //!
 //! - **零分配错误路径**: 使用 `thiserror` 的 `#[from]` 实现零开销错误转换。
 //! - **语义完整性**: 保留底层错误类型，允许上层精确匹配。
-//! - **条件编译**: 后端专用错误 (redb, bincode) 仅在非 WASM 环境下启用。
+//! - **条件编译**: 后端专用错误 (redb) 仅在非 WASM 环境下启用。
 
 use thiserror::Error;
 
@@ -49,11 +49,6 @@ pub enum DeveError {
     /// JSON 序列化/反序列化错误
     #[error("JSON serialization error: {0}")]
     Json(#[from] serde_json::Error),
-
-    /// Bincode 序列化错误 (仅后端)
-    #[cfg(not(target_arch = "wasm32"))]
-    #[error("Bincode serialization error: {0}")]
-    Bincode(#[from] bincode::Error),
 
     /// 文档未找到
     #[error("Not found: {0}")]

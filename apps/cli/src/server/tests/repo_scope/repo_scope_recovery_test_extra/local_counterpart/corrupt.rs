@@ -3,6 +3,7 @@
 
 use super::support::{build_state, remote_scope};
 use crate::server::repo_scope::resolve_local_counterpart_repo;
+use deve_core::codec;
 use deve_core::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
     RepoInfo, RepoManager,
@@ -27,7 +28,7 @@ fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() 
     let txn = mirror_db.begin_write()?;
     txn.open_table(REPO_METADATA)?.insert(
         &REPO_INFO_METADATA_KEY,
-        bincode::serialize(&RepoInfo {
+        codec::encode(&RepoInfo {
             uuid: mirror_info.uuid,
             name: "mirror".into(),
             url: Some("urn:test".into()),
@@ -67,7 +68,7 @@ fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadabl
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
         table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
     }
@@ -80,6 +81,8 @@ fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadabl
     assert!(
         err.to_string().contains("decode")
             || err.to_string().contains("deserialize")
+            || err.to_string().contains("deserialization")
+            || err.to_string().contains("postcard")
             || err.to_string().contains("unexpected end")
     );
     Ok(())

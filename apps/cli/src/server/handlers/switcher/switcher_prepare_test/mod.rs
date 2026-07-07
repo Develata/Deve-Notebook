@@ -1,6 +1,7 @@
 use super::switcher_prepare::prepare_repo_switch;
 use super::switcher_selector::{resolve_requested_repo_name, select_target_repo};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use deve_core::codec;
 use deve_core::config::SyncMode;
 use deve_core::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
@@ -19,9 +20,9 @@ pub(super) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyho
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-        let bytes = bincode::serialize(info)?;
+        let bytes = codec::encode(info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     txn.commit()?;
@@ -32,7 +33,7 @@ fn write_invalid_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
         table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
     }

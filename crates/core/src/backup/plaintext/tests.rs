@@ -1,5 +1,6 @@
 use super::*;
 use crate::backup::{BackupDigest, BackupPackPlanInput, plan_backup_pack};
+use crate::codec;
 use crate::models::{ContentOp, DocId, LedgerEntry, PeerId, serialize_ledger_entry};
 
 fn digest() -> BackupDigest {
@@ -64,7 +65,7 @@ fn plaintext_for(manifest: &BackupPackManifest) -> BackupPackPlaintext {
 }
 
 fn raw_plaintext_bytes(plaintext: &BackupPackPlaintext) -> Vec<u8> {
-    let payload = bincode::serialize(plaintext).unwrap();
+    let payload = codec::encode(plaintext).unwrap();
     let mut bytes = Vec::with_capacity(BACKUP_PACK_PLAINTEXT_MAGIC.len() + payload.len());
     bytes.extend_from_slice(BACKUP_PACK_PLAINTEXT_MAGIC);
     bytes.extend(payload);
@@ -125,7 +126,7 @@ fn backup_pack_plaintext_rejects_manifest_mismatch() {
 fn backup_pack_plaintext_rejects_unversioned_or_invalid_ledger_entries() {
     let manifest = manifest();
     let plaintext = plaintext_for(&manifest);
-    let unversioned = bincode::serialize(&plaintext).unwrap();
+    let unversioned = codec::encode(&plaintext).unwrap();
     assert_eq!(
         open_backup_pack_plaintext(BackupPackPlaintextOpenInput {
             manifest: &manifest,

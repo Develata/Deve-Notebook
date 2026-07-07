@@ -1,3 +1,4 @@
+use deve_core::codec;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{
     REDB_SCHEMA_VERSION, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
@@ -32,8 +33,8 @@ fn init_fails_closed_when_existing_local_repo_lacks_metadata_value() {
         table
             .insert(
                 &REPO_SCHEMA_VERSION_METADATA_KEY,
-                bincode::serialize(&REDB_SCHEMA_VERSION)
-                    .expect("serialize schema version")
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
                     .as_slice(),
             )
             .expect("insert placeholder");

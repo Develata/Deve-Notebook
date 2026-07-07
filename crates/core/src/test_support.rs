@@ -2,6 +2,7 @@
 //!
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
+use crate::codec;
 use crate::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
     RepoInfo, RepoManager,
@@ -37,9 +38,9 @@ pub(crate) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyho
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-        let bytes = bincode::serialize(info)?;
+        let bytes = codec::encode(info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     txn.commit()?;
@@ -53,13 +54,13 @@ pub(crate) fn delete_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub(crate) fn poison_repo_metadata_invalid_bincode(db: &redb::Database) -> anyhow::Result<()> {
+pub(crate) fn poison_repo_metadata_invalid_codec(db: &redb::Database) -> anyhow::Result<()> {
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
-        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        let version = codec::encode(&REDB_SCHEMA_VERSION)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-        table.insert(&REPO_INFO_METADATA_KEY, b"not-bincode".as_slice())?;
+        table.insert(&REPO_INFO_METADATA_KEY, b"not-postcard".as_slice())?;
     }
     txn.commit()?;
     Ok(())

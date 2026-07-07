@@ -133,11 +133,26 @@ fn plugin_call_args_remain_json_debug_compatible() {
 
 #[test]
 fn legacy_binary_without_magic_is_rejected() {
-    let bytes = bincode::serialize(&ClientMessage::Ping).unwrap();
+    let bytes = vec![0_u8, 1, 2, 3];
     assert!(matches!(
         decode_client_binary(&bytes),
         Err(ProtocolFrameError::Decode(_))
     ));
+}
+
+#[test]
+fn oversized_binary_payload_is_rejected_before_magic_is_added() {
+    #[derive(serde::Serialize)]
+    struct OversizedPayload {
+        data: Vec<u8>,
+    }
+
+    let err = encode_binary_frame(&OversizedPayload {
+        data: vec![0; MAX_WS_FRAME_BYTES as usize + 1],
+    })
+    .expect_err("oversized encode must fail closed");
+
+    assert!(matches!(err, ProtocolFrameError::Decode(detail) if detail.contains("exceeds")));
 }
 
 #[test]

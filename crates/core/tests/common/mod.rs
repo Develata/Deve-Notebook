@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use deve_core::codec;
 use deve_core::ledger::schema::{
     CLIENT_OP_INDEX, DOC_OPS, DOCID_TO_PATH, INODE_TO_DOCID, INODE_TO_NODEID, LEDGER_OPS, NODE_OPS,
     NODE_PEER_SEQ, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_DOC_SEQ,
@@ -43,15 +44,15 @@ pub fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) {
         table
             .insert(
                 &REPO_SCHEMA_VERSION_METADATA_KEY,
-                bincode::serialize(&REDB_SCHEMA_VERSION)
-                    .expect("serialize schema version")
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
                     .as_slice(),
             )
             .expect("write schema version");
         table
             .insert(
                 &REPO_INFO_METADATA_KEY,
-                bincode::serialize(info).expect("serialize").as_slice(),
+                codec::encode(info).expect("encode metadata").as_slice(),
             )
             .expect("write metadata");
     }
@@ -64,15 +65,15 @@ pub fn delete_repo_metadata(db: &redb::Database) {
     txn.commit().expect("commit missing metadata");
 }
 
-pub fn poison_repo_metadata_invalid_bincode(db: &redb::Database) {
+pub fn poison_repo_metadata_invalid_codec(db: &redb::Database) {
     let txn = db.begin_write().expect("write txn");
     {
         let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
         table
             .insert(
                 &REPO_SCHEMA_VERSION_METADATA_KEY,
-                bincode::serialize(&REDB_SCHEMA_VERSION)
-                    .expect("serialize schema version")
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
                     .as_slice(),
             )
             .expect("write schema version");
@@ -191,8 +192,8 @@ pub fn seed_shadow_without_metadata_row(repo: &RepoManager, peer_id: &PeerId, re
         .expect("repo metadata")
         .insert(
             &REPO_SCHEMA_VERSION_METADATA_KEY,
-            bincode::serialize(&REDB_SCHEMA_VERSION)
-                .expect("serialize schema version")
+            codec::encode(&REDB_SCHEMA_VERSION)
+                .expect("encode schema version")
                 .as_slice(),
         )
         .expect("write schema version");

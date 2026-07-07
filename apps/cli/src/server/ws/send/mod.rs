@@ -26,7 +26,7 @@ pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Recei
 /// 启动单播发送任务：将单播队列中的消息写入 WebSocket。
 ///
 /// ## 协议策略
-/// - **使用二进制 (Bincode)**: 体积更小，解析更快，减少带宽占用。
+/// - **使用二进制帧**: 体积更小，解析更快，减少带宽占用。
 pub(crate) fn spawn_unicast_sender_task(
     sender: futures::stream::SplitSink<WebSocket, Message>,
     rx: mpsc::Receiver<ServerMessage>,

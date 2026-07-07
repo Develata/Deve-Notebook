@@ -10,6 +10,7 @@ use super::lookup::{
     get_node_id, get_node_id_in_txn, get_node_meta, get_node_meta_in_txn, path_doc_in_txn,
 };
 use super::split_path;
+use crate::codec;
 use crate::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta};
 use crate::utils::path::to_forward_slash;
@@ -51,7 +52,7 @@ pub(crate) fn upsert_node_in_txn(
     {
         let mut n2m = write_txn.open_table(NODEID_TO_META)?;
         let mut p2n = write_txn.open_table(PATH_TO_NODEID)?;
-        let bytes = bincode::serialize(meta)?;
+        let bytes = codec::encode(meta)?;
         n2m.insert(node_id.as_u128(), bytes.as_slice())?;
         p2n.insert(&*meta.path, node_id.as_u128())?;
     }

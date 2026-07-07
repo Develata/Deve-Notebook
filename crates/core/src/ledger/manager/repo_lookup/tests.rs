@@ -36,7 +36,7 @@ fn local_repo_info_lookup_without_repair_fails_closed_on_broken_main_metadata() 
     let main_info = main.get_repo_info().expect("main info").expect("present");
     let main_db = main.open_database(None, "main").expect("main db");
 
-    crate::test_support::poison_repo_metadata_invalid_bincode(main_db.db.as_ref())
+    crate::test_support::poison_repo_metadata_invalid_codec(main_db.db.as_ref())
         .expect("poison metadata");
 
     let err = main

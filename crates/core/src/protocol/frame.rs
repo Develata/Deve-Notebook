@@ -4,13 +4,13 @@
 //! Versioned WebSocket frame helpers.
 
 use super::{ClientMessage, ServerMessage};
-use bincode::Options;
+use crate::codec;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 10;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 10;
+pub const WS_PROTOCOL_VERSION: u16 = 11;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 11;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
 pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
@@ -160,9 +160,13 @@ pub fn decode_server_json(text: &str) -> Result<ServerMessage, ProtocolFrameErro
 }
 
 fn encode_binary_frame<T: Serialize>(frame: &T) -> Result<Vec<u8>, ProtocolFrameError> {
-    let body = bincode_options()
-        .serialize(frame)
-        .map_err(bincode_decode_error)?;
+    let body = codec::encode(frame).map_err(codec_error)?;
+    if body.len() as u64 > MAX_WS_FRAME_BYTES {
+        return Err(ProtocolFrameError::Decode(format!(
+            "WS frame payload exceeds {} bytes",
+            MAX_WS_FRAME_BYTES
+        )));
+    }
     let mut bytes = Vec::with_capacity(WS_FRAME_MAGIC.len() + body.len());
     bytes.extend_from_slice(WS_FRAME_MAGIC);
     bytes.extend(body);
@@ -180,27 +184,24 @@ fn decode_required_binary_frame<T: DeserializeOwned>(
 ) -> Result<T, ProtocolFrameError> {
     let payload = framed_payload(bytes)
         .ok_or_else(|| ProtocolFrameError::Decode(MISSING_WS_FRAME_MAGIC.to_string()))?;
+    if payload.len() as u64 > MAX_WS_FRAME_BYTES {
+        return Err(ProtocolFrameError::Decode(format!(
+            "WS frame payload exceeds {} bytes",
+            MAX_WS_FRAME_BYTES
+        )));
+    }
     ensure_supported(decode_binary_protocol_version(payload)?)?;
-    decode_bincode(payload)
+    decode_postcard(payload)
 }
 
 fn decode_binary_protocol_version(bytes: &[u8]) -> Result<u16, ProtocolFrameError> {
-    bincode_options()
-        .allow_trailing_bytes()
-        .deserialize(bytes)
-        .map_err(bincode_decode_error)
+    codec::decode_prefix::<VersionEnvelope>(bytes)
+        .map(|(envelope, _)| envelope.protocol_version)
+        .map_err(codec_error)
 }
 
-fn decode_bincode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolFrameError> {
-    bincode_options()
-        .deserialize(bytes)
-        .map_err(bincode_decode_error)
-}
-
-fn bincode_options() -> impl Options {
-    bincode::DefaultOptions::new()
-        .with_limit(MAX_WS_FRAME_BYTES)
-        .with_fixint_encoding()
+fn decode_postcard<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolFrameError> {
+    codec::decode(bytes).map_err(codec_error)
 }
 
 fn ensure_supported(version: u16) -> Result<(), ProtocolFrameError> {
@@ -214,7 +215,7 @@ fn ensure_supported(version: u16) -> Result<(), ProtocolFrameError> {
     })
 }
 
-fn bincode_decode_error(error: impl std::error::Error) -> ProtocolFrameError {
+fn codec_error(error: impl std::error::Error) -> ProtocolFrameError {
     ProtocolFrameError::Decode(error.to_string())
 }
 

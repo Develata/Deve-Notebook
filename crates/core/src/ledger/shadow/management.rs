@@ -17,6 +17,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use crate::codec;
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::*;
@@ -105,7 +106,7 @@ pub fn load_shadow_db(
                     repo_id
                 );
             };
-            let schema_version: u16 = bincode::deserialize(version_guard.value())?;
+            let schema_version: u16 = codec::decode(version_guard.value())?;
             if schema_version != REDB_SCHEMA_VERSION {
                 anyhow::bail!(
                     "Unsupported redb schema version {} while loading shadow repo {}/{}; expected {}",
@@ -116,7 +117,7 @@ pub fn load_shadow_db(
                 );
             }
         } else {
-            let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+            let version = codec::encode(&REDB_SCHEMA_VERSION)?;
             repo_meta.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
         }
         if repo_meta.get(&REPO_INFO_METADATA_KEY)?.is_none() {
@@ -132,7 +133,7 @@ pub fn load_shadow_db(
                 name: repo_id.to_string(),
                 url: None,
             };
-            let bytes = bincode::serialize(&info)?;
+            let bytes = codec::encode(&info)?;
             repo_meta.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
         }
         let _ = write_txn.open_table(LEDGER_OPS)?;

@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
 
+use crate::codec;
 use crate::ledger::RepoManager;
 use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;
@@ -20,7 +21,11 @@ impl RepoManager {
         let read_txn = db.begin_read()?;
         let table = match read_txn.open_table(REPO_METADATA) {
             Ok(table) => table,
-            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+            Err(redb::TableError::TableDoesNotExist(_)) => {
+                anyhow::bail!(
+                    "Unsupported redb schema while reading repo metadata: schema version missing; reset, repair, or migrate this pre-stable repo explicitly"
+                );
+            }
             Err(err) => return Err(err.into()),
         };
         let Some(version_guard) = table.get(&REPO_SCHEMA_VERSION_METADATA_KEY)? else {
@@ -28,7 +33,7 @@ impl RepoManager {
                 "Unsupported redb schema while reading repo metadata: schema version missing; reset, repair, or migrate this pre-stable repo explicitly"
             );
         };
-        let schema_version: u16 = bincode::deserialize(version_guard.value())?;
+        let schema_version: u16 = codec::decode(version_guard.value())?;
         if schema_version != REDB_SCHEMA_VERSION {
             anyhow::bail!(
                 "Unsupported redb schema version {} while reading repo metadata; expected {}",
@@ -37,7 +42,7 @@ impl RepoManager {
             );
         }
         if let Some(guard) = table.get(&REPO_INFO_METADATA_KEY)? {
-            let info: RepoInfo = bincode::deserialize(guard.value())?;
+            let info: RepoInfo = codec::decode(guard.value())?;
             return Ok(Some(info));
         }
         Ok(None)
@@ -80,9 +85,9 @@ impl RepoManager {
         let write_txn = db.begin_write()?;
         {
             let mut table = write_txn.open_table(REPO_METADATA)?;
-            let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+            let version = codec::encode(&REDB_SCHEMA_VERSION)?;
             table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-            let bytes = bincode::serialize(info)?;
+            let bytes = codec::encode(info)?;
             table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
         }
         write_txn.commit()?;

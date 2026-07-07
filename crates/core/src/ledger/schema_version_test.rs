@@ -1,3 +1,4 @@
+use crate::codec;
 use crate::ledger::schema::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
@@ -15,7 +16,7 @@ fn redb_schema_version_written_on_repo_init() -> anyhow::Result<()> {
     let raw = table
         .get(&REPO_SCHEMA_VERSION_METADATA_KEY)?
         .expect("schema version should be present");
-    let version: u16 = bincode::deserialize(raw.value())?;
+    let version: u16 = codec::decode(raw.value())?;
 
     assert_eq!(version, REDB_SCHEMA_VERSION);
     Ok(())
@@ -37,7 +38,7 @@ fn redb_schema_version_missing_fails_closed() -> anyhow::Result<()> {
             name: "default".into(),
             url: Some("urn:default".into()),
         };
-        let bytes = bincode::serialize(&info)?;
+        let bytes = codec::encode(&info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     txn.commit()?;
@@ -64,14 +65,14 @@ fn redb_schema_version_mismatch_fails_closed() -> anyhow::Result<()> {
     {
         let mut table = txn.open_table(REPO_METADATA)?;
         let bad_version = REDB_SCHEMA_VERSION + 1;
-        let version = bincode::serialize(&bad_version)?;
+        let version = codec::encode(&bad_version)?;
         table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
         let info = RepoInfo {
             uuid: uuid::Uuid::new_v4(),
             name: "default".into(),
             url: Some("urn:default".into()),
         };
-        let bytes = bincode::serialize(&info)?;
+        let bytes = codec::encode(&info)?;
         table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
     }
     txn.commit()?;

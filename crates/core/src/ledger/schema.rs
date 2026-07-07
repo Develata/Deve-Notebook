@@ -47,10 +47,10 @@ pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> =
     MultimapTableDefinition::new("snapshot_index");
 pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("snapshot_data");
 
-// Metadata Key (u8) -> Metadata Value (Bytes - JSON/Bincode)
+// Metadata Key (u8) -> Metadata Value (Bytes - JSON/Postcard)
 pub const REPO_INFO_METADATA_KEY: u8 = 0;
 pub const REPO_SCHEMA_VERSION_METADATA_KEY: u8 = 1;
-pub const REDB_SCHEMA_VERSION: u16 = 1;
+pub const REDB_SCHEMA_VERSION: u16 = 2;
 
 // Key 0: RepoInfo (UUID, Name, URL)
 // Key 1: REDB_SCHEMA_VERSION

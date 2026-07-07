@@ -1,3 +1,4 @@
+use deve_core::codec;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use deve_core::models::{LedgerEntry, NodeId, Op, PeerId, StructureOp};
@@ -131,7 +132,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
             .map(|v| v.value())
             .expect("canonical node mapping");
         let meta: deve_core::models::NodeMeta =
-            bincode::deserialize(n2m.get(node_id)?.expect("node meta").value())?;
+            codec::decode(n2m.get(node_id)?.expect("node meta").value())?;
         assert_eq!(meta.path, "notes/sub/a.md");
         assert_eq!(meta.doc_id, Some(doc_id));
         Ok(())

@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-24`
+- `Last Review`: `2026-07-07`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -67,10 +67,10 @@
 
 规则：
 
-- 每条 `LedgerEntry` 落盘 **MUST** 使用显式格式信封：固定 magic header + `ledger_entry_format_version` + bincode payload。
-- 当前首版格式为 `LEDGER_ENTRY_FORMAT_VERSION = 1`。
+- 每条 `LedgerEntry` 落盘 **MUST** 使用显式格式信封：固定 magic header + `ledger_entry_format_version` + project-owned postcard codec payload。
+- 当前首版格式为 `LEDGER_ENTRY_FORMAT_VERSION = 2`。
 - 读取路径 **MUST** 先验证 magic header，再按显式 `ledger_entry_format_version` dispatch。
-- 运行时 **MUST NOT** 通过“尝试当前结构、再尝试若干 legacy 结构”的 bincode 形状探测作为 authority decode 路径。
+- 运行时 **MUST NOT** 通过“尝试当前结构、再尝试若干 legacy 结构”的 codec 形状探测作为 authority decode 路径。
 - 缺失 magic header、缺失版本或版本不受支持时，repo 必须 fail-closed；pre-1.0 未发布开发期旧 ledger 可要求显式 reset / repair / migration，不进入生产透明兼容承诺。
 
 ### 4.2 Sequence Contract
@@ -115,7 +115,7 @@
 
 - `REPO_METADATA[0] = RepoInfo`
 - `REPO_METADATA[1] = redb_schema_version`
-- 当前首版 schema 为 `REDB_SCHEMA_VERSION = 1`。
+- 当前首版 schema 为 `REDB_SCHEMA_VERSION = 2`，repo metadata 与 node metadata value 使用同一 project-owned postcard codec。
 
 规则：
 

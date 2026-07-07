@@ -32,7 +32,7 @@ fn protocol_error_finishes_pending_chat_placeholder() {
     assert!(finish_pending_chat_on_protocol_error(
         &ServerError::with_detail(
             ServerErrorCode::RequestFailed,
-            "Invalid bincode client message"
+            "Invalid binary client message"
         ),
         Locale::En,
         signals,

@@ -1,5 +1,6 @@
 use super::super::dispatch::dispatch_batch;
 use super::super::dispatch_test_support::{event_for, new_sync};
+use crate::codec;
 use crate::ledger::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
@@ -13,9 +14,9 @@ fn dispatch_batch_fails_closed_on_dir_change_resolution_error() -> anyhow::Resul
         let write = db.begin_write()?;
         {
             let mut table = write.open_table(REPO_METADATA)?;
-            let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+            let version = codec::encode(&REDB_SCHEMA_VERSION)?;
             table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
-            table.insert(&REPO_INFO_METADATA_KEY, b"not-bincode".as_slice())?;
+            table.insert(&REPO_INFO_METADATA_KEY, b"not-postcard".as_slice())?;
         }
         write.commit()?;
         Ok::<_, anyhow::Error>(())

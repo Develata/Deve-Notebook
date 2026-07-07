@@ -49,11 +49,11 @@
     - run: cargo test -p deve_core frame -- --nocapture
     - run: cargo test -p deve_cli receive -- --nocapture
   assertions:
-    - packet_format_eq: ["server", "versioned-bincode"]
-    - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]
+    - packet_format_eq: ["server", "versioned-postcard"]
+    - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 9
-    - min_supported_packet_protocol_version_eq: 9
+    - versioned_packet_protocol_version_eq: 11
+    - min_supported_packet_protocol_version_eq: 11
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true

@@ -5,6 +5,7 @@
 //!
 //! # Node 元数据迁移/查询
 
+use crate::codec;
 use crate::ledger::schema::{INODE_TO_NODEID, NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta};
 use anyhow::Result;
@@ -17,7 +18,7 @@ pub fn list_nodes(db: &Database) -> Result<Vec<(NodeId, NodeMeta)>> {
     let mut nodes = Vec::new();
     for item in table.iter()? {
         let (id, meta_bytes) = item?;
-        let meta: NodeMeta = bincode::deserialize(meta_bytes.value())?;
+        let meta: NodeMeta = codec::decode(meta_bytes.value())?;
         nodes.push((NodeId::from_u128(id.value()), meta));
     }
     Ok(nodes)
@@ -43,7 +44,7 @@ pub fn file_meta_for_doc(db: &Database, doc_id: DocId) -> Result<Option<NodeMeta
     let Some(meta_bytes) = table.get(NodeId::from_doc_id(doc_id).as_u128())? else {
         return Ok(None);
     };
-    let meta: NodeMeta = bincode::deserialize(meta_bytes.value())?;
+    let meta: NodeMeta = codec::decode(meta_bytes.value())?;
     if meta.kind != NodeKind::File || meta.doc_id != Some(doc_id) {
         return Ok(None);
     }

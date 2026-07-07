@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::server::tree_state::RepoTreeRegistry;
+use deve_core::codec;
 use deve_core::ledger::schema::DOCID_TO_PATH;
 use deve_core::ledger::{REPO_INFO_METADATA_KEY, REPO_METADATA, RepoInfo};
 use deve_core::models::PeerId;
@@ -53,7 +54,7 @@ fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
         let write = db.begin_write()?;
         write.open_table(REPO_METADATA)?.insert(
             &REPO_INFO_METADATA_KEY,
-            bincode::serialize(&RepoInfo {
+            codec::encode(&RepoInfo {
                 uuid: info.uuid,
                 name: "default".into(),
                 url: Some("urn:default".into()),

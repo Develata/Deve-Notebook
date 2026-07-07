@@ -76,7 +76,8 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
     assert!(
         err.to_string()
             .contains("Local repo not found for name wiki")
-            || (err.to_string().contains("wiki") && err.to_string().contains("metadata missing")),
+            || (err.to_string().contains("wiki") && err.to_string().contains("metadata missing"))
+            || err.to_string().contains("schema version missing"),
         "unexpected error: {err}"
     );
 }

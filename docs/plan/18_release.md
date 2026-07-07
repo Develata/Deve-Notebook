@@ -127,7 +127,7 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 1` 与 `REDB_SCHEMA_VERSION = 1`。pre-1.0 未发布开发期产生的无版本 ledger entry 或无 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
+> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 2`、`REDB_SCHEMA_VERSION = 2` 与 `BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2`，三者均使用 project-owned postcard codec payload。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
 
 ## 4. Open Source License (开源协议)
 

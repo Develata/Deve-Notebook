@@ -188,7 +188,7 @@ fn execution_resolution_rejects_uuid_string_in_repo_name_slot() {
 fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    common::poison_repo_metadata_invalid_bincode(extra_db.db.as_ref());
+    common::poison_repo_metadata_invalid_codec(extra_db.db.as_ref());
 
     let err = repo
         .find_local_repo_name_by_id(extra_id)

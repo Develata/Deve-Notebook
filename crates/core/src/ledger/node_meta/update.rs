@@ -7,6 +7,7 @@
 //! # Node 元数据更新操作
 
 use super::split_path;
+use crate::codec;
 use crate::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{NodeId, NodeMeta};
 use crate::utils::path::to_forward_slash;
@@ -100,10 +101,10 @@ pub(crate) fn rename_path_prefix_in_txn(
                 let guard = n2m.get(node_id)?;
                 guard.map(|g| g.value().to_vec())
             } {
-                let mut meta: NodeMeta = bincode::deserialize(&meta_bytes)?;
+                let mut meta: NodeMeta = codec::decode(&meta_bytes)?;
                 meta.path = new_path.clone();
                 meta.name = split_path(&new_path).1.to_string();
-                let bytes = bincode::serialize(&meta)?;
+                let bytes = codec::encode(&meta)?;
                 n2m.insert(node_id, bytes.as_slice())?;
                 touched.push(node_id);
             }
@@ -114,7 +115,7 @@ pub(crate) fn rename_path_prefix_in_txn(
                 let guard = n2m.get(node_id)?;
                 guard.map(|g| g.value().to_vec())
             } {
-                let mut meta: NodeMeta = bincode::deserialize(&meta_bytes)?;
+                let mut meta: NodeMeta = codec::decode(&meta_bytes)?;
                 if meta.path == new_prefix || meta.path == old_prefix {
                     let parent_path = split_path(&meta.path).0;
                     meta.parent_id = if parent_path.is_empty() {
@@ -123,7 +124,7 @@ pub(crate) fn rename_path_prefix_in_txn(
                         p2n.get(parent_path)?.map(|v| NodeId::from_u128(v.value()))
                     };
                 }
-                let bytes = bincode::serialize(&meta)?;
+                let bytes = codec::encode(&meta)?;
                 n2m.insert(node_id, bytes.as_slice())?;
             }
         }

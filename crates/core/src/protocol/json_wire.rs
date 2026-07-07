@@ -2,7 +2,7 @@
 //!   - 07_network#server-ws-runtime
 //!   - 07_network#web-ws-runtime
 //!
-//! JSON payload adapters for bincode protocol frames.
+//! JSON payload adapters for binary protocol frames.
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeError};
 

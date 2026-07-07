@@ -20,6 +20,7 @@
 //! - `sync`: 文档同步与调和
 
 pub mod backup;
+pub mod codec;
 pub mod config;
 pub mod context;
 pub mod error;

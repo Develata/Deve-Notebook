@@ -128,7 +128,7 @@ async fn ws_endpoint_rejects_unsupported_protocol_version() -> anyhow::Result<()
 async fn ws_endpoint_rejects_legacy_binary_without_magic() -> anyhow::Result<()> {
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
-    let legacy_bytes = bincode::serialize(&ClientMessage::Ping)?;
+    let legacy_bytes = vec![0_u8, 1, 2, 3];
 
     ws.send(Message::Binary(legacy_bytes)).await?;
 

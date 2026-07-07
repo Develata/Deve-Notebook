@@ -2,6 +2,7 @@
 //!   - 03_storage/projection#projection-contract
 //!   - 04_repository#tree-projection-contract
 //!
+use crate::codec;
 use crate::models::{DocId, NodeId, NodeMeta};
 use anyhow::{Result, anyhow};
 use redb::{ReadableTable, WriteTransaction};
@@ -24,7 +25,7 @@ pub(super) fn load_meta(write_txn: &WriteTransaction, node_id: NodeId) -> Result
     let table = write_txn.open_table(NODEID_TO_META)?;
     table
         .get(node_id.as_u128())?
-        .map(|bytes| bincode::deserialize(bytes.value()).map_err(Into::into))
+        .map(|bytes| codec::decode(bytes.value()).map_err(Into::into))
         .transpose()
 }
 
