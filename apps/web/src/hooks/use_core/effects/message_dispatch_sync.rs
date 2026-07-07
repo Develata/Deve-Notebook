@@ -10,6 +10,7 @@ use super::message_runtime_sync::{
     handle_sync_mode_status,
 };
 use super::message_sync::handle_sync_hello;
+use crate::runtime::domain::PendingOpsPreview;
 
 pub fn handle_sync_hello_message(
     peer_id: PeerId,
@@ -38,7 +39,7 @@ pub fn handle_pending_ops_info_message(
     branch: Option<PeerId>,
     scope_nonce: Option<u64>,
     count: u32,
-    previews: Vec<(String, String, String)>,
+    previews: Vec<PendingOpsPreview>,
     signals: CoreSignals,
 ) {
     handle_pending_ops_info(

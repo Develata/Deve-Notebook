@@ -65,7 +65,7 @@ fn pending_ops_info_rejects_stale_scope() {
         None,
         Some(6),
         2,
-        vec![("a".into(), "b".into(), "c".into())],
+        vec![PendingOpsPreview::new("a".into(), "b".into(), "c".into())],
         signals,
     );
 

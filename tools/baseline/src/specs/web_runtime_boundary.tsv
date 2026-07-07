@@ -82,3 +82,5 @@ regex_absent_tree_ext	apps/web/src/hooks	rs	hooks\s*::\s*use_core\s*::\s*callbac
 regex_absent_tree_ext	apps/web/src/hooks	rs	hooks\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
 regex_absent_tree_ext	apps/web/src/hooks	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*callbacks_scope
 regex_absent_tree_ext	apps/web/src/hooks	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
+regex_absent_tree_ext	apps/web/src/hooks/use_core/effects	rs	Vec<\(\s*String\s*,\s*String\s*,\s*String\s*\)>
+regex_absent_tree_ext	apps/web/src/hooks/use_core/effects	rs	Vec<\(\s*String\s*,\s*String\s*,\s*f32\s*\)>

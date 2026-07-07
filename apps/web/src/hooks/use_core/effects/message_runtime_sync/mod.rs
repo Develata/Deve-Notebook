@@ -2,14 +2,32 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
+use crate::hooks::use_core::SyncModeState;
 use crate::hooks::use_core::state::CoreSignals;
-use crate::hooks::use_core::{PendingOpsPreview, SyncModeState};
+use crate::runtime::domain::PendingOpsPreview;
 use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::Set;
 
 mod gate;
 #[cfg(test)]
 mod tests;
+
+pub fn accepts_pending_ops_info(
+    request_id: Option<&str>,
+    repo_id: &Option<RepoId>,
+    branch: &Option<PeerId>,
+    scope_nonce: Option<u64>,
+    signals: CoreSignals,
+) -> bool {
+    gate::accepts_runtime_request(
+        request_id,
+        signals.pending_ops_request_id,
+        repo_id,
+        branch,
+        scope_nonce,
+        signals,
+    )
+}
 
 pub fn handle_sync_mode_status(
     request_id: Option<String>,
@@ -41,7 +59,7 @@ pub fn handle_pending_ops_info(
     branch: Option<PeerId>,
     scope_nonce: Option<u64>,
     count: u32,
-    previews: Vec<(String, String, String)>,
+    previews: Vec<PendingOpsPreview>,
     signals: CoreSignals,
 ) {
     if !gate::accepts_runtime_request(
@@ -56,9 +74,7 @@ pub fn handle_pending_ops_info(
     }
     signals.set_pending_ops_request_id.set(None);
     signals.set_pending_ops_count.set(count);
-    signals
-        .set_pending_ops_previews
-        .set(previews.into_iter().map(PendingOpsPreview::from).collect());
+    signals.set_pending_ops_previews.set(previews);
 }
 
 pub fn handle_merge_complete(

@@ -9,6 +9,7 @@ use crate::hooks::use_core::state::init_signals;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use crate::i18n::Locale;
+use crate::runtime::domain::SearchHit;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
@@ -147,7 +148,7 @@ fn accepted_search_results_clear_pending_request() {
         Some(repo_id),
         None,
         Some(11),
-        vec![("doc-1".into(), "notes/a.md".into(), 1.0)],
+        vec![SearchHit::new("doc-1".into(), "notes/a.md".into(), 1.0)],
         signals,
     );
 
