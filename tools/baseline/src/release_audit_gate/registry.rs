@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 
 const REGISTRY_REL: &str = "docs/registry/release-audit-warning-registry.md";
+const YANKED_ADVISORY: &str = "YANKED";
 const VALID_DECISIONS: &[&str] = &[
     "direct-migration-before-stable",
     "feature-gated-upstream-watch",
@@ -80,7 +81,7 @@ fn parse_registry(registry: &str) -> Result<Vec<RegistryRow>> {
     let mut seen = BTreeMap::<AuditWarning, usize>::new();
     for (line_no, line) in registry.lines().enumerate() {
         let trimmed = line.trim();
-        if !trimmed.starts_with("| RUSTSEC-") {
+        if !is_warning_row(trimmed) {
             continue;
         }
         let fields = split_markdown_row(trimmed);
@@ -115,15 +116,12 @@ fn parse_registry(registry: &str) -> Result<Vec<RegistryRow>> {
         rows.push(row);
     }
     if rows.is_empty() {
-        bail!("{LABEL}: {REGISTRY_REL} has no RUSTSEC warning rows");
+        bail!("{LABEL}: {REGISTRY_REL} has no audit warning rows");
     }
     Ok(rows)
 }
 
 fn validate_registry_row(line_no: usize, row: &RegistryRow) -> Result<()> {
-    if !row.warning.advisory.starts_with("RUSTSEC-") {
-        bail!("{LABEL}: {REGISTRY_REL}:{line_no} advisory must start with RUSTSEC-");
-    }
     for (label, value) in [
         ("crate", &row.warning.krate),
         ("version", &row.version),
@@ -139,12 +137,30 @@ fn validate_registry_row(line_no: usize, row: &RegistryRow) -> Result<()> {
     }
     if !matches!(
         row.warning.kind.as_str(),
-        "unmaintained" | "unsound" | "notice"
+        "unmaintained" | "unsound" | "notice" | "yanked"
     ) {
         bail!(
             "{LABEL}: {REGISTRY_REL}:{line_no} unsupported warning kind '{}'",
             row.warning.kind
         );
+    }
+    match row.warning.kind.as_str() {
+        "yanked" if row.warning.advisory != YANKED_ADVISORY => {
+            bail!("{LABEL}: {REGISTRY_REL}:{line_no} yanked warning advisory must be YANKED");
+        }
+        kind if kind != "yanked" && row.warning.advisory == YANKED_ADVISORY => {
+            bail!(
+                "{LABEL}: {REGISTRY_REL}:{line_no} YANKED advisory is only valid for yanked warnings"
+            );
+        }
+        _ if !row.warning.advisory.starts_with("RUSTSEC-")
+            && row.warning.advisory != YANKED_ADVISORY =>
+        {
+            bail!(
+                "{LABEL}: {REGISTRY_REL}:{line_no} advisory must start with RUSTSEC- or be YANKED for yanked warnings"
+            );
+        }
+        _ => {}
     }
     if !VALID_DECISIONS.contains(&row.decision.as_str()) {
         bail!(
@@ -156,6 +172,10 @@ fn validate_registry_row(line_no: usize, row: &RegistryRow) -> Result<()> {
         bail!("{LABEL}: {REGISTRY_REL}:{line_no} tag blocker must be yes or no");
     }
     Ok(())
+}
+
+fn is_warning_row(line: &str) -> bool {
+    line.starts_with("| RUSTSEC-") || line.starts_with("| YANKED |")
 }
 
 fn split_markdown_row(line: &str) -> Vec<String> {
@@ -177,13 +197,7 @@ fn parse_audit_warnings(report: &str) -> Result<BTreeSet<AuditWarning>> {
             bail!("{LABEL}: cargo audit JSON warning group '{kind}' is not an array");
         };
         for entry in entries {
-            let advisory = entry
-                .get("advisory")
-                .and_then(|value| value.get("id"))
-                .and_then(Value::as_str)
-                .ok_or_else(|| {
-                    anyhow::anyhow!("{LABEL}: cargo audit warning missing advisory.id")
-                })?;
+            let advisory = parse_warning_advisory(kind, entry)?;
             let krate = entry
                 .get("package")
                 .and_then(|value| value.get("name"))
@@ -207,6 +221,18 @@ fn parse_audit_warnings(report: &str) -> Result<BTreeSet<AuditWarning>> {
         }
     }
     Ok(warnings)
+}
+
+fn parse_warning_advisory(kind: &str, entry: &Value) -> Result<String> {
+    if kind == "yanked" {
+        return Ok(YANKED_ADVISORY.to_string());
+    }
+    entry
+        .get("advisory")
+        .and_then(|value| value.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| anyhow::anyhow!("{LABEL}: cargo audit warning missing advisory.id"))
 }
 
 fn validate_no_vulnerabilities(json: &Value) -> Result<()> {
@@ -301,6 +327,35 @@ mod tests {
             version: "1.0.0".to_string(),
             kind: "unmaintained".to_string(),
         }));
+    }
+
+    #[test]
+    fn accepts_yanked_warning_rows() {
+        let report = r#"{
+          "vulnerabilities": {"found": false, "count": 0},
+          "warnings": {
+            "yanked": [
+              {"package": {"name": "demo", "version": "1.0.0"}}
+            ]
+          }
+        }"#;
+        let registry = "| YANKED | demo | 1.0.0 | yanked | upstream-upgrade-watch | yes | direct dependency was yanked upstream | replace with maintained upstream release |\n";
+        let rows =
+            parse_registry(registry).expect("yanked warning rows are valid cargo-audit warnings");
+
+        assert_eq!(rows[0].warning.advisory, "YANKED");
+        assert_eq!(rows[0].warning.kind, "yanked");
+        validate_cargo_audit_report(report, registry).expect("matching yanked registry");
+    }
+
+    #[test]
+    fn rejects_yanked_warning_rows_with_rustsec_advisory() {
+        let error = parse_registry(
+            "| RUSTSEC-0000-0001 | demo | 1.0.0 | yanked | upstream-upgrade-watch | yes | reason | route |\n",
+        )
+        .expect_err("invalid yanked registry key");
+
+        assert!(error.to_string().contains("advisory must be YANKED"));
     }
 
     #[test]

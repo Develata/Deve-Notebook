@@ -14,6 +14,8 @@ release audit gate must fail.
 ## Rules
 
 - Every warning emitted by `cargo audit --json` must have exactly one row below.
+- `Advisory` must be a RustSec `RUSTSEC-*` id, except `yanked` warnings without
+  a RustSec advisory id must use the synthetic advisory key `YANKED`.
 - `Decision` must be one of:
   - `direct-migration-before-stable`: first stable/tag readiness needs a direct
     project decision or codec/dependency replacement before data format freeze.
@@ -21,6 +23,8 @@ release audit gate must fail.
     platform shell dependency; keep the feature gate and track upstream.
   - `upstream-upgrade-watch`: warning is transitive through selected upstream
     framework/tooling; replacement is owned by an upstream upgrade batch.
+- `Kind` must match the cargo-audit warning group, currently one of
+  `unmaintained`, `unsound`, `notice`, or `yanked`.
 - `Tag blocker` values:
   - `yes`: before the first formal public tag, the USER must approve the
     retained risk or the dependency must be replaced.

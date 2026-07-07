@@ -48,9 +48,11 @@ CI/CD 基于 GitHub Actions。
         non-vulnerability `cargo audit` warning with
         `docs/registry/release-audit-warning-registry.md`. Any unregistered,
         stale, or field-incomplete warning is release-gate drift. The registry
-        row must include the advisory, crate, warning kind, rationale,
-        replacement route, and whether first-tag readiness requires a separate
-        USER decision or replacement before public tag.
+        row must include the advisory identifier (or synthetic `YANKED` for
+        cargo-audit yanked warnings without a RustSec advisory id), crate,
+        warning kind, rationale, replacement route, and whether first-tag
+        readiness requires a separate USER decision or replacement before
+        public tag.
     2.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。
     3.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
     4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。

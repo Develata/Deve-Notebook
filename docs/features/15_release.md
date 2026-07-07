@@ -52,6 +52,8 @@
 - 发布依赖审计必须区分 hard vulnerabilities 与 non-vulnerability warnings。Hard vulnerabilities
   不允许进入公开 tag；warnings 必须在 release audit warning registry 中有明确
   allowlist 理由或替换路线，新增 warning 未登记时 fail-closed。
+- `cargo audit` 的 `yanked` warning 若没有 RustSec advisory id，registry 使用
+  synthetic `YANKED` advisory key 并仍按 crate / version / kind 精确匹配。
 - 首个公开 tag 的 release audit 作业必须设置 `DEVE_RELEASE_TAG_READY_REQUIRED=1`
   或显式运行 `deve_baseline release-audit-gate tag-ready`；仍登记为
   `tag_blocker=yes` 的 warning 会 fail-closed，直到完成替换、重新归类或 USER

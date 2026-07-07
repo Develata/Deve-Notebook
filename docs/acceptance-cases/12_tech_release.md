@@ -97,6 +97,7 @@
     - release_assert: validation_script_ownership_policy_classified true
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
+    - release_assert: yanked_warnings_without_advisory_use_synthetic_registry_key true
     - release_assert: trunk_dev_index_rejected_by_static_delivery true
 
 - case_id: REL-003A
