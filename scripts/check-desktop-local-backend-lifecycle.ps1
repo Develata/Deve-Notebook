@@ -132,6 +132,11 @@ function Request-DesktopExit($Process, $Mode) {
 }
 
 $desktopPath = Resolve-Path -LiteralPath $DesktopExe -ErrorAction Stop
+$desktopDir = Split-Path -Parent $desktopPath.Path
+$sidecarPath = Join-Path $desktopDir "deve_cli.exe"
+if (-not (Test-Path -LiteralPath $sidecarPath -PathType Leaf)) {
+    Fail "deve_cli sidecar is missing next to DesktopExe: $sidecarPath; build it with cargo build -p deve_cli --bin deve_cli before running this smoke"
+}
 $smokeRoot = Join-Path (Resolve-Path -LiteralPath ".") "target\desktop-local-backend-lifecycle-smoke"
 $runId = "{0}-{1}" -f ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()), $PID
 $dataRoot = Join-Path $smokeRoot $runId
