@@ -127,12 +127,19 @@ fn ensure_repo_url_provider_io_supported(
     provider: RemoteProjectionProvider,
     locator: &str,
 ) -> Result<()> {
-    if provider == RemoteProjectionProvider::S3 && locator.trim().starts_with("s3+https://") {
+    if provider == RemoteProjectionProvider::S3 && is_s3_custom_https_locator(locator) {
         anyhow::bail!(
             "S3 custom endpoint requires explicit credential binding before Web Remote Projection provider I/O"
         );
     }
     Ok(())
+}
+
+fn is_s3_custom_https_locator(locator: &str) -> bool {
+    locator
+        .trim()
+        .get(..11)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("s3+https://"))
 }
 
 fn remote_projection_provider_io_not_ready_detail(error: impl std::fmt::Display) -> String {
@@ -147,6 +154,17 @@ mod tests {
     use deve_core::source_control::ChangeStatus;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{Duration, timeout};
+
+    #[test]
+    fn s3_custom_endpoint_repo_url_gate_is_case_insensitive() {
+        let error = ensure_repo_url_provider_io_supported(
+            RemoteProjectionProvider::S3,
+            " S3+HTTPS://minio.example.com/bucket/notebooks/main",
+        )
+        .expect_err("mixed-case s3 custom endpoint must fail closed");
+
+        assert!(error.to_string().contains("explicit credential binding"));
+    }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn remote_projection_transport_missing_transport_url_fails_closed() -> anyhow::Result<()>

@@ -179,6 +179,8 @@ contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_pu
 contains	apps/cli/src/commands/projection_remote/tests/identity.rs	fn run_checks_workspace_identity_before_provider_io()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_uses_repo_url_locator()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_missing_transport_url_fails_closed()
+contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor()
+contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn s3_custom_endpoint_repo_url_gate_is_case_insensitive()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	provider_io_ready=false
 contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_push_outcome_contract
 contains	apps/cli/src/commands/projection_remote/outcome_contract.rs	ensure_projection_transport_pull_outcome_contract
