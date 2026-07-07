@@ -20,10 +20,8 @@ pub fn run(args: &[String]) -> Result<()> {
             let ctx = BaselineContext::new(LABEL)?;
             run_tsv(&ctx, include_str!("specs/release_audit_gate.tsv"))?;
             registry::validate_registry_file(ctx.root())?;
-            if flags.tag_ready_required {
-                let registry = registry::read_registry(ctx.root())?;
-                registry::validate_no_tag_blockers(&registry)?;
-            }
+            let registry = registry::read_registry(ctx.root())?;
+            validate_tag_ready_if_required(&flags, &registry)?;
             ctx.ok();
         }
         [action] if action == "cargo-audit-missing" => {
@@ -53,6 +51,7 @@ pub fn run(args: &[String]) -> Result<()> {
                 )
             })?;
             registry::validate_cargo_audit_report(&report, &registry)?;
+            validate_tag_ready_if_required(&flags, &registry)?;
         }
         [action] if action == "tag-ready" => {
             let ctx = BaselineContext::new(LABEL)?;
@@ -61,6 +60,13 @@ pub fn run(args: &[String]) -> Result<()> {
         }
         [action] => bail!("{LABEL}: unsupported release audit action: {action}"),
         _ => bail!("{LABEL}: expected zero or one release audit action"),
+    }
+    Ok(())
+}
+
+fn validate_tag_ready_if_required(flags: &AuditFlags, registry: &str) -> Result<()> {
+    if flags.tag_ready_required {
+        registry::validate_no_tag_blockers(registry)?;
     }
     Ok(())
 }
@@ -106,7 +112,7 @@ impl AuditFlags {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuditFlags, LABEL, run};
+    use super::{AuditFlags, LABEL, run, validate_tag_ready_if_required};
     use crate::env_gate::parse_binary_flag;
 
     #[test]
@@ -160,6 +166,23 @@ mod tests {
 
         let error =
             run(&["tag-ready".to_string()]).expect_err("explicit first-tag check must block");
+        assert!(
+            error.to_string().contains("first-tag readiness is blocked"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn tag_ready_env_gate_rejects_blockers_for_shared_actions() {
+        let flags = AuditFlags {
+            release_required: false,
+            cargo_required: false,
+            npm_required: false,
+            tag_ready_required: true,
+        };
+        let registry = "| RUSTSEC-0000-0001 | demo | 1.0.0 | unmaintained | upstream-upgrade-watch | yes | reason | route |\n";
+
+        let error = validate_tag_ready_if_required(&flags, registry).expect_err("tag blocker");
         assert!(
             error.to_string().contains("first-tag readiness is blocked"),
             "{error}"

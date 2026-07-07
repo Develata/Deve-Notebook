@@ -9,19 +9,46 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 
+AUDIT_REPORT=""
+
+cleanup_current_audit_report() {
+  if [[ -n "${AUDIT_REPORT:-}" ]]; then
+    rm -f "$AUDIT_REPORT"
+    AUDIT_REPORT=""
+  fi
+}
+
+cleanup_report() {
+  local report="$1"
+  rm -f "$report"
+  if [[ "${AUDIT_REPORT:-}" == "$report" ]]; then
+    AUDIT_REPORT=""
+  fi
+}
+
+trap cleanup_current_audit_report EXIT
+trap 'cleanup_current_audit_report; exit 130' INT
+trap 'cleanup_current_audit_report; exit 143' TERM
+
 run_cargo_audit() {
   if cargo audit --version >/dev/null 2>&1; then
     local report_rel report
     report_rel="target/release-audit-$RANDOM-$$.json"
     report="$ROOT_DIR/$report_rel"
+    AUDIT_REPORT="$report"
     mkdir -p "$ROOT_DIR/target"
     if cargo audit --json >"$report"; then
-      run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-report" "$report_rel"
-      rm -f "$report"
-      return
+      if run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-report" "$report_rel"; then
+        cleanup_report "$report"
+        return
+      else
+        local status=$?
+        cleanup_report "$report"
+        return "$status"
+      fi
     fi
     cat "$report" >&2 || true
-    rm -f "$report"
+    cleanup_report "$report"
     return 1
   fi
 
@@ -30,14 +57,20 @@ run_cargo_audit() {
     local report_rel report
     report_rel="target/release-audit-$RANDOM-$$.json"
     report="$ROOT_DIR/$report_rel"
+    AUDIT_REPORT="$report"
     mkdir -p "$ROOT_DIR/target"
     if "$cargo_audit_bin" audit --json >"$report"; then
-      run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-report" "$report_rel"
-      rm -f "$report"
-      return
+      if run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-report" "$report_rel"; then
+        cleanup_report "$report"
+        return
+      else
+        local status=$?
+        cleanup_report "$report"
+        return "$status"
+      fi
     fi
     cat "$report" >&2 || true
-    rm -f "$report"
+    cleanup_report "$report"
     return 1
   fi
 
