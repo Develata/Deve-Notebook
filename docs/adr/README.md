@@ -52,3 +52,4 @@ blueprint in `docs/plan/`.
 | [0005](./0005-uuid-first-not-path-first.md) | UUID-first identity, not path-first | Accepted |
 | [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Proposed |
 | [0007](./0007-backup-explicit-merge-authority-route.md) | Backup explicit merge authority route | Proposed |
+| [0008](./0008-s3-compatible-remote-projection-credential-binding.md) | S3-compatible Remote Projection credential binding | Proposed |
