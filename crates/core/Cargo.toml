@@ -55,7 +55,7 @@ default = []
 search = ["tantivy"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tantivy]
-version = "0.22"
+version = "0.26"
 optional = true
 
 [dev-dependencies]

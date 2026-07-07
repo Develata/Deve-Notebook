@@ -130,7 +130,7 @@ impl SearchService {
             QueryParser::for_index(&self.index, vec![self.field_path, self.field_content]);
         let query = query_parser.parse_query(query)?;
 
-        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit).order_by_score())?;
 
         let mut results = Vec::new();
         for (score, doc_address) in top_docs {
