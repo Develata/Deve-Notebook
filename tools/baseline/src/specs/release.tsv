@@ -8,6 +8,7 @@ contains	.github/workflows/release.yml	node-version: 24
 contains	.github/workflows/release.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
 contains	.github/workflows/release.yml	cargo install cargo-audit --locked
 contains	.github/workflows/release.yml	DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
+contains	.github/workflows/release.yml	cargo run --locked -p deve_baseline -- release-audit-gate tag-ready
 contains	.github/workflows/release.yml	scripts/plan-coverage.sh --write-report
 contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
 contains	.github/workflows/release.yml	scripts/check-architecture-registry.sh

@@ -45,7 +45,9 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: Audit dependencies
-        run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
+        run: |
+          DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
+          cargo run --locked -p deve_baseline -- release-audit-gate tag-ready
 
       - name: Check plan coverage
         run: |
