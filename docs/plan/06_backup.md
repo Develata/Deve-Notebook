@@ -163,6 +163,44 @@ RestoreCandidate admission MUST consume manifest verification 与
 `PacksPlaintextVerified` typed evidence。只有 `PacksDecrypted` 而没有版本化
 plaintext schema evidence 的 pack，不得进入 RestoreCandidate。
 
+RestoreCandidate MUST expose a core-derived candidate fingerprint or handle for
+follow-up explicit actions. 该 handle 只能由 `RepoId / writer_identity /
+branch_path / manifest_digest / pack_digests / plaintext evidence digest` 派生，
+不能来自 provider metadata、locator string、CLI/UI 自填字段或 plaintext 自证。
+执行 `ExplicitImport` / `ExplicitMerge` 时必须重新绑定并复核该 candidate evidence；
+仅持有 handle 不授予写权限。
+
+`RemoteReadonly`、`ExplicitImport` 与 `ExplicitMerge` 的差异：
+
+- `RemoteReadonly` 只创建内存态 candidate，用于 inspect / preview / diagnostics；
+  它不得写 local branch、ledger、Source Control、Git mirror、staging 或 Projection
+  Workspace。
+- `ExplicitImport` 是 disaster recovery 的显式恢复入口。它只能把已验证 candidate
+  导入到一个空的、新建的或已由 repair/reset gate 显式批准的 local repo target；
+  不能把非空 current ledger 静默覆盖为 backup 内容。导入写入必须经 Repo Runtime
+  target validation、writer gate 与 authority storage append/rebuild path，并且不得自动
+  创建 Source Control commit anchor 或 Git mirror queue。
+- `ExplicitMerge` 是把 candidate 作为只读 merge source 合入当前 local branch 的入口。
+  它必须经 current repo scope、writer gate、RestoreCandidate admission 与 merge/source-control
+  authority；合并结果只能追加新的 ledger facts 或产生 conflict，不得 replay backup
+  global sequence、不得改写既有 ledger facts、不得自动创建 commit anchor。
+
+两条显式路径共同约束：
+
+- candidate `RepoId` 必须与目标 repo `RepoId` 一致；不一致必须 fail-closed。
+- request 必须绑定当前 `scope_nonce`、target repo/branch、writer identity、candidate
+  fingerprint 与 admission mode；stale scope 或 stale candidate 必须 fail-closed。
+- provider metadata、ETag、mtime、object version、locator path、plaintext 自带字段都不得
+  直接成为 import/merge authority。
+- backup runtime 只负责 candidate verification 与 evidence transport；真正写入必须移交
+  Repo Runtime / Source Control / Merge Runtime。
+- 成功导入或合并后，Source Control 只能通过 commit anchor -> ledger head 的派生规则展示
+  Confirmed Ledger Changes；不得由 Backup Runtime 直接写 staging、commit anchor 或 Git
+  mirror queue。
+- 任一失败必须保持无 partial staging、无 commit anchor、无 Git mirror queue。若 ledger
+  append 已按 authority path 成功但 projection writeback 失败，必须沿既有 degraded/projection
+  repair 语义报告，不得回滚已确认 ledger facts。
+
 ## 4. State Machines
 
 ### 4.1 Backup Upload {#backup-upload-state-machine-contract}
@@ -223,6 +261,56 @@ RemoteDiscovered
 - `ExplicitImport` 与 `ExplicitMerge` 必须复用 repo scope、writer gate 与
   source-control / merge authority。
 
+`ExplicitImport` 子状态：
+
+```text
+RestoreCandidate
+  -> ExplicitImportRequested
+  -> ImportTargetValidated
+  -> ImportLedgerPlanned
+  -> LedgerImported
+  -> ProjectionRebuilt | ProjectionRepairRequired
+  -> ImportComplete
+```
+
+约束：
+
+- `ImportTargetValidated` 必须确认目标是空 local repo、新建 local repo，或已通过 repair/reset
+  gate 显式批准的 quarantined/degraded target；非空 healthy local repo 不得被 import
+  静默覆盖。
+- `ImportLedgerPlanned` 必须从 verified plaintext ledger entries 规划 append/rebuild；
+  不得信任 backup pack 的原始 `global_seq` 作为本地 redb 主键。
+- `LedgerImported` 只能由 authority storage runtime 执行；Backup Runtime 不得直接写
+  redb authority tables。
+- `ProjectionRebuilt` 只能从导入后的 local ledger fold 派生；不能直接把 backup plaintext
+  或 provider bytes materialize 成 Projection Workspace authority。
+- Import 完成不自动创建 Source Control commit anchor；若需要 Git mirror 更新，必须由
+  Source Control 后续终态镜像流程独立处理。
+
+`ExplicitMerge` 子状态：
+
+```text
+RestoreCandidate
+  -> ExplicitMergeRequested
+  -> MergeSourceValidated
+  -> MergePlanComputed
+  -> MergeConflict | LedgerMerged
+  -> ProjectionWriteback | ProjectionRepairRequired
+  -> MergeComplete
+```
+
+约束：
+
+- `MergeSourceValidated` 必须确认当前 scope 是 local writable branch，candidate repo 与当前
+  `RepoId` 一致，且 writer gate 当前有效。
+- `MergePlanComputed` 必须把 candidate fold 作为只读 merge source；不得把 backup ledger
+  entries 逐条直接 replay 到当前 local ledger。
+- `MergeConflict` 必须进入既有 conflict/diff resolution surface；不得自动选择 backup 或
+  local 一侧。
+- `LedgerMerged` 只能追加 merge result facts；不得删除、重排或改写当前 ledger facts。
+- Merge 完成后的 dirty state 由 Source Control 从 commit anchor 派生；Backup Runtime 不得
+  写 staging 或 commit anchor。
+
 ## 5. Commands / Inputs / Outputs
 
 ### 5.1 Inputs
@@ -245,6 +333,8 @@ RemoteDiscovered
 - `BackupBranch`
 - `VerifyBackupTarget`
 - `RestoreBackup`
+- `ImportRestoreCandidate`
+- `MergeRestoreCandidate`
 - `UnbindBackupTarget`
 
 `BackupBranch` 可以先以 dry-run 输出 pack / upload plan；真实 provider upload
@@ -257,6 +347,11 @@ staging、commit anchor 或 Projection Workspace。
 manifest-backed verification、artifact authentication 与 decrypt gate 前，CLI/UI 不得把
 download success 呈现为 restore success，也不得写 ledger、staging、commit anchor、
 Projection Workspace 或 Git mirror queue。
+
+`ImportRestoreCandidate` / `MergeRestoreCandidate` 不是新的 provider transport 命令；
+它们只消费已 admission 的 RestoreCandidate evidence，并必须携带 candidate fingerprint、
+target repo/branch、scope nonce 与 writer gate proof。CLI/UI 只能发起 typed intent，
+不得传入 raw plaintext、provider metadata、locator secret 或自行构造的 ledger facts。
 
 ### 5.3 Outputs {#backup-command-output-contract}
 
@@ -312,6 +407,9 @@ Projection Workspace 或 Git mirror queue。
 - decrypt failure
 - remote version conflict
 - restore candidate incompatible with current repo health
+- explicit import target is non-empty without an approved repair/reset gate
+- explicit merge source conflicts with current local ledger
+- stale scope nonce or stale restore candidate fingerprint
 
 所有 failure 必须结构化。失败的 backup 或 restore 不得留下 partial ledger writes、
 staged entries、pending imports 或 workspace projection changes。
@@ -323,6 +421,8 @@ staged entries、pending imports 或 workspace projection changes。
 - 把 credentials 或 encryption secrets 放入 locator / repo URL。
 - 未经 verification 与 decryption 就导入 downloaded packs。
 - download 阶段自动 merge backup branches。
+- 把 `ExplicitImport` 当作“覆盖当前 ledger”的快捷方式。
+- 把 `ExplicitMerge` 当作逐条 replay backup ledger entry 的快捷方式。
 - 把 WebDAV ETag 或 S3 object version 当作 ledger、branch 或 repo authority。
 - 用 backup manifests 替代 Source Control commit history。
 
@@ -345,6 +445,8 @@ staged entries、pending imports 或 workspace projection changes。
 - repo_id validation
 - branch binding validation
 - restore candidate admission
+- explicit import target validation
+- import-side authority storage append / rebuild coordination
 - quarantine / degraded handling
 
 ### 10.3 Source Control / Merge Runtime
@@ -354,6 +456,8 @@ staged entries、pending imports 或 workspace projection changes。
 - explicit import
 - explicit merge
 - stage / commit after restore candidate admission
+- conflict / diff resolution for explicit merge
+- confirmed ledger dirty derivation after import / merge
 
 Backup runtime不得直接写 staging、commit anchors、Projection Workspace 或 current
 repo scope。

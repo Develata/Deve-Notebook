@@ -92,8 +92,25 @@
 - remote-readonly RestoreCandidate 还必须通过 core-owned resource budget；
   pack 数、encrypted aggregate bytes 或 plaintext aggregate bytes 超出预算时
   必须 fail-closed，不得继续下载/导入/合并。
-- `backup restore --mode explicit-import|explicit-merge` 在 writer gate 与完整
-  RestoreCandidate admission 执行链路落地前必须 fail-closed。
+- `backup restore --mode explicit-import|explicit-merge` 在完整 authority 链路落地前
+  仍必须 fail-closed；以下条款是首版目标合同，不能被 UI/CLI 表达为当前已成功执行的
+  产品行为。二者未来成为 RestoreCandidate 重新进入 authority path 的显式入口时，
+  都必须先通过完整 RestoreCandidate admission、scope nonce 与 writer gate。
+- `backup restore --mode explicit-import` 的用户体验必须是“把已验证的
+  RestoreCandidate 显式导入到一个安全目标”，而不是覆盖当前工作区。目标只能是
+  空 local repo、新建 local repo，或已通过 repair/reset gate 显式批准的 target；
+  非空 healthy repo 必须 fail-closed。导入成功后，Projection Workspace 从导入后的
+  ledger fold 重建，Source Control 只通过 commit anchor -> ledger head 派生
+  Confirmed Ledger Changes，不自动创建 commit anchor、staging、Git mirror queue。
+- `backup restore --mode explicit-merge` 的用户体验必须是“把已验证的
+  RestoreCandidate 作为只读 merge source 合入当前 local branch”。系统必须显示
+  candidate fingerprint、目标 repo/branch 与 write gate 状态；若产生冲突，进入既有
+  diff/conflict resolution，而不是自动选择 backup 或 local 一侧。合并成功只追加
+  ledger facts，Source Control dirty state 仍由 authority 派生。
+- `explicit-import` / `explicit-merge` 的 UI 或 CLI 入口不得接收 raw plaintext、
+  provider metadata、secret、locator token 或自造 ledger facts；只能提交 typed intent
+  和 core-issued candidate fingerprint。stale scope、stale candidate、RepoId mismatch
+  或 write gate 失效必须 fail-closed。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
   或 Projection Workspace。
 

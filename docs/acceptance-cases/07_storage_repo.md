@@ -419,11 +419,52 @@
 - case_id: STORE-026
   goal: Backup 首版 gate 必须聚合 binding、pack、provider upload/download 与 RestoreCandidate 验收。
   preconditions:
-    - STORE-018..STORE-025 已列出可自动化验证命令
-    - explicit-import / explicit-merge 在完整 authority 链路落地前仍 fail-closed
+    - STORE-018..STORE-025 已列出 provider/RestoreCandidate 自动化验证命令
+    - STORE-027..STORE-028 已列出 explicit-import / explicit-merge authority path 验收命令
   steps:
     - run: cargo run -p deve_baseline -- backup
   assertions:
     - cli_assert: backup_baseline_aggregates_release_required_backup_checks true
     - cli_assert: backup_baseline_runs_full_mode_targeted_tests true
+
+- case_id: STORE-027
+  goal: Backup explicit-import 只能把 verified RestoreCandidate 导入到安全 local target。
+  preconditions:
+    - planned/manual-pending: 当前实现仍 fail-closed；真实测试命令必须在实现落地时补齐
+    - RestoreCandidate 已由 manifest verification 与 PacksPlaintextVerified typed evidence admission
+    - target local repo 为空、新建，或已通过 repair/reset gate 显式批准
+    - writer gate 当前有效并绑定 candidate fingerprint、target repo/branch 与 scope_nonce
+  steps:
+    - manual-pending: implement core/cli tests for backup_restore_import before release
+    - manual-pending: add backup baseline entries only after those tests exist
+  assertions:
+    - cli_assert: backup_restore_import_consumes_restore_candidate_evidence true
+    - cli_assert: backup_restore_import_requires_writer_gate_and_current_scope true
+    - cli_assert: backup_restore_import_rejects_non_empty_healthy_target true
+    - cli_assert: backup_restore_import_rejects_repo_id_mismatch true
+    - cli_assert: backup_restore_import_rejects_stale_candidate_fingerprint true
+    - cli_assert: backup_restore_import_appends_via_authority_storage_runtime true
+    - cli_assert: backup_restore_import_rebuilds_projection_from_imported_ledger true
+    - cli_assert: backup_restore_import_creates_no_staging_commit_anchor_or_git_queue true
+
+- case_id: STORE-028
+  goal: Backup explicit-merge 只能把 verified RestoreCandidate 作为只读 merge source 合入当前 local branch。
+  preconditions:
+    - planned/manual-pending: 当前实现仍 fail-closed；真实测试命令必须在实现落地时补齐
+    - RestoreCandidate 已由 manifest verification 与 PacksPlaintextVerified typed evidence admission
+    - current repo scope 是 local writable branch
+    - writer gate 当前有效并绑定 candidate fingerprint、target repo/branch 与 scope_nonce
+  steps:
+    - manual-pending: implement core/cli tests for backup_restore_merge before release
+    - manual-pending: add backup baseline entries only after those tests exist
+  assertions:
+    - cli_assert: backup_restore_merge_consumes_restore_candidate_evidence true
+    - cli_assert: backup_restore_merge_requires_writer_gate_and_current_scope true
+    - cli_assert: backup_restore_merge_rejects_repo_id_mismatch true
+    - cli_assert: backup_restore_merge_rejects_stale_candidate_fingerprint true
+    - cli_assert: backup_restore_merge_uses_candidate_as_readonly_source true
+    - cli_assert: backup_restore_merge_does_not_replay_backup_global_seq true
+    - cli_assert: backup_restore_merge_conflict_enters_existing_diff_resolution true
+    - cli_assert: backup_restore_merge_appends_only_merge_result_facts true
+    - cli_assert: backup_restore_merge_creates_no_staging_commit_anchor_or_git_queue true
 ```
