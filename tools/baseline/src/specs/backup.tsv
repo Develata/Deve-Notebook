@@ -1,0 +1,79 @@
+contains	docs/plan/06_backup.md	# 06_backup.md - Backup and Restore
+contains	docs/plan/06_backup.md	## 2. Locator Model {#backup-locator-contract}
+contains	docs/plan/06_backup.md	### 3.2 Branch Backup Binding {#backup-branch-binding-contract}
+contains	docs/plan/06_backup.md	### 3.3 Backup Pack {#backup-pack-contract}
+contains	docs/plan/06_backup.md	### 3.4 Restore Candidate {#backup-restore-candidate-contract}
+contains	docs/plan/06_backup.md	## 7. Security Contract {#backup-secret-ref-contract} {#backup-verification-contract} {#backup-artifact-protection-contract}
+contains	docs/plan/06_backup.md	provider adapter 只能挂在 backup runtime 下
+contains	docs/features/06_repository.md	Backup Locator 与 Binding
+contains	docs/features/06_repository.md	backup restore --mode explicit-import|explicit-merge
+contains	docs/features/06_repository.md	remote-readonly RestoreCandidate
+contains	docs/registry/runtime-skeleton-registry.md	backup_locator_runtime
+contains	docs/registry/runtime-skeleton-registry.md	backup_pack_runtime
+contains	docs/registry/runtime-skeleton-registry.md	backup_restore_runtime
+contains	docs/registry/runtime-skeleton-registry.md	remote-readonly provider restore path
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_core backup_binding_store -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli backup_bind -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli plans_writable_binding_dry_run_without_persisting -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli backup_unbind -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib backup_pack_plaintext -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli backup_run -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli provider_io -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib backup_branch_manifest_artifact -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib backup_pack_artifact_ref_download_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli provider_io -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib backup_plaintext_packs -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p deve_cli backup_restore_download -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	run: cargo run -p deve_baseline -- backup
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	cli_assert: backup_baseline_aggregates_release_required_backup_checks true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	cli_assert: backup_baseline_runs_full_mode_targeted_tests true
+contains	tools/baseline/src/main.rs	mod backup;
+contains	tools/baseline/src/main.rs	"backup" => backup::run(),
+contains	tools/baseline/src/main.rs	backup::run_text()?
+contains	tools/baseline/src/main.rs	backup::run()?
+contains	crates/core/src/backup/binding_store/tests.rs	fn backup_binding_store_persists_secret_free_host_local_metadata()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_roundtrips_encrypted_bytes()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_upload_verify_checks_digest_before_provider_io()
+contains	crates/core/src/backup/artifact/tests.rs	fn backup_pack_artifact_download_verify_checks_digest_before_decrypt()
+contains	crates/core/src/backup/branch_manifest/tests.rs	fn backup_branch_manifest_artifact_roundtrips_after_digest_and_authentication()
+contains	crates/core/src/backup/plaintext/tests.rs	fn backup_pack_plaintext_roundtrips_manifest_aligned_ledger_entries()
+contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
+contains	crates/core/src/backup/verification/decrypted_packs/tests.rs	fn backup_decrypted_packs_match_downloaded_pack_refs()
+contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs()
+contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
+contains	apps/cli/src/commands/backup/run/tests/provider_upload.rs	fn backup_run_requires_artifact_for_provider_upload()
+contains	apps/cli/src/commands/backup/restore/tests/download/success.rs	fn backup_restore_download_opens_branch_manifest_before_pack_download()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_non_dry_run_remains_fail_closed()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_merge_non_dry_run_remains_fail_closed()
+# Full mode uses lib-targeted filters to avoid whole-package integration enumeration while keeping the Backup module tests executable.
+cargo_test_lib	deve_core	backup_binding_store
+cargo_test_lib	deve_cli	backup_bind
+cargo_test_lib	deve_cli	plans_writable_binding_dry_run_without_persisting
+cargo_test_lib	deve_cli	backup_unbind
+cargo_test_lib	deve_core	backup_pack_artifact
+cargo_test_lib	deve_core	backup_pack_plaintext
+cargo_test_lib	deve_core	backup_pack_artifact_upload_verify
+cargo_test_lib	deve_cli	backup_run
+cargo_test_lib	deve_cli	provider_io
+cargo_test_lib	deve_core	backup_branch_manifest_artifact
+cargo_test_lib	deve_core	backup_pack_artifact_ref_download_verify
+cargo_test_lib	deve_cli	backup_restore
+cargo_test_lib	deve_cli	requires_download_refs_and_known_mode
+cargo_test_lib	deve_cli	backup_restore_download
+cargo_test_lib	deve_core	backup_pack_artifact_download_verify
+cargo_test_lib	deve_core	backup_downloaded_packs
+cargo_test_lib	deve_core	backup_decrypted_packs
+cargo_test_lib	deve_core	backup_plaintext_packs
+cargo_test_lib	deve_core	backup_restore_candidate

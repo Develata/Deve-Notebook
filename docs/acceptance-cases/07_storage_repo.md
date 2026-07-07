@@ -415,4 +415,15 @@
     - cli_assert: backup_restore_candidate_rejects_resource_budget_excess true
     - cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
     - cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
+
+- case_id: STORE-026
+  goal: Backup 首版 gate 必须聚合 binding、pack、provider upload/download 与 RestoreCandidate 验收。
+  preconditions:
+    - STORE-018..STORE-025 已列出可自动化验证命令
+    - explicit-import / explicit-merge 在完整 authority 链路落地前仍 fail-closed
+  steps:
+    - run: cargo run -p deve_baseline -- backup
+  assertions:
+    - cli_assert: backup_baseline_aggregates_release_required_backup_checks true
+    - cli_assert: backup_baseline_runs_full_mode_targeted_tests true
 ```

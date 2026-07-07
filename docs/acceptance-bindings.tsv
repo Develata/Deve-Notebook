@@ -133,6 +133,7 @@ STORE-022|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded 
 STORE-023|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded pack evidence matches branch manifest refs
 STORE-024|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup decrypted pack evidence matches downloaded refs
 STORE-025|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup restore candidate admission consumes typed verification and decrypted evidence
+STORE-026|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup release baseline aggregates binding, pack, provider, and restore candidate checks
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
 UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom
