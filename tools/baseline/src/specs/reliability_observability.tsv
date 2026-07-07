@@ -44,8 +44,8 @@ contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health
 contains	docs/plan/AGENTS.md	`22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/coverage-matrix.md	| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |
-contains	docs/features/operation-coverage.md	| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013` |
-contains	docs/features/operations/release_quality_gates.md	- `Related Acceptance Cases`: `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
+contains	docs/features/operation-coverage.md	| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013` |
+contains	docs/features/operations/release_quality_gates.md	- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
 contains	docs/features/operations/release_quality_gates.md	### `op.release.quality.run-reliability-observability-baseline`
 contains	docs/features/15_release.md	`REL-013` reliability/observability governance baseline
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	scripts/check-reliability-observability-baseline.sh
