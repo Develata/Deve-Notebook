@@ -104,6 +104,8 @@ fn desktop_launch_options_support_manual_local_backend_disable() {
 
 #[test]
 fn desktop_host_backend_preference_can_select_remote_browser() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(crate::DEVE_NATIVE_REMOTE_URL_ENV, None);
     let preference = NativeBackendPreference::remote("https://pref.example");
 
     let bootstrap = remote_browser_bootstrap_for_launch_options(
@@ -118,6 +120,8 @@ fn desktop_host_backend_preference_can_select_remote_browser() {
 
 #[test]
 fn desktop_local_backend_option_overrides_remote_preference() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(crate::DEVE_NATIVE_REMOTE_URL_ENV, None);
     let preference = NativeBackendPreference::remote("https://pref.example");
     let options = DesktopTauriLaunchOptions {
         remote_url: None,
@@ -136,6 +140,36 @@ fn desktop_main_window_close_requests_process_exit() {
         DESKTOP_TAURI_MAIN_WINDOW_LABEL
     ));
     assert!(!desktop_main_window_close_exits_process("secondary"));
+}
+
+#[test]
+fn desktop_shutdown_action_stops_backend_before_main_window_exit() {
+    let action = desktop_shutdown_action_for_window_close(DESKTOP_TAURI_MAIN_WINDOW_LABEL);
+
+    assert_eq!(
+        action,
+        DesktopRunEventShutdownAction::StopLocalBackendAndExit
+    );
+    assert!(action.should_stop_local_backend());
+    assert!(action.should_exit_process());
+}
+
+#[test]
+fn desktop_secondary_window_close_does_not_stop_backend() {
+    let action = desktop_shutdown_action_for_window_close("secondary");
+
+    assert_eq!(action, DesktopRunEventShutdownAction::None);
+    assert!(!action.should_stop_local_backend());
+    assert!(!action.should_exit_process());
+}
+
+#[test]
+fn desktop_process_exit_stops_backend_without_recursive_exit_request() {
+    let action = desktop_shutdown_action_for_process_exit();
+
+    assert_eq!(action, DesktopRunEventShutdownAction::StopLocalBackend);
+    assert!(action.should_stop_local_backend());
+    assert!(!action.should_exit_process());
 }
 
 #[test]

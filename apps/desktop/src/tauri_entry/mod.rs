@@ -44,6 +44,23 @@ pub enum DesktopTauriShellEffect {
     QuitRequested,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DesktopRunEventShutdownAction {
+    None,
+    StopLocalBackend,
+    StopLocalBackendAndExit,
+}
+
+impl DesktopRunEventShutdownAction {
+    fn should_stop_local_backend(self) -> bool {
+        matches!(self, Self::StopLocalBackend | Self::StopLocalBackendAndExit)
+    }
+
+    fn should_exit_process(self) -> bool {
+        matches!(self, Self::StopLocalBackendAndExit)
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DesktopTauriLaunchOptions {
     pub remote_url: Option<String>,
@@ -338,13 +355,19 @@ fn handle_desktop_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
             label,
             event: WindowEvent::CloseRequested { api, .. },
             ..
-        } if desktop_main_window_close_exits_process(&label) => {
-            api.prevent_close();
-            stop_local_backend_for_app(app, current_unix_time_millis());
-            app.exit(0);
+        } => {
+            let action = desktop_shutdown_action_for_window_close(&label);
+            if action.should_exit_process() {
+                api.prevent_close();
+            }
+            apply_desktop_shutdown_action(app, action, current_unix_time_millis());
         }
         RunEvent::ExitRequested { .. } | RunEvent::Exit => {
-            stop_local_backend_for_app(app, current_unix_time_millis());
+            apply_desktop_shutdown_action(
+                app,
+                desktop_shutdown_action_for_process_exit(),
+                current_unix_time_millis(),
+            );
         }
         _ => {}
     }
@@ -352,6 +375,31 @@ fn handle_desktop_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
 
 fn desktop_main_window_close_exits_process(label: &str) -> bool {
     label == DESKTOP_TAURI_MAIN_WINDOW_LABEL
+}
+
+fn desktop_shutdown_action_for_window_close(label: &str) -> DesktopRunEventShutdownAction {
+    if desktop_main_window_close_exits_process(label) {
+        DesktopRunEventShutdownAction::StopLocalBackendAndExit
+    } else {
+        DesktopRunEventShutdownAction::None
+    }
+}
+
+fn desktop_shutdown_action_for_process_exit() -> DesktopRunEventShutdownAction {
+    DesktopRunEventShutdownAction::StopLocalBackend
+}
+
+fn apply_desktop_shutdown_action<R: Runtime>(
+    app: &AppHandle<R>,
+    action: DesktopRunEventShutdownAction,
+    timestamp_unix_ms: i64,
+) {
+    if action.should_stop_local_backend() {
+        stop_local_backend_for_app(app, timestamp_unix_ms);
+    }
+    if action.should_exit_process() {
+        app.exit(0);
+    }
 }
 
 fn stop_local_backend_for_app<R: Runtime>(app: &AppHandle<R>, timestamp_unix_ms: i64) {
