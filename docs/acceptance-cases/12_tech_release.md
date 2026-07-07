@@ -83,6 +83,7 @@
     - run: cargo run -p deve_baseline -- deep-audit-gate
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
+    - run: cargo test -p deve_cli static_files -- --nocapture
     - run: cargo test --locked
     - run: cargo run -p deve_baseline -- release-audit-gate
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
@@ -96,6 +97,7 @@
     - release_assert: validation_script_ownership_policy_classified true
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
+    - release_assert: trunk_dev_index_rejected_by_static_delivery true
 
 - case_id: REL-004
   goal: 当前运行与测试入口文档和实现边界保持一致。
@@ -147,6 +149,8 @@
     - exit_code_eq: 0
     - stdout_contains: "release-baseline-check: ok"
     - release_assert: embedded_frontend_single_binary_boundary true
+    - release_assert: trunk_dev_index_not_served_as_release_frontend true
+    - release_assert: api_only_does_not_prove_embedded_frontend_health true
     - release_assert: target_host_platform_evidence_runtime_boundary_current true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

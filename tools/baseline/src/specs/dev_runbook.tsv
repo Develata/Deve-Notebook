@@ -6,6 +6,8 @@ contains	docs/dev-runbook.md	cargo run -p deve_cli --features search --bin deve_
 contains	docs/dev-runbook.md	scripts/smoke-web-release-build.sh
 contains	docs/dev-runbook.md	scripts/smoke-web-runtime-paths.sh
 contains	docs/dev-runbook.md	The wrapper normalizes Trunk's `NO_COLOR` parsing
+contains	docs/dev-runbook.md	.well-known/trunk/ws
+contains	docs/dev-runbook.md	DEVE_STATIC_DIR
 contains	docs/dev-runbook.md	NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
 contains	docs/dev-runbook.md	AUTH_SECRET
 contains	docs/dev-runbook.md	AUTH_PASS

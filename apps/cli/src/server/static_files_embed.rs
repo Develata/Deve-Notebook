@@ -13,13 +13,28 @@ mod embedded {
 }
 
 pub(super) fn fallback<S: Clone + Send + Sync + 'static>() -> Option<Router<S>> {
-    asset_for_path("/index.html")?;
+    valid_index_asset()?;
     tracing::info!("Serving embedded frontend static assets");
     Some(Router::new().fallback_service(tower::service_fn(serve_asset)))
 }
 
 pub(super) fn has_index_asset() -> bool {
-    asset_for_path("/index.html").is_some()
+    valid_index_asset().is_some()
+}
+
+fn valid_index_asset() -> Option<&'static embedded::EmbeddedAsset> {
+    valid_index_asset_in(embedded::EMBEDDED_ASSETS)
+}
+
+fn valid_index_asset_in(assets: &[embedded::EmbeddedAsset]) -> Option<&embedded::EmbeddedAsset> {
+    let asset = asset_for_path_in("/index.html", assets)?;
+    if super::static_files::index_html_contains_trunk_dev_ws(asset.bytes) {
+        tracing::warn!(
+            "Embedded frontend index.html contains Trunk development live-reload markers; run `trunk build --release` before rebuilding deve_cli"
+        );
+        return None;
+    }
+    Some(asset)
 }
 
 async fn serve_asset(req: Request<Body>) -> Result<Response<Body>, Infallible> {
@@ -41,10 +56,6 @@ fn asset_for_request_path_in<'a>(
         return None;
     }
     asset_for_path_in(path, assets)
-}
-
-fn asset_for_path(path: &str) -> Option<&'static embedded::EmbeddedAsset> {
-    asset_for_path_in(path, embedded::EMBEDDED_ASSETS)
 }
 
 fn asset_for_path_in<'a>(
@@ -111,6 +122,18 @@ mod tests {
         let found = asset_for_path_in("/", &assets).expect("index asset");
 
         assert_eq!(found.path, "index.html");
+    }
+
+    #[test]
+    fn embedded_lookup_rejects_trunk_dev_index() {
+        let assets = [embedded::EmbeddedAsset {
+            path: "index.html",
+            bytes: b"<script>const address = '{{__TRUNK_ADDRESS__}}'; const url = '.well-known/trunk/ws';</script>",
+        }];
+
+        let found = valid_index_asset_in(&assets);
+
+        assert!(found.is_none());
     }
 
     #[test]

@@ -53,6 +53,9 @@ after Web source changes you must rebuild `apps/web/dist` before rebuilding or
 running the CLI. Otherwise the embedded server can serve stale WASM.
 The wrapper normalizes Trunk's `NO_COLOR` parsing and suppresses non-actionable
 Browserslist database freshness noise from the Trunk Tailwind pipeline.
+Backend static delivery rejects `index.html` files that still contain Trunk
+development live-reload markers such as `.well-known/trunk/ws`; rebuild with
+`trunk build --release` before embedding or setting `DEVE_STATIC_DIR`.
 For `CMD-007A`, the browser smoke must confirm the page reaches either `Ready`
 or `Login`, and network traffic includes `/api/auth/status` and `/api/node/role`.
 

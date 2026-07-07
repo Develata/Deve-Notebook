@@ -247,7 +247,19 @@ contains	docs/plan/18_release.md	<projection-base>/<safe_repo_name>--<repo_id>/
 contains	docs/plan/18_release.md	delivery shape、environment、ports 与聚合 repo
 contains	docs/plan/18_release.md	health counts。degraded repo
 contains	docs/plan/18_release.md	native/graph boundary scripts
+contains	docs/plan/18_release.md	Trunk development live-reload
+contains	docs/plan/18_release.md	api-only
+contains	docs/plan/11_ui_design/01_web.md	Trunk development
+contains	docs/plan/11_ui_design/01_web.md	.well-known/trunk/ws
 contains	docs/features/15_release.md	Docker/Server 当前主通道是单个 `deve_cli` 二进制
+contains	docs/features/15_release.md	`api-only` 只能说明当前没有可服务的前端资产
+contains	docs/acceptance-cases/12_tech_release.md	cargo test -p deve_cli static_files -- --nocapture
+contains	docs/acceptance-cases/12_tech_release.md	trunk_dev_index_rejected_by_static_delivery true
+contains	docs/acceptance-cases/12_tech_release.md	trunk_dev_index_not_served_as_release_frontend true
+contains	docs/acceptance-cases/12_tech_release.md	api_only_does_not_prove_embedded_frontend_health true
+contains	apps/cli/src/server/static_files.rs	TRUNK_DEV_INDEX_MARKERS
+contains	apps/cli/src/server/static_files_embed.rs	valid_index_asset
+contains	apps/cli/src/server/static_files/tests.rs	static_dir_trunk_dev_index_is_not_served_as_spa_fallback
 contains	docs/dev-runbook.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
 contains	docs/dev-runbook.md	DEVE_DOCKER_BIN=/path/to/docker
 contains	docs/dev-runbook.md	http://127.0.0.1:3102/api/node/role

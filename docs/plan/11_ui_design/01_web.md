@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-07-07`
 - `Counterpart Feature`: `docs/features/08_ui_design_01_web.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
@@ -32,6 +32,13 @@ CLI 二进制文件 **MUST** 内嵌前端静态资源，以支持零依赖部署
 会继续提供旧的已嵌入前端资产。认证相关 smoke 必须使用
 `http://127.0.0.1:<port>/` 作为浏览器入口，不使用 `0.0.0.0` 作为登录
 origin。
+
+后端静态资源 admission gate **MUST** 拒绝仍包含 Trunk development
+live-reload 标记的 `index.html`，包括 `{{__TRUNK_ADDRESS__}}`、
+`{{__TRUNK_WS_BASE__}}` 与 `.well-known/trunk/ws`。显式 `DEVE_STATIC_DIR`
+命中该类 index 时 **MUST** 在静态根校验阶段 fail-closed；嵌入式前端命中该类
+index 时 **MUST NOT** 被作为 release SPA fallback 提供，运行形态可退化为
+`api-only` 并通过日志与 CMD-007A/browser smoke 暴露。
 
 ### 1.2 路由回退 (SPA Routing)
 后端服务器 **MUST** 实现 SPA 路由回退逻辑：

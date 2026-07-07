@@ -31,6 +31,14 @@ const ENV_STATIC_DIR: &str = "DEVE_STATIC_DIR";
 /// 默认静态文件目录 (相对于工作目录)
 const DEFAULT_STATIC_DIR: &str = "./static";
 
+const TRUNK_DEV_INDEX_MARKERS: &[&[u8]] = &[
+    b"{{__TRUNK_ADDRESS__}}",
+    b"{{__trunk_address__}}",
+    b"{{__TRUNK_WS_BASE__}}",
+    b"{{__trunk_ws_base__}}",
+    b".well-known/trunk/ws",
+];
+
 /// 获取静态文件目录路径
 ///
 /// 优先读取 `DEVE_STATIC_DIR` 环境变量，回退到默认值 `./static`。
@@ -55,13 +63,25 @@ pub fn validate_static_dir_override() -> Result<()> {
 
 pub fn delivery_shape() -> &'static str {
     let dir = resolve_static_dir();
-    if validate_static_root(&dir).is_ok() {
-        if std::env::var_os(ENV_STATIC_DIR).is_some() {
+    classify_delivery_shape(
+        validate_static_root(&dir).is_ok(),
+        std::env::var_os(ENV_STATIC_DIR).is_some(),
+        super::static_files_embed::has_index_asset(),
+    )
+}
+
+fn classify_delivery_shape(
+    static_root_valid: bool,
+    static_dir_override: bool,
+    embedded_index_valid: bool,
+) -> &'static str {
+    if static_root_valid {
+        if static_dir_override {
             return "static-dir-override";
         }
         return "static-dir";
     }
-    if super::static_files_embed::has_index_asset() {
+    if embedded_index_valid {
         return "embedded-frontend";
     }
     "api-only"
@@ -80,10 +100,35 @@ fn validate_static_root(dir: &std::path::Path) -> Result<()> {
 
     let index = dir.join("index.html");
     match index.try_exists() {
-        Ok(true) => Ok(()),
+        Ok(true) => validate_static_index(&index),
         Ok(false) => Err(anyhow!("Configured static index missing: {:?}", index)),
         Err(err) => Err(err).with_context(|| format!("Failed to stat index.html {:?}", index)),
     }
+}
+
+fn validate_static_index(index: &std::path::Path) -> Result<()> {
+    let bytes = std::fs::read(index)
+        .with_context(|| format!("Failed to read static index.html {:?}", index))?;
+    if index_html_contains_trunk_dev_ws(&bytes) {
+        return Err(anyhow!(
+            "Configured static index contains Trunk development live-reload markers: {:?}; run `trunk build --release`, not `trunk serve`",
+            index
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn index_html_contains_trunk_dev_ws(bytes: &[u8]) -> bool {
+    TRUNK_DEV_INDEX_MARKERS
+        .iter()
+        .any(|marker| contains_bytes(bytes, marker))
+}
+
+fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+    !needle.is_empty()
+        && haystack
+            .windows(needle.len())
+            .any(|window| window == needle)
 }
 
 /// 构建 SPA 静态文件 fallback 服务

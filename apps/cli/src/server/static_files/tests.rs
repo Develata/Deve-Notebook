@@ -62,6 +62,27 @@ fn validate_static_dir_override_fails_closed_when_index_missing() {
 }
 
 #[test]
+fn validate_static_dir_override_rejects_trunk_dev_index() {
+    let _guard = env_guard();
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        dir.path().join("index.html"),
+        "<script>const address = '{{__TRUNK_ADDRESS__}}'; const url = '.well-known/trunk/ws';</script>",
+    )
+    .expect("write index");
+    unsafe { std::env::set_var(ENV_STATIC_DIR, dir.path()) };
+
+    let err = validate_static_dir_override()
+        .expect_err("configured Trunk development index must fail closed");
+
+    unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+    assert!(
+        err.to_string()
+            .contains("Trunk development live-reload markers")
+    );
+}
+
+#[test]
 fn delivery_shape_reports_static_override_when_valid() {
     let _guard = env_guard();
     let dir = tempfile::tempdir().expect("tempdir");
@@ -71,6 +92,12 @@ fn delivery_shape_reports_static_override_when_valid() {
     assert_eq!(delivery_shape(), "static-dir-override");
 
     unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+}
+
+#[test]
+fn delivery_shape_reports_api_only_when_static_and_embedded_frontend_are_invalid() {
+    assert_eq!(classify_delivery_shape(false, false, false), "api-only");
+    assert_eq!(classify_delivery_shape(false, true, false), "api-only");
 }
 
 #[tokio::test]
@@ -104,6 +131,35 @@ async fn static_dir_spa_route_returns_index_with_ok_status() {
         .await
         .expect("body");
     assert!(String::from_utf8_lossy(&body).contains("deve-spa"));
+}
+
+#[tokio::test]
+async fn static_dir_trunk_dev_index_is_not_served_as_spa_fallback() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        dir.path().join("index.html"),
+        "<html><body>trunk-dev-static-index-sentinel .well-known/trunk/ws</body></html>",
+    )
+    .expect("write index");
+    let app = static_fallback_from_dir::<()>(dir.path().to_path_buf());
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/docs/invalid-static")
+                .body(Body::empty())
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+
+    let body = body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .expect("body");
+    assert!(
+        !String::from_utf8_lossy(&body).contains("trunk-dev-static-index-sentinel"),
+        "invalid static index must not be returned as SPA fallback"
+    );
 }
 
 #[tokio::test]

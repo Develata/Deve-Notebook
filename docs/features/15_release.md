@@ -24,12 +24,14 @@
 
 - Web / Server / Docker 是当前主要交付面。
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
+- 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 
 ### 2. 版本与升级预期
 
 - 用户应能知道当前运行的大致版本或构建来源。
 - 当前 `/api/node/role` 与 Web dashboard 应暴露只读运行摘要，包括版本、profile、环境、交付形态和 repo health 聚合状态。
+- `/api/node/role` 中的 `api-only` 只能说明当前没有可服务的前端资产，不能单独证明嵌入式前端健康；发布前必须配套浏览器入口 smoke。
 - 升级后核心数据与核心工作流不应无提示地断裂。
 - 首个 stable 前产生的无版本开发期 ledger / `.redb` 不属于兼容承诺；正式运行时应 fail-closed 并提示显式 reset / repair / migration。
 
