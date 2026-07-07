@@ -6,7 +6,8 @@ contains	docs/plan/06_backup.md	### 3.4 Restore Candidate {#backup-restore-candi
 contains	docs/plan/06_backup.md	## 7. Security Contract {#backup-secret-ref-contract} {#backup-verification-contract} {#backup-artifact-protection-contract}
 contains	docs/plan/06_backup.md	provider adapter 只能挂在 backup runtime 下
 contains	docs/features/06_repository.md	Backup Locator 与 Binding
-contains	docs/features/06_repository.md	backup restore --mode explicit-import|explicit-merge
+contains	docs/features/06_repository.md	backup restore --mode explicit-import
+contains	docs/features/06_repository.md	backup restore --mode explicit-merge
 contains	docs/features/06_repository.md	remote-readonly RestoreCandidate
 contains	docs/registry/runtime-skeleton-registry.md	backup_locator_runtime
 contains	docs/registry/runtime-skeleton-registry.md	backup_pack_runtime
@@ -27,7 +28,6 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli backup_restore_download -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
@@ -39,6 +39,17 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	run: cargo run -p deve_baseline -- backup
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	cli_assert: backup_baseline_aggregates_release_required_backup_checks true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-026	cli_assert: backup_baseline_runs_full_mode_targeted_tests true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cargo test -p deve_core --lib backup_restore_import_runtime -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cargo test -p deve_cli backup_restore_explicit_import -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_requires_writer_gate_and_explicit_mode true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_non_empty_healthy_target true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_candidate_plaintext_evidence_mismatch true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_incomplete_ledger_image true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_unrestored_snapshot_or_blob_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_reports_projection_repair_after_authority_import true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_without_authority_context_fails_closed true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_reports_projection_repair_after_authority_import true
 contains	tools/baseline/src/main.rs	mod backup;
 contains	tools/baseline/src/main.rs	"backup" => backup::run(),
 contains	tools/baseline/src/main.rs	backup::run_text()?
@@ -55,7 +66,14 @@ contains	crates/core/src/backup/verification/plaintext_packs/tests.rs	fn backup_
 contains	crates/core/src/backup/restore/tests/admission.rs	fn backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence()
 contains	apps/cli/src/commands/backup/run/tests/provider_upload.rs	fn backup_run_requires_artifact_for_provider_upload()
 contains	apps/cli/src/commands/backup/restore/tests/download/success.rs	fn backup_restore_download_opens_branch_manifest_before_pack_download()
-contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_non_dry_run_remains_fail_closed()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn imports_explicit_candidate_to_empty_local_repo()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_non_empty_target_repo()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_candidate_plaintext_evidence_mismatch()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_incomplete_ledger_slice_not_starting_at_one()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_snapshot_or_blob_refs_until_restored()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_without_authority_context_fails_closed()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_reports_projection_repair_after_authority_import()
 contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_merge_non_dry_run_remains_fail_closed()
 # Full mode uses lib-targeted filters to avoid whole-package integration enumeration while keeping the Backup module tests executable.
 cargo_test_lib	deve_core	backup_binding_store
@@ -77,3 +95,5 @@ cargo_test_lib	deve_core	backup_downloaded_packs
 cargo_test_lib	deve_core	backup_decrypted_packs
 cargo_test_lib	deve_core	backup_plaintext_packs
 cargo_test_lib	deve_core	backup_restore_candidate
+cargo_test_lib	deve_core	backup_restore_import_runtime
+cargo_test_lib	deve_cli	backup_restore_explicit_import

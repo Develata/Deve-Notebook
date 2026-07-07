@@ -10,6 +10,7 @@ use deve_core::backup::{
     plan_backup_pack,
 };
 use deve_core::models::{ContentOp, DocId, LedgerEntry, PeerId, serialize_ledger_entry};
+use deve_core::models::{NodeId, StructureOp};
 
 pub(in crate::commands::backup::restore::tests) type ArtifactMap = Vec<(String, Vec<u8>)>;
 pub(in crate::commands::backup::restore::tests) type DownloadFixture =
@@ -53,19 +54,37 @@ fn snapshot_ref(pack_sequence: u64) -> BackupBlobRef {
 }
 
 fn pack_manifest(pack_sequence: u64, payload_digest: BackupDigest) -> BackupPackManifest {
+    pack_manifest_with_counts(
+        pack_sequence,
+        payload_digest,
+        BackupSeqRange {
+            start: pack_sequence,
+            end: pack_sequence,
+        },
+        1,
+        1,
+        vec![blob_ref(pack_sequence)],
+    )
+}
+
+fn pack_manifest_with_counts(
+    pack_sequence: u64,
+    payload_digest: BackupDigest,
+    ledger_seq_range: BackupSeqRange,
+    ledger_event_count: u64,
+    snapshot_count: u64,
+    blob_refs: Vec<BackupBlobRef>,
+) -> BackupPackManifest {
     plan_backup_pack(BackupPackPlanInput {
         repo_id: REPO_ID.parse().expect("repo id"),
         writer_identity: "writer-1".to_string(),
         branch_path: "deve/branches/writer-1".to_string(),
         pack_sequence,
-        ledger_seq_range: Some(BackupSeqRange {
-            start: pack_sequence,
-            end: pack_sequence,
-        }),
-        ledger_event_count: 1,
-        snapshot_count: 1,
+        ledger_seq_range: Some(ledger_seq_range),
+        ledger_event_count,
+        snapshot_count,
         payload_digest,
-        blob_refs: vec![blob_ref(pack_sequence)],
+        blob_refs,
     })
     .expect("pack manifest")
 }
@@ -100,6 +119,64 @@ fn plaintext_bytes(manifest: &BackupPackManifest) -> Vec<u8> {
         ledger_seq_range: manifest.ledger_seq_range,
         ledger_entries: vec![ledger_entry(seq_range.start)],
         snapshot_refs: vec![snapshot_ref(manifest.pack_sequence)],
+        blob_refs: manifest.blob_refs.clone(),
+    };
+    encode_backup_pack_plaintext(BackupPackPlaintextEncodeInput {
+        manifest,
+        plaintext: &plaintext,
+    })
+    .expect("backup pack plaintext")
+}
+
+fn restore_file_ledger_entries() -> Vec<BackupPackPlaintextLedgerEntry> {
+    let doc_id = DocId::from_u128(20_001);
+    let node_id = NodeId::from_doc_id(doc_id);
+    let peer = PeerId::new("backup-cli-restore-test-peer");
+    let structure = LedgerEntry::new_structure(
+        StructureOp::CreateFile {
+            node_id,
+            doc_id,
+            parent_id: None,
+            name: "restored.md".into(),
+        },
+        1_700_000_001,
+        peer.clone(),
+        1,
+    );
+    let content = LedgerEntry::new_content(
+        doc_id,
+        ContentOp::Insert {
+            pos: 0,
+            content: "restored from backup".into(),
+        },
+        1_700_000_002,
+        peer,
+        2,
+        None,
+        None,
+    );
+    vec![
+        BackupPackPlaintextLedgerEntry {
+            global_seq: 1,
+            entry_bytes: serialize_ledger_entry(&structure).expect("structure entry"),
+        },
+        BackupPackPlaintextLedgerEntry {
+            global_seq: 2,
+            entry_bytes: serialize_ledger_entry(&content).expect("content entry"),
+        },
+    ]
+}
+
+fn restore_file_plaintext_bytes(manifest: &BackupPackManifest) -> Vec<u8> {
+    let plaintext = BackupPackPlaintext {
+        format_version: BACKUP_PACK_PLAINTEXT_FORMAT_VERSION,
+        repo_id: manifest.repo_id,
+        writer_identity: manifest.writer_identity.clone(),
+        branch_path: manifest.branch_path.clone(),
+        pack_sequence: manifest.pack_sequence,
+        ledger_seq_range: manifest.ledger_seq_range,
+        ledger_entries: restore_file_ledger_entries(),
+        snapshot_refs: Vec::new(),
         blob_refs: manifest.blob_refs.clone(),
     };
     encode_backup_pack_plaintext(BackupPackPlaintextEncodeInput {
@@ -196,4 +273,68 @@ pub(in crate::commands::backup::restore::tests) fn download_fixture_with_pack_ke
         .collect();
 
     (manifest_key, manifest_digest, artifacts, pack_digests)
+}
+
+pub(in crate::commands::backup::restore::tests) fn restore_file_download_fixture() -> DownloadFixture
+{
+    let key = artifact_key();
+    let provisional_manifest = pack_manifest_with_counts(
+        1,
+        digest('a'),
+        BackupSeqRange { start: 1, end: 2 },
+        2,
+        0,
+        Vec::new(),
+    );
+    let plaintext = restore_file_plaintext_bytes(&provisional_manifest);
+    let artifact = encrypt_backup_pack_artifact(deve_core::backup::BackupPackArtifactInput {
+        repo_id: REPO_ID.parse().expect("repo id"),
+        writer_identity: "writer-1",
+        branch_path: "deve/branches/writer-1",
+        pack_sequence: 1,
+        protection: &protection(BackupArtifactKind::Pack),
+        key: &key,
+        plaintext: &plaintext,
+    })
+    .expect("encrypted pack artifact");
+    let pack_manifest = pack_manifest_with_counts(
+        1,
+        artifact.payload_digest().expect("payload digest"),
+        BackupSeqRange { start: 1, end: 2 },
+        2,
+        0,
+        Vec::new(),
+    );
+    let pack_ref = BackupBranchManifestPackRef::from_pack_manifest(&pack_manifest);
+    let pack_bytes = artifact.to_bytes().expect("artifact bytes");
+    let branch = BackupLocator::parse("s3://bucket-name/deve/")
+        .unwrap()
+        .branch_locator("writer-1")
+        .unwrap();
+    let branch_manifest_path = branch.branch_manifest_path();
+    let branch_manifest =
+        encrypt_backup_branch_manifest_artifact(BackupBranchManifestArtifactInput {
+            branch,
+            repo_id: REPO_ID.parse().expect("repo id"),
+            writer_identity: "writer-1",
+            branch_path: "deve/branches/writer-1",
+            packs: vec![pack_ref.clone()],
+            protection: &protection(BackupArtifactKind::BranchManifest),
+            key: &key,
+        })
+        .expect("encrypted branch manifest");
+    let manifest_digest = branch_manifest
+        .payload_digest()
+        .expect("manifest digest")
+        .hex;
+    let artifacts = vec![
+        (
+            branch_manifest_path,
+            branch_manifest.to_bytes().expect("manifest bytes"),
+        ),
+        (pack_ref.object_path.clone(), pack_bytes),
+    ];
+    let pack_digests = vec![pack_ref.payload_digest.hex];
+
+    (key, manifest_digest, artifacts, pack_digests)
 }

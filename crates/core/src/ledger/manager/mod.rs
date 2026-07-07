@@ -17,6 +17,7 @@ pub mod types;
 mod workspace;
 
 mod authority_storage_runtime;
+pub(crate) mod backup_restore_import_runtime;
 mod commit_apply;
 mod commit_plan;
 mod commit_preflight;

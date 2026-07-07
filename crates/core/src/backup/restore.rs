@@ -12,12 +12,13 @@ use super::locator::{normalize_remote_path, safe_writer_identity};
 use super::pack::BackupDigest;
 use super::verification::{BackupPlaintextPacksResult, BackupVerificationResult};
 use crate::models::RepoId;
+use crate::security::hashing::sha256_hex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub const BACKUP_RESTORE_MAX_PACKS: u64 = 64;
 pub const BACKUP_RESTORE_MAX_ENCRYPTED_BYTES: usize = 128 * 1024 * 1024;
@@ -72,6 +73,7 @@ struct RestoreCandidateInput {
     pub manifest_digest: BackupDigest,
     pub pack_count: u64,
     pub pack_digests: Vec<BackupDigest>,
+    pub plaintext_evidence_digest: BackupDigest,
     pub evidence: RestoreEvidence,
     pub admission_mode: RestoreAdmissionMode,
     pub write_gate_confirmed: bool,
@@ -101,6 +103,8 @@ pub struct RestoreCandidate {
     pub manifest_digest: BackupDigest,
     pub pack_count: u64,
     pub pack_digests: Vec<BackupDigest>,
+    pub plaintext_evidence_digest: BackupDigest,
+    pub fingerprint: BackupDigest,
     pub state: RestoreAdmissionState,
 }
 
@@ -120,6 +124,8 @@ pub enum BackupRestoreError {
     InvalidDigest,
     #[error("backup restore candidate pack digest is duplicated")]
     DuplicatePackDigest,
+    #[error("backup restore candidate fingerprint digest is invalid")]
+    InvalidCandidateFingerprint,
     #[error("backup restore candidate typed verification evidence does not match plaintext packs")]
     TypedEvidenceMismatch,
     #[error("backup restore candidate pack count exceeds resource budget")]
@@ -151,17 +157,32 @@ fn admit_restore_candidate(
     })?;
     validate_digest(&input.manifest_digest)?;
     validate_pack_digests(&input.pack_digests)?;
+    validate_digest(&input.plaintext_evidence_digest)?;
     if requires_write_gate(input.admission_mode) && !input.write_gate_confirmed {
         return Err(BackupRestoreError::WriteGateRequired);
     }
 
+    let writer_identity = safe_writer_identity(&input.writer_identity)?;
+    let branch_path = normalize_remote_path(&input.branch_path)?;
+    let fingerprint = restore_candidate_fingerprint(
+        input.repo_id,
+        &writer_identity,
+        &branch_path,
+        &input.manifest_digest,
+        input.pack_count,
+        &input.pack_digests,
+        &input.plaintext_evidence_digest,
+    )?;
+
     Ok(RestoreCandidate {
         repo_id: input.repo_id,
-        writer_identity: safe_writer_identity(&input.writer_identity)?,
-        branch_path: normalize_remote_path(&input.branch_path)?,
+        writer_identity,
+        branch_path,
         manifest_digest: input.manifest_digest,
         pack_count: input.pack_count,
         pack_digests: input.pack_digests,
+        plaintext_evidence_digest: input.plaintext_evidence_digest,
+        fingerprint,
         state: admission_state(input.admission_mode),
     })
 }
@@ -188,10 +209,30 @@ pub fn admit_verified_restore_candidate(
         manifest_digest: input.manifest_verification.manifest_digest().clone(),
         pack_count: input.plaintext_packs.pack_count(),
         pack_digests: input.plaintext_packs.pack_digests().to_vec(),
+        plaintext_evidence_digest: plaintext_evidence_digest(input.plaintext_packs)?,
         evidence: RestoreEvidence::verified_downloaded_decrypted_plaintext(),
         admission_mode: input.admission_mode,
         write_gate_confirmed: input.write_gate_confirmed,
     })
+}
+
+pub(crate) fn verify_restore_candidate_fingerprint(
+    candidate: &RestoreCandidate,
+) -> Result<(), BackupRestoreError> {
+    let expected = restore_candidate_fingerprint(
+        candidate.repo_id,
+        &candidate.writer_identity,
+        &candidate.branch_path,
+        &candidate.manifest_digest,
+        candidate.pack_count,
+        &candidate.pack_digests,
+        &candidate.plaintext_evidence_digest,
+    )?;
+    if expected.same_sha256(&candidate.fingerprint) {
+        Ok(())
+    } else {
+        Err(BackupRestoreError::InvalidCandidateFingerprint)
+    }
 }
 
 pub fn validate_backup_restore_resource_budget(
@@ -271,6 +312,101 @@ fn validate_pack_digests(pack_digests: &[BackupDigest]) -> Result<(), BackupRest
             return Err(BackupRestoreError::DuplicatePackDigest);
         }
     }
+    Ok(())
+}
+
+pub(crate) fn plaintext_evidence_digest(
+    plaintext_packs: &BackupPlaintextPacksResult,
+) -> Result<BackupDigest, BackupRestoreError> {
+    let mut transcript = Vec::new();
+    transcript.extend_from_slice(b"deve-backup-plaintext-evidence-v1");
+    transcript.extend_from_slice(plaintext_packs.repo_id().as_bytes());
+    push_str(&mut transcript, plaintext_packs.writer_identity());
+    push_str(&mut transcript, plaintext_packs.branch_path());
+    push_u64(&mut transcript, plaintext_packs.pack_count());
+
+    for pack in plaintext_packs.plaintext_packs() {
+        push_u64(&mut transcript, pack.pack_sequence());
+        push_digest(&mut transcript, pack.encrypted_digest())?;
+        push_u64(
+            &mut transcript,
+            u64::try_from(pack.encrypted_bytes()).unwrap_or(u64::MAX),
+        );
+        push_u64(
+            &mut transcript,
+            u64::try_from(pack.plaintext_bytes()).unwrap_or(u64::MAX),
+        );
+        let plaintext = pack.plaintext();
+        push_u64(&mut transcript, plaintext.pack_sequence);
+        match plaintext.ledger_seq_range {
+            Some(range) => {
+                transcript.push(1);
+                push_u64(&mut transcript, range.start);
+                push_u64(&mut transcript, range.end);
+            }
+            None => transcript.push(0),
+        }
+        for entry in &plaintext.ledger_entries {
+            push_u64(&mut transcript, entry.global_seq);
+            push_str(&mut transcript, &sha256_hex(&entry.entry_bytes));
+        }
+        for snapshot in &plaintext.snapshot_refs {
+            push_str(&mut transcript, &snapshot.path);
+            push_u64(&mut transcript, snapshot.size_bytes);
+            push_digest(&mut transcript, &snapshot.digest)?;
+        }
+        for blob in &plaintext.blob_refs {
+            push_str(&mut transcript, &blob.path);
+            push_u64(&mut transcript, blob.size_bytes);
+            push_digest(&mut transcript, &blob.digest)?;
+        }
+    }
+
+    Ok(BackupDigest::sha256(sha256_hex(&transcript)))
+}
+
+fn restore_candidate_fingerprint(
+    repo_id: RepoId,
+    writer_identity: &str,
+    branch_path: &str,
+    manifest_digest: &BackupDigest,
+    pack_count: u64,
+    pack_digests: &[BackupDigest],
+    plaintext_evidence_digest: &BackupDigest,
+) -> Result<BackupDigest, BackupRestoreError> {
+    let mut transcript = Vec::new();
+    transcript.extend_from_slice(b"deve-restore-candidate-v1");
+    transcript.extend_from_slice(repo_id.as_bytes());
+    push_str(&mut transcript, writer_identity);
+    push_str(&mut transcript, branch_path);
+    push_digest(&mut transcript, manifest_digest)?;
+    push_u64(&mut transcript, pack_count);
+    for digest in pack_digests {
+        push_digest(&mut transcript, digest)?;
+    }
+    push_digest(&mut transcript, plaintext_evidence_digest)?;
+    let digest = BackupDigest::sha256(sha256_hex(&transcript));
+    if digest.is_valid_sha256() {
+        Ok(digest)
+    } else {
+        Err(BackupRestoreError::InvalidCandidateFingerprint)
+    }
+}
+
+fn push_u64(transcript: &mut Vec<u8>, value: u64) {
+    transcript.extend_from_slice(&value.to_be_bytes());
+}
+
+fn push_str(transcript: &mut Vec<u8>, value: &str) {
+    push_u64(transcript, u64::try_from(value.len()).unwrap_or(u64::MAX));
+    transcript.extend_from_slice(value.as_bytes());
+}
+
+fn push_digest(transcript: &mut Vec<u8>, digest: &BackupDigest) -> Result<(), BackupRestoreError> {
+    let canonical = digest
+        .canonical_sha256_hex()
+        .ok_or(BackupRestoreError::InvalidDigest)?;
+    push_str(transcript, &canonical);
     Ok(())
 }
 

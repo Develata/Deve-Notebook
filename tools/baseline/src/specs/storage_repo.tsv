@@ -65,7 +65,6 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: bac
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cli_assert: backup_pack_download_verify_checks_manifest_digest_before_decrypt true
@@ -100,6 +99,17 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: bac
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_rejects_resource_budget_excess true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-025	cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cargo test -p deve_core --lib backup_restore_import_runtime -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cargo test -p deve_cli backup_restore_explicit_import -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_requires_writer_gate_and_explicit_mode true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_non_empty_healthy_target true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_candidate_plaintext_evidence_mismatch true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_incomplete_ledger_image true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_rejects_unrestored_snapshot_or_blob_refs true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_import_reports_projection_repair_after_authority_import true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_without_authority_context_fails_closed true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-027	cli_assert: backup_restore_explicit_import_reports_projection_repair_after_authority_import true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	run: scripts/check-storage-repo-baseline.sh
@@ -205,7 +215,14 @@ contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.
 contains	apps/cli/src/commands/backup/restore/tests/download/admission_failures.rs	fn backup_restore_download_rejects_tampered_artifact_before_candidate()
 contains	apps/cli/src/commands/backup/restore/tests/download/admission_failures.rs	fn backup_restore_download_rejects_authoritative_provider_metadata()
 contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_download_rejects_metadata_before_provider_get()
-contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_non_dry_run_remains_fail_closed()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn imports_explicit_candidate_to_empty_local_repo()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_non_empty_target_repo()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_candidate_plaintext_evidence_mismatch()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_incomplete_ledger_slice_not_starting_at_one()
+contains	crates/core/src/ledger/manager/backup_restore_import_runtime.rs	fn rejects_snapshot_or_blob_refs_until_restored()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_without_authority_context_fails_closed()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection()
+contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_import_reports_projection_repair_after_authority_import()
 contains	apps/cli/src/commands/backup/restore/tests/download/preflight_failures.rs	fn backup_restore_explicit_merge_non_dry_run_remains_fail_closed()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_match_manifest_refs()
 contains	crates/core/src/backup/verification/downloaded_packs.rs	fn backup_downloaded_packs_accept_provider_order_independent_verified_results()

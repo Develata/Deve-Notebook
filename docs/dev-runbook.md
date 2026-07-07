@@ -258,9 +258,16 @@ Control, Git mirror, or Projection Workspace state. Core-owned restore resource
 budget limits pack count, encrypted aggregate bytes, and plaintext aggregate
 bytes before admission.
 
-`explicit-import` and `explicit-merge` modes are only available as dry-run flow
-planning with `--write-gate`; non-dry-run execution remains fail-closed until
-RestoreCandidate import/merge authority is implemented.
+`explicit-import` supports non-dry-run import into an existing empty local repo
+after RestoreCandidate admission and `--write-gate`; it writes ledger facts only
+through the core RepoManager authority path and then rebuilds Projection. The
+current CLI one-shot path only accepts complete ledger-only candidates whose
+backup sequence starts at 1 and whose plaintext carries no unrestored
+snapshot/blob refs. If ledger import succeeds but Projection rebuild fails, the
+command reports authority import completed plus `projection_repair_required`.
+`explicit-merge`, implicit target creation, repair/reset-approved import targets,
+and multi-step candidate handle/scope gates remain fail-closed until their
+authority paths are implemented.
 
 ## Docker Release Smoke
 

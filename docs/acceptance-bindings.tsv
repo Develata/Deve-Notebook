@@ -134,7 +134,7 @@ STORE-023|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded 
 STORE-024|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup decrypted pack evidence matches downloaded refs
 STORE-025|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup restore candidate admission consumes typed verification and decrypted evidence
 STORE-026|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup release baseline aggregates binding, pack, provider, and restore candidate checks
-STORE-027|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup explicit-import authority path contract pending implementation tests
+STORE-027|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup explicit-import empty local target authority path covered by core runtime and CLI projection rebuild tests
 STORE-028|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup explicit-merge authority path contract pending implementation tests
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary

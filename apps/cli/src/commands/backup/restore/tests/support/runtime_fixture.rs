@@ -1,4 +1,7 @@
-use super::super::super::{RestoreCommandInput, restore_lines_with_runtime};
+use super::super::super::{
+    RestoreAuthorityContext, RestoreCommandInput, restore_lines_with_runtime,
+    restore_lines_with_runtime_and_authority,
+};
 use super::artifact_fixture::ArtifactMap;
 use crate::commands::backup::provider_io::{
     BackupArtifactDownloadOutcome, BackupArtifactDownloadRequest, BackupArtifactDownloader,
@@ -6,6 +9,7 @@ use crate::commands::backup::provider_io::{
 };
 use deve_core::backup::{BackupArtifactKey, BackupSecretRef};
 use std::collections::HashMap;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(in crate::commands::backup::restore::tests) struct DownloadRecord {
@@ -114,5 +118,26 @@ pub(in crate::commands::backup::restore::tests) fn restore_with_fixture(
     let mut downloader = RecordingDownloader::new(artifacts);
     let mut key_resolver = FixedKeyResolver::new(key);
     let lines = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)?;
+    Ok((lines, downloader, key_resolver))
+}
+
+pub(in crate::commands::backup::restore::tests) fn restore_with_fixture_and_authority(
+    command: RestoreCommandInput<'_>,
+    artifacts: ArtifactMap,
+    key: BackupArtifactKey,
+    ledger_dir: &Path,
+    snapshot_depth: usize,
+) -> anyhow::Result<(Vec<String>, RecordingDownloader, FixedKeyResolver)> {
+    let mut downloader = RecordingDownloader::new(artifacts);
+    let mut key_resolver = FixedKeyResolver::new(key);
+    let lines = restore_lines_with_runtime_and_authority(
+        command,
+        &mut downloader,
+        &mut key_resolver,
+        RestoreAuthorityContext {
+            ledger_dir: Some(ledger_dir),
+            snapshot_depth,
+        },
+    )?;
     Ok((lines, downloader, key_resolver))
 }

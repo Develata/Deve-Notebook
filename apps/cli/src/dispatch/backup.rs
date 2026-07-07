@@ -8,7 +8,7 @@ use crate::BackupAction;
 use crate::commands;
 use std::path::Path;
 
-pub fn run(ledger_dir: &Path, action: BackupAction) -> anyhow::Result<()> {
+pub fn run(ledger_dir: &Path, snapshot_depth: usize, action: BackupAction) -> anyhow::Result<()> {
     match action {
         BackupAction::Bind {
             locator,
@@ -105,27 +105,31 @@ pub fn run(ledger_dir: &Path, action: BackupAction) -> anyhow::Result<()> {
             packs_downloaded,
             packs_decrypted,
             dry_run,
-        } => commands::backup::restore(commands::backup::RestoreCommandInput {
-            locator: &locator,
-            repo_id: &repo_id,
-            manifest_repo_id: &manifest_repo_id,
-            branch: &branch,
-            manifest_digest: &manifest_digest,
-            pack_digests: &pack_digests,
-            credential_ref: credential_ref.as_deref(),
-            key_ref: key_ref.as_deref(),
-            pack_sequence,
-            ledger_start,
-            ledger_end,
-            ledger_event_count,
-            snapshot_count,
-            mode: &mode,
-            write_gate,
-            manifest_verified,
-            packs_downloaded,
-            packs_decrypted,
-            dry_run,
-        })?,
+        } => commands::backup::restore(
+            ledger_dir,
+            snapshot_depth,
+            commands::backup::RestoreCommandInput {
+                locator: &locator,
+                repo_id: &repo_id,
+                manifest_repo_id: &manifest_repo_id,
+                branch: &branch,
+                manifest_digest: &manifest_digest,
+                pack_digests: &pack_digests,
+                credential_ref: credential_ref.as_deref(),
+                key_ref: key_ref.as_deref(),
+                pack_sequence,
+                ledger_start,
+                ledger_end,
+                ledger_event_count,
+                snapshot_count,
+                mode: &mode,
+                write_gate,
+                manifest_verified,
+                packs_downloaded,
+                packs_decrypted,
+                dry_run,
+            },
+        )?,
         BackupAction::Unbind {
             locator,
             repo_id,

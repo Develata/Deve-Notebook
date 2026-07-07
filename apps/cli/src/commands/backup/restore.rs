@@ -10,8 +10,9 @@
 //! can perform a remote-readonly provider download of encrypted branch manifest
 //! and pack bytes. Manifest bytes are opened through core verification before
 //! pack refs are trusted; pack bytes are opened through typed manifest refs and
-//! admitted as an in-memory remote-readonly RestoreCandidate. This command does
-//! not import, merge, append ledger state, or touch Projection Workspaces.
+//! admitted as a RestoreCandidate. Non-dry-run explicit import is delegated to
+//! core ledger authority and then asks SyncManager to rebuild Projection.
+//! Explicit merge remains fail-closed.
 
 mod download;
 
@@ -26,6 +27,7 @@ use deve_core::backup::{
     backup_command_plan, plan_backup_restore_flow,
 };
 use deve_core::models::RepoId;
+use std::path::Path;
 
 #[cfg(test)]
 mod tests;
@@ -53,10 +55,37 @@ pub struct RestoreCommandInput<'a> {
     pub snapshot_count: Option<u64>,
 }
 
-pub fn restore(input: RestoreCommandInput<'_>) -> anyhow::Result<()> {
+#[derive(Clone, Copy)]
+pub(crate) struct RestoreAuthorityContext<'a> {
+    pub ledger_dir: Option<&'a Path>,
+    pub snapshot_depth: usize,
+}
+
+impl<'a> RestoreAuthorityContext<'a> {
+    fn none() -> Self {
+        Self {
+            ledger_dir: None,
+            snapshot_depth: 0,
+        }
+    }
+}
+
+pub fn restore(
+    ledger_dir: &Path,
+    snapshot_depth: usize,
+    input: RestoreCommandInput<'_>,
+) -> anyhow::Result<()> {
     let mut downloader = RealBackupArtifactDownloader;
     let mut key_resolver = EnvBackupArtifactKeyResolver;
-    for line in restore_lines_with_runtime(input, &mut downloader, &mut key_resolver)? {
+    for line in restore_lines_with_runtime_and_authority(
+        input,
+        &mut downloader,
+        &mut key_resolver,
+        RestoreAuthorityContext {
+            ledger_dir: Some(ledger_dir),
+            snapshot_depth,
+        },
+    )? {
         println!("{line}");
     }
     Ok(())
@@ -74,16 +103,35 @@ pub(crate) fn restore_lines_with_runtime(
     downloader: &mut dyn BackupArtifactDownloader,
     key_resolver: &mut dyn BackupArtifactKeyResolver,
 ) -> anyhow::Result<Vec<String>> {
+    restore_lines_with_runtime_and_authority(
+        input,
+        downloader,
+        key_resolver,
+        RestoreAuthorityContext::none(),
+    )
+}
+
+pub(crate) fn restore_lines_with_runtime_and_authority(
+    input: RestoreCommandInput<'_>,
+    downloader: &mut dyn BackupArtifactDownloader,
+    key_resolver: &mut dyn BackupArtifactKeyResolver,
+    authority: RestoreAuthorityContext<'_>,
+) -> anyhow::Result<Vec<String>> {
     let context = RestoreContext::parse(input)?;
     if requires_write_gate(context.admission_mode) && !input.write_gate {
         bail!("backup restore explicit import or merge requires an explicit write gate");
+    }
+    if context.admission_mode == RestoreAdmissionMode::ExplicitImport
+        && authority.ledger_dir.is_none()
+    {
+        bail!("backup restore explicit import requires local authority context");
     }
 
     if input.dry_run {
         return restore_dry_run_lines(input, &context);
     }
 
-    download::restore_download_lines(input, downloader, key_resolver, &context)
+    download::restore_download_lines(input, downloader, key_resolver, &context, authority)
 }
 
 fn restore_dry_run_lines(

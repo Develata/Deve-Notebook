@@ -36,7 +36,7 @@ mod pack;
 mod plaintext;
 mod protection;
 mod provider;
-mod restore;
+pub(crate) mod restore;
 mod restore_flow;
 mod root;
 mod secret;

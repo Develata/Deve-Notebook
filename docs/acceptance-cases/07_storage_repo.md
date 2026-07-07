@@ -346,7 +346,6 @@
     - cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
     - cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
     - cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
-    - cli_assert: backup_restore_explicit_import_non_dry_run_remains_fail_closed true
     - cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
 
 - case_id: STORE-022
@@ -430,22 +429,27 @@
 - case_id: STORE-027
   goal: Backup explicit-import 只能把 verified RestoreCandidate 导入到安全 local target。
   preconditions:
-    - planned/manual-pending: 当前实现仍 fail-closed；真实测试命令必须在实现落地时补齐
     - RestoreCandidate 已由 manifest verification 与 PacksPlaintextVerified typed evidence admission
-    - target local repo 为空、新建，或已通过 repair/reset gate 显式批准
-    - writer gate 当前有效并绑定 candidate fingerprint、target repo/branch 与 scope_nonce
+    - target local repo 已存在且为空；新建 target 与 repair/reset-approved target 仍 fail-closed
+    - RestoreCandidate 是完整 ledger-only image：backup seq 从 1 开始且无 snapshot/blob refs
+    - writer gate 当前有效并绑定 candidate fingerprint 与 target repo
   steps:
-    - manual-pending: implement core/cli tests for backup_restore_import before release
-    - manual-pending: add backup baseline entries only after those tests exist
+    - run: cargo test -p deve_core --lib backup_restore_import_runtime -- --nocapture
+    - run: cargo test -p deve_cli backup_restore_explicit_import -- --nocapture
   assertions:
     - cli_assert: backup_restore_import_consumes_restore_candidate_evidence true
-    - cli_assert: backup_restore_import_requires_writer_gate_and_current_scope true
+    - cli_assert: backup_restore_import_requires_writer_gate_and_explicit_mode true
     - cli_assert: backup_restore_import_rejects_non_empty_healthy_target true
-    - cli_assert: backup_restore_import_rejects_repo_id_mismatch true
-    - cli_assert: backup_restore_import_rejects_stale_candidate_fingerprint true
+    - cli_assert: backup_restore_import_rejects_candidate_plaintext_evidence_mismatch true
+    - cli_assert: backup_restore_import_rejects_incomplete_ledger_image true
+    - cli_assert: backup_restore_import_rejects_unrestored_snapshot_or_blob_refs true
     - cli_assert: backup_restore_import_appends_via_authority_storage_runtime true
     - cli_assert: backup_restore_import_rebuilds_projection_from_imported_ledger true
+    - cli_assert: backup_restore_import_reports_projection_repair_after_authority_import true
     - cli_assert: backup_restore_import_creates_no_staging_commit_anchor_or_git_queue true
+    - cli_assert: backup_restore_explicit_import_without_authority_context_fails_closed true
+    - cli_assert: backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection true
+    - cli_assert: backup_restore_explicit_import_reports_projection_repair_after_authority_import true
 
 - case_id: STORE-028
   goal: Backup explicit-merge 只能把 verified RestoreCandidate 作为只读 merge source 合入当前 local branch。

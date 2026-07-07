@@ -16,9 +16,9 @@ pub(super) fn validate_download_entry(
     input: RestoreCommandInput<'_>,
     context: &RestoreContext,
 ) -> anyhow::Result<()> {
-    if context.admission_mode != RestoreAdmissionMode::RemoteReadonly {
+    if context.admission_mode == RestoreAdmissionMode::ExplicitMerge {
         bail!(
-            "backup restore explicit import or merge remains fail-closed until RestoreCandidate import/merge authority is implemented"
+            "backup restore explicit merge remains fail-closed until RestoreCandidate merge authority is implemented"
         );
     }
     if input.manifest_verified || input.packs_downloaded || input.packs_decrypted {

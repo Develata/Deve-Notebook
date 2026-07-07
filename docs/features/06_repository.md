@@ -92,25 +92,29 @@
 - remote-readonly RestoreCandidate 还必须通过 core-owned resource budget；
   pack 数、encrypted aggregate bytes 或 plaintext aggregate bytes 超出预算时
   必须 fail-closed，不得继续下载/导入/合并。
-- `backup restore --mode explicit-import|explicit-merge` 在完整 authority 链路落地前
-  仍必须 fail-closed；以下条款是首版目标合同，不能被 UI/CLI 表达为当前已成功执行的
-  产品行为。二者未来成为 RestoreCandidate 重新进入 authority path 的显式入口时，
-  都必须先通过完整 RestoreCandidate admission、scope nonce 与 writer gate。
-- `backup restore --mode explicit-import` 的用户体验必须是“把已验证的
-  RestoreCandidate 显式导入到一个安全目标”，而不是覆盖当前工作区。目标只能是
-  空 local repo、新建 local repo，或已通过 repair/reset gate 显式批准的 target；
-  非空 healthy repo 必须 fail-closed。导入成功后，Projection Workspace 从导入后的
-  ledger fold 重建，Source Control 只通过 commit anchor -> ledger head 派生
+- `backup restore --mode explicit-import` 已支持非 dry-run 的空 local repo 目标：
+  远端 artifact 必须先完成 verify-before-decrypt、plaintext schema verification 与
+  RestoreCandidate admission，随后 CLI 只把 verified candidate、candidate fingerprint
+  与 writer gate 提交给 core RepoManager authority path。目标必须是已存在且为空的
+  local repo；新建 target 与 repair/reset-approved target 仍是后续扩展，不能由
+  restore 命令隐式创建或重置。当前 CLI one-shot import 仅接受完整 ledger-only
+  candidate：backup seq 必须从 1 开始且不得携带尚未恢复的 snapshot/blob refs，避免
+  增量片段或缺失附件被误报为完整灾难恢复。导入成功后，Projection Workspace 从导入后的
+  ledger fold 重建；若 projection rebuild 失败，CLI 必须报告 authority import 已完成、
+  projection repair required。Source Control 只通过 commit anchor -> ledger head 派生
   Confirmed Ledger Changes，不自动创建 commit anchor、staging、Git mirror queue。
+- `backup restore --mode explicit-merge` 在完整 merge authority 链路落地前仍必须
+  fail-closed；UI/CLI 不得把 explicit-merge 表达为当前已成功执行的产品行为。
 - `backup restore --mode explicit-merge` 的用户体验必须是“把已验证的
   RestoreCandidate 作为只读 merge source 合入当前 local branch”。系统必须显示
   candidate fingerprint、目标 repo/branch 与 write gate 状态；若产生冲突，进入既有
   diff/conflict resolution，而不是自动选择 backup 或 local 一侧。合并成功只追加
   ledger facts，Source Control dirty state 仍由 authority 派生。
 - `explicit-import` / `explicit-merge` 的 UI 或 CLI 入口不得接收 raw plaintext、
-  provider metadata、secret、locator token 或自造 ledger facts；只能提交 typed intent
-  和 core-issued candidate fingerprint。stale scope、stale candidate、RepoId mismatch
-  或 write gate 失效必须 fail-closed。
+  provider metadata、secret、locator token 或自造 ledger facts；当前 CLI import 是单命令
+  one-shot flow，不暴露可复用 candidate handle。后续多步 UI/CLI 若引入 candidate handle，
+  必须提交 typed intent、core-issued candidate fingerprint 与 scope/write-gate proof；
+  stale scope、stale candidate、RepoId mismatch 或 write gate 失效必须 fail-closed。
 - dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
   或 Projection Workspace。
 

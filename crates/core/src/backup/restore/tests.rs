@@ -7,12 +7,12 @@ use crate::backup::BackupLocator;
 use crate::backup::{
     BACKUP_BRANCH_MANIFEST_FORMAT_VERSION, BACKUP_PACK_PLAINTEXT_FORMAT_VERSION, BackupArtifactKey,
     BackupArtifactKind, BackupArtifactProtection, BackupArtifactProtectionInput, BackupBlobRef,
-    BackupBranchManifest, BackupBranchManifestPackRef, BackupEncryptedPackArtifact,
-    BackupPackArtifactDownloadVerifyInput, BackupPackArtifactInput, BackupPackArtifactOpenInput,
-    BackupPackArtifactOpenResult, BackupPackManifest, BackupPackPlaintext,
-    BackupPackPlaintextEncodeInput, BackupPackPlaintextLedgerEntry, BackupPackPlanInput,
-    BackupPackVerificationEvidence, BackupPlaintextPacksInput, BackupPlaintextPacksResult,
-    BackupProtectionMechanism, BackupSeqRange, BackupVerificationInput, BackupVerificationResult,
+    BackupBranchManifest, BackupBranchManifestPackRef, BackupPackArtifactDownloadVerifyInput,
+    BackupPackArtifactInput, BackupPackArtifactOpenInput, BackupPackArtifactOpenResult,
+    BackupPackManifest, BackupPackPlaintext, BackupPackPlaintextEncodeInput,
+    BackupPackPlaintextLedgerEntry, BackupPackPlanInput, BackupPackVerificationEvidence,
+    BackupPlaintextPacksInput, BackupPlaintextPacksResult, BackupProtectionMechanism,
+    BackupSeqRange, BackupVerificationInput, BackupVerificationResult,
     encode_backup_pack_plaintext, encrypt_backup_pack_artifact, open_backup_pack_artifact,
     parse_backup_key_ref, plan_backup_artifact_protection, plan_backup_pack,
     verify_backup_artifacts, verify_decrypted_backup_packs, verify_downloaded_backup_packs,
@@ -26,9 +26,15 @@ struct PackFixture {
     open_result: BackupPackArtifactOpenResult,
 }
 
-struct RestoreEvidenceFixture {
-    manifest_verification: BackupVerificationResult,
-    plaintext_packs: BackupPlaintextPacksResult,
+pub(crate) struct RestoreEvidenceFixture {
+    pub(crate) manifest_verification: BackupVerificationResult,
+    pub(crate) plaintext_packs: BackupPlaintextPacksResult,
+}
+
+pub(crate) struct SinglePackFixture {
+    pub(crate) pack_manifest: BackupPackManifest,
+    pub(crate) download_result: crate::backup::BackupPackArtifactDownloadVerifyResult,
+    pub(crate) open_result: BackupPackArtifactOpenResult,
 }
 
 fn repo_id() -> RepoId {
@@ -113,20 +119,23 @@ fn pack_manifest(
             end: pack_sequence,
         }),
         ledger_event_count: 1,
-        snapshot_count: 1,
+        snapshot_count: 0,
         payload_digest,
-        blob_refs: vec![blob_ref(pack_sequence)],
+        blob_refs: Vec::new(),
     })
     .unwrap()
 }
 
-fn pack_manifest_for(artifact: &BackupEncryptedPackArtifact) -> BackupPackManifest {
-    pack_manifest(
-        artifact.pack_sequence,
-        &artifact.writer_identity,
-        &artifact.branch_path,
-        artifact.payload_digest().unwrap(),
-    )
+fn pack_manifest_with_refs(
+    pack_sequence: u64,
+    writer_identity: &str,
+    branch_path: &str,
+    payload_digest: BackupDigest,
+) -> BackupPackManifest {
+    let mut manifest = pack_manifest(pack_sequence, writer_identity, branch_path, payload_digest);
+    manifest.snapshot_count = 1;
+    manifest.blob_refs = vec![blob_ref(pack_sequence)];
+    manifest
 }
 
 fn ledger_entry(global_seq: u64) -> BackupPackPlaintextLedgerEntry {
@@ -158,7 +167,11 @@ fn plaintext_bytes(manifest: &BackupPackManifest) -> Vec<u8> {
         pack_sequence: manifest.pack_sequence,
         ledger_seq_range: manifest.ledger_seq_range,
         ledger_entries: vec![ledger_entry(seq_range.start)],
-        snapshot_refs: vec![snapshot_ref(manifest.pack_sequence)],
+        snapshot_refs: if manifest.snapshot_count == 0 {
+            Vec::new()
+        } else {
+            vec![snapshot_ref(manifest.pack_sequence)]
+        },
         blob_refs: manifest.blob_refs.clone(),
     };
     encode_backup_pack_plaintext(BackupPackPlaintextEncodeInput {
@@ -169,11 +182,23 @@ fn plaintext_bytes(manifest: &BackupPackManifest) -> Vec<u8> {
 }
 
 fn pack_fixture(pack_sequence: u64, writer_identity: &str) -> PackFixture {
+    pack_fixture_with_manifest_planner(pack_sequence, writer_identity, pack_manifest)
+}
+
+fn pack_fixture_with_refs(pack_sequence: u64, writer_identity: &str) -> PackFixture {
+    pack_fixture_with_manifest_planner(pack_sequence, writer_identity, pack_manifest_with_refs)
+}
+
+fn pack_fixture_with_manifest_planner(
+    pack_sequence: u64,
+    writer_identity: &str,
+    plan_manifest: fn(u64, &str, &str, BackupDigest) -> BackupPackManifest,
+) -> PackFixture {
     let key = artifact_key();
     let protection = protection();
     let branch_path = format!("deve/branches/{writer_identity}");
     let provisional_manifest =
-        pack_manifest(pack_sequence, writer_identity, &branch_path, digest('a'));
+        plan_manifest(pack_sequence, writer_identity, &branch_path, digest('a'));
     let plaintext = plaintext_bytes(&provisional_manifest);
     let artifact = encrypt_backup_pack_artifact(pack_artifact_input(
         &key,
@@ -185,7 +210,12 @@ fn pack_fixture(pack_sequence: u64, writer_identity: &str) -> PackFixture {
     ))
     .unwrap();
     let artifact_bytes = artifact.to_bytes().unwrap();
-    let manifest = pack_manifest_for(&artifact);
+    let manifest = plan_manifest(
+        artifact.pack_sequence,
+        &artifact.writer_identity,
+        &artifact.branch_path,
+        artifact.payload_digest().unwrap(),
+    );
     let download_result =
         verify_downloaded_pack_artifact_digest_and_routing(BackupPackArtifactDownloadVerifyInput {
             manifest: &manifest,
@@ -203,6 +233,15 @@ fn pack_fixture(pack_sequence: u64, writer_identity: &str) -> PackFixture {
         pack_manifest: manifest,
         download_result,
         open_result,
+    }
+}
+
+pub(crate) fn single_pack_fixture(pack_sequence: u64) -> SinglePackFixture {
+    let fixture = pack_fixture(pack_sequence, "writer-1");
+    SinglePackFixture {
+        pack_manifest: fixture.pack_manifest,
+        download_result: fixture.download_result,
+        open_result: fixture.open_result,
     }
 }
 
@@ -225,6 +264,20 @@ fn branch_manifest(fixtures: &[PackFixture]) -> BackupBranchManifest {
     }
 }
 
+pub(crate) fn branch_manifest_for_single_pack(fixture: &SinglePackFixture) -> BackupBranchManifest {
+    BackupBranchManifest {
+        repo_id: repo_id(),
+        writer_identity: "writer-1".into(),
+        branch_path: "deve/branches/writer-1".into(),
+        branch_manifest_path: "deve/branches/writer-1/branch.manifest.enc".into(),
+        pack_prefix: "deve/branches/writer-1/packs".into(),
+        format_version: BACKUP_BRANCH_MANIFEST_FORMAT_VERSION,
+        packs: vec![BackupBranchManifestPackRef::from_pack_manifest(
+            &fixture.pack_manifest,
+        )],
+    }
+}
+
 fn manifest_verification(pack_digests: Vec<BackupDigest>) -> BackupVerificationResult {
     let packs = pack_digests
         .into_iter()
@@ -234,7 +287,7 @@ fn manifest_verification(pack_digests: Vec<BackupDigest>) -> BackupVerificationR
     manifest_verification_with_sequences(packs)
 }
 
-fn manifest_verification_with_sequences(
+pub(crate) fn manifest_verification_with_sequences(
     pack_refs: Vec<(u64, BackupDigest)>,
 ) -> BackupVerificationResult {
     let packs = pack_refs
@@ -259,8 +312,18 @@ fn manifest_verification_with_sequences(
     .unwrap()
 }
 
-fn verified_restore_evidence() -> RestoreEvidenceFixture {
-    let fixtures = pack_fixtures();
+pub(crate) fn verified_restore_evidence() -> RestoreEvidenceFixture {
+    verified_restore_evidence_from_fixtures(pack_fixtures())
+}
+
+pub(crate) fn verified_restore_evidence_with_refs() -> RestoreEvidenceFixture {
+    verified_restore_evidence_from_fixtures(vec![
+        pack_fixture_with_refs(1, "writer-1"),
+        pack_fixture_with_refs(2, "writer-1"),
+    ])
+}
+
+fn verified_restore_evidence_from_fixtures(fixtures: Vec<PackFixture>) -> RestoreEvidenceFixture {
     let manifest = branch_manifest(&fixtures);
     let downloaded = verify_downloaded_backup_packs(crate::backup::BackupDownloadedPacksInput {
         branch_manifest: &manifest,
@@ -305,6 +368,7 @@ fn input() -> RestoreCandidateInput {
         manifest_digest: digest('a'),
         pack_count: 2,
         pack_digests: vec![digest('b'), digest('c')],
+        plaintext_evidence_digest: digest('d'),
         evidence: RestoreEvidence::verified_downloaded_decrypted_plaintext(),
         admission_mode: RestoreAdmissionMode::RemoteReadonly,
         write_gate_confirmed: false,

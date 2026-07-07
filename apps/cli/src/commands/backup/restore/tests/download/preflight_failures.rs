@@ -1,8 +1,11 @@
 use super::super::super::restore_lines_with_runtime;
 use super::super::support::{
-    DIGEST_A, FixedKeyResolver, ForbiddenFlagCase, RecordingDownloader, download_fixture,
-    download_input, restore_with_fixture,
+    DIGEST_A, FixedKeyResolver, ForbiddenFlagCase, REPO_ID, RecordingDownloader, download_fixture,
+    download_input, restore_file_download_fixture, restore_with_fixture,
+    restore_with_fixture_and_authority,
 };
+use deve_core::ledger::RepoManager;
+use deve_core::ledger::init::RepoInitOptions;
 
 #[test]
 fn backup_restore_download_verifies_branch_manifest_digest_and_routing() {
@@ -101,7 +104,7 @@ fn backup_restore_download_rejects_metadata_before_provider_get() {
 }
 
 #[test]
-fn backup_restore_explicit_import_non_dry_run_remains_fail_closed() {
+fn backup_restore_explicit_import_without_authority_context_fails_closed() {
     let (key, manifest_digest, artifacts, pack_digests) = download_fixture();
     let mut command = download_input(&manifest_digest, &pack_digests);
     command.mode = "explicit-import";
@@ -109,10 +112,119 @@ fn backup_restore_explicit_import_non_dry_run_remains_fail_closed() {
     let mut downloader = RecordingDownloader::new(artifacts);
     let mut key_resolver = FixedKeyResolver::new(key);
     let err = restore_lines_with_runtime(command, &mut downloader, &mut key_resolver)
-        .expect_err("explicit import execution must remain closed");
+        .expect_err("explicit import requires authority context");
 
-    assert!(err.to_string().contains("fail-closed"));
+    assert!(err.to_string().contains("authority context"));
     assert!(downloader.requests.is_empty());
+}
+
+#[test]
+fn backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection()
+-> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("projection");
+    std::fs::create_dir_all(&projection_base)?;
+    let mut repo = RepoManager::init_with_options(
+        &ledger_dir,
+        8,
+        Some("restored"),
+        RepoInitOptions {
+            repo_id: Some(REPO_ID.parse()?),
+            repo_url: Some("urn:test:restore".into()),
+        },
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let restored_file = repo.local_repo_workspace_path("restored", "restored.md")?;
+
+    let (key, manifest_digest, artifacts, pack_digests) = restore_file_download_fixture();
+    let mut command = download_input(&manifest_digest, &pack_digests);
+    command.mode = "explicit-import";
+    command.write_gate = true;
+
+    let (lines, downloader, _key_resolver) =
+        restore_with_fixture_and_authority(command, artifacts, key, &ledger_dir, 8)?;
+
+    assert_eq!(downloader.requests.len(), 2);
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "candidate_admission=created_explicit_import")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "restore_candidate_state=ExplicitImport")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "writes_local_authority=true")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "creates_staging_commit_anchor_or_git_queue=false")
+    );
+    assert!(lines.iter().any(|line| line == "imported_ledger_entries=2"));
+    assert!(lines.iter().any(|line| line == "projection_rebuilt=true"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "projection_repair_required=false")
+    );
+    assert_eq!(
+        std::fs::read_to_string(restored_file)?,
+        "restored from backup"
+    );
+    Ok(())
+}
+
+#[test]
+fn backup_restore_explicit_import_reports_projection_repair_after_authority_import()
+-> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init_with_options(
+        &ledger_dir,
+        8,
+        Some("restored"),
+        RepoInitOptions {
+            repo_id: Some(REPO_ID.parse()?),
+            repo_url: Some("urn:test:restore".into()),
+        },
+    )?;
+
+    let (key, manifest_digest, artifacts, pack_digests) = restore_file_download_fixture();
+    let mut command = download_input(&manifest_digest, &pack_digests);
+    command.mode = "explicit-import";
+    command.write_gate = true;
+
+    let (lines, _downloader, _key_resolver) =
+        restore_with_fixture_and_authority(command, artifacts, key, &ledger_dir, 8)?;
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "candidate_admission=created_explicit_import")
+    );
+    assert!(lines.iter().any(|line| line == "imported_ledger_entries=2"));
+    assert!(lines.iter().any(|line| line == "projection_rebuilt=false"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "projection_repair_required=true")
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("projection_rebuild_error="))
+    );
+    assert_eq!(
+        repo.run_on_local_repo("restored", deve_core::ledger::range::get_max_seq)?,
+        2
+    );
+    Ok(())
 }
 
 #[test]
