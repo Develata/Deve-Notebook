@@ -20,6 +20,10 @@ pub fn run(args: &[String]) -> Result<()> {
             let ctx = BaselineContext::new(LABEL)?;
             run_tsv(&ctx, include_str!("specs/release_audit_gate.tsv"))?;
             registry::validate_registry_file(ctx.root())?;
+            if flags.tag_ready_required {
+                let registry = registry::read_registry(ctx.root())?;
+                registry::validate_no_tag_blockers(&registry)?;
+            }
             ctx.ok();
         }
         [action] if action == "cargo-audit-missing" => {
@@ -74,6 +78,7 @@ struct AuditFlags {
     release_required: bool,
     cargo_required: bool,
     npm_required: bool,
+    tag_ready_required: bool,
 }
 
 impl AuditFlags {
@@ -82,6 +87,11 @@ impl AuditFlags {
             release_required: binary_flag_from_env(LABEL, "DEVE_RELEASE_AUDIT_REQUIRED", false)?,
             cargo_required: binary_flag_from_env(LABEL, "DEVE_CARGO_AUDIT_REQUIRED", false)?,
             npm_required: binary_flag_from_env(LABEL, "DEVE_NPM_AUDIT_REQUIRED", false)?,
+            tag_ready_required: binary_flag_from_env(
+                LABEL,
+                "DEVE_RELEASE_TAG_READY_REQUIRED",
+                false,
+            )?,
         })
     }
 
@@ -96,7 +106,7 @@ impl AuditFlags {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuditFlags, LABEL};
+    use super::{AuditFlags, LABEL, run};
     use crate::env_gate::parse_binary_flag;
 
     #[test]
@@ -118,6 +128,7 @@ mod tests {
             release_required: true,
             cargo_required: false,
             npm_required: false,
+            tag_ready_required: false,
         };
 
         assert!(flags.cargo_required());
@@ -130,9 +141,28 @@ mod tests {
             release_required: false,
             cargo_required: true,
             npm_required: false,
+            tag_ready_required: false,
         };
 
         assert!(flags.cargo_required());
         assert!(!flags.npm_required());
+    }
+
+    #[test]
+    fn parses_release_tag_ready_required_flags() {
+        assert!(!parse_binary_flag(LABEL, "DEVE_RELEASE_TAG_READY_REQUIRED", "0").expect("flag"));
+        assert!(parse_binary_flag(LABEL, "DEVE_RELEASE_TAG_READY_REQUIRED", "1").expect("flag"));
+    }
+
+    #[test]
+    fn default_gate_allows_registered_first_tag_blockers_until_explicit_tag_ready_check() {
+        run(&[]).expect("default release audit registry gate should allow tag blockers");
+
+        let error =
+            run(&["tag-ready".to_string()]).expect_err("explicit first-tag check must block");
+        assert!(
+            error.to_string().contains("first-tag readiness is blocked"),
+            "{error}"
+        );
     }
 }

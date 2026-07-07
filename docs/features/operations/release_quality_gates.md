@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.release.quality-gates`
 - `Domain`: `release`
 - `Related Feature Chapters`: `docs/features/15_release.md`, `docs/features/14_tech_stack.md`
-- `Related Acceptance Cases`: `REL-003`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
+- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
 
 ## Operations
 

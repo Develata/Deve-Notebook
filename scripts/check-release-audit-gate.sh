@@ -3,7 +3,8 @@ set -euo pipefail
 
 # REL-003 dependency audit gate. Local runs may skip unavailable audit tools
 # with a diagnostic; CI/release can set DEVE_RELEASE_AUDIT_REQUIRED=1 to make
-# missing tools fail closed.
+# missing tools fail closed. First public-tag jobs additionally set
+# DEVE_RELEASE_TAG_READY_REQUIRED=1 so registered tag blockers fail closed.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"

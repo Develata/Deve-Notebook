@@ -99,6 +99,18 @@
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
     - release_assert: trunk_dev_index_rejected_by_static_delivery true
 
+- case_id: REL-003A
+  goal: 首个公开 tag 前，release audit readiness 必须阻断仍登记为 tag blocker 的 warning。
+  preconditions:
+    - 当前 release audit warning registry 仍包含 tag_blocker=yes 行
+  steps:
+    - run: cargo run -p deve_baseline -- release-audit-gate tag-ready
+    - run: DEVE_RELEASE_TAG_READY_REQUIRED=1 cargo run -p deve_baseline -- release-audit-gate
+  assertions:
+    - exit_code_all_nonzero_until_tag_blockers_resolved: true
+    - stderr_contains: "first-tag readiness is blocked"
+    - release_assert: current_tag_blockers_require_user_decision_or_replacement true
+
 - case_id: REL-004
   goal: 当前运行与测试入口文档和实现边界保持一致。
   preconditions:

@@ -52,6 +52,10 @@
 - 发布依赖审计必须区分 hard vulnerabilities 与 non-vulnerability warnings。Hard vulnerabilities
   不允许进入公开 tag；warnings 必须在 release audit warning registry 中有明确
   allowlist 理由或替换路线，新增 warning 未登记时 fail-closed。
+- 首个公开 tag 的 release audit 作业必须设置 `DEVE_RELEASE_TAG_READY_REQUIRED=1`
+  或显式运行 `deve_baseline release-audit-gate tag-ready`；仍登记为
+  `tag_blocker=yes` 的 warning 会 fail-closed，直到完成替换、重新归类或 USER
+  决策。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 
 ## 非目标
