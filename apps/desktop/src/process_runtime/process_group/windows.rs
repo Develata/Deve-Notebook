@@ -9,25 +9,25 @@ use std::ffi::{OsStr, c_void};
 use std::mem::{size_of, zeroed};
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
-use std::ptr::{null, null_mut};
+use std::ptr::null;
 use std::time::Duration;
 
+use self::attribute_list::ProcessAttributeList;
+use self::stdio::ChildStdioHandles;
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_FAILED, WAIT_TIMEOUT};
-use windows_sys::Win32::System::Console::{
-    GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-};
 use windows_sys::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
     SetInformationJobObject,
 };
 use windows_sys::Win32::System::Threading::{
-    CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessW, DeleteProcThreadAttributeList,
-    EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, InitializeProcThreadAttributeList,
-    LPPROC_THREAD_ATTRIBUTE_LIST, PROC_THREAD_ATTRIBUTE_JOB_LIST, PROCESS_INFORMATION,
-    ResumeThread, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, TerminateProcess,
-    UpdateProcThreadAttribute, WaitForSingleObject,
+    CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessW, EXTENDED_STARTUPINFO_PRESENT,
+    GetExitCodeProcess, LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION, ResumeThread,
+    STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, TerminateProcess, WaitForSingleObject,
 };
+
+mod attribute_list;
+mod stdio;
 
 #[derive(Debug)]
 pub(super) struct KillOnCloseJob {
@@ -59,13 +59,14 @@ impl KillOnCloseJob {
         spec: &NativeProcessSpawnSpec,
         inherit_stdio: bool,
     ) -> Result<JobChildProcess, DesktopChildProcessSpawnError> {
-        let stdio = ChildStdioHandles::new(inherit_stdio);
-        match self.spawn_with_job_list(spec, stdio.as_ref()) {
+        let stdio = ChildStdioHandles::new(inherit_stdio)
+            .map_err(DesktopChildProcessSpawnError::SpawnFailed)?;
+        match self.spawn_with_job_list(spec, &stdio) {
             Ok(process) => Ok(process),
             Err(error) if should_fallback_to_suspended_assign(&error) => {
                 // Some host jobs reject Job List creation; keep the service suspended until
                 // the kill-on-close job owns it so it cannot run as an uncontained backend.
-                self.spawn_suspended_then_assign(spec, stdio.as_ref())
+                self.spawn_suspended_then_assign(spec, &stdio)
             }
             Err(error) => Err(DesktopChildProcessSpawnError::SpawnFailed(error)),
         }
@@ -74,9 +75,9 @@ impl KillOnCloseJob {
     fn spawn_with_job_list(
         &self,
         spec: &NativeProcessSpawnSpec,
-        stdio: Option<&ChildStdioHandles>,
+        stdio: &ChildStdioHandles,
     ) -> std::io::Result<JobChildProcess> {
-        let mut attribute_list = JobAttributeList::new(self.handle)?;
+        let mut attribute_list = ProcessAttributeList::with_job_and_handles(self.handle, stdio)?;
         let process_info = create_process(
             spec,
             stdio,
@@ -89,13 +90,15 @@ impl KillOnCloseJob {
     fn spawn_suspended_then_assign(
         &self,
         spec: &NativeProcessSpawnSpec,
-        stdio: Option<&ChildStdioHandles>,
+        stdio: &ChildStdioHandles,
     ) -> Result<JobChildProcess, DesktopChildProcessSpawnError> {
+        let mut attribute_list = ProcessAttributeList::with_handles(stdio)
+            .map_err(DesktopChildProcessSpawnError::SpawnFailed)?;
         let process_info = create_process(
             spec,
             stdio,
-            CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
-            None,
+            CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT,
+            Some(attribute_list.as_mut_ptr()),
         )
         .map_err(DesktopChildProcessSpawnError::SpawnFailed)?;
 
@@ -136,7 +139,7 @@ impl KillOnCloseJob {
 
 fn create_process(
     spec: &NativeProcessSpawnSpec,
-    stdio: Option<&ChildStdioHandles>,
+    stdio: &ChildStdioHandles,
     creation_flags: u32,
     attribute_list: Option<LPPROC_THREAD_ATTRIBUTE_LIST>,
 ) -> std::io::Result<PROCESS_INFORMATION> {
@@ -146,12 +149,10 @@ fn create_process(
     } else {
         size_of::<STARTUPINFOW>() as u32
     };
-    if let Some(stdio) = stdio {
-        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-        startup.StartupInfo.hStdInput = stdio.stdin;
-        startup.StartupInfo.hStdOutput = stdio.stdout;
-        startup.StartupInfo.hStdError = stdio.stderr;
-    }
+    startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    startup.StartupInfo.hStdInput = stdio.stdin;
+    startup.StartupInfo.hStdOutput = stdio.stdout;
+    startup.StartupInfo.hStdError = stdio.stderr;
     if let Some(attribute_list) = attribute_list {
         startup.lpAttributeList = attribute_list;
     }
@@ -168,7 +169,7 @@ fn create_process(
             command_line.as_mut_ptr(),
             null(),
             null(),
-            if stdio.is_some() { 1 } else { 0 },
+            1,
             creation_flags,
             environment.as_ptr() as *const c_void,
             current_dir.as_ptr(),
@@ -283,83 +284,6 @@ impl Drop for JobChildProcess {
 
 unsafe impl Send for JobChildProcess {}
 
-struct JobAttributeList {
-    buffer: Vec<u8>,
-    jobs: Box<[HANDLE; 1]>,
-}
-
-impl JobAttributeList {
-    fn new(job_handle: HANDLE) -> std::io::Result<Self> {
-        let mut size = 0usize;
-        unsafe {
-            InitializeProcThreadAttributeList(null_mut(), 1, 0, &mut size);
-        }
-        if size == 0 {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        let mut attribute_list = Self {
-            buffer: vec![0; size],
-            jobs: Box::new([job_handle]),
-        };
-        let initialized = unsafe {
-            InitializeProcThreadAttributeList(attribute_list.as_mut_ptr(), 1, 0, &mut size)
-        };
-        if initialized == 0 {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        let updated = unsafe {
-            UpdateProcThreadAttribute(
-                attribute_list.as_mut_ptr(),
-                0,
-                PROC_THREAD_ATTRIBUTE_JOB_LIST as usize,
-                attribute_list.jobs.as_ptr() as *const c_void,
-                size_of::<[HANDLE; 1]>(),
-                null_mut(),
-                null(),
-            )
-        };
-        if updated == 0 {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        Ok(attribute_list)
-    }
-
-    fn as_mut_ptr(&mut self) -> LPPROC_THREAD_ATTRIBUTE_LIST {
-        self.buffer.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST
-    }
-}
-
-impl Drop for JobAttributeList {
-    fn drop(&mut self) {
-        unsafe {
-            DeleteProcThreadAttributeList(self.as_mut_ptr());
-        }
-    }
-}
-
-struct ChildStdioHandles {
-    stdin: HANDLE,
-    stdout: HANDLE,
-    stderr: HANDLE,
-}
-
-impl ChildStdioHandles {
-    fn new(inherit_stdio: bool) -> Option<Self> {
-        if inherit_stdio {
-            Some(Self {
-                stdin: unsafe { GetStdHandle(STD_INPUT_HANDLE) },
-                stdout: unsafe { GetStdHandle(STD_OUTPUT_HANDLE) },
-                stderr: unsafe { GetStdHandle(STD_ERROR_HANDLE) },
-            })
-        } else {
-            None
-        }
-    }
-}
-
 fn wide_path_null(path: &Path) -> Vec<u16> {
     let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
     value.push(0);
@@ -430,6 +354,9 @@ mod tests {
     use super::*;
     use std::thread::sleep;
     use std::time::{Duration, Instant};
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
 
     #[test]
     fn kill_on_close_job_terminates_assigned_child() {
@@ -456,5 +383,35 @@ mod tests {
             }
             sleep(Duration::from_millis(50));
         }
+    }
+
+    #[test]
+    fn non_inherited_stdio_uses_explicit_null_handles() {
+        let stdio = ChildStdioHandles::new(false).expect("create null stdio");
+
+        assert!(!stdio.stdin.is_null());
+        assert!(!stdio.stdout.is_null());
+        assert!(!stdio.stderr.is_null());
+        assert_ne!(stdio.stdin, unsafe { GetStdHandle(STD_INPUT_HANDLE) });
+        assert_ne!(stdio.stdout, unsafe { GetStdHandle(STD_OUTPUT_HANDLE) });
+        assert_ne!(stdio.stderr, unsafe { GetStdHandle(STD_ERROR_HANDLE) });
+        assert!(stdio._owned_null_handles.is_some());
+    }
+
+    #[test]
+    fn process_attribute_list_limits_inheritance_to_stdio_handles() {
+        let job = KillOnCloseJob::new().expect("create job");
+        let stdio = ChildStdioHandles::new(false).expect("create null stdio");
+        let attrs = ProcessAttributeList::with_job_and_handles(job.handle, &stdio)
+            .expect("create process attributes");
+
+        assert_eq!(
+            attrs.inherited_handles.as_ref(),
+            &[stdio.stdin, stdio.stdout, stdio.stderr]
+        );
+        assert_eq!(
+            attrs.jobs.as_ref().expect("job list").as_ref(),
+            &[job.handle]
+        );
     }
 }

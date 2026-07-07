@@ -30,7 +30,7 @@ indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default
 tauri = { version = "2.11.1", optional = true, default-features = false, features = [] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", optional = true, default-features = false, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows-sys = { version = "0.61.2", optional = true, default-features = false, features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [build-dependencies]
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }

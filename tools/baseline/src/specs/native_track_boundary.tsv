@@ -15,7 +15,8 @@ contains	apps/desktop/src/process_runtime.rs	stop_service
 contains	apps/desktop/src/process_runtime/process_group.rs	env_clear()
 contains	apps/desktop/src/process_runtime/launcher.rs	DesktopChildProcessGroup::new()
 contains	apps/desktop/src/process_runtime/process_group/windows.rs	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-contains	apps/desktop/src/process_runtime/process_group/windows.rs	PROC_THREAD_ATTRIBUTE_JOB_LIST
+contains	apps/desktop/src/process_runtime/process_group/windows/attribute_list.rs	PROC_THREAD_ATTRIBUTE_JOB_LIST
+contains	apps/desktop/src/process_runtime/process_group/windows/attribute_list.rs	PROC_THREAD_ATTRIBUTE_HANDLE_LIST
 contains	apps/desktop/src/process_runtime/process_group/windows.rs	CREATE_SUSPENDED
 contains	apps/desktop/src/process_runtime/process_group/windows.rs	AssignProcessToJobObject
 contains	apps/desktop/src/process_runtime/process_group/windows.rs	ResumeThread

@@ -191,7 +191,11 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
         &Scan::new().skip_dirs(&["gen", "target", "node_modules", "dist"]),
         &import_regex,
     )? {
-        if line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs" {
+        if line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs"
+            || line
+                .rel
+                .starts_with("apps/desktop/src/process_runtime/process_group/windows/")
+        {
             continue;
         }
         return fail(format!(
