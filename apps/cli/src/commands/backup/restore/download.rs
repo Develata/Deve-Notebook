@@ -12,6 +12,9 @@
 //! does not append ledger state, stage source-control changes, import branches,
 //! merge branches, or touch Projection Workspaces.
 
+mod validation;
+
+use self::validation::{validate_download_entry, validate_requested_pack_digests};
 use super::{RestoreCommandInput, RestoreContext, required_str};
 use crate::commands::backup::provider_io::{
     BACKUP_ARTIFACT_MAX_DOWNLOAD_BYTES, BackupArtifactDownloadRequest, BackupArtifactDownloader,
@@ -19,15 +22,14 @@ use crate::commands::backup::provider_io::{
 };
 use anyhow::bail;
 use deve_core::backup::{
-    BackupBindingStatus, BackupBranchManifest, BackupCommandKind, BackupDecryptedPacksInput,
-    BackupDownloadedPacksInput, BackupPackArtifactRefDownloadVerifyInput,
-    BackupPackArtifactRefOpenInput, BackupPackVerificationEvidence, BackupPlaintextPacksInput,
-    BackupPlanInput, BackupRestoreFlowEvidence, BackupRestoreFlowInput,
-    BackupRestoreResourceBudgetInput, BackupVerificationInput, RestoreAdmissionMode,
-    RestoreCandidateFromVerifiedPacksInput, admit_verified_restore_candidate, backup_command_plan,
-    open_backup_branch_manifest_artifact, open_backup_pack_artifact_ref,
-    parse_backup_credential_ref, parse_backup_key_ref, plan_backup_restore_flow,
-    validate_backup_restore_resource_budget, verify_backup_artifacts,
+    BackupBindingStatus, BackupCommandKind, BackupDecryptedPacksInput, BackupDownloadedPacksInput,
+    BackupPackArtifactRefDownloadVerifyInput, BackupPackArtifactRefOpenInput,
+    BackupPackVerificationEvidence, BackupPlaintextPacksInput, BackupPlanInput,
+    BackupRestoreFlowEvidence, BackupRestoreFlowInput, BackupRestoreResourceBudgetInput,
+    BackupVerificationInput, RestoreAdmissionMode, RestoreCandidateFromVerifiedPacksInput,
+    admit_verified_restore_candidate, backup_command_plan, open_backup_branch_manifest_artifact,
+    open_backup_pack_artifact_ref, parse_backup_credential_ref, parse_backup_key_ref,
+    plan_backup_restore_flow, validate_backup_restore_resource_budget, verify_backup_artifacts,
     verify_decrypted_backup_packs, verify_downloaded_backup_packs,
     verify_downloaded_pack_artifact_ref_and_routing, verify_plaintext_backup_packs,
 };
@@ -227,75 +229,4 @@ pub(super) fn restore_download_lines(
     }
 
     Ok(lines)
-}
-
-fn validate_download_entry(
-    input: RestoreCommandInput<'_>,
-    context: &RestoreContext,
-) -> anyhow::Result<()> {
-    if context.admission_mode != RestoreAdmissionMode::RemoteReadonly {
-        bail!(
-            "backup restore explicit import or merge remains fail-closed until RestoreCandidate import/merge authority is implemented"
-        );
-    }
-    if input.manifest_verified || input.packs_downloaded || input.packs_decrypted {
-        bail!(
-            "backup restore provider download derives manifest/download evidence from remote artifacts; do not pass precomputed evidence flags"
-        );
-    }
-    if input.pack_sequence.is_some()
-        || input.ledger_start.is_some()
-        || input.ledger_end.is_some()
-        || input.ledger_event_count.is_some()
-        || input.snapshot_count.is_some()
-    {
-        bail!(
-            "backup restore provider download derives pack refs from branch.manifest.enc; remove pack sequence and ledger metadata flags"
-        );
-    }
-    if !context.manifest_digest.is_valid_sha256() {
-        bail!("backup restore provider download requires a valid --manifest-digest");
-    }
-    if context.manifest_repo_id != context.repo_id {
-        bail!("backup restore manifest repo id does not match expected repo id");
-    }
-
-    plan_backup_restore_flow(BackupRestoreFlowInput {
-        expected_repo_id: context.repo_id,
-        manifest_repo_id: Some(context.manifest_repo_id),
-        writer_identity: context.writer_identity.clone(),
-        branch_path: context.branch_path.clone(),
-        manifest_digest: Some(context.manifest_digest.clone()),
-        pack_digests: context.pack_digests.clone(),
-        evidence: BackupRestoreFlowEvidence {
-            remote_discovered: true,
-            manifest_verified: false,
-            packs_downloaded: false,
-            packs_decrypted: false,
-            packs_plaintext_verified: false,
-            candidate_admitted: false,
-        },
-        admission_mode: context.admission_mode,
-        write_gate_confirmed: false,
-        local_ledger_append_requested: false,
-    })?;
-    Ok(())
-}
-
-fn validate_requested_pack_digests(
-    pack_digests: &[deve_core::backup::BackupDigest],
-    branch_manifest: &BackupBranchManifest,
-) -> anyhow::Result<()> {
-    if pack_digests.is_empty() {
-        return Ok(());
-    }
-    if pack_digests.len() != branch_manifest.packs.len() {
-        bail!("backup restore --pack-digest count must match branch manifest pack refs");
-    }
-    for (provided, expected) in pack_digests.iter().zip(&branch_manifest.packs) {
-        if !expected.payload_digest.same_sha256(provided) {
-            bail!("backup restore --pack-digest does not match branch manifest pack ref");
-        }
-    }
-    Ok(())
 }
