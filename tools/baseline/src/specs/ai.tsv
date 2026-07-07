@@ -39,7 +39,7 @@ contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_reaches
 contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_accepts_empty_string_context_as_no_context
 contains	apps/web/src/components/chat/actions/send/tests.rs	chat_context_includes_current_doc_markdown_selection_and_mode
 contains	apps/web/src/components/chat/actions/send.rs	chat.on_plugin_call.run
-contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_finishes_matching_chat_placeholder
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_stops_loading
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_does_not_duplicate_streamed_chat_content
 contains	apps/web/src/components/chat/actions/send_backend/tests.rs	trusted_cli_untrusted_send_uses_native_plugin_and_visible_notice
 contains	apps/web/src/components/chat/actions/apply/tests.rs	chat_apply_append_markdown_op_uses_utf16_end_position

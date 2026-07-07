@@ -190,7 +190,7 @@ fn accepts_chat_finish_for_existing_message_after_response_ack() {
 }
 
 #[test]
-fn plugin_text_response_finishes_matching_chat_placeholder() {
+fn plugin_text_response_stops_loading() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let (connection_status, _) = signal(ConnectionStatus::Connected);
