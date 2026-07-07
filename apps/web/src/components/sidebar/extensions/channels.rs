@@ -6,7 +6,9 @@ use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
 };
 use crate::components::icons::{Terminal, Zap};
-use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
+use crate::hooks::use_ai_backend::{
+    AiBackendFallbackSignals, use_ai_backend_capabilities_with_fallback,
+};
 use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
 use crate::runtime::domain::AiBackendMode;
@@ -14,7 +16,14 @@ use leptos::prelude::*;
 
 #[component]
 pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoView {
-    let trusted_cap = use_ai_backend_capabilities_with_fallback(chat.clone(), locale);
+    let trusted_cap = use_ai_backend_capabilities_with_fallback(
+        AiBackendFallbackSignals {
+            ai_mode: chat.ai_mode,
+            set_ai_mode: chat.set_ai_mode,
+            set_messages: chat.set_messages,
+        },
+        locale,
+    );
     let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
     let native_available = Signal::derive(move || trusted_cap.get().native_available);
     let native_reason = move || {

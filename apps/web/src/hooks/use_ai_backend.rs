@@ -8,7 +8,6 @@ use crate::api::{
     AiBackendCapabilities, BackendSendDecision, fetch_ai_backend_capabilities,
     resolve_backend_for_effective_state,
 };
-use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
 use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
@@ -26,12 +25,19 @@ enum BackendFallback {
     Keep,
 }
 
+#[derive(Clone, Copy)]
+pub struct AiBackendFallbackSignals {
+    pub ai_mode: ReadSignal<AiBackendMode>,
+    pub set_ai_mode: WriteSignal<AiBackendMode>,
+    pub set_messages: WriteSignal<Vec<ChatMessage>>,
+}
+
 pub fn use_ai_backend_capabilities_with_fallback(
-    chat: ChatContext,
+    signals: AiBackendFallbackSignals,
     locale: RwSignal<Locale>,
 ) -> ReadSignal<AiBackendCapabilities> {
     let capabilities = use_ai_backend_capabilities();
-    attach_trusted_cli_fallback(chat, capabilities, locale);
+    attach_trusted_cli_fallback(signals, capabilities, locale);
     capabilities
 }
 
@@ -46,17 +52,18 @@ fn use_ai_backend_capabilities() -> ReadSignal<AiBackendCapabilities> {
 }
 
 fn attach_trusted_cli_fallback(
-    chat: ChatContext,
+    signals: AiBackendFallbackSignals,
     capabilities: ReadSignal<AiBackendCapabilities>,
     locale: RwSignal<Locale>,
 ) {
     let last_notice = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let cap = capabilities.get();
-        let fallback = select_backend_fallback(chat.ai_mode.get().as_str(), &cap);
+        let fallback = select_backend_fallback(signals.ai_mode.get().as_str(), &cap);
         let reason = match fallback {
             BackendFallback::Switch { backend, reason } => {
-                chat.set_ai_mode
+                signals
+                    .set_ai_mode
                     .set(AiBackendMode::from_backend_str_or_native(backend));
                 reason
             }
@@ -68,7 +75,10 @@ fn attach_trusted_cli_fallback(
             return;
         }
         last_notice.set(Some(notice.clone()));
-        chat.set_messages.update(|messages| {
+        signals.set_messages.update(|messages| {
+            if latest_message_is_notice(messages, &notice) {
+                return;
+            }
             messages.push(ChatMessage {
                 role: "assistant".to_string(),
                 content: notice,
@@ -77,6 +87,16 @@ fn attach_trusted_cli_fallback(
             });
         });
     });
+}
+
+fn latest_message_is_notice(messages: &[ChatMessage], notice: &str) -> bool {
+    matches!(
+        messages.last(),
+        Some(message)
+            if message.role == "assistant"
+                && message.req_id.is_none()
+                && message.content == notice
+    )
 }
 
 fn select_backend_fallback(current_backend: &str, cap: &AiBackendCapabilities) -> BackendFallback {
@@ -91,8 +111,9 @@ fn select_backend_fallback(current_backend: &str, cap: &AiBackendCapabilities) -
 
 #[cfg(test)]
 mod tests {
-    use super::{BackendFallback, select_backend_fallback};
+    use super::{BackendFallback, latest_message_is_notice, select_backend_fallback};
     use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
+    use crate::runtime::domain::ChatMessage;
 
     #[test]
     fn trusted_cli_falls_back_to_native_when_policy_blocks_it() {
@@ -167,5 +188,52 @@ mod tests {
                 reason: "native AI disabled by config".to_string()
             }
         );
+    }
+
+    #[test]
+    fn suppresses_duplicate_fallback_notice_when_multiple_surfaces_mount() {
+        let notice = "trusted-cli fallback";
+        let messages = vec![ChatMessage {
+            role: "assistant".to_string(),
+            content: notice.to_string(),
+            req_id: None,
+            ts_ms: 1,
+        }];
+
+        assert!(latest_message_is_notice(&messages, notice));
+    }
+
+    #[test]
+    fn allows_fallback_notice_after_user_message() {
+        let notice = "trusted-cli fallback";
+        let messages = vec![
+            ChatMessage {
+                role: "assistant".to_string(),
+                content: notice.to_string(),
+                req_id: None,
+                ts_ms: 1,
+            },
+            ChatMessage {
+                role: "user".to_string(),
+                content: "try again".to_string(),
+                req_id: None,
+                ts_ms: 2,
+            },
+        ];
+
+        assert!(!latest_message_is_notice(&messages, notice));
+    }
+
+    #[test]
+    fn plugin_response_with_same_content_is_not_treated_as_fallback_notice() {
+        let notice = "trusted-cli fallback";
+        let messages = vec![ChatMessage {
+            role: "assistant".to_string(),
+            content: notice.to_string(),
+            req_id: Some("plugin-response".to_string()),
+            ts_ms: 1,
+        }];
+
+        assert!(!latest_message_is_notice(&messages, notice));
     }
 }

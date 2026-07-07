@@ -12,7 +12,9 @@ use crate::components::layout_context::ChatControl;
 use crate::components::settings_sections_policy::{
     ai_backend_button_state, ai_chat_visibility_button_state, sync_mode_button_state,
 };
-use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
+use crate::hooks::use_ai_backend::{
+    AiBackendFallbackSignals, use_ai_backend_capabilities_with_fallback,
+};
 use crate::i18n::{Locale, t};
 use crate::runtime::domain::AiBackendMode;
 use leptos::prelude::*;
@@ -60,7 +62,14 @@ pub fn SyncModeSection(locale: RwSignal<Locale>) -> impl IntoView {
 pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
     move || {
         let chat = expect_context::<crate::hooks::use_core::ChatContext>();
-        let trusted_cap = use_ai_backend_capabilities_with_fallback(chat.clone(), locale);
+        let trusted_cap = use_ai_backend_capabilities_with_fallback(
+            AiBackendFallbackSignals {
+                ai_mode: chat.ai_mode,
+                set_ai_mode: chat.set_ai_mode,
+                set_messages: chat.set_messages,
+            },
+            locale,
+        );
         let button_state = Signal::derive(move || {
             ai_backend_button_state(
                 chat.ai_mode.get().as_str(),

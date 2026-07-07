@@ -43,7 +43,7 @@
 
 - 控件只负责发出用户意图，不应直接操纵业务真相。
 - 同一个用户动作，在不同端上应尽量收敛到同一条 application/control 路径。
-- Web runtime 共享 request/state 类型应归属于 runtime/domain contract；`use_core` 只能作为 application-control composition root 重新导出这些类型，不得让 `runtime/*_client` 反向依赖 `hooks/use_core` 内部模块。Editor/sync 等 runtime 消费端也应直接使用 `runtime/domain` 的共享类型，而不是经由 `use_core` re-export 取回 domain state；repo/scope 稳定性 helper 归属于 `runtime/scope_client`，Editor/sync/chat 以及 `hooks/use_core` 之外的 hook 消费端不应直接 import `hooks/use_core::callbacks_scope`。
+- Web runtime 共享 request/state 类型应归属于 runtime/domain contract；`use_core` 只能作为 application-control composition root 重新导出这些类型，不得让 `runtime/*_client` 反向依赖 `hooks/use_core` 内部模块。Editor/sync 等 runtime 消费端也应直接使用 `runtime/domain` 的共享类型，而不是经由 `use_core` re-export 取回 domain state；AI backend fallback hook 应接收明确的 runtime/domain 信号而不是 import `use_core` context；repo/scope 稳定性 helper 归属于 `runtime/scope_client`，Editor/sync/chat 以及 `hooks/use_core` 之外的 hook 消费端不应直接 import `hooks/use_core::callbacks_scope`。
 
 ## 非目标
 

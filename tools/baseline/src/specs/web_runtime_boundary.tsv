@@ -5,9 +5,15 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_runtime_
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_runtime_no_use_core_internal_imports true
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_editor_domain_types_use_runtime_domain true
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_chat_domain_types_use_runtime_domain true
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_ai_backend_hook_does_not_import_use_core_context true
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-004	cli_assert: web_scope_helpers_use_runtime_scope_client true
 contains	docs/features/08_ui_design.md	Web runtime 共享 request/state 类型应归属于 runtime/domain contract
+contains	docs/features/08_ui_design.md	AI backend fallback hook 应接收明确的 runtime/domain 信号
 contains	docs/features/08_ui_design.md	repo/scope 稳定性 helper 归属于 `runtime/scope_client`
+contains	apps/web/src/hooks/use_ai_backend.rs	pub struct AiBackendFallbackSignals
+contains	apps/web/src/hooks/use_ai_backend.rs	pub ai_mode: ReadSignal<AiBackendMode>
+contains	apps/web/src/hooks/use_ai_backend.rs	pub set_ai_mode: WriteSignal<AiBackendMode>
+contains	apps/web/src/hooks/use_ai_backend.rs	pub set_messages: WriteSignal<Vec<ChatMessage>>
 contains	apps/web/src/runtime/mod.rs	pub mod domain;
 contains	apps/web/src/runtime/domain/scope.rs	pub struct RepoSwitchRequest
 contains	apps/web/src/runtime/domain/runtime_state.rs	pub struct ChatMessage
@@ -62,6 +68,8 @@ regex_absent_tree_ext	apps/web/src/components	rs	hooks\s*::\s*use_core\s*::\s*(t
 regex_absent_tree_ext	apps/web/src/components	rs	hooks\s*::\s*use_core\s*::\s*(types\s*::\s*)?\{[^}]*\b(AiBackendMode|ChatMessage|LoadPhase|PeerSession|PendingBranchSwitch|PendingBranchTarget|PendingOpsPreview|PendingRepoSwitch|RepoRemoveRequest|RepoRenameRequest|RepoSwitchRequest|SearchHit|SyncModeState)\b
 regex_absent	apps/web/src/hooks/use_ai_backend.rs	hooks\s*::\s*use_core\s*::\s*(types\s*::\s*)?(AiBackendMode|ChatMessage|LoadPhase|PeerSession|PendingBranchSwitch|PendingBranchTarget|PendingOpsPreview|PendingRepoSwitch|RepoRemoveRequest|RepoRenameRequest|RepoSwitchRequest|SearchHit|SyncModeState)
 regex_absent	apps/web/src/hooks/use_ai_backend.rs	hooks\s*::\s*use_core\s*::\s*(types\s*::\s*)?\{[^}]*\b(AiBackendMode|ChatMessage|LoadPhase|PeerSession|PendingBranchSwitch|PendingBranchTarget|PendingOpsPreview|PendingRepoSwitch|RepoRemoveRequest|RepoRenameRequest|RepoSwitchRequest|SearchHit|SyncModeState)\b
+regex_absent	apps/web/src/hooks/use_ai_backend.rs	\buse\s+crate\s*::\s*hooks\s*::\s*use_core
+regex_absent	apps/web/src/hooks/use_ai_backend.rs	\buse\s+crate\s*::\s*hooks\s*::\s*\{(?s:.*\buse_core\b)
 regex_absent_tree_ext	apps/web/src/editor	rs	hooks\s*::\s*use_core\s*::\s*callbacks_scope
 regex_absent_tree_ext	apps/web/src/editor	rs	hooks\s*::\s*use_core\s*::\s*\{(?s:.*\bcallbacks_scope\b)
 regex_absent_tree_ext	apps/web/src/editor	rs	\b[A-Za-z_][A-Za-z0-9_]*\s*::\s*use_core\s*::\s*callbacks_scope

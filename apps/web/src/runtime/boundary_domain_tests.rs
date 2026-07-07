@@ -57,4 +57,39 @@ mod tests {
             "web runtime consumers must import runtime/domain shared types directly: {violations:?}"
         );
     }
+
+    #[test]
+    fn web_runtime_boundary_ai_backend_hook_does_not_import_use_core_context() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = manifest_dir.join("src/hooks/use_ai_backend.rs");
+        let content = fs::read_to_string(&path).expect("read ai backend hook source");
+
+        assert!(
+            !imports_use_core_internals(&content),
+            "use_ai_backend must accept explicit runtime/domain signals instead of importing use_core context"
+        );
+    }
+
+    #[test]
+    fn web_runtime_boundary_ai_backend_fallback_signals_stay_narrow() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = manifest_dir.join("src/hooks/use_ai_backend.rs");
+        let content = fs::read_to_string(&path).expect("read ai backend hook source");
+
+        for expected in [
+            "pub struct AiBackendFallbackSignals",
+            "pub ai_mode: ReadSignal<AiBackendMode>",
+            "pub set_ai_mode: WriteSignal<AiBackendMode>",
+            "pub set_messages: WriteSignal<Vec<ChatMessage>>",
+        ] {
+            assert!(
+                content.contains(expected),
+                "use_ai_backend fallback signals must keep narrow field {expected}"
+            );
+        }
+        assert!(
+            !content.contains("ChatContext"),
+            "use_ai_backend fallback signals must not accept the use_core ChatContext bundle"
+        );
+    }
 }
