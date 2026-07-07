@@ -2,7 +2,12 @@
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;
+use crate::spec::run_tsv;
 use anyhow::{Result, bail};
+use std::fs;
+use std::path::Path;
+
+mod registry;
 
 const LABEL: &str = "release-audit-gate";
 const CARGO_AUDIT_UNAVAILABLE: &str = "cargo-audit unavailable; install with 'cargo install cargo-audit --locked' or set DEVE_CARGO_AUDIT_REQUIRED=0 for local diagnostic-only runs";
@@ -13,6 +18,8 @@ pub fn run(args: &[String]) -> Result<()> {
     match args {
         [] => {
             let ctx = BaselineContext::new(LABEL)?;
+            run_tsv(&ctx, include_str!("specs/release_audit_gate.tsv"))?;
+            registry::validate_registry_file(ctx.root())?;
             ctx.ok();
         }
         [action] if action == "cargo-audit-missing" => {
@@ -24,6 +31,29 @@ pub fn run(args: &[String]) -> Result<()> {
         }
         [action] if action == "npm-audit-missing" => {
             report_missing_tool(flags.npm_required(), "npm audit", NPM_UNAVAILABLE)?;
+        }
+        [action, report] if action == "cargo-audit-report" => {
+            let ctx = BaselineContext::new(LABEL)?;
+            run_tsv(&ctx, include_str!("specs/release_audit_gate.tsv"))?;
+            let registry = registry::read_registry(ctx.root())?;
+            let report_path = Path::new(report);
+            let report_path = if report_path.is_absolute() {
+                report_path.to_path_buf()
+            } else {
+                ctx.root().join(report_path)
+            };
+            let report = fs::read_to_string(&report_path).map_err(|err| {
+                anyhow::anyhow!(
+                    "{LABEL}: failed to read cargo audit report {}: {err}",
+                    report_path.display()
+                )
+            })?;
+            registry::validate_cargo_audit_report(&report, &registry)?;
+        }
+        [action] if action == "tag-ready" => {
+            let ctx = BaselineContext::new(LABEL)?;
+            let registry = registry::read_registry(ctx.root())?;
+            registry::validate_no_tag_blockers(&registry)?;
         }
         [action] => bail!("{LABEL}: unsupported release audit action: {action}"),
         _ => bail!("{LABEL}: expected zero or one release audit action"),

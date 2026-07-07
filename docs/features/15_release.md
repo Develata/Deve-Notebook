@@ -47,6 +47,9 @@
 - Desktop/Android/Mobile native-packaging 默认 LocalBackend 可作为本机 FullPeer；RemoteBrowser 显式连接远端 Docker/Web HTTPS origin。
 - Native 双模式 smoke 可以作为功能证据，但不能替代签名、store、physical-device 或后台同步 release readiness。
 - 对纯文本 baseline 与确定性边界检查合同，开发者可以使用独立 Rust CLI mirror（例如 `cargo run -p deve_baseline -- all`）做本地验收；需要覆盖历史 baseline shell 中的确定性 `cargo test` 调度时，可以显式运行 `cargo run -p deve_baseline -- full`。validation script ownership policy 要求确定性规则归 Rust/CLI，shell 仅保留兼容入口、CI glue 或真实平台编排；Docker、runtime、native install/package 与 GitHub artifact smoke 不被强行塞进 `deve_baseline -- all`。这些入口减少 Windows/WSL 环境对 bash/awk/rg runtime 的依赖，不改变普通用户可见命令面。
+- 发布依赖审计必须区分 hard vulnerabilities 与 non-vulnerability warnings。Hard vulnerabilities
+  不允许进入公开 tag；warnings 必须在 release audit warning registry 中有明确
+  allowlist 理由或替换路线，新增 warning 未登记时 fail-closed。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 
 ## 非目标

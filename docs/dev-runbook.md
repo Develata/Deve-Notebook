@@ -396,7 +396,9 @@ Local diagnostic mode:
 scripts/check-release-audit-gate.sh
 ```
 
-The script runs `cargo audit` when `cargo-audit` is installed and runs
+The script runs `cargo audit --json` when `cargo-audit` is installed, verifies
+that all non-vulnerability warnings match
+`docs/registry/release-audit-warning-registry.md`, and runs
 `npm audit --audit-level=high` for `apps/web` when `npm` is available. Missing
 tools print an explicit skip diagnostic in local mode.
 
@@ -412,6 +414,14 @@ Install the Rust audit tool with:
 ```bash
 cargo install cargo-audit --locked
 ```
+
+Before the first formal public tag, also run:
+
+```bash
+cargo run -p deve_baseline -- release-audit-gate tag-ready
+```
+
+This fails while any registered audit warning still has `Tag blocker = yes`.
 
 ## Runtime Happy Path Smoke
 

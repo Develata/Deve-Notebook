@@ -94,6 +94,8 @@
     - stdout_contains: "repo-file-ops-baseline: ok"
     - release_assert: stable_data_format_v1_gates_present true
     - release_assert: validation_script_ownership_policy_classified true
+    - release_assert: cargo_audit_warnings_match_registry true
+    - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
 
 - case_id: REL-004
   goal: 当前运行与测试入口文档和实现边界保持一致。

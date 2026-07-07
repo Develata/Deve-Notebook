@@ -1,0 +1,12 @@
+contains	docs/plan/18_release.md	docs/registry/release-audit-warning-registry.md
+contains	docs/plan/18_release.md	non-vulnerability `cargo audit` warning
+contains	docs/features/15_release.md	release audit warning registry
+contains	docs/acceptance-cases/12_tech_release.md	cargo_audit_warnings_match_registry
+contains	docs/dev-runbook.md	cargo run -p deve_baseline -- release-audit-gate tag-ready
+contains	docs/registry/release-audit-warning-registry.md	# Release Audit Warning Registry
+contains	docs/registry/release-audit-warning-registry.md	direct-migration-before-stable
+contains	docs/registry/release-audit-warning-registry.md	feature-gated-upstream-watch
+contains	docs/registry/release-audit-warning-registry.md	upstream-upgrade-watch
+contains	docs/registry/release-audit-warning-registry.md	RUSTSEC-2025-0141
+contains	docs/registry/release-audit-warning-registry.md	RUSTSEC-2024-0429
+contains	docs/registry/release-audit-warning-registry.md	RUSTSEC-2026-0002

@@ -15,6 +15,7 @@ log.
 | File | Description |
 |------|-------------|
 | `runtime-skeleton-registry.md` | Runtime name, convergence status, current module path, and tracking task registry |
+| `release-audit-warning-registry.md` | Current non-vulnerability `cargo audit` warnings, allowlist rationale, and replacement route registry |
 
 ## For AI Agents
 

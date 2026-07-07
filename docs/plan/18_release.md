@@ -43,6 +43,14 @@ CI/CD 基于 GitHub Actions。
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
     1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native/graph boundary scripts, `cargo test --locked`.
+        Dependency audit belongs to this gate: `scripts/check-release-audit-gate.sh`
+        **MUST** fail on cargo/npm vulnerabilities and **MUST** compare every
+        non-vulnerability `cargo audit` warning with
+        `docs/registry/release-audit-warning-registry.md`. Any unregistered,
+        stale, or field-incomplete warning is release-gate drift. The registry
+        row must include the advisory, crate, warning kind, rationale,
+        replacement route, and whether first-tag readiness requires a separate
+        USER decision or replacement before public tag.
     2.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。
     3.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
     4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
@@ -202,4 +210,6 @@ health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公�
 - [ ] 所有 CI 测试通过 (Green).
 - [ ] `CHANGELOG.md` 已更新。
 - [ ] 关键依赖 (Dependencies) 无高危审计漏洞 (`cargo audit`, `npm audit`).
+- [ ] 非漏洞依赖 warning 均有 registry allowlist 理由或替换路线；首个正式 tag 前
+      `tag_blocker=yes` 项已被 USER 决策、替换或重新归类。
 - [ ] 多平台 (Win/Mac/Linux) 冒烟测试通过。
