@@ -171,7 +171,7 @@ fn decoded_xml_text(
     label: &str,
     text: &BytesText<'_>,
 ) -> Result<String, RemoteProjectionProviderError> {
-    text.xml_content()
+    text.xml10_content()
         .map(|value| value.into_owned())
         .map_err(|err| {
             RemoteProjectionProviderError::ProviderIo(format!("failed to decode {label}: {err}"))

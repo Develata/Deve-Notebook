@@ -7,7 +7,7 @@ contains	crates/core/src/lib.rs	pub mod graph;
 contains	docs/plan/17_tech_stack.md	Core graph projection
 contains	docs/plan/17_tech_stack.md	CLI/HTTP adapter
 contains	docs/plan/14_commands.md	deve graph
-contains	apps/cli/src/main.rs	Graph {
+contains	apps/cli/src/cli.rs	Graph {
 contains	apps/cli/src/dispatch.rs	commands::graph::run
 contains	apps/cli/src/commands/graph.rs	project_repo_graph
 contains	apps/cli/src/graph_projection.rs	project_documents

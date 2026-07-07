@@ -1,7 +1,7 @@
 contains	docs/dev-runbook.md	sc-status --repo <repo>
 contains	docs/dev-runbook.md	Source Control state lives in Deve
 contains	docs/dev-runbook.md	checked-in local `default` ledger being clean
-contains	apps/cli/src/main.rs	ScStatus
+contains	apps/cli/src/cli.rs	ScStatus
 contains	apps/cli/src/main_test.rs	sc_status_accepts_repo_selector
 contains	apps/cli/src/dispatch.rs	commands::sc_status::run
 contains	apps/cli/src/commands/sc_status.rs	list_staged_in_local_repo
