@@ -51,3 +51,4 @@ blueprint in `docs/plan/`.
 | [0004](./0004-tauri-v2-as-native-target.md) | Tauri v2 as the native packaging target | Accepted |
 | [0005](./0005-uuid-first-not-path-first.md) | UUID-first identity, not path-first | Accepted |
 | [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Proposed |
+| [0007](./0007-backup-explicit-merge-authority-route.md) | Backup explicit merge authority route | Proposed |
