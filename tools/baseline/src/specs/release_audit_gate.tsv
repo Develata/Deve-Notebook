@@ -14,3 +14,8 @@ contains	docs/registry/release-audit-warning-registry.md	upstream-upgrade-watch
 contains	docs/registry/release-audit-warning-registry.md	yanked
 contains	docs/registry/release-audit-warning-registry.md	YANKED
 contains	docs/registry/release-audit-warning-registry.md	RUSTSEC-2024-0429
+contains	docs/registry/release-audit-warning-registry.md	docs/adr/0006-native-linux-gtk3-first-tag-route.md
+contains	docs/adr/README.md	0006-native-linux-gtk3-first-tag-route.md
+contains	docs/adr/0006-native-linux-gtk3-first-tag-route.md	Status: Proposed
+contains	docs/adr/0006-native-linux-gtk3-first-tag-route.md	release-audit-gate tag-ready
+contains	docs/adr/0006-native-linux-gtk3-first-tag-route.md	Route 2

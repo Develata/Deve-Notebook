@@ -50,3 +50,4 @@ blueprint in `docs/plan/`.
 | [0003](./0003-self-i18n-over-fluent.md) | Self-built i18n facade over Fluent | Accepted |
 | [0004](./0004-tauri-v2-as-native-target.md) | Tauri v2 as the native packaging target | Accepted |
 | [0005](./0005-uuid-first-not-path-first.md) | UUID-first identity, not path-first | Accepted |
+| [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Proposed |
