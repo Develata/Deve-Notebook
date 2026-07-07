@@ -7,8 +7,10 @@ contains	apps/desktop/src/lib.rs	mod tauri_bootstrap;
 contains	apps/desktop/src/process_runtime.rs	DesktopLocalServiceRuntime
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_with_parent true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_after_main_window_close true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_native_session_smoke_stops_local_service_after_probe true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1 -ShutdownMode CloseMainWindow
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-native-session-package-smoke.sh
 contains	apps/desktop/src/process_runtime.rs	DesktopCommandProcessLauncher
 contains	apps/desktop/src/process_runtime.rs	validate_desktop_service_command
 contains	apps/desktop/src/process_runtime.rs	stop_service
@@ -58,6 +60,8 @@ contains	apps/desktop/src/tauri_bootstrap/mod.rs	desktop native session cookie i
 contains	apps/desktop/src/tauri_entry/mod.rs	desktop_tauri_local_service_bootstrap_from_env
 contains	apps/desktop/src/tauri_entry/mod.rs	desktop_tauri_native_session_smoke
 contains	apps/desktop/src/tauri_entry/smoke.rs	desktop-native-session-smoke: ok
+contains	apps/desktop/src/tauri_entry/smoke.rs	local_service_stopped_after_smoke
+contains	apps/desktop/src/tauri_entry/tests.rs	desktop_tauri_native_session_smoke_requires_cleanup_before_passing
 contains	apps/desktop/src/tauri_entry/mod.rs	DesktopLocalServiceTauriState::new
 contains	apps/desktop/src/main.rs	DEVE_DESKTOP_NATIVE_SESSION_SMOKE
 contains	apps/cli/src/server/auth/handlers/native_session.rs	NativeSessionBridge

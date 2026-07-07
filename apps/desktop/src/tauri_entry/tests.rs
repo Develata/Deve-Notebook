@@ -31,7 +31,21 @@ fn desktop_tauri_native_session_smoke_reports_disabled_when_local_backend_disabl
     assert!(!smoke.local_service_started);
     assert!(!smoke.session_bound);
     assert!(!smoke.native_session_cookie_installed_before_bootstrap);
+    assert!(!smoke.local_service_stopped_after_smoke);
     assert!(!smoke.opens_authority_write_path);
+}
+
+#[test]
+fn desktop_tauri_native_session_smoke_requires_cleanup_before_passing() {
+    let smoke = DesktopTauriNativeSessionSmoke {
+        local_service_started: true,
+        session_bound: true,
+        native_session_cookie_installed_before_bootstrap: true,
+        local_service_stopped_after_smoke: false,
+        opens_authority_write_path: false,
+    };
+
+    assert!(!smoke.passed());
 }
 
 #[test]

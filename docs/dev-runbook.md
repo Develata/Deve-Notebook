@@ -550,8 +550,10 @@ The native session package smoke runs the packaged Desktop binary with
 temporary data root. It verifies that the bundled sibling `deve_cli` can start
 `serve --native-loopback`, issue the native-only HttpOnly session cookie, pass
 `/api/auth/status`, and exit without exposing token/secret material to JS-visible
-bootstrap, URL, localStorage, logs, or crash reports. It remains diagnostic-only
-unless `DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1` is set.
+bootstrap, URL, localStorage, logs, or crash reports. The smoke must stop the
+local service before reporting `desktop-native-session-smoke: ok`; failure to
+stop is treated as a local-backend lifecycle regression. It remains
+diagnostic-only unless `DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1` is set.
 
 The installer smoke is a separate target-host gate. On macOS it mounts the
 `.dmg`, copies the `.app` to a temporary Applications directory, runs the same

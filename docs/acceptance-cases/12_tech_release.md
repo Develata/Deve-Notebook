@@ -259,11 +259,13 @@
   steps:
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-native-packaging-gate.sh
+    - run: scripts/check-desktop-native-session-package-smoke.sh
     - run: cargo test -p deve_core native_adapter -- --nocapture
     - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
     - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
   assertions:
     - native_assert: desktop_local_backend_default_starts_controlled_loopback_service true
+    - native_assert: desktop_native_session_smoke_stops_local_service_after_probe true
     - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true
     - native_assert: mobile_embedded_backend_uses_typed_runtime_auth_material true
     - native_assert: remote_browser_accepts_https_origin_only true

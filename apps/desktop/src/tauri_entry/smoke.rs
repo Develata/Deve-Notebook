@@ -53,6 +53,7 @@ pub struct DesktopTauriNativeSessionSmoke {
     pub local_service_started: bool,
     pub session_bound: bool,
     pub native_session_cookie_installed_before_bootstrap: bool,
+    pub local_service_stopped_after_smoke: bool,
     pub opens_authority_write_path: bool,
 }
 
@@ -61,6 +62,7 @@ impl DesktopTauriNativeSessionSmoke {
         self.local_service_started
             && self.session_bound
             && self.native_session_cookie_installed_before_bootstrap
+            && self.local_service_stopped_after_smoke
             && !self.opens_authority_write_path
     }
 }
@@ -101,6 +103,7 @@ pub fn desktop_tauri_native_session_smoke(
             local_service_started: false,
             session_bound: false,
             native_session_cookie_installed_before_bootstrap: false,
+            local_service_stopped_after_smoke: false,
             opens_authority_write_path: false,
         });
     };
@@ -112,12 +115,13 @@ pub fn desktop_tauri_native_session_smoke(
         native_session_cookie_installed_before_bootstrap: bootstrap
             .script
             .has_native_session_cookie(),
+        local_service_stopped_after_smoke: bootstrap
+            .runtime
+            .as_mut()
+            .map(|runtime| runtime.stop(timestamp_unix_ms.saturating_add(1)).is_ok())
+            .unwrap_or(false),
         opens_authority_write_path: bootstrap.script.opens_authority_write_path(),
     };
-
-    if let Some(runtime) = bootstrap.runtime.as_mut() {
-        let _ = runtime.stop(timestamp_unix_ms.saturating_add(1));
-    }
 
     Ok(smoke)
 }
