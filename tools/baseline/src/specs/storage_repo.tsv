@@ -66,6 +66,13 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-008	run: scripts/ch
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-009	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-010	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	run: scripts/check-storage-repo-baseline.sh
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli create_repo -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli repo_lifecycle -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: scripts/check-storage-repo-baseline.sh
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_authority_not_physically_deleted true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_projection_workspace_not_physically_deleted true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_hidden_from_normal_list true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-015	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-016	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	run: scripts/check-storage-repo-baseline.sh

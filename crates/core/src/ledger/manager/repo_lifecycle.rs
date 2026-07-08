@@ -288,7 +288,8 @@ mod tests {
     }
 
     #[test]
-    fn remove_local_repo_hides_it_without_deleting_authority_file() -> anyhow::Result<()> {
+    fn remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace()
+    -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let notes = dir.path().join("notes");
@@ -304,10 +305,26 @@ mod tests {
         let authority = ledger
             .join("local")
             .join(format!("{}.redb", summary.execution_name));
+        let workspace = notes.join(
+            crate::ledger::manager::projection_locator::repo_workspace_segment(
+                &summary.name,
+                summary.repo_id,
+            )?,
+        );
+        std::fs::create_dir_all(&workspace)?;
+        crate::utils::notegit::ensure_repo_identity_marker(
+            &workspace,
+            summary.repo_id,
+            &summary.name,
+        )?;
+        let user_markdown = workspace.join("keep.md");
+        std::fs::write(&user_markdown, "keep\n")?;
 
         repo.remove_local_repo(summary.repo_id)?;
 
         assert!(authority.is_file());
+        assert!(workspace.is_dir());
+        assert!(user_markdown.is_file());
         let summaries = repo.list_local_repo_summaries()?;
         assert!(!summaries.iter().any(|item| item.repo_id == summary.repo_id));
         assert!(repo.get_local_repo_info_by_id(summary.repo_id)?.is_none());

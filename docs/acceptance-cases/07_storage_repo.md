@@ -209,6 +209,8 @@
   steps:
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
+    - run: cargo test -p deve_core --lib remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
     - chrome_mcp: 点击 repo 行更多菜单并执行重命名
     - chrome_mcp: 点击非当前 repo 行更多菜单并执行移除
@@ -218,6 +220,7 @@
     - ui_assert: renamed_repo_visible_and_bound true
     - ui_assert: removed_repo_hidden_from_normal_list true
     - cli_assert: removed_repo_authority_not_physically_deleted true
+    - cli_assert: removed_repo_projection_workspace_not_physically_deleted true
 
 - case_id: STORE-015
   goal: Writeback failure 后 Ledger Ack 仍成立。

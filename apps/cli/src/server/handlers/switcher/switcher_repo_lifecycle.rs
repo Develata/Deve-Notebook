@@ -271,6 +271,14 @@ mod tests {
             }
             other => anyhow::bail!("expected RepoList, got {other:?}"),
         }
+        match recv_until_repo_switched(&mut rx).await? {
+            ServerMessage::RepoSwitched { name, uuid, .. } => {
+                assert_eq!(name, "default");
+                assert_ne!(uuid::Uuid::parse_str(&uuid)?, research_id);
+            }
+            other => anyhow::bail!("expected fallback RepoSwitched, got {other:?}"),
+        }
+        assert_eq!(session.active_repo.as_deref(), Some("default"));
         assert!(state.repo.get_local_repo_info_by_id(research_id)?.is_none());
         Ok(())
     }
