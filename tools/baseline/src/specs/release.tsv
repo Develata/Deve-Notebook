@@ -1,5 +1,16 @@
 git_tracked	Cargo.lock
 git_not_ignored	Cargo.lock
+absent	Cargo.lock	name = "bincode"
+absent	Cargo.toml	bincode
+regex_absent_tree_ext	crates	rs	\bbincode\b
+regex_absent_tree_ext	crates	toml	\bbincode\b
+regex_absent_tree_ext	apps	rs	\bbincode\b
+regex_absent_tree_ext	apps	toml	\bbincode\b
+regex_absent_tree_ext	tools	rs	\bbincode\b
+regex_absent_tree_ext	tools	toml	\bbincode\b
+absent_tree	scripts	bincode
+absent	docs/registry/release-audit-warning-registry.md	RUSTSEC-2025-0141
+absent	docs/registry/release-audit-warning-registry.md	bincode
 contains	.github/workflows/release.yml	tags: ['v*']
 contains	.github/workflows/release.yml	cargo clippy --locked --all-targets -- -D warnings
 contains	.github/workflows/release.yml	actions/checkout@v6
@@ -275,6 +286,7 @@ contains	crates/core/src/backup/plaintext.rs	pub const BACKUP_PACK_PLAINTEXT_FOR
 contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 11;
 contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 11;
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md
+contains	docs/acceptance-cases/12_tech_release.md	legacy_binary_codec_dependency_absent true
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_format_matrix_bound_to_plan_and_code true
 contains	docs/plan/11_ui_design/01_web.md	Trunk development
 contains	docs/plan/11_ui_design/01_web.md	.well-known/trunk/ws
