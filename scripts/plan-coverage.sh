@@ -34,8 +34,6 @@ SOFT_LINES=250
 PLAN_REF_CORE='[0-9][0-9]_[A-Za-z0-9_]+(/[A-Za-z0-9_]+)?#[A-Za-z0-9_-]+'
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
 I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
-I18N_CJK_SCAN_DIRS=("$ROOT/apps/web/src/components")
-I18N_EXACT_SCAN_DIRS=("$ROOT/apps/web/src/components" "$ROOT/apps/web/src/editor")
 I18N_FORBIDDEN_ENGLISH_LITERALS=(
   '"Pin"'
   '"Unpin"'
@@ -69,7 +67,7 @@ is_plan_ref_missing_exempt() {
   esac
   return 1
 }
-REPORT=""
+REPORT_LINES=()
 WRITE_REPORT=0
 LIST_MISSING_PLAN_REF=0
 SUMMARY_MISSING_PLAN_REF=0
@@ -136,8 +134,20 @@ while [ "$#" -gt 0 ]; do
   shift || true
 done
 
-log() { echo "$@"; REPORT+="$*"$'\n'; }
-err() { echo "ERROR: $*" >&2; REPORT+="ERROR: $*"$'\n'; }
+append_report() {
+  [ "$WRITE_REPORT" = "1" ] || return 0
+  REPORT_LINES+=("$1")
+}
+
+log() {
+  echo "$@"
+  append_report "$*"
+}
+
+err() {
+  echo "ERROR: $*" >&2
+  append_report "ERROR: $*"
+}
 
 trim() {
   local value="$1"
@@ -176,6 +186,82 @@ tracked_rust_files() {
   git_in_repo ls-files -- 'crates' 'apps' |
     grep -E '\.rs$' |
     sed "s|^|$ROOT/|"
+}
+
+tracked_rust_line_counts() {
+  git_in_repo grep -n -I -e '^' -- 'crates' 'apps' |
+    awk -F: -v root="$ROOT" '
+      $1 ~ /\.rs$/ { counts[$1] = $2 }
+      END {
+        for (f in counts) print counts[f], root "/" f
+      }
+    ' |
+    sort -k2,2
+}
+
+tracked_plan_ref_entries() {
+  git_in_repo grep -n -I -e '^//! plan_ref:' -e '^//! *- ' -- 'crates' 'apps' |
+    awk -F: -v root="$ROOT" '
+      $1 !~ /\.rs$/ { next }
+      {
+        file = $1
+        line_no = $2 + 0
+        line = $0
+        sub(/^[^:]*:[0-9]+:/, "", line)
+        full = root "/" file
+      }
+      line ~ /^\/\/! plan_ref:/ {
+        active[file] = 1
+        last[file] = line_no
+        print full "\tHEADER\t" line
+        if (line ~ /^\/\/![[:space:]]*plan_ref:[[:space:]]*[^[:space:]]/ &&
+            line !~ /^\/\/![[:space:]]*plan_ref:[[:space:]]*infra[[:space:]]*$/) {
+          print full "\tHEADER_INVALID\t" line
+        }
+        next
+      }
+      active[file] && line_no == last[file] + 1 && line ~ /^\/\/![[:space:]]*-[[:space:]]*/ {
+        last[file] = line_no
+        sub(/^\/\/![[:space:]]*-[[:space:]]*/, "", line)
+        split(line, parts, /[[:space:]]/)
+        print full "\tREF\t" parts[1]
+        next
+      }
+      {
+        active[file] = 0
+      }
+    '
+}
+
+tracked_i18n_cjk_hits() {
+  (git_in_repo grep -n -I -P -e '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' -- \
+    'apps/web/src/components' 2>/dev/null || true) |
+    awk -F: -v root="$ROOT" '$1 ~ /\.rs$/ { print root "/" $0 }'
+  git_in_repo ls-files --others --exclude-standard -- 'apps/web/src/components' |
+    while IFS= read -r rel; do
+      case "$rel" in
+        *.rs) printf '%s\0' "$ROOT/$rel" ;;
+      esac
+    done |
+    xargs -0 -r grep -HnP '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' 2>/dev/null || true
+}
+
+tracked_i18n_exact_hits() {
+  local grep_args=(-n -I -F)
+  local literal
+  for literal in "${I18N_FORBIDDEN_ENGLISH_LITERALS[@]}"; do
+    grep_args+=(-e "$literal")
+  done
+  (git_in_repo grep "${grep_args[@]}" -- \
+    'apps/web/src/components' 'apps/web/src/editor' 2>/dev/null || true) |
+    awk -F: -v root="$ROOT" '$1 ~ /\.rs$/ { print root "/" $0 }'
+  git_in_repo ls-files --others --exclude-standard -- 'apps/web/src/components' 'apps/web/src/editor' |
+    while IFS= read -r rel; do
+      case "$rel" in
+        *.rs) printf '%s\0' "$ROOT/$rel" ;;
+      esac
+    done |
+    xargs -0 -r grep -HnF "${grep_args[@]:3}" 2>/dev/null || true
 }
 
 REWRITE_TMP_FILES=()
@@ -218,9 +304,45 @@ resolve_plan_anchor() {
   printf '%s/%s.md' "$PLAN_DIR" "$chapter_ref"
 }
 
+declare -A PLAN_CHAPTER_EXISTS_CACHE=()
+declare -A PLAN_ANCHOR_EXISTS_CACHE=()
+
+plan_chapter_exists() {
+  local chapter="$1"
+  local cached="${PLAN_CHAPTER_EXISTS_CACHE[$chapter]+x}"
+  if [ -z "$cached" ]; then
+    local chapter_file
+    chapter_file="$(resolve_plan_anchor "$chapter")"
+    if [ -f "$chapter_file" ]; then
+      PLAN_CHAPTER_EXISTS_CACHE["$chapter"]=1
+    else
+      PLAN_CHAPTER_EXISTS_CACHE["$chapter"]=0
+    fi
+  fi
+  [ "${PLAN_CHAPTER_EXISTS_CACHE[$chapter]}" = "1" ]
+}
+
+plan_anchor_exists() {
+  local chapter="$1"
+  local anchor="$2"
+  local key="$chapter#$anchor"
+  local cached="${PLAN_ANCHOR_EXISTS_CACHE[$key]+x}"
+  if [ -z "$cached" ]; then
+    local chapter_file
+    chapter_file="$(resolve_plan_anchor "$chapter")"
+    if [ -f "$chapter_file" ] && grep -Fq "{#$anchor}" "$chapter_file"; then
+      PLAN_ANCHOR_EXISTS_CACHE["$key"]=1
+    else
+      PLAN_ANCHOR_EXISTS_CACHE["$key"]=0
+    fi
+  fi
+  [ "${PLAN_ANCHOR_EXISTS_CACHE[$key]}" = "1" ]
+}
+
 # extract_plan_ref_blocks <file> -> echoes each `//!   - <ref>` list line that
-# lives inside a `//! plan_ref:` block. Single source of truth for plan_ref
-# extraction so scanning and rewriting share identical block detection.
+# lives inside a `//! plan_ref:` block. It remains the rewrite-mode extractor;
+# full-report scans use tracked_plan_ref_entries for the same contiguous-block
+# semantics without per-file shelling.
 extract_plan_ref_blocks() {
   local f="$1"
   awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f"
@@ -509,25 +631,48 @@ run_check_md_links() {
 # references `adr/` (a 2-digit chapter prefix is required elsewhere, so `adr/`
 # in a plan_ref line is unambiguously an ADR reference).
 run_check_no_adr_plan_ref() {
-  local hits=0 f line token
-  while IFS= read -r f; do
-    # (a) inline header form `//! plan_ref: adr/...` bypasses entry extraction,
-    #     so scan the header line itself.
-    while IFS= read -r line; do
-      [ -n "$line" ] || continue
-      echo "ERROR: no-adr-plan-ref: $f plan_ref header references an ADR: $line" >&2
-      hits=$((hits + 1))
-    done < <(grep -E '^//![[:space:]]*plan_ref:.*adr/' "$f" 2>/dev/null || true)
-    # (b) entry lines: judge only the target token (first field after `- `), so a
-    #     trailing comment that merely mentions adr/ is not a false positive.
-    while IFS= read -r line; do
-      token="$(printf '%s' "$line" | sed -E 's@^//![[:space:]]*-[[:space:]]*([^[:space:]]+).*@\1@')"
-      if printf '%s' "$token" | grep -qE '(^|[^[:alnum:]_])adr/'; then
-        echo "ERROR: no-adr-plan-ref: $f plan_ref targets an ADR: $token" >&2
-        hits=$((hits + 1))
-      fi
-    done < <(extract_plan_ref_blocks "$f")
-  done < <(tracked_rust_files)
+  local hits=0 report
+  report="$(
+    (git_in_repo grep -n -I -E \
+      -e '^//![[:space:]]*plan_ref:' \
+      -e '^//![[:space:]]*-[[:space:]]*' \
+      -- 'crates' 'apps' 2>/dev/null || true) |
+      awk -F: -v root="$ROOT" '
+        $1 !~ /\.rs$/ { next }
+        {
+          file = $1
+          line_no = $2 + 0
+          line = $0
+          sub(/^[^:]*:[0-9]+:/, "", line)
+          full = root "/" file
+        }
+        line ~ /^\/\/![[:space:]]*plan_ref:/ {
+          active[file] = 1
+          last[file] = line_no
+          if (line ~ /^\/\/![[:space:]]*plan_ref:.*adr\//) {
+            print "ERROR: no-adr-plan-ref: " full " plan_ref header references an ADR: " line
+          }
+          next
+        }
+        active[file] && line_no == last[file] + 1 && line ~ /^\/\/![[:space:]]*-[[:space:]]*/ {
+          last[file] = line_no
+          token = line
+          sub(/^\/\/![[:space:]]*-[[:space:]]*/, "", token)
+          sub(/[[:space:]].*$/, "", token)
+          if (token ~ /(^|[^[:alnum:]_])adr\//) {
+            print "ERROR: no-adr-plan-ref: " full " plan_ref targets an ADR: " token
+          }
+          next
+        }
+        {
+          active[file] = 0
+        }
+      '
+  )"
+  if [ -n "$report" ]; then
+    printf '%s\n' "$report" >&2
+    hits="$(printf '%s\n' "$report" | wc -l | tr -d '[:space:]')"
+  fi
   if [ "$hits" -gt 0 ]; then
     echo "check-no-adr-plan-ref: FAIL — ${hits} plan_ref(s) reference an ADR (ADRs are not plan_ref targets)"
     return 1
@@ -569,6 +714,8 @@ esac
 
 blocking=0
 soft_warnings=0
+rust_files=()
+declare -A rust_file_lines=()
 
 # ---------------------------------------------------------------------------
 # Check 1 — Single-file size fuse (> 500 hard, > 250 soft)
@@ -576,7 +723,8 @@ soft_warnings=0
 log "== Check 1: single-file size fuse =="
 while read -r lines f; do
   [ -n "${f:-}" ] || continue
-  [ "$f" = "total" ] && continue
+  rust_files+=("$f")
+  rust_file_lines["$f"]="$lines"
   rel="${f#$ROOT/}"
   if [ "$lines" -gt "$FUSE_LINES" ]; then
     if is_allowlisted "$rel"; then
@@ -590,7 +738,7 @@ while read -r lines f; do
     log "soft($lines): $f"
     soft_warnings=$((soft_warnings + 1))
   fi
-done < <(tracked_rust_files | sort | tr '\n' '\0' | xargs -0 wc -l)
+done < <(tracked_rust_line_counts)
 log "fuse violations: $blocking, soft warnings: $soft_warnings"
 log ""
 
@@ -604,66 +752,70 @@ dangling_refs=0
 annotated_refs=0
 missing_ref_files=()
 declare -A plan_coverage_map=()
+declare -A annotated_file_map=()
 
-while IFS= read -r f; do
+while IFS=$'\t' read -r f entry_kind entry_value; do
+  [ -n "${f:-}" ] || continue
   rel="${f#$ROOT/}"
-
-  if ! grep -q '^//! plan_ref:' "$f" 2>/dev/null; then
-    # Missing annotations are actionable only for non-test source modules.
-    lines=$(wc -l < "$f")
-    [ "$lines" -lt 20 ] && continue
-    if is_plan_ref_missing_exempt "$rel"; then
-      missing_refs_exempt=$((missing_refs_exempt + 1))
-      continue
-    fi
-    missing_refs=$((missing_refs + 1))
-    missing_ref_files+=("$rel")
-    continue
+  if [ -z "${annotated_file_map[$f]+x}" ]; then
+    annotated_file_map["$f"]=1
+    annotated_refs=$((annotated_refs + 1))
   fi
-  annotated_refs=$((annotated_refs + 1))
 
   # B3.4 guard: the `//! plan_ref:` header tail MUST be empty or exactly `infra`.
   # Any other inline content (e.g. `//! plan_ref: 04_repository#x`) would bypass
   # entry extraction so dangling / reverse-coverage / no-adr all skip it.
-  if grep -qE '^//![[:space:]]*plan_ref:[[:space:]]*[^[:space:]]' "$f" \
-     && ! grep -qE '^//![[:space:]]*plan_ref:[[:space:]]*infra[[:space:]]*$' "$f"; then
+  if [ "$entry_kind" = "HEADER_INVALID" ]; then
     err "invalid-plan-ref-header: $rel — '//! plan_ref:' header tail must be empty or 'infra'"
     blocking=$((blocking + 1))
+    continue
   fi
+
+  [ "$entry_kind" = "REF" ] || continue
 
   # Extract `<chapter-path>#<stable-anchor-id>` refs and verify both parts.
   # chapter-path is either a single-file basename (`04_repository`) or a
   # multi-file chapter path (`03_storage/authority`).
-  while IFS= read -r ref_line; do
-    ref=$(echo "$ref_line" | sed -n 's|^//! *- *\([^[:space:]]\+\).*$|\1|p')
-    [ -z "$ref" ] && continue
-    [ "$ref" = "infra" ] && continue
+  ref="$entry_value"
+  [ -z "$ref" ] && continue
+  [ "$ref" = "infra" ] && continue
 
-    plan_ref_anchor_re="^${PLAN_REF_CORE}$"
-    if ! [[ "$ref" =~ $plan_ref_anchor_re ]]; then
-      err "invalid plan_ref in $rel: $ref"
-      dangling_refs=$((dangling_refs + 1))
-      blocking=$((blocking + 1))
-      continue
-    fi
+  plan_ref_anchor_re="^${PLAN_REF_CORE}$"
+  if ! [[ "$ref" =~ $plan_ref_anchor_re ]]; then
+    err "invalid plan_ref in $rel: $ref"
+    dangling_refs=$((dangling_refs + 1))
+    blocking=$((blocking + 1))
+    continue
+  fi
 
-    chapter="${ref%%#*}"
-    anchor="${ref#*#}"
-    chapter_file="$(resolve_plan_anchor "$chapter")"
-    if [ ! -f "$chapter_file" ]; then
-      err "dangling plan_ref in $rel: $chapter.md not found in plan"
-      dangling_refs=$((dangling_refs + 1))
-      blocking=$((blocking + 1))
-    elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
-      err "dangling plan_ref in $rel: anchor $ref not found"
-      dangling_refs=$((dangling_refs + 1))
-      blocking=$((blocking + 1))
-    else
-      key="$ref"
-      plan_coverage_map["$key"]+="$f "
-    fi
-  done < <(extract_plan_ref_blocks "$f")
-done < <(tracked_rust_files | sort)
+  chapter="${ref%%#*}"
+  anchor="${ref#*#}"
+  if ! plan_chapter_exists "$chapter"; then
+    err "dangling plan_ref in $rel: $chapter.md not found in plan"
+    dangling_refs=$((dangling_refs + 1))
+    blocking=$((blocking + 1))
+  elif ! plan_anchor_exists "$chapter" "$anchor"; then
+    err "dangling plan_ref in $rel: anchor $ref not found"
+    dangling_refs=$((dangling_refs + 1))
+    blocking=$((blocking + 1))
+  else
+    key="$ref"
+    plan_coverage_map["$key"]+="$f "
+  fi
+done < <(tracked_plan_ref_entries)
+
+for f in "${rust_files[@]}"; do
+  [ -z "${annotated_file_map[$f]+x}" ] || continue
+  rel="${f#$ROOT/}"
+  lines="${rust_file_lines[$f]:-0}"
+  [ "$lines" -lt 20 ] && continue
+  if is_plan_ref_missing_exempt "$rel"; then
+    missing_refs_exempt=$((missing_refs_exempt + 1))
+    continue
+  fi
+  missing_refs=$((missing_refs + 1))
+  missing_ref_files+=("$rel")
+done
 
 log "modules with plan_ref: $annotated_refs"
 log "modules without plan_ref (soft): $missing_refs"
@@ -706,25 +858,23 @@ if [ -d "$ROOT/apps/web/src/components" ]; then
       i18n_leaks=$((i18n_leaks + 1))
       blocking=$((blocking + 1))
     fi
-  done < <(grep -rnP --include='*.rs' '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' "${I18N_CJK_SCAN_DIRS[@]}" 2>/dev/null || true)
+  done < <(tracked_i18n_cjk_hits)
 
   # Exact regression guard for English literals already migrated to t::*.
   # A broad English detector is too noisy for class names and protocol strings;
   # this targeted list blocks the UI copy leaks found by the current gap scan.
-  for literal in "${I18N_FORBIDDEN_ENGLISH_LITERALS[@]}"; do
-    while IFS= read -r hit; do
-      echo "$hit" | grep -qE '(//|t::|tr!|L10n|plan_ref|include_str!|r#")' && continue
-      rel_hit="${hit#$ROOT/}"
-      if is_i18n_allowlisted "$rel_hit"; then
-        log "i18n-allowlisted: $rel_hit"
-        i18n_allowlisted=$((i18n_allowlisted + 1))
-      else
-        err "i18n-leak: $rel_hit"
-        i18n_leaks=$((i18n_leaks + 1))
-        blocking=$((blocking + 1))
-      fi
-    done < <(grep -rnF --include='*.rs' "$literal" "${I18N_EXACT_SCAN_DIRS[@]}" 2>/dev/null || true)
-  done
+  while IFS= read -r hit; do
+    echo "$hit" | grep -qE '(//|t::|tr!|L10n|plan_ref|include_str!|r#")' && continue
+    rel_hit="${hit#$ROOT/}"
+    if is_i18n_allowlisted "$rel_hit"; then
+      log "i18n-allowlisted: $rel_hit"
+      i18n_allowlisted=$((i18n_allowlisted + 1))
+    else
+      err "i18n-leak: $rel_hit"
+      i18n_leaks=$((i18n_leaks + 1))
+      blocking=$((blocking + 1))
+    fi
+  done < <(tracked_i18n_exact_hits)
 fi
 log "i18n leaks (blocking): $i18n_leaks"
 log "i18n allowlisted debt: $i18n_allowlisted"
@@ -856,13 +1006,12 @@ while IFS= read -r ref; do
   [ -n "$ref" ] || continue
   agents_anchor_map["$ref"]=1
   IFS=$'\t' read -r chapter anchor < <(resolve_agents_anchor_ref "$ref") || true
-  chapter_file="$(resolve_plan_anchor "$chapter")"
-  if [ ! -f "$chapter_file" ]; then
+  if ! plan_chapter_exists "$chapter"; then
     err "agents-anchor-dangling: $ref chapter not found"
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
     blocking=$((blocking + 1))
     dangling_anchor_map["$ref"]=1
-  elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
+  elif ! plan_anchor_exists "$chapter" "$anchor"; then
     err "agents-anchor-dangling: $ref anchor not found"
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
     blocking=$((blocking + 1))
@@ -938,7 +1087,7 @@ log "blocking violations: $blocking"
 log "soft warnings: $((soft_warnings + missing_refs + unbound_cases))"
 
 if [ "$WRITE_REPORT" = "1" ]; then
-  printf '%s' "$REPORT" > "$ROOT/scripts/plan-coverage.txt"
+  printf '%s\n' "${REPORT_LINES[@]}" > "$ROOT/scripts/plan-coverage.txt"
   echo "report written to scripts/plan-coverage.txt"
 fi
 
