@@ -5,8 +5,6 @@ use crate::commands::projection_remote::ProjectionRemoteDirectionAction;
 use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
-mod backup;
-
 static CWD_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]

@@ -266,209 +266,88 @@
     - cli_assert: nil_shadow_repo_quarantined_not_deleted true
 
 - case_id: STORE-018
-  goal: Backup binding persistence 只写 host-local metadata。
+  goal: Projection Backup push 只上传 Markdown Projection Workspace files，且 provider 结果不产生 authority effect。
   preconditions:
-    - backup locator 不含 credential/key material
-    - ledger_dir 可在临时目录创建
+    - local Projection Workspace 已通过 Projection Locator 与 `.notegit` identity marker gate
+    - workspace 中同时存在 Markdown files 与 internal/reserved paths
   steps:
-    - run: cargo test -p deve_core backup_binding_store -- --nocapture
-    - run: cargo test -p deve_cli backup_bind -- --nocapture
-    - run: cargo test -p deve_cli plans_writable_binding_dry_run_without_persisting -- --nocapture
-    - run: cargo test -p deve_cli backup_unbind -- --nocapture
+    - run: cargo test -p deve_cli --lib run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
+    - run: cargo test -p deve_cli --lib run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
+    - run: cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
   assertions:
-    - cli_assert: backup_bind_persists_host_local_metadata true
-    - cli_assert: backup_unbind_removes_host_local_metadata true
-    - cli_assert: backup_dry_run_does_not_write_binding_state true
-    - cli_assert: backup_binding_store_contains_no_secret_refs true
+    - cli_assert: projection_backup_push_uploads_markdown_files_only true
+    - cli_assert: projection_backup_push_skips_internal_reserved_paths true
+    - cli_assert: projection_backup_push_writes_no_ledger_source_control_or_git_mirror true
 
 - case_id: STORE-019
-  goal: Backup encrypted pack artifact 支持真实加密并强制 verify-before-decrypt。
+  goal: Projection Backup pull 只覆盖 Projection Workspace，并经 External Changes admission。
   preconditions:
-    - backup key material 由 runtime 解析后以内存 key 传入 core，不写入 locator/binding/manifest
-    - pack manifest payload_digest 指向 encrypted artifact bytes
+    - remote provider 返回 Markdown object set
+    - target local repo 是当前 writable local repo
   steps:
-    - run: cargo test -p deve_core --lib backup_pack_artifact -- --nocapture
-    - run: cargo test -p deve_core --lib backup_pack_plaintext -- --nocapture
+    - run: cargo test -p deve_cli --lib run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
+    - run: cargo test -p deve_cli --lib run_s3_pull_scans_written_files_into_external_changes -- --nocapture
+    - run: cargo test -p deve_core --lib fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
   assertions:
-    - cli_assert: backup_pack_artifact_ciphertext_differs_from_plaintext true
-    - cli_assert: backup_pack_manifest_digest_covers_encrypted_artifact true
-    - cli_assert: backup_pack_open_verifies_digest_before_decrypt true
-    - cli_assert: backup_pack_artifact_contains_no_secret_refs true
-    - cli_assert: backup_pack_plaintext_schema_matches_manifest true
-    - cli_assert: backup_pack_plaintext_requires_versioned_ledger_entries true
-    - cli_assert: backup_pack_plaintext_rejects_manifest_mismatch true
-    - cli_assert: backup_pack_plaintext_writes_no_local_authority true
+    - cli_assert: projection_backup_pull_overwrites_projection_workspace true
+    - cli_assert: projection_backup_pull_surfaces_external_changes true
+    - cli_assert: projection_backup_pull_does_not_stage_commit_or_write_ledger true
 
 - case_id: STORE-020
-  goal: Backup provider upload 只上传已验证 encrypted pack artifact bytes，并在上传后远端读回校验后才进入 RemoteVerified。
+  goal: Projection Backup provider metadata 与 unsafe remote paths 不得成为 authority。
   preconditions:
-    - encrypted pack artifact file 已由 backup runtime 生成
-    - provider credential ref 指向 env resolver
+    - provider may expose ETag/mtime/object version/listing order
+    - remote may contain malformed, duplicate, non-Markdown, or unsafe paths
   steps:
-    - run: cargo test -p deve_core --lib backup_pack_artifact_upload_verify -- --nocapture
-    - run: cargo test -p deve_cli backup_run -- --nocapture
-    - run: cargo test -p deve_cli provider_io -- --nocapture
+    - run: cargo test -p deve_cli --lib run_rejects_provider_authority_effects_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli --lib run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
+    - run: cargo test -p deve_cli --lib run_rejects_duplicate_pull_paths_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_core --lib provider_request_rejects_duplicate_paths -- --nocapture
   assertions:
-    - cli_assert: backup_run_requires_artifact_for_provider_upload true
-    - cli_assert: backup_run_verifies_artifact_digest_before_provider_put true
-    - cli_assert: backup_run_uploads_encrypted_artifact_bytes_only true
-    - cli_assert: backup_run_remote_verifies_uploaded_artifact_before_remote_verified_state true
-    - cli_assert: backup_run_rejects_remote_verify_mismatch true
-    - cli_assert: backup_run_provider_metadata_diagnostic_only true
-    - cli_assert: backup_run_rejects_authoritative_provider_metadata true
-    - cli_assert: backup_run_writes_no_local_authority true
+    - cli_assert: projection_backup_provider_metadata_diagnostic_only true
+    - cli_assert: projection_backup_rejects_provider_authority_effects true
+    - cli_assert: projection_backup_rejects_duplicate_remote_paths_before_workspace_write true
+    - cli_assert: projection_backup_rejects_unsafe_or_internal_projection_paths true
 
 - case_id: STORE-021
-  goal: Backup restore provider download 先验证 branch manifest，再经 pack decrypt 与 plaintext schema admission 为 remote-readonly RestoreCandidate。
+  goal: Projection Backup pull 必须在 workspace 写入前校验 provider contract 与 resource budget；External Changes 用户确认发生在 workspace overwrite + watcher/scan 之后。
   preconditions:
-    - branch.manifest.enc 已指向 provider object path
-    - provider credential ref 指向 env resolver
-    - backup key ref 指向 runtime key resolver
+    - provider outcome declares whether pull writes only Projection Workspace and requires later External Changes admission
+    - file count, single file size, and aggregate size budgets are configured in provider adapters
   steps:
-    - run: cargo test -p deve_core --lib backup_branch_manifest_artifact -- --nocapture
-    - run: cargo test -p deve_core --lib backup_pack_artifact_ref_download_verify -- --nocapture
-    - run: cargo test -p deve_cli provider_io -- --nocapture
-    - run: cargo test -p deve_cli backup_restore -- --nocapture
-    - run: cargo test -p deve_cli requires_download_refs_and_known_mode -- --nocapture
-    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
+    - run: cargo test -p deve_cli --lib run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli --lib run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli --lib webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
   assertions:
-    - cli_assert: backup_provider_download_returns_encrypted_bytes_only true
-    - cli_assert: backup_provider_download_provider_metadata_diagnostic_only true
-    - cli_assert: backup_provider_download_does_not_write_local_authority true
-    - cli_assert: backup_restore_download_opens_branch_manifest_before_pack_download true
-    - cli_assert: backup_restore_download_verifies_branch_manifest_digest_and_routing true
-    - cli_assert: backup_restore_download_selects_pack_from_branch_manifest true
-    - cli_assert: backup_restore_download_verifies_pack_plaintext_schema_before_candidate true
-    - cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
-    - cli_assert: backup_restore_download_rejects_resource_budget_excess true
-    - cli_assert: backup_restore_download_rejects_manual_evidence_before_provider_get true
-    - cli_assert: backup_restore_download_rejects_manual_pack_metadata_before_provider_get true
-    - cli_assert: backup_restore_download_rejects_tampered_artifact_before_candidate true
-    - cli_assert: backup_restore_download_rejects_authoritative_provider_metadata true
-    - cli_assert: backup_restore_download_rejects_metadata_before_provider_get true
-    - cli_assert: backup_restore_explicit_merge_non_dry_run_remains_fail_closed true
+    - cli_assert: projection_backup_pull_declares_later_external_changes_admission true
+    - cli_assert: projection_backup_pull_requires_projection_workspace_overwrite_contract true
+    - cli_assert: projection_backup_pull_budget_failures_happen_before_workspace_write true
 
 - case_id: STORE-022
-  goal: Backup downloaded artifact 必须先通过 manifest/routing/digest 校验且不得解密。
+  goal: Projection Backup S3-compatible endpoint 在显式 Remote Projection profile binding 前 fail-closed。
   preconditions:
-    - provider download 已返回 encrypted pack artifact bytes
-    - pack manifest payload_digest 指向 encrypted artifact bytes
+    - locator uses `s3+https://` custom endpoint
+    - no accepted Remote Projection profile binding is active
   steps:
-    - run: cargo test -p deve_core --lib backup_pack_artifact_download_verify -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
   assertions:
-    - cli_assert: backup_pack_download_verify_checks_manifest_digest_before_decrypt true
-    - cli_assert: backup_pack_download_verify_result_exposes_digest_only true
-    - cli_assert: backup_pack_download_verify_rejects_metadata_or_ciphertext_tamper true
+    - cli_assert: projection_backup_s3_custom_endpoint_requires_profile_binding true
+    - cli_assert: projection_backup_s3_custom_endpoint_fails_before_default_credentials true
+    - cli_assert: projection_backup_s3_custom_endpoint_fails_before_provider_io true
 
 - case_id: STORE-023
-  goal: Backup PacksDownloaded evidence 必须与 branch manifest pack refs 一一匹配。
+  goal: Projection Backup 首版 gate 聚合 Remote Projection transport 文档与测试证据。
   preconditions:
-    - branch.manifest.enc 已通过 expected digest、routing 与 AEAD authentication 校验
-    - provider download 与 artifact digest/routing 校验已产生 per-pack evidence
-  steps:
-    - run: cargo test -p deve_core --lib backup_downloaded_packs -- --nocapture
-  assertions:
-    - cli_assert: backup_downloaded_packs_match_manifest_refs true
-    - cli_assert: backup_downloaded_packs_accept_provider_order_independent_verified_results true
-    - cli_assert: backup_downloaded_packs_consume_verified_artifact_results_only true
-    - cli_assert: backup_downloaded_packs_reject_missing_or_unexpected_pack true
-    - cli_assert: backup_downloaded_packs_reject_path_or_digest_mismatch true
-    - cli_assert: backup_downloaded_packs_reject_duplicate_sequence_or_path true
-
-- case_id: STORE-024
-  goal: Backup PacksDecrypted evidence 必须来自真实 artifact open result，并与 PacksDownloaded refs 一一匹配；PacksPlaintextVerified 必须由 branch manifest pack refs 打开 plaintext schema。
-  preconditions:
-    - branch manifest pack refs 已通过 PacksDownloaded gate
-    - encrypted artifact bytes 已通过 manifest/routing/digest 校验后执行 decrypt
-  steps:
-    - run: cargo test -p deve_core --lib backup_decrypted_packs -- --nocapture
-    - run: cargo test -p deve_core --lib backup_plaintext_packs -- --nocapture
-    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
-  assertions:
-    - cli_assert: backup_decrypted_packs_match_downloaded_pack_refs true
-    - cli_assert: backup_decrypted_packs_accept_provider_order_independent_open_results true
-    - cli_assert: backup_decrypted_packs_consume_open_artifact_results_only true
-    - cli_assert: backup_restore_download_opens_pack_artifacts_from_branch_manifest_refs true
-    - cli_assert: backup_decrypted_packs_reject_missing_or_unexpected_pack true
-    - cli_assert: backup_decrypted_packs_reject_path_or_digest_mismatch true
-    - cli_assert: backup_decrypted_packs_reject_duplicate_sequence true
-    - cli_assert: backup_decrypted_packs_open_result_cannot_be_empty_plaintext true
-    - cli_assert: backup_decrypted_packs_tracks_encrypted_and_plaintext_bytes true
-    - cli_assert: backup_plaintext_packs_open_schema_from_verified_branch_manifest_refs true
-    - cli_assert: backup_plaintext_packs_reject_raw_or_mismatched_plaintext true
-
-- case_id: STORE-025
-  goal: Backup RestoreCandidate admission 必须从 manifest verification 与 PacksPlaintextVerified typed evidence 派生。
-  preconditions:
-    - branch manifest pack refs 已通过 PacksDownloaded gate
-    - manifest verification result 已通过 hash/auth/decrypt gate
-    - encrypted artifact bytes 已通过 open gate 产生 PacksDecrypted result
-    - decrypted plaintext 已通过 branch manifest pack refs 的 plaintext schema gate 产生 PacksPlaintextVerified result
-  steps:
-    - run: cargo test -p deve_core --lib backup_restore_candidate -- --nocapture
-    - run: cargo test -p deve_cli backup_restore_download -- --nocapture
-  assertions:
-    - cli_assert: backup_restore_candidate_admission_consumes_verified_plaintext_pack_evidence true
-    - cli_assert: backup_restore_candidate_admission_preserves_repo_and_write_gates true
-    - cli_assert: backup_restore_candidate_admission_rejects_manifest_and_plaintext_pack_mismatch true
-    - cli_assert: backup_restore_candidate_rejects_resource_budget_excess true
-    - cli_assert: backup_restore_candidate_admission_writes_no_local_authority true
-    - cli_assert: backup_restore_download_admits_remote_readonly_candidate_after_pack_decrypt true
-
-- case_id: STORE-026
-  goal: Backup 首版 gate 必须聚合 binding、pack、provider upload/download 与 RestoreCandidate 验收。
-  preconditions:
-    - STORE-018..STORE-025 已列出 provider/RestoreCandidate 自动化验证命令
-    - STORE-027..STORE-028 已列出 explicit-import / explicit-merge authority path 验收命令
+    - STORE-018..STORE-022 已列出 Projection Backup 自动化验证命令
+    - ledger backup pack / RestoreCandidate / explicit-import / explicit-merge 不属于首版 Backup contract
   steps:
     - run: cargo run -p deve_baseline -- backup
   assertions:
-    - cli_assert: backup_baseline_aggregates_release_required_backup_checks true
-    - cli_assert: backup_baseline_runs_full_mode_targeted_tests true
+    - cli_assert: projection_backup_baseline_aggregates_remote_projection_transport_checks true
+    - cli_assert: projection_backup_baseline_excludes_ledger_pack_restore_checks true
 
-- case_id: STORE-027
-  goal: Backup explicit-import 只能把 verified RestoreCandidate 导入到安全 local target。
-  preconditions:
-    - RestoreCandidate 已由 manifest verification 与 PacksPlaintextVerified typed evidence admission
-    - target local repo 已存在且为空；新建 target 与 repair/reset-approved target 仍 fail-closed
-    - RestoreCandidate 是完整 ledger-only image：backup seq 从 1 开始且无 snapshot/blob refs
-    - writer gate 当前有效并绑定 candidate fingerprint 与 target repo
-  steps:
-    - run: cargo test -p deve_core --lib backup_restore_import_runtime -- --nocapture
-    - run: cargo test -p deve_cli backup_restore_explicit_import -- --nocapture
-  assertions:
-    - cli_assert: backup_restore_import_consumes_restore_candidate_evidence true
-    - cli_assert: backup_restore_import_requires_writer_gate_and_explicit_mode true
-    - cli_assert: backup_restore_import_rejects_non_empty_healthy_target true
-    - cli_assert: backup_restore_import_rejects_candidate_plaintext_evidence_mismatch true
-    - cli_assert: backup_restore_import_rejects_incomplete_ledger_image true
-    - cli_assert: backup_restore_import_rejects_unrestored_snapshot_or_blob_refs true
-    - cli_assert: backup_restore_import_appends_via_authority_storage_runtime true
-    - cli_assert: backup_restore_import_rebuilds_projection_from_imported_ledger true
-    - cli_assert: backup_restore_import_reports_projection_repair_after_authority_import true
-    - cli_assert: backup_restore_import_creates_no_staging_commit_anchor_or_git_queue true
-    - cli_assert: backup_restore_explicit_import_without_authority_context_fails_closed true
-    - cli_assert: backup_restore_explicit_import_writes_empty_local_authority_and_rebuilds_projection true
-    - cli_assert: backup_restore_explicit_import_reports_projection_repair_after_authority_import true
-
-- case_id: STORE-028
-  goal: Backup explicit-merge 只能把 verified RestoreCandidate 作为只读 merge source 合入当前 local branch。
-  preconditions:
-    - planned/manual-pending: 当前实现仍 fail-closed；真实测试命令必须在实现落地时补齐
-    - RestoreCandidate 已由 manifest verification 与 PacksPlaintextVerified typed evidence admission
-    - current repo scope 是 local writable branch
-    - writer gate 当前有效并绑定 candidate fingerprint、target repo/branch 与 scope_nonce
-  steps:
-    - manual-pending: implement core/cli tests for backup_restore_merge before release
-    - manual-pending: add backup baseline entries only after those tests exist
-  assertions:
-    - cli_assert: backup_restore_merge_consumes_restore_candidate_evidence true
-    - cli_assert: backup_restore_merge_requires_writer_gate_and_current_scope true
-    - cli_assert: backup_restore_merge_rejects_repo_id_mismatch true
-    - cli_assert: backup_restore_merge_rejects_stale_candidate_fingerprint true
-    - cli_assert: backup_restore_merge_uses_candidate_as_readonly_source true
-    - cli_assert: backup_restore_merge_does_not_replay_backup_global_seq true
-    - cli_assert: backup_restore_merge_conflict_enters_existing_diff_resolution true
-    - cli_assert: backup_restore_merge_appends_only_merge_result_facts true
-    - cli_assert: backup_restore_merge_creates_no_staging_commit_anchor_or_git_queue true
 ```

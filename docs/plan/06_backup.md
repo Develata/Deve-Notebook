@@ -1,57 +1,99 @@
-# 06_backup.md - Backup and Restore
+# 06_backup.md - Projection Backup
 
 ## Metadata
 
-- `Layer`: `Authority Core / Backup Transport`
+- `Layer`: `Application / Projection Transport`
 - `Status`: `Planned Contract`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-07`
+- `Version`: `0.0.2`
+- `Last Review`: `2026-07-08`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`
+- `Primary Code Areas`: `crates/core/src/remote_projection/`, `apps/cli/src/commands/projection_remote.rs`, `apps/web/src/components/command_palette/registry/remote_projection.rs`
 
-本章定义 repo / branch 对应 URL 的备份展开方式。它把 `04_repository.md`
-中的 characteristic parameter 从普通 URL 扩展为 WebDAV、S3 与
-S3-compatible backup locator，但不改变 `RepoId`、Branch、Ledger 与
-Source Control authority。
+本章定义 **Projection Backup**：把 Markdown Projection Workspace 文件集合传输到
+WebDAV / S3 / S3-compatible remote，并可从 remote 拉回 Projection Workspace。
 
-## 1. Scope
+Projection Backup 的备份对象是：
 
-本章只处理三类问题：
+```text
+Projection Workspace 中的 Markdown 文件集合
+```
 
-1. 一个 logical repo 如何绑定到 remote backup root。
-2. 一个 branch / writer identity 如何绑定到 remote backup folder 或 prefix。
-3. 备份包如何加密、上传、校验、下载与进入 restore/import 流程。
+它不是 Ledger history disaster recovery，不承诺恢复 ledger global sequence、writer
+causality、commit anchors、Source Control history 或 Git mirror queue。需要 history 的场景
+属于 NoteGit/ngit + Git remote workflow；Projection Backup 只负责搬运 Markdown projection
+files。
+
+## 1. Scope {#projection-backup-scope}
+
+本章只处理四类问题：
+
+1. 当前 local repo 的 Projection Workspace Markdown files 如何上传到 WebDAV/S3 remote。
+2. WebDAV/S3 remote 上的 Markdown files 如何下载并覆盖 Projection Workspace。
+3. 下载后的文件变化如何进入 External Changes，并由用户确认后写入 Ledger。
+4. Remote Projection transport、credential binding 与 provider metadata 的 authority 边界。
 
 非目标：
 
-- 不定义实时同步协议。
-- 不定义 Git remote、GitHub repo、`.git` mirror 或 Git push。
-- 不允许 WebDAV/S3 直接成为 Ledger、Source Control 或 workspace authority。
-- 不允许多个 active writers 共写同一个 backup branch path。
+- 不定义任何 ledger-history disaster recovery path；Ledger history 由 NoteGit / Git remote 负责。
+- 不定义独立的 backup pack、manifest、restore-candidate 或 ledger import/merge runtime。
+- 不定义实时多端同步协议。
+- 不定义 Git remote、GitHub repo、`.git` mirror 或 Git push；Git history 由
+  Source Control / NoteGit / Git remote 语义负责。
+- 不允许 WebDAV/S3 直接成为 Ledger、Source Control、Git mirror 或 workspace identity
+  authority。
+- 不传输 `.notegit/`、`.git/`、ledger、staging、snapshot、runtime state 或 secret material。
 
-## 2. Locator Model {#backup-locator-contract}
+## 2. Product Semantics {#projection-backup-contract}
 
-`04_repository.md` 中的 `URL / characteristic parameter` 在 backup 场景下
-扩展为 protocol-aware locator。locator 是发现与恢复线索，不是 authority。
-
-支持的 locator 形式至少包括：
+Projection Backup 是 Remote Projection Transport 的 backup-oriented 产品语义。
 
 ```text
-webdav+https://dav.example.com/notebooks/deve/
-s3://bucket-name/deve/
-s3+https://r2.example.com/bucket-name/deve/
+Upload:
+  Projection Workspace Markdown files
+    -> Projection Locator / identity gate
+    -> WebDAV / S3 / S3-compatible provider
+    -> remote Markdown object set
+
+Pull / Download:
+  remote Markdown object set
+    -> Projection Locator / identity gate
+    -> Projection Workspace overwrite
+    -> Watcher / scan
+    -> External Changes
+    -> user confirmation
+    -> Ledger facts
+```
+
+核心规则：
+
+- Upload 只上传 Markdown projection files，不上传 ledger facts、commit anchors、runtime
+  metadata 或 provider-local credentials。
+- Pull / Download 只写 Projection Workspace；它不得直接 append ledger、写 Source Control
+  staging、创建 commit anchor、写 Git mirror queue 或自动确认 External Changes。
+- External Changes 是 remote files 进入 Ledger 的唯一首版 admission surface。用户确认前，remote
+  files 只是外部输入。
+- Provider object metadata 只能作为 diagnostic。ETag、mtime、object version、object key、locator
+  path 或 remote listing order 都不得成为 ledger/source-control authority。
+
+## 3. Locator and Profile Model {#projection-backup-locator-contract}
+
+Projection Backup 复用 Remote Projection locator / profile 模型。支持的 locator 形式至少包括：
+
+```text
+webdav+https://dav.example.com/notebooks/deve/main/
+s3://bucket-name/deve/main/
+s3+https://r2.example.com/bucket-name/deve/main/
 ```
 
 locator 的有效组成：
 
-- protocol
-- endpoint
+- protocol / provider kind
+- endpoint host
 - bucket / namespace
-- repo root path
-- branch path
+- projection prefix
 
-禁止组成：
+locator 禁止组成：
 
 - password
 - access key / secret key
@@ -59,430 +101,222 @@ locator 的有效组成：
 - encryption key material
 - auth cookie
 
-locator 解析规则：
-
-- repo root locator 用于发现同一 logical repo 的 backup namespace。
-- branch locator = repo root locator + branch writer identity path。
-- locator 匹配只能作为归类 hint；最终必须以 backup manifest 中的 `RepoId`
-  和本地 ledger/catalog 中的 `RepoId` 校验为准。
-- locator 与 manifest `RepoId` 冲突时必须 fail-closed。
-
-## 3. Authoritative Entities
-
-### 3.1 Backup Root {#backup-root-contract}
-
-Backup root 是 remote storage 上的 repo-level namespace。它可以对应一个
-logical repo，但不拥有 repo authority。
-
-最小状态：
-
-- `repo_locator`
-- `expected_repo_id`
-- `format_version`
-- `provider_kind`
-
-### 3.2 Branch Backup Binding {#backup-branch-binding-contract}
-
-Branch backup binding 是一个 branch / writer identity 到 remote folder 或
-prefix 的 1:1 映射。
-
 规则：
 
-- 一个 Branch **MUST** 最多绑定一个可写 backup folder/prefix。
-- 一个可写 backup folder/prefix **MUST NOT** 被两个 active writers 共享。
-- 多端备份必须表现为同一 `RepoId` 下的多个 branch backup bindings。
-- 非本 writer 的 branch backup 只能进入 `RemoteReadonly` 或 restore candidate。
-- Binding persistence 是 host-local backup runtime metadata，不是 ledger facts、
-  Source Control state 或 Projection Workspace 内容；它只能保存 secret-free locator
-  与 branch/writer/path/access 元数据，不能保存 credential ref、key ref 或任何 key
-  material。
+- Web / Command Palette 不接收 locator 或 credential material；backend 必须从当前 local repo
+  的 characteristic `repo_url` 或显式 Remote Projection profile 解析 locator。
+- CLI 可以为 host operation 显式传入 `--locator` 或显式 Remote Projection profile。
+- `s3+https://` / S3-compatible endpoint 必须绑定显式 Remote Projection profile；未绑定时
+  fail-closed，避免默认 AWS 环境凭证被签给任意 host。
+- locator/profile 只能作为 transport target 选择依据，不拥有 repo identity。执行前必须复用
+  Projection Locator、`.notegit` identity marker 与 current repo scope gate。
 
-### 3.3 Backup Pack {#backup-pack-contract}
+## 4. Remote Layout {#projection-backup-remote-layout-contract}
 
-Backup pack 是加密签名后的 branch ledger artifact。
-
-pack 内容可以包含：
-
-- ledger facts range
-- snapshots
-- pack manifest
-- content-addressed blob references
-- integrity hashes
-
-pack 内容不得绕过 ledger append 或 source-control authority 直接写入 Projection Workspace。
-
-pack artifact 字节级约束：
-
-- 上传到 provider 的 pack artifact MUST 是加密后的 artifact bytes，而不是明文
-  ledger/snapshot payload。
-- provider upload runtime MUST 在 PUT 前验证 artifact bytes 可被解析为 encrypted
-  pack artifact，且 artifact routing metadata 与 `BackupPackManifest` 一致。
-- `BackupPackManifest.payload_digest` MUST 是序列化后的 encrypted pack artifact
-  bytes 的 sha256 digest；不得使用明文 payload digest 作为远端校验依据。
-- encrypted pack artifact 的明文字段只允许包含 routing / verification 所需的
-  `format_version / RepoId / writer_identity / branch_path / pack_sequence /
-  nonce / ciphertext`；不得包含 credential、key ref 或 key material。
-- restore 打开 pack 时 MUST 先校验 manifest、artifact routing metadata 与
-  `payload_digest`，只有 digest 匹配后才允许执行 decrypt。
-
-pack plaintext schema gate 约束 {#backup-pack-plaintext-schema-contract}：
-
-- decrypt 后的 pack plaintext MUST 使用 backup runtime 拥有的版本化 schema；
-  任意未带 backup plaintext magic / format version 的 bytes 不得进入
-  RestoreCandidate 或 import/merge planning。
-- 当前首版 plaintext schema 为 `BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2`，
-  使用 project-owned postcard codec payload；pre-1.0 旧 plaintext magic /
-  codec payload 不进入 stable 兼容承诺。
-- plaintext schema MUST 显式携带 `format_version / RepoId / writer_identity /
-  branch_path / pack_sequence / ledger_seq_range / ledger_entries /
-  snapshot_refs / blob_refs`。
-- plaintext 中的 repo、writer、branch、pack sequence、ledger range、ledger entry
-  count、snapshot count 与 blob refs MUST 与 `BackupPackManifest` 完全一致；
-  任一不一致必须 fail-closed。
-- `ledger_entries` MUST 逐条携带 `global_seq` 与 `serialize_ledger_entry` 产生的
-  versioned ledger entry bytes；打开 plaintext 时必须逐条执行
-  `deserialize_ledger_entry` 校验。未版本化、损坏或 sequence 不连续的 ledger entry
-  不得进入 RestoreCandidate。
-- plaintext schema validation 只是解密后的 typed evidence gate。它不得 append
-  ledger，不得写 staging，不得写 Projection Workspace，不得创建 commit anchor 或
-  Git mirror queue。
-- branch manifest pack refs MUST carry the pack manifest metadata required to
-  validate decrypted plaintext (`ledger_seq_range / ledger_event_count /
-  snapshot_count / blob_refs`). Restore 只能从已验证的 branch manifest pack ref
-  还原 `BackupPackManifest` 并打开 plaintext；不得信任 plaintext 自带 metadata
-  来完成自证。
-
-### 3.4 Restore Candidate {#backup-restore-candidate-contract}
-
-Restore candidate 是下载、验证、解密后尚未导入的备份结果。
-
-Restore candidate 不是 local branch，也不是 current scope。只有显式 restore /
-import / merge intent 通过 gate 后，才允许进入本地 repo runtime。
-
-RestoreCandidate admission MUST consume manifest verification 与
-`PacksPlaintextVerified` typed evidence。只有 `PacksDecrypted` 而没有版本化
-plaintext schema evidence 的 pack，不得进入 RestoreCandidate。
-
-RestoreCandidate MUST expose a core-derived candidate fingerprint or handle for
-follow-up explicit actions. 该 handle 只能由 `RepoId / writer_identity /
-branch_path / manifest_digest / pack_digests / plaintext evidence digest` 派生，
-不能来自 provider metadata、locator string、CLI/UI 自填字段或 plaintext 自证。
-执行 `ExplicitImport` / `ExplicitMerge` 时必须重新绑定并复核该 candidate evidence；
-仅持有 handle 不授予写权限。
-
-`RemoteReadonly`、`ExplicitImport` 与 `ExplicitMerge` 的差异：
-
-- `RemoteReadonly` 只创建内存态 candidate，用于 inspect / preview / diagnostics；
-  它不得写 local branch、ledger、Source Control、Git mirror、staging 或 Projection
-  Workspace。
-- `ExplicitImport` 是 disaster recovery 的显式恢复入口。它只能把已验证 candidate
-  导入到一个空的、新建的或已由 repair/reset gate 显式批准的 local repo target；
-  不能把非空 current ledger 静默覆盖为 backup 内容。导入写入必须经 Repo Runtime
-  target validation、writer gate 与 authority storage append/rebuild path，并且不得自动
-  创建 Source Control commit anchor 或 Git mirror queue。
-- `ExplicitMerge` 是把 candidate 作为只读 merge source 合入当前 local branch 的入口。
-  它必须经 current repo scope、writer gate、RestoreCandidate admission 与 merge/source-control
-  authority；合并结果只能追加新的 ledger facts 或产生 conflict，不得 replay backup
-  global sequence、不得改写既有 ledger facts、不得自动创建 commit anchor。
-
-两条显式路径共同约束：
-
-- candidate `RepoId` 必须与目标 repo `RepoId` 一致；不一致必须 fail-closed。
-- request 必须绑定当前 `scope_nonce`、target repo/branch、writer identity、candidate
-  fingerprint 与 admission mode；stale scope 或 stale candidate 必须 fail-closed。
-- provider metadata、ETag、mtime、object version、locator path、plaintext 自带字段都不得
-  直接成为 import/merge authority。
-- backup runtime 只负责 candidate verification 与 evidence transport；真正写入必须移交
-  Repo Runtime / Source Control / Merge Runtime。
-- 成功导入或合并后，Source Control 只能通过 commit anchor -> ledger head 的派生规则展示
-  Confirmed Ledger Changes；不得由 Backup Runtime 直接写 staging、commit anchor 或 Git
-  mirror queue。
-- 任一失败必须保持无 partial staging、无 commit anchor、无 Git mirror queue。若 ledger
-  append 已按 authority path 成功但 projection writeback 失败，必须沿既有 degraded/projection
-  repair 语义报告，不得回滚已确认 ledger facts。
-
-## 4. State Machines
-
-### 4.1 Backup Upload {#backup-upload-state-machine-contract}
-
-```text
-Unbound
-  -> BindingValidated
-  -> PackPlanned
-  -> PackEncrypted
-  -> Uploaded
-  -> RemoteVerified
-  -> Complete
-```
-
-约束：
-
-- `BindingValidated` 必须校验 `RepoId`、branch role 与 writer identity。
-- `PackPlanned` 只能读取 ledger / snapshot authority，不得读取 stale UI state。
-- `Uploaded` 只能在 encrypted pack artifact bytes 已通过 manifest / routing /
-  digest 校验且 provider PUT 成功后进入。
-- `RemoteVerified` 必须确认 remote object 读回的 encrypted pack artifact bytes
-  与 uploaded pack hash 一致；provider metadata、ETag、version 或 mtime 不能作为
-  该确认依据。
-- upload 失败不得回滚 local ledger 或 source-control state。
-
-Provider adapter 的 PUT / GET 只是 Backup Runtime 的传输原语。上传后进入
-`RemoteVerified` 前，Backup Runtime 必须对同一 object 执行 readback，并用
-readback bytes 重新计算 sha256，与 manifest `payload_digest` / uploaded digest
-比对；不一致必须 fail-closed。GET 成功只表示 encrypted artifact bytes 已从 remote
-object 读入内存，并附带 diagnostic-only provider metadata；它不能代替
-manifest/hash/signature verification，不能触发 decrypt，也不能创建 restore candidate。
-
-### 4.2 Restore / Import {#backup-restore-state-machine-contract}
-
-```text
-RemoteDiscovered
-  -> ManifestVerified
-  -> PacksDownloaded
-  -> PacksDecrypted
-  -> PacksPlaintextVerified
-  -> RestoreCandidate
-  -> RemoteReadonly | ExplicitImport | ExplicitMerge
-```
-
-约束：
-
-- verification、hash check、signature check 或 decrypt 失败必须 fail-closed。
-- `PacksDownloaded` 必须由 branch manifest 中的 pack object refs 驱动，逐个下载
-  encrypted pack artifact bytes；下载结果在通过 manifest digest、artifact digest、
-  authentication 与 decrypt gate 前，不得暴露为 plaintext 或 restore candidate。
-- `PacksPlaintextVerified` 必须由 core 通过已验证 branch manifest pack refs
-  还原 pack manifest 后打开 plaintext schema；任意 raw plaintext、metadata
-  mismatch、损坏 ledger entry 或 plaintext 自证失败都不得进入 RestoreCandidate。
-- restore candidate admission MUST 由 core-owned resource budget 约束 pack 数、
-  encrypted aggregate bytes 与 plaintext aggregate bytes；超出预算必须
-  fail-closed，且不得继续导入、合并或写本地 authority。
-- 默认下载不得 append local ledger。
-- `ExplicitImport` 与 `ExplicitMerge` 必须复用 repo scope、writer gate 与
-  source-control / merge authority。
-
-`ExplicitImport` 子状态：
-
-```text
-RestoreCandidate
-  -> ExplicitImportRequested
-  -> ImportTargetValidated
-  -> ImportLedgerPlanned
-  -> LedgerImported
-  -> ProjectionRebuilt | ProjectionRepairRequired
-  -> ImportComplete
-```
-
-约束：
-
-- `ImportTargetValidated` 必须确认目标是空 local repo、新建 local repo，或已通过 repair/reset
-  gate 显式批准的 quarantined/degraded target；非空 healthy local repo 不得被 import
-  静默覆盖。
-- `ImportLedgerPlanned` 必须从 verified plaintext ledger entries 规划 append/rebuild；
-  不得信任 backup pack 的原始 `global_seq` 作为本地 redb 主键。
-- `LedgerImported` 只能由 authority storage runtime 执行；Backup Runtime 不得直接写
-  redb authority tables。
-- `ProjectionRebuilt` 只能从导入后的 local ledger fold 派生；不能直接把 backup plaintext
-  或 provider bytes materialize 成 Projection Workspace authority。
-- Import 完成不自动创建 Source Control commit anchor；若需要 Git mirror 更新，必须由
-  Source Control 后续终态镜像流程独立处理。
-
-`ExplicitMerge` 子状态：
-
-```text
-RestoreCandidate
-  -> ExplicitMergeRequested
-  -> MergeSourceValidated
-  -> MergePlanComputed
-  -> MergeConflict | LedgerMerged
-  -> ProjectionWriteback | ProjectionRepairRequired
-  -> MergeComplete
-```
-
-约束：
-
-- `MergeSourceValidated` 必须确认当前 scope 是 local writable branch，candidate repo 与当前
-  `RepoId` 一致，且 writer gate 当前有效。
-- `MergePlanComputed` 必须把 candidate fold 作为只读 merge source；不得把 backup ledger
-  entries 逐条直接 replay 到当前 local ledger。
-- `MergeConflict` 必须进入既有 conflict/diff resolution surface；不得自动选择 backup 或
-  local 一侧。
-- `LedgerMerged` 只能追加 merge result facts；不得删除、重排或改写当前 ledger facts。
-- Merge 完成后的 dirty state 由 Source Control 从 commit anchor 派生；Backup Runtime 不得
-  写 staging 或 commit anchor。
-
-## 5. Commands / Inputs / Outputs
-
-### 5.1 Inputs
-
-- `BackupLocator`
-- `RepoId`
-- `BranchSelector`
-- `WriterIdentity`
-- `BackupCredentialRef`
-- `BackupKeyRef`
-- `BackupEncryptedPackArtifactFile`
-
-`BackupCredentialRef` 与 `BackupKeyRef` 是 secret/config 引用，不是 locator 的一部分。
-
-### 5.2 Commands
-
-- `BindBackupTarget`
-- `InspectBackupTarget`
-- `ListBackupBranches`
-- `BackupBranch`
-- `VerifyBackupTarget`
-- `RestoreBackup`
-- `ImportRestoreCandidate`
-- `MergeRestoreCandidate`
-- `UnbindBackupTarget`
-
-`BackupBranch` 可以先以 dry-run 输出 pack / upload plan；真实 provider upload
-只能上传显式传入且已通过 manifest/digest 校验的 encrypted pack artifact file。
-该阶段不读取 stale UI state，不把 provider metadata 当 authority，也不写 ledger、
-staging、commit anchor 或 Projection Workspace。
-
-`RestoreBackup` 的 provider download 只能由 Backup Runtime 自有 adapter 执行，
-并且只返回 encrypted artifact bytes 给 verification / decrypt pipeline。未完成
-manifest-backed verification、artifact authentication 与 decrypt gate 前，CLI/UI 不得把
-download success 呈现为 restore success，也不得写 ledger、staging、commit anchor、
-Projection Workspace 或 Git mirror queue。
-
-`ImportRestoreCandidate` / `MergeRestoreCandidate` 不是新的 provider transport 命令；
-它们只消费已 admission 的 RestoreCandidate evidence，并必须携带 candidate fingerprint、
-target repo/branch、scope nonce 与 writer gate proof。CLI/UI 只能发起 typed intent，
-不得传入 raw plaintext、provider metadata、locator secret 或自行构造的 ledger facts。
-
-### 5.3 Outputs {#backup-command-output-contract}
-
-- `BackupBindingStatus`
-- `BackupPlan`
-- `BackupPackManifest`
-- `BackupVerificationResult`
-- `RestoreCandidate`
-- `BackupError`
-
-## 6. Remote Layout {#backup-remote-layout-contract}
+Projection Backup remote layout 是 Markdown object set，不是 ledger pack layout。
 
 推荐布局：
 
 ```text
-<repo-root>/
-  repo.manifest.enc
-  branches/
-    <writer-identity>/
-      branch.manifest.enc
-      packs/
-        000001.pack.enc
-        000002.pack.enc
+<remote-prefix>/
+  README.md
+  notes/
+    a.md
+    b.md
+  journals/
+    2026-07-08.md
 ```
 
 规则：
 
-- manifest 内路径分隔符 **MUST** 是 `/`。
-- WebDAV ETag、S3 object version、mtime、object key 等 provider metadata 只能作为 transport diagnostic。
-- remote layout drift 必须产生结构化诊断，不得静默 rebind。
+- Remote object path 使用 `/` 分隔，并以 Projection Workspace 相对路径为 canonical path。
+- 只枚举和传输 `.md` Markdown projection files。
+- 归一化后为空、绝对路径、包含 `..`、指向 reserved/internal path 或重复的 remote path 必须在下载
+  payload 或写 workspace 前 fail-closed。
+- Provider metadata、remote listing order 与 object version 只进入 diagnostics，不进入 Ledger 或
+  Source Control authority。
 
-## 7. Security Contract {#backup-secret-ref-contract} {#backup-verification-contract} {#backup-artifact-protection-contract}
+## 5. Upload State Machine {#projection-backup-upload-state-machine-contract}
 
-- backup artifacts **MUST** be encrypted before upload。
-- manifests and packs **MUST** be authenticated by signature, AEAD tag, or an
-  equivalent integrity mechanism owned by `08_auth.md`。
-- provider upload credential resolution 初始只允许 `env:` ref；`keyring:` 与
-  `config:` 必须 fail-closed，直到对应 resolver 被纳入本章合同。
-- download 必须先 verify，再允许 decrypt/import effect 暴露给 runtime。
-- credentials, tokens and key material **MUST NOT** be stored in repo catalog,
-  locator string, localStorage, URL query, normal logs or crash reports。
-- cloud ACL 可以限制 writer access，但 cryptographic verification 仍是必需条件。
+```text
+UploadRequested
+  -> ProjectionWorkspaceValidated
+  -> MarkdownFilesEnumerated
+  -> ProviderResolved
+  -> FilesUploaded
+  -> UploadReported
+```
 
-## 8. Failure Modes
+约束：
 
-- locator unreachable
-- credential rejected
-- manifest missing or malformed
-- `RepoId` mismatch
-- duplicate writable branch binding
-- pack hash mismatch
-- signature / AEAD verification failure
-- decrypt failure
-- remote version conflict
-- restore candidate incompatible with current repo health
-- explicit import target is non-empty without an approved repair/reset gate
-- explicit merge source conflicts with current local ledger
-- stale scope nonce or stale restore candidate fingerprint
+- `ProjectionWorkspaceValidated` 必须确认当前 local repo、Projection Locator 与 `.notegit`
+  identity marker 一致。
+- `MarkdownFilesEnumerated` 只能从 Projection Workspace 读取 Markdown files；必须排除
+  `.notegit/`、`.git/`、ledger、staging、snapshot、runtime state 与 ignored/internal paths。
+- `FilesUploaded` 只表示 provider adapter 完成 file object PUT；它不生成 ledger facts，不修改
+  Source Control state，不创建 commit anchor。
+- 上传失败不得回滚 local ledger 或 Source Control state；已上传的 remote objects 只能作为 provider
+  diagnostic / retry context。
 
-所有 failure 必须结构化。失败的 backup 或 restore 不得留下 partial ledger writes、
-staged entries、pending imports 或 workspace projection changes。
+## 6. Pull / Download State Machine {#projection-backup-pull-state-machine-contract}
 
-## 9. Forbidden Patterns
+```text
+PullRequested
+  -> ProviderResolved
+  -> RemoteMarkdownListed
+  -> RemotePathsValidated
+  -> RemoteMarkdownDownloaded
+  -> ProjectionWorkspaceOverwritten
+  -> WatcherOrScanDetected
+  -> ExternalChanges
+```
+
+约束：
+
+- `RemoteMarkdownListed` / `RemoteMarkdownDownloaded` 必须受 hard budget 约束：文件数、单文件
+  bytes、总下载 bytes 超限时必须在写 Projection Workspace 前 fail-closed。
+- `RemotePathsValidated` 必须在下载 payload 或写 workspace 前拒绝归一化后重复、越界、reserved、
+  non-Markdown 或 unsafe target path。
+- `ProjectionWorkspaceOverwritten` 必须只覆盖 Projection Workspace 中的 Markdown projection files；
+  workspace apply 应使用 staging + rollback 或等价机制，避免半写入可见。
+- `WatcherOrScanDetected` 后才能进入 External Changes。该步骤不得直接 stage、commit、Apply to
+  Ledger 或创建 Git mirror queue。
+- External Changes 由用户明确确认后，才通过 existing Ledger authority path 追加 facts。
+
+## 7. Commands / Inputs / Outputs {#projection-backup-command-output-contract}
+
+### 7.1 Inputs
+
+- `ProjectionBackupLocator` / `RemoteProjectionLocator`
+- `RemoteProjectionProfile`
+- `RepoSelector`
+- `ProviderKind`
+- `Direction` = `push | pull`
+- provider credential refs owned by Remote Projection profile/runtime
+
+credential refs 是 host-local runtime config 引用，不是 locator 的一部分。
+
+### 7.2 Commands
+
+Projection Backup 不引入独立 provider runtime；首版命令应收敛到 Remote Projection transport。
+
+- `deve projection-remote webdav push/pull`
+- `deve projection-remote s3 push/pull`
+
+旧 `deve backup ...` CLI surface 不属于首版命令面；Projection Backup 的唯一 CLI surface 是
+`deve projection-remote ... push/pull`。
+
+### 7.3 Outputs
+
+- `ProjectionBackupPlan`
+- `ProjectionBackupReport`
+- `RemoteProjectionProviderReport`
+- `ExternalChangesRequired`
+- `ProjectionBackupError`
+
+输出必须区分：
+
+- provider IO 是否成功；
+- Projection Workspace 是否被写入；
+- External Changes 是否已被检测；
+- Ledger 是否已被用户确认写入。
+
+Provider success 不等于 pull/admission success；Projection Workspace overwrite 不等于 Ledger recovery。
+
+## 8. Security and Authority Contract {#projection-backup-secret-ref-contract} {#projection-backup-verification-contract}
+
+- Credentials, tokens and key material **MUST NOT** be stored in repo catalog, locator string,
+  localStorage, URL query, normal logs or crash reports。
+- Remote Projection profile 可以保存 secret-free endpoint/bucket/prefix/credential-ref binding；credential
+  value 只能由 runtime resolver 在 provider IO 时解析。
+- Provider metadata **MUST** remain diagnostic-only。
+- Remote files are external input. They become Ledger facts only through External Changes user
+  confirmation and existing authority storage runtime。
+- Projection Backup does not encrypt or authenticate ledger history because it does not transport
+  ledger history. If durable history is required, use NoteGit/ngit + Git remote。
+- S3-compatible custom endpoint signing must be profile-bound and fail-closed on missing endpoint,
+  missing region/signing scope, missing credential ref, or provider/profile mismatch。
+
+## 9. Failure Modes {#projection-backup-failure-modes}
+
+- locator/profile missing or provider mismatch
+- credential rejected or credential resolver unavailable
+- custom S3 endpoint missing explicit profile binding
+- Projection Locator or `.notegit` identity marker broken
+- workspace cannot be canonicalized
+- remote listing unavailable or malformed
+- remote path normalization failure
+- duplicate normalized remote Markdown path
+- file count / single file bytes / total bytes budget exceeded
+- provider PUT/GET failure
+- workspace apply rollback required or failed
+- watcher/scan failed to surface External Changes
+
+所有 failure 必须结构化。失败的 upload / pull 不得留下 partial ledger writes、Source Control staging、
+commit anchors、Git mirror queue entries 或 silently confirmed External Changes。
+
+## 10. Forbidden Patterns {#projection-backup-forbidden-patterns}
 
 - 把 WebDAV/S3 当作 shared writable sync authority。
-- 把两个 active writers 绑定到同一个 backup folder/prefix。
-- 把 credentials 或 encryption secrets 放入 locator / repo URL。
-- 未经 verification 与 decryption 就导入 downloaded packs。
-- download 阶段自动 merge backup branches。
-- 把 `ExplicitImport` 当作“覆盖当前 ledger”的快捷方式。
-- 把 `ExplicitMerge` 当作逐条 replay backup ledger entry 的快捷方式。
-- 把 WebDAV ETag 或 S3 object version 当作 ledger、branch 或 repo authority。
-- 用 backup manifests 替代 Source Control commit history。
+- 把 Projection Backup 描述为 Ledger history disaster recovery。
+- 上传或下载 ledger-history artifacts、snapshot/runtime state 作为首版 Backup 合同的一部分。
+- 把 ledger import/merge runtime 当作 Projection Backup pull/admission path。
+- 把 provider metadata、locator path、ETag、mtime 或 object version 当作 ledger/source-control
+  authority。
+- 远端 pull 后自动 Apply to Ledger、自动 stage、自动 commit 或自动 Git push。
+- 在 Web / Command Palette 收集 WebDAV/S3 credentials 或直接访问 provider。
+- 复用独立 backup credential/key model；WebDAV/S3 credential binding 应归 Remote Projection profile
+  runtime 所有。
 
-## 10. Runtime Boundary
+## 11. Runtime Boundary {#projection-backup-provider-dispatch-contract}
 
-### 10.1 Backup Runtime {#backup-provider-dispatch-contract}
+### 11.1 Remote Projection Transport Runtime
 
 职责：
 
-- locator parsing
+- locator/profile resolution
 - provider adapter dispatch
-- pack planning
-- encryption / verification orchestration
-- remote upload/download
+- Markdown file enumeration
+- WebDAV/S3/S3-compatible upload/download
+- provider diagnostics
 
-### 10.2 Repo Runtime
-
-职责：
-
-- repo_id validation
-- branch binding validation
-- restore candidate admission
-- explicit import target validation
-- import-side authority storage append / rebuild coordination
-- quarantine / degraded handling
-
-### 10.3 Source Control / Merge Runtime
+### 11.2 Projection Workspace Runtime
 
 职责：
 
-- explicit import
-- explicit merge
-- stage / commit after restore candidate admission
-- conflict / diff resolution for explicit merge
-- confirmed ledger dirty derivation after import / merge
+- Projection Locator validation
+- `.notegit` identity marker validation
+- safe workspace overwrite
+- staging / rollback for pull apply
+- watcher/scan trigger
 
-Backup runtime不得直接写 staging、commit anchors、Projection Workspace 或 current
-repo scope。
+### 11.3 External Changes / Ledger Runtime
 
-## 11. Refactor Target
+职责：
 
-长期应形成独立 runtime：
+- external file diff detection
+- user confirmation / Apply to Ledger
+- ledger facts append through existing authority storage path
+- Source Control dirty derivation after ledger confirmation
 
-- `backup_locator_runtime`
-- `backup_pack_runtime`
-- `backup_restore_runtime`
+Remote Projection Transport 不得直接写 Ledger、Source Control staging、commit anchors、Git mirror queue
+或确认 External Changes。
 
-provider adapter 只能挂在 backup runtime 下，不得进入 repo、source-control 或
-storage authority 层。
+## 12. Deferred / Removed From First Tag {#projection-backup-deferred-ledger-backup}
+
+已从首版范围删除：独立 ledger backup pack/manifest、restore-candidate admission、ledger import/merge
+runtime，以及 WebDAV/S3 上的 ledger-history disaster recovery。
+
+若未来重新引入 ledger backup，必须作为独立 ADR 与独立 runtime proposal 重开；不得从 Projection
+Backup 语义中回填。
 
 ## 本章相关命令
 
-- `Backup: Bind Target`
-- `Backup: Inspect Target`
-- `Backup: Run Backup`
-- `Backup: Restore`
+- `Remote Projection: WebDAV Push/Pull`
+- `Remote Projection: S3 Push/Pull`
 
 ## 本章相关配置
 
-- `backup.provider`
-- `backup.locator`
-- `backup.credential_ref`
-- `backup.key_ref`
+- `remote_projection.profile`
+- `remote_projection.locator`
+- `remote_projection.credential_ref`

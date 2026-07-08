@@ -134,8 +134,9 @@ DeveStaged
 
 ### 2.3.2 Remote Projection Transport Lifecycle {#remote-projection-transport}
 
-Remote Projection Transport 是 WebDAV/S3 上的 Markdown Projection Workspace 传输层，
-独立于 `06_backup` 的加密 backup pack。
+Remote Projection Transport 是 WebDAV/S3 上的 Markdown Projection Workspace 传输层。
+`06_backup` 中的 Projection Backup 只是该 transport 的 backup-oriented 产品语义；它不再
+定义独立加密 backup pack。
 
 ```text
 RemoteProjectionCommand

@@ -128,7 +128,7 @@
 *   **Metrics Taxonomy (指标分类法)**：counter / gauge / histogram 等指标的命名与维度规则。
 *   **Tracing Span (追踪跨度)**：一次操作在异步/分布式链路中的可观测时间区间。
 *   **Alerting Tier (告警等级)**：错误码族 / health 信号到告警严重度的分级映射；映射归 `22_reliability_observability`，错误码定义归 `13_i18n`、health 状态归 `04_repository#repo-health-and-repair`。
-*   **DR Playbook (灾难恢复手册)**：灾难恢复操作索引；权威恢复步骤归 `06_backup` 与 `04_repository#repo-health-and-repair`。
+*   **Resilience Playbook (韧性手册)**：投影传输、健康诊断与人工修复入口索引；Projection Backup 文件传输合同归 `06_backup`，repo degraded/quarantine 修复路径归 `04_repository#repo-health-and-repair`。
 
 ## 2.ter Operations Vocabulary (运维与操作术语)
 

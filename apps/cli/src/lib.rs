@@ -25,6 +25,5 @@ pub use cli::run_cli;
 #[cfg(test)]
 pub(crate) use cli::run_pre_config_command;
 pub(crate) use cli::{Commands, ConfigAction, NgitAction, RepoAction, RepoProjectionAction};
-pub(crate) use commands::backup::BackupAction;
 pub(crate) use commands::projection_remote::ProjectionRemoteAction;
 pub(crate) use commands::sc::ScAction;

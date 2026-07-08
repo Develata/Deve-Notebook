@@ -23,7 +23,7 @@ Root source of the core library. Declares all public modules and gates backend-o
 
 | Directory | Purpose |
 |-----------|---------|
-| `backup/` | Backup locator parsing and future backup runtime boundary |
+| `remote_projection/` | Remote Projection transport model used by Projection Backup surfaces |
 | `context/` | Context engine (tree context) |
 | `ledger/` | Ledger storage — the heart of the system |
 | `models/` | Data model types and serialization |

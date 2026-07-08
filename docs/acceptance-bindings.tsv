@@ -125,17 +125,12 @@ STORE-014|manual-cli|docs/features/04_storage.md|ledger json lines export
 STORE-015|manual-cli|docs/features/04_storage.md|ledger ack holds after writeback failure
 STORE-016|manual-cli|docs/features/04_storage.md|watcher overflow/reconcile/debounce boundary
 STORE-017|manual-cli|docs/features/04_storage.md|repo catalog hard-fail / quarantine
-STORE-018|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup bind/unbind host-local secret-free metadata tests
-STORE-019|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup encrypted pack artifact verify-before-decrypt tests
-STORE-020|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup provider upload verifies encrypted pack artifact before PUT
-STORE-021|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup provider download reads encrypted artifact bytes only
-STORE-022|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded artifact verifies manifest digest before decrypt
-STORE-023|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup downloaded pack evidence matches branch manifest refs
-STORE-024|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup decrypted pack evidence matches downloaded refs
-STORE-025|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup restore candidate admission consumes typed verification and decrypted evidence
-STORE-026|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup release baseline aggregates binding, pack, provider, and restore candidate checks
-STORE-027|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup explicit-import empty local target authority path covered by core runtime and CLI projection rebuild tests
-STORE-028|manual-cli|docs/acceptance-cases/07_storage_repo.md|backup explicit-merge authority path contract pending implementation tests
+STORE-018|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup push uploads Markdown Projection Workspace files only
+STORE-019|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup pull writes Projection Workspace then surfaces External Changes
+STORE-020|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup provider metadata diagnostic-only and unsafe path rejection
+STORE-021|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup pull contract and budget fail closed before workspace write
+STORE-022|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup S3-compatible endpoint requires explicit Remote Projection profile binding
+STORE-023|manual-cli|docs/acceptance-cases/07_storage_repo.md|Projection Backup baseline aggregates Remote Projection transport checks
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
 UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom

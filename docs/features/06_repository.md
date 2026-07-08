@@ -50,73 +50,23 @@
 - 远端 repo 的只读限制不能影响本地 repo 的正常可写。
 - 当前 repo 损坏或失效时，系统应提示恢复或回退，而不是静默绑定到别的 repo。
 
-### 6. Backup Locator 与 Binding
+### 6. Projection Backup
 
-- Backup locator 只作为 repo/branch 备份发现与恢复线索，不成为 repo authority。
-- CLI 可用 `backup inspect/list/verify/bind/run/restore/unbind` 检查 WebDAV/S3
-  locator、branch binding、pack 计划与 restore flow planning；RestoreCandidate
-  admission 必须由 manifest verification 与 PacksPlaintextVerified typed evidence
-  派生。
-- `backup bind` / `backup unbind` 在未传 `--dry-run` 时只写 host-local
-  backup binding metadata；该 metadata 不成为 repo authority，不得包含
-  credential/key material，不得写 ledger、staging 或 Projection Workspace。
-- Backup pack artifact 必须先加密再进入上传状态；pack manifest 中的 payload
-  digest 用于 verify-before-decrypt，不是明文 payload digest。
-- Backup pack 解密后的 plaintext 必须继续通过版本化 schema gate：repo/writer/
-  branch/pack sequence、ledger range/count、snapshot count 与 blob refs 必须与
-  manifest 完全一致，ledger entry bytes 必须是 `serialize_ledger_entry` 产生的
-  versioned bytes；该 gate 不写 ledger、staging、Source Control、Git mirror 或
-  Projection Workspace。
-- 非 dry-run `backup run` 只能上传显式提供的 encrypted pack artifact 文件；
-  上传前必须验证 artifact bytes 与 manifest metadata/digest 一致；provider PUT
-  成功后必须读回同一 remote object 并校验 encrypted artifact bytes 的 digest，
-  只有读回 digest 与 manifest/uploaded digest 一致时才进入 `RemoteVerified`
-  upload state。该流程不写 ledger、staging、Source Control 或 Projection Workspace。
-- Backup provider download 只能把 remote object 读成 encrypted artifact bytes，供
-  后续 manifest/hash/authentication/decrypt gate 使用；GET 成功本身不是 restore
-  success，也不能创建 restore candidate 或写入当前 repo。只有 core 完成
-  branch manifest verify、pack download verify、pack open/decrypt 与
-  RestoreCandidate admission 后，才可呈现 remote-readonly candidate。
-- `backup restore --dry-run` 只能展示 flow planning。非 dry-run 的
-  `remote-readonly` restore 必须先下载并打开 `branch.manifest.enc`，经
-  expected digest、routing 与 AEAD authentication 校验后进入 `ManifestVerified`
-  evidence，再按 typed branch manifest pack refs 下载 encrypted pack artifact
-  bytes 并做 manifest/routing/digest 校验；只有下载结果与 branch manifest pack
-  refs 一一匹配后，才可进入 `PacksDownloaded` evidence。随后 pack artifact open
-  必须继续使用 branch manifest pack refs 做 verify-before-decrypt，产生
-  `PacksDecrypted` typed evidence；再由 core 用已验证 branch manifest pack refs
-  还原 pack manifest 并打开版本化 plaintext schema，产生
-  `PacksPlaintextVerified` typed evidence 后，才能 admission 为内存态
-  remote-readonly RestoreCandidate；该 candidate 不得写 ledger、staging、
-  Source Control、Git mirror 或 Projection Workspace。
-- remote-readonly RestoreCandidate 还必须通过 core-owned resource budget；
-  pack 数、encrypted aggregate bytes 或 plaintext aggregate bytes 超出预算时
-  必须 fail-closed，不得继续下载/导入/合并。
-- `backup restore --mode explicit-import` 已支持非 dry-run 的空 local repo 目标：
-  远端 artifact 必须先完成 verify-before-decrypt、plaintext schema verification 与
-  RestoreCandidate admission，随后 CLI 只把 verified candidate、candidate fingerprint
-  与 writer gate 提交给 core RepoManager authority path。目标必须是已存在且为空的
-  local repo；新建 target 与 repair/reset-approved target 仍是后续扩展，不能由
-  restore 命令隐式创建或重置。当前 CLI one-shot import 仅接受完整 ledger-only
-  candidate：backup seq 必须从 1 开始且不得携带尚未恢复的 snapshot/blob refs，避免
-  增量片段或缺失附件被误报为完整灾难恢复。导入成功后，Projection Workspace 从导入后的
-  ledger fold 重建；若 projection rebuild 失败，CLI 必须报告 authority import 已完成、
-  projection repair required。Source Control 只通过 commit anchor -> ledger head 派生
-  Confirmed Ledger Changes，不自动创建 commit anchor、staging、Git mirror queue。
-- `backup restore --mode explicit-merge` 在完整 merge authority 链路落地前仍必须
-  fail-closed；UI/CLI 不得把 explicit-merge 表达为当前已成功执行的产品行为。
-- `backup restore --mode explicit-merge` 的用户体验必须是“把已验证的
-  RestoreCandidate 作为只读 merge source 合入当前 local branch”。系统必须显示
-  candidate fingerprint、目标 repo/branch 与 write gate 状态；若产生冲突，进入既有
-  diff/conflict resolution，而不是自动选择 backup 或 local 一侧。合并成功只追加
-  ledger facts，Source Control dirty state 仍由 authority 派生。
-- `explicit-import` / `explicit-merge` 的 UI 或 CLI 入口不得接收 raw plaintext、
-  provider metadata、secret、locator token 或自造 ledger facts；当前 CLI import 是单命令
-  one-shot flow，不暴露可复用 candidate handle。后续多步 UI/CLI 若引入 candidate handle，
-  必须提交 typed intent、core-issued candidate fingerprint 与 scope/write-gate proof；
-  stale scope、stale candidate、RepoId mismatch 或 write gate 失效必须 fail-closed。
-- dry-run backup 命令不得上传/下载远端对象，不得写 ledger、staging、binding state
-  或 Projection Workspace。
+- Projection Backup 是 Remote Projection Transport 的 backup-oriented 产品语义：
+  将 Projection Workspace 中的 Markdown files 上传到 WebDAV/S3，或从 remote
+  下载 Markdown files 覆盖 Projection Workspace。
+- Projection Backup 不备份 ledger history，不传输 encrypted pack、branch manifest、
+  RestoreCandidate、snapshot/runtime state、`.git/` 或 `.notegit/`。
+- `push` 只上传 Markdown projection files；provider metadata、ETag、mtime、object
+  version 与 remote listing order 都只能作为 diagnostics。
+- `pull` 只写 Projection Workspace，并必须进入 Watcher/scan -> External Changes；
+  用户确认前不得写 ledger、Source Control staging、commit anchor 或 Git mirror queue。
+- Web / Command Palette 只提交 provider/direction typed intent；backend 负责解析当前
+  repo scope、Projection Locator、Remote Projection locator/profile 与 credential ref。
+- CLI 使用 `projection-remote webdav push/pull` 与 `projection-remote s3 push/pull`
+  执行 Projection Backup transport；旧 `backup` CLI surface 已从首版命令面删除。
+- S3-compatible `s3+https://` endpoint 必须绑定显式 Remote Projection profile；未绑定时
+  在 provider I/O 与默认 AWS credential 解析前 fail-closed。
 
 ## 非目标
 

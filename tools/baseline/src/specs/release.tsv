@@ -264,25 +264,21 @@ contains	docs/plan/18_release.md	Trunk development live-reload
 contains	docs/plan/18_release.md	api-only
 contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 2
 contains	docs/plan/18_release.md	REDB_SCHEMA_VERSION = 2
-contains	docs/plan/18_release.md	BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2
 contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 2
 contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 2
-contains	docs/plan/06_backup.md	BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2
 contains	docs/plan/07_network.md	`protocol_version` 当前固定为 `11`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
 contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 2
 contains	docs/registry/first-tag-format-matrix.md	REDB_SCHEMA_VERSION = 2
-contains	docs/registry/first-tag-format-matrix.md	BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 11;`
 contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 11;`
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	provider_io_ready=false
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection locator
-contains	docs/registry/first-tag-format-matrix.md	Backup locator / manifest
+contains	docs/registry/first-tag-format-matrix.md	Projection Backup / Remote Projection locator
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 2;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 2;
-contains	crates/core/src/backup/plaintext.rs	pub const BACKUP_PACK_PLAINTEXT_FORMAT_VERSION: u32 = 2;
 contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 11;
 contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 11;
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md

@@ -41,14 +41,10 @@ impl RepoManager {
         repo_id: RepoId,
     ) -> Result<Self> {
         let ledger_dir = ledger_dir.as_ref();
-        let local_dir = Self::checked_local_dir_for(
-            ledger_dir,
-            "opening existing local repo for backup restore import",
-        )?;
-        for (path, stem) in redb_repo_entries(
-            &local_dir,
-            "opening existing local repo for backup restore import",
-        )? {
+        let local_dir =
+            Self::checked_local_dir_for(ledger_dir, "opening existing local repo by RepoId")?;
+        for (path, stem) in redb_repo_entries(&local_dir, "opening existing local repo by RepoId")?
+        {
             let Some(info) = Self::read_repo_info_from_path(&path)? else {
                 continue;
             };

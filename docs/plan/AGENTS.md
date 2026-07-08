@@ -32,7 +32,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `18_release.md` | Build, packaging, and deployment |
 | `09_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
 | `19_plugins.md` | Trusted agent / calculation runtime interface reservation |
-| `06_backup.md` | Branch-scoped backup / restore locator, encrypted pack, WebDAV and S3 boundary |
+| `06_backup.md` | Projection Backup: WebDAV/S3 Markdown Projection Workspace file transport |
 | `12_source_control_ui.md` | VS Code-like Source Control view contract and boundary |
 | `../registry/runtime-skeleton-registry.md` | Runtime convergence status and current module path registry |
 
@@ -187,20 +187,16 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
 | `19_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `19_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
-| `06_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
-| `06_backup#backup-remote-layout-contract` | `## 6. Remote Layout` | repo manifest、branch manifest、packs prefix 与 remote layout drift 的结构化诊断边界 |
-| `06_backup#backup-root-contract` | `### 3.1 Backup Root` | remote repo-level namespace 的 locator、expected RepoId、format_version、provider_kind 校验边界 |
-| `06_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
-| `06_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
-| `06_backup#backup-pack-plaintext-schema-contract` | `### 3.3 Backup Pack` | decrypt 后 backup pack plaintext 的版本化 schema gate、manifest 一致性、versioned ledger entry 与禁写本地 authority 边界 |
-| `06_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
-| `06_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
-| `06_backup#backup-restore-state-machine-contract` | `### 4.2 Restore / Import` | backup restore 从 RemoteDiscovered 到 RestoreCandidate 的状态推进、下载阶段禁写 ledger 与显式写 gate 边界 |
-| `06_backup#backup-secret-ref-contract` | `## 7. Security Contract` | backup credential/key 只能作为 env/keyring/config 引用进入 runtime，禁止裸 secret/token/key material |
-| `06_backup#backup-verification-contract` | `## 7. Security Contract` | manifest/pack hash、认证证据、decrypt gate 与 RepoId 一致性的 fail-closed 校验边界 |
-| `06_backup#backup-artifact-protection-contract` | `## 7. Security Contract` | manifest/pack 上传前加密与认证 metadata admission，key ref 只作为引用进入 runtime |
-| `06_backup#backup-provider-dispatch-contract` | `### 10.1 Backup Runtime` | WebDAV/S3 provider adapter dispatch、credential/key ref 接入与 provider metadata 非权威边界 |
-| `06_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
+| `06_backup#projection-backup-scope` | `## 1. Scope` | Projection Backup 只搬运 Markdown Projection Workspace files；Ledger history backup 属于非目标 |
+| `06_backup#projection-backup-contract` | `## 2. Product Semantics` | Upload/Pull 语义：Markdown files <-> WebDAV/S3；pull 只写 Projection Workspace 并进入 External Changes |
+| `06_backup#projection-backup-locator-contract` | `## 3. Locator and Profile Model` | Projection Backup 复用 Remote Projection locator/profile；credential material 不进入 locator |
+| `06_backup#projection-backup-remote-layout-contract` | `## 4. Remote Layout` | remote layout 是 Markdown object set，不是 ledger pack layout |
+| `06_backup#projection-backup-upload-state-machine-contract` | `## 5. Upload State Machine` | upload 只枚举并上传 Markdown projection files，不写 ledger/source-control authority |
+| `06_backup#projection-backup-pull-state-machine-contract` | `## 6. Pull / Download State Machine` | pull 经预算与 path gate 后只覆盖 Projection Workspace，再进入 External Changes |
+| `06_backup#projection-backup-command-output-contract` | `## 7. Commands / Inputs / Outputs` | Projection Backup 命令输出区分 provider IO、workspace overwrite、External Changes 与 Ledger confirmation |
+| `06_backup#projection-backup-secret-ref-contract` | `## 8. Security and Authority Contract` | credential refs 归 Remote Projection profile/runtime，provider metadata 仅 diagnostic |
+| `06_backup#projection-backup-verification-contract` | `## 8. Security and Authority Contract` | remote files 是外部输入；只有 External Changes 用户确认后才写 Ledger |
+| `06_backup#projection-backup-provider-dispatch-contract` | `## 11. Runtime Boundary` | provider dispatch 属于 Remote Projection Transport；不得直接写 Ledger/SC/Git 或确认 External Changes |
 | `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 | `12_source_control_ui#external-changes-sibling-view` | `## 4.1 External Changes Sibling View` | External Changes 同级入口、投影偏差导入 ledger 与 Source Control commit anchor 分离边界 |
 | `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
@@ -215,7 +211,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
 | `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
 | `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
 | `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
 | `23_threat_model#stride-catalog` | `## 3. STRIDE Catalog` | STRIDE 威胁面与缓解归属目录；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
 | `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |

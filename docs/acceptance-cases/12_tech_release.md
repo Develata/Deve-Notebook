@@ -89,7 +89,6 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 2" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 2" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "BACKUP_PACK_PLAINTEXT_FORMAT_VERSION = 2" docs/registry/first-tag-format-matrix.md
     - run: rg -n "`WS_PROTOCOL_VERSION = 11;`" docs/registry/first-tag-format-matrix.md
     - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 11;`" docs/registry/first-tag-format-matrix.md
   assertions:
@@ -331,5 +330,5 @@
     - contract_assert: tracing_span_boundary_bound true
     - contract_assert: observation_health_mapping_bound true
     - contract_assert: alerting_tier_bound true
-    - contract_assert: dr_playbook_index_bound true
+    - contract_assert: resilience_playbook_index_bound true
 ```

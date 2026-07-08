@@ -16,8 +16,8 @@
 
 本章是**可观测性契约唯一权威**：定义遥测/指标/追踪的结构标准与告警映射。
 
-- **Owns**：SLO/SLI catalog（§2）、telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、observation-to-health mapping（§6）、alerting tier 映射（§7）、DR playbook index（§8）。
-- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack#performance-profiles-and-feature-matrix`；运维观测 endpoint 归 `18_release#runtime-observability`；DR/恢复步骤归 `06_backup`（§8 DR Playbook Index）。
+- **Owns**：SLO/SLI catalog（§2）、telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、observation-to-health mapping（§6）、alerting tier 映射（§7）、resilience playbook index（§8）。
+- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack#performance-profiles-and-feature-matrix`；运维观测 endpoint 归 `18_release#runtime-observability`；Projection Backup 文件传输合同归 `06_backup`；repo degraded/quarantine 修复路径归 `04_repository#repo-health-and-repair`（§8 Resilience Playbook Index）。
 - **边界**：本章 **MUST NOT** 定义 health 状态、错误码、budget 数值或新增调用层；只承载观测/映射/边界声明。
 
 ## 2. SLO / SLI Catalog {#slo-sli-catalog}
@@ -134,12 +134,13 @@ DurableProjectionFault = {
 
 某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 为显式例外。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
 
-## 8. DR Playbook Index {#dr-playbook-index}
+## 8. Resilience Playbook Index {#resilience-playbook-index}
 
-灾难恢复手册索引。备份/恢复/导出的权威合同归 `06_backup`：
+可靠性手册索引。Projection Backup 只作为 Projection Workspace 文件传输合同被索引；它不是 Ledger history disaster recovery：
 
-- 备份展开与 locator：`06_backup#backup-locator-contract`。
-- 恢复候选与还原：`06_backup#backup-restore-candidate-contract`。
+- Projection Backup 范围：`06_backup#projection-backup-scope`。
+- Projection Backup locator/profile：`06_backup#projection-backup-locator-contract`。
+- pull 后 External Changes admission：`06_backup#projection-backup-pull-state-machine-contract`。
 - repo 级 degraded/quarantine 后的恢复路径：`04_repository#repo-health-and-repair`。
 
 本章不复制恢复步骤，只索引权威章节。

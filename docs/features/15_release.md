@@ -58,10 +58,9 @@
   或显式运行 `deve_baseline release-audit-gate tag-ready`；仍登记为
   `tag_blocker=yes` 的 warning 会 fail-closed，直到完成替换、重新归类或 USER
   决策。
-- 首个公开 tag 的 Ledger / Redb / Backup plaintext / WS protocol /
-  Projection Locator / Remote locator / Backup locator 当前格式必须能在
-  `docs/registry/first-tag-format-matrix.md` 中查到，并由 release baseline
-  钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
+- 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
+  Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
+  中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 
 ## 非目标

@@ -214,14 +214,14 @@ fn push_feature_args(args: &mut Vec<String>, features: Option<&str>, no_default_
 
 fn select_cargo_bin(root: &Path, label: &str) -> Result<String> {
     if let Ok(cargo_bin) = env::var("CARGO_BIN") {
-        if command_exists(&cargo_bin) {
+        if configured_cargo_exists(&cargo_bin) {
             return Ok(cargo_bin);
         }
         bail!("{label}: configured CARGO_BIN '{cargo_bin}' was not found");
     }
 
     if let Ok(cargo) = env::var("CARGO") {
-        if command_exists(&cargo) {
+        if configured_cargo_exists(&cargo) {
             return Ok(cargo);
         }
         bail!("{label}: configured CARGO '{cargo}' was not found");
@@ -240,6 +240,14 @@ fn select_cargo_bin(root: &Path, label: &str) -> Result<String> {
     }
 
     bail!("{label}: cargo command not found")
+}
+
+fn configured_cargo_exists(candidate: &str) -> bool {
+    let path = Path::new(candidate);
+    if path.is_absolute() || candidate.contains(std::path::MAIN_SEPARATOR) {
+        return path.is_file();
+    }
+    command_exists(candidate)
 }
 
 fn command_exists(candidate: &str) -> bool {
@@ -263,7 +271,11 @@ fn is_wsl_mounted_workspace(root: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{CargoTest, cargo_test_args, executed_test_count, tree_contains_regex};
+    use super::{
+        CargoTest, cargo_test_args, configured_cargo_exists, executed_test_count,
+        tree_contains_regex,
+    };
+    use std::fs;
 
     #[test]
     fn counts_all_cargo_test_running_lines() {
@@ -331,6 +343,18 @@ mod tests {
                 .to_string()
                 .contains("cannot combine --lib and --test")
         );
+    }
+
+    #[test]
+    fn configured_cargo_exists_trusts_existing_explicit_path() {
+        let path =
+            std::env::temp_dir().join(format!("deve-cargo-gate-test-cargo-{}", std::process::id()));
+        fs::write(&path, b"not an executable proxy").expect("write temp cargo path");
+        let path_string = path.to_string_lossy().to_string();
+
+        assert!(configured_cargo_exists(&path_string));
+
+        let _ = fs::remove_file(path);
     }
 
     fn strings(values: &[&str]) -> Vec<String> {

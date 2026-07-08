@@ -6,8 +6,9 @@
 ## Context
 
 Remote Projection transports Markdown Projection Workspace files through
-WebDAV or S3-compatible object storage. It is not Backup, sync authority,
-Source Control authority, ledger authority, or Git mirror authority. `push`
+WebDAV or S3-compatible object storage. It is the transport runtime used by
+Projection Backup, but it is not ledger backup, sync authority, Source Control
+authority, ledger authority, or Git mirror authority. `push`
 uploads only projection Markdown files. `pull` writes only Projection
 Workspace files and then relies on watcher/scan External Changes admission.
 
@@ -23,15 +24,17 @@ let any repo-local locator cause the runtime to sign arbitrary hosts with
 default AWS environment keys. That is a security and authority boundary change,
 not a provider URL parsing patch.
 
-The key unresolved decisions are:
+The current safe direction is to keep custom endpoint I/O fail-closed until a
+dedicated Remote Projection profile contract is accepted and implemented. The
+remaining decision questions are:
 
 - Where the custom endpoint allowlist and credential reference live.
 - How to prove that a locator origin, bucket, and root prefix match a binding.
 - Whether CLI can use explicit profile names before the Web path is enabled.
 - How to ensure default AWS environment credentials are never reused for an
   arbitrary custom endpoint.
-- How to keep Remote Projection binding separate from Backup binding and from
-  repo authority data.
+- How to keep Remote Projection binding separate from any future ledger backup
+  binding and from repo authority data.
 
 ## Decision
 
@@ -40,7 +43,7 @@ be enabled, the project must choose one of these routes:
 
 1. **Dedicated Remote Projection provider profile runtime.**
    Add a host-local, secret-free Remote Projection profile store that is
-   separate from Backup binding and separate from ledger authority. A profile
+   separate from any future ledger backup binding and separate from ledger authority. A profile
    binds provider `s3-compatible`, endpoint origin, bucket, allowed root
    prefix, region/signing settings, and a credential reference. The credential
    reference points to a runtime secret source, but raw access keys, secret
@@ -100,15 +103,14 @@ wait, but the first release avoids locking in an unsafe credential path.
 
 ## Consequences
 
-- Current behavior does not change. `s3+https://` remains fail-closed until a
-  route is accepted and implemented.
+- Current behavior does not change. `s3+https://` remains fail-closed until an
+  implementation route is accepted and implemented.
 - Default `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
   `AWS_REGION`, and `AWS_DEFAULT_REGION` must not be used for custom endpoint
   provider I/O unless an accepted profile contract explicitly binds that secret
   source to the endpoint.
-- Remote Projection profiles must not reuse Backup binding stores, Backup
-  artifact metadata, or backup provider adapters as sync/source-control
-  authority.
+- Remote Projection profiles must not reuse future ledger-backup binding stores,
+  artifact metadata, or provider adapters as sync/source-control authority.
 - Profile data must be host-local and secret-free. It may identify a credential
   reference, endpoint origin, bucket, prefix, region, and signing options, but
   not raw secret values.

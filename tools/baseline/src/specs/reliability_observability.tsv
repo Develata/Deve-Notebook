@@ -1,5 +1,5 @@
-contains	docs/plan/22_reliability_observability.md	- `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index`
-contains	docs/plan/22_reliability_observability.md	- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (DR/恢复步骤)`
+contains	docs/plan/22_reliability_observability.md	resilience playbook index
+contains	docs/plan/22_reliability_observability.md	Projection Backup 文件传输合同归 `06_backup`
 contains	docs/plan/22_reliability_observability.md	## 2. SLO / SLI Catalog
 contains	docs/plan/22_reliability_observability.md	| Edit-ack 可用性 | `ack` 成功率（非 `SYNC_EDIT_REJECTED` 协议错误占比） | ≥ 99.5% / 7d | 0.5% / 7d |
 contains	docs/plan/22_reliability_observability.md	| Edit-ack 延迟 | P99 edit→ack（对照 `21_perf_budget`） | 达标率 ≥ 99% | 1% / 7d |
@@ -34,15 +34,15 @@ contains	docs/plan/22_reliability_observability.md	| `T2` 警告 | 409 冲突 / 
 contains	docs/plan/22_reliability_observability.md	| `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
 contains	docs/plan/22_reliability_observability.md	`Quarantined` → `T1`
 contains	docs/plan/22_reliability_observability.md	其余 `Degraded*` → `T2`
-contains	docs/plan/22_reliability_observability.md	## 8. DR Playbook Index
-contains	docs/plan/22_reliability_observability.md	`06_backup#backup-restore-candidate-contract`
+contains	docs/plan/22_reliability_observability.md	## 8. Resilience Playbook Index
+contains	docs/plan/22_reliability_observability.md	`06_backup#projection-backup-pull-state-machine-contract`
 contains	docs/plan/AGENTS.md	`22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/plan/AGENTS.md	`22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#dr-playbook-index` | `## 8. DR Playbook Index` | 灾难恢复手册索引（步骤 defer 06）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
+contains	docs/plan/AGENTS.md	`22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
 contains	docs/coverage-matrix.md	| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |
 contains	docs/features/operation-coverage.md	| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013` |
 contains	docs/features/operations/release_quality_gates.md	- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
@@ -57,7 +57,7 @@ case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: 
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: tracing_span_boundary_bound true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: observation_health_mapping_bound true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: alerting_tier_bound true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: dr_playbook_index_bound true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-013	contract_assert: resilience_playbook_index_bound true
 contains	scripts/check-reliability-observability-baseline.sh	run_deve_baseline "$ROOT_DIR" "reliability-observability" "reliability-observability-baseline-check"
 contains	scripts/AGENTS.md	`check-reliability-observability-baseline.sh`
 contains	scripts/check-deep-audit-gate.sh	scripts/check-reliability-observability-baseline.sh

@@ -5,8 +5,6 @@ use crate::commands;
 use crate::{Commands, ConfigAction, NgitAction, RepoAction, RepoProjectionAction, ScAction};
 use std::path::PathBuf;
 
-mod backup;
-
 pub async fn run(
     command: Option<Commands>,
     config: &deve_core::config::Config,
@@ -140,9 +138,6 @@ pub async fn run(
         },
         Some(Commands::ProjectionRemote { action }) => {
             commands::projection_remote::run(ledger_dir, action, config.snapshot_depth)?
-        }
-        Some(Commands::Backup { action }) => {
-            backup::run(ledger_dir, config.snapshot_depth, action)?
         }
         Some(Commands::VerifyP2P {
             live_ledger_dir,

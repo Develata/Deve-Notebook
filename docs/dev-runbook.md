@@ -173,10 +173,10 @@ Important fields:
 - `repair_hint`: operator-facing next step for the diagnostic class.
 
 `repair --check` is a repair-step preflight. It does not execute the repair
-subcommand's mutating steps: shadow quarantine, repo-prefixed path rewrite,
-backup restore, or projection table rebuild. Like other CLI diagnostics, startup
-may still initialize or repair repo catalog metadata; run it against a copy if
-byte-for-byte immutability is required.
+subcommand's mutating steps: shadow quarantine, repo-prefixed path rewrite, or
+projection table rebuild. Like other CLI diagnostics, startup may still initialize
+or repair repo catalog metadata; run it against a copy if byte-for-byte immutability
+is required.
 
 For rebuild-supported projection drift, use:
 
@@ -184,9 +184,9 @@ For rebuild-supported projection drift, use:
 cargo run -p deve_cli --bin deve_cli -- repair --repo <repo> --rebuild-projection
 ```
 
-For `authority_corrupt` repos, inspect ledger/backups and restore authoritative
-Structure Facts before expecting scan, watcher, export, or source-control paths
-to treat that repo as healthy. The server should continue serving other healthy
+For `authority_corrupt` repos, inspect ledger state and restore authoritative
+Structure Facts through ledger/Git recovery before expecting scan, watcher, export, or
+source-control paths to treat that repo as healthy. The server should continue serving other healthy
 repos.
 
 ## Source Control Smoke Hygiene
@@ -207,67 +207,36 @@ cases depend on the checked-in local `default` ledger being clean; use a seeded
 temporary repo for exact counts, or assert only that Source Control loads and
 reports its current state.
 
-## Backup Diagnostics and Remote-Readonly Restore
+## Projection Backup Diagnostics
 
-Backup diagnostics have two side-effect classes. Dry-run commands expose
-locator/runtime admission checks only: they do not contact WebDAV/S3 providers,
-upload/download artifacts, mutate binding state, append ledger entries, stage
-source-control changes, or touch Projection Workspaces.
+Projection Backup is the backup-oriented product name for Remote Projection
+Transport. It transfers Markdown Projection Workspace files through WebDAV/S3
+and deliberately does not transfer ledger history, encrypted packs, branch
+manifests, or RestoreCandidate handles.
 
-Non-dry-run `remote-readonly` restore may contact WebDAV/S3 providers and
-download encrypted artifacts, but it can only admit an in-memory
-RestoreCandidate after manifest verification, artifact authentication,
-verify-before-decrypt, plaintext schema checks, and resource-budget checks. It
-must not write ledger, staging, Source Control, Git mirror, or Projection
-Workspace state.
-
-Locator and layout diagnostics:
+Push examples:
 
 ```bash
-cargo run -p deve_cli --bin deve_cli -- backup inspect --locator s3://bucket-name/deve/ --branch writer-1
-cargo run -p deve_cli --bin deve_cli -- backup list --locator s3://bucket-name/deve/ --object deve/repo.manifest.enc
-cargo run -p deve_cli --bin deve_cli -- backup verify --locator s3://bucket-name/deve/ --branch writer-1 --object deve/repo.manifest.enc --pack deve/branches/writer-1/packs/000001.pack.enc
+cargo run -p deve_cli --bin deve_cli -- projection-remote webdav push --locator webdav+https://dav.example.com/notebooks/main
+cargo run -p deve_cli --bin deve_cli -- projection-remote s3 push --locator s3://bucket-name/notebooks/main
 ```
 
-Binding and upload planning:
+Pull examples:
 
 ```bash
-cargo run -p deve_cli --bin deve_cli -- backup bind --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --access writable --dry-run
-cargo run -p deve_cli --bin deve_cli -- backup run --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --credential-ref env:DEVE_BACKUP_TOKEN --key-ref keyring:deve/default-backup-key --ledger-start 1 --ledger-end 1 --ledger-events 1 --payload-digest <sha256-hex> --encrypted --authenticated --dry-run
-cargo run -p deve_cli --bin deve_cli -- backup unbind --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --access writable --dry-run
+cargo run -p deve_cli --bin deve_cli -- projection-remote webdav pull --locator webdav+https://dav.example.com/notebooks/main
+cargo run -p deve_cli --bin deve_cli -- projection-remote s3 pull --locator s3://bucket-name/notebooks/main
 ```
 
-Restore flow planning:
+`pull` overwrites only Markdown files in the Projection Workspace, then relies on
+watcher/scan to surface External Changes. The user must still confirm External
+Changes before any ledger facts are appended. Provider metadata, ETags, mtimes,
+object versions, and remote listing order remain diagnostics only.
 
-```bash
-cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-name/deve/ --repo-id <repo-id> --manifest-repo-id <repo-id> --branch writer-1 --manifest-digest <sha256-hex> --pack-digest <sha256-hex> --mode remote-readonly --manifest-verified --packs-downloaded --packs-decrypted --dry-run
-```
-
-Remote-readonly provider download:
-
-```bash
-cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-name/deve/ --repo-id <repo-id> --manifest-repo-id <repo-id> --branch writer-1 --manifest-digest <branch-manifest-artifact-sha256-hex> --credential-ref env:DEVE_BACKUP_TOKEN --key-ref env:DEVE_BACKUP_KEY
-```
-
-The non-dry-run remote-readonly path downloads and opens
-`branch.manifest.enc`, then downloads encrypted pack artifacts referenced by the
-verified branch manifest. Pack artifacts are then opened through the same branch
-manifest pack refs and admitted as an in-memory remote-readonly
-RestoreCandidate. This path still does not write ledger, staging, Source
-Control, Git mirror, or Projection Workspace state. Core-owned restore resource
-budget limits pack count, encrypted aggregate bytes, and plaintext aggregate
-bytes before admission.
-
-`explicit-import` supports non-dry-run import into an existing empty local repo
-after RestoreCandidate admission and `--write-gate`; it writes ledger facts only
-through the core RepoManager authority path and then rebuilds Projection. The
-current CLI one-shot path only accepts complete ledger-only candidates whose
-backup sequence starts at 1 and whose plaintext carries no unrestored
-snapshot/blob refs. If ledger import succeeds but Projection rebuild fails, the
-command reports authority import completed plus `projection_repair_required`.
-`explicit-merge`, implicit target creation, repair/reset-approved import targets,
-and multi-step candidate handle/scope gates remain fail-closed until their
-authority paths are implemented.
+S3-compatible custom endpoints (`s3+https://...`) remain fail-closed until an
+explicit Remote Projection credential profile binding is accepted and active;
+the guard runs before provider I/O and before default AWS credentials are
+resolved.
 
 ## Docker Release Smoke
 
