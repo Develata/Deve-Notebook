@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 
 const REGISTRY_REL: &str = "docs/registry/release-audit-warning-registry.md";
+const NATIVE_GTK3_FIRST_TAG_ADR_REL: &str = "docs/adr/0006-native-linux-gtk3-first-tag-route.md";
 const YANKED_ADVISORY: &str = "YANKED";
 const VALID_DECISIONS: &[&str] = &[
     "direct-migration-before-stable",
@@ -69,8 +70,8 @@ pub(super) fn validate_no_tag_blockers(registry: &str) -> Result<()> {
         .collect();
     if !blockers.is_empty() {
         bail!(
-            "{LABEL}: first-tag readiness is blocked by registered audit warnings: {}",
-            format_warnings(&blockers)
+            "{LABEL}: first-tag readiness is blocked by registered audit warnings: {}; see {REGISTRY_REL} for rationale/replacement routes and {NATIVE_GTK3_FIRST_TAG_ADR_REL} for the current native GTK3/glib first-tag route decision",
+            format_warnings(&blockers),
         );
     }
     Ok(())
@@ -396,6 +397,16 @@ mod tests {
 
         let error = validate_no_tag_blockers(registry).expect_err("tag blocker");
         assert!(error.to_string().contains("first-tag readiness is blocked"));
+        assert!(
+            error
+                .to_string()
+                .contains("release-audit-warning-registry.md")
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("0006-native-linux-gtk3-first-tag-route.md")
+        );
     }
 
     #[test]

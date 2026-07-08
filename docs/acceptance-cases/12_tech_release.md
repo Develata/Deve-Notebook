@@ -117,6 +117,8 @@
   assertions:
     - exit_code_all_nonzero_until_tag_blockers_resolved: true
     - stderr_contains: "first-tag readiness is blocked"
+    - stderr_contains: "docs/registry/release-audit-warning-registry.md"
+    - stderr_contains: "docs/adr/0006-native-linux-gtk3-first-tag-route.md"
     - release_assert: current_tag_blockers_require_user_decision_or_replacement true
 
 - case_id: REL-004
