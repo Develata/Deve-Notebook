@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-04`
+- `Last Review`: `2026-07-08`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -45,7 +45,7 @@
 | `flow.commands.surface-mode-routing` | II | — | N | — | N | N | `14_commands` | mode-registered |
 | `flow.cli.control-commands` | II | — | N | — | N | N | `14_commands#cli-commands` | cli-runtime-ready |
 | `flow.cli.empty-command-guidance` | II | — | N | — | N | N | `14_commands#cli-commands` | no-args |
-| `flow.cli.export-inspect` | ED | L | N | — | N | N | `06_backup` | export-target |
+| `flow.cli.export-inspect` | ED | L | N | — | N | N | `03_storage/repair#backup-export` | export-target |
 | `flow.cli.help-surface` | II | — | N | — | N | N | `14_commands#cli-commands` | — |
 | `flow.cli.parse-command` | II | — | N | — | N | N | `14_commands#cli-commands` | well-formed-input |
 | `flow.cli.repair-admin` | ED | L+PW | Y | `STORAGE_*` | N | N | `03_storage/repair` | admin-repair-cmd |
@@ -139,7 +139,7 @@ feature flag 名与默认值归各原章节与 `17_tech_stack` feature matrix；
 | 全局设置 / UI 偏好 / 持久化 | `15_settings` |
 | 认证 / session / TLS | `08_auth` |
 | 网络 / relay / 协议 | `07_network` |
-| 备份 / 导出 locator | `06_backup` |
+| Projection Backup locator/profile | `06_backup` |
 | locale / 错误码文案 | `13_i18n` |
 | 技术栈 profile / feature matrix | `17_tech_stack` |
 

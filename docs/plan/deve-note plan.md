@@ -20,7 +20,7 @@
 - **[03_storage/](./03_storage/index.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
 - **[04_repository.md](./04_repository.md)**: repo identity、branch scope、tree projection、repo health。
 - **[05_diff_logic.md](./05_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
-- **[06_backup.md](./06_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
+- **[06_backup.md](./06_backup.md)**: Projection Backup：WebDAV/S3 Markdown Projection Workspace 传输、External Changes admission 与 provider 边界。
 
 ### C. Runtime Protocols
 - **[07_network.md](./07_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
@@ -67,11 +67,11 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
   - Owns：op 维度 latency / RSS budget；CI fuse 阈值。
   - Defers To：`17_tech_stack#performance-profiles-and-feature-matrix`（profile 枚举与 feature matrix）。
 - **22_reliability_observability.md**（B3.3 新增）
-  - Owns：SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index。
-  - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）、`21_perf_budget`（latency/RSS budget）、`06_backup`（DR/恢复步骤）。
+  - Owns：SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index。
+  - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）、`21_perf_budget`（latency/RSS budget）、`06_backup`（Projection Backup 文件传输边界）。
 - **23_threat_model.md**（B3.4 新增）
   - Owns：STRIDE catalog / key lifecycle（高层流程）/ algorithm deprecation / supply chain / CVD policy。
-  - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#backup-secret-ref-contract`（key custody）、`03_storage/authority`（ledger append 校验）、`13_i18n#i18n-error-code-catalog`（错误码/限流码）、`17_tech_stack#native-packaging-dependency-gate`（供应链依赖门禁）、`18_release`（artifact 签名）、`19_plugins`（plugin capability gate）、`22_reliability_observability#alerting-tier`（告警等级）。
+  - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#projection-backup-secret-ref-contract`（Remote Projection credential refs）、`03_storage/authority`（ledger append 校验）、`13_i18n#i18n-error-code-catalog`（错误码/限流码）、`17_tech_stack#native-packaging-dependency-gate`（供应链依赖门禁）、`18_release`（artifact 签名）、`19_plugins`（plugin capability gate）、`22_reliability_observability#alerting-tier`（告警等级）。
 
 ### F. Implementation Blueprints
 - **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。
@@ -91,7 +91,7 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
 *   **Current UI Contract（当前界面契约）**：`10_rendering`、`11_ui_design/*`、`12_source_control_ui`。定义交互与可见行为，但不得改写 Ledger / Auth / Network 权威规则。
 *   **Approved Runtime Architecture（已批准运行时架构）**：`09_web_thin_client_ledger`。Web 写路径 pending/ack/reject 与 repo-scoped write readiness 收敛；不得反向推翻 `03_storage` / `04_repository` / `05_diff_logic` / `07_network` / `08_auth` 的 Node-first 与权威约束。
 *   **Optional Product Layer（可选产品层）**：`16_ai_agent` 定义 Native AI Chat 启用后合同与 Trusted CLI Agent 显式 opt-in 边界；不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
-*   **Planned Contract（规划合同）**：`06_backup`。repo/branch URL 备份展开、加密 pack、远端 locator 合同；备份不得成为共享可写 sync authority。
+*   **Planned Contract（规划合同）**：`06_backup`。Projection Backup 只定义 WebDAV/S3 Markdown Projection Workspace 文件传输、Remote Projection locator/profile 与 External Changes admission；不引入 ledger backup pack，也不得成为共享可写 sync authority。
 *   **Planned / Optional（规划或扩展）**：`14_commands`、`15_settings`。可指导实现，但不得推翻 Current MUST。
 *   **Reference（参考）**：`17_tech_stack`、`18_release`。技术栈选型与构建/发布流程参考基线。
 *   **Deferred（外围保留）**：`19_plugins`。plugin / external runtime 接口保留，不得升级为默认插件平台。
@@ -123,7 +123,7 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
 *   `07_network.md`：连接拓扑、WS/HTTP 路由契约、repo-scoped sync handshake。
 *   `04_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。
 *   `05_diff_logic.md`：外部文件系统变更在 Stage -> Commit 时如何拆成内容事实与结构事实。
-*   `06_backup.md`：repo/branch URL 如何扩展为 WebDAV/S3 backup locator；备份不得成为共享可写 sync authority。
+*   `06_backup.md`：Projection Backup 如何复用 Remote Projection locator/profile 在 WebDAV/S3 之间传输 Markdown Projection Workspace files；它不得成为共享可写 sync authority，也不得恢复 ledger history。
 *   `12_source_control_ui.md`：Source Control view 如何参考 VS Code SCM mental model；不得复制 VS Code implementation 或改写 Source Control authority。
 *   `08_auth.md`：user session、token 生命周期、鉴权失败处理。
 *   `16_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。

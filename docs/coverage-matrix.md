@@ -19,7 +19,7 @@
 | `03_storage/index` | `04_storage` | `07_storage_repo` | storage/runtime/repair automation（index + authority/projection/watcher/repair 子文件） |
 | `04_repository` | `06_repository` | `07_storage_repo` | repo/scope automation + Chrome MCP |
 | `05_diff_logic` | `07_diff_logic` | `04_diff` | diff/merge/source-control automation |
-| `06_backup` | `06_repository` | `07_storage_repo` | backup/restore locator boundary automation |
+| `06_backup` | `06_repository` | `07_storage_repo` | projection transport / External Changes boundary automation |
 | `07_network` | `05_network` | `06_network` | protocol + reconnect automation |
 | `08_auth` | `09_auth` | `08_auth` | auth/security automation |
 | `09_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject automation + Chrome MCP |
