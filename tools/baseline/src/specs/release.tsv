@@ -608,6 +608,8 @@ contains	scripts/smoke-runtime-recovery-path.sh	auth_probe
 contains	scripts/smoke-runtime-recovery-path.sh	expected at least one test
 contains	scripts/check-release-audit-gate.sh	cargo audit
 contains	scripts/check-release-audit-gate.sh	npm --prefix
+contains	scripts/check-release-audit-gate.sh	apps/web/package-lock.json
+contains	scripts/check-release-audit-gate.sh	audit --audit-level=high
 contains	scripts/check-release-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate"
 contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-missing"
