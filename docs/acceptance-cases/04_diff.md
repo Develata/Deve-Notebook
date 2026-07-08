@@ -192,6 +192,9 @@
     - run: cargo test -p deve_cli s3_push_puts_projection_files_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli s3_push_rejects_failed_put -- --nocapture
     - run: cargo test -p deve_cli s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
+    - run: cargo test -p deve_cli s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
+    - run: cargo test -p deve_cli s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
+    - run: cargo test -p deve_cli s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_matches_golden_vector -- --nocapture
     - run: cargo test -p deve_cli s3_signed_get_request_includes_canonical_query -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_changes_with_payload -- --nocapture
@@ -229,6 +232,7 @@
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
+    - run: cargo test -p deve_cli remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
