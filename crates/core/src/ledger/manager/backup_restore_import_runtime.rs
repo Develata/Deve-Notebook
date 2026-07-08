@@ -1,14 +1,13 @@
 //! plan_ref:
-//!   - 06_backup#backup-explicit-import-authority-path
+//!   - 06_backup#backup-restore-state-machine-contract
 //!   - 03_storage/authority#facts-partition
 //!   - 04_repository#repo-scope-runtime
 //!
 //! Explicit backup import authority path.
 //!
-//! This runtime only admits a verified RestoreCandidate into an empty local
-//! repository through the normal ledger append validator. It does not stage
-//! Source Control changes, create commit anchors, enqueue Git mirror work, or
-//! touch Projection Workspace files.
+//! Admits a verified RestoreCandidate into an empty local repo through normal
+//! ledger append. It never stages Source Control, creates commit anchors,
+//! enqueues Git mirror work, or touches Projection Workspace.
 
 use crate::backup::restore::{plaintext_evidence_digest, verify_restore_candidate_fingerprint};
 use crate::backup::{
@@ -260,7 +259,6 @@ mod tests {
                 expected_candidate_fingerprint: &candidate.fingerprint,
                 write_gate_confirmed: true,
             })?;
-
         assert_eq!(report.repo_id, candidate.repo_id);
         assert_eq!(report.repo_name, "restored");
         assert_eq!(report.imported_ledger_entries, 2);
@@ -304,7 +302,6 @@ mod tests {
             no_gate,
             BackupRestoreImportError::WriteGateRequired
         ));
-
         let wrong_mode = repo
             .import_verified_restore_candidate_to_empty_local_repo(BackupRestoreImportInput {
                 candidate: &candidate,
