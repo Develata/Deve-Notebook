@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-09`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -162,8 +162,11 @@ RemoteProjectionCommand
   并报告 `provider_io_ready=false`。CLI 可以继续通过显式 `--locator` 覆盖该 host 操作输入。
 - 当前 `s3:push` / `s3:pull` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime
   环境凭证执行；push 使用 SigV4 PUT，pull 使用 SigV4 ListObjectsV2 + GET。
-  `s3+https://` custom endpoint 在显式 credential binding/profile 合同完成前必须
-  fail-closed，避免将默认 AWS 环境密钥签给任意 host。
+  S3-compatible `s3+https://` custom endpoint 的长期路线是 ADR 0008 的 Remote Projection
+  profile binding：host-local、secret-free profile 绑定 endpoint origin / bucket / prefix /
+  signing settings / credential ref，并由 runtime resolver 在 provider I/O 时取用 secret。
+  在该 profile runtime 实现并验证前，`s3+https://` 必须 fail-closed，且不得将默认
+  AWS 环境密钥签给任意 custom host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。
 - `webdav:pull` / `s3:pull` 远端枚举结果归一化后若出现重复 Markdown projection

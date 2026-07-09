@@ -5,7 +5,7 @@
 - `Layer`: `Application / Projection Transport`
 - `Status`: `Planned Contract`
 - `Version`: `0.0.2`
-- `Last Review`: `2026-07-08`
+- `Last Review`: `2026-07-09`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/remote_projection/`, `apps/cli/src/commands/projection_remote.rs`, `apps/web/src/components/command_palette/registry/remote_projection.rs`
@@ -104,12 +104,34 @@ locator 禁止组成：
 规则：
 
 - Web / Command Palette 不接收 locator 或 credential material；backend 必须从当前 local repo
-  的 characteristic `repo_url` 或显式 Remote Projection profile 解析 locator。
-- CLI 可以为 host operation 显式传入 `--locator` 或显式 Remote Projection profile。
+  的 characteristic `repo_url` 或显式 Remote Projection profile 解析 locator。未来 profile UX
+  只能选择 backend-defined profile handle，不能把 endpoint URL 或 secret material 交给前端。
+- CLI 可以为 host operation 显式传入 `--locator` 或显式 Remote Projection profile；`s3+https://`
+  locator 即使来自 CLI 也必须匹配 profile。
 - `s3+https://` / S3-compatible endpoint 必须绑定显式 Remote Projection profile；未绑定时
-  fail-closed，避免默认 AWS 环境凭证被签给任意 host。
+  fail-closed，避免默认 AWS 环境凭证被签给任意 host。长期设计采用 ADR 0008：host-local、
+  secret-free profile store + runtime credential resolver，而不是 release-driven shortcut。
 - locator/profile 只能作为 transport target 选择依据，不拥有 repo identity。执行前必须复用
   Projection Locator、`.notegit` identity marker 与 current repo scope gate。
+
+Remote Projection profile 的最小长期字段：
+
+- `profile_id` / display name：host-local stable handle；
+- `provider = s3-compatible`；
+- normalized HTTPS endpoint origin；
+- bucket / namespace；
+- allowed root prefix；
+- region / signing scope / service (`s3`)；
+- addressing style and provider capability flags；
+- allowed directions (`push`, `pull`, or both)；
+- credential reference resolved only by runtime provider I/O。
+
+Profile matching **MUST** be exact on provider kind, endpoint origin and bucket,
+and **MUST** require the operation locator prefix to stay within the profile's
+allowed root prefix. Missing profile, endpoint mismatch, bucket mismatch, prefix
+escape, missing region/signing scope, unsupported addressing style, missing
+credential ref, or credential resolver failure all fail closed before provider
+I/O; for custom endpoints they also fail before default AWS credential fallback.
 
 ## 4. Remote Layout {#projection-backup-remote-layout-contract}
 
@@ -229,6 +251,10 @@ Provider success 不等于 pull/admission success；Projection Workspace overwri
   localStorage, URL query, normal logs or crash reports。
 - Remote Projection profile 可以保存 secret-free endpoint/bucket/prefix/credential-ref binding；credential
   value 只能由 runtime resolver 在 provider IO 时解析。
+- Process-wide `AWS_*` credentials are ambient AWS S3 inputs only. For
+  `s3+https://` custom endpoints they are invisible unless an explicit profile
+  credential ref intentionally names that secret source and the locator matches
+  the same profile.
 - Provider metadata **MUST** remain diagnostic-only。
 - Remote files are external input. They become Ledger facts only through External Changes user
   confirmation and existing authority storage runtime。
@@ -306,6 +332,12 @@ Remote Projection Transport 不得直接写 Ledger、Source Control staging、co
 
 已从首版范围删除：独立 ledger backup pack/manifest、restore-candidate admission、ledger import/merge
 runtime，以及 WebDAV/S3 上的 ledger-history disaster recovery。
+
+S3-compatible credential profile implementation is not a rushed first-tag
+shortcut. Until the ADR 0008 profile runtime is implemented and verified,
+`s3+https://` remains fail-closed; the long-term target remains the accepted
+profile binding design, not reuse of default AWS credentials for arbitrary
+custom endpoints.
 
 若未来重新引入 ledger backup，必须作为独立 ADR 与独立 runtime proposal 重开；不得从 Projection
 Backup 语义中回填。

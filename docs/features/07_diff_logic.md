@@ -112,9 +112,11 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
   已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
   workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
 - 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull` 与 AWS `s3://` `s3:push`/`s3:pull`；
-  `s3+https://` custom endpoint 在显式 credential binding 完成前必须继续 fail-closed。
+  `s3+https://` custom endpoint 在 ADR 0008 的 host-local、secret-free Remote Projection
+  profile binding 实现并验证前必须继续 fail-closed。
 - Web Command Palette 只发送 provider/direction intent；backend 从当前 local repo 的 `repo_url`
-  解析 WebDAV/S3 locator。未配置 transport URL 或 provider 与 URL scheme 不匹配时显示
+  或后续 backend-defined profile handle 解析 WebDAV/S3 locator/profile。未配置 transport URL、
+  provider 与 URL scheme 不匹配，或 profile 与 locator 不匹配时显示
   `provider_io_ready=false`，不得在前端收集凭证、列举远端文件或覆盖本地文件。
 - push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
 - pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。

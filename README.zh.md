@@ -70,6 +70,19 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 `docs/plan/` 是权威设计来源。`docs/features/` 和 `docs/acceptance-cases/`
 细化行为与验收。`docs/report/` 是带日期的历史证据，不是实时契约。
 
+### Remote Projection / Projection Backup
+
+Remote Projection / Projection Backup 只通过 WebDAV/S3 传输 Markdown Projection
+Workspace files。它不是 ledger history backup、实时同步、Source Control authority
+或 Git mirror authority。
+
+S3-compatible custom endpoint 采用长期 credential-binding 设计：host-local、
+secret-free Remote Projection profile 绑定 endpoint origin、bucket、allowed prefix、
+signing settings 与 credential ref。access key、secret key、session token 不得写入
+repo metadata、locator string、浏览器状态、普通日志或 README 示例。在该 profile runtime
+实现并验证前，`s3+https://` custom endpoint I/O 继续 fail-closed，默认 `AWS_*`
+环境凭证不得被签给任意 custom host。
+
 ## 仓库结构
 
 | 路径 | 作用 |
@@ -163,6 +176,13 @@ cargo run -p deve_desktop --features native-packaging -- --remote-url https://ex
 packaged 或脚本化启动也可以使用
 `DEVE_NATIVE_REMOTE_URL=https://example.invalid`。RemoteBrowser URL 必须是 HTTPS
 origin：不得包含 userinfo、query、fragment 或业务子路径。
+
+Linux native Desktop package 是首个正式 tag 前的 deferred TODO。当前 Tauri v2
+Linux stack 仍经过 GTK3/WebKitGTK 4.x 依赖线；首个正式 tag 在 Linux 上应使用
+Web / Server / Docker delivery，而不是发布 `.deb`、`.rpm` 或 `.AppImage`
+Desktop artifacts。只有在 shell stack 升级/替换为 maintained GTK4/WebKitGTK 6-compatible
+Tauri/Wry route 或等价 maintained WebView route，并刷新 Linux package/startup/native-session
+evidence 后，才能重新启用 Linux native artifacts。
 
 native app 的 Settings 会显示 Backend section：
 

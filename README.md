@@ -80,6 +80,21 @@ The authoritative design source is `docs/plan/`. Feature docs and acceptance
 cases refine it. Reports under `docs/report/` are dated evidence, not live
 contracts.
 
+### Remote Projection / Projection Backup
+
+Remote Projection / Projection Backup transports only Markdown Projection
+Workspace files through WebDAV/S3. It is not ledger-history backup, realtime
+sync, Source Control authority, or Git mirror authority.
+
+S3-compatible custom endpoints use a long-term credential-binding design: a
+host-local, secret-free Remote Projection profile binds endpoint origin, bucket,
+allowed prefix, signing settings, and a credential reference. Raw access keys,
+secret keys, and session tokens must not be stored in repo metadata, locator
+strings, browser state, normal logs, or README examples. Until that profile
+runtime is implemented and verified, `s3+https://` custom endpoint I/O remains
+fail-closed and default `AWS_*` environment credentials must not be signed to an
+arbitrary custom host.
+
 ## Repository Layout
 
 | Path | Purpose |
@@ -176,6 +191,15 @@ cargo run -p deve_desktop --features native-packaging -- --remote-url https://ex
 Packaged or scripted launches may also use
 `DEVE_NATIVE_REMOTE_URL=https://example.invalid`. RemoteBrowser URLs must be
 HTTPS origins: no userinfo, query, fragment, or application subpath.
+
+Linux native Desktop packages are a deferred first-tag TODO. The current Tauri
+v2 Linux stack still resolves through GTK3/WebKitGTK 4.x dependencies; the first
+formal tag should use Web / Server / Docker delivery on Linux instead of
+publishing `.deb`, `.rpm`, or `.AppImage` Desktop artifacts. Re-enable Linux
+native artifacts only after the shell stack is upgraded or replaced with a
+maintained GTK4/WebKitGTK 6-compatible Tauri/Wry route or equivalent maintained
+WebView route, followed by refreshed Linux package/startup/native-session
+evidence.
 
 In the native app, Settings exposes a Backend section:
 

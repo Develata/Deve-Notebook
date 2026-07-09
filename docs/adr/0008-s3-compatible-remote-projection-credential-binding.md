@@ -1,7 +1,7 @@
 # 0008. S3-compatible Remote Projection credential binding
 
-- Status: Proposed
-- Date: 2026-07-07
+- Status: Accepted
+- Date: 2026-07-09
 
 ## Context
 
@@ -38,73 +38,86 @@ remaining decision questions are:
 
 ## Decision
 
-No implementation route is accepted yet. Before `s3+https://` provider I/O can
-be enabled, the project must choose one of these routes:
+Accept the **Dedicated Remote Projection provider profile runtime** as the
+long-term route. First-tag pressure must not introduce a shortcut that signs an
+arbitrary S3-compatible endpoint with default AWS environment credentials.
 
-1. **Dedicated Remote Projection provider profile runtime.**
-   Add a host-local, secret-free Remote Projection profile store that is
-   separate from any future ledger backup binding and separate from ledger authority. A profile
-   binds provider `s3-compatible`, endpoint origin, bucket, allowed root
-   prefix, region/signing settings, and a credential reference. The credential
-   reference points to a runtime secret source, but raw access keys, secret
-   keys, and session tokens are never persisted in repo metadata, Projection
-   Workspace, Backup metadata, or Web client state. `s3+https://` provider I/O
-   is allowed only when the current locator matches an active profile. Web
-   continues to submit typed provider/direction intents; backend re-resolves
-   repo scope, locator, and profile match before every operation.
+The accepted model is:
 
-2. **CLI-only explicit profile route first.**
-   Keep Web `s3+https://` fail-closed, but allow CLI `projection-remote s3`
-   operations to pass an explicit Remote Projection profile name. The profile
-   still uses a dedicated host-local binding store and does not accept raw
-   secrets or default AWS environment keys for custom endpoints. This proves
-   provider I/O behavior before a browser-visible profile management flow
-   exists.
+1. **Host-local, secret-free profile store.** A Remote Projection profile is
+   local to the current host and separate from ledger authority, Projection
+   Locator, Source Control, Git mirror, sync, and any future ledger-backup
+   binding. It stores only binding metadata: stable profile handle, provider
+   kind `s3-compatible`, HTTPS endpoint origin, bucket, allowed root prefix,
+   region/signing scope, addressing-style/capability flags, allowed directions,
+   and a credential reference.
+2. **Runtime credential resolver.** The credential reference points to a runtime
+   secret source such as an explicitly named environment-variable set, OS/keyring
+   secret, or future host secret adapter. Raw access keys, secret keys, and
+   session tokens are never persisted in repo metadata, Projection Workspace,
+   locator strings, Backup metadata, Web client state, normal logs, or crash
+   reports.
+3. **Exact binding admission.** `s3+https://` provider I/O is allowed only when
+   the operation locator matches an active profile by provider kind, normalized
+   endpoint origin, bucket, and prefix containment. Region/signing settings must
+   be explicit in the profile; provider-specific values such as Cloudflare R2
+   `auto` are allowed only when pinned by the profile.
+4. **No ambient AWS fallback for custom endpoints.** Process-wide
+   `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
+   `AWS_REGION`, and `AWS_DEFAULT_REGION` are not used for `s3+https://` unless
+   an explicit profile credential reference intentionally points at that secret
+   source and the endpoint/bucket/prefix match that same profile.
+5. **Thin Web surface.** Web / Command Palette continues to submit typed user
+   intent only. It may select a backend-defined profile handle after a profile UX
+   exists, but it never accepts endpoint URLs, locator strings, access keys,
+   secret keys, session tokens, ETags, or provider metadata as authority.
 
-3. **Defer S3-compatible endpoints from the first formal tag.**
-   Keep `s3+https://` fail-closed and ship only WebDAV plus AWS `s3://` S3
-   Remote Projection until a complete binding/profile UX is accepted.
+A **CLI-only explicit profile slice** is acceptable as an implementation stage
+only if it writes and validates this same profile contract. It must not create a
+parallel CLI-only credential model. A release-driven route that merely defers
+S3-compatible endpoints remains safe as current behavior, but it is no longer
+the architectural target.
 
-The recommended route is **Route 1**, with Route 2 acceptable as a smaller
-implementation slice only if it writes the same profile contract that Route 1
-will later use.
+Until the accepted profile runtime is implemented and verified, `s3+https://`
+custom endpoint I/O remains fail-closed before provider I/O and before default
+AWS credential resolution.
 
 ## Rationale
 
-Route 1 is the cleanest long-term boundary. It keeps endpoint admission,
+The accepted route is the cleanest long-term boundary. It keeps endpoint admission,
 credential selection, and provider I/O in backend/runtime infrastructure while
 preserving the frontend thin-shell rule. It also gives Web, CLI, and future
 mobile shells the same security model: user intent selects provider/direction,
 runtime authority resolves locator/profile and performs transport.
 
-Route 2 lowers implementation risk by avoiding immediate browser-visible
+The CLI-only slice lowers implementation risk by avoiding immediate browser-visible
 profile management, but it must not create a CLI-only credential model that the
 Web path later has to bypass or replace. It is useful only as a staged slice of
-Route 1.
+the accepted route.
 
-Route 3 is operationally safe, but it leaves R2, MinIO, and other
-S3-compatible endpoints unavailable for the first formal release. It is
-acceptable only if the first tag intentionally narrows Remote Projection to
-WebDAV and AWS S3.
+Deferring provider I/O is operationally safe while the profile runtime is still
+missing, but it should not erase the long-term S3-compatible design merely to
+accelerate the first formal tag.
 
 ## User Impact
 
-With Route 1, users can configure a custom endpoint once, then use the same
+With the accepted profile route, users can configure a custom endpoint once, then use the same
 Remote Projection actions from Web or CLI without exposing secrets to the
 frontend. If a repo points at an unbound endpoint, the operation remains
 fail-closed with a clear `provider_io_ready=false` diagnostic.
 
-With Route 2, users can validate R2/MinIO-style provider I/O from CLI, but Web
+With the CLI-only slice, users can validate R2/MinIO-style provider I/O from CLI, but Web
 Command Palette actions for custom endpoints still fail closed until profile
 management is available.
 
-With Route 3, users can use WebDAV or AWS S3 only. Custom endpoint users must
-wait, but the first release avoids locking in an unsafe credential path.
+While the profile runtime is deferred, users can use WebDAV or AWS S3 only.
+Custom endpoint users must wait, but the first release avoids locking in an
+unsafe credential path.
 
 ## Consequences
 
-- Current behavior does not change. `s3+https://` remains fail-closed until an
-  implementation route is accepted and implemented.
+- Current behavior does not change. `s3+https://` remains fail-closed until the
+  accepted profile runtime is implemented and verified.
 - Default `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
   `AWS_REGION`, and `AWS_DEFAULT_REGION` must not be used for custom endpoint
   provider I/O unless an accepted profile contract explicitly binds that secret
@@ -112,8 +125,9 @@ wait, but the first release avoids locking in an unsafe credential path.
 - Remote Projection profiles must not reuse future ledger-backup binding stores,
   artifact metadata, or provider adapters as sync/source-control authority.
 - Profile data must be host-local and secret-free. It may identify a credential
-  reference, endpoint origin, bucket, prefix, region, and signing options, but
-  not raw secret values.
+  reference, endpoint origin, bucket, prefix, region, signing options,
+  addressing style, provider capability flags, and allowed directions, but not
+  raw secret values.
 - `push` and `pull` authority rules stay unchanged: only Markdown projection
   files are transported; `pull` writes Projection Workspace files and enters
   External Changes; no ledger, staging, commit anchor, Git mirror queue, backup
@@ -121,7 +135,7 @@ wait, but the first release avoids locking in an unsafe credential path.
 - Frontend and Command Palette surfaces must not accept locator strings,
   endpoint URLs, access keys, secret keys, session tokens, ETags, or provider
   metadata as operation authority. They may only collect typed user intent or,
-  after an accepted profile UX exists, select backend-defined profile handles.
+  after a profile UX exists, select backend-defined profile handles.
 
 ## References
 

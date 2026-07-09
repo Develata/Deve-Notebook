@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-04`
+- `Last Review`: `2026-07-09`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -54,7 +54,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve ngit import`: 只读规划外部 Git/worktree changes。
     *   `deve ngit import --apply`: 显式把安全 Git changes 写入 pending/import；不得直接生成 ledger facts。
     *   `deve ngit push`: 显式发布已映射 `.git` main mirror HEAD。
-    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 执行 Projection Backup / Remote Projection transport；push/pull 只传输 Markdown Projection Workspace files，pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。
+    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 执行 Projection Backup / Remote Projection transport；push/pull 只传输 Markdown Projection Workspace files，pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。S3-compatible `s3+https://` custom endpoint 必须走 ADR 0008 的 host-local、secret-free profile binding；profile runtime 未实现或 locator/profile 不匹配时继续 fail-closed。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -73,7 +73,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `ngit:import`: 将外部 Git/worktree 变化转成 pending/import，再进入 External Changes / Apply to Ledger / Source Control commit；该命令不得直接生成 ledger commit。
     *   `ngit:push`: 将已映射的 `.git` main mirror HEAD 推送到远端；不得绕过 NoteGit/ngit authority。
     *   `ngit:repair`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
-    *   `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull`: 发送 remote projection transport intent；前端不得直接访问 WebDAV/S3 provider。
+    *   `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull`: 发送 remote projection transport intent；前端不得直接访问 WebDAV/S3 provider，不得收集 locator、endpoint URL 或 credential material；未来 S3-compatible profile UX 只能选择 backend-defined profile handle。
     *   Command Palette / Source Control UI 不再展示 `source_control.git_bridge` mode；Source Control header copy **MUST** 明确 `.notegit` / NoteGit/ngit 是 authority、Git main 只是终态 mirror；Web surface **MUST NOT** 直接执行 Git writer。
     *   若旧客户端仍发送 `ClientMessage::CommitAndPush`，服务端 **MUST** 先复用当前 Source Control write gate，然后返回结构化 unsupported blocker；不得创建重复 NoteGit/ngit commit、排队重复 Git mirror record 或执行 Git push。
     *   代理 / plugin-host 模式下，Command Palette 不得读取或展示 legacy bridge mode；delegated/readonly 状态必须来自 runtime typed state。

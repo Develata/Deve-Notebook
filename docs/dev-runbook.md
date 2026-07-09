@@ -233,10 +233,10 @@ watcher/scan to surface External Changes. The user must still confirm External
 Changes before any ledger facts are appended. Provider metadata, ETags, mtimes,
 object versions, and remote listing order remain diagnostics only.
 
-S3-compatible custom endpoints (`s3+https://...`) remain fail-closed until an
-explicit Remote Projection credential profile binding is accepted and active;
-the guard runs before provider I/O and before default AWS credentials are
-resolved.
+S3-compatible custom endpoints (`s3+https://...`) remain fail-closed until the
+ADR 0008 Remote Projection credential profile runtime is implemented,
+configured, and active; the guard runs before provider I/O and before default
+AWS credentials are resolved.
 
 ## Docker Release Smoke
 

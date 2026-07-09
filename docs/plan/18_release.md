@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-07`
+- `Last Review`: `2026-07-09`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -26,6 +26,15 @@
 | **iOS**     | `.ipa` (App Store)          | ARM64                | **Pending** (Not urgent) |
 | **Android** | `.apk` / `.aab`             | ARM64                | **Pending** (Not urgent) |
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
+
+First formal tag scope note: Linux native Desktop artifacts (`.deb`, `.rpm`,
+`.AppImage`) are deferred until the native shell stack can move off the current
+GTK3/WebKitGTK 4.x dependency line. The tracked TODO is to upgrade or replace
+the Tauri/Wry Linux shell route with a maintained GTK4/WebKitGTK 6-compatible
+stack, then refresh target-host package/startup evidence before re-enabling
+Linux native artifacts in a public release. Until that TODO is closed, Linux
+users are expected to use Web / Server / Docker delivery rather than a Linux
+native Desktop package.
 
 ### 1.2 Release Channels (发布通道)
 1.  **Public Preview (公开预览)**: tag `v0.y.z`，用于 pre-1.0 阶段的首批公开验证；必须通过当前 release gate，但不得声明 stable data compatibility、签名 native release、store readiness 或 physical-device readiness。
@@ -61,6 +70,14 @@ CI/CD 基于 GitHub Actions。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
 Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
+
+Linux native Desktop bundling has an additional first-tag TODO: it **MUST NOT**
+ship a Linux GTK3/WebKitGTK 4.x native artifact for the first formal tag. Before
+Linux native artifacts can be restored to the release set, the project must
+either adopt a maintained Tauri/Wry GTK4/WebKitGTK 6 route or replace the Linux
+native shell route with an equivalent maintained WebView stack, and then rerun
+release audit, package build, startup, and native-session smoke evidence on the
+Linux target host.
 
 Desktop startup / native-session smoke MAY accept `DEVE_DESKTOP_PACKAGE_BUNDLES=exe`
 as a target-host release-binary-only probe after `target/release/deve_desktop.exe`
@@ -214,4 +231,12 @@ health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公�
 - [ ] 关键依赖 (Dependencies) 无高危审计漏洞 (`cargo audit`, `npm audit`).
 - [ ] 非漏洞依赖 warning 均有 registry allowlist 理由或替换路线；首个正式 tag 前
       `tag_blocker=yes` 项已被 USER 决策、替换或重新归类。
-- [ ] 多平台 (Win/Mac/Linux) 冒烟测试通过。
+- [ ] Remote Projection S3-compatible credential binding 遵循 ADR 0008 的长期 profile
+      contract；若 profile runtime 尚未实现，`s3+https://` custom endpoint 必须继续
+      fail-closed，且不得把默认 `AWS_*` 环境凭证签给任意 custom host。
+- [ ] Linux native Desktop first-tag TODO 已关闭，或首个正式 tag 的 release set
+      已明确排除 Linux native Desktop artifacts，并将 GTK4/WebKitGTK 6-compatible
+      Tauri/Wry route 或等价 maintained WebView route 记录为后续工作。
+- [ ] 多平台 (Win/Mac/Linux) 冒烟测试通过；若 Linux native Desktop artifact 被
+      首个正式 tag 排除，本项的 Linux native package/startup 部分不作为该 tag
+      的 release blocker，但必须保留为后续 evidence gap。

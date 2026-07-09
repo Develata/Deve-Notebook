@@ -331,7 +331,7 @@
   goal: Projection Backup S3-compatible endpoint 在显式 Remote Projection profile binding 前 fail-closed。
   preconditions:
     - locator uses `s3+https://` custom endpoint
-    - no accepted Remote Projection profile binding is active
+    - no ADR 0008 Remote Projection profile binding is implemented and active
   steps:
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture

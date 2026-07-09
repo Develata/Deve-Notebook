@@ -62,11 +62,14 @@
 - `pull` 只写 Projection Workspace，并必须进入 Watcher/scan -> External Changes；
   用户确认前不得写 ledger、Source Control staging、commit anchor 或 Git mirror queue。
 - Web / Command Palette 只提交 provider/direction typed intent；backend 负责解析当前
-  repo scope、Projection Locator、Remote Projection locator/profile 与 credential ref。
+  repo scope、Projection Locator、Remote Projection locator/profile 与 credential ref。未来
+  S3-compatible UX 只能选择 backend-defined profile handle，不得在前端收集 endpoint URL
+  或 secret material。
 - CLI 使用 `projection-remote webdav push/pull` 与 `projection-remote s3 push/pull`
   执行 Projection Backup transport；旧 `backup` CLI surface 已从首版命令面删除。
-- S3-compatible `s3+https://` endpoint 必须绑定显式 Remote Projection profile；未绑定时
-  在 provider I/O 与默认 AWS credential 解析前 fail-closed。
+- S3-compatible `s3+https://` endpoint 的长期设计是 host-local、secret-free Remote
+  Projection profile binding；未实现或未匹配 profile 时，在 provider I/O 与默认 AWS
+  credential 解析前 fail-closed。
 
 ## 非目标
 
