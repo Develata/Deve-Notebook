@@ -4,7 +4,9 @@
 use super::credentials::S3Credentials;
 use super::signing::signed_get_request;
 use super::transport::S3Transport;
-use super::url::{s3_list_url, s3_locator_prefix};
+use super::url::{
+    S3CustomEndpointUrlBinding, s3_list_url_with_binding, s3_locator_prefix_with_binding,
+};
 use crate::commands::projection_remote::collect::{is_markdown_path, is_reserved_projection_path};
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{RemoteProjectionFile, RemoteProjectionProviderError};
@@ -20,10 +22,11 @@ pub(super) fn discover_remote_markdown_files<T: S3Transport>(
     transport: &T,
     credentials: &S3Credentials,
     region: &str,
+    custom_url_binding: Option<&S3CustomEndpointUrlBinding>,
     now: fn() -> DateTime<Utc>,
     locator: &str,
 ) -> Result<Vec<String>, RemoteProjectionProviderError> {
-    let prefix = s3_locator_prefix(locator)?;
+    let prefix = s3_locator_prefix_with_binding(locator, custom_url_binding)?;
     let mut continuation_token = None;
     let mut pages = 0usize;
     let mut files = BTreeSet::new();
@@ -34,7 +37,12 @@ pub(super) fn discover_remote_markdown_files<T: S3Transport>(
                 "S3 pull exceeds list page budget of {MAX_LIST_PAGES}"
             )));
         }
-        let list_url = s3_list_url(locator, region, continuation_token.as_deref())?;
+        let list_url = s3_list_url_with_binding(
+            locator,
+            region,
+            continuation_token.as_deref(),
+            custom_url_binding,
+        )?;
         let response = transport.get(signed_get_request(
             list_url,
             credentials,

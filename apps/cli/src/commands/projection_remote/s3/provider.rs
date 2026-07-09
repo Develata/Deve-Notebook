@@ -1,24 +1,26 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
 
-#[cfg(test)]
-use super::credentials::S3Credentials;
-use super::credentials::{S3CredentialSource, S3RegionSource};
+use super::credentials::{S3CredentialSource, S3Credentials, S3RegionSource};
+use super::profile::{RemoteProjectionS3Profile, S3ProfileRuntimeBinding};
 use super::pull;
 use super::push;
 use super::transport::{ReqwestS3Transport, S3Transport};
-use super::url::reject_custom_https_endpoint_without_binding;
+use super::url::{
+    S3CustomEndpointUrlBinding, custom_endpoint_requires_binding_error, is_s3_custom_https_locator,
+};
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
-    RemoteProjectionProvider, RemoteProjectionProviderAdapter, RemoteProjectionProviderError,
-    RemoteProjectionPullOutcome, RemoteProjectionPullRequest, RemoteProjectionPushOutcome,
-    RemoteProjectionPushRequest,
+    RemoteProjectionDirection, RemoteProjectionProvider, RemoteProjectionProviderAdapter,
+    RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
+    RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
 };
 
 pub(crate) struct S3ProjectionProvider<T = ReqwestS3Transport> {
     pub(super) transport: T,
     pub(super) credentials: S3CredentialSource,
     pub(super) region: S3RegionSource,
+    pub(super) custom_profile: Option<RemoteProjectionS3Profile>,
     pub(super) now: fn() -> DateTime<Utc>,
 }
 
@@ -28,7 +30,53 @@ impl S3ProjectionProvider<ReqwestS3Transport> {
             transport: ReqwestS3Transport::new()?,
             credentials: S3CredentialSource::Env,
             region: S3RegionSource::Env,
+            custom_profile: None,
             now: Utc::now,
+        })
+    }
+    pub(crate) fn with_custom_profile(mut self, profile: RemoteProjectionS3Profile) -> Self {
+        self.custom_profile = Some(profile);
+        self
+    }
+}
+
+pub(super) struct S3RequestBinding {
+    pub(super) credentials: S3Credentials,
+    pub(super) region: String,
+    pub(super) custom_url_binding: Option<S3CustomEndpointUrlBinding>,
+}
+
+impl<T> S3ProjectionProvider<T> {
+    pub(super) fn request_binding(
+        &self,
+        direction: RemoteProjectionDirection,
+        locator: &str,
+    ) -> Result<S3RequestBinding, RemoteProjectionProviderError> {
+        if is_s3_custom_https_locator(locator) {
+            let profile = self
+                .custom_profile
+                .as_ref()
+                .ok_or_else(custom_endpoint_requires_binding_error)?;
+            let S3ProfileRuntimeBinding {
+                credentials,
+                region,
+                url_binding,
+            } = profile.runtime_binding_for(direction, locator)?;
+            return Ok(S3RequestBinding {
+                credentials,
+                region,
+                custom_url_binding: Some(url_binding),
+            });
+        }
+        if self.custom_profile.is_some() {
+            return Err(RemoteProjectionProviderError::ProviderIo(
+                "Remote Projection S3 profile can only be used with s3+https:// custom endpoint locators".into(),
+            ));
+        }
+        Ok(S3RequestBinding {
+            credentials: self.credentials.resolve()?,
+            region: self.region.resolve()?,
+            custom_url_binding: None,
         })
     }
 }
@@ -45,6 +93,21 @@ impl<T> S3ProjectionProvider<T> {
             transport,
             credentials: S3CredentialSource::Static(credentials),
             region: S3RegionSource::Static(region.into()),
+            custom_profile: None,
+            now,
+        }
+    }
+
+    pub(super) fn new_for_test_with_profile(
+        transport: T,
+        profile: RemoteProjectionS3Profile,
+        now: fn() -> DateTime<Utc>,
+    ) -> Self {
+        Self {
+            transport,
+            credentials: S3CredentialSource::Env,
+            region: S3RegionSource::Env,
+            custom_profile: Some(profile),
             now,
         }
     }
@@ -59,11 +122,12 @@ impl<T: S3Transport> RemoteProjectionProviderAdapter for S3ProjectionProvider<T>
         &mut self,
         request: RemoteProjectionPushRequest,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
-        reject_custom_https_endpoint_without_binding(request.locator())?;
+        let binding = self.request_binding(RemoteProjectionDirection::Push, request.locator())?;
         push::push_request(
             &self.transport,
-            &self.credentials.resolve()?,
-            &self.region.resolve()?,
+            &binding.credentials,
+            &binding.region,
+            binding.custom_url_binding.as_ref(),
             self.now,
             request,
         )
@@ -73,11 +137,12 @@ impl<T: S3Transport> RemoteProjectionProviderAdapter for S3ProjectionProvider<T>
         &self,
         request: RemoteProjectionPullRequest,
     ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        reject_custom_https_endpoint_without_binding(request.locator())?;
+        let binding = self.request_binding(RemoteProjectionDirection::Pull, request.locator())?;
         pull::pull_request(
             &self.transport,
-            &self.credentials.resolve()?,
-            &self.region.resolve()?,
+            &binding.credentials,
+            &binding.region,
+            binding.custom_url_binding.as_ref(),
             self.now,
             request,
         )

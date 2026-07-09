@@ -328,19 +328,22 @@
     - cli_assert: projection_backup_pull_budget_failures_happen_before_workspace_write true
 
 - case_id: STORE-022
-  goal: Projection Backup S3-compatible endpoint 在显式 Remote Projection profile binding 前 fail-closed。
+  goal: Projection Backup S3-compatible endpoint 只允许显式 Remote Projection profile binding；未绑定或不匹配时 fail-closed。
   preconditions:
     - locator uses `s3+https://` custom endpoint
-    - no ADR 0008 Remote Projection profile binding is implemented and active
+    - ADR 0008 Remote Projection profile binding is either absent, mismatched, or explicitly supplied by CLI profile handle
   steps:
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_push_uses_explicit_profile_binding -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_profile_env_ref_is_not_default_aws_fallback -- --nocapture
   assertions:
     - cli_assert: projection_backup_s3_custom_endpoint_requires_profile_binding true
     - cli_assert: projection_backup_s3_custom_endpoint_fails_before_default_credentials true
     - cli_assert: projection_backup_s3_custom_endpoint_fails_before_provider_io true
+    - cli_assert: projection_backup_s3_custom_endpoint_explicit_profile_can_enable_cli_io true
 
 - case_id: STORE-023
   goal: Projection Backup 首版 gate 聚合 Remote Projection transport 文档与测试证据。

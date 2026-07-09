@@ -1,10 +1,11 @@
 use super::super::credentials::{S3CredentialSource, S3RegionSource};
+use super::super::profile::RemoteProjectionS3Profile;
 use super::super::provider::S3ProjectionProvider;
 use super::super::push::S3ProjectionPushAdapter;
 use super::super::url::{
     reject_custom_https_endpoint_without_binding, s3_file_url, s3_list_url, s3_locator_prefix,
 };
-use super::support::{RecordingS3Transport, now, test_credentials};
+use super::support::{EnvGuard, RecordingS3Transport, header, now, test_credentials};
 use crate::commands::projection_remote::collect::collect_markdown_projection_files;
 use deve_core::remote_projection::{
     RemoteProjectionFile, RemoteProjectionProvider, RemoteProjectionProviderAdapter,
@@ -108,6 +109,7 @@ fn s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve() {
         transport,
         credentials: S3CredentialSource::Fail("custom-endpoint-push"),
         region: S3RegionSource::Fail("custom-endpoint-push"),
+        custom_profile: None,
         now,
     };
     let request = RemoteProjectionPushRequest::new(
@@ -141,6 +143,7 @@ fn s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve() {
         transport,
         credentials: S3CredentialSource::Fail("custom-endpoint-pull"),
         region: S3RegionSource::Fail("custom-endpoint-pull"),
+        custom_profile: None,
         now,
     };
     let request = RemoteProjectionPullRequest::new(
@@ -161,6 +164,87 @@ fn s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve() {
             .get_calls
             .lock()
             .expect("get calls")
+            .len(),
+        0
+    );
+}
+
+#[test]
+fn s3_custom_https_endpoint_push_uses_explicit_profile_binding() {
+    let _env = EnvGuard::set(&[
+        ("MINIO_ACCESS_KEY_ID", Some("minio-key")),
+        ("MINIO_SECRET_ACCESS_KEY", Some("minio-secret")),
+        ("MINIO_SESSION_TOKEN", None),
+    ]);
+    let profile = RemoteProjectionS3Profile::env_profile(
+        "minio",
+        "https://minio.example.com",
+        "bucket",
+        "notebooks/main",
+        "us-east-1",
+        "MINIO",
+        vec!["push".into(), "pull".into()],
+    );
+    let transport = RecordingS3Transport::new(StatusCode::OK);
+    let mut provider = S3ProjectionProvider::new_for_test_with_profile(transport, profile, now);
+    let request = RemoteProjectionPushRequest::new(
+        RemoteProjectionProvider::S3,
+        "s3+https://minio.example.com/bucket/notebooks/main",
+        vec![RemoteProjectionFile::new("notes/a.md", b"a").expect("file")],
+    )
+    .expect("request");
+
+    let outcome = provider.push(request).expect("custom endpoint push");
+
+    assert_eq!(outcome.uploaded_files, 1);
+    let calls = provider.transport.put_calls.lock().expect("put calls");
+    assert_eq!(
+        calls[0].url.as_str(),
+        "https://minio.example.com/bucket/notebooks/main/notes/a.md"
+    );
+    assert!(header(&calls[0], "authorization").contains("Credential=minio-key/"));
+    assert!(header(&calls[0], "authorization").contains("/us-east-1/s3/aws4_request"));
+}
+
+#[test]
+fn s3_custom_https_endpoint_profile_env_ref_is_not_default_aws_fallback() {
+    let _env = EnvGuard::set(&[
+        ("AWS_ACCESS_KEY_ID", Some("aws-key")),
+        ("AWS_SECRET_ACCESS_KEY", Some("aws-secret")),
+        ("MINIO_ACCESS_KEY_ID", None),
+        ("MINIO_SECRET_ACCESS_KEY", None),
+        ("MINIO_SESSION_TOKEN", None),
+    ]);
+    let profile = RemoteProjectionS3Profile::env_profile(
+        "minio",
+        "https://minio.example.com",
+        "bucket",
+        "notebooks/main",
+        "us-east-1",
+        "MINIO",
+        vec!["push".into()],
+    );
+    let transport = RecordingS3Transport::new(StatusCode::OK);
+    let mut provider = S3ProjectionProvider::new_for_test_with_profile(transport, profile, now);
+    let request = RemoteProjectionPushRequest::new(
+        RemoteProjectionProvider::S3,
+        "s3+https://minio.example.com/bucket/notebooks/main",
+        vec![RemoteProjectionFile::new("notes/a.md", b"a").expect("file")],
+    )
+    .expect("request");
+
+    let err = provider
+        .push(request)
+        .expect_err("profile env ref must be explicit");
+
+    assert!(err.to_string().contains("MINIO_ACCESS_KEY_ID"));
+    assert!(!err.to_string().contains("AWS_ACCESS_KEY_ID"));
+    assert_eq!(
+        provider
+            .transport
+            .put_calls
+            .lock()
+            .expect("put calls")
             .len(),
         0
     );

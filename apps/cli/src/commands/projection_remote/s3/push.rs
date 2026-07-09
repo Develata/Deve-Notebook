@@ -6,12 +6,12 @@ use super::provider::FailClosedS3ProjectionProvider;
 use super::provider::S3ProjectionProvider;
 use super::signing::signed_put_request;
 use super::transport::S3Transport;
-use super::url::{reject_custom_https_endpoint_without_binding, s3_file_url};
+use super::url::{S3CustomEndpointUrlBinding, s3_file_url_with_binding};
 use crate::commands::projection_remote::collect::MarkdownProjectionFileRef;
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
-    RemoteProjectionAuthorityEffects, RemoteProjectionProvider, RemoteProjectionProviderError,
-    RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
+    RemoteProjectionAuthorityEffects, RemoteProjectionDirection, RemoteProjectionProvider,
+    RemoteProjectionProviderError, RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
 };
 use std::fs;
 
@@ -35,9 +35,14 @@ impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
             return Err(RemoteProjectionProviderError::ProviderMismatch);
         }
         let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())?;
-        reject_custom_https_endpoint_without_binding(request.locator())?;
-        let credentials = self.credentials.resolve()?;
-        let region = self.region.resolve()?;
+        let binding = self.request_binding(RemoteProjectionDirection::Push, request.locator())?;
+        let push_context = S3PushContext {
+            transport: &self.transport,
+            credentials: &binding.credentials,
+            region: &binding.region,
+            custom_url_binding: binding.custom_url_binding.as_ref(),
+            now: self.now,
+        };
         for file in files {
             let content = fs::read(file.fs_path()).map_err(|err| {
                 RemoteProjectionProviderError::ProviderIo(format!(
@@ -45,15 +50,7 @@ impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
                     file.fs_path().display()
                 ))
             })?;
-            push_payload(
-                &self.transport,
-                &credentials,
-                &region,
-                self.now,
-                request.locator(),
-                file.path(),
-                content,
-            )?;
+            push_payload(&push_context, request.locator(), file.path(), content)?;
         }
         Ok(push_outcome(files.len()))
     }
@@ -77,19 +74,23 @@ pub(super) fn push_request<T: S3Transport>(
     transport: &T,
     credentials: &S3Credentials,
     region: &str,
+    custom_url_binding: Option<&S3CustomEndpointUrlBinding>,
     now: fn() -> DateTime<Utc>,
     request: RemoteProjectionPushRequest,
 ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
     if request.provider() != RemoteProjectionProvider::S3 {
         return Err(RemoteProjectionProviderError::ProviderMismatch);
     }
-    reject_custom_https_endpoint_without_binding(request.locator())?;
+    let push_context = S3PushContext {
+        transport,
+        credentials,
+        region,
+        custom_url_binding,
+        now,
+    };
     for file in request.files() {
         push_payload(
-            transport,
-            credentials,
-            region,
-            now,
+            &push_context,
             request.locator(),
             file.path(),
             file.content().to_vec(),
@@ -98,22 +99,32 @@ pub(super) fn push_request<T: S3Transport>(
     Ok(push_outcome(request.files().len()))
 }
 
-fn push_payload<T: S3Transport>(
-    transport: &T,
-    credentials: &S3Credentials,
-    region: &str,
+struct S3PushContext<'a, T> {
+    transport: &'a T,
+    credentials: &'a S3Credentials,
+    region: &'a str,
+    custom_url_binding: Option<&'a S3CustomEndpointUrlBinding>,
     now: fn() -> DateTime<Utc>,
+}
+
+fn push_payload<T: S3Transport>(
+    push_context: &S3PushContext<'_, T>,
     locator: &str,
     path: &str,
     content: Vec<u8>,
 ) -> Result<(), RemoteProjectionProviderError> {
-    let target = s3_file_url(locator, region, path)?;
-    let status = transport.put(signed_put_request(
+    let target = s3_file_url_with_binding(
+        locator,
+        push_context.region,
+        path,
+        push_context.custom_url_binding,
+    )?;
+    let status = push_context.transport.put(signed_put_request(
         target,
         content,
-        credentials,
-        region,
-        now(),
+        push_context.credentials,
+        push_context.region,
+        (push_context.now)(),
     )?)?;
     if !status.is_success() {
         return Err(RemoteProjectionProviderError::ProviderIo(format!(

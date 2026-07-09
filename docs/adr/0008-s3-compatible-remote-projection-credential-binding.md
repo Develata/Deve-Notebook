@@ -13,20 +13,21 @@ uploads only projection Markdown files. `pull` writes only Projection
 Workspace files and then relies on watcher/scan External Changes admission.
 
 The current S3 provider supports AWS `s3://bucket/prefix` with explicit runtime
-environment credentials and SigV4 object operations. It intentionally rejects
-`s3+https://` custom endpoints before provider I/O and before resolving
-default `AWS_*` credentials. The Web Command Palette sends only provider and
-direction typed intents; backend resolves the locator from the current local
-repo `repo_url`.
+environment credentials and SigV4 object operations. It also supports a
+CLI-only explicit profile slice for `s3+https://` custom endpoints. Missing or
+mismatched custom endpoint profiles are rejected before provider I/O and before
+resolving default `AWS_*` credentials. The Web Command Palette sends only
+provider and direction typed intents; backend resolves the locator from the
+current local repo `repo_url`.
 
 Allowing custom endpoints without a credential binding/profile contract would
 let any repo-local locator cause the runtime to sign arbitrary hosts with
 default AWS environment keys. That is a security and authority boundary change,
 not a provider URL parsing patch.
 
-The current safe direction is to keep custom endpoint I/O fail-closed until a
-dedicated Remote Projection profile contract is accepted and implemented. The
-remaining decision questions are:
+The current safe direction is to keep unbound custom endpoint I/O fail-closed and
+allow custom endpoint I/O only through a dedicated Remote Projection profile
+contract. The remaining decision questions are:
 
 - Where the custom endpoint allowlist and credential reference live.
 - How to prove that a locator origin, bucket, and root prefix match a binding.
@@ -78,9 +79,11 @@ parallel CLI-only credential model. A release-driven route that merely defers
 S3-compatible endpoints remains safe as current behavior, but it is no longer
 the architectural target.
 
-Until the accepted profile runtime is implemented and verified, `s3+https://`
-custom endpoint I/O remains fail-closed before provider I/O and before default
-AWS credential resolution.
+With the CLI-only profile slice, `s3+https://` custom endpoint I/O is allowed
+only when an explicit profile handle matches endpoint origin, bucket, direction,
+and allowed prefix, and the runtime credential resolver succeeds. Otherwise it
+remains fail-closed before provider I/O and before default AWS credential
+resolution.
 
 ## Rationale
 
@@ -116,8 +119,9 @@ unsafe credential path.
 
 ## Consequences
 
-- Current behavior does not change. `s3+https://` remains fail-closed until the
-  accepted profile runtime is implemented and verified.
+- CLI explicit profile behavior now implements the first accepted profile slice.
+  `s3+https://` remains fail-closed when no profile handle is supplied, when the
+  profile does not match, or when Web has no backend-defined profile UX.
 - Default `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`,
   `AWS_REGION`, and `AWS_DEFAULT_REGION` must not be used for custom endpoint
   provider I/O unless an accepted profile contract explicitly binds that secret

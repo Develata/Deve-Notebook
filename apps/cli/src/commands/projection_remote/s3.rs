@@ -6,6 +6,7 @@
 
 mod credentials;
 mod list;
+mod profile;
 mod provider;
 mod pull;
 mod push;
@@ -13,6 +14,10 @@ mod signing;
 mod transport;
 mod url;
 
+pub(crate) use profile::{
+    RemoteProjectionS3Profile, load_remote_projection_s3_profile,
+    load_remote_projection_s3_profiles, write_remote_projection_s3_profile,
+};
 pub(crate) use provider::FailClosedS3ProjectionProvider;
 pub(crate) use provider::S3ProjectionProvider;
 pub(crate) use pull::S3ProjectionPullAdapter;

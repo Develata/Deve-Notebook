@@ -67,9 +67,9 @@
   或 secret material。
 - CLI 使用 `projection-remote webdav push/pull` 与 `projection-remote s3 push/pull`
   执行 Projection Backup transport；旧 `backup` CLI surface 已从首版命令面删除。
-- S3-compatible `s3+https://` endpoint 的长期设计是 host-local、secret-free Remote
-  Projection profile binding；未实现或未匹配 profile 时，在 provider I/O 与默认 AWS
-  credential 解析前 fail-closed。
+- S3-compatible `s3+https://` endpoint 走 host-local、secret-free Remote
+  Projection profile binding；CLI 已支持显式 profile handle，未绑定或未匹配 profile
+  时仍在 provider I/O 与默认 AWS credential 解析前 fail-closed。
 
 ## 非目标
 

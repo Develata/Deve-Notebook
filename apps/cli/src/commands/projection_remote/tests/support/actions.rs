@@ -1,13 +1,16 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
 
-use super::super::super::{ProjectionRemoteAction, ProjectionRemoteDirectionAction};
+use super::super::super::{
+    ProjectionRemoteAction, ProjectionRemoteDirectionAction, S3ProjectionRemoteAction,
+};
 
 pub(in crate::commands::projection_remote::tests) fn s3_pull_action() -> ProjectionRemoteAction {
     ProjectionRemoteAction::S3 {
-        action: ProjectionRemoteDirectionAction::Pull {
+        action: S3ProjectionRemoteAction::Pull {
             repo: Some("default".into()),
             locator: "s3://bucket/notebooks/main".into(),
+            profile: None,
         },
     }
 }
@@ -34,9 +37,10 @@ pub(in crate::commands::projection_remote::tests) fn webdav_push_action() -> Pro
 
 pub(in crate::commands::projection_remote::tests) fn s3_push_action() -> ProjectionRemoteAction {
     ProjectionRemoteAction::S3 {
-        action: ProjectionRemoteDirectionAction::Push {
+        action: S3ProjectionRemoteAction::Push {
             repo: Some("default".into()),
             locator: "s3://bucket/notebooks/main".into(),
+            profile: None,
         },
     }
 }

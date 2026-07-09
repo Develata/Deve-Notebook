@@ -55,9 +55,9 @@
 - Command Palette 提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
 - 四个命令只发送 typed intent；不得在前端直接列举、上传、下载或覆盖文件。
 - push/pull 的实际 provider IO 与 Projection Workspace 写入由 backend/core runtime 执行；未接线的 provider/direction 必须报告 `provider_io_ready=false` 并 fail-closed，已接线的 provider/direction 必须在执行成功后报告 `provider_io_ready=true`。
-- 当前 backend/CLI 已接线 WebDAV push/pull 与 AWS `s3://` S3 push/pull；`s3+https://` custom endpoint
-  在 ADR 0008 的 host-local、secret-free Remote Projection profile binding 实现并验证前继续
-  fail-closed。
+- 当前 backend/CLI 已接线 WebDAV push/pull、AWS `s3://` S3 push/pull，以及 CLI 显式
+  profile handle 下的 `s3+https://` S3-compatible custom endpoint push/pull；未绑定或
+  locator/profile 不匹配时继续 fail-closed。
 - Web Command Palette 入口不接收 locator 或 credential material；backend 使用当前 local repo 的
   `repo_url` 或后续 backend-defined profile handle 解析 Remote Projection locator/profile。若
   `repo_url` 不是所选 provider 的 transport URL，或 profile 与 locator 不匹配，命令必须

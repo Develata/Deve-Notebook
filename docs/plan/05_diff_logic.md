@@ -160,12 +160,12 @@ RemoteProjectionCommand
   local repo 的 characteristic `repo_url` 解析 remote projection locator；`repo_url` 缺失、
   使用 `urn:*`/非 transport URL，或 scheme 与用户选择的 provider 不匹配时 MUST fail-closed
   并报告 `provider_io_ready=false`。CLI 可以继续通过显式 `--locator` 覆盖该 host 操作输入。
-- 当前 `s3:push` / `s3:pull` 只允许 AWS `s3://bucket/prefix` locator 通过 runtime
-  环境凭证执行；push 使用 SigV4 PUT，pull 使用 SigV4 ListObjectsV2 + GET。
-  S3-compatible `s3+https://` custom endpoint 的长期路线是 ADR 0008 的 Remote Projection
-  profile binding：host-local、secret-free profile 绑定 endpoint origin / bucket / prefix /
-  signing settings / credential ref，并由 runtime resolver 在 provider I/O 时取用 secret。
-  在该 profile runtime 实现并验证前，`s3+https://` 必须 fail-closed，且不得将默认
+- 当前 `s3:push` / `s3:pull` 支持 AWS `s3://bucket/prefix` locator 通过 runtime
+  环境凭证执行，也支持 CLI 显式 Remote Projection profile handle 下的
+  S3-compatible `s3+https://` custom endpoint。custom endpoint 必须匹配 ADR 0008
+  的 host-local、secret-free profile：endpoint origin / bucket / prefix / signing
+  settings / credential ref 均由 runtime resolver admission 后使用。未绑定、profile
+  不匹配或 credential ref 解析失败时，`s3+https://` 必须 fail-closed，且不得将默认
   AWS 环境密钥签给任意 custom host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。

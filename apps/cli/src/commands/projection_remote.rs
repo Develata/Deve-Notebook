@@ -32,7 +32,7 @@ pub(crate) enum ProjectionRemoteAction {
     /// Push or pull through an S3 projection transport
     S3 {
         #[command(subcommand)]
-        action: ProjectionRemoteDirectionAction,
+        action: S3ProjectionRemoteAction,
     },
 }
 
@@ -54,14 +54,74 @@ pub(crate) enum ProjectionRemoteDirectionAction {
     },
 }
 
+#[derive(Subcommand, Debug)]
+pub(crate) enum S3ProjectionRemoteAction {
+    /// Upload the Markdown projection folder
+    Push {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long)]
+        locator: String,
+        #[arg(long)]
+        profile: Option<String>,
+    },
+    /// Download and overwrite the Markdown projection folder
+    Pull {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long)]
+        locator: String,
+        #[arg(long)]
+        profile: Option<String>,
+    },
+    /// Manage host-local secret-free S3-compatible Remote Projection profiles
+    Profile {
+        #[command(subcommand)]
+        action: S3ProjectionProfileAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum S3ProjectionProfileAction {
+    /// Write or replace a host-local S3-compatible Remote Projection profile
+    Put {
+        #[arg(long)]
+        profile: String,
+        #[arg(long)]
+        endpoint_origin: String,
+        #[arg(long)]
+        bucket: String,
+        #[arg(long)]
+        allowed_prefix: String,
+        #[arg(long)]
+        region: String,
+        #[arg(long)]
+        credential_env_prefix: String,
+        #[arg(long, value_delimiter = ',', default_value = "push,pull")]
+        allowed_directions: Vec<String>,
+    },
+    /// List host-local S3-compatible Remote Projection profile handles
+    List,
+}
+
 pub(crate) fn run(
     ledger_dir: &Path,
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
 ) -> Result<()> {
+    if let ProjectionRemoteAction::S3 {
+        action: S3ProjectionRemoteAction::Profile { action },
+    } = &action
+    {
+        return run_s3_profile_action(ledger_dir, action);
+    }
     let mut webdav_provider = webdav::WebDavProjectionProvider::new()?;
     if action_is_s3(&action) {
         let mut s3_provider = s3::S3ProjectionProvider::new()?;
+        if let Some(profile_id) = s3_profile_id_from_action(&action) {
+            let profile = s3::load_remote_projection_s3_profile(ledger_dir, profile_id)?;
+            s3_provider = s3_provider.with_custom_profile(profile);
+        }
         run_with_providers(
             ledger_dir,
             action,
@@ -78,6 +138,51 @@ pub(crate) fn run(
             &mut webdav_provider,
             &mut s3_provider,
         )
+    }
+}
+
+fn run_s3_profile_action(ledger_dir: &Path, action: &S3ProjectionProfileAction) -> Result<()> {
+    match action {
+        S3ProjectionProfileAction::Put {
+            profile,
+            endpoint_origin,
+            bucket,
+            allowed_prefix,
+            region,
+            credential_env_prefix,
+            allowed_directions,
+        } => {
+            let profile = s3::RemoteProjectionS3Profile::env_profile(
+                profile,
+                endpoint_origin,
+                bucket,
+                allowed_prefix,
+                region,
+                credential_env_prefix,
+                allowed_directions.clone(),
+            );
+            let path = s3::write_remote_projection_s3_profile(ledger_dir, profile)?;
+            println!(
+                "projection_remote: wrote host-local secret-free S3 profile store {}",
+                path.display()
+            );
+            Ok(())
+        }
+        S3ProjectionProfileAction::List => {
+            for profile in s3::load_remote_projection_s3_profiles(ledger_dir)? {
+                println!(
+                    "projection_remote: s3 profile={} endpoint_origin={} bucket={} allowed_prefix={} region={} credential_ref=env_prefix:{} allowed_directions={}",
+                    profile.profile_id,
+                    profile.endpoint_origin,
+                    profile.bucket,
+                    profile.allowed_prefix,
+                    profile.region,
+                    profile.credential_ref.env_prefix,
+                    profile.allowed_directions.join(","),
+                );
+            }
+            Ok(())
+        }
     }
 }
 
@@ -388,9 +493,55 @@ fn request_from_action(action: ProjectionRemoteAction) -> ProjectionRemoteReques
         ProjectionRemoteAction::Webdav { action } => {
             direction_request(RemoteProjectionProvider::WebDav, action)
         }
-        ProjectionRemoteAction::S3 { action } => {
-            direction_request(RemoteProjectionProvider::S3, action)
+        ProjectionRemoteAction::S3 { action } => s3_direction_request(action),
+    }
+}
+
+fn s3_direction_request(action: S3ProjectionRemoteAction) -> ProjectionRemoteRequest {
+    match action {
+        S3ProjectionRemoteAction::Push {
+            repo,
+            locator,
+            profile: _,
+        } => ProjectionRemoteRequest {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Push,
+            repo,
+            locator,
+        },
+        S3ProjectionRemoteAction::Pull {
+            repo,
+            locator,
+            profile: _,
+        } => ProjectionRemoteRequest {
+            provider: RemoteProjectionProvider::S3,
+            direction: RemoteProjectionDirection::Pull,
+            repo,
+            locator,
+        },
+        S3ProjectionRemoteAction::Profile { .. } => {
+            unreachable!("S3 profile management actions are handled before provider execution")
         }
+    }
+}
+
+fn s3_profile_id_from_action(action: &ProjectionRemoteAction) -> Option<&str> {
+    match action {
+        ProjectionRemoteAction::S3 {
+            action:
+                S3ProjectionRemoteAction::Push {
+                    profile: Some(profile),
+                    ..
+                },
+        }
+        | ProjectionRemoteAction::S3 {
+            action:
+                S3ProjectionRemoteAction::Pull {
+                    profile: Some(profile),
+                    ..
+                },
+        } => Some(profile.as_str()),
+        _ => None,
     }
 }
 

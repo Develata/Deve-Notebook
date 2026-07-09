@@ -8,7 +8,9 @@ use chrono::{TimeZone, Utc};
 use deve_core::remote_projection::RemoteProjectionProviderError;
 use reqwest::StatusCode;
 use std::collections::VecDeque;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 pub(super) fn test_credentials() -> S3Credentials {
     S3Credentials::for_test()
@@ -143,4 +145,41 @@ pub(super) fn now() -> chrono::DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 7, 5, 12, 0, 0)
         .single()
         .expect("time")
+}
+
+pub(super) struct EnvGuard {
+    _lock: MutexGuard<'static, ()>,
+    old: Vec<(&'static str, Option<String>)>,
+}
+
+impl EnvGuard {
+    pub(super) fn set(values: &[(&'static str, Option<&'static str>)]) -> Self {
+        let lock = ENV_LOCK.lock().expect("env lock");
+        let old = values
+            .iter()
+            .map(|(key, _)| (*key, std::env::var(key).ok()))
+            .collect::<Vec<_>>();
+        for (key, value) in values {
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+        Self { _lock: lock, old }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (key, value) in self.old.drain(..) {
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
 }

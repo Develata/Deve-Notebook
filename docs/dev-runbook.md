@@ -219,6 +219,7 @@ Push examples:
 ```bash
 cargo run -p deve_cli --bin deve_cli -- projection-remote webdav push --locator webdav+https://dav.example.com/notebooks/main
 cargo run -p deve_cli --bin deve_cli -- projection-remote s3 push --locator s3://bucket-name/notebooks/main
+cargo run -p deve_cli --bin deve_cli -- projection-remote s3 push --profile minio --locator s3+https://minio.example.com/bucket-name/notebooks/main
 ```
 
 Pull examples:
@@ -226,17 +227,41 @@ Pull examples:
 ```bash
 cargo run -p deve_cli --bin deve_cli -- projection-remote webdav pull --locator webdav+https://dav.example.com/notebooks/main
 cargo run -p deve_cli --bin deve_cli -- projection-remote s3 pull --locator s3://bucket-name/notebooks/main
+cargo run -p deve_cli --bin deve_cli -- projection-remote s3 pull --profile minio --locator s3+https://minio.example.com/bucket-name/notebooks/main
 ```
+
+S3-compatible custom endpoints require a host-local secret-free profile before
+provider I/O. Example profile setup:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- projection-remote s3 profile put \
+  --profile minio \
+  --endpoint-origin https://minio.example.com \
+  --bucket bucket-name \
+  --allowed-prefix notebooks/main \
+  --region us-east-1 \
+  --credential-env-prefix MINIO \
+  --allowed-directions push,pull
+
+export MINIO_ACCESS_KEY_ID=...
+export MINIO_SECRET_ACCESS_KEY=...
+# Optional:
+export MINIO_SESSION_TOKEN=...
+```
+
+The profile store lives under `ledger/.host/remote-projection-s3-profiles.toml`
+and stores only endpoint/bucket/prefix/signing metadata plus the credential env
+prefix, never raw key material.
 
 `pull` overwrites only Markdown files in the Projection Workspace, then relies on
 watcher/scan to surface External Changes. The user must still confirm External
 Changes before any ledger facts are appended. Provider metadata, ETags, mtimes,
 object versions, and remote listing order remain diagnostics only.
 
-S3-compatible custom endpoints (`s3+https://...`) remain fail-closed until the
-ADR 0008 Remote Projection credential profile runtime is implemented,
-configured, and active; the guard runs before provider I/O and before default
-AWS credentials are resolved.
+S3-compatible custom endpoints (`s3+https://...`) run only through an explicit
+profile handle. Missing profile, endpoint/bucket/prefix mismatch, unsupported
+addressing style, missing credential env, or resolver failure all fail closed
+before provider I/O and before ambient AWS credentials are resolved.
 
 ## Docker Release Smoke
 

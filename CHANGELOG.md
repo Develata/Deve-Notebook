@@ -5,6 +5,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Projection Backup / S3-compatible**: CLI-only explicit Remote Projection profile slice for `s3+https://` custom endpoints, backed by host-local secret-free profile metadata and env-prefix credential refs; unbound or mismatched custom endpoints still fail closed before provider I/O and ambient AWS credential fallback.
+
 ## [0.1.0] - 2026-06-23
 
 ### Added

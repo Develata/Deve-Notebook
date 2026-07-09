@@ -54,7 +54,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve ngit import`: 只读规划外部 Git/worktree changes。
     *   `deve ngit import --apply`: 显式把安全 Git changes 写入 pending/import；不得直接生成 ledger facts。
     *   `deve ngit push`: 显式发布已映射 `.git` main mirror HEAD。
-    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 执行 Projection Backup / Remote Projection transport；push/pull 只传输 Markdown Projection Workspace files，pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。S3-compatible `s3+https://` custom endpoint 必须走 ADR 0008 的 host-local、secret-free profile binding；profile runtime 未实现或 locator/profile 不匹配时继续 fail-closed。
+    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 执行 Projection Backup / Remote Projection transport；push/pull 只传输 Markdown Projection Workspace files，pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。S3-compatible `s3+https://` custom endpoint 必须走 ADR 0008 的 host-local、secret-free profile binding；CLI 显式 profile handle 已可执行，未绑定或 locator/profile 不匹配时继续 fail-closed。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 

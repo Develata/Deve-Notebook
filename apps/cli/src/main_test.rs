@@ -1,7 +1,9 @@
 use super::{
     Args, Commands, ConfigAction, NgitAction, ProjectionRemoteAction, run_pre_config_command,
 };
-use crate::commands::projection_remote::ProjectionRemoteDirectionAction;
+use crate::commands::projection_remote::{
+    ProjectionRemoteDirectionAction, S3ProjectionProfileAction, S3ProjectionRemoteAction,
+};
 use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
@@ -245,6 +247,99 @@ fn projection_remote_webdav_pull_accepts_locator() {
         }) => {
             assert_eq!(repo.as_deref(), Some("default"));
             assert_eq!(locator, "webdav+https://dav.example.com/notebooks/main");
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
+fn projection_remote_s3_push_accepts_explicit_profile() {
+    let args = Args::try_parse_from([
+        "deve",
+        "projection-remote",
+        "s3",
+        "push",
+        "--repo",
+        "default",
+        "--locator",
+        "s3+https://minio.example.com/bucket/notebooks/main",
+        "--profile",
+        "minio",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::ProjectionRemote {
+            action:
+                ProjectionRemoteAction::S3 {
+                    action:
+                        S3ProjectionRemoteAction::Push {
+                            repo,
+                            locator,
+                            profile,
+                        },
+                },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert_eq!(
+                locator,
+                "s3+https://minio.example.com/bucket/notebooks/main"
+            );
+            assert_eq!(profile.as_deref(), Some("minio"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
+fn projection_remote_s3_profile_put_accepts_secret_free_fields() {
+    let args = Args::try_parse_from([
+        "deve",
+        "projection-remote",
+        "s3",
+        "profile",
+        "put",
+        "--profile",
+        "minio",
+        "--endpoint-origin",
+        "https://minio.example.com",
+        "--bucket",
+        "bucket",
+        "--allowed-prefix",
+        "notebooks/main",
+        "--region",
+        "us-east-1",
+        "--credential-env-prefix",
+        "MINIO",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::ProjectionRemote {
+            action:
+                ProjectionRemoteAction::S3 {
+                    action:
+                        S3ProjectionRemoteAction::Profile {
+                            action:
+                                S3ProjectionProfileAction::Put {
+                                    profile,
+                                    endpoint_origin,
+                                    bucket,
+                                    allowed_prefix,
+                                    region,
+                                    credential_env_prefix,
+                                    allowed_directions,
+                                },
+                        },
+                },
+        }) => {
+            assert_eq!(profile, "minio");
+            assert_eq!(endpoint_origin, "https://minio.example.com");
+            assert_eq!(bucket, "bucket");
+            assert_eq!(allowed_prefix, "notebooks/main");
+            assert_eq!(region, "us-east-1");
+            assert_eq!(credential_env_prefix, "MINIO");
+            assert_eq!(allowed_directions, vec!["push", "pull"]);
         }
         other => panic!("unexpected command: {other:?}"),
     }

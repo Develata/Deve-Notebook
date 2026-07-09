@@ -111,9 +111,9 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - 未接线的 provider/direction 必须显示 `provider_io_ready=false` 并 fail-closed，不能伪装成
   已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
   workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
-- 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull` 与 AWS `s3://` `s3:push`/`s3:pull`；
-  `s3+https://` custom endpoint 在 ADR 0008 的 host-local、secret-free Remote Projection
-  profile binding 实现并验证前必须继续 fail-closed。
+- 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull`、AWS `s3://` `s3:push`/`s3:pull`，
+  以及 CLI 显式 profile handle 下的 `s3+https://` custom endpoint；未绑定或 profile
+  与 locator 不匹配时必须继续 fail-closed。
 - Web Command Palette 只发送 provider/direction intent；backend 从当前 local repo 的 `repo_url`
   或后续 backend-defined profile handle 解析 WebDAV/S3 locator/profile。未配置 transport URL、
   provider 与 URL scheme 不匹配，或 profile 与 locator 不匹配时显示

@@ -232,8 +232,9 @@ health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公�
 - [ ] 非漏洞依赖 warning 均有 registry allowlist 理由或替换路线；首个正式 tag 前
       `tag_blocker=yes` 项已被 USER 决策、替换或重新归类。
 - [ ] Remote Projection S3-compatible credential binding 遵循 ADR 0008 的长期 profile
-      contract；若 profile runtime 尚未实现，`s3+https://` custom endpoint 必须继续
-      fail-closed，且不得把默认 `AWS_*` 环境凭证签给任意 custom host。
+      contract；CLI 显式 profile slice 可执行，未绑定 / locator-profile 不匹配 / Web
+      profile UX 尚未接入的 custom endpoint 必须继续 fail-closed，且不得把默认
+      `AWS_*` 环境凭证签给任意 custom host。
 - [ ] Linux native Desktop first-tag TODO 已关闭，或首个正式 tag 的 release set
       已明确排除 Linux native Desktop artifacts，并将 GTK4/WebKitGTK 6-compatible
       Tauri/Wry route 或等价 maintained WebView route 记录为后续工作。

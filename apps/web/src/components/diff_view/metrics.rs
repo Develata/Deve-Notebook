@@ -49,11 +49,10 @@ pub fn record_cache_sample(metrics: &DiffMetricsState, hit: bool) {
     let total = metrics.cache_total.get_untracked();
     let next_hits = hits + u32::from(hit);
     let next_total = total.saturating_add(1);
-    let ratio = if next_total == 0 {
-        0
-    } else {
-        (next_hits.saturating_mul(100)) / next_total
-    };
+    let ratio = next_hits
+        .saturating_mul(100)
+        .checked_div(next_total)
+        .unwrap_or(0);
     metrics.set_cache_hits.set(next_hits);
     metrics.set_cache_total.set(next_total);
     metrics.set_cache_hit_ratio.set(ratio);

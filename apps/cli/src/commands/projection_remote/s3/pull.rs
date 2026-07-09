@@ -6,11 +6,12 @@ use super::list::discover_remote_markdown_files;
 use super::provider::{FailClosedS3ProjectionProvider, S3ProjectionProvider};
 use super::signing::signed_get_request;
 use super::transport::S3Transport;
-use super::url::{reject_custom_https_endpoint_without_binding, s3_file_url};
+use super::url::{S3CustomEndpointUrlBinding, s3_file_url_with_binding};
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
-    RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProvider,
-    RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
+    RemoteProjectionAuthorityEffects, RemoteProjectionDirection, RemoteProjectionFile,
+    RemoteProjectionProvider, RemoteProjectionProviderError, RemoteProjectionPullOutcome,
+    RemoteProjectionPullRequest,
 };
 
 pub(super) const MAX_PULL_FILE_BYTES: usize = 4 * 1024 * 1024;
@@ -34,10 +35,15 @@ impl<T: S3Transport> S3ProjectionPullAdapter for S3ProjectionProvider<T> {
             return Err(RemoteProjectionProviderError::ProviderMismatch);
         }
         let request = RemoteProjectionPullRequest::new(provider, locator)?;
-        reject_custom_https_endpoint_without_binding(request.locator())?;
-        let credentials = self.credentials.resolve()?;
-        let region = self.region.resolve()?;
-        pull_request(&self.transport, &credentials, &region, self.now, request)
+        let binding = self.request_binding(RemoteProjectionDirection::Pull, request.locator())?;
+        pull_request(
+            &self.transport,
+            &binding.credentials,
+            &binding.region,
+            binding.custom_url_binding.as_ref(),
+            self.now,
+            request,
+        )
     }
 }
 
@@ -58,19 +64,26 @@ pub(super) fn pull_request<T: S3Transport>(
     transport: &T,
     credentials: &S3Credentials,
     region: &str,
+    custom_url_binding: Option<&S3CustomEndpointUrlBinding>,
     now: fn() -> DateTime<Utc>,
     request: RemoteProjectionPullRequest,
 ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
     if request.provider() != RemoteProjectionProvider::S3 {
         return Err(RemoteProjectionProviderError::ProviderMismatch);
     }
-    reject_custom_https_endpoint_without_binding(request.locator())?;
-    let paths =
-        discover_remote_markdown_files(transport, credentials, region, now, request.locator())?;
+    let paths = discover_remote_markdown_files(
+        transport,
+        credentials,
+        region,
+        custom_url_binding,
+        now,
+        request.locator(),
+    )?;
     let mut files = Vec::new();
     let mut total_bytes = 0usize;
     for path in paths {
-        let target = s3_file_url(request.locator(), region, &path)?;
+        let target =
+            s3_file_url_with_binding(request.locator(), region, &path, custom_url_binding)?;
         let response = transport.get(signed_get_request(
             target,
             credentials,
