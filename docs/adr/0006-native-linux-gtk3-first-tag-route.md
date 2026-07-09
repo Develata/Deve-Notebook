@@ -1,6 +1,6 @@
 # 0006. Native Linux GTK3 first-tag route
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-07
 
 ## Context
@@ -21,8 +21,12 @@ developer-only spike.
 
 ## Decision
 
-No route is accepted yet. Before the first formal public tag, the project must
-choose exactly one of these routes:
+Route 2 is accepted for the first formal public tag: Linux GTK3/WebKitGTK 4.x
+native artifacts are excluded from the first-tag release set. The remaining
+routes are kept as future alternatives, but they do not block the first tag while
+the Linux GTK3 native artifact remains unshipped.
+
+The possible routes remain:
 
 1. **Upgrade or replace the native shell dependency stack.**
    Move the Linux native shell route to a maintained GTK/WebView dependency
@@ -40,8 +44,9 @@ choose exactly one of these routes:
    an explicit USER decision records the risk, scope, replacement follow-up and
    evidence boundary.
 
-The recommended route is **Route 2 unless a maintained native stack upgrade is
-small and already proven on the target hosts**.
+The accepted first-tag route is **Route 2**. A maintained native stack upgrade
+can reopen Linux native artifacts in a later release only after target-host
+package/startup evidence is refreshed.
 
 ## Rationale
 
@@ -72,15 +77,18 @@ carry an explicit compatibility and advisory story from the first tag onward.
 
 ## Consequences
 
-- `release-audit-gate tag-ready` must continue to fail while the GTK3/glib
-  rows in `docs/registry/release-audit-warning-registry.md` have
-  `tag_blocker=yes`.
+- `release-audit-gate tag-ready` may pass for the GTK3/glib warnings only
+  because Linux GTK3/WebKitGTK 4.x native artifacts are excluded from the first
+  formal tag. Re-enabling those artifacts without replacing the stack must set
+  the affected warning rows back to `tag_blocker=yes` or record a new explicit
+  USER risk acceptance.
 - This ADR does not open native authority writes, process runtime outside the
   existing gates, Linux package publication, store readiness, signing readiness
   or physical-device readiness.
-- Any implementation of Route 1 or Route 2 must update the release plan,
-  feature docs, acceptance cases, warning registry and target-host evidence
-  before removing the tag blocker.
+- This Route 2 implementation updates the release plan, feature docs,
+  acceptance cases, warning registry and release workflow boundary. It does not
+  update target-host evidence because no Linux native artifact is shipped in the
+  first-tag release set.
 
 ## References
 

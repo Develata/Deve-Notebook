@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-remote-layout-contract
 
 use super::credentials::S3Credentials;
 use super::signing::signed_get_request;

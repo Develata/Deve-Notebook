@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-locator-contract
 
 use deve_core::remote_projection::RemoteProjectionProviderError;
 use reqwest::Url;

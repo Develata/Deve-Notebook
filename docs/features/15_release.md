@@ -26,6 +26,7 @@
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
+- 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
 
 ### 2. 版本与升级预期
 
@@ -56,8 +57,9 @@
   synthetic `YANKED` advisory key 并仍按 crate / version / kind 精确匹配。
 - 首个公开 tag 的 release audit 作业必须设置 `DEVE_RELEASE_TAG_READY_REQUIRED=1`
   或显式运行 `deve_baseline release-audit-gate tag-ready`；仍登记为
-  `tag_blocker=yes` 的 warning 会 fail-closed，直到完成替换、重新归类或 USER
-  决策。
+  `tag_blocker=yes` 的 warning 会 fail-closed。当前 GTK3/glib warning 依据 ADR
+  0006 Route 2 重新归类为非 blocker，因为 Linux GTK3 native artifacts 不进入
+  first-tag release set。
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
   Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。

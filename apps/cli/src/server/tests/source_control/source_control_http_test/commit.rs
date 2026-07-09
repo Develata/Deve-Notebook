@@ -15,6 +15,7 @@ async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {
     write_workspace_file(dir, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
+    proxy.apply_external_changes_in_repo(&selector)?;
     let c1 = proxy.commit_source_control_changes_in_repo(
         &selector,
         "c1",
@@ -22,6 +23,7 @@ async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {
     write_workspace_file(dir, "notes/b.md", "world");
     seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/b.md"))?;
+    proxy.apply_external_changes_in_repo(&selector)?;
     let c2 = proxy.commit_source_control_changes_in_repo(
         &selector,
         "c2",

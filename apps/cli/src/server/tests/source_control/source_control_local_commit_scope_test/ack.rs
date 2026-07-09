@@ -33,6 +33,7 @@ async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;
+    state.repo.apply_external_changes()?;
 
     let (uni_tx, _uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);

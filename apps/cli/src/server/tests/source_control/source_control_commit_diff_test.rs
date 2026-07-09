@@ -56,6 +56,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             has_conflict: false,        },
     );
     proxy.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    proxy.apply_external_changes_in_repo(&selector)?;
     let first = proxy.commit_source_control_changes_in_repo(
         &selector,
         "initial",
@@ -94,6 +95,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
         domain: None,
         },
     )?;
+    proxy.apply_external_changes_in_repo(&selector)?;
     let second = proxy.commit_source_control_changes_in_repo(
         &selector,
         "rename",

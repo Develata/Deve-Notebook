@@ -5,10 +5,15 @@ name: Release Native Packages
 # The Docker/Web release baseline stays in `release.yml`; this workflow is the
 # SEPARATE native delivery track described in docs/plan/18_release.md §2.1. It
 # builds installable desktop/mobile packages on a `v*` tag and attaches them to
-# the GitHub Release. It reuses the same package-build scripts as
+# the GitHub Release, except Linux GTK3/WebKitGTK desktop artifacts, which ADR
+# 0006 excludes from the first-tag release set. It reuses the same package-build scripts as
 # `native-target-host.yml` (single source of truth for "how to build a package").
 #
 # Caveats (see docs/plan/18_release.md §1.1 / §2.1):
+#   - Linux GTK3/WebKitGTK desktop bundles are intentionally not produced by
+#     this first-tag delivery workflow. Reintroducing them requires reopening
+#     ADR 0006 / release-audit warning blockers and refreshing target-host
+#     evidence for the maintained native shell stack.
 #   - Windows bundles ship UNSIGNED. SmartScreen will show an "unknown
 #     publisher" prompt; this is expected for an unsigned open-source build.
 #   - Android requires signing to install. The APK is signed only when the
@@ -228,88 +233,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-mobile-android
-          path: dist-release
-          if-no-files-found: error
-
-      - name: Attach to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist-release/*
-          prerelease: ${{ env.IS_PRERELEASE }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-
-  desktop-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: "1.92"
-          targets: wasm32-unknown-unknown,x86_64-unknown-linux-gnu
-
-      - name: Install Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Cache cargo registry
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-native-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-native-
-
-      - name: Install Linux bundling dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libssl-dev \
-            patchelf \
-            file \
-            build-essential
-
-      - name: Install native packaging tools (trunk + tauri CLI)
-        env:
-          DEVE_NATIVE_INSTALL_TRUNK: "1"
-          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
-        run: scripts/install-native-target-host-tools.sh
-
-      - name: Build web dist
-        run: scripts/build-web-dist-ci.sh
-
-      - name: Build Linux bundles (deb, appimage; unsigned)
-        env:
-          DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
-          DEVE_DESKTOP_PACKAGE_BUNDLES: deb,appimage
-          DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
-        run: scripts/check-desktop-platform-package-build.sh
-
-      - name: Collect Linux bundles
-        run: |
-          set -euo pipefail
-          mkdir -p dist-release
-          shopt -s nullglob
-          copied=0
-          for f in target/release/bundle/deb/*.deb target/release/bundle/appimage/*.AppImage; do
-            cp "$f" dist-release/
-            copied=$((copied + 1))
-          done
-          [ "$copied" -gt 0 ] || { echo "no Linux bundles under target/release/bundle"; exit 1; }
-          ls -la dist-release
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: deve-desktop-linux
           path: dist-release
           if-no-files-found: error
 

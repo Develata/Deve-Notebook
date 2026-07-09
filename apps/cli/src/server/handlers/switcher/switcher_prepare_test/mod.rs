@@ -208,6 +208,7 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
     let (dir, state) = build_state()?;
     init_local_repo(&dir, "notes-a", "urn:notes-a")?;
     init_local_repo(&dir, "notes-b", "urn:notes-b")?;
+    let mut targets = Vec::new();
     for repo_name in ["notes-a", "notes-b"] {
         let repo_uuid = state
             .repo
@@ -215,6 +216,9 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
             .expect("repo info")
             .uuid;
         let db = state.repo.open_database(None, repo_name)?.db;
+        targets.push((repo_name, repo_uuid, db));
+    }
+    for (repo_name, repo_uuid, db) in targets {
         write_repo_metadata(
             &db,
             &RepoInfo {
@@ -242,6 +246,8 @@ fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> a
     assert!(
         err.to_string().contains("decode")
             || err.to_string().contains("deserialize")
+            || err.to_string().contains("deserialization")
+            || err.to_string().contains("postcard")
             || err.to_string().contains("unexpected end")
     );
     Ok(())

@@ -49,7 +49,10 @@ pub(crate) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyho
 
 pub(crate) fn delete_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
     let txn = db.begin_write()?;
-    txn.delete_table(REPO_METADATA)?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        table.remove(&REPO_INFO_METADATA_KEY)?;
+    }
     txn.commit()?;
     Ok(())
 }
@@ -71,10 +74,19 @@ pub(crate) fn create_repo_db_missing_metadata(path: impl AsRef<Path>) {
         std::fs::create_dir_all(parent).expect("metadata-less repo parent dir");
     }
     let db = redb::Database::create(path.as_ref()).expect("metadata-less repo db");
-    db.begin_write()
-        .expect("write txn")
-        .commit()
-        .expect("commit metadata-less db");
+    let txn = db.begin_write().expect("write txn");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .insert(
+                &REPO_SCHEMA_VERSION_METADATA_KEY,
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
+                    .as_slice(),
+            )
+            .expect("write schema version");
+    }
+    txn.commit().expect("commit metadata-less db");
     drop(db);
 }
 

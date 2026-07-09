@@ -42,6 +42,24 @@ fn maps_plain_text_broken_repo_entry_to_storage_persist_failed() {
 }
 
 #[test]
+fn maps_plain_text_local_repo_catalog_drift_during_listing_to_storage_persist_failed() {
+    let err = decode_error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        b"failed to list local repos: local repo notes metadata name drifted to peer-remote",
+    );
+    assert_eq!(err.code, ServerErrorCode::StoragePersistFailed);
+}
+
+#[test]
+fn maps_plain_text_stale_alias_drift_without_listing_context_to_repo_context_invalid() {
+    let err = decode_error(
+        StatusCode::CONFLICT,
+        b"Local repo notes metadata name drifted to legacy-notes",
+    );
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
 fn maps_plain_text_stale_scope_nonce() {
     let err = decode_error(
         StatusCode::CONFLICT,

@@ -161,15 +161,10 @@ mod tests {
     }
 
     #[test]
-    fn default_gate_allows_registered_first_tag_blockers_until_explicit_tag_ready_check() {
-        run(&[]).expect("default release audit registry gate should allow tag blockers");
-
-        let error =
-            run(&["tag-ready".to_string()]).expect_err("explicit first-tag check must block");
-        assert!(
-            error.to_string().contains("first-tag readiness is blocked"),
-            "{error}"
-        );
+    fn tag_ready_allows_registry_after_first_tag_blockers_are_resolved() {
+        run(&[]).expect("default release audit registry gate should pass");
+        run(&["tag-ready".to_string()])
+            .expect("first-tag gate should pass after ADR 0006 Route 2 resolves blockers");
     }
 
     #[test]

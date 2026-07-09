@@ -37,6 +37,7 @@ fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(Stri
         )
     })?;
     state.repo.stage_pending(&path)?;
+    state.repo.apply_external_changes()?;
     state
         .repo
         .commit_source_control_changes("initial")?;

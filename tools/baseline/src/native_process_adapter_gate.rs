@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 
 const LABEL: &str = "native-process-adapter-gate-check";
 const DEFAULT_TARGET_DIR: &str = "target/native-process-gate";
+const RUN_NATIVE_PACKAGING_TESTS_ENV: &str =
+    "DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS";
 const RUN_DESKTOP_NATIVE_PACKAGING_TESTS_ENV: &str =
     "DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS";
 
@@ -46,14 +48,6 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         filter: Some("mobile_default_build_defers_real_process_adapter"),
     },
     CargoTest {
-        package: "deve_mobile",
-        features: Some("native-packaging"),
-        no_default_features: false,
-        lib: false,
-        test_target: None,
-        filter: Some("mobile_embedded_backend"),
-    },
-    CargoTest {
         package: "deve_cli",
         features: None,
         no_default_features: false,
@@ -62,6 +56,15 @@ const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
         filter: Some("native_session"),
     },
 ];
+
+const MOBILE_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[CargoTest {
+    package: "deve_mobile",
+    features: Some("native-packaging"),
+    no_default_features: false,
+    lib: false,
+    test_target: None,
+    filter: Some("mobile_embedded_backend"),
+}];
 
 const DESKTOP_NATIVE_PACKAGING_TESTS: &[CargoTest] = &[
     CargoTest {
@@ -164,12 +167,20 @@ fn run_cargo_tests(root: &Path) -> Result<()> {
         runner.run_test(test)?;
     }
 
-    if should_run_desktop_native_packaging_tests()? {
-        for test in DESKTOP_NATIVE_PACKAGING_TESTS {
+    if should_run_native_packaging_tests()? {
+        for test in MOBILE_NATIVE_PACKAGING_TESTS {
             runner.run_test(test)?;
         }
+
+        if should_run_desktop_native_packaging_tests()? {
+            for test in DESKTOP_NATIVE_PACKAGING_TESTS {
+                runner.run_test(test)?;
+            }
+        } else {
+            println!("{LABEL}: skip Desktop native-packaging tests for scoped target-host run");
+        }
     } else {
-        println!("{LABEL}: skip Desktop native-packaging tests for scoped target-host run");
+        println!("{LABEL}: skip native-packaging tests for release scope without native artifacts");
     }
 
     for test in PROCESS_OBSERVATION_TESTS {
@@ -179,13 +190,20 @@ fn run_cargo_tests(root: &Path) -> Result<()> {
     Ok(())
 }
 
+fn should_run_native_packaging_tests() -> Result<bool> {
+    binary_env_flag(RUN_NATIVE_PACKAGING_TESTS_ENV, true)
+}
+
 fn should_run_desktop_native_packaging_tests() -> Result<bool> {
-    let value =
-        std::env::var(RUN_DESKTOP_NATIVE_PACKAGING_TESTS_ENV).unwrap_or_else(|_| "1".to_string());
+    binary_env_flag(RUN_DESKTOP_NATIVE_PACKAGING_TESTS_ENV, true)
+}
+
+fn binary_env_flag(name: &str, default: bool) -> Result<bool> {
+    let value = std::env::var(name).unwrap_or_else(|_| if default { "1" } else { "0" }.to_string());
     match value.as_str() {
         "1" | "true" | "TRUE" | "yes" | "YES" => Ok(true),
         "0" | "false" | "FALSE" | "no" | "NO" => Ok(false),
-        _ => bail!("{LABEL}: invalid {RUN_DESKTOP_NATIVE_PACKAGING_TESTS_ENV}: {value}"),
+        _ => bail!("{LABEL}: invalid {name}: {value}"),
     }
 }
 

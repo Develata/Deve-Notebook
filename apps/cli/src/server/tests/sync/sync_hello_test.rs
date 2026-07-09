@@ -175,6 +175,7 @@ async fn sync_hello_pushes_source_control_commit_to_full_peer() -> anyhow::Resul
     state
         .repo
         .stage_pending_in_repo(&selector, &ScPathTarget::from_path(path))?;
+    state.repo.apply_external_changes_in_repo(&selector)?;
     state.repo.commit_source_control_changes_in_repo(
         &selector,
         "source control mesh commit",

@@ -34,6 +34,7 @@ fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()>
         },
     );
     repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    repo.apply_external_changes_in_repo(&selector)?;
     repo.commit_source_control_changes_in_repo(&selector, "initial")?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
     repo.apply_file_delete_structure_in_local_repo(
@@ -107,6 +108,7 @@ fn remote_diff_fails_closed_when_local_doc_has_only_legacy_mapping() -> anyhow::
         },
     );
     repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    repo.apply_external_changes_in_repo(&selector)?;
     repo.commit_source_control_changes_in_repo(&selector, "initial")?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

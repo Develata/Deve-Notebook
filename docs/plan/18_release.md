@@ -51,7 +51,7 @@ CI/CD 基于 GitHub Actions。
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native/graph boundary scripts, `cargo test --locked`.
+    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, and `cargo test --locked`. The native process adapter gate is scoped with `DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0` in `release.yml`, so it verifies no-Tauri/process authority boundaries without compiling native-packaging dependencies.
         Dependency audit belongs to this gate: `scripts/check-release-audit-gate.sh`
         **MUST** fail on cargo/npm vulnerabilities and **MUST** compare every
         non-vulnerability `cargo audit` warning with
@@ -70,6 +70,11 @@ CI/CD 基于 GitHub Actions。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
 Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
+
+First-tag `release.yml` deliberately does **not** run Linux GTK3/WebKitGTK 4.x
+native packaging, installer, signing, Android/iOS package-build or physical-device
+smoke gates. Those remain target-host / workflow-dispatch evidence surfaces, not
+tag-triggered Docker release requirements.
 
 Linux native Desktop bundling has an additional first-tag TODO: it **MUST NOT**
 ship a Linux GTK3/WebKitGTK 4.x native artifact for the first formal tag. Before

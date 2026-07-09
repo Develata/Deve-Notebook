@@ -42,6 +42,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
             domain: None,
         },
     )?;
+    repo.apply_external_changes_in_repo(&selector)?;
     repo.commit_source_control_changes_in_repo(&selector, "rename")?;
 
     let content = local_counterpart_content(&repo, doc_id, repo.local_repo_name())?;

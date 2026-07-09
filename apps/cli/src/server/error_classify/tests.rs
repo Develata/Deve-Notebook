@@ -36,3 +36,13 @@ fn classifies_registry_poison_as_storage_corruption() {
         "reposcopedsyncengine write lock poisoned",
     ));
 }
+
+#[test]
+fn classifies_local_repo_catalog_metadata_corruption() {
+    assert!(is_storage_corruption(
+        "failed to list local repos: local repo notes metadata name drifted to peer-remote",
+    ));
+    assert!(is_storage_corruption(
+        "failed to list local repos: postcard deserialization failed: serde deserialization error",
+    ));
+}

@@ -196,6 +196,8 @@ fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
     assert!(
         err.to_string().contains("decode")
             || err.to_string().contains("deserialize")
+            || err.to_string().contains("deserialization")
+            || err.to_string().contains("postcard")
             || err.to_string().contains("unexpected end")
     );
 }

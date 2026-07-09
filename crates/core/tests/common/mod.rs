@@ -61,7 +61,12 @@ pub fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) {
 
 pub fn delete_repo_metadata(db: &redb::Database) {
     let txn = db.begin_write().expect("write txn");
-    let _ = txn.delete_table(REPO_METADATA).expect("delete metadata");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .remove(&REPO_INFO_METADATA_KEY)
+            .expect("delete repo info metadata");
+    }
     txn.commit().expect("commit missing metadata");
 }
 
@@ -97,10 +102,19 @@ pub fn seed_metadata_less_local_repo(ledger_dir: &Path, stem: &str) {
     std::fs::create_dir_all(ledger_dir.join("local")).expect("create local dir");
     let db =
         redb::Database::create(local_repo_file(ledger_dir, stem)).expect("metadata-less repo db");
-    db.begin_write()
-        .expect("write txn")
-        .commit()
-        .expect("commit metadata-less db");
+    let txn = db.begin_write().expect("write txn");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .insert(
+                &REPO_SCHEMA_VERSION_METADATA_KEY,
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
+                    .as_slice(),
+            )
+            .expect("write schema version");
+    }
+    txn.commit().expect("commit metadata-less db");
     drop(db);
 }
 
@@ -173,6 +187,19 @@ pub fn seed_metadata_less_shadow_repo(repo: &RepoManager, peer_id: &PeerId, stem
     std::fs::create_dir_all(&peer_dir).expect("peer dir");
     let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))
         .expect("metadata-less shadow repo");
+    let txn = db.begin_write().expect("write txn");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .insert(
+                &REPO_SCHEMA_VERSION_METADATA_KEY,
+                codec::encode(&REDB_SCHEMA_VERSION)
+                    .expect("encode schema version")
+                    .as_slice(),
+            )
+            .expect("write schema version");
+    }
+    txn.commit().expect("commit metadata-less shadow repo");
     drop(db);
 }
 

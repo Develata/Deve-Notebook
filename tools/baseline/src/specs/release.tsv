@@ -24,14 +24,24 @@ contains	.github/workflows/release.yml	scripts/plan-coverage.sh --write-report
 contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
 contains	.github/workflows/release.yml	scripts/check-architecture-registry.sh
 contains	.github/workflows/release.yml	scripts/check-native-track-boundary.sh
-contains	.github/workflows/release.yml	scripts/check-native-packaging-gate.sh
-contains	.github/workflows/release.yml	scripts/check-native-process-adapter-gate.sh
-contains	.github/workflows/release.yml	scripts/check-mobile-platform-package-preflight.sh
-contains	.github/workflows/release.yml	scripts/check-mobile-android-shell-package-build.sh
-contains	.github/workflows/release.yml	scripts/check-desktop-signing-preflight.sh
-contains	.github/workflows/release.yml	scripts/check-mobile-android-release-preflight.sh
+contains	.github/workflows/release.yml	DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0 scripts/check-native-process-adapter-gate.sh
 contains	.github/workflows/release.yml	scripts/check-graph-baseline.sh
+absent	.github/workflows/release.yml	scripts/check-native-packaging-gate.sh
+absent	.github/workflows/release.yml	scripts/check-mobile-platform-package-preflight.sh
+absent	.github/workflows/release.yml	scripts/check-mobile-android-shell-package-build.sh
+absent	.github/workflows/release.yml	scripts/check-desktop-signing-preflight.sh
+absent	.github/workflows/release.yml	scripts/check-mobile-android-release-preflight.sh
 contains	.github/workflows/release.yml	cargo test --locked
+contains	.github/workflows/release-native.yml	tags: ['v*']
+contains	.github/workflows/release-native.yml	Linux GTK3/WebKitGTK desktop artifacts
+contains	.github/workflows/release-native.yml	0006 excludes from the first-tag release set
+contains	.github/workflows/release-native.yml	deve-desktop-windows
+contains	.github/workflows/release-native.yml	deve-mobile-android
+contains	.github/workflows/release-native.yml	deve-desktop-macos
+absent	.github/workflows/release-native.yml	desktop-linux:
+absent	.github/workflows/release-native.yml	deve-desktop-linux
+absent	.github/workflows/release-native.yml	DEVE_DESKTOP_PACKAGE_BUNDLES: deb,appimage
+absent	.github/workflows/release-native.yml	libwebkit2gtk-4.1-dev
 contains	.github/workflows/release.yml	docker/build-push-action@v6
 contains	.github/workflows/release.yml	platforms: linux/amd64
 contains	.github/workflows/release.yml	type=raw,value=latest
@@ -259,7 +269,7 @@ contains	docs/plan/18_release.md	`deve init --path <data-root> --repo <name> --p
 contains	docs/plan/18_release.md	<projection-base>/<safe_repo_name>--<repo_id>/
 contains	docs/plan/18_release.md	delivery shape、environment、ports 与聚合 repo
 contains	docs/plan/18_release.md	health counts。degraded repo
-contains	docs/plan/18_release.md	native/graph boundary scripts
+contains	docs/plan/18_release.md	native boundary checks that do not build Linux GTK3 artifacts
 contains	docs/plan/18_release.md	Trunk development live-reload
 contains	docs/plan/18_release.md	api-only
 contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 2

@@ -1,5 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-pull-state-machine-contract
+//!   - 06_backup#projection-backup-verification-contract
 
 use deve_core::remote_projection::{RemoteProjectionFile, RemoteProjectionProviderError};
 use std::fs;

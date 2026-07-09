@@ -24,6 +24,7 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
     state
         .repo
         .stage_pending_in_local_repo(&repo_name, "note.md")?;
+    state.repo.apply_external_changes_in_local_repo(&repo_name)?;
     state
         .repo
         .commit_source_control_changes_in_local_repo(
@@ -140,6 +141,7 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
     state
         .repo
         .stage_pending_in_local_repo(&repo_name, "notes/a.md")?;
+    state.repo.apply_external_changes_in_local_repo(&repo_name)?;
     state
         .repo
         .commit_source_control_changes_in_local_repo(

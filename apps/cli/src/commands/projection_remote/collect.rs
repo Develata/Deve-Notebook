@@ -1,5 +1,8 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-scope
+//!   - 06_backup#projection-backup-contract
+//!   - 06_backup#projection-backup-upload-state-machine-contract
 
 use anyhow::{Context, Result};
 use deve_core::remote_projection::RemoteProjectionFile;

@@ -49,6 +49,7 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
     state
         .repo
         .stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
+    state.repo.apply_external_changes_in_repo(&selector)?;
     state.repo.commit_source_control_changes_in_repo(
         &selector,
         "initial",

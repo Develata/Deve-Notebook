@@ -36,6 +36,7 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
             )
         })?;
     state.repo.stage_pending("notes/stale.md")?;
+    state.repo.apply_external_changes()?;
 
     let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
     let before_commits = state.repo.list_commits(10)?.len();

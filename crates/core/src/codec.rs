@@ -1,7 +1,6 @@
 //! plan_ref:
 //!   - 03_storage/authority#ledger-entry-format-contract
 //!   - 07_network#server-ws-runtime
-//!   - 06_backup#backup-pack-plaintext-schema-contract
 //!
 //! Project-owned binary codec facade.
 

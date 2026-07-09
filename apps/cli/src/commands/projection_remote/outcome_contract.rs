@@ -1,5 +1,8 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-contract
+//!   - 06_backup#projection-backup-command-output-contract
+//!   - 06_backup#projection-backup-verification-contract
 //!
 //! Runtime outcome contract guard for Remote Projection provider I/O.
 

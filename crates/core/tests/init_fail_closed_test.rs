@@ -17,7 +17,7 @@ fn init_fails_closed_when_existing_local_repo_lacks_metadata_table() {
         Ok(_) => panic!("missing repo metadata table must fail init"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("repository metadata missing"));
+    assert!(err.to_string().contains("schema version missing"));
 }
 
 #[test]

@@ -108,6 +108,7 @@ pub(super) fn commit_added_file(
     );
     let selector = RepoSelector::default();
     repo.stage_pending_in_repo(&selector, &ScPathTarget::from_path(path))?;
+    repo.apply_external_changes_in_repo(&selector)?;
     repo.commit_source_control_changes_in_repo(&selector, message)?;
     Ok(repo.get_docid(path)?.expect("existing doc id"))
 }

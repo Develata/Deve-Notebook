@@ -128,6 +128,7 @@ fn seed_note_baseline(
     state
         .repo
         .stage_pending_in_local_repo(repo_name, "note.md")?;
+    state.repo.apply_external_changes_in_local_repo(repo_name)?;
     Ok(state
         .repo
         .commit_source_control_changes_in_local_repo(

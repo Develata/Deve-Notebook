@@ -30,6 +30,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;
+    state.repo.apply_external_changes()?;
     state.repo.commit_source_control_changes("initial")?;
     let doc_id = state
         .repo

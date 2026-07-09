@@ -25,11 +25,11 @@ pub(super) fn decode_plain_text_error(
     if is_stale_scope(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScStaleScope, raw_detail);
     }
-    if is_repo_context_invalid(&lower) {
-        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
-    }
     if is_storage_corruption(&lower) {
         return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, raw_detail);
+    }
+    if is_repo_context_invalid(&lower) {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);
     }
     if is_db_locked(&lower) || status == StatusCode::SERVICE_UNAVAILABLE {
         return ServerError::with_detail(
