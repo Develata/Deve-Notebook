@@ -52,6 +52,8 @@ contains	apps/desktop/tauri.conf.json	"version": "0.1.0"
 contains	apps/mobile/tauri.conf.json	"version": "0.1.0"
 absent	apps/desktop/tauri.conf.json	"version": "0.0.1"
 absent	apps/mobile/tauri.conf.json	"version": "0.0.1"
+contains	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "0.1.0"
+absent	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "1.0"
 contains	docs/plan/18_release.md	.github/workflows/release-native.yml
 contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
