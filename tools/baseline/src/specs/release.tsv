@@ -38,10 +38,23 @@ contains	.github/workflows/release-native.yml	0006 excludes from the first-tag r
 contains	.github/workflows/release-native.yml	deve-desktop-windows
 contains	.github/workflows/release-native.yml	deve-mobile-android
 contains	.github/workflows/release-native.yml	deve-desktop-macos
+contains	.github/workflows/release-native.yml	softprops/action-gh-release@v2
+contains	.github/workflows/release-native.yml	DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
+contains	.github/workflows/release-native.yml	ANDROID_KEYSTORE_BASE64
+contains	.github/workflows/release-native.yml	UNSIGNED APK that cannot be installed
 absent	.github/workflows/release-native.yml	desktop-linux:
 absent	.github/workflows/release-native.yml	deve-desktop-linux
+absent	.github/workflows/release-native.yml	mobile-ios:
+absent	.github/workflows/release-native.yml	deve-mobile-ios
 absent	.github/workflows/release-native.yml	DEVE_DESKTOP_PACKAGE_BUNDLES: deb,appimage
 absent	.github/workflows/release-native.yml	libwebkit2gtk-4.1-dev
+contains	apps/desktop/tauri.conf.json	"version": "0.1.0"
+contains	apps/mobile/tauri.conf.json	"version": "0.1.0"
+absent	apps/desktop/tauri.conf.json	"version": "0.0.1"
+absent	apps/mobile/tauri.conf.json	"version": "0.0.1"
+contains	docs/plan/18_release.md	.github/workflows/release-native.yml
+contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK
+contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
 contains	.github/workflows/release.yml	docker/build-push-action@v6
 contains	.github/workflows/release.yml	platforms: linux/amd64
 contains	.github/workflows/release.yml	type=raw,value=latest

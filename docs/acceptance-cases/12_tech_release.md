@@ -130,9 +130,9 @@
     - exit_code_eq: 0
 
 - case_id: REL-005
-  goal: Docker、Compose、release workflow 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
+  goal: Docker、Compose、Docker/native tag workflows 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
   preconditions:
-    - Dockerfile、docker-compose.yml、.github/workflows/release.yml 与 .github/workflows/native-target-host.yml 可读
+    - Dockerfile、docker-compose.yml、.github/workflows/release.yml、.github/workflows/release-native.yml 与 .github/workflows/native-target-host.yml 可读
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
     - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
     - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
@@ -181,6 +181,10 @@
     - release_assert: desktop_localbackend_process_runtime_controlled true
     - release_assert: mobile_child_process_runtime_closed true
     - release_assert: native_authority_writes_closed true
+    - release_assert: first_tag_native_artifacts_windows_macos_android_only true
+    - release_assert: linux_desktop_and_ios_artifacts_excluded_from_first_tag true
+    - release_assert: native_public_preview_signing_boundaries_explicit true
+    - release_assert: release_native_artifacts_attach_to_github_release true
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"
     - cli_assert: graph_projection_cli_and_http_share_adapter true

@@ -5,10 +5,11 @@
 
 ## Purpose
 
-GitHub CI/CD configuration. The current release baseline contains the
-tag-driven release workflow only. Optional manual target-host workflows may
-exist for deferred delivery evidence; nightly and speckit sync workflows are
-not required repo metadata.
+GitHub CI/CD configuration. The current first-tag release baseline contains
+the tag-driven Docker/Web/CLI workflow and the separate Windows/macOS/Android
+native delivery workflow. Optional manual target-host workflows may exist for
+deferred delivery evidence; nightly and speckit sync workflows are not required
+repo metadata.
 
 ## Subdirectories
 
@@ -22,6 +23,7 @@ not required repo metadata.
 |------|-------------|
 | `workflows/check.yml` | Branch push / PR check-only CI; no packaging, publishing, GHCR, or production actions |
 | `workflows/release.yml` | Required release quality gates and Docker publishing |
+| `workflows/release-native.yml` | Tag-driven Windows/macOS/Android package delivery; Linux Desktop and iOS excluded from first tag |
 | `workflows/docker-smoke.yml` | Optional manual Docker release smoke on a GitHub-hosted Linux runner |
 | `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |
 
@@ -31,8 +33,9 @@ not required repo metadata.
 
 - Workflow files use GitHub Actions YAML syntax.
 - Keep workflows lean — the target environment is resource-constrained.
-- Do not attach optional target-host workflows to tag releases until the release
-  plan explicitly promotes them into the required release baseline.
+- Do not attach optional target-host workflows to tag releases. Required tag
+  publishing belongs only in the plan-bound `release.yml` and
+  `release-native.yml` workflows.
 - Keep Docker smoke manual-only unless the release baseline explicitly promotes
   it into a required branch or tag gate.
 - Do not recreate `nightly.yml` or `speckit-sync-check.yml` unless the plan

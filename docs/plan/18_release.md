@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-09`
+- `Last Review`: `2026-07-10`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -26,6 +26,7 @@
 | **iOS**     | `.ipa` (App Store)          | ARM64                | **Pending** (Not urgent) |
 | **Android** | `.apk` / `.aab`             | ARM64                | **Pending** (Not urgent) |
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
+| **CLI**     | `deve_cli` binary           | Host target          | Unsigned public preview  |
 
 First formal tag scope note: Linux native Desktop artifacts (`.deb`, `.rpm`,
 `.AppImage`) are deferred until the native shell stack can move off the current
@@ -46,7 +47,9 @@ native Desktop package.
 CI/CD 基于 GitHub Actions。
 
 > [!NOTE]
-> 发布基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
+> 首个公开 tag 的发布基线包含 `.github/workflows/release.yml` 与
+> `.github/workflows/release-native.yml`。`nightly.yml` 与
+> `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
@@ -69,7 +72,18 @@ CI/CD 基于 GitHub Actions。
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
-Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
+`release-native.yml` 是独立于 Docker baseline 的 tag-triggered native delivery
+track。它在首个公开 tag 上构建并向 GitHub Release 附加 Windows MSI/NSIS、
+macOS DMG 与 Android ARM64 APK；Windows/macOS public-preview artifacts 可以保持
+unsigned，Android 仅在 keystore secrets 齐全时产生已签名 APK，否则只能上传明确
+标记、不可安装的 unsigned diagnostic artifact。该 workflow **MUST NOT** 构建
+Linux GTK3/WebKitGTK 4.x Desktop artifacts 或 iOS artifacts，也不得把 package
+artifact 存在性表述为 signing、notarization、store 或 physical-device readiness。
+
+Web 与 CLI 仍由 `deve_cli` 主通道承载：Docker image 在构建 `deve_cli` 前嵌入
+release Web assets，Desktop LocalBackend package 将同一 CLI 作为受控 sidecar。
+在独立 standalone CLI upload workflow 被显式加入 plan 前，不要求重复上传另一套
+CLI artifact。
 
 First-tag `release.yml` deliberately does **not** run Linux GTK3/WebKitGTK 4.x
 native packaging, installer, signing, Android/iOS package-build or physical-device

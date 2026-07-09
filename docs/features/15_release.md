@@ -24,6 +24,8 @@
 
 - Web / Server / Docker 是当前主要交付面。
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
+- 首个公开 tag 同时运行独立 native delivery track：发布 Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK 到 GitHub Release；Linux Desktop 与 iOS 不在 first-tag artifact set。
+- Windows/macOS public-preview packages 可以 unsigned；Android 只有在 signing secrets 齐全时才是可安装 signed APK，否则只能作为明确标记的 unsigned diagnostic artifact。任何这些 artifacts 都不等于 signing、notarization、store 或 physical-device readiness。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 - 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
