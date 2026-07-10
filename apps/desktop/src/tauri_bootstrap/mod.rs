@@ -187,7 +187,9 @@ pub fn desktop_tauri_remote_browser_init_script(
     let origin = serde_json::to_string(&target.https_origin)
         .expect("serializing a validated HTTPS origin string cannot fail");
     DesktopTauriBootstrapScript::new(
-        format!("window.location.replace({origin});"),
+        format!(
+            "(()=>{{const target=new URL({origin}).origin;if(window.top===window&&window.location.origin!==target){{window.location.replace(target);}}}})();"
+        ),
         false,
         false,
         None,
