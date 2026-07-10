@@ -104,6 +104,7 @@ wait_for_server() {
 }
 
 run_playwright() {
+  node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
   mkdir -p "$PLAYWRIGHT_WORK_DIR"
   if [[ ! -f "$PLAYWRIGHT_WORK_DIR/package.json" ]]; then
     printf '{"private":true,"type":"module"}\n' >"$PLAYWRIGHT_WORK_DIR/package.json"

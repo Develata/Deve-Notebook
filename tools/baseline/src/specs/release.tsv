@@ -355,6 +355,11 @@ contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_PORT:-3102
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_BIN
 contains	scripts/smoke-docker-release.sh	docker_cmd build -t
 contains	scripts/smoke-docker-release.sh	docker_cmd run -d
+contains	scripts/smoke-docker-release.sh	docker_run_without_msys_arg_conversion docker_cmd run -d
+contains	scripts/smoke-docker-release.sh	source "$ROOT_DIR/scripts/lib/docker-msys.sh"
+contains	scripts/smoke-docker-release.sh	bash "$ROOT_DIR/scripts/lib/docker-msys.test.sh"
+contains	scripts/lib/docker-msys.sh	export MSYS2_ARG_CONV_EXCL='*'
+contains	scripts/lib/docker-msys.test.sh	DEVE_LEDGER_DIR=/data/ledger
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_DATA_VOLUME
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_NOTES_VOLUME
 contains	scripts/smoke-docker-release.sh	docker_cmd volume create "$DATA_VOLUME"
@@ -373,11 +378,16 @@ contains	scripts/smoke-docker-multiclient.sh	deve-docker-multiclient-playwright
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" install --no-audit --no-fund "$PLAYWRIGHT_PACKAGE"
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" exec -- playwright install chromium
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json"
+contains	scripts/smoke-docker-multiclient.sh	node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
 contains	scripts/smoke-docker-multiclient.mjs	await browser.newContext()
 contains	scripts/smoke-docker-multiclient.mjs	createRequire(
 contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="create-doc"
 contains	scripts/smoke-docker-multiclient.mjs	context.setOffline(true)
 contains	scripts/smoke-docker-multiclient.mjs	new URL(url).pathname === "/ws"
+contains	scripts/smoke-docker-multiclient.mjs	await waitForRenderedShell(page, timeoutMs)
+contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a login or sync marker
+contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
+contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending
 contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
 contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED

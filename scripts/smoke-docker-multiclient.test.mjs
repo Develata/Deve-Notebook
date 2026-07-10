@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import fs, { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import {
+  editorContentIncludes,
+  isDirectInvocation,
+  renderedShellPresent,
+  renderedShellSelector,
+  waitForRenderedShell,
+} from "./smoke-docker-multiclient.mjs";
+
+test("rendered shell requires a login or sync marker", () => {
+  const emptyRoot = { querySelector: () => null };
+  const loginRoot = {
+    querySelector: (selector) => selector === renderedShellSelector ? {} : null,
+  };
+
+  assert.equal(renderedShellPresent(renderedShellSelector, emptyRoot), false);
+  assert.equal(renderedShellPresent(renderedShellSelector, loginRoot), true);
+});
+
+test("render wait forwards the marker and timeout to the browser", async () => {
+  const calls = [];
+  const page = {
+    async waitForFunction(predicate, selector, options) {
+      calls.push({ predicate, selector, options });
+    },
+  };
+
+  await waitForRenderedShell(page, 4321);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].predicate, renderedShellPresent);
+  assert.equal(calls[0].selector, renderedShellSelector);
+  assert.deepEqual(calls[0].options, { timeout: 4321 });
+});
+
+test("editor content wait treats an unready bridge as pending", () => {
+  assert.equal(editorContentIncludes("ready", {}), false);
+  assert.equal(editorContentIncludes("ready", { getEditorContent: () => null }), false);
+  assert.equal(
+    editorContentIncludes("ready", { getEditorContent: () => "eventually ready" }),
+    true,
+  );
+});
+
+test("login checks page health only after the rendered shell wait", () => {
+  const source = fs.readFileSync(new URL("./smoke-docker-multiclient.mjs", import.meta.url), "utf8");
+  assert.match(
+    source,
+    /async function login\(page, diag\) \{[\s\S]*?await page\.goto[\s\S]*?await waitForRenderedShell\(page, timeoutMs\);[\s\S]*?await assertPageHealthy\(page, diag\);/,
+  );
+});
+
+test("direct invocation recognizes Windows and Git Bash path forms", () => {
+  const scriptUrl = new URL("./smoke-docker-multiclient.mjs", import.meta.url);
+  const scriptPath = fileURLToPath(scriptUrl);
+
+  assert.equal(isDirectInvocation(scriptPath, scriptUrl.href), true);
+  assert.equal(isDirectInvocation(scriptPath.replaceAll("\\", "/"), scriptUrl.href), true);
+  assert.equal(isDirectInvocation(undefined, scriptUrl.href), false);
+});
+
+test("direct execution enters main instead of silently succeeding", () => {
+  const scriptUrl = new URL("./smoke-docker-multiclient.mjs", import.meta.url);
+  const tempDir = mkdtempSync(join(tmpdir(), "deve-multiclient-direct-"));
+  try {
+    const result = spawnSync(process.execPath, [fileURLToPath(scriptUrl)], {
+      cwd: tempDir,
+      env: {
+        ...process.env,
+        DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM: join(tempDir, "package.json"),
+      },
+      encoding: "utf8",
+    });
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /docker-multiclient-smoke: Playwright failure/);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const playwrightRequire = createRequire(
   process.env.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM ?? import.meta.url,
 );
-const { chromium } = playwrightRequire("playwright");
-
 const baseUrl = process.env.DEVE_DOCKER_MULTI_BASE_URL ?? "http://127.0.0.1:3101";
 const authUser = process.env.DEVE_DOCKER_MULTI_AUTH_USER ?? "admin";
 const authPassword = process.env.DEVE_DOCKER_MULTI_AUTH_PASSWORD ?? "password";
@@ -13,6 +13,27 @@ const headless = !["0", "false", "no"].includes(
   (process.env.DEVE_DOCKER_MULTI_HEADLESS ?? "1").toLowerCase(),
 );
 const timeoutMs = Number(process.env.DEVE_DOCKER_MULTI_TIMEOUT_MS ?? "60000");
+export const renderedShellSelector = "#login-username, [data-deve-sync-status]";
+
+export function renderedShellPresent(selector, root = document) {
+  return root.querySelector(selector) != null;
+}
+
+export async function waitForRenderedShell(page, timeout = 15000) {
+  await page.waitForFunction(renderedShellPresent, renderedShellSelector, { timeout });
+}
+
+export function isDirectInvocation(argvPath = process.argv[1], moduleUrl = import.meta.url) {
+  return Boolean(argvPath) && moduleUrl === pathToFileURL(resolve(argvPath)).href;
+}
+
+export function editorContentIncludes(expected, root = window) {
+  if (typeof root.getEditorContent !== "function") {
+    return false;
+  }
+  const content = root.getEditorContent();
+  return typeof content === "string" && content.includes(expected);
+}
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -149,6 +170,12 @@ async function waitForReady(page, label) {
 
 async function login(page, diag) {
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  try {
+    await waitForRenderedShell(page, timeoutMs);
+  } catch (err) {
+    await assertPageHealthy(page, diag);
+    throw new Error(`${diag.label} did not render the login or sync shell: ${err.message}`);
+  }
   await assertPageHealthy(page, diag);
 
   const username = page.locator("#login-username");
@@ -194,8 +221,7 @@ async function editorContent(page) {
 
 async function waitForEditorContains(page, expected) {
   await page.waitForFunction(
-    (value) => typeof window.getEditorContent === "function"
-      && window.getEditorContent().includes(value),
+    editorContentIncludes,
     expected,
     { timeout: timeoutMs },
   );
@@ -261,6 +287,7 @@ async function exerciseOfflineRecovery(context, page, diag) {
 async function main() {
   const docPath = `docker-multiclient-${Date.now()}.md`;
   const content = `Docker multiclient smoke ${new Date().toISOString()}`;
+  const { chromium } = playwrightRequire("playwright");
   const browser = await chromium.launch({ headless });
   const contexts = [];
 
@@ -303,8 +330,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("docker-multiclient-smoke: Playwright failure");
-  console.error(err);
-  process.exit(1);
-});
+if (isDirectInvocation()) {
+  main().catch((err) => {
+    console.error("docker-multiclient-smoke: Playwright failure");
+    console.error(err);
+    process.exit(1);
+  });
+}

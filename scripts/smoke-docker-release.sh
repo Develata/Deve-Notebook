@@ -7,6 +7,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/baseline-wrapper.sh
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+# shellcheck source=scripts/lib/docker-msys.sh
+source "$ROOT_DIR/scripts/lib/docker-msys.sh"
 IMAGE="${DEVE_DOCKER_SMOKE_IMAGE:-deve-notebook:local-smoke}"
 CONTAINER_NAME="${DEVE_DOCKER_SMOKE_CONTAINER:-deve-docker-smoke-$$}"
 HOST_PORT="${DEVE_DOCKER_SMOKE_PORT:-3102}"
@@ -22,6 +24,7 @@ REMOVE_DATA_VOLUME=0
 REMOVE_NOTES_VOLUME=0
 
 run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-release-smoke" "release"
+bash "$ROOT_DIR/scripts/lib/docker-msys.test.sh"
 
 fail() {
   echo "docker-release-smoke: $*" >&2
@@ -107,7 +110,7 @@ docker_cmd build -t "$IMAGE" "$ROOT_DIR"
 docker_cmd volume create "$DATA_VOLUME" >/dev/null
 docker_cmd volume create "$NOTES_VOLUME" >/dev/null
 
-docker_cmd run -d \
+docker_run_without_msys_arg_conversion docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   -p "$HOST_PORT:3001" \
   -v "$DATA_VOLUME:/data" \
