@@ -6,6 +6,7 @@ use crate::ledger::node_meta;
 use crate::models::{DocId, NodeId, NodeKind, StructureOp};
 use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
+use redb::WriteTransaction;
 
 pub(super) struct StructuredCommitTarget {
     pub doc_id: DocId,
@@ -81,7 +82,7 @@ pub(super) fn plan_delete(
     }))
 }
 
-fn resolve_doc_id(
+pub(super) fn resolve_doc_id(
     repo: &RepoManager,
     repo_name: &str,
     path: &str,
@@ -94,6 +95,109 @@ fn resolve_doc_id(
         return Ok(doc_id);
     }
     Ok(DocId::new())
+}
+
+pub(super) fn plan_file_upsert_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+    doc_id: DocId,
+) -> Result<StructuredCommitTarget> {
+    let path = to_forward_slash(path);
+    let (mut ops, parent_id, name) = plan_parent_chain_in_txn(write_txn, &path)?;
+    let Some(meta) = node_meta::get_node_meta_in_txn(write_txn, NodeId::from_doc_id(doc_id))?
+    else {
+        ops.push(StructureOp::CreateFile {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id,
+            parent_id,
+            name,
+        });
+        return Ok(StructuredCommitTarget { doc_id, ops });
+    };
+    if meta.parent_id != parent_id {
+        ops.push(StructureOp::MoveNode {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
+            new_parent_id: parent_id,
+        });
+    }
+    if meta.name != name {
+        ops.push(StructureOp::RenameNode {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
+            new_name: name,
+        });
+    }
+    Ok(StructuredCommitTarget { doc_id, ops })
+}
+
+pub(super) fn plan_delete_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+    doc_id_hint: Option<DocId>,
+) -> Result<Option<StructuredCommitTarget>> {
+    let path = to_forward_slash(path);
+    let doc_id = match doc_id_hint {
+        Some(doc_id) => {
+            let meta = node_meta::get_node_meta_in_txn(write_txn, NodeId::from_doc_id(doc_id))?
+                .ok_or_else(|| anyhow!("source control delete target doc not found: {}", doc_id))?;
+            if to_forward_slash(&meta.path) != path {
+                return Err(anyhow!(
+                    "source control delete target path mismatch: doc {} is at {}, staged path {}",
+                    doc_id,
+                    to_forward_slash(&meta.path),
+                    path
+                ));
+            }
+            Some(doc_id)
+        }
+        None => node_meta::get_node_id_in_txn(write_txn, &path)?
+            .and_then(|node_id| node_meta::get_node_meta_in_txn(write_txn, node_id).transpose())
+            .transpose()?
+            .and_then(|meta| meta.doc_id),
+    };
+    Ok(doc_id.map(|doc_id| StructuredCommitTarget {
+        doc_id,
+        ops: vec![StructureOp::DeleteNode {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
+        }],
+    }))
+}
+
+fn plan_parent_chain_in_txn(
+    write_txn: &WriteTransaction,
+    path: &str,
+) -> Result<(Vec<StructureOp>, Option<NodeId>, String)> {
+    let (parent_path, name) = path
+        .rfind('/')
+        .map_or(("", path), |idx| (&path[..idx], &path[idx + 1..]));
+    let mut ops = Vec::new();
+    let mut parent_id = None;
+    let mut current = String::new();
+    for segment in parent_path.split('/').filter(|part| !part.is_empty()) {
+        if !current.is_empty() {
+            current.push('/');
+        }
+        current.push_str(segment);
+        if let Some(node_id) = node_meta::get_node_id_in_txn(write_txn, &current)? {
+            let meta = node_meta::get_node_meta_in_txn(write_txn, node_id)?
+                .ok_or_else(|| anyhow!("node meta missing for {}", current))?;
+            if meta.kind != NodeKind::Dir {
+                return Err(anyhow!("target parent is not a directory: {}", current));
+            }
+            parent_id = Some(node_id);
+            continue;
+        }
+        let node_id = NodeId::new();
+        ops.push(StructureOp::CreateDir {
+            node_id,
+            parent_id,
+            name: segment.to_string(),
+        });
+        parent_id = Some(node_id);
+    }
+    Ok((ops, parent_id, name.to_string()))
 }
 
 fn current_meta(

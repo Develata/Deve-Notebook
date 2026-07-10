@@ -5,7 +5,6 @@
 //! Source Control write/commit runtime.
 
 use crate::ledger::manager::types::RepoManager;
-use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
     ChangeEntry, ChangeStatus, CommitInfo, external_overlap, ledger_dirty, pending_fs, staging,
@@ -73,24 +72,36 @@ impl<'a> SourceControlWriteRuntime<'a> {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
+        self.stage_pending_targets_in_local_repo(repo_name, std::slice::from_ref(target))
+    }
+
+    pub(crate) fn stage_pending_targets_in_local_repo(
+        &self,
+        repo_name: &str,
+        targets: &[ScPathTarget],
+    ) -> Result<()> {
         self.manager.run_on_local_repo(repo_name, |db| {
-            let Some(entry) = pending_fs::get_for_target(db, target)? else {
-                if staging::get_staged_for_target(db, target)?.is_some() {
-                    return Ok(());
+            let mut selected = Vec::new();
+            let mut seen_paths = HashSet::new();
+            for target in targets {
+                let Some(entry) = pending_fs::get_for_target(db, target)? else {
+                    if staging::get_staged_for_target(db, target)?.is_some() {
+                        continue;
+                    }
+                    anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
+                };
+                for entry in collect_stage_entries_for_pending_target(db, entry)? {
+                    if seen_paths.insert(entry.path.clone()) {
+                        selected.push(entry);
+                    }
                 }
-                anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
-            };
-            let entries = collect_stage_entries_for_pending_target(db, entry)?;
+            }
             let confirmed = ledger_dirty::list_confirmed(db)?;
-            for entry in &entries {
+            for entry in &selected {
                 ensure_pending_entry_stageable(entry)?;
                 ensure_pending_entry_not_confirmed_overlap(entry, &confirmed)?;
             }
-            for entry in entries {
-                pending_fs::remove(db, &entry.path)?;
-                source_control::stage_pending_entry(db, &entry)?;
-            }
-            Ok(())
+            staging::stage_pending_entries_atomically(db, &selected, false)
         })
     }
 
@@ -123,12 +134,7 @@ impl<'a> SourceControlWriteRuntime<'a> {
                     }
                 }
             }
-            for mut entry in selected {
-                pending_fs::remove(db, &entry.path)?;
-                entry.has_conflict = false;
-                staging::stage_resolved_pending_entry(db, &entry)?;
-            }
-            Ok(())
+            staging::stage_pending_entries_atomically(db, &selected, true)
         })
     }
 

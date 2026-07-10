@@ -19,6 +19,8 @@ pub(super) struct CommitTarget {
     pub delete_only: bool,
     pub has_rename_evidence: bool,
     pub allow_confirmed_overlap: bool,
+    pub content_hash: String,
+    pub validated_content: Option<String>,
 }
 
 pub(super) fn build_targets(staged: Vec<(String, StagedEntry)>) -> Vec<CommitTarget> {
@@ -58,6 +60,8 @@ fn resolve_group(entries: Vec<(String, StagedEntry)>) -> CommitTarget {
             .all(|(_, entry)| entry.status == ChangeStatus::Deleted),
         has_rename_evidence: has_delete_side || entry.renamed_from.is_some(),
         allow_confirmed_overlap,
+        content_hash: entry.content_hash.clone(),
+        validated_content: None,
     }
 }
 

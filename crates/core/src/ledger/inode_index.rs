@@ -10,7 +10,7 @@
 use crate::ledger::schema::INODE_TO_DOCID;
 use crate::models::{DocId, FileNodeId};
 use anyhow::Result;
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, WriteTransaction};
 use std::collections::HashSet;
 
 pub fn get_docid(db: &Database, inode: &FileNodeId) -> Result<Option<DocId>> {
@@ -25,11 +25,18 @@ pub fn get_docid(db: &Database, inode: &FileNodeId) -> Result<Option<DocId>> {
 
 pub fn bind_docid(db: &Database, inode: &FileNodeId, doc_id: DocId) -> Result<()> {
     let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(INODE_TO_DOCID)?;
-        table.insert(inode.id, doc_id.as_u128())?;
-    }
+    bind_docid_in_txn(&write_txn, inode, doc_id)?;
     write_txn.commit()?;
+    Ok(())
+}
+
+pub(crate) fn bind_docid_in_txn(
+    write_txn: &WriteTransaction,
+    inode: &FileNodeId,
+    doc_id: DocId,
+) -> Result<()> {
+    let mut table = write_txn.open_table(INODE_TO_DOCID)?;
+    table.insert(inode.id, doc_id.as_u128())?;
     Ok(())
 }
 

@@ -27,6 +27,11 @@ pub(crate) enum ScAction {
         #[arg(long)]
         all: bool,
     },
+    /// Apply staged external projection changes to ledger facts
+    Apply {
+        #[arg(long)]
+        repo: Option<String>,
+    },
     /// Create a Source Control commit anchor for confirmed ledger changes
     Commit {
         #[arg(long)]
@@ -54,8 +59,19 @@ pub fn stage(
         ensure_no_unresolved_conflicts(&pending)?;
         let targets = targets_from_entries(&pending);
         ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "source-control write")?;
-        repo.stage_resolved_pending_targets_in_local_repo(&repo_name, &targets)?;
+        repo.stage_pending_targets_in_local_repo(&repo_name, &targets)?;
         println!("sc_stage[{repo_name}]: staged={}", targets.len());
+    }
+    Ok(())
+}
+
+pub fn apply(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo_names = resolve_local_repo_args(&repo, target_repo)?;
+    for repo_name in repo_names {
+        ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "source-control write")?;
+        let confirmed = repo.apply_external_changes_in_local_repo(&repo_name)?;
+        println!("sc_apply[{repo_name}]: confirmed={}", confirmed.len());
     }
     Ok(())
 }
@@ -110,7 +126,7 @@ fn targets_from_entries(entries: &[ChangeEntry]) -> Vec<ScPathTarget> {
 
 #[cfg(test)]
 mod tests {
-    use super::{commit, require_stage_all, stage, targets_from_entries};
+    use super::{apply, commit, require_stage_all, stage, targets_from_entries};
     use deve_core::ledger::RepoManager;
     use deve_core::models::DocId;
     use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -186,6 +202,91 @@ mod tests {
         assert_eq!(pending[0].doc_id, Some(doc_id));
         assert!(pending[0].has_conflict);
         assert!(staged.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn sc_stage_all_keeps_ordinary_external_staging() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger_dir = dir.path().join("ledger");
+        let projection_base = dir.path().join("notes");
+        {
+            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+            repo.ensure_local_repo_workspace_identity("default")?;
+            let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
+            std::fs::create_dir_all(file.parent().expect("workspace file parent"))?;
+            std::fs::write(&file, "external")?;
+            repo.run_on_local_repo("default", |db| {
+                pending_fs::upsert(
+                    db,
+                    &PendingFsEntry {
+                        path: "notes/a.md".into(),
+                        renamed_from: None,
+                        doc_id: None,
+                        change_type: ChangeStatus::Added,
+                        content_hash: pending_fs::content_hash("external"),
+                        detected_at: 1,
+                        has_conflict: false,
+                    },
+                )
+            })?;
+        }
+
+        stage(&ledger_dir, Some("default"), true, 10)?;
+
+        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
+        assert_eq!(staged.len(), 1);
+        assert!(!staged[0].1.resolved_conflict);
+        Ok(())
+    }
+
+    #[test]
+    fn sc_apply_moves_ordinary_external_staging_to_ledger_without_commit_anchor()
+    -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger_dir = dir.path().join("ledger");
+        let projection_base = dir.path().join("notes");
+        {
+            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+            repo.ensure_local_repo_workspace_identity("default")?;
+            let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
+            std::fs::create_dir_all(file.parent().expect("workspace file parent"))?;
+            std::fs::write(&file, "external")?;
+            repo.run_on_local_repo("default", |db| {
+                pending_fs::upsert(
+                    db,
+                    &PendingFsEntry {
+                        path: "notes/a.md".into(),
+                        renamed_from: None,
+                        doc_id: None,
+                        change_type: ChangeStatus::Added,
+                        content_hash: pending_fs::content_hash("external"),
+                        detected_at: 1,
+                        has_conflict: false,
+                    },
+                )
+            })?;
+        }
+
+        stage(&ledger_dir, Some("default"), true, 10)?;
+        apply(&ledger_dir, Some("default"), 10)?;
+
+        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        assert!(
+            repo.run_on_local_repo("default", staging::list_staged_entries)?
+                .is_empty()
+        );
+        assert_eq!(
+            repo.list_confirmed_ledger_changes_in_local_repo("default")?
+                .len(),
+            1
+        );
+        assert!(repo.list_commits_in_local_repo("default", 10)?.is_empty());
         Ok(())
     }
 

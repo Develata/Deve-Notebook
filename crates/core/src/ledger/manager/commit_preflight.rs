@@ -8,26 +8,35 @@
 
 use crate::ledger::RepoManager;
 use crate::ledger::manager::commit_plan::CommitTarget;
+use crate::source_control::pending_fs;
 use crate::utils::path::to_forward_slash;
 use anyhow::{Context, Result};
 
 pub(super) fn preflight_staged_commit_targets(
     repo: &RepoManager,
     repo_name: &str,
-    targets: &[CommitTarget],
+    targets: &mut [CommitTarget],
 ) -> Result<()> {
     for target in targets.iter().filter(|target| target.delete_only) {
         preflight_staged_delete_identity(repo, repo_name, target)?;
     }
-    for target in targets.iter().filter(|target| !target.delete_only) {
+    for target in targets.iter_mut().filter(|target| !target.delete_only) {
         let disk_path = repo.local_repo_workspace_path(repo_name, &target.path)?;
-        std::fs::read_to_string(&disk_path).with_context(|| {
+        let content = std::fs::read_to_string(&disk_path).with_context(|| {
             format!(
                 "Failed to read staged workspace file {} at {:?}",
                 target.path, disk_path
             )
         })?;
+        let current_hash = pending_fs::content_hash(&content);
+        if current_hash != target.content_hash {
+            anyhow::bail!(
+                "staged workspace content changed after stage: {}; rescan and restage before Apply to Ledger",
+                target.path
+            );
+        }
         preflight_staged_upsert_identity(repo, repo_name, target)?;
+        target.validated_content = Some(content);
     }
     Ok(())
 }

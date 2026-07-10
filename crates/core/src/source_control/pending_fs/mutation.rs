@@ -6,7 +6,7 @@ use super::{PendingFsEntry, index};
 use crate::ledger::schema::{PENDING_FS_DOC_INDEX, PENDING_FS_OPS};
 use crate::models::DocId;
 use anyhow::Result;
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, WriteTransaction};
 
 /// 初始化 pending_fs_ops 表
 pub fn init_table(db: &Database) -> Result<()> {
@@ -102,6 +102,34 @@ pub fn remove(db: &Database, path: &str) -> Result<()> {
     }
     write_txn.commit()?;
     tracing::debug!("Pending FS removed: {}", path);
+    Ok(())
+}
+
+/// Remove the exact pending entry inside a caller-owned transaction.
+///
+/// The semantic equality check closes the read/preflight-to-write gap: if a watcher
+/// replaced the row before the staging transaction begins, the whole transaction
+/// fails instead of moving a different change into staging.
+pub(crate) fn remove_exact_in_txn(
+    write_txn: &WriteTransaction,
+    expected: &PendingFsEntry,
+) -> Result<()> {
+    let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+    let current = table
+        .get(expected.path.as_str())?
+        .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+        .transpose()?;
+    let Some(current) = current else {
+        anyhow::bail!(
+            "Pending FS entry disappeared before stage: {}",
+            expected.path
+        );
+    };
+    if !semantic_eq(&current, expected) {
+        anyhow::bail!("Pending FS entry changed before stage: {}", expected.path);
+    }
+    index::remove(write_txn, current.doc_id, &expected.path)?;
+    table.remove(expected.path.as_str())?;
     Ok(())
 }
 

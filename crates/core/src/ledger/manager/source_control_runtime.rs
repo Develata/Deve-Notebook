@@ -143,6 +143,15 @@ impl<'a> SourceControlRuntime<'a> {
             .stage_pending_target_in_local_repo(repo_name, target)
     }
 
+    pub(crate) fn stage_pending_targets_in_local_repo(
+        &self,
+        repo_name: &str,
+        targets: &[ScPathTarget],
+    ) -> Result<()> {
+        self.write()
+            .stage_pending_targets_in_local_repo(repo_name, targets)
+    }
+
     pub(crate) fn stage_resolved_pending_target_in_local_repo(
         &self,
         repo_name: &str,

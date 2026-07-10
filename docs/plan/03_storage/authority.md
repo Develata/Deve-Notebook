@@ -97,7 +97,7 @@
     - non-source: Web pending overlay
   - `staging`
     - key: staged entry id
-    - value: pending source ref, staged_at, stage actor, repo head anchor
+    - value: pending source ref, staged_at, stage actor, repo head anchor, staged content hash
   - `commit_index`
     - key: commit id / anchor
     - value: ledger head, commit meta, affected docs/nodes
@@ -193,23 +193,24 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 - **MUST NOT** 先改 Projection Workspace 再补 ledger。
 - Path A 写入成功后 **MUST NOT** 回灌到 `pending_fs_ops` 或 staging；Source Control 只能通过 confirmed ledger dirty projection 展示它。
 
-### 6.3 Path C: Stage -> Commit
+### 6.3 Path C: Stage -> Apply to Ledger -> Commit Anchor
 
-1. 从 `pending_fs_ops` 迁移到 `staging`。
-2. 以当前 confirmed projection 为 base 计算差异。
-3. 生成 content / structure facts。
-4. 追加到 ledger。
-5. 写 commit anchor。
-6. 清理 side tables。
-7. 回写 projection。
+1. 从 `pending_fs_ops` 迁移到 `staging`；一个用户 stage batch 的 pending remove、staged insert 与两侧 DocId index 更新必须在同一事务提交。
+2. staging 保存检测时的内容 hash；Apply preflight 重新读取 workspace 并验证非 delete 文件仍与该 hash 一致，同时捕获本次 Apply 唯一允许消费的内容快照。
+3. 以当前 confirmed projection 为 base 计算差异。
+4. `Apply to Ledger` 生成 content / structure facts 并追加到 ledger。
+5. Apply 成功后清理 External Changes staging 并回写 projection；此时变化进入 confirmed ledger dirty。
+6. 后续 Source Control commit 只为 confirmed ledger dirty 写 commit anchor。
 
 额外约束：
 
 - stage 是真实迁移，不是 UI 布尔标记。
-- commit 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 vault 内容快照。
+- Apply 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 workspace 内容快照。
+- staging 后 workspace 内容发生变化时，Apply **MUST** fail-closed、保留 staging，并要求重新 scan/stage；不得静默应用未确认的新内容。
+- Apply **MUST NOT** 在 hash preflight 后再次从 workspace 读取内容；本批所有 structure/content facts、identity index 更新与本次 staged snapshot 的 exact consumption 必须在同一 ledger write transaction 提交，任一 target 失败则整批回滚。事务开始时必须比较 preflight 前捕获的 ledger head；head 漂移表示 confirmed/content base 已变化，整批 fail-closed 并要求刷新重试。事务不得清空 preflight 后新加入的其他 staging；原 staged row 被替换或移除时必须 fail-closed。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
 - 当 staged 为空但存在 `ConfirmedLedgerChange` 时，commit **MUST** 只创建覆盖当前 ledger head 的 commit anchor，不得重复追加内容或结构 facts。
-- 当 staged 与 `ConfirmedLedgerChange` 同时存在时，commit 必须先完成 staged preflight 与 ledger append，再以最终 ledger head 创建单个 commit anchor 覆盖两类变化。
+- ordinary External Changes staging **MUST NOT** 被普通 commit 消费；只有显式 resolved-conflict staging 可以按 `05_diff_logic` 的受控例外在同一 writer gate 内 apply 后创建 anchor。
 
 ## 10. Forbidden Patterns（authority）
 

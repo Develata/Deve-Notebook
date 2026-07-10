@@ -54,8 +54,62 @@ fn external_changes_apply_writes_ledger_without_commit_anchor() {
 }
 
 #[test]
+fn apply_external_changes_rejects_workspace_content_changed_after_stage() {
+    let (_dir, repo) = new_repo();
+    let before_head = ledger_head(&repo);
+    write_workspace_file(&repo, "notes/external.md", "stage-a");
+    seed_pending(&repo, "notes/external.md", ChangeStatus::Added, "stage-a");
+    repo.stage_pending("notes/external.md")
+        .expect("stage external add");
+
+    write_workspace_file(&repo, "notes/external.md", "changed-after-stage");
+
+    let err = repo
+        .apply_external_changes()
+        .expect_err("changed staged content must require restage");
+    assert!(
+        err.to_string().contains("changed after stage"),
+        "unexpected error: {err}"
+    );
+    assert_eq!(ledger_head(&repo), before_head);
+    assert_eq!(repo.list_staged().expect("staging preserved").len(), 1);
+    assert!(repo.list_commits(10).expect("no commit anchor").is_empty());
+}
+
+#[test]
 fn apply_external_changes_to_ledger() {
     assert_apply_external_changes_writes_ledger_without_commit_anchor();
+}
+
+#[test]
+fn apply_external_changes_reuses_shared_missing_parent_within_atomic_batch() {
+    let (_dir, repo) = new_repo();
+    for (path, content) in [("notes/new/a.md", "alpha"), ("notes/new/b.md", "beta")] {
+        write_workspace_file(&repo, path, content);
+        seed_pending(&repo, path, ChangeStatus::Added, content);
+    }
+    let targets = repo
+        .list_pending_fs()
+        .expect("pending shared-parent additions")
+        .into_iter()
+        .map(|entry| deve_core::protocol::ScPathTarget {
+            path: entry.path,
+            doc_id: entry.doc_id,
+            domain: None,
+        })
+        .collect::<Vec<_>>();
+    repo.stage_pending_targets_in_local_repo(repo.local_repo_name(), &targets)
+        .expect("stage shared-parent additions");
+
+    repo.apply_external_changes()
+        .expect("atomic apply must reuse the first target's parent projection");
+
+    assert!(repo.list_staged().expect("staging cleared").is_empty());
+    let confirmed = repo
+        .list_confirmed_ledger_changes()
+        .expect("confirmed shared-parent additions");
+    assert!(confirmed.iter().any(|entry| entry.path == "notes/new/a.md"));
+    assert!(confirmed.iter().any(|entry| entry.path == "notes/new/b.md"));
 }
 
 #[test]

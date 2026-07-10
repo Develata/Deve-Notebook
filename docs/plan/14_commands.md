@@ -40,8 +40,9 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
     *   `deve recover`: 从 ledger 数据恢复 repo projection workspace 文件。
     *   `deve sc status --repo <selector>`: 只读输出 Deve Source Control staged / unstaged 状态；`deve sc-status` 可作为兼容别名保留。
-    *   `deve sc stage --repo <selector> --all`: 将当前 repo 的 pending / working changes 显式移入 staged；执行面必须复用 `05_diff_logic` 的 target resolution 与 stage 边界。
-    *   `deve sc commit --repo <selector> --message <message>`: 将 staged/confirmed changes 提交为 NoteGit/ngit ledger-backed commit anchor；不得执行 Git push，也不得直接写 Git index。
+    *   `deve sc stage --repo <selector> --all`: 将当前 repo 的 ordinary pending external changes 显式移入 External Changes staging；执行面必须复用 `05_diff_logic` 的 target resolution 与普通 stage 边界，不得伪装为 resolved-conflict staging。
+    *   `deve sc apply --repo <selector>`: 显式执行 External Changes `Apply to Ledger`，将已暂存且 hash/identity preflight 仍成立的 external changes 转为 ledger facts；不得创建 commit anchor。
+    *   `deve sc commit --repo <selector> --message <message>`: 为 confirmed ledger changes 创建 NoteGit/ngit ledger-backed commit anchor；ordinary external staging 必须先经 `sc apply`，不得被普通 commit 直接消费，也不得执行 Git push 或直接写 Git index。
     *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
@@ -65,7 +66,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 
 *   **Source Control / NoteGit-like Workflow**:
     *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
-    *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
+    *   `Source Control: Commit`: 为 confirmed ledger changes 创建 ledger-backed commit anchor；ordinary External Changes staging 必须先显式 Apply to Ledger，resolved-conflict staging 仅按 `05_diff_logic` 的受控例外消费。
     *   `Source Control: Push`: 推送 Deve source-control state；不得被解释为 Web 直接执行 Git push；Git main mirror publish 只由显式 backend/runtime surface 承担。
     *   `ngit:status`: 只读查看 `.git` main mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
     *   `ngit:mirror`: 显式执行 queued Git main mirror commit；执行面 **MUST** 复用 `05_diff_logic` 的 Git mirror preflight 与 out-of-sync 边界。

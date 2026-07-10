@@ -29,6 +29,7 @@ mod idempotency_test;
 
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
+pub(crate) use mutation::remove_exact_in_txn;
 pub(crate) use mutation::semantic_eq;
 pub use mutation::{clear, init_table, move_for_doc, remove, remove_subtree, upsert, upsert_many};
 pub use query::{get, list_all, list_for_doc};

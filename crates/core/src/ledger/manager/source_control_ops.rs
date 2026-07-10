@@ -9,6 +9,7 @@
 //! 实现 `RepoManager` 的 repo-scoped 暂存、提交、丢弃等写路径方法。
 
 use crate::ledger::RepoManager;
+use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, CommitInfo};
 use anyhow::Result;
 
@@ -40,6 +41,15 @@ impl RepoManager {
     pub fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
         self.source_control_runtime()
             .stage_pending_in_local_repo(repo_name, path)
+    }
+
+    pub fn stage_pending_targets_in_local_repo(
+        &self,
+        repo_name: &str,
+        targets: &[ScPathTarget],
+    ) -> Result<()> {
+        self.source_control_runtime()
+            .stage_pending_targets_in_local_repo(repo_name, targets)
     }
 
     pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

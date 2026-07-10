@@ -67,4 +67,6 @@
 
 - External Changes 可共享 UI primitive，但不能复用 Source Control commit/history/graph controller。
 - `Apply to Ledger` 不是 `Commit`；它只写 ledger facts，不创建 commit anchor。
+- Stage 固化用户确认时的 workspace 内容 hash；若文件在 Stage 后再次被外部修改，Apply 必须
+  fail-closed 并要求重新 scan/stage，不能把未确认的新内容写入 ledger。
 - Source Control 只展示 ledger/version-anchor 状态；External Changes 只展示投影文件夹偏差。

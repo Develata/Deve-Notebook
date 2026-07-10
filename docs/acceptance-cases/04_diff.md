@@ -411,7 +411,15 @@
     - run: cargo test -p deve_core external_scan_renamed_enters_external_changes_not_ledger -- --nocapture
     - run: cargo test -p deve_core external_stage_unstage_only_moves_external_staging -- --nocapture
     - run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
+    - run: cargo test -p deve_core apply_external_changes_rejects_workspace_content_changed_after_stage -- --nocapture
+    - run: cargo test -p deve_core apply_external_changes_reuses_shared_missing_parent_within_atomic_batch -- --nocapture
+    - run: cargo test -p deve_core --lib batch_stage_rolls_back_if_any_pending_entry_changed_or_disappeared -- --nocapture
+    - run: cargo test -p deve_core --lib apply_snapshot_consume_rejects_replaced_staged_entry_without_removal -- --nocapture
+    - run: cargo test -p deve_core --lib apply_snapshot_consume_preserves_new_unrelated_staging -- --nocapture
+    - run: cargo test -p deve_core --lib atomic_apply_rejects_ledger_head_changed_after_preflight -- --nocapture
     - run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
+    - run: cargo test -p deve_cli sc_stage_all_keeps_ordinary_external_staging -- --nocapture
+    - run: cargo test -p deve_cli sc_apply_moves_ordinary_external_staging_to_ledger_without_commit_anchor -- --nocapture
     - run: cargo test -p deve_web external_changes -- --nocapture
     - run: cargo test -p deve_web source_control_confirmed_only_view -- --nocapture
     - ui_open: "External Changes"
@@ -426,6 +434,14 @@
     - api_assert: external_stage_unstage_only_moves_external_staging true
     - api_assert: apply_external_changes_writes_ledger_facts true
     - api_assert: apply_external_changes_does_not_create_commit_anchor true
+    - api_assert: apply_external_changes_rejects_changed_staged_content true
+    - api_assert: stage_batch_side_table_migration_is_atomic true
+    - api_assert: apply_batch_uses_preflighted_content_and_single_write_transaction true
+    - api_assert: apply_batch_reuses_shared_parent_projection true
+    - api_assert: apply_consumes_exact_staged_snapshot_without_clearing_new_entries true
+    - api_assert: apply_rejects_ledger_head_drift_after_preflight true
+    - cli_assert: sc_stage_all_uses_ordinary_external_staging true
+    - cli_assert: sc_apply_writes_ledger_without_commit_anchor true
     - ui_assert: external_changes_sibling_entry_visible true
     - ui_assert: external_changes_minimal_actions_visible true
     - ui_assert: external_changes_history_graph_absent true

@@ -103,6 +103,10 @@ impl<'a> CommitRuntime<'a> {
         let staged = self
             .manager
             .run_on_local_repo(repo_name, staging::list_staged_entries)?;
+        let staged_snapshot = staged.clone();
+        let expected_ledger_head = self
+            .manager
+            .run_on_local_repo(repo_name, range::get_max_seq)?;
         let confirmed = self
             .manager
             .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
@@ -112,28 +116,18 @@ impl<'a> CommitRuntime<'a> {
         }
         targets.sort_by_key(|target| target.delete_only);
         ensure_external_targets_do_not_overlap_confirmed(&targets, &confirmed)?;
-        commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
-
-        for target in &targets {
-            if target.delete_only {
-                self.manager.apply_external_delete_in_local_repo(
-                    repo_name,
-                    &target.path,
-                    target.doc_id,
-                )?;
-            } else {
-                self.manager.apply_external_file_ops_in_local_repo(
-                    repo_name,
-                    &target.path,
-                    target.doc_id,
-                )?;
-            }
-        }
+        commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &mut targets)?;
+        self.manager
+            .apply_external_targets_atomically_in_local_repo(
+                repo_name,
+                &targets,
+                &staged_snapshot,
+                expected_ledger_head,
+            )?;
 
         let final_confirmed = self
             .manager
             .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
-        self.manager.run_on_local_repo(repo_name, staging::clear)?;
         tracing::info!(
             "Applied {} external changes to ledger in {}",
             targets.len(),

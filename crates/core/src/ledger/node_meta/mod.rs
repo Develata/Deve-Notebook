@@ -18,7 +18,7 @@ pub use migrate::{file_meta_for_doc, list_file_docs, list_nodes, path_for_doc};
 pub use update::{delete_path_prefix, remove_node_by_path, rename_path_prefix};
 
 pub(crate) use core::{ensure_file_node_in_txn, upsert_node_in_txn};
-pub(crate) use lookup::get_node_meta_in_txn;
+pub(crate) use lookup::{get_node_id_in_txn, get_node_meta_in_txn};
 pub(crate) use update::{
     delete_path_prefix_in_txn, remove_node_by_path_in_txn, rename_path_prefix_in_txn,
 };

@@ -95,6 +95,9 @@ pub async fn run(
             ScAction::Stage { repo, all } => {
                 commands::sc::stage(ledger_dir, repo.as_deref(), all, config.snapshot_depth)?
             }
+            ScAction::Apply { repo } => {
+                commands::sc::apply(ledger_dir, repo.as_deref(), config.snapshot_depth)?
+            }
             ScAction::Commit { repo, message } => {
                 commands::sc::commit(ledger_dir, repo.as_deref(), &message, config.snapshot_depth)?
             }

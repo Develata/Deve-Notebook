@@ -214,6 +214,14 @@ PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
 
 - Watcher 检测到的变更 **MUST NOT** 直接写入 ledger。
 - External Changes 的 `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化，也不是 Source Control commit anchor 的 include/exclude 模型。
+- `Stage` **MUST** 把 pending 检测到的 `content_hash` 固化到 staged entry。对非 delete target，
+  `Apply to Ledger` preflight **MUST** 重新读取 workspace 内容并比较该 hash；不一致时保留 staging、
+  不追加任何 ledger fact，并要求重新 scan/stage。
+- 一个 stage batch 的 pending/staged rows 与 DocId indexes **MUST** 原子迁移；Apply preflight 捕获的
+  内容快照是该批唯一写入输入，所有 target facts、projection/index 更新与本次 staged snapshot 的
+  exact consumption **MUST** 共享一个 write transaction。hash 校验后不得二次读取 workspace，
+  最终事务必须用 preflight 前的 ledger head 做 compare-and-fail gate；head 漂移时不得使用旧
+  confirmed/content base。不得留下批次前缀的 ledger facts，也不得清除本次 snapshot 之外的新 staging。
 - `Discard` 的语义是恢复 workspace 到当前规范 projection。
 - 普通 `Stage` **MUST** fail-closed 于 `has_conflict=true` 的 pending entry；
   只有显式 `ResolveConflict(KeepFs)` flow 可以通过 resolved-stage 路径清除 conflict 标记并移入 staged。
@@ -463,6 +471,7 @@ MergeRequested
 - watcher overflow
 - ambiguous path target
 - missing staged workspace file
+- staged workspace content hash changed after stage
 - staged entry doc identity missing
 
 ### 6.2 Commit Failures

@@ -2,10 +2,13 @@
 //!   - 03_storage/projection#projection-contract
 //!   - 05_diff_logic#authority-diff-core
 
-use crate::ledger::RepoManager;
+use crate::ledger::schema::PEER_DOC_SEQ;
+use crate::ledger::seq::checked_next_local_seq;
+use crate::ledger::{RepoManager, ops};
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use crate::state;
 use anyhow::{Result, anyhow};
+use redb::ReadableTable;
 use tracing::info;
 
 /// Compares Ledger state with target content.
@@ -58,5 +61,37 @@ pub fn append_patch_in_local_repo(
         })?;
     }
     info!("Reconcile: Applied {} ops for doc {}", ops.len(), doc_id);
+    Ok(())
+}
+
+pub(crate) fn append_patch_to_txn(
+    write_txn: &redb::WriteTransaction,
+    doc_id: DocId,
+    peer_label: &str,
+    repo_scope: &str,
+    patch: &[Op],
+) -> Result<()> {
+    let peer_id = PeerId::new(peer_label);
+    for op in patch {
+        let current_local_seq = {
+            let peer_seqs = write_txn.open_table(PEER_DOC_SEQ)?;
+            peer_seqs
+                .get((doc_id.as_u128(), peer_id.as_str()))?
+                .map(|value| value.value())
+                .unwrap_or(0)
+        };
+        let next_local_seq = checked_next_local_seq(current_local_seq)
+            .ok_or_else(|| anyhow!("LocalSeq overflow"))?;
+        let entry = LedgerEntry::new_content(
+            doc_id,
+            op.clone(),
+            chrono::Utc::now().timestamp_millis(),
+            peer_id.clone(),
+            next_local_seq,
+            None,
+            None,
+        );
+        ops::append_op_to_txn(write_txn, &entry, repo_scope)?;
+    }
     Ok(())
 }

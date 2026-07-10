@@ -47,6 +47,8 @@
 ### 5. NoteGit Mirror Import/Export/Push Command Chain
 
 - 当前 resolved import 发布链路必须通过 runtime 显式执行：`deve_cli ngit import --apply` 只写 pending/import；External Changes / Apply to Ledger / Source Control commit 生成 NoteGit/ngit facts 与 commit anchor；`deve_cli ngit export` 建立 Git main mirror mapping；`deve_cli ngit push` 发布已映射 Git HEAD。
+- CLI 等价链路为 `deve_cli sc stage --all` → `deve_cli sc apply` →
+  `deve_cli sc commit --message <message>`；普通 commit 不消费 External Changes staging。
 - `deve_cli ngit push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty NoteGit Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
 - Web Command Palette 只能显示 ngit import / push / repair 的 backend/runtime intent 或 read-only notice，不得直接触发 Git writer；不再读取 `source_control.git_bridge` mode。
 
