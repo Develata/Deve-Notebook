@@ -103,6 +103,14 @@ contains	crates/core/src/ledger/manager/remote_repo_select.rs	let Some(info) = e
 contains	apps/cli/src/export_entries.rs	fn jsonl_roundtrip_is_monotonic_and_line_stable()
 contains	apps/cli/src/export_entries.rs	fn includes_dir_structure_fact_in_export()
 contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails()
+contains	docs/plan/09_web_thin_client_ledger.md	其中 `seq` **MUST** 是 repo 范围的 `GlobalSeq`
+contains	docs/features/operations/doc_edit_confirmed_op.md	peer-local fact sequence is never a browser document version
+case_contains	docs/acceptance-cases/14_operation_flow_refs.md	WEBWRITE-FEAT-01	edit_acknowledges_ledger_commit_when_workspace_writeback_fails
+case_contains	docs/acceptance-cases/14_operation_flow_refs.md	WEBWRITE-FEAT-01	ack_and_new_op_seq_equal_repo_global_ledger_seq true
+contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_ne!(
+contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(seq, global_seq);
+contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(entry.seq, global_seq);
+cargo_test_lib	deve_cli	edit_acknowledges_ledger_commit_when_workspace_writeback_fails
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	CommitOutcome::WritebackFailed
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	emit_commit_outcome(
 contains	apps/cli/src/server/handlers/document/write_confirmation.rs	broadcast_and_ack_committed_edit(

@@ -1,5 +1,5 @@
 use super::{
-    edit_message_test_support::{recv_ack, send_insert},
+    edit_message_test_support::send_insert,
     edit_state_test_support::{edit_harness, seed_doc, unicast_channel, writer_browser_session},
 };
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
@@ -16,10 +16,30 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
 
     send_insert(&h.state, &ch, &mut session, doc_id, 0).await;
 
-    let (scope_nonce, ack_doc_id, client_op_id) = recv_ack(&mut uni_rx).await;
-    assert_eq!(scope_nonce, Some(37));
-    assert_eq!(ack_doc_id, doc_id);
-    assert_eq!(client_op_id, 9);
+    let (global_seq, entry) = h
+        .state
+        .repo
+        .find_client_op_in_local_repo("default", 7, 9)?
+        .expect("committed client op");
+    assert_ne!(
+        global_seq, entry.seq,
+        "fixture must distinguish global protocol seq from peer-local fact seq"
+    );
+    match uni_rx.recv().await {
+        Some(ServerMessage::Ack {
+            scope_nonce,
+            doc_id: ack_doc_id,
+            seq,
+            client_op_id,
+            ..
+        }) => {
+            assert_eq!(scope_nonce, Some(37));
+            assert_eq!(ack_doc_id, doc_id);
+            assert_eq!(seq, global_seq);
+            assert_eq!(client_op_id, 9);
+        }
+        other => panic!("expected Ack, got {other:?}"),
+    }
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError {
             error,
@@ -41,8 +61,12 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
     match broadcast_rx.recv().await? {
         ServerMessage::NewOp {
             doc_id: broadcast_doc_id,
+            entry,
             ..
-        } => assert_eq!(broadcast_doc_id, doc_id),
+        } => {
+            assert_eq!(broadcast_doc_id, doc_id);
+            assert_eq!(entry.seq, global_seq);
+        }
         other => panic!("expected NewOp broadcast, got {:?}", other),
     }
     assert!(matches!(uni_rx.try_recv(), Err(TryRecvError::Empty)));

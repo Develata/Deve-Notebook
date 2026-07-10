@@ -115,6 +115,11 @@ State_auth = L_confirmed
 
 否则前端无法精确清理 pending overlay。
 
+其中 `seq` **MUST** 是 repo 范围的 `GlobalSeq`，与 `Snapshot.base_seq`、
+`Snapshot.version`、`History[].seq` 和 `NewOp.entry.seq` 使用同一序号域；不得投影为
+`LedgerEntry.seq` 的 peer-local 序号。Web 只允许用该统一全局序号推进 document runtime
+version，不能比较不同 peer 的局部序号。
+
 补充：
 
 - 若 ledger 已提交但后续 workspace/projection 写回失败，仍然 MUST 返回能够标识该写入已确认的 `Ack`，并通过独立 fault 通道报告 writeback error。

@@ -69,12 +69,12 @@ fn append_client_edit_locked(input: ClientEditAppend<'_>) {
             )
         },
     ) {
-        Ok((_global_seq, local_seq)) => {
+        Ok((global_seq, _local_seq)) => {
             let outcome = match state
                 .sync_manager
                 .persist_doc_in_local_repo(&scope.repo_name, doc_id)
             {
-                Ok(_) => CommitOutcome::Committed { seq: local_seq },
+                Ok(_) => CommitOutcome::Committed { seq: global_seq },
                 Err(err) => {
                     tracing::error!(
                         doc_id = %doc_id,
@@ -83,7 +83,7 @@ fn append_client_edit_locked(input: ClientEditAppend<'_>) {
                         err
                     );
                     CommitOutcome::WritebackFailed {
-                        seq: local_seq,
+                        seq: global_seq,
                         detail: format!("Projection writeback failed after ledger commit: {err}"),
                     }
                 }

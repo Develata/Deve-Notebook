@@ -73,10 +73,12 @@
   steps:
     - run: "cargo test -p deve_cli repo_write_gate_serializes_same_repo -- --nocapture"
     - run: "cargo test -p deve_cli duplicate_client_op_returns_original_ack_without_append -- --nocapture"
+    - run: "cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture"
     - run: "cargo test -p deve_web echoed_new_op_clears_matching_pending_overlay -- --nocapture"
   assertions:
     - cli_assert: same_repo_browser_edit_commits_are_serialized true
     - ws_assert: ack_contains "doc_id client_op_id scope_nonce"
+    - ws_assert: ack_and_new_op_seq_equal_repo_global_ledger_seq true
     - ui_assert: pending_overlay_cleared_after_confirmed_echo true
 
 - case_id: WEBWRITE-FEAT-02

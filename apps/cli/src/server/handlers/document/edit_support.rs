@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub(super) struct CommittedEdit {
     pub(super) scope_nonce: u64,
     pub(super) doc_id: DocId,
-    pub(super) local_seq: u64,
+    pub(super) global_seq: u64,
     pub(super) op: Op,
     pub(super) client_id: u64,
     pub(super) client_op_id: u64,
@@ -84,7 +84,7 @@ pub(super) fn broadcast_and_ack_committed_edit(
         scope_nonce: Some(edit.scope_nonce),
         doc_id: edit.doc_id,
         entry: ConfirmedOp::new(
-            edit.local_seq,
+            edit.global_seq,
             edit.op,
             Some(ClientOrigin {
                 client_id: edit.client_id,
@@ -97,7 +97,7 @@ pub(super) fn broadcast_and_ack_committed_edit(
         branch: scope.branch.clone(),
         scope_nonce: Some(edit.scope_nonce),
         doc_id: edit.doc_id,
-        seq: edit.local_seq,
+        seq: edit.global_seq,
         client_op_id: edit.client_op_id,
     });
 }

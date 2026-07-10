@@ -33,6 +33,7 @@ NET-013|manual-security|docs/features/05_network.md|unauthorized vs reconnect wo
 NET-014|manual-network|docs/features/05_network.md|full peer ws admission review
 NET-015|manual-network|docs/features/05_network.md|full peer mesh shadow-only workflow
 NET-016|manual-network|docs/features/05_network.md|full peer reconnect vector workflow
+NET-018|manual-network|docs/features/05_network.md|recipient-scoped browser broadcast after reconnect
 PLUG-002|manual-chrome|docs/features/17_plugins.md|plugin UI boundary
 PLUG-003|manual-security|docs/features/17_plugins.md|plugin sandbox boundary
 POS-001|manual-doc|docs/features/02_positioning.md|positioning contract review

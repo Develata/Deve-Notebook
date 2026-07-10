@@ -69,5 +69,6 @@
 
 - The visible editor buffer is `confirmed + pending`, not authority.
 - `Ack` only clears pending state; `NewOp` carries the confirmed ledger op.
+- `Ack.seq` and `NewOp.entry.seq` use the same repo-global ledger sequence as snapshot/history versions; peer-local fact sequence is never a browser document version.
 - Re-sending the same `(client_id, client_op_id)` with the same op returns the original ack; sending a different op with the same key is rejected.
 - Workspace projection failure after ledger append is recoverable and must not roll back authority.

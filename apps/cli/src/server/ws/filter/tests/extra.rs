@@ -79,7 +79,7 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
 }
 
 #[test]
-fn preserves_existing_runtime_scope_nonce_when_stamping() {
+fn recipient_scope_nonce_overrides_producer_nonce_for_runtime_broadcast() {
     let mut session = WsSession::new();
     session.set_scope_nonce(Some(9));
     let filter = BroadcastFilter::for_session(&session);
@@ -100,7 +100,7 @@ fn preserves_existing_runtime_scope_nonce_when_stamping() {
     });
 
     match new_op {
-        Some(ServerMessage::NewOp { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(7)),
+        Some(ServerMessage::NewOp { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected new-op message: {:?}", other),
     }
 }

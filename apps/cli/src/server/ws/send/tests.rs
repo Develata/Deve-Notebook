@@ -68,7 +68,7 @@ async fn critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_f
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn new_op_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
+async fn new_op_broadcast_uses_recipient_nonce_when_unicast_queue_is_full() {
     let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();
     let mut session = WsSession::new();
@@ -86,7 +86,7 @@ async fn new_op_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
         .send(ServerMessage::NewOp {
             repo_id,
             branch: None,
-            scope_nonce: None,
+            scope_nonce: Some(7),
             doc_id: DocId::new(),
             entry: ConfirmedOp::new(
                 1,

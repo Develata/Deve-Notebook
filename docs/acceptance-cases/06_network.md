@@ -343,4 +343,17 @@
     - incremental_apply_rejects_seq_gap: true
     - replayed_remote_ops_skip_duplicate_shadow_append: true
     - snapshot_base_allows_newer_contiguous_ops: true
+
+- case_id: NET-018
+  goal: 同一 repo 的多个 browser session 即使拥有不同连接内 scope_nonce，也能接收彼此已经通过 writer gate 的实时广播。
+  preconditions:
+    - client A 与 client B 已登录同一 repo/branch
+    - client B 曾断线重连，因此 B 的 scope_nonce 与 A 不同
+  steps:
+    - run: cargo test -p deve_cli recipient_scope_nonce_overrides_producer_nonce_for_runtime_broadcast -- --nocapture
+    - run: DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+  assertions:
+    - producer_write_still_uses_producer_writer_gate: true
+    - delivered_new_op_uses_recipient_scope_nonce: true
+    - client_a_receives_client_b_post_reconnect_edit: true
 ```

@@ -322,6 +322,12 @@ enum 或 wire shape 时才需要 bump `WS_PROTOCOL_VERSION`。
 - `repo_id_a` 与 `repo_id_b` 必须映射到不同 peer state。
 - 旧 repo 的延迟握手不得激活新 repo 的写入闸门。
 - `scope_nonce` 必须参与 repo-scoped message gating。
+- server outbound fanout 中的 `scope_nonce` 是**接收连接作用域版本**，不是事件生产者的
+  连接版本。repo/branch 已匹配的 runtime broadcast 在进入某个接收连接的 unicast queue
+  前，**MUST** 覆盖为该接收连接当前 `scope_nonce`；不得因生产者重连后 nonce 更大而让
+  仍停留在同一 repo/branch 的其他客户端丢弃已确认 `NewOp`。
+- 覆盖接收者 nonce 不得放宽 writer gate：生产者请求在产生 ledger fact 前仍必须按其自身
+  当前 `scope_nonce` fail-closed 校验；fanout 只投影已经成立的 server/runtime event。
 
 ### 6.3 Keystore Contract
 

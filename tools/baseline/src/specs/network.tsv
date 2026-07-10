@@ -104,11 +104,13 @@ contains	docs/features/05_network.md	Shadow 与显式合并边界
 contains	docs/acceptance-cases/06_network.md	case_id: NET-014
 contains	docs/acceptance-cases/06_network.md	case_id: NET-015
 contains	docs/acceptance-cases/06_network.md	case_id: NET-016
+contains	docs/acceptance-cases/06_network.md	case_id: NET-018
 case_contains	docs/acceptance-cases/06_network.md	NET-015	merge_peer_local_branch_contract_writes_local_only
 case_contains	docs/acceptance-cases/06_network.md	NET-016	live post-reconnect vector equality is not exposed
 contains	docs/acceptance-bindings.tsv	NET-014|manual-network|docs/features/05_network.md
 contains	docs/acceptance-bindings.tsv	NET-015|manual-network|docs/features/05_network.md
 contains	docs/acceptance-bindings.tsv	NET-016|manual-network|docs/features/05_network.md
+contains	docs/acceptance-bindings.tsv	NET-018|manual-network|docs/features/05_network.md
 contains	apps/cli/src/server/ws/auth.rs	pub(super) enum WsAdmission
 contains	apps/cli/src/server/ws/auth.rs	FullPeer
 contains	apps/cli/src/server/ws/auth.rs	DEVE_P2P_INBOUND_TOKEN

@@ -79,7 +79,7 @@ pub(super) fn emit_commit_outcome(write: CommittedWrite<'_>, outcome: CommitOutc
         CommittedEdit {
             scope_nonce,
             doc_id,
-            local_seq: outcome.ledger_seq(),
+            global_seq: outcome.ledger_seq(),
             op,
             client_id,
             client_op_id,

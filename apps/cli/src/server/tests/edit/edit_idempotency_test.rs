@@ -29,7 +29,11 @@ async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Re
         .repo
         .find_client_op_in_local_repo("default", 7, 9)?
         .expect("client op index entry");
-    assert_eq!(found.1.seq, first_ack.seq);
+    assert_ne!(
+        found.0, found.1.seq,
+        "fixture must distinguish repo-global protocol seq from peer-local fact seq"
+    );
+    assert_eq!(found.0, first_ack.seq);
     Ok(())
 }
 
@@ -94,7 +98,7 @@ async fn duplicate_client_op_with_different_op_is_rejected() -> anyhow::Result<(
         .repo
         .find_client_op_in_local_repo("default", 7, 9)?
         .expect("client op index entry");
-    assert_eq!(found.1.seq, first_ack.seq);
+    assert_eq!(found.0, first_ack.seq);
     Ok(())
 }
 
