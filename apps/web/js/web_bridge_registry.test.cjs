@@ -946,6 +946,44 @@ assert.equal(
   true,
   "index bootstrap fail-closed write fallbacks must not enqueue state-progressing editor actions"
 );
+let editorReadyCalled = false;
+const queuedEditorElement = {};
+const queuedEditorUpdate = () => {};
+const queuedEditorReady = () => {
+  editorReadyCalled = true;
+};
+assert.equal(
+  indexBootstrapBridge.call(
+    "setupCodeMirror",
+    queuedEditorElement,
+    queuedEditorUpdate,
+    queuedEditorReady,
+  ),
+  true,
+  "index bootstrap must accept a queued editor mount while the adapter loads"
+);
+assert.equal(editorReadyCalled, false, "queued editor mounts must not report readiness early");
+assert.equal(indexBootstrapState.editorQueue.length, 1);
+assert.equal(indexBootstrapState.editorQueue[0].element, queuedEditorElement);
+assert.equal(indexBootstrapState.editorQueue[0].onUpdate, queuedEditorUpdate);
+assert.equal(indexBootstrapState.editorQueue[0].onReady, queuedEditorReady);
+assert.equal(indexBootstrapBridge.call("destroyEditor"), true);
+assert.equal(
+  indexBootstrapState.editorQueue.length,
+  0,
+  "destroying an unmounted editor must discard its queued callbacks"
+);
+assert.equal(editorReadyCalled, false, "destroying a queued mount must not report readiness");
+assert.match(
+  indexEditorAdapterSource,
+  /editorBootstrapState\.editorBridgeReady = true;[\s\S]*?onReady\(\);/,
+  "lazy editor adapter must report readiness only after the real view is marked ready"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /catch \(e\) \{[\s\S]*?rawSetReadOnly\(true\);[\s\S]*?rawDestroyEditor\(\);[\s\S]*?editorBootstrapState\.editorBridgeReady = false;/,
+  "editor adapter initialization failure must lock and destroy the view before remaining unready"
+);
 assert.doesNotMatch(
   indexBridgeSource,
   /window\.__deveEditorBootstrap\b/,
@@ -1058,7 +1096,7 @@ assert.doesNotMatch(
 );
 
 const editorFfiBridgeCalls = [
-  ["setupCodeMirror", /bridge_call2\("setupCodeMirror"/],
+  ["setupCodeMirror", /bridge_call3\([\s\S]*?"setupCodeMirror"/],
   ["destroyEditor", /bridge_call0\("destroyEditor"/],
   ["applyRemoteContent", /bridge_call1\("applyRemoteContent"/],
   ["applyRemoteOp", /bridge_call1\("applyRemoteOp"/],

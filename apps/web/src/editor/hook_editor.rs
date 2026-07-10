@@ -15,6 +15,7 @@ use leptos::html::Div;
 use leptos::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use wasm_bindgen::closure::Closure;
 
 pub struct EditorMountEffectCtx {
     pub doc_id: DocId,
@@ -25,6 +26,7 @@ pub struct EditorMountEffectCtx {
     pub local_version: ReadSignal<u64>,
     pub on_stats: Option<Callback<EditorStats>>,
     pub set_content: WriteSignal<String>,
+    pub set_editor_ready: WriteSignal<bool>,
 }
 
 pub fn setup_editor_mount_effect(ctx: EditorMountEffectCtx) {
@@ -50,12 +52,16 @@ pub fn setup_editor_mount_effect(ctx: EditorMountEffectCtx) {
             on_stats: ctx.on_stats,
             set_content: ctx.set_content,
         });
-        if !setupCodeMirror(raw_element, &on_delta) {
+        ctx.set_editor_ready.set(false);
+        let set_editor_ready = ctx.set_editor_ready;
+        let on_ready =
+            Closure::wrap(Box::new(move || set_editor_ready.set(true)) as Box<dyn FnMut()>);
+        if !setupCodeMirror(raw_element, &on_delta, &on_ready) {
             leptos::logging::warn!("CodeMirror setup blocked: editor bridge unavailable");
             return;
         }
-        let on_delta = StoredValue::new_local(Some(on_delta));
-        on_cleanup(move || on_delta.update_value(|value| drop(value.take())));
+        let callbacks = StoredValue::new_local(Some((on_delta, on_ready)));
+        on_cleanup(move || callbacks.update_value(|value| drop(value.take())));
     });
 }
 
@@ -64,10 +70,12 @@ pub struct EditorCleanupCtx {
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
+    pub set_editor_ready: WriteSignal<bool>,
 }
 
 pub fn setup_editor_cleanup(ctx: EditorCleanupCtx) {
     on_cleanup(move || {
+        ctx.set_editor_ready.set(false);
         let _ = ctx.session_generation.fetch_add(1, Ordering::Relaxed);
         ctx.ready_generation.store(0, Ordering::Relaxed);
         clear_sync_buffers(

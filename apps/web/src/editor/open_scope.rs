@@ -34,9 +34,10 @@ pub fn can_open_doc(scope: &OpenDocScope<'_>) -> bool {
 pub fn open_request_key(
     scope: OpenDocScope<'_>,
     connection_ready: bool,
+    editor_ready: bool,
     scope_nonce: u64,
 ) -> Option<OpenRequestKey> {
-    if !connection_ready || !can_open_doc(&scope) {
+    if !connection_ready || !editor_ready || !can_open_doc(&scope) {
         return None;
     }
     Some(OpenRequestKey {
@@ -89,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    fn open_request_key_requires_connection_and_scope() {
+    fn open_request_key_requires_connection_editor_and_scope() {
         let doc_id = DocId::new();
         let scope = OpenDocScope {
             doc_id,
@@ -100,9 +101,10 @@ mod tests {
             repo_switch_idle: true,
         };
 
-        assert_eq!(open_request_key(scope.clone(), false, 7), None);
+        assert_eq!(open_request_key(scope.clone(), false, true, 7), None);
+        assert_eq!(open_request_key(scope.clone(), true, false, 7), None);
         assert_eq!(
-            open_request_key(scope, true, 7),
+            open_request_key(scope, true, true, 7),
             Some(OpenRequestKey {
                 doc_id,
                 scope_nonce: 7,

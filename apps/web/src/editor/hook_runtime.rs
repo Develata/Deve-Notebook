@@ -19,6 +19,8 @@ pub(super) struct EditorRuntime {
     pub set_open_request_id: WriteSignal<u64>,
     pub last_open_request_key: ReadSignal<Option<OpenRequestKey>>,
     pub set_last_open_request_key: WriteSignal<Option<OpenRequestKey>>,
+    pub editor_ready: ReadSignal<bool>,
+    pub set_editor_ready: WriteSignal<bool>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
@@ -39,6 +41,7 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
     let (local_version, set_local_version) = signal(0u64);
     let (open_request_id, set_open_request_id) = signal(0u64);
     let (last_open_request_key, set_last_open_request_key) = signal(None::<OpenRequestKey>);
+    let (editor_ready, set_editor_ready) = signal(false);
     let session_generation = Arc::new(AtomicU64::new(0));
     let ready_generation = Arc::new(AtomicU64::new(0));
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
@@ -56,6 +59,8 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
         set_open_request_id,
         last_open_request_key,
         set_last_open_request_key,
+        editor_ready,
+        set_editor_ready,
         session_generation,
         ready_generation,
         buffered_live_ops,

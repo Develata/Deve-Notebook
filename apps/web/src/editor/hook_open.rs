@@ -20,6 +20,7 @@ pub struct OpenDocEffectCtx {
     pub doc_id: DocId,
     pub last_open_request_key: ReadSignal<Option<OpenRequestKey>>,
     pub set_last_open_request_key: WriteSignal<Option<OpenRequestKey>>,
+    pub editor_ready: ReadSignal<bool>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
@@ -82,6 +83,7 @@ fn current_open_key(ctx: &OpenDocEffectCtx) -> Option<OpenRequestKey> {
             repo_switch_idle: ctx.core.pending_repo_switch.get().is_none(),
         },
         ctx.ws.status.get() == ConnectionStatus::Connected,
+        ctx.editor_ready.get(),
         ctx.core.current_scope_nonce.get(),
     )
 }

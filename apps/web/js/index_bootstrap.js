@@ -137,11 +137,12 @@
         this.pendingEditorActions.shift();
       }
     },
-    queueMount(element, onUpdate) {
-      this.editorQueue = [{ element, onUpdate }];
+    queueMount(element, onUpdate, onReady) {
+      this.editorQueue = [{ element, onUpdate, onReady }];
     },
     resetBridge() {
       this.editorBridgeReady = false;
+      this.editorQueue = [];
       this.pendingEditorActions = [];
     },
     takePendingActions() {
@@ -169,16 +170,16 @@
     editorBootstrapState.queueAction(kind, payload);
   }, { role: "editor-bootstrap-queue" });
 
-  const queueEditorMount = registerEditorBridgeGlobal("queueEditorMount", (element, onUpdate) => {
-    editorBootstrapState.queueMount(element, onUpdate);
+  const queueEditorMount = registerEditorBridgeGlobal("queueEditorMount", (element, onUpdate, onReady) => {
+    editorBootstrapState.queueMount(element, onUpdate, onReady);
   }, { role: "editor-bootstrap-mount-queue" });
 
-  registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate) {
+  registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate, onReady) {
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.cmLoaded && editorBootstrapState.realInit) {
-      return editorBootstrapState.realInit(element, onUpdate) === true;
+      return editorBootstrapState.realInit(element, onUpdate, onReady) === true;
     } else {
-      queueEditorMount(element, onUpdate);
+      queueEditorMount(element, onUpdate, onReady);
       requestEditorAdapter();
       return true;
     }

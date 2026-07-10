@@ -183,14 +183,13 @@ const attachEditorAdapter = (module) => {
 
   logToOverlay("Adapter imported successfully.");
 
-  editorBootstrapState.realInit = (element, onUpdate) => {
+  editorBootstrapState.realInit = (element, onUpdate, onReady) => {
     logToOverlay("Initializing Editor View");
     hideOverlay();
 
     try {
       initCodeMirror(element, onUpdate);
       editorBootstrapState.editorBridgeReady = true;
-      rawSetReadOnly(true);
       if (editorBootstrapState.pendingEditorActions.length > 0) {
         const pending = editorBootstrapState.takePendingActions();
         logToOverlay(
@@ -198,20 +197,36 @@ const attachEditorAdapter = (module) => {
         );
         pending.forEach(replayEditorAction);
       }
+      rawSetReadOnly(true);
       syncEditorStateToRust?.();
+      if (typeof onReady !== "function") {
+        throw new TypeError("CodeMirror readiness callback is required");
+      }
+      onReady();
       return true;
     } catch (e) {
+      try {
+        rawSetReadOnly(true);
+      } catch (_) {
+        // Keep the original initialization error as the visible failure.
+      }
+      try {
+        rawDestroyEditor();
+      } catch (_) {
+        // The bridge remains unready even if best-effort cleanup also fails.
+      }
+      editorBootstrapState.editorBridgeReady = false;
       logToOverlay("Init call failed: " + e.message, true);
       throw e;
     }
   };
 
-  registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate) => {
+  registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate, onReady) => {
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.realInit) {
-      return editorBootstrapState.realInit(element, onUpdate) === true;
+      return editorBootstrapState.realInit(element, onUpdate, onReady) === true;
     }
-    queueEditorMount(element, onUpdate);
+    queueEditorMount(element, onUpdate, onReady);
     requestEditorAdapter();
     return true;
   }, { role: "wasm-editor-mount" });
@@ -226,6 +241,7 @@ const attachEditorAdapter = (module) => {
     editorBootstrapState.realInit(
       queuedMount.latestMount.element,
       queuedMount.latestMount.onUpdate,
+      queuedMount.latestMount.onReady,
     );
   }
 };

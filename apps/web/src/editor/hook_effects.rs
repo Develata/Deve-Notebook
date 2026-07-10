@@ -32,6 +32,7 @@ pub(super) fn setup_editor_effects(
         doc_id,
         last_open_request_key: runtime.last_open_request_key,
         set_last_open_request_key: runtime.set_last_open_request_key,
+        editor_ready: runtime.editor_ready,
         session_generation: runtime.session_generation.clone(),
         ready_generation: runtime.ready_generation.clone(),
         buffered_live_ops: runtime.buffered_live_ops.clone(),
@@ -83,12 +84,14 @@ pub(super) fn setup_editor_effects(
         local_version: runtime.local_version,
         on_stats,
         set_content: runtime.set_content,
+        set_editor_ready: runtime.set_editor_ready,
     });
     setup_editor_cleanup(EditorCleanupCtx {
         session_generation: runtime.session_generation.clone(),
         ready_generation: runtime.ready_generation.clone(),
         buffered_live_ops: runtime.buffered_live_ops.clone(),
         buffered_encrypted_ops: runtime.buffered_encrypted_ops.clone(),
+        set_editor_ready: runtime.set_editor_ready,
     });
     setup_playback_effect(PlaybackEffectCtx {
         ws,

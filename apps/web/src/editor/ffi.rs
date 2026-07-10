@@ -23,10 +23,16 @@ use wasm_bindgen::prelude::*;
 pub fn setupCodeMirror(
     element: &web_sys::HtmlElement,
     on_delta: &Closure<dyn FnMut(String)>,
+    on_ready: &Closure<dyn FnMut()>,
 ) -> bool {
-    bridge_call2("setupCodeMirror", element.as_ref(), on_delta.as_ref())
-        .and_then(|value| value.as_bool())
-        .unwrap_or(false)
+    bridge_call3(
+        "setupCodeMirror",
+        element.as_ref(),
+        on_delta.as_ref(),
+        on_ready.as_ref(),
+    )
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false)
 }
 
 /// 销毁编辑器实例，释放资源
@@ -121,6 +127,12 @@ fn bridge_call2(name: &str, first: &JsValue, second: &JsValue) -> Option<JsValue
         .ok()
 }
 
+fn bridge_call3(name: &str, first: &JsValue, second: &JsValue, third: &JsValue) -> Option<JsValue> {
+    let (bridge, func) = bridge_call_function()?;
+    func.call4(&bridge, &JsValue::from_str(name), first, second, third)
+        .ok()
+}
+
 fn bridge_call_function() -> Option<(JsValue, js_sys::Function)> {
     let window = web_sys::window()?;
     let bridge = js_sys::Reflect::get(window.as_ref(), &"__deveWebBridge".into()).ok()?;
@@ -145,7 +157,8 @@ mod tests {
         assert!(!source.contains("unsafe extern \"C\""));
         assert!(source.contains("\"__deveWebBridge\""));
         assert!(source.contains("\"call\""));
-        assert!(source.contains("bridge_call2(\"setupCodeMirror\""));
+        assert!(source.contains("bridge_call3("));
+        assert!(source.contains("\"setupCodeMirror\""));
         assert!(source.contains("bridge_call0(\"destroyEditor\""));
         assert!(source.contains("bridge_call1(\"applyRemoteContent\""));
         assert!(source.contains("bridge_call1(\"applyRemoteOp\""));
@@ -156,6 +169,7 @@ mod tests {
         assert!(source.contains("bridge_call0(\"syncEditorStateToRust\""));
         assert!(source.contains("bridge_call1(\"mobileInsertText\""));
         assert!(source.contains("bridge_call2(\"mobileWrapSelection\""));
+        assert!(source.contains("fn bridge_call3("));
         assert!(source.contains("bridge_call0(\"mobileUndo\""));
         assert!(source.contains("bridge_call0(\"mobileRedo\""));
         assert!(source.contains("bridge_call1(\"updateGutterDiff\""));
