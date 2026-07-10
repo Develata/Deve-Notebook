@@ -23,11 +23,38 @@ fn mobile_tauri_remote_browser_accepts_https_origin_without_native_bootstrap() {
     })
     .expect("remote script");
 
-    assert!(script.source().contains("window.location.replace"));
+    assert!(
+        script
+            .source()
+            .contains("window.top===window&&window.location.origin!==target")
+    );
+    assert!(script.source().contains("window.location.replace(target)"));
     assert!(script.source().contains("https://deve.example"));
     assert!(!script.source().contains("__DEVE_NATIVE_BOOTSTRAP"));
     assert!(!script.source().contains("http_base"));
     assert!(!script.source().contains("ws_base"));
+}
+
+#[test]
+fn mobile_tauri_remote_browser_redirect_is_top_frame_and_same_origin_guarded() {
+    let script = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
+        https_origin: "https://deve.example".to_string(),
+    })
+    .expect("remote script");
+    let source = script.source();
+
+    let target = source
+        .find("const target=new URL")
+        .expect("target origin must be normalized before navigation");
+    let guard = source
+        .find("window.top===window&&window.location.origin!==target")
+        .expect("top-frame and same-origin guard");
+    let redirect = source
+        .find("window.location.replace(target)")
+        .expect("guarded redirect");
+
+    assert!(target < guard);
+    assert!(guard < redirect);
 }
 
 #[test]

@@ -158,7 +158,9 @@ pub fn mobile_tauri_remote_browser_init_script(
     validate_native_remote_target(target)?;
     let origin = serde_json::to_string(&target.https_origin)
         .expect("serializing a validated HTTPS origin string cannot fail");
-    let source = format!("window.location.replace({origin});");
+    let source = format!(
+        "(()=>{{const target=new URL({origin}).origin;if(window.top===window&&window.location.origin!==target){{window.location.replace(target);}}}})();"
+    );
     validate_mobile_remote_script_source(&source)?;
     Ok(MobileTauriRemoteBrowserScript { source })
 }
