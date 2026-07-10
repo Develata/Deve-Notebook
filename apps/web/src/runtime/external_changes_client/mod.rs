@@ -59,24 +59,14 @@ pub fn create_external_changes_refresh_callback(
         spawn_local(async move {
             match fetch_external_changes(repo_id, scope_nonce).await {
                 Ok(snapshot) => {
-                    if !scope_matches(
-                        &request_repo_id,
-                        scope_nonce,
-                        &scope.current_repo_id.get_untracked(),
-                        scope.current_scope_nonce.get_untracked(),
-                    ) {
+                    if !scope_is_current(scope, &request_repo_id, scope_nonce) {
                         return;
                     }
                     set_staged_changes.set(snapshot.staged);
                     set_unstaged_changes.set(snapshot.unstaged);
                 }
                 Err(error) => {
-                    if scope_matches(
-                        &request_repo_id,
-                        scope_nonce,
-                        &scope.current_repo_id.get_untracked(),
-                        scope.current_scope_nonce.get_untracked(),
-                    ) {
+                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
                         on_error.run(error);
                     }
                 }
@@ -135,10 +125,19 @@ fn target_callback(
     Callback::new(move |entry: ChangeEntry| {
         let repo_id = scope.current_repo_id.get_untracked();
         let scope_nonce = scope.current_scope_nonce.get_untracked();
+        let request_repo_id = repo_id.clone();
         spawn_local(async move {
             match mutate_external_change_target(op, repo_id, scope_nonce, entry).await {
-                Ok(()) => on_refresh.run(()),
-                Err(error) => on_error.run(error),
+                Ok(()) => {
+                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                        on_refresh.run(());
+                    }
+                }
+                Err(error) => {
+                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                        on_error.run(error);
+                    }
+                }
             }
         });
     })
@@ -156,16 +155,24 @@ fn targets_callback(
         }
         let repo_id = scope.current_repo_id.get_untracked();
         let scope_nonce = scope.current_scope_nonce.get_untracked();
+        let request_repo_id = repo_id.clone();
         spawn_local(async move {
             for entry in entries {
+                if !scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    return;
+                }
                 if let Err(error) =
                     mutate_external_change_target(op, repo_id.clone(), scope_nonce, entry).await
                 {
-                    on_error.run(error);
+                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                        on_error.run(error);
+                    }
                     return;
                 }
             }
-            on_refresh.run(());
+            if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                on_refresh.run(());
+            }
         });
     })
 }
@@ -183,30 +190,39 @@ fn apply_callback(
         spawn_local(async move {
             match apply_external_changes_to_ledger(repo_id, scope_nonce).await {
                 Ok(confirmed_changes) => {
-                    if !scope_matches(
-                        &request_repo_id,
-                        scope_nonce,
-                        &scope.current_repo_id.get_untracked(),
-                        scope.current_scope_nonce.get_untracked(),
-                    ) {
+                    if !scope_is_current(scope, &request_repo_id, scope_nonce) {
                         return;
                     }
                     on_apply_confirmed_changes.run(confirmed_changes);
                     on_refresh.run(());
                 }
                 Err(error) => {
-                    if scope_matches(
-                        &request_repo_id,
-                        scope_nonce,
-                        &scope.current_repo_id.get_untracked(),
-                        scope.current_scope_nonce.get_untracked(),
-                    ) {
+                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
                         on_error.run(error);
                     }
                 }
             }
         });
     })
+}
+
+fn scope_is_current(
+    scope: ExternalChangesHttpScope,
+    request_repo_id: &Option<String>,
+    request_scope_nonce: u64,
+) -> bool {
+    let Some(current_repo_id) = scope.current_repo_id.try_get_untracked() else {
+        return false;
+    };
+    let Some(current_scope_nonce) = scope.current_scope_nonce.try_get_untracked() else {
+        return false;
+    };
+    scope_matches(
+        request_repo_id,
+        request_scope_nonce,
+        &current_repo_id,
+        current_scope_nonce,
+    )
 }
 
 fn scope_matches(
