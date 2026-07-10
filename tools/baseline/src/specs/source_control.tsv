@@ -238,7 +238,7 @@ contains	apps/cli/src/server/ws/route/source_control/tests.rs	source_control_sco
 contains	apps/cli/src/server/tests/source_control/source_control_scope_test/write_extra.rs	commit_and_push_ws_returns_cli_only_blocker_without_commit
 contains	apps/cli/src/server/handlers/source_control/http_scope.rs	source control scope nonce missing
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	test_http_status_rejects_missing_scope_nonce
-contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	test_http_stage_rejects_missing_scope_nonce_before_mutation
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage/authority.rs	test_http_stage_rejects_missing_scope_nonce_before_mutation
 contains	apps/cli/src/server/source_control_proxy/mod.rs	REMOTE_PROXY_SCOPE_NONCE
 contains	apps/cli/src/server/source_control_proxy/mod.rs	new_with_delegation_secret
 contains	apps/cli/src/server/source_control_proxy/mod.rs	DELEGATED_SC_HEADER
@@ -263,9 +263,9 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --lib source_c
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_uses_ngit_authority -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli delegated_source_control_proxy_api_is_type_marked -- --nocapture
-contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	delegated_source_control_requires_proxy_capability
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage/delegated.rs	delegated_source_control_requires_proxy_capability
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	remote_source_control_proxy_reads_use_delegated_capability
-contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	http_source_control_write_grant_requires_local_branch
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage/authority.rs	http_source_control_write_grant_requires_local_branch
 contains	apps/cli/src/server/source_control_grants/tests.rs	source_control_write_grant_creation_fails_closed
 contains	apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs	source_control_scope_cleanup_revokes_write_grant
 contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs	switch_branch_failure_revokes_source_control_write_grant

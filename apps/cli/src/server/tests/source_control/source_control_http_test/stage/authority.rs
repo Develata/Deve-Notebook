@@ -1,8 +1,10 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
+use super::super::super::source_control_grants::SourceControlGrantBranch;
 use super::super::support::{ProxyHarness, path_target, seed_pending};
 use deve_core::ledger::traits::RepoSelector;
+use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
@@ -70,11 +72,7 @@ async fn http_source_control_all_mutations_require_browser_write_grant() -> anyh
 
     let pending = repo.list_pending_fs_in_repo(&selector)?;
     assert!(pending.iter().any(|entry| entry.path == "notes/stage.md"));
-    assert!(
-        pending
-            .iter()
-            .any(|entry| entry.path == "notes/discard.md")
-    );
+    assert!(pending.iter().any(|entry| entry.path == "notes/discard.md"));
     let staged = repo.list_staged_in_repo(&selector)?;
     assert!(staged.iter().any(|entry| entry.path == "notes/unstage.md"));
     assert!(staged.iter().any(|entry| entry.path == "notes/commit.md"));
@@ -88,5 +86,106 @@ async fn assert_stale_grant(response: reqwest::Response) -> anyhow::Result<()> {
     let body: ServerError = response.json().await?;
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
     assert_eq!(body.code, ServerErrorCode::ScStaleScope);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_http_stage_rejects_missing_scope_nonce_before_mutation() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(body.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(
+        body.detail.as_deref(),
+        Some("source control scope nonce missing")
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+    harness.shutdown().await;
+    Ok(())
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_mutations_require_browser_write_grant() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+
+    repo.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
+    repo.unstage_file_in_repo(&selector, &path_target("notes/a.md"))?;
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_write_grant_requires_local_branch() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    let repo_id = repo
+        .get_repo_info_for(None, Some(repo.local_repo_name()))?
+        .ok_or_else(|| anyhow::anyhow!("missing local repo info"))?
+        .uuid;
+    harness
+        .state
+        .source_control_write_grants()
+        .grant(
+            harness.auth_session_id.clone(),
+            repo_id,
+            SourceControlGrantBranch::Remote(PeerId::new("remote-peer")),
+            PeerId::new("test-peer"),
+            1,
+        )
+        .expect("source-control write grant");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+    harness.shutdown().await;
     Ok(())
 }
