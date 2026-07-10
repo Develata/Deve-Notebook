@@ -10,6 +10,8 @@ import {
   isDirectInvocation,
   renderedShellPresent,
   renderedShellSelector,
+  relevantConsoleErrors,
+  webSocketMatchesExpectedOrigin,
   waitForRenderedShell,
 } from "./smoke-docker-multiclient.mjs";
 
@@ -45,6 +47,33 @@ test("editor content wait treats an unready bridge as pending", () => {
   assert.equal(
     editorContentIncludes("ready", { getEditorContent: () => "eventually ready" }),
     true,
+  );
+});
+
+test("websocket proof requires the expected origin and relative ws path", () => {
+  assert.equal(
+    webSocketMatchesExpectedOrigin("ws://127.0.0.1:3101/ws", "http://127.0.0.1:3101"),
+    true,
+  );
+  assert.equal(
+    webSocketMatchesExpectedOrigin("ws://elsewhere.invalid/ws", "http://127.0.0.1:3101"),
+    false,
+  );
+  assert.equal(
+    webSocketMatchesExpectedOrigin("ws://127.0.0.1:3101/other", "http://127.0.0.1:3101"),
+    false,
+  );
+});
+
+test("internet disconnected console errors are ignored only during the offline window", () => {
+  const message = "Failed to load resource: net::ERR_INTERNET_DISCONNECTED";
+  assert.deepEqual(
+    relevantConsoleErrors({ consoleErrors: [{ message, duringOffline: true }] }),
+    [],
+  );
+  assert.deepEqual(
+    relevantConsoleErrors({ consoleErrors: [{ message, duringOffline: false }] }),
+    [{ message, duringOffline: false }],
   );
 });
 

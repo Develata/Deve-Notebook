@@ -57,7 +57,7 @@
     - stdout_contains: "ghcr.io/${{ github.repository }}"
 
 - case_id: REL-002
-  goal: Docker 部署可用。
+  goal: Docker release 镜像 boot/auth 与 embedded frontend metadata preflight 可用。
   preconditions:
     - Docker 可用
     - AUTH_SECRET 已设置为 32 字节以上随机字符串
@@ -67,6 +67,9 @@
     - note: use `DEVE_DOCKER_BIN=/path/to/docker DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh` when Docker is not named `docker`
   assertions:
     - http_status_eq: 200
+    - runtime_assert: delivery_eq_embedded_frontend true
+    - runtime_assert: local_repo_count_at_least_one true
+    - auth_assert: production_login_succeeds true
     - stderr_contains_on_docker_unavailable: "docker-release-smoke: docker_bin="
 
 - case_id: REL-003
@@ -253,9 +256,10 @@
   assertions:
     - docker_assert: one_containerized_server_ready true
     - browser_assert: isolated_browser_contexts_login_independently true
-    - ws_assert: browser_clients_connect_relative_ws true
     - ui_assert: client_a_create_edit_visible_on_client_b true
     - ui_assert: client_b_offline_readonly_then_reconnect_ready true
+    - ui_assert: client_b_post_reconnect_edit_visible_on_client_a true
+    - ws_assert: browser_clients_connect_expected_container_origin true
     - ui_assert: no_blank_page_or_framework_overlay true
     - ui_assert: no_relevant_console_errors true
 
@@ -271,12 +275,13 @@
     - note: use `DEVE_DOCKER_P2P_MESH_KEEP=1` to keep both peers running for manual diagnostics
   assertions:
     - docker_assert: peer_a_and_peer_b_ready true
-    - p2p_assert: full_peer_ws_admission_uses_bearer_token true
+    - p2p_assert: full_peer_ws_admission_succeeds_with_configured_bearer_token true
     - p2p_assert: peer_b_shadow_contains_peer_a_write true
     - p2p_assert: peer_b_local_branch_unchanged_before_explicit_merge true
-    - p2p_assert: explicit_merge_makes_remote_content_local_visible true
-    - p2p_assert: reconnect_vector_aligned true
-    - security_assert: p2p_token_material_not_logged_or_written_to_config true
+    - p2p_assert: peer_b_reconnect_performs_fresh_authenticated_handshake true
+    - security_assert: p2p_token_material_not_logged_or_written_to_persisted_data_or_projection_files true
+    - evidence_boundary: explicit merge is covered by NET-015 targeted server tests, not this Docker smoke
+    - evidence_gap: live post-reconnect vector equality is not exposed by the current diagnostic surface
 
 - case_id: REL-011
   goal: Desktop/Android/Mobile native 双模式可验收，native shell 不直接拥有业务 authority。

@@ -302,6 +302,9 @@ gh run list --workflow docker-smoke.yml --limit 1
 This workflow is manual-only. It runs the same `scripts/smoke-docker-release.sh`
 on an Ubuntu runner with `DEVE_DOCKER_SMOKE_REQUIRED=1`; it does not publish a
 GHCR image and does not replace the tag-triggered `release.yml` channel.
+The release smoke also requires `delivery=embedded-frontend` and at least one
+initialized local repo before accepting the production-auth login probe. It is
+still a boot/auth preflight; REL-009 supplies the real browser path.
 
 ## Docker Multi-client Smoke
 
@@ -317,10 +320,13 @@ start a single `deve-server` on `http://127.0.0.1:3101`, wait for
 `scripts/smoke-docker-multiclient.mjs` with a Playwright package installed under
 `${TMPDIR:-/tmp}/deve-docker-multiclient-playwright` by default.
 The script also runs `playwright install chromium` for first-time browser setup.
-The Playwright harness creates isolated browser contexts, verifies relative
+The Playwright harness creates isolated browser contexts, verifies same-origin
 `/ws`, logs in as `admin` / `password`, creates and edits a document in one
 client, opens it from a second client, and checks offline read-only plus
-reconnect recovery.
+reconnect recovery. After reconnect, the recovered client writes again and the
+other client must receive that edit; WebSocket proof is bound to the expected
+container origin, and offline network errors are ignored only inside the
+deliberate offline window.
 
 Use `DEVE_DOCKER_MULTI_PORT=<port>` when 3101 is occupied. Set
 `DEVE_DOCKER_MULTI_KEEP=1` to keep the compose project running for Chrome MCP
@@ -340,8 +346,10 @@ independent data/notes volumes, a shared `RepoId`, static peer configuration,
 and P2P admission tokens supplied only through environment variables. It
 verifies that peer A can write locally, peer B receives the update under peer
 A's shadow repo, peer B's local branch remains unchanged until an explicit
-merge/import step, and reconnect aligns vectors without implying automatic
-local merge.
+merge/import step, and peer B performs a fresh authenticated handshake after
+restart. The script does not execute an explicit merge or expose live vector
+equality; use the NET-015 targeted merge test and NET-017 vector monotonicity
+tests for those contracts.
 
 For Windows/WSL stability, the smoke builds a single shared local image
 serially and defaults `DEVE_DOCKER_P2P_MESH_BUILDKIT=0`; set it to `1` only

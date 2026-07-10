@@ -371,6 +371,8 @@ contains	scripts/smoke-docker-release.sh	host port $HOST_PORT already serves /ap
 contains	scripts/smoke-docker-release.sh	docker_cmd port "$CONTAINER_NAME" 3001/tcp
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_AUTH_PASSWORD
 contains	scripts/smoke-docker-release.sh	http://127.0.0.1:${HOST_PORT}/api/auth/login
+contains	scripts/smoke-docker-release.sh	DEVE_RUNTIME_EXPECTED_DELIVERY=embedded-frontend
+contains	scripts/smoke-docker-release.sh	DEVE_RUNTIME_MIN_LOCAL_REPOS=1
 contains	scripts/smoke-docker-multiclient.sh	docker-compose.multiclient.yml
 contains	scripts/smoke-docker-multiclient.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-multiclient-smoke" "multiclient"
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_KEEP
@@ -378,13 +380,19 @@ contains	scripts/smoke-docker-multiclient.sh	deve-docker-multiclient-playwright
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" install --no-audit --no-fund "$PLAYWRIGHT_PACKAGE"
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" exec -- playwright install chromium
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json"
+contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_EXPECTED_ORIGIN="$BASE_ORIGIN"
+contains	scripts/smoke-docker-multiclient.sh	base URL must use the container's loopback host port
 contains	scripts/smoke-docker-multiclient.sh	node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
 contains	scripts/smoke-docker-multiclient.mjs	await browser.newContext()
 contains	scripts/smoke-docker-multiclient.mjs	createRequire(
 contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="create-doc"
 contains	scripts/smoke-docker-multiclient.mjs	context.setOffline(true)
-contains	scripts/smoke-docker-multiclient.mjs	new URL(url).pathname === "/ws"
+contains	scripts/smoke-docker-multiclient.mjs	observed.origin === expected.origin && observed.pathname === "/ws"
 contains	scripts/smoke-docker-multiclient.mjs	await waitForRenderedShell(page, timeoutMs)
+contains	scripts/smoke-docker-multiclient.mjs	await appendEditorContent(pageB, recoveryContent)
+contains	scripts/smoke-docker-multiclient.mjs	await waitForEditorContains(pageA, recoveryContent)
+contains	scripts/smoke-docker-multiclient.mjs	diag.wsUrls.slice(wsCountBefore).some
+contains	scripts/smoke-docker-multiclient.mjs	duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")
 contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a login or sync marker
 contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
 contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending
@@ -394,6 +402,9 @@ contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_KEEP
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P mesh connector handshake completed
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P token material appeared in compose logs
+contains	scripts/smoke-docker-p2p-mesh.sh	/api/delegated/sc/apply-external-changes
+contains	scripts/smoke-docker-p2p-mesh.sh	P2P token material appeared in persisted data/projection files
+contains	scripts/smoke-docker-p2p-mesh.sh	assert_no_token_material_in_logs_or_persisted_data "final"
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-005
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-001
 contains	docs/acceptance-cases/12_tech_release.md	tags: ['v*']
@@ -412,8 +423,12 @@ contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-010
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-011
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	scripts/check-desktop-native-session-package-smoke.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_native_session_smoke_stops_local_service_after_probe true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	delivery_eq_embedded_frontend true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	local_repo_count_at_least_one true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	production_login_succeeds true
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-010	live post-reconnect vector equality is not exposed
 contains	docs/acceptance-bindings.tsv	REL-010|manual-network|docs/dev-runbook.md
 contains	docs/acceptance-bindings.tsv	REL-011|manual-cli|docs/dev-runbook.md
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
@@ -623,6 +638,10 @@ contains	scripts/smoke-runtime-release-info.sh	allowed_delivery
 contains	scripts/smoke-runtime-release-info.sh	repo_health
 contains	scripts/smoke-runtime-release-info.sh	repo_health counts do not add up
 contains	scripts/smoke-runtime-release-info.sh	unknown repo_health must use zero counts
+contains	scripts/smoke-runtime-release-info.sh	expected delivery
+contains	scripts/smoke-runtime-release-info.sh	MIN_LOCAL_REPOS
+contains	scripts/smoke-runtime-release-info.sh	DEVE_RUNTIME_PYTHON_BIN
+contains	scripts/smoke-runtime-release-info.sh	python3/python command not found
 contains	scripts/smoke-runtime-happy-path.sh	ws_endpoint_sync_hello_uses_switched_repo_scope
 contains	scripts/smoke-runtime-happy-path.sh	ws_endpoint_register_writer_after_sync_hello_returns_write_ready
 contains	scripts/smoke-runtime-happy-path.sh	ws_edit_after_register_writer_emits_new_op_and_ack

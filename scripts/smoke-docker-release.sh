@@ -130,6 +130,14 @@ fi
 for _ in $(seq 1 60); do
   status="$(curl_local -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/node/role" || true)"
   if [[ "$status" == "200" ]]; then
+    if ! DEVE_RUNTIME_BASE_URL="http://127.0.0.1:${HOST_PORT}" \
+      DEVE_RUNTIME_SMOKE_REQUIRED=1 \
+      DEVE_RUNTIME_EXPECTED_DELIVERY=embedded-frontend \
+      DEVE_RUNTIME_MIN_LOCAL_REPOS=1 \
+      bash "$ROOT_DIR/scripts/smoke-runtime-release-info.sh"; then
+      diagnose_container_endpoint
+      fail "container runtime metadata did not report an embedded frontend and initialized local repo"
+    fi
     login_status="$(
       curl_local -fsS -o /dev/null -w '%{http_code}' \
         -X POST "http://127.0.0.1:${HOST_PORT}/api/auth/login" \

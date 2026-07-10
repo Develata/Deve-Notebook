@@ -143,9 +143,15 @@ cleanup() {
 }
 
 diagnose() {
+  local logs
   echo "docker-p2p-mesh-smoke: collecting compose diagnostics" >&2
   docker_compose ps >&2 || true
-  docker_compose logs --no-color >&2 || true
+  logs="$(docker_compose logs --no-color 2>/dev/null || true)"
+  if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
+    echo "docker-p2p-mesh-smoke: compose logs suppressed because token material was detected" >&2
+    return
+  fi
+  printf '%s\n' "$logs" >&2
 }
 
 wait_for_peer() {
@@ -388,11 +394,12 @@ wait_for_pending_path() {
   return 1
 }
 
-stage_and_commit_path() {
+stage_apply_and_commit_path() {
   local port="$1"
   local doc_path="$2"
   local message="$3"
   local stage_output
+  local apply_output
   local commit_output
   if ! stage_output="$(curl_local -fsS \
     -X POST "http://127.0.0.1:${port}/api/delegated/sc/stage-pending" \
@@ -401,6 +408,15 @@ stage_and_commit_path() {
     --data "{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"path\":\"${doc_path}\"}" \
     2>&1)"; then
     printf '%s\n' "$stage_output" >&2
+    return 1
+  fi
+  if ! apply_output="$(curl_local -fsS \
+    -X POST "http://127.0.0.1:${port}/api/delegated/sc/apply-external-changes" \
+    -H "x-deve-source-control-delegation: ${DELEGATED_SC_HEADER_VALUE}" \
+    -H 'Content-Type: application/json' \
+    --data "{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\"}" \
+    2>&1)"; then
+    printf '%s\n' "$apply_output" >&2
     return 1
   fi
   if ! commit_output="$(curl_local -fsS \
@@ -428,7 +444,7 @@ create_peer_a_fixture() {
     diagnose
     fail "peer-a source-control status did not observe pending path ${doc_path}"
   fi
-  stage_and_commit_path "$PORT_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"
+  stage_apply_and_commit_path "$PORT_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"
 
   local docs_json
   local doc_id
@@ -519,6 +535,30 @@ restart_peer_b_and_wait_reconnect() {
   return 1
 }
 
+assert_no_token_material_in_logs_or_persisted_data() {
+  local phase="$1"
+  local logs
+  local service
+  local scan_status
+  logs="$(docker_compose logs --no-color 2>/dev/null || true)"
+  if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
+    fail "P2P token material appeared in compose logs during ${phase} hygiene check"
+  fi
+
+  for service in peer-a peer-b; do
+    if docker_compose exec -T "$service" sh -c \
+      'grep -R -F -e "$1" -e "$2" /data /notes >/dev/null 2>&1' \
+      sh "$TOKEN_A" "$TOKEN_B"; then
+      fail "P2P token material appeared in persisted data/projection files for ${service}"
+    else
+      scan_status=$?
+      if [[ "$scan_status" -ne 1 ]]; then
+        fail "P2P token persisted data/projection scan failed for ${service} (status ${scan_status})"
+      fi
+    fi
+  done
+}
+
 docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 find_python || require_or_skip "python3/python command not found"
@@ -579,5 +619,7 @@ if ! restart_peer_b_and_wait_reconnect "$CONNECTIONS_BEFORE" "$PEER_A_ID"; then
   diagnose
   fail "peer-b did not reconnect to the mesh after offline shadow verification"
 fi
+
+assert_no_token_material_in_logs_or_persisted_data "final"
 
 echo "docker-p2p-mesh-smoke: ok"

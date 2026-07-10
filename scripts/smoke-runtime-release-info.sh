@@ -6,6 +6,9 @@ set -euo pipefail
 
 BASE_URL="${DEVE_RUNTIME_BASE_URL:-http://127.0.0.1:3001}"
 REQUIRED="${DEVE_RUNTIME_SMOKE_REQUIRED:-0}"
+EXPECTED_DELIVERY="${DEVE_RUNTIME_EXPECTED_DELIVERY:-}"
+MIN_LOCAL_REPOS="${DEVE_RUNTIME_MIN_LOCAL_REPOS:-0}"
+PYTHON_BIN="${DEVE_RUNTIME_PYTHON_BIN:-}"
 URL="${BASE_URL%/}/api/node/role"
 
 fail() {
@@ -22,11 +25,29 @@ skip_or_fail() {
   exit 0
 }
 
+find_python() {
+  if [[ -n "$PYTHON_BIN" ]]; then
+    command -v "$PYTHON_BIN" >/dev/null 2>&1
+    return
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN=python3
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_BIN=python
+    return 0
+  fi
+  return 1
+}
+
+find_python || skip_or_fail "python3/python command not found"
+
 if ! payload="$(curl --noproxy '*' --fail --silent --show-error --max-time 5 "$URL")"; then
   skip_or_fail "runtime endpoint is not reachable at $URL"
 fi
 
-PAYLOAD="$payload" python3 - <<'PY'
+PAYLOAD="$payload" EXPECTED_DELIVERY="$EXPECTED_DELIVERY" MIN_LOCAL_REPOS="$MIN_LOCAL_REPOS" "$PYTHON_BIN" - <<'PY'
 import json
 import os
 import sys
@@ -96,6 +117,29 @@ if repo_health["status"] == "unknown" and (
 if payload["delivery"] not in allowed_delivery:
     print(
         f"runtime-release-info-smoke: unsupported delivery {payload['delivery']}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+expected_delivery = os.environ["EXPECTED_DELIVERY"]
+if expected_delivery and payload["delivery"] != expected_delivery:
+    print(
+        f"runtime-release-info-smoke: expected delivery {expected_delivery}, got {payload['delivery']}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+try:
+    min_local_repos = int(os.environ["MIN_LOCAL_REPOS"])
+except ValueError:
+    print("runtime-release-info-smoke: invalid DEVE_RUNTIME_MIN_LOCAL_REPOS", file=sys.stderr)
+    sys.exit(1)
+if min_local_repos < 0:
+    print("runtime-release-info-smoke: minimum local repo count must be non-negative", file=sys.stderr)
+    sys.exit(1)
+if repo_health["local_total"] < min_local_repos:
+    print(
+        f"runtime-release-info-smoke: expected at least {min_local_repos} local repos, got {repo_health['local_total']}",
         file=sys.stderr,
     )
     sys.exit(1)

@@ -11,6 +11,7 @@ COMPOSE_FILE="${DEVE_DOCKER_MULTI_COMPOSE_FILE:-$ROOT_DIR/docker-compose.multicl
 PROJECT="${DEVE_DOCKER_MULTI_PROJECT:-deve-multiclient-$$}"
 HOST_PORT="${DEVE_DOCKER_MULTI_PORT:-3101}"
 BASE_URL="${DEVE_DOCKER_MULTI_BASE_URL:-http://127.0.0.1:${HOST_PORT}}"
+BASE_ORIGIN="${BASE_URL%/}"
 REQUIRED="${DEVE_DOCKER_MULTI_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_MULTI_KEEP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
@@ -114,6 +115,7 @@ run_playwright() {
   fi
   npm --prefix "$PLAYWRIGHT_WORK_DIR" exec -- playwright install chromium
   DEVE_DOCKER_MULTI_BASE_URL="$BASE_URL" \
+  DEVE_DOCKER_MULTI_EXPECTED_ORIGIN="$BASE_ORIGIN" \
   DEVE_DOCKER_MULTI_AUTH_USER="$AUTH_USER" \
   DEVE_DOCKER_MULTI_AUTH_PASSWORD="$AUTH_PASSWORD" \
   DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json" \
@@ -123,6 +125,10 @@ run_playwright() {
 docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 command -v npm >/dev/null 2>&1 || require_or_skip "npm command not found"
+case "$BASE_ORIGIN" in
+  "http://127.0.0.1:${HOST_PORT}" | "http://localhost:${HOST_PORT}") ;;
+  *) fail "base URL must use the container's loopback host port ${HOST_PORT}: ${BASE_URL}" ;;
+esac
 docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 [[ -f "$COMPOSE_FILE" ]] || fail "compose file not found: $COMPOSE_FILE"
 [[ -f "$NODE_SCRIPT" ]] || fail "Playwright script not found: $NODE_SCRIPT"

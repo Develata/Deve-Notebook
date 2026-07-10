@@ -7,6 +7,7 @@ const playwrightRequire = createRequire(
   process.env.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM ?? import.meta.url,
 );
 const baseUrl = process.env.DEVE_DOCKER_MULTI_BASE_URL ?? "http://127.0.0.1:3101";
+const expectedOrigin = process.env.DEVE_DOCKER_MULTI_EXPECTED_ORIGIN ?? baseUrl;
 const authUser = process.env.DEVE_DOCKER_MULTI_AUTH_USER ?? "admin";
 const authPassword = process.env.DEVE_DOCKER_MULTI_AUTH_PASSWORD ?? "password";
 const headless = !["0", "false", "no"].includes(
@@ -63,6 +64,7 @@ function attachDiagnostics(page, label) {
     responses: [],
     consoleErrors: [],
     pageErrors: [],
+    offline: false,
   };
 
   page.on("websocket", (ws) => {
@@ -76,7 +78,7 @@ function attachDiagnostics(page, label) {
   });
   page.on("console", (msg) => {
     if (msg.type() === "error") {
-      diag.consoleErrors.push(msg.text());
+      diag.consoleErrors.push({ message: msg.text(), duringOffline: diag.offline });
     }
   });
   page.on("pageerror", (err) => {
@@ -86,12 +88,12 @@ function attachDiagnostics(page, label) {
   return diag;
 }
 
-function relevantConsoleErrors(diag) {
-  return diag.consoleErrors.filter((message) => {
+export function relevantConsoleErrors(diag) {
+  return diag.consoleErrors.filter(({ message, duringOffline }) => {
     if (message.includes("favicon.ico")) {
       return false;
     }
-    if (message.includes("net::ERR_INTERNET_DISCONNECTED")) {
+    if (duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")) {
       return false;
     }
     return true;
@@ -110,10 +112,21 @@ function assertApiResponse(diag, path, expectedStatus) {
   );
 }
 
+export function webSocketMatchesExpectedOrigin(url, httpOrigin = expectedOrigin) {
+  try {
+    const expected = new URL(httpOrigin);
+    expected.protocol = expected.protocol === "https:" ? "wss:" : "ws:";
+    const observed = new URL(url);
+    return observed.origin === expected.origin && observed.pathname === "/ws";
+  } catch {
+    return false;
+  }
+}
+
 function hasRelativeWs(diag) {
   return diag.wsUrls.some((url) => {
     try {
-      return new URL(url).pathname === "/ws";
+      return webSocketMatchesExpectedOrigin(url);
     } catch {
       return false;
     }
@@ -170,6 +183,11 @@ async function waitForReady(page, label) {
 
 async function login(page, diag) {
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  assert.equal(
+    new URL(page.url()).origin,
+    new URL(expectedOrigin).origin,
+    `${diag.label} loaded an unexpected origin`,
+  );
   try {
     await waitForRenderedShell(page, timeoutMs);
   } catch (err) {
@@ -257,6 +275,7 @@ async function openDoc(page, path) {
 
 async function exerciseOfflineRecovery(context, page, diag) {
   const wsCountBefore = diag.wsUrls.length;
+  diag.offline = true;
   await context.setOffline(true);
   await page.locator('[data-deve-disconnect-overlay="lockdown"]').waitFor({
     state: "visible",
@@ -272,21 +291,33 @@ async function exerciseOfflineRecovery(context, page, diag) {
   );
 
   await context.setOffline(false);
+  diag.offline = false;
   await waitForStatus(page, ["ready"], timeoutMs);
   await page.locator('[data-deve-disconnect-overlay="lockdown"]').waitFor({
     state: "detached",
     timeout: 20000,
-  }).catch(() => {});
+  });
   await waitUntil(
     `${diag.label} reconnect websocket`,
-    () => diag.wsUrls.length > wsCountBefore && hasRelativeWs(diag),
+    () => diag.wsUrls.slice(wsCountBefore).some((url) => webSocketMatchesExpectedOrigin(url)),
     timeoutMs,
   );
+  await waitForWritableEditor(page);
+}
+
+async function appendEditorContent(page, content) {
+  const cm = page.locator(".cm-content").first();
+  await cm.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(content);
+  await waitForEditorContains(page, content);
+  await waitForStatus(page, ["ready"], timeoutMs);
 }
 
 async function main() {
   const docPath = `docker-multiclient-${Date.now()}.md`;
   const content = `Docker multiclient smoke ${new Date().toISOString()}`;
+  const recoveryContent = ` reconnect-write-${Date.now()}`;
   const { chromium } = playwrightRequire("playwright");
   const browser = await chromium.launch({ headless });
   const contexts = [];
@@ -310,6 +341,12 @@ async function main() {
 
     await exerciseOfflineRecovery(contextB, pageB, diagB);
     await waitForEditorContains(pageB, content);
+    await appendEditorContent(pageB, recoveryContent);
+    await waitForEditorContains(pageA, recoveryContent);
+    assert.ok(
+      (await editorContent(pageA))?.includes(recoveryContent),
+      "client-a must receive client-b's post-reconnect edit",
+    );
     await assertPageHealthy(pageA, diagA);
     await assertPageHealthy(pageB, diagB);
 
