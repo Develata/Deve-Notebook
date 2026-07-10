@@ -19,6 +19,17 @@ contains	docs/plan/22_reliability_observability.md	命名前缀 `deve_<runtime>_
 contains	docs/plan/22_reliability_observability.md	`deve_edit_ack_latency_ms`
 contains	docs/plan/22_reliability_observability.md	`deve_open_doc_latency_ms`
 contains	docs/plan/22_reliability_observability.md	高基数标签（如 doc_id）**MUST NOT** 作为标签。
+contains	docs/plan/22_reliability_observability.md	容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域
+contains	docs/features/15_release.md	Docker/Web dashboard 的 CPU 与内存占用应优先反映当前可见容器 cgroup hierarchy
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-006	cargo test -p deve_cli cgroup_ -- --nocapture
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-006	container_memory_uses_current_cgroup_usage true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-006	container_cpu_uses_cgroup_usage_and_effective_capacity true
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_v2_memory_usage_precedes_host_meminfo()
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_mountinfo_maps_unified_mountpoint()
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_parent_quota_limits_leaf_capacity()
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_private_mount_root_requires_quota_file()
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_hybrid_falls_back_to_v1_controllers()
+contains	apps/cli/src/server/metrics/cgroup/layout_tests.rs	fn cgroup_incomplete_capacity_rejects_source()
 contains	docs/plan/22_reliability_observability.md	## 5. Tracing Span Boundary
 contains	docs/plan/22_reliability_observability.md	每个 **Flow Coordination**（第三层）入口开一个 **root span**
 contains	docs/plan/22_reliability_observability.md	跨 Web↔CLI 的写确认链（edit→ack）SHOULD 透传 `trace_id`

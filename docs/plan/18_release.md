@@ -227,6 +227,10 @@ services:
 health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公开 endpoint 只能返回
 聚合计数，以便运维发现 degraded startup，同时避免泄漏 repo name 或 corruption detail。
 
+Web dashboard 通过 `SystemMetrics` 展示的 CPU / memory gauge 必须遵循
+`22_reliability_observability#metrics-taxonomy` 定义的 runtime resource domain、cgroup
+选择与完整回退规则；本章只拥有 release/runtime 观测入口，不重复定义 metric source 语义。
+
 ### 5.5 Docker P2P Mesh Smoke
 
 发布前的本地 Docker mesh smoke **MAY** 使用独立 compose override 启动两个 `deve-server`

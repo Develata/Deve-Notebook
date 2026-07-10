@@ -44,6 +44,9 @@
 - 不同运行环境的差异不应混淆成产品功能差异。
 - 生产服务器/容器运行必须显式提供 `AUTH_SECRET` 和 `AUTH_PASS`；本地开发应使用 `deve serve --dev` 或 `DEVE_ENV=development`。
 - degraded repo 必须被显示为运行状态，而不是伪装为全局启动失败或静默健康。
+- Docker/Web dashboard 的 CPU 与内存占用应优先反映当前可见容器 cgroup hierarchy，
+  而不是 Docker host / VM 的聚合使用量；只有同一 cgroup 数据源的 usage/capacity
+  不完整时才整条回退宿主 Linux 指标。
 
 ### 4. Mesh 与 Native 双模式成熟度提示
 

@@ -10,7 +10,7 @@
 //! 采用定时快照策略：每 5 秒采集一次瞬时值并广播。
 //!
 //! **平台支持**:
-//! - Linux: 解析 `/proc/meminfo` + `/proc/stat`
+//! - Linux: 优先读取当前可见 cgroup hierarchy，必要时回退 `/proc`
 //! - 其他平台: 安全降级 (CPU=0, 内存=0)
 
 use crate::server::AppState;
@@ -20,6 +20,9 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
+
+#[cfg(any(target_os = "linux", test))]
+mod cgroup;
 
 /// 全局操作计数器 (Handler 中调用 `increment_ops()` 累加)
 static OPS_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -131,69 +134,7 @@ fn platform_metrics() -> (f32, u64) {
 }
 
 #[cfg(target_os = "linux")]
-mod linux {
-    use std::fs;
-
-    /// 读取 /proc/meminfo 计算已用内存 (MB)
-    pub fn memory_used_mb() -> u64 {
-        let Ok(content) = fs::read_to_string("/proc/meminfo") else {
-            return 0;
-        };
-        let mut total = 0u64;
-        let mut available = 0u64;
-        for line in content.lines().take(8) {
-            if let Some(val) = parse_meminfo_kb(line, "MemTotal:") {
-                total = val;
-            } else if let Some(val) = parse_meminfo_kb(line, "MemAvailable:") {
-                available = val;
-            }
-        }
-        total.saturating_sub(available) / 1024
-    }
-
-    fn parse_meminfo_kb(line: &str, prefix: &str) -> Option<u64> {
-        let rest = line.strip_prefix(prefix)?;
-        rest.split_whitespace().next()?.parse().ok()
-    }
-
-    /// 瞬时 CPU 使用率 (/proc/stat 两次采样, 间隔 100ms)
-    pub fn cpu_usage() -> f32 {
-        let Some(s1) = read_cpu_stat() else {
-            return 0.0;
-        };
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        let Some(s2) = read_cpu_stat() else {
-            return 0.0;
-        };
-        let total_d = s2.total.saturating_sub(s1.total);
-        let idle_d = s2.idle.saturating_sub(s1.idle);
-        if total_d == 0 {
-            return 0.0;
-        }
-        ((total_d - idle_d) as f32 / total_d as f32) * 100.0
-    }
-
-    struct CpuStat {
-        total: u64,
-        idle: u64,
-    }
-
-    fn read_cpu_stat() -> Option<CpuStat> {
-        let content = fs::read_to_string("/proc/stat").ok()?;
-        let line = content.lines().next()?;
-        let vals: Vec<u64> = line
-            .split_whitespace()
-            .skip(1)
-            .filter_map(|s| s.parse().ok())
-            .collect();
-        if vals.len() < 4 {
-            return None;
-        }
-        let idle = vals[3];
-        let total: u64 = vals.iter().sum();
-        Some(CpuStat { total, idle })
-    }
-}
+mod linux;
 
 #[cfg(test)]
 mod tests {

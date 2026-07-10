@@ -207,12 +207,15 @@
     - run: DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
+    - run: cargo test -p deve_cli cgroup_ -- --nocapture
     - chrome_mcp: open dashboard
   assertions:
     - stdout_contains: "release-baseline-check: ok"
     - json_fields_present: ["version", "profile", "delivery", "environment"]
     - json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
+    - metrics_assert: container_memory_uses_current_cgroup_usage true
+    - metrics_assert: container_cpu_uses_cgroup_usage_and_effective_capacity true
 
 - case_id: REL-007
   goal: 当前运行写读主链路可在临时 repo 中自动验收。

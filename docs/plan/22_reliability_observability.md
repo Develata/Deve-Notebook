@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-08`
+- `Last Review`: `2026-07-10`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Projection Backup 文件传输边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -66,6 +66,12 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 规则：
 - latency histogram 的 budget 对照唯一引用 `21_perf_budget`；本章不定义阈值。
 - 维度标签 SHOULD 含 `runtime` 与（写路径）`repo_scope`；高基数标签（如 doc_id）**MUST NOT** 作为标签。
+- 容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域：
+  memory 使用当前 cgroup usage；CPU 使用当前 cgroup usage delta，并按可见祖先中最严
+  quota 与 effective cpuset 的较小 capacity 归一化到 `0..=100%`。每个 metric 应按
+  cgroup v2 → 对应 v1 controller → host `/proc` 的顺序选择完整数据源；usage 或 capacity
+  任一不可用时必须整条回退，不得混用不同资源域的 numerator / denominator。cgroup
+  namespace 隐藏的宿主祖先不属于进程可观测边界，不得被宣称为已测量的 effective quota。
 
 ## 5. Tracing Span Boundary {#tracing-span-boundary}
 

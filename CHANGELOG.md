@@ -10,6 +10,7 @@
 
 ### Fixed
 - **Native package version alignment**: Desktop and Mobile Tauri manifests plus the tracked Android direct-Gradle fallback now match the workspace `0.1.0` version used by first-tag artifacts.
+- **Docker runtime metrics**: Server dashboard CPU and memory gauges now use the container-visible cgroup hierarchy, with strict cgroup v2/v1/host fallback instead of reporting Docker host or VM totals.
 
 ## [0.1.0] - 2026-06-23
 
