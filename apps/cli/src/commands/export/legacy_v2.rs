@@ -214,7 +214,7 @@ fn write_markdown(
     }
 
     let output_dir = PathBuf::from(output.unwrap_or_else(|| "export-v2".into()));
-    let mut exported = 0_u32;
+    let mut documents = Vec::new();
     let mut seen_paths = HashSet::new();
     for (node_id, node) in &nodes {
         let Some(doc_id) = node.doc_id else {
@@ -229,8 +229,12 @@ fn write_markdown(
         let ops = content_ops.get(&doc_id).map(Vec::as_slice).unwrap_or(&[]);
         let content = deve_core::state::try_apply_content_ops("", ops)
             .ok_or_else(|| anyhow!("legacy content facts for {doc_id} are invalid"))?;
-        doc::write_markdown_file(&output_dir.join(&path), &content)?;
-        exported += 1;
+        documents.push((path, content));
+    }
+    documents.sort_by(|left, right| left.0.cmp(&right.0));
+    let exported = u32::try_from(documents.len()).context("too many legacy documents to export")?;
+    for (path, content) in documents {
+        doc::write_markdown_file(&output_dir.join(path), &content)?;
     }
     println!(
         "Exported {exported} markdown files from schema v2 to {:?}",
@@ -344,6 +348,9 @@ mod tests {
     use super::*;
     use deve_core::ledger::schema::{LEDGER_OPS, REPO_METADATA};
 
+    #[path = "legacy_v2_acceptance.rs"]
+    mod acceptance;
+
     fn write_v2_fixture(ledger_dir: &Path) -> Result<(DocId, PathBuf)> {
         let local_dir = ledger_dir.join("local");
         std::fs::create_dir_all(&local_dir)?;
@@ -422,8 +429,9 @@ mod tests {
     fn legacy_v2_export_json_is_explicit_and_preserves_raw_attribution() -> Result<()> {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
-        write_v2_fixture(&ledger_dir)?;
+        let (_doc_id, db_path) = write_v2_fixture(&ledger_dir)?;
         let output = dir.path().join("legacy.jsonl");
+        let database_before = std::fs::read(&db_path)?;
 
         run(
             &ledger_dir,
@@ -437,6 +445,10 @@ mod tests {
         assert_eq!(lines.lines().count(), 3);
         assert!(lines.contains("\"legacy_schema_version\":2"));
         assert!(lines.contains("\"peer_id\":\"legacy-label\""));
+        assert!(lines.contains("\"seq\":1"));
+        assert!(!lines.contains("origin_peer_id"));
+        assert!(!lines.contains("peer_seq"));
+        assert_eq!(std::fs::read(db_path)?, database_before);
         Ok(())
     }
 
