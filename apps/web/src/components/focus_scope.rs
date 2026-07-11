@@ -48,6 +48,26 @@ pub(crate) fn active_element() -> Option<Element> {
         .and_then(|document| document.active_element())
 }
 
+pub(crate) fn should_restore_previous_focus(
+    active_modal_present: bool,
+    previous_inside_active_modal: bool,
+) -> bool {
+    !active_modal_present || previous_inside_active_modal
+}
+
+fn active_modal_elements() -> Vec<Element> {
+    let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+        return Vec::new();
+    };
+    let Ok(nodes) = document.query_selector_all("[role=\"dialog\"][aria-modal=\"true\"]") else {
+        return Vec::new();
+    };
+    (0..nodes.length())
+        .filter_map(|index| nodes.get(index))
+        .filter_map(|node| node.dyn_into::<Element>().ok())
+        .collect()
+}
+
 pub(crate) fn should_blur_active_element_for_hidden_surface(active_inside_surface: bool) -> bool {
     active_inside_surface
 }
@@ -108,6 +128,16 @@ pub(crate) fn attach_modal_focus_restore_effect(
 pub(crate) fn restore_focus_next_frame(previous: Option<Element>) {
     request_animation_frame(move || {
         request_animation_frame(move || {
+            let active_modals = active_modal_elements();
+            let active_modal_present = !active_modals.is_empty();
+            let previous_inside_active_modal = previous.as_ref().is_some_and(|previous| {
+                active_modals
+                    .iter()
+                    .any(|modal| element_contains(modal, previous))
+            });
+            if !should_restore_previous_focus(active_modal_present, previous_inside_active_modal) {
+                return;
+            }
             if let Some(previous) = previous
                 && let Ok(previous) = previous.dyn_into::<HtmlElement>()
                 && focus_element(&previous)
@@ -115,7 +145,9 @@ pub(crate) fn restore_focus_next_frame(previous: Option<Element>) {
             {
                 return;
             }
-            focus_editor();
+            if !active_modal_present {
+                focus_editor();
+            }
         });
     });
 }
@@ -193,8 +225,8 @@ fn active_html_element_is(element: &HtmlElement) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::should_trap_tab_key;
     use super::{FocusTrapTarget, resolve_tab_target};
+    use super::{should_restore_previous_focus, should_trap_tab_key};
 
     #[test]
     fn focus_scope_tab_from_last_wraps_to_first() {
@@ -240,5 +272,12 @@ mod tests {
     fn focus_scope_blurs_only_when_active_element_is_inside_surface() {
         assert!(super::should_blur_active_element_for_hidden_surface(true));
         assert!(!super::should_blur_active_element_for_hidden_surface(false));
+    }
+
+    #[test]
+    fn focus_restore_respects_the_active_modal_owner() {
+        assert!(should_restore_previous_focus(false, false));
+        assert!(should_restore_previous_focus(true, true));
+        assert!(!should_restore_previous_focus(true, false));
     }
 }

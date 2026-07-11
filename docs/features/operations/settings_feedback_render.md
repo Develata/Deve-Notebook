@@ -28,7 +28,8 @@
 - `Preconditions`: capability gate is not satisfied
 - `Immediate Result`: disabled or reserved control shows explicit reason and
   exposes a machine-checkable disabled marker
-- `Application Entry`: `apps/web/src/components/settings_sections.rs`,
+- `Application Entry`: `apps/web/src/components/settings.rs`,
+  `apps/web/src/components/settings_sections.rs`,
   `apps/web/src/components/settings_sections_policy.rs`
 
 ### `op.settings.feedback.render-runtime`

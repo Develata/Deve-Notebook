@@ -34,9 +34,14 @@
 - case_id: SET-005
   goal: Settings UI 偏好变更有即时反馈。
   preconditions:
-    - 应用已运行
-    - Settings 已打开
+    - 应用 shell 可交互
+    - Command Palette 可打开
   steps:
+    - ui_open_via_command_palette: "Settings"
+    - ui_assert: focus_inside_settings_modal true
+    - ui_press: "Escape"
+    - ui_assert: settings_closed true
+    - ui_open_via_command_palette: "Settings"
     - ui_click: "中文"
     - ui_click: "Night"
     - ui_click: "Off"
@@ -66,6 +71,8 @@
     - ui_assert: ai_chat_divider_hidden_when_setting_hidden true
     - ui_assert: display_editor_visible_when_ai_chat_setting_hidden true
     - ui_assert: hidden_ai_chat_preserves_layout_width_pref true
+    - ui_assert: settings_modal_handoff_keeps_focus_inside true
+    - ui_assert: settings_escape_closes true
 
 - case_id: SET-006
   goal: Settings 中不可用或预留能力必须显示明确、可访问的反馈。

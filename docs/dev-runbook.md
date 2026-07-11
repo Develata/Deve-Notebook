@@ -107,9 +107,10 @@ Required checks:
   Settings` with the Settings group and browser-local/runtime-feedback detail.
 - Invoking `Open Settings` closes the command surface and opens the Settings
   modal without navigating away from the app shell.
+- Focus moves into the Settings modal instead of returning to the hidden command
+  surface or its opener; pressing `Escape` closes Settings.
 - The modal exposes `data-deve-settings-surface="modal"`, remains within the
-  viewport on mobile, supports `Escape` close, and its close controls remain
-  44px touch targets.
+  viewport on mobile, and its close controls remain 44px touch targets.
 - Clicking `Night`, `Off`, and `Compact` updates the browser-local markers
   `data-deve-settings-theme`, `data-deve-settings-editor-wrap`, and
   `data-deve-settings-editor-density` without writing server settings.

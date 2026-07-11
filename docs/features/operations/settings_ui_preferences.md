@@ -9,6 +9,19 @@
 
 ## Operations
 
+### `op.settings.ui.modal-focus-lifecycle`
+
+- `Name`: `Open and Close Settings Modal`
+- `Surface`: `command-palette`, `settings-modal`
+- `Trigger`: open Settings from the command palette, press `Escape`, or click the icon close control
+- `Preconditions`: the application shell is interactive
+- `Immediate Result`: modal-to-modal handoff keeps focus inside Settings; closing Settings does not leak focus into a hidden surface
+- `Application Entry`: `apps/web/src/components/command_palette/registry.rs`,
+  `apps/web/src/components/command_palette/logic.rs`,
+  `apps/web/src/components/main_layout.rs`,
+  `apps/web/src/components/settings.rs`,
+  `apps/web/src/components/focus_scope.rs`
+
 ### `op.settings.ui.select-language`
 
 - `Name`: `Select UI Language`
