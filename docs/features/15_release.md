@@ -24,11 +24,14 @@
 
 - Web / Server / Docker 是当前主要交付面。
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
-- 首个公开 tag 同时运行独立 native delivery track：发布 Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK 到 GitHub Release；Linux Desktop 与 iOS 不在 first-tag artifact set。
+- 首个公开 tag 只由 `release.yml` 直接监听；`v*` glob 触发后必须先验证完整 SemVer，非法 tag 在 checkout/build/publish 前失败。它在 quality gates 与 Docker publish 成功后调用 reusable native delivery track。Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK 全部构建成功后，publish job 还要验证 downloaded containers 总文件数与 exact artifact manifest；资产先上传到 draft，GitHub API 复核完整后才公开一次 GitHub Release。Linux Desktop 与 iOS 不在 first-tag artifact set。
 - Windows/macOS public-preview packages 可以 unsigned；Android 只有在 signing secrets 齐全时才是可安装 signed APK，否则只能作为明确标记的 unsigned diagnostic artifact。任何这些 artifacts 都不等于 signing、notarization、store 或 physical-device readiness。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 - 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
+- Docker image 可能先于 native track 完成而发布；native build 失败时不得留下公开 GitHub Release，也不得把已有 GHCR image 表述为完整 first-tag delivery。
+- Native build、manifest、draft upload 或 API 复核失败时，公开 GitHub Release 必须保持不存在；失败产生的 draft 只作为显式恢复对象，不得被报告为已发布版本。
+- 同一 tag 的 workflow rerun 只允许复用 draft；若 Release 已公开，必须在上传资产前拒绝自动覆盖并转入 maintainer 显式恢复。
 
 ### 2. 版本与升级预期
 

@@ -36,14 +36,32 @@
 - `Immediate Result`: release container artifact is published
 - `Application Entry`: `.github/workflows/release.yml`
 
+### `op.release.publish.build-native-artifacts`
+
+- `Name`: `Build Required Native Artifacts`
+- `Surface`: `github-actions-reusable-workflow`
+- `Trigger`: orchestrator Docker job succeeds and calls native delivery
+- `Preconditions`: release quality gates and Docker publish succeeded
+- `Immediate Result`: Windows, macOS, and Android jobs upload internal workflow artifacts without creating a GitHub Release
+- `Application Entry`: `.github/workflows/release-native.yml`
+
+### `op.release.publish.attach-native-release`
+
+- `Name`: `Attach Complete Native Artifact Set`
+- `Surface`: `github-actions`
+- `Trigger`: all required native build jobs succeed
+- `Preconditions`: Windows, macOS, and Android workflow artifacts are available
+- `Immediate Result`: one publish job rejects any downloaded file beyond the exact four-file allowlist, rejects rerun mutation of an already-public Release, uploads the validated set to a draft, verifies the remote asset set, and only then publishes one GitHub Release
+- `Application Entry`: `.github/workflows/release-native.yml`
+
 ## Response Flow
 
 1. Release workflow enters the publish stage after quality gates pass.
 2. Instruction interface is the docker job and its ordered steps.
-3. Flow coordination authenticates registry access, computes tags, and pushes the artifact.
-4. Execution domains are release automation, registry auth, and container delivery.
+3. Flow coordination authenticates registry access, computes tags, pushes the container, calls native delivery, waits for every required native build, and publishes the native set once.
+4. Execution domains are release automation, registry auth, container delivery, native package build, and GitHub Release publication.
 
 ## Notes
 
-- The current baseline only requires Docker/GHCR artifact publish, not multi-channel package distribution.
+- Docker/GHCR publish precedes native delivery in the approved first-tag minimal orchestration. A later native, manifest, upload, or API verification failure leaves no public GitHub Release; an incomplete draft and the GHCR image require explicit recovery and must not be reported as a complete release.
 - Main objects: `release::artifact`, `container::image`, `release::channel`.

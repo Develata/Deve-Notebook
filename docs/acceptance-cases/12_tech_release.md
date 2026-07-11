@@ -42,9 +42,10 @@
     - stdout_contains: "profile = 'low-spec'"
 
 - case_id: REL-001
-  goal: 当前 release channel 由 tag-triggered GHCR/Docker surface 表达。
+  goal: 当前 release channel 由单一 tag orchestrator 顺序协调 GHCR/Docker 与 reusable native delivery。
   preconditions:
     - `.github/workflows/release.yml` 可读
+    - `.github/workflows/release-native.yml` 可读
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
@@ -55,6 +56,17 @@
     - stdout_contains: "type=semver,pattern={{version}}"
     - stdout_contains: "type=raw,value=latest"
     - stdout_contains: "ghcr.io/${{ github.repository }}"
+    - release_assert: release_yml_is_only_direct_v_tag_entry true
+    - release_assert: non_semver_v_tag_rejected_before_checkout_build_publish true
+    - release_assert: native_delivery_uses_workflow_call_after_docker true
+    - release_assert: github_release_created_once_after_all_native_builds true
+    - release_assert: native_failure_creates_no_github_release true
+    - release_assert: native_manifest_requires_exact_allowlisted_asset_set true
+    - release_assert: native_manifest_rejects_extra_downloaded_files true
+    - release_assert: existing_public_release_rejected_before_asset_upload true
+    - release_assert: github_release_remains_draft_until_remote_asset_manifest_matches true
+    - security_assert: reusable_native_receives_only_android_signing_secrets true
+    - evidence_boundary: docker_image_may_publish_before_native_delivery_completes
 
 - case_id: REL-002
   goal: Docker release 镜像 boot/auth 与 embedded frontend metadata preflight 可用。
@@ -133,7 +145,7 @@
     - exit_code_eq: 0
 
 - case_id: REL-005
-  goal: Docker、Compose、Docker/native tag workflows 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
+  goal: Docker、Compose、release tag orchestrator、reusable native workflow 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
   preconditions:
     - Dockerfile、docker-compose.yml、.github/workflows/release.yml、.github/workflows/release-native.yml 与 .github/workflows/native-target-host.yml 可读
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
@@ -188,6 +200,8 @@
     - release_assert: linux_desktop_and_ios_artifacts_excluded_from_first_tag true
     - release_assert: native_public_preview_signing_boundaries_explicit true
     - release_assert: release_native_artifacts_attach_to_github_release true
+    - release_assert: release_native_has_no_independent_tag_trigger true
+    - release_assert: release_native_publish_waits_for_all_required_builds true
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"
     - cli_assert: graph_projection_cli_and_http_share_adapter true

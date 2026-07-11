@@ -5,7 +5,7 @@
 (group :id grp.mod.render-math-mermaid :layer module :label "rendering math / mermaid" :members (mod_render_inline mod_render_math mod_render_mermaid mod_editor_runtime))
 (group :id grp.mod.i18n-locale-error :layer module :label "i18n locale / error" :members (mod_i18n_catalog mod_i18n_error mod_time_format mod_proto_ws))
 (group :id grp.mod.tech-runtime-budget :layer module :label "tech-stack runtime budget" :members (mod_tech_deps mod_runtime_budget mod_platform_matrix mod_ci_release))
-(module :id mod_ci_release :label "ci::release" :parent core.release :code ".github/workflows/release.yml")
+(module :id mod_ci_release :label "ci::release" :parent core.release :code ".github/workflows/{release,release-native}.yml")
 (module :id mod_ci_workflow :label "ci::workflow-index" :parent core.release :code ".github/workflows/")
 (module :id mod_release_container :label "release::container" :parent core.release :code "Dockerfile | .github/workflows/release.yml")
 (module :id mod_tech_budget :label "tech::quality-gates" :parent core.tech_stack :code "scripts/plan-coverage.sh")

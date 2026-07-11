@@ -15,7 +15,7 @@
 - `Surface`: `repo-files`
 - `Trigger`: maintainer checks release automation scope
 - `Preconditions`: `.github/workflows/` is readable
-- `Immediate Result`: repo shows `release.yml` as the current required release workflow
+- `Immediate Result`: repo shows `release.yml` as the sole tag orchestrator and `release-native.yml` as its reusable native delivery track
 - `Application Entry`: `.github/workflows/`
 
 ### `op.release.verify.inspect-release-channel`
@@ -46,4 +46,5 @@
 ## Notes
 
 - This flow keeps "release completed" separate from "delivery verified".
+- A GHCR image or draft Release without the single verified native GitHub Release is partial delivery, not a completed first-tag release.
 - Main objects: `delivery::verification`, `release::artifact`, `release::channel`.

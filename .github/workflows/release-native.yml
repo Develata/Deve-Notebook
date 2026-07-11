@@ -1,11 +1,12 @@
 name: Release Native Packages
 
-# Tag-triggered native delivery track.
+# Reusable native delivery track called by the tag-triggered release orchestrator.
 #
 # The Docker/Web release baseline stays in `release.yml`; this workflow is the
-# SEPARATE native delivery track described in docs/plan/18_release.md §2.1. It
-# builds installable desktop/mobile packages on a `v*` tag and attaches them to
-# the GitHub Release, except Linux GTK3/WebKitGTK desktop artifacts, which ADR
+# native delivery track described in docs/plan/18_release.md §2.1. It builds
+# installable desktop/mobile packages after the Docker release job succeeds and
+# attaches them to one GitHub Release only after all required native builds pass,
+# except Linux GTK3/WebKitGTK desktop artifacts, which ADR
 # 0006 excludes from the first-tag release set. It reuses the same package-build scripts as
 # `native-target-host.yml` (single source of truth for "how to build a package").
 #
@@ -31,11 +32,16 @@ name: Release Native Packages
 #   ANDROID_KEY_PASSWORD       key password (often equal to the store password)
 
 on:
-  push:
-    tags: ['v*']
-
-permissions:
-  contents: write
+  workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
 
 concurrency:
   group: release-native-${{ github.ref }}
@@ -50,6 +56,8 @@ env:
 jobs:
   desktop-windows:
     runs-on: windows-latest
+    permissions:
+      contents: read
     defaults:
       run:
         shell: bash
@@ -126,16 +134,10 @@ jobs:
           path: dist-release
           if-no-files-found: error
 
-      - name: Attach to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist-release/*
-          prerelease: ${{ env.IS_PRERELEASE }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-
   mobile-android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       DEVE_MOBILE_PACKAGE_TARGETS: android
     steps:
@@ -236,16 +238,10 @@ jobs:
           path: dist-release
           if-no-files-found: error
 
-      - name: Attach to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist-release/*
-          prerelease: ${{ env.IS_PRERELEASE }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-
   desktop-macos:
     runs-on: macos-latest
+    permissions:
+      contents: read
     env:
       DEVE_DESKTOP_TARGET_HOSTS: macos
     steps:
@@ -307,10 +303,130 @@ jobs:
           path: dist-release
           if-no-files-found: error
 
-      - name: Attach to GitHub Release
+  publish:
+    needs: [desktop-windows, mobile-android, desktop-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-desktop-windows
+          path: native-artifacts/windows
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android
+          path: native-artifacts/android
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-desktop-macos
+          path: native-artifacts/macos
+
+      - name: Validate native artifact manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' downloaded_files < <(find native-artifacts -type f -print0)
+          if [ "${#downloaded_files[@]}" -ne 4 ]; then
+            echo "native artifacts: expected exactly four downloaded files, found ${#downloaded_files[@]}" >&2
+            printf '  %s\n' "${downloaded_files[@]}" >&2
+            exit 1
+          fi
+
+          collect_one() {
+            local label="$1"
+            local directory="$2"
+            local pattern="$3"
+            local matches=()
+            mapfile -d '' matches < <(find "$directory" -maxdepth 1 -type f -name "$pattern" -print0)
+            if [ "${#matches[@]}" -ne 1 ]; then
+              echo "$label: expected exactly one '$pattern' file in $directory, found ${#matches[@]}" >&2
+              return 1
+            fi
+            printf '%s' "${matches[0]}"
+          }
+
+          windows_msi="$(collect_one windows-msi native-artifacts/windows '*.msi')"
+          windows_nsis="$(collect_one windows-nsis native-artifacts/windows '*.exe')"
+          macos_dmg="$(collect_one macos-dmg native-artifacts/macos '*.dmg')"
+          android_apk="$(collect_one android-arm64 native-artifacts/android 'deve-notebook-*-android-arm64*.apk')"
+
+          mkdir -p dist-release
+          declare -A seen=()
+          for file in "$windows_msi" "$windows_nsis" "$macos_dmg" "$android_apk"; do
+            name="${file##*/}"
+            if [ -n "${seen[$name]+present}" ]; then
+              echo "duplicate release asset basename: $name" >&2
+              exit 1
+            fi
+            seen[$name]=1
+            cp "$file" "dist-release/$name"
+          done
+
+          find dist-release -maxdepth 1 -type f -printf '%f\n' | sort > native-asset-manifest.txt
+          [ "$(wc -l < native-asset-manifest.txt)" -eq 4 ]
+          cat native-asset-manifest.txt
+
+      - name: Require absent or draft GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          lookup_error="$RUNNER_TEMP/release-lookup.err"
+          if existing_draft="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq '.draft' 2>"$lookup_error")"; then
+            [ "$existing_draft" = "true" ] || {
+              echo "existing GitHub Release must be draft before asset upload" >&2
+              exit 1
+            }
+          elif grep -q '(HTTP 404)' "$lookup_error"; then
+            echo "no existing GitHub Release; a draft may be created"
+          else
+            cat "$lookup_error" >&2
+            exit 1
+          fi
+
+      - name: Upload validated assets to a draft GitHub Release
+        id: draft_release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-release/*
+          files: |
+            dist-release/*.msi
+            dist-release/*.exe
+            dist-release/*.dmg
+            dist-release/deve-notebook-*-android-arm64*.apk
+          draft: true
           prerelease: ${{ env.IS_PRERELEASE }}
           generate_release_notes: true
           fail_on_unmatched_files: true
+
+      - name: Verify draft assets and publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_state="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')"
+          [ "$release_state" = "true" ] || { echo "release must remain draft before asset verification" >&2; exit 1; }
+
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > uploaded-asset-manifest.txt
+          diff -u native-asset-manifest.txt uploaded-asset-manifest.txt
+
+          publish_args=(--draft=false)
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            publish_args+=(--prerelease)
+          else
+            publish_args+=(--prerelease=false --latest)
+          fi
+          gh release edit "$GITHUB_REF_NAME" "${publish_args[@]}"
+
+          release_state="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')"
+          [ "$release_state" = "false" ] || { echo "release remained draft after publish" >&2; exit 1; }
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > published-asset-manifest.txt
+          diff -u native-asset-manifest.txt published-asset-manifest.txt

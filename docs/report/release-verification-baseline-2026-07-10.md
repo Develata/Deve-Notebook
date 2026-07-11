@@ -4,6 +4,13 @@
 `docs/plan/18_release.md`、`docs/features/15_release.md`、
 `docs/acceptance-cases/12_tech_release.md` 或 release workflow。
 
+> [!IMPORTANT]
+> **Superseded snapshot:** 本文所有 `current` / `requires a v* tag` / changelog
+> 描述只绑定下述 `7bd177f` source base，不是当前 main 的操作说明。后续 first-tag
+> orchestration 已收敛为 `release.yml` 单一 tag trigger 调用 reusable
+> `release-native.yml`，且首个版本真正发布前 `CHANGELOG.md` 只记录 `[Unreleased]`。
+> 当前真值以本段上方列出的 plan / feature / acceptance 与实际 workflow 为准。
+
 ## Scope
 
 - Branch: `main`

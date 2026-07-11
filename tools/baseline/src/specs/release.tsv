@@ -12,6 +12,12 @@ absent_tree	scripts	bincode
 absent	docs/registry/release-audit-warning-registry.md	RUSTSEC-2025-0141
 absent	docs/registry/release-audit-warning-registry.md	bincode
 contains	.github/workflows/release.yml	tags: ['v*']
+contains	.github/workflows/release.yml	Validate SemVer release tag
+contains	.github/workflows/release.yml	invalid SemVer release tag
+contains	.github/workflows/release.yml	needs: docker
+contains	.github/workflows/release.yml	uses: ./.github/workflows/release-native.yml
+absent	.github/workflows/release.yml	secrets: inherit
+contains	.github/workflows/release.yml	ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 contains	.github/workflows/release.yml	cargo clippy --locked --all-targets -- -D warnings
 contains	.github/workflows/release.yml	actions/checkout@v6
 contains	.github/workflows/release.yml	actions/setup-node@v6
@@ -32,7 +38,19 @@ absent	.github/workflows/release.yml	scripts/check-mobile-android-shell-package-
 absent	.github/workflows/release.yml	scripts/check-desktop-signing-preflight.sh
 absent	.github/workflows/release.yml	scripts/check-mobile-android-release-preflight.sh
 contains	.github/workflows/release.yml	cargo test --locked
-contains	.github/workflows/release-native.yml	tags: ['v*']
+contains	.github/workflows/release-native.yml	workflow_call:
+absent	.github/workflows/release-native.yml	tags: ['v*']
+contains	.github/workflows/release-native.yml	publish:
+contains	.github/workflows/release-native.yml	needs: [desktop-windows, mobile-android, desktop-macos]
+contains	.github/workflows/release-native.yml	actions/download-artifact@v8
+contains	.github/workflows/release-native.yml	Validate native artifact manifest
+contains	.github/workflows/release-native.yml	expected exactly four downloaded files
+contains	.github/workflows/release-native.yml	Require absent or draft GitHub Release
+contains	.github/workflows/release-native.yml	existing GitHub Release must be draft before asset upload
+contains	.github/workflows/release-native.yml	Upload validated assets to a draft GitHub Release
+contains	.github/workflows/release-native.yml	draft: true
+contains	.github/workflows/release-native.yml	diff -u native-asset-manifest.txt uploaded-asset-manifest.txt
+contains	.github/workflows/release-native.yml	gh release edit "$GITHUB_REF_NAME"
 contains	.github/workflows/release-native.yml	Linux GTK3/WebKitGTK desktop artifacts
 contains	.github/workflows/release-native.yml	0006 excludes from the first-tag release set
 contains	.github/workflows/release-native.yml	deve-desktop-windows
@@ -412,6 +430,17 @@ contains	scripts/smoke-docker-p2p-mesh.sh	cleanup || fail "compose cleanup faile
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-005
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-001
 contains	docs/acceptance-cases/12_tech_release.md	tags: ['v*']
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	release_yml_is_only_direct_v_tag_entry true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	non_semver_v_tag_rejected_before_checkout_build_publish true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_delivery_uses_workflow_call_after_docker true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	github_release_created_once_after_all_native_builds true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_failure_creates_no_github_release true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_manifest_requires_exact_allowlisted_asset_set true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_manifest_rejects_extra_downloaded_files true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	existing_public_release_rejected_before_asset_upload true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	github_release_remains_draft_until_remote_asset_manifest_matches true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	reusable_native_receives_only_android_signing_secrets true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	docker_image_may_publish_before_native_delivery_completes
 contains	docs/acceptance-cases/12_tech_release.md	type=semver,pattern={{version}}
 contains	docs/acceptance-cases/12_tech_release.md	type=raw,value=latest
 contains	docs/acceptance-cases/12_tech_release.md	ghcr.io/${{ github.repository }}
@@ -436,6 +465,8 @@ case_contains	docs/acceptance-cases/12_tech_release.md	REL-010	live post-reconne
 contains	docs/acceptance-bindings.tsv	REL-010|manual-network|docs/dev-runbook.md
 contains	docs/acceptance-bindings.tsv	REL-011|manual-cli|docs/dev-runbook.md
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_has_no_independent_tag_trigger true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_publish_waits_for_all_required_builds true
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_BIN=/path/to/docker
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/smoke-runtime-happy-path.sh

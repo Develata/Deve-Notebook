@@ -24,7 +24,7 @@
 - `Surface`: `workflow-config`
 - `Trigger`: GitHub evaluates the pushed ref
 - `Preconditions`: `.github/workflows/release.yml` is present
-- `Immediate Result`: only semver-style release tags enter the release workflow
+- `Immediate Result`: the broad `v*` trigger enters one orchestrator, whose first gate rejects non-SemVer refs before checkout/build/publish; native delivery has no independent tag trigger
 - `Application Entry`: `.github/workflows/release.yml`
 
 ### `op.release.tag.observe-dispatch`
@@ -40,10 +40,10 @@
 
 1. Maintainer pushes a semver release tag.
 2. Instruction interface is git ref delivery plus workflow trigger matching.
-3. Flow coordination decides whether the pushed ref becomes a release run.
+3. Flow coordination validates SemVer before repository checkout, decides whether the pushed ref may continue as a release run, and keeps reusable native delivery behind the orchestrator's quality and Docker jobs.
 4. Execution domains are release trigger policy and CI workflow dispatch.
 
 ## Notes
 
-- This flow defines the release entry gate before any build or publish step starts.
+- This flow defines the sole release entry gate before any build or publish step starts; `.github/workflows/release-native.yml` is callable infrastructure, not a second tag entry.
 - Main objects: `release::tag`, `ci::workflow`, `release::channel`.

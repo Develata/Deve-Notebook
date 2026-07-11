@@ -47,14 +47,16 @@ native Desktop package.
 CI/CD 基于 GitHub Actions。
 
 > [!NOTE]
-> 首个公开 tag 的发布基线包含 `.github/workflows/release.yml` 与
-> `.github/workflows/release-native.yml`。`nightly.yml` 与
+> 首个公开 tag 的发布基线由 `.github/workflows/release.yml` 作为唯一
+> `v*` tag orchestrator，并调用 reusable `.github/workflows/release-native.yml`。
+> `nightly.yml` 与
 > `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, and `cargo test --locked`. The native process adapter gate is scoped with `DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0` in `release.yml`, so it verifies no-Tauri/process authority boundaries without compiling native-packaging dependencies.
+    1.  **Tag Gate**: GitHub 的 `v*` glob 只负责触发；workflow 的第一个 step 必须按 SemVer 2.0.0（含可选 prerelease/build metadata）验证 `GITHUB_REF_NAME`，非 SemVer `v*` tag 必须在 checkout、build 或 publish 前 fail-closed。
+    2.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, and `cargo test --locked`. The native process adapter gate is scoped with `DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0` in `release.yml`, so it verifies no-Tauri/process authority boundaries without compiling native-packaging dependencies.
         Dependency audit belongs to this gate: `scripts/check-release-audit-gate.sh`
         **MUST** fail on cargo/npm vulnerabilities and **MUST** compare every
         non-vulnerability `cargo audit` warning with
@@ -72,23 +74,39 @@ CI/CD 基于 GitHub Actions。
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
-`release-native.yml` 是独立于 Docker baseline 的 tag-triggered native delivery
-track。它在首个公开 tag 上构建并向 GitHub Release 附加 Windows MSI/NSIS、
-macOS DMG 与 Android ARM64 APK；Windows/macOS public-preview artifacts 可以保持
-unsigned，Android 仅在 keystore secrets 齐全时产生已签名 APK，否则只能上传明确
-标记、不可安装的 unsigned diagnostic artifact。该 workflow **MUST NOT** 构建
-Linux GTK3/WebKitGTK 4.x Desktop artifacts 或 iOS artifacts，也不得把 package
-artifact 存在性表述为 signing、notarization、store 或 physical-device readiness。
+`release-native.yml` 是 reusable native delivery track，不得独立监听 `v*` tag。
+`release.yml` 的 quality gates 与 Docker publish 成功后才可调用它。Windows
+MSI/NSIS、macOS DMG 与 Android ARM64 APK 的 build jobs 只能先上传 workflow
+artifacts；三个必需 build jobs 全部成功后，单一 publish job 才可创建或更新一次
+draft GitHub Release。publish job 必须按 allowlisted artifact names 下载，先验证三个容器内
+总文件数恰为四，再验证恰好存在
+Windows MSI、Windows NSIS、macOS DMG 与 Android ARM64 APK，拒绝缺失、重复 basename
+或额外 artifact；上传后必须从 GitHub Release API 复核 asset manifest，完全相等后才可
+把 draft 发布为公开 GitHub Release。任一 native build、manifest、upload 或复核步骤失败时
+不得留下公开的 partial GitHub Release。Reusable workflow 只接收四个 Android signing
+secrets，不得继承全部 repository / organization secrets。Windows/macOS public-preview artifacts 可以保持 unsigned，Android
+仅在 keystore secrets 齐全时产生已签名 APK，否则只能上传明确标记、不可安装的
+unsigned diagnostic artifact。该 workflow **MUST NOT** 构建 Linux
+GTK3/WebKitGTK 4.x Desktop artifacts 或 iOS artifacts，也不得把 package artifact
+存在性表述为 signing、notarization、store 或 physical-device readiness。
+
+该 first-tag orchestrator 是最小收敛而非跨 registry 强事务：Docker version / latest
+image 可以在 native track 完成前已发布。若随后 native build 或 publish verification
+失败，workflow 必须以失败结束且不得留下公开 GitHub Release；draft 与已发布 GHCR tag
+的保留、删除或重跑由 maintainer 显式恢复流程处理，不得把 partial delivery 报告为完整 release。
+同一 tag 重跑时，asset upload 前只允许 GitHub Release 不存在或仍为 draft；若该 tag 已有
+公开 Release，workflow 必须在修改任何公开资产前 fail-closed，等待 maintainer 显式恢复。
 
 Web 与 CLI 仍由 `deve_cli` 主通道承载：Docker image 在构建 `deve_cli` 前嵌入
 release Web assets，Desktop LocalBackend package 将同一 CLI 作为受控 sidecar。
 在独立 standalone CLI upload workflow 被显式加入 plan 前，不要求重复上传另一套
 CLI artifact。
 
-First-tag `release.yml` deliberately does **not** run Linux GTK3/WebKitGTK 4.x
-native packaging, installer, signing, Android/iOS package-build or physical-device
-smoke gates. Those remain target-host / workflow-dispatch evidence surfaces, not
-tag-triggered Docker release requirements.
+First-tag tag orchestrator deliberately does **not** run Linux GTK3/WebKitGTK 4.x
+native packaging, iOS package-build, installer, signing/notarization, store or
+physical-device smoke gates. Android ARM64 package-build is a required job in the
+reusable native delivery track; Android install, emulator/device and signing-readiness
+smokes remain target-host / workflow-dispatch evidence surfaces rather than tag publish gates.
 
 Linux native Desktop bundling has an additional first-tag TODO: it **MUST NOT**
 ship a Linux GTK3/WebKitGTK 4.x native artifact for the first formal tag. Before
