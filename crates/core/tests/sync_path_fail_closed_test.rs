@@ -1,7 +1,7 @@
 #![cfg(unix)]
 
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
