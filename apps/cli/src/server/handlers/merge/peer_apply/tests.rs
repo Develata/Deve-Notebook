@@ -2,7 +2,7 @@ use super::*;
 use crate::server::{AppState, channel::DualChannel, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op, PeerId};
 use deve_core::protocol::ServerErrorCode;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -117,15 +117,21 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
         repo_name: "default".into(),
         branch: None,
     };
+    let preflight =
+        crate::server::session::test_merge_preflight(repo_id, doc_id, "base", "changed");
 
-    assert!(!write_merged_content(
-        &state,
-        &ch,
-        &scope,
-        doc_id,
-        "changed",
-        Some(13)
-    ));
+    assert_eq!(
+        write_merged_content(
+            &state,
+            &ch,
+            &scope,
+            &preflight,
+            "changed",
+            MergeResolution::AcceptIncoming,
+            Some(13)
+        ),
+        MergeWriteOutcome::CommitFailed
+    );
 
     match unicast_rx.recv().await {
         Some(ServerMessage::ProtocolError {
@@ -154,20 +160,16 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (doc_id, _) =
         repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
-    repo.append_generated_op_in_local_repo("default", doc_id, PeerId::new("local"), |seq| {
-        LedgerEntry::new_content(
+    repo.local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            "default",
             doc_id,
             Op::Insert {
                 pos: 0,
                 content: "base".into(),
             },
             1,
-            PeerId::new("local"),
-            seq,
-            None,
-            None,
-        )
-    })?;
+        )?;
     let repo = Arc::new(repo);
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
     sync_manager.mark_projection_writeback_fault("default");

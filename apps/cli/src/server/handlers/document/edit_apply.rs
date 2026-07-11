@@ -4,7 +4,7 @@
 //! Persists accepted document edits and emits ack/broadcast messages.
 
 use crate::server::{AppState, channel::DualChannel, repo_scope::ResolvedRepo};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, FactActor, Op};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
@@ -20,7 +20,6 @@ pub(super) struct ClientEditAppend<'a> {
     pub(super) scope_nonce: u64,
     pub(super) doc_id: DocId,
     pub(super) op: Op,
-    pub(super) local_peer_id: PeerId,
     pub(super) client_id: u64,
     pub(super) client_op_id: u64,
 }
@@ -45,29 +44,19 @@ fn append_client_edit_locked(input: ClientEditAppend<'_>) {
         scope_nonce,
         doc_id,
         op,
-        local_peer_id,
         client_id,
         client_op_id,
     } = input;
-    let op_clone = op.clone();
-    let peer_id_clone = local_peer_id.clone();
-    match state.repo.append_generated_client_op_in_local_repo(
+    let writer = state
+        .repo
+        .local_fact_writer(FactActor::new("browser_edit").expect("static actor is valid"));
+    match writer.append_client_content_in_local_repo(
         &scope.repo_name,
         doc_id,
-        local_peer_id,
+        op.clone(),
+        chrono::Utc::now().timestamp_millis(),
         client_id,
         client_op_id,
-        move |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                op_clone.clone(),
-                chrono::Utc::now().timestamp_millis(),
-                peer_id_clone.clone(),
-                seq,
-                Some(client_id),
-                Some(client_op_id),
-            )
-        },
     ) {
         Ok((global_seq, _local_seq)) => {
             let outcome = match state

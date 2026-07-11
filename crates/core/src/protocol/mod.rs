@@ -41,7 +41,10 @@ pub use client::ClientMessage;
 pub use client_scope::ClientMessageScopeGate;
 pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
-pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
+pub use frame::{
+    MAX_SYNC_FACT_BYTES_PER_PAYLOAD, MAX_SYNC_FACTS_PER_PAYLOAD, MAX_WS_FRAME_BYTES,
+    MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION,
+};
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
 pub use relay_proxy::{
     DirectSyncPushAttributionInput, DirectSyncSnapshotAttributionInput, RelayProxyRoute,

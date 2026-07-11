@@ -176,7 +176,7 @@ async fn p2p_exchange_rejects_unoffered_sync_request_source() -> anyhow::Result<
         repo_id,
         branch: None,
         known_vector: VersionVector::new(),
-        requests: vec![(unoffered_source, (1, 2))],
+        requests: vec![(unoffered_source, (1_u64.into(), 2_u64.into()))],
     };
     let mut stats = authenticated_stats(PeerId::new(REMOTE_PEER_ID));
     let mut socket = MockSocket::new(Vec::new());
@@ -249,7 +249,7 @@ async fn p2p_exchange_waits_for_delayed_followup_after_hello() -> anyhow::Result
         repo_id,
         branch: None,
         known_vector: VersionVector::new(),
-        requests: vec![(local_peer, (1, 2))],
+        requests: vec![(local_peer, (1_u64.into(), 1_u64.into()))],
     })?);
     let mut socket = DelayedSocket::new(vec![
         DelayedFrame::Ready(hello),

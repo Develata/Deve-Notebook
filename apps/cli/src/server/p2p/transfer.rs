@@ -2,9 +2,10 @@
 //!   - 07_network#full-peer-mesh-v1
 
 use crate::server::AppState;
+use crate::server::p2p::fault_injection::maybe_inject_sequence_gap;
 use crate::server::p2p::stats::ExchangeStats;
 use anyhow::{Context, Result, anyhow};
-use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::models::{PeerFactSeq, PeerId, RepoId, VersionVector};
 use deve_core::protocol::frame::encode_client_binary;
 use deve_core::protocol::{ClientMessage, SyncPayloadKind, SyncPushHeader, SyncSourceProof};
 use deve_core::security::EncryptedOp;
@@ -17,12 +18,23 @@ pub(super) async fn send_requested_ops<S>(
     state: &Arc<AppState>,
     socket: &mut S,
     repo_id: RepoId,
-    requests: Vec<(PeerId, (u64, u64))>,
+    requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))>,
     stats: &mut ExchangeStats,
 ) -> Result<()>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
 {
+    let local_peer_id = state.identity_key.peer_id();
+    if let Some((peer_id, _)) = requests
+        .iter()
+        .find(|(peer_id, _)| peer_id != &local_peer_id)
+    {
+        return Err(anyhow!(
+            "P2P cannot sign non-local diff source {} for repo {}",
+            peer_id,
+            repo_id
+        ));
+    }
     let (header_vector, responses) = state
         .sync_engine
         .with_strict_engine(repo_id, |engine| {
@@ -42,10 +54,16 @@ where
         .with_context(|| format!("Failed to build P2P sync response for {repo_id}"))?;
 
     for response in responses {
-        let response = response?;
+        let mut response = response?;
         if response.ops.is_empty() {
             continue;
         }
+        maybe_inject_sequence_gap(
+            state,
+            "connector_sync_request",
+            response.range,
+            &mut response.ops,
+        )?;
         let header = signed_local_diff_header(
             state,
             response.repo_id,
@@ -53,11 +71,16 @@ where
             header_vector.clone(),
             &response.ops,
         )?;
+        let (range_start, range_end) = response
+            .range
+            .expect("incremental sync response must carry its closed range");
         send_client_message(
             socket,
             ClientMessage::SyncPush {
                 source_peer_id: response.peer_id,
                 repo_id: response.repo_id,
+                range_start,
+                range_end,
                 header,
                 encrypted_payload: response.ops,
             },
@@ -106,6 +129,7 @@ where
         ClientMessage::SyncPushSnapshot {
             source_peer_id: response.peer_id,
             repo_id: response.repo_id,
+            waterline: response.waterline,
             server_vector,
             snapshot_kind: Some("full".to_string()),
             source_proof: Some(source_proof),
@@ -117,28 +141,19 @@ where
     Ok(())
 }
 
-fn send_sync_response(
-    peer_id: PeerId,
-    repo_id: RepoId,
-    ops: Vec<EncryptedOp>,
-) -> sync_proto::SyncResponse {
-    sync_proto::SyncResponse {
-        peer_id,
-        repo_id,
-        ops,
-    }
-}
-
 pub(super) fn receive_remote_ops(
     state: &Arc<AppState>,
     peer_id: PeerId,
     repo_id: RepoId,
+    range: (PeerFactSeq, PeerFactSeq),
     ops: Vec<EncryptedOp>,
 ) -> Result<u64> {
     state
         .sync_engine
         .with_strict_engine_mut(repo_id, |engine| {
-            engine.receive_remote_ops(send_sync_response(peer_id, repo_id, ops))
+            engine.receive_remote_ops(sync_proto::SyncResponse::incremental(
+                peer_id, repo_id, range, ops,
+            ))
         })
         .with_context(|| format!("Failed to apply P2P sync ops for {repo_id}"))?
 }
@@ -147,12 +162,15 @@ pub(super) fn receive_remote_snapshot(
     state: &Arc<AppState>,
     peer_id: PeerId,
     repo_id: RepoId,
+    waterline: PeerFactSeq,
     ops: Vec<EncryptedOp>,
 ) -> Result<u64> {
     state
         .sync_engine
         .with_strict_engine_mut(repo_id, |engine| {
-            engine.receive_remote_snapshot(send_sync_response(peer_id, repo_id, ops))
+            engine.receive_remote_snapshot(sync_proto::SyncResponse::full_fact_replay(
+                peer_id, repo_id, waterline, ops,
+            ))
         })
         .with_context(|| format!("Failed to apply P2P sync snapshot for {repo_id}"))?
 }

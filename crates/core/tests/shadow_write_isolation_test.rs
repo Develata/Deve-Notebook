@@ -70,7 +70,7 @@ fn remote_content_op_does_not_appear_in_local_doc_ops() {
     let (local_doc, _ops) = repo
         .apply_file_structure_in_local_repo(&name, "mine.md", None, "test")
         .expect("create local file");
-    let local_peer = PeerId::new("local");
+    let local_peer = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(&name, local_doc, local_peer.clone(), |seq| {
         LedgerEntry::new_content(
             local_doc,
@@ -116,7 +116,7 @@ fn remote_content_op_does_not_appear_in_local_doc_ops() {
             },
             2,
             peer_id.clone(),
-            1,
+            2,
             None,
             None,
         ),

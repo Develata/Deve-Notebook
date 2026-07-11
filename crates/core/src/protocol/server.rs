@@ -7,7 +7,7 @@
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
 use super::merge_conflict::{ConflictHunk, MergeConflictAction};
-use crate::models::{DocId, PeerId, RepoId, VersionVector};
+use crate::models::{DocId, PeerFactSeq, PeerId, RepoId, VersionVector};
 use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
@@ -29,10 +29,10 @@ pub enum ServerMessage {
     Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, seq: u64, client_op_id: u64 },
     SyncHello { peer_id: PeerId, repo_id: RepoId, scope_nonce: ScopeNonce, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
     WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId> },
-    SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] known_vector: VersionVector, requests: Vec<(PeerId, (u64, u64))> },
+    SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] known_vector: VersionVector, requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))> },
     SyncSnapshotRequest { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, #[serde(default)] known_vector: VersionVector, #[serde(default)] reason: Option<String> },
-    SyncPush { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, header: SyncPushHeader, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, #[serde(alias = "ops")] encrypted_payload: Vec<EncryptedOp> },
-    SyncPushSnapshot { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(default)] source_proof: Option<SyncSourceProof>, #[serde(alias = "ops", alias = "encrypted_payload")] payload: Vec<EncryptedOp> },
+    SyncPush { source_peer_id: PeerId, repo_id: RepoId, range_start: PeerFactSeq, range_end: PeerFactSeq, header: SyncPushHeader, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, encrypted_payload: Vec<EncryptedOp> },
+    SyncPushSnapshot { source_peer_id: PeerId, repo_id: RepoId, waterline: PeerFactSeq, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(default)] source_proof: Option<SyncSourceProof>, payload: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
     Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },

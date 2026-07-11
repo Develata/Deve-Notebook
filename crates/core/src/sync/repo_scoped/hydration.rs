@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
 
+use crate::ledger::RepoManager;
 use crate::ledger::listing::RepoListing;
-use crate::ledger::{RepoManager, range};
 use crate::models::VersionVector;
 use crate::models::{PeerId, RepoId};
 use anyhow::{Result, anyhow};
@@ -13,7 +13,14 @@ pub(super) fn build_version_vector(
     repo_id: RepoId,
 ) -> Result<VersionVector> {
     let mut vector = VersionVector::new();
-    let local_seq = repo.run_on_local_repo_id(&repo_id, range::get_max_seq)?;
+    if repo.local_peer_id() != local_peer_id {
+        return Err(anyhow!(
+            "Sync engine local peer {} does not match repo host identity {}",
+            local_peer_id,
+            repo.local_peer_id()
+        ));
+    }
+    let local_seq = repo.get_local_peer_waterline(&repo_id)?;
     vector.set_exact(local_peer_id.clone(), local_seq);
 
     for peer_id in repo.list_shadows_on_disk()? {

@@ -9,9 +9,13 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 11;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 11;
+pub const WS_PROTOCOL_VERSION: u16 = 12;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 12;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
+/// Bound fact-count allocation before a transfer payload is materialized.
+pub const MAX_SYNC_FACTS_PER_PAYLOAD: u64 = 16 * 1024;
+/// Bound encoded ledger bytes before encryption/frame serialization duplicates the payload.
+pub const MAX_SYNC_FACT_BYTES_PER_PAYLOAD: u64 = MAX_WS_FRAME_BYTES;
 pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
 pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
 

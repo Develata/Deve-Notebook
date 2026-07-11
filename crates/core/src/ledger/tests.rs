@@ -76,6 +76,7 @@ fn test_local_and_shadow_isolation() -> Result<()> {
     let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
 
     let doc_id = DocId::new();
+    let local_peer_id = repo.local_peer_id().clone();
     let peer_id = PeerId::new("peer_mobile");
     let repo_id = Uuid::new_v4();
 
@@ -87,7 +88,7 @@ fn test_local_and_shadow_isolation() -> Result<()> {
             content: "local content".into(),
         },
         1000,
-        peer_id.clone(),
+        local_peer_id,
         1,
         None,
         None,
@@ -139,7 +140,7 @@ fn test_snapshot_pruning() -> Result<()> {
     // 设置快照深度为 2
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("local");
+    let peer_id = repo.local_peer_id().clone();
 
     let ops = [(1, "a"), (2, "ab"), (3, "abc")];
 

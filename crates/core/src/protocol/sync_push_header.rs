@@ -206,7 +206,7 @@ fn source_proof_message(
 ) -> Result<Vec<u8>, SyncSourceProofError> {
     let mut vector_entries: Vec<(String, u64)> = vector
         .iter()
-        .map(|(peer, seq)| (peer.as_str().to_string(), *seq))
+        .map(|(peer, seq)| (peer.as_str().to_string(), seq.get()))
         .collect();
     vector_entries.sort_by(|left, right| left.0.cmp(&right.0));
     let payload_kind = match payload_kind {

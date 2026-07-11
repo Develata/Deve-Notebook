@@ -1,5 +1,5 @@
 use super::AppState;
-use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, PEER_DOC_SEQ};
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, PEER_FACT_OPS, PEER_FACT_SEQ};
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use redb::ReadableTable;
 use std::sync::Arc;
@@ -36,8 +36,11 @@ pub(super) fn inject_legacy_invalid_insert(
             .open_multimap_table(DOC_OPS)?
             .insert(doc_id.as_u128(), next_global_seq)?;
         write
-            .open_table(PEER_DOC_SEQ)?
-            .insert((doc_id.as_u128(), peer_id.as_str()), 2)?;
+            .open_table(PEER_FACT_SEQ)?
+            .insert(peer_id.as_str(), 2)?;
+        write
+            .open_table(PEER_FACT_OPS)?
+            .insert((peer_id.as_str(), 2), next_global_seq)?;
         write.commit()?;
         Ok(())
     })

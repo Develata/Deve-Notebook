@@ -5,7 +5,7 @@ use super::support::{build_state, write_workspace_file};
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_get_doc_diff, session::WsSession,
 };
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;
 
@@ -17,25 +17,18 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         .repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
     let tracked_doc_id = state.repo.get_docid("notes/a.md")?.expect("tracked doc id");
-    state.repo.append_generated_op_in_local_repo(
-        "default",
-        tracked_doc_id,
-        PeerId::new("test"),
-        |seq| {
-            LedgerEntry::new_content(
-                tracked_doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "hello".into(),
-                },
-                1,
-                PeerId::new("test"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            "default",
+            tracked_doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "hello".into(),
+            },
+            1,
+        )?;
     state.repo.apply_file_delete_structure_in_local_repo(
         "default",
         "notes/a.md",
@@ -48,25 +41,18 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         None,
         "test",
     )?;
-    state.repo.append_generated_op_in_local_repo(
-        "default",
-        reused_doc_id,
-        PeerId::new("test"),
-        |seq| {
-            LedgerEntry::new_content(
-                reused_doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "other".into(),
-                },
-                1,
-                PeerId::new("test"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            "default",
+            reused_doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "other".into(),
+            },
+            1,
+        )?;
     write_workspace_file(&dir, "notes/reused.md", "other");
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);

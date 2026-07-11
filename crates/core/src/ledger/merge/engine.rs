@@ -5,11 +5,9 @@
 //!
 // ---------------------------------------------------------------
 // 模块：三路合并引擎
-// 作用：执行 LCA 计算、状态重建与 3-Way Merge
+// 作用：对已经由 MergeBaseCheckpoint 证明的三方内容执行 3-Way Merge
 // 功能：冲突检测、冲突片段构建、合并结果输出
 // ---------------------------------------------------------------
-
-use crate::models::{DocId, LedgerEntry, VersionVector};
 
 use super::diff::{apply_edits, diff_to_edits};
 use super::region::merge_regions;
@@ -18,32 +16,6 @@ use super::types::MergeResult;
 pub struct MergeEngine;
 
 impl MergeEngine {
-    /// 计算本地与远端的 LCA 版本向量
-    pub fn find_lca(local_vv: &VersionVector, remote_vv: &VersionVector) -> VersionVector {
-        // LCA = 两个向量的逐分量最小值
-        local_vv.intersection(remote_vv)
-    }
-
-    /// 在指定 VersionVector 上重建文档内容
-    ///
-    /// 复杂点：需要过滤出对 LCA 可见的操作
-    pub fn reconstruct_state_at(
-        _doc_id: DocId,
-        all_ops: &[LedgerEntry],
-        at_vv: &VersionVector,
-    ) -> String {
-        let visible_ops: Vec<LedgerEntry> = all_ops
-            .iter()
-            .filter(|entry| {
-                let max_seq = at_vv.get(&entry.peer_id);
-                entry.seq <= max_seq
-            })
-            .cloned()
-            .collect();
-
-        crate::state::reconstruct_content(&visible_ops)
-    }
-
     /// 执行 3-Way Merge
     pub fn merge_commits(base: &str, local: &str, remote: &str) -> MergeResult {
         if local == remote {

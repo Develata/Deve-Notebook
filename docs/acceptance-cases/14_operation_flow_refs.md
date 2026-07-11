@@ -38,6 +38,11 @@
   steps: [ws_send: {type: SyncHello, repo_id: "repo_b"}]
   assertions: [ws_receive_not_contains: "reuse_repo_a_vector"]
 
+- case_id: NET-FEAT-05
+  goal: A missing physical-peer fact blocks later facts until the exact gap is restored.
+  steps: [run: "cargo test -p deve_core peer_fact_seq -- --nocapture", run: "cargo test -p deve_cli p2p_sequence_gap -- --nocapture"]
+  assertions: [inbound_gap_keeps_shadow_and_vector_unchanged: true, restored_missing_fact_allows_contiguous_recovery: true]
+
 - case_id: RENDER-FEAT-01
   goal: Document edit produces a confirmed operation.
   steps: [ui_type: "confirmed op check", run: "cargo test -p deve_cli duplicate_client_op -- --nocapture"]

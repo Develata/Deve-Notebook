@@ -24,7 +24,8 @@ async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<
     ensure_local_projection_ready(&state)?;
     let peer_id = ensure_remote_repo(&state, repo_id)?;
     let doc_id = seed_local_doc(&state, "notes/a.md")?;
-    seed_remote_insert(&state, &peer_id, repo_id, doc_id, "incoming")?;
+    seed_shared_base(&state, &peer_id, repo_id, doc_id, "base")?;
+    seed_remote_replace(&state, &peer_id, repo_id, doc_id, "base", "incoming")?;
     let remote_before = doc_content(&state, RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
     let local_before = local_doc_content(&state, doc_id)?;
     let (ch, _uni_rx) = unicast_channel(&state);
@@ -44,7 +45,7 @@ async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<
     .await;
 
     expect_merge_complete(&mut broadcast_rx, repo_id, None, Some(41), 1).await?;
-    assert_eq!(local_before, (0, String::new()));
+    assert_eq!(local_before.1, "base");
     assert_eq!(local_doc_content(&state, doc_id)?.1, "incoming");
     assert_eq!(
         doc_content(&state, RepoType::Remote(peer_id, repo_id), doc_id)?,
@@ -145,6 +146,9 @@ async fn resolve_merge_conflict_rejects_remote_branch_scope_without_consuming_pe
         scope_nonce: Some(57),
         local_content: "local".into(),
         incoming_content: "incoming".into(),
+        preflight: crate::server::session::test_merge_preflight(
+            repo_id, doc_id, "local", "incoming",
+        ),
     });
 
     route_merge(
@@ -180,6 +184,9 @@ async fn resolve_merge_conflict_rejects_local_branch_without_writer_ready_withou
         scope_nonce: Some(59),
         local_content: "local".into(),
         incoming_content: "incoming".into(),
+        preflight: crate::server::session::test_merge_preflight(
+            repo_id, doc_id, "local", "incoming",
+        ),
     });
 
     route_merge(

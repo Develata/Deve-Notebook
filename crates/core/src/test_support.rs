@@ -10,6 +10,7 @@ use crate::ledger::{
 use std::path::Path;
 
 static LOCAL_REPO_CATALOG_TEST_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+pub(crate) static CWD_LOCK: Mutex<()> = Mutex::new(());
 
 pub(crate) fn local_repo_catalog_test_guard() -> MutexGuard<'static, ()> {
     LOCAL_REPO_CATALOG_TEST_MUTEX

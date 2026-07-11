@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{AppState, session::WsSession};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
+use deve_core::models::{DocId, FactActor, Op, RepoId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -19,25 +19,18 @@ pub(super) fn seed_doc(
         state
             .repo
             .apply_file_structure_in_local_repo(repo_name, DOC_PATH, None, "test")?;
-    state.repo.append_generated_op_in_local_repo(
-        repo_name,
-        doc_id,
-        PeerId::new("test-peer"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: content.into(),
-                },
-                1,
-                PeerId::new("test-peer"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            repo_name,
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )?;
     Ok(doc_id)
 }
 

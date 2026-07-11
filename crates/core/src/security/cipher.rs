@@ -12,7 +12,9 @@
 //! - `RepoKey`: 32 字节对称密钥。
 //! - `EncryptedOp`: 加密后的操作载荷结构。
 
-use crate::models::{DocId, LedgerEntry, deserialize_ledger_entry, serialize_ledger_entry};
+use crate::models::{
+    DocId, LedgerEntry, PeerFactSeq, deserialize_ledger_entry, serialize_ledger_entry,
+};
 use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -64,7 +66,11 @@ impl RepoKey {
     }
 
     /// 加密 LedgerEntry
-    pub fn encrypt(&self, entry: &LedgerEntry, seq: u64) -> anyhow::Result<EncryptedOp> {
+    pub fn encrypt(
+        &self,
+        entry: &LedgerEntry,
+        peer_seq: PeerFactSeq,
+    ) -> anyhow::Result<EncryptedOp> {
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // 96-bits; unique per message
 
         let plaintext = serialize_ledger_entry(entry)?;
@@ -76,7 +82,7 @@ impl RepoKey {
 
         Ok(EncryptedOp {
             doc_id: entry.doc_id,
-            seq, // Enforced externally
+            peer_seq,
             ciphertext,
             nonce: nonce.to_vec(),
         })
@@ -106,13 +112,13 @@ impl RepoKey {
 ///
 /// **结构**:
 /// - `doc_id`: 明文，用于路由。
-/// - `seq`: 明文，用于 Vector Clock 排序。
+/// - `peer_seq`: 明文，用于 VersionVector 排序。
 /// - `ciphertext`: 密文 (LedgerEntry)。
 /// - `nonce`: 用于 AES-GCM 解密的随机数。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedOp {
     pub doc_id: Option<DocId>,
-    pub seq: u64,
+    pub peer_seq: PeerFactSeq,
     pub ciphertext: Vec<u8>,
     pub nonce: Vec<u8>,
 }
@@ -139,9 +145,9 @@ mod tests {
         );
 
         // Encrypt
-        let enc = key.encrypt(&entry, 100).unwrap();
+        let enc = key.encrypt(&entry, 100.into()).unwrap();
         assert!(!enc.ciphertext.is_empty());
-        assert_eq!(enc.seq, 100);
+        assert_eq!(enc.peer_seq, 100_u64);
         assert_ne!(enc.ciphertext, serialize_ledger_entry(&entry).unwrap());
 
         // Decrypt
@@ -165,7 +171,7 @@ mod tests {
             None,
         );
 
-        let mut enc = key.encrypt(&entry, 100).unwrap();
+        let mut enc = key.encrypt(&entry, 100.into()).unwrap();
         enc.nonce.truncate(AES_GCM_NONCE_LEN - 1);
 
         let err = key

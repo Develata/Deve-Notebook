@@ -17,9 +17,9 @@ async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push() -> anyh
     append_local_doc(&state)?;
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(PeerId::new("peer-a")), Some(17));
-    session.set_offered_sync_sources([PeerId::new("test-peer")]);
+    session.set_offered_sync_sources([state.repo.local_peer_id().clone()]);
 
-    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range()).await;
+    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range(&state, repo_id)?).await;
 
     assert_eq!(recv_sync_push_nonce(&mut rx).await, 17);
     Ok(())
@@ -46,9 +46,9 @@ async fn non_browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::
     append_local_doc(&state)?;
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(PeerId::new("peer-a")), None);
-    session.set_offered_sync_sources([PeerId::new("test-peer")]);
+    session.set_offered_sync_sources([state.repo.local_peer_id().clone()]);
 
-    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range()).await;
+    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range(&state, repo_id)?).await;
 
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
@@ -65,7 +65,7 @@ async fn non_browser_sync_request_rejects_missing_authenticated_peer_even_when_r
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, None, Some(23));
 
-    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range()).await;
+    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range(&state, repo_id)?).await;
 
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
@@ -79,12 +79,13 @@ async fn sync_request_preserves_requested_source_peer_in_push() -> anyhow::Resul
     append_local_doc(&state)?;
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(PeerId::new("peer-a")), Some(37));
-    session.set_offered_sync_sources([PeerId::new("test-peer")]);
+    let local_peer = state.repo.local_peer_id().clone();
+    session.set_offered_sync_sources([local_peer.clone()]);
 
-    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range()).await;
+    handle_sync_request(&state, &ch, &mut session, repo_id, sync_range(&state, repo_id)?).await;
 
     let (peer_id, nonce) = recv_sync_push_peer_nonce(&mut rx).await;
-    assert_eq!(peer_id, PeerId::new("test-peer"));
+    assert_eq!(peer_id, local_peer);
     assert_eq!(nonce, 37);
     Ok(())
 }

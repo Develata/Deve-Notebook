@@ -123,78 +123,90 @@ fn remote_repo_info_fails_closed_when_metadata_missing() {
 }
 
 #[test]
-fn apply_remote_snapshot_replaces_stale_shadow_repo_contents() {
-    let (_dir, repo) = new_repo();
+fn apply_remote_snapshot_extends_a_matching_confirmed_prefix() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo_id = uuid::Uuid::new_v4();
+    let source_repo = RepoManager::init_with_options(
+        dir.path().join("source-ledger"),
+        10,
+        Some("default"),
+        deve_core::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: Some("urn:source".into()),
+        },
+    )
+    .expect("source repo");
+    let receiver_repo = RepoManager::init_with_options(
+        dir.path().join("receiver-ledger"),
+        10,
+        Some("default"),
+        deve_core::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: Some("urn:receiver".into()),
+        },
+    )
+    .expect("receiver repo");
     let repo_key = RepoKey::generate();
-    let mut engine = SyncEngine::new(
-        PeerId::new("local"),
-        std::sync::Arc::new(repo),
+    let source_peer = source_repo.local_peer_id().clone();
+    let source_engine = SyncEngine::new(
+        source_peer.clone(),
+        std::sync::Arc::new(source_repo),
         SyncMode::Auto,
         Some(repo_key.clone()),
     );
-    let repo_id = engine
-        .repo
-        .get_repo_info()
-        .expect("repo info")
-        .expect("present")
-        .uuid;
-    let local_name = engine.repo.local_repo_name().to_string();
-    let (live_doc, _ops) = engine
+    let mut receiver_engine = SyncEngine::new(
+        receiver_repo.local_peer_id().clone(),
+        std::sync::Arc::new(receiver_repo),
+        SyncMode::Auto,
+        Some(repo_key),
+    );
+    let local_name = source_engine.repo.local_repo_name().to_string();
+    let (live_doc, _ops) = source_engine
         .repo
         .apply_file_structure_in_local_repo(&local_name, "notes/live.md", None, "test")
         .expect("create local file");
-    engine
-        .repo
-        .append_generated_op_in_local_repo(&local_name, live_doc, PeerId::new("local"), |seq| {
-            LedgerEntry::new_content(
-                live_doc,
-                Op::Insert {
-                    pos: 0,
-                    content: "fresh".into(),
-                },
-                1,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
+    let initial = source_engine
+        .get_snapshot_for_sync(&SyncSnapshotRequest {
+            peer_id: source_peer.clone(),
+            repo_id,
+            reason: None,
         })
+        .expect("build initial snapshot");
+    receiver_engine
+        .apply_remote_snapshot(initial)
+        .expect("apply initial snapshot");
+    let writer = source_engine
+        .repo
+        .local_fact_writer(deve_core::models::FactActor::new("test").unwrap());
+    writer
+        .append_content_in_local_repo(
+            &local_name,
+            live_doc,
+            Op::Insert {
+                pos: 0,
+                content: "fresh".into(),
+            },
+            1,
+        )
         .expect("append local content");
 
-    let stale_doc = DocId::new();
-    engine
-        .repo
-        .append_remote_op(
-            &PeerId::new("local"),
-            &repo_id,
-            &LedgerEntry::new_structure(
-                StructureOp::CreateFile {
-                    node_id: NodeId::from_doc_id(stale_doc),
-                    doc_id: stale_doc,
-                    parent_id: None,
-                    name: "stale.md".into(),
-                },
-                1,
-                PeerId::new("local"),
-                1,
-            ),
-        )
-        .expect("append stale shadow file");
-
-    let response = engine
+    let response = source_engine
         .get_snapshot_for_sync(&SyncSnapshotRequest {
-            peer_id: PeerId::new("local"),
+            peer_id: source_peer.clone(),
             repo_id,
             reason: None,
         })
         .expect("build snapshot");
-    engine
+    receiver_engine
         .apply_remote_snapshot(response)
         .expect("apply snapshot");
 
-    let shadow = RepoType::Remote(PeerId::new("local"), repo_id);
+    let shadow = RepoType::Remote(source_peer, repo_id);
     assert_eq!(
-        engine.repo.list_docs(&shadow).expect("list shadow docs"),
+        receiver_engine
+            .repo
+            .list_docs(&shadow)
+            .expect("list shadow docs"),
         vec![(live_doc, "notes/live.md".into())]
     );
 }

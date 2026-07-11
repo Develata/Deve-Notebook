@@ -35,7 +35,7 @@ fn source_proof() -> SyncSourceProof {
 fn payload() -> Vec<EncryptedOp> {
     vec![EncryptedOp {
         doc_id: None,
-        seq: 1,
+        peer_seq: 1.into(),
         ciphertext: vec![1, 2, 3],
         nonce: vec![0; 12],
     }]

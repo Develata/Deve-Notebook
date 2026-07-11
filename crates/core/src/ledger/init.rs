@@ -102,6 +102,10 @@ pub fn init_with_options(
     std::fs::create_dir_all(&remotes_dir)
         .with_context(|| format!("无法创建远端目录: {:?}", remotes_dir))?;
 
+    let host_keys_dir = crate::utils::notegit::host_keys_dir(&ledger_dir);
+    let local_peer_id =
+        crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
+
     // 3. 碰撞检测与处理 (Collision Handling)
     // 策略: 检查文件是否存在 -> 若存在，检查 URL 是否匹配 -> 若不匹配，重命名尝试 (name-1)
     let mut final_name = base_name.clone();
@@ -197,11 +201,13 @@ pub fn init_with_options(
 
     let repo = RepoManager {
         ledger_dir,
+        local_peer_id,
         local_db,
         local_repo_name: final_name,
         extra_local_dbs: RwLock::new(HashMap::new()),
         repaired_local_runtime_tables: RwLock::new(HashSet::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
+        shadow_merge_guard: std::sync::Mutex::new(()),
         snapshot_depth,
         persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
     };
@@ -237,7 +243,9 @@ fn init_core_tables(db: &Database) -> Result<()> {
         let _ = write_txn.open_multimap_table(DOC_OPS)?;
         let _ = write_txn.open_multimap_table(NODE_OPS)?;
         let _ = write_txn.open_table(CLIENT_OP_INDEX)?;
-        let _ = write_txn.open_table(NODE_PEER_SEQ)?;
+        let _ = write_txn.open_table(PEER_FACT_SEQ)?;
+        let _ = write_txn.open_table(PEER_FACT_OPS)?;
+        let _ = write_txn.open_table(MERGE_BASE_CHECKPOINT)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
     }

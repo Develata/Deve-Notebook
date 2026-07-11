@@ -27,7 +27,9 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
     let repo = Arc::new(repo);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let identity_key = security::load_or_generate_identity_key(
+        &deve_core::utils::notegit::host_keys_dir(repo.ledger_dir()),
+    )?;
     Ok((
         dir,
         Arc::new(AppState {

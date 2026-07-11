@@ -163,7 +163,7 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 2` 与 `REDB_SCHEMA_VERSION = 2`，二者均使用 project-owned postcard codec payload。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
+> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。v2 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
 
 ## 4. Open Source License (开源协议)
 
@@ -241,6 +241,7 @@ Web dashboard 通过 `SystemMetrics` 展示的 CPU / memory gauge 必须遵循
 - A 的本地写入只进入 B 的 A-shadow。
 - B 的 local branch 在显式 merge 前不被污染。
 - 断线重连后重新 `SyncHello` 并按当前 vector 对齐。
+- smoke 必须故障注入一个 source peer sequence 缺口，证明后续事实被阻塞、shadow/vector 不推进；恢复缺失事实后才能连续收敛。
 
 该 smoke 只证明 server-to-server mesh runtime；不等价于 native release、store readiness、
 公网 discovery 或 NAT traversal readiness。

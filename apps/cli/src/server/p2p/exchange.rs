@@ -160,6 +160,8 @@ where
         ServerMessage::SyncPush {
             source_peer_id,
             repo_id: frame_repo_id,
+            range_start,
+            range_end,
             header,
             encrypted_payload,
             ..
@@ -174,14 +176,20 @@ where
                 &header,
                 &encrypted_payload,
             )?;
-            let count =
-                receive_remote_ops(state, source_peer_id, frame_repo_id, encrypted_payload)?;
+            let count = receive_remote_ops(
+                state,
+                source_peer_id,
+                frame_repo_id,
+                (range_start, range_end),
+                encrypted_payload,
+            )?;
             stats.applied_pushes += u64::from(count > 0);
             Ok(())
         }
         ServerMessage::SyncPushSnapshot {
             source_peer_id,
             repo_id: frame_repo_id,
+            waterline,
             server_vector,
             source_proof,
             payload,
@@ -201,7 +209,8 @@ where
                     payload: &payload,
                 },
             )?;
-            let count = receive_remote_snapshot(state, source_peer_id, frame_repo_id, payload)?;
+            let count =
+                receive_remote_snapshot(state, source_peer_id, frame_repo_id, waterline, payload)?;
             stats.applied_snapshots += u64::from(count > 0);
             Ok(())
         }

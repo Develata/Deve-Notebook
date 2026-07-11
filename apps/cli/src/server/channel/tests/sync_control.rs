@@ -53,7 +53,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         repo_id: uuid::Uuid::nil(),
         branch: Some(peer.clone()),
         known_vector: VersionVector::default(),
-        requests: vec![(peer.clone(), (1, 2))],
+        requests: vec![(peer.clone(), (1_u64.into(), 2_u64.into()))],
     });
     ch.unicast(ServerMessage::SyncSnapshotRequest {
         source_peer_id: peer.clone(),
@@ -64,6 +64,8 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::SyncPush {
         source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
+        range_start: 1_u64.into(),
+        range_end: 1_u64.into(),
         header: SyncPushHeader::diff(uuid::Uuid::nil(), peer.clone(), VersionVector::default()),
         scope_nonce: ScopeNonce::new(7),
         branch: Some(peer.clone()),
@@ -72,6 +74,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
+        waterline: 0_u64.into(),
         scope_nonce: ScopeNonce::new(7),
         branch: Some(peer),
         server_vector: VersionVector::default(),

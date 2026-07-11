@@ -5,19 +5,19 @@
 use super::SyncEngine;
 use crate::config::SyncMode;
 use crate::ledger::ShadowPayload;
-use crate::models::{LedgerEntry, PeerId, RepoId};
+use crate::models::{LedgerEntry, PeerFactSeq, PeerId, RepoId};
 use crate::sync::buffer::PendingSyncPayload;
 use crate::sync::protocol::SyncResponse;
 use anyhow::{Result, bail};
 
-use super::transfer::{entries_with_seq, new_contiguous_remote_ops};
+use super::transfer::entries_with_seq;
 
 struct DecryptedPendingPayload {
     kind: DecryptedPendingKind,
     peer_id: PeerId,
     repo_id: RepoId,
     entries: Vec<LedgerEntry>,
-    max_seq: u64,
+    max_seq: PeerFactSeq,
     count: u64,
 }
 
@@ -48,12 +48,12 @@ impl SyncEngine {
     }
 
     /// 暂存从远端接收的操作 (Manual 模式)
-    pub fn buffer_remote_ops(&mut self, response: SyncResponse) {
+    pub(crate) fn buffer_remote_ops(&mut self, response: SyncResponse) {
         self.pending_ops.push(response);
     }
 
     /// 暂存从远端接收的快照 (Manual 模式)
-    pub fn buffer_remote_snapshot(&mut self, response: SyncResponse) {
+    pub(crate) fn buffer_remote_snapshot(&mut self, response: SyncResponse) {
         self.pending_ops.push_snapshot(response);
     }
 
@@ -62,6 +62,7 @@ impl SyncEngine {
         if self.sync_mode == SyncMode::Auto {
             return self.apply_remote_ops(response);
         }
+        self.validate_remote_ops(&response)?;
         let count = response.ops.len() as u64;
         self.buffer_remote_ops(response);
         Ok(count)
@@ -72,6 +73,7 @@ impl SyncEngine {
         if self.sync_mode == SyncMode::Auto {
             return self.apply_remote_snapshot(response);
         }
+        self.validate_remote_snapshot(&response)?;
         let count = response.ops.len() as u64;
         self.buffer_remote_snapshot(response);
         Ok(count)
@@ -80,6 +82,14 @@ impl SyncEngine {
     /// 合并所有待处理的操作 (Manual 模式显式触发)
     pub fn merge_pending(&mut self) -> Result<u64> {
         let pending = self.pending_ops.clone_all();
+        for item in &pending {
+            match item {
+                PendingSyncPayload::Ops(response) => self.validate_remote_ops(response)?,
+                PendingSyncPayload::Snapshot(response) => {
+                    self.validate_remote_snapshot(response)?
+                }
+            }
+        }
         let decrypted = self.decrypt_pending_payloads(&pending)?;
         let total = decrypted.iter().map(|payload| payload.count).sum();
 
@@ -97,44 +107,38 @@ impl SyncEngine {
             bail!("Manual merge requires one peer/repo target to preserve atomicity");
         }
 
-        // 单调化归约（批内单 peer/repo）：最新且非陈旧的 snapshot 是整库 base；
-        // 只应用 base 之后严格连续的增量 ops。陈旧 snapshot 与已应用 ops 必须幂等跳过，
-        // 不得 reset newer shadow，也不得二次 append 已接收 remote seq。
-        let current = self.version_vector.get(&peer_id);
+        // 批内单 peer/repo：选择最高 waterline snapshot 作为 base，但先证明所有其他
+        // snapshot 都是它的相同前缀；增量按 peer_seq 排序并只允许完全相同的重复。
+        // 最终由一个 shadow write transaction 对持久化前缀再次做 equality/continuity gate。
         let newest_snapshot = decrypted
             .iter()
             .filter(|payload| matches!(payload.kind, DecryptedPendingKind::Snapshot))
-            .filter(|payload| payload.max_seq > current)
             .max_by_key(|payload| payload.max_seq);
-        let base_seq = newest_snapshot.map_or(current, |payload| payload.max_seq);
+        if let Some(newest) = newest_snapshot {
+            for snapshot in decrypted
+                .iter()
+                .filter(|payload| matches!(payload.kind, DecryptedPendingKind::Snapshot))
+            {
+                ensure_snapshot_prefix_matches(snapshot, newest)?;
+            }
+        }
         let ops_decrypted: Vec<_> = decrypted
             .iter()
             .filter(|payload| matches!(payload.kind, DecryptedPendingKind::Ops))
             .flat_map(|payload| entries_with_seq(&payload.entries))
             .collect();
-        let new_ops = new_contiguous_remote_ops(ops_decrypted, base_seq)?;
-
+        let canonical_ops = canonicalize_pending_ops(ops_decrypted)?;
+        let mut payloads = Vec::with_capacity(2);
         if let Some(snapshot) = newest_snapshot {
-            let mut payloads = vec![snapshot.as_shadow_payload()];
-            if !new_ops.entries.is_empty() {
-                payloads.push(ShadowPayload::Ops(&new_ops.entries));
-            }
-            self.repo
-                .apply_remote_payloads(&peer_id, &repo_id, &payloads)?;
-            self.version_vector
-                .update(peer_id, base_seq.max(new_ops.max_seq));
-        } else {
-            if !new_ops.entries.is_empty() {
-                self.repo.apply_remote_payloads(
-                    &peer_id,
-                    &repo_id,
-                    &[ShadowPayload::Ops(&new_ops.entries)],
-                )?;
-            }
-            if new_ops.max_seq > 0 {
-                self.version_vector.update(peer_id, new_ops.max_seq);
-            }
+            payloads.push(snapshot.as_shadow_payload());
         }
+        if !canonical_ops.is_empty() {
+            payloads.push(ShadowPayload::Ops(&canonical_ops));
+        }
+        let persisted_waterline = self
+            .repo
+            .apply_remote_payloads(&peer_id, &repo_id, &payloads)?;
+        self.version_vector.set_exact(peer_id, persisted_waterline);
 
         self.pending_ops.clear();
         Ok(total)
@@ -162,18 +166,18 @@ impl SyncEngine {
                 }
             };
             let mut entries = Vec::with_capacity(response.ops.len());
-            let mut max_seq = 0;
+            let mut max_seq = PeerFactSeq::ZERO;
             for enc_op in &response.ops {
                 let entry = repo_key.decrypt(enc_op)?;
-                if matches!(kind, DecryptedPendingKind::Ops) && entry.seq != enc_op.seq {
+                if matches!(kind, DecryptedPendingKind::Ops) && entry.peer_seq != enc_op.peer_seq {
                     bail!(
                         "Encrypted op seq mismatch: envelope {}, payload {}",
-                        enc_op.seq,
-                        entry.seq
+                        enc_op.peer_seq,
+                        entry.peer_seq
                     );
                 }
                 entries.push(entry);
-                max_seq = max_seq.max(enc_op.seq);
+                max_seq = max_seq.max(enc_op.peer_seq);
             }
             decrypted.push(DecryptedPendingPayload {
                 kind,
@@ -186,6 +190,43 @@ impl SyncEngine {
         }
         Ok(decrypted)
     }
+}
+
+fn ensure_snapshot_prefix_matches(
+    candidate: &DecryptedPendingPayload,
+    newest: &DecryptedPendingPayload,
+) -> Result<()> {
+    let overlap = candidate.entries.len().min(newest.entries.len());
+    if candidate.entries[..overlap] != newest.entries[..overlap] {
+        bail!(
+            "sequence_conflict: snapshots disagree within confirmed prefix at waterlines {} and {}",
+            candidate.max_seq,
+            newest.max_seq
+        );
+    }
+    Ok(())
+}
+
+fn canonicalize_pending_ops(
+    mut entries: Vec<(PeerFactSeq, LedgerEntry)>,
+) -> Result<Vec<LedgerEntry>> {
+    entries.sort_by_key(|(seq, _entry)| *seq);
+    let mut canonical: Vec<LedgerEntry> = Vec::with_capacity(entries.len());
+    for (_seq, entry) in entries {
+        if let Some(previous) = canonical.last()
+            && previous.peer_seq == entry.peer_seq
+        {
+            if previous != &entry {
+                bail!(
+                    "sequence_conflict: pending facts disagree at peer_seq {}",
+                    entry.peer_seq
+                );
+            }
+            continue;
+        }
+        canonical.push(entry);
+    }
+    Ok(canonical)
 }
 
 #[cfg(test)]

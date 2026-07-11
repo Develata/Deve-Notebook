@@ -75,6 +75,7 @@ fn output_write_classification_distinguishes_reads_from_writes() {
     assert!(is_write_message(&ClientMessage::SyncPushSnapshot {
         source_peer_id: PeerId::new("browser-peer"),
         repo_id: uuid::Uuid::nil(),
+        waterline: 0_u64.into(),
         server_vector: VersionVector::new(),
         snapshot_kind: None,
         source_proof: None,

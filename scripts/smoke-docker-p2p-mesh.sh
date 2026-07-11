@@ -13,6 +13,8 @@ PORT_A="${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}"
 PORT_B="${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}"
 REQUIRED="${DEVE_DOCKER_P2P_MESH_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_P2P_MESH_KEEP:-0}"
+SKIP_BUILD="${DEVE_DOCKER_P2P_MESH_SKIP_BUILD:-0}"
+INJECT_SEQUENCE_GAP="${DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
 DOCKER_BUILDKIT_MODE="${DEVE_DOCKER_P2P_MESH_BUILDKIT:-0}"
 COMPOSE_DOCKER_CLI_BUILD_MODE="${DEVE_DOCKER_P2P_MESH_COMPOSE_DOCKER_CLI_BUILD:-0}"
@@ -52,6 +54,10 @@ skip() {
   exit 0
 }
 
+is_true() {
+  [[ "$1" == "1" || "$1" == "true" ]]
+}
+
 docker_cmd() {
   command "$DOCKER_BIN" "$@"
 }
@@ -66,6 +72,7 @@ docker_compose() {
   DEVE_DOCKER_P2P_MESH_TOKEN_B="$TOKEN_B" \
   DEVE_DOCKER_P2P_MESH_PEER_A_ID="$PEER_A_EXPECTED_ID" \
   DEVE_DOCKER_P2P_MESH_PEER_B_ID="$PEER_B_EXPECTED_ID" \
+  DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP="$INJECT_SEQUENCE_GAP" \
   DEVE_DOCKER_P2P_MESH_A_PORT="$PORT_A" \
   DEVE_DOCKER_P2P_MESH_B_PORT="$PORT_B" \
   DOCKER_BUILDKIT="$DOCKER_BUILDKIT_MODE" \
@@ -132,14 +139,17 @@ preflight_port() {
 
 cleanup() {
   rm -f "$COOKIE_A" "$COOKIE_B" >/dev/null 2>&1 || true
-  if [[ "$KEEP" == "1" || "$KEEP" == "true" ]]; then
+  if is_true "$KEEP"; then
     echo "docker-p2p-mesh-smoke: kept compose project '$PROJECT'"
     echo "docker-p2p-mesh-smoke: peer-a http://127.0.0.1:${PORT_A}/"
     echo "docker-p2p-mesh-smoke: peer-b http://127.0.0.1:${PORT_B}/"
-    echo "docker-p2p-mesh-smoke: cleanup with: $DOCKER_BIN compose -f $COMPOSE_FILE -p $PROJECT down -v --remove-orphans"
+    echo "docker-p2p-mesh-smoke: cleanup by rerunning this script with DEVE_DOCKER_P2P_MESH_PROJECT='$PROJECT' and DEVE_DOCKER_P2P_MESH_KEEP=0"
     return
   fi
-  docker_compose down -v --remove-orphans >/dev/null 2>&1 || true
+  if ! docker_compose down -v --remove-orphans >/dev/null 2>&1; then
+    echo "docker-p2p-mesh-smoke: warning: compose cleanup failed for project '$PROJECT'" >&2
+    return 1
+  fi
 }
 
 diagnose() {
@@ -383,7 +393,7 @@ wait_for_pending_path() {
   for _ in $(seq 1 45); do
     status_json="$(
       curl_local -fsS -b "$cookie" \
-        "http://127.0.0.1:${port}/api/sc/status?scope_nonce=1&repo_id=${REPO_ID}" \
+        "http://127.0.0.1:${port}/api/sc/pending?scope_nonce=1&repo_id=${REPO_ID}" \
         || true
     )"
     if [[ -n "$status_json" ]] && json_has_path "$status_json" "$doc_path"; then
@@ -398,14 +408,21 @@ stage_apply_and_commit_path() {
   local port="$1"
   local doc_path="$2"
   local message="$3"
+  local doc_id="${4:-}"
   local stage_output
   local apply_output
   local commit_output
+  local stage_body
+  if [[ -n "$doc_id" ]]; then
+    stage_body="{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"path\":\"${doc_path}\",\"doc_id\":\"${doc_id}\"}"
+  else
+    stage_body="{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"path\":\"${doc_path}\"}"
+  fi
   if ! stage_output="$(curl_local -fsS \
     -X POST "http://127.0.0.1:${port}/api/delegated/sc/stage-pending" \
     -H "x-deve-source-control-delegation: ${DELEGATED_SC_HEADER_VALUE}" \
     -H 'Content-Type: application/json' \
-    --data "{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"path\":\"${doc_path}\"}" \
+    --data "$stage_body" \
     2>&1)"; then
     printf '%s\n' "$stage_output" >&2
     return 1
@@ -438,13 +455,15 @@ create_peer_a_fixture() {
 
   local workspace_root="/notes/default--${REPO_ID}"
   docker_compose exec -T peer-a sh -c \
-    "mkdir -p '${workspace_root}/p2p-mesh' && printf '%s\n' '${doc_content}' > '${workspace_root}/${doc_path}'"
+    "mkdir -p '${workspace_root}/p2p-mesh' && printf '%s' '${doc_content}' > '${workspace_root}/${doc_path}'"
 
   if ! wait_for_pending_path "$PORT_A" "$COOKIE_A" "$doc_path"; then
     diagnose
     fail "peer-a source-control status did not observe pending path ${doc_path}"
   fi
-  stage_apply_and_commit_path "$PORT_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"
+  if ! stage_apply_and_commit_path "$PORT_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"; then
+    fail "peer-a could not stage/apply/commit initial fixture ${doc_path}"
+  fi
 
   local docs_json
   local doc_id
@@ -497,6 +516,89 @@ PY
   return 1
 }
 
+wait_for_recovered_shadow() {
+  local peer_id="$1"
+  local doc_id="$2"
+  local expected_content="$3"
+  for _ in $(seq 1 9); do
+    sleep 10
+    docker_compose stop peer-b >/dev/null
+    if run_offline_shadow_check "$peer_id" "$doc_id" "$expected_content"; then
+      return 0
+    fi
+    docker_compose up -d peer-b >/dev/null
+    wait_for_peer "$PORT_B" || return 1
+  done
+  return 1
+}
+
+arm_sequence_gap_fault() {
+  docker_compose exec -T peer-a sh -c \
+    'mkdir -p /data/ledger/.host/test-faults && : > /data/ledger/.host/test-faults/p2p-sequence-gap-arm'
+  docker_compose exec -T peer-a sh -c \
+    'case "$DEVE_P2P_FAULT_INJECT_SEQUENCE_GAP" in 1|true) ;; *) exit 1 ;; esac; test -f /data/ledger/.host/test-faults/p2p-sequence-gap-arm' \
+    || fail "peer-a sequence-gap fault gate was not fully armed"
+}
+
+disarm_sequence_gap_fault() {
+  docker_compose exec -T peer-a rm -f \
+    /data/ledger/.host/test-faults/p2p-sequence-gap-arm
+}
+
+wait_for_sequence_gap_fault() {
+  local logs
+  for _ in $(seq 1 60); do
+    logs="$(docker_compose logs --no-color peer-a 2>/dev/null || true)"
+    if grep -q "P2P test fault injected sequence_gap" <<<"$logs"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+wait_for_sequence_gap_rejection() {
+  local logs
+  for _ in $(seq 1 60); do
+    logs="$(docker_compose logs --no-color peer-b 2>/dev/null || true)"
+    if grep -Eq "non-contiguous remote ops: expected seq [0-9]+, received [0-9]+" <<<"$logs"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+update_peer_a_fixture() {
+  local doc_path="$1"
+  local doc_id="$3"
+  local fixture_id
+  fixture_id="$(date +%s)-$$"
+  local phase_one_content="gap-${fixture_id}-phase-one"
+  local next_content="gap-${fixture_id}-phase-two"
+  local workspace_root="/notes/default--${REPO_ID}"
+
+  docker_compose exec -T peer-a sh -c \
+    "printf '%s' '${phase_one_content}' > '${workspace_root}/${doc_path}'"
+  if ! wait_for_pending_path "$PORT_A" "$COOKIE_A" "$doc_path"; then
+    diagnose
+    fail "peer-a did not observe gap-phase update for ${doc_path}"
+  fi
+  if ! stage_apply_and_commit_path "$PORT_A" "$doc_path" "docker p2p sequence gap phase one ${fixture_id}" "$doc_id"; then
+    fail "peer-a could not stage/apply/commit first gap-phase fixture ${doc_path}"
+  fi
+  docker_compose exec -T peer-a sh -c \
+    "printf '%s' '${next_content}' > '${workspace_root}/${doc_path}'"
+  if ! wait_for_pending_path "$PORT_A" "$COOKIE_A" "$doc_path"; then
+    diagnose
+    fail "peer-a did not observe second gap-phase update for ${doc_path}"
+  fi
+  if ! stage_apply_and_commit_path "$PORT_A" "$doc_path" "docker p2p sequence gap phase two ${fixture_id}" "$doc_id"; then
+    fail "peer-a could not stage/apply/commit second gap-phase fixture ${doc_path}"
+  fi
+  printf '%s\n' "$next_content"
+}
+
 run_offline_shadow_check() {
   local peer_id="$1"
   local doc_id="$2"
@@ -508,7 +610,7 @@ run_offline_shadow_check() {
     --repo-id "$REPO_ID" \
     --peer-id "$peer_id" \
     --doc-id "$doc_id" \
-    --contains "$expected_content" \
+    --equals "$expected_content" \
     --local-must-not-contain "$expected_content" \
     2>&1)"; then
     printf '%s\n' "$output" >&2
@@ -571,7 +673,9 @@ preflight_port "$PORT_B"
 
 trap cleanup EXIT
 
-docker_compose build peer-a
+if [[ "$SKIP_BUILD" != "1" && "$SKIP_BUILD" != "true" ]]; then
+  docker_compose build peer-a
+fi
 docker_compose up -d --no-build
 
 if ! wait_for_peer "$PORT_A"; then
@@ -620,6 +724,46 @@ if ! restart_peer_b_and_wait_reconnect "$CONNECTIONS_BEFORE" "$PEER_A_ID"; then
   fail "peer-b did not reconnect to the mesh after offline shadow verification"
 fi
 
+if is_true "$INJECT_SEQUENCE_GAP"; then
+  arm_sequence_gap_fault
+  docker_compose stop peer-b >/dev/null
+  NEXT_DOC_CONTENT="$(update_peer_a_fixture "$DOC_PATH" "$DOC_CONTENT" "$DOC_ID")"
+  docker_compose up -d peer-b >/dev/null
+  wait_for_peer "$PORT_B" || fail "peer-b did not restart for sequence-gap delivery"
+  if ! wait_for_sequence_gap_fault; then
+    diagnose
+    fail "sequence-gap fault was armed but no incomplete range was emitted"
+  fi
+  if ! wait_for_sequence_gap_rejection; then
+    diagnose
+    fail "peer-b did not reject the observed N+1 fact while N was missing"
+  fi
+
+  docker_compose stop peer-b >/dev/null
+  if ! run_offline_shadow_check "$PEER_A_ID" "$DOC_ID" "$DOC_CONTENT"; then
+    diagnose
+    fail "peer-b advanced its shadow while the source range contained a gap"
+  fi
+
+  disarm_sequence_gap_fault
+  docker_compose up -d peer-b >/dev/null
+  if ! wait_for_peer "$PORT_B"; then
+    diagnose
+    fail "peer-b did not restart after sequence-gap hold"
+  fi
+  if ! wait_for_recovered_shadow "$PEER_A_ID" "$DOC_ID" "$NEXT_DOC_CONTENT"; then
+    diagnose
+    fail "peer-b did not recover the complete range after the gap was restored"
+  fi
+  docker_compose up -d peer-b >/dev/null
+  wait_for_peer "$PORT_B" || fail "peer-b did not restart after recovered shadow verification"
+fi
+
 assert_no_token_material_in_logs_or_persisted_data "final"
+
+if ! is_true "$KEEP"; then
+  cleanup || fail "compose cleanup failed after successful smoke"
+  trap - EXIT
+fi
 
 echo "docker-p2p-mesh-smoke: ok"

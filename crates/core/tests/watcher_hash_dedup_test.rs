@@ -1,6 +1,6 @@
 //! DIFF-006: Watcher hash 去重 — 相同内容的重复写入不产生新 pending op。
 
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -26,7 +26,7 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
     let name = repo.local_repo_name().to_string();
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo(&name, "dedup.md", None, "test")?;
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(&name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,
@@ -75,7 +75,7 @@ fn revert_to_original_clears_pending() -> anyhow::Result<()> {
     let name = repo.local_repo_name().to_string();
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo(&name, "revert.md", None, "test")?;
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(&name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,

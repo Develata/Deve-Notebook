@@ -6,7 +6,7 @@ use crate::server::{
     channel::DualChannel, handlers::source_control::handle_resolve_conflict, session::WsSession,
 };
 use deve_core::git_bridge::apply_import;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeStatus, ConflictResolution};

@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use redb::ReadableTable;
 #[cfg(unix)]
@@ -31,7 +31,7 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -40,7 +40,7 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) {
                     content: content.into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,
@@ -173,7 +173,7 @@ fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -182,7 +182,7 @@ fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
                     content: "legacy".into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

@@ -1,12 +1,10 @@
 use super::*;
+use crate::test_support::CWD_LOCK;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use tempfile::tempdir;
 
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
-
-static CWD_LOCK: Mutex<()> = Mutex::new(());
 
 struct CwdGuard {
     old: PathBuf,

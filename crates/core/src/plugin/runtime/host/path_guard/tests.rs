@@ -29,6 +29,7 @@ fn note_target_parts_for(
 #[cfg(unix)]
 #[test]
 fn ledger_managed_detection_fails_closed_through_symlink() {
+    let _guard = crate::test_support::CWD_LOCK.lock().expect("lock cwd");
     let dir = tempdir().expect("tempdir");
     let cwd = std::env::current_dir().expect("cwd");
     let ledger = dir.path().join("ledger/local");

@@ -36,7 +36,7 @@ fn commit_diff_fails_closed_for_content_only_docs_without_structure_projection()
             content: "orphan".into(),
         },
         0,
-        deve_core::models::PeerId::new("test"),
+        repo.local_peer_id().clone(),
         1,
         None,
         None,

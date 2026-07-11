@@ -77,6 +77,8 @@
 - 本地当前 branch 不得因为“同步成功”而被隐式污染。
 - 用户必须通过显式 merge/import 流程把远端 shadow 内容合并到本地 branch。
 - 断线重连后应重新握手并对齐 vector；对齐成功只说明 shadow 可读，不代表自动合并完成。
+- 同一 peer 的事实若出现序号缺失，状态必须明确进入同步错误/重试；后续事实不得提前出现在 shadow 或本地投影。缺失事实恢复后，重试才能继续推进。
+- `MergeAnchor` 与内容/结构事实属于同一 source 日志连续序列；同步端必须保存它以供审计和后续 merge checkpoint 验证，但 anchor 本身不得直接改变 shadow Markdown/tree 展示。
 
 ## Operation 示例
 
@@ -93,6 +95,7 @@
 - 当前阶段不要求浏览器持有完整 ledger。
 - 当前阶段不通过显示层直接操控同步核心逻辑。
 - 当前阶段不要求 P2P 自动发现、NAT 穿透、自动 local merge 或移动端后台长时同步。
+- 当前阶段不提供压缩或分块 full snapshot；超过资源上限时明确失败。
 
 ## Chrome MCP 验收实例
 
@@ -165,3 +168,22 @@
 - peer B 可以看到 peer A 的 shadow 更新。
 - 显式 merge 前，peer B 的本地 branch 不被自动修改。
 - 断线重连后状态重新进入 connected，vector 对齐不要求刷新页面。
+
+### NET-FEAT-05: Peer 序列缺口阻塞与恢复
+
+前置条件：
+
+- 两个服务端已完成 mesh handshake，测试入口可故意遗漏 peer A 的某条事实。
+
+步骤：
+
+1. 让 peer A 连续产生多文档 content/structure facts。
+2. 向 peer B 投递 N+1 但遗漏 N。
+3. 观察 peer B 的同步诊断与 shadow 内容。
+4. 恢复 N 并触发重试。
+
+期望结果：
+
+- peer B 报告 expected/observed/source/repo 范围的连续性错误。
+- N+1 不会提前进入 shadow、vector 或用户投影。
+- N 恢复后按序收敛，local branch 仍需显式 merge。

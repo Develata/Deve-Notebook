@@ -28,7 +28,8 @@ fn seed_main_file(repo: &RepoManager) {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("main", "notes/live.md", None, "test")
         .expect("create main doc");
-    repo.append_generated_op_in_local_repo("main", doc_id, PeerId::new("local"), |seq| {
+    let peer = repo.local_peer_id().clone();
+    repo.append_generated_op_in_local_repo("main", doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,
             Op::Insert {
@@ -36,7 +37,7 @@ fn seed_main_file(repo: &RepoManager) {
                 content: "ok".into(),
             },
             1,
-            PeerId::new("local"),
+            peer.clone(),
             seq,
             None,
             None,

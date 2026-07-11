@@ -59,7 +59,11 @@ fn remote_doc(peer_id: &PeerId, content: &str, seq: u64) -> LedgerEntry {
 fn constructor_preserves_configured_sync_mode() -> anyhow::Result<()> {
     let (_dir, repo, _repo_id) = build_repo()?;
 
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Manual);
+    let engine = RepoScopedSyncEngine::new(
+        repo.local_peer_id().clone(),
+        Arc::new(repo),
+        SyncMode::Manual,
+    );
 
     assert_eq!(engine.sync_mode(), SyncMode::Manual);
     Ok(())
@@ -68,7 +72,8 @@ fn constructor_preserves_configured_sync_mode() -> anyhow::Result<()> {
 #[test]
 fn strict_engine_mutation_persists_in_registry() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
 
     engine.with_strict_engine_mut(repo_id, |engine| {
         engine.set_sync_mode(SyncMode::Manual);
@@ -82,7 +87,8 @@ fn strict_engine_mutation_persists_in_registry() -> anyhow::Result<()> {
 #[test]
 fn strict_engine_load_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _guard = engine.engines.write().expect("write lock");
         panic!("poison repo scoped sync engine");
@@ -99,7 +105,8 @@ fn strict_engine_load_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()>
 #[test]
 fn get_returns_none_when_lock_is_poisoned() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _guard = engine.engines.write().expect("write lock");
         panic!("poison repo scoped sync engine");
@@ -116,7 +123,8 @@ fn get_returns_none_when_lock_is_poisoned() -> anyhow::Result<()> {
 #[test]
 fn clone_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     let (_dir, repo, _repo_id) = build_repo()?;
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _guard = engine.engines.write().expect("write lock");
         panic!("poison repo scoped sync engine");
@@ -133,7 +141,8 @@ fn clone_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
 #[test]
 fn clear_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
     let (_dir, repo, _repo_id) = build_repo()?;
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _guard = engine.engines.write().expect("write lock");
         panic!("poison repo scoped sync engine");
@@ -153,7 +162,8 @@ fn strict_engine_load_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<
     fs::create_dir_all(&key_dir)?;
     fs::write(key_dir.join("repo.key"), [1, 2, 3, 4])?;
 
-    let engine = RepoScopedSyncEngine::new(PeerId::new("local"), Arc::new(repo), SyncMode::Auto);
+    let engine =
+        RepoScopedSyncEngine::new(repo.local_peer_id().clone(), Arc::new(repo), SyncMode::Auto);
 
     let err = match engine.get_or_create_strict(repo_id) {
         Ok(_) => panic!("strict engine load must fail closed on corrupt repo key"),
@@ -167,7 +177,7 @@ fn strict_engine_load_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<
 #[test]
 fn strict_engine_hydrates_version_vector_from_ledger_heads() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let local_peer = PeerId::new("local");
+    let local_peer = repo.local_peer_id().clone();
     let remote_peer = PeerId::new("remote");
     append_local_doc(&repo, &local_peer, "a")?;
     append_local_doc(&repo, &local_peer, "b")?;
@@ -191,7 +201,7 @@ fn strict_engine_hydrates_version_vector_from_ledger_heads() -> anyhow::Result<(
 #[test]
 fn strict_engine_refreshes_existing_vector_from_ledger_heads() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let local_peer = PeerId::new("local");
+    let local_peer = repo.local_peer_id().clone();
     let repo = Arc::new(repo);
     let engine = RepoScopedSyncEngine::new(local_peer.clone(), repo.clone(), SyncMode::Auto);
 

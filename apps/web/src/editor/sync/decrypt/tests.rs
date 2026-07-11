@@ -5,7 +5,7 @@ use std::sync::Mutex;
 fn sample_encrypted_op(seq: u64) -> EncryptedOp {
     EncryptedOp {
         doc_id: None,
-        seq,
+        peer_seq: seq.into(),
         ciphertext: vec![1, 2, 3],
         nonce: vec![4; 12],
     }
@@ -21,8 +21,8 @@ fn sync_push_without_repo_key_is_buffered() {
     assert!(key.is_none());
     let buffered = buffered.lock().unwrap();
     assert_eq!(buffered.len(), 2);
-    assert_eq!(buffered[0].seq, 7);
-    assert_eq!(buffered[1].seq, 8);
+    assert_eq!(buffered[0].peer_seq, 7_u64);
+    assert_eq!(buffered[1].peer_seq, 8_u64);
 }
 
 #[test]

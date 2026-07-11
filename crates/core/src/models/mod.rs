@@ -23,15 +23,19 @@ use smol_str::SmolStr;
 use std::fmt;
 use uuid::Uuid;
 
+mod fact_identity;
 mod ledger_decode;
 mod ledger_event;
 pub mod version_vector;
 
+pub use fact_identity::{FactActor, FactActorError, PeerFactSeq};
 pub use ledger_decode::{
     LEDGER_ENTRY_FORMAT_MAGIC, LEDGER_ENTRY_FORMAT_VERSION, deserialize_ledger_entry,
     serialize_ledger_entry,
 };
-pub use ledger_event::{ContentOp, LedgerEntry, LedgerEvent, Op, StructureOp};
+pub use ledger_event::{
+    ContentOp, LedgerEntry, LedgerEvent, MergeAnchor, MergeResolution, Op, StructureOp,
+};
 pub use version_vector::VersionVector;
 
 /// 节点唯一标识符 (Peer ID)

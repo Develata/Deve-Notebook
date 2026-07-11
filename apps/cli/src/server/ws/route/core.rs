@@ -80,6 +80,7 @@ async fn route_unscoped_core(
         ClientMessage::SyncPushSnapshot {
             source_peer_id,
             repo_id,
+            waterline,
             server_vector,
             source_proof,
             payload,
@@ -92,6 +93,7 @@ async fn route_unscoped_core(
                 sync::SyncPushSnapshotInput {
                     peer_id: source_peer_id,
                     repo_id,
+                    waterline,
                     server_vector,
                     source_proof,
                     ops: payload,
@@ -107,6 +109,8 @@ async fn route_unscoped_core(
         ClientMessage::SyncPush {
             source_peer_id,
             repo_id,
+            range_start,
+            range_end,
             header,
             encrypted_payload,
         } => {
@@ -116,6 +120,7 @@ async fn route_unscoped_core(
                 session,
                 source_peer_id,
                 repo_id,
+                (range_start, range_end),
                 header,
                 encrypted_payload,
             )

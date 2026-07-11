@@ -8,7 +8,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
+use deve_core::models::{DocId, FactActor, LedgerEntry, Op, PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerMessage};
 use deve_core::security::EncryptedOp;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -42,7 +42,9 @@ fn build_state_inner(
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let identity_key = security::load_or_generate_identity_key(
+        &deve_core::utils::notegit::host_keys_dir(repo.ledger_dir()),
+    )?;
     let local_peer = if use_identity_peer {
         identity_key.peer_id()
     } else {
@@ -72,20 +74,18 @@ fn build_state_inner(
 pub(super) fn append_local_doc(state: &Arc<AppState>) -> anyhow::Result<()> {
     let repo_name = state.repo.local_repo_name().to_string();
     let doc_id = DocId::new();
-    state.repo.append_generated_op_in_local_repo(&repo_name, doc_id, PeerId::new("local"), |seq| {
-        LedgerEntry::new_content(
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            &repo_name,
             doc_id,
             Op::Insert {
                 pos: 0,
                 content: "hello".into(),
             },
             1,
-            PeerId::new("local"),
-            seq,
-            None,
-            None,
-        )
-    })?;
+        )?;
     Ok(())
 }
 
@@ -117,7 +117,7 @@ pub(super) fn encrypted_insert_for_author(
         .repo_key
         .ok_or_else(|| anyhow::anyhow!("repo key missing"))?;
     let entry = remote_insert_entry(author, seq);
-    key.encrypt(&entry, seq)
+    key.encrypt(&entry, seq.into())
 }
 
 pub(super) fn unicast_channel(
@@ -143,8 +143,23 @@ pub(super) fn bound_session(
     session
 }
 
-pub(super) fn sync_range() -> Vec<(PeerId, (u64, u64))> {
-    vec![(PeerId::new("test-peer"), (1, 2))]
+pub(super) fn sync_range(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+) -> anyhow::Result<
+    Vec<(
+        PeerId,
+        (
+            deve_core::models::PeerFactSeq,
+            deve_core::models::PeerFactSeq,
+        ),
+    )>,
+> {
+    let waterline = state.repo.get_local_peer_waterline(&repo_id)?;
+    Ok(vec![(
+        state.repo.local_peer_id().clone(),
+        (deve_core::models::PeerFactSeq::ONE, waterline),
+    )])
 }
 
 pub(super) async fn recv_protocol_error(

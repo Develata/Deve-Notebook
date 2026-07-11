@@ -1,5 +1,5 @@
 use deve_core::ledger::schema::NODEID_TO_META;
-use deve_core::models::{LedgerEntry, NodeId, Op, PeerId};
+use deve_core::models::{LedgerEntry, NodeId, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -21,7 +21,7 @@ fn persist_doc_prefers_node_projection_path() {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -30,7 +30,7 @@ fn persist_doc_prefers_node_projection_path() {
                     content: "hello".into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

@@ -13,7 +13,7 @@ use crate::models::{PeerId, RepoId};
 
 mod query;
 mod validate;
-mod write_direct;
+pub(crate) mod write_direct;
 mod write_generated;
 
 pub use query::{

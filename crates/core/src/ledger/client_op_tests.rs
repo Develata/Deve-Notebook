@@ -4,7 +4,7 @@
 //!
 use super::*;
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
-use crate::models::{DocId, LedgerEntry, PeerId};
+use crate::models::{DocId, LedgerEntry};
 use anyhow::Result;
 use tempfile::TempDir;
 
@@ -14,7 +14,7 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         repo.local_repo_name(),
@@ -42,7 +42,7 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
         .find_client_op_in_local_repo(repo.local_repo_name(), 42, 9)?
         .expect("client op should be indexed");
     assert_eq!(found.1.doc_id, Some(doc_id));
-    assert_eq!(found.1.seq, 1);
+    assert_eq!(found.1.peer_seq.get(), 1);
     assert_eq!(
         found.1.content_op(),
         Some(&crate::models::Op::Insert {
@@ -62,7 +62,7 @@ fn test_client_op_index_is_global_for_client_writer() -> Result<()> {
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let first_doc = DocId::new();
     let second_doc = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         repo.local_repo_name(),
@@ -131,7 +131,7 @@ fn test_client_op_index_is_repo_scoped() -> Result<()> {
     );
     let main_doc = DocId::new();
     let wiki_doc = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         "main",
@@ -213,7 +213,7 @@ fn test_find_client_op_fails_closed_on_metadata_mismatch() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         repo.local_repo_name(),
@@ -260,7 +260,7 @@ fn test_find_client_op_fails_closed_on_dangling_index() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         repo.local_repo_name(),

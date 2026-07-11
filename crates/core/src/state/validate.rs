@@ -40,26 +40,32 @@ impl ContentOpValidator {
             Op::Insert { pos, content } => {
                 if *pos > self.current_utf16_len {
                     return Some(InvalidContentOp::InsertBeyondEnd {
-                        seq: entry.seq,
+                        seq: entry.peer_seq.get(),
                         pos: *pos,
                         current_utf16_len: self.current_utf16_len,
                     });
                 }
                 let Some(delta) = utf16_len(content) else {
-                    return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
+                    return Some(InvalidContentOp::LengthOverflow {
+                        seq: entry.peer_seq.get(),
+                    });
                 };
                 let Some(next_len) = self.current_utf16_len.checked_add(delta) else {
-                    return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
+                    return Some(InvalidContentOp::LengthOverflow {
+                        seq: entry.peer_seq.get(),
+                    });
                 };
                 self.current_utf16_len = next_len;
             }
             Op::Delete { pos, len } => {
                 let Some(end) = pos.checked_add(*len) else {
-                    return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
+                    return Some(InvalidContentOp::LengthOverflow {
+                        seq: entry.peer_seq.get(),
+                    });
                 };
                 if *pos > self.current_utf16_len || end > self.current_utf16_len {
                     return Some(InvalidContentOp::DeleteBeyondEnd {
-                        seq: entry.seq,
+                        seq: entry.peer_seq.get(),
                         pos: *pos,
                         len: *len,
                         current_utf16_len: self.current_utf16_len,

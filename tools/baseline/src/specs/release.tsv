@@ -287,25 +287,25 @@ contains	docs/plan/18_release.md	health counts。degraded repo
 contains	docs/plan/18_release.md	native boundary checks that do not build Linux GTK3 artifacts
 contains	docs/plan/18_release.md	Trunk development live-reload
 contains	docs/plan/18_release.md	api-only
-contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 2
-contains	docs/plan/18_release.md	REDB_SCHEMA_VERSION = 2
-contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 2
-contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 2
-contains	docs/plan/07_network.md	`protocol_version` 当前固定为 `11`
+contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 3
+contains	docs/plan/18_release.md	REDB_SCHEMA_VERSION = 3
+contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 3
+contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 3
+contains	docs/plan/07_network.md	`protocol_version` 当前固定为 `12`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
-contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 2
-contains	docs/registry/first-tag-format-matrix.md	REDB_SCHEMA_VERSION = 2
-contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 11;`
-contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 11;`
+contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 3
+contains	docs/registry/first-tag-format-matrix.md	REDB_SCHEMA_VERSION = 3
+contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 12;`
+contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 12;`
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	provider_io_ready=false
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection locator
 contains	docs/registry/first-tag-format-matrix.md	Projection Backup / Remote Projection locator
-contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 2;
-contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 2;
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 11;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 11;
+contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
+contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 3;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 12;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 12;
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md
 contains	docs/acceptance-cases/12_tech_release.md	legacy_binary_codec_dependency_absent true
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_format_matrix_bound_to_plan_and_code true
@@ -400,11 +400,15 @@ contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
 contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_KEEP
+contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_SKIP_BUILD
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P mesh connector handshake completed
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P token material appeared in compose logs
 contains	scripts/smoke-docker-p2p-mesh.sh	/api/delegated/sc/apply-external-changes
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P token material appeared in persisted data/projection files
 contains	scripts/smoke-docker-p2p-mesh.sh	assert_no_token_material_in_logs_or_persisted_data "final"
+contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP
+contains	scripts/smoke-docker-p2p-mesh.sh	wait_for_sequence_gap_fault
+contains	scripts/smoke-docker-p2p-mesh.sh	cleanup || fail "compose cleanup failed after successful smoke"
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-005
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-001
 contains	docs/acceptance-cases/12_tech_release.md	tags: ['v*']

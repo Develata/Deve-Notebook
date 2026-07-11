@@ -1,7 +1,7 @@
 use super::drop_unanchored_projection_path;
 use crate::ledger::RepoManager;
 use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-use crate::models::{DocId, LedgerEntry, Op, PeerId};
+use crate::models::{DocId, LedgerEntry, Op};
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -80,7 +80,7 @@ fn drops_legacy_doc_mapping_backed_only_by_content_facts() {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("test"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -89,7 +89,7 @@ fn drops_legacy_doc_mapping_backed_only_by_content_facts() {
                     content: "hello".into(),
                 },
                 1,
-                PeerId::new("test"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

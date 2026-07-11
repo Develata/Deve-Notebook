@@ -5,7 +5,7 @@ use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorRunOptions, apply_import, export_mirror, get_record,
 };
 use deve_core::models::DocId;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use std::path::{Path, PathBuf};
@@ -149,25 +149,18 @@ fn finish_imported_conflict_fixture(
         .repo
         .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
         .expect("doc id");
-    state.repo.append_generated_op_in_local_repo(
-        &repo_name,
-        doc_id,
-        PeerId::new("local"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 6,
-                    content: "ledger\n".into(),
-                },
-                2,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            &repo_name,
+            doc_id,
+            Op::Insert {
+                pos: 6,
+                content: "ledger\n".into(),
+            },
+            2,
+        )?;
     write_workspace_file(&dir, &repo_name, "note.md", "git import\n");
 
     let report = apply_import(&state.repo, &repo_name, &repo_root)?;

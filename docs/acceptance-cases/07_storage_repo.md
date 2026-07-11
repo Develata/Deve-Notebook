@@ -201,6 +201,21 @@
     - cli_assert: jsonl_global_seq_monotonic true
     - cli_assert: jsonl_export_includes_structure_facts true
 
+- case_id: STORE-014B
+  goal: schema v2 只能通过显式离线只读导出，不得进入正常 runtime 或伪造 v3 来源。
+  preconditions:
+    - 临时目录中存在格式合法的 v2 repo fixture，server 未运行
+  steps:
+    - run: cargo test -p deve_cli legacy_v2_export -- --nocapture
+    - run: deve export --allow-legacy-v2 --format json --out legacy-v2.jsonl
+    - run: deve export --allow-legacy-v2 --format markdown --out legacy-v2-markdown
+  assertions:
+    - cli_assert: normal_v2_repo_open_fails_closed true
+    - cli_assert: legacy_export_requires_explicit_flag true
+    - cli_assert: legacy_export_is_read_only true
+    - cli_assert: legacy_json_preserves_old_peer_and_seq_without_v3_attribution true
+    - cli_assert: legacy_markdown_fails_closed_on_invalid_structure true
+
 - case_id: STORE-014A
   goal: 本地 Repo 新增、重命名与安全移除。
   preconditions:

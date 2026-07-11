@@ -7,7 +7,7 @@ use crate::server::{
     handlers::source_control::{handle_get_changes, handle_get_doc_diff},
     session::WsSession,
 };
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, FactActor, Op};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeDomain, ChangeStatus};
@@ -46,26 +46,18 @@ fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(Stri
         .repo
         .get_tracked_docid_in_local_repo("default", &path)?
         .expect("tracked doc id after initial commit");
-    let peer_id = PeerId::new("editor");
-    state.repo.append_generated_op_in_local_repo(
-        "default",
-        doc_id,
-        peer_id.clone(),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 5,
-                    content: " world".into(),
-                },
-                1000,
-                peer_id.clone(),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("editor")?)
+        .append_content_in_local_repo(
+            "default",
+            doc_id,
+            Op::Insert {
+                pos: 5,
+                content: " world".into(),
+            },
+            1000,
+        )?;
     Ok((path, doc_id))
 }
 

@@ -2,7 +2,7 @@
 //!   - 04_repository#tree-projection-contract
 
 use crate::ledger::{RepoManager, node_ops, ops as ledger_ops};
-use crate::models::{DocId, NodeId, PeerId, StructureOp};
+use crate::models::{DocId, FactActor, NodeId, StructureOp};
 use anyhow::Result;
 
 use super::commit_structure_plan;
@@ -85,7 +85,8 @@ impl RepoManager {
         peer_label: &str,
         ops: &[StructureOp],
     ) -> Result<()> {
-        let peer_id = PeerId::new(peer_label);
+        let peer_id = self.local_peer_id().clone();
+        let actor = FactActor::new(peer_label)?;
         let repo_scope = ledger_ops::local_repo_scope(repo_name);
         self.run_on_local_repo(repo_name, |db| {
             let write_txn = db.begin_write()?;
@@ -94,6 +95,7 @@ impl RepoManager {
                 node_ops::append_generated_structure_op_to_txn(
                     &write_txn,
                     peer_id.clone(),
+                    actor.clone(),
                     op.clone(),
                     timestamp,
                     &repo_scope,

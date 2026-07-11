@@ -1,5 +1,5 @@
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::pending_fs::PendingFsEntry;
 use deve_core::source_control::{ChangeStatus, changes, conflict, pending_fs, staging};
@@ -20,7 +20,7 @@ fn seed_doc(repo: &RepoManager, path: &str, committed: &str) -> deve_core::model
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -29,7 +29,7 @@ fn seed_doc(repo: &RepoManager, path: &str, committed: &str) -> deve_core::model
                     content: committed.into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,
@@ -51,7 +51,7 @@ fn check_conflict_detects_ledger_divergence_against_snapshot() {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -60,7 +60,7 @@ fn check_conflict_detects_ledger_divergence_against_snapshot() {
                     content: " local".into(),
                 },
                 2,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

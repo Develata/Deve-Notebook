@@ -36,10 +36,11 @@ impl RepoScopedSyncEngine {
     /// - `engines` 为空 HashMap
     /// - 首次访问某个 repo 时才会创建对应的 SyncEngine
     pub fn new(
-        local_peer_id: PeerId,
+        _local_peer_id: PeerId,
         repo: Arc<crate::ledger::RepoManager>,
         sync_mode: crate::config::SyncMode,
     ) -> Self {
+        let local_peer_id = repo.local_peer_id().clone();
         Self {
             local_peer_id,
             repo,

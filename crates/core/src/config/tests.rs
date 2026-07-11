@@ -1,12 +1,10 @@
+use crate::test_support::CWD_LOCK;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 mod agent_bridge_tests;
 mod load_tests;
 mod p2p_tests;
-
-static CWD_LOCK: Mutex<()> = Mutex::new(());
 
 struct CwdGuard {
     old_cwd: PathBuf,

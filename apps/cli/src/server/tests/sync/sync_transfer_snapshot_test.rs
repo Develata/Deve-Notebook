@@ -38,6 +38,7 @@ async fn sync_push_snapshot_uses_message_source_peer_for_shadow_replace() -> any
         SyncPushSnapshotInput {
             peer_id: source_peer.clone(),
             repo_id,
+            waterline: 1_u64.into(),
             server_vector,
             source_proof: Some(source_proof),
             ops: vec![op],
@@ -76,6 +77,7 @@ async fn sync_push_snapshot_rejects_relay_forged_source_proof() -> anyhow::Resul
         SyncPushSnapshotInput {
             peer_id: source_peer.clone(),
             repo_id,
+            waterline: 1_u64.into(),
             server_vector,
             source_proof: Some(forged_proof),
             ops: vec![op],
@@ -108,6 +110,7 @@ async fn sync_push_snapshot_rejects_indirect_source_without_proof() -> anyhow::R
         SyncPushSnapshotInput {
             peer_id: source_peer.clone(),
             repo_id,
+            waterline: 1_u64.into(),
             server_vector,
             source_proof: None,
             ops: vec![op],

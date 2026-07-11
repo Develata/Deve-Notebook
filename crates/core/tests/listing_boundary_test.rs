@@ -2,7 +2,7 @@
 
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::models::{LedgerEntry, Op, PeerId, RepoType};
+use deve_core::models::{LedgerEntry, Op, RepoType};
 use tempfile::TempDir;
 
 mod common;
@@ -41,7 +41,7 @@ fn deleted_doc_does_not_appear_in_listing() {
     let (doc_id, _) = repo
         .apply_file_structure_in_local_repo(&name, "notes/temp.md", None, "test")
         .expect("create file");
-    let peer = PeerId::new("test");
+    let peer = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(&name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,

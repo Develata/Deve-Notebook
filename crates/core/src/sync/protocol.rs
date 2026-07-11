@@ -16,7 +16,7 @@
 //! **类型**: Core MUST (核心必选)
 
 use crate::models::VersionVector;
-use crate::models::{PeerId, RepoId};
+use crate::models::{PeerFactSeq, PeerId, RepoId};
 use crate::security::EncryptedOp;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
@@ -26,8 +26,8 @@ pub struct SyncRequest {
     pub peer_id: PeerId,
     /// 目标仓库 ID
     pub repo_id: RepoId,
-    /// 需要拉取的序列号范围 (start, end) - 左闭右开
-    pub range: (u64, u64),
+    /// Wire range is closed: `[start, end]`.
+    pub range: (PeerFactSeq, PeerFactSeq),
 }
 
 /// 快照请求：当差异过大时，直接请求最新快照
@@ -45,8 +45,44 @@ pub struct SyncResponse {
     pub peer_id: PeerId,
     /// 来源仓库 ID
     pub repo_id: RepoId,
+    /// Present for incremental responses; closed range.
+    pub range: Option<(PeerFactSeq, PeerFactSeq)>,
+    /// Exact source waterline for a full-fact replay response.
+    pub waterline: PeerFactSeq,
     /// 加密的操作列表 (Envelope Body)
     pub ops: Vec<EncryptedOp>,
+}
+
+impl SyncResponse {
+    pub fn incremental(
+        peer_id: PeerId,
+        repo_id: RepoId,
+        range: (PeerFactSeq, PeerFactSeq),
+        ops: Vec<EncryptedOp>,
+    ) -> Self {
+        Self {
+            peer_id,
+            repo_id,
+            range: Some(range),
+            waterline: PeerFactSeq::ZERO,
+            ops,
+        }
+    }
+
+    pub fn full_fact_replay(
+        peer_id: PeerId,
+        repo_id: RepoId,
+        waterline: PeerFactSeq,
+        ops: Vec<EncryptedOp>,
+    ) -> Self {
+        Self {
+            peer_id,
+            repo_id,
+            range: None,
+            waterline,
+            ops,
+        }
+    }
 }
 
 /// 握手结果
@@ -83,7 +119,7 @@ pub fn compute_diff_requests(
         .map(|(peer_id, range)| SyncRequest {
             peer_id,
             repo_id,
-            range: (range.start, range.end),
+            range,
         })
         .collect();
 
@@ -92,7 +128,8 @@ pub fn compute_diff_requests(
 
     for (peer_id, range) in missing_from_local {
         // 策略: 如果落后超过阈值，直接请求快照
-        if range.end - range.start > SNAPSHOT_THRESHOLD {
+        let width = range.1.get() - range.0.get() + 1;
+        if width > SNAPSHOT_THRESHOLD {
             snapshot_requests.push(SyncSnapshotRequest {
                 peer_id,
                 repo_id,
@@ -102,7 +139,7 @@ pub fn compute_diff_requests(
             to_request.push(SyncRequest {
                 peer_id,
                 repo_id,
-                range: (range.start, range.end),
+                range,
             });
         }
     }

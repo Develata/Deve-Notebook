@@ -23,8 +23,8 @@
 - `Name`: `Request MergePeer`
 - `Surface`: `workspace-runtime`
 - `Trigger`: merge command action 触发
-- `Preconditions`: current doc 已选中，local repo scope 稳定，当前 branch 为 Local，write gate 未阻塞，peer source 只读 mirror 与 local repo 属于同一 logical repo
-- `Immediate Result`: 前端发送 `ClientMessage::MergePeer { peer_id, doc_id, scope_nonce }`
+- `Preconditions`: current doc 已选中，local repo scope 稳定，当前 branch 为 Local，write gate 未阻塞，peer source 只读 mirror 与 local repo 属于同一 logical repo；已有有效 merge checkpoint，或双方当前内容完全相同可建立初始 equal baseline
+- `Immediate Result`: 前端发送 `ClientMessage::MergePeer { peer_id, doc_id, scope_nonce }`；checkpoint/hash/waterline 由后端解析，缺少可证明基线时返回结构化错误
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sync/write.rs`, `apps/cli/src/server/ws/route/merge.rs`, `apps/cli/src/server/handlers/merge/peer.rs`
 
 ### `op.sc.merge-peer.receive-complete`
@@ -115,3 +115,4 @@
 - `merge_peer` 是显式用户动作，符合 `05_network` 中“merge 到 local 必须是显式用户动作”的约束。
 - Remote Branch 保持纯只读语义；peer mirror 只能作为 merge source，不能作为当前 write scope 或 merge result target。
 - conflict 出现后，UI 只发送 typed `ResolveMergeConflict`；旧 `DocDiff` fallback 不得成为 conflict authority。
+- 所有 resolution（包括 AcceptCurrent）都由后端原子追加 MergeAnchor 并推进该 source/doc checkpoint；UI 不持有或伪造 merge-base authority。

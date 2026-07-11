@@ -1,3 +1,7 @@
+use super::merge_peer_test_support::{
+    browser_writer_ready_session, ensure_local_projection_ready, ensure_remote_repo,
+    seed_local_doc, seed_local_replace, seed_remote_replace, seed_shared_base,
+};
 use super::route_merge;
 use crate::server::session::PendingMergeConflict;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
@@ -50,11 +54,27 @@ fn extracts_scope_nonce_from_merge_messages() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolve_merge_conflict_routes_accept_current_to_merge_complete() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
-    state.repo.ensure_local_repo_workspace_identity("notes")?;
+    ensure_local_projection_ready(&state)?;
     let (ch, _uni_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
-    let doc_id = DocId::new();
-    let mut session = browser_session_with_pending_conflict(repo_id, doc_id, 17);
+    let peer_id = ensure_remote_repo(&state, repo_id)?;
+    let doc_id = seed_local_doc(&state, "notes/route-accept-current.md")?;
+    seed_shared_base(&state, &peer_id, repo_id, doc_id, "base")?;
+    seed_local_replace(&state, doc_id, "base", "local")?;
+    seed_remote_replace(&state, &peer_id, repo_id, doc_id, "base", "incoming")?;
+    let evaluation = state
+        .repo
+        .merge_peer_in_local_repo("notes", &peer_id, &repo_id, doc_id)?;
+    let mut session = browser_writer_ready_session(repo_id, 17);
+    session.pending_merge_conflict = Some(PendingMergeConflict {
+        repo_id,
+        branch: None,
+        doc_id,
+        scope_nonce: Some(17),
+        local_content: "local".into(),
+        incoming_content: "incoming".into(),
+        preflight: evaluation.preflight,
+    });
 
     route_merge(
         &state,
@@ -192,6 +212,9 @@ fn browser_session_with_pending_conflict(
         scope_nonce: Some(scope_nonce),
         local_content: "local".into(),
         incoming_content: "incoming".into(),
+        preflight: crate::server::session::test_merge_preflight(
+            repo_id, doc_id, "local", "incoming",
+        ),
     });
     session
 }

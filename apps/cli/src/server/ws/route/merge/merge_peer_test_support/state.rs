@@ -16,7 +16,9 @@ pub(crate) fn reopen_state(root: &Path) -> anyhow::Result<Arc<AppState>> {
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
-    let identity_key = security::load_or_generate_identity_key(&root.join("host"))?;
+    let identity_key = security::load_or_generate_identity_key(
+        &deve_core::utils::notegit::host_keys_dir(repo.ledger_dir()),
+    )?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
         sync_manager: Arc::new(SyncManager::new_checked(repo.clone())?),

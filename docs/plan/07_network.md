@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-07`
+- `Last Review`: `2026-07-10`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -187,7 +187,7 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- `protocol_version` 当前固定为 `11`；当前兼容窗口为 `11..=11`；任何破坏兼容的 schema 或 codec 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- `protocol_version` 当前固定为 `12`；当前兼容窗口为 `12..=12`；任何破坏兼容的 schema 或 codec 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
 - 未来若支持滚动升级，必须为每个仍支持的旧 `protocol_version` 维护显式 decode/upgrade adapter，并在 `MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION` 区间内逐版本测试。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned postcard frame。
@@ -245,6 +245,8 @@ enabled = true
   - 必填:
     - `repo_id`
     - `source_peer_id`
+    - `range_start`
+    - `range_end`
     - `header`
     - `encrypted_payload`
 - `SyncSnapshotRequest`
@@ -259,6 +261,7 @@ enabled = true
     - `repo_id`
     - `source_peer_id`
     - `server_vector`
+    - `waterline`
     - `payload`
   - 可选:
     - `snapshot_kind`
@@ -357,8 +360,9 @@ enum 或 wire shape 时才需要 bump `WS_PROTOCOL_VERSION`。
 
 Vector authority 规则：
 
+- `VersionVector` 是 repo-scoped `PeerId -> PeerFactSeq`；同一物理 peer 的 Content Facts 与 Structure Facts 共享一个连续水位。
 - `SyncHello.vector` 必须由当前 `repo_id` 的 ledger heads 重建或刷新，不得只信任进程内缓存。
-- local branch 水位来自本地 repo ledger head；remote branch 水位来自对应 `ledger/remotes/<peer>/<repo>` shadow ledger head。
+- local branch 水位来自本地 repo 的 `PEER_FACT_SEQ[local physical PeerId]`；remote branch 水位来自对应 `ledger/remotes/<peer>/<repo>` shadow 的 source peer waterline。两者不得使用 `GlobalSeq` 代替。
 - 服务重启、engine lazy-load、或已有 engine 之后发生本地写入时，下次 strict sync 访问必须先刷新 vector，再计算 diff 或签名回包。
 - Deve-authorized local writes, including Source Control stage/commit flows, MUST be visible to the next FullPeer
   `SyncHello` diff. A committed local Projection Workspace change on peer A must produce either an incremental
@@ -366,12 +370,15 @@ Vector authority 规则：
 
 Apply 端单调性与连续性规则（与第 5 节「不得破坏 vector monotonicity」一致，定义入站 facts 落库的合法性）：
 
-- **Snapshot 单调性**：远端 snapshot 是「整库 reset 到该状态」。其携带的 peer 水位 `max_seq` **MUST NOT**
-  低于本地已持有的同一 peer vector；`max_seq <= 本地 vector` 的陈旧或乱序到达 snapshot **MUST** 跳过——既不
-  reset shadow ledger，也不回退 vector。否则会清掉更 newer 的 ops 并令 vector 倒退。
-- **增量连续性**：增量 ops apply **MUST** 从 `本地 vector + 1` 起严格连续地推进 peer 水位。`seq <= 本地 vector`
-  的已应用区间 **MUST** 幂等跳过，不得二次 append 到 shadow；遇到序号空洞或重复 seq **MUST** fail-closed 并保持
+- **Snapshot 单调性**：远端 snapshot 是单一 source peer 从 `1..=waterline` 的完整连续事实日志。持久化 shadow waterline 是最终 gate，不能只信任某个进程内 `VersionVector`。任何 snapshot 都必须先逐条比对与已确认历史重叠的前缀；完全相同且 `waterline <= stored` 时才幂等跳过，冲突重复必须整批拒绝。只有 `waterline > stored`、confirmed prefix 相同且完整验证通过的 snapshot 才能在同一 shadow write transaction 中替换影子库并推进持久化水位。
+- **增量连续性**：增量 ops apply **MUST** 从 `持久化 shadow waterline + 1` 起严格连续地推进 peer 水位。`seq <= stored waterline`
+  的已应用区间只有在完整事实逐字段相同时才幂等跳过，不得二次 append 到 shadow；遇到序号空洞、冲突重复或重复 seq **MUST** fail-closed 并保持
   状态不变，留待重连/重新请求，**MUST NOT** 把 vector 推过未接收的 op 造成静默丢失。
+- **发送端完整性**：wire 增量范围使用闭区间 `[range_start, range_end]`，必须通过 `(PeerId, PeerFactSeq) -> GlobalSeq` 索引完整解析；缺少任一事实必须返回结构化 sequence-gap 错误，不得发送部分成功。`VersionVector::diff` 内部可使用 Rust 半开 `Range`，但组装 `SyncRequest` 时必须显式转换为闭区间，禁止把半开 end 直接发上 wire。
+- **批次原子性**：envelope `peer_seq`、解密 entry `peer_seq`、entry `origin_peer_id` 与认证 source 必须逐条一致；gap、乱序、冲突重复、来源不符或解密失败时整批不写 shadow、不推进 vector、不刷新投影。
+- **Wire vector canonicality**：反序列化后的 `VersionVector` 只能包含正 `PeerFactSeq`，并必须按 `PeerId` 严格升序且无重复；zero、乱序或重复键在 diff 算术之前 fail-closed，不允许由 `normalize()` 修补不可信 wire 输入。
+- **Transfer resource gate**：在按请求范围分配 `Vec` 或收集完整 snapshot 前，发送端必须先验证 `end <= source waterline`、checked range width、最多 16384 个事实及最多 16 MiB 编码 fact bytes；超过限制返回 `sync_resource_limit`，不得尝试巨额分配，也不得伪装为成功。加密 snapshot 构造过程中仍须累计 payload budget；分块/压缩另列后续能力。
+- 完整 source 日志中的 `MergeAnchor` 与 content/structure facts 使用同一 `PeerFactSeq`；接收端必须保存并推进连续水位，但不得把 anchor 直接解释为 Markdown/tree projection mutation。
 
 ### 7.2 Envelope Pattern
 
@@ -458,6 +465,9 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - vector 差距过大时允许 snapshot fallback
 - fallback 必须绑定到明确 repo route
 - 禁止空 repo 占位符或跨 repo 复用 snapshot
+- 当前 `SyncPushSnapshot` 是 Full-Fact Replay Payload，必须恰好包含认证 source peer 的 `1..=waterline` 完整连续事实；它不是 storage/authority 状态压缩 Snapshot。验证全部成功后才能原子替换 shadow。
+- stale snapshot 仅在其重叠前缀与已确认事实完全相同时幂等跳过；冲突重复、缺失序号、混入其他 origin、越过 waterline 或 envelope/entry 不一致时必须保留旧 shadow 与 vector。
+- 当前单响应 snapshot 超过 frame/resource 上限时必须明确失败；分块或压缩 snapshot 不属于 v1 合同。
 
 ### 10.2 Trust Boundary {#trust-boundary}
 
@@ -482,7 +492,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 - A 经 C 中继传给 B 时，B 的落盘归属必须由 A 的签名来源决定，而不是由 C 的传输通道决定。
 - `SyncPush` 与 `SyncPushSnapshot` 必须携带 source peer / branch id；该字段决定 shadow 写入目标。
-- `LedgerEntry.peer_id` 表示 op author，不等于 source branch id，不能替代 payload source peer。
+- `LedgerEntry.origin_peer_id` 表示事实的物理 origin；Static FullPeer v1 的单-source payload 中它必须等于 `source_peer_id`。`FactActor` 只表示本地执行路径，不能替代 payload source peer。
 - authenticated transport peer 只用于会话、repo、scope 校验，不得替代 payload source peer。
 - 同一个 push payload 只能包含一个 source peer 的 ledger facts；不同 source peer 必须拆成多个 push。
 - Snapshot request 若请求 shadow source，响应必须导出对应 shadow，而不能回退到本地 ledger。

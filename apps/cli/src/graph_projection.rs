@@ -104,33 +104,24 @@ mod tests {
     use anyhow::{Context as _, anyhow};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::traits::RepoSelector;
-    use deve_core::models::{LedgerEntry, Op, PeerId};
+    use deve_core::models::{FactActor, Op};
     use tempfile::TempDir;
 
     fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> deve_core::models::DocId {
         let (doc_id, _ops) = repo
             .apply_file_structure_in_local_repo(repo.local_repo_name(), path, None, "test")
             .expect("structure");
-        repo.append_generated_op_in_local_repo(
-            repo.local_repo_name(),
-            doc_id,
-            PeerId::new("local"),
-            |seq| {
-                LedgerEntry::new_content(
-                    doc_id,
-                    Op::Insert {
-                        pos: 0,
-                        content: content.into(),
-                    },
-                    1,
-                    PeerId::new("local"),
-                    seq,
-                    None,
-                    None,
-                )
-            },
-        )
-        .expect("append op");
+        repo.local_fact_writer(FactActor::new("test").expect("actor"))
+            .append_content_in_local_repo(
+                repo.local_repo_name(),
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: content.into(),
+                },
+                1,
+            )
+            .expect("append op");
         doc_id
     }
 

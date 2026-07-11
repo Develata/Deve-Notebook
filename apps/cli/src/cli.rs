@@ -85,6 +85,9 @@ pub(crate) enum Commands {
         format: String,
         #[arg(long)]
         allow_degraded_projection: bool,
+        /// Offline read-only export for schema-v2 repositories; normal runtime stays fail-closed.
+        #[arg(long)]
+        allow_legacy_v2: bool,
     },
     /// Print repo-scoped read-only graph projection JSON
     Graph {
@@ -109,6 +112,8 @@ pub(crate) enum Commands {
         doc_id: Option<uuid::Uuid>,
         #[arg(long = "contains")]
         contains: Option<String>,
+        #[arg(long = "equals")]
+        equals: Option<String>,
         #[arg(long = "local-must-not-contain")]
         local_must_not_contain: Option<String>,
     },

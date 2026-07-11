@@ -7,6 +7,7 @@
 //! 管理单个 WebSocket 连接的 repo-scoped 会话状态。
 
 use deve_core::ledger::database::DatabaseHandle;
+use deve_core::ledger::merge::MergePreflight;
 use deve_core::models::{DocId, PeerId, RepoId};
 use std::time::Instant;
 
@@ -23,6 +24,68 @@ pub struct PendingMergeConflict {
     pub scope_nonce: Option<u64>,
     pub local_content: String,
     pub incoming_content: String,
+    pub preflight: MergePreflight,
+}
+
+#[cfg(test)]
+pub(crate) fn test_merge_preflight(
+    _repo_id: RepoId,
+    doc_id: DocId,
+    _local_content: &str,
+    _incoming_content: &str,
+) -> MergePreflight {
+    use deve_core::ledger::{RepoInfo, RepoManager};
+    use deve_core::models::{FactActor, LedgerEntry, Op};
+
+    let dir = tempfile::tempdir().expect("test merge ledger dir");
+    let repo = RepoManager::init(dir.path(), 4, Some("default"), None)
+        .expect("initialize test merge ledger");
+    let actual_repo_id = repo
+        .get_repo_info()
+        .expect("read test repo info")
+        .expect("test repo info")
+        .uuid;
+    let peer = PeerId::new("test-remote-peer");
+    repo.ensure_shadow_repo_info(
+        &peer,
+        &RepoInfo {
+            uuid: actual_repo_id,
+            name: "default".into(),
+            url: None,
+        },
+    )
+    .expect("initialize test shadow");
+    repo.local_fact_writer(FactActor::new("test").expect("test actor"))
+        .append_content_in_local_repo(
+            "default",
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "test-baseline".into(),
+            },
+            1,
+        )
+        .expect("append local test fact");
+    repo.append_remote_op(
+        &peer,
+        &actual_repo_id,
+        &LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "test-baseline".into(),
+            },
+            1,
+            peer.clone(),
+            1,
+            None,
+            None,
+        ),
+    )
+    .expect("append remote test fact");
+    repo.merge_peer_in_local_repo("default", &peer, &actual_repo_id, doc_id)
+        .expect("evaluate test merge")
+        .preflight
 }
 
 /// WebSocket 会话状态

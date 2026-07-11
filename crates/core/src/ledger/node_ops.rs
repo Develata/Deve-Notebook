@@ -3,11 +3,9 @@
 //!   - 04_repository#tree-projection-contract
 //!
 use crate::ledger::ops;
-use crate::ledger::schema::{LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
-use crate::ledger::seq::checked_next_local_seq;
-use crate::models::{LedgerEntry, PeerId, StructureOp, deserialize_ledger_entry};
-use anyhow::{Result, anyhow};
-use redb::{ReadableMultimapTable, ReadableTable, WriteTransaction};
+use crate::models::{FactActor, LedgerEntry, PeerId, StructureOp};
+use anyhow::Result;
+use redb::WriteTransaction;
 
 /// Invariants:
 /// - 结构事件的真实身份由 `StructureOp` payload 决定。
@@ -15,46 +13,14 @@ use redb::{ReadableMultimapTable, ReadableTable, WriteTransaction};
 pub(crate) fn append_generated_structure_op_to_txn(
     write_txn: &WriteTransaction,
     peer_id: PeerId,
+    actor: FactActor,
     structure: StructureOp,
     timestamp: i64,
     repo_scope: &str,
 ) -> Result<(u64, u64)> {
-    let node_id = structure.node_id();
-    let peer_key = peer_id.as_str().to_string();
-    let key = (node_id.as_u128(), peer_key.as_str());
-    let current_local_seq = {
-        let node_seqs = write_txn.open_table(NODE_PEER_SEQ)?;
-        if let Some(val) = node_seqs.get(key)? {
-            val.value()
-        } else {
-            scan_node_peer_seq(write_txn, node_id.as_u128(), &peer_id)?
-        }
-    };
-    let next_local_seq =
-        checked_next_local_seq(current_local_seq).ok_or_else(|| anyhow!("LocalSeq overflow"))?;
-    let entry = LedgerEntry::new_structure(structure, timestamp, peer_id, next_local_seq);
+    let next_peer_seq = ops::write_direct::next_peer_fact_seq(write_txn, &peer_id)?;
+    let entry =
+        LedgerEntry::new_structure_with_actor(structure, timestamp, peer_id, next_peer_seq, actor);
     let global_seq = ops::append_op_to_txn(write_txn, &entry, repo_scope)?;
-    let mut node_seqs = write_txn.open_table(NODE_PEER_SEQ)?;
-    node_seqs.insert(key, next_local_seq)?;
-    Ok((global_seq, next_local_seq))
-}
-
-fn scan_node_peer_seq(
-    write_txn: &redb::WriteTransaction,
-    node_id: u128,
-    peer_id: &PeerId,
-) -> Result<u64> {
-    let node_ops = write_txn.open_multimap_table(NODE_OPS)?;
-    let ops = write_txn.open_table(LEDGER_OPS)?;
-    let mut max_seq = 0;
-    for seq in node_ops.get(node_id)? {
-        let seq = seq?.value();
-        if let Some(bytes) = ops.get(seq)? {
-            let entry: LedgerEntry = deserialize_ledger_entry(bytes.value())?;
-            if entry.peer_id == *peer_id && entry.seq > max_seq {
-                max_seq = entry.seq;
-            }
-        }
-    }
-    Ok(max_seq)
+    Ok((global_seq, next_peer_seq.get()))
 }

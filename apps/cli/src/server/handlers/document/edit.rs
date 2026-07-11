@@ -63,7 +63,7 @@ pub(super) async fn handle_edit(
         reject_edit(ch, response_scope_nonce, doc_id, client_op_id, error);
         return;
     }
-    let Some(local_peer_id) = writer_peer_id(
+    let Some(_authenticated_writer_peer_id) = writer_peer_id(
         session,
         &scope.repo_id,
         doc_id,
@@ -106,7 +106,6 @@ pub(super) async fn handle_edit(
         scope_nonce: response_scope_nonce,
         doc_id,
         op,
-        local_peer_id,
         client_id,
         client_op_id,
     });

@@ -89,7 +89,7 @@ fn source_proof_rejects_forged_source_identity() {
 fn encrypted_payload() -> Vec<EncryptedOp> {
     vec![EncryptedOp {
         doc_id: None,
-        seq: 1,
+        peer_seq: 1.into(),
         ciphertext: vec![1, 2, 3],
         nonce: vec![0; 12],
     }]

@@ -37,7 +37,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.i18n.localized-formatting` | [`i18n_localized_formatting.md`](./operations/i18n_localized_formatting.md) | `I18N-005`, `TECH-001` |
 | `flow.net.key-exchange` | [`net_key_exchange.md`](./operations/net_key_exchange.md) | `NET-FEAT-01`, `NET-FEAT-03` |
 | `flow.net.sync-handshake` | [`net_sync_handshake.md`](./operations/net_sync_handshake.md) | `NET-FEAT-01`, `NET-FEAT-02`, `NET-FEAT-03` |
-| `flow.net.sync-transfer` | [`net_sync_transfer.md`](./operations/net_sync_transfer.md) | `NET-FEAT-02`, `NET-FEAT-03` |
+| `flow.net.sync-transfer` | [`net_sync_transfer.md`](./operations/net_sync_transfer.md) | `NET-FEAT-02`, `NET-FEAT-03`, `NET-FEAT-05` |
 | `flow.plugin.runtime-boundary` | [`plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md) | `PLUG-001`, `AI-005`, `AI-006` |
 | `flow.release.ci` | [`release_ci.md`](./operations/release_ci.md) | `REL-001`, `REL-002`, `REL-003`, `TECH-001`, `PERF-001` |
 | `flow.release.tag-dispatch` | [`release_tag_dispatch.md`](./operations/release_tag_dispatch.md) | `REL-001`, `REL-003` |

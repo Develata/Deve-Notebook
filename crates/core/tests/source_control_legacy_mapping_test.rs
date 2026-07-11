@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID, PATH_TO_NODEID};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::changes;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -23,7 +23,7 @@ fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("test"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -32,7 +32,7 @@ fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
                     content: content.into(),
                 },
                 1,
-                PeerId::new("test"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

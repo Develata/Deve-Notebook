@@ -8,6 +8,7 @@
 //! direct DB access or live-proxy fallback when the server holds the lock.
 
 mod doc;
+mod legacy_v2;
 #[cfg(test)]
 mod tests;
 
@@ -27,6 +28,7 @@ use std::path::PathBuf;
 /// **功能**:
 /// - `json` (默认): 将 Ledger facts 导出为 Line-delimited JSON。
 /// - `markdown`: 从 Ledger 重建文档内容并写入输出目录。
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     ledger_dir: &PathBuf,
     output: Option<String>,
@@ -35,7 +37,11 @@ pub fn run(
     snapshot_depth: usize,
     format: &str,
     allow_degraded_projection: bool,
+    allow_legacy_v2: bool,
 ) -> Result<()> {
+    if allow_legacy_v2 {
+        return legacy_v2::run(ledger_dir, output, repo_name, doc, format);
+    }
     match format {
         "json" => run_json(ledger_dir, output, repo_name, doc, snapshot_depth),
         "markdown" | "md" => run_markdown(

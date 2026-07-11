@@ -8,7 +8,7 @@ use anyhow::Result;
 mod apply;
 mod snapshot;
 
-pub(crate) use apply::{entries_with_seq, new_contiguous_remote_ops};
+pub(crate) use apply::entries_with_seq;
 
 impl SyncEngine {
     /// 从本地仓库获取指定范围的操作 (用于发送给远端)。
@@ -16,8 +16,12 @@ impl SyncEngine {
     /// **安全**: 使用 `RepoKey` 对 LedgerEntry 进行加密 (Envelope Pattern)。
     pub fn get_ops_for_sync(&self, request: &SyncRequest) -> Result<SyncResponse> {
         let raw_ops = if request.peer_id == self.local_peer_id {
-            self.repo
-                .get_local_ops_in_range(&request.repo_id, request.range.0, request.range.1)?
+            self.repo.get_local_ops_in_range(
+                &request.repo_id,
+                &request.peer_id,
+                request.range.0,
+                request.range.1,
+            )?
         } else {
             self.repo.get_shadow_ops_in_range(
                 &request.peer_id,
@@ -34,12 +38,14 @@ impl SyncEngine {
 
         let mut encrypted_ops = Vec::with_capacity(raw_ops.len());
         for (_storage_seq, entry) in raw_ops {
-            encrypted_ops.push(repo_key.encrypt(&entry, entry.seq)?);
+            encrypted_ops.push(repo_key.encrypt(&entry, entry.peer_seq)?);
         }
 
         Ok(SyncResponse {
             peer_id: request.peer_id.clone(),
             repo_id: request.repo_id,
+            range: Some(request.range),
+            waterline: crate::models::PeerFactSeq::ZERO,
             ops: encrypted_ops,
         })
     }
@@ -50,7 +56,7 @@ mod tests {
     use super::*;
     use crate::config::SyncMode;
     use crate::ledger::RepoManager;
-    use crate::models::{DocId, LedgerEntry, Op, PeerId};
+    use crate::models::{DocId, LedgerEntry, Op};
     use crate::security::RepoKey;
     use std::sync::Arc;
 
@@ -64,7 +70,7 @@ mod tests {
             Some("urn:default"),
         )?);
         let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-        let peer_id = PeerId::new("local-peer");
+        let peer_id = repo.local_peer_id().clone();
         let repo_key = RepoKey::generate();
         let engine = SyncEngine::new(
             peer_id.clone(),
@@ -72,30 +78,36 @@ mod tests {
             SyncMode::Auto,
             Some(repo_key.clone()),
         );
-        let entry = LedgerEntry::new_content(
-            DocId::new(),
-            Op::Insert {
-                pos: 0,
-                content: "hello".into(),
-            },
-            1,
+        let doc_id = DocId::new();
+        let peer_for_entry = peer_id.clone();
+        let (_storage_seq, peer_seq) = repo.append_generated_op_in_local_repo(
+            "default",
+            doc_id,
             peer_id.clone(),
-            7,
-            None,
-            None,
-        );
-        let storage_seq = repo.append_local_op_in_local_repo("default", &entry)?;
-
-        assert_ne!(storage_seq, entry.seq);
+            move |seq| {
+                LedgerEntry::new_content(
+                    doc_id,
+                    Op::Insert {
+                        pos: 0,
+                        content: "hello".into(),
+                    },
+                    1,
+                    peer_for_entry.clone(),
+                    seq,
+                    None,
+                    None,
+                )
+            },
+        )?;
         let response = engine.get_ops_for_sync(&SyncRequest {
             peer_id,
             repo_id,
-            range: (storage_seq, storage_seq + 1),
+            range: (peer_seq.into(), peer_seq.into()),
         })?;
 
         assert_eq!(response.ops.len(), 1);
-        assert_eq!(response.ops[0].seq, entry.seq);
-        assert_eq!(repo_key.decrypt(&response.ops[0])?.seq, entry.seq);
+        assert_eq!(response.ops[0].peer_seq, peer_seq);
+        assert_eq!(repo_key.decrypt(&response.ops[0])?.peer_seq.get(), peer_seq);
         Ok(())
     }
 }

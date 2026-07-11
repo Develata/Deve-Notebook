@@ -4,7 +4,7 @@
 //!   - 07_network#web-ws-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
 
-use crate::models::{DocId, Op, PeerId, VersionVector};
+use crate::models::{DocId, Op, PeerFactSeq, PeerId, VersionVector};
 use crate::protocol::RemoteProjectionDirection;
 use crate::protocol::RemoteProjectionProvider;
 use crate::protocol::ScPathTarget;
@@ -35,7 +35,7 @@ pub enum ClientMessage {
         repo_id: crate::models::RepoId,
         #[serde(default)]
         known_vector: VersionVector,
-        requests: Vec<(PeerId, (u64, u64))>,
+        requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))>,
     },
     SyncSnapshotRequest {
         #[serde(alias = "peer_id")]
@@ -47,24 +47,23 @@ pub enum ClientMessage {
         reason: Option<String>,
     },
     SyncPush {
-        #[serde(alias = "peer_id")]
         source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        range_start: PeerFactSeq,
+        range_end: PeerFactSeq,
         header: SyncPushHeader,
-        #[serde(alias = "ops")]
         encrypted_payload: Vec<EncryptedOp>,
     },
     SyncPushSnapshot {
-        #[serde(alias = "peer_id")]
         source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        waterline: PeerFactSeq,
         #[serde(default)]
         server_vector: VersionVector,
         #[serde(default)]
         snapshot_kind: Option<String>,
         #[serde(default)]
         source_proof: Option<SyncSourceProof>,
-        #[serde(alias = "ops", alias = "encrypted_payload")]
         payload: Vec<EncryptedOp>,
     },
     Edit {

@@ -101,12 +101,11 @@ fn managed_target_parts(path: &Path) -> Result<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::CWD_LOCK;
     use rhai::Engine;
     use std::path::PathBuf;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
     use tempfile::tempdir;
-
-    static CWD_LOCK: Mutex<()> = Mutex::new(());
 
     struct CwdGuard {
         old: PathBuf,

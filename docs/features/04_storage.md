@@ -32,6 +32,7 @@
 - 某个 repo 损坏时，应进入明确的降级或恢复路径。
 - 其它健康 repo 不应被一起拖死。
 - 缺失 ledger entry 格式信封、缺失 redb schema version 或 schema version 不匹配时，系统应明确报告该 repo 需要 reset / repair / migration，不应猜测旧格式继续打开。
+- 对明确选择的 schema v2 开发库，用户可以在服务停止时运行 `deve export --allow-legacy-v2` 做只读 JSON/Markdown 导出；该入口不会打开正常写入、同步或 repair authority。
 
 ## 非目标
 

@@ -135,6 +135,8 @@ fn sync_push(peer_id: PeerId, repo_id: uuid::Uuid) -> ClientMessage {
     ClientMessage::SyncPush {
         source_peer_id: peer_id.clone(),
         repo_id,
+        range_start: 1_u64.into(),
+        range_end: 1_u64.into(),
         header: SyncPushHeader::diff(repo_id, peer_id, VersionVector::new()),
         encrypted_payload: vec![],
     }

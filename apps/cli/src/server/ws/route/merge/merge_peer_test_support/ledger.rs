@@ -1,5 +1,6 @@
 use crate::server::AppState;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoType};
+use deve_core::ledger::merge::MergeResult;
+use deve_core::models::{DocId, FactActor, LedgerEntry, MergeResolution, Op, PeerId, RepoType};
 use std::sync::Arc;
 
 pub(crate) fn seed_local_doc(state: &Arc<AppState>, path: &str) -> anyhow::Result<DocId> {
@@ -42,24 +43,46 @@ pub(crate) fn seed_shared_base(
     doc_id: DocId,
     content: &str,
 ) -> anyhow::Result<()> {
-    let base_entry = LedgerEntry::new_content(
-        doc_id,
-        Op::Insert {
-            pos: 0,
-            content: content.into(),
-        },
-        1,
-        PeerId::new("shared-base"),
-        1,
-        None,
-        None,
-    );
     state
         .repo
-        .append_local_op_in_local_repo("notes", &base_entry)?;
-    state
+        .local_fact_writer(FactActor::new("merge_test")?)
+        .append_content_in_local_repo(
+            "notes",
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )?;
+    state.repo.append_remote_op(
+        peer_id,
+        &repo_id,
+        &LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+            peer_id.clone(),
+            1,
+            None,
+            None,
+        ),
+    )?;
+    let evaluation = state
         .repo
-        .append_remote_op(peer_id, &repo_id, &base_entry)?;
+        .merge_peer_in_local_repo("notes", peer_id, &repo_id, doc_id)?;
+    let MergeResult::Success(content) = evaluation.result else {
+        anyhow::bail!("equal merge fixture unexpectedly produced a conflict");
+    };
+    state.repo.commit_peer_merge_in_local_repo(
+        "notes",
+        &evaluation.preflight,
+        &content,
+        MergeResolution::EstablishEqual,
+    )?;
     Ok(())
 }
 
@@ -69,36 +92,24 @@ pub(crate) fn seed_local_replace(
     before: &str,
     after: &str,
 ) -> anyhow::Result<()> {
-    let peer_id = PeerId::new("local-test");
-    state.repo.append_local_op_in_local_repo(
+    let writer = state.repo.local_fact_writer(FactActor::new("merge_test")?);
+    writer.append_content_in_local_repo(
         "notes",
-        &LedgerEntry::new_content(
-            doc_id,
-            Op::Delete {
-                pos: 0,
-                len: utf16_len(before),
-            },
-            2,
-            peer_id.clone(),
-            1,
-            None,
-            None,
-        ),
+        doc_id,
+        Op::Delete {
+            pos: 0,
+            len: utf16_len(before),
+        },
+        2,
     )?;
-    state.repo.append_local_op_in_local_repo(
+    writer.append_content_in_local_repo(
         "notes",
-        &LedgerEntry::new_content(
-            doc_id,
-            Op::Insert {
-                pos: 0,
-                content: after.into(),
-            },
-            3,
-            peer_id,
-            2,
-            None,
-            None,
-        ),
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: after.into(),
+        },
+        3,
     )?;
     Ok(())
 }
@@ -122,7 +133,7 @@ pub(crate) fn seed_remote_replace(
             },
             2,
             peer_id.clone(),
-            1,
+            2,
             None,
             None,
         ),
@@ -138,7 +149,7 @@ pub(crate) fn seed_remote_replace(
             },
             3,
             peer_id.clone(),
-            2,
+            3,
             None,
             None,
         ),

@@ -2,7 +2,7 @@
 //!   - 07_network#server-ws-runtime
 
 use super::SyncEngine;
-use crate::models::LedgerEntry;
+use crate::models::{LedgerEntry, PeerFactSeq, PeerId};
 use crate::sync::protocol::SyncResponse;
 use anyhow::Result;
 
@@ -12,7 +12,8 @@ impl SyncEngine {
             .repo_key
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
-        decrypt_remote_ops(repo_key, &response.ops, false)?;
+        let decrypted = decrypt_remote_ops(repo_key, &response.peer_id, &response.ops)?;
+        validate_full_fact_replay(response.waterline, &decrypted)?;
         Ok(())
     }
 
@@ -28,22 +29,17 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured"))?;
 
-        let decrypted = decrypt_remote_ops(repo_key, &response.ops, false)?;
-        let max_seq = max_decrypted_seq(&decrypted);
-
-        let current = self.version_vector.get(&response.peer_id);
-        if max_seq <= current {
-            return Ok(current);
-        }
+        let decrypted = decrypt_remote_ops(repo_key, &response.peer_id, &response.ops)?;
+        validate_full_fact_replay(response.waterline, &decrypted)?;
 
         let entries = decrypted_entries(decrypted);
+        let persisted_waterline =
+            self.repo
+                .replace_shadow_repo_ops(&response.peer_id, &response.repo_id, &entries)?;
+        self.version_vector
+            .set_exact(response.peer_id, persisted_waterline);
 
-        self.repo
-            .replace_shadow_repo_ops(&response.peer_id, &response.repo_id, &entries)?;
-
-        self.version_vector.set_exact(response.peer_id, max_seq);
-
-        Ok(max_seq)
+        Ok(persisted_waterline)
     }
 
     pub fn validate_remote_ops(&self, response: &SyncResponse) -> Result<()> {
@@ -51,7 +47,8 @@ impl SyncEngine {
             .repo_key
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured, cannot decrypt ops"))?;
-        decrypt_remote_ops(repo_key, &response.ops, true)?;
+        let decrypted = decrypt_remote_ops(repo_key, &response.peer_id, &response.ops)?;
+        validate_incremental_range(response.range, &decrypted)?;
         Ok(())
     }
 
@@ -67,103 +64,122 @@ impl SyncEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured, cannot decrypt ops"))?;
 
-        let current = self.version_vector.get(&response.peer_id);
-        let new_ops =
-            new_contiguous_remote_ops(decrypt_remote_ops(repo_key, &response.ops, true)?, current)?;
-        if !new_ops.entries.is_empty() {
+        let decrypted = decrypt_remote_ops(repo_key, &response.peer_id, &response.ops)?;
+        validate_incremental_range(response.range, &decrypted)?;
+        let entries = decrypted_entries(decrypted);
+        let persisted_waterline =
             self.repo
-                .append_remote_ops(&response.peer_id, &response.repo_id, &new_ops.entries)?;
-        }
-
-        if new_ops.max_seq > 0 {
-            self.version_vector
-                .update(response.peer_id, new_ops.max_seq);
-        }
-
-        Ok(new_ops.max_seq)
+                .append_remote_ops(&response.peer_id, &response.repo_id, &entries)?;
+        self.version_vector
+            .set_exact(response.peer_id, persisted_waterline);
+        Ok(persisted_waterline)
     }
 }
 
 fn decrypt_remote_ops(
     repo_key: &crate::security::RepoKey,
+    source_peer_id: &PeerId,
     ops: &[crate::security::EncryptedOp],
-    validate_entry_seq: bool,
-) -> Result<Vec<(u64, LedgerEntry)>> {
+) -> Result<Vec<(PeerFactSeq, LedgerEntry)>> {
     let mut decrypted = Vec::with_capacity(ops.len());
     for enc_op in ops {
         let entry = repo_key.decrypt(enc_op)?;
-        if validate_entry_seq && entry.seq != enc_op.seq {
+        if entry.peer_seq != enc_op.peer_seq {
             anyhow::bail!(
                 "Encrypted op seq mismatch: envelope {}, payload {}",
-                enc_op.seq,
-                entry.seq
+                enc_op.peer_seq,
+                entry.peer_seq
             );
         }
-        decrypted.push((enc_op.seq, entry));
+        if entry.origin_peer_id != *source_peer_id {
+            anyhow::bail!(
+                "Remote op origin mismatch: source {}, payload {} at peer_seq {}",
+                source_peer_id,
+                entry.origin_peer_id,
+                entry.peer_seq
+            );
+        }
+        decrypted.push((enc_op.peer_seq, entry));
     }
     Ok(decrypted)
 }
 
-pub(crate) struct NewRemoteOps {
-    pub(crate) entries: Vec<LedgerEntry>,
-    pub(crate) max_seq: u64,
-}
-
-/// 过滤并校验解密后的增量 op 批次相对当前 vector 无空洞。
-///
-/// 与已应用区间重叠的 `seq <= current` 必须幂等跳过，不能再次 append 到 shadow。
-/// `current` 之上的 seq 必须从 `current+1` 起严格连续；出现空洞或重复即返回结构化错误，
-/// 调用方不写入任何状态。
-pub(crate) fn new_contiguous_remote_ops(
-    decrypted: Vec<(u64, LedgerEntry)>,
-    current: u64,
-) -> Result<NewRemoteOps> {
-    let Some(mut expected) = current.checked_add(1) else {
-        return Ok(NewRemoteOps {
-            entries: Vec::new(),
-            max_seq: 0,
-        });
-    };
-    let mut pending: Vec<_> = decrypted
-        .into_iter()
-        .filter(|(seq, _entry)| *seq > current)
-        .collect();
-    pending.sort_unstable_by_key(|(seq, _entry)| *seq);
-
-    let mut entries = Vec::with_capacity(pending.len());
-    let mut last_seq = None;
-    let mut max_seq = 0;
-    for (seq, entry) in pending {
-        if last_seq == Some(seq) {
-            anyhow::bail!("duplicate remote op seq {seq}");
-        }
-        if seq != expected {
-            anyhow::bail!("non-contiguous remote ops: expected seq {expected}, received {seq}");
-        }
-        max_seq = seq;
-        entries.push(entry);
-        last_seq = Some(seq);
-        expected = seq.saturating_add(1);
-    }
-    Ok(NewRemoteOps { entries, max_seq })
-}
-
-pub(crate) fn entries_with_seq(entries: &[LedgerEntry]) -> Vec<(u64, LedgerEntry)> {
+pub(crate) fn entries_with_seq(entries: &[LedgerEntry]) -> Vec<(PeerFactSeq, LedgerEntry)> {
     entries
         .iter()
         .cloned()
-        .map(|entry| (entry.seq, entry))
+        .map(|entry| (entry.peer_seq, entry))
         .collect()
 }
 
-pub(crate) fn max_decrypted_seq(decrypted: &[(u64, LedgerEntry)]) -> u64 {
-    decrypted
-        .iter()
-        .map(|(seq, _entry)| *seq)
-        .max()
-        .unwrap_or(0)
+fn decrypted_entries(decrypted: Vec<(PeerFactSeq, LedgerEntry)>) -> Vec<LedgerEntry> {
+    decrypted.into_iter().map(|(_seq, entry)| entry).collect()
 }
 
-fn decrypted_entries(decrypted: Vec<(u64, LedgerEntry)>) -> Vec<LedgerEntry> {
-    decrypted.into_iter().map(|(_seq, entry)| entry).collect()
+fn validate_incremental_range(
+    range: Option<(PeerFactSeq, PeerFactSeq)>,
+    decrypted: &[(PeerFactSeq, LedgerEntry)],
+) -> Result<()> {
+    let (start, end) = range.ok_or_else(|| anyhow::anyhow!("incremental sync range missing"))?;
+    if start == PeerFactSeq::ZERO || end < start {
+        anyhow::bail!("invalid incremental closed range {}..={}", start, end);
+    }
+    if !decrypted.is_empty() {
+        validate_exact_sequence(start, end, decrypted)?;
+    }
+    let expected_len = end.get() - start.get() + 1;
+    if decrypted.len() as u64 != expected_len {
+        anyhow::bail!(
+            "sequence_gap: range {}..={} expects {} facts, received {}",
+            start,
+            end,
+            expected_len,
+            decrypted.len()
+        );
+    }
+    Ok(())
+}
+
+fn validate_full_fact_replay(
+    waterline: PeerFactSeq,
+    decrypted: &[(PeerFactSeq, LedgerEntry)],
+) -> Result<()> {
+    if waterline == PeerFactSeq::ZERO {
+        if decrypted.is_empty() {
+            return Ok(());
+        }
+        anyhow::bail!("snapshot waterline is zero but payload is not empty");
+    }
+    if decrypted.len() as u64 != waterline.get() {
+        anyhow::bail!(
+            "sequence_gap: full-fact replay waterline {} expects {} facts, received {}",
+            waterline,
+            waterline,
+            decrypted.len()
+        );
+    }
+    validate_exact_sequence(PeerFactSeq::ONE, waterline, decrypted)
+}
+
+fn validate_exact_sequence(
+    start: PeerFactSeq,
+    end: PeerFactSeq,
+    decrypted: &[(PeerFactSeq, LedgerEntry)],
+) -> Result<()> {
+    let mut expected = start;
+    for (seq, _entry) in decrypted {
+        if *seq != expected {
+            anyhow::bail!(
+                "non-contiguous remote ops: expected seq {}, received {}",
+                expected,
+                seq
+            );
+        }
+        if *seq != end {
+            expected = seq
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("PeerFactSeq overflow after {}", seq))?;
+        }
+    }
+    Ok(())
 }

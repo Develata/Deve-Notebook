@@ -77,6 +77,8 @@
 
 - 冲突必须以显式方式显示。
 - 只读或 spectator 场景下不能假装支持 commit/merge 写入。
+- 同一 peer/doc 第一次建立 merge 基线时，只有 Local 与 Remote 内容完全一致才能自动建立；若首次已分叉，页面必须显示“缺少可证明共同基线”并要求显式 baseline/import 选择，不能直接以空内容尝试合并。
+- Merge、Accept Current、Accept Incoming、Accept Both 完成后都必须形成后端可审计 merge anchor；前端只发送 typed resolution intent，不计算 hash、水位或 checkpoint。
 
 ### 5. NoteGit / Git Main Mirror Repair UI Boundary
 

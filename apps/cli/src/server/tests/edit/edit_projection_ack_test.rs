@@ -21,10 +21,8 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
         .repo
         .find_client_op_in_local_repo("default", 7, 9)?
         .expect("committed client op");
-    assert_ne!(
-        global_seq, entry.seq,
-        "fixture must distinguish global protocol seq from peer-local fact seq"
-    );
+    assert_eq!(entry.origin_peer_id, *h.state.repo.local_peer_id());
+    assert!(entry.peer_seq.get() > 0);
     match uni_rx.recv().await {
         Some(ServerMessage::Ack {
             scope_nonce,

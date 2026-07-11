@@ -1,7 +1,7 @@
 use deve_core::config::SyncMode;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::{LedgerEntry, LedgerEvent, NodeId, Op, PeerId, RepoId, RepoType};
+use deve_core::models::{LedgerEntry, LedgerEvent, NodeId, Op, RepoId, RepoType};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::SyncSnapshotRequest;
@@ -24,7 +24,8 @@ fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::Doc
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo_name, "notes/extra.md", None, "test")
         .expect("create extra file");
-    repo.append_generated_op_in_local_repo(repo_name, doc_id, PeerId::new("local"), |seq| {
+    let peer = repo.local_peer_id().clone();
+    repo.append_generated_op_in_local_repo(repo_name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,
             Op::Insert {
@@ -32,7 +33,7 @@ fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::Doc
                 content: "extra repo".into(),
             },
             1,
-            PeerId::new("local"),
+            peer.clone(),
             seq,
             None,
             None,
@@ -65,9 +66,15 @@ fn local_repo_reads_route_by_repo_id() {
         2
     );
     assert_eq!(
-        repo.get_local_ops_in_range(&extra_id, 1, 8)
-            .expect("load ranged ops")
-            .len(),
+        repo.get_local_ops_in_range(
+            &extra_id,
+            repo.local_peer_id(),
+            1_u64.into(),
+            repo.get_local_peer_waterline(&extra_id)
+                .expect("peer waterline"),
+        )
+        .expect("load ranged ops")
+        .len(),
         3
     );
 }
@@ -77,8 +84,9 @@ fn sync_snapshot_uses_requested_local_repo_id() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let doc_id = seed_extra_doc(&repo, &extra_name);
     let repo_key = RepoKey::generate();
+    let local_peer = repo.local_peer_id().clone();
     let engine = SyncEngine::new(
-        PeerId::new("local"),
+        local_peer.clone(),
         Arc::new(repo),
         SyncMode::Auto,
         Some(repo_key.clone()),
@@ -86,7 +94,7 @@ fn sync_snapshot_uses_requested_local_repo_id() {
 
     let response = engine
         .get_snapshot_for_sync(&SyncSnapshotRequest {
-            peer_id: PeerId::new("local"),
+            peer_id: local_peer,
             repo_id: extra_id,
             reason: None,
         })

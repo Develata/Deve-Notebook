@@ -52,8 +52,8 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 11
-    - min_supported_packet_protocol_version_eq: 11
+    - versioned_packet_protocol_version_eq: 12
+    - min_supported_packet_protocol_version_eq: 12
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
@@ -101,7 +101,7 @@
     - run: cargo test -p deve_cli sync_request_preserves_requested_source_peer_in_push -- --nocapture
     - run: cargo test -p deve_cli ws_sync_request -- --nocapture
   assertions:
-    - ws_receive_contains: { type: "SyncPush", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_receive_contains: { type: "SyncPush", repo_id: "11111111-1111-1111-1111-111111111111", source_peer_id: "peer-a", range_start: 4, range_end: 7, scope_nonce: 1 }
     - sync_push_source_peer_id_eq_requested_source: true
     - new_sync_request_frames_include_known_vector: true
     - wrong_or_unbound_repo_returns_structured_protocol_error: true
@@ -116,7 +116,7 @@
     - run: cargo test -p deve_cli snapshot_request_exports_requested_shadow_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", source_peer_id: "peer-a", scope_nonce: 1, server_vector: "present", snapshot_kind: "full" }
+    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", source_peer_id: "peer-a", scope_nonce: 1, server_vector: "present", waterline: "present", snapshot_kind: "full" }
     - sync_push_snapshot_source_peer_id_eq_requested_source: true
     - unoffered_source_returns_structured_protocol_error: true
 
@@ -332,7 +332,7 @@
     - evidence_gap: live post-reconnect vector equality is not exposed by the current diagnostic surface; NET-017 covers apply-side vector monotonicity
 
 - case_id: NET-017
-  goal: 入站 remote facts 落库满足 apply 端单调性与连续性（plan 07_network 7.1）——陈旧或乱序到达的 snapshot 不回退 peer vector、不 reset 更 newer 的 shadow；增量 ops 不越过 seq 空洞、不重复 append 已接收的 seq。
+  goal: 入站 remote facts 落库满足 apply 端单调性、连续性与 confirmed-prefix equality（plan 07_network 7.1）——陈旧或乱序到达的 snapshot 不回退持久化 peer waterline、不 reset 更新的 shadow；增量 ops 不越过 seq 空洞，冲突重复整批拒绝。
   preconditions:
     - 一个配置了 RepoKey 的 sync engine，shadow ledger 已持有该 peer 的若干 ops
   steps:
@@ -343,6 +343,12 @@
     - incremental_apply_rejects_seq_gap: true
     - replayed_remote_ops_skip_duplicate_shadow_append: true
     - snapshot_base_allows_newer_contiguous_ops: true
+    - run: cargo test -p deve_core --lib auto_conflicting_prefix_rejects_entire_incremental_batch -- --nocapture
+    - run: cargo test -p deve_core --lib auto_newer_snapshot_cannot_rewrite_confirmed_prefix -- --nocapture
+    - run: cargo test -p deve_core --lib manual_equal_waterline_snapshots_must_be_identical -- --nocapture
+    - run: cargo test -p deve_core --lib persisted_shadow_waterline_blocks_stale_snapshot_from_another_engine -- --nocapture
+    - api_assert: untrusted_version_vector_zero_unsorted_duplicate_rejected_before_diff true
+    - api_assert: huge_or_over_budget_peer_range_fails_before_allocation true
 
 - case_id: NET-018
   goal: 同一 repo 的多个 browser session 即使拥有不同连接内 scope_nonce，也能接收彼此已经通过 writer gate 的实时广播。
@@ -356,4 +362,29 @@
     - producer_write_still_uses_producer_writer_gate: true
     - delivered_new_op_uses_recipient_scope_nonce: true
     - client_a_receives_client_b_post_reconnect_edit: true
+
+- case_id: NET-019
+  goal: 同一 repo 内物理 peer 的 content/structure facts 共享严格连续 PeerFactSeq；任意缺口阻塞后续事实，直到补齐或明确失败。
+  preconditions:
+    - peer-a 与 peer-b 使用相同 RepoId、独立 local ledger 与认证 FullPeer session
+    - 测试入口可以遗漏 peer-a 的序号 N 并先投递 N+1
+  steps:
+    - run: cargo test -p deve_core peer_fact_seq -- --nocapture
+    - run: cargo test -p deve_core sync::engine::manual -- --nocapture
+    - run: cargo test -p deve_cli p2p_sequence_gap -- --nocapture
+    - run: cargo test -p deve_core --test merge_checkpoint_test checkpoint_survives_reopen_and_anchor_is_in_peer_range -- --nocapture
+    - run: DEVE_DOCKER_P2P_MESH_REQUIRED=1 DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP=1 bash scripts/smoke-docker-p2p-mesh.sh
+  assertions:
+    - content_and_structure_share_peer_sequence: true
+    - failed_write_does_not_consume_peer_sequence: true
+    - global_seq_not_used_as_sync_waterline: true
+    - missing_range_entry_returns_sequence_gap: true
+    - inbound_gap_keeps_shadow_and_vector_unchanged: true
+    - smoke_waits_for_receiver_expected_n_observed_n_plus_one_rejection: true
+    - gap_hold_uses_exact_shadow_content_not_substring_match: true
+    - connector_request_and_full_peer_hello_push_fault_paths_are_labeled: true
+    - restored_missing_fact_allows_contiguous_recovery: true
+    - snapshot_requires_exact_source_range_1_through_waterline: true
+    - merge_anchor_consumes_peer_fact_seq_and_roundtrips_in_full_log_snapshot: true
+    - merge_anchor_does_not_mutate_content_or_structure_projection: true
 ```

@@ -65,6 +65,7 @@ pub mod traits;
 // ========== 公开导出 ==========
 
 pub use self::schema::*;
+pub use manager::local_fact_writer::LocalFactWriter;
 pub use manager::types::*;
 pub use seq::GlobalSeq;
 pub(crate) use shadow_transfer::ShadowPayload; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager

@@ -1,6 +1,6 @@
 use crate::config::SyncMode;
 use crate::ledger::RepoManager;
-use crate::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
+use crate::models::{DocId, LedgerEntry, Op, PeerFactSeq, PeerId, RepoId};
 use crate::security::{EncryptedOp, RepoKey};
 use crate::sync::engine::SyncEngine;
 use crate::sync::protocol::SyncResponse;
@@ -25,7 +25,12 @@ fn build_engine(
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let repo = Arc::new(repo);
     let key = RepoKey::generate();
-    let engine = SyncEngine::new(PeerId::new("local"), repo.clone(), mode, Some(key.clone()));
+    let engine = SyncEngine::new(
+        repo.local_peer_id().clone(),
+        repo.clone(),
+        mode,
+        Some(key.clone()),
+    );
     Ok((dir, repo, repo_id, key, engine))
 }
 
@@ -43,12 +48,12 @@ fn encrypted_response_with_seq(
     key: &RepoKey,
     seq: u64,
 ) -> anyhow::Result<SyncResponse> {
-    let doc_id = DocId::new();
+    let doc_id = DocId::from_u128(1);
     let entry = LedgerEntry::new_content(
         doc_id,
         Op::Insert {
-            pos: 0,
-            content: "remote".into(),
+            pos: (seq - 1) as u32,
+            content: "x".into(),
         },
         1,
         peer.clone(),
@@ -56,11 +61,44 @@ fn encrypted_response_with_seq(
         None,
         None,
     );
-    Ok(SyncResponse {
-        peer_id: peer.clone(),
+    let peer_seq = PeerFactSeq::new(seq);
+    Ok(SyncResponse::incremental(
+        peer.clone(),
         repo_id,
-        ops: vec![key.encrypt(&entry, seq)?],
-    })
+        (peer_seq, peer_seq),
+        vec![key.encrypt(&entry, peer_seq)?],
+    ))
+}
+
+fn encrypted_snapshot_with_waterline(
+    peer: &PeerId,
+    repo_id: RepoId,
+    key: &RepoKey,
+    waterline: u64,
+) -> anyhow::Result<SyncResponse> {
+    let doc_id = DocId::from_u128(1);
+    let mut ops = Vec::new();
+    for seq in 1..=waterline {
+        let entry = LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: (seq - 1) as u32,
+                content: "x".into(),
+            },
+            seq as i64,
+            peer.clone(),
+            seq,
+            None,
+            None,
+        );
+        ops.push(key.encrypt(&entry, seq.into())?);
+    }
+    Ok(SyncResponse::full_fact_replay(
+        peer.clone(),
+        repo_id,
+        waterline.into(),
+        ops,
+    ))
 }
 
 fn encrypted_invalid_delete_response(
@@ -78,24 +116,68 @@ fn encrypted_invalid_delete_response(
         None,
         None,
     );
-    Ok(SyncResponse {
-        peer_id: peer.clone(),
+    let peer_seq = PeerFactSeq::new(seq);
+    Ok(SyncResponse::incremental(
+        peer.clone(),
         repo_id,
-        ops: vec![key.encrypt(&entry, seq)?],
-    })
+        (peer_seq, peer_seq),
+        vec![key.encrypt(&entry, peer_seq)?],
+    ))
+}
+
+fn conflicting_prefix_response(
+    peer: &PeerId,
+    repo_id: RepoId,
+    key: &RepoKey,
+) -> anyhow::Result<SyncResponse> {
+    let doc_id = DocId::from_u128(1);
+    let conflicting = LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: "y".into(),
+        },
+        1,
+        peer.clone(),
+        1,
+        None,
+        None,
+    );
+    let next = LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 1,
+            content: "x".into(),
+        },
+        2,
+        peer.clone(),
+        2,
+        None,
+        None,
+    );
+    Ok(SyncResponse::incremental(
+        peer.clone(),
+        repo_id,
+        (1_u64.into(), 2_u64.into()),
+        vec![
+            key.encrypt(&conflicting, 1_u64.into())?,
+            key.encrypt(&next, 2_u64.into())?,
+        ],
+    ))
 }
 
 fn tampered_response(peer: &PeerId, repo_id: RepoId) -> SyncResponse {
-    SyncResponse {
-        peer_id: peer.clone(),
+    SyncResponse::full_fact_replay(
+        peer.clone(),
         repo_id,
-        ops: vec![EncryptedOp {
+        1.into(),
+        vec![EncryptedOp {
             doc_id: None,
-            seq: 2,
+            peer_seq: 1.into(),
             ciphertext: vec![1, 2, 3],
             nonce: vec![0; 12],
         }],
-    }
+    )
 }
 
 fn seq_mismatch_response(
@@ -104,7 +186,7 @@ fn seq_mismatch_response(
     key: &RepoKey,
 ) -> anyhow::Result<SyncResponse> {
     let mut response = encrypted_response_with_seq(peer, repo_id, key, 1)?;
-    response.ops[0].seq = 2;
+    response.ops[0].peer_seq = 2.into();
     Ok(response)
 }
 
@@ -164,7 +246,7 @@ fn auto_apply_remote_ops_rejects_seq_gap() -> anyhow::Result<()> {
         .apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 3)?)
         .expect_err("seq gap must fail closed");
     assert!(
-        err.to_string().contains("non-contiguous"),
+        err.to_string().contains("sequence_gap"),
         "unexpected error: {err}"
     );
     assert_eq!(
@@ -196,6 +278,27 @@ fn auto_replayed_remote_ops_do_not_append_duplicate_shadow_entries() -> anyhow::
 }
 
 #[test]
+fn auto_conflicting_prefix_rejects_entire_incremental_batch() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Auto)?;
+    let peer = PeerId::new("remote");
+    engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+
+    let error = engine
+        .apply_remote_ops(conflicting_prefix_response(&peer, repo_id, &key)?)
+        .expect_err("conflicting confirmed prefix must reject the entire batch");
+    assert!(error.to_string().contains("sequence_conflict"));
+    assert_eq!(engine.version_vector().get(&peer), 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    assert!(
+        repo.get_shadow_ops_in_range(&peer, &repo_id, 1.into(), 1.into())?[0]
+            .1
+            .content_op()
+            .is_some_and(|op| matches!(op, Op::Insert { content, .. } if content == "x"))
+    );
+    Ok(())
+}
+
+#[test]
 fn manual_merge_rejects_incremental_seq_gap() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
@@ -206,7 +309,7 @@ fn manual_merge_rejects_incremental_seq_gap() -> anyhow::Result<()> {
         .merge_pending()
         .expect_err("seq gap must fail closed");
     assert!(
-        err.to_string().contains("non-contiguous"),
+        err.to_string().contains("sequence_gap"),
         "unexpected error: {err}"
     );
     assert_eq!(engine.pending_ops_count(), 1);

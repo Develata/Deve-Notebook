@@ -8,8 +8,8 @@ use super::peer_support::resolve_doc_path;
 use crate::server::repo_scope::{ResolvedRepo, ensure_resolved_local_repo_writable};
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::ledger::merge::ConflictHunk;
-use deve_core::ledger::reconcile;
-use deve_core::models::DocId;
+use deve_core::ledger::merge::MergePreflight;
+use deve_core::models::{DocId, MergeResolution};
 use deve_core::protocol::{MergeConflictAction, ServerMessage};
 use std::sync::Arc;
 
@@ -21,74 +21,57 @@ pub(super) struct MergeConflictPayload {
     pub(super) conflicts: Vec<ConflictHunk>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum MergeWriteOutcome {
+    Committed,
+    CommitFailed,
+    CommittedWritebackFailed,
+}
+
 pub(super) fn write_merged_content(
     state: &Arc<AppState>,
     ch: &DualChannel,
     scope: &ResolvedRepo,
-    doc_id: DocId,
+    preflight: &MergePreflight,
     content: &str,
+    resolution: MergeResolution,
     scope_nonce: Option<u64>,
-) -> bool {
+) -> MergeWriteOutcome {
     if let Err(error) = ensure_resolved_local_repo_writable(state, scope) {
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
-        return false;
+        return MergeWriteOutcome::CommitFailed;
     }
-    let entries = match state
-        .repo
-        .get_local_ops_in_local_repo(&scope.repo_name, doc_id)
-    {
-        Ok(entries) => entries
-            .into_iter()
-            .map(|(_, entry)| entry)
-            .collect::<Vec<_>>(),
-        Err(err) => {
-            errors::classified_failure(
-                ch,
-                format!("Failed to load local merge state: {}", err),
-                scope_nonce,
-            );
-            return false;
-        }
-    };
-    let patch = match reconcile::compute_reconcile_patch(&entries, content) {
-        Ok(patch) => patch,
-        Err(err) => {
-            errors::request_failed(
-                ch,
-                format!("Failed to diff merged content: {}", err),
-                scope_nonce,
-            );
-            return false;
-        }
-    };
-    if let Err(err) = reconcile::append_patch_in_local_repo(
-        &state.repo,
+    let outcome = match state.repo.commit_peer_merge_in_local_repo(
         &scope.repo_name,
-        doc_id,
-        "merge",
-        &patch,
+        preflight,
+        content,
+        resolution,
     ) {
-        errors::storage_persist_failed(
-            ch,
-            format!("Failed to append merged content: {}", err),
-            scope_nonce,
-        );
-        return false;
-    }
-    if let Err(err) = state
-        .sync_manager
-        .persist_doc_in_local_repo(&scope.repo_name, doc_id)
+        Ok(outcome) => outcome,
+        Err(err) => {
+            errors::storage_persist_failed(
+                ch,
+                format!("Failed to append merged content and checkpoint: {}", err),
+                scope_nonce,
+            );
+            return MergeWriteOutcome::CommitFailed;
+        }
+    };
+    if outcome.content_changed
+        && let Err(err) = state
+            .sync_manager
+            .persist_doc_in_local_repo(&scope.repo_name, preflight.doc_id())
     {
         errors::storage_persist_failed(
             ch,
             format!("Failed to persist merged content: {}", err),
             scope_nonce,
         );
-        return false;
+        return MergeWriteOutcome::CommittedWritebackFailed;
     }
-    tracing::info!("Merge Success for doc {}", doc_id);
-    broadcast_merge_complete(ch, scope, 1, scope_nonce);
-    true
+    tracing::info!("Merge Success for doc {}", preflight.doc_id());
+    broadcast_merge_complete(ch, scope, u32::from(outcome.content_changed), scope_nonce);
+    MergeWriteOutcome::Committed
 }
 
 pub(super) fn broadcast_merge_complete(

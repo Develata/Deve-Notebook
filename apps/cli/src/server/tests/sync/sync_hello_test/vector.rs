@@ -7,35 +7,27 @@ use super::super::sync_hello_test_support::{
     build_state, collect_unicast_messages, empty_session, signed_hello, signed_hello_for_repo,
     unicast_channel,
 };
-use deve_core::models::{DocId, LedgerEntry, Op, VersionVector};
+use deve_core::models::{DocId, FactActor, Op, VersionVector};
 use deve_core::protocol::ServerMessage;
 use deve_core::security::IdentityKeyPair;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_response_refreshes_vector_from_ledger_heads() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
-    let local_peer = state.identity_key.peer_id();
     state.sync_engine.get_or_create_strict(repo_id)?;
     let doc_id = DocId::new();
-    state.repo.append_generated_op_in_local_repo(
-        state.repo.local_repo_name(),
-        doc_id,
-        local_peer.clone(),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "local".into(),
-                },
-                1,
-                local_peer.clone(),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            state.repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "local".into(),
+            },
+            1,
+        )?;
     let remote = IdentityKeyPair::generate();
     let hello = signed_hello_for_repo(&remote, repo_id);
     let (ch, mut rx) = unicast_channel(&state);
@@ -59,25 +51,18 @@ async fn sync_hello_followup_request_carries_known_vector() -> anyhow::Result<()
     let (_dir, state, repo_id) = build_state()?;
     let local_peer = state.identity_key.peer_id();
     let doc_id = DocId::new();
-    state.repo.append_generated_op_in_local_repo(
-        state.repo.local_repo_name(),
-        doc_id,
-        local_peer.clone(),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "local".into(),
-                },
-                1,
-                local_peer.clone(),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            state.repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "local".into(),
+            },
+            1,
+        )?;
 
     let remote = IdentityKeyPair::generate();
     let mut remote_vector = VersionVector::new();

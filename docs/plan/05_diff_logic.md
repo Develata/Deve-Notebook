@@ -289,11 +289,11 @@ CommitSelected
 
 ```text
 MergeRequested
-  -> LCAResolved
+  -> MergeCheckpointResolved | InitialEqualBaselineEstablished
   -> DiffCalculated
   -> AutoMerged | Conflict
   -> ConfirmedResult
-  -> LedgerCommitted
+  -> MergeAnchorCommitted
 ```
 
 约束：
@@ -304,6 +304,12 @@ MergeRequested
 - `MergePeer` **MUST** 从 Local Branch 发起；用户选择 peer force-mirror / shadow branch 作为只读 source。
 - Remote Branch UI / scope **MUST NOT** 发起 `MergePeer`、`ResolveMergeConflict` 或任何会产生 local ledger facts 的 merge apply；应禁用入口或 fail-closed。
 - `MergePeer` 产出的任何写入都必须重新进入本机 repo-scoped writer gate，并作为新的 Local Branch ledger facts 提交。
+- local ledger 与单-source shadow 的物理 `PeerId` 集合按设计互斥；merge **MUST NOT** 再用两边 VersionVector 的 peer-id 交集伪造 LCA。
+- `(source_peer_id, DocId)` 已存在有效 `MergeBaseCheckpoint` 时，`Base` 必须由 source shadow 在 checkpoint 的 source waterline 重建，并用 `source_state_hash` 校验该历史仍可证明；checkpoint 的 local anchor 必须仍存在于本地连续历史，以证明本机已经处理过该 source 状态。
+- 首次不存在 checkpoint 时，只有 local 与 remote 当前内容逐字节相等才允许自动追加 `MergeAnchor(resolution=establish_equal)` 建立基线；首次已经分叉必须返回 `merge_base_missing` 或等价结构化错误，要求显式 baseline/import 决策，不得以空内容、相似度或路径猜测共同祖先。
+- merge preflight 必须是 core 评估产生的 opaque evidence，且 local/source 目标 DocId 都必须由对应事实证明存在，不能把缺失文档折叠为空字符串。writer 在同一 shadow guard 下必须重新执行 evaluation 并逐字段比对 local waterline、source waterline、checkpoint anchor、base/result evidence；任一伪造或漂移都必须 fail-closed 并要求刷新。
+- auto merge 与所有 conflict resolution（包括内容不变的 AcceptCurrent）都必须追加本地 `MergeAnchor`；内容 fact、anchor、peer sequence/index 与 checkpoint 更新必须在同一事务提交。
+- `MergeAnchor` 不改变 Markdown/tree projection，但必须进入 peer range、完整事实 snapshot、v2 JSON archive 与审计输出；projection fold 必须显式忽略其内容效果。
 
 冲突检测原则：
 
@@ -449,7 +455,7 @@ MergeRequested
 
 ### 5.4 Merge Contract
 
-- `Base` = LCA snapshot / anchor。
+- `Base` = 最新有效 `MergeBaseCheckpoint` 指向的 source shadow state；首次仅允许 equal-state anchor 建立。上次本地 merge result 不得伪装成远端也拥有的共同状态。
 - `Left` = local confirmed state。
 - `Right` = remote mirror confirmed state。
 - auto-merge 仅允许在差异域不重叠时发生。
@@ -461,6 +467,7 @@ MergeRequested
 - Remote mirror 自身不得因 merge 流程被直接改写。
 - merge 不是远端并发编辑协议；它是本机对 remote mirror snapshot 的显式读入、计算与本地提交。
 - merge result 若需要用户选择，结果必须在确认后才允许落 ledger。
+- 一个 source 的 checkpoint 按 `(source_peer_id, DocId)` 独立维护；合并其他 peer 产生的本地变化可以进入当前 Local，但不得覆盖该 source 的上次共同基线。
 
 ## 6. Failure Modes
 
@@ -485,6 +492,8 @@ MergeRequested
 ### 6.3 Merge Failures
 
 - no common ancestor
+- merge checkpoint missing / dangling / hash mismatch
+- local/source waterline changed after merge preflight
 - cross-repo merge request
 - structure conflict unresolved
 - remote scope not writable but merge requested

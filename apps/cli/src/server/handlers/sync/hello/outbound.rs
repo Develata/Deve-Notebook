@@ -79,9 +79,28 @@ fn send_pushes(
 ) {
     for req in requests {
         match ctx.engine.get_ops_for_sync(&req) {
-            Ok(response) => {
+            Ok(mut response) => {
                 if response.ops.is_empty() {
                     continue;
+                }
+                if ctx.session.authenticated_peer_id.is_some()
+                    && let Err(err) = crate::server::p2p::fault_injection::maybe_inject_sequence_gap(
+                        ctx.state,
+                        "full_peer_sync_hello_push",
+                        response.range,
+                        &mut response.ops,
+                    )
+                {
+                    clear_sync_hello_scope_failure(ctx.session, false);
+                    errors::sync_payload_build_failed(
+                        ctx.ch,
+                        format!(
+                            "Failed to inject armed P2P sequence-gap test fault for repo {}: {}",
+                            ctx.repo_id, err
+                        ),
+                        ctx.scope,
+                    );
+                    return;
                 }
                 let header = SyncPushHeader::diff(
                     response.repo_id,
@@ -107,9 +126,14 @@ fn send_pushes(
                         return;
                     }
                 };
+                let (range_start, range_end) = response
+                    .range
+                    .expect("incremental sync response must carry its closed range");
                 ctx.ch.unicast(ServerMessage::SyncPush {
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
+                    range_start,
+                    range_end,
                     header,
                     scope_nonce: ctx.scope_nonce.into(),
                     branch: ctx.session.active_branch.clone(),

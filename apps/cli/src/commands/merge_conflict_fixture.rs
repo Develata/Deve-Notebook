@@ -4,8 +4,9 @@
 //!   - 14_commands#cli-commands
 
 use anyhow::{Result, bail};
+use deve_core::ledger::merge::MergeResult;
 use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::{LedgerEntry, Op, PeerId, StructureOp};
+use deve_core::models::{FactActor, LedgerEntry, MergeResolution, Op, PeerId, StructureOp};
 use std::path::Path;
 
 pub struct MergeConflictFixtureOptions {
@@ -40,15 +41,18 @@ pub fn run(
 
     let (doc_id, structure_ops) =
         repo.apply_file_structure_in_local_repo(&repo_name, &options.path, None, "fixture")?;
-    append_remote_structure(&repo, &peer_id, &repo_info.uuid, &structure_ops)?;
-    append_shared_base(
+    let remote_structure_waterline =
+        append_remote_structure(&repo, &peer_id, &repo_info.uuid, &structure_ops)?;
+    let remote_base_seq = append_shared_base(
         &repo,
         &repo_name,
         &peer_id,
         &repo_info.uuid,
         doc_id,
         &options.base,
+        remote_structure_waterline + 1,
     )?;
+    establish_equal_checkpoint(&repo, &repo_name, &peer_id, &repo_info.uuid, doc_id)?;
     append_local_replace(&repo, &repo_name, doc_id, &options.base, &options.local)?;
     append_remote_replace(
         &repo,
@@ -57,6 +61,7 @@ pub fn run(
         doc_id,
         &options.base,
         &options.remote,
+        remote_base_seq + 1,
     )?;
     let workspace_root = repo.ensure_local_repo_workspace_identity(&repo_name)?;
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
@@ -71,6 +76,26 @@ pub fn run(
     println!("peer={peer_id}");
     println!("path={}", options.path);
     println!("doc_id={doc_id}");
+    Ok(())
+}
+
+fn establish_equal_checkpoint(
+    repo: &RepoManager,
+    repo_name: &str,
+    peer_id: &PeerId,
+    repo_id: &uuid::Uuid,
+    doc_id: deve_core::models::DocId,
+) -> Result<()> {
+    let evaluation = repo.merge_peer_in_local_repo(repo_name, peer_id, repo_id, doc_id)?;
+    let MergeResult::Success(content) = evaluation.result else {
+        bail!("equal fixture baseline unexpectedly produced a conflict");
+    };
+    repo.commit_peer_merge_in_local_repo(
+        repo_name,
+        &evaluation.preflight,
+        &content,
+        MergeResolution::EstablishEqual,
+    )?;
     Ok(())
 }
 
@@ -108,23 +133,17 @@ fn append_remote_structure(
     peer_id: &PeerId,
     repo_id: &uuid::Uuid,
     ops: &[StructureOp],
-) -> Result<()> {
-    let structure_peer = PeerId::new("shared-structure");
+) -> Result<u64> {
     let timestamp = chrono::Utc::now().timestamp_millis();
     let entries = ops
         .iter()
         .enumerate()
         .map(|(idx, op)| {
-            LedgerEntry::new_structure(
-                op.clone(),
-                timestamp,
-                structure_peer.clone(),
-                idx as u64 + 1,
-            )
+            LedgerEntry::new_structure(op.clone(), timestamp, peer_id.clone(), idx as u64 + 1)
         })
         .collect::<Vec<_>>();
     repo.append_remote_ops(peer_id, repo_id, &entries)?;
-    Ok(())
+    Ok(entries.len() as u64)
 }
 
 fn append_shared_base(
@@ -134,23 +153,36 @@ fn append_shared_base(
     repo_id: &uuid::Uuid,
     doc_id: deve_core::models::DocId,
     base: &str,
-) -> Result<()> {
-    let base_peer = PeerId::new("shared-base");
-    let entry = LedgerEntry::new_content(
-        doc_id,
-        Op::Insert {
-            pos: 0,
-            content: base.into(),
-        },
-        chrono::Utc::now().timestamp_millis(),
-        base_peer,
-        1,
-        None,
-        None,
-    );
-    repo.append_local_op_in_local_repo(repo_name, &entry)?;
-    repo.append_remote_op(peer_id, repo_id, &entry)?;
-    Ok(())
+    remote_seq: u64,
+) -> Result<u64> {
+    let timestamp = chrono::Utc::now().timestamp_millis();
+    repo.local_fact_writer(FactActor::new("merge_fixture")?)
+        .append_content_in_local_repo(
+            repo_name,
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: base.into(),
+            },
+            timestamp,
+        )?;
+    repo.append_remote_op(
+        peer_id,
+        repo_id,
+        &LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: base.into(),
+            },
+            timestamp,
+            peer_id.clone(),
+            remote_seq,
+            None,
+            None,
+        ),
+    )?;
+    Ok(remote_seq)
 }
 
 fn append_local_replace(
@@ -160,35 +192,25 @@ fn append_local_replace(
     before: &str,
     after: &str,
 ) -> Result<()> {
-    let peer_id = PeerId::new("fixture-local");
-    repo.append_generated_op_in_local_repo(repo_name, doc_id, peer_id.clone(), |seq| {
-        LedgerEntry::new_content(
-            doc_id,
-            Op::Delete {
-                pos: 0,
-                len: utf16_len(before),
-            },
-            chrono::Utc::now().timestamp_millis(),
-            peer_id.clone(),
-            seq,
-            None,
-            None,
-        )
-    })?;
-    repo.append_generated_op_in_local_repo(repo_name, doc_id, peer_id.clone(), |seq| {
-        LedgerEntry::new_content(
-            doc_id,
-            Op::Insert {
-                pos: 0,
-                content: after.into(),
-            },
-            chrono::Utc::now().timestamp_millis(),
-            peer_id.clone(),
-            seq,
-            None,
-            None,
-        )
-    })?;
+    let writer = repo.local_fact_writer(FactActor::new("merge_fixture")?);
+    writer.append_content_in_local_repo(
+        repo_name,
+        doc_id,
+        Op::Delete {
+            pos: 0,
+            len: utf16_len(before),
+        },
+        chrono::Utc::now().timestamp_millis(),
+    )?;
+    writer.append_content_in_local_repo(
+        repo_name,
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: after.into(),
+        },
+        chrono::Utc::now().timestamp_millis(),
+    )?;
     Ok(())
 }
 
@@ -199,6 +221,7 @@ fn append_remote_replace(
     doc_id: deve_core::models::DocId,
     before: &str,
     after: &str,
+    first_seq: u64,
 ) -> Result<()> {
     repo.append_remote_op(
         peer_id,
@@ -211,7 +234,7 @@ fn append_remote_replace(
             },
             chrono::Utc::now().timestamp_millis(),
             peer_id.clone(),
-            1,
+            first_seq,
             None,
             None,
         ),
@@ -227,7 +250,7 @@ fn append_remote_replace(
             },
             chrono::Utc::now().timestamp_millis(),
             peer_id.clone(),
-            2,
+            first_seq + 1,
             None,
             None,
         ),

@@ -5,8 +5,8 @@
 
 use crate::server::session::PendingMergeConflict;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
-use deve_core::ledger::merge::MergeResult;
-use deve_core::models::{DocId, PeerId};
+use deve_core::ledger::merge::{MergeEvaluation, MergeResult};
+use deve_core::models::{DocId, MergeResolution, PeerId};
 use std::sync::Arc;
 
 use super::errors;
@@ -34,15 +34,35 @@ pub(super) async fn handle_merge_peer(
         &local_scope.repo_id,
         doc_id,
     ) {
-        Ok(MergeResult::Success(content)) => {
+        Ok(MergeEvaluation {
+            result: MergeResult::Success(content),
+            preflight,
+        }) => {
             session.pending_merge_conflict = None;
-            write_merged_content(state, ch, &local_scope, doc_id, &content, scope_nonce);
+            let resolution = if preflight.establishes_equal_baseline() {
+                MergeResolution::EstablishEqual
+            } else {
+                MergeResolution::Auto
+            };
+            write_merged_content(
+                state,
+                ch,
+                &local_scope,
+                &preflight,
+                &content,
+                resolution,
+                scope_nonce,
+            );
         }
-        Ok(MergeResult::Conflict {
-            base,
-            local,
-            remote,
-            conflicts,
+        Ok(MergeEvaluation {
+            result:
+                MergeResult::Conflict {
+                    base,
+                    local,
+                    remote,
+                    conflicts,
+                },
+            preflight,
         }) => {
             let pending = PendingMergeConflict {
                 repo_id: local_scope.repo_id,
@@ -51,6 +71,7 @@ pub(super) async fn handle_merge_peer(
                 scope_nonce,
                 local_content: local.clone(),
                 incoming_content: remote.clone(),
+                preflight,
             };
             let emitted = send_merge_conflict(
                 state,

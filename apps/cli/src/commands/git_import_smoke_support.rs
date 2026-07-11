@@ -11,7 +11,7 @@ use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorPushOptions, GitMirrorPushReport, get_record, push_mirror,
 };
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op};
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -130,20 +130,16 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         let doc_id = repo
             .get_tracked_docid_in_local_repo("default", "note.md")?
             .expect("doc id");
-        repo.append_generated_op_in_local_repo("default", doc_id, PeerId::new("local"), |seq| {
-            LedgerEntry::new_content(
+        repo.local_fact_writer(FactActor::new("test")?)
+            .append_content_in_local_repo(
+                "default",
                 doc_id,
                 Op::Insert {
                     pos: 6,
                     content: "ledger\n".into(),
                 },
                 2,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        })?;
+            )?;
         doc_id
     };
     let repo = open_repo(ledger_dir, projection_base)?;

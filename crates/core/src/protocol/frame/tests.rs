@@ -267,7 +267,7 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
     let client = ClientMessage::SyncRequest {
         repo_id,
         known_vector: vector.clone(),
-        requests: vec![(peer.clone(), (1, 8))],
+        requests: vec![(peer.clone(), (1_u64.into(), 8_u64.into()))],
     };
     let decoded_client = decode_client_binary(&encode_client_binary(&client).unwrap()).unwrap();
     match decoded_client {
@@ -280,6 +280,7 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
     let server = ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,
+        waterline: 7_u64.into(),
         scope_nonce: crate::protocol::ScopeNonce::new(3),
         branch: Some(peer.clone()),
         server_vector: vector.clone(),
@@ -333,11 +334,12 @@ fn sync_vector_fields_default_for_legacy_json_debug_frames() {
 
     let server_snapshot = serde_json::json!({
         "SyncPushSnapshot": {
-            "peer_id": peer,
+            "source_peer_id": peer,
             "repo_id": repo_id,
+            "waterline": 0,
             "scope_nonce": 9,
             "branch": null,
-            "ops": []
+            "payload": []
         }
     });
     match serde_json::from_value::<ServerMessage>(server_snapshot).unwrap() {

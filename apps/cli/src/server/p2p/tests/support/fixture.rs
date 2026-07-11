@@ -2,7 +2,7 @@ use crate::server::p2p::ExchangeStats;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
 use deve_core::config::{P2pPeerConfig, SyncMode};
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
+use deve_core::models::{DocId, FactActor, LedgerEntry, Op, PeerId, VersionVector};
 use deve_core::protocol::{ScopeNonce, ServerMessage};
 use deve_core::security::{EncryptedOp, IdentityKeyPair};
 use deve_core::sync::SyncManager;
@@ -22,12 +22,11 @@ pub(crate) fn test_state_with_dir(
     identity: Arc<IdentityKeyPair>,
 ) -> anyhow::Result<(tempfile::TempDir, Arc<AppState>)> {
     let dir = tempfile::tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
-        10,
-        Some("default"),
-        Some("urn:default"),
-    )?;
+    let ledger_dir = dir.path().join("ledger");
+    let host_keys_dir = deve_core::utils::notegit::host_keys_dir(&ledger_dir);
+    std::fs::create_dir_all(&host_keys_dir)?;
+    std::fs::write(host_keys_dir.join("identity.key"), identity.to_bytes())?;
+    let mut repo = RepoManager::init(ledger_dir, 10, Some("default"), Some("urn:default"))?;
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
     let repo = Arc::new(repo);
     let (tx, _rx) = tokio::sync::broadcast::channel(8);
@@ -70,7 +69,7 @@ pub(crate) fn peer_with_id(repo_id: uuid::Uuid, peer_id: &str) -> P2pPeerConfig 
 pub(crate) fn dummy_payload() -> Vec<EncryptedOp> {
     vec![EncryptedOp {
         doc_id: None,
-        seq: 1,
+        peer_seq: 1_u64.into(),
         ciphertext: vec![1, 2, 3],
         nonce: vec![0; 12],
     }]
@@ -79,26 +78,18 @@ pub(crate) fn dummy_payload() -> Vec<EncryptedOp> {
 pub(crate) fn append_local_op(state: &Arc<AppState>, repo_id: uuid::Uuid) -> anyhow::Result<()> {
     state.sync_engine.get_or_create_strict(repo_id)?;
     let doc_id = DocId::new();
-    let local_peer = state.identity_key.peer_id();
-    state.repo.append_generated_op_in_local_repo(
-        state.repo.local_repo_name(),
-        doc_id,
-        local_peer.clone(),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "local".into(),
-                },
-                1,
-                local_peer.clone(),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            state.repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "local".into(),
+            },
+            1,
+        )?;
     Ok(())
 }
 

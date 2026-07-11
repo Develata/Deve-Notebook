@@ -42,7 +42,7 @@ fn test_diff_scenarios() {
     assert!(missing_local.is_empty());
     let (id, range) = &missing_remote[0];
     assert_eq!(id, &p("A"));
-    assert_eq!(range, &(6..11)); // Expecting 6,7,8,9,10.
+    assert_eq!(range, &(6.into(), 10.into()));
 
     // Scenario 2: B leading (Remote has more data from B)
     local.update(p("B"), 3);
@@ -54,14 +54,14 @@ fn test_diff_scenarios() {
     assert!(
         missing_remote
             .iter()
-            .any(|(id, r)| id == &p("A") && r == &(6..11))
+            .any(|(id, r)| id == &p("A") && r == &(6.into(), 10.into()))
     );
 
     // Check missing from local (B case)
     assert!(
         missing_local
             .iter()
-            .any(|(id, r)| id == &p("B") && r == &(4..9))
+            .any(|(id, r)| id == &p("B") && r == &(4.into(), 8.into()))
     );
 }
 
@@ -80,18 +80,18 @@ fn test_diff_concurrent() {
 
     let (missing_remote, missing_local) = local.diff(&remote);
 
-    // Remote needs B: 16..21
+    // Remote needs B: 16..=20
     assert!(
         missing_remote
             .iter()
-            .any(|(id, r)| id == &p("B") && r == &(16..21))
+            .any(|(id, r)| id == &p("B") && r == &(16.into(), 20.into()))
     );
 
-    // Local needs A: 11..13
+    // Local needs A: 11..=12
     assert!(
         missing_local
             .iter()
-            .any(|(id, r)| id == &p("A") && r == &(11..13))
+            .any(|(id, r)| id == &p("A") && r == &(11.into(), 12.into()))
     );
 }
 
@@ -109,21 +109,25 @@ fn test_merge_idempotent() {
 }
 
 #[test]
-fn test_intersection() {
-    let mut v1 = VersionVector::new();
-    v1.update(p("A"), 10);
-    v1.update(p("B"), 5);
-
-    let mut v2 = VersionVector::new();
-    v2.update(p("A"), 7);
-    v2.update(p("B"), 8);
-    v2.update(p("C"), 3);
-
-    let lca = v1.intersection(&v2);
-
-    assert_eq!(lca.get(&p("A")), 7); // min(10, 7)
-    assert_eq!(lca.get(&p("B")), 5); // min(5, 8)
-    assert_eq!(lca.get(&p("C")), 0); // min(0, 3) = 0, not stored
+fn deserialization_rejects_zero_unsorted_and_duplicate_entries() {
+    assert!(
+        serde_json::from_value::<VersionVector>(serde_json::json!({
+            "clock": [["peer-a", 0]]
+        }))
+        .is_err()
+    );
+    assert!(
+        serde_json::from_value::<VersionVector>(serde_json::json!({
+            "clock": [["peer-b", 1], ["peer-a", 2]]
+        }))
+        .is_err()
+    );
+    assert!(
+        serde_json::from_value::<VersionVector>(serde_json::json!({
+            "clock": [["peer-a", 1], ["peer-a", 2]]
+        }))
+        .is_err()
+    );
 }
 
 #[test]

@@ -90,17 +90,17 @@
     - run: cargo test --locked
     - run: cargo run -p deve_baseline -- release-audit-gate
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
-    - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 2" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "REDB_SCHEMA_VERSION = 2" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`WS_PROTOCOL_VERSION = 11;`" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 11;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "REDB_SCHEMA_VERSION = 3" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`WS_PROTOCOL_VERSION = 12;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 12;`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
     - stdout_contains: "storage-repo-baseline-check: ok"
     - stdout_contains: "network-baseline-check: ok"
     - stdout_contains: "release-baseline-check: ok"
     - stdout_contains: "repo-file-ops-baseline: ok"
-    - release_assert: stable_data_format_postcard_v2_gates_present true
+    - release_assert: first_tag_data_format_postcard_v3_gates_present true
     - release_assert: legacy_binary_codec_dependency_absent true
     - release_assert: first_tag_format_matrix_bound_to_plan_and_code true
     - release_assert: validation_script_ownership_policy_classified true

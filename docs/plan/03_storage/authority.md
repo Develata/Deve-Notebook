@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-07`
+- `Last Review`: `2026-07-10`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -23,6 +23,10 @@
 - `Structure Facts`
   - 面向 `NodeId / DocId`
   - Create / Rename / Move / Delete 等结构变化
+- `Merge Anchor Facts`
+  - 面向 `DocId + source PeerId`
+  - 记录已确认 source waterline、local pre-merge waterline、resolution 与 result hash
+  - 不直接改变内容/结构投影，但属于 ledger authority 并占用连续 `PeerFactSeq`
 
 ### 2.4 Non-Authoritative Runtime State
 
@@ -60,6 +64,9 @@
 - `INODE_TO_NODEID: Inode -> NodeId`
 - `SNAPSHOT_INDEX: DocId -> [SeqNo]`
 - `SNAPSHOT_DATA: SeqNo -> ContentBlob`
+- `PEER_FACT_SEQ: PeerId -> PeerFactSeq`
+- `PEER_FACT_OPS: (PeerId, PeerFactSeq) -> GlobalSeq`
+- `MERGE_BASE_CHECKPOINT: (SourcePeerId, DocId) -> MergeBaseCheckpoint`
 
 ### 4.1.1 Ledger Entry Format Contract {#ledger-entry-format-contract}
 
@@ -67,8 +74,8 @@
 
 规则：
 
-- 每条 `LedgerEntry` 落盘 **MUST** 使用显式格式信封：固定 magic header + `ledger_entry_format_version` + project-owned postcard codec payload。
-- 当前首版格式为 `LEDGER_ENTRY_FORMAT_VERSION = 2`。
+- 每条 `LedgerEntry` 落盘 **MUST** 使用显式格式信封：magic header + `ledger_entry_format_version` + project-owned postcard codec payload。
+- 当前格式为 `LEDGER_ENTRY_FORMAT_VERSION = 3`、magic `DEVELDG3`；v3 显式区分 `origin_peer_id`、`peer_seq` 与非权威诊断字段 `actor`。
 - 读取路径 **MUST** 先验证 magic header，再按显式 `ledger_entry_format_version` dispatch。
 - 运行时 **MUST NOT** 通过“尝试当前结构、再尝试若干 legacy 结构”的 codec 形状探测作为 authority decode 路径。
 - 缺失 magic header、缺失版本或版本不受支持时，repo 必须 fail-closed；pre-1.0 未发布开发期旧 ledger 可要求显式 reset / repair / migration，不进入生产透明兼容承诺。
@@ -78,14 +85,23 @@
 - `GlobalSeq`
   - repo 范围内全序
   - `LEDGER_OPS` 主键
-- `PEER_DOC_SEQ`
-  - `(DocId, PeerId) -> u64`
-  - per-doc per-peer 单调计数
+- `PeerFactSeq`
+  - repo 内 `(PeerId) -> PeerFactSeq`
+  - 同一物理 peer 的全部 Content / Structure Facts 共享、从 1 开始且严格连续
+- `PEER_FACT_OPS`
+  - `(PeerId, PeerFactSeq) -> GlobalSeq`
+  - 为 P2P peer range 提供唯一反向索引
 
 规则：
 
 - `GlobalSeq` 决定落盘顺序。
-- `PEER_DOC_SEQ` 只作为 entry metadata，不得替代全序主键。
+- `GlobalSeq` 不得进入 P2P VersionVector、wire envelope 或 source range。
+- 本地事实的 `PeerFactSeq` 分配、`LEDGER_OPS` append、`PEER_FACT_SEQ` 水位与 `PEER_FACT_OPS` 反向索引必须在同一个 redb write transaction 提交；事务回滚不得留下永久序号缺口。
+- `FactActor` 只用于诊断审计，不得参与序列、身份、去重或 source attribution；wire/storage decode 必须与构造器一致地拒绝空字符串和超过 64 bytes 的值，不能通过派生反序列化绕过类型不变量。
+- 远端事实只能由认证 sync ingest 写入对应 source shadow；该路径验证既有 `(origin_peer_id, peer_seq)`，不得分配本地 peer sequence。
+- `MergeAnchor` 必须由 host-bound local writer 追加；source peer、local/source waterline、source base hash 与 result hash 必须来自后端 merge preflight，前端不得提供或覆盖。
+- `MERGE_BASE_CHECKPOINT` 只能与对应 `MergeAnchor` 在同一 local repo write transaction 更新；事务失败不得留下 anchor/checkpoint 任一侧的半提交。
+- checkpoint 必须能反向定位到同一 `(source_peer_id, doc_id)` 的 anchor fact；悬空、hash 不一致或水位越界必须 fail-closed，repair 不得按内容相似度猜测共同祖先。
 
 ### 4.3 Runtime Side Tables and Repo Metadata
 
@@ -115,13 +131,14 @@
 
 - `REPO_METADATA[0] = RepoInfo`
 - `REPO_METADATA[1] = redb_schema_version`
-- 当前首版 schema 为 `REDB_SCHEMA_VERSION = 2`，repo metadata 与 node metadata value 使用同一 project-owned postcard codec。
+- 当前 schema 为 `REDB_SCHEMA_VERSION = 3`，repo metadata 与 node metadata value 使用同一 project-owned postcard codec。
 
 规则：
 
 - 新建 local repo 与 remote shadow repo **MUST** 写入当前 `REDB_SCHEMA_VERSION`。
 - 打开已有 repo 时，运行时 **MUST** 先校验 `REDB_SCHEMA_VERSION`，再读取 `RepoInfo` 或进入 ledger/query 路径。
 - 缺失 schema version 或版本不匹配 **MUST** fail-closed，并暴露“需要显式迁移、reset 或重建”的诊断。
+- v2 的 `peer_id/seq` 同时混入 actor 标签与 per-doc/per-node 计数，运行时不得推测性重写为 v3 物理 peer history。v2 只允许经 repair/export 兼容读取后显式导出，再重建 v3 repo。
 - 表名后缀（如 `client_op_index_v2`）只能表达单个 side table 的内部演进，不得替代顶层 redb schema version gate。
 
 ### 4.4 Snapshot Storage Contract

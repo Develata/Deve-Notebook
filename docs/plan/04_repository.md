@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-07-10`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -61,6 +61,7 @@ RepoNameBinding = {
 - Remote Branch 是本机保存的 peer force-mirror / shadow 输入，不是可写工作分支。
 - Remote Branch 对所有用户操作、Editor、Source Control、Merge、plugin-host writer 与 Web UI action **MUST** 保持纯只读语义。
 - 唯一允许改变 Remote Branch 存储内容的路径是经认证同步协议 ingest peer facts / snapshot；该路径只维护 mirror authority，不是用户写入、不是 merge target，也不得由 Source Control writer 复用。
+- 每个 remote shadow 只能持有其目录所绑定物理 source peer 的事实；entry 的 `origin_peer_id` 必须等于该 source，`peer_seq` 必须形成从 1 到 shadow waterline 的连续序列。
 - 任何会 append ledger facts、写 pending/staging/commit、确认 pending overlay、应用 merge result 或修改 projection 的操作，若当前 branch 是 Remote Branch，必须 fail-closed 或在 UI 中禁用。
 - 需要从 Remote Branch 合并内容时，Remote Branch 只能作为只读 source；用户必须处于 matching Local Branch，并通过 Local Branch writer gate 后选择 peer source。
 

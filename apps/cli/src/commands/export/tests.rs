@@ -1,8 +1,8 @@
 use super::run;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_FACT_OPS, PEER_FACT_SEQ};
 use deve_core::models::{
-    DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp, serialize_ledger_entry,
+    DocId, FactActor, LedgerEntry, NodeId, Op, PeerId, StructureOp, serialize_ledger_entry,
 };
 use redb::ReadableTable;
 use tempfile::TempDir;
@@ -11,26 +11,17 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), path, None, "test")
         .expect("structure");
-    repo.append_generated_op_in_local_repo(
-        repo.local_repo_name(),
-        doc_id,
-        PeerId::new("local"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: content.into(),
-                },
-                1,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )
-    .expect("append op");
+    repo.local_fact_writer(FactActor::new("test").expect("actor"))
+        .append_content_in_local_repo(
+            repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )
+        .expect("append op");
     doc_id
 }
 
@@ -41,14 +32,19 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) {
             let mut ops = write.open_table(LEDGER_OPS)?;
             let mut doc_ops = write.open_multimap_table(DOC_OPS)?;
             let mut node_ops = write.open_multimap_table(NODE_OPS)?;
-            let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
+            let mut peer_seqs = write.open_table(PEER_FACT_SEQ)?;
+            let mut peer_ops = write.open_table(PEER_FACT_OPS)?;
             let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
             let bytes = serialize_ledger_entry(entry)?;
             ops.insert(next_seq, bytes.as_slice())?;
             if let Some(doc_id) = entry.doc_id {
                 doc_ops.insert(doc_id.as_u128(), next_seq)?;
-                peer_seqs.insert((doc_id.as_u128(), entry.peer_id.as_str()), entry.seq)?;
             }
+            peer_seqs.insert(entry.origin_peer_id.as_str(), entry.peer_seq.get())?;
+            peer_ops.insert(
+                (entry.origin_peer_id.as_str(), entry.peer_seq.get()),
+                next_seq,
+            )?;
             if let Some(node_id) = entry.structure_node_id() {
                 node_ops.insert(node_id.as_u128(), next_seq)?;
             }
@@ -74,6 +70,7 @@ fn markdown_export_supports_single_doc_output() {
         Some(doc_id.to_string()),
         8,
         "markdown",
+        false,
         false,
     )
     .expect("export markdown doc");
@@ -101,6 +98,7 @@ fn markdown_export_preserves_user_frontmatter_without_system_metadata() {
         8,
         "markdown",
         false,
+        false,
     )
     .expect("export markdown doc");
 
@@ -123,6 +121,7 @@ fn json_export_rejects_single_doc_selector() {
         Some(uuid::Uuid::new_v4().to_string()),
         8,
         "json",
+        false,
         false,
     )
     .expect_err("json export should reject --doc");
@@ -165,6 +164,7 @@ fn markdown_export_requires_explicit_degraded_projection_flag() {
         8,
         "markdown",
         false,
+        false,
     )
     .expect_err("degraded projection export must require explicit flag");
 
@@ -180,6 +180,7 @@ fn markdown_export_requires_explicit_degraded_projection_flag() {
         8,
         "markdown",
         true,
+        false,
     )
     .expect("explicit degraded export");
     assert_eq!(

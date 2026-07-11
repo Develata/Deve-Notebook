@@ -2,7 +2,7 @@
 //!   - 07_network#server-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 
-use super::handlers::sync::handle_sync_push;
+use super::handlers::sync::handle_sync_push as handle_sync_push_inner;
 use super::sync_transfer_scope_test_support::{
     append_local_doc, bound_session, build_state, build_state_with_mode,
     encrypted_insert_for_author, recv_protocol_error, unicast_channel,
@@ -13,10 +13,39 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{ServerErrorCode, SyncPayloadKind, SyncPushHeader};
 use deve_core::security::{EncryptedOp, IdentityKeyPair};
 
+async fn handle_sync_push(
+    state: &std::sync::Arc<super::AppState>,
+    ch: &crate::server::channel::DualChannel,
+    session: &mut crate::server::session::WsSession,
+    peer_id: PeerId,
+    repo_id: RepoId,
+    header: SyncPushHeader,
+    ops: Vec<EncryptedOp>,
+) {
+    let start = ops
+        .first()
+        .map(|op| op.peer_seq)
+        .unwrap_or(deve_core::models::PeerFactSeq::ONE);
+    let end = ops.last().map(|op| op.peer_seq).unwrap_or(start);
+    handle_sync_push_inner(
+        state,
+        ch,
+        session,
+        peer_id,
+        repo_id,
+        (start, end),
+        header,
+        ops,
+    )
+    .await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn manual_sync_push_buffers_without_applying_remote_ops() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state_with_mode(SyncMode::Manual)?;
-    let peer = PeerId::new("peer-a");
+    let source_key = IdentityKeyPair::generate();
+    let peer = source_key.peer_id();
+    let op = encrypted_insert_for_author(&state, repo_id, &peer, 1)?;
     let (ch, _rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(peer.clone()), Some(31));
     session.set_requested_sync_sources([peer.clone()]);
@@ -27,13 +56,8 @@ async fn manual_sync_push_buffers_without_applying_remote_ops() -> anyhow::Resul
         &mut session,
         peer.clone(),
         repo_id,
-        sync_push_header(repo_id, &peer),
-        vec![EncryptedOp {
-            doc_id: None,
-            seq: 1,
-            ciphertext: vec![1, 2, 3],
-            nonce: vec![0; 12],
-        }],
+        signed_sync_push_header(repo_id, &source_key, std::slice::from_ref(&op))?,
+        vec![op],
     )
     .await;
 
@@ -180,7 +204,7 @@ async fn sync_push_rejects_envelope_seq_mismatch() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let source_peer = PeerId::new("origin-peer");
     let mut op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
-    op.seq = 2;
+    op.peer_seq = 2_u64.into();
     let (ch, _rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(source_peer.clone()), Some(41));
     session.set_requested_sync_sources([source_peer.clone()]);

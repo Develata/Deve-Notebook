@@ -7,7 +7,7 @@
 //! - `StructureOp` 只描述节点/路径结构变化。
 //! - `LedgerEntry` 的权威载荷永远是 `LedgerEvent`，而不是分散副作用。
 
-use super::{DocId, NodeId, PeerId};
+use super::{DocId, FactActor, NodeId, PeerFactSeq, PeerId};
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
@@ -18,6 +18,25 @@ pub enum ContentOp {
 }
 
 pub type Op = ContentOp;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MergeResolution {
+    EstablishEqual,
+    Auto,
+    AcceptCurrent,
+    AcceptIncoming,
+    AcceptBoth,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MergeAnchor {
+    pub source_peer_id: PeerId,
+    pub source_waterline: PeerFactSeq,
+    pub local_pre_merge_waterline: PeerFactSeq,
+    pub source_state_hash: [u8; 32],
+    pub result_hash: [u8; 32],
+    pub resolution: MergeResolution,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StructureOp {
@@ -74,6 +93,7 @@ impl StructureOp {
 pub enum LedgerEvent {
     Content(ContentOp),
     Structure(StructureOp),
+    MergeAnchor(MergeAnchor),
 }
 
 impl LedgerEvent {
@@ -85,28 +105,33 @@ impl LedgerEvent {
         Self::Structure(op)
     }
 
+    pub fn merge_anchor(anchor: MergeAnchor) -> Self {
+        Self::MergeAnchor(anchor)
+    }
+
     pub fn content_op(&self) -> Option<&ContentOp> {
         match self {
             Self::Content(op) => Some(op),
-            Self::Structure(_) => None,
+            Self::Structure(_) | Self::MergeAnchor(_) => None,
         }
     }
 
     pub fn into_content_op(self) -> Option<ContentOp> {
         match self {
             Self::Content(op) => Some(op),
-            Self::Structure(_) => None,
+            Self::Structure(_) | Self::MergeAnchor(_) => None,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LedgerEntry {
     pub doc_id: Option<DocId>,
     pub event: LedgerEvent,
     pub timestamp: i64,
-    pub peer_id: PeerId,
-    pub seq: u64,
+    pub origin_peer_id: PeerId,
+    pub peer_seq: PeerFactSeq,
+    pub actor: FactActor,
     pub client_id: Option<u64>,
     pub client_op_id: Option<u64>,
 }
@@ -116,8 +141,31 @@ impl LedgerEntry {
         doc_id: DocId,
         op: ContentOp,
         timestamp: i64,
-        peer_id: PeerId,
+        origin_peer_id: PeerId,
         seq: u64,
+        client_id: Option<u64>,
+        client_op_id: Option<u64>,
+    ) -> Self {
+        Self::new_content_with_actor(
+            doc_id,
+            op,
+            timestamp,
+            origin_peer_id,
+            PeerFactSeq::new(seq),
+            FactActor::system(),
+            client_id,
+            client_op_id,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_content_with_actor(
+        doc_id: DocId,
+        op: ContentOp,
+        timestamp: i64,
+        origin_peer_id: PeerId,
+        peer_seq: PeerFactSeq,
+        actor: FactActor,
         client_id: Option<u64>,
         client_op_id: Option<u64>,
     ) -> Self {
@@ -125,22 +173,72 @@ impl LedgerEntry {
             doc_id: Some(doc_id),
             event: LedgerEvent::content(op),
             timestamp,
-            peer_id,
-            seq,
+            origin_peer_id,
+            peer_seq,
+            actor,
             client_id,
             client_op_id,
         }
     }
 
-    pub fn new_structure(op: StructureOp, timestamp: i64, peer_id: PeerId, seq: u64) -> Self {
+    pub fn new_structure(
+        op: StructureOp,
+        timestamp: i64,
+        origin_peer_id: PeerId,
+        seq: u64,
+    ) -> Self {
+        Self::new_structure_with_actor(
+            op,
+            timestamp,
+            origin_peer_id,
+            PeerFactSeq::new(seq),
+            FactActor::system(),
+        )
+    }
+
+    pub fn new_structure_with_actor(
+        op: StructureOp,
+        timestamp: i64,
+        origin_peer_id: PeerId,
+        peer_seq: PeerFactSeq,
+        actor: FactActor,
+    ) -> Self {
         Self {
             doc_id: op.doc_id(),
             event: LedgerEvent::structure(op),
             timestamp,
-            peer_id,
-            seq,
+            origin_peer_id,
+            peer_seq,
+            actor,
             client_id: None,
             client_op_id: None,
+        }
+    }
+
+    pub fn new_merge_anchor_with_actor(
+        doc_id: DocId,
+        anchor: MergeAnchor,
+        timestamp: i64,
+        origin_peer_id: PeerId,
+        peer_seq: PeerFactSeq,
+        actor: FactActor,
+    ) -> Self {
+        Self {
+            doc_id: Some(doc_id),
+            event: LedgerEvent::merge_anchor(anchor),
+            timestamp,
+            origin_peer_id,
+            peer_seq,
+            actor,
+            client_id: None,
+            client_op_id: None,
+        }
+    }
+
+    pub fn merge_anchor(&self) -> Option<&MergeAnchor> {
+        match &self.event {
+            LedgerEvent::MergeAnchor(anchor) => Some(anchor),
+            LedgerEvent::Content(_) | LedgerEvent::Structure(_) => None,
         }
     }
 
@@ -155,7 +253,7 @@ impl LedgerEntry {
     pub fn structure_node_id(&self) -> Option<NodeId> {
         match &self.event {
             LedgerEvent::Structure(op) => Some(op.node_id()),
-            LedgerEvent::Content(_) => None,
+            LedgerEvent::Content(_) | LedgerEvent::MergeAnchor(_) => None,
         }
     }
 }

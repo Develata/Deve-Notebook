@@ -1,6 +1,6 @@
 use super::RepoManager;
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
-use crate::models::{DocId, LedgerEntry, Op, PeerId};
+use crate::models::{DocId, LedgerEntry, Op};
 use anyhow::Result;
 use tempfile::TempDir;
 
@@ -16,7 +16,7 @@ fn repairs_missing_client_op_index_for_secondary_local_repo_on_runtime_open() ->
         "urn:wiki",
     );
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.run_on_local_repo("wiki", |db| {
         let write = db.begin_write()?;
@@ -55,7 +55,7 @@ fn repairs_empty_client_op_index_for_primary_local_repo_on_init() -> Result<()> 
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo("main", doc_id, peer_id.clone(), 42, 9, |seq| {
         LedgerEntry::new_content(
@@ -95,7 +95,7 @@ fn repairs_partial_non_empty_client_op_index_for_primary_local_repo_on_init() ->
     let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
     let first_doc = DocId::new();
     let second_doc = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
         "main",
@@ -175,7 +175,7 @@ fn rebuild_coalesces_legacy_duplicate_client_op_metadata_to_first_seq() -> Resul
     let ledger_dir = tmp_dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser-peer");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_op_in_local_repo("main", doc_id, peer_id.clone(), |seq| {
         LedgerEntry::new_content(

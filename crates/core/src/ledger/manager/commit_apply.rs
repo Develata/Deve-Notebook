@@ -9,7 +9,7 @@
 use crate::ledger::manager::commit_plan::CommitTarget;
 use crate::ledger::schema::LEDGER_OPS;
 use crate::ledger::{RepoManager, inode_index, node_ops, ops, reconcile};
-use crate::models::{DocId, FileNodeId, Op, PeerId, StructureOp};
+use crate::models::{DocId, FactActor, FileNodeId, Op, PeerId, StructureOp};
 use crate::source_control::staging::{self, StagedEntry};
 use crate::utils::fs::checked_exists;
 use anyhow::{Result, anyhow};
@@ -44,7 +44,7 @@ impl RepoManager {
             .map(|target| self.prepare_external_target(repo_name, target))
             .collect::<Result<Vec<_>>>()?;
         let repo_scope = ops::local_repo_scope(repo_name);
-        let peer_id = PeerId::new(EXTERNAL_APPLY_SOURCE);
+        let peer_id = self.local_peer_id().clone();
 
         self.run_on_local_repo(repo_name, |db| {
             let write_txn = db.begin_write()?;
@@ -62,6 +62,7 @@ impl RepoManager {
                         reconcile::append_patch_to_txn(
                             &write_txn,
                             target.doc_id,
+                            &peer_id,
                             EXTERNAL_APPLY_SOURCE,
                             &repo_scope,
                             &target.content_ops,
@@ -158,6 +159,7 @@ fn append_structure_ops_to_txn(
         node_ops::append_generated_structure_op_to_txn(
             write_txn,
             peer_id.clone(),
+            FactActor::new(EXTERNAL_APPLY_SOURCE)?,
             op.clone(),
             chrono::Utc::now().timestamp_millis(),
             repo_scope,

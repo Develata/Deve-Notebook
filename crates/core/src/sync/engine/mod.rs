@@ -54,8 +54,8 @@
 //!      local_vv.get(peer) ≥ end ∧ remote_vv.get(peer) < start
 //!    ```
 
-use crate::models::PeerId;
 use crate::models::VersionVector;
+use crate::models::{PeerFactSeq, PeerId};
 
 pub mod handshake;
 pub mod manual;
@@ -126,7 +126,7 @@ impl SyncEngine {
     ///
     /// ## 后置条件 (Post-conditions)
     /// - `self.version_vector.get(&self.local_peer_id) >= seq`
-    pub fn update_local_seq(&mut self, seq: u64) {
+    pub fn update_local_seq(&mut self, seq: PeerFactSeq) {
         self.version_vector.update(self.local_peer_id.clone(), seq);
     }
 
@@ -137,7 +137,7 @@ impl SyncEngine {
     ///
     /// ## 后置条件 (Post-conditions)
     /// - `self.version_vector.get(&peer_id) >= seq`
-    pub fn update_remote_seq(&mut self, peer_id: PeerId, seq: u64) {
+    pub fn update_remote_seq(&mut self, peer_id: PeerId, seq: PeerFactSeq) {
         self.version_vector.update(peer_id, seq);
     }
 
@@ -150,12 +150,19 @@ impl SyncEngine {
     ///
     /// ## 返回值
     /// `Vec<(PeerId, start_seq, end_seq)>` - 需要从远端拉取的序列号范围 (左闭右闭)。
-    pub fn calculate_pull_ranges(&self, remote_vv: &VersionVector) -> Vec<(PeerId, u64, u64)> {
+    pub fn calculate_pull_ranges(
+        &self,
+        remote_vv: &VersionVector,
+    ) -> Vec<(PeerId, PeerFactSeq, PeerFactSeq)> {
         let mut ranges = Vec::new();
         for (peer, remote_seq) in remote_vv.iter() {
             let local_seq = self.version_vector.get(peer);
             if *remote_seq > local_seq {
-                ranges.push((peer.clone(), local_seq + 1, *remote_seq));
+                ranges.push((
+                    peer.clone(),
+                    local_seq.next().expect("larger peer seq has a successor"),
+                    *remote_seq,
+                ));
             }
         }
         ranges
@@ -170,12 +177,19 @@ impl SyncEngine {
     ///
     /// ## 返回值
     /// `Vec<(PeerId, start_seq, end_seq)>` - 可以推送给远端的序列号范围 (左闭右闭)。
-    pub fn calculate_push_ranges(&self, remote_vv: &VersionVector) -> Vec<(PeerId, u64, u64)> {
+    pub fn calculate_push_ranges(
+        &self,
+        remote_vv: &VersionVector,
+    ) -> Vec<(PeerId, PeerFactSeq, PeerFactSeq)> {
         let mut ranges = Vec::new();
         for (peer, local_seq) in self.version_vector.iter() {
             let remote_seq = remote_vv.get(peer);
             if *local_seq > remote_seq {
-                ranges.push((peer.clone(), remote_seq + 1, *local_seq));
+                ranges.push((
+                    peer.clone(),
+                    remote_seq.next().expect("larger peer seq has a successor"),
+                    *local_seq,
+                ));
             }
         }
         ranges

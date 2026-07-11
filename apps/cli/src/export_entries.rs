@@ -48,7 +48,7 @@ fn resolve_path(
 mod tests {
     use super::*;
     use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-    use deve_core::models::{LedgerEntry, Op, PeerId};
+    use deve_core::models::{FactActor, Op};
     use tempfile::TempDir;
 
     #[test]
@@ -97,26 +97,17 @@ mod tests {
         let (doc_id, _ops) = repo
             .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
             .expect("create file");
-        repo.append_generated_op_in_local_repo(
-            repo.local_repo_name(),
-            doc_id,
-            PeerId::new("local"),
-            |seq| {
-                LedgerEntry::new_content(
-                    doc_id,
-                    Op::Insert {
-                        pos: 0,
-                        content: "hello".into(),
-                    },
-                    1,
-                    PeerId::new("local"),
-                    seq,
-                    None,
-                    None,
-                )
-            },
-        )
-        .expect("append content");
+        repo.local_fact_writer(FactActor::new("test").expect("actor"))
+            .append_content_in_local_repo(
+                repo.local_repo_name(),
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "hello".into(),
+                },
+                1,
+            )
+            .expect("append content");
         repo.run_on_local_repo(repo.local_repo_name(), |db| {
             let write_txn = db.begin_write()?;
             {

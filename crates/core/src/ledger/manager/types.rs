@@ -9,7 +9,7 @@ use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 仓库元数据信息
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,6 +36,8 @@ pub struct LocalRepoSummary {
 pub struct RepoManager {
     /// 账本目录根路径
     pub(crate) ledger_dir: PathBuf,
+    /// Physical host identity used for every locally-authored fact.
+    pub(crate) local_peer_id: PeerId,
     /// 本地权威库 (local.redb) - 默认/主库
     pub(crate) local_db: Arc<Database>,
     /// 主库名称
@@ -46,6 +48,8 @@ pub struct RepoManager {
     pub(crate) repaired_local_runtime_tables: RwLock<HashSet<String>>,
     /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
     pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
+    /// Serializes authenticated shadow mutation with merge checkpoint evaluation/commit.
+    pub(crate) shadow_merge_guard: Mutex<()>,
     /// 快照保留深度
     pub snapshot_depth: usize,
     /// 受控 Projection 写回的 watcher 忽略表。

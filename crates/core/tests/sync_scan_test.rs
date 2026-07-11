@@ -1,5 +1,5 @@
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::source_control::ChangeStatus;
 use deve_core::sync::SyncManager;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ fn seed_tracked_doc(repo: &RepoManager, repo_name: &str, path: &str, content: &s
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo_name, path, None, "test")
         .expect("create tracked doc");
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(repo_name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,

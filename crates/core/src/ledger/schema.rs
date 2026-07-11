@@ -50,18 +50,22 @@ pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("sna
 // Metadata Key (u8) -> Metadata Value (Bytes - JSON/Postcard)
 pub const REPO_INFO_METADATA_KEY: u8 = 0;
 pub const REPO_SCHEMA_VERSION_METADATA_KEY: u8 = 1;
-pub const REDB_SCHEMA_VERSION: u16 = 2;
+pub const REDB_SCHEMA_VERSION: u16 = 3;
 
 // Key 0: RepoInfo (UUID, Name, URL)
 // Key 1: REDB_SCHEMA_VERSION
 pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo_metadata");
 
-// (DocId (u128), PeerId (&str)) -> MaxSeq (u64)
-// Used for atomic sequence generation and O(1) retrieval.
-pub const PEER_DOC_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("peer_doc_seq");
+// Physical PeerId (&str) -> repo-scoped max PeerFactSeq (u64).
+pub const PEER_FACT_SEQ: TableDefinition<&str, u64> = TableDefinition::new("peer_fact_seq_v3");
 
-// (NodeId (u128), PeerId (&str)) -> MaxSeq (u64)
-pub const NODE_PEER_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("node_peer_seq");
+// (Physical PeerId (&str), PeerFactSeq (u64)) -> GlobalSeq storage key (u64).
+pub const PEER_FACT_OPS: TableDefinition<(&str, u64), u64> =
+    TableDefinition::new("peer_fact_ops_v3");
+
+// (Source physical PeerId, DocId) -> encoded MergeBaseCheckpoint.
+pub const MERGE_BASE_CHECKPOINT: TableDefinition<(&str, u128), &[u8]> =
+    TableDefinition::new("merge_base_checkpoint_v3");
 
 // (ClientId, ClientOpId) -> GlobalSeq
 // 浏览器写入去重索引，用于 reconnect 后安全重发。

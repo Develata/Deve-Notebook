@@ -1,5 +1,5 @@
 use crate::ledger::RepoManager;
-use crate::models::{LedgerEntry, PeerId};
+use crate::models::{FactActor, Op};
 use crate::sync::SyncManager;
 use notify_debouncer_full::{
     DebouncedEvent,
@@ -70,20 +70,16 @@ pub(super) fn commit_doc(
     content: &str,
 ) -> anyhow::Result<crate::models::DocId> {
     let (doc_id, _) = repo.apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
-    repo.append_generated_op_in_local_repo(repo_name, doc_id, PeerId::new("local"), |seq| {
-        LedgerEntry::new_content(
+    repo.local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            repo_name,
             doc_id,
-            crate::models::Op::Insert {
+            Op::Insert {
                 pos: 0,
                 content: content.into(),
             },
             1,
-            PeerId::new("local"),
-            seq,
-            None,
-            None,
-        )
-    })?;
+        )?;
     sync.persist_doc_in_local_repo(repo_name, doc_id)?;
     Ok(doc_id)
 }

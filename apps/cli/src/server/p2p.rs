@@ -4,6 +4,7 @@
 
 mod connect;
 mod exchange;
+pub(in crate::server) mod fault_injection;
 mod hello;
 mod source_sets;
 mod stats;

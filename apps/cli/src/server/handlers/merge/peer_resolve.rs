@@ -4,11 +4,11 @@
 //! Peer merge conflict resolution handlers.
 
 use super::errors;
-use super::peer_apply::{broadcast_merge_complete, write_merged_content};
+use super::peer_apply::{MergeWriteOutcome, write_merged_content};
 use super::scope::resolve_local_write_scope;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel, session::PendingMergeConflict};
-use deve_core::models::DocId;
+use deve_core::models::{DocId, MergeResolution};
 use deve_core::protocol::MergeConflictAction;
 use std::sync::Arc;
 
@@ -35,14 +35,28 @@ pub(super) async fn handle_resolve_merge_conflict(
         return;
     }
 
+    let resolution = match &action {
+        MergeConflictAction::AcceptCurrent => MergeResolution::AcceptCurrent,
+        MergeConflictAction::AcceptIncoming => MergeResolution::AcceptIncoming,
+        MergeConflictAction::AcceptBoth => MergeResolution::AcceptBoth,
+    };
     let content = resolved_content(&pending, action, result_content);
-    if content == pending.local_content {
-        broadcast_merge_complete(ch, &scope, 0, scope_nonce);
-        return;
-    }
-    if !write_merged_content(state, ch, &scope, pending.doc_id, &content, scope_nonce) {
+    let outcome = write_merged_content(
+        state,
+        ch,
+        &scope,
+        &pending.preflight,
+        &content,
+        resolution,
+        scope_nonce,
+    );
+    if should_restore_pending(outcome) {
         session.pending_merge_conflict = Some(pending);
     }
+}
+
+fn should_restore_pending(outcome: MergeWriteOutcome) -> bool {
+    outcome == MergeWriteOutcome::CommitFailed
 }
 
 fn matches_pending_conflict(
@@ -149,14 +163,31 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn committed_writeback_failure_does_not_restore_consumed_preflight() {
+        assert!(should_restore_pending(MergeWriteOutcome::CommitFailed));
+        assert!(!should_restore_pending(MergeWriteOutcome::Committed));
+        assert!(!should_restore_pending(
+            MergeWriteOutcome::CommittedWritebackFailed
+        ));
+    }
+
     fn pending_conflict(local_content: &str, incoming_content: &str) -> PendingMergeConflict {
+        let repo_id = uuid::Uuid::new_v4();
+        let doc_id = DocId::new();
         PendingMergeConflict {
-            repo_id: uuid::Uuid::new_v4(),
+            repo_id,
             branch: None,
-            doc_id: DocId::new(),
+            doc_id,
             scope_nonce: Some(11),
             local_content: local_content.into(),
             incoming_content: incoming_content.into(),
+            preflight: crate::server::session::test_merge_preflight(
+                repo_id,
+                doc_id,
+                local_content,
+                incoming_content,
+            ),
         }
     }
 }

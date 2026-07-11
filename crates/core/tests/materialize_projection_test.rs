@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -19,7 +19,7 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) -> deve_core::mo
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -28,7 +28,7 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) -> deve_core::mo
                     content: content.into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

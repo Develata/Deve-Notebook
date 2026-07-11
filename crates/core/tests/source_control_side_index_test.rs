@@ -25,6 +25,15 @@ fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
 }
 
 fn seed_pending(repo: &RepoManager, path: &str, doc_id: Option<DocId>, status: ChangeStatus) {
+    let content_hash = if status == ChangeStatus::Deleted {
+        String::new()
+    } else {
+        let abs = repo
+            .local_repo_workspace_path("default", path)
+            .expect("workspace path");
+        let content = std::fs::read_to_string(abs).expect("read staged workspace content");
+        pending_fs::content_hash(&content)
+    };
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -35,7 +44,7 @@ fn seed_pending(repo: &RepoManager, path: &str, doc_id: Option<DocId>, status: C
                     .filter(|_| path == "notes/b.md"),
                 doc_id,
                 change_type: status,
-                content_hash: pending_fs::content_hash(path),
+                content_hash,
                 detected_at: 1,
                 has_conflict: false,
             },

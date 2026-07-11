@@ -6,7 +6,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId};
+use deve_core::models::{PeerFactSeq, PeerId, RepoId};
 use deve_core::protocol::{
     ServerMessage, SourceProofRequirement, SyncPushAttributionInput, SyncPushHeader,
     SyncSourceProofError, validate_sync_push_attribution,
@@ -24,7 +24,7 @@ pub(super) async fn handle_request(
     ch: &DualChannel,
     session: &mut WsSession,
     repo_id: RepoId,
-    requests: Vec<(PeerId, (u64, u64))>,
+    requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))>,
 ) {
     let Some(scope) = require_current_sync_scope(state, ch, session) else {
         return;
@@ -93,6 +93,9 @@ pub(super) async fn handle_request(
         return;
     };
     for response in non_empty {
+        let (range_start, range_end) = response
+            .range
+            .expect("incremental sync response must carry its closed range");
         let header = SyncPushHeader::diff(
             response.repo_id,
             response.peer_id.clone(),
@@ -112,6 +115,8 @@ pub(super) async fn handle_request(
         ch.unicast(ServerMessage::SyncPush {
             source_peer_id: response.peer_id,
             repo_id: response.repo_id,
+            range_start,
+            range_end,
             header,
             scope_nonce: delivery_scope_nonce.into(),
             branch: session.active_branch.clone(),
@@ -131,12 +136,14 @@ pub(super) fn attach_local_source_proof(
     Ok(header)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn handle_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    range: (PeerFactSeq, PeerFactSeq),
     header: SyncPushHeader,
     encrypted_payload: Vec<EncryptedOp>,
 ) {
@@ -183,11 +190,8 @@ pub(super) async fn handle_push(
         route.transport_peer
     );
 
-    let response = sync_proto::SyncResponse {
-        peer_id: peer_id.clone(),
-        repo_id,
-        ops: encrypted_payload,
-    };
+    let response =
+        sync_proto::SyncResponse::incremental(peer_id.clone(), repo_id, range, encrypted_payload);
 
     let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
         engine.receive_remote_ops(response)

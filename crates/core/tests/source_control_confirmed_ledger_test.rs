@@ -1,5 +1,5 @@
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::conflict;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -59,7 +59,7 @@ fn seed_initial_commit(repo: &RepoManager) -> deve_core::models::DocId {
 }
 
 fn append_confirmed_ledger_edit(repo: &RepoManager, doc_id: deve_core::models::DocId) {
-    let peer_id = PeerId::new("editor");
+    let peer_id = repo.local_peer_id().clone();
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
@@ -87,7 +87,7 @@ fn append_confirmed_ledger_insert(
     doc_id: deve_core::models::DocId,
     content: &str,
 ) {
-    let peer_id = PeerId::new("editor");
+    let peer_id = repo.local_peer_id().clone();
     let content = content.to_string();
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),

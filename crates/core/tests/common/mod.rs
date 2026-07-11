@@ -3,7 +3,7 @@
 use deve_core::codec;
 use deve_core::ledger::schema::{
     CLIENT_OP_INDEX, DOC_OPS, DOCID_TO_PATH, INODE_TO_DOCID, INODE_TO_NODEID, LEDGER_OPS, NODE_OPS,
-    NODE_PEER_SEQ, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_DOC_SEQ,
+    NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_FACT_OPS, PEER_FACT_SEQ,
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
     SNAPSHOT_DATA, SNAPSHOT_INDEX,
 };
@@ -143,7 +143,8 @@ fn init_core_repo_tables(db: &redb::Database) {
     let _ = txn.open_multimap_table(DOC_OPS).expect("doc_ops");
     let _ = txn.open_multimap_table(NODE_OPS).expect("node_ops");
     let _ = txn.open_table(CLIENT_OP_INDEX).expect("client_op_index");
-    let _ = txn.open_table(NODE_PEER_SEQ).expect("node_peer_seq");
+    let _ = txn.open_table(PEER_FACT_SEQ).expect("peer_fact_seq");
+    let _ = txn.open_table(PEER_FACT_OPS).expect("peer_fact_ops");
     let _ = txn
         .open_multimap_table(SNAPSHOT_INDEX)
         .expect("snapshot_index");
@@ -238,24 +239,29 @@ pub fn append_unvalidated_local_op(
             let mut ops = write.open_table(LEDGER_OPS)?;
             let mut doc_ops = write.open_multimap_table(DOC_OPS)?;
             let mut node_ops = write.open_multimap_table(NODE_OPS)?;
-            let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
+            let mut peer_seqs = write.open_table(PEER_FACT_SEQ)?;
+            let mut peer_ops = write.open_table(PEER_FACT_OPS)?;
             let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
             let bytes = serialize_ledger_entry(entry)?;
             ops.insert(next_seq, bytes.as_slice())?;
             if let Some(doc_id) = entry.doc_id {
                 doc_ops.insert(doc_id.as_u128(), next_seq)?;
-                let peer_key = (doc_id.as_u128(), entry.peer_id.as_str());
+                let peer_key = entry.origin_peer_id.as_str();
                 let current = peer_seqs
                     .get(peer_key)?
                     .map(|value| value.value())
                     .unwrap_or(0);
-                if entry.seq > current {
-                    peer_seqs.insert(peer_key, entry.seq)?;
+                if entry.peer_seq.get() > current {
+                    peer_seqs.insert(peer_key, entry.peer_seq.get())?;
                 }
             }
             if let Some(node_id) = entry.structure_node_id() {
                 node_ops.insert(node_id.as_u128(), next_seq)?;
             }
+            peer_ops.insert(
+                (entry.origin_peer_id.as_str(), entry.peer_seq.get()),
+                next_seq,
+            )?;
             next_seq
         };
         write.commit()?;

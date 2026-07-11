@@ -1,3 +1,4 @@
+use super::super::fault_injection::inject_sequence_gap;
 use super::super::transfer::{send_requested_ops, send_requested_snapshot};
 use super::support::{
     MockSocket, THIRD_PARTY_PEER_ID, append_local_op, append_remote_shadow_op, test_state_with_dir,
@@ -9,6 +10,29 @@ use deve_core::protocol::{ClientMessage, SyncPayloadKind};
 use deve_core::security::IdentityKeyPair;
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::Message;
+
+#[test]
+fn p2p_sequence_gap_fault_requires_both_gates_and_drops_exactly_one_fact() {
+    let encrypted = |byte| deve_core::security::EncryptedOp {
+        doc_id: None,
+        peer_seq: u64::from(byte).into(),
+        ciphertext: vec![byte],
+        nonce: vec![byte; 12],
+    };
+    let mut disabled = vec![encrypted(1), encrypted(2)];
+    assert!(!inject_sequence_gap(false, true, &mut disabled));
+    assert_eq!(disabled.len(), 2);
+
+    let mut unarmed = vec![encrypted(1), encrypted(2)];
+    assert!(!inject_sequence_gap(true, false, &mut unarmed));
+    assert_eq!(unarmed.len(), 2);
+
+    let mut armed = vec![encrypted(1), encrypted(2)];
+    assert!(inject_sequence_gap(true, true, &mut armed));
+    assert_eq!(armed.len(), 1);
+    assert_eq!(armed[0].peer_seq, 2_u64);
+    assert_eq!(armed[0].ciphertext, vec![2]);
+}
 
 #[tokio::test]
 async fn p2p_send_requested_ops_signs_local_diff_source() -> anyhow::Result<()> {
@@ -28,7 +52,7 @@ async fn p2p_send_requested_ops_signs_local_diff_source() -> anyhow::Result<()> 
         &state,
         &mut socket,
         repo_id,
-        vec![(local_peer.clone(), (1, 2))],
+        vec![(local_peer.clone(), (1_u64.into(), 1_u64.into()))],
         &mut stats,
     )
     .await?;
@@ -42,11 +66,14 @@ async fn p2p_send_requested_ops_signs_local_diff_source() -> anyhow::Result<()> 
         ClientMessage::SyncPush {
             source_peer_id,
             repo_id: actual_repo_id,
+            range_start,
+            range_end,
             header,
             encrypted_payload,
         } => {
             assert_eq!(source_peer_id, local_peer);
             assert_eq!(actual_repo_id, repo_id);
+            assert_eq!((range_start.get(), range_end.get()), (1, 1));
             assert_eq!(header.peer_id, local_peer);
             assert_eq!(header.payload_kind, SyncPayloadKind::Diff);
             assert!(header.source_proof.is_some());
@@ -76,7 +103,7 @@ async fn p2p_send_requested_ops_rejects_unsigned_non_local_source() -> anyhow::R
         &state,
         &mut socket,
         repo_id,
-        vec![(third_party, (1, 2))],
+        vec![(third_party, (1_u64.into(), 2_u64.into()))],
         &mut stats,
     )
     .await

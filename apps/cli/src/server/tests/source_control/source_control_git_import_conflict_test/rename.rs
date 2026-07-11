@@ -37,25 +37,18 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
         .repo
         .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
         .expect("doc id");
-    state.repo.append_generated_op_in_local_repo(
-        &repo_name,
-        doc_id,
-        PeerId::new("local"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: baseline.len() as u32,
-                    content: "ledger\n".into(),
-                },
-                2,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            &repo_name,
+            doc_id,
+            Op::Insert {
+                pos: baseline.len() as u32,
+                content: "ledger\n".into(),
+            },
+            2,
+        )?;
     git(&repo_root, &["mv", "note.md", "renamed.md"]);
     std::fs::write(
         repo_root.join("renamed.md"),

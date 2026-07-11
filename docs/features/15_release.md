@@ -68,6 +68,7 @@
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
   Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
+- 当前 first-tag 精确基线为 ledger entry format v3 / `DEVELDG3`、redb schema v3、WS protocol lockstep `12..=12`。schema v2 只允许显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 
 ## 非目标

@@ -57,10 +57,9 @@ mod tests;
 
 mod algo;
 
-use super::PeerId;
-use serde::{Deserialize, Serialize};
+use super::{PeerFactSeq, PeerId};
+use serde::{Deserialize, Deserializer, Serialize};
 use smallvec::SmallVec;
-use std::ops::Range;
 
 /// 栈分配阈值：6 个协作者 (覆盖 99% 场景)
 pub(super) const INLINE_CAP: usize = 6;
@@ -69,7 +68,8 @@ pub(super) const INLINE_CAP: usize = 6;
 ///
 /// - 第一个元素：对方缺少的 (我比对方新的部分)
 /// - 第二个元素：我缺少的 (对方比我新的部分)
-pub type VvDiffResult = (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>);
+pub type PeerFactRange = (PeerFactSeq, PeerFactSeq);
+pub type VvDiffResult = (Vec<(PeerId, PeerFactRange)>, Vec<(PeerId, PeerFactRange)>);
 
 /// 逻辑时钟向量，用于追踪各个节点的数据同步状态。
 ///
@@ -84,10 +84,39 @@ pub type VvDiffResult = (Vec<(PeerId, Range<u64>)>, Vec<(PeerId, Range<u64>)>);
 /// - 所有存储的序列号均为正整数 (> 0)。
 /// - 未记录的 PeerId 隐式视为 seq = 0。
 /// - 数组按 PeerId 严格升序排列，无重复键。
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct VersionVector {
     /// 有序数组: (PeerId, seq) 按 PeerId 升序排列
-    clock: SmallVec<[(PeerId, u64); INLINE_CAP]>,
+    clock: SmallVec<[(PeerId, PeerFactSeq); INLINE_CAP]>,
+}
+
+impl<'de> Deserialize<'de> for VersionVector {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct WireVersionVector {
+            clock: SmallVec<[(PeerId, PeerFactSeq); INLINE_CAP]>,
+        }
+
+        let wire = WireVersionVector::deserialize(deserializer)?;
+        let mut previous: Option<&PeerId> = None;
+        for (peer, seq) in &wire.clock {
+            if *seq == PeerFactSeq::ZERO {
+                return Err(serde::de::Error::custom(format!(
+                    "version vector sequence must be positive for peer {peer}"
+                )));
+            }
+            if previous.is_some_and(|prior| prior >= peer) {
+                return Err(serde::de::Error::custom(
+                    "version vector peers must be strictly sorted and unique",
+                ));
+            }
+            previous = Some(peer);
+        }
+        Ok(Self { clock: wire.clock })
+    }
 }
 
 impl VersionVector {
@@ -103,10 +132,10 @@ impl VersionVector {
     ///
     /// **复杂度**: O(log n) 二分查找
     #[inline]
-    pub fn get(&self, peer: &PeerId) -> u64 {
+    pub fn get(&self, peer: &PeerId) -> PeerFactSeq {
         match self.clock.binary_search_by(|(p, _)| p.cmp(peer)) {
             Ok(idx) => self.clock[idx].1,
-            Err(_) => 0,
+            Err(_) => PeerFactSeq::ZERO,
         }
     }
 
@@ -115,7 +144,8 @@ impl VersionVector {
     /// **前置条件**: 无
     /// **后置条件**: `self.get(peer) >= seq` (单调性保证)
     /// **复杂度**: O(log n) 查找 + O(n) 插入 (最坏情况)
-    pub fn update(&mut self, peer: PeerId, seq: u64) {
+    pub fn update(&mut self, peer: PeerId, seq: impl Into<PeerFactSeq>) {
+        let seq = seq.into();
         match self.clock.binary_search_by(|(p, _)| p.cmp(&peer)) {
             Ok(idx) => {
                 // 已存在，只在新值更大时更新 (单调性)
@@ -125,7 +155,7 @@ impl VersionVector {
             }
             Err(idx) => {
                 // 不存在，保序插入
-                if seq > 0 {
+                if seq > PeerFactSeq::ZERO {
                     self.clock.insert(idx, (peer, seq));
                 }
             }
@@ -135,17 +165,18 @@ impl VersionVector {
     /// 精确设置指定节点的版本号。
     ///
     /// 用于 Snapshot 覆盖场景：收到全量状态后，版本向量必须与远端 head 精确一致。
-    pub fn set_exact(&mut self, peer: PeerId, seq: u64) {
+    pub fn set_exact(&mut self, peer: PeerId, seq: impl Into<PeerFactSeq>) {
+        let seq = seq.into();
         match self.clock.binary_search_by(|(p, _)| p.cmp(&peer)) {
             Ok(idx) => {
-                if seq == 0 {
+                if seq == PeerFactSeq::ZERO {
                     self.clock.remove(idx);
                 } else {
                     self.clock[idx].1 = seq;
                 }
             }
             Err(idx) => {
-                if seq > 0 {
+                if seq > PeerFactSeq::ZERO {
                     self.clock.insert(idx, (peer, seq));
                 }
             }
@@ -175,7 +206,7 @@ impl VersionVector {
 // 将 iter 拆分到单独的 impl 块以保持文件简洁
 impl VersionVector {
     /// 获取内部时钟的迭代器
-    pub fn iter(&self) -> impl Iterator<Item = (&PeerId, &u64)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&PeerId, &PeerFactSeq)> {
         self.clock.iter().map(|(p, v)| (p, v))
     }
 }

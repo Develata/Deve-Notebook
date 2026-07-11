@@ -15,7 +15,10 @@ mod region;
 mod types;
 
 pub use engine::MergeEngine;
-pub use types::{ConflictHunk, MergeResult};
+pub use types::{
+    ConflictHunk, MergeBaseCheckpoint, MergeCommitOutcome, MergeEvaluation, MergePreflight,
+    MergeResult,
+};
 
 #[cfg(test)]
 mod tests;

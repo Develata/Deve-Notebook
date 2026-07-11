@@ -101,6 +101,7 @@ pub(super) async fn handle_request(
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 source_peer_id,
                 repo_id: response.repo_id,
+                waterline: response.waterline,
                 scope_nonce: delivery_scope_nonce.into(),
                 branch: session.active_branch.clone(),
                 server_vector: server_vector.clone(),
@@ -129,6 +130,7 @@ pub(super) async fn handle_push(
     let SyncPushSnapshotInput {
         peer_id,
         repo_id,
+        waterline,
         server_vector,
         source_proof,
         ops: payload,
@@ -179,11 +181,12 @@ pub(super) async fn handle_push(
         payload.len()
     );
 
-    let response = deve_core::sync::protocol::SyncResponse {
-        peer_id: peer_id.clone(),
+    let response = deve_core::sync::protocol::SyncResponse::full_fact_replay(
+        peer_id.clone(),
         repo_id,
-        ops: payload,
-    };
+        waterline,
+        payload,
+    );
 
     let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
         engine.receive_remote_snapshot(response)

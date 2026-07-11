@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-13`
+- `Last Review`: `2026-07-10`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -45,6 +45,7 @@ peer identity、repo-scoped sync identity 与 pending write contract 不在本�
   - 回答“谁有权访问 API / Dashboard / WS”
 - `Peer Identity`
   - 回答“同步数据来自哪个 peer”
+  - 必须由 host identity 公钥推导；browser writer、session、plugin 或业务 actor 标签不能替代物理 PeerId
 
 二者是独立状态机，不允许互相替代。
 
@@ -281,6 +282,7 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 ### 6.7 Key and File Permissions {#key-and-file-permissions}
 
 - 宿主机上的 `identity.key` / auth secret material 文件权限 **MUST** 为 owner-only。
+- 所有本地 ledger fact writer 必须绑定由该 `identity.key` 推导出的物理 PeerId；`FactActor` 仅作诊断，不能参与签名、source proof 或 VersionVector。
 - 浏览器端不得导出 peer private key 或 session material 到 localStorage / URL / logs。
 
 ### 6.8 Localhost / Dev Policy {#localhost-dev-policy}

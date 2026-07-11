@@ -4,7 +4,7 @@
 
 use super::check_repair_readiness;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_FACT_OPS, PEER_FACT_SEQ};
 use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, StructureOp, serialize_ledger_entry};
 use redb::ReadableTable;
 use std::sync::Arc;
@@ -24,14 +24,19 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result
             let mut ops = write.open_table(LEDGER_OPS)?;
             let mut doc_ops = write.open_multimap_table(DOC_OPS)?;
             let mut node_ops = write.open_multimap_table(NODE_OPS)?;
-            let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
+            let mut peer_seqs = write.open_table(PEER_FACT_SEQ)?;
+            let mut peer_ops = write.open_table(PEER_FACT_OPS)?;
             let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
             let bytes = serialize_ledger_entry(entry)?;
             ops.insert(next_seq, bytes.as_slice())?;
             if let Some(doc_id) = entry.doc_id {
                 doc_ops.insert(doc_id.as_u128(), next_seq)?;
-                peer_seqs.insert((doc_id.as_u128(), entry.peer_id.as_str()), entry.seq)?;
             }
+            peer_seqs.insert(entry.origin_peer_id.as_str(), entry.peer_seq.get())?;
+            peer_ops.insert(
+                (entry.origin_peer_id.as_str(), entry.peer_seq.get()),
+                next_seq,
+            )?;
             if let Some(node_id) = entry.structure_node_id() {
                 node_ops.insert(node_id.as_u128(), next_seq)?;
             }

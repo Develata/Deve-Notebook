@@ -60,6 +60,7 @@ pub async fn run(
             doc,
             format,
             allow_degraded_projection,
+            allow_legacy_v2,
         }) => commands::export::run(
             ledger_dir,
             output,
@@ -68,6 +69,7 @@ pub async fn run(
             config.snapshot_depth,
             &format,
             allow_degraded_projection,
+            allow_legacy_v2,
         )?,
         Some(Commands::Graph {
             repo,
@@ -148,6 +150,7 @@ pub async fn run(
             peer_id,
             doc_id,
             contains,
+            equals,
             local_must_not_contain,
         }) => match live_ledger_dir {
             Some(ledger_dir) => commands::verify_p2p::run_live_shadow_check(
@@ -157,6 +160,7 @@ pub async fn run(
                     peer_id,
                     doc_id,
                     contains,
+                    equals,
                     local_must_not_contain,
                 },
                 config.snapshot_depth,

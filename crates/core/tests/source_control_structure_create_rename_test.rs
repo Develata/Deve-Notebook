@@ -35,7 +35,7 @@ fn structure_ops(repo: &RepoManager, node_id: NodeId) -> Vec<StructureOp> {
     .into_iter()
     .filter_map(|(_, entry)| match entry.event {
         LedgerEvent::Structure(op) => Some(op),
-        LedgerEvent::Content(_) => None,
+        LedgerEvent::Content(_) | LedgerEvent::MergeAnchor(_) => None,
     })
     .collect()
 }

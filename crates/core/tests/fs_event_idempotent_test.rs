@@ -1,4 +1,4 @@
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
@@ -23,7 +23,7 @@ fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow:
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -32,7 +32,7 @@ fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow:
                     content: "hello".into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

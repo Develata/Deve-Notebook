@@ -8,8 +8,9 @@ fn merge_peer_fails_closed_when_remote_ops_are_corrupted() -> anyhow::Result<()>
     let dir = tempdir()?;
     let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let peer_id = PeerId::new("peer-remote");
+    let local_repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let remote = RepoInfo {
-        uuid: uuid::Uuid::new_v4(),
+        uuid: local_repo_id,
         name: "wiki".into(),
         url: Some("urn:test:wiki".into()),
     };
@@ -19,7 +20,7 @@ fn merge_peer_fails_closed_when_remote_ops_are_corrupted() -> anyhow::Result<()>
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -28,7 +29,7 @@ fn merge_peer_fails_closed_when_remote_ops_are_corrupted() -> anyhow::Result<()>
                     content: "local".into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

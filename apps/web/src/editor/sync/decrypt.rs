@@ -45,9 +45,9 @@ pub(super) fn handle_sync_push_with_key(ctx: &SyncContext, key: &RepoKey, ops: &
 
     for enc_op in ops {
         match key.decrypt(enc_op) {
-            Ok(entry) => apply_decrypted_entry(ctx, entry, enc_op.seq),
+            Ok(entry) => apply_decrypted_entry(ctx, entry, enc_op.peer_seq.get()),
             Err(e) => {
-                leptos::logging::error!("Decrypt failed seq={}: {}", enc_op.seq, e);
+                leptos::logging::error!("Decrypt failed seq={}: {}", enc_op.peer_seq, e);
             }
         }
     }

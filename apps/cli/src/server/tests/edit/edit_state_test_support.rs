@@ -7,7 +7,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, FactActor, Op, PeerId};
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -83,25 +83,18 @@ pub(crate) fn seed_doc_with_content(
     content: &str,
 ) -> anyhow::Result<DocId> {
     let doc_id = seed_doc(state, repo_name, path)?;
-    state.repo.append_generated_op_in_local_repo(
-        repo_name,
-        doc_id,
-        PeerId::new("test-peer"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: content.into(),
-                },
-                1,
-                PeerId::new("test-peer"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            repo_name,
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )?;
     Ok(doc_id)
 }
 

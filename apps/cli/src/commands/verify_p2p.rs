@@ -28,6 +28,7 @@ pub struct LiveShadowCheckOptions {
     pub peer_id: Option<String>,
     pub doc_id: Option<uuid::Uuid>,
     pub contains: Option<String>,
+    pub equals: Option<String>,
     pub local_must_not_contain: Option<String>,
 }
 
@@ -167,9 +168,10 @@ pub fn run_live_shadow_check(options: LiveShadowCheckOptions, snapshot_depth: us
             .doc_id
             .ok_or_else(|| anyhow!("--doc-id is required with --live-ledger-dir"))?,
     );
-    let expected = options
-        .contains
-        .ok_or_else(|| anyhow!("--contains is required with --live-ledger-dir"))?;
+    ensure!(
+        options.contains.is_some() ^ options.equals.is_some(),
+        "exactly one of --contains or --equals is required with --live-ledger-dir"
+    );
 
     let repo = RepoManager::init(&options.ledger_dir, snapshot_depth, None, None)
         .with_context(|| format!("failed to open live ledger at {:?}", options.ledger_dir))?;
@@ -186,10 +188,17 @@ pub fn run_live_shadow_check(options: LiveShadowCheckOptions, snapshot_depth: us
     );
     let shadow_entries: Vec<LedgerEntry> = shadow_ops.into_iter().map(|(_, entry)| entry).collect();
     let shadow_content = deve_core::state::reconstruct_content(&shadow_entries);
-    ensure!(
-        shadow_content.contains(&expected),
-        "shadow content for doc {doc_id} did not contain expected text"
-    );
+    if let Some(expected) = options.equals {
+        ensure!(
+            shadow_content == expected,
+            "shadow content for doc {doc_id} did not exactly match expected text"
+        );
+    } else if let Some(expected) = options.contains {
+        ensure!(
+            shadow_content.contains(&expected),
+            "shadow content for doc {doc_id} did not contain expected text"
+        );
+    }
 
     let local_content = repo
         .resolve_local_content(&repo_name, doc_id)

@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-07-10`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_repair_runtime.rs`, `crates/core/src/ledger/manager/repair_runtime.rs`, `crates/core/src/ledger/snapshot.rs`, `apps/cli/src/commands/export/`
 
@@ -51,6 +51,11 @@
 
 - repo **MAY** 定期生成只读 backup snapshot。
 - 系统 **MUST** 支持将 ledger 导出为 JSON Lines。
+- schema v2 repo 只能由离线命令 `deve export --allow-legacy-v2 --format json|markdown` 通过专用兼容读取器访问；普通 RepoManager、serve、write、sync 与 repair mutation 必须在 schema gate fail-closed。
+- 兼容读取器只能打开用户明确选择的既有 v2 `.redb` 并启动 read transaction，不创建数据库、不写 metadata/table、不获取 writer authority。运行中的 server 持锁时必须拒绝。
+- JSON Lines 必须按旧 `GlobalSeq` 单调导出原始 v2 `event / peer_id / seq / client ids` 并显式标记 `legacy_schema_version=2`；不得把旧 peer/seq 投影成 v3 origin。
+- Markdown 导出只允许 fold v2 content/structure facts 生成当前可读投影；structure authority 不一致时 fail-closed，不使用 path metadata 猜测修复。
+- v2 导出后必须重建 v3 repo，并通过受控 import/reconcile 生成当前 host identity 下的新事实；不得把旧 actor 标签猜测成物理 peer 或原地伪造连续序列。
 
 ### 9.5 Hard Failure vs Degraded Mode
 

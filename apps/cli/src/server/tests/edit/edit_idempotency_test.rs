@@ -29,10 +29,8 @@ async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Re
         .repo
         .find_client_op_in_local_repo("default", 7, 9)?
         .expect("client op index entry");
-    assert_ne!(
-        found.0, found.1.seq,
-        "fixture must distinguish repo-global protocol seq from peer-local fact seq"
-    );
+    assert_eq!(found.1.origin_peer_id, *h.state.repo.local_peer_id());
+    assert!(found.1.peer_seq.get() > 0);
     assert_eq!(found.0, first_ack.seq);
     Ok(())
 }

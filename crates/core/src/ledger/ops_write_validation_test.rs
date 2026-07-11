@@ -9,7 +9,7 @@ fn append_local_op_rejects_out_of_bounds_content_range() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("local_watcher");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.append_local_op(&content_entry(
         doc_id,
@@ -49,7 +49,7 @@ fn append_generated_client_op_rejects_out_of_bounds_content_range() -> Result<()
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser");
+    let peer_id = repo.local_peer_id().clone();
 
     append_client_op(
         &repo,
@@ -103,7 +103,7 @@ fn append_generated_op_rejects_structure_entries() -> Result<()> {
         .append_generated_op_in_local_repo(
             repo.local_repo_name(),
             doc_id,
-            PeerId::new("test"),
+            repo.local_peer_id().clone(),
             |seq| {
                 LedgerEntry::new_structure(
                     StructureOp::CreateFile {
@@ -113,7 +113,7 @@ fn append_generated_op_rejects_structure_entries() -> Result<()> {
                         name: "bad.md".into(),
                     },
                     1000,
-                    PeerId::new("test"),
+                    repo.local_peer_id().clone(),
                     seq,
                 )
             },

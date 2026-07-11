@@ -4,7 +4,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{FactActor, Op, PeerId};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -50,25 +50,18 @@ fn seed_file(state: &Arc<AppState>, path: &str, content: &str) -> anyhow::Result
         None,
         "test",
     )?;
-    state.repo.append_generated_op_in_local_repo(
-        state.repo.local_repo_name(),
-        doc_id,
-        PeerId::new("test-peer"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: content.into(),
-                },
-                1,
-                PeerId::new("test-peer"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            state.repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )?;
     Ok(())
 }
 

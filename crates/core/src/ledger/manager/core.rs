@@ -11,9 +11,15 @@ use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
 use crate::ledger::{init, range};
-use crate::models::{LedgerEntry, NodeId, NodeMeta, RepoId};
+use crate::models::{LedgerEntry, NodeId, NodeMeta, PeerFactSeq, PeerId, RepoId};
 
 impl RepoManager {
+    pub(crate) fn lock_shadow_merge(&self) -> Result<std::sync::MutexGuard<'_, ()>> {
+        self.shadow_merge_guard
+            .lock()
+            .map_err(|_| anyhow!("shadow/merge authority guard poisoned"))
+    }
+
     /// 初始化仓库管理器
     ///
     /// 详细文档见 `init` 模块。
@@ -107,6 +113,10 @@ impl RepoManager {
         &self.ledger_dir
     }
 
+    pub fn local_peer_id(&self) -> &crate::models::PeerId {
+        &self.local_peer_id
+    }
+
     pub fn snapshot_depth(&self) -> usize {
         self.snapshot_depth
     }
@@ -125,11 +135,18 @@ impl RepoManager {
     pub fn get_local_ops_in_range(
         &self,
         repo_id: &RepoId,
-        start_seq: u64,
-        end_seq: u64,
+        peer_id: &PeerId,
+        start_seq: PeerFactSeq,
+        end_seq: PeerFactSeq,
     ) -> Result<Vec<(u64, LedgerEntry)>> {
         self.run_on_local_repo_id(repo_id, |db| {
-            range::get_ops_in_range(db, start_seq, end_seq)
+            range::get_peer_ops_in_range(db, peer_id, start_seq, end_seq)
+        })
+    }
+
+    pub fn get_local_peer_waterline(&self, repo_id: &RepoId) -> Result<PeerFactSeq> {
+        self.run_on_local_repo_id(repo_id, |db| {
+            range::get_peer_waterline(db, self.local_peer_id())
         })
     }
 }

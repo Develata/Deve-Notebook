@@ -17,7 +17,7 @@ mod writer;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::models::{PeerFactSeq, PeerId, RepoId, VersionVector};
 use deve_core::protocol::{SyncPushHeader, SyncSourceProof};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
@@ -27,6 +27,7 @@ pub use hello::SyncHelloInput;
 pub struct SyncPushSnapshotInput {
     pub peer_id: PeerId,
     pub repo_id: RepoId,
+    pub waterline: PeerFactSeq,
     pub server_vector: VersionVector,
     pub source_proof: Option<SyncSourceProof>,
     pub ops: Vec<EncryptedOp>,
@@ -64,21 +65,23 @@ pub async fn handle_sync_request(
     ch: &DualChannel,
     session: &mut WsSession,
     repo_id: RepoId,
-    requests: Vec<(PeerId, (u64, u64))>,
+    requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))>,
 ) {
     transfer::handle_request(state, ch, session, repo_id, requests).await;
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_sync_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    range: (PeerFactSeq, PeerFactSeq),
     header: SyncPushHeader,
     ops: Vec<EncryptedOp>,
 ) {
-    transfer::handle_push(state, ch, session, peer_id, repo_id, header, ops).await;
+    transfer::handle_push(state, ch, session, peer_id, repo_id, range, header, ops).await;
 }
 
 pub async fn handle_sync_snapshot_request(

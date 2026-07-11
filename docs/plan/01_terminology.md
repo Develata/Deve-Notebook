@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-24`
+- `Last Review`: `2026-07-10`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -31,6 +31,8 @@
     *   **Fact Partition**：账本事实至少可分为 `Content Facts` 与 `Structure Facts`；前者描述文本变化，后者描述节点/路径结构变化。
 *   **Snapshot (快照)**：Ledger 在特定账本事实序列位置的状态压缩 $S_t$。
     *   $Snapshot(t) \equiv Fold(Fact_1...Fact_t)$，用于启动、校正与加速 fold；Snapshot 可重建，不是独立真值源。
+*   **Full-Fact Replay Payload (完整事实重放载荷)**：网络协议 `SyncPushSnapshot` 在当前 v1 中传输的、单一 source peer 从 1 到 waterline 的完整连续事实日志。
+    *   它不是本章定义的状态压缩 Snapshot；wire enum 保留历史名称，但不得据此省略事实、传输压缩状态或把 waterline 推过缺口。
 *   **Projection (投影)**：从 Ledger 派生的、面向用户的可读/可编辑形式（如 Markdown 文件）。
     *   $P = Project(S_{ledger})$。投影不承载权威状态；对投影的外部修改必须先转为差异，再经 Reconciliation 生成 Ledger Facts。
 *   **Deve-authorized Write Path (Deve 授权写路径)**：由 Deve runtime 明确发起、绑定 repo scope / writer gate，并通过 ledger append、projection writeback、source-control import 或 repair 命令产生可审计副作用的写路径。
@@ -98,14 +100,24 @@
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。
     *   所有 Peer 在协议层完全对等，拥有全量或子集 Ledger 副本。
+    *   `PeerId` 是由宿主 identity 公钥派生的物理节点身份；UI session、browser writer、plugin、merge、repair 等 actor 标签不得充当 `PeerId`。
 *   **WebLightPeer (Web 轻节点)**：浏览器端 thin-client peer。
     *   WebLightPeer 只持有 session、snapshot、pending overlay 与 repo-scoped protocol state，不持有本地 ledger authority。
 *   **Relay (中继)**：具有 $Attr_{always\_on}$ 的 Peer，只做加密数据 blind storage 与流量转发，不解密业务数据。
-*   **LedgerSeq (账本序列数)**：Peer 维度的单调递增计数器。
-    *   $Seq(P, i) \in \mathbb{N}$（实现为 `u64`），表示 Peer $P$ 产生的第 $i$ 条账本事实。
-    *   `(PeerId, LedgerSeq)` 用于因果定位；repo 落盘全序由 `GlobalSeq` / `LEDGER_OPS` 主键决定。
+*   **PeerFactSeq (Peer 事实序列数)**：单个 repo 内、物理 Peer 维度的严格连续计数器。
+    *   $Seq(R, P, i) \in \mathbb{N}^{+}$（实现为强类型 `PeerFactSeq(u64)`），表示 Peer $P$ 在 Repo $R$ 产生的第 $i$ 条账本事实。
+    *   Content Facts、Structure Facts、rename、merge、plugin 与 repair 产生的本地事实共享同一 `(RepoId, PeerId)` 序列；不得按 DocId、NodeId 或 actor 分裂计数。
+    *   `(RepoId, PeerId, PeerFactSeq)` 用于 P2P 因果定位、范围同步与去重；任意序号缺失必须阻塞该 peer 后续事实，不能把 vector 推过缺口。
+*   **GlobalSeq (本地落盘序列数)**：单个 repo database 内 `LEDGER_OPS` 的本地全序主键。
+    *   `GlobalSeq` 只表达当前数据库的持久化顺序，不得进入 P2P vector、range 或 wire envelope 充当来源序号。
+*   **FactActor (事实执行来源)**：产生本地事实的受控执行路径诊断标签，如 `browser_edit`、`external_apply`、`local_reconcile`、`plugin`、`merge`、`repair`。
+    *   `FactActor` 不参与身份认证、序列分配、去重、range 或 VersionVector；前端可以发送业务 intent，但不得指定物理 `origin_peer_id`。
+*   **MergeAnchor (合并锚事实)**：本机对一个只读 source peer 在指定 `DocId` 上完成 merge/baseline 决策后追加的本地 authority fact。
+    *   它记录 source peer、被确认的 source waterline、本地 merge 前水位、resolution 与最终内容 hash；不直接产生文本或结构投影，但必须占用本机连续 `PeerFactSeq` 并参与完整事实同步。
+*   **MergeBaseCheckpoint (合并基线检查点)**：由最新有效 `MergeAnchor` 唯一派生/索引的 `(source_peer_id, DocId) -> (local_anchor_peer_seq, source_peer_seq, source_state_hash, result_hash, anchor_global_seq)` repo-local 状态。
+    *   它不是可脱离 ledger 修改的第二真源；缺失、悬空、hash 不一致或水位越界时 merge 必须 fail-closed。
 *   **Vector Clock (向量时钟)**：因果历史的数学表达。
-    *   $VC = \{ (PeerID_1, Seq_1), (PeerID_2, Seq_2), ... \}$，用于 diff 与并发冲突检测。
+    *   $VC_R = \{ (PeerID_1, PeerFactSeq_1), (PeerID_2, PeerFactSeq_2), ... \}$，在单个 repo scope 内用于 diff、连续性验证与并发冲突检测。
 *   **scope_nonce (作用域版本)**：当前已确认 repo / branch scope 的连接内单调版本。
     *   所有 repo-scoped server message、write intent 与 UI writable state **MUST** 绑定当前 `scope_nonce`。
 *   **switch_nonce (切换版本)**：客户端发起 repo / branch switch 时声明的候选 scope 版本。

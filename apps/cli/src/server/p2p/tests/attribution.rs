@@ -24,6 +24,8 @@ async fn p2p_exchange_rejects_forged_sync_push_source() -> anyhow::Result<()> {
     let message = ServerMessage::SyncPush {
         source_peer_id: forged_source.clone(),
         repo_id,
+        range_start: 1_u64.into(),
+        range_end: 1_u64.into(),
         header: SyncPushHeader::diff(repo_id, forged_source.clone(), VersionVector::new()),
         scope_nonce: ScopeNonce::new(0),
         branch: None,
@@ -59,6 +61,8 @@ async fn p2p_exchange_rejects_unrequested_direct_sync_push_source() -> anyhow::R
     let message = ServerMessage::SyncPush {
         source_peer_id: authenticated_peer.clone(),
         repo_id,
+        range_start: 1_u64.into(),
+        range_end: 1_u64.into(),
         header: SyncPushHeader::diff(repo_id, authenticated_peer.clone(), VersionVector::new()),
         scope_nonce: ScopeNonce::new(0),
         branch: None,
@@ -93,6 +97,7 @@ async fn p2p_exchange_rejects_forged_snapshot_source() -> anyhow::Result<()> {
     let message = ServerMessage::SyncPushSnapshot {
         source_peer_id: forged_source.clone(),
         repo_id,
+        waterline: 1_u64.into(),
         scope_nonce: ScopeNonce::new(0),
         branch: None,
         server_vector: VersionVector::new(),
@@ -140,6 +145,7 @@ async fn p2p_exchange_rejects_unrequested_direct_snapshot_source() -> anyhow::Re
     let message = ServerMessage::SyncPushSnapshot {
         source_peer_id: authenticated_peer.clone(),
         repo_id,
+        waterline: 1_u64.into(),
         scope_nonce: ScopeNonce::new(0),
         branch: None,
         server_vector,

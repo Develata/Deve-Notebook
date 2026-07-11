@@ -1,5 +1,5 @@
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::sync::SyncManager;
@@ -26,7 +26,7 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("test"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -35,7 +35,7 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
                     content: "ledger".into(),
                 },
                 1,
-                PeerId::new("test"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,
@@ -91,7 +91,7 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("test"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -100,7 +100,7 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
                     content: "ledger".into(),
                 },
                 1,
-                PeerId::new("test"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

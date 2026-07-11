@@ -1,6 +1,6 @@
 use super::RepoManager;
 use crate::ledger::range;
-use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_PEER_SEQ, PEER_DOC_SEQ};
+use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, PEER_FACT_OPS, PEER_FACT_SEQ};
 use crate::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
 use anyhow::Result;
 use tempfile::TempDir;
@@ -10,7 +10,7 @@ fn append_local_op_rejects_global_seq_overflow_without_side_effects() -> Result<
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("local_watcher");
+    let peer_id = repo.local_peer_id().clone();
 
     insert_global_seq_sentinel(&repo)?;
 
@@ -36,7 +36,7 @@ fn append_generated_op_rejects_global_seq_overflow_without_side_effects() -> Res
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser");
+    let peer_id = repo.local_peer_id().clone();
 
     insert_global_seq_sentinel(&repo)?;
 
@@ -60,17 +60,17 @@ fn append_generated_op_rejects_global_seq_overflow_without_side_effects() -> Res
 }
 
 #[test]
-fn append_generated_op_rejects_local_seq_overflow_without_side_effects() -> Result<()> {
+fn append_generated_op_rejects_peer_fact_seq_overflow_without_side_effects() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
     let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser");
+    let peer_id = repo.local_peer_id().clone();
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
         write
-            .open_table(PEER_DOC_SEQ)?
-            .insert((doc_id.as_u128(), peer_id.as_str()), u64::MAX)?;
+            .open_table(PEER_FACT_SEQ)?
+            .insert(peer_id.as_str(), u64::MAX)?;
         write.commit()?;
         Ok(())
     })?;
@@ -87,29 +87,29 @@ fn append_generated_op_rejects_local_seq_overflow_without_side_effects() -> Resu
                 },
             )
         })
-        .expect_err("LocalSeq overflow must fail before ledger append");
+        .expect_err("PeerFactSeq overflow must fail before ledger append");
 
-    assert!(err.to_string().contains("LocalSeq overflow"));
+    assert!(err.to_string().contains("PeerFactSeq overflow"));
     assert_eq!(
         repo.run_on_local_repo(repo.local_repo_name(), range::get_max_seq)?,
         0
     );
-    assert_peer_doc_seq(&repo, doc_id, &peer_id, Some(u64::MAX))?;
+    assert_peer_fact_seq(&repo, &peer_id, Some(u64::MAX))?;
     Ok(())
 }
 
 #[test]
-fn append_generated_structure_event_rejects_local_seq_overflow() -> Result<()> {
+fn append_generated_structure_event_shares_peer_fact_seq_overflow() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let repo = init_repo(tmp_dir.path())?;
-    let peer_id = PeerId::new("test");
+    let peer_id = repo.local_peer_id().clone();
     let node_id = NodeId::new();
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
         write
-            .open_table(NODE_PEER_SEQ)?
-            .insert((node_id.as_u128(), peer_id.as_str()), u64::MAX)?;
+            .open_table(PEER_FACT_SEQ)?
+            .insert(peer_id.as_str(), u64::MAX)?;
         write.commit()?;
         Ok(())
     })?;
@@ -125,14 +125,14 @@ fn append_generated_structure_event_rejects_local_seq_overflow() -> Result<()> {
             },
             2000,
         )
-        .expect_err("LocalSeq overflow must fail before ledger append");
+        .expect_err("PeerFactSeq overflow must fail before ledger append");
 
-    assert!(err.to_string().contains("LocalSeq overflow"));
+    assert!(err.to_string().contains("PeerFactSeq overflow"));
     assert_eq!(
         repo.run_on_local_repo(repo.local_repo_name(), range::get_max_seq)?,
         0
     );
-    assert_node_peer_seq(&repo, node_id, &peer_id, Some(u64::MAX))?;
+    assert_peer_fact_seq(&repo, &peer_id, Some(u64::MAX))?;
     Ok(())
 }
 
@@ -162,36 +162,30 @@ fn assert_content_side_indexes_empty(
         let doc_ops = read.open_multimap_table(DOC_OPS)?;
         assert!(ops.get(u64::MAX)?.is_some());
         assert_eq!(doc_ops.get(doc_id.as_u128())?.count(), 0);
-        assert_peer_doc_seq_in_read(&read, doc_id, peer_id, None)?;
+        assert_peer_fact_seq_in_read(&read, peer_id, None)?;
+        let peer_ops = read.open_table(PEER_FACT_OPS)?;
+        assert!(peer_ops.get((peer_id.as_str(), 1))?.is_none());
         Ok(())
     })
 }
 
-fn assert_peer_doc_seq(
-    repo: &RepoManager,
-    doc_id: DocId,
-    peer_id: &PeerId,
-    expected: Option<u64>,
-) -> Result<()> {
+fn assert_peer_fact_seq(repo: &RepoManager, peer_id: &PeerId, expected: Option<u64>) -> Result<()> {
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let read = db.begin_read()?;
-        assert_peer_doc_seq_in_read(&read, doc_id, peer_id, expected)?;
+        assert_peer_fact_seq_in_read(&read, peer_id, expected)?;
         Ok(())
     })
 }
 
-fn assert_peer_doc_seq_in_read(
+fn assert_peer_fact_seq_in_read(
     read: &redb::ReadTransaction,
-    doc_id: DocId,
     peer_id: &PeerId,
     expected: Option<u64>,
 ) -> Result<()> {
-    match read.open_table(PEER_DOC_SEQ) {
+    match read.open_table(PEER_FACT_SEQ) {
         Ok(peer_seqs) => {
             assert_eq!(
-                peer_seqs
-                    .get((doc_id.as_u128(), peer_id.as_str()))?
-                    .map(|value| value.value()),
+                peer_seqs.get(peer_id.as_str())?.map(|value| value.value()),
                 expected
             );
         }
@@ -199,25 +193,6 @@ fn assert_peer_doc_seq_in_read(
         Err(err) => return Err(err.into()),
     }
     Ok(())
-}
-
-fn assert_node_peer_seq(
-    repo: &RepoManager,
-    node_id: NodeId,
-    peer_id: &PeerId,
-    expected: Option<u64>,
-) -> Result<()> {
-    repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        let read = db.begin_read()?;
-        let node_seqs = read.open_table(NODE_PEER_SEQ)?;
-        assert_eq!(
-            node_seqs
-                .get((node_id.as_u128(), peer_id.as_str()))?
-                .map(|value| value.value()),
-            expected
-        );
-        Ok(())
-    })
 }
 
 fn content_entry(doc_id: DocId, peer_id: PeerId, seq: u64, op: Op) -> LedgerEntry {

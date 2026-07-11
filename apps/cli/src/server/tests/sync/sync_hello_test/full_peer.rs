@@ -8,7 +8,7 @@ use super::super::sync_hello_test_support::{
     signed_hello_for_repo, signed_hello_for_scope, unicast_channel,
 };
 use deve_core::ledger::traits::RepoSelector;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
+use deve_core::models::{DocId, FactActor, LedgerEntry, Op, PeerId, VersionVector};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -187,26 +187,18 @@ fn append_local_op(
 ) -> anyhow::Result<()> {
     state.sync_engine.get_or_create_strict(repo_id)?;
     let doc_id = DocId::new();
-    let local_peer = state.identity_key.peer_id();
-    state.repo.append_generated_op_in_local_repo(
-        state.repo.local_repo_name(),
-        doc_id,
-        local_peer.clone(),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "local".into(),
-                },
-                1,
-                local_peer.clone(),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            state.repo.local_repo_name(),
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "local".into(),
+            },
+            1,
+        )?;
     Ok(())
 }
 

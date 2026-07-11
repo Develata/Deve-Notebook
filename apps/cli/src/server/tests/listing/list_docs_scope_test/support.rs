@@ -4,7 +4,7 @@
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, FactActor, Op, PeerId};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -43,25 +43,18 @@ pub(super) fn seed_doc(
     let (doc_id, _ops) = state
         .repo
         .apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
-    state.repo.append_generated_op_in_local_repo(
-        repo_name,
-        doc_id,
-        PeerId::new("test-peer"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: content.into(),
-                },
-                1,
-                PeerId::new("test-peer"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
+    state
+        .repo
+        .local_fact_writer(FactActor::new("test")?)
+        .append_content_in_local_repo(
+            repo_name,
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+        )?;
     Ok(doc_id)
 }
 

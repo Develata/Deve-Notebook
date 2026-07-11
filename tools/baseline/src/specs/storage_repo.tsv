@@ -27,6 +27,9 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-013	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-013	run: scripts/check-repo-file-ops-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	cargo test -p deve_cli includes_dir_structure_fact_in_export -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014B	cargo test -p deve_cli legacy_v2_export -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014B	legacy_export_is_read_only true
+contains	docs/plan/03_storage/repair.md	deve export --allow-legacy-v2 --format json|markdown
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-015	cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-015	cargo test -p deve_core --test durable_projection_fault_test -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-016	cargo test -p deve_core notify_backend_error_requests_rescan -- --nocapture
@@ -107,7 +110,8 @@ contains	docs/plan/09_web_thin_client_ledger.md	其中 `seq` **MUST** 是 repo �
 contains	docs/features/operations/doc_edit_confirmed_op.md	peer-local fact sequence is never a browser document version
 case_contains	docs/acceptance-cases/14_operation_flow_refs.md	WEBWRITE-FEAT-01	edit_acknowledges_ledger_commit_when_workspace_writeback_fails
 case_contains	docs/acceptance-cases/14_operation_flow_refs.md	WEBWRITE-FEAT-01	ack_and_new_op_seq_equal_repo_global_ledger_seq true
-contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_ne!(
+contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(entry.origin_peer_id, *h.state.repo.local_peer_id());
+contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert!(entry.peer_seq.get() > 0);
 contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(seq, global_seq);
 contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(entry.seq, global_seq);
 cargo_test_lib	deve_cli	edit_acknowledges_ledger_commit_when_workspace_writeback_fails

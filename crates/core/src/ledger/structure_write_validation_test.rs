@@ -1,6 +1,6 @@
 use super::{RepoManager, range};
 use crate::ledger::node_meta;
-use crate::models::{DocId, LedgerEntry, NodeId, PeerId, StructureOp};
+use crate::models::{DocId, LedgerEntry, NodeId, StructureOp};
 use anyhow::Result;
 use tempfile::TempDir;
 
@@ -17,7 +17,7 @@ fn append_local_structure_op_rejects_missing_parent_reference() -> Result<()> {
             name: "broken.md".into(),
         },
         1000,
-        PeerId::new("test"),
+        repo.local_peer_id().clone(),
         1,
     );
 
@@ -49,7 +49,7 @@ fn append_generated_structure_event_rejects_move_that_creates_cycle() -> Result<
     let err = repo
         .append_generated_structure_event_in_local_repo(
             repo.local_repo_name(),
-            PeerId::new("test"),
+            repo.local_peer_id().clone(),
             StructureOp::MoveNode {
                 node_id: notes_id,
                 doc_id: None,

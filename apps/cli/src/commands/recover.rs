@@ -60,7 +60,7 @@ pub fn run(ledger_dir: &PathBuf, repo_name: Option<String>, snapshot_depth: usiz
 mod tests {
     use super::run;
     use deve_core::ledger::RepoManager;
-    use deve_core::models::{LedgerEntry, Op, PeerId};
+    use deve_core::models::{FactActor, Op};
 
     #[test]
     fn recover_rebuilds_workspace_files_from_ledger() {
@@ -74,21 +74,17 @@ mod tests {
         let (doc_id, _) = repo
             .apply_file_structure_in_local_repo("default", "notes/recovered.md", None, "test")
             .expect("create doc");
-        repo.append_generated_op_in_local_repo("default", doc_id, PeerId::new("local"), |seq| {
-            LedgerEntry::new_content(
+        repo.local_fact_writer(FactActor::new("test").expect("actor"))
+            .append_content_in_local_repo(
+                "default",
                 doc_id,
                 Op::Insert {
                     pos: 0,
                     content: "recovered from ledger".into(),
                 },
                 1,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
             )
-        })
-        .expect("append content");
+            .expect("append content");
 
         run(&ledger_dir, Some("default".into()), 8).expect("recover");
 

@@ -17,7 +17,7 @@ fn dir_ops(repo: &RepoManager, node_id: NodeId) -> Vec<StructureOp> {
         .into_iter()
         .filter_map(|(_, entry)| match entry.event {
             LedgerEvent::Structure(op) => Some(op),
-            LedgerEvent::Content(_) => None,
+            LedgerEvent::Content(_) | LedgerEvent::MergeAnchor(_) => None,
         })
         .collect()
 }
@@ -74,7 +74,7 @@ fn dir_delete_emits_delete_structure_fact() {
 }
 
 #[test]
-fn dir_structure_seq_is_monotonic_per_node() {
+fn dir_structure_facts_preserve_monotonic_peer_wide_order() {
     let (_dir, repo) = new_repo();
     let (node_id, _ops) = repo
         .apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
@@ -94,7 +94,8 @@ fn dir_structure_seq_is_monotonic_per_node() {
     .expect("delete dir structure");
     let seqs: Vec<_> = dir_entries(&repo, node_id)
         .into_iter()
-        .map(|(_, entry)| entry.seq)
+        .map(|(_, entry)| entry.peer_seq.get())
         .collect();
-    assert_eq!(seqs, vec![1, 2, 3, 4]);
+    assert_eq!(seqs.len(), 4);
+    assert!(seqs.windows(2).all(|pair| pair[0] < pair[1]));
 }

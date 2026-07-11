@@ -82,7 +82,7 @@ fn delete_commit_emits_delete_structure_fact() {
         .into_iter()
         .filter_map(|(_, entry)| match entry.event {
             LedgerEvent::Structure(op) => Some(op),
-            LedgerEvent::Content(_) => None,
+            LedgerEvent::Content(_) | LedgerEvent::MergeAnchor(_) => None,
         })
         .collect::<Vec<_>>();
     assert!(facts.iter().any(|op| matches!(

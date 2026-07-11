@@ -4,7 +4,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::{
     DOC_OPS, LEDGER_OPS, NODEID_TO_META, PATH_TO_NODEID, SNAPSHOT_DATA, SNAPSHOT_INDEX,
 };
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use tempfile::TempDir;
 
 fn new_repo(snapshot_depth: usize) -> (TempDir, RepoManager) {
@@ -55,7 +55,7 @@ fn required_redb_tables_exist_after_init() {
 fn snapshot_respects_depth_limit() {
     let (_dir, repo) = new_repo(3);
     let name = repo.local_repo_name().to_string();
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
 
     let (doc_id, _) = repo
         .apply_file_structure_in_local_repo(&name, "snap.md", None, "test")

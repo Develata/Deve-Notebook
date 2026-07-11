@@ -21,7 +21,7 @@ fn entry() -> LedgerEntry {
 }
 
 #[test]
-fn ledger_entry_format_roundtrips_v2_envelope() -> anyhow::Result<()> {
+fn ledger_entry_format_roundtrips_v3_envelope() -> anyhow::Result<()> {
     let entry = entry();
     let bytes = serialize_ledger_entry(&entry)?;
 
@@ -29,8 +29,9 @@ fn ledger_entry_format_roundtrips_v2_envelope() -> anyhow::Result<()> {
     let decoded = deserialize_ledger_entry(&bytes)?;
     assert_eq!(decoded.doc_id, entry.doc_id);
     assert_eq!(decoded.event, entry.event);
-    assert_eq!(decoded.peer_id, entry.peer_id);
-    assert_eq!(decoded.seq, entry.seq);
+    assert_eq!(decoded.origin_peer_id, entry.origin_peer_id);
+    assert_eq!(decoded.peer_seq, entry.peer_seq);
+    assert_eq!(decoded.actor, entry.actor);
     assert_eq!(decoded.client_id, entry.client_id);
     assert_eq!(decoded.client_op_id, entry.client_op_id);
     Ok(())
@@ -42,7 +43,7 @@ fn ledger_entry_format_rejects_unversioned_payload() {
 
     let err = deserialize_ledger_entry(&bytes).expect_err("unversioned entry must fail closed");
 
-    assert!(err.to_string().contains("missing DEVELDG2 magic"));
+    assert!(err.to_string().contains("missing DEVELDG3 magic"));
 }
 
 #[test]

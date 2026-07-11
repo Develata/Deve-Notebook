@@ -13,7 +13,7 @@
     - api_assert: utf16_positions_match_editor_offsets true
 
 - case_id: DIFF-002
-  goal: 3-Way Merge 使用 LCA。
+  goal: 3-Way Merge 使用可验证的 source checkpoint 基线，不使用 PeerId/VersionVector 交集猜测 LCA。
   preconditions:
     - Local 与 Remote 均基于同一 Base 修改
     - 用户当前处于 Local Branch，并显式选择 peer force-mirror 作为只读 source
@@ -22,8 +22,13 @@
     - run: cargo test -p deve_cli merge_scope_nonce_gate -- --nocapture
     - run: cargo test -p deve_cli merge_manual_write_readonly_gate -- --nocapture
     - run: cargo test -p deve_cli merge_peer_local_branch_contract -- --nocapture
+    - run: cargo test -p deve_core --test merge_checkpoint_test -- --nocapture
   assertions:
-    - log_contains: "LCA"
+    - api_assert: merge_base_comes_from_checkpoint_not_peer_id_intersection true
+    - api_assert: first_equal_state_establishes_merge_anchor true
+    - api_assert: first_divergent_state_without_checkpoint_fails_closed true
+    - api_assert: merge_preflight_is_opaque_and_revalidated_by_core_writer true
+    - api_assert: missing_local_or_source_target_doc_is_not_treated_as_empty_content true
     - api_assert: merge_manual_writes_reject_remote_readonly true
     - api_assert: merge_peer_writes_local_branch_only true
     - api_assert: merge_peer_rejects_remote_branch_scope true
@@ -51,6 +56,7 @@
     - run: cargo test -p deve_cli resolve_merge_conflict_accept_current -- --nocapture
     - run: cargo test -p deve_cli resolve_merge_conflict_local_branch_contract -- --nocapture
     - run: cargo test -p deve_cli resolve_merge_conflict_accept_both -- --nocapture
+    - run: cargo test -p deve_core --test merge_checkpoint_test auto_incoming_and_both_resolutions_append_typed_anchors -- --nocapture
   assertions:
     - ws_message: "ResolveMergeConflict"
     - ws_field_contains: "doc_id action result_content scope_nonce"
@@ -58,6 +64,8 @@
     - api_assert: resolve_merge_conflict_accept_current_local_only true
     - api_assert: resolve_merge_conflict_writes_local_branch_only true
     - api_assert: resolve_merge_conflict_accept_both_result_local_only true
+    - api_assert: every_resolution_appends_merge_anchor true
+    - api_assert: merge_content_anchor_checkpoint_commit_atomically true
 
 - case_id: DIFF-005
   goal: 合并 state 重开可重放。
@@ -65,9 +73,13 @@
     - Peer merge conflict 已产生但未确认
   steps:
     - run: cargo test -p deve_cli merge_peer_conflict_replays_after_state_reopen -- --nocapture
+    - run: cargo test -p deve_core --test merge_checkpoint_test checkpoint_survives_reopen_and_anchor_is_in_peer_range -- --nocapture
+    - run: cargo test -p deve_core --test merge_checkpoint_test source_drift_rejects_entire_merge_commit -- --nocapture
   assertions:
     - api_assert: merge_peer_local_remote_ledger_entries_unchanged_after_state_reopen true
     - api_assert: merge_peer_conflict_replay_after_state_reopen true
+    - api_assert: merge_checkpoint_recovers_from_ledger_anchor_after_state_reopen true
+    - api_assert: merge_checkpoint_waterline_drift_fails_closed true
 
 - case_id: DIFF-006
   goal: Watcher 防抖与 Hash 校验。

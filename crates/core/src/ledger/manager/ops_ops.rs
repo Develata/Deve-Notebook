@@ -13,7 +13,7 @@ use crate::ledger::manager::structure_projection;
 use crate::ledger::node_ops;
 use crate::ledger::ops;
 use crate::ledger::runtime_tables;
-use crate::models::{DocId, LedgerEntry, PeerId, RepoType, StructureOp};
+use crate::models::{DocId, FactActor, LedgerEntry, PeerId, RepoType, StructureOp};
 use anyhow::Result;
 
 impl RepoManager {
@@ -82,12 +82,20 @@ impl RepoManager {
         structure: StructureOp,
         timestamp: i64,
     ) -> Result<(u64, u64)> {
+        if &peer_id != self.local_peer_id() {
+            anyhow::bail!(
+                "Local structure fact origin {} does not match host identity {}",
+                peer_id,
+                self.local_peer_id()
+            );
+        }
         let repo_scope = ops::local_repo_scope(repo_name);
         self.run_on_local_repo(repo_name, move |db| {
             let write_txn = db.begin_write()?;
             let seqs = node_ops::append_generated_structure_op_to_txn(
                 &write_txn,
                 peer_id,
+                FactActor::system(),
                 structure.clone(),
                 timestamp,
                 &repo_scope,

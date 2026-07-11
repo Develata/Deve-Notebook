@@ -1,7 +1,7 @@
 //! STORE-005: Ledger-first round-trip tests.
 
 use deve_core::ledger::RepoManager;
-use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::models::{LedgerEntry, Op};
 use deve_core::state;
 use tempfile::TempDir;
 
@@ -16,7 +16,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 fn edit_round_trip_reconstructs_content() {
     let (_dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
 
     let (doc_id, _) = repo
         .apply_file_structure_in_local_repo(&name, "rt.md", None, "test")
@@ -73,7 +73,7 @@ fn edit_round_trip_reconstructs_content() {
 fn delete_op_round_trip() {
     let (_dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
-    let peer = PeerId::new("local");
+    let peer = repo.local_peer_id().clone();
 
     let (doc_id, _) = repo
         .apply_file_structure_in_local_repo(&name, "del.md", None, "test")

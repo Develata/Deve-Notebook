@@ -2,7 +2,7 @@
 //!   - 03_storage/projection#projection-contract
 
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::sync::SyncManager;
@@ -25,7 +25,7 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
         doc_id,
-        PeerId::new("local"),
+        repo.local_peer_id().clone(),
         |seq| {
             LedgerEntry::new_content(
                 doc_id,
@@ -34,7 +34,7 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
                     content: content.into(),
                 },
                 1,
-                PeerId::new("local"),
+                repo.local_peer_id().clone(),
                 seq,
                 None,
                 None,

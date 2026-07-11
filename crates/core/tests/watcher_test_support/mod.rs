@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 use anyhow::{Result, anyhow};
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, PeerId, RepoId};
+use deve_core::models::{DocId, LedgerEntry, RepoId};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use deve_core::sync::{SyncManager, watcher};
 use std::path::PathBuf;
@@ -61,7 +61,7 @@ impl Harness {
         self.repo.append_generated_op_in_local_repo(
             repo_name,
             doc_id,
-            PeerId::new("local"),
+            self.repo.local_peer_id().clone(),
             |seq| {
                 LedgerEntry::new_content(
                     doc_id,
@@ -70,7 +70,7 @@ impl Harness {
                         content: content.into(),
                     },
                     1,
-                    PeerId::new("local"),
+                    self.repo.local_peer_id().clone(),
                     seq,
                     None,
                     None,
