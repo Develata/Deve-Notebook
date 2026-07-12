@@ -45,7 +45,7 @@ load_user_tools() {
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
   [[ -s "$NVM_DIR/nvm.sh" ]] || fail "NVM is missing: $NVM_DIR/nvm.sh"
   source "$NVM_DIR/nvm.sh"
-  nvm use --silent 24 >/dev/null
+  nvm use --silent "$NODE_VERSION" >/dev/null
 
   [[ "$(node --version)" == "$NODE_VERSION" ]] \
     || fail "Node version mismatch: expected $NODE_VERSION, got $(node --version)"
@@ -57,15 +57,59 @@ load_user_tools() {
     || fail "Tauri CLI 2.11.1 is required"
 }
 
-validate_archive_entries() {
+safe_extract_archive() {
   local archive="$1"
-  local entry
-  while IFS= read -r entry; do
-    [[ "$entry" != /* ]] || fail "source archive contains an absolute path: $entry"
-    case "/$entry/" in
-      */../*) fail "source archive contains a parent traversal: $entry" ;;
-    esac
-  done < <(tar -tzf "$archive")
+  local destination="$2"
+  python3 - "$archive" "$destination" <<'PY'
+import pathlib
+import shutil
+import sys
+import tarfile
+archive = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2]).resolve()
+max_entries = 200_000
+max_bytes = 2 * 1024 * 1024 * 1024
+seen: set[tuple[str, ...]] = set()
+validated: list[tuple[tarfile.TarInfo, tuple[str, ...]]] = []
+total_bytes = 0
+root.mkdir(parents=True, exist_ok=True)
+with tarfile.open(archive, mode="r:gz") as source:
+    members = source.getmembers()
+    if len(members) > max_entries:
+        raise SystemExit("source archive contains too many entries")
+    for member in members:
+        raw = pathlib.PurePosixPath(member.name)
+        if raw.is_absolute() or ".." in raw.parts:
+            raise SystemExit(f"unsafe source archive path: {member.name!r}")
+        parts = tuple(part for part in raw.parts if part not in ("", "."))
+        if not parts:
+            if member.isdir():
+                continue
+            raise SystemExit(f"unsafe empty source archive path: {member.name!r}")
+        if parts in seen:
+            raise SystemExit(f"duplicate source archive path: {member.name!r}")
+        seen.add(parts)
+        if not (member.isdir() or member.isfile()):
+            raise SystemExit(f"unsupported source archive entry type: {member.name!r}")
+        total_bytes += member.size
+        if total_bytes > max_bytes:
+            raise SystemExit("source archive expands beyond 2 GiB")
+        validated.append((member, parts))
+    for member, parts in validated:
+        if member.isdir():
+            root.joinpath(*parts).mkdir(parents=True, exist_ok=True)
+    for member, parts in validated:
+        if member.isdir():
+            continue
+        target = root.joinpath(*parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        extracted = source.extractfile(member)
+        if extracted is None:
+            raise SystemExit(f"cannot read source archive file: {member.name!r}")
+        with extracted, target.open("xb") as output:
+            shutil.copyfileobj(extracted, output)
+        target.chmod(member.mode & 0o777)
+PY
 }
 
 stage_source() {
@@ -77,7 +121,6 @@ stage_source() {
     require_sha256 DEVE_APPTAINER_SOURCE_SHA256 "$SOURCE_SHA256"
     [[ "$(sha256_of "$SOURCE_ARCHIVE")" == "$SOURCE_SHA256" ]] \
       || fail "source archive checksum mismatch"
-    validate_archive_entries "$SOURCE_ARCHIVE"
     cp "$SOURCE_ARCHIVE" "$staged_archive"
   else
     require_command git
@@ -89,8 +132,7 @@ stage_source() {
     SOURCE_SHA256="$(sha256_of "$staged_archive")"
   fi
 
-  mkdir -p "$WORK/repo"
-  tar --no-same-owner --no-same-permissions -xzf "$staged_archive" -C "$WORK/repo"
+  safe_extract_archive "$staged_archive" "$WORK/repo"
   echo "SOURCE_REVISION=$SOURCE_REVISION"
   echo "SOURCE_SHA256=$SOURCE_SHA256"
 }
@@ -114,6 +156,7 @@ container_exec() {
 require_command sha256sum
 require_command tar
 require_command cp
+require_command python3
 load_apptainer
 load_user_tools
 require_sha256 DEVE_APPTAINER_IMAGE_SHA256 "$IMAGE_SHA256"

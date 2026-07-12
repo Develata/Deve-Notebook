@@ -538,6 +538,10 @@ sbatch \
   scripts/check-desktop-linux-apptainer-slurm.sh
 ```
 
+External source archives are restricted to regular files and directories;
+links, special files, duplicate paths, absolute paths, and parent traversal are
+rejected before staging.
+
 The worker verifies the source and SIF checksums; stages source, Rust toolchain,
 Cargo registry, and build target under node-local `/tmp`; builds release Web
 assets; the host Web/WASM and container-native builds use separate Cargo target

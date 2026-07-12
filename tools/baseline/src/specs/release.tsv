@@ -212,6 +212,8 @@ contains	scripts/check-desktop-platform-package-build.sh	"externalBin": ["binari
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	run this worker inside a Slurm allocation
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	GATE=desktop_native_container_session
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	APPTAINER_SCRATCH
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	safe_extract_archive
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	nvm use --silent "$NODE_VERSION"
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	WEB_CARGO_TARGET_DIR
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	scripts/check-desktop-platform-package-build.sh
 contains	scripts/check-desktop-linux-apptainer-slurm.sh	scripts/check-desktop-package-startup-smoke.sh
@@ -229,7 +231,7 @@ contains	apps/desktop/src/tauri_entry/smoke.rs	local_service_stopped_after_smoke
 contains	scripts/check-desktop-package-startup-smoke.sh	explicit_bundle exe
 contains	scripts/check-desktop-native-session-package-smoke.sh	explicit_bundle exe
 contains	scripts/check-desktop-package-startup-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_STARTUP_SMOKE=1
-contains	scripts/check-desktop-native-session-package-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_LOCAL_SERVICE=1
+contains	scripts/check-desktop-native-session-package-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_DATA_DIR="$data_dir"
 contains	scripts/check-desktop-native-session-package-smoke.sh	target/desktop-native-session-smoke
 contains	docs/plan/18_release.md	DEVE_DESKTOP_PACKAGE_BUNDLES=exe
 contains	docs/report/native-target-host-evidence-template.md	# Native Target-host Evidence
