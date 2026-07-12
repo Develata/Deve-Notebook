@@ -25,6 +25,7 @@ where
 }
 
 /// Return the exact postcard byte length without allocating an encoded copy.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn encoded_size<T>(value: &T) -> Result<usize, BinaryCodecError>
 where
     T: Serialize + ?Sized,
