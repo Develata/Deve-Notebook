@@ -160,6 +160,7 @@
     - run: scripts/check-native-target-host-evidence.sh
     - run: scripts/install-native-target-host-tools.sh
     - run: scripts/check-desktop-package-preflight.sh
+    - slurm_run: scripts/check-desktop-linux-apptainer-slurm.sh
     - run: cargo run -p deve_baseline -- desktop-platform-package-build
     - run: scripts/check-desktop-platform-package-build.sh
     - run: cargo run -p deve_baseline -- desktop-package-startup-smoke
@@ -313,6 +314,7 @@
   assertions:
     - native_assert: desktop_local_backend_default_starts_controlled_loopback_service true
     - native_assert: desktop_native_session_smoke_stops_local_service_after_probe true
+    - native_assert: desktop_native_session_smoke_uses_temporary_data_root true
     - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true
     - native_assert: mobile_embedded_backend_uses_typed_runtime_auth_material true
     - native_assert: remote_browser_accepts_https_origin_only true

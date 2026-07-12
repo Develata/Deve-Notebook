@@ -497,6 +497,64 @@ For Linux AppImage verification, `linuxdeploy --plugin gtk` requires
 `librsvg2-dev`. On WSL hosts without `libfuse2`, run AppImage tooling through
 `APPIMAGE_EXTRACT_AND_RUN=1`.
 
+### Linux Apptainer / Slurm development gate
+
+On the USTC 107 development host, the bare login and compute nodes do not own
+the GTK3/WebKitGTK development libraries. Use the pinned Apptainer image and
+run the heavy gate inside Slurm instead of installing a user-local recursive
+APT sysroot:
+
+```bash
+mkdir -p "$HOME/.hermes-logs/deve-notebook"
+sbatch \
+  --account=stu \
+  --partition=Students \
+  --qos=qos_stu_default \
+  --nodelist=anode06 \
+  --cpus-per-task=2 \
+  --mem=16G \
+  --time=01:00:00 \
+  --output="$HOME/.hermes-logs/deve-notebook/slurm-%j-desktop-apptainer.out" \
+  scripts/check-desktop-linux-apptainer-slurm.sh
+```
+
+The default source mode requires a clean Git worktree and packages exactly
+`HEAD` with `git archive`. When the orchestration source and 107 worktree have
+diverged, upload an immutable source archive and bind it explicitly:
+
+```bash
+DEVE_APPTAINER_SOURCE_ARCHIVE="$HOME/.cache/deve-build-inputs/deve-source.tar.gz" \
+DEVE_APPTAINER_SOURCE_REVISION=<git-revision> \
+DEVE_APPTAINER_SOURCE_SHA256=<sha256> \
+sbatch \
+  --account=stu \
+  --partition=Students \
+  --qos=qos_stu_default \
+  --nodelist=anode06 \
+  --cpus-per-task=2 \
+  --mem=16G \
+  --time=01:00:00 \
+  --output="$HOME/.hermes-logs/deve-notebook/slurm-%j-desktop-apptainer.out" \
+  scripts/check-desktop-linux-apptainer-slurm.sh
+```
+
+The worker verifies the source and SIF checksums; stages source, Rust toolchain,
+Cargo registry, and build target under node-local `/tmp`; builds release Web
+assets; the host Web/WASM and container-native builds use separate Cargo target
+directories so host GLIBC build scripts cannot contaminate the older container
+ABI. The worker then opens one Apptainer session for package build, startup,
+and native-session checks through the existing Desktop scripts. Keeping all
+native gates in one session avoids repeated SIF extraction on 107 hosts without
+`squashfuse`; the temporary container extraction uses node-local `/tmp` and is
+removed on exit.
+The validated SIF checksum default is intentionally fail-closed; override image
+path and checksum together with `DEVE_APPTAINER_IMAGE` and
+`DEVE_APPTAINER_IMAGE_SHA256` when the pinned image is deliberately replaced.
+
+This is Linux developer/target-host evidence only. It does not re-enable Linux
+artifacts in the first-tag release set, prove signing or installer readiness,
+or replace macOS/Windows target-host evidence.
+
 Diagnose macOS/Windows target-host prerequisites without claiming readiness on
 the wrong host:
 

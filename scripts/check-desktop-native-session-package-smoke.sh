@@ -53,10 +53,11 @@ is_windows_exe_path() {
 append_wslenv_name() {
   local wslenv="$1"
   local name="$2"
+  local key="${name%%/*}"
   local entry
   IFS=':' read -ra entries <<<"$wslenv"
   for entry in "${entries[@]}"; do
-    [[ "${entry%%/*}" == "$name" ]] && {
+    [[ "${entry%%/*}" == "$key" ]] && {
       printf '%s\n' "$wslenv"
       return
     }
@@ -64,24 +65,42 @@ append_wslenv_name() {
   printf '%s\n' "${wslenv:+$wslenv:}$name"
 }
 
+remove_wslenv_name() {
+  local wslenv="$1"
+  local name="$2"
+  local entry
+  local result=""
+  IFS=':' read -ra entries <<<"$wslenv"
+  for entry in "${entries[@]}"; do
+    [[ -n "$entry" ]] || continue
+    [[ "${entry%%/*}" == "$name" ]] && continue
+    result="${result:+$result:}$entry"
+  done
+  printf '%s\n' "$result"
+}
+
 native_session_wslenv() {
   local wslenv="${WSLENV:-}"
   wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_LOCAL_SERVICE")"
   wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_NATIVE_SESSION_SMOKE")"
   wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_SERVICE_STDIO_INHERIT")"
+  wslenv="$(remove_wslenv_name "$wslenv" "DEVE_DESKTOP_DATA_DIR")"
+  wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_DATA_DIR/p")"
   printf '%s\n' "$wslenv"
 }
 
 run_native_session_env() {
   local binary="$1"
+  local data_dir="$2"
   local wslenv
-  shift
+  shift 2
 
+  mkdir -p "$data_dir"
   if is_windows_exe_path "$binary"; then
     wslenv="$(native_session_wslenv)"
-    WSLENV="$wslenv" DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
+    WSLENV="$wslenv" DEVE_DESKTOP_DATA_DIR="$data_dir" DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
   else
-    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
+    DEVE_DESKTOP_DATA_DIR="$data_dir" DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
   fi
 }
 
@@ -103,20 +122,20 @@ run_with_timeout() {
   if command -v gtimeout >/dev/null 2>&1; then
 	    (
 	      cd "$smoke_root"
-	      run_native_session_env "$binary" gtimeout "${TIMEOUT_SECS}s" "$binary"
+	      run_native_session_env "$binary" "$smoke_root/data" gtimeout "${TIMEOUT_SECS}s" "$binary"
 	    )
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
 	  (
 	    cd "$smoke_root"
-	    run_native_session_env "$binary" timeout "${TIMEOUT_SECS}s" "$binary"
+	    run_native_session_env "$binary" "$smoke_root/data" timeout "${TIMEOUT_SECS}s" "$binary"
 	  )
     return
   fi
 	  (
 	    cd "$smoke_root"
-	    run_native_session_env "$binary" "$binary"
+	    run_native_session_env "$binary" "$smoke_root/data" "$binary"
 	  )
 }
 

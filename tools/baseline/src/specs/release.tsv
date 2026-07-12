@@ -209,8 +209,21 @@ contains	scripts/write-native-target-host-evidence.sh	scripts/check-native-targe
 contains	scripts/write-native-target-host-evidence.sh	sanitize_tool_output
 contains	scripts/check-desktop-platform-package-build.sh	cargo build --release --locked -p deve_cli --bin deve_cli
 contains	scripts/check-desktop-platform-package-build.sh	"externalBin": ["binaries/deve_cli"]
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	run this worker inside a Slurm allocation
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	GATE=desktop_native_container_session
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	APPTAINER_SCRATCH
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	WEB_CARGO_TARGET_DIR
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	scripts/check-desktop-platform-package-build.sh
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	scripts/check-desktop-package-startup-smoke.sh
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	scripts/check-desktop-native-session-package-smoke.sh
+contains	scripts/check-desktop-linux-apptainer-slurm.sh	DESKTOP_LINUX_APPTAINER_SLURM_OK=1
+contains	docs/dev-runbook.md	Linux Apptainer / Slurm development gate
+contains	docs/dev-runbook.md	This is Linux developer/target-host evidence only.
 contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1
 contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_LOCAL_SERVICE=1
+contains	scripts/check-desktop-native-session-package-smoke.sh	remove_wslenv_name
+contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_DATA_DIR/p
+contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_DATA_DIR="$data_dir"
 contains	scripts/check-desktop-native-session-package-smoke.sh	desktop-native-session-smoke: ok
 contains	apps/desktop/src/tauri_entry/smoke.rs	local_service_stopped_after_smoke
 contains	scripts/check-desktop-package-startup-smoke.sh	explicit_bundle exe
@@ -456,6 +469,7 @@ contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-010
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-011
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	scripts/check-desktop-native-session-package-smoke.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_native_session_smoke_stops_local_service_after_probe true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_native_session_smoke_uses_temporary_data_root true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	delivery_eq_embedded_frontend true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	local_repo_count_at_least_one true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	production_login_succeeds true
