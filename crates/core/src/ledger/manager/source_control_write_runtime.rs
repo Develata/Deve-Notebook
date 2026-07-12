@@ -166,21 +166,14 @@ impl<'a> SourceControlWriteRuntime<'a> {
         target: &ScPathTarget,
     ) -> Result<()> {
         self.manager.run_on_local_repo(repo_name, |db| {
-            let Some((path, staged)) = staging::take_staged_for_target(db, target)? else {
-                anyhow::bail!("Path is not staged: {}", target.path);
-            };
-            pending_fs::upsert(
+            if !staging::unstage_target_atomically(
                 db,
-                &pending_fs::PendingFsEntry {
-                    path,
-                    renamed_from: staged.renamed_from,
-                    doc_id: staged.doc_id,
-                    change_type: staged.status,
-                    content_hash: staged.content_hash,
-                    detected_at: chrono::Utc::now().timestamp_millis(),
-                    has_conflict: staged.has_conflict,
-                },
-            )
+                target,
+                chrono::Utc::now().timestamp_millis(),
+            )? {
+                anyhow::bail!("Path is not staged: {}", target.path);
+            }
+            Ok(())
         })
     }
 }

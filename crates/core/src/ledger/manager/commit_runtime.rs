@@ -11,6 +11,7 @@ use crate::ledger::manager::commit_plan::CommitTarget;
 use crate::ledger::manager::git_mirror_queue_runtime;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::manager::{commit_plan, commit_preflight};
+use crate::ledger::schema::LEDGER_OPS;
 use crate::ledger::{ops, range};
 use crate::models::DocId;
 use crate::source_control::{
@@ -18,7 +19,7 @@ use crate::source_control::{
     staging,
 };
 use anyhow::Result;
-use redb::Database;
+use redb::{Database, ReadableTable, WriteTransaction};
 use std::collections::HashSet;
 
 pub(crate) struct CommitRuntime<'a> {
@@ -69,24 +70,47 @@ impl<'a> CommitRuntime<'a> {
             .manager
             .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
         let doc_count = covered_doc_count(&final_confirmed);
-
-        let commit = self.manager.run_on_local_repo(repo_name, |db| {
-            sync_confirmed_commit_snapshots(db, &final_confirmed)?;
-            let ledger_seq = range::get_max_seq(db)?;
-            let commit = commits::create(db, message, doc_count, ledger_seq)?;
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(repo_id) = git_mirror_repo_id
-                && let Err(err) = crate::git_bridge::queue_deve_commit(db, repo_id, &commit)
-            {
-                tracing::warn!(
-                    repo_name,
-                    deve_commit_id = %commit.id,
-                    error = %err,
-                    "Git mirror queue update failed after Deve commit; ledger commit is kept"
+        let (expected_base_seq, expected_ledger_head) = confirmed_range(&final_confirmed)?;
+        let expected_parent_id = self.manager.run_on_local_repo(repo_name, |db| {
+            let parent_id = commits::get_latest_id(db)?;
+            let parent_seq = match parent_id.as_deref() {
+                Some(parent_id) => commits::get(db, parent_id)?.ledger_seq,
+                None => 0,
+            };
+            if parent_seq != expected_base_seq {
+                anyhow::bail!(
+                    "Source control commit base changed before snapshot preparation: expected {}, observed {}",
+                    expected_base_seq,
+                    parent_seq
                 );
             }
-            Ok(commit)
+            Ok(parent_id)
         })?;
+        let commit = self.manager.run_on_local_repo(repo_name, |db| {
+            let snapshots = plan_confirmed_commit_snapshots(&final_confirmed);
+            persist_commit_state_atomically(
+                db,
+                &snapshots,
+                expected_ledger_head,
+                expected_parent_id.as_deref(),
+                message,
+                doc_count,
+            )
+        })?;
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(repo_id) = git_mirror_repo_id
+            && let Err(err) = self.manager.run_on_local_repo(repo_name, |db| {
+                crate::git_bridge::queue_deve_commit(db, repo_id, &commit)?;
+                Ok(())
+            })
+        {
+            tracing::warn!(
+                repo_name,
+                deve_commit_id = %commit.id,
+                error = %err,
+                "Git mirror queue update failed after Deve commit; ledger commit is kept"
+            );
+        }
         tracing::info!(
             "Committed {} files in {}: {}",
             doc_count,
@@ -176,19 +200,129 @@ fn insert_covered_key(keys: &mut HashSet<String>, doc_id: Option<DocId>, path: &
     keys.insert(key);
 }
 
-fn sync_confirmed_commit_snapshots(db: &Database, confirmed: &[ChangeEntry]) -> Result<()> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SnapshotMutation {
+    Save(DocId),
+    Remove(DocId),
+}
+
+fn confirmed_range(confirmed: &[ChangeEntry]) -> Result<(u64, u64)> {
+    let first = confirmed
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("confirmed ledger changes are empty"))?;
+    let base = first
+        .base_seq
+        .ok_or_else(|| anyhow::anyhow!("confirmed ledger change lacks base sequence"))?;
+    let target = first
+        .target_seq
+        .ok_or_else(|| anyhow::anyhow!("confirmed ledger change lacks target sequence"))?;
+    if confirmed
+        .iter()
+        .any(|entry| entry.base_seq != Some(base) || entry.target_seq != Some(target))
+    {
+        anyhow::bail!("confirmed ledger changes do not share one commit range");
+    }
+    Ok((base, target))
+}
+
+fn plan_confirmed_commit_snapshots(confirmed: &[ChangeEntry]) -> Vec<SnapshotMutation> {
+    let mut mutations = Vec::new();
     for entry in confirmed {
         let Some(doc_id) = entry.doc_id else {
             continue;
         };
         if entry.status == ChangeStatus::Deleted {
-            changes::remove_snapshot(db, doc_id)?;
+            mutations.push(SnapshotMutation::Remove(doc_id));
             continue;
         }
-        let entries = ops::get_ops_from_db(db, doc_id)?;
-        let facts: Vec<_> = entries.into_iter().map(|(_, entry)| entry).collect();
-        let content = crate::state::reconstruct_content(&facts);
-        changes::save_snapshot(db, doc_id, &content)?;
+        mutations.push(SnapshotMutation::Save(doc_id));
+    }
+    mutations
+}
+
+fn persist_commit_state_atomically(
+    db: &Database,
+    snapshots: &[SnapshotMutation],
+    expected_ledger_head: u64,
+    expected_parent_id: Option<&str>,
+    message: &str,
+    doc_count: u32,
+) -> Result<CommitInfo> {
+    persist_commit_state_atomically_with_hook(
+        db,
+        snapshots,
+        expected_ledger_head,
+        expected_parent_id,
+        message,
+        doc_count,
+        |_| Ok(()),
+    )
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CommitStateStep {
+    Snapshot(usize),
+    BeforeAnchor,
+}
+
+fn persist_commit_state_atomically_with_hook<F>(
+    db: &Database,
+    snapshots: &[SnapshotMutation],
+    expected_ledger_head: u64,
+    expected_parent_id: Option<&str>,
+    message: &str,
+    doc_count: u32,
+    mut hook: F,
+) -> Result<CommitInfo>
+where
+    F: FnMut(CommitStateStep) -> Result<()>,
+{
+    let write_txn = db.begin_write()?;
+    ensure_commit_preflight_current(&write_txn, expected_ledger_head, expected_parent_id)?;
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        match snapshot {
+            SnapshotMutation::Save(doc_id) => {
+                let entries = ops::get_ops_from_txn(&write_txn, *doc_id)?;
+                let facts: Vec<_> = entries.into_iter().map(|(_, entry)| entry).collect();
+                let content = crate::state::reconstruct_content(&facts);
+                changes::save_snapshot_in_txn(&write_txn, *doc_id, &content)?;
+            }
+            SnapshotMutation::Remove(doc_id) => {
+                changes::remove_snapshot_in_txn(&write_txn, *doc_id)?;
+            }
+        }
+        hook(CommitStateStep::Snapshot(index))?;
+    }
+    hook(CommitStateStep::BeforeAnchor)?;
+    let commit = commits::create_in_txn(&write_txn, message, doc_count, expected_ledger_head)?;
+    write_txn.commit()?;
+    Ok(commit)
+}
+
+fn ensure_commit_preflight_current(
+    write_txn: &WriteTransaction,
+    expected_ledger_head: u64,
+    expected_parent_id: Option<&str>,
+) -> Result<()> {
+    let ledger_head = write_txn
+        .open_table(LEDGER_OPS)?
+        .last()?
+        .map(|(seq, _)| seq.value())
+        .unwrap_or(0);
+    if ledger_head != expected_ledger_head {
+        anyhow::bail!(
+            "Source control commit ledger head changed before atomic write: expected {}, observed {}",
+            expected_ledger_head,
+            ledger_head
+        );
+    }
+    let parent_id = commits::get_latest_id_in_txn(write_txn)?;
+    if parent_id.as_deref() != expected_parent_id {
+        anyhow::bail!(
+            "Source control commit parent changed before atomic write: expected {:?}, observed {:?}",
+            expected_parent_id,
+            parent_id
+        );
     }
     Ok(())
 }
@@ -198,3 +332,6 @@ impl RepoManager {
         CommitRuntime::new(self)
     }
 }
+
+#[cfg(test)]
+mod atomic_tests;

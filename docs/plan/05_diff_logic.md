@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-09`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -214,6 +214,7 @@ PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
 
 - Watcher 检测到的变更 **MUST NOT** 直接写入 ledger。
 - External Changes 的 `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化，也不是 Source Control commit anchor 的 include/exclude 模型。
+- `Unstage` 必须先捕获完整 staged entry，再在单个 write transaction 内按当前 target 重新解析并与该 entry exact-compare；只有比较成功后才能同时删除 staged row/index 并写回 pending row/index。若 watcher 已在同路径写入语义不同的较新 pending row，必须保留该证据并整笔 fail-closed；语义相同则保持现有 pending row 字节不变。目标消失、被替换或任一第二步失败时整笔回滚。
 - `Stage` **MUST** 把 pending 检测到的 `content_hash` 固化到 staged entry。对非 delete target，
   `Apply to Ledger` preflight **MUST** 重新读取 workspace 内容并比较该 hash；不一致时保留 staging、
   不追加任何 ledger fact，并要求重新 scan/stage。
@@ -443,6 +444,8 @@ MergeRequested
 6. 清理已被 resolved-conflict flow 消费的 staging；ordinary External Changes staging 必须保留给
    External Changes runtime。
 7. 重建或增量更新 projection / committed snapshot base。
+
+原子性约束：步骤 5 对应的 commit payload/order anchor 与步骤 7 的全部 committed snapshot baseline 必须在同一个 redb write transaction 内提交；事务必须 exact-compare 预检得到的 ledger head，head 漂移或任一文档 snapshot、commit/order 写入失败时整笔回滚。snapshot 必须在该事务视图内逐文档读取 facts、重建并立即写入，不得同时缓存全部 dirty 文档的完整内容。Git mirror queue 必须在该事务 commit 之后执行，失败只产生可恢复诊断，不得撤销 NoteGit commit。
 
 规则：
 

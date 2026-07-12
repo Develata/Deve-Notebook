@@ -59,33 +59,67 @@ pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
 pub fn upsert_many(db: &Database, entries: &[PendingFsEntry]) -> Result<usize> {
     let write_txn = db.begin_write()?;
     let mut written = 0;
-    {
-        let mut table = write_txn.open_table(PENDING_FS_OPS)?;
-        for entry in entries {
-            let previous = table
-                .get(entry.path.as_str())?
-                .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
-                .transpose()?;
-            if previous
-                .as_ref()
-                .is_some_and(|prev| semantic_eq(prev, entry))
-            {
-                // Byte-stable idempotency: leave existing row untouched.
-                continue;
-            }
-            let bytes = serde_json::to_vec(entry)?;
-            index::replace(
-                &write_txn,
-                previous.as_ref().and_then(|item| item.doc_id),
-                entry.doc_id,
-                &entry.path,
-            )?;
-            table.insert(entry.path.as_str(), bytes.as_slice())?;
+    for entry in entries {
+        if upsert_in_txn(&write_txn, entry)? {
             written += 1;
         }
     }
     write_txn.commit()?;
     Ok(written)
+}
+
+/// Insert or replace a pending row and its DocId index in a caller-owned transaction.
+///
+/// Returns `true` when the row changed. Semantically identical rows remain byte-stable.
+fn upsert_in_txn(write_txn: &WriteTransaction, entry: &PendingFsEntry) -> Result<bool> {
+    let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+    let previous = table
+        .get(entry.path.as_str())?
+        .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+        .transpose()?;
+    if previous
+        .as_ref()
+        .is_some_and(|previous| semantic_eq(previous, entry))
+    {
+        return Ok(false);
+    }
+    let bytes = serde_json::to_vec(entry)?;
+    index::replace(
+        write_txn,
+        previous.as_ref().and_then(|item| item.doc_id),
+        entry.doc_id,
+        &entry.path,
+    )?;
+    table.insert(entry.path.as_str(), bytes.as_slice())?;
+    Ok(true)
+}
+
+/// Restore an unstaged row without overwriting newer watcher evidence.
+///
+/// A semantically identical destination is retained byte-for-byte. Any different
+/// row at the same path makes Unstage fail closed so the caller-owned transaction
+/// preserves both the staged snapshot and the newer pending evidence.
+pub(crate) fn restore_unstaged_in_txn(
+    write_txn: &WriteTransaction,
+    entry: &PendingFsEntry,
+) -> Result<()> {
+    let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+    let current = table
+        .get(entry.path.as_str())?
+        .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+        .transpose()?;
+    match current {
+        Some(current) if semantic_eq(&current, entry) => return Ok(()),
+        Some(_) => anyhow::bail!(
+            "Pending FS destination changed before Unstage: {}",
+            entry.path
+        ),
+        None => {}
+    }
+    let bytes = serde_json::to_vec(entry)?;
+    index::replace(write_txn, None, entry.doc_id, &entry.path)?;
+    table.insert(entry.path.as_str(), bytes.as_slice())?;
+    Ok(())
 }
 
 /// 移除单条待确认变更（Stage 或 Discard 后调用）

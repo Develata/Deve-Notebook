@@ -48,4 +48,5 @@
 ## Notes
 
 - 这条 flow 强调 `pending -> staged -> pending` 的显式迁移，而不是 UI 样式切换。
+- Unstage 只有在服务端单事务完成 staged row/index 删除与 pending row/index 写回后才返回 ack；目标在事务开始前被替换、或任一写入失败时保持原状态并返回错误。
 - `Stage All / Unstage All` 只是同一语义的批量版本，不单独在这轮建模。

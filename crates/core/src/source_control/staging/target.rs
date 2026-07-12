@@ -8,7 +8,7 @@ use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
-use redb::Database;
+use redb::{Database, ReadableTable, WriteTransaction};
 
 pub fn get_staged_for_target(
     db: &Database,
@@ -39,6 +39,43 @@ pub fn take_staged_for_target(
     };
     let _ = take_staged(db, &path)?;
     Ok(Some((path, entry)))
+}
+
+pub(super) fn get_staged_for_unstage_target(
+    db: &Database,
+    target: &ScPathTarget,
+) -> Result<Option<(String, StagedEntry)>> {
+    match exact_staged_for_target(db, target)? {
+        Some(hit) => Ok(Some(hit)),
+        None => get_staged_for_target(db, target),
+    }
+}
+
+pub(super) fn get_staged_for_unstage_target_in_txn(
+    write_txn: &WriteTransaction,
+    target: &ScPathTarget,
+) -> Result<Option<(String, StagedEntry)>> {
+    let table = write_txn.open_table(super::STAGED_TABLE)?;
+    let mut entries = Vec::new();
+    for item in table.iter()? {
+        let (path, value) = item?;
+        entries.push((
+            path.value().to_string(),
+            serde_json::from_slice::<StagedEntry>(value.value())?,
+        ));
+    }
+    let path = to_forward_slash(&target.path);
+    if let Some(doc_id) = target.doc_id {
+        if let Some(exact) = entries
+            .iter()
+            .find(|(entry_path, entry)| entry_path == &path && entry.doc_id == Some(doc_id))
+            .cloned()
+        {
+            return Ok(Some(exact));
+        }
+        return Ok(select_entry_for_doc(entries, &path, doc_id));
+    }
+    select_entry_without_doc(entries, &path)
 }
 
 fn exact_staged_for_target(

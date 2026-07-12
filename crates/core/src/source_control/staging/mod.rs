@@ -147,6 +147,54 @@ fn stage_entry_in_txn(write_txn: &WriteTransaction, path: &str, entry: &StagedEn
     Ok(())
 }
 
+pub(crate) fn unstage_target_atomically(
+    db: &Database,
+    target: &crate::protocol::ScPathTarget,
+    detected_at: i64,
+) -> Result<bool> {
+    let Some(expected) = target::get_staged_for_unstage_target(db, target)? else {
+        return Ok(false);
+    };
+    unstage_expected_atomically(db, target, &expected, detected_at, || Ok(()))?;
+    Ok(true)
+}
+
+fn unstage_expected_atomically<F>(
+    db: &Database,
+    target: &crate::protocol::ScPathTarget,
+    expected: &(String, StagedEntry),
+    detected_at: i64,
+    after_staged_remove: F,
+) -> Result<()>
+where
+    F: FnOnce() -> Result<()>,
+{
+    let write_txn = db.begin_write()?;
+    let current = target::get_staged_for_unstage_target_in_txn(&write_txn, target)?;
+    match current {
+        Some(ref current) if current == expected => {}
+        Some(_) => anyhow::bail!("Staged entry changed before Unstage: {}", expected.0),
+        None => anyhow::bail!("Staged entry disappeared before Unstage: {}", expected.0),
+    }
+    consume_exact_in_txn(&write_txn, std::slice::from_ref(expected))?;
+    after_staged_remove()?;
+    let (path, staged) = expected;
+    crate::source_control::pending_fs::restore_unstaged_in_txn(
+        &write_txn,
+        &PendingFsEntry {
+            path: path.clone(),
+            renamed_from: staged.renamed_from.clone(),
+            doc_id: staged.doc_id,
+            change_type: staged.status,
+            content_hash: staged.content_hash.clone(),
+            detected_at,
+            has_conflict: staged.has_conflict,
+        },
+    )?;
+    write_txn.commit()?;
+    Ok(())
+}
+
 pub(crate) fn clear_in_txn(write_txn: &WriteTransaction) -> Result<()> {
     write_txn.delete_table(STAGED_TABLE)?;
     let _ = write_txn.open_table(STAGED_TABLE)?;
@@ -189,6 +237,7 @@ pub fn clear(db: &Database) -> Result<()> {
 #[cfg(test)]
 mod atomic_tests {
     use super::*;
+    use crate::protocol::ScPathTarget;
     use crate::source_control::pending_fs;
 
     fn pending(path: &str) -> PendingFsEntry {
@@ -200,6 +249,14 @@ mod atomic_tests {
             content_hash: path.into(),
             detected_at: 1,
             has_conflict: false,
+        }
+    }
+
+    fn target(path: &str, doc_id: Option<DocId>) -> ScPathTarget {
+        ScPathTarget {
+            path: path.into(),
+            doc_id,
+            domain: None,
         }
     }
 
@@ -266,6 +323,101 @@ mod atomic_tests {
 
         assert!(get_staged(&db, &expected_pending.path)?.is_none());
         assert!(get_staged(&db, &new_pending.path)?.is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn unstage_second_step_failure_rolls_back_staged_remove_and_indexes() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let db = Database::create(dir.path().join("unstage-second-step.redb"))?;
+        pending_fs::init_table(&db)?;
+        init_table(&db)?;
+        let doc_id = DocId::new();
+        let mut entry = pending("notes/a.md");
+        entry.doc_id = Some(doc_id);
+        stage_pending_entry(&db, &entry)?;
+        let expected =
+            target::get_staged_for_unstage_target(&db, &target(&entry.path, Some(doc_id)))?
+                .expect("staged entry");
+
+        let error = unstage_expected_atomically(
+            &db,
+            &target(&entry.path, Some(doc_id)),
+            &expected,
+            2,
+            || anyhow::bail!("injected pending write failure"),
+        )
+        .expect_err("second step failure must abort transaction");
+
+        assert!(error.to_string().contains("injected pending write failure"));
+        assert_eq!(get_staged(&db, &entry.path)?, Some(expected.1));
+        assert!(pending_fs::get(&db, &entry.path)?.is_none());
+        assert_eq!(list_staged_entries_for_doc(&db, doc_id)?.len(), 1);
+        assert!(pending_fs::list_for_doc(&db, doc_id)?.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn unstage_rejects_concurrently_replaced_staged_entry() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let db = Database::create(dir.path().join("unstage-replaced.redb"))?;
+        pending_fs::init_table(&db)?;
+        init_table(&db)?;
+        let entry = pending("notes/a.md");
+        stage_pending_entry(&db, &entry)?;
+        let requested = target(&entry.path, None);
+        let expected =
+            target::get_staged_for_unstage_target(&db, &requested)?.expect("original staged entry");
+        let mut replacement = entry.clone();
+        replacement.content_hash = "replacement".into();
+        stage_pending_entry(&db, &replacement)?;
+
+        let error = unstage_expected_atomically(&db, &requested, &expected, 2, || Ok(()))
+            .expect_err("replacement must fail exact comparison");
+
+        assert!(error.to_string().contains("changed before Unstage"));
+        assert_eq!(
+            get_staged(&db, &entry.path)?
+                .expect("replacement remains")
+                .content_hash,
+            "replacement"
+        );
+        assert!(pending_fs::get(&db, &entry.path)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn unstage_rejects_newer_pending_without_overwriting_evidence() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let db = Database::create(dir.path().join("unstage-newer-pending.redb"))?;
+        pending_fs::init_table(&db)?;
+        init_table(&db)?;
+        let doc_id = DocId::new();
+        let mut staged_source = pending("notes/a.md");
+        staged_source.doc_id = Some(doc_id);
+        stage_pending_entry(&db, &staged_source)?;
+
+        let mut newer_pending = staged_source.clone();
+        newer_pending.content_hash = "newer-watcher-hash".into();
+        newer_pending.detected_at = 2;
+        newer_pending.has_conflict = true;
+        pending_fs::upsert(&db, &newer_pending)?;
+
+        let requested = target(&staged_source.path, Some(doc_id));
+        let error = unstage_target_atomically(&db, &requested, 3)
+            .expect_err("newer pending evidence must make Unstage fail closed");
+
+        assert!(
+            error
+                .to_string()
+                .contains("Pending FS destination changed before Unstage")
+        );
+        assert!(get_staged(&db, &staged_source.path)?.is_some());
+        let preserved = pending_fs::get(&db, &staged_source.path)?.expect("newer pending remains");
+        assert!(pending_fs::semantic_eq(&preserved, &newer_pending));
+        assert_eq!(preserved.detected_at, newer_pending.detected_at);
+        assert_eq!(list_staged_entries_for_doc(&db, doc_id)?.len(), 1);
+        assert_eq!(pending_fs::list_for_doc(&db, doc_id)?.len(), 1);
         Ok(())
     }
 }

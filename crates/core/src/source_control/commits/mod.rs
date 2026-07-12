@@ -12,7 +12,7 @@
 
 use crate::source_control::CommitInfo;
 use anyhow::{Result, anyhow};
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, ReadableTable, TableDefinition, WriteTransaction};
 
 mod repair;
 pub use self::repair::repair_missing_order_table;
@@ -37,39 +37,49 @@ pub fn init_table(db: &Database) -> Result<()> {
 ///
 /// **Invariant**: parent_id 自动从最新提交中推导，构成单链提交历史。
 pub fn create(db: &Database, message: &str, doc_count: u32, ledger_seq: u64) -> Result<CommitInfo> {
-    let commit_id = uuid::Uuid::new_v4().to_string();
-    let timestamp = chrono::Utc::now().timestamp_millis();
-    let parent_id = get_latest_id(db)?;
-
-    let info = CommitInfo {
-        id: commit_id.clone(),
-        parent_id,
-        message: message.to_string(),
-        timestamp,
-        doc_count,
-        ledger_seq,
-    };
-
-    let json = serde_json::to_string(&info)?;
-
     let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(COMMITS_TABLE)?;
-        table.insert(commit_id.as_str(), json.as_str())?;
-
-        let mut order_table = write_txn.open_table(COMMITS_ORDER_TABLE)?;
-        let next_seq = next_seq_inner(&order_table)?;
-        order_table.insert(next_seq, commit_id.as_str())?;
-    }
+    let info = create_in_txn(&write_txn, message, doc_count, ledger_seq)?;
     write_txn.commit()?;
 
     tracing::info!(
         "Created commit: {} (parent: {:?}) - {}",
-        commit_id,
+        info.id,
         info.parent_id,
         message
     );
     Ok(info)
+}
+
+pub(crate) fn create_in_txn(
+    write_txn: &WriteTransaction,
+    message: &str,
+    doc_count: u32,
+    ledger_seq: u64,
+) -> Result<CommitInfo> {
+    let parent_id = get_latest_id_in_txn(write_txn)?;
+    let info = CommitInfo {
+        id: uuid::Uuid::new_v4().to_string(),
+        parent_id,
+        message: message.to_string(),
+        timestamp: chrono::Utc::now().timestamp_millis(),
+        doc_count,
+        ledger_seq,
+    };
+    let json = serde_json::to_string(&info)?;
+    write_txn
+        .open_table(COMMITS_TABLE)?
+        .insert(info.id.as_str(), json.as_str())?;
+    let mut order = write_txn.open_table(COMMITS_ORDER_TABLE)?;
+    let next_seq = next_seq_inner(&order)?;
+    order.insert(next_seq, info.id.as_str())?;
+    Ok(info)
+}
+
+pub(crate) fn get_latest_id_in_txn(write_txn: &WriteTransaction) -> Result<Option<String>> {
+    let order = write_txn.open_table(COMMITS_ORDER_TABLE)?;
+    Ok(order
+        .last()?
+        .map(|(_, commit_id)| commit_id.value().to_string()))
 }
 
 /// 获取下一个序列号 — O(log n) via `last()`

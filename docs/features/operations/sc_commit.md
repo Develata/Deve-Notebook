@@ -122,3 +122,4 @@
 - commit 的关键 gate 不是按钮本身，而是 `write gate + scope_nonce + repo-scoped authority`。
 - AI 生成提交说明只是辅助输入，不得绕过 AI backend capability gate，也不得在失败时写入 commit message。
 - 成功 commit 的最终成立条件仍是 ledger append 与 commit anchor，而不是 UI 列表刷新。
+- confirmed commit 的全部 committed snapshot baselines 与 commit payload/order anchor 必须单事务成立；snapshot 在事务内逐文档重建并立即写入，避免缓存全部 dirty 内容；Git mirror queue 只在该事务成功后排队，失败不会撤销 NoteGit commit。

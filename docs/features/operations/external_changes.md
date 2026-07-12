@@ -33,7 +33,7 @@
 - `Surface`: `external-changes-panel`
 - `Trigger`: 点击 staged external change 的 `Unstage`
 - `Preconditions`: 条目位于 staged external 区域，write gate 未阻塞
-- `Immediate Result`: 条目回到 External Changes unstaged 区域
+- `Immediate Result`: 服务端单事务完成 staged/pending rows 与 DocId indexes 的迁移后，条目回到 External Changes unstaged 区域；目标漂移或写入失败时保持原 staged 状态
 - `Application Entry`: `apps/web/src/components/sidebar/external_changes/row.rs`, `apps/web/src/runtime/external_changes_client/mod.rs`, `apps/web/src/api/external_changes.rs`
 
 ### `op.external-changes.discard`
@@ -69,4 +69,5 @@
 - `Apply to Ledger` 不是 `Commit`；它只写 ledger facts，不创建 commit anchor。
 - Stage 固化用户确认时的 workspace 内容 hash；若文件在 Stage 后再次被外部修改，Apply 必须
   fail-closed 并要求重新 scan/stage，不能把未确认的新内容写入 ledger。
+- Unstage 对调用前解析的完整 staged entry 做事务内重新解析与 exact compare；并发替换不得被误消费，也不得覆盖 watcher 已写入的同路径较新 pending 证据。
 - Source Control 只展示 ledger/version-anchor 状态；External Changes 只展示投影文件夹偏差。

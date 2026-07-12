@@ -6,7 +6,7 @@
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS};
 use crate::models::{DocId, LedgerEntry, NodeId, deserialize_ledger_entry};
 use anyhow::{Result, anyhow};
-use redb::Database;
+use redb::{Database, ReadableMultimapTable, ReadableTable, WriteTransaction};
 
 /// Invariants:
 /// - `DOC_OPS` 中出现的每个序号都必须在 `LEDGER_OPS` 中存在。
@@ -26,6 +26,28 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
         entries.push((seq_val, deserialize_ledger_entry(bytes.value())?));
     }
     entries.sort_by_key(|k| k.0);
+    Ok(entries)
+}
+
+/// Read one document's facts from a caller-owned write transaction.
+///
+/// Commit snapshot refresh uses this view so the ledger-head guard, fact read,
+/// snapshot write, and commit anchor all observe one redb transaction.
+pub(crate) fn get_ops_from_txn(
+    write_txn: &WriteTransaction,
+    doc_id: DocId,
+) -> Result<Vec<(u64, LedgerEntry)>> {
+    let ops_table = write_txn.open_table(LEDGER_OPS)?;
+    let doc_ops_table = write_txn.open_multimap_table(DOC_OPS)?;
+    let mut entries = Vec::new();
+    for seq in doc_ops_table.get(doc_id.as_u128())? {
+        let seq = seq?.value();
+        let Some(bytes) = ops_table.get(seq)? else {
+            return Err(broken_doc_ops_index(doc_id, seq));
+        };
+        entries.push((seq, deserialize_ledger_entry(bytes.value())?));
+    }
+    entries.sort_by_key(|(seq, _)| *seq);
     Ok(entries)
 }
 

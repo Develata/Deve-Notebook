@@ -13,7 +13,7 @@
 use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use anyhow::Result;
-use redb::{Database, TableDefinition};
+use redb::{Database, TableDefinition, WriteTransaction};
 
 /// 快照表定义 (doc_id -> content)
 /// 存储每个文档最后一次提交时的内容
@@ -35,14 +35,22 @@ pub fn init_table(db: &Database) -> Result<()> {
 /// - `doc_id`: 文档 ID
 /// - `content`: 文档当前内容
 pub fn save_snapshot(db: &Database, doc_id: DocId, content: &str) -> Result<()> {
-    let doc_id_str = doc_id.to_string();
     let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(SNAPSHOTS_TABLE)?;
-        table.insert(doc_id_str.as_str(), content)?;
-    }
+    save_snapshot_in_txn(&write_txn, doc_id, content)?;
     write_txn.commit()?;
     tracing::debug!("Saved snapshot for doc: {}", doc_id);
+    Ok(())
+}
+
+pub(crate) fn save_snapshot_in_txn(
+    write_txn: &WriteTransaction,
+    doc_id: DocId,
+    content: &str,
+) -> Result<()> {
+    let doc_id = doc_id.to_string();
+    write_txn
+        .open_table(SNAPSHOTS_TABLE)?
+        .insert(doc_id.as_str(), content)?;
     Ok(())
 }
 
@@ -96,13 +104,17 @@ pub fn clear_snapshots(db: &Database) -> Result<()> {
 
 /// 删除文档快照 (提交删除时调用)
 pub fn remove_snapshot(db: &Database, doc_id: DocId) -> Result<()> {
-    let doc_id_str = doc_id.to_string();
     let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(SNAPSHOTS_TABLE)?;
-        table.remove(doc_id_str.as_str())?;
-    }
+    remove_snapshot_in_txn(&write_txn, doc_id)?;
     write_txn.commit()?;
     tracing::debug!("Removed snapshot for doc: {}", doc_id);
+    Ok(())
+}
+
+pub(crate) fn remove_snapshot_in_txn(write_txn: &WriteTransaction, doc_id: DocId) -> Result<()> {
+    let doc_id = doc_id.to_string();
+    write_txn
+        .open_table(SNAPSHOTS_TABLE)?
+        .remove(doc_id.as_str())?;
     Ok(())
 }

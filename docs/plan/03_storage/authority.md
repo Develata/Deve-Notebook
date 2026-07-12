@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-12`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -222,11 +222,13 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 额外约束：
 
 - stage 是真实迁移，不是 UI 布尔标记。
+- unstage 必须在一个 redb write transaction 内重新解析目标并 exact-compare staged row；staged remove、pending upsert 与两侧 `DocId` index 更新必须共同提交。若同路径已有语义不同的较新 pending 证据则整笔 fail-closed，不得覆盖；任一步失败都保留原 staged/pending 状态。
 - Apply 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 workspace 内容快照。
 - staging 后 workspace 内容发生变化时，Apply **MUST** fail-closed、保留 staging，并要求重新 scan/stage；不得静默应用未确认的新内容。
 - Apply **MUST NOT** 在 hash preflight 后再次从 workspace 读取内容；本批所有 structure/content facts、identity index 更新与本次 staged snapshot 的 exact consumption 必须在同一 ledger write transaction 提交，任一 target 失败则整批回滚。事务开始时必须比较 preflight 前捕获的 ledger head；head 漂移表示 confirmed/content base 已变化，整批 fail-closed 并要求刷新重试。事务不得清空 preflight 后新加入的其他 staging；原 staged row 被替换或移除时必须 fail-closed。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
 - 当 staged 为空但存在 `ConfirmedLedgerChange` 时，commit **MUST** 只创建覆盖当前 ledger head 的 commit anchor，不得重复追加内容或结构 facts。
+- commit 覆盖 confirmed ledger dirty 时，全部 committed snapshot baselines 与对应 commit payload/order anchor 必须在同一个 redb write transaction 提交；任一 snapshot 或 anchor/order 写入失败都不得留下半提交。Git mirror queue 只能在该事务成功后作为可恢复 projection 操作排队，排队失败不得回滚 NoteGit commit。
 - ordinary External Changes staging **MUST NOT** 被普通 commit 消费；只有显式 resolved-conflict staging 可以按 `05_diff_logic` 的受控例外在同一 writer gate 内 apply 后创建 anchor。
 
 ## 10. Forbidden Patterns（authority）

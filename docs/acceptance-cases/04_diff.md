@@ -428,7 +428,16 @@
     - run: cargo test -p deve_core --lib batch_stage_rolls_back_if_any_pending_entry_changed_or_disappeared -- --nocapture
     - run: cargo test -p deve_core --lib apply_snapshot_consume_rejects_replaced_staged_entry_without_removal -- --nocapture
     - run: cargo test -p deve_core --lib apply_snapshot_consume_preserves_new_unrelated_staging -- --nocapture
+    - run: cargo test -p deve_core --lib unstage_second_step_failure_rolls_back_staged_remove_and_indexes -- --nocapture
+    - run: cargo test -p deve_core --lib unstage_rejects_concurrently_replaced_staged_entry -- --nocapture
+    - run: cargo test -p deve_core --lib unstage_rejects_newer_pending_without_overwriting_evidence -- --nocapture
     - run: cargo test -p deve_core --lib atomic_apply_rejects_ledger_head_changed_after_preflight -- --nocapture
+    - run: cargo test -p deve_core --lib commit_state_second_step_failure_rolls_back_snapshots -- --nocapture
+    - run: cargo test -p deve_core --lib commit_state_multi_doc_snapshot_failure_rolls_back_entire_transaction -- --nocapture
+    - run: cargo test -p deve_core --lib commit_state_success_commits_snapshots_and_anchor_atomically -- --nocapture
+    - run: cargo test -p deve_core --lib commit_state_rejects_ledger_head_drift_before_any_write -- --nocapture
+    - run: cargo test -p deve_core --lib commit_state_rejects_parent_drift_before_any_write -- --nocapture
+    - run: cargo test -p deve_core --test git_mirror_queue_test git_mirror_queue_failure_does_not_rollback_deve_commit -- --nocapture
     - run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
     - run: cargo test -p deve_cli sc_stage_all_keeps_ordinary_external_staging -- --nocapture
     - run: cargo test -p deve_cli sc_apply_moves_ordinary_external_staging_to_ledger_without_commit_anchor -- --nocapture
@@ -451,7 +460,11 @@
     - api_assert: apply_batch_uses_preflighted_content_and_single_write_transaction true
     - api_assert: apply_batch_reuses_shared_parent_projection true
     - api_assert: apply_consumes_exact_staged_snapshot_without_clearing_new_entries true
+    - api_assert: unstage_side_table_move_is_atomic_and_exact true
     - api_assert: apply_rejects_ledger_head_drift_after_preflight true
+    - api_assert: commit_snapshots_and_anchor_are_one_atomic_state_move true
+    - api_assert: commit_snapshot_precompute_rejects_ledger_head_drift true
+    - api_assert: git_mirror_queue_failure_keeps_notegit_commit true
     - cli_assert: sc_stage_all_uses_ordinary_external_staging true
     - cli_assert: sc_apply_writes_ledger_without_commit_anchor true
     - ui_assert: external_changes_sibling_entry_visible true
