@@ -195,11 +195,9 @@ fn manual_receive_buffers_remote_ops_until_confirmed() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
     let response = encrypted_response(&peer, repo_id, &key)?;
-
     assert_eq!(engine.receive_remote_ops(response)?, 1);
     assert_eq!(engine.pending_ops_count(), 1);
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
-
     assert_eq!(engine.merge_pending()?, 1);
     assert_eq!(engine.pending_ops_count(), 0);
     assert_eq!(engine.pending_ops.payload_count(), 0);
@@ -213,9 +211,7 @@ fn transport_clone_does_not_copy_manual_pending_queue() -> anyhow::Result<()> {
     let (_dir, _repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
     engine.receive_remote_ops(encrypted_response(&peer, repo_id, &key)?)?;
-
     let outbound = engine.clone_for_transport();
-
     assert_eq!(engine.pending_ops_count(), 1);
     assert_eq!(outbound.pending_ops_count(), 0);
     assert!(Arc::ptr_eq(&engine.repo, &outbound.repo));
@@ -242,7 +238,6 @@ fn manual_resource_preflight_runs_before_decrypt_and_preserves_queue() -> anyhow
         engine.pending_ops_count(),
         engine.pending_ops.encoded_bytes(),
     );
-
     let error = engine
         .receive_remote_ops(tampered_response(&peer, repo_id))
         .expect_err("resource limit must reject before decrypting the tampered payload");
@@ -263,7 +258,6 @@ fn manual_resource_preflight_runs_before_decrypt_and_preserves_queue() -> anyhow
 fn manual_receive_validation_failure_does_not_enqueue_or_change_counters() -> anyhow::Result<()> {
     let (_dir, _repo, repo_id, _key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-
     let error = engine
         .receive_remote_snapshot(tampered_response(&peer, repo_id))
         .expect_err("invalid payload must fail validation before enqueue");
@@ -284,7 +278,6 @@ fn manual_merge_rejects_incremental_seq_mismatch() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
     engine.buffer_remote_ops(seq_mismatch_response(&peer, repo_id, &key)?)?;
-
     let err = engine
         .merge_pending()
         .expect_err("incremental seq mismatch must fail");
