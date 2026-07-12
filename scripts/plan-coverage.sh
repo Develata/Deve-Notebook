@@ -200,7 +200,7 @@ tracked_rust_line_counts() {
 }
 
 tracked_plan_ref_entries() {
-  git_in_repo grep -n -I -e '^//! plan_ref:' -e '^//! *- ' -- 'crates' 'apps' |
+  git_in_repo grep -n -I -e '^//\! plan_ref:' -e '^//\! *- ' -- 'crates' 'apps' |
     awk -F: -v root="$ROOT" '
       $1 !~ /\.rs$/ { next }
       {
@@ -634,8 +634,8 @@ run_check_no_adr_plan_ref() {
   local hits=0 report
   report="$(
     (git_in_repo grep -n -I -E \
-      -e '^//![[:space:]]*plan_ref:' \
-      -e '^//![[:space:]]*-[[:space:]]*' \
+      -e '^//\![[:space:]]*plan_ref:' \
+      -e '^//\![[:space:]]*-[[:space:]]*' \
       -- 'crates' 'apps' 2>/dev/null || true) |
       awk -F: -v root="$ROOT" '
         $1 !~ /\.rs$/ { next }
