@@ -45,6 +45,14 @@ contains	apps/cli/src/server/handlers/sync/hello/outbound.rs	full_peer_sync_hell
 contains	crates/core/tests/merge_checkpoint_test.rs	checkpoint_survives_reopen_and_anchor_is_in_peer_range
 case_contains	docs/acceptance-cases/06_network.md	NET-019	cargo test -p deve_cli p2p_sequence_gap -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-019	DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP=1 bash scripts/smoke-docker-p2p-mesh.sh
+case_contains	docs/acceptance-cases/06_network.md	NET-017	cargo test -p deve_core sync::buffer::tests -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-017	api_assert: manual_pending_payload_fact_and_encoded_bytes_are_cumulative_and_bounded true
+case_contains	docs/acceptance-cases/06_network.md	NET-017	api_assert: failed_manual_merge_restores_payloads_and_all_resource_counters true
+case_contains	docs/acceptance-cases/06_network.md	NET-017	api_assert: transport_clone_does_not_copy_manual_pending_queue true
+contains	crates/core/src/sync/buffer.rs	manual_pending_payload_fact_and_encoded_bytes_are_cumulative_and_bounded
+contains	crates/core/src/sync/engine/manual/tests.rs	failed_manual_merge_restores_payloads_and_all_resource_counters
+contains	crates/core/src/sync/engine/manual/tests.rs	transport_clone_does_not_copy_manual_pending_queue
+contains	apps/cli/src/server/handlers/sync/hello/mod.rs	engine.clone_for_transport()
 contains	crates/core/src/protocol/frame.rs	pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
 contains	crates/core/src/protocol/frame.rs	missing WS frame magic
 contains	apps/cli/src/server/ws/receive/mod.rs	MISSING_WS_FRAME_MAGIC

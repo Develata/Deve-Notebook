@@ -107,6 +107,21 @@ impl SyncEngine {
         self.sync_mode
     }
 
+    /// Build a detached engine for read-only transport response generation.
+    ///
+    /// Manual pending payloads remain owned by the registry engine and are never
+    /// copied into an outbound handshake/transfer snapshot.
+    pub fn clone_for_transport(&self) -> Self {
+        Self {
+            local_peer_id: self.local_peer_id.clone(),
+            repo: self.repo.clone(),
+            version_vector: self.version_vector.clone(),
+            sync_mode: self.sync_mode,
+            pending_ops: crate::sync::buffer::PendingOpsBuffer::new(),
+            repo_key: self.repo_key.clone(),
+        }
+    }
+
     pub fn set_sync_mode(&mut self, mode: crate::config::SyncMode) {
         self.sync_mode = mode;
     }

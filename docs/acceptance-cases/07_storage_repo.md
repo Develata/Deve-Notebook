@@ -45,10 +45,12 @@
     - snapshot_depth=3
   steps:
     - run: cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture
+    - run: cargo test -p deve_core snapshot_rejects_middle_content_mismatch -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: snapshot_tables_reachable true
     - cli_assert: snapshot_count_le_config true
+    - cli_assert: snapshot_candidate_matches_full_ledger_rebuild true
 
 - case_id: STORE-005
   goal: Ledger-First 与原子持久化。

@@ -69,12 +69,10 @@ fn rebuild_full_snapshot(
         return Ok((String::new(), 0, Vec::new(), 0));
     }
 
-    let ops: Vec<LedgerEntry> = full_entries
-        .iter()
-        .map(|(_, entry)| entry.clone())
-        .collect();
-    let full_content = deve_core::state::reconstruct_content(&ops);
     let full_version = full_entries.last().map(|(seq, _)| *seq).unwrap_or(0);
+    let ops: Vec<LedgerEntry> = full_entries.into_iter().map(|(_, entry)| entry).collect();
+    let full_content = deve_core::state::reconstruct_content(&ops);
+    drop(ops);
     persist_rebuilt_snapshot(
         db,
         doc_id,
@@ -108,19 +106,24 @@ fn persist_rebuilt_snapshot(
     snapshot_depth: usize,
     repo_scope: &str,
 ) -> anyhow::Result<()> {
-    let verified = deve_core::ledger::snapshot::verify_snapshot_consistency(
-        db, doc_id, version, content, true,
-    )?;
-    if !verified {
-        let path = doc_path_label(db, doc_id);
-        tracing::warn!(
-            repo_scope,
-            doc_id = %doc_id,
-            path = %path,
-            version,
-            "OpenDoc snapshot rebuild skipped persistence"
-        );
-        return Ok(());
+    match deve_core::ledger::snapshot::try_save_snapshot(
+        db,
+        doc_id,
+        version,
+        content,
+        snapshot_depth,
+    )? {
+        deve_core::ledger::snapshot::SnapshotSaveOutcome::Saved => Ok(()),
+        deve_core::ledger::snapshot::SnapshotSaveOutcome::Inconsistent => {
+            let path = doc_path_label(db, doc_id);
+            tracing::warn!(
+                repo_scope,
+                doc_id = %doc_id,
+                path = %path,
+                version,
+                "OpenDoc snapshot rebuild skipped persistence"
+            );
+            Ok(())
+        }
     }
-    deve_core::ledger::snapshot::save_snapshot(db, doc_id, version, content, snapshot_depth)
 }

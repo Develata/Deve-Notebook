@@ -130,8 +130,8 @@ fn manual_equal_waterline_snapshots_must_be_identical() -> anyhow::Result<()> {
         None,
     );
     conflicting.ops[0] = key.encrypt(&replacement, 1_u64.into())?;
-    engine.buffer_remote_snapshot(first);
-    engine.buffer_remote_snapshot(conflicting);
+    engine.buffer_remote_snapshot(first)?;
+    engine.buffer_remote_snapshot(conflicting)?;
 
     let error = engine
         .merge_pending()
@@ -146,8 +146,8 @@ fn manual_equal_waterline_snapshots_must_be_identical() -> anyhow::Result<()> {
 fn manual_snapshot_base_rejects_conflicting_incremental_prefix() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 1)?);
-    engine.buffer_remote_ops(conflicting_prefix_response(&peer, repo_id, &key)?);
+    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(conflicting_prefix_response(&peer, repo_id, &key)?)?;
 
     let error = engine
         .merge_pending()
@@ -167,7 +167,7 @@ fn manual_stale_snapshot_does_not_regress_or_wipe_newer_ops() -> anyhow::Result<
     assert_eq!(engine.version_vector().get(&peer), 2);
 
     // 缓冲一个陈旧快照后 merge：它被 newer 状态 supersede，应被丢弃而非应用。
-    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 1)?);
+    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 1)?)?;
     engine.merge_pending()?;
 
     assert_eq!(
@@ -189,8 +189,8 @@ fn manual_snapshot_base_allows_newer_contiguous_ops() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
 
-    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 3)?);
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 4)?);
+    engine.buffer_remote_snapshot(encrypted_snapshot_with_waterline(&peer, repo_id, &key, 3)?)?;
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 4)?)?;
 
     assert_eq!(engine.merge_pending()?, 4);
     assert_eq!(
@@ -215,7 +215,7 @@ fn failed_manual_snapshot_merge_does_not_reset_shadow_repo() -> anyhow::Result<(
     engine.apply_remote_ops(encrypted_response(&peer, repo_id, &key)?)?;
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
 
-    engine.buffer_remote_snapshot(tampered_response(&peer, repo_id));
+    engine.buffer_remote_snapshot(tampered_response(&peer, repo_id))?;
 
     let err = engine.merge_pending().expect_err("bad snapshot must fail");
     assert!(err.to_string().contains("Decryption failed"));
@@ -231,7 +231,7 @@ fn failed_manual_snapshot_validation_does_not_reset_shadow_repo() -> anyhow::Res
     engine.apply_remote_ops(encrypted_response(&peer, repo_id, &key)?)?;
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
 
-    engine.buffer_remote_snapshot(encrypted_invalid_snapshot(&peer, repo_id, &key)?);
+    engine.buffer_remote_snapshot(encrypted_invalid_snapshot(&peer, repo_id, &key)?)?;
 
     let err = engine
         .merge_pending()

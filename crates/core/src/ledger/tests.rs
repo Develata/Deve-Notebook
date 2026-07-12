@@ -181,6 +181,38 @@ fn test_snapshot_pruning() -> Result<()> {
 }
 
 #[test]
+fn snapshot_rejects_middle_content_mismatch() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let doc_id = DocId::new();
+    let content = format!("{}ledger-middle{}", "a".repeat(1024), "z".repeat(1024));
+    let candidate = format!("{}forged-middle{}", "a".repeat(1024), "z".repeat(1024));
+    assert_eq!(content.len(), candidate.len());
+
+    let entry = LedgerEntry::new_content(
+        doc_id,
+        crate::models::Op::Insert {
+            pos: 0,
+            content: content.clone().into(),
+        },
+        1,
+        repo.local_peer_id().clone(),
+        1,
+        None,
+        None,
+    );
+    let seq = repo.append_local_op(&entry)?;
+
+    let error = repo
+        .save_snapshot(doc_id, seq, &candidate)
+        .expect_err("same-length candidate with a different middle must fail");
+    assert!(error.to_string().contains("Snapshot verification failed"));
+    assert!(repo.load_latest_snapshot(doc_id)?.is_none());
+    Ok(())
+}
+
+#[test]
 fn test_node_migration_and_consistency() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");

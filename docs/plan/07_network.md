@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -378,6 +378,8 @@ Apply 端单调性与连续性规则（与第 5 节「不得破坏 vector monoto
 - **批次原子性**：envelope `peer_seq`、解密 entry `peer_seq`、entry `origin_peer_id` 与认证 source 必须逐条一致；gap、乱序、冲突重复、来源不符或解密失败时整批不写 shadow、不推进 vector、不刷新投影。
 - **Wire vector canonicality**：反序列化后的 `VersionVector` 只能包含正 `PeerFactSeq`，并必须按 `PeerId` 严格升序且无重复；zero、乱序或重复键在 diff 算术之前 fail-closed，不允许由 `normalize()` 修补不可信 wire 输入。
 - **Transfer resource gate**：在按请求范围分配 `Vec` 或收集完整 snapshot 前，发送端必须先验证 `end <= source waterline`、checked range width、最多 16384 个事实及最多 16 MiB 编码 fact bytes；超过限制返回 `sync_resource_limit`，不得尝试巨额分配，也不得伪装为成功。加密 snapshot 构造过程中仍须累计 payload budget；分块/压缩另列后续能力。
+- **Manual receive resource gate**：Manual 模式的待确认缓冲必须跨全部已排队 frame 累计 payload 数、fact 数及每个 `EncryptedOp` 的 postcard 编码字节；三者分别不得超过 16384 payload、16384 facts 与 16 MiB。任何 checked overflow 或超限必须在解密和入队前返回 `sync_resource_limit`，且队列与全部计数保持不变；空 frame 仍计入 payload 上限。
+- **Manual merge memory/rollback**：确认合并必须先 `take` 整个缓冲，失败时原样恢复 payload 与三类计数；不得通过 clone 整队列实现试应用。解密后应先证明 snapshot prefix，再移动最高 waterline snapshot 与增量 entries 形成 canonical batch，及时释放其余解密 payload；解密、连续性、origin、ledger apply 任一步失败都不得丢失待确认缓冲、写入部分 shadow 或推进 vector。SyncHello/transfer 需要脱离 registry lock 生成响应时，只能 clone identity/repo/key/vector 等 transport state，Manual pending queue 必须留在 registry engine，禁止随 outbound engine 复制。
 - 完整 source 日志中的 `MergeAnchor` 与 content/structure facts 使用同一 `PeerFactSeq`；接收端必须保存并推进连续水位，但不得把 anchor 直接解释为 Markdown/tree projection mutation。
 
 ### 7.2 Envelope Pattern

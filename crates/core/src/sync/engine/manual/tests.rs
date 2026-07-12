@@ -202,7 +202,80 @@ fn manual_receive_buffers_remote_ops_until_confirmed() -> anyhow::Result<()> {
 
     assert_eq!(engine.merge_pending()?, 1);
     assert_eq!(engine.pending_ops_count(), 0);
+    assert_eq!(engine.pending_ops.payload_count(), 0);
+    assert_eq!(engine.pending_ops.encoded_bytes(), 0);
     assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    Ok(())
+}
+
+#[test]
+fn transport_clone_does_not_copy_manual_pending_queue() -> anyhow::Result<()> {
+    let (_dir, _repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.receive_remote_ops(encrypted_response(&peer, repo_id, &key)?)?;
+
+    let outbound = engine.clone_for_transport();
+
+    assert_eq!(engine.pending_ops_count(), 1);
+    assert_eq!(outbound.pending_ops_count(), 0);
+    assert!(Arc::ptr_eq(&engine.repo, &outbound.repo));
+    assert_eq!(outbound.local_peer_id, engine.local_peer_id);
+    assert_eq!(outbound.version_vector(), engine.version_vector());
+    assert!(outbound.repo_key.is_some());
+    Ok(())
+}
+
+#[test]
+fn manual_resource_preflight_runs_before_decrypt_and_preserves_queue() -> anyhow::Result<()> {
+    let (_dir, _repo, repo_id, _key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    for _ in 0..crate::protocol::MAX_SYNC_FACTS_PER_PAYLOAD {
+        engine.buffer_remote_ops(SyncResponse::incremental(
+            peer.clone(),
+            repo_id,
+            (PeerFactSeq::ONE, PeerFactSeq::ONE),
+            Vec::new(),
+        ))?;
+    }
+    let before = (
+        engine.pending_ops.payload_count(),
+        engine.pending_ops_count(),
+        engine.pending_ops.encoded_bytes(),
+    );
+
+    let error = engine
+        .receive_remote_ops(tampered_response(&peer, repo_id))
+        .expect_err("resource limit must reject before decrypting the tampered payload");
+    assert!(error.to_string().contains("sync_resource_limit"));
+    assert!(!error.to_string().contains("Decryption failed"));
+    assert_eq!(
+        (
+            engine.pending_ops.payload_count(),
+            engine.pending_ops_count(),
+            engine.pending_ops.encoded_bytes(),
+        ),
+        before
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_receive_validation_failure_does_not_enqueue_or_change_counters() -> anyhow::Result<()> {
+    let (_dir, _repo, repo_id, _key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+
+    let error = engine
+        .receive_remote_snapshot(tampered_response(&peer, repo_id))
+        .expect_err("invalid payload must fail validation before enqueue");
+    assert!(error.to_string().contains("Decryption failed"));
+    assert_eq!(
+        (
+            engine.pending_ops.payload_count(),
+            engine.pending_ops_count(),
+            engine.pending_ops.encoded_bytes(),
+        ),
+        (0, 0, 0)
+    );
     Ok(())
 }
 
@@ -210,7 +283,7 @@ fn manual_receive_buffers_remote_ops_until_confirmed() -> anyhow::Result<()> {
 fn manual_merge_rejects_incremental_seq_mismatch() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(seq_mismatch_response(&peer, repo_id, &key)?);
+    engine.buffer_remote_ops(seq_mismatch_response(&peer, repo_id, &key)?)?;
 
     let err = engine
         .merge_pending()
@@ -303,7 +376,7 @@ fn manual_merge_rejects_incremental_seq_gap() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
     engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 3)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 3)?)?;
 
     let err = engine
         .merge_pending()
@@ -322,7 +395,7 @@ fn manual_merge_rejects_incremental_seq_gap() -> anyhow::Result<()> {
 fn failed_manual_merge_retains_pending_ops() -> anyhow::Result<()> {
     let (_dir, _repo, repo_id, _key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(tampered_response(&peer, repo_id));
+    engine.buffer_remote_ops(tampered_response(&peer, repo_id))?;
 
     let err = engine.merge_pending().expect_err("tampered op must fail");
     assert!(err.to_string().contains("Decryption failed"));
@@ -334,8 +407,8 @@ fn failed_manual_merge_retains_pending_ops() -> anyhow::Result<()> {
 fn failed_manual_merge_does_not_partially_apply_ops() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?);
-    engine.buffer_remote_ops(tampered_response(&peer, repo_id));
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(tampered_response(&peer, repo_id))?;
 
     let err = engine
         .merge_pending()
@@ -350,8 +423,8 @@ fn failed_manual_merge_does_not_partially_apply_ops() -> anyhow::Result<()> {
 fn failed_manual_merge_validation_rolls_back_prior_payload() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?);
-    engine.buffer_remote_ops(encrypted_invalid_delete_response(&peer, repo_id, &key, 2)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(encrypted_invalid_delete_response(&peer, repo_id, &key, 2)?)?;
 
     let err = engine
         .merge_pending()
@@ -363,12 +436,46 @@ fn failed_manual_merge_validation_rolls_back_prior_payload() -> anyhow::Result<(
 }
 
 #[test]
+fn failed_manual_merge_restores_payloads_and_all_resource_counters() -> anyhow::Result<()> {
+    for apply_failure in [false, true] {
+        let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+        let peer = PeerId::new("remote");
+        engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+        if apply_failure {
+            engine
+                .buffer_remote_ops(encrypted_invalid_delete_response(&peer, repo_id, &key, 2)?)?;
+        } else {
+            engine.buffer_remote_ops(tampered_response(&peer, repo_id))?;
+        }
+        let before = (
+            engine.pending_ops.payload_count(),
+            engine.pending_ops_count(),
+            engine.pending_ops.encoded_bytes(),
+        );
+
+        engine
+            .merge_pending()
+            .expect_err("decrypt or apply failure must restore the complete pending buffer");
+        assert_eq!(
+            (
+                engine.pending_ops.payload_count(),
+                engine.pending_ops_count(),
+                engine.pending_ops.encoded_bytes(),
+            ),
+            before
+        );
+        assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
+    }
+    Ok(())
+}
+
+#[test]
 fn manual_merge_rejects_mixed_peer_targets() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer_a = PeerId::new("remote-a");
     let peer_b = PeerId::new("remote-b");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_a, repo_id, &key, 1)?);
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_b, repo_id, &key, 1)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_a, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_b, repo_id, &key, 1)?)?;
 
     let err = engine
         .merge_pending()
@@ -385,8 +492,8 @@ fn manual_merge_rejects_mixed_repo_targets() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
     let other_repo_id = uuid::Uuid::new_v4();
     let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?);
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, other_repo_id, &key, 1)?);
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, other_repo_id, &key, 1)?)?;
 
     let err = engine
         .merge_pending()

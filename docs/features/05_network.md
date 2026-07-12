@@ -79,6 +79,9 @@
 - 断线重连后应重新握手并对齐 vector；对齐成功只说明 shadow 可读，不代表自动合并完成。
 - 同一 peer 的事实若出现序号缺失，状态必须明确进入同步错误/重试；后续事实不得提前出现在 shadow 或本地投影。缺失事实恢复后，重试才能继续推进。
 - `MergeAnchor` 与内容/结构事实属于同一 source 日志连续序列；同步端必须保存它以供审计和后续 merge checkpoint 验证，但 anchor 本身不得直接改变 shadow Markdown/tree 展示。
+- Manual 模式跨多帧暂存时必须受累计 payload、fact 与编码字节上限保护；超过上限应明确报告 `sync_resource_limit`，并保留此前已暂存且尚未确认的全部事实。
+- 用户确认 Manual 合并后，解密、连续性验证或 shadow 原子写入任一步失败都必须保留完整待确认队列，便于修复来源后重试或显式丢弃。
+- 新握手或 outbound transfer 生成响应时不得复制 Manual 待确认队列；该队列始终留在当前 repo 的 registry engine 中。
 
 ## Operation 示例
 

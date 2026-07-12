@@ -13,11 +13,12 @@ use crate::sync::engine::SyncEngine;
 use anyhow::{Result, anyhow};
 
 impl RepoScopedSyncEngine {
-    /// 严格获取指定仓库的 SyncEngine。
+    /// 严格获取指定仓库的 detached transport SyncEngine。
     ///
     /// Invariants:
     /// - repo-scoped sync engine 进入传输链前必须已加载有效 `RepoKey`。
     /// - 严格路径不得缓存 `repo_key = None` 的 engine。
+    /// - Manual pending queue remains in the registry and is not cloned.
     pub fn get_or_create_strict(&self, repo_id: RepoId) -> Result<SyncEngine> {
         self.ensure_strict_engine_loaded(repo_id)?;
         self.refresh_loaded_engine_vector(repo_id)?;
@@ -28,7 +29,7 @@ impl RepoScopedSyncEngine {
         if engine.repo_key.is_none() {
             return Err(anyhow!("RepoScopedSyncEngine missing repo key {}", repo_id));
         }
-        Ok(engine.clone())
+        Ok(engine.clone_for_transport())
     }
 
     pub fn with_strict_engine<F, R>(&self, repo_id: RepoId, f: F) -> Result<R>

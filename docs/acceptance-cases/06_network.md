@@ -337,6 +337,7 @@
     - 一个配置了 RepoKey 的 sync engine，shadow ledger 已持有该 peer 的若干 ops
   steps:
     - run: cargo test -p deve_core sync::engine::manual -- --nocapture
+    - run: cargo test -p deve_core sync::buffer::tests -- --nocapture
   assertions:
     - stale_snapshot_does_not_regress_peer_vector: true
     - stale_snapshot_does_not_wipe_newer_shadow_ops: true
@@ -349,6 +350,9 @@
     - run: cargo test -p deve_core --lib persisted_shadow_waterline_blocks_stale_snapshot_from_another_engine -- --nocapture
     - api_assert: untrusted_version_vector_zero_unsorted_duplicate_rejected_before_diff true
     - api_assert: huge_or_over_budget_peer_range_fails_before_allocation true
+    - api_assert: manual_pending_payload_fact_and_encoded_bytes_are_cumulative_and_bounded true
+    - api_assert: failed_manual_merge_restores_payloads_and_all_resource_counters true
+    - api_assert: transport_clone_does_not_copy_manual_pending_queue true
 
 - case_id: NET-018
   goal: 同一 repo 的多个 browser session 即使拥有不同连接内 scope_nonce，也能接收彼此已经通过 writer gate 的实时广播。

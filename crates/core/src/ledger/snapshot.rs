@@ -16,6 +16,12 @@ mod verify;
 
 pub use verify::verify_snapshot_consistency;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SnapshotSaveOutcome {
+    Saved,
+    Inconsistent,
+}
+
 /// Save a snapshot for a document (Local DB only).
 pub fn save_snapshot(
     db: &Database,
@@ -24,9 +30,24 @@ pub fn save_snapshot(
     content: &str,
     depth: usize,
 ) -> Result<()> {
-    let verified = verify_snapshot_consistency(db, doc_id, seq, content, true)?;
-    if !verified {
-        return Err(anyhow!("Snapshot verification failed"));
+    match try_save_snapshot(db, doc_id, seq, content, depth)? {
+        SnapshotSaveOutcome::Saved => Ok(()),
+        SnapshotSaveOutcome::Inconsistent => Err(anyhow!("Snapshot verification failed")),
+    }
+}
+
+/// Verify a snapshot candidate once and persist it only when it exactly matches
+/// the ledger rebuild. Callers that may safely skip a stale candidate can inspect
+/// the typed outcome without repeating the full fold.
+pub fn try_save_snapshot(
+    db: &Database,
+    doc_id: DocId,
+    seq: u64,
+    content: &str,
+    depth: usize,
+) -> Result<SnapshotSaveOutcome> {
+    if !verify_snapshot_consistency(db, doc_id, seq, content)? {
+        return Ok(SnapshotSaveOutcome::Inconsistent);
     }
     let write_txn = db.begin_write()?;
     {
@@ -39,7 +60,7 @@ pub fn save_snapshot(
     write_txn.commit()?;
 
     prune_snapshots(db, doc_id, depth)?;
-    Ok(())
+    Ok(SnapshotSaveOutcome::Saved)
 }
 
 /// Load the latest snapshot for a document.

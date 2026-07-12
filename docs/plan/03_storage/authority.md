@@ -150,6 +150,8 @@
     - `SeqNo -> ContentBlob`
 - 规则：
   - snapshot 永远锚定到已确认 `GlobalSeq`
+  - 保存 snapshot 前必须从 Ledger 全量重建该 `DocId` 在目标 `GlobalSeq` 的内容，并与候选内容逐字节严格相等；不得以长度、头尾采样或 hash sampling 代替全量一致性证明
+  - 候选内容与全量重建结果不一致时必须拒绝保存，既有 dual-table snapshot 状态保持不变
   - snapshot pruning **MUST** 只删除已被 `SNAPSHOT_INDEX` 脱链的旧快照
   - pruning 不得删除当前 head、最近检查点和正在被 restore 使用的快照
 

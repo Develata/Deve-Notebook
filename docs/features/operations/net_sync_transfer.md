@@ -24,7 +24,7 @@
 - `Surface`: `workspace-runtime`
 - `Trigger`: 服务端返回 `ServerMessage::SyncPush`
 - `Preconditions`: 已建立 repo-scoped sync context
-- `Immediate Result`: 验证 source 与严格连续的 peer fact range 后，原子应用远端增量 ops；缺口时保持 shadow/vector 不变
+- `Immediate Result`: 验证 source 与严格连续的 peer fact range 后，Auto 模式原子应用；Manual 模式先通过累计 payload/fact/encoded-byte resource gate 再暂存，超限或后续合并失败时保持既有队列、shadow/vector 不变
 - `Application Entry`: `apps/web/src/editor/sync/route_payload.rs`, `apps/cli/src/server/handlers/sync/transfer.rs`
 
 ### `op.net.sync.request-snapshot`
@@ -42,7 +42,7 @@
 - `Surface`: `workspace-runtime`
 - `Trigger`: 服务端返回 `ServerMessage::SyncPushSnapshot`
 - `Preconditions`: snapshot fallback 已发起
-- `Immediate Result`: 验证 source peer 的 `1..=waterline` 完整连续事实日志后原子替换 shadow，再更新 vector
+- `Immediate Result`: 验证 source peer 的 `1..=waterline` 完整连续事实日志；Auto 模式原子替换 shadow，Manual 模式先经累计资源 gate 暂存，确认合并失败时完整恢复待确认队列
 - `Application Entry`: `apps/web/src/editor/sync/route_payload.rs`, `apps/cli/src/server/handlers/sync/snapshot.rs`
 
 ## Notes

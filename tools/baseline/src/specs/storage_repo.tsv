@@ -5,6 +5,9 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	cargo test -p deve_core init_allocates_collision_safe_repo_name_for_same_name_different_url -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_rejects_middle_content_mismatch -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cli_assert: snapshot_candidate_matches_full_ledger_rebuild true
+contains	crates/core/src/ledger/tests.rs	fn snapshot_rejects_middle_content_mismatch
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-005	cargo test -p deve_core edit_round_trip_reconstructs_content -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-005	cargo test -p deve_core global_seq_increases -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-006	cargo test -p deve_cli markdown_export_preserves_user_frontmatter_without_system_metadata -- --nocapture

@@ -80,7 +80,7 @@ pub(super) async fn handle(
                 session_proof.signature(),
                 remote_vector,
             )
-            .map(|result| (local_vector, engine.clone(), result))
+            .map(|result| (local_vector, engine.clone_for_transport(), result))
     }) else {
         clear_sync_hello_scope_failure(session, false);
         return;

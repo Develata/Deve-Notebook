@@ -13,7 +13,6 @@ pub fn verify_snapshot_consistency(
     doc_id: DocId,
     seq: u64,
     content: &str,
-    sample: bool,
 ) -> Result<bool> {
     let entries = ops::get_ops_from_db(db, doc_id)?;
     if entries.is_empty() {
@@ -31,36 +30,5 @@ pub fn verify_snapshot_consistency(
     }
 
     let rebuilt = state::reconstruct_content(&ops);
-    if !sample || rebuilt.len() <= 2048 {
-        return Ok(rebuilt == content);
-    }
-
-    if rebuilt.chars().count() != content.chars().count() {
-        return Ok(false);
-    }
-
-    let head = rebuilt.chars().take(1024).collect::<String>();
-    let content_head = content.chars().take(1024).collect::<String>();
-    if head != content_head {
-        return Ok(false);
-    }
-
-    let tail: String = rebuilt
-        .chars()
-        .rev()
-        .take(1024)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let content_tail: String = content
-        .chars()
-        .rev()
-        .take(1024)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-
-    Ok(tail == content_tail)
+    Ok(rebuilt == content)
 }

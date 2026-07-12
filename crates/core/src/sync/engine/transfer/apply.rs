@@ -76,7 +76,7 @@ impl SyncEngine {
     }
 }
 
-fn decrypt_remote_ops(
+pub(in crate::sync::engine) fn decrypt_remote_ops(
     repo_key: &crate::security::RepoKey,
     source_peer_id: &PeerId,
     ops: &[crate::security::EncryptedOp],
@@ -104,19 +104,11 @@ fn decrypt_remote_ops(
     Ok(decrypted)
 }
 
-pub(crate) fn entries_with_seq(entries: &[LedgerEntry]) -> Vec<(PeerFactSeq, LedgerEntry)> {
-    entries
-        .iter()
-        .cloned()
-        .map(|entry| (entry.peer_seq, entry))
-        .collect()
-}
-
 fn decrypted_entries(decrypted: Vec<(PeerFactSeq, LedgerEntry)>) -> Vec<LedgerEntry> {
     decrypted.into_iter().map(|(_seq, entry)| entry).collect()
 }
 
-fn validate_incremental_range(
+pub(in crate::sync::engine) fn validate_incremental_range(
     range: Option<(PeerFactSeq, PeerFactSeq)>,
     decrypted: &[(PeerFactSeq, LedgerEntry)],
 ) -> Result<()> {
@@ -140,7 +132,7 @@ fn validate_incremental_range(
     Ok(())
 }
 
-fn validate_full_fact_replay(
+pub(in crate::sync::engine) fn validate_full_fact_replay(
     waterline: PeerFactSeq,
     decrypted: &[(PeerFactSeq, LedgerEntry)],
 ) -> Result<()> {

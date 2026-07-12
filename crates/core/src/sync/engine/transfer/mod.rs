@@ -8,7 +8,7 @@ use anyhow::Result;
 mod apply;
 mod snapshot;
 
-pub(crate) use apply::entries_with_seq;
+pub(super) use apply::{decrypt_remote_ops, validate_full_fact_replay, validate_incremental_range};
 
 impl SyncEngine {
     /// 从本地仓库获取指定范围的操作 (用于发送给远端)。
