@@ -98,8 +98,9 @@ fn scan_ignores_git_mirror_markdown_paths() {
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
     let internal = repo
-        .local_repo_workspace_path("default", ".git/objects/x.md")
-        .expect("workspace path");
+        .local_repo_workspace_root("default")
+        .expect("workspace root")
+        .join(".git/objects/x.md");
     std::fs::create_dir_all(internal.parent().expect("parent")).expect("mkdir");
     std::fs::write(&internal, "git mirror state").expect("write");
 

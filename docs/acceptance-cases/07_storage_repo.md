@@ -371,4 +371,21 @@
     - cli_assert: projection_backup_baseline_aggregates_remote_projection_transport_checks true
     - cli_assert: projection_backup_baseline_excludes_ledger_pack_restore_checks true
 
+- case_id: STORE-024
+  goal: Projection Workspace child path 与 existing ancestor containment fail-closed。
+  preconditions:
+    - local repo 已绑定 Projection Locator
+    - 测试夹具可在 Projection Workspace 内创建目录与符号链接；Windows 权限不足时只跳过 symlink 分支
+  steps:
+    - run: cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
+    - run: cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
+    - run: cargo test -p deve_core --test materialize_projection_test -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
+  assertions:
+    - cli_assert: projection_workspace_accepts_canonical_forward_slash_relative_path true
+    - cli_assert: projection_workspace_rejects_absolute_traversal_empty_internal_and_noncanonical_paths true
+    - cli_assert: projection_workspace_existing_ancestor_stays_within_canonical_root true
+    - cli_assert: projection_workspace_external_or_dangling_symlink_fails_closed true
+    - cli_assert: projection_materialize_and_rematerialize_remain_ledger_derived true
+
 ```

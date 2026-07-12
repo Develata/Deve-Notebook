@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -251,6 +251,7 @@ ReadonlyDegraded
 - `TreeManager` 是内存 projection，不是 authority。
 - `TreeDelta` 是 projection diff，不是业务写路径。
 - `path_cache` 只允许由 projection builder / repair 流程写入。
+- Structure Facts 导出的任意 repo child path 必须通过 `03_storage/projection.md#projection-contract` 的 canonical relative-path 与 existing-ancestor containment gate；坏 path、外指 symlink / junction 或不可 stat / canonicalize 的 ancestor 必须使 tree projection fail-closed，不得写到 workspace root 外部。
 
 ### 5.3 Fallback Rule
 

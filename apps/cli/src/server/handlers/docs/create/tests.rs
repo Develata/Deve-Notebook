@@ -129,7 +129,8 @@ async fn create_rejects_backslash_internal_segment_before_ledger() -> anyhow::Re
     assert!(
         !state
             .repo
-            .local_repo_workspace_path("default", "notes/.notegit/hidden.md")?
+            .local_repo_workspace_root("default")?
+            .join("notes/.notegit/hidden.md")
             .exists()
     );
     Ok(())

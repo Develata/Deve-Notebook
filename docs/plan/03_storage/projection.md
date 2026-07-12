@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-07-12`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
@@ -95,6 +95,10 @@ Intent -> Ledger Facts -> Projection -> Projection Workspace
   - 不同 repo 之间必须隔离
 - `PersistGuard` / `WriteSuppressor` 必须在 projection writeback 前后成对生效，防止 watcher storm
 - projection writeback **MUST** 通过 Projection Locator 解析目标 base，并计算 `<projection_base>/<safe_repo_name>--<repo_id>/` 作为目标 workspace root；禁止从全局 vault root 隐式推断。
+- repo child path **MUST** 是 canonical forward-slash relative path。root lookup 可以用空 `repo_path` 返回计算出的 workspace root；任意非空 child path 必须在单一 core locator 入口拒绝 absolute path、任意 segment 中的 drive / UNC prefix、NUL、空 segment（包括 `//` 与首尾 `/`）、`.`、`..`、反斜杠、Windows 会折叠的尾随点或空格，以及任意层级大小写不敏感的 `.git` / `.notegit` segment；调用方不得各自重复或放宽该校验。
+- 若计算出的 workspace root 已存在，locator 入口 **MUST** 拒绝 workspace root 自身为 symlink / junction，canonicalize 后的 root 必须仍是 canonical projection base 的直接子目录；随后从 joined target 自身向上找到最近的 existing ancestor，该 ancestor 必须可 canonicalize 且 canonical path 位于 canonical workspace root 内。existing child symlink / junction 指向 workspace root 外部、dangling symlink、stat / canonicalize 失败都必须 fail-closed，不得继续 write / remove / materialize。
+- 若 workspace root 尚不存在，locator 入口只能返回通过上述 lexical gate 的 safe join；后续创建 root 的调用方不得由 child path 创建或越出 `<projection_base>/<safe_repo_name>--<repo_id>/`。
+- 这些 path / containment gate 只约束 Projection Workspace 派生路径，不改变 Ledger authority、storage schema、RepoId 或 repo identity。
 
 ## 10. Forbidden Patterns（projection）
 

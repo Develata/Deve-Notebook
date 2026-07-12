@@ -58,6 +58,15 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	run: cargo run -p deve_baseline -- backup
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --test materialize_projection_test -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	run: scripts/check-storage-repo-baseline.sh
+contains	crates/core/src/ledger/manager/workspace/tests.rs	fn projection_workspace_child_path_accepts_canonical_relative_path_and_root()
+contains	crates/core/src/ledger/manager/workspace/tests.rs	fn projection_workspace_child_path_rejects_unsafe_or_noncanonical_inputs()
+contains	crates/core/src/ledger/manager/workspace/tests.rs	fn projection_workspace_root_symlink_cannot_escape_projection_base()
+contains	crates/core/src/ledger/manager/workspace/tests.rs	fn projection_workspace_existing_ancestor_symlink_cannot_escape_root()
+contains	crates/core/src/ledger/manager/workspace/tests.rs	fn projection_workspace_existing_ancestor_dangling_symlink_fails_closed()
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	run: scripts/check-storage-repo-baseline.sh

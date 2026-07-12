@@ -6,9 +6,10 @@
 //!
 use crate::ledger::RepoManager;
 use crate::models::RepoId;
-use crate::utils::path::{join_normalized, to_forward_slash};
+use crate::utils::path::{to_forward_slash, validate_projection_repo_child_path};
 use anyhow::{Context, Result, anyhow};
-use std::path::PathBuf;
+use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
 
 impl RepoManager {
     /// 返回指定本地 repo 的 Projection Workspace 根目录：
@@ -22,6 +23,7 @@ impl RepoManager {
             &info.name, info.uuid,
         )?;
         let root = locator.projection_base_abs.join(&segment);
+        validate_projection_workspace_root(&locator.projection_base_abs, &root)?;
         let legacy_segment =
             crate::ledger::manager::projection_locator::safe_repo_path_segment(&info.name)?;
         let legacy_root = locator.projection_base_abs.join(legacy_segment);
@@ -50,7 +52,11 @@ impl RepoManager {
         if repo_path.is_empty() {
             return Ok(repo_root);
         }
-        Ok(join_normalized(&repo_root, repo_path))
+        let relative = validate_projection_repo_child_path(repo_path)
+            .with_context(|| format!("Invalid Projection Workspace child path: {repo_path:?}"))?;
+        let target = repo_root.join(relative);
+        validate_existing_ancestor_containment(&repo_root, &target)?;
+        Ok(target)
     }
 
     /// 返回指定本地 repo 的运行时元数据目录：
@@ -163,3 +169,81 @@ impl RepoManager {
         self.persist_guard.should_ignore(&repo_root, &relative)
     }
 }
+
+fn validate_projection_workspace_root(projection_base: &Path, repo_root: &Path) -> Result<()> {
+    let metadata = match std::fs::symlink_metadata(repo_root) {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => {
+            return Err(err).with_context(|| {
+                format!("Failed to stat Projection Workspace root: {repo_root:?}")
+            });
+        }
+    };
+    if metadata.file_type().is_symlink() {
+        return Err(anyhow!(
+            "Projection Workspace root must not be a symlink or junction: {repo_root:?}"
+        ));
+    }
+
+    let canonical_base = std::fs::canonicalize(projection_base).with_context(|| {
+        format!("Failed to canonicalize Projection Locator base: {projection_base:?}")
+    })?;
+    let canonical_root = std::fs::canonicalize(repo_root).with_context(|| {
+        format!("Failed to canonicalize Projection Workspace root: {repo_root:?}")
+    })?;
+    if canonical_root.parent() != Some(canonical_base.as_path()) {
+        return Err(anyhow!(
+            "Projection Workspace root escapes canonical projection base: root={canonical_root:?}, base={canonical_base:?}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_existing_ancestor_containment(repo_root: &Path, target: &Path) -> Result<()> {
+    let canonical_root = match std::fs::symlink_metadata(repo_root) {
+        Ok(_) => std::fs::canonicalize(repo_root).with_context(|| {
+            format!("Failed to canonicalize Projection Workspace root: {repo_root:?}")
+        })?,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => {
+            return Err(err).with_context(|| {
+                format!("Failed to stat Projection Workspace root: {repo_root:?}")
+            });
+        }
+    };
+
+    let mut ancestor = target;
+    loop {
+        match std::fs::symlink_metadata(ancestor) {
+            Ok(_) => {
+                let canonical_ancestor = std::fs::canonicalize(ancestor).with_context(|| {
+                    format!(
+                        "Failed to canonicalize existing Projection Workspace ancestor: {ancestor:?}"
+                    )
+                })?;
+                if !canonical_ancestor.starts_with(&canonical_root) {
+                    return Err(anyhow!(
+                        "Projection Workspace path escapes canonical root: target={target:?}, ancestor={canonical_ancestor:?}, root={canonical_root:?}"
+                    ));
+                }
+                return Ok(());
+            }
+            Err(err) if err.kind() == ErrorKind::NotFound => {}
+            Err(err) => {
+                return Err(err).with_context(|| {
+                    format!(
+                        "Failed to stat Projection Workspace ancestor while resolving {target:?}: {ancestor:?}"
+                    )
+                });
+            }
+        }
+
+        ancestor = ancestor.parent().ok_or_else(|| {
+            anyhow!("Projection Workspace target has no existing ancestor within root: {target:?}")
+        })?;
+    }
+}
+
+#[cfg(test)]
+mod tests;

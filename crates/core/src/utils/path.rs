@@ -10,7 +10,96 @@
 //! 为保持一致性，所有存储在 Ledger 中的路径都使用**正斜杠格式**（Linux 风格）。
 //! 这确保了在 Windows 和 Linux 之间的互操作性，并避免路径格式不一致的问题。
 
+use std::fmt;
 use std::path::{Path, PathBuf};
+
+/// Projection Workspace child path lexical validation failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectionRepoPathError {
+    Empty,
+    NonForwardSlash,
+    Nul,
+    AbsoluteOrPrefix,
+    EmptySegment,
+    CurrentSegment,
+    ParentSegment,
+    InternalSegment,
+    NonCanonicalSegment,
+}
+
+impl fmt::Display for ProjectionRepoPathError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let reason = match self {
+            Self::Empty => "path is empty",
+            Self::NonForwardSlash => "path must use forward slashes only",
+            Self::Nul => "path contains NUL",
+            Self::AbsoluteOrPrefix => "absolute, drive, and UNC paths are forbidden",
+            Self::EmptySegment => "path contains an empty segment",
+            Self::CurrentSegment => "path contains a current-directory segment",
+            Self::ParentSegment => "path contains a parent-directory segment",
+            Self::InternalSegment => "path enters an internal .git or .notegit directory",
+            Self::NonCanonicalSegment => {
+                "path segment has a trailing dot or space that is non-canonical on Windows"
+            }
+        };
+        f.write_str(reason)
+    }
+}
+
+impl std::error::Error for ProjectionRepoPathError {}
+
+/// Validate a non-empty canonical repo-relative Projection Workspace child path.
+///
+/// The input is required to already use canonical forward-slash spelling. This
+/// function is lexical only; callers that touch disk must additionally enforce
+/// canonical containment against the repo workspace root.
+pub fn validate_projection_repo_child_path(
+    repo_path: &str,
+) -> Result<PathBuf, ProjectionRepoPathError> {
+    if repo_path.is_empty() {
+        return Err(ProjectionRepoPathError::Empty);
+    }
+    if repo_path.contains('\\') {
+        return Err(ProjectionRepoPathError::NonForwardSlash);
+    }
+    if repo_path.contains('\0') {
+        return Err(ProjectionRepoPathError::Nul);
+    }
+    let bytes = repo_path.as_bytes();
+    if repo_path.starts_with('/')
+        || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
+    {
+        return Err(ProjectionRepoPathError::AbsoluteOrPrefix);
+    }
+
+    let mut normalized = PathBuf::new();
+    for segment in repo_path.split('/') {
+        if segment.is_empty() {
+            return Err(ProjectionRepoPathError::EmptySegment);
+        }
+        if segment == "." {
+            return Err(ProjectionRepoPathError::CurrentSegment);
+        }
+        if segment == ".." {
+            return Err(ProjectionRepoPathError::ParentSegment);
+        }
+        if segment.ends_with(['.', ' ']) {
+            return Err(ProjectionRepoPathError::NonCanonicalSegment);
+        }
+        if segment.eq_ignore_ascii_case(".git") || segment.eq_ignore_ascii_case(".notegit") {
+            return Err(ProjectionRepoPathError::InternalSegment);
+        }
+        let segment_bytes = segment.as_bytes();
+        if segment_bytes.len() >= 2
+            && segment_bytes[0].is_ascii_alphabetic()
+            && segment_bytes[1] == b':'
+        {
+            return Err(ProjectionRepoPathError::AbsoluteOrPrefix);
+        }
+        normalized.push(segment);
+    }
+    Ok(normalized)
+}
 
 /// 将路径字符串转换为正斜杠格式（用于存储）。
 ///

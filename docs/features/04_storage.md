@@ -31,6 +31,7 @@
 
 - 某个 repo 损坏时，应进入明确的降级或恢复路径。
 - 其它健康 repo 不应被一起拖死。
+- Projection Workspace 路径若包含绝对路径、遍历段、空段、Windows 非规范尾随点/空格、内部 `.git` / `.notegit` 段，或已有符号链接 / junction 指向该 repo workspace 外部，保存、重建与 materialize 必须明确失败；系统不得在 workspace 外创建、覆盖或删除文件，Ledger 中已确认的 authority facts 保持可用于 repair。
 - 缺失 ledger entry 格式信封、缺失 redb schema version 或 schema version 不匹配时，系统应明确报告该 repo 需要 reset / repair / migration，不应猜测旧格式继续打开。
 - 对明确选择的 schema v2 开发库，用户可以在服务停止时运行 `deve export --allow-legacy-v2` 做只读 JSON/Markdown 导出；该入口不会打开正常写入、同步或 repair authority。
 
