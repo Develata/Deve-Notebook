@@ -266,6 +266,20 @@ before provider I/O and before ambient AWS credentials are resolved.
 
 ## Docker Release Smoke
 
+Before a tag-triggered release, require the tag (including prerelease/build
+metadata) to match the workspace plus both Tauri manifests exactly. The fixture
+test covers stable and prerelease/build versions as well as each mismatch:
+
+```bash
+bash scripts/check-release-version-match.sh v0.1.0
+bash scripts/check-release-version-match.test.sh
+bash scripts/validate-release-image-tags.test.sh
+```
+
+`scripts/validate-release-image-tags.sh` is the workflow's pre-push guard. It
+accepts the metadata-action version plus the complete tag list and rejects
+missing, duplicate, cross-repository, or unexpected tags before the first push.
+
 After enabling Docker Desktop WSL integration or another Docker-compatible
 runtime, run:
 
@@ -292,6 +306,15 @@ development server cannot be mistaken for the Docker smoke container.
 When Docker is missing or unreachable, the script prints the resolved Docker
 binary plus `DOCKER_HOST` / `DOCKER_CONTEXT` so WSL and remote daemon issues are
 diagnosable without changing the script.
+
+To smoke an already-built candidate without rebuilding it, set both the image
+and skip-build variables. Release CI uses this mode so runtime and browser
+evidence apply to the exact image ID that is later tagged and pushed:
+
+```bash
+DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_SKIP_BUILD=1 DEVE_DOCKER_SMOKE_IMAGE=<candidate-image> scripts/smoke-docker-release.sh
+DEVE_DOCKER_MULTI_REQUIRED=1 DEVE_DOCKER_MULTI_SKIP_BUILD=1 DEVE_DOCKER_MULTI_IMAGE=<candidate-image> bash scripts/smoke-docker-multiclient.sh
+```
 
 Optional GitHub Actions entry for host-isolated Docker smoke:
 
@@ -631,7 +654,13 @@ The installer smoke is a separate target-host gate. On macOS it mounts the
 `.dmg`, copies the `.app` to a temporary Applications directory, runs the same
 startup probe, uninstalls by deleting the copied bundle, and verifies removal.
 On Windows it runs MSI/NSIS silent install, probes the installed binary, then
-runs the installer-specific uninstall path. It remains diagnostic-only unless
+runs LocalBackend lifecycle and local-bare-remote Git bridge checks. It also
+invokes `scripts/check-desktop-packaged-ui-smoke.ps1`, which starts the installed
+window with isolated data/WebView2 state and a random CDP port, and drives
+`scripts/smoke-desktop-packaged-ui.mjs` through native session, document edit,
+NoteGit commit/history, and Settings focus-trap flows. The gate requires exactly
+one installed sibling sidecar while the app is alive and zero after exit before
+running the installer-specific uninstall path. It remains diagnostic-only unless
 `DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1` is set.
 
 Capture the host OS, tool versions, command output, artifact paths, install

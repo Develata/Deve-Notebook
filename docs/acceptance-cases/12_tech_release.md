@@ -49,6 +49,8 @@
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
+    - run: scripts/check-release-version-match.test.sh
+    - run: scripts/validate-release-image-tags.test.sh
     - run: rg -n "tags: \\['v\\*'\\]|type=semver,pattern=\\{\\{version\\}\\}|type=raw,value=latest|ghcr.io/\\$\\{\\{ github.repository \\}\\}" .github/workflows/release.yml
   assertions:
     - stdout_contains: "release-baseline-check: ok"
@@ -58,6 +60,10 @@
     - stdout_contains: "ghcr.io/${{ github.repository }}"
     - release_assert: release_yml_is_only_direct_v_tag_entry true
     - release_assert: non_semver_v_tag_rejected_before_checkout_build_publish true
+    - release_assert: checked_out_workspace_desktop_mobile_versions_exact_match_tag true
+    - release_assert: prerelease_and_build_metadata_are_not_normalized_away true
+    - release_assert: docker_candidate_built_once_and_smoked_without_rebuild true
+    - release_assert: version_and_latest_remote_manifest_digests_match true
     - release_assert: native_delivery_uses_workflow_call_after_docker true
     - release_assert: github_release_created_once_after_all_native_builds true
     - release_assert: native_failure_creates_no_github_release true
@@ -76,12 +82,17 @@
     - AUTH_PASS 已设置为 Argon2 PHC 密码哈希
   steps:
     - run: DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+    - run: DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_SKIP_BUILD=1 DEVE_DOCKER_SMOKE_IMAGE=deve-notebook:existing scripts/smoke-docker-release.sh
+    - run: DEVE_DOCKER_MULTI_REQUIRED=1 DEVE_DOCKER_MULTI_SKIP_BUILD=1 DEVE_DOCKER_MULTI_IMAGE=deve-notebook:existing scripts/smoke-docker-multiclient.sh
+    - run: node --test scripts/smoke-docker-existing-image.test.mjs
     - note: use `DEVE_DOCKER_BIN=/path/to/docker DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh` when Docker is not named `docker`
   assertions:
     - http_status_eq: 200
     - runtime_assert: delivery_eq_embedded_frontend true
     - runtime_assert: local_repo_count_at_least_one true
     - auth_assert: production_login_succeeds true
+    - release_assert: existing_image_mode_rejects_missing_image true
+    - release_assert: existing_image_mode_does_not_build true
     - stderr_contains_on_docker_unavailable: "docker-release-smoke: docker_bin="
 
 - case_id: REL-003
@@ -167,8 +178,6 @@
     - run: scripts/check-desktop-package-startup-smoke.sh
     - run: cargo run -p deve_baseline -- desktop-native-session-package-smoke
     - run: scripts/check-desktop-native-session-package-smoke.sh
-    - run: scripts/check-desktop-installer-smoke.sh
-    - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable
     - run: cargo run -p deve_baseline -- desktop-installer-smoke
     - run: scripts/check-desktop-installer-smoke.sh
     - run: scripts/check-desktop-target-host-preflight.sh
@@ -311,6 +320,10 @@
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-desktop-native-session-package-smoke.sh
+    - run: scripts/check-desktop-installer-smoke.sh
+    - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable
+    - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-packaged-ui-smoke.ps1 -DesktopBinary <installed_deve_desktop.exe> -WorkRoot <temp_root>
+    - run: node --test scripts/smoke-desktop-packaged-ui.test.mjs
     - run: cargo test -p deve_core native_adapter -- --nocapture
     - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
     - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
@@ -326,6 +339,10 @@
     - native_assert: desktop_installer_smoke_uses_local_bare_git_remote true
     - native_assert: desktop_installer_smoke_covers_notegit_commit_mirror_import_export_push true
     - native_assert: desktop_git_unavailable_does_not_rollback_notegit_commit true
+    - native_assert: desktop_packaged_ui_uses_installed_binary_and_real_webview true
+    - native_assert: desktop_packaged_ui_covers_create_edit_commit_history_and_settings_focus_trap true
+    - native_assert: desktop_packaged_ui_exit_leaves_no_orphan_sidecar true
+    - evidence_boundary: startup_marker_probe_is_not_packaged_ui_readiness
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true

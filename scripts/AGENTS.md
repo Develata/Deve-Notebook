@@ -54,7 +54,9 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-desktop-platform-package-build.sh` | Diagnoses target-host Desktop package build prerequisites and only runs `cargo tauri build` when explicitly required |
 | `check-desktop-package-startup-smoke.sh` | Verifies target-host Desktop package artifacts expose a startup-probeable shell binary without opening process runtime or authority writes |
 | `check-desktop-native-session-package-smoke.sh` | Starts the bundled `deve_cli` with smoke state bound to a temporary `DEVE_DESKTOP_DATA_DIR`, verifies native-session cookie handoff, and requires cleanup before success |
-| `check-desktop-installer-smoke.sh` | Verifies target-host Desktop installer install/startup/uninstall flow without opening process runtime or authority writes |
+| `check-desktop-installer-smoke.sh` | Verifies target-host Desktop install/startup/real-WebView/NoteGit-Git/uninstall flow while keeping all writes behind the installed sidecar authority path |
+| `check-desktop-packaged-ui-smoke.ps1` | Starts an installed Windows Desktop package with isolated data/WebView2 roots and verifies real UI plus sidecar cleanup through a random CDP endpoint |
+| `smoke-desktop-packaged-ui.mjs` | Drives create/edit/commit/history and Settings focus trapping inside the installed native WebView without direct authority calls |
 | `check-desktop-target-host-preflight.sh` | Diagnoses macOS/Windows Desktop target-host prerequisites without claiming package readiness on the wrong host |
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
@@ -67,12 +69,14 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-i18n-formatting-baseline.sh` | Verifies visible frontend time formatting goes through the locale-aware formatting utility |
 | `check-reliability-observability-baseline.sh` | Verifies reliability/observability governance covers SLO/SLI, telemetry schema, metrics taxonomy, tracing, health mapping, alert tier, and DR index |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
+| `check-release-version-match.sh` | Exact-matches a release tag with workspace, Desktop Tauri, and Mobile Tauri versions, including prerelease/build metadata |
+| `validate-release-image-tags.sh` | Rejects incomplete, duplicate, cross-repository, or wrong-version Docker tag sets before any release push |
 | `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |
 | `smoke-web-runtime-paths.sh` | Prints the repeatable CMD-007A/CMD-007B browser runtime smoke command sequence |
 | `smoke-runtime-happy-path.sh` | Runs temporary-repo Axum/WebSocket happy-path tests for switch, handshake, writer, edit, open, history, and reconnect bootstrap |
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
-| `smoke-docker-release.sh` | Builds and runs the Docker release image smoke test when Docker is available |
-| `smoke-docker-multiclient.sh` | Builds and runs one Docker server, then drives multiple isolated Playwright browser clients |
+| `smoke-docker-release.sh` | Builds and runs the Docker release image smoke, or verifies an explicitly supplied existing candidate image without rebuilding |
+| `smoke-docker-multiclient.sh` | Builds or reuses one Docker candidate image, then drives multiple isolated Playwright browser clients |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
 | `lib/android-tools.sh` | Shared Android SDK / Android Studio JBR discovery helpers for local and target-host Android gates |
 

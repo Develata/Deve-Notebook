@@ -27,13 +27,22 @@
 - `Immediate Result`: semver and `latest` tags are derived for the image
 - `Application Entry`: `.github/workflows/release.yml`
 
+### `op.release.publish.smoke-candidate-image`
+
+- `Name`: `Build And Smoke Candidate Image`
+- `Surface`: `github-actions`
+- `Trigger`: docker build step creates one local candidate image
+- `Preconditions`: registry auth and metadata steps succeeded
+- `Immediate Result`: runtime/login and multi-client browser smokes pass against the same recorded image ID without rebuilding
+- `Application Entry`: `.github/workflows/release.yml`
+
 ### `op.release.publish.push-image`
 
-- `Name`: `Build And Push Release Image`
+- `Name`: `Tag Push And Verify Release Image`
 - `Surface`: `github-actions`
-- `Trigger`: docker build-push step runs
-- `Preconditions`: registry auth and metadata steps succeeded
-- `Immediate Result`: release container artifact is published
+- `Trigger`: exact candidate image smokes succeed
+- `Preconditions`: candidate image ID remains unchanged
+- `Immediate Result`: version and latest tags are pushed and both remote references resolve to the same manifest digest
 - `Application Entry`: `.github/workflows/release.yml`
 
 ### `op.release.publish.build-native-artifacts`
@@ -58,7 +67,7 @@
 
 1. Release workflow enters the publish stage after quality gates pass.
 2. Instruction interface is the docker job and its ordered steps.
-3. Flow coordination authenticates registry access, computes tags, pushes the container, calls native delivery, waits for every required native build, and publishes the native set once.
+3. Flow coordination authenticates registry access, computes tags, builds and smokes one candidate image, pushes and verifies its two remote tags, calls native delivery, waits for every required native build, and publishes the native set once.
 4. Execution domains are release automation, registry auth, container delivery, native package build, and GitHub Release publication.
 
 ## Notes

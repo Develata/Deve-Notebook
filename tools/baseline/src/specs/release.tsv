@@ -20,6 +20,9 @@ absent	.github/workflows/release.yml	secrets: inherit
 contains	.github/workflows/release.yml	ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 contains	.github/workflows/release.yml	cargo clippy --locked --all-targets -- -D warnings
 contains	.github/workflows/release.yml	actions/checkout@v6
+contains	.github/workflows/release.yml	Match tag to checked-out package versions
+contains	.github/workflows/release.yml	bash scripts/check-release-version-match.sh "$GITHUB_REF_NAME"
+contains	.github/workflows/release.yml	Test release smoke harnesses
 contains	.github/workflows/release.yml	actions/setup-node@v6
 contains	.github/workflows/release.yml	node-version: 24
 contains	.github/workflows/release.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
@@ -78,6 +81,15 @@ contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_win
 contains	.github/workflows/release.yml	docker/build-push-action@v6
 contains	.github/workflows/release.yml	platforms: linux/amd64
 contains	.github/workflows/release.yml	type=raw,value=latest
+contains	.github/workflows/release.yml	Build release candidate image once
+contains	.github/workflows/release.yml	push: false
+contains	.github/workflows/release.yml	DEVE_DOCKER_SMOKE_SKIP_BUILD: '1'
+contains	.github/workflows/release.yml	DEVE_DOCKER_MULTI_SKIP_BUILD: '1'
+contains	.github/workflows/release.yml	Verify candidate identity after smokes
+contains	.github/workflows/release.yml	docker buildx imagetools inspect
+contains	.github/workflows/release.yml	Validate tags and push verified candidate image
+contains	.github/workflows/release.yml	flavor: latest=false
+contains	.github/workflows/release.yml	validate-release-image-tags.sh
 contains	.github/workflows/check.yml	name: Check
 contains	.github/workflows/check.yml	branches: [main]
 contains	.github/workflows/check.yml	pull_request:
@@ -387,6 +399,8 @@ contains	scripts/smoke-docker-release.sh	run_deve_baseline "$ROOT_DIR" "docker-s
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_PORT:-3102
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_BIN
 contains	scripts/smoke-docker-release.sh	docker_cmd build -t
+contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_SKIP_BUILD
+contains	scripts/smoke-docker-release.sh	docker_cmd image inspect "$IMAGE"
 contains	scripts/smoke-docker-release.sh	docker_cmd run -d
 contains	scripts/smoke-docker-release.sh	docker_run_without_msys_arg_conversion docker_cmd run -d
 contains	scripts/smoke-docker-release.sh	source "$ROOT_DIR/scripts/lib/docker-msys.sh"
@@ -409,6 +423,9 @@ contains	scripts/smoke-docker-release.sh	DEVE_RUNTIME_MIN_LOCAL_REPOS=1
 contains	scripts/smoke-docker-multiclient.sh	docker-compose.multiclient.yml
 contains	scripts/smoke-docker-multiclient.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-multiclient-smoke" "multiclient"
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_KEEP
+contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_SKIP_BUILD
+contains	scripts/smoke-docker-multiclient.sh	docker_compose up -d --no-build
+contains	docker-compose.multiclient.yml	image: ${DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient}
 contains	scripts/smoke-docker-multiclient.sh	deve-docker-multiclient-playwright
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" install --no-audit --no-fund "$PLAYWRIGHT_PACKAGE"
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" exec -- playwright install chromium
@@ -1005,6 +1022,8 @@ contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- 
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
 contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_bridge_smoke
 contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_unavailable_native_session_smoke
+contains	scripts/check-desktop-installer-smoke.sh	run_installed_packaged_ui_smoke
+contains	scripts/check-desktop-installer-smoke.sh	check-desktop-packaged-ui-smoke.ps1
 contains	scripts/check-desktop-local-backend-lifecycle.ps1	ForceGitUnavailable
 contains	scripts/check-desktop-installer-smoke.sh	check-desktop-installed-git-bridge-smoke.ps1
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	desktop-installed-git-bridge-smoke: ok
@@ -1014,3 +1033,11 @@ contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cl
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit push --repo default --remote origin --branch $branch
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_installer_smoke_uses_local_bare_git_remote true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_git_unavailable_does_not_rollback_notegit_commit true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_packaged_ui_uses_installed_binary_and_real_webview true
+contains	scripts/check-release-version-match.sh	release-version-match: ok
+contains	scripts/check-release-version-match.test.sh	release-version-match-test: ok
+contains	scripts/validate-release-image-tags.sh	expected exactly version and latest image tags before push
+contains	scripts/validate-release-image-tags.test.sh	release-image-tags-test: ok
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
+contains	scripts/smoke-desktop-packaged-ui.mjs	desktop-packaged-ui-webview: ok
+contains	scripts/smoke-desktop-packaged-ui.test.mjs	direct execution fails closed without a CDP endpoint

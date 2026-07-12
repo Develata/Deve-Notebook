@@ -9,6 +9,13 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
+fn begin_async_completion<T>(signal: WriteSignal<T>, value: T) -> bool
+where
+    T: Send + Sync + 'static,
+{
+    signal.try_set(value).is_none()
+}
+
 /// Native host-local backend selector. In regular browsers this section is
 /// visible but unavailable; native shells provide the invoke bridge.
 #[component]
@@ -22,7 +29,9 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
 
     spawn_local(async move {
         let config: crate::api::NativeBackendConfig = crate::api::get_native_backend_config().await;
-        set_available.set(config.available);
+        if !begin_async_completion(set_available, config.available) {
+            return;
+        }
         if config.available {
             set_mode.set(config.mode);
             set_remote_draft.set(config.remote_url);
@@ -53,7 +62,9 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         spawn_local(async move {
             let result: crate::api::NativeBackendValidation =
                 crate::api::save_native_backend_remote(draft).await;
-            set_busy.set(false);
+            if !begin_async_completion(set_busy, false) {
+                return;
+            }
             if !result.available {
                 set_available.set(false);
                 set_remote_validation_succeeded.set(false);
@@ -90,7 +101,9 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         spawn_local(async move {
             let config: crate::api::NativeBackendConfig =
                 crate::api::switch_native_backend_local().await;
-            set_busy.set(false);
+            if !begin_async_completion(set_busy, false) {
+                return;
+            }
             if config.available {
                 set_available.set(true);
                 set_mode.set("local".to_string());
@@ -214,5 +227,33 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 </div>
             </Show>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::begin_async_completion;
+    use leptos::prelude::*;
+
+    #[test]
+    fn async_completion_discards_results_after_settings_owner_is_disposed() {
+        let set_value = {
+            let owner = leptos::reactive::owner::Owner::new();
+            owner.set();
+            let (_, set_value) = signal(false);
+            set_value
+        };
+
+        assert!(!begin_async_completion(set_value, true));
+    }
+
+    #[test]
+    fn async_completion_updates_live_settings_signal() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let (value, set_value) = signal(false);
+            assert!(begin_async_completion(set_value, true));
+            assert!(value.get_untracked());
+        });
     }
 }

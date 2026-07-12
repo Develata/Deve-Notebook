@@ -4,6 +4,7 @@
 
 services:
   deve-server:
+    image: ${DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient}
     build:
       context: .
       dockerfile: Dockerfile

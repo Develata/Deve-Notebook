@@ -24,6 +24,9 @@ jobs:
           fi
 
       - uses: actions/checkout@v6
+
+      - name: Match tag to checked-out package versions
+        run: bash scripts/check-release-version-match.sh "$GITHUB_REF_NAME"
       
       - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@stable
@@ -35,6 +38,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
+
+      - name: Test release smoke harnesses
+        run: |
+          bash scripts/check-release-version-match.test.sh
+          bash scripts/validate-release-image-tags.test.sh
+          node --test scripts/smoke-docker-existing-image.test.mjs
+          node --test scripts/smoke-desktop-packaged-ui.test.mjs
       
       - name: Cache cargo registry and build
         uses: actions/cache@v6
@@ -87,6 +97,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: test
+    env:
+      RELEASE_CANDIDATE_IMAGE: deve-notebook:release-candidate-${{ github.run_id }}-${{ github.run_attempt }}
     permissions:
       contents: read
       packages: write
@@ -108,20 +120,84 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
       
-      - name: Build and push Docker image
+      - name: Build release candidate image once
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          load: true
+          push: false
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.RELEASE_CANDIDATE_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Record release candidate image ID
+        id: candidate
+        shell: bash
+        run: echo "image_id=$(docker image inspect --format '{{.Id}}' "$RELEASE_CANDIDATE_IMAGE")" >>"$GITHUB_OUTPUT"
+
+      - name: Smoke exact release candidate image
+        env:
+          DEVE_DOCKER_SMOKE_REQUIRED: '1'
+          DEVE_DOCKER_SMOKE_SKIP_BUILD: '1'
+          DEVE_DOCKER_SMOKE_IMAGE: ${{ env.RELEASE_CANDIDATE_IMAGE }}
+        run: scripts/smoke-docker-release.sh
+
+      - name: Browser-smoke exact release candidate image
+        env:
+          DEVE_DOCKER_MULTI_REQUIRED: '1'
+          DEVE_DOCKER_MULTI_SKIP_BUILD: '1'
+          DEVE_DOCKER_MULTI_IMAGE: ${{ env.RELEASE_CANDIDATE_IMAGE }}
+        run: scripts/smoke-docker-multiclient.sh
+
+      - name: Verify candidate identity after smokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          observed="$(docker image inspect --format '{{.Id}}' "$RELEASE_CANDIDATE_IMAGE")"
+          [[ "$observed" == "${{ steps.candidate.outputs.image_id }}" ]] || {
+            echo "release candidate image changed during smoke: expected=${{ steps.candidate.outputs.image_id }} observed=$observed" >&2
+            exit 1
+          }
+
+      - name: Validate tags and push verified candidate image
+        id: pushed_tags
+        env:
+          RELEASE_IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tags < <(printf '%s\n' "$RELEASE_IMAGE_TAGS" | sed '/^$/d')
+          mapfile -t validated_tags < <(bash scripts/validate-release-image-tags.sh "$RELEASE_VERSION" "${tags[@]}")
+          [[ "${#validated_tags[@]}" -eq 2 ]] || { echo "release tag validator returned an invalid result" >&2; exit 1; }
+          version_tag="${validated_tags[0]}"
+          latest_tag="${validated_tags[1]}"
+          echo "latest_tag=$latest_tag" >>"$GITHUB_OUTPUT"
+          echo "version_tag=$version_tag" >>"$GITHUB_OUTPUT"
+          for tag in "$version_tag" "$latest_tag"; do
+            docker tag "$RELEASE_CANDIDATE_IMAGE" "$tag"
+            docker push "$tag"
+          done
+
+      - name: Verify remote release tag digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_tag='${{ steps.pushed_tags.outputs.version_tag }}'
+          latest_tag='${{ steps.pushed_tags.outputs.latest_tag }}'
+          first_digest="$(docker buildx imagetools inspect "$version_tag" --format '{{.Manifest.Digest}}')"
+          second_digest="$(docker buildx imagetools inspect "$latest_tag" --format '{{.Manifest.Digest}}')"
+          [[ -n "$first_digest" && "$first_digest" == "$second_digest" ]] || {
+            echo "remote release tag digest mismatch: $version_tag=$first_digest $latest_tag=$second_digest" >&2
+            exit 1
+          }
 
   native:
     needs: docker

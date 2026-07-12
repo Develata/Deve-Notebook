@@ -88,7 +88,7 @@ pub(crate) fn blur_active_element_inside(root: &Element) -> bool {
 
 pub(crate) fn focus_input_next_frame(input_ref: NodeRef<leptos::html::Input>) {
     request_animation_frame(move || {
-        if let Some(input) = input_ref.get_untracked() {
+        if let Some(input) = input_ref.try_get_untracked().flatten() {
             let _ = input.focus();
         }
     });
@@ -96,7 +96,7 @@ pub(crate) fn focus_input_next_frame(input_ref: NodeRef<leptos::html::Input>) {
 
 pub(crate) fn focus_button_next_frame(button_ref: NodeRef<leptos::html::Button>) {
     request_animation_frame(move || {
-        if let Some(button) = button_ref.get_untracked() {
+        if let Some(button) = button_ref.try_get_untracked().flatten() {
             let _ = button.focus();
         }
     });
@@ -111,15 +111,25 @@ pub(crate) fn attach_modal_focus_restore_effect(
 
     Effect::new(move |_| {
         let open = is_open();
-        let was_open = last_open.get_value();
-        last_open.set_value(open);
+        let Some(was_open) = last_open.try_get_value() else {
+            return;
+        };
+        if last_open.try_set_value(open).is_some() {
+            return;
+        }
 
         if open && !was_open {
-            previous_focus.set_value(active_element());
+            if previous_focus.try_set_value(active_element()).is_some() {
+                return;
+            }
             focus_button_next_frame(initial_focus_ref);
         } else if !open && was_open {
-            let previous = previous_focus.get_value();
-            previous_focus.set_value(None);
+            let Some(previous) = previous_focus.try_get_value() else {
+                return;
+            };
+            if previous_focus.try_set_value(None).is_some() {
+                return;
+            }
             restore_focus_next_frame(previous);
         }
     });
@@ -135,19 +145,32 @@ pub(crate) fn attach_modal_focus_restore_effect_with_fallback(
 
     Effect::new(move |_| {
         let open = is_open();
-        let was_open = last_open.get_value();
-        last_open.set_value(open);
+        let Some(was_open) = last_open.try_get_value() else {
+            return;
+        };
+        if last_open.try_set_value(open).is_some() {
+            return;
+        }
 
         if open && !was_open {
-            previous_focus.set_value(active_element());
+            if previous_focus.try_set_value(active_element()).is_some() {
+                return;
+            }
             focus_button_next_frame(initial_focus_ref);
         } else if !open && was_open {
-            let previous = previous_focus.get_value();
-            previous_focus.set_value(None);
-            let fallback = fallback_focus_ref.get_untracked().and_then(|button| {
-                let button: &HtmlElement = &button;
-                button.clone().dyn_into::<Element>().ok()
-            });
+            let Some(previous) = previous_focus.try_get_value() else {
+                return;
+            };
+            if previous_focus.try_set_value(None).is_some() {
+                return;
+            }
+            let fallback = fallback_focus_ref
+                .try_get_untracked()
+                .flatten()
+                .and_then(|button| {
+                    let button: &HtmlElement = &button;
+                    button.clone().dyn_into::<Element>().ok()
+                });
             restore_focus_next_frame_with_fallback(previous, fallback);
         }
     });
@@ -190,7 +213,7 @@ pub(crate) fn handle_focus_trap_keydown(
     if !should_trap_tab_key(&ev.key(), ev.ctrl_key(), ev.meta_key(), ev.alt_key()) {
         return false;
     }
-    let Some(panel) = panel_ref.get_untracked() else {
+    let Some(panel) = panel_ref.try_get_untracked().flatten() else {
         return false;
     };
     let focusable = focusable_elements(&panel);

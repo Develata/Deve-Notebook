@@ -19,8 +19,12 @@ pub fn attach_focus_effect(
 
     Effect::new(move |_| {
         let open = show.get();
-        let was_open = last_show.get_value();
-        last_show.set_value(open);
+        let Some(was_open) = last_show.try_get_value() else {
+            return;
+        };
+        if last_show.try_set_value(open).is_some() {
+            return;
+        }
 
         if open {
             // 打开时重置查询并聚焦搜索框。
@@ -31,11 +35,15 @@ pub fn attach_focus_effect(
             set_query.set(cleaned);
             set_selected_index.set(0);
 
-            if !was_open {
-                previous_focus.set_value(focus_scope::active_element());
+            if !was_open
+                && previous_focus
+                    .try_set_value(focus_scope::active_element())
+                    .is_some()
+            {
+                return;
             }
             request_animation_frame(move || {
-                if let Some(el) = input_ref.get_untracked() {
+                if let Some(el) = input_ref.try_get_untracked().flatten() {
                     let _ = el.focus();
                     if has_cursor {
                         let _ = el.set_selection_range(cursor_pos as u32, cursor_pos as u32);
@@ -43,8 +51,12 @@ pub fn attach_focus_effect(
                 }
             });
         } else if was_open {
-            let previous = previous_focus.get_value();
-            previous_focus.set_value(None);
+            let Some(previous) = previous_focus.try_get_value() else {
+                return;
+            };
+            if previous_focus.try_set_value(None).is_some() {
+                return;
+            }
             focus_scope::restore_focus_next_frame(previous);
         }
     });

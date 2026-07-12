@@ -22,6 +22,20 @@ fn submitted_max_document_tabs(raw: &str) -> usize {
         .unwrap_or(DEFAULT_MAX_DOCUMENT_TABS)
 }
 
+#[derive(Clone, Copy)]
+struct MaxDocumentTabsCommit {
+    set_committed: WriteSignal<usize>,
+    set_draft: WriteSignal<String>,
+}
+
+impl MaxDocumentTabsCommit {
+    fn run(self, raw: String) {
+        let next = submitted_max_document_tabs(&raw);
+        self.set_committed.set(next);
+        self.set_draft.set(next.to_string());
+    }
+}
+
 /// Browser-local theme preference.
 #[component]
 pub fn AppearanceSection(locale: RwSignal<Locale>) -> impl IntoView {
@@ -94,11 +108,10 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
             set_max_document_tabs_draft.set(committed);
         }
     });
-    let commit_max_document_tabs = Callback::new(move |raw: String| {
-        let next = submitted_max_document_tabs(&raw);
-        set_max_document_tabs.set(next);
-        set_max_document_tabs_draft.set(next.to_string());
-    });
+    let commit_max_document_tabs = MaxDocumentTabsCommit {
+        set_committed: set_max_document_tabs,
+        set_draft: set_max_document_tabs_draft,
+    };
 
     view! {
         <div class="bg-sidebar p-4 rounded-lg border border-default">
@@ -177,10 +190,10 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
                         prop:value=move || max_document_tabs_draft.get()
                         on:input=move |ev| set_max_document_tabs_draft.set(event_target_value(&ev))
                         on:change=move |ev| commit_max_document_tabs.run(event_target_value(&ev))
-                        on:blur=move |_| commit_max_document_tabs.run(max_document_tabs_draft.get_untracked())
+                        on:blur=move |ev| commit_max_document_tabs.run(event_target_value(&ev))
                         on:keydown=move |ev| {
                             if ev.key() == "Enter" {
-                                commit_max_document_tabs.run(max_document_tabs_draft.get_untracked());
+                                commit_max_document_tabs.run(event_target_value(&ev));
                             }
                         }
                     />

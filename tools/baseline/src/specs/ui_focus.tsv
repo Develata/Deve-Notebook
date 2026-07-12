@@ -31,7 +31,9 @@ contains	apps/web/src/components/desktop_layout/content.rs	aria-hidden=move || s
 contains	apps/web/src/components/desktop_chat_panel.rs	focus_scope::blur_active_element_inside
 contains	apps/web/src/components/desktop_chat_panel.rs	surface_hidden
 contains	apps/web/src/components/desktop_chat_panel.rs	aria-hidden=move || surface_hidden.get().to_string()
-contains	apps/web/src/components/search_box/effects.rs	previous_focus.set_value(focus_scope::active_element())
+contains	apps/web/src/components/search_box/effects.rs	.try_set_value(focus_scope::active_element())
+contains	apps/web/src/components/search_box/effects.rs	previous_focus.try_get_value()
+contains	apps/web/src/components/search_box/effects.rs	previous_focus.try_set_value(None)
 contains	apps/web/src/components/search_box/effects.rs	focus_scope::restore_focus_next_frame(previous)
 contains	apps/web/src/components/search_box/ui.rs	role="dialog"
 contains	apps/web/src/components/search_box/ui.rs	aria-modal="true"

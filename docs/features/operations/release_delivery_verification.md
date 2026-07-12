@@ -33,7 +33,7 @@
 - `Surface`: `docker`
 - `Trigger`: deployer validates published server image
 - `Preconditions`: Docker runtime and release image are available
-- `Immediate Result`: current container delivery path can be smoke-tested
+- `Immediate Result`: current container delivery path can be smoke-tested from an existing image without rebuilding; release automation can verify version/latest resolve to one manifest digest
 - `Application Entry`: `Dockerfile`, `docker-compose.yml`
 
 ## Response Flow

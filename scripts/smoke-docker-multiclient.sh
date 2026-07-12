@@ -15,6 +15,8 @@ BASE_ORIGIN="${BASE_URL%/}"
 REQUIRED="${DEVE_DOCKER_MULTI_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_MULTI_KEEP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
+IMAGE="${DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient}"
+SKIP_BUILD="${DEVE_DOCKER_MULTI_SKIP_BUILD:-0}"
 AUTH_SECRET="${DEVE_DOCKER_MULTI_AUTH_SECRET:-deve_docker_multi_secret_32_bytes_ok!!}"
 AUTH_USER="${DEVE_DOCKER_MULTI_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_MULTI_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
@@ -44,6 +46,7 @@ docker_compose() {
   AUTH_USER="$AUTH_USER" \
   AUTH_PASS="$AUTH_PASS" \
   DEVE_DOCKER_MULTI_PORT="$HOST_PORT" \
+  DEVE_DOCKER_MULTI_IMAGE="$IMAGE" \
     docker_cmd compose -f "$COMPOSE_FILE" -p "$PROJECT" "$@"
 }
 
@@ -147,7 +150,13 @@ docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachab
 
 trap cleanup EXIT
 
-docker_compose up -d --build
+if [[ "$SKIP_BUILD" == "1" || "$SKIP_BUILD" == "true" ]]; then
+  docker_cmd image inspect "$IMAGE" >/dev/null 2>&1 || fail "existing image not found: $IMAGE"
+  echo "docker-multiclient-smoke: using existing image $IMAGE"
+  docker_compose up -d --no-build
+else
+  docker_compose up -d --build
+fi
 
 if ! wait_for_server; then
   diagnose

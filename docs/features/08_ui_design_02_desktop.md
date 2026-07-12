@@ -46,11 +46,13 @@
 - service 端口、session secret 与 P2P token material 不应出现在 URL、日志、Web localStorage 或可见 bootstrap payload。
 - Desktop host 优先验证显式 `DEVE_GIT_EXECUTABLE`；未配置时可从宿主绝对 PATH entries/PATHEXT 解析并 canonicalize Git。sidecar 只接收该绝对路径或互斥的 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不继承完整 PATH/PATHEXT，也不在 unavailable 时回退 executable search。
 - 显式 Git 路径无效时不回退；Git 缺失只让 mirror/import/export/push unavailable/out-of-sync，不阻断 LocalBackend、native session 或 NoteGit commit。
+- Windows 已安装包的真实 UI smoke 使用隔离数据根、隔离 WebView2 profile 与随机 CDP port 驱动 native WebView；必须完成创建、编辑、commit/history、Settings 键盘焦点约束，并确认关闭后无孤儿 sidecar。该 smoke 仍只提交 UI intent，不能绕过后端 authority。
 
 ## 非目标
 
 - 当前阶段不在本章定义 Tauri 原生托盘、系统菜单等平台整合细节。
 - 当前阶段不要求 Chrome MCP 覆盖真正的原生窗口管理能力。
+- 快速 startup marker 只属于 entrypoint probe，不单独构成 packaged UI 可用证据。
 - 当前阶段不把 Desktop native packaging 解释为签名 release readiness；LocalBackend 与 RemoteBrowser 仍需各自独立 smoke 验收。
 
 ## Chrome MCP 验收实例

@@ -55,7 +55,7 @@ CI/CD 基于 GitHub Actions。
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
-    1.  **Tag Gate**: GitHub 的 `v*` glob 只负责触发；workflow 的第一个 step 必须按 SemVer 2.0.0（含可选 prerelease/build metadata）验证 `GITHUB_REF_NAME`，非 SemVer `v*` tag 必须在 checkout、build 或 publish 前 fail-closed。
+    1.  **Tag Gate**: GitHub 的 `v*` glob 只负责触发；workflow 的第一个 step 必须按 SemVer 2.0.0（含可选 prerelease/build metadata）验证 `GITHUB_REF_NAME`，非 SemVer `v*` tag 必须在 checkout、build 或 publish 前 fail-closed。checkout 后必须把去掉单个前导 `v` 的 tag 与 workspace package version、Desktop Tauri version、Mobile Tauri version 做逐字节 exact compare；prerelease 与 build metadata 不得被归一化或忽略，任一不一致都必须在 build/publish 前失败。
     2.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, and `cargo test --locked`. The native process adapter gate is scoped with `DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0` in `release.yml`, so it verifies no-Tauri/process authority boundaries without compiling native-packaging dependencies.
         Dependency audit belongs to this gate: `scripts/check-release-audit-gate.sh`
         **MUST** fail on cargo/npm vulnerabilities and **MUST** compare every
@@ -67,12 +67,14 @@ CI/CD 基于 GitHub Actions。
         warning kind, rationale, replacement route, and whether first-tag
         readiness requires a separate USER decision or replacement before
         public tag.
-    2.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。
-    3.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
-    4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
+    3.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。release job 只构建一次本地 candidate image，并记录其 image ID。
+    4.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
+    5.  **Exact Image Smoke**: runtime/login smoke 与 Playwright 双客户端 smoke 必须复用同一 candidate image，禁止在 smoke 内重新 build；全部 smoke 后 image ID 必须仍与构建时一致。
+    6.  **Docker Push**: 仅在 exact image smoke 成功后，才把 candidate image 赋予 version 与 `latest` tag 并 push。
         *   **Registry**: GHCR (`ghcr.io`).
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
+        *   **Digest Verification**: push 后必须从 registry 解析 version 与 `latest`，两者 manifest digest 必须完全相同；不一致时 release job 失败。
 
 `release-native.yml` 是 reusable native delivery track，不得独立监听 `v*` tag。
 `release.yml` 的 quality gates 与 Docker publish 成功后才可调用它。Windows
@@ -134,6 +136,12 @@ Windows installer/package smoke 必须使用已安装 Desktop bundle 及其 side
 Projection Workspace 与本地 bare Git remote 验证 NoteGit commit、mirror、import/export
 和 push；不得依赖公网 remote。该 smoke 还必须证明 Git 不存在时 LocalBackend 仍能启动，
 且已成立的 NoteGit commit 不会因 mirror unavailable 被回滚。
+
+Windows packaged UI evidence 必须独立于快速 startup marker probe。它使用已安装的 Desktop
+可执行文件、临时 `DEVE_DESKTOP_DATA_DIR`、隔离 WebView2 user-data 与随机 CDP 端口，
+通过真实 native WebView 完成 native session、创建文档、编辑、NoteGit commit/history 与
+Settings 焦点约束，并在关闭窗口后证明 sidecar 无孤儿进程。该 CDP automation 只操作已安装
+壳层所承载的 Web UI，不授予脚本或 Desktop shell 任何 ledger / Source Control authority。
 
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
@@ -241,7 +249,7 @@ services:
 *   **Builder**: `rust:1.92-bookworm` (Multi-stage build)，包含 Node.js、固定版本的 Cargo-installed tools（当前为 `trunk`）与 `wasm32-unknown-unknown` target。
 *   **Optimization**: Docker 发布基线 **MUST** 使用 locked direct release build；依赖缓存层属于可选构建优化，只有在 locked CI 与 Docker smoke 通过后才可进入发布基线。
 *   **Frontend Delivery**: runtime image 只交付单个嵌入前端静态资源的 `deve_cli` 二进制；正常 Docker 部署 **MUST NOT** 依赖 `/app/static` 或 `DEVE_STATIC_DIR`。嵌入或显式静态根的 `index.html` **MUST NOT** 包含 Trunk development live-reload 标记；显式 `DEVE_STATIC_DIR` 命中该类 index 时 fail-closed，嵌入式前端命中该类 index 时不得被报告或服务为 `embedded-frontend`，发布 smoke 不能只依赖 `/api/node/role` 的 `api-only`，还必须用浏览器入口证明 release frontend 可用。
-*   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` **MUST** 支持 `DEVE_DOCKER_BIN` 以覆盖非默认 Docker CLI 路径，并在 Docker 缺失或不可达时输出 Docker binary/context 诊断。
+*   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` **MUST** 支持 `DEVE_DOCKER_BIN` 以覆盖非默认 Docker CLI 路径，并在 Docker 缺失或不可达时输出 Docker binary/context 诊断。release 与 multiclient smoke 还必须支持显式 existing-image 模式；该模式要求 image 已存在、禁止重新 build，并使 release workflow 能证明运行与浏览器 smoke 覆盖的是即将发布的同一 image ID。
 
 ### 5.4 Runtime Observability {#runtime-observability}
 

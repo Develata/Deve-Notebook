@@ -40,6 +40,7 @@ Desktop native adapter 是进程与平台壳层，不是业务 authority；第�
 *   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   Desktop host 若显式收到 `DEVE_GIT_EXECUTABLE`，必须先验证其为 absolute、存在的 ordinary file 并 canonicalize；显式值无效时不得回退。未显式配置时，host **MAY** 从自己的绝对 `PATH` entries 与 Windows `PATHEXT` 解析 Git。启动 sidecar 时必须二选一传递 canonical `DEVE_GIT_EXECUTABLE` 或内部 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不得把宿主完整 `PATH` / `PATHEXT` 加入 allowlist；unavailable 状态不得退回普通 executable search。
 *   Git 不可用不得阻断 `LocalBackend` service、native session 或 NoteGit ledger commit；Git mirror/import/export/push 只能进入 unavailable/out-of-sync 诊断。该绑定是 shell-to-sidecar process contract，不授予 Desktop shell `.git` 或 Source Control authority。
+*   Windows packaged UI gate 必须启动已安装的 Desktop binary，而不是仅探测 marker。gate 使用临时 app-private data root、隔离 WebView2 user-data 与随机 CDP port，必须通过真实 WebView 完成 native session、create/edit、NoteGit commit/history 和 Settings keyboard focus trap，并在窗口关闭后确认受控 sidecar 已退出。CDP 只驱动前端 intent；所有业务写入仍经过 server/core writer gate。
 *   `RemoteBrowser { https_origin }` 是显式远端模式，Desktop 可通过启动参数 `--remote-url https://host[:port]` 或诊断/脚本环境变量 `DEVE_NATIVE_REMOTE_URL` 选择。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
 *   Desktop Settings 必须通过 native backend bridge 读写 host-local backend preference：默认 `local`；选择 `remote` 时必须先由 Desktop native 侧探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。
 *   Desktop `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。CLI `--remote-url` 与 `DEVE_NATIVE_REMOTE_URL` 仍只作为诊断/脚本覆盖项，优先于持久 preference，但不得回写 preference。
@@ -103,6 +104,7 @@ Idle
     `deve_cli serve --native-loopback` 变成孤儿后端；其它 target-host 在实现等价平台约束前不得声明同等级别的异常终止保护。
 *   supervisor 的 `offline.reason` 是 native 内部诊断；recovery bootstrap 仍不得把 reason、token、secret 或 repo 写权限暴露给 Web。
 *   supervisor 不得写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
+*   startup marker probe 只证明 package entrypoint 可执行，不能单独作为 packaged UI 可用性证据；Windows target-host 必须另有真实窗口/WebView gate。
 
 **Adapter inputs**:
 
