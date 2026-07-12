@@ -5,12 +5,14 @@
 use std::path::{Path, PathBuf};
 
 use deve_core::config::AppProfile;
+use deve_core::git_bridge::{DEVE_GIT_EXECUTABLE_ENV, DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV};
 use deve_core::native_adapter::{
     NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeProcessBindHints, NativeProcessEnvBinding,
     NativeProcessPathResolution, NativeProcessSpawnSpec, native_tauri_allowed_origins,
 };
 use deve_core::security::auth::password;
 
+use super::git_executable::{TrustedGitExecutable, resolve_trusted_git_executable_from_env};
 use super::{DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointInput};
 
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
@@ -74,6 +76,22 @@ pub(super) fn build_spawn_spec(
     for binding in platform_env {
         env_allowlist.push(binding.key.clone());
         env.push(binding);
+    }
+    match resolve_trusted_git_executable_from_env() {
+        TrustedGitExecutable::Bound(path) if path.to_str().is_some() => {
+            env_allowlist.push(DEVE_GIT_EXECUTABLE_ENV.to_string());
+            env.push(NativeProcessEnvBinding {
+                key: DEVE_GIT_EXECUTABLE_ENV.to_string(),
+                value: path.to_string_lossy().into_owned(),
+            });
+        }
+        TrustedGitExecutable::Bound(_) | TrustedGitExecutable::Unavailable => {
+            env_allowlist.push(DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV.to_string());
+            env.push(NativeProcessEnvBinding {
+                key: DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV.to_string(),
+                value: "1".to_string(),
+            });
+        }
     }
     Ok(NativeProcessSpawnSpec {
         executable,

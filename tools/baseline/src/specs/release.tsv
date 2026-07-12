@@ -1003,3 +1003,14 @@ contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- 
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-native-session-package-smoke.sh
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-installer-smoke
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
+contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_bridge_smoke
+contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_unavailable_native_session_smoke
+contains	scripts/check-desktop-local-backend-lifecycle.ps1	ForceGitUnavailable
+contains	scripts/check-desktop-installer-smoke.sh	check-desktop-installed-git-bridge-smoke.ps1
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	desktop-installed-git-bridge-smoke: ok
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$failureReport = (Invoke-Checked $cli ngit export --repo default)
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	ngit mirror --repo default --retry-out-of-sync
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit import --repo default --apply
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit push --repo default --remote origin --branch $branch
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_installer_smoke_uses_local_bare_git_remote true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_git_unavailable_does_not_rollback_notegit_commit true

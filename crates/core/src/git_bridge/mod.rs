@@ -27,6 +27,7 @@ pub use error::{
     GitMirrorStatusError, GitMirrorStatusResult, GitMirrorStoreError, GitMirrorStoreResult,
 };
 pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};
+pub use git_cmd::{DEVE_GIT_EXECUTABLE_ENV, DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV};
 pub use import_apply::{GitImportApplyReport, apply_import};
 pub use import_plan::{GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, plan_import};
 pub use push::{GitMirrorPushBlocker, GitMirrorPushOptions, GitMirrorPushReport, push_mirror};

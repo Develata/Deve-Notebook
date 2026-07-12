@@ -13,6 +13,7 @@ use deve_core::native_adapter::{
 };
 use thiserror::Error;
 
+mod git_executable;
 mod spawn_spec;
 
 use spawn_spec::build_spawn_spec;

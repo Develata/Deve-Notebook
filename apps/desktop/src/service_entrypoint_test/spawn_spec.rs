@@ -1,3 +1,4 @@
+use deve_core::git_bridge::{DEVE_GIT_EXECUTABLE_ENV, DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV};
 use deve_core::native_adapter::{
     NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, native_tauri_allowed_origins,
 };
@@ -47,6 +48,8 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert!(spec.env_allowlist.contains(&"AUTH_USER".to_string()));
     assert!(spec.env_allowlist.contains(&"ALLOWED_ORIGINS".to_string()));
     assert!(spec.env_allowlist.contains(&"DEVE_PLUGIN_DIR".to_string()));
+    assert!(!spec.env_allowlist.contains(&"PATH".to_string()));
+    assert!(!spec.env_allowlist.contains(&"PATHEXT".to_string()));
     assert!(
         !spec
             .env_allowlist
@@ -104,6 +107,29 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
             .as_deref()
     );
     assert_eq!(spec.profile, "low-spec");
+    if let Some(git_binding) = spec
+        .env
+        .iter()
+        .find(|binding| binding.key == DEVE_GIT_EXECUTABLE_ENV)
+    {
+        let path = std::path::Path::new(&git_binding.value);
+        assert!(path.is_absolute());
+        assert!(path.is_file());
+        assert_eq!(std::fs::canonicalize(path).ok().as_deref(), Some(path));
+        assert!(
+            spec.env_allowlist
+                .contains(&DEVE_GIT_EXECUTABLE_ENV.to_string())
+        );
+    }
+    let git_bound = spec
+        .env
+        .iter()
+        .any(|binding| binding.key == DEVE_GIT_EXECUTABLE_ENV);
+    let git_unavailable = spec
+        .env
+        .iter()
+        .any(|binding| binding.key == DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV && binding.value == "1");
+    assert_ne!(git_bound, git_unavailable);
     assert!(plan.health_probe_required_before_bootstrap);
     assert!(plan.session_handoff_required_before_bootstrap);
     assert!(!plan.opens_authority_write_path);

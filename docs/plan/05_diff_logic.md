@@ -124,6 +124,15 @@ DeveStaged
 - Git mirror 写命令在写 pending/import、`.git` mirror 或发布 mirror HEAD 之前
   **MUST** 复用本地 Projection Workspace identity gate；
   Projection Locator 或 `.notegit` identity marker 破损时必须 fail-closed。
+- Git bridge 进程在 `DEVE_GIT_EXECUTABLE` 存在时 **MUST** 只执行该变量指向的
+  canonical absolute ordinary file；相对路径、不存在路径或目录必须 fail-closed，
+  不得再回退到 `PATH`。普通 CLI 未设置该内部绑定时 **MAY** 继续按自身 `PATH`
+  解析 `git`。Desktop shell 的受控 sidecar 绑定规则见 Desktop native contract。
+- Git executable 缺失或无效只允许把 mirror/import/export/push 标记为
+  unavailable 或 `GitMirrorOutOfSync`；它 **MUST NOT** 阻断 LocalBackend 启动、
+  撤销已经成立的 NoteGit commit，或改变 ledger/source-control authority。
+  受控 Desktop sidecar 在没有 trusted path 时 **MUST** 携带
+  `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`；core 必须据此禁止普通 `git` 路径搜索。
 - Git push 只能发布已映射的 `.git` main mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、
   Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit`
   tracked 泄漏或 Git HEAD 未映射到最新 NoteGit/ngit commit。

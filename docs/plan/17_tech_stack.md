@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -79,6 +79,7 @@ Deve 的核心版本管理是 ledger-backed Source Control；不把 Git object s
 - Git mirror failure 只产生 `GitMirrorOutOfSync` 与 retry/repair 需求，不回滚 Deve commit。
 - Git import 只能进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。
 - Git export 与 Git push 不得反向改写 ledger authority。
+- Core Git bridge 在 `DEVE_GIT_EXECUTABLE` 存在时只执行经过验证的 canonical absolute ordinary file；配置无效时 fail-closed。普通 CLI 未设置时可按自身 `PATH` 使用 `git`。
 - Web/后台不得从只读 status/review surface 隐式升级为 Git writer；任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认。
 
 ### 1.4 原生打包依赖门禁 {#native-packaging-dependency-gate}
@@ -115,6 +116,7 @@ Gate 状态：
 - Android/Mobile `LocalBackend` **MAY** 在 `apps/mobile` 的 `native-packaging` scope 内依赖内部 `deve_cli` library entrypoint，以启动 in-process embedded loopback backend；这不允许 native shell 直接调用 ledger/source-control/search writer API。
 - 默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
 - Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
+- Desktop `LocalBackend` host 只把已验证的 canonical Git absolute path 作为 `DEVE_GIT_EXECUTABLE` 传给 sidecar；找不到 trusted Git 时改传互斥的 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，禁止 core 退回普通路径搜索。两种情况都不传宿主完整 `PATH` / `PATHEXT`；Git 缺失只关闭 Git bridge，不阻断受控 service 或 NoteGit commit。
 - Desktop Windows `LocalBackend` **MAY** 在 `apps/desktop` 的 `native-packaging`
   feature scope 内使用 `windows-sys` Job Object 与 `PROC_THREAD_ATTRIBUTE_JOB_LIST`
   API，把 `deve_cli` sidecar 在创建时绑定到父 Desktop 进程生命周期；若宿主已有 Job 链拒绝 Job List，fallback

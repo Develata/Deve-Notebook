@@ -233,6 +233,29 @@ run_startup_probe() {
   ((status == 0)) && [[ "$output" == *"desktop-startup-smoke: ok"* ]]
 }
 
+run_installed_git_bridge_smoke() {
+  local desktop_binary="$1"
+  local work_root="$2"
+
+  run_windows_installer_command \
+    "installed NoteGit/Git bridge smoke for ${desktop_binary#"$ROOT_DIR"/}" \
+    powershell.exe -NoProfile -ExecutionPolicy Bypass \
+    -File "$(to_windows_path "$ROOT_DIR/scripts/check-desktop-installed-git-bridge-smoke.ps1")" \
+    -DesktopBinary "$(to_windows_path "$desktop_binary")" \
+    -WorkRoot "$(to_windows_path "$work_root")"
+}
+
+run_installed_git_unavailable_native_session_smoke() {
+  local desktop_binary="$1"
+
+  run_windows_installer_command \
+    "installed LocalBackend smoke with Git unavailable for ${desktop_binary#"$ROOT_DIR"/}" \
+    powershell.exe -NoProfile -ExecutionPolicy Bypass \
+    -File "$(to_windows_path "$ROOT_DIR/scripts/check-desktop-local-backend-lifecycle.ps1")" \
+    -DesktopExe "$(to_windows_path "$desktop_binary")" \
+    -ForceGitUnavailable
+}
+
 prepare_work_dir() {
   mkdir -p "$WORK_ROOT"
 }
@@ -408,6 +431,14 @@ smoke_windows_msi_install() {
       preserve_failure_path "$install_root"
       status=1
     fi
+    if ! run_installed_git_unavailable_native_session_smoke "$exe"; then
+      preserve_failure_path "$install_root"
+      status=1
+    fi
+    if ! run_installed_git_bridge_smoke "$exe" "$install_root"; then
+      preserve_failure_path "$install_root"
+      status=1
+    fi
   fi
 
   if ! run_windows_installer_command \
@@ -462,6 +493,14 @@ smoke_windows_nsis_install() {
   else
     if ! run_startup_probe "$exe"; then
       print_log_tail "$install_log"
+      preserve_failure_path "$install_root"
+      status=1
+    fi
+    if ! run_installed_git_unavailable_native_session_smoke "$exe"; then
+      preserve_failure_path "$install_root"
+      status=1
+    fi
+    if ! run_installed_git_bridge_smoke "$exe" "$install_root"; then
       preserve_failure_path "$install_root"
       status=1
     fi

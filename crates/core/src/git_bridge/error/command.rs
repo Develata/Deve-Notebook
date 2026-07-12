@@ -15,6 +15,8 @@ pub(in crate::git_bridge) enum GitBridgeError {
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(in crate::git_bridge) enum GitCommandError {
+    #[error("git executable is invalid: {message}")]
+    InvalidExecutable { message: String },
     #[error("failed to run git {args}: {message}")]
     Spawn { args: String, message: String },
     #[error("failed to open stdin for git {args}")]

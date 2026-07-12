@@ -44,6 +44,8 @@
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。
 - service 端口、session secret 与 P2P token material 不应出现在 URL、日志、Web localStorage 或可见 bootstrap payload。
+- Desktop host 优先验证显式 `DEVE_GIT_EXECUTABLE`；未配置时可从宿主绝对 PATH entries/PATHEXT 解析并 canonicalize Git。sidecar 只接收该绝对路径或互斥的 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不继承完整 PATH/PATHEXT，也不在 unavailable 时回退 executable search。
+- 显式 Git 路径无效时不回退；Git 缺失只让 mirror/import/export/push unavailable/out-of-sync，不阻断 LocalBackend、native session 或 NoteGit commit。
 
 ## 非目标
 

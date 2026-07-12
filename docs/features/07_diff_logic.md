@@ -145,6 +145,9 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - CLI `deve sc stage/commit`、plugin-host HTTP mutation 与 Rhai `sc_commit`
   也必须复用本地 Projection Workspace identity gate；`.notegit` identity marker
   或 Projection Locator 破损时不得写 pending/staging/commit。
+- 配置 `DEVE_GIT_EXECUTABLE` 时，Git bridge 只执行该 canonical absolute ordinary
+  file；无效值不回退 PATH。普通 CLI 未配置时仍可使用自身 PATH。Git 不可用只产生
+  mirror/import/export/push unavailable 或 out-of-sync，不撤销 NoteGit commit。
 
 ## 非目标
 

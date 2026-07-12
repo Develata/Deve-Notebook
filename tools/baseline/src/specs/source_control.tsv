@@ -633,3 +633,10 @@ contains	crates/core/tests/source_control_commit_apply_error_test/identity_prefl
 contains	docs/plan/05_diff_logic.md	legacy `Deleted + doc_id=None` 的 exact delete selector
 contains	crates/core/src/ledger/manager/source_control_path_target.rs	has_legacy_docless_exact_delete
 contains	crates/core/src/ledger/manager/source_control_path_target/tests.rs	path_wrapper_promotes_docless_non_delete_to_tracked_identity
+contains	docs/plan/05_diff_logic.md	DEVE_GIT_EXECUTABLE
+contains	crates/core/src/git_bridge/mod.rs	DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV
+contains	crates/core/src/git_bridge/git_cmd.rs	pub const DEVE_GIT_EXECUTABLE_ENV: &str = "DEVE_GIT_EXECUTABLE";
+contains	crates/core/src/git_bridge/git_cmd.rs	pub const DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV: &str = "DEVE_GIT_EXECUTABLE_UNAVAILABLE";
+contains	crates/core/src/git_bridge/git_cmd.rs	trusted Desktop host reported Git unavailable
+contains	crates/core/src/git_bridge/git_cmd.rs	resolve_git_executable
+contains	crates/core/src/git_bridge/error/command.rs	git executable is invalid

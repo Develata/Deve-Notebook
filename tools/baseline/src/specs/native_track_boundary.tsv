@@ -323,3 +323,10 @@ contains	docs/overview/architecture-code.lisp	native::adapter_boundary
 contains	docs/overview/architecture-code.lisp	native::service_recovery
 contains	docs/overview/architecture-doc.lisp	native::adapter_boundary
 contains	docs/overview/architecture-doc.lisp	native::service_recovery
+contains	docs/plan/11_ui_design/02_desktop.md	DEVE_GIT_EXECUTABLE
+contains	docs/plan/11_ui_design/02_desktop.md	不得把宿主完整 `PATH` / `PATHEXT` 加入 allowlist
+contains	apps/desktop/src/service_entrypoint/git_executable.rs	canonical_regular_file
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	resolve_trusted_git_executable_from_env
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV
+contains	scripts/check-desktop-local-backend-lifecycle.ps1	ForceGitUnavailable
+absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	std::env::var_os("PATH")

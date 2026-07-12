@@ -167,6 +167,8 @@
     - run: scripts/check-desktop-package-startup-smoke.sh
     - run: cargo run -p deve_baseline -- desktop-native-session-package-smoke
     - run: scripts/check-desktop-native-session-package-smoke.sh
+    - run: scripts/check-desktop-installer-smoke.sh
+    - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable
     - run: cargo run -p deve_baseline -- desktop-installer-smoke
     - run: scripts/check-desktop-installer-smoke.sh
     - run: scripts/check-desktop-target-host-preflight.sh
@@ -321,6 +323,9 @@
     - native_assert: remote_browser_accepts_https_origin_only true
     - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true
     - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true
+    - native_assert: desktop_installer_smoke_uses_local_bare_git_remote true
+    - native_assert: desktop_installer_smoke_covers_notegit_commit_mirror_import_export_push true
+    - native_assert: desktop_git_unavailable_does_not_rollback_notegit_commit true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true

@@ -2,6 +2,7 @@ param(
     [string]$DesktopExe = "target\debug\deve_desktop.exe",
     [int]$StartupTimeoutSeconds = 30,
     [int]$ExitTimeoutSeconds = 8,
+    [switch]$ForceGitUnavailable,
     [ValidateSet("Force", "CloseMainWindow")]
     [string]$ShutdownMode = "Force"
 )
@@ -150,6 +151,9 @@ $psi.RedirectStandardInput = $true
 $psi.RedirectStandardOutput = $true
 $psi.RedirectStandardError = $true
 $psi.Environment["DEVE_DESKTOP_DATA_DIR"] = $dataRoot
+if ($ForceGitUnavailable) {
+    $psi.Environment["DEVE_GIT_EXECUTABLE"] = Join-Path $dataRoot "missing-git.exe"
+}
 
 $desktop = [System.Diagnostics.Process]::Start($psi)
 $childPid = $null

@@ -133,3 +133,15 @@ contains	docs/report/process-runtime-gate-decision-after-target-host-closure-202
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	direct spawn
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	must be a separate implementation batch
 contains	docs/plan/17_tech_stack.md	Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
+contains	apps/desktop/src/service_entrypoint/mod.rs	mod git_executable;
+contains	apps/desktop/src/service_entrypoint/git_executable.rs	resolve_trusted_git_executable_from_env
+contains	apps/desktop/src/service_entrypoint/git_executable.rs	if let Some(explicit) = explicit
+contains	apps/desktop/src/service_entrypoint/git_executable.rs	if !directory.is_absolute()
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	DEVE_GIT_EXECUTABLE_ENV
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	TrustedGitExecutable::Unavailable
+absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	"PATH".to_string()
+absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	"PATHEXT".to_string()
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_sidecar_receives_only_canonical_git_executable_not_host_path true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_git_unavailable_does_not_block_local_backend true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -38,6 +38,8 @@ Desktop native adapter 是进程与平台壳层，不是业务 authority；第�
 
 *   `LocalBackend` 是 native-packaging 默认模式。Desktop 壳层只负责 sidecar 生命周期、loopback endpoint、native session handoff、health probe、restart budget、bootstrap/recovery 注入与窗口/菜单/托盘事件。
 *   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   Desktop host 若显式收到 `DEVE_GIT_EXECUTABLE`，必须先验证其为 absolute、存在的 ordinary file 并 canonicalize；显式值无效时不得回退。未显式配置时，host **MAY** 从自己的绝对 `PATH` entries 与 Windows `PATHEXT` 解析 Git。启动 sidecar 时必须二选一传递 canonical `DEVE_GIT_EXECUTABLE` 或内部 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不得把宿主完整 `PATH` / `PATHEXT` 加入 allowlist；unavailable 状态不得退回普通 executable search。
+*   Git 不可用不得阻断 `LocalBackend` service、native session 或 NoteGit ledger commit；Git mirror/import/export/push 只能进入 unavailable/out-of-sync 诊断。该绑定是 shell-to-sidecar process contract，不授予 Desktop shell `.git` 或 Source Control authority。
 *   `RemoteBrowser { https_origin }` 是显式远端模式，Desktop 可通过启动参数 `--remote-url https://host[:port]` 或诊断/脚本环境变量 `DEVE_NATIVE_REMOTE_URL` 选择。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
 *   Desktop Settings 必须通过 native backend bridge 读写 host-local backend preference：默认 `local`；选择 `remote` 时必须先由 Desktop native 侧探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。
 *   Desktop `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。CLI `--remote-url` 与 `DEVE_NATIVE_REMOTE_URL` 仍只作为诊断/脚本覆盖项，优先于持久 preference，但不得回写 preference。

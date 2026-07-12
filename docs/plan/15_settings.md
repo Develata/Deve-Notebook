@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-04`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -52,8 +52,15 @@
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
+| `DEVE_GIT_EXECUTABLE`            | *(none)*         | 内部 native host → sidecar Git 绑定；必须为 absolute、存在的 ordinary file。显式无效时 Git 操作 fail-closed，不回退 PATH；它不是 `config.toml` 或 Source Control policy。 |
+| `DEVE_GIT_EXECUTABLE_UNAVAILABLE` | *(none)*        | 内部 native host → sidecar unavailable marker；只接受 `1`，与 executable path 互斥，并禁止 sidecar 退回普通 Git 搜索。 |
 
 `DEVE_*` 扁平字段保留下划线命名；嵌套配置如后续需要通过环境变量覆盖，使用双下划线分隔层级。
+
+`DEVE_GIT_EXECUTABLE` 及其 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1` companion 是进程边界变量而非用户持久配置。普通 CLI 两者均未设置时可以按自身
+`PATH` 解析 `git`；Desktop sidecar 因清空继承环境，只能使用宿主验证后传入的该绝对路径，
+或接收互斥的 unavailable marker；不得继承完整 `PATH` / `PATHEXT`。变量缺失或无效只影响 Git bridge 可用性，不影响
+LocalBackend 或 NoteGit authority。
 
 ## 2. Configuration Settings (config.toml) {#configuration-settings}
 

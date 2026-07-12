@@ -130,6 +130,11 @@ Native 双模式属于运行时能力门禁，不属于签名/store/physical-dev
 
 但不得在未完成签名、store、physical-device 与长期后台同步验收前声明 Desktop/Mobile release ready。
 
+Windows installer/package smoke 必须使用已安装 Desktop bundle 及其 sidecar，并以临时
+Projection Workspace 与本地 bare Git remote 验证 NoteGit commit、mirror、import/export
+和 push；不得依赖公网 remote。该 smoke 还必须证明 Git 不存在时 LocalBackend 仍能启动，
+且已成立的 NoteGit commit 不会因 mirror unavailable 被回滚。
+
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
 发布与验收基线可以提供 Rust developer CLI mirror，用于替代对 host bash/awk/rg runtime 敏感的纯文本合同检查。该入口由独立 workspace tool crate `tools/baseline`（package `deve_baseline`）承载，属于 developer/release tooling，不属于普通用户 `deve` 命令面；它 **MUST NOT** 依赖 `deve_cli` 产品 runtime，默认也 **MUST NOT** 依赖 `deve_core`，更 **MUST NOT** 获得 ledger、projection、source-control 或 native authority 写权限。
