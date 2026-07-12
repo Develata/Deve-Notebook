@@ -34,8 +34,8 @@ fn echoed_live_ctx<'a>(
     let (load_state, set_load_state) = signal(LoadPhase::Ready);
     let (is_spectator, _) = signal(false);
     let (handshake_ready, _) = signal(true);
-    let (open_request_id, _) = signal(0u64);
-    let (_, set_content) = signal(String::new());
+    let (open_request_id, set_open_request_id) = signal(0u64);
+    let (content, set_content) = signal(String::new());
     let (pending_local_edits, set_pending_local_edits) = signal({
         let mut pending = HashMap::new();
         push_pending_edit(
@@ -66,6 +66,8 @@ fn echoed_live_ctx<'a>(
     let (_, set_load_progress) = signal((0usize, 0usize));
     let (_, set_load_eta_ms) = signal(0u64);
     let (repo_key, set_repo_key) = signal(None);
+    let (_, set_editor_sync_failure) = signal(None);
+    let (snapshot_reopen_attempted, set_snapshot_reopen_attempted) = signal(false);
 
     (
         SyncContext {
@@ -85,7 +87,9 @@ fn echoed_live_ctx<'a>(
             is_spectator: is_spectator.into(),
             handshake_ready,
             open_request_id,
+            set_open_request_id,
             ws,
+            content,
             set_content,
             pending_local_edits,
             set_pending_local_edits,
@@ -99,6 +103,9 @@ fn echoed_live_ctx<'a>(
             set_load_state,
             set_load_progress,
             set_load_eta_ms,
+            set_editor_sync_failure,
+            snapshot_reopen_attempted,
+            set_snapshot_reopen_attempted,
             on_stats: None,
             repo_key,
             set_repo_key,
@@ -129,7 +136,8 @@ fn echoed_new_op_clears_matching_pending_overlay() {
                 client_op_id: 13,
             }),
         ),
-    );
+    )
+    .expect("echoed live op should apply");
 
     assert_eq!(
         pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),
@@ -162,7 +170,8 @@ fn stale_echoed_new_op_clears_pending_without_advancing_history() {
                 client_op_id: 13,
             }),
         ),
-    );
+    )
+    .expect("duplicate echoed live op should be idempotent");
 
     assert_eq!(
         pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),

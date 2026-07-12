@@ -6,6 +6,7 @@ use super::EditorStats;
 use super::sync;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
+use crate::runtime::domain::EditorSyncFailure;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
@@ -24,6 +25,7 @@ pub struct ServerMessageEffectCtx {
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub set_content: WriteSignal<String>,
+    pub content: ReadSignal<String>,
     pub local_version: ReadSignal<u64>,
     pub set_local_version: WriteSignal<u64>,
     pub history: ReadSignal<Vec<(u64, Op)>>,
@@ -33,6 +35,10 @@ pub struct ServerMessageEffectCtx {
     pub on_stats: Option<Callback<EditorStats>>,
     pub repo_key: ReadSignal<Option<RepoKey>>,
     pub set_repo_key: WriteSignal<Option<RepoKey>>,
+    pub set_editor_sync_failure: WriteSignal<Option<EditorSyncFailure>>,
+    pub snapshot_reopen_attempted: ReadSignal<bool>,
+    pub set_snapshot_reopen_attempted: WriteSignal<bool>,
+    pub set_open_request_id: WriteSignal<u64>,
 }
 
 pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
@@ -46,6 +52,7 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         buffered_live_ops,
         buffered_encrypted_ops,
         set_content,
+        content,
         local_version,
         set_local_version,
         history,
@@ -55,6 +62,10 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         on_stats,
         repo_key,
         set_repo_key,
+        set_editor_sync_failure,
+        snapshot_reopen_attempted,
+        set_snapshot_reopen_attempted,
+        set_open_request_id,
     } = ctx;
     let (last_msg_seq, set_last_msg_seq) = signal(0u64);
 
@@ -88,8 +99,10 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 is_spectator: core.is_spectator,
                 handshake_ready: core.handshake_ready,
                 open_request_id,
+                set_open_request_id,
                 ws: &ws,
                 set_content,
+                content,
                 pending_local_edits: core.pending_local_edits,
                 set_pending_local_edits: core.set_pending_local_edits,
                 set_pending_navigation: core.set_pending_navigation,
@@ -102,6 +115,9 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 set_load_state: core.set_load_state,
                 set_load_progress: core.set_load_progress,
                 set_load_eta_ms: core.set_load_eta_ms,
+                set_editor_sync_failure,
+                snapshot_reopen_attempted,
+                set_snapshot_reopen_attempted,
                 on_stats,
                 repo_key,
                 set_repo_key,

@@ -550,6 +550,7 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: editor_tab_runtime_resets_on_branch_scope_change true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_drawer_close_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_dialog_focus_scope_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_diff_keeps_source_control_state true
@@ -568,6 +569,10 @@ contains	apps/web/src/components/editor_tabs/tests/runtime_policy.rs	PeerId::new
 contains	apps/web/src/components/editor_tabs/tests/runtime_policy.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	aria-modal="true"
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	handle_focus_trap_keydown
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	attach_modal_focus_restore_effect_with_fallback
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	node_ref=trigger_ref
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-type-label=mobile_surface_type_label_marker()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()

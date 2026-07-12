@@ -4,6 +4,7 @@
 //!
 use super::open_scope::OpenRequestKey;
 use crate::hooks::use_core::EditorContext;
+use crate::runtime::domain::EditorSyncFailure;
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
@@ -21,6 +22,12 @@ pub(super) struct EditorRuntime {
     pub set_last_open_request_key: WriteSignal<Option<OpenRequestKey>>,
     pub editor_ready: ReadSignal<bool>,
     pub set_editor_ready: WriteSignal<bool>,
+    pub editor_sync_failure: ReadSignal<Option<EditorSyncFailure>>,
+    pub set_editor_sync_failure: WriteSignal<Option<EditorSyncFailure>>,
+    pub snapshot_reopen_attempted: ReadSignal<bool>,
+    pub set_snapshot_reopen_attempted: WriteSignal<bool>,
+    pub retry_nonce: ReadSignal<u64>,
+    pub set_retry_nonce: WriteSignal<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
@@ -42,6 +49,9 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
     let (open_request_id, set_open_request_id) = signal(0u64);
     let (last_open_request_key, set_last_open_request_key) = signal(None::<OpenRequestKey>);
     let (editor_ready, set_editor_ready) = signal(false);
+    let (editor_sync_failure, set_editor_sync_failure) = signal(None::<EditorSyncFailure>);
+    let (snapshot_reopen_attempted, set_snapshot_reopen_attempted) = signal(false);
+    let (retry_nonce, set_retry_nonce) = signal(0u64);
     let session_generation = Arc::new(AtomicU64::new(0));
     let ready_generation = Arc::new(AtomicU64::new(0));
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
@@ -61,6 +71,12 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
         set_last_open_request_key,
         editor_ready,
         set_editor_ready,
+        editor_sync_failure,
+        set_editor_sync_failure,
+        snapshot_reopen_attempted,
+        set_snapshot_reopen_attempted,
+        retry_nonce,
+        set_retry_nonce,
         session_generation,
         ready_generation,
         buffered_live_ops,

@@ -8,12 +8,30 @@ import { fileURLToPath } from "node:url";
 import {
   editorContentIncludes,
   isDirectInvocation,
+  pendingAckCount,
   renderedShellPresent,
   renderedShellSelector,
   relevantConsoleErrors,
   webSocketMatchesExpectedOrigin,
   waitForRenderedShell,
 } from "./smoke-docker-multiclient.mjs";
+
+test("pending marker parser rejects malformed counts", async () => {
+  const page = {
+    locator() {
+      return {
+        first() {
+          return {
+            evaluate(callback) {
+              return callback({ getAttribute: () => "not-a-count" });
+            },
+          };
+        },
+      };
+    },
+  };
+  await assert.rejects(() => pendingAckCount(page), /invalid pending ack count marker/);
+});
 
 test("rendered shell requires a login or sync marker", () => {
   const emptyRoot = { querySelector: () => null };
@@ -83,6 +101,22 @@ test("login checks page health only after the rendered shell wait", () => {
     source,
     /async function login\(page, diag\) \{[\s\S]*?await page\.goto[\s\S]*?await waitForRenderedShell\(page, timeoutMs\);[\s\S]*?await assertPageHealthy\(page, diag\);/,
   );
+});
+
+test("offline recovery attempts input before asserting local pending and peer immutability", () => {
+  const source = fs.readFileSync(new URL("./smoke-docker-multiclient.mjs", import.meta.url), "utf8");
+  assert.match(
+    source,
+    /async function exerciseOfflineRecovery[\s\S]*?keyboard\.type\(blockedInput\)[\s\S]*?offline input must not change local editor content[\s\S]*?offline input must not enqueue pending edits[\s\S]*?offline input must not reach the peer editor[\s\S]*?setOffline\(false\)/,
+  );
+});
+
+test("playwright bootstrap validates module resolution instead of a stale directory", () => {
+  const source = fs.readFileSync(new URL("./smoke-docker-multiclient.sh", import.meta.url), "utf8");
+
+  assert.match(source, /createRequire\(process\.env\.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM\)/);
+  assert.match(source, /typeof playwright\.chromium\?\.launch !== "function"/);
+  assert.doesNotMatch(source, /\[\[ ! -d "\$PLAYWRIGHT_WORK_DIR\/node_modules\/playwright" \]\]/);
 });
 
 test("direct invocation recognizes Windows and Git Bash path forms", () => {

@@ -99,6 +99,8 @@
 - 打开长文档时，用户应先看到首屏内容。
 - 剩余内容可以渐进加载，但编辑区不应卡死。
 - 在预加载完成前，全文搜索等重操作可以被限制或延后。
+- snapshot 或 replay 无法原子应用时，编辑器保持只读并显示可诊断错误；初始 snapshot
+  自动重试最多一次，之后必须由用户点击 Retry 生成新的打开请求，不能永久 Loading 或无限重试。
 - 细粒度操作示例：[`operations/rendering_large_doc_prefetch.md`](./operations/rendering_large_doc_prefetch.md), [`operations/rendering_large_doc_search_gate.md`](./operations/rendering_large_doc_search_gate.md)
 
 ## 细粒度操作链

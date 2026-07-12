@@ -4,8 +4,9 @@
 //!
 use super::context::SyncContext;
 use crate::editor::EditorStats;
-use crate::editor::ffi::{try_apply_remote_op, try_get_editor_content};
+use crate::editor::ffi::try_apply_remote_op;
 use crate::runtime::document::confirm;
+use crate::runtime::domain::EditorSyncFailureCode;
 use deve_core::models::RepoId;
 use leptos::prelude::{Callable, GetUntracked, Set, Update};
 
@@ -14,10 +15,15 @@ pub fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp)
         ctx.buffer_live_op(entry);
         return;
     }
-    apply_live_op(ctx, entry);
+    if let Err(code) = apply_live_op(ctx, entry) {
+        ctx.fail_editor_sync(code);
+    }
 }
 
-pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
+pub(super) fn apply_live_op(
+    ctx: &SyncContext,
+    entry: deve_core::protocol::ConfirmedOp,
+) -> Result<(), EditorSyncFailureCode> {
     let echoed_origin = entry
         .origin
         .filter(|origin| Some(origin.client_id) == ctx.client_id);
@@ -25,26 +31,28 @@ pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::Confi
         clear_confirmed_pending_edit(ctx, origin.client_op_id, entry.seq);
     }
     if entry.seq <= ctx.local_version.get_untracked() {
-        return;
+        return Ok(());
     }
     let echoed = echoed_origin.is_some();
     if !echoed {
+        let Some(text) = deve_core::state::try_apply_content_ops(
+            &ctx.content.get_untracked(),
+            std::slice::from_ref(&entry.op),
+        ) else {
+            return Err(EditorSyncFailureCode::LiveReplay);
+        };
         match serde_json::to_string(&entry.op) {
             Ok(json) => {
                 if !try_apply_remote_op(&json) {
                     leptos::logging::warn!("Live op apply blocked: editor op bridge unavailable");
-                    return;
+                    return Err(EditorSyncFailureCode::LiveReplay);
                 }
             }
             Err(err) => {
                 leptos::logging::warn!("Live op serialization failed: {err}");
-                return;
+                return Err(EditorSyncFailureCode::LiveReplay);
             }
         }
-        let Some(text) = try_get_editor_content() else {
-            leptos::logging::warn!("Live op apply blocked: editor content bridge unavailable");
-            return;
-        };
         if let Some(cb) = ctx.on_stats {
             cb.run(EditorStats {
                 chars: text.len(),
@@ -60,6 +68,7 @@ pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::Confi
     if !ctx.is_playback.get_untracked() {
         ctx.set_playback_version.set(entry.seq);
     }
+    Ok(())
 }
 
 fn clear_confirmed_pending_edit(ctx: &SyncContext, client_op_id: u64, seq: u64) {

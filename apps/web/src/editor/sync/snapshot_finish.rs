@@ -2,10 +2,11 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 07_network#web-ws-runtime
 //!
-use super::context::SyncContext;
+use super::context::{EditorSyncFailureSink, SyncContext};
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::editor::ffi::try_get_editor_content;
+use crate::runtime::domain::EditorSyncFailureCode;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -23,6 +24,7 @@ pub(super) struct LoadFinish {
     set_load_progress: WriteSignal<(usize, usize)>,
     set_load_eta_ms: WriteSignal<u64>,
     on_stats: Option<Callback<EditorStats>>,
+    failure_sink: EditorSyncFailureSink,
 }
 
 impl LoadFinish {
@@ -44,6 +46,7 @@ impl LoadFinish {
             set_load_progress: ctx.set_load_progress,
             set_load_eta_ms: ctx.set_load_eta_ms,
             on_stats: ctx.on_stats,
+            failure_sink: ctx.failure_sink(),
         }
     }
 
@@ -52,6 +55,8 @@ impl LoadFinish {
             leptos::logging::warn!(
                 "Snapshot load finish blocked: editor content bridge unavailable"
             );
+            self.failure_sink
+                .fail(EditorSyncFailureCode::ContentReadback);
             return;
         };
         self.complete_with_content(text);

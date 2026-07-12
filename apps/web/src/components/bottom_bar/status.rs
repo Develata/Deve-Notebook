@@ -80,6 +80,7 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
         | SyncStatusKind::NativeSessionPending
         | SyncStatusKind::NativeReprobeRequired => "bg-yellow-500",
         SyncStatusKind::SnapshotLoading => "bg-blue-500",
+        SyncStatusKind::EditorSyncError => "bg-deleted",
         SyncStatusKind::SessionExpired => "bg-amber-500",
         SyncStatusKind::NativeBootstrapInvalid
         | SyncStatusKind::NativeServiceOffline
@@ -95,6 +96,7 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
         <div
             class="flex items-center gap-2 min-w-0"
             data-deve-sync-status=move || sync_status_kind_marker(summary.get().kind)
+            data-deve-pending-ack-count=move || summary.get().pending_ack_count.to_string()
         >
             <div class=move || format!("w-2 h-2 rounded-full {}", color())></div>
             <span class="text-xs text-secondary font-medium">{text}</span>
@@ -126,6 +128,7 @@ fn sync_status_kind_marker(kind: SyncStatusKind) -> &'static str {
         SyncStatusKind::Offline => "offline",
         SyncStatusKind::Reconnecting => "reconnecting",
         SyncStatusKind::SnapshotLoading => "snapshot-loading",
+        SyncStatusKind::EditorSyncError => "editor-sync-error",
         SyncStatusKind::ReadOnly => "read-only",
         SyncStatusKind::HandshakingRepo => "handshaking-repo",
         SyncStatusKind::PeerNotRegistered => "peer-not-registered",

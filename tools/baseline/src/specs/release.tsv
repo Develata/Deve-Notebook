@@ -420,6 +420,8 @@ contains	scripts/smoke-docker-multiclient.mjs	await browser.newContext()
 contains	scripts/smoke-docker-multiclient.mjs	createRequire(
 contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="create-doc"
 contains	scripts/smoke-docker-multiclient.mjs	context.setOffline(true)
+contains	scripts/smoke-docker-multiclient.mjs	offline input must not enqueue pending edits
+contains	scripts/smoke-docker-multiclient.mjs	offline input must not reach the peer editor
 contains	scripts/smoke-docker-multiclient.mjs	observed.origin === expected.origin && observed.pathname === "/ws"
 contains	scripts/smoke-docker-multiclient.mjs	await waitForRenderedShell(page, timeoutMs)
 contains	scripts/smoke-docker-multiclient.mjs	await appendEditorContent(pageB, recoveryContent)
@@ -429,6 +431,7 @@ contains	scripts/smoke-docker-multiclient.mjs	duringOffline && message.includes(
 contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a login or sync marker
 contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
 contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending
+contains	scripts/smoke-docker-multiclient.test.mjs	offline recovery attempts input before asserting local pending and peer immutability
 contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
 contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED

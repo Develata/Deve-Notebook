@@ -7,6 +7,9 @@ mod rows;
 pub(crate) use self::model::mobile_surface_sheet_visible;
 
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
+use crate::components::focus_scope::{
+    attach_modal_focus_restore_effect_with_fallback, handle_focus_trap_keydown,
+};
 use crate::components::icons::{ChevronDown, FileText, SourceControl, X};
 use crate::i18n::{Locale, t};
 use crate::runtime::source_control_client::diff_session::DiffSessionWire;
@@ -44,6 +47,14 @@ pub fn MobileSurfaceSwitcher(
     let sheet_visible = Signal::derive(move || {
         mobile_surface_sheet_visible(open.get(), drawer_open.get(), has_tabs.get())
     });
+    let trigger_ref = NodeRef::<leptos::html::Button>::new();
+    let close_ref = NodeRef::<leptos::html::Button>::new();
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
+    attach_modal_focus_restore_effect_with_fallback(
+        move || sheet_visible.get(),
+        close_ref,
+        trigger_ref,
+    );
 
     Effect::new(move |_| {
         if drawer_open.get() || !has_tabs.get() {
@@ -58,6 +69,7 @@ pub fn MobileSurfaceSwitcher(
                 class="flex-none border-b border-default bg-panel px-2 py-1"
             >
                 <button
+                    node_ref=trigger_ref
                     type="button"
                     data-deve-mobile-surface-action="open_switcher"
                     data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
@@ -127,18 +139,29 @@ pub fn MobileSurfaceSwitcher(
                 class="fixed inset-0 z-[var(--z-overlay)] bg-black/20"
                 on:click=move |_| set_open.set(false)
             ></div>
-            <section
+            <div
+                node_ref=panel_ref
                 data-deve-mobile-surface-sheet="open"
                 role="dialog"
+                aria-modal="true"
                 class="fixed inset-x-0 bottom-0 z-[var(--z-modal)] max-h-[72vh] overflow-hidden rounded-t-lg border border-default bg-panel shadow-lg"
                 style="padding-bottom: env(safe-area-inset-bottom);"
                 aria-label=move || t::common::switch_open_tabs(locale.get())
+                on:keydown=move |ev| {
+                    if ev.key() == "Escape" {
+                        ev.prevent_default();
+                        set_open.set(false);
+                        return;
+                    }
+                    let _ = handle_focus_trap_keydown(&ev, panel_ref);
+                }
             >
                 <div class="flex h-12 items-center justify-between border-b border-default px-3">
                     <span class="text-sm font-semibold text-primary">
                         {move || t::common::switch_open_tabs(locale.get())}
                     </span>
                     <button
+                        node_ref=close_ref
                         type="button"
                         data-deve-mobile-surface-action="close_sheet"
                         data-deve-mobile-touch-target=mobile_surface_close_touch_target()
@@ -201,7 +224,7 @@ pub fn MobileSurfaceSwitcher(
                         }/>
                     </Show>
                 </div>
-            </section>
+            </div>
         </Show>
     }
 }

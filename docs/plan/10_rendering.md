@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -107,6 +107,11 @@ OpenDoc
   -> EditorBufferReady
   -> RenderProjectionReady
 ```
+
+任一 adapter/replay 步骤失败时必须原子停止并进入 `EditorSyncError`：编辑器保持只读，
+本地 version/history 不得推进到失败 batch 之后，pending overlay 不得重发。初始 snapshot
+adapter 写入失败最多自动 reopen 一次；再次失败显示诊断与显式 Retry，Retry 必须使用新的
+generation/request。
 
 ### 3.2 Live Editing
 
@@ -384,6 +389,11 @@ Baseline contract 的行内支持集合：
 ## 10. Recovery / Repair
 
 - snapshot delta 不可应用时，必须回退到 full snapshot，而不是继续向前端推坏 batch。
+- CodeMirror remote batch 必须先按逐步变化后的虚拟 UTF-16 文档长度验证并构造全部
+  transaction specs；任意非法 op 时不得 dispatch。成功时只允许一次 sequential dispatch，
+  且 remote transaction 不得进入本地 undo history。
+- pending/history/live replay 或 editor content readback 失败时必须保持只读并进入结构化
+  `EditorSyncError`；不得进入 Ready、不得重发 pending、不得留下已应用前缀。
 - 单个 widget 渲染失败时，必须回退为源码显示，不得破坏整篇文档编辑。
 - outline projection 失败时，只允许降级为 plain heading text，不得阻断文档编辑主链。
 

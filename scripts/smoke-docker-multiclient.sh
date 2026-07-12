@@ -104,15 +104,27 @@ wait_for_server() {
   return 1
 }
 
+playwright_module_available() {
+  DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json" \
+    node --input-type=module -e '
+      import { createRequire } from "node:module";
+      const playwright = createRequire(process.env.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM)("playwright");
+      if (typeof playwright.chromium?.launch !== "function") {
+        throw new TypeError("playwright chromium launcher is unavailable");
+      }
+    ' >/dev/null 2>&1
+}
+
 run_playwright() {
   node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
   mkdir -p "$PLAYWRIGHT_WORK_DIR"
   if [[ ! -f "$PLAYWRIGHT_WORK_DIR/package.json" ]]; then
     printf '{"private":true,"type":"module"}\n' >"$PLAYWRIGHT_WORK_DIR/package.json"
   fi
-  if [[ ! -d "$PLAYWRIGHT_WORK_DIR/node_modules/playwright" ]]; then
+  if ! playwright_module_available; then
     npm --prefix "$PLAYWRIGHT_WORK_DIR" install --no-audit --no-fund "$PLAYWRIGHT_PACKAGE"
   fi
+  playwright_module_available || fail "playwright module is not resolvable from $PLAYWRIGHT_WORK_DIR"
   npm --prefix "$PLAYWRIGHT_WORK_DIR" exec -- playwright install chromium
   DEVE_DOCKER_MULTI_BASE_URL="$BASE_URL" \
   DEVE_DOCKER_MULTI_EXPECTED_ORIGIN="$BASE_ORIGIN" \

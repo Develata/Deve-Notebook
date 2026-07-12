@@ -33,6 +33,7 @@ pub(super) fn setup_editor_effects(
         last_open_request_key: runtime.last_open_request_key,
         set_last_open_request_key: runtime.set_last_open_request_key,
         editor_ready: runtime.editor_ready,
+        retry_nonce: runtime.retry_nonce,
         session_generation: runtime.session_generation.clone(),
         ready_generation: runtime.ready_generation.clone(),
         buffered_live_ops: runtime.buffered_live_ops.clone(),
@@ -40,6 +41,8 @@ pub(super) fn setup_editor_effects(
         set_local_version: runtime.set_local_version,
         set_open_request_id: runtime.set_open_request_id,
         set_history: runtime.set_history,
+        set_editor_sync_failure: runtime.set_editor_sync_failure,
+        set_snapshot_reopen_attempted: runtime.set_snapshot_reopen_attempted,
     });
     setup_request_key_effect(ws.clone(), core.clone(), runtime.set_repo_key);
     Effect::new({
@@ -57,6 +60,7 @@ pub(super) fn setup_editor_effects(
         buffered_live_ops: runtime.buffered_live_ops.clone(),
         buffered_encrypted_ops: runtime.buffered_encrypted_ops.clone(),
         set_content: runtime.set_content,
+        content: runtime.content,
         local_version: runtime.local_version,
         set_local_version: runtime.set_local_version,
         history: runtime.history,
@@ -66,6 +70,10 @@ pub(super) fn setup_editor_effects(
         on_stats: on_stats.clone(),
         repo_key: runtime.repo_key,
         set_repo_key: runtime.set_repo_key,
+        set_editor_sync_failure: runtime.set_editor_sync_failure,
+        snapshot_reopen_attempted: runtime.snapshot_reopen_attempted,
+        set_snapshot_reopen_attempted: runtime.set_snapshot_reopen_attempted,
+        set_open_request_id: runtime.set_open_request_id,
     });
     setup_handshake_reset_effect(HandshakeResetCtx {
         ws: ws.clone(),

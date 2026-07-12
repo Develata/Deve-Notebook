@@ -237,6 +237,17 @@ async function editorContent(page) {
   });
 }
 
+export async function pendingAckCount(page) {
+  return page.locator("[data-deve-pending-ack-count]").first().evaluate((element) => {
+    const raw = element.getAttribute("data-deve-pending-ack-count");
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`invalid pending ack count marker: ${raw}`);
+    }
+    return value;
+  });
+}
+
 async function waitForEditorContains(page, expected) {
   await page.waitForFunction(
     editorContentIncludes,
@@ -273,7 +284,10 @@ async function openDoc(page, path) {
   await waitForWritableEditor(page);
 }
 
-async function exerciseOfflineRecovery(context, page, diag) {
+async function exerciseOfflineRecovery(context, page, diag, peerPage) {
+  const contentBefore = await editorContent(page);
+  const peerContentBefore = await editorContent(peerPage);
+  const pendingBefore = await pendingAckCount(page);
   const wsCountBefore = diag.wsUrls.length;
   diag.offline = true;
   await context.setOffline(true);
@@ -289,6 +303,16 @@ async function exerciseOfflineRecovery(context, page, diag) {
     null,
     { timeout: 20000 },
   );
+
+  const blockedInput = ` offline-blocked-${Date.now()}`;
+  const cm = page.locator(".cm-content").first();
+  await cm.click({ force: true });
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(blockedInput);
+  await delay(300);
+  assert.equal(await editorContent(page), contentBefore, "offline input must not change local editor content");
+  assert.equal(await pendingAckCount(page), pendingBefore, "offline input must not enqueue pending edits");
+  assert.equal(await editorContent(peerPage), peerContentBefore, "offline input must not reach the peer editor");
 
   await context.setOffline(false);
   diag.offline = false;
@@ -339,7 +363,7 @@ async function main() {
     await waitForEditorContains(pageB, content);
     assert.equal(await editorContent(pageB), content, "client-b content must match client-a edit");
 
-    await exerciseOfflineRecovery(contextB, pageB, diagB);
+    await exerciseOfflineRecovery(contextB, pageB, diagB, pageA);
     await waitForEditorContains(pageB, content);
     await appendEditorContent(pageB, recoveryContent);
     await waitForEditorContains(pageA, recoveryContent);

@@ -125,25 +125,56 @@ pub(crate) fn attach_modal_focus_restore_effect(
     });
 }
 
+pub(crate) fn attach_modal_focus_restore_effect_with_fallback(
+    is_open: impl Fn() -> bool + Copy + 'static,
+    initial_focus_ref: NodeRef<leptos::html::Button>,
+    fallback_focus_ref: NodeRef<leptos::html::Button>,
+) {
+    let last_open = StoredValue::new_local(false);
+    let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
+
+    Effect::new(move |_| {
+        let open = is_open();
+        let was_open = last_open.get_value();
+        last_open.set_value(open);
+
+        if open && !was_open {
+            previous_focus.set_value(active_element());
+            focus_button_next_frame(initial_focus_ref);
+        } else if !open && was_open {
+            let previous = previous_focus.get_value();
+            previous_focus.set_value(None);
+            let fallback = fallback_focus_ref.get_untracked().and_then(|button| {
+                let button: &HtmlElement = &button;
+                button.clone().dyn_into::<Element>().ok()
+            });
+            restore_focus_next_frame_with_fallback(previous, fallback);
+        }
+    });
+}
+
 pub(crate) fn restore_focus_next_frame(previous: Option<Element>) {
+    restore_focus_next_frame_with_fallback(previous, None);
+}
+
+fn restore_focus_next_frame_with_fallback(previous: Option<Element>, fallback: Option<Element>) {
     request_animation_frame(move || {
         request_animation_frame(move || {
             let active_modals = active_modal_elements();
             let active_modal_present = !active_modals.is_empty();
-            let previous_inside_active_modal = previous.as_ref().is_some_and(|previous| {
-                active_modals
+            for candidate in [previous, fallback].into_iter().flatten() {
+                let inside_active_modal = active_modals
                     .iter()
-                    .any(|modal| element_contains(modal, previous))
-            });
-            if !should_restore_previous_focus(active_modal_present, previous_inside_active_modal) {
-                return;
-            }
-            if let Some(previous) = previous
-                && let Ok(previous) = previous.dyn_into::<HtmlElement>()
-                && focus_element(&previous)
-                && active_html_element_is(&previous)
-            {
-                return;
+                    .any(|modal| element_contains(modal, &candidate));
+                if !should_restore_previous_focus(active_modal_present, inside_active_modal) {
+                    continue;
+                }
+                if let Ok(candidate) = candidate.dyn_into::<HtmlElement>()
+                    && focus_element(&candidate)
+                    && active_html_element_is(&candidate)
+                {
+                    return;
+                }
             }
             if !active_modal_present {
                 focus_editor();

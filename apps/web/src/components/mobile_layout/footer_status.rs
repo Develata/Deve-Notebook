@@ -117,6 +117,10 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
                 "bg-blue-500",
                 t::bottom_bar::snapshot_loading(locale.get()).to_string(),
             ),
+            SyncStatusKind::EditorSyncError => (
+                "bg-deleted",
+                t::bottom_bar::editor_sync_error(locale.get()).to_string(),
+            ),
             SyncStatusKind::Reconnecting => (
                 "bg-yellow-500",
                 t::bottom_bar::reconnecting(locale.get()).to_string(),
@@ -147,7 +151,10 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
             ),
         };
         view! {
-            <div class="flex items-center gap-1.5">
+            <div
+                class="flex items-center gap-1.5"
+                data-deve-pending-ack-count=summary.pending_ack_count.to_string()
+            >
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
                 <span class="text-[11px] text-secondary font-medium">{text}</span>
                 <Show when=move || matches!(summary.kind, SyncStatusKind::PeerNotRegistered)>
@@ -177,8 +184,17 @@ pub fn LoadStatus(
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
     move || {
-        if read_footer_signal(load_state, LoadPhase::Ready).is_ready() {
+        let state = read_footer_signal(load_state, LoadPhase::Ready);
+        if state.is_ready() {
             return view! {}.into_any();
+        }
+        if state == LoadPhase::Error {
+            return view! {
+                <div class="text-[10px] text-deleted font-mono">
+                    {t::bottom_bar::editor_sync_error(locale.get())}
+                </div>
+            }
+            .into_any();
         }
         let (done, total) = read_footer_signal(load_progress, (0, 0));
         let eta_ms = read_footer_signal(load_eta_ms, 0);

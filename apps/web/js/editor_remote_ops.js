@@ -74,30 +74,12 @@ export function applyRemoteOpsBatch(ops_json) {
   try {
     const ops = JSON.parse(ops_json);
     if (!Array.isArray(ops) || ops.length === 0) return true;
-    for (const op of ops) {
-      if (op.Insert) {
-        const pos = op.Insert.pos;
-        ensureValidRange(pos, pos);
-        ctx.activeView.dispatch({
-          changes: { from: pos, insert: op.Insert.content },
-          annotations: remoteHistoryAnnotation,
-        });
-      } else if (op.Delete) {
-        const from = op.Delete.pos;
-        const to = op.Delete.pos + op.Delete.len;
-        ensureValidRange(from, to);
-        ctx.activeView.dispatch({
-          changes: {
-            from,
-            to,
-            insert: "",
-          },
-          annotations: remoteHistoryAnnotation,
-        });
-      } else {
-        throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);
-      }
-    }
+    const specs = buildRemoteBatchSpecs(
+      ops,
+      ctx.activeView.state.doc.length,
+      remoteHistoryAnnotation,
+    );
+    ctx.activeView.dispatch(...specs);
     return true;
   } catch (e) {
     console.error("applyRemoteOpsBatch Error:", e);
@@ -107,11 +89,66 @@ export function applyRemoteOpsBatch(ops_json) {
   }
 }
 
+export function buildRemoteBatchSpecs(ops, initialLength, historyAnnotation) {
+  if (!Array.isArray(ops)) {
+    throw new TypeError("Remote op batch must be an array");
+  }
+  if (!Number.isSafeInteger(initialLength) || initialLength < 0) {
+    throw new RangeError(`Invalid initial document length ${initialLength}`);
+  }
+  let virtualLength = initialLength;
+  const specs = [];
+  for (const op of ops) {
+    if (!op || typeof op !== "object" || Array.isArray(op)) {
+      throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);
+    }
+    if (op.Insert && !op.Delete) {
+      const pos = op.Insert.pos;
+      const content = op.Insert.content;
+      if (typeof content !== "string") {
+        throw new TypeError("Remote insert content must be a string");
+      }
+      ensureValidRangeForLength(pos, pos, virtualLength);
+      specs.push({
+        changes: { from: pos, insert: content },
+        annotations: historyAnnotation,
+        sequential: true,
+      });
+      virtualLength += content.length;
+    } else if (op.Delete && !op.Insert) {
+      const from = op.Delete.pos;
+      const len = op.Delete.len;
+      if (!Number.isSafeInteger(len) || len < 0) {
+        throw new RangeError(`Invalid remote delete length ${len}`);
+      }
+      const to = from + len;
+      ensureValidRangeForLength(from, to, virtualLength);
+      specs.push({
+        changes: {
+          from,
+          to,
+          insert: "",
+        },
+        annotations: historyAnnotation,
+        sequential: true,
+      });
+      virtualLength -= to - from;
+    } else {
+      throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);
+    }
+  }
+  return specs;
+}
+
 function ensureValidRange(from, to) {
   const length = ctx.activeView.state.doc.length;
+  ensureValidRangeForLength(from, to, length);
+}
+
+function ensureValidRangeForLength(from, to, length) {
   if (
-    !Number.isInteger(from) ||
-    !Number.isInteger(to) ||
+    !Number.isSafeInteger(from) ||
+    !Number.isSafeInteger(to) ||
     from < 0 ||
     to < from ||
     to > length

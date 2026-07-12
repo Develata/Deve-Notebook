@@ -19,6 +19,7 @@ use super::hook_effects::setup_editor_effects;
 use super::hook_runtime::build_editor_runtime;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
+use crate::runtime::domain::EditorSyncFailure;
 use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
@@ -26,6 +27,9 @@ use leptos::prelude::*;
 pub(super) struct EditorState {
     pub content: ReadSignal<String>,
     pub playback_version: ReadSignal<u64>,
+    pub open_request_id: ReadSignal<u64>,
+    pub sync_failure: ReadSignal<Option<EditorSyncFailure>>,
+    pub retry_sync: Callback<()>,
 }
 
 pub(super) fn use_editor(
@@ -46,8 +50,23 @@ pub(super) fn use_editor(
         on_stats.clone(),
     );
 
+    let set_failure = runtime.set_editor_sync_failure;
+    let set_reopen_attempted = runtime.set_snapshot_reopen_attempted;
+    let set_last_open_request_key = runtime.set_last_open_request_key;
+    let set_retry_nonce = runtime.set_retry_nonce;
+    let retry_sync = Callback::new(move |_| {
+        super::ffi::set_read_only(true);
+        set_failure.set(None);
+        set_reopen_attempted.set(false);
+        set_last_open_request_key.set(None);
+        set_retry_nonce.update(|nonce| *nonce = nonce.wrapping_add(1));
+    });
+
     EditorState {
         content: runtime.content,
         playback_version: runtime.playback_version,
+        open_request_id: runtime.open_request_id,
+        sync_failure: runtime.editor_sync_failure,
+        retry_sync,
     }
 }

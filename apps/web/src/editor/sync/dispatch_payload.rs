@@ -111,7 +111,7 @@ mod tests {
         let (load_state, set_load_state) = signal(LoadPhase::Ready);
         let (is_spectator, _) = signal(false);
         let (handshake_ready, _) = signal(true);
-        let (open_request_id, _) = signal(0u64);
+        let (open_request_id, set_open_request_id) = signal(0u64);
         let (content, set_content) = signal(String::new());
         let (pending_local_edits, set_pending_local_edits) = signal({
             let mut pending = HashMap::new();
@@ -140,6 +140,8 @@ mod tests {
         let (load_eta_ms, set_load_eta_ms) = signal(0u64);
         let (repo_key, set_repo_key) = signal(None);
         let (_, set_pending_navigation) = signal(None::<PendingNavigation>);
+        let (_, set_editor_sync_failure) = signal(None);
+        let (snapshot_reopen_attempted, set_snapshot_reopen_attempted) = signal(false);
 
         let _ = (content, playback_version, load_progress, load_eta_ms);
 
@@ -160,7 +162,9 @@ mod tests {
             is_spectator: is_spectator.into(),
             handshake_ready,
             open_request_id,
+            set_open_request_id,
             ws,
+            content,
             set_content,
             pending_local_edits,
             set_pending_local_edits,
@@ -174,6 +178,9 @@ mod tests {
             set_load_state,
             set_load_progress,
             set_load_eta_ms,
+            set_editor_sync_failure,
+            snapshot_reopen_attempted,
+            set_snapshot_reopen_attempted,
             on_stats: None,
             repo_key,
             set_repo_key,

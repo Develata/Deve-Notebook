@@ -9,12 +9,15 @@ use super::context::SyncContext;
 use super::snapshot_apply::{SnapshotApplySignals, build_apply_batch, build_progress_handler};
 use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
+use crate::editor::buffered_ops::clear_sync_buffers;
 use crate::editor::ffi::{applyRemoteContent, set_read_only};
+use crate::editor::hook_open::advance_session_generation;
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
-use crate::runtime::domain::LoadPhase;
+use crate::runtime::domain::{EditorSyncFailure, EditorSyncFailureCode, LoadPhase};
 use deve_core::models::{Op, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use leptos::prelude::*;
+use std::sync::atomic::Ordering;
 
 #[cfg(test)]
 pub(super) use super::snapshot_gate::{SnapshotRequestMatch, snapshot_request_matches};
@@ -74,6 +77,7 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
             "Snapshot apply blocked: editor content bridge unavailable for doc={}",
             ctx.doc_id
         );
+        retry_initial_snapshot_once(ctx, &gate);
         return;
     }
     emit_stats(ctx.on_stats, &message.new_content);
@@ -105,7 +109,6 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
                 version: message.version,
                 history: confirmed_history(&message.delta_ops),
                 finish: LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id),
-                request_id: message.request_id,
             },
         ),
     );
@@ -135,7 +138,6 @@ struct DeltaFailureFallback {
     version: u64,
     history: Vec<(u64, Op)>,
     finish: LoadFinish,
-    request_id: u64,
 }
 
 fn build_delta_failure_fallback(
@@ -144,15 +146,16 @@ fn build_delta_failure_fallback(
     fallback: DeltaFailureFallback,
 ) -> std::rc::Rc<dyn Fn()> {
     let gate = gate.clone();
-    let ws = ctx.ws.clone();
     let doc_id = ctx.doc_id;
-    let scope_nonce = ctx.current_scope_nonce.get_untracked();
     let set_local_version = ctx.set_local_version;
     let set_history = ctx.set_history;
-    let set_playback_version = ctx.set_playback_version;
     let set_load_state = ctx.set_load_state;
     let set_load_progress = ctx.set_load_progress;
     let set_load_eta_ms = ctx.set_load_eta_ms;
+    let set_editor_sync_failure = ctx.set_editor_sync_failure;
+    let open_request_id = ctx.open_request_id;
+    let session_generation = ctx.session_generation.clone();
+    let ready_generation = ctx.ready_generation.clone();
     std::rc::Rc::new(move || {
         if !gate.matches() {
             return;
@@ -171,22 +174,56 @@ fn build_delta_failure_fallback(
                 "Snapshot reconstructed fallback blocked: editor content bridge unavailable for doc={doc_id}"
             );
         }
-        leptos::logging::warn!(
-            "Snapshot delta batch apply failed; requesting snapshot reopen fallback for doc={doc_id}"
-        );
+        leptos::logging::warn!("Snapshot delta batch apply failed closed for doc={doc_id}");
         set_read_only(true);
-        set_local_version.set(0);
-        set_history.set(Vec::new());
-        set_playback_version.set(0);
-        set_load_state.set(LoadPhase::Loading);
+        ready_generation.store(0, Ordering::Relaxed);
+        set_load_state.set(LoadPhase::Error);
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
-        ws.send(ClientMessage::OpenDoc {
-            doc_id,
-            request_id: fallback.request_id,
-            scope_nonce: Some(scope_nonce),
-        });
+        set_editor_sync_failure.set(Some(EditorSyncFailure::new(
+            EditorSyncFailureCode::DeltaReplay,
+            session_generation.load(Ordering::Relaxed),
+            open_request_id.get_untracked(),
+        )));
     })
+}
+
+fn retry_initial_snapshot_once(ctx: &SyncContext, gate: &SnapshotRequestGate) {
+    if !gate.matches() {
+        return;
+    }
+    if !initial_snapshot_may_auto_reopen(ctx.snapshot_reopen_attempted.get_untracked()) {
+        ctx.fail_editor_sync(EditorSyncFailureCode::SnapshotApply);
+        return;
+    }
+
+    let request_id = advance_session_generation(&ctx.session_generation);
+    ctx.set_snapshot_reopen_attempted.set(true);
+    ctx.set_editor_sync_failure.set(None);
+    ctx.ready_generation.store(0, Ordering::Relaxed);
+    clear_sync_buffers(
+        &ctx.buffered_live_ops,
+        &ctx.buffered_encrypted_ops,
+        "snapshot auto-reopen clears buffered live ops",
+        "snapshot auto-reopen clears buffered encrypted ops",
+    );
+    set_read_only(true);
+    ctx.set_open_request_id.set(request_id);
+    ctx.set_local_version.set(0);
+    ctx.set_history.set(Vec::new());
+    ctx.set_playback_version.set(0);
+    ctx.set_load_state.set(LoadPhase::Loading);
+    ctx.set_load_progress.set((0, 0));
+    ctx.set_load_eta_ms.set(0);
+    ctx.ws.send(ClientMessage::OpenDoc {
+        doc_id: ctx.doc_id,
+        request_id,
+        scope_nonce: Some(ctx.current_scope_nonce.get_untracked()),
+    });
+}
+
+fn initial_snapshot_may_auto_reopen(attempted: bool) -> bool {
+    !attempted
 }
 
 fn reconstruct_full_snapshot_content(base: &str, delta_ops: &[ConfirmedOp]) -> Option<String> {

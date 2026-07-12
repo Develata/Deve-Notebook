@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-27`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -191,6 +191,7 @@ HandshakePending(repo_id)
 EditableConfirmed(repo_id)
 PendingAck(doc_id, op_set)
 Resyncing
+EditorSyncError
 ```
 
 可写条件必须满足：
@@ -215,6 +216,15 @@ Editable iff SnapshotReady && HandshakeReady(current_repo)
   - trigger: all pending ops acked or rejected
 - 任意状态 -> `Unauthorized`
   - trigger: explicit auth failure, never by generic disconnect wrapper
+- `SnapshotLoading | Resyncing -> EditorSyncError`
+  - trigger: snapshot adapter、delta/history/live replay 或 pending overlay replay 无法原子应用
+  - effect: editor 保持只读，writer readiness 关闭，不进入 `Ready`，不重发 pending edits
+- `EditorSyncError -> SnapshotLoading`
+  - trigger: 用户显式 Retry；必须创建新的 session generation 与 open request id
+
+初始 snapshot adapter 写入失败只允许一次受当前 repo/branch/scope、generation 与 request id
+约束的自动 reopen。第二次失败必须进入 `EditorSyncError`；不得复用旧 request id、不得无限重试，
+也不得把失败的 adapter 写入当作 snapshot 已确认。
 
 ## 6. Backend State Machine
 
@@ -351,6 +361,8 @@ overlay state row 至少需要：
 
 - 负责 pending overlay、client op id、late ack discard、navigation guard 与 reconnect recovery。
 - 不得把 DOM buffer、localStorage 或 stale scope message 当成已确认事实。
+- editor adapter/replay 失败必须记录结构化的 client-side failure kind；只有显式 Retry 或新的
+  doc/scope generation 可以清除该错误。
 
 ## 12. Refactor Target
 

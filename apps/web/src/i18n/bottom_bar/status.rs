@@ -61,6 +61,13 @@ pub fn snapshot_loading(locale: Locale) -> &'static str {
     }
 }
 
+pub fn editor_sync_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Editor sync error",
+        Locale::Zh => "编辑器同步错误",
+    }
+}
+
 pub fn pending_ack(locale: Locale, count: usize) -> String {
     match locale {
         Locale::En => format!("Pending Ack ({count})"),

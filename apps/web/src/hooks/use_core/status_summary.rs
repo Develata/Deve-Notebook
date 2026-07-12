@@ -18,6 +18,7 @@ pub(crate) enum SyncStatusKind {
     Offline,
     Reconnecting,
     SnapshotLoading,
+    EditorSyncError,
     ReadOnly,
     HandshakingRepo,
     PeerNotRegistered,
@@ -67,6 +68,7 @@ impl SyncStatusSummary {
             SyncStatusKind::Offline => t::bottom_bar::offline(locale).to_string(),
             SyncStatusKind::Reconnecting => t::bottom_bar::reconnecting(locale).to_string(),
             SyncStatusKind::SnapshotLoading => t::bottom_bar::snapshot_loading(locale).to_string(),
+            SyncStatusKind::EditorSyncError => t::bottom_bar::editor_sync_error(locale).to_string(),
             SyncStatusKind::ReadOnly => t::bottom_bar::read_only(locale).to_string(),
             SyncStatusKind::HandshakingRepo => t::bottom_bar::handshaking_repo(locale).to_string(),
             SyncStatusKind::PeerNotRegistered => {
@@ -95,6 +97,9 @@ pub(crate) fn derive_sync_status(input: SyncStatusInput<'_>) -> SyncStatusSummar
         ConnectionStatus::Connecting => SyncStatusKind::Reconnecting,
         ConnectionStatus::Connected if input.node_role_probe_failed => {
             SyncStatusKind::NativeReprobeRequired
+        }
+        ConnectionStatus::Connected if input.load_state == "error" => {
+            SyncStatusKind::EditorSyncError
         }
         ConnectionStatus::Connected if input.load_state != "ready" => {
             SyncStatusKind::SnapshotLoading

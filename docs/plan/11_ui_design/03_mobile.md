@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-28`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -331,6 +331,8 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
 *   repo / branch / scope 切换、drawer 打开、选择条目或关闭当前 surface 时，sheet
     **MUST** 自动收起。
 *   sheet 打开时 **MUST** 避免 AI Chat、辅助键盘栏与 Bottom Bar 遮挡。
+*   sheet 必须使用 `role="dialog"` 与 `aria-modal="true"`；打开后初始焦点进入关闭按钮，
+    `Tab` / `Shift+Tab` 必须困在 sheet 内，`Escape` 关闭，关闭后恢复到触发胶囊（若仍可聚焦）。
 
 ### 5.5 快捷入口 (Quick Actions)
 *   **Search**: 打开 Quick Open / Command Palette（移动端应为底部抽屉）。

@@ -53,7 +53,10 @@ pub fn Editor(
     let editor_ref = NodeRef::<Div>::new();
     let state = hook::use_editor(doc_id, editor_ref, on_stats);
     let playback_version = state.playback_version;
+    let open_request_id = state.open_request_id;
     let content = state.content;
+    let sync_failure = state.sync_failure;
+    let retry_sync = state.retry_sync;
     let core = expect_context::<EditorContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let doc_version = core.doc_version;
@@ -95,6 +98,7 @@ pub fn Editor(
                     data-deve-desktop-col="3-editor"
                     data-deve-editor-host="true"
                     data-deve-editor-readonly=move || editor_readonly.get().to_string()
+                    data-deve-editor-open-request-id=move || open_request_id.get().to_string()
                     class="flex-1 relative border-r border-[var(--border-default)] bg-[var(--bg-editor)] shadow-sm overflow-hidden"
                 >
                     <div
@@ -103,6 +107,42 @@ pub fn Editor(
                         class="absolute inset-0"
                         class=("bg-[var(--bg-active)]", move || playback_version.get() < doc_version.get())
                     ></div>
+                    <Show when=move || sync_failure.get().is_some()>
+                        <div
+                            role="alert"
+                            data-deve-editor-sync-error=move || sync_failure
+                                .get()
+                                .map(|failure| failure.code.as_str())
+                                .unwrap_or_default()
+                            data-deve-editor-sync-failure-generation=move || sync_failure
+                                .get()
+                                .map(|failure| failure.generation.to_string())
+                                .unwrap_or_default()
+                            data-deve-editor-sync-failure-request-id=move || sync_failure
+                                .get()
+                                .map(|failure| failure.request_id.to_string())
+                                .unwrap_or_default()
+                            class="absolute inset-x-4 top-4 z-[var(--z-modal)] rounded-md border border-default bg-panel p-4 text-primary shadow-lg"
+                        >
+                            <div class="text-sm font-semibold">
+                                {move || t::editor_sync::title(locale.get())}
+                            </div>
+                            <div class="mt-1 text-xs">
+                                {move || sync_failure
+                                    .get()
+                                    .map(|failure| t::editor_sync::detail(locale.get(), failure.code))
+                                    .unwrap_or_default()}
+                            </div>
+                            <button
+                                type="button"
+                                data-deve-editor-sync-retry="true"
+                                class="mt-3 rounded border border-default bg-editor px-3 py-2 text-xs font-semibold text-deleted"
+                                on:click=move |_| retry_sync.run(())
+                            >
+                                {move || t::editor_sync::retry(locale.get())}
+                            </button>
+                        </div>
+                    </Show>
                     {move || if !embedded && playback_version.get() < doc_version.get() {
                         view! {
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[var(--z-floating)] px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">

@@ -75,6 +75,16 @@ fn prefers_loading_state_while_snapshot_is_inflight() {
 }
 
 #[test]
+fn reports_editor_sync_error_instead_of_permanent_snapshot_loading() {
+    let summary = summary(SyncStatusInput {
+        load_state: "error",
+        ..ready_input()
+    });
+    assert_eq!(summary.kind, SyncStatusKind::EditorSyncError);
+    assert_eq!(summary.display_text(Locale::En), "Editor sync error");
+}
+
+#[test]
 fn reports_native_reprobe_before_snapshot_loading_when_node_role_probe_failed() {
     let summary = summary(SyncStatusInput {
         load_state: "loading",

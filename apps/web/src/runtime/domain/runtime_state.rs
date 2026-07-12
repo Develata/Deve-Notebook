@@ -76,6 +76,7 @@ pub enum LoadPhase {
     Ready,
     Loading,
     Partial,
+    Error,
 }
 
 impl LoadPhase {
@@ -84,6 +85,7 @@ impl LoadPhase {
             Self::Ready => "ready",
             Self::Loading => "loading",
             Self::Partial => "partial",
+            Self::Error => "error",
         }
     }
 
@@ -99,12 +101,51 @@ impl LoadPhase {
             "ready" => Some(Self::Ready),
             "loading" => Some(Self::Loading),
             "partial" => Some(Self::Partial),
+            "error" => Some(Self::Error),
             _ => None,
         }
     }
 
     pub fn from_wire_or_ready(value: &str) -> Self {
         Self::from_wire(value).unwrap_or(Self::Ready)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EditorSyncFailureCode {
+    SnapshotApply,
+    DeltaReplay,
+    HistoryReplay,
+    LiveReplay,
+    ContentReadback,
+}
+
+impl EditorSyncFailureCode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::SnapshotApply => "snapshot_apply",
+            Self::DeltaReplay => "delta_replay",
+            Self::HistoryReplay => "history_replay",
+            Self::LiveReplay => "live_replay",
+            Self::ContentReadback => "content_readback",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EditorSyncFailure {
+    pub code: EditorSyncFailureCode,
+    pub generation: u64,
+    pub request_id: u64,
+}
+
+impl EditorSyncFailure {
+    pub const fn new(code: EditorSyncFailureCode, generation: u64, request_id: u64) -> Self {
+        Self {
+            code,
+            generation,
+            request_id,
+        }
     }
 }
 

@@ -9,13 +9,50 @@ use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::runtime::document::pending::PendingLocalEdits;
-use crate::runtime::domain::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::domain::{
+    EditorSyncFailure, EditorSyncFailureCode, LoadPhase, PendingBranchSwitch, PendingRepoSwitch,
+};
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+
+#[derive(Clone)]
+pub(super) struct EditorSyncFailureSink {
+    session_generation: Arc<AtomicU64>,
+    ready_generation: Arc<AtomicU64>,
+    open_request_id: ReadSignal<u64>,
+    set_load_state: WriteSignal<LoadPhase>,
+    set_load_progress: WriteSignal<(usize, usize)>,
+    set_load_eta_ms: WriteSignal<u64>,
+    set_editor_sync_failure: WriteSignal<Option<EditorSyncFailure>>,
+}
+
+impl EditorSyncFailureSink {
+    pub(super) fn fail(&self, code: EditorSyncFailureCode) {
+        lock_editor_projection();
+        self.ready_generation.store(0, Ordering::Relaxed);
+        self.set_load_state.set(LoadPhase::Error);
+        self.set_load_progress.set((0, 0));
+        self.set_load_eta_ms.set(0);
+        self.set_editor_sync_failure
+            .set(Some(EditorSyncFailure::new(
+                code,
+                self.session_generation.load(Ordering::Relaxed),
+                self.open_request_id.get_untracked(),
+            )));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn lock_editor_projection() {
+    crate::editor::ffi::set_read_only(true);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn lock_editor_projection() {}
 
 /// 同步消息处理所需的全部上下文
 ///
@@ -41,8 +78,10 @@ pub struct SyncContext<'a> {
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
     pub open_request_id: ReadSignal<u64>,
+    pub set_open_request_id: WriteSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号
+    pub content: ReadSignal<String>,
     pub set_content: WriteSignal<String>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
@@ -60,6 +99,9 @@ pub struct SyncContext<'a> {
     pub set_load_state: WriteSignal<LoadPhase>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub set_load_eta_ms: WriteSignal<u64>,
+    pub set_editor_sync_failure: WriteSignal<Option<EditorSyncFailure>>,
+    pub snapshot_reopen_attempted: ReadSignal<bool>,
+    pub set_snapshot_reopen_attempted: WriteSignal<bool>,
     // 统计回调
     pub on_stats: Option<Callback<EditorStats>>,
     // E2EE: 仓库密钥 (RAM-only)
@@ -89,6 +131,22 @@ impl SyncContext<'_> {
             && self.ready_generation.load(Ordering::Relaxed) == current_generation
     }
 
+    pub fn fail_editor_sync(&self, code: EditorSyncFailureCode) {
+        self.failure_sink().fail(code);
+    }
+
+    pub(super) fn failure_sink(&self) -> EditorSyncFailureSink {
+        EditorSyncFailureSink {
+            session_generation: self.session_generation.clone(),
+            ready_generation: self.ready_generation.clone(),
+            open_request_id: self.open_request_id,
+            set_load_state: self.set_load_state,
+            set_load_progress: self.set_load_progress,
+            set_load_eta_ms: self.set_load_eta_ms,
+            set_editor_sync_failure: self.set_editor_sync_failure,
+        }
+    }
+
     pub fn buffer_live_op(&self, entry: ConfirmedOp) {
         match self.buffered_live_ops.lock() {
             Ok(mut buffered) => buffered.push(entry),
@@ -106,6 +164,16 @@ impl SyncContext<'_> {
         }
     }
 
+    pub fn restore_buffered_live_ops(&self, mut entries: Vec<ConfirmedOp>) {
+        match self.buffered_live_ops.lock() {
+            Ok(mut buffered) => {
+                entries.append(&mut *buffered);
+                *buffered = entries;
+            }
+            Err(_) => leptos::logging::warn!("failed to restore buffered live ops: lock poisoned"),
+        }
+    }
+
     pub fn drain_buffered_encrypted_ops(&self) -> Vec<EncryptedOp> {
         match self.buffered_encrypted_ops.lock() {
             Ok(mut buffered) => std::mem::take(&mut *buffered),
@@ -114,5 +182,51 @@ impl SyncContext<'_> {
                 Vec::new()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::EditorSyncFailureSink;
+    use crate::runtime::domain::{EditorSyncFailureCode, LoadPhase};
+    use leptos::prelude::*;
+    use leptos::reactive::owner::Owner;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    #[test]
+    fn editor_sync_failure_sink_sets_error_and_structured_diagnostics() {
+        let owner = Owner::new();
+        owner.set();
+        let (open_request_id, _) = signal(17u64);
+        let (load_state, set_load_state) = signal(LoadPhase::Partial);
+        let (load_progress, set_load_progress) = signal((2usize, 4usize));
+        let (load_eta_ms, set_load_eta_ms) = signal(8u64);
+        let (failure, set_failure) = signal(None);
+        let ready_generation = Arc::new(AtomicU64::new(9));
+        let sink = EditorSyncFailureSink {
+            session_generation: Arc::new(AtomicU64::new(11)),
+            ready_generation: ready_generation.clone(),
+            open_request_id,
+            set_load_state,
+            set_load_progress,
+            set_load_eta_ms,
+            set_editor_sync_failure: set_failure,
+        };
+
+        sink.fail(EditorSyncFailureCode::ContentReadback);
+
+        assert_eq!(load_state.get_untracked(), LoadPhase::Error);
+        assert_eq!(load_progress.get_untracked(), (0, 0));
+        assert_eq!(load_eta_ms.get_untracked(), 0);
+        assert_eq!(ready_generation.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            failure.get_untracked(),
+            Some(crate::runtime::domain::EditorSyncFailure::new(
+                EditorSyncFailureCode::ContentReadback,
+                11,
+                17,
+            ))
+        );
     }
 }

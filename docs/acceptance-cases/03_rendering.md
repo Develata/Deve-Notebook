@@ -132,10 +132,18 @@
   steps:
     - run: scripts/check-large-doc-baseline.sh
     - run: cargo test -p deve_web snapshot_apply_failure -- --nocapture
+    - run: cargo test -p deve_web history_replay -- --nocapture
+    - run: cargo test -p deve_web editor_sync_failure_sink -- --nocapture
+    - run: cargo test -p deve_web editor_sync_retry_generation_request_id -- --nocapture
+    - run: node apps/web/js/editor_remote_ops.test.cjs
   assertions:
     - cli_assert: remote_batch_apply_returns_failure true
+    - cli_assert: remote_batch_apply_is_single_dispatch_and_prefix_atomic true
     - cli_assert: failed_batch_does_not_advance_version_or_history true
-    - ui_assert: full_snapshot_fallback_requested true
+    - cli_assert: failed_replay_does_not_ready_or_resend_pending true
+    - ui_assert: snapshot_auto_reopen_at_most_once true
+    - ui_assert: editor_sync_error_retry_uses_new_generation_request true
+    - ui_assert: editor_sync_failure_generation_request_markers_visible true
 
 - case_id: RENDER-MATH-001
   goal: 公式渲染与折叠。

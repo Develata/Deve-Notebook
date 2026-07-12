@@ -273,6 +273,7 @@
     - browser_assert: isolated_browser_contexts_login_independently true
     - ui_assert: client_a_create_edit_visible_on_client_b true
     - ui_assert: client_b_offline_readonly_then_reconnect_ready true
+    - ui_assert: client_b_offline_input_does_not_change_content_pending_or_client_a true
     - ui_assert: client_b_post_reconnect_edit_visible_on_client_a true
     - ws_assert: browser_clients_connect_expected_container_origin true
     - ui_assert: no_blank_page_or_framework_overlay true

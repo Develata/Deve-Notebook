@@ -96,7 +96,9 @@ fn apply_decrypted_entry(ctx: &SyncContext, entry: deve_core::models::LedgerEntr
     };
     let confirmed = ConfirmedOp::new(seq, op, origin);
     if ctx.is_live_ready() {
-        apply_live_op(ctx, confirmed);
+        if let Err(code) = apply_live_op(ctx, confirmed) {
+            ctx.fail_editor_sync(code);
+        }
     } else {
         ctx.buffer_live_op(confirmed);
     }

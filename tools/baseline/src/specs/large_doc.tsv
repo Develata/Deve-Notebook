@@ -9,9 +9,17 @@ contains	docs/acceptance-cases/03_rendering.md	progressive_replay_enabled true
 contains	docs/acceptance-cases/03_rendering.md	search_disabled_until_prefetch_complete true
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LARGE-002
 contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_web snapshot_apply_failure -- --nocapture
+contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_web history_replay -- --nocapture
+contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_web editor_sync_failure_sink -- --nocapture
+contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_web editor_sync_retry_generation_request_id -- --nocapture
+contains	docs/acceptance-cases/03_rendering.md	node apps/web/js/editor_remote_ops.test.cjs
 contains	docs/acceptance-cases/03_rendering.md	remote_batch_apply_returns_failure true
 contains	docs/acceptance-cases/03_rendering.md	failed_batch_does_not_advance_version_or_history true
-contains	docs/acceptance-cases/03_rendering.md	full_snapshot_fallback_requested true
+contains	docs/acceptance-cases/03_rendering.md	remote_batch_apply_is_single_dispatch_and_prefix_atomic true
+contains	docs/acceptance-cases/03_rendering.md	failed_replay_does_not_ready_or_resend_pending true
+contains	docs/acceptance-cases/03_rendering.md	snapshot_auto_reopen_at_most_once true
+contains	docs/acceptance-cases/03_rendering.md	editor_sync_error_retry_uses_new_generation_request true
+contains	docs/acceptance-cases/03_rendering.md	editor_sync_failure_generation_request_markers_visible true
 absent	docs/acceptance-cases/03_rendering.md	virtual_render_enabled true
 contains	docs/acceptance-cases/04_diff.md	snapshot_first true
 contains	docs/acceptance-cases/04_diff.md	search_disabled_until_prefetch_complete true
@@ -19,7 +27,7 @@ contains	docs/features/operations/rendering_large_doc_search_gate.md	apps/web/sr
 contains	docs/features/operations/rendering_large_doc_prefetch.md	RENDER-LARGE-002
 contains	docs/features/operations/rendering_large_doc_prefetch.md	op.render.large-doc.delta-fallback
 contains	docs/features/operations/rendering_large_doc_prefetch.md	Failed delta replay must not advance local version or history.
-contains	docs/features/operations/rendering_large_doc_prefetch.md	snapshot reopen is only a last-resort fallback
+contains	docs/features/operations/rendering_large_doc_prefetch.md	only the initial snapshot adapter failure may reopen once automatically
 contains	apps/web/src/editor/sync/snapshot.rs	applyRemoteContent(&message.new_content)
 contains	apps/web/src/editor/sync/snapshot.rs	ctx.set_load_state.set(LoadPhase::Partial)
 contains	apps/web/src/editor/sync/snapshot.rs	apply_ops_in_batches(
@@ -39,12 +47,22 @@ contains	apps/web/src/editor/sync/snapshot_finish.rs	complete_with_content
 contains	apps/web/src/editor/sync/snapshot.rs	ClientMessage::OpenDoc
 contains	apps/web/src/editor/sync/snapshot_apply.rs	snapshot_apply_failure_does_not_advance_version_or_history
 contains	apps/web/src/editor/sync/snapshot/tests.rs	snapshot_delta_fallback_reconstructs_full_content
-contains	apps/web/src/editor/sync/history_replay.rs	Pending overlay replay batch failed
+contains	apps/web/src/editor/sync/history_replay.rs	pub(super) fn apply_replay_ops_atomically(
 contains	apps/web/src/editor/ffi.rs	pub fn applyRemoteOpsBatch(ops_json: &str) -> bool {
 contains	apps/web/js/index_bootstrap.js	return false;
 contains	apps/web/js/index_editor_adapter.js	Queued editor ops batch replay failed
 contains	apps/web/js/editor_remote_ops.js	return false;
 contains	apps/web/js/editor_remote_ops.js	ensureValidRange
 contains	apps/web/js/editor_remote_ops.js	Unsupported remote op
+contains	apps/web/js/editor_remote_ops.js	ctx.activeView.dispatch(...specs)
+contains	apps/web/js/editor_remote_ops.test.cjs	batch validation failure must not dispatch a prefix
+contains	apps/web/src/editor/sync/history_replay.rs	fn history_replay_includes_authoritative_tail_before_pending_overlay()
+contains	apps/web/src/editor/sync/history_replay.rs	fn history_replay_rejects_conflicting_buffered_sequence_without_dropping_entries()
+contains	apps/web/src/editor/sync/context.rs	fn editor_sync_failure_sink_sets_error_and_structured_diagnostics()
+contains	apps/web/src/editor/hook_open.rs	fn editor_sync_retry_generation_request_id_is_monotonic_and_nonzero()
+contains	apps/web/src/editor/mod.rs	data-deve-editor-open-request-id
+contains	apps/web/src/editor/mod.rs	data-deve-editor-sync-failure-generation
+contains	apps/web/src/editor/mod.rs	data-deve-editor-sync-failure-request-id
+contains	apps/web/src/editor/sync/snapshot_finish.rs	EditorSyncFailureCode::ContentReadback
 contains	apps/web/builder.js	entryPoints: ['js/editor_adapter.js']
 contains	apps/web/builder.js	outfile: 'js/editor.bundle.js'

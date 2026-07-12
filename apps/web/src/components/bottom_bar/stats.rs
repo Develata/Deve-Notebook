@@ -20,6 +20,9 @@ pub fn BottomBarStats(
         if state.is_ready() {
             return None;
         }
+        if state == LoadPhase::Error {
+            return Some(t::bottom_bar::editor_sync_error(locale.get()).to_string());
+        }
         let (done, total) = load_progress.get();
         let eta_ms = load_eta_ms.get();
         Some(if total > 0 {

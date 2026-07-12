@@ -1,6 +1,6 @@
 use super::{
-    SnapshotRequestMatch, confirmed_history, reconstruct_full_snapshot_content,
-    snapshot_request_matches,
+    SnapshotRequestMatch, confirmed_history, initial_snapshot_may_auto_reopen,
+    reconstruct_full_snapshot_content, snapshot_request_matches,
 };
 use crate::runtime::domain::PendingBranchTarget;
 use deve_core::models::{Op, PeerId};
@@ -110,4 +110,10 @@ fn snapshot_delta_fallback_reconstructs_full_content() {
         Some("AXB")
     );
     assert_eq!(confirmed_history(&ops).len(), 2);
+}
+
+#[test]
+fn initial_snapshot_adapter_failure_auto_reopens_at_most_once() {
+    assert!(initial_snapshot_may_auto_reopen(false));
+    assert!(!initial_snapshot_may_auto_reopen(true));
 }

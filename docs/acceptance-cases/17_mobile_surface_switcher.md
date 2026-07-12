@@ -23,8 +23,12 @@
     - ui_focus: "open_switcher"
     - ui_keypress: "Enter"
     - ui_assert: mobile_surface_sheet_visible true
-    - ui_keypress: "Enter"
+    - ui_assert: mobile_surface_close_button_focused true
+    - ui_keypress: "Tab"
+    - ui_assert: mobile_surface_focus_trapped true
+    - ui_keypress: "Escape"
     - ui_assert: mobile_surface_sheet_visible false
+    - ui_assert: mobile_surface_trigger_focus_restored true
     - ui_click: "open_switcher"
     - ui_click: "mobile_surface_document_row"
     - ui_assert: editor_visible true
@@ -41,6 +45,7 @@
     - cli_assert: editor_tab_runtime_resets_on_branch_scope_change true
     - cli_assert: mobile_surface_drawer_close_bound true
     - cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
+    - cli_assert: mobile_surface_dialog_focus_scope_bound true
     - cli_assert: mobile_surface_touch_targets_min_size_bound true
     - cli_assert: mobile_surface_diff_restore_bound true
     - cli_assert: mobile_surface_close_diff_keeps_source_control_state true

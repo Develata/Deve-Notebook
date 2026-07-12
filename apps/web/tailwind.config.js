@@ -24,6 +24,7 @@ module.exports = {
         'badge-count': 'var(--bg-badge-count)',
         'chat-user': 'var(--bg-chat-user)',
         'badge-success': 'var(--bg-badge-success)',
+        deleted: 'var(--color-deleted)',
       },
       textColor: {
         primary: 'var(--fg-primary)',
