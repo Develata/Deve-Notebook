@@ -53,8 +53,14 @@ const TAURI_IMPORT_ALLOWED: &[&str] = &[
     "apps/desktop/src/tauri_bootstrap/cookie.rs",
     "apps/desktop/src/tauri_entry/mod.rs",
     "apps/mobile/src/tauri_entry.rs",
+    "apps/mobile/src/tauri_lifecycle.rs",
     "apps/mobile/src/embedded_backend/mod.rs",
     "apps/mobile/src/embedded_backend/cookie.rs",
+    "apps/mobile/src/embedded_backend/generation.rs",
+    "apps/mobile/src/embedded_backend/supervisor.rs",
+    "apps/mobile/src/embedded_backend/supervisor_webview.rs",
+    "apps/mobile/src/embedded_backend/supervisor_tests.rs",
+    "apps/mobile/src/embedded_backend/supervisor_types.rs",
 ];
 
 const PROCESS_RUNTIME_ALLOWED: &[&str] = &[

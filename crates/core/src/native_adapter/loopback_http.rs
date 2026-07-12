@@ -60,6 +60,8 @@ pub enum NativeLoopbackHttpError {
     ResponseTooLarge,
     #[error("native loopback HTTP response is invalid")]
     InvalidResponse,
+    #[error("native loopback HTTP probe was cancelled")]
+    Cancelled,
     #[error("native loopback HTTP IO failed")]
     Io(#[source] std::io::Error),
 }
@@ -100,8 +102,19 @@ impl NativeLoopbackHttpProbe {
     }
 
     pub fn get_json_with_startup_retry(&self, url: &str) -> Result<Value, NativeLoopbackHttpError> {
+        self.get_json_with_startup_retry_until(url, || false)
+    }
+
+    pub fn get_json_with_startup_retry_until(
+        &self,
+        url: &str,
+        mut cancelled: impl FnMut() -> bool,
+    ) -> Result<Value, NativeLoopbackHttpError> {
         let deadline = Instant::now() + self.startup_grace;
         loop {
+            if cancelled() {
+                return Err(NativeLoopbackHttpError::Cancelled);
+            }
             match self.get_json(url) {
                 Ok(json) => return Ok(json),
                 Err(error) if is_retryable_startup_probe_error(&error) => {
@@ -343,5 +356,15 @@ mod tests {
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("token=secret"));
         assert!(!debug.contains("secret body"));
+    }
+
+    #[test]
+    fn startup_retry_honors_cancellation_before_connecting() {
+        let probe = NativeLoopbackHttpProbe::default();
+        let error = probe
+            .get_json_with_startup_retry_until("http://127.0.0.1:9/api/node/role", || true)
+            .expect_err("cancelled");
+
+        assert!(matches!(error, NativeLoopbackHttpError::Cancelled));
     }
 }

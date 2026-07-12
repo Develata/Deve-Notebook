@@ -6,7 +6,8 @@
 //! Native local backend assembly shared by Desktop and Mobile shells.
 
 use crate::server::{
-    NativeLoopbackAuthMaterial, ServerLaunchOptions, start_server_with_bound_listener,
+    EmbeddedServerRuntime, NativeLoopbackAuthMaterial, ServerLaunchOptions, ServerTransportRuntime,
+    ServerTransportServeError,
 };
 use anyhow::Context;
 use deve_core::config::{AppProfile, P2pConfig, SyncMode};
@@ -17,6 +18,7 @@ use deve_core::plugin::runtime::PluginRuntime;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 pub const NATIVE_DEFAULT_REPO_NAME: &str = "default";
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
@@ -39,12 +41,58 @@ pub struct NativeLocalBackendOptions {
     pub p2p: P2pConfig,
     pub session_bound: bool,
     pub auth_material: Option<NativeLoopbackAuthMaterial>,
+    pub prewarm_enabled: bool,
 }
 
 #[derive(Debug)]
 pub struct NativeLoopbackListener {
     listener: TcpListener,
     port: u16,
+}
+
+pub struct NativeEmbeddedServerRuntime {
+    runtime: Option<EmbeddedServerRuntime>,
+}
+
+#[derive(Debug)]
+pub struct NativeEmbeddedTransportError {
+    message: String,
+    sessions_retired: bool,
+}
+
+impl NativeEmbeddedTransportError {
+    pub fn sessions_retired(&self) -> bool {
+        self.sessions_retired
+    }
+
+    fn before_serve(error: anyhow::Error) -> Self {
+        Self {
+            message: error.to_string(),
+            sessions_retired: true,
+        }
+    }
+}
+
+impl std::fmt::Display for NativeEmbeddedTransportError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for NativeEmbeddedTransportError {}
+
+impl From<ServerTransportServeError> for NativeEmbeddedTransportError {
+    fn from(error: ServerTransportServeError) -> Self {
+        Self {
+            sessions_retired: error.sessions_retired(),
+            message: error.to_string(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct NativeEmbeddedTransportRuntime {
+    transport: ServerTransportRuntime,
 }
 
 impl NativeLoopbackListener {
@@ -69,6 +117,7 @@ impl NativeLocalBackendOptions {
             p2p: P2pConfig::default(),
             session_bound: false,
             auth_material: None,
+            prewarm_enabled: true,
         }
     }
 
@@ -130,33 +179,110 @@ pub async fn start_native_loopback_backend(
 }
 
 pub async fn start_native_loopback_backend_with_listener(
-    mut options: NativeLocalBackendOptions,
+    options: NativeLocalBackendOptions,
     listener: NativeLoopbackListener,
 ) -> anyhow::Result<()> {
+    start_native_loopback_backend_with_listener_until_shutdown(
+        options,
+        listener,
+        std::future::pending(),
+    )
+    .await
+}
+
+pub async fn start_native_loopback_backend_with_listener_until_shutdown<F>(
+    mut options: NativeLocalBackendOptions,
+    listener: NativeLoopbackListener,
+    shutdown: F,
+) -> anyhow::Result<()>
+where
+    F: std::future::Future<Output = ()> + Send + 'static,
+{
     options.port = listener.port();
-    let listener = listener
-        .into_tokio_listener()
-        .context("Failed to prepare native loopback listener")?;
-    let (repo, _) = init_default_native_backend(&options.app_data_dir, options.snapshot_depth)?;
-    let plugins = load_native_plugins()?;
-    let launch = match options.auth_material {
+    let runtime = NativeEmbeddedServerRuntime::initialize(&options).await?;
+    let transport = runtime.transport();
+    let serve_result = transport
+        .serve_with_listener_until_shutdown(options, listener, shutdown)
+        .await;
+    let shutdown_result = runtime.shutdown(Duration::from_secs(5)).await;
+    match (serve_result, shutdown_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) => Err(error.into()),
+        (Ok(()), Err(error)) => Err(error),
+        (Err(serve_error), Err(shutdown_error)) => Err(anyhow::Error::new(serve_error).context(
+            format!("native embedded runtime shutdown also failed: {shutdown_error}"),
+        )),
+    }
+}
+
+impl NativeEmbeddedServerRuntime {
+    pub async fn initialize(options: &NativeLocalBackendOptions) -> anyhow::Result<Self> {
+        let (repo, _) = init_default_native_backend(&options.app_data_dir, options.snapshot_depth)?;
+        let plugins = load_native_plugins()?;
+        let launch = native_server_launch_options(options);
+        let runtime = EmbeddedServerRuntime::initialize(
+            repo,
+            &launch,
+            plugins,
+            options.profile,
+            options.sync_mode,
+            options.p2p.clone(),
+            options.prewarm_enabled,
+        )?;
+        Ok(Self {
+            runtime: Some(runtime),
+        })
+    }
+
+    pub fn transport(&self) -> NativeEmbeddedTransportRuntime {
+        NativeEmbeddedTransportRuntime {
+            transport: self
+                .runtime
+                .as_ref()
+                .expect("native embedded runtime is present before shutdown")
+                .transport(),
+        }
+    }
+
+    pub async fn shutdown(mut self, timeout: Duration) -> anyhow::Result<()> {
+        let Some(runtime) = self.runtime.take() else {
+            return Ok(());
+        };
+        runtime.shutdown(timeout).await
+    }
+}
+
+impl NativeEmbeddedTransportRuntime {
+    pub async fn serve_with_listener_until_shutdown<F>(
+        &self,
+        mut options: NativeLocalBackendOptions,
+        listener: NativeLoopbackListener,
+        shutdown: F,
+    ) -> Result<(), NativeEmbeddedTransportError>
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        options.port = listener.port();
+        let listener = listener
+            .into_tokio_listener()
+            .context("Failed to prepare native loopback listener")
+            .map_err(NativeEmbeddedTransportError::before_serve)?;
+        self.transport
+            .serve(listener, native_server_launch_options(&options), shutdown)
+            .await
+            .map_err(NativeEmbeddedTransportError::from)
+    }
+}
+
+fn native_server_launch_options(options: &NativeLocalBackendOptions) -> ServerLaunchOptions {
+    match options.auth_material.clone() {
         Some(auth_material) => ServerLaunchOptions::native_loopback_with_auth_material(
             options.port,
             options.session_bound,
             auth_material,
         ),
         None => ServerLaunchOptions::native_loopback(options.port, options.session_bound),
-    };
-    start_server_with_bound_listener(
-        repo,
-        launch,
-        plugins,
-        options.profile,
-        options.sync_mode,
-        options.p2p,
-        listener,
-    )
-    .await
+    }
 }
 
 pub fn bind_native_loopback_listener(
@@ -274,6 +400,7 @@ mod tests {
         assert_eq!(options.snapshot_depth, 100);
         assert!(!options.session_bound);
         assert!(options.auth_material.is_none());
+        assert!(options.prewarm_enabled);
         assert!(!options.p2p.enabled);
     }
 

@@ -20,12 +20,14 @@ pub(crate) use app_runtime::{
     AppStateParts, build_app_state, build_tree_registry, new_server_broadcast_channel,
 };
 pub(crate) use auth_runtime::init_auth_runtime;
-pub(crate) use host_runtime::{install_repo_host_apis, install_sync_host_api, prepare_host_layout};
+pub(crate) use host_runtime::{
+    install_repo_host_apis, install_sync_host_api, prepare_host_layout, refresh_host_port_hint,
+};
 pub(crate) use node_role_runtime::{current_repo_health, init_node_role, update_repo_health};
 #[cfg(feature = "search")]
 pub(crate) use peripheral_runtime::search_available;
 pub(crate) use peripheral_runtime::{
-    init_observability_runtime, spawn_background_runtime_tasks, spawn_prewarm,
+    BackgroundRuntimeTasks, init_observability_runtime, spawn_background_runtime_tasks,
 };
 pub(crate) use router_runtime::build_runtime_router;
 pub(crate) use sync_runtime::{build_sync_engine, init_sync_manager, load_identity_key};

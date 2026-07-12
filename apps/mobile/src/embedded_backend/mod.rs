@@ -8,24 +8,26 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use deve_cli::native_runtime::{
-    NativeLocalBackendOptions, NativeLoopbackListener, bind_native_loopback_listener,
-    start_native_loopback_backend_with_listener,
-};
 use deve_cli::server::NativeLoopbackAuthMaterial;
-use deve_core::config::AppProfile;
 use deve_core::native_adapter::{NativeAdapterError, native_tauri_allowed_origins};
 use deve_core::security::auth::password;
 use tauri::plugin::TauriPlugin;
 use thiserror::Error;
 
-use crate::{MobileBootstrap, MobileSessionMaterial, MobileShell, MobileShellError};
+use crate::{MobileBootstrap, MobileShellError};
 
 mod cookie;
+mod generation;
 mod http;
+mod supervisor;
+mod supervisor_types;
 
-use cookie::{MobileNativeSessionCookie, tauri_cookie_from_native_session};
-use http::MobileLoopbackHttpProbe;
+use cookie::MobileNativeSessionCookie;
+pub use supervisor::{MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT, MobileEmbeddedBackendSupervisor};
+pub use supervisor_types::{
+    MobileEmbeddedBackendResume, MobileEmbeddedBackendServiceState,
+    MobileEmbeddedBackendSupervisorSnapshot,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MobileEmbeddedBackendPlan {
@@ -46,6 +48,7 @@ pub struct MobileEmbeddedBackendBootstrap {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MobileEmbeddedBackendScript {
     source: String,
+    replacement_source: String,
     native_session_cookie: MobileNativeSessionCookie,
 }
 
@@ -56,6 +59,11 @@ impl MobileEmbeddedBackendScript {
 
     pub fn has_native_session_cookie(&self) -> bool {
         self.native_session_cookie.has_value()
+    }
+
+    #[cfg(any(mobile, test))]
+    pub(super) fn replacement_source(&self) -> &str {
+        &self.replacement_source
     }
 }
 
@@ -93,6 +101,36 @@ pub enum MobileEmbeddedBackendError {
     Shell(#[from] MobileShellError),
     #[error("failed to serialize mobile LocalBackend bootstrap: {0}")]
     BootstrapSerialize(#[from] serde_json::Error),
+    #[error("mobile LocalBackend supervisor state is poisoned")]
+    SupervisorStatePoisoned,
+    #[error("mobile LocalBackend session generation overflow")]
+    SessionGenerationOverflow,
+    #[error("mobile LocalBackend graceful shutdown timed out")]
+    ShutdownTimeout,
+    #[error("mobile LocalBackend task join failed: {0}")]
+    TaskJoinFailed(String),
+    #[error("mobile LocalBackend task exited with error: {0}")]
+    BackendExited(String),
+    #[error("mobile LocalBackend task exited after all transport sessions retired: {0}")]
+    BackendExitedAfterSessionRetirement(String),
+    #[error("mobile embedded authority runtime initialization failed: {0}")]
+    RuntimeInitializeFailed(String),
+    #[error("mobile embedded authority runtime is unavailable")]
+    RuntimeUnavailable,
+    #[error(
+        "mobile embedded authority runtime requires app restart after failed transport retirement"
+    )]
+    RuntimeRestartRequired,
+    #[error("mobile embedded authority runtime shutdown failed: {0}")]
+    RuntimeShutdownFailed(String),
+    #[error("mobile LocalBackend lifecycle transition was superseded or cancelled")]
+    LifecycleTransitionCancelled,
+    #[error("mobile LocalBackend shutdown is already in progress")]
+    ShutdownInProgress,
+    #[error("mobile LocalBackend WebView bootstrap install failed: {0}")]
+    WebviewInstallFailed(String),
+    #[error("mobile LocalBackend main WebView is unavailable")]
+    WebviewUnavailable,
 }
 
 pub fn plan_mobile_embedded_backend(
@@ -116,70 +154,23 @@ pub fn plan_mobile_embedded_backend(
     })
 }
 
-fn run_mobile_embedded_backend_bootstrap_with_listener(
-    plan: MobileEmbeddedBackendPlan,
-    listener: NativeLoopbackListener,
-) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
-    let auth = MobileNativeAuthMaterial::generate()?;
-    let native_session_secret = auth.native_session_secret.clone();
-    spawn_embedded_backend(&plan, listener, auth.into_native_loopback_auth_material());
-
-    let mut shell = MobileShell::new();
-    shell.start_service();
-
-    let probe = MobileLoopbackHttpProbe::default();
-    let mut endpoint = probe.probe_node_role(&plan)?;
-    let cookie = probe.bind_native_session(&plan, &endpoint, &native_session_secret)?;
-    endpoint.session_bound = true;
-    shell.bind_endpoint(endpoint)?;
-    shell.bind_session(MobileSessionMaterial::bound())?;
-
-    let bootstrap = shell.bootstrap_for_web()?;
-    let script = mobile_embedded_backend_script(bootstrap, cookie)?;
-    Ok(MobileEmbeddedBackendBootstrap { plan, script })
-}
-
-pub fn run_mobile_embedded_backend_bootstrap(
-    app_data_dir: impl Into<PathBuf>,
-) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
-    let app_data_dir = app_data_dir.into();
-    let listener = bind_native_loopback_listener(None)
-        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
-    let port = listener.port();
-    let plan = plan_mobile_embedded_backend(app_data_dir, port)?;
-    run_mobile_embedded_backend_bootstrap_with_listener(plan, listener)
-}
-
 pub fn mobile_embedded_backend_plugin<R: tauri::Runtime>(
     script: &MobileEmbeddedBackendScript,
 ) -> TauriPlugin<R> {
-    let native_session_cookie = script.native_session_cookie.clone();
-    tauri::plugin::Builder::<R, ()>::new("deve-mobile-local-backend")
-        .js_init_script(script.source.clone())
-        .on_webview_ready(move |webview| {
-            if let Err(error) =
-                webview.set_cookie(tauri_cookie_from_native_session(&native_session_cookie))
-            {
+    let builder = tauri::plugin::Builder::<R, ()>::new("deve-mobile-local-backend")
+        .js_init_script(script.source.clone());
+    #[cfg(not(target_os = "android"))]
+    let builder = {
+        let native_session_cookie = script.native_session_cookie.clone();
+        builder.on_webview_ready(move |webview| {
+            if let Err(error) = webview.set_cookie(cookie::tauri_cookie_from_native_session(
+                &native_session_cookie,
+            )) {
                 eprintln!("deve_mobile native session cookie install failed closed: {error}");
             }
         })
-        .build()
-}
-
-fn spawn_embedded_backend(
-    plan: &MobileEmbeddedBackendPlan,
-    listener: NativeLoopbackListener,
-    auth_material: NativeLoopbackAuthMaterial,
-) {
-    let mut options = NativeLocalBackendOptions::new(plan.app_data_dir.clone(), plan.port)
-        .with_auth_material(auth_material);
-    options.profile = AppProfile::Standard;
-    options.session_bound = false;
-    tauri::async_runtime::spawn(async move {
-        if let Err(error) = start_native_loopback_backend_with_listener(options, listener).await {
-            eprintln!("deve_mobile LocalBackend exited with error: {error}");
-        }
-    });
+    };
+    builder.build()
 }
 
 fn mobile_embedded_backend_script(
@@ -187,10 +178,21 @@ fn mobile_embedded_backend_script(
     native_session_cookie: MobileNativeSessionCookie,
 ) -> Result<MobileEmbeddedBackendScript, MobileEmbeddedBackendError> {
     let payload = serde_json::to_string(&bootstrap)?;
-    let source = format!("window.__DEVE_NATIVE_BOOTSTRAP={payload};");
+    let source = format!(
+        "(()=>{{const k='__DEVE_NATIVE_BOOTSTRAP_CURRENT__';const fallback={payload};let current=fallback;try{{const saved=window.sessionStorage.getItem(k);if(saved){{current=JSON.parse(saved);}}else{{window.sessionStorage.setItem(k,JSON.stringify(fallback));}}}}catch(_error){{}}window.__DEVE_NATIVE_BOOTSTRAP=current;}})();"
+    );
+    #[cfg(target_os = "android")]
+    let source = format!(
+        "{source}(()=>{{const k='__DEVE_NATIVE_SESSION_INSTALLED__';const current=window.__DEVE_NATIVE_BOOTSTRAP;let installed=false;try{{installed=window.sessionStorage.getItem(k)===current.http_base;}}catch(_error){{}}if(installed)return;queueMicrotask(()=>Promise.resolve().then(()=>window.__TAURI_INTERNALS__.invoke('native_backend_prepare_webview_session')).then(()=>{{try{{window.sessionStorage.setItem(k,current.http_base);}}catch(_error){{}}window.location.reload();}}).catch(()=>{{window.__DEVE_NATIVE_BOOTSTRAP={{...current,session_bound:false,blocked_reason:'session_invalid'}};window.dispatchEvent(new Event('deve-native-service-error'));}}));}})();"
+    );
+    let replacement_source = format!(
+        "(()=>{{const k='__DEVE_NATIVE_BOOTSTRAP_CURRENT__';const current={payload};try{{window.sessionStorage.setItem(k,JSON.stringify(current));}}catch(_error){{}}window.__DEVE_NATIVE_BOOTSTRAP=current;}})();"
+    );
     validate_mobile_embedded_script_source(&source)?;
+    validate_mobile_embedded_script_source(&replacement_source)?;
     Ok(MobileEmbeddedBackendScript {
         source,
+        replacement_source,
         native_session_cookie,
     })
 }
@@ -215,8 +217,8 @@ fn validate_mobile_embedded_script_source(source: &str) -> Result<(), MobileEmbe
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct MobileNativeAuthMaterial {
-    native_session_secret: String,
+pub(super) struct MobileNativeAuthMaterial {
+    pub(super) native_session_secret: String,
     auth_secret: String,
     auth_password_hash: String,
 }
@@ -232,7 +234,7 @@ impl fmt::Debug for MobileNativeAuthMaterial {
 }
 
 impl MobileNativeAuthMaterial {
-    fn generate() -> Result<Self, MobileEmbeddedBackendError> {
+    pub(super) fn generate() -> Result<Self, MobileEmbeddedBackendError> {
         let native_session_secret = generate_secret()?;
         let auth_secret = generate_secret()?;
         let auth_password = generate_secret()?;
@@ -245,7 +247,7 @@ impl MobileNativeAuthMaterial {
         })
     }
 
-    fn into_native_loopback_auth_material(self) -> NativeLoopbackAuthMaterial {
+    pub(super) fn into_native_loopback_auth_material(self) -> NativeLoopbackAuthMaterial {
         NativeLoopbackAuthMaterial::new(
             self.native_session_secret,
             self.auth_secret,
@@ -275,6 +277,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use deve_cli::native_runtime::bind_native_loopback_listener;
 
     #[test]
     fn mobile_embedded_backend_plan_is_local_authority_free_runtime() {
@@ -329,7 +332,13 @@ mod tests {
         assert!(
             script
                 .source()
-                .starts_with("window.__DEVE_NATIVE_BOOTSTRAP=")
+                .contains("window.__DEVE_NATIVE_BOOTSTRAP=current")
+        );
+        assert!(script.source().contains("window.sessionStorage.getItem"));
+        assert!(
+            script
+                .replacement_source()
+                .contains("window.sessionStorage.setItem")
         );
         assert!(script.source().contains("http://127.0.0.1:40123"));
         assert!(!script.source().contains("secret"));

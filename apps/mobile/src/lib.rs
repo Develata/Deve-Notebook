@@ -24,12 +24,16 @@ mod shell_recovery_test;
 mod shell_test;
 #[cfg(feature = "native-packaging")]
 mod tauri_entry;
+#[cfg(feature = "native-packaging")]
+mod tauri_lifecycle;
 mod types;
 
 #[cfg(feature = "native-packaging")]
 pub use embedded_backend::{
     MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError, MobileEmbeddedBackendPlan,
-    MobileEmbeddedBackendScript, plan_mobile_embedded_backend,
+    MobileEmbeddedBackendResume, MobileEmbeddedBackendScript, MobileEmbeddedBackendServiceState,
+    MobileEmbeddedBackendSupervisor, MobileEmbeddedBackendSupervisorSnapshot,
+    plan_mobile_embedded_backend,
 };
 #[cfg(feature = "native-packaging")]
 pub use native_backend::{

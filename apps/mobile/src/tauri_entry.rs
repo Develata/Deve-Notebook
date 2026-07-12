@@ -18,8 +18,9 @@ use tauri::{AppHandle, Manager, State, WebviewWindowBuilder, Wry};
 use thiserror::Error;
 
 use crate::MobileNativeBackendState;
-use crate::embedded_backend::{
-    mobile_embedded_backend_plugin, run_mobile_embedded_backend_bootstrap,
+use crate::embedded_backend::{MobileEmbeddedBackendSupervisor, mobile_embedded_backend_plugin};
+use crate::tauri_lifecycle::{
+    handle_mobile_run_event, handle_mobile_window_event, shutdown_mobile_backend_before_restart,
 };
 
 const MOBILE_TAURI_MAIN_WINDOW_LABEL: &str = "main";
@@ -220,8 +221,13 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
     let mut builder = tauri::Builder::default();
 
     builder = builder
+        .on_window_event(handle_mobile_window_event)
         .invoke_handler(tauri::generate_handler![
             native_backend_get_config,
+            native_backend_get_service_state,
+            native_backend_prepare_webview_session,
+            native_backend_debug_stop_transport,
+            native_backend_debug_request_exit,
             native_backend_validate_remote,
             native_backend_save_remote,
             native_backend_switch_local,
@@ -259,8 +265,8 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
                         return Ok(());
                     }
                 };
-                match run_mobile_embedded_backend_bootstrap(app_data_dir) {
-                    Ok(bootstrap) => {
+                match MobileEmbeddedBackendSupervisor::start(app_data_dir) {
+                    Ok((supervisor, bootstrap)) => {
                         if let Err(error) = app
                             .handle()
                             .plugin(mobile_embedded_backend_plugin(&bootstrap.script))
@@ -268,6 +274,7 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
                             eprintln!("deve_mobile LocalBackend plugin failed closed: {error}");
                             return Ok(());
                         }
+                        app.manage(std::sync::Arc::new(supervisor));
                     }
                     Err(error) => {
                         eprintln!("deve_mobile LocalBackend bootstrap failed closed: {error}");
@@ -279,10 +286,14 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
             Ok(())
         });
 
-    let result = builder.run(tauri::generate_context!());
-    if let Err(error) = result {
-        eprintln!("deve_mobile Tauri shell exited with error: {error}");
-    }
+    let app = match builder.build(tauri::generate_context!()) {
+        Ok(app) => app,
+        Err(error) => {
+            eprintln!("deve_mobile Tauri shell build failed closed: {error}");
+            return;
+        }
+    };
+    app.run(handle_mobile_run_event);
 }
 
 fn remote_browser_script_for_launch_options(
@@ -340,6 +351,73 @@ async fn native_backend_get_config(
 }
 
 #[tauri::command]
+async fn native_backend_get_service_state(
+    app: AppHandle<Wry>,
+) -> Result<Option<crate::MobileEmbeddedBackendSupervisorSnapshot>, String> {
+    let Some(state) = app.try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>() else {
+        return Ok(None);
+    };
+    state
+        .snapshot()
+        .map(Some)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn native_backend_prepare_webview_session(app: AppHandle<Wry>) -> Result<(), String> {
+    let state = app
+        .try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>()
+        .ok_or_else(|| "mobile embedded runtime unavailable".to_string())?;
+    let webview = app
+        .get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL)
+        .ok_or_else(|| "mobile main WebView unavailable".to_string())?;
+    #[cfg(mobile)]
+    {
+        state
+            .prepare_initial_webview_session(&webview)
+            .await
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(mobile))]
+    {
+        let _ = (state, webview);
+        Err("mobile WebView session preparation is unavailable on this target".to_string())
+    }
+}
+
+#[tauri::command]
+async fn native_backend_debug_stop_transport(app: AppHandle<Wry>) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    {
+        let state = app
+            .try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>()
+            .ok_or_else(|| "mobile embedded runtime unavailable".to_string())?;
+        state
+            .stop_transport_for_lifecycle_smoke()
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = app;
+        Err("mobile lifecycle fault injection is debug-only".to_string())
+    }
+}
+
+#[tauri::command]
+async fn native_backend_debug_request_exit(app: AppHandle<Wry>) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    {
+        app.exit(0);
+        Ok(())
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = app;
+        Err("mobile lifecycle exit probe is debug-only".to_string())
+    }
+}
+
+#[tauri::command]
 async fn native_backend_validate_remote(remote_url: String) -> NativeBackendValidationResult {
     crate::probe_mobile_native_remote_backend(&remote_url).await
 }
@@ -361,6 +439,7 @@ async fn native_backend_save_remote(
     state
         .save_preference(NativeBackendPreference::remote(origin))
         .map_err(|error| error.to_string())?;
+    shutdown_mobile_backend_before_restart(&app).await?;
     app.request_restart();
     Ok(result)
 }
@@ -374,6 +453,7 @@ async fn native_backend_switch_local(
     state
         .save_preference(preference.clone())
         .map_err(|error| error.to_string())?;
+    shutdown_mobile_backend_before_restart(&app).await?;
     app.request_restart();
     Ok(preference)
 }

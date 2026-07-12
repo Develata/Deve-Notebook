@@ -30,15 +30,16 @@ pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Recei
 pub(crate) fn spawn_unicast_sender_task(
     sender: futures::stream::SplitSink<WebSocket, Message>,
     rx: mpsc::Receiver<ServerMessage>,
-) {
-    spawn_unicast_sender_task_with_encoder(sender, rx, encode_server_message);
+) -> tokio::task::JoinHandle<()> {
+    spawn_unicast_sender_task_with_encoder(sender, rx, encode_server_message)
 }
 
 fn spawn_unicast_sender_task_with_encoder<S, E>(
     mut sender: S,
     mut rx: mpsc::Receiver<ServerMessage>,
     encode: E,
-) where
+) -> tokio::task::JoinHandle<()>
+where
     S: Sink<Message> + Unpin + Send + 'static,
     S::Error: std::fmt::Debug + Send + 'static,
     E: Fn(&ServerMessage) -> Result<Vec<u8>, String> + Send + 'static,
@@ -58,7 +59,7 @@ fn spawn_unicast_sender_task_with_encoder<S, E>(
                 break;
             }
         }
-    });
+    })
 }
 
 fn encode_server_message(msg: &ServerMessage) -> Result<Vec<u8>, String> {
@@ -70,7 +71,7 @@ pub(crate) fn spawn_broadcast_forwarder(
     mut broadcast_rx: broadcast::Receiver<ServerMessage>,
     unicast_tx: mpsc::Sender<ServerMessage>,
     filter: BroadcastFilter,
-) {
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
             match broadcast_rx.recv().await {
@@ -100,7 +101,7 @@ pub(crate) fn spawn_broadcast_forwarder(
                 Err(RecvError::Closed) => break,
             }
         }
-    });
+    })
 }
 
 fn must_deliver_broadcast(msg: &ServerMessage) -> bool {

@@ -552,6 +552,10 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 负责按静态 peer 配置启动 outbound connector；connector 可以复用独立的 P2P handler，但该 handler 必须执行与普通 sync handler 等价的 repo/source attribution 校验，不得在校验前直接写 shadow repo；等价校验必须复用 core protocol 共享 helper。
 - P2P handler 在收到并接受 `SyncHello` 前，不得处理 `SyncRequest`、`SyncSnapshotRequest`、`SyncPush` 或 `SyncPushSnapshot`；
   握手后的所有 sync frame 必须沿用同一 configured `repo_id`。
+- native in-process runtime **MUST** separate the process-scoped authority runtime from listener/session transport generations. RepoManager、SyncManager、plugin host APIs、watchers、metrics、prewarm 与 P2P connector 只能由一个 owned `EmbeddedServerRuntime` 初始化一次；随机 loopback listener 或 native session 重建不得重复安装或替换这些 authority objects。
+- `EmbeddedServerRuntime` **MUST** own cancellation and join handles for every background task it starts. Axum listener shutdown alone is not a complete runtime shutdown；normal native app exit 必须先停止 active transport generation，再在有界时间内 cancel/join metrics、prewarm、P2P connector，并释放 watcher ownership。
+- transport generation 可以针对新端口重建 node-role、native-session bridge、allowed-origin router 与 port hint，但必须复用同一 `AppState`。process-scoped runtime fatal failure 必须 fail-closed 并要求 app restart；不得在同一进程中创建第二套 authority runtime。
+- 每个 transport generation 必须拥有其升级后的 WebSocket session cancellation 与 join 边界。listener shutdown 必须先拒绝新 upgrade、通知该 generation 的全部已升级 session 退出，并可抢占当前 in-flight handler future，然后撤销 browser writer grant 并等待 session idle；旧 generation 的 sender/broadcast task、认证状态或 `AppState` 引用不得跨到新 endpoint。transport error 只有在 runtime 明确携带 `sessions_retired=true` 证明时才允许 replacement；任何 shutdown/join/idle 证明失败都必须熔断到 app restart。Mobile 为满足有界 app exit 可以关闭可选 prewarm，但不得 detach 或跳过其他 runtime task 的 cancellation/join；一般 runtime 的 prewarm 也必须协作取消，取消后不得保存部分 snapshot。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 
@@ -565,6 +569,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - Native shell 不拥有 ledger/source-control/search authority；它只能启动或绑定本机 service，并把 endpoint/session/readiness 交给共享 Web shell。
 - Desktop full peer v1 使用受控 child-process local service；Android/Mobile full peer v1 使用 in-process embedded loopback service。
 - 两者必须通过本机 server/core writer gate 完成业务写入；shell lifecycle、foreground、network online 事件不得直接授予可写状态。
+- Android/Mobile 的 session generation 只拥有 listener、port-specific router、native session 与 Web bootstrap；process-scoped embedded runtime 继续拥有唯一 RepoManager/SyncManager/AppState，generation restart 不得重开数据库或重装全局 host API。
 
 ## 13. Refactor Target
 

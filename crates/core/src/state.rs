@@ -40,12 +40,25 @@ pub use validate::{InvalidContentOp, describe_invalid_content_op, find_invalid_c
 /// - 当前实现假设操作是线性有序的（Phase 0 简化假设）。
 /// - 在更复杂的 CRDT 场景中，此处应由 Loro 等库处理。
 pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
+    reconstruct_content_until(ops, || false).expect("non-cancellable reconstruction completes")
+}
+
+/// 重建内容，并允许后台 projection/prewarm 在 runtime shutdown 时协作取消。
+///
+/// 返回 `None` 时调用方不得保存部分结果或推进任何 authority waterline。
+pub fn reconstruct_content_until(
+    ops: &[LedgerEntry],
+    mut cancelled: impl FnMut() -> bool,
+) -> Option<String> {
     let mut content = Rope::new();
     let mut total_utf16: u32 = 0;
     let mut cache = Utf16IndexCache::new(adaptive_step(total_utf16));
     let mut op_count = 0u32;
 
     for entry in ops {
+        if cancelled() {
+            return None;
+        }
         op_count = op_count.wrapping_add(1);
         let Some(op) = entry.content_op() else {
             continue;
@@ -92,7 +105,10 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
         }
     }
 
-    content.to_string()
+    if cancelled() {
+        return None;
+    }
+    Some(content.to_string())
 }
 
 /// 将一组 UTF-16 索引的内容操作应用到已有文本。

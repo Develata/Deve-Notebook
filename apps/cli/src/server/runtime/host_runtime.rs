@@ -32,3 +32,7 @@ pub(crate) fn prepare_host_layout(repo: &RepoManager, port: u16) -> anyhow::Resu
     setup::write_main_port_hint(&host_dir, port)?;
     Ok(host_dir)
 }
+
+pub(crate) fn refresh_host_port_hint(host_dir: &std::path::Path, port: u16) -> anyhow::Result<()> {
+    setup::write_main_port_hint(host_dir, port)
+}

@@ -605,3 +605,62 @@ contains	docs/plan/11_ui_design/03_mobile.md	**Font Size**: 默认字号 **SHOUL
 contains	docs/plan/11_ui_design/03_mobile.md	Font Size：移动端编辑器默认字号 **SHOULD** 设为 `16px` 或更高
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-020	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-020	cli_assert: mobile_editor_font_size_16px true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging mobile_embedded_backend_supervisor -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging stale_resume -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging lifecycle_fault_injection -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging failed_transport_retirement -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli native_loopback_graceful_shutdown -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_web foreground_reprobe -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_web native_resume_requests_dynamic_endpoint_rebind_without_old_endpoint_probe -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli --test native_embedded_runtime_restart_test -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli edit_rejects_stale_message_scope_at_writer_gate -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-lifecycle.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_remains_storage_limited_readonly true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_supervisor_owns_backend_task_shutdown_endpoint_and_generation true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_embedded_authority_runtime_initialized_once_per_process true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_transport_restart_reuses_repo_sync_and_app_state true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_runtime_shutdown_cancels_and_joins_background_tasks true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_remote_browser_creates_no_embedded_supervisor true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_exit_gracefully_stops_embedded_backend true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_resume_restarts_dead_backend_on_new_random_endpoint true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: retired_mobile_transport_closes_upgraded_websocket_sessions true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_resume_rebinds_web_connection_without_page_reload true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_exit_reports_clean_runtime_shutdown_marker true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: unproven_transport_retirement_requires_app_restart true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_suspend_immediately_readonly_and_preserves_pending true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_resume_rejects_stale_scope_before_fresh_writer_ready true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_resume_installs_only_current_generation_bootstrap true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_lifecycle_smoke_preserves_nonzero_pending true
+contains	docs/plan/11_ui_design/03_mobile.md	`MobileEmbeddedBackendSupervisor` 必须持有唯一 process-scoped `EmbeddedServerRuntime`
+contains	docs/features/08_ui_design_03_mobile.md	LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`
+contains	apps/cli/src/native_runtime.rs	start_native_loopback_backend_with_listener_until_shutdown
+contains	apps/cli/src/native_runtime.rs	pub struct NativeEmbeddedServerRuntime
+contains	apps/cli/src/server/start.rs	pub(crate) struct EmbeddedServerRuntime
+contains	apps/cli/src/server/start.rs	.with_graceful_shutdown(shutdown)
+contains	apps/cli/src/server/ws/transport.rs	pub(crate) struct WsTransportRuntime
+contains	apps/mobile/src/embedded_backend/supervisor.rs	pub struct MobileEmbeddedBackendSupervisor
+contains	apps/mobile/src/embedded_backend/supervisor.rs	MobileEmbeddedBackendServiceState::ForegroundReprobe
+contains	apps/mobile/src/embedded_backend/supervisor.rs	resume_gate: tokio::sync::Mutex<()>
+contains	apps/mobile/src/embedded_backend/supervisor_shutdown.rs	pub async fn shutdown
+contains	apps/mobile/src/embedded_backend/supervisor_webview.rs	resume_and_complete_on_webview
+contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
+contains	apps/mobile/src/embedded_backend/supervisor_types.rs	replacement_source
+contains	apps/mobile/src/embedded_backend/cookie.rs	setAcceptThirdPartyCookies
+contains	apps/mobile/src/tauri_entry.rs	native_backend_prepare_webview_session
+contains	apps/mobile/src/tauri_entry.rs	MobileEmbeddedBackendSupervisor::start(app_data_dir)
+contains	apps/mobile/src/tauri_entry.rs	app.manage(std::sync::Arc::new(supervisor))
+contains	apps/mobile/src/tauri_lifecycle.rs	WindowEvent::Suspended
+contains	apps/mobile/src/tauri_lifecycle.rs	WindowEvent::Resumed
+contains	apps/mobile/src/tauri_lifecycle.rs	shutdown_mobile_backend_before_restart
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	deve-native-suspended
+contains	apps/web/src/api/connection.rs	RebindNativeEndpoint
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	probe_auth_status_with_http_base
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn native_suspend_immediately_revokes_write_readiness()
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	smoke-mobile-android-lifecycle.sh
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_CDP_ENDPOINT
+contains	scripts/smoke-mobile-android-lifecycle.mjs	mobile-android-lifecycle: backgrounding app
+contains	scripts/smoke-mobile-android-lifecycle.mjs	Android System WebView lacks WebCrypto Ed25519
+contains	scripts/smoke-mobile-android-lifecycle.mjs	suspended editor must reject writes
+contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
+contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh

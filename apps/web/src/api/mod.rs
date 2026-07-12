@@ -35,6 +35,7 @@ pub use self::ai_backend::{
     fetch_ai_backend_capabilities, resolve_backend_for_effective_state, resolve_backend_for_send,
 };
 pub(crate) use self::auth_login::{LoginAttemptError, LoginTransportError, attempt_login, logout};
+pub(crate) use self::auth_probe::probe_auth_status_with_http_base;
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
 pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_for_http_base};
 pub(crate) use self::external_changes::{

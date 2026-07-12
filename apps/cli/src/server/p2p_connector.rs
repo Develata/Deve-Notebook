@@ -12,13 +12,18 @@ use tokio::time::Duration;
 const MAX_RECONNECT_BACKOFF: Duration = Duration::from_secs(30);
 const INITIAL_RECONNECT_BACKOFF: Duration = Duration::from_secs(1);
 
-pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
+pub(super) fn spawn_mesh_connectors(
+    config: P2pConfig,
+    state: Arc<AppState>,
+    shutdown: tokio::sync::watch::Receiver<bool>,
+) -> Vec<tokio::task::JoinHandle<()>> {
     p2p_status::initialize(&config);
     if !config.enabled {
-        return;
+        return Vec::new();
     }
 
     let success_interval = Duration::from_millis(config.connect_interval_ms.clamp(1_000, 30_000));
+    let mut tasks = Vec::new();
     for peer in config.peers.into_iter().filter(|peer| peer.enabled) {
         let state = state.clone();
         if is_self_loop(&peer, &state) {
@@ -31,15 +36,30 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
             );
             continue;
         }
-        tokio::spawn(async move {
+        let mut shutdown = shutdown.clone();
+        tasks.push(tokio::spawn(async move {
             let mut backoff = INITIAL_RECONNECT_BACKOFF;
             loop {
+                if *shutdown.borrow() {
+                    break;
+                }
                 let attempt = p2p_status::record_attempt(&peer);
-                match p2p::connect_peer_once(&peer, state.clone()).await {
+                let exchange = tokio::select! {
+                    changed = shutdown.changed() => {
+                        if changed.is_err() || *shutdown.borrow() {
+                            break;
+                        }
+                        continue;
+                    }
+                    result = p2p::connect_peer_once(&peer, state.clone()) => result,
+                };
+                match exchange {
                     Ok(stats) => {
                         p2p_status::record_success(&peer, outcome_from_stats(&stats));
                         backoff = INITIAL_RECONNECT_BACKOFF;
-                        tokio::time::sleep(success_interval).await;
+                        if sleep_or_shutdown(success_interval, &mut shutdown).await {
+                            break;
+                        }
                     }
                     Err(err) => {
                         let error_code = classify_p2p_error(&err);
@@ -55,12 +75,30 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
                         if is_terminal_p2p_error(error_code) {
                             break;
                         }
-                        tokio::time::sleep(backoff + jitter_for_attempt(&peer, attempt)).await;
+                        if sleep_or_shutdown(
+                            backoff + jitter_for_attempt(&peer, attempt),
+                            &mut shutdown,
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         backoff = next_backoff(backoff);
                     }
                 }
             }
-        });
+        }));
+    }
+    tasks
+}
+
+async fn sleep_or_shutdown(
+    duration: Duration,
+    shutdown: &mut tokio::sync::watch::Receiver<bool>,
+) -> bool {
+    tokio::select! {
+        changed = shutdown.changed() => changed.is_err() || *shutdown.borrow(),
+        _ = tokio::time::sleep(duration) => false,
     }
 }
 

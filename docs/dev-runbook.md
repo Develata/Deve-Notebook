@@ -924,6 +924,7 @@ Mobile install/startup smoke is separate from package build evidence:
 ```bash
 scripts/check-mobile-android-install-startup-smoke.sh
 scripts/check-mobile-android-emulator-install-startup-smoke.sh
+scripts/smoke-mobile-android-lifecycle.sh
 scripts/check-mobile-ios-install-startup-smoke.sh
 ```
 
@@ -949,15 +950,44 @@ with the target-host evidence artifact.
 DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-emulator-install-startup-smoke.sh
 ```
 
+The emulator gate now keeps the debug APK installed after its marker startup
+probe and runs `scripts/smoke-mobile-android-lifecycle.sh` against the same
+artifact. The lifecycle harness forwards the app's debug WebView socket to a
+random host CDP port, then uses raw page-target CDP from
+`scripts/smoke-mobile-android-lifecycle.mjs` to
+verify native-session startup, create/edit/commit, a real non-zero pending
+overlay, HOME background read-only, debug-only transport fault injection,
+replacement random endpoint/session generation, foreground
+auth/node-role/WS/scope reprobe, pending replay, a second edit/commit, and
+bounded graceful app/runtime exit. It does not call ledger or Source Control
+authority APIs directly; the fault-injection and exit commands are unavailable
+in release builds.
+
+The writable lifecycle path requires the target Android System WebView to pass
+the actual WebCrypto Ed25519 key-generation probe. A frozen AOSP image without
+that capability remains storage-limited/read-only by contract; the smoke must
+fail with the capability reason instead of waiting indefinitely or bypassing
+browser peer identity. LocalBackend installs its HttpOnly native-session cookie
+through a no-argument Tauri command backed by Android CookieManager because the
+current Wry Android `set_cookie` surface is unsupported; cookie material never
+enters JavaScript or command arguments.
+
+With an already booted emulator and built debug APK, run the narrower gate:
+
+```bash
+DEVE_MOBILE_ANDROID_SERIAL=emulator-5554 DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh
+```
+
 Required iOS mode needs macOS, a built simulator `.app`, and a booted simulator:
 
 ```bash
 DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-ios-install-startup-smoke.sh
 ```
 
-These gates install and launch only the WebView shell. They do not open
-child-process runtime, backend supervision, ledger/Projection Locator/source-control/search,
-Git, or `.notegit` authority writes.
+The narrower install/startup gates open only the WebView shell. The lifecycle
+smoke additionally starts the embedded LocalBackend supervisor and exercises
+normal UI intent paths, but it does not call ledger/Projection Locator,
+Source Control, Git, or `.notegit` authority APIs directly.
 
 Optional GitHub Actions entry:
 

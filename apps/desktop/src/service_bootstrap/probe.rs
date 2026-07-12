@@ -114,6 +114,7 @@ impl From<NativeLoopbackHttpError> for DesktopLocalServiceBootstrapError {
             NativeLoopbackHttpError::HttpStatus { status } => Self::ProbeHttpStatus { status },
             NativeLoopbackHttpError::ResponseTooLarge => Self::ProbeResponseTooLarge,
             NativeLoopbackHttpError::InvalidResponse => Self::ProbeInvalidResponse,
+            NativeLoopbackHttpError::Cancelled => Self::HealthProbeFailed,
             NativeLoopbackHttpError::Io(source) => Self::ProbeIo(source),
         }
     }

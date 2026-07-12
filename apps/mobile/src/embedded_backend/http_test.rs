@@ -109,3 +109,27 @@ fn mobile_node_role_payload_rejects_empty_endpoint_role() {
         ));
     }
 }
+
+#[test]
+fn mobile_node_role_payload_rejects_endpoint_from_another_transport_generation() {
+    let error = endpoint_from_node_role_json(
+        &plan(),
+        &json!({
+            "role": "native-main",
+            "native_service": {
+                "endpoint": {
+                    "http_base": "http://127.0.0.1:40124",
+                    "ws_base": "ws://127.0.0.1:40124",
+                    "node_role": "native-main",
+                    "session_bound": false
+                }
+            }
+        }),
+    )
+    .expect_err("foreign generation endpoint fails closed");
+
+    assert!(matches!(
+        error,
+        MobileEmbeddedBackendError::ProbeInvalidResponse
+    ));
+}

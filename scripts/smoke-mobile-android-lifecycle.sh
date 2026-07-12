@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
+
+REQUIRED="${DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED:-0}"
+APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
+APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
+SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
+TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-180}"
+NODE_SCRIPT="${DEVE_MOBILE_ANDROID_LIFECYCLE_NODE_SCRIPT:-$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.mjs}"
+
+fail() {
+  echo "mobile-android-lifecycle-smoke: $*" >&2
+  exit 1
+}
+
+adb_bin() {
+  android_tool_path adb || fail "adb is required for Android lifecycle smoke"
+}
+
+adb_cmd() {
+  local args=()
+  local limit=30
+  [[ -z "$SERIAL" ]] || args=(-s "$SERIAL")
+  if [[ -n "${GLOBAL_DEADLINE:-}" ]]; then
+    limit=$((GLOBAL_DEADLINE - SECONDS))
+    (( limit > 0 )) || fail "global lifecycle smoke deadline exhausted before adb $*"
+  fi
+  timeout "$limit" "$(adb_bin)" "${args[@]}" "$@"
+}
+
+app_pid() {
+  adb_cmd shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' | awk '{ print $1; exit }'
+}
+
+adb_cleanup_cmd() {
+  local args=()
+  [[ -z "$SERIAL" ]] || args=(-s "$SERIAL")
+  timeout 10 "$(adb_bin)" "${args[@]}" "$@" >/dev/null 2>&1 || true
+}
+
+cleanup() {
+  if [[ -n "${FORWARD_PORT:-}" ]]; then
+    adb_cleanup_cmd forward --remove "tcp:$FORWARD_PORT"
+  fi
+  adb_cleanup_cmd shell am force-stop "$APP_ID"
+  adb_cleanup_cmd uninstall "$APP_ID"
+}
+
+find_webview_socket() {
+  local pid="$1"
+  local sockets
+  sockets="$(adb_cmd shell cat /proc/net/unix 2>/dev/null | tr -d '\r' | awk '$NF ~ /webview_devtools_remote/ { print $NF }')"
+  printf '%s\n' "$sockets" | grep -E "(^|_)${pid}$" | head -n 1 || true
+}
+
+remaining_seconds() {
+  local remaining=$((GLOBAL_DEADLINE - SECONDS))
+  (( remaining > 0 )) || fail "global lifecycle smoke deadline exhausted"
+  printf '%s\n' "$remaining"
+}
+
+if [[ "$REQUIRED" != "1" ]]; then
+  echo "mobile-android-lifecycle-smoke: not executed; set DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 on an Android emulator host"
+  echo "mobile-android-lifecycle-smoke: ok"
+  exit 0
+fi
+
+[[ -n "$SERIAL" ]] || fail "DEVE_MOBILE_ANDROID_SERIAL is required"
+command -v node >/dev/null 2>&1 || fail "node is required"
+command -v timeout >/dev/null 2>&1 || fail "timeout is required"
+[[ -f "$ROOT_DIR/$APK_PATH" || -f "$APK_PATH" ]] || fail "debug APK not found: $APK_PATH"
+[[ -f "$NODE_SCRIPT" ]] || fail "lifecycle harness not found: $NODE_SCRIPT"
+[[ -f "$ROOT_DIR/$APK_PATH" ]] && APK_PATH="$ROOT_DIR/$APK_PATH"
+GLOBAL_DEADLINE=$((SECONDS + TIMEOUT_SECS))
+
+trap cleanup EXIT
+adb_cmd start-server >/dev/null
+adb_cmd wait-for-device
+adb_cmd install -r "$APK_PATH" >/dev/null
+adb_cmd logcat -c
+adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
+
+deadline=$GLOBAL_DEADLINE
+PID=""
+while (( SECONDS < deadline )); do
+  PID="$(app_pid || true)"
+  [[ -z "$PID" ]] || break
+  sleep 1
+done
+[[ -n "$PID" ]] || fail "Android app did not remain running: $APP_ID"
+
+SOCKET=""
+while (( SECONDS < deadline )); do
+  SOCKET="$(find_webview_socket "$PID")"
+  [[ -z "$SOCKET" ]] || break
+  sleep 1
+done
+[[ -n "$SOCKET" ]] || fail "debug WebView socket not found for pid $PID"
+SOCKET="${SOCKET#@}"
+FORWARD_PORT="$(adb_cmd forward tcp:0 "localabstract:$SOCKET" | tr -d '\r')"
+[[ "$FORWARD_PORT" =~ ^[0-9]+$ ]] || fail "adb did not allocate a CDP forward port: $FORWARD_PORT"
+
+DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
+DEVE_MOBILE_ANDROID_ADB_BIN="$(adb_bin)" \
+DEVE_MOBILE_ANDROID_SERIAL="$SERIAL" \
+DEVE_MOBILE_ANDROID_APP_ID="$APP_ID" \
+DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS="$(($(remaining_seconds) * 1000))" \
+timeout "$(remaining_seconds)" node "$NODE_SCRIPT"
+
+for _ in $(seq 1 30); do
+  [[ -z "$(app_pid || true)" ]] && break
+  sleep 1
+done
+[[ -z "$(app_pid || true)" ]] || fail "Android app/backend process remained after bounded graceful exit"
+
+LOGCAT="$(adb_cmd logcat -d 2>/dev/null | tr -d '\r')"
+printf '%s\n' "$LOGCAT" | grep -F "deve_mobile LocalBackend clean shutdown complete" >/dev/null \
+  || fail "clean LocalBackend shutdown marker missing from Android logcat"
+if printf '%s\n' "$LOGCAT" | grep -F "deve_mobile LocalBackend exit shutdown failed closed" >/dev/null; then
+  fail "Android logcat reports LocalBackend shutdown failure"
+fi
+
+echo "mobile-android-lifecycle-smoke: app_id=$APP_ID serial=$SERIAL initial_pid=$PID"
+echo "mobile-android-lifecycle-smoke: ok"

@@ -31,6 +31,7 @@ fn non_connected_status_resets_node_role_runtime_summary() {
 
     let signals = ConnectionManagerSignals {
         lifecycle: ConnectionLifecycle::new(),
+        current_status: status,
         set_status,
         set_msg_seq,
         set_msg_queue,

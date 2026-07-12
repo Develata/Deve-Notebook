@@ -7,25 +7,52 @@ use deve_core::models::DocId;
 use deve_core::state;
 use deve_core::sync::snapshot_policy::SnapshotPolicy;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::time::{Duration, sleep};
 
 const PREWARM_LIMIT: usize = 5;
 
-pub fn spawn_prewarm(repo: Arc<RepoManager>) {
+pub fn spawn_prewarm(
+    repo: Arc<RepoManager>,
+    mut shutdown: tokio::sync::watch::Receiver<bool>,
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        sleep(Duration::from_secs(2)).await;
+        tokio::select! {
+            changed = shutdown.changed() => {
+                if changed.is_err() || *shutdown.borrow() {
+                    return;
+                }
+            }
+            _ = sleep(Duration::from_secs(2)) => {}
+        }
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let blocking_cancelled = cancelled.clone();
         let repo = repo.clone();
-        match tokio::task::spawn_blocking(move || prewarm_snapshots(&repo)).await {
+        let mut task =
+            tokio::task::spawn_blocking(move || prewarm_snapshots(&repo, &blocking_cancelled));
+        let result = tokio::select! {
+            result = &mut task => result,
+            changed = shutdown.changed() => {
+                if changed.is_err() || *shutdown.borrow() {
+                    cancelled.store(true, Ordering::Release);
+                }
+                task.await
+            }
+        };
+        match result {
             Ok(Ok(())) => {}
             Ok(Err(e)) => tracing::warn!("Prewarm snapshots failed: {:?}", e),
             Err(e) => tracing::warn!("Prewarm task panicked: {:?}", e),
         }
-    });
+    })
 }
 
-fn prewarm_snapshots(repo: &RepoManager) -> Result<()> {
+fn prewarm_snapshots(repo: &RepoManager, cancelled: &AtomicBool) -> Result<()> {
     for (repo_name, doc_id) in select_prewarm_docs(repo)? {
-        prewarm_doc(repo, &repo_name, doc_id)?;
+        if cancelled.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        prewarm_doc(repo, &repo_name, doc_id, cancelled)?;
     }
     Ok(())
 }
@@ -72,7 +99,12 @@ fn score_repo_docs(repo: &RepoManager, repo_name: &str) -> Result<Vec<(DocId, u6
     Ok(scored)
 }
 
-fn prewarm_doc(repo: &RepoManager, repo_name: &str, doc_id: DocId) -> Result<()> {
+fn prewarm_doc(
+    repo: &RepoManager,
+    repo_name: &str,
+    doc_id: DocId,
+    cancelled: &AtomicBool,
+) -> Result<()> {
     let snapshot = repo.load_latest_snapshot_in_local_repo(repo_name, doc_id)?;
     let base_seq = snapshot.as_ref().map(|(seq, _)| *seq).unwrap_or(0);
     let entries = repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
@@ -90,7 +122,14 @@ fn prewarm_doc(repo: &RepoManager, repo_name: &str, doc_id: DocId) -> Result<()>
 
     if snapshot.is_none() || policy.should_snapshot(doc_len, delta, 0) {
         let ops: Vec<_> = entries.iter().map(|(_, e)| e.clone()).collect();
-        let content = state::reconstruct_content(&ops);
+        let Some(content) =
+            state::reconstruct_content_until(&ops, || cancelled.load(Ordering::Acquire))
+        else {
+            return Ok(());
+        };
+        if cancelled.load(Ordering::Acquire) {
+            return Ok(());
+        }
         repo.save_snapshot_in_local_repo(repo_name, doc_id, max_seq, &content)?;
     }
     Ok(())

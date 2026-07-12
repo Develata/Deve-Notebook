@@ -9,6 +9,7 @@ use deve_core::native_adapter::{
     validate_native_endpoint_bases,
 };
 use serde_json::Value;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::cookie::MobileNativeSessionCookie;
 use super::{MobileEmbeddedBackendError, MobileEmbeddedBackendPlan};
@@ -22,10 +23,13 @@ impl MobileLoopbackHttpProbe {
     pub(super) fn probe_node_role(
         &self,
         plan: &MobileEmbeddedBackendPlan,
+        cancelled: Option<&AtomicBool>,
     ) -> Result<NativeEndpointReady, MobileEmbeddedBackendError> {
         let json = self
             .probe
-            .get_json_with_startup_retry(&format!("{}/api/node/role", plan.http_base))
+            .get_json_with_startup_retry_until(&format!("{}/api/node/role", plan.http_base), || {
+                cancelled.is_some_and(|cancelled| cancelled.load(Ordering::Acquire))
+            })
             .map_err(MobileEmbeddedBackendError::from)?;
         endpoint_from_node_role_json(plan, &json)
     }
@@ -37,6 +41,15 @@ impl MobileLoopbackHttpProbe {
         secret: &str,
     ) -> Result<MobileNativeSessionCookie, MobileEmbeddedBackendError> {
         let cookie = self.issue_native_session_cookie(plan, endpoint, secret)?;
+        self.validate_native_session(plan, &cookie)?;
+        Ok(cookie)
+    }
+
+    pub(super) fn validate_native_session(
+        &self,
+        plan: &MobileEmbeddedBackendPlan,
+        cookie: &MobileNativeSessionCookie,
+    ) -> Result<(), MobileEmbeddedBackendError> {
         let json = self
             .probe
             .get_json_with_cookie(
@@ -49,7 +62,7 @@ impl MobileLoopbackHttpProbe {
             .and_then(Value::as_bool)
             .unwrap_or(false)
         {
-            Ok(cookie)
+            Ok(())
         } else {
             Err(MobileEmbeddedBackendError::NativeSessionHandoffFailed)
         }
@@ -94,6 +107,9 @@ fn endpoint_from_node_role_json(
         },
     };
     validate_native_endpoint_bases(&endpoint)?;
+    if endpoint.http_base != plan.http_base || endpoint.ws_base != plan.ws_base {
+        return Err(MobileEmbeddedBackendError::ProbeInvalidResponse);
+    }
     Ok(endpoint)
 }
 
@@ -151,6 +167,7 @@ impl From<NativeLoopbackHttpError> for MobileEmbeddedBackendError {
             NativeLoopbackHttpError::HttpStatus { status } => Self::ProbeHttpStatus { status },
             NativeLoopbackHttpError::ResponseTooLarge => Self::ProbeResponseTooLarge,
             NativeLoopbackHttpError::InvalidResponse => Self::ProbeInvalidResponse,
+            NativeLoopbackHttpError::Cancelled => Self::LifecycleTransitionCancelled,
             NativeLoopbackHttpError::Io(source) => Self::ProbeIo(source),
         }
     }

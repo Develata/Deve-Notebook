@@ -17,3 +17,32 @@ fn server_sync_engine_uses_configured_sync_mode() -> anyhow::Result<()> {
     assert_eq!(engine.sync_mode(), SyncMode::Manual);
     Ok(())
 }
+use super::serve_router_until_shutdown;
+use axum::{Router, routing::get};
+use tokio::sync::oneshot;
+
+#[tokio::test]
+async fn native_loopback_graceful_shutdown_stops_bound_server() {
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .expect("listener");
+    let addr = listener.local_addr().expect("addr");
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    let task = tokio::spawn(serve_router_until_shutdown(
+        listener,
+        Router::new().route("/health", get(|| async { "ok" })),
+        async move {
+            let _ = shutdown_rx.await;
+        },
+    ));
+
+    tokio::net::TcpStream::connect(addr)
+        .await
+        .expect("server accepts connections");
+    shutdown_tx.send(()).expect("signal shutdown");
+    tokio::time::timeout(std::time::Duration::from_secs(1), task)
+        .await
+        .expect("bounded shutdown")
+        .expect("join")
+        .expect("server result");
+}

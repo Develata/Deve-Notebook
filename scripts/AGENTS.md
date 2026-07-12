@@ -61,6 +61,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Boots an Android emulator target host, builds a debug WebView shell APK, and delegates install/startup smoke without opening process runtime |
+| `smoke-mobile-android-lifecycle.sh` | Drives the debug Android WebView through CDP, verifies non-zero pending preservation, transport-generation recovery, foreground reprobe, resumed commit, and bounded graceful runtime cleanup |
+| `smoke-mobile-android-lifecycle.mjs` | Raw page-target CDP harness for the Android LocalBackend lifecycle smoke; requires WebCrypto Ed25519, uses debug-only lifecycle fault/exit commands, and otherwise submits UI intents only |
 | `check-mobile-ios-shell-package-build.sh` | Runs the iOS WebView shell package gate only when explicitly required on a macOS target host |
 | `check-graph-baseline.sh` | Verifies Graph remains a read-only derived projection and does not become a ledger/workspace authority path |
 | `check-mobile-baseline.sh` | Verifies Mobile Web shell viewport mapping, drawer gestures, resize-handle exclusion, keyboard toolbar, search top sheet/results scrolling, bottom bar, and editor font-size baseline contracts |

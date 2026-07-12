@@ -4,8 +4,10 @@ contains	docs/acceptance-cases/05_ui.md	run: cargo test -p deve_web dashboard_me
 contains	docs/acceptance-cases/05_ui.md	ui_assert: system_health_refreshed true
 contains	docs/acceptance-cases/05_ui.md	ui_assert: sync_status_updates_via_ws true
 contains	apps/cli/src/server/metrics.rs	std::time::Duration::from_secs(5)
-contains	apps/cli/src/server/start.rs	runtime::spawn_background_runtime_tasks(p2p, app_state.clone());
-contains	apps/cli/src/server/runtime/peripheral_runtime.rs	metrics::spawn_broadcaster(app_state.clone());
+contains	apps/cli/src/server/start.rs	runtime::spawn_background_runtime_tasks(p2p, app_state.clone(), repo, prewarm_enabled);
+contains	apps/cli/src/server/runtime/peripheral_runtime.rs	pub(crate) struct BackgroundRuntimeTasks
+contains	apps/cli/src/server/runtime/peripheral_runtime.rs	tasks.push(metrics::spawn_broadcaster(
+contains	apps/cli/src/server/runtime/peripheral_runtime.rs	shutdown_rx.clone(),
 contains	crates/core/src/protocol/server.rs	SystemMetrics
 contains	apps/web/src/hooks/use_core/dashboard_context.rs	pub sample_seq: u64
 contains	apps/web/src/hooks/use_core/dashboard_context.rs	pub metrics_live: ReadSignal<bool>

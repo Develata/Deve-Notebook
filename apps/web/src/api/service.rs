@@ -13,7 +13,9 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 use self::service_ping::spawn_ping_loop;
-use super::connection::{ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager};
+use super::connection::{
+    ConnectionControl, ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager,
+};
 use super::status::ConnectionStatus;
 use super::write_gate::WriterReadyResetSignals;
 use super::writer_id::new_writer_session_nonce;
@@ -49,8 +51,11 @@ pub struct WsService {
     writer_session_nonce: u64,
     msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
     tx: UnboundedSender<ClientMessage>,
+    connection_control_tx: UnboundedSender<ConnectionControl>,
     #[cfg(test)]
     test_rx: Option<Arc<Mutex<UnboundedReceiver<ClientMessage>>>>,
+    #[cfg(test)]
+    test_connection_control_rx: Option<Arc<Mutex<UnboundedReceiver<ConnectionControl>>>>,
 }
 
 impl WsService {
@@ -71,6 +76,7 @@ impl WsService {
             signal(false);
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
+        let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
         let lifecycle = ConnectionLifecycle::new();
         let cleanup_lifecycle = lifecycle.clone();
         on_cleanup(move || cleanup_lifecycle.shutdown());
@@ -82,8 +88,10 @@ impl WsService {
 
         spawn_connection_manager(
             rx,
+            connection_control_rx,
             ConnectionManagerSignals {
                 lifecycle,
+                current_status: status,
                 set_status,
                 set_msg_seq,
                 set_msg_queue,
@@ -126,14 +134,27 @@ impl WsService {
             writer_session_nonce: new_writer_session_nonce(),
             msg_queue,
             tx,
+            connection_control_tx,
             #[cfg(test)]
             test_rx: None,
+            #[cfg(test)]
+            test_connection_control_rx: None,
         }
     }
 
     pub fn send(&self, msg: ClientMessage) {
         if let Err(e) = self.tx.unbounded_send(msg) {
             leptos::logging::error!("消息入队失败: {:?}", e);
+        }
+    }
+
+    pub(crate) fn request_native_endpoint_rebind(&self) {
+        if let Err(error) = self
+            .connection_control_tx
+            .unbounded_send(ConnectionControl::RebindNativeEndpoint)
+        {
+            leptos::logging::error!("Native endpoint rebind request failed: {error:?}");
+            self.mark_native_service_offline();
         }
     }
 

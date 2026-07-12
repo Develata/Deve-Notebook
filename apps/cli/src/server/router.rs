@@ -21,6 +21,23 @@ use std::sync::Arc;
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
 use deve_core::config::RuntimeEnvironment;
 use deve_core::security::AuthConfig;
+
+pub(crate) struct WsTransportRouterParts {
+    admission: Arc<ws::WsAdmissionConfig>,
+    lifecycle: Arc<ws::transport::WsTransportRuntime>,
+}
+
+impl WsTransportRouterParts {
+    pub(crate) fn new(
+        p2p_inbound_token_env: Option<String>,
+        lifecycle: Arc<ws::transport::WsTransportRuntime>,
+    ) -> Self {
+        Self {
+            admission: Arc::new(ws::WsAdmissionConfig::new(p2p_inbound_token_env)),
+            lifecycle,
+        }
+    }
+}
 /// 构建完整的 Axum 应用路由
 ///
 /// ## 路由结构
@@ -40,9 +57,12 @@ pub fn build_app(
         port,
         auth_config,
         None,
-        ws::WsAdmissionConfig::default().p2p_inbound_token_env,
         RuntimeEnvironment::from_env(),
         None,
+        WsTransportRouterParts::new(
+            ws::WsAdmissionConfig::default().p2p_inbound_token_env,
+            ws::transport::WsTransportRuntime::new(),
+        ),
     )
 }
 
@@ -51,9 +71,9 @@ pub fn build_app_with_native_session_and_p2p(
     port: u16,
     auth_config: Arc<AuthConfig>,
     native_session_bridge: Option<Arc<auth::handlers::NativeSessionBridge>>,
-    p2p_inbound_token_env: Option<String>,
     runtime_environment: RuntimeEnvironment,
     allowed_origins_override: Option<&[String]>,
+    ws_transport: WsTransportRouterParts,
 ) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
@@ -226,9 +246,8 @@ pub fn build_app_with_native_session_and_p2p(
         .layer(axum::middleware::from_fn(auth::headers::security_headers))
         .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))
         .layer(axum::Extension(auth_config))
-        .layer(axum::Extension(Arc::new(ws::WsAdmissionConfig::new(
-            p2p_inbound_token_env,
-        ))))
+        .layer(axum::Extension(ws_transport.admission))
+        .layer(axum::Extension(ws_transport.lifecycle))
         .layer(axum::Extension(brute_force))
         .layer(axum::Extension(api_limiter))
         .layer(setup::build_cors_layer(

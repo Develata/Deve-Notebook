@@ -1352,12 +1352,14 @@ dependencies = [
  "deve_core",
  "getrandom 0.3.4",
  "indexmap 1.9.3",
+ "jni",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]

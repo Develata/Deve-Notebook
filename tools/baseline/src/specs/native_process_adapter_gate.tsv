@@ -108,13 +108,17 @@ contains	docs/features/08_ui_design_02_desktop.md	Native 双模式
 contains	docs/features/08_ui_design_03_mobile.md	Native 双模式
 contains	docs/dev-runbook.md	Native Shell Modes
 contains	apps/mobile/src/lib.rs	mod embedded_backend;
-contains	apps/mobile/src/embedded_backend/mod.rs	start_native_loopback_backend
-contains	apps/mobile/src/embedded_backend/mod.rs	start_native_loopback_backend_with_listener
-contains	apps/mobile/src/embedded_backend/mod.rs	run_mobile_embedded_backend_bootstrap
+contains	apps/mobile/src/embedded_backend/generation.rs	serve_with_listener_until_shutdown
+contains	apps/cli/src/server/ws/transport.rs	pub(crate) struct WsTransportRuntime
+contains	apps/web/src/api/connection.rs	RebindNativeEndpoint
+contains	apps/mobile/src/embedded_backend/supervisor.rs	pub struct MobileEmbeddedBackendSupervisor
+contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
 contains	apps/mobile/src/embedded_backend/mod.rs	NativeLoopbackAuthMaterial
 contains	apps/mobile/src/embedded_backend/mod.rs	native_tauri_allowed_origins
 absent	apps/mobile/src/embedded_backend/mod.rs	std::env::set_var
 absent	apps/mobile/src/embedded_backend/mod.rs	NATIVE_SESSION_BOOTSTRAP_SECRET_ENV
+absent	apps/mobile/src/embedded_backend/supervisor.rs	std::env::set_var
+absent	apps/mobile/src/embedded_backend/supervisor.rs	NATIVE_SESSION_BOOTSTRAP_SECRET_ENV
 contains	apps/mobile/src/embedded_backend/http.rs	/api/auth/native-session
 contains	apps/mobile/src/embedded_backend/cookie.rs	MobileNativeSessionCookie
 contains	crates/core/src/native_adapter/process_runtime.rs	NativeProcessSpawnSpec

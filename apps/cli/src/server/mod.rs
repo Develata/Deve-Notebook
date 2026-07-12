@@ -43,6 +43,7 @@ pub mod ws;
 #[allow(unused_imports)]
 pub use launch::NativeLoopbackAuthMaterial;
 pub use launch::ServerLaunchOptions;
+pub(crate) use start::{EmbeddedServerRuntime, ServerTransportRuntime, ServerTransportServeError};
 #[allow(unused_imports)]
 pub use start::{start_plugin_host_only, start_server_with_bound_listener};
 pub use state::AppState;

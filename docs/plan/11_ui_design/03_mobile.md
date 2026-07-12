@@ -41,7 +41,7 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 *   `LocalBackend` 是 native-packaging Android/Mobile 默认模式。Mobile 壳层只负责 embedded loopback lifecycle、endpoint/session bootstrap、foreground reprobe、readiness 展示与失败恢复。
 *   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
-*   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff、bootstrap plugin 与 cookie 注册之后创建；不得先创建无 session/bootstrap 的主 WebView。
+*   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff 与 bootstrap plugin 注册之后创建；不得先创建无 endpoint/session bootstrap 的主 WebView。Android Wry 不实现 `WebView::set_cookie`，因此 Android 必须在 WebView 已登记后通过无参数 native command 调用系统 `CookieManager` 安装 HttpOnly cookie，确认成功后才 reload 一次并进入 authenticated runtime；cookie/token/secret 不得进入 command 参数、JavaScript 或 bootstrap payload。
 *   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
 *   Mobile Settings 必须与 Desktop 共用 native backend preference 语义：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。
 *   Mobile `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。启动参数/环境覆盖只用于诊断和脚本启动，不得回写 preference。
@@ -86,6 +86,7 @@ MobileColdStart
 *   Native 壳可注入只含 `service_state` 的 recovery bootstrap；payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
 *   `?ws_port=` 只能作为开发期 fallback。mobile production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
+*   bundled Web shell 仍是 WebLightPeer，repo-scoped browser identity 必须满足 `03_storage/index#browser-storage-layering` 的 IndexedDB + non-extractable WebCrypto Ed25519 合同。Android System WebView 不支持 Ed25519 时必须保持 storage-limited 只读；LocalBackend/native session 不得伪造 browser key、跳过签名或转授 host writer authority。
 
 **Offline/background semantics**:
 
@@ -117,6 +118,19 @@ Mobile 与 Desktop 共用 `./02_desktop.md#desktop-service-supervisor-contract`
 *   `BackgroundSuspended` 不得清空 pending overlay，也不得把旧 supervisor session handoff 直接视为可写。
 *   Health probe、retry budget、session handoff failure 分类与 Desktop 一致：bind/probe/process-exit 可预算内 retry，session handoff failure fatal。
 *   supervisor 不得写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
+*   `MobileEmbeddedBackendSupervisor` 必须持有唯一 process-scoped `EmbeddedServerRuntime`、当前 transport task、graceful-shutdown sender、随机 loopback endpoint、session generation、`MobileShell` 与结构化 service state；这些对象必须作为一个 lifecycle owner 创建和销毁，不得再次 detach task。`EmbeddedServerRuntime` 只初始化一次 RepoManager、SyncManager、plugin host APIs、watchers 与 background task group；transport restart 不得重开 authority runtime。
+*   `RemoteBrowser` 模式不得创建或 manage `MobileEmbeddedBackendSupervisor`。从 LocalBackend 切换到 remote 前必须先发送 graceful shutdown，并在有界等待结束后才请求 app restart。
+*   CLI native runtime 必须提供 owned `EmbeddedServerRuntime` 与内部 transport graceful-shutdown 入口。正常 app exit 必须先停止 transport，再 cancel/join runtime task group 与 watcher guard，并在超时边界内等待完成。超时或 join/runtime error 必须进入结构化 error 状态，不能报告 clean shutdown。
+*   Tauri mobile `WindowEvent::Suspended` 必须立即让 Web writer gate 失效并保留 pending overlay；`WindowEvent::Resumed` 必须进入 `ForegroundReprobe`。若 transport task 已退出，supervisor 必须保留唯一 authority runtime、丢弃旧 transport generation、绑定新的随机 loopback listener、生成新的 native session，并在 generation token 仍为 current 时安装新 cookie/bootstrap 后通知 bundled Web shell；不得扫描端口、复用旧 scope 或重复安装 host authority。
+*   backend 存活时 resume 仍必须重新验证 native session 与 node role；Web 必须重新验证 auth、node role、WS repo handshake、writer-ready 与 current `scope_nonce`。任一失败都保持只读，并显示 `foreground_reprobe` / `service_offline` / `session_invalid` 中对应的结构化状态。
+*   foreground probe 与 session handoff 必须在 supervisor lock 外执行，并使用 generation token compare-and-set 提交结果；shutdown 必须可以取消 in-flight resume，Tauri lifecycle callback 不得因同步网络请求阻塞 UI thread。
+*   bundled Web bootstrap 必须由 current generation 动态提供。旧固定 `js_init_script`、旧 endpoint 或迟到的 probe result 不得覆盖新 generation；Web 只有在 native cookie/bootstrap 安装完成后才收到 resumed/reprobe 事件。
+*   `Resumed` 处理必须 single-flight；并发 resume 不得同时创建 transport 或竞争 process-global port hint/node-role projection。probe 返回的 `http_base/ws_base` 必须与本次随机 listener plan 精确一致，startup retry 必须可由 suspend/shutdown 取消，单次阻塞 IO 也必须受短 timeout 约束。
+*   replacement cookie、bootstrap 与 `deve-native-resumed` dispatch 必须在 current-generation 校验保护下作为一次 WebView handoff 完成；安装或 dispatch 失败必须把 supervisor 置为结构化 `Error`。Web 连接管理器收到 native resume 后必须通过 typed control 重新读取 current bootstrap、关闭旧 socket 并连接新 endpoint；不得 reload 页面、丢失 pending overlay，或继续 probe 旧 endpoint。
+*   WebView cookie/bootstrap 调用不得持有 supervisor state mutex；handoff 前后必须重新校验 current transition。`resumed`、`suspended` 与 `service-error` 事件必须携带同一 native 单调 transition guard，使迟到事件不能覆盖更新状态。
+*   transport 被停止或 fault-injected 后必须立即标记为不可运行；恢复前先完成旧 listener 与全部 upgraded WebSocket session 的 cancellation/join，再创建新 generation。旧 scope 的写入仍由 server writer gate 拒绝，shell 不得自行判断或迁移 authority。
+*   transient existing-probe 或 WebView handoff error 必须把当前 transport 标记为 stopping；下一次恢复使用 fresh transport 与 fresh `MobileShell`，不得复用 terminal-offline shell。若 server 明确证明旧 transport 的 upgraded sessions 已全部 retired，则 listener 异常退出仍可安全 replacement。
+*   任一旧 transport retirement 无法证明 session idle（timeout、panic、join error 或显式 retirement failure）时，supervisor 必须持久进入 `runtime_restart_required`；本进程后续所有 resume 都 fail-closed，直到 app restart。
 
 ### 1.3 Process Adapter Gate {#mobile-process-adapter-decision}
 

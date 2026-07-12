@@ -108,6 +108,7 @@ impl WsService {
     pub(crate) fn begin_foreground_reprobe(&self) {
         self.clear_writer_ready();
         self.reset_node_role_state(true);
+        self.set_status.set(ConnectionStatus::NativeReprobeRequired);
     }
 
     pub(crate) fn complete_foreground_node_role_reprobe(
@@ -125,10 +126,17 @@ impl WsService {
         self.set_host_file_reveal_in_system_explorer
             .set(host_file_reveal_in_system_explorer);
         self.set_node_role_probe_failed.set(false);
+        self.set_status.set(ConnectionStatus::Connected);
     }
 
     pub(crate) fn fail_foreground_node_role_reprobe(&self) {
         self.reset_node_role_state(true);
+    }
+
+    pub(crate) fn mark_native_service_offline(&self) {
+        self.clear_writer_ready();
+        self.reset_node_role_state(true);
+        self.set_status.set(ConnectionStatus::NativeServiceOffline);
     }
 
     fn reset_node_role_state(&self, probe_failed: bool) {

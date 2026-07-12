@@ -5,7 +5,9 @@
 
 use std::fmt;
 
+#[cfg(not(target_os = "android"))]
 use tauri::webview::Cookie;
+#[cfg(not(target_os = "android"))]
 use tauri::webview::cookie::SameSite;
 
 use super::MobileEmbeddedBackendError;
@@ -89,8 +91,31 @@ impl MobileNativeSessionCookie {
     pub(super) fn has_value(&self) -> bool {
         !self.value.is_empty()
     }
+
+    #[cfg(any(target_os = "android", test))]
+    fn android_install_url(&self) -> String {
+        // Android CookieManager applies normal Set-Cookie validation to this
+        // URL. Use the secure loopback origin for installation so the required
+        // Secure/SameSite=None cookie is accepted; the host-only cookie remains
+        // available to Chromium's potentially-trustworthy HTTP loopback origin.
+        format!("https://{}/", self.domain)
+    }
+
+    #[cfg(any(target_os = "android", test))]
+    fn android_verification_url(&self) -> String {
+        format!("http://{}/", self.domain)
+    }
+
+    #[cfg(any(target_os = "android", test))]
+    fn android_set_cookie_value(&self) -> String {
+        format!(
+            "{}={}; Path={}; HttpOnly; Secure; SameSite={}",
+            self.name, self.value, self.path, self.same_site
+        )
+    }
 }
 
+#[cfg(not(target_os = "android"))]
 pub(super) fn tauri_cookie_from_native_session(
     cookie: &MobileNativeSessionCookie,
 ) -> Cookie<'static> {
@@ -103,12 +128,136 @@ pub(super) fn tauri_cookie_from_native_session(
         .build()
 }
 
+#[cfg(not(target_os = "android"))]
 fn tauri_same_site_from_native_session(same_site: &str) -> SameSite {
     match same_site.to_ascii_lowercase().as_str() {
         "none" => SameSite::None,
         "lax" => SameSite::Lax,
         _ => SameSite::Strict,
     }
+}
+
+#[cfg(all(not(target_os = "android"), mobile))]
+pub(super) async fn install_native_session_cookie_confirmed<R: tauri::Runtime>(
+    webview: &tauri::WebviewWindow<R>,
+    cookie: &MobileNativeSessionCookie,
+) -> Result<(), String> {
+    webview
+        .set_cookie(tauri_cookie_from_native_session(cookie))
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(target_os = "android")]
+pub(super) async fn install_native_session_cookie_confirmed<R: tauri::Runtime>(
+    webview: &tauri::WebviewWindow<R>,
+    cookie: &MobileNativeSessionCookie,
+) -> Result<(), String> {
+    let install_url = cookie.android_install_url();
+    let verification_url = cookie.android_verification_url();
+    let set_cookie = cookie.android_set_cookie_value();
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    webview
+        .with_webview(move |platform| {
+            platform
+                .jni_handle()
+                .exec(move |env, _activity, android_webview| {
+                    let result = install_android_cookie(
+                        env,
+                        android_webview,
+                        &install_url,
+                        &verification_url,
+                        &set_cookie,
+                    )
+                    .map_err(|error| error.to_string());
+                    let _ = sender.send(result);
+                });
+        })
+        .map_err(|error| error.to_string())?;
+    tokio::time::timeout(std::time::Duration::from_secs(2), receiver)
+        .await
+        .map_err(|_| "Android native session cookie install timed out".to_string())?
+        .map_err(|_| "Android native session cookie installer stopped".to_string())?
+}
+
+#[cfg(target_os = "android")]
+#[derive(Debug, thiserror::Error)]
+enum AndroidCookieInstallError {
+    #[error("Android CookieManager JNI call failed: {0}")]
+    Jni(#[from] jni::errors::Error),
+    #[error("Android CookieManager did not retain the native session cookie")]
+    NotRetained,
+}
+
+#[cfg(target_os = "android")]
+fn install_android_cookie(
+    env: &mut jni::JNIEnv<'_>,
+    android_webview: &jni::objects::JObject<'_>,
+    install_url: &str,
+    verification_url: &str,
+    set_cookie: &str,
+) -> Result<(), AndroidCookieInstallError> {
+    use jni::objects::{JObject, JString, JValue};
+
+    let cookie_manager_class = env.find_class("android/webkit/CookieManager")?;
+    let cookie_manager = env
+        .call_static_method(
+            cookie_manager_class,
+            "getInstance",
+            "()Landroid/webkit/CookieManager;",
+            &[],
+        )?
+        .l()?;
+    env.call_method(
+        &cookie_manager,
+        "setAcceptCookie",
+        "(Z)V",
+        &[JValue::Bool(1)],
+    )?;
+    env.call_method(
+        &cookie_manager,
+        "setAcceptThirdPartyCookies",
+        "(Landroid/webkit/WebView;Z)V",
+        &[JValue::Object(android_webview), JValue::Bool(1)],
+    )?;
+
+    let expected_cookie_pair = set_cookie
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let install_url = JObject::from(env.new_string(install_url)?);
+    let set_cookie = JObject::from(env.new_string(set_cookie)?);
+    env.call_method(
+        &cookie_manager,
+        "setCookie",
+        "(Ljava/lang/String;Ljava/lang/String;)V",
+        &[JValue::Object(&install_url), JValue::Object(&set_cookie)],
+    )?;
+    env.call_method(&cookie_manager, "flush", "()V", &[])?;
+    let verification_url = JObject::from(env.new_string(verification_url)?);
+    let installed = env
+        .call_method(
+            &cookie_manager,
+            "getCookie",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            &[JValue::Object(&verification_url)],
+        )?
+        .l()?;
+    if installed.is_null() {
+        return Err(AndroidCookieInstallError::NotRetained);
+    }
+    let installed = JString::from(installed);
+    let installed = env.get_string(&installed)?;
+    let installed = installed.to_string_lossy();
+    if !installed
+        .split(';')
+        .map(str::trim)
+        .any(|cookie| cookie == expected_cookie_pair)
+    {
+        return Err(AndroidCookieInstallError::NotRetained);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -146,5 +295,20 @@ mod tests {
         let debug = format!("{cookie:?}");
         assert!(!debug.contains("cookie-value"));
         assert!(debug.contains("<redacted>"));
+    }
+
+    #[test]
+    fn android_native_session_cookie_is_host_only_for_loopback_ip() {
+        let cookie = MobileNativeSessionCookie::from_set_cookie(
+            "token=cookie-value; Path=/; HttpOnly; Secure; SameSite=None",
+            "127.0.0.1",
+        )
+        .expect("cookie");
+
+        assert_eq!(cookie.android_install_url(), "https://127.0.0.1/");
+        assert_eq!(cookie.android_verification_url(), "http://127.0.0.1/");
+        let value = cookie.android_set_cookie_value();
+        assert!(value.starts_with("token=cookie-value; Path=/"));
+        assert!(!value.to_ascii_lowercase().contains("domain="));
     }
 }

@@ -11,9 +11,11 @@ native-packaging = [
   "dep:deve_cli",
   "dep:getrandom",
   "dep:indexmap_1",
+  "dep:jni",
   "dep:reqwest",
   "dep:tauri",
   "dep:tauri-build",
+  "dep:tokio",
   "tauri/wry",
 ]
 
@@ -32,6 +34,10 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
 # needs indexmap/std explicit because indexmap 1.x only auto-detects std via autocfg.
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }
 tauri = { version = "2.11.1", optional = true, default-features = false, features = [] }
+tokio = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", optional = true }
 
 [build-dependencies]
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }

@@ -3,7 +3,8 @@
 //!   - 09_web_thin_client_ledger#write-readiness
 //!
 use crate::api::{
-    ConnectionStatus, WsService, http_base_from_ws_url, probe_node_role_for_http_base,
+    AuthProbe, ConnectionStatus, WsService, http_base_from_ws_url,
+    probe_auth_status_with_http_base, probe_node_role_for_http_base,
 };
 use crate::hooks::use_core::types::HandshakeSignals;
 use leptos::prelude::GetUntracked;
@@ -44,6 +45,34 @@ pub(super) fn mount_foreground_reprobe_listener(
     mount_listener(document.as_ref(), "visibilitychange");
     mount_listener(window.as_ref(), "focus");
     mount_listener(window.as_ref(), "blur");
+
+    let mount_native_listener = |event_name: &str, suspended: bool| {
+        let ws = ws.clone();
+        let last_mode = last_mode.clone();
+        let last_active = last_active.clone();
+        let callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+            if suspended {
+                handle_native_suspend(&ws, signals, &last_mode, &last_active);
+            } else {
+                handle_native_resume(&ws, signals, &last_mode, &last_active);
+            }
+        }) as Box<dyn FnMut(_)>);
+        let _ =
+            window.add_event_listener_with_callback(event_name, callback.as_ref().unchecked_ref());
+        callback.forget();
+    };
+    mount_native_listener("deve-native-suspended", true);
+    mount_native_listener("deve-native-resumed", false);
+
+    let ws_error = ws.clone();
+    let error_callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        ws_error.mark_native_service_offline();
+    }) as Box<dyn FnMut(_)>);
+    let _ = window.add_event_listener_with_callback(
+        "deve-native-service-error",
+        error_callback.as_ref().unchecked_ref(),
+    );
+    error_callback.forget();
 }
 
 fn handle_page_activity_change(
@@ -55,7 +84,7 @@ fn handle_page_activity_change(
     let active = current_page_active();
     if should_force_foreground_reprobe(last_active.get(), active, ws.status.get_untracked()) {
         reset_foreground_reprobe_state(ws, signals, last_mode);
-        spawn_node_role_reprobe(ws.clone());
+        spawn_foreground_reprobe(ws.clone());
     }
     last_active.set(active);
 }
@@ -69,7 +98,30 @@ fn reset_foreground_reprobe_state(
     reset_handshake_attempt(last_mode, ws, signals);
 }
 
-fn spawn_node_role_reprobe(ws: WsService) {
+fn handle_native_suspend(
+    ws: &WsService,
+    signals: HandshakeSignals,
+    last_mode: &Rc<RefCell<Option<String>>>,
+    last_active: &Cell<bool>,
+) {
+    if matches!(ws.status.get_untracked(), ConnectionStatus::Connected) {
+        reset_foreground_reprobe_state(ws, signals, last_mode);
+    }
+    last_active.set(false);
+}
+
+fn handle_native_resume(
+    ws: &WsService,
+    signals: HandshakeSignals,
+    last_mode: &Rc<RefCell<Option<String>>>,
+    last_active: &Cell<bool>,
+) {
+    reset_foreground_reprobe_state(ws, signals, last_mode);
+    ws.request_native_endpoint_rebind();
+    last_active.set(true);
+}
+
+fn spawn_foreground_reprobe(ws: WsService) {
     let endpoint = ws.endpoint.get_untracked();
     let connection_epoch = ws.connection_epoch.get_untracked();
     if endpoint.trim().is_empty() {
@@ -79,6 +131,17 @@ fn spawn_node_role_reprobe(ws: WsService) {
 
     let http_base = http_base_from_ws_url(&endpoint);
     spawn_local(async move {
+        match probe_auth_status_with_http_base(Some(&http_base)).await {
+            AuthProbe::Valid => {}
+            AuthProbe::Invalid => {
+                ws.mark_unauthorized();
+                return;
+            }
+            AuthProbe::Unknown => {
+                ws.fail_foreground_node_role_reprobe();
+                return;
+            }
+        }
         let result = probe_node_role_for_http_base(http_base).await;
         if ws.endpoint.get_untracked() != endpoint
             || ws.connection_epoch.get_untracked() != connection_epoch
@@ -165,11 +228,59 @@ mod tests {
         reset_foreground_reprobe_state(&ws, signals, &last_mode);
 
         assert!(last_mode.borrow().is_none());
+        assert_eq!(
+            ws.status.get_untracked(),
+            ConnectionStatus::NativeReprobeRequired
+        );
         assert!(signals.handshake_scope_nonce.get_untracked().is_none());
         assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
         assert_eq!(ws.node_role.get_untracked(), "");
         assert_eq!(ws.source_control_authority.get_untracked(), "unknown");
         assert!(ws.node_role_probe_failed.get_untracked());
+    }
+
+    #[test]
+    fn native_suspend_immediately_revokes_write_readiness() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.set_node_role_for_test("main");
+        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        let signals = test_handshake_signals();
+        signals.set_handshake_ready.set(true);
+        signals.set_handshake_scope_nonce.set(Some(7));
+        let last_mode = Rc::new(RefCell::new(Some("ready-mode".to_string())));
+        let last_active = Cell::new(true);
+
+        handle_native_suspend(&ws, signals, &last_mode, &last_active);
+
+        assert!(!last_active.get());
+        assert_eq!(
+            ws.status.get_untracked(),
+            ConnectionStatus::NativeReprobeRequired
+        );
+        assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+        assert!(signals.handshake_scope_nonce.get_untracked().is_none());
+        assert!(last_mode.borrow().is_none());
+    }
+
+    #[test]
+    fn native_resume_requests_dynamic_endpoint_rebind_without_old_endpoint_probe() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Disconnected);
+        let signals = test_handshake_signals();
+        let last_mode = Rc::new(RefCell::new(Some("stale-mode".to_string())));
+        let last_active = Cell::new(false);
+
+        handle_native_resume(&ws, signals, &last_mode, &last_active);
+
+        assert!(last_active.get());
+        assert_eq!(
+            ws.status.get_untracked(),
+            ConnectionStatus::NativeReprobeRequired
+        );
+        assert_eq!(ws.drain_connection_controls_for_test().len(), 1);
     }
 
     fn test_handshake_signals() -> HandshakeSignals {

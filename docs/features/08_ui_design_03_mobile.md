@@ -40,7 +40,7 @@
 ### 5. Native 双模式
 
 - Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、默认 repo/projection 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
-- `LocalBackend` 必须在主 WebView 创建前完成 native session handoff、bootstrap 注入与 cookie 注册。
+- `LocalBackend` 必须在主 WebView 创建前完成 native session handoff 与 bootstrap 注入。Android 因 Wry cookie API 不受支持，必须在 WebView 登记后以无参数 native command 调用系统 CookieManager 安装 HttpOnly cookie，确认后只 reload 一次；cookie/secret 不得进入 JS 或 command 参数。
 - Mobile v1 不使用 child process。
 - Mobile 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；Settings 中的 Backend section 与 Desktop 使用同一套 Local Backend / Remote Backend 语义。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
@@ -49,7 +49,15 @@
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - Mobile native bundle 不应固定依赖开发期 `http://127.0.0.1:3001` devUrl；生产 shell 加载 bundled frontendDist，并由 native backend mode 决定连接 local 或 remote。
 - 后台或系统暂停期间不承诺长时同步；回到前台后必须重新探测 service 与 writer gate。
+- LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`、transport task、shutdown sender、随机 endpoint 与 session generation；authority runtime 每个 app 进程只初始化一次，普通退出和切换 Remote Backend 必须先有界关闭 transport 与全部 runtime tasks，RemoteBrowser 不创建 supervisor。
+- 系统暂停时编辑器立即只读但不清空未确认编辑；恢复时重新验证 auth、node role、WS 与 current scope。若 transport 已退出，则在同一 authority runtime 上创建新的随机 endpoint/session，generation token 校验通过后安装新 cookie/bootstrap，再通知 Web 恢复；旧 scope 写入必须被拒绝。
+- resume probe 在 native lifecycle lock 外执行，shutdown 可取消正在进行的 reprobe；固定初始 bootstrap、旧 endpoint 与迟到的旧 generation 结果不得覆盖 current generation。
+- resume 使用 single-flight gate；probe 必须验证返回 endpoint 属于当前随机 listener。transport replacement 会关闭旧 WebSocket generation，Web 通过 typed rebind control 重新读取 session-scoped bootstrap 并连接新 endpoint，不 reload 页面或清空 pending。
+- current-generation cookie/bootstrap 安装与 resumed 事件是一次受校验的 WebView handoff；任一步失败都会进入结构化 error。Mobile LocalBackend 关闭可选 prewarm，以保证 suspend/exit 的有界 task join；其他 runtime task 仍由唯一 authority runtime 持有并关闭。
+- lifecycle handoff 不持 state mutex 跨 WebView 调用，且所有 resumed/suspended/error 事件使用单调 transition guard。无法证明旧 WebSocket sessions 已 retired 时进入 `runtime_restart_required`，本进程不再自动创建 transport。
+- service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
+- bundled Web shell 仍需 IndexedDB 与不可导出的 WebCrypto Ed25519 repo identity；Android System WebView 缺少该能力时保持 storage-limited 只读，LocalBackend 不得以 native session 绕过 browser identity。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标
@@ -165,8 +173,9 @@
 1. 默认环境启动 Mobile shell。
 2. 检查 embedded loopback service、session handoff 与 Web shell 可用性。
 3. 模拟 foreground reprobe，并检查 writer gate 状态。
-4. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin。
-5. 模拟 RemoteBrowser 失联，并使用 native-only “Use local backend” 切回 local。
+4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失。
+5. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin且旧 embedded service 已有界退出。
+6. 模拟 RemoteBrowser 失联，并使用 native-only “Use local backend” 切回 local。
 
 期望结果：
 
@@ -175,4 +184,6 @@
 - Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
 - RemoteBrowser 失联时 native-only 入口可切回 LocalBackend。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
+- 后端退出后恢复使用新的随机 endpoint/session，不扫描端口；stale scope 被拒绝且 pending overlay 保留。
+- app exit 后 transport、metrics、prewarm、watcher 与 P2P task 不残留；RemoteBrowser 全程不创建 embedded runtime。
 - 后台长时同步不可被 UI 暗示为已支持。

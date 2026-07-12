@@ -29,10 +29,10 @@ async fn handle_socket(
 ) {
     let (sender, mut receiver) = socket.split();
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
-    send::spawn_unicast_sender_task(sender, unicast_rx);
+    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx);
 
     let broadcast_rx = state.tx.subscribe();
-    send::spawn_broadcast_forwarder(
+    let broadcast_task = send::spawn_broadcast_forwarder(
         broadcast_rx,
         unicast_tx.clone(),
         send::BroadcastFilter::allow_all(),
@@ -53,6 +53,10 @@ async fn handle_socket(
             break;
         }
     }
+    broadcast_task.abort();
+    let _ = broadcast_task.await;
+    unicast_task.abort();
+    let _ = unicast_task.await;
 }
 
 async fn handle_client_message(

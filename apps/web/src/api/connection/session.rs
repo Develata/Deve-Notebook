@@ -16,6 +16,14 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use std::collections::VecDeque;
 
+use super::ConnectionControl;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ConnectedSessionOutcome {
+    Lost,
+    RebindRequested,
+}
+
 #[derive(Clone)]
 pub(super) struct ConnectedSessionSignals {
     pub lifecycle: ConnectionLifecycle,
@@ -35,20 +43,21 @@ pub(super) async fn run_connected_session(
     socket: BrowserSocket,
     mut events: UnboundedReceiver<SocketEvent>,
     rx: &mut UnboundedReceiver<deve_core::protocol::ClientMessage>,
+    control_rx: &mut UnboundedReceiver<ConnectionControl>,
     queue: &mut VecDeque<deve_core::protocol::ClientMessage>,
     signals: ConnectedSessionSignals,
-) {
+) -> ConnectedSessionOutcome {
     let mut confirmed_connected = false;
     let mut announced_open = false;
 
     loop {
         if !signals.lifecycle.is_active() {
-            return;
+            return ConnectedSessionOutcome::Lost;
         }
         if browser_reports_offline() {
             leptos::logging::warn!("WS session ended because browser reports offline");
             let _ = try_set_session_status(&signals, ConnectionStatus::Disconnected);
-            return;
+            return ConnectedSessionOutcome::Lost;
         }
         if socket.is_open() && !announced_open {
             leptos::logging::log!("WS: Socket opened, waiting for first message...");
@@ -60,20 +69,21 @@ pub(super) async fn run_connected_session(
                 "WS session ended because browser socket is closed: ready_state={}",
                 socket.ready_state()
             );
-            return;
+            return ConnectedSessionOutcome::Lost;
         }
 
         if socket.is_open()
             && let Some(msg) = queue.pop_front()
             && !send_or_requeue(&socket, msg, queue)
         {
-            return;
+            return ConnectedSessionOutcome::Lost;
         }
 
         let inbound = events.next().fuse();
         let outbound = rx.next().fuse();
+        let control = control_rx.next().fuse();
         let timer = TimeoutFuture::new(25).fuse();
-        futures::pin_mut!(inbound, outbound, timer);
+        futures::pin_mut!(inbound, outbound, control, timer);
 
         futures::select! {
             result = inbound => match result {
@@ -90,12 +100,12 @@ pub(super) async fn run_connected_session(
                         signals.set_status,
                         signals.connection_epoch,
                     ) {
-                        return;
+                        return ConnectedSessionOutcome::Lost;
                     }
                 }
                 None => {
                     if socket.is_closed() {
-                        return;
+                        return ConnectedSessionOutcome::Lost;
                     }
                 }
             },
@@ -107,7 +117,13 @@ pub(super) async fn run_connected_session(
                     }
                     queue.push_back(msg);
                 }
-                None => return,
+                None => return ConnectedSessionOutcome::Lost,
+            },
+            command = control => match command {
+                Some(ConnectionControl::RebindNativeEndpoint) => {
+                    return ConnectedSessionOutcome::RebindRequested;
+                }
+                None => return ConnectedSessionOutcome::Lost,
             },
             _ = timer => {}
         }

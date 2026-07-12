@@ -64,15 +64,26 @@ pub fn collect(state: &AppState) -> ServerMessage {
 }
 
 /// 启动指标广播任务 (每 5 秒)
-pub fn spawn_broadcaster(state: Arc<AppState>) {
+pub fn spawn_broadcaster(
+    state: Arc<AppState>,
+    mut shutdown: tokio::sync::watch::Receiver<bool>,
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
         loop {
-            interval.tick().await;
-            let msg = collect(&state);
-            let _ = state.tx.send(msg);
+            tokio::select! {
+                changed = shutdown.changed() => {
+                    if changed.is_err() || *shutdown.borrow() {
+                        break;
+                    }
+                }
+                _ = interval.tick() => {
+                    let msg = collect(&state);
+                    let _ = state.tx.send(msg);
+                }
+            }
         }
-    });
+    })
 }
 
 /// 存储指标: DB 文件大小 + 文档数

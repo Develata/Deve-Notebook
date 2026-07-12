@@ -9,6 +9,7 @@ use leptos::prelude::{Set, signal};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+use super::super::connection::ConnectionControl;
 use super::{ConnectionStatus, WsService};
 
 impl WsService {
@@ -38,6 +39,7 @@ impl WsService {
             signal(false);
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
+        let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
 
         Self {
             status,
@@ -64,7 +66,9 @@ impl WsService {
             writer_session_nonce: 1,
             msg_queue,
             tx,
+            connection_control_tx,
             test_rx: Some(Arc::new(Mutex::new(rx))),
+            test_connection_control_rx: Some(Arc::new(Mutex::new(connection_control_rx))),
         }
     }
 
@@ -96,5 +100,19 @@ impl WsService {
             messages.push(message);
         }
         messages
+    }
+
+    pub(crate) fn drain_connection_controls_for_test(&self) -> Vec<ConnectionControl> {
+        let Some(test_rx) = &self.test_connection_control_rx else {
+            return Vec::new();
+        };
+        let mut rx = test_rx
+            .lock()
+            .expect("test connection control receiver lock");
+        let mut controls = Vec::new();
+        while let Ok(control) = rx.try_recv() {
+            controls.push(control);
+        }
+        controls
     }
 }

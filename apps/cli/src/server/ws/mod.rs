@@ -22,6 +22,7 @@ mod filter;
 mod receive;
 mod route;
 pub(crate) mod send;
+pub(crate) mod transport;
 
 #[derive(Debug, Clone)]
 pub struct WsAdmissionConfig {
@@ -47,11 +48,12 @@ impl WsAdmissionConfig {
 /// HTTP/WebSocket 入口 (含鉴权)。
 ///
 /// 09_auth.md: "WebSocket Auth: 必须在握手阶段验证 Ticket/Token"
-pub async fn ws_handler(
+pub(crate) async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
     axum::Extension(config): axum::Extension<Arc<AuthConfig>>,
     axum::Extension(admission_config): axum::Extension<Arc<WsAdmissionConfig>>,
+    axum::Extension(transport_runtime): axum::Extension<Arc<transport::WsTransportRuntime>>,
     req: axum::http::request::Parts,
 ) -> impl IntoResponse {
     let admission = match auth::session_admission(
@@ -64,10 +66,21 @@ pub async fn ws_handler(
     };
 
     let peer_id = uuid::Uuid::new_v4().to_string();
+    let Some(transport_permit) = transport_runtime.reserve_session() else {
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
     let browser_auth_session = admission.browser_auth_session().cloned();
     let set_cookie = admission.set_cookie().map(ToOwned::to_owned);
     let mut response = ws
-        .on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_auth_session))
+        .on_upgrade(move |socket| {
+            handle_socket(
+                state,
+                socket,
+                peer_id,
+                browser_auth_session,
+                transport_permit,
+            )
+        })
         .into_response();
     if let Some(set_cookie) = set_cookie
         && let Ok(value) = HeaderValue::from_str(&set_cookie)
@@ -95,6 +108,7 @@ pub(crate) async fn handle_socket(
     socket: axum::extract::ws::WebSocket,
     peer_id: String,
     browser_auth_session: Option<crate::server::source_control_grants::AuthSessionId>,
+    _transport_permit: transport::WsTransportSessionPermit,
 ) {
     let (sender, mut receiver) = socket.split();
     let mut session = WsSession::new();
@@ -107,18 +121,34 @@ pub(crate) async fn handle_socket(
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
 
     // 将单播队列写入 WebSocket。
-    send::spawn_unicast_sender_task(sender, unicast_rx);
+    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx);
 
     // 订阅广播并尝试转发到单播队列（带背压/丢弃策略）。
     let broadcast_rx = state.tx.subscribe();
     let broadcast_filter = send::BroadcastFilter::for_session(&session);
-    send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), broadcast_filter.clone());
+    let broadcast_task =
+        send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), broadcast_filter.clone());
 
     let ch = DualChannel::new(state.tx.clone(), unicast_tx);
 
     tracing::info!("Client connected: {}", peer_id);
 
-    while let Some(msg) = receiver.next().await {
+    let mut transport_shutdown = _transport_permit.subscribe();
+    loop {
+        let next_message = receiver.next();
+        tokio::pin!(next_message);
+        let msg = tokio::select! {
+            changed = transport_shutdown.changed() => {
+                if changed.is_err() || *transport_shutdown.borrow() {
+                    break;
+                }
+                continue;
+            }
+            msg = &mut next_message => {
+                let Some(msg) = msg else { break; };
+                msg
+            }
+        };
         let msg = match msg {
             Ok(msg) => msg,
             Err(e) => {
@@ -127,18 +157,25 @@ pub(crate) async fn handle_socket(
             }
         };
 
-        if matches!(
-            receive::handle_incoming_message(
-                &state,
-                &ch,
-                &mut session,
-                msg,
-                &broadcast_filter,
-                &peer_id,
-            )
-            .await,
-            receive::SocketFlow::Break
-        ) {
+        let handle_incoming = receive::handle_incoming_message(
+            &state,
+            &ch,
+            &mut session,
+            msg,
+            &broadcast_filter,
+            &peer_id,
+        );
+        tokio::pin!(handle_incoming);
+        let flow = tokio::select! {
+            changed = transport_shutdown.changed() => {
+                if changed.is_err() || *transport_shutdown.borrow() {
+                    break;
+                }
+                continue;
+            }
+            flow = &mut handle_incoming => flow,
+        };
+        if matches!(flow, receive::SocketFlow::Break) {
             break;
         }
     }
@@ -148,6 +185,10 @@ pub(crate) async fn handle_socket(
             .source_control_write_grants()
             .revoke_session(&auth_session_id);
     }
+    broadcast_task.abort();
+    let _ = broadcast_task.await;
+    unicast_task.abort();
+    let _ = unicast_task.await;
 }
 
 #[cfg(test)]

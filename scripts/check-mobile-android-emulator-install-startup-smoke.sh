@@ -218,7 +218,15 @@ adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
   export DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1
   export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
   export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
+  export DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=0
   run "$ROOT_DIR/scripts/check-mobile-android-install-startup-smoke.sh"
+)
+
+(
+  export DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1
+  export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+  export DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
+  run "$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.sh"
 )
 
 echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
