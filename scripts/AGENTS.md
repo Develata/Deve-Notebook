@@ -21,6 +21,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-auth-unauthorized-state.sh` | Verifies auth failures map to Unauthorized instead of reconnect/disconnected UI |
 | `check-auth-baseline.sh` | Verifies Auth startup, cookie/JWT/status, WS 401, rate-limit, headers, and frontend session-expired contracts |
 | `check-network-baseline.sh` | Verifies NET-001..NET-004 reconnect, `/ws`, node role, and WS frame baseline contracts |
+| `check-acceptance-matrix.sh` | Verifies acceptance cases, operation relations, first-tag journeys, and generated matrix drift through the Rust checker |
 | `check-foundation-baseline.sh` | Verifies foundation terminology, source-of-truth wording, positioning boundaries, init, watcher, rename, and `.deveignore` acceptance bindings |
 | `check-search-baseline.sh` | Verifies current Search scope, feature-gate, stale-result, and future-index boundaries |
 | `check-rendering-baseline.sh` | Verifies Markdown rendering current/future split, lightweight renderer subset, and controlled apply boundaries |

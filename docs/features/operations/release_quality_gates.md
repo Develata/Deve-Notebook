@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.release.quality-gates`
 - `Domain`: `release`
 - `Related Feature Chapters`: `docs/features/15_release.md`, `docs/features/14_tech_stack.md`
-- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`
+- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`, `REL-014`
 
 ## Operations
 
@@ -80,6 +80,15 @@
 - `Preconditions`: `docs/plan/22_reliability_observability.md` and Rust baseline checker are readable
 - `Immediate Result`: SLO/SLI, telemetry schema, metric taxonomy, tracing boundary, health mapping, alert tier, and DR index drift block release checks
 - `Application Entry`: `scripts/check-reliability-observability-baseline.sh`, `tools/baseline/src/reliability_observability.rs`
+
+### `op.release.quality.validate-acceptance-matrix`
+
+- `Name`: `Validate Acceptance Matrix`
+- `Surface`: `github-actions`, `local-or-ci-script`
+- `Trigger`: branch CI validates structure; tag workflow validates fresh receipts
+- `Preconditions`: matrix authority, operation coverage, generated projection, and receipt directory are readable
+- `Immediate Result`: missing case/flow/journey relations block CI; missing, dirty, stale, wrong-platform, or failed required evidence blocks tag-ready
+- `Application Entry`: `tools/baseline/src/acceptance_matrix/`, `scripts/check-acceptance-matrix.sh`
 
 ## Response Flow
 

@@ -881,23 +881,16 @@ log "i18n allowlisted debt: $i18n_allowlisted"
 log ""
 
 # ---------------------------------------------------------------------------
-# Check 4 — Acceptance case ↔ test binding
+# Check 4 — Acceptance case / flow / journey matrix
 # ---------------------------------------------------------------------------
-log "== Check 4: acceptance case bindings =="
-unbound_cases=0
-binding_status=0
-binding_report="$(bash "$ROOT/scripts/check-acceptance-bindings.sh" 2>&1)" || binding_status=$?
+log "== Check 4: acceptance matrix =="
+matrix_status=0
+matrix_report="$(bash "$ROOT/scripts/check-acceptance-matrix.sh" 2>&1)" || matrix_status=$?
 while IFS= read -r line; do
   [ -z "$line" ] && continue
-  if [[ "$line" == ERROR:* ]]; then
-    err "${line#ERROR: }"
-  else
-    log "$line"
-  fi
-done <<< "$binding_report"
-unbound_cases="$(printf '%s\n' "$binding_report" | awk -F': ' '/^unbound acceptance cases/ { print $2; exit }')"
-unbound_cases="${unbound_cases:-0}"
-if [ "$binding_status" -ne 0 ]; then
+  log "$line"
+done <<< "$matrix_report"
+if [ "$matrix_status" -ne 0 ]; then
   blocking=$((blocking + 1))
 fi
 log ""
@@ -1084,7 +1077,7 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Summary =="
 log "blocking violations: $blocking"
-log "soft warnings: $((soft_warnings + missing_refs + unbound_cases))"
+log "soft warnings: $((soft_warnings + missing_refs))"
 
 if [ "$WRITE_REPORT" = "1" ]; then
   printf '%s\n' "${REPORT_LINES[@]}" > "$ROOT/scripts/plan-coverage.txt"

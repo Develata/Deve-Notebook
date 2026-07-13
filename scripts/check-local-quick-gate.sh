@@ -42,7 +42,7 @@ run git diff --check
 run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core
 run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli
 run scripts/plan-coverage.sh --check-no-adr-plan-ref
-run scripts/check-acceptance-bindings.sh
+run scripts/check-acceptance-matrix.sh
 run scripts/check-feature-operation-paths.sh
 
 if [[ "${DEVE_QUICK_GATE_TESTS:-1}" == "1" ]]; then

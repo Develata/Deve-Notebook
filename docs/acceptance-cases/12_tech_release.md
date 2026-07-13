@@ -115,8 +115,8 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 3" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`WS_PROTOCOL_VERSION = 12;`" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 12;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`WS_PROTOCOL_VERSION = 13;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 13;`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
     - stdout_contains: "storage-repo-baseline-check: ok"
@@ -382,4 +382,23 @@
     - contract_assert: observation_health_mapping_bound true
     - contract_assert: alerting_tier_bound true
     - contract_assert: resilience_playbook_index_bound true
+
+- case_id: REL-014
+  goal: 分层验收矩阵对 case、operation flow、first-tag journey 与 evidence receipt fail-closed。
+  preconditions:
+    - `docs/registry/acceptance-matrix.tsv` 可读
+    - Rust 1.92 toolchain 可用
+  steps:
+    - run: cargo run --locked -p deve_baseline -- acceptance-matrix
+    - run: cargo test --locked -p deve_baseline acceptance_matrix -- --nocapture
+    - run: receipt_root="$(mktemp -d)" && ! cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
+  assertions:
+    - contract_assert: all_acceptance_cases_bound true
+    - contract_assert: operation_flow_case_relations_exact true
+    - contract_assert: first_tag_journey_surface_complete true
+    - contract_assert: store_011_and_store_024_not_soft_unbound true
+    - contract_assert: generated_acceptance_matrix_drift_rejected true
+    - contract_assert: dirty_failed_stale_or_missing_receipt_rejected true
+    - contract_assert: receipt_head_surface_mode_platform_and_locator_bound true
+    - release_assert: explicit_p0_gap_blocks_tag_ready true
 ```

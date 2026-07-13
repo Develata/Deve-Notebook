@@ -4,7 +4,7 @@ use anyhow::{Result, bail};
 use std::env;
 use std::process::ExitCode;
 
-mod acceptance_bindings;
+mod acceptance_matrix;
 mod ai;
 mod architecture_registry;
 mod auth;
@@ -82,7 +82,8 @@ fn run() -> Result<()> {
 
     match command.as_str() {
         "storage-repo" => storage_repo::run(),
-        "acceptance-bindings" => acceptance_bindings::run(),
+        "acceptance-matrix" => acceptance_matrix::run(&command_args),
+        "acceptance-receipt" => acceptance_matrix::run_receipt(&command_args),
         "architecture-registry" => architecture_registry::run(),
         "network" => network::run(),
         "release" => release::run(),
@@ -153,7 +154,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|backup|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|perf-budget|reliability-observability|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-matrix|acceptance-receipt|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|backup|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|perf-budget|reliability-observability|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
             );
             Ok(())
         }
@@ -167,7 +168,7 @@ fn run() -> Result<()> {
 
 fn run_text_baselines() -> Result<()> {
     storage_repo::run()?;
-    acceptance_bindings::run()?;
+    acceptance_matrix::run(&[])?;
     architecture_registry::run()?;
     network::run()?;
     release::run()?;
@@ -209,7 +210,7 @@ fn run_text_baselines() -> Result<()> {
 
 fn run_full_baselines() -> Result<()> {
     storage_repo::run()?;
-    acceptance_bindings::run()?;
+    acceptance_matrix::run(&[])?;
     architecture_registry::run()?;
     network::run()?;
     release::run()?;

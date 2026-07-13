@@ -6,6 +6,13 @@
 
 跨层章节映射见 [../coverage-matrix.md](../coverage-matrix.md)。
 
+验收需求、operation flow 关系、first-tag journey/surface 与证据 freshness 的唯一人工
+维护注册表是 [`../registry/acceptance-matrix.tsv`](../registry/acceptance-matrix.tsv)。
+[`../acceptance-matrix.md`](../acceptance-matrix.md) 是由 `deve_baseline acceptance-matrix
+--render --write` 生成的人类可读投影，不得手工维护。普通 CI 对矩阵结构 fail-closed；
+first-tag 另以 current-HEAD/target-host receipts 校验证据，不再使用“case ID 在代码或文档
+中出现过”作为充分条件。
+
 自动化验收的优先原则：
 
 - 优先验证 application/control/CLI 层，而不是把显示层当作唯一操控入口

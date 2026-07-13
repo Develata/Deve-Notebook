@@ -90,6 +90,14 @@ jobs:
           scripts/check-native-track-boundary.sh
           DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0 scripts/check-native-process-adapter-gate.sh
           scripts/check-graph-baseline.sh
+
+      # This intentionally blocks every tag before any publish job while the
+      # P0 platform receipt producer/aggregation requirement remains open.
+      - name: Block release until first-tag acceptance receipts are aggregated
+        run: |
+          receipt_root="$RUNNER_TEMP/deve-acceptance-receipts"
+          mkdir -p "$receipt_root"
+          cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
       
       - name: Run tests
         run: cargo test --locked

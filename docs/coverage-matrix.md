@@ -52,7 +52,7 @@
 
 > 上述治理 acceptance 用例（`PERF-001` / `REL-013` / `PLUG-001` / `AUTH-*`）均已在所列
 > `docs/acceptance-cases/` 文件中定义并绑定（automated / walkthrough），由
-> `scripts/check-acceptance-bindings.sh` 校验（0 unbound）。
+> `scripts/check-acceptance-matrix.sh` 校验 case / flow / first-tag journey 全覆盖。
 
 ### Non-Matrix Documents
 
@@ -76,7 +76,7 @@ The following documents exist under `docs/` but do not participate in the three-
 - Every `docs/plan/` chapter (01-19 + 11_ui sub-chapters) must have a corresponding row in the Chapter Mapping table; 20-23 Governance Contracts are mapped separately in the Governance Contracts table (ownership-axis slice, not A-E feature chapters).
 - Every `docs/features/` chapter must define at least one Chrome MCP walkthrough, **except** `01_terminology` and `02_positioning` which use `Verification: glossary-only / boundary-only`.
 - Every `docs/acceptance-cases/` file must map to at least one stable automation surface.
-- Non-automated acceptance cases must be listed in `docs/acceptance-bindings.tsv`
+- 每个 acceptance case、operation flow 关系与 first-tag journey/surface 必须登记在 `docs/registry/acceptance-matrix.tsv`
   with a binding type and evidence document; `scripts/plan-coverage.sh` validates
   the case id, binding type, and evidence path.
 - A single acceptance file may cover multiple blueprint chapters, but the mapping must be explicit here.

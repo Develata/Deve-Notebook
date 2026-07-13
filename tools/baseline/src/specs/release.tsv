@@ -336,21 +336,21 @@ contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/18_release.md	REDB_SCHEMA_VERSION = 3
 contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 3
-contains	docs/plan/07_network.md	`protocol_version` 当前固定为 `12`
+contains	docs/plan/07_network.md	`protocol_version` 当前固定为 `13`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
 contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/registry/first-tag-format-matrix.md	REDB_SCHEMA_VERSION = 3
-contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 12;`
-contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 12;`
+contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 13;`
+contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 13;`
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	provider_io_ready=false
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection locator
 contains	docs/registry/first-tag-format-matrix.md	Projection Backup / Remote Projection locator
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 3;
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 12;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 12;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 13;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 13;
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md
 contains	docs/acceptance-cases/12_tech_release.md	legacy_binary_codec_dependency_absent true
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_format_matrix_bound_to_plan_and_code true
@@ -498,8 +498,6 @@ case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	production_login_
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-010	live post-reconnect vector equality is not exposed
-contains	docs/acceptance-bindings.tsv	REL-010|manual-network|docs/dev-runbook.md
-contains	docs/acceptance-bindings.tsv	REL-011|manual-cli|docs/dev-runbook.md
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_has_no_independent_tag_trigger true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_publish_waits_for_all_required_builds true
@@ -749,8 +747,8 @@ contains	scripts/baseline-wrapper.sh	cargo_bin="$(resolve_baseline_cargo "$root_
 contains	scripts/baseline-wrapper.sh	run_deve_baseline()
 contains	scripts/baseline-wrapper.sh	"$baseline" "$@"
 contains	scripts/baseline-wrapper.sh	local cargo_bin="${CARGO_BIN:-${CARGO:-}}"
-contains	scripts/check-acceptance-bindings.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
-contains	scripts/check-acceptance-bindings.sh	run_deve_baseline "$ROOT_DIR" "acceptance-bindings" "acceptance-bindings-check"
+contains	scripts/check-acceptance-matrix.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-acceptance-matrix.sh	run_deve_baseline "$ROOT_DIR" "acceptance-matrix" "acceptance-matrix-check"
 contains	scripts/check-architecture-registry.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-architecture-registry.sh	run_deve_baseline "$ROOT_DIR" "architecture-registry" "architecture-registry-check"
 contains	scripts/check-native-target-host-evidence.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
@@ -811,7 +809,8 @@ contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- 
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release
 contains	docs/acceptance-cases/12_tech_release.md	validation_script_ownership_policy_classified true
 contains	tools/baseline/src/main.rs	"full" => run_full_baselines()
-contains	tools/baseline/src/main.rs	"acceptance-bindings" => acceptance_bindings::run()
+contains	tools/baseline/src/main.rs	"acceptance-matrix" => acceptance_matrix::run(&command_args)
+contains	.github/workflows/release.yml	cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
 contains	tools/baseline/src/main.rs	"architecture-registry" => architecture_registry::run()
 contains	tools/baseline/src/main.rs	mod cargo_gate;
 contains	tools/baseline/src/main.rs	mod desktop_package_preflight;

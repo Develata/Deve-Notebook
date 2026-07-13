@@ -16,6 +16,7 @@ log.
 |------|-------------|
 | `runtime-skeleton-registry.md` | Runtime name, convergence status, current module path, and tracking task registry |
 | `release-audit-warning-registry.md` | Current non-vulnerability `cargo audit` warnings, allowlist rationale, and replacement route registry |
+| `acceptance-matrix.tsv` | Machine-readable acceptance requirements, operation relations, journeys, evidence locators, and freshness gates |
 
 ## For AI Agents
 

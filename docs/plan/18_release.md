@@ -171,6 +171,72 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 - 不得运行 native package build、installer smoke、store distribution、physical-device 或 production deploy。
 - MAY 运行 `cargo fmt --check`、`cargo clippy --locked --all-targets -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、`cargo test --locked`、`cargo run -p deve_baseline -- all` 与 plan coverage enforcing checks。
 
+### 2.1.4 First-tag Acceptance Matrix {#first-tag-acceptance-matrix}
+
+`docs/registry/acceptance-matrix.tsv` 是验收需求与证据需求的唯一人工维护注册表；
+`docs/acceptance-matrix.md` 只能由 checker 确定性生成，不是第二套 authority。旧的
+`docs/acceptance-bindings.tsv` 在完整迁移后删除。矩阵字段固定为：
+
+`requirement_id | journey_id | flow_id | case_id | surface | mode | gate | requirement | evidence_kind | evidence_id | evidence_ref | freshness | note`
+
+- `requirement` 只允许 `required`、`conditional`、`non-goal`；后两者必须在 `note`
+  给出具体边界或原因。
+- `gate` 只允许 `ci`、`release`、`tag-ready`、`advisory`。
+- `freshness` 只允许 `source-bound`、`current-head`、`target-host-30d`、
+  `first-tag-once`、`none`。
+- `case_id` 或 `flow_id` 没有对应对象时使用受控哨兵 `none`。每个 acceptance case
+  至少映射一次；`20_operations_catalog` / `operation-coverage` 中每一条 flow-case 关系
+  都必须在矩阵中出现，避免仅凭“文本中曾被提及”冒充验收绑定。
+- `requirement_id` 是全表唯一 requirement key；同一 `evidence_id` 可以覆盖多条需求。
+- `evidence_kind` 只允许 `source-ref`、`test`、`script`、`document`、`receipt`、
+  `external-state`、`gap`。路径、脚本和 test selector 必须可解析；Rust test selector
+  必须绑定真实 workspace package、可解析 test target，且 filter 必须匹配该 package/target
+  源码中定义的测试函数。
+  `receipt` locator 必须是规范相对 JSON 路径；`gap` 必须明确说明缺失事实，且不得满足
+  `tag-ready`。
+
+first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
+`edit-sync-offline-recovery`、`source-control`、`external-changes`、`notegit`、
+`p2p-gap-recovery`、`docker-multiclient`、`desktop-local-backend`、
+`desktop-remote-browser`、`android-local-backend`、`android-remote-browser`、
+`release-artifacts`、`security-supply-chain`。矩阵必须为这些 journey 的适用 surface/mode
+登记 `tag-ready/required` 需求；iOS target-host 仍为 `advisory/conditional`，必须如实说明
+目标宿主与证据缺口，不能伪装为现有证据。
+
+`deve_baseline acceptance-matrix` 属于普通 CI 的结构 gate，负责 case、flow、journey、
+枚举、唯一键、rationale 与 evidence locator 完整性；它不把过期或尚未采集的运行时
+证据伪装为通过。默认结构检查还必须验证生成内容与 `docs/acceptance-matrix.md`
+一致；使用 `acceptance-matrix --render` 才能显式刷新该投影。
+
+`deve_baseline acceptance-receipt --evidence-id <id> --evidence-ref <relative-json>
+--surface <surface> --mode <mode> --target-os <target> --output <file> -- <command...>`
+包装真实命令，并记录 receipt schema、evidence ID/ref、命令前后 HEAD/dirty、host OS/arch、
+target OS、surface/mode、开始/结束 UTC 时间、退出状态与稳定命令指纹。只有命令成功、
+前后 HEAD 相同且 worktree 始终 clean 时才写 `passed`；其他情况仍必须原子写出 `failed`
+receipt 并返回非零。Receipt output 必须位于 Git worktree 外，且其尾部路径必须与
+`evidence_ref` 一致，避免 evidence 文件本身污染被测工作树。
+
+`deve_baseline acceptance-matrix --tag-ready <receipt-dir>` 只接受矩阵中 `required` 且
+`gate=tag-ready` 的新鲜证据：receipt 必须 `passed`、commit SHA 等于当前 HEAD、平台匹配、
+worktree clean，并满足 `current-head` / `target-host-30d` / `first-tag-once` 的时效语义。
+`source-bound` 由结构 checker 在当前源码上验证；`external-state` 与 `gap` 不得无 receipt
+地满足 tag-ready。普通 CI 只阻断结构漂移；正式 tag workflow 必须汇总各平台 receipts
+后再运行 tag-ready。
+
+当前 tag workflow 在平台 receipt producers 与 pre-publish aggregation 尚未完成时，必须使用
+worktree 外的空 receipt root 提前 fail-closed，禁止 Docker push 或 GitHub Release；该缺口
+作为独立 P0 requirement 保留。后续 P0 关闭它时，必须先让各平台 job 产出并上传 receipt，
+再在任何公开发布动作前聚合并执行 tag-ready，不得仅删除前置失败 gate。
+
+当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 未启用；发布
+资产缺少 SBOM、SHA-256 checksum 与 provenance/attestation；Docker、Desktop、Android、
+RemoteBrowser 仍需 current-HEAD candidate receipts；首个版本、CHANGELOG 与 release set
+尚未冻结；Android 已有 `apksigner` workflow，但仍缺 current-HEAD secrets、签名验证与安装
+证据。开源治理文件、ruleset、
+Dependabot/CodeQL/container scan、operator runbook 属 P1；toolchain pins、`.editorconfig`、
+fuzz/performance/privacy policy 属 P2 advisory。本批只建立诚实 gate，不顺带声称这些缺口
+已经关闭。
+
 ### 2.2 Deferred Workflows (推迟的工作流)
 
 以下 workflow 不属于权威 release / CI 基线：

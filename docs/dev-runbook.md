@@ -129,7 +129,7 @@ cargo test -p deve_web acc_cmd_004 -- --nocapture
 cargo test -p deve_cli commands::sc::tests -- --nocapture
 cargo check -p deve_cli
 cargo check -p deve_web --target wasm32-unknown-unknown
-scripts/check-acceptance-bindings.sh
+scripts/check-acceptance-matrix.sh
 scripts/plan-coverage.sh --check-metadata-completeness
 scripts/plan-coverage.sh --check-reverse-coverage
 ```
@@ -1164,7 +1164,7 @@ Current docs/code guard scripts:
 ```bash
 scripts/check-local-quick-gate.sh
 scripts/check-deep-audit-gate.sh
-scripts/check-acceptance-bindings.sh
+scripts/check-acceptance-matrix.sh
 scripts/check-auth-baseline.sh
 scripts/check-auth-unauthorized-state.sh
 scripts/check-network-baseline.sh
