@@ -102,8 +102,6 @@ pub(super) fn setup_editor_effects(
         set_editor_ready: runtime.set_editor_ready,
     });
     setup_playback_effect(PlaybackEffectCtx {
-        ws,
-        core,
         doc_id,
         history: runtime.history,
         playback_version: runtime.playback_version,

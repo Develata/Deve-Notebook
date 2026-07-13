@@ -9,6 +9,8 @@ TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
 BUILD_APK="${DEVE_MOBILE_ANDROID_PACKAGE_APK:-1}"
 BUILD_AAB="${DEVE_MOBILE_ANDROID_PACKAGE_AAB:-0}"
 BUILD_DEBUG="${DEVE_MOBILE_ANDROID_PACKAGE_DEBUG:-0}"
+RUST_TOOLCHAIN="${DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN:-1.92.0}"
+CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
 
 # This gate builds only the Android WebView shell; it must not open child-process runtime.
 
@@ -62,6 +64,18 @@ configure_android_build_java() {
     || fail "java >=17 or Android Studio JBR is required for Android shell package build"
 }
 
+configure_android_rust() {
+  [[ -n "$RUST_TOOLCHAIN" && "$RUST_TOOLCHAIN" != *[[:space:]]* ]] \
+    || fail "DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN must be one non-empty rustup toolchain"
+  [[ "$CARGO_BUILD_JOBS" =~ ^[1-9][0-9]*$ ]] \
+    || fail "DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS must be a positive integer"
+  rustup toolchain list | grep -Eq "^${RUST_TOOLCHAIN//./\\.}(-|$)" \
+    || fail "Rust toolchain $RUST_TOOLCHAIN is required for Android package build"
+  export RUSTUP_TOOLCHAIN="$RUST_TOOLCHAIN"
+  export CARGO_BUILD_JOBS
+  echo "mobile-android-shell-package-build-check: rust_toolchain=$RUST_TOOLCHAIN cargo_build_jobs=$CARGO_BUILD_JOBS"
+}
+
 configure_kotlin_incremental_workaround() {
   case "$(uname -s 2>/dev/null || printf 'unknown')" in
     MINGW*|MSYS*|CYGWIN*) ;;
@@ -76,6 +90,7 @@ configure_kotlin_incremental_workaround() {
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-shell-package-build" "mobile-android-shell-package-build-check"
 configure_android_build_java
+configure_android_rust
 configure_kotlin_incremental_workaround
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"

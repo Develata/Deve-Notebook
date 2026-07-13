@@ -15,4 +15,4 @@ contains	apps/web/src/hooks/use_core/write_gate.rs	is_read_only: signals.is_spec
 contains	apps/web/src/hooks/use_core/write_gate/tests.rs	fn repo_write_gate_blocks_remote_branches_as_read_only()
 contains	apps/web/src/editor/mod.rs	fn should_editor_be_read_only(
 contains	apps/web/src/editor/mod.rs	fn editor_read_only_gate_blocks_native_runtime_write_gate()
-contains	apps/web/src/editor/mod.rs	ffi::set_read_only(editor_readonly.get());
+contains	apps/web/src/editor/mod.rs	ffi::set_read_only_for_host(raw_element, editor_readonly.get());

@@ -7,6 +7,8 @@ import { Compartment } from "@codemirror/state";
 export const ctx = {
   /** @type {import("@codemirror/view").EditorView | null} */
   activeView: null,
+  /** @type {HTMLElement | null} exact owner of activeView */
+  activeHost: null,
   /** 是否正在应用远程操作 (抑制 delta 回声) */
   isRemote: false,
   /** 只读模式 Compartment */

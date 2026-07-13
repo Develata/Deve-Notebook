@@ -48,6 +48,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolb
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_history_actions_front_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_visible true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoint_keyboard_resize_preserves_editor_mount true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoint_keyboard_resize_does_not_resend_open_doc true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: mobile_toolbar_history_actions_visible_at_390px true
 contains	docs/plan/11_ui_design/03_mobile.md	必须使用 `visualViewport` API 监听键盘高度变化
 contains	apps/web/src/components/mobile_layout/effects.rs	visual_viewport_keyboard_offset(
@@ -636,6 +638,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_suspen
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_resume_rejects_stale_scope_before_fresh_writer_ready true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_resume_installs_only_current_generation_bootstrap true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_lifecycle_smoke_preserves_nonzero_pending true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_pending_fault_gate_discards_old_generation_outbound_write true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_replacement_generation_requires_product_pending_replay true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_same_repo_session_restore_rebinds_pending_scope true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_keyboard_resize_preserves_host_and_open_request true
 contains	docs/plan/11_ui_design/03_mobile.md	`MobileEmbeddedBackendSupervisor` 必须持有唯一 process-scoped `EmbeddedServerRuntime`
 contains	docs/features/08_ui_design_03_mobile.md	LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`
 contains	apps/cli/src/native_runtime.rs	start_native_loopback_backend_with_listener_until_shutdown
@@ -667,10 +673,42 @@ contains	scripts/smoke-mobile-android-lifecycle.mjs	mobile-android-lifecycle: ba
 contains	scripts/smoke-mobile-android-lifecycle.mjs	Android System WebView WebCrypto capability blocked writable lifecycle
 contains	scripts/smoke-mobile-android-lifecycle.mjs	probeWebCryptoEd25519
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-webview-interaction.mjs
+contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-source-control-interaction.mjs
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_SERIAL="emulator-$EMULATOR_PORT"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-port "$EMULATOR_PORT"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-memory "$EMULATOR_RAM_MB"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	LIFECYCLE_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-600}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-lowram
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	stop_android_gradle_daemon
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	emu avd name
+before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	check-mobile-android-shell-package-build.sh	emulator_cmd \
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	cmd package list packages
+contains	scripts/lib/android-tools.sh	android_boot_properties_complete()
+contains	scripts/lib/android-tools.sh	if sdk="$(android_sdk_root)"; then
+contains	apps/web/js/editor_lifecycle.test.mjs	stale cleanup cannot destroy a replacement editor mount
+contains	apps/web/js/editor_lifecycle.js	destroyOwnedEditorMount
+contains	scripts/mobile-webview-interaction.test.mjs	read-only editor focus rejects a writable CodeMirror surface
 contains	scripts/smoke-mobile-android-lifecycle.mjs	suspended editor must reject writes
+contains	scripts/lib/mobile-source-control-interaction.mjs	commit visible in history
+contains	scripts/smoke-mobile-android-lifecycle.mjs	buffered outbound write before suspend
+contains	scripts/lib/mobile-webview-interaction.mjs	same-breakpoint Android keyboard resize
+contains	scripts/lib/mobile-webview-interaction.mjs	android_pending_ack_marker_invalid
+contains	scripts/lib/websocket-delivery-gate.mjs	WebSocket.prototype.send = function gatedSend
+contains	apps/web/src/runtime/domain/scope.rs	RestoreSession
+contains	apps/web/src/runtime/document/pending/ops.rs	pub fn rebind_pending_scope
+contains	apps/web/src/hooks/use_core/effects/message_control.rs	session_restore_rebind_target
+contains	scripts/check-mobile-android-shell-package-build.sh	RUST_TOOLCHAIN="${DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN:-1.92.0}"
+contains	scripts/check-mobile-android-shell-package-build.sh	CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
 contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh

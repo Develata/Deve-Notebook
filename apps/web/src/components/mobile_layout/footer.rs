@@ -32,7 +32,7 @@ pub(super) fn bottom_bar_after_outside_click(_expanded: bool) -> bool {
 }
 
 #[component]
-pub fn MobileFooter() -> impl IntoView {
+pub fn MobileFooter(pending_ack_count: Memo<usize>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let document = expect_context::<DocumentClient>();
     let editor = expect_context::<EditorContext>();
@@ -117,6 +117,7 @@ pub fn MobileFooter() -> impl IntoView {
                 expanded=expanded
                 set_expanded=set_expanded
                 displayed_stats=displayed_stats
+                pending_ack_count=pending_ack_count
             />
 
             <Show when=move || read_footer_signal(expanded, false)>

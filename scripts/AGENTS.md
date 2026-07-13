@@ -64,6 +64,9 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `smoke-mobile-android-lifecycle.sh` | Drives the debug Android WebView through CDP, verifies non-zero pending preservation, transport-generation recovery, foreground reprobe, resumed commit, and bounded graceful runtime cleanup |
 | `smoke-mobile-android-lifecycle.mjs` | Raw page-target CDP harness for the Android LocalBackend lifecycle smoke; requires WebCrypto Ed25519, uses debug-only lifecycle fault/exit commands, and otherwise submits UI intents only |
 | `lib/mobile-webview-interaction.mjs` | Focus, text-input failure diagnostics, and mobile drawer navigation helpers for the Android WebView lifecycle harness |
+| `lib/mobile-source-control-interaction.mjs` | Source Control open, confirmed-row commit acknowledgement, history proof, and failure diagnostics for the Android WebView lifecycle harness |
+| `lib/android-webview-cdp.mjs` | Raw Android WebView page-target discovery, CDP request routing, evaluation, and bounded reconnect helpers for native lifecycle smoke |
+| `lib/websocket-delivery-gate.mjs` | CDP-installed, smoke-only outbound WebSocket gate; discards an old-generation edit frame so only product pending replay can deliver it after Android transport replacement |
 | `lib/webcrypto-capability.mjs` | Shared target-host probe for non-extractable WebCrypto Ed25519 capability; returns stable fail-closed blocker facts only |
 | `webcrypto-capability.test.mjs` | Verifies the Android/WebView probe requests non-extractable Ed25519 signing keys and rejects unsupported or extractable results |
 | `check-mobile-ios-shell-package-build.sh` | Runs the iOS WebView shell package gate only when explicitly required on a macOS target host |

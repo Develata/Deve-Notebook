@@ -7,6 +7,7 @@ use super::chat_sheet::MobileChatSheet;
 use super::content::MobileContent;
 use super::drawers::MobileDrawers;
 use super::footer::MobileFooter;
+use super::footer_status::pending_ack_count_for_current_scope;
 use super::header::MobileHeader;
 use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
@@ -99,6 +100,18 @@ pub fn MobileLayoutFrame(
     let current_doc = document.current_doc;
     let diff_content = source_control.diff_content;
     let current_editor_doc = create_current_editor_doc(&document, &editor);
+    let pending_local_edits = document.pending_local_edits;
+    let pending_repo_id = scope.current_repo_id;
+    let pending_scope_nonce = scope.current_scope_nonce;
+    let mobile_pending_ack_count = Memo::new(move |_| {
+        let current_repo_id = pending_repo_id.get();
+        pending_ack_count_for_current_scope(
+            &pending_local_edits.get(),
+            current_doc.get(),
+            current_repo_id.as_deref(),
+            pending_scope_nonce.get(),
+        )
+    });
     let tabs = create_editor_tab_runtime(
         EditorTabRuntimeInputs {
             document: document.clone(),
@@ -135,6 +148,7 @@ pub fn MobileLayoutFrame(
     view! {
         <div
             data-deve-layout-mode="mobile"
+            data-deve-mobile-pending-ack-count=move || mobile_pending_ack_count.get().to_string()
             class="flex flex-col flex-1 overflow-hidden bg-sidebar"
             style="touch-action: pan-y;"
             on:touchstart=move |ev| on_touch_start.run(ev)
@@ -239,7 +253,7 @@ pub fn MobileLayoutFrame(
                     surface_switcher_sheet_visible.get(),
                 )
             }>
-                <MobileFooter />
+                    <MobileFooter pending_ack_count=mobile_pending_ack_count />
             </Show>
         </div>
     }

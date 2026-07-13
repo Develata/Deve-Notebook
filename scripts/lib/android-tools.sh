@@ -29,26 +29,27 @@ android_tool_path() {
   local candidate
   local candidates=()
 
+  if sdk="$(android_sdk_root)"; then
+    candidates=(
+      "$sdk/platform-tools/$tool"
+      "$sdk/platform-tools/$tool.exe"
+      "$sdk/emulator/$tool"
+      "$sdk/emulator/$tool.exe"
+      "$sdk/cmdline-tools/latest/bin/$tool"
+      "$sdk/cmdline-tools/latest/bin/$tool.bat"
+      "$sdk/cmdline-tools/latest/bin/$tool.exe"
+    )
+    for candidate in "${candidates[@]}"; do
+      [[ -f "$candidate" ]] || continue
+      printf '%s\n' "$candidate"
+      return 0
+    done
+  fi
+
   if command -v "$tool" >/dev/null 2>&1; then
     command -v "$tool"
     return 0
   fi
-
-  sdk="$(android_sdk_root)" || return 1
-  candidates=(
-    "$sdk/platform-tools/$tool"
-    "$sdk/platform-tools/$tool.exe"
-    "$sdk/emulator/$tool"
-    "$sdk/emulator/$tool.exe"
-    "$sdk/cmdline-tools/latest/bin/$tool"
-    "$sdk/cmdline-tools/latest/bin/$tool.bat"
-    "$sdk/cmdline-tools/latest/bin/$tool.exe"
-  )
-  for candidate in "${candidates[@]}"; do
-    [[ -f "$candidate" ]] || continue
-    printf '%s\n' "$candidate"
-    return 0
-  done
   return 1
 }
 
@@ -140,4 +141,11 @@ android_run_tool() {
 
   tool_path="$(android_tool_path "$tool")" || return 1
   "$tool_path" "$@"
+}
+
+android_boot_properties_complete() {
+  local sys_boot_completed="${1:-}"
+  local dev_boot_complete="${2:-}"
+
+  [[ "$sys_boot_completed" == "1" || "$dev_boot_complete" == "1" ]]
 }

@@ -28,6 +28,7 @@ pub(super) struct EditorState {
     pub content: ReadSignal<String>,
     pub playback_version: ReadSignal<u64>,
     pub open_request_id: ReadSignal<u64>,
+    pub editor_ready: ReadSignal<bool>,
     pub sync_failure: ReadSignal<Option<EditorSyncFailure>>,
     pub retry_sync: Callback<()>,
 }
@@ -66,6 +67,7 @@ pub(super) fn use_editor(
         content: runtime.content,
         playback_version: runtime.playback_version,
         open_request_id: runtime.open_request_id,
+        editor_ready: runtime.editor_ready,
         sync_failure: runtime.editor_sync_failure,
         retry_sync,
     }

@@ -58,6 +58,7 @@ pub fn FooterSummaryRow(
     expanded: ReadSignal<bool>,
     set_expanded: WriteSignal<bool>,
     displayed_stats: Signal<EditorStats>,
+    pending_ack_count: Memo<usize>,
 ) -> impl IntoView {
     let stat_label = move |compact: &'static str, full: fn(Locale) -> &'static str| {
         let locale = locale;
@@ -86,7 +87,7 @@ pub fn FooterSummaryRow(
                     <BranchSwitcher compact=true />
                 </div>
                 <div data-deve-mobile-bottom-bar-field="status" class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
-                    {move || view! { <StatusView locale=locale /> }}
+                    {move || view! { <StatusView locale=locale pending_ack_count=pending_ack_count /> }}
                 </div>
                 <div data-deve-mobile-bottom-bar-field="words" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("W", t::bottom_bar::words)}</span>

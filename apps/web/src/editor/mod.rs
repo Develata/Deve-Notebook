@@ -54,6 +54,7 @@ pub fn Editor(
     let state = hook::use_editor(doc_id, editor_ref, on_stats);
     let playback_version = state.playback_version;
     let open_request_id = state.open_request_id;
+    let editor_ready = state.editor_ready;
     let content = state.content;
     let sync_failure = state.sync_failure;
     let retry_sync = state.retry_sync;
@@ -79,10 +80,14 @@ pub fn Editor(
             },
         )
         .is_some();
-        should_editor_be_read_only(is_pb, write_blocked)
+        should_editor_be_read_only(editor_ready.get(), is_pb, write_blocked)
     });
     Effect::new(move |_| {
-        ffi::set_read_only(editor_readonly.get());
+        let Some(element) = editor_ref.get() else {
+            return;
+        };
+        let raw_element: &web_sys::HtmlElement = &element;
+        ffi::set_read_only_for_host(raw_element, editor_readonly.get());
     });
     let (outline_pref, set_outline_pref) = use_context::<OutlineControl>()
         .map(|outline| (outline.visible, outline.set_visible))
@@ -187,8 +192,8 @@ pub fn Editor(
     }
 }
 
-fn should_editor_be_read_only(is_playback: bool, write_blocked: bool) -> bool {
-    is_playback || write_blocked
+fn should_editor_be_read_only(editor_ready: bool, is_playback: bool, write_blocked: bool) -> bool {
+    !editor_ready || is_playback || write_blocked
 }
 
 #[cfg(test)]
@@ -197,16 +202,21 @@ mod tests {
 
     #[test]
     fn editor_read_only_gate_blocks_native_runtime_write_gate() {
-        assert!(should_editor_be_read_only(false, true));
+        assert!(should_editor_be_read_only(true, false, true));
     }
 
     #[test]
     fn editor_read_only_gate_allows_ready_writable_document() {
-        assert!(!should_editor_be_read_only(false, false));
+        assert!(!should_editor_be_read_only(true, false, false));
     }
 
     #[test]
     fn editor_read_only_gate_blocks_playback() {
-        assert!(should_editor_be_read_only(true, false));
+        assert!(should_editor_be_read_only(true, true, false));
+    }
+
+    #[test]
+    fn editor_read_only_gate_blocks_unadmitted_editor_mount() {
+        assert!(should_editor_be_read_only(false, false, false));
     }
 }

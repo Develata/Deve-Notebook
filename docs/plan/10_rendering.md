@@ -394,6 +394,16 @@ Baseline contract 的行内支持集合：
   且 remote transaction 不得进入本地 undo history。
 - pending/history/live replay 或 editor content readback 失败时必须保持只读并进入结构化
   `EditorSyncError`；不得进入 Ready、不得重发 pending、不得留下已应用前缀。
+- CodeMirror adapter 的 mount 与 cleanup 必须绑定到精确的 editor host owner。新 mount
+  发布为 active view 前必须退休旧 view；迟到的旧组件 cleanup 只能销毁自己拥有的 view，
+  owner 不匹配时必须 no-op，不得清空新 mount 的 bridge/queue。`editorBridgeReady`、active
+  view 与可写状态必须属于同一 host。每个新 mount 都是新的 projection load session，
+  必须先撤销旧 `Ready` 并保持只读，直到该 mount 自己的 OpenDoc/Snapshot/history 完成；
+  不得把空白 editor 暴露为短暂可写。当前 host 首次进入可写后的第一笔真实输入不得因旧
+  cleanup 迟到而丢失。mount 前置构造失败或 view teardown 抛错时也必须清空 active
+  view、callback 与 bootstrap owner，保持 fail-closed，不得保留半活跃 bridge。已脱离
+  DOM 的迟到 host 必须在退休当前 view 之前被拒绝，不得接管 active owner，也不得通过
+  全局 readonly adapter 修改当前 owner 的可写状态。
 - 单个 widget 渲染失败时，必须回退为源码显示，不得破坏整篇文档编辑。
 - outline projection 失败时，只允许降级为 plain heading text，不得阻断文档编辑主链。
 

@@ -44,12 +44,17 @@ import { gutterDiffExtension, updateGutterDiff } from "./extensions/gutter_diff.
 // --- 共享状态与远程操作 (从子模块导入) ---
 import { ctx } from "./editor_state.js";
 import {
+  activateEditorMount,
+  destroyOwnedEditorMount,
+} from "./editor_lifecycle.js";
+import {
   getEditorContent,
   applyRemoteContent,
   applyRemoteOp,
   applyRemoteOpsBatch,
   scrollGlobal,
   setReadOnly,
+  setReadOnlyForHost,
 } from "./editor_remote_ops.js";
 
 function registerBrowserBridgeGlobal(name, value, meta = {}) {
@@ -110,58 +115,67 @@ function changeSetToDeltas(changes) {
 // --- 核心初始化 (Core Initialization) ---
 export function initCodeMirror(element, onDelta) {
   if (!element) return;
-  element.innerHTML = "";
-  ctx.onDeltaCallback = onDelta;
 
   try {
-    const startState = EditorState.create({
-      doc: "",
-      extensions: [
-        ...manualBasicSetup,
-        ctx.readOnlyCompartment.of(EditorState.readOnly.of(true)),
-        EditorView.lineWrapping,
-        markdown({
-          base: markdownLanguage,
-          codeLanguages: languages,
-          extensions: [GFM],
-        }),
-        hybridPlugin,
-        mathStateField,
-        tableStateField,
-        imageStateField,
-        checkboxStateField,
-        mermaidStateField,
-        copyTexExtension,
-        blockStyling,
-        listMarkerPlugin,
-        blockquoteBorderPlugin,
-        codeToolbarPlugin,
-        hyperlinkClickPlugin,
-        gutterDiffExtension,
+    return activateEditorMount(
+      ctx,
+      element,
+      () => {
+        ctx.onDeltaCallback = onDelta;
+        const startState = EditorState.create({
+          doc: "",
+          extensions: [
+            ...manualBasicSetup,
+            ctx.readOnlyCompartment.of(EditorState.readOnly.of(true)),
+            EditorView.lineWrapping,
+            markdown({
+              base: markdownLanguage,
+              codeLanguages: languages,
+              extensions: [GFM],
+            }),
+            hybridPlugin,
+            mathStateField,
+            tableStateField,
+            imageStateField,
+            checkboxStateField,
+            mermaidStateField,
+            copyTexExtension,
+            blockStyling,
+            listMarkerPlugin,
+            blockquoteBorderPlugin,
+            codeToolbarPlugin,
+            hyperlinkClickPlugin,
+            gutterDiffExtension,
 
-        EditorView.updateListener.of((v) => {
-          if (ctx.isRemote) return;
-          if (v.docChanged && ctx.onDeltaCallback) {
-            const deltas = changeSetToDeltas(v.changes);
-            ctx.onDeltaCallback(JSON.stringify(deltas));
-          }
-        }),
-      ],
-    });
-
-    const view = new EditorView({ state: startState, parent: element });
-    ctx.activeView = view;
-    return view;
+            EditorView.updateListener.of((v) => {
+              if (ctx.isRemote) return;
+              if (v.docChanged && ctx.onDeltaCallback) {
+                const deltas = changeSetToDeltas(v.changes);
+                ctx.onDeltaCallback(JSON.stringify(deltas));
+              }
+            }),
+          ],
+        });
+        element.innerHTML = "";
+        return new EditorView({ state: startState, parent: element });
+      },
+    );
   } catch (e) {
+    ctx.onDeltaCallback = null;
     console.error("Init Error:", e);
     throw e;
   }
 }
 
-export function destroyEditor() {
-  if (ctx.activeView) {
-    ctx.activeView.destroy();
-    ctx.activeView = null;
+export function destroyEditor(expectedHost) {
+  const ownsMount = expectedHost
+    && ctx.activeHost === expectedHost
+    && ctx.activeView;
+  if (!ownsMount) return false;
+  try {
+    destroyOwnedEditorMount(ctx, expectedHost);
+    return true;
+  } finally {
     ctx.onDeltaCallback = null;
   }
 }
@@ -243,7 +257,7 @@ function getEditorSelection() {
   return JSON.stringify({ from: main.from, to: main.to, text });
 }
 
-export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, getEditorSelection };
+export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, setReadOnlyForHost, getEditorSelection };
 export { updateGutterDiff };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
@@ -259,6 +273,9 @@ registerBrowserBridgeGlobal("scrollGlobal", scrollGlobal, {
   role: "wasm-editor-navigation",
 });
 registerBrowserBridgeGlobal("setReadOnly", setReadOnly, { role: "wasm-editor-readonly" });
+registerBrowserBridgeGlobal("setReadOnlyForHost", setReadOnlyForHost, {
+  role: "wasm-editor-owner-readonly",
+});
 registerBrowserBridgeGlobal("updateGutterDiff", updateGutterDiff, {
   runtime: "widget_bridge_runtime",
   role: "wasm-editor-diff-projection",

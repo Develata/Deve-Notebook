@@ -61,7 +61,10 @@ pub(super) fn restore_session_scope(
         if let Some(msg) = build_switch_repo(repo_name.clone(), current_repo_id, switch_nonce) {
             signals
                 .set_pending_repo_switch
-                .set(Some(PendingRepoSwitch::switch(repo_name, switch_nonce)));
+                .set(Some(PendingRepoSwitch::restore_session(
+                    repo_name,
+                    switch_nonce,
+                )));
             ws.send(msg);
             return;
         }

@@ -56,7 +56,7 @@ pub use history::reconcile_with_history;
 pub use ops::{
     clear_pending_edit_and_check_current_doc_empty, cloned_ops_for_doc_in_scope,
     cloned_pending_edits_for_doc_in_scope, has_pending_edit, has_pending_edits_for_doc_in_scope,
-    pending_count_for_doc_in_scope, push_pending_edit,
+    pending_count_for_doc_in_scope, push_pending_edit, rebind_pending_scope,
 };
 #[cfg(test)]
 pub use ops::{

@@ -322,6 +322,7 @@ overlay state row 至少需要：
 - 进入 `Disconnected` / `Unauthorized` / native bootstrap blocked 等非 `Connected` 连接态时，前端必须清除当前
   writer-ready 状态；旧 `WriteReady(repo_id, scope_nonce)` 不得跨断线、认证失效或 native session 失效继续授权写入。
 - 旧 scope 的 ack / newop / snapshot 不得污染当前 repo scope。
+- 同一页面的 internal reconnect/session restore 在恢复**同一 local branch、同一 repo UUID** 时，是唯一允许把未确认 pending row 从旧 `scope_nonce` 迁移到服务端已确认的新 `scope_nonce` 的内部路径。迁移必须等精确匹配内部 session-restore intent 的 `RepoSwitched` 成功后原子更新 browser pending overlay；用户 repo/branch switch、repo UUID 变化、页面 reload 或 RemoteBrowser 导航均不得复用该路径。迁移不产生 confirmed state、不改变 `client_id + client_op_id`，并且仍须等 fresh `WriteReady(repo_id, scope_nonce)` 后才能 replay。
 
 补充：
 

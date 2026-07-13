@@ -37,8 +37,10 @@ pub fn setupCodeMirror(
 
 /// 销毁编辑器实例，释放资源
 #[allow(non_snake_case)]
-pub fn destroyEditor() -> bool {
-    bridge_call0("destroyEditor").is_some()
+pub fn destroyEditor(expected_host: &web_sys::HtmlElement) -> bool {
+    bridge_call1("destroyEditor", expected_host.as_ref())
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
 }
 
 /// 应用远程快照 (全量替换)
@@ -69,6 +71,17 @@ pub fn set_read_only(read_only: bool) -> bool {
     bridge_call1("setReadOnly", &JsValue::from_bool(read_only))
         .and_then(|value| value.as_bool())
         .unwrap_or(false)
+}
+
+/// 仅当 `expected_host` 仍拥有 active editor 时切换只读状态。
+pub fn set_read_only_for_host(expected_host: &web_sys::HtmlElement, read_only: bool) -> bool {
+    bridge_call2(
+        "setReadOnlyForHost",
+        expected_host.as_ref(),
+        &JsValue::from_bool(read_only),
+    )
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false)
 }
 
 #[allow(non_snake_case)]
@@ -159,12 +172,13 @@ mod tests {
         assert!(source.contains("\"call\""));
         assert!(source.contains("bridge_call3("));
         assert!(source.contains("\"setupCodeMirror\""));
-        assert!(source.contains("bridge_call0(\"destroyEditor\""));
+        assert!(source.contains("bridge_call1(\"destroyEditor\""));
         assert!(source.contains("bridge_call1(\"applyRemoteContent\""));
         assert!(source.contains("bridge_call1(\"applyRemoteOp\""));
         assert!(source.contains("bridge_call0(\"getEditorContent\""));
         assert!(source.contains("bridge_call1(\"scrollGlobal\""));
         assert!(source.contains("bridge_call1(\"setReadOnly\""));
+        assert!(source.contains("bridge_call2(\n        \"setReadOnlyForHost\""));
         assert!(source.contains("bridge_call1(\"applyRemoteOpsBatch\""));
         assert!(source.contains("bridge_call0(\"syncEditorStateToRust\""));
         assert!(source.contains("bridge_call1(\"mobileInsertText\""));
@@ -182,6 +196,7 @@ mod tests {
             "getEditorContent",
             "scrollGlobal",
             "setReadOnly",
+            "setReadOnlyForHost",
             "applyRemoteOpsBatch",
             "syncEditorStateToRust",
             "mobileInsertText",

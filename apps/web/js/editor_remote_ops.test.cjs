@@ -51,10 +51,12 @@ function testView(content) {
   const calls = [];
   const view = {
     state: { doc: { length: content.length, toString: () => content } },
+    contentDOM: { setAttribute() {} },
     dispatch(...specs) {
       calls.push(specs);
       for (const spec of specs) {
         const change = spec.changes;
+        if (!change) continue;
         content = content.slice(0, change.from) + change.insert + content.slice(change.to ?? change.from);
       }
       this.state.doc = { length: content.length, toString: () => content };
@@ -120,6 +122,19 @@ function testView(content) {
     () => remoteOps.buildRemoteBatchSpecs([{ Delete: { pos: 0, len: Number.MAX_SAFE_INTEGER + 1 } }], 4, {}),
     /Invalid remote delete length/,
   );
+  const activeHost = {};
+  const staleHost = {};
+  const ownerScoped = testView("owned");
+  globalThis.__DEVE_EDITOR_REMOTE_OPS_TEST_CTX__.activeView = ownerScoped.view;
+  globalThis.__DEVE_EDITOR_REMOTE_OPS_TEST_CTX__.activeHost = activeHost;
+  assert.equal(
+    remoteOps.setReadOnlyForHost(staleHost, false),
+    false,
+    "stale hosts must not mutate the active editor readonly compartment",
+  );
+  assert.equal(ownerScoped.calls.length, 0);
+  assert.equal(remoteOps.setReadOnlyForHost(activeHost, true), true);
+  assert.equal(ownerScoped.calls.length, 1);
   console.log("editor-remote-ops-atomic-batch: ok");
 })().catch((error) => {
   console.error(error);

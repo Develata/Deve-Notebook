@@ -978,16 +978,16 @@ contains	tools/baseline/src/script_gate_preflight.rs	empty desktop package bundl
 contains	tools/baseline/src/script_gate_preflight.rs	unsupported desktop package bundle selector
 contains	tools/baseline/src/script_gate_preflight.rs	empty desktop installer bundle selector
 contains	tools/baseline/src/script_gate_preflight.rs	unsupported desktop installer bundle selector
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_ARCH
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_DEVICE
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
-contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
-contains	tools/baseline/src/script_gate_preflight.rs	unsupported Android target
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_ARCH
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_DEVICE
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
+contains	tools/baseline/src/script_gate_preflight/android.rs	unsupported Android target
 contains	scripts/check-local-quick-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-local-quick-gate.sh	run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
 contains	scripts/check-local-quick-gate.sh	LOCAL_CARGO_TARGET_DIR="${DEVE_LOCAL_QUICK_GATE_TARGET_DIR:-target/local-quick-gate}"

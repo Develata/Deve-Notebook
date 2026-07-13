@@ -265,7 +265,7 @@ contains	apps/web/src/hooks/use_core/status_summary/tests.rs	reports_native_repr
 contains	apps/web/src/hooks/use_core/status_summary/tests.rs	reports_native_reprobe_before_snapshot_loading_when_node_role_probe_failed
 contains	apps/web/src/editor/delta_input_gate.rs	blocks_delta_when_runtime_write_gate_blocks
 contains	apps/web/src/editor/mod.rs	editor_read_only_gate_blocks_native_runtime_write_gate
-contains	apps/web/src/editor/hook_playback.rs	playback_read_only_gate_blocks_native_runtime_write_gate
+contains	apps/web/src/editor/hook_playback.rs	playback_effect_never_mutates_the_global_editor_readonly_adapter
 contains	apps/web/src/editor/delta_input.rs	repo_write_block_untracked
 contains	apps/web/src/editor/sync/history_resend.rs	repo_write_block_untracked
 contains	apps/web/src/editor/sync/dispatch_payload.rs	write_ready_resend_blocks_when_native_runtime_readiness_fails

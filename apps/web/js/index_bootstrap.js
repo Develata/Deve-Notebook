@@ -129,6 +129,7 @@
     pendingEditorActions: [],
     cmLoaded: false,
     editorBridgeReady: false,
+    activeHost: null,
     realInit: null,
     adapterLoading: null,
     queueAction(kind, payload) {
@@ -138,11 +139,27 @@
       }
     },
     queueMount(element, onUpdate, onReady) {
+      if (element?.isConnected === false) return false;
       this.editorQueue = [{ element, onUpdate, onReady }];
+      return true;
     },
-    resetBridge() {
+    ownsHost(expectedHost) {
+      if (!expectedHost) return false;
+      if (this.activeHost) return this.activeHost === expectedHost;
+      const queued = this.editorQueue[this.editorQueue.length - 1];
+      return queued?.element === expectedHost;
+    },
+    resetBridge(expectedHost) {
+      if (!this.ownsHost(expectedHost)) return false;
       this.editorBridgeReady = false;
+      this.activeHost = null;
       this.editorQueue = [];
+      this.pendingEditorActions = [];
+      return true;
+    },
+    failMount() {
+      this.editorBridgeReady = false;
+      this.activeHost = null;
       this.pendingEditorActions = [];
     },
     takePendingActions() {
@@ -171,15 +188,16 @@
   }, { role: "editor-bootstrap-queue" });
 
   const queueEditorMount = registerEditorBridgeGlobal("queueEditorMount", (element, onUpdate, onReady) => {
-    editorBootstrapState.queueMount(element, onUpdate, onReady);
+    return editorBootstrapState.queueMount(element, onUpdate, onReady);
   }, { role: "editor-bootstrap-mount-queue" });
 
   registerEditorBridgeGlobal("setupCodeMirror", function (element, onUpdate, onReady) {
+    if (element?.isConnected === false) return false;
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.cmLoaded && editorBootstrapState.realInit) {
       return editorBootstrapState.realInit(element, onUpdate, onReady) === true;
     } else {
-      queueEditorMount(element, onUpdate, onReady);
+      if (queueEditorMount(element, onUpdate, onReady) === false) return false;
       requestEditorAdapter();
       return true;
     }
@@ -226,9 +244,17 @@
     return false;
   }, { role: "wasm-editor-readonly" });
 
-  registerEditorBridgeGlobal("destroyEditor", () => {
-    editorBootstrapState.resetBridge();
-    return true;
+  registerEditorBridgeGlobal("setReadOnlyForHost", (expectedHost, readOnly) => {
+    if (!editorBootstrapState.ownsHost(expectedHost)) return false;
+    queueEditorAction("readOnlyForHost", {
+      expectedHost,
+      readOnly: !!readOnly,
+    });
+    return false;
+  }, { role: "wasm-editor-owner-readonly" });
+
+  registerEditorBridgeGlobal("destroyEditor", (expectedHost) => {
+    return editorBootstrapState.resetBridge(expectedHost);
   }, { role: "wasm-editor-lifecycle" });
 
   const ensureMobileEditorAdapter = () => {

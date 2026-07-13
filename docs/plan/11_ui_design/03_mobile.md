@@ -88,6 +88,8 @@ MobileColdStart
 *   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
 *   bundled Web shell 仍是 WebLightPeer，repo-scoped browser identity 必须满足 `03_storage/index#browser-storage-layering` 的 IndexedDB + non-extractable WebCrypto Ed25519 合同。Android System WebView 不支持 Ed25519 时必须保持 storage-limited 只读；LocalBackend/native session 不得伪造 browser key、跳过签名或转授 host writer authority。
 *   Android 可写 target-host gate 必须在业务步骤前执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。API level、system-image tag 或 WebView version string 只能作为诊断，不能替代能力证明；不满足时必须输出结构化 blocker 并停止可写 smoke。
+*   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式和有界 RAM 启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后仍须确认 package manager 可用，不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
+*   Android lifecycle gate 必须在首次文档 editor host 进入当前 generation 的可写状态后立即注入第一笔真实输入并证明内容与 pending 链均保留。跨 transport generation 的 pending 证据必须在旧 generation 暂停一笔真实 outbound edit frame、确认前端 pending 非空、随后丢弃旧 frame 后取得；replacement generation 只能依靠产品 pending replay 使后端首次看到该唯一文本，不能用已写入服务端的 Snapshot 替代 pending 保留证明。CodeMirror mount/cleanup 必须服从 `10_rendering#document-authority-bridge` 的 owner-scoped 生命周期；迟到 cleanup 不得销毁新 WebView editor。
 
 **Offline/background semantics**:
 
@@ -122,7 +124,7 @@ Mobile 与 Desktop 共用 `./02_desktop.md#desktop-service-supervisor-contract`
 *   `MobileEmbeddedBackendSupervisor` 必须持有唯一 process-scoped `EmbeddedServerRuntime`、当前 transport task、graceful-shutdown sender、随机 loopback endpoint、session generation、`MobileShell` 与结构化 service state；这些对象必须作为一个 lifecycle owner 创建和销毁，不得再次 detach task。`EmbeddedServerRuntime` 只初始化一次 RepoManager、SyncManager、plugin host APIs、watchers 与 background task group；transport restart 不得重开 authority runtime。
 *   `RemoteBrowser` 模式不得创建或 manage `MobileEmbeddedBackendSupervisor`。从 LocalBackend 切换到 remote 前必须先发送 graceful shutdown，并在有界等待结束后才请求 app restart。
 *   CLI native runtime 必须提供 owned `EmbeddedServerRuntime` 与内部 transport graceful-shutdown 入口。正常 app exit 必须先停止 transport，再 cancel/join runtime task group 与 watcher guard，并在超时边界内等待完成。超时或 join/runtime error 必须进入结构化 error 状态，不能报告 clean shutdown。
-*   Tauri mobile `WindowEvent::Suspended` 必须立即让 Web writer gate 失效并保留 pending overlay；`WindowEvent::Resumed` 必须进入 `ForegroundReprobe`。若 transport task 已退出，supervisor 必须保留唯一 authority runtime、丢弃旧 transport generation、绑定新的随机 loopback listener、生成新的 native session，并在 generation token 仍为 current 时安装新 cookie/bootstrap 后通知 bundled Web shell；不得扫描端口、复用旧 scope 或重复安装 host authority。
+*   Tauri mobile `WindowEvent::Suspended` 必须立即让 Web writer gate 失效并保留 pending overlay；`WindowEvent::Resumed` 必须进入 `ForegroundReprobe`。若 transport task 已退出，supervisor 必须保留唯一 authority runtime、丢弃旧 transport generation、绑定新的随机 loopback listener、生成新的 native session，并在 generation token 仍为 current 时安装新 cookie/bootstrap 后通知 bundled Web shell；不得扫描端口、复用旧 scope 或重复安装 host authority。Web 只可复用 browser document runtime 的 internal reconnect/session-restore 路径：收到同一 local branch、同一 repo UUID 的新 `RepoSwitched` 后，把该 repo 的 pending rows 从旧 nonce 重绑到新 nonce；用户 scope switch、UUID 变化或页面 reload 不得迁移 pending，且 fresh writer-ready 前不得 replay。
 *   backend 存活时 resume 仍必须重新验证 native session 与 node role；Web 必须重新验证 auth、node role、WS repo handshake、writer-ready 与 current `scope_nonce`。任一失败都保持只读，并显示 `foreground_reprobe` / `service_offline` / `session_invalid` 中对应的结构化状态。
 *   foreground probe 与 session handoff 必须在 supervisor lock 外执行，并使用 generation token compare-and-set 提交结果；shutdown 必须可以取消 in-flight resume，Tauri lifecycle callback 不得因同步网络请求阻塞 UI thread。
 *   bundled Web bootstrap 必须由 current generation 动态提供。旧固定 `js_init_script`、旧 endpoint 或迟到的 probe result 不得覆盖新 generation；Web 只有在 native cookie/bootstrap 安装完成后才收到 resumed/reprobe 事件。
@@ -278,6 +280,7 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 
 **Technical Constraint**:
 必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
+软键盘引发的 viewport resize 在宽度仍处于同一 responsive breakpoint 时 **MUST NOT** 重建 MobileLayout 或 Editor；breakpoint 状态只允许在实际跨越阈值时更新，当前 editor mount、projection load session 与键盘焦点必须保持不变。
 撤销与重做按钮 **MUST** 与其它写动作共用 repo writer gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑器 history action。
 撤销与重做属于高频恢复操作，**MUST** 保持在移动工具栏前段，390px 宽度下无需横向滚动即可看到。
 Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。

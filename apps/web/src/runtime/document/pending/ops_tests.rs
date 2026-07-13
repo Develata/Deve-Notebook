@@ -365,3 +365,95 @@ fn exact_pending_edit_match_requires_scope_and_client_op() {
         8,
     ));
 }
+
+#[test]
+fn session_restore_rebinds_only_exact_repo_and_previous_scope() {
+    let doc_id = DocId::from_u128(80);
+    let other_doc = DocId::from_u128(81);
+    let repo_id = RepoId::from_u128(80);
+    let other_repo = RepoId::from_u128(81);
+    let mut pending = PendingLocalEdits::new();
+    for (target_repo, target_doc, scope_nonce, client_op_id) in [
+        (repo_id, doc_id, 7, 1),
+        (repo_id, other_doc, 7, 2),
+        (repo_id, doc_id, 8, 3),
+        (other_repo, doc_id, 7, 4),
+    ] {
+        push_pending_edit(
+            &mut pending,
+            PendingLocalEditInput {
+                repo_id: target_repo,
+                doc_id: target_doc,
+                scope_nonce,
+                client_id: 11,
+                client_op_id,
+                base_version: 0,
+                op: Op::Insert {
+                    pos: 0,
+                    content: client_op_id.to_string().into(),
+                },
+            },
+        );
+    }
+
+    assert_eq!(rebind_pending_scope(&mut pending, repo_id, 7, 9), 2);
+    let rebound_scope = PendingScope {
+        repo_id,
+        scope_nonce: 9,
+    };
+    assert_eq!(
+        pending_count_for_doc_in_scope(&pending, doc_id, rebound_scope),
+        1
+    );
+    assert_eq!(
+        pending_count_for_doc_in_scope(&pending, other_doc, rebound_scope),
+        1
+    );
+    assert_eq!(
+        pending_count_for_doc_in_scope(
+            &pending,
+            doc_id,
+            PendingScope {
+                repo_id,
+                scope_nonce: 8,
+            },
+        ),
+        1
+    );
+    assert_eq!(
+        pending_count_for_doc_in_scope(
+            &pending,
+            doc_id,
+            PendingScope {
+                repo_id: other_repo,
+                scope_nonce: 7,
+            },
+        ),
+        1
+    );
+}
+
+#[test]
+fn session_restore_same_nonce_is_a_noop() {
+    let doc_id = DocId::from_u128(82);
+    let repo_id = RepoId::from_u128(82);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        PendingLocalEditInput {
+            repo_id,
+            doc_id,
+            scope_nonce: 7,
+            client_id: 11,
+            client_op_id: 1,
+            base_version: 0,
+            op: Op::Insert {
+                pos: 0,
+                content: "pending".into(),
+            },
+        },
+    );
+
+    assert_eq!(rebind_pending_scope(&mut pending, repo_id, 7, 7), 0);
+    assert_eq!(pending_count_for_doc(&pending, doc_id), 1);
+}

@@ -2,11 +2,24 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import {
-  closeMobileSidebar,
+  findStableAppPage,
+  visibleElement,
+} from "./lib/android-webview-cdp.mjs";
+import {
+  clickWebViewPoint,
   focusEditor,
   openMobileSidebarView,
+  proveSameBreakpointKeyboardResize,
+  readPendingAckCount,
   typeEditor,
 } from "./lib/mobile-webview-interaction.mjs";
+import { commitSourceControlChange } from "./lib/mobile-source-control-interaction.mjs";
+import {
+  discardAndResumeWebSocketDelivery,
+  inspectWebSocketDeliveryGate,
+  installWebSocketDeliveryGate,
+  pauseWebSocketDelivery,
+} from "./lib/websocket-delivery-gate.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS ?? "90000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
@@ -65,146 +78,43 @@ function adbCommand(...args) {
   });
 }
 
-class CdpPage {
-  constructor(socket) {
-    this.socket = socket;
-    this.nextId = 1;
-    this.pending = new Map();
-    socket.addEventListener("message", (event) => {
-      const message = JSON.parse(String(event.data));
-      if (message.id === undefined) return;
-      const waiter = this.pending.get(message.id);
-      if (!waiter) return;
-      this.pending.delete(message.id);
-      if (message.error) waiter.reject(new Error(`${waiter.method}: ${message.error.message}`));
-      else waiter.resolve(message.result ?? {});
-    });
-    socket.addEventListener("close", () => {
-      for (const waiter of this.pending.values()) {
-        waiter.reject(new Error(`CDP socket closed during ${waiter.method}`));
-      }
-      this.pending.clear();
+async function dispatchWebViewText(page, value) {
+  if (!/^[A-Za-z0-9 _-]+$/.test(value)) {
+    throw new Error(`Android lifecycle input contains unsupported WebView text: ${value}`);
+  }
+  for (const character of value) {
+    await page.send("Input.dispatchKeyEvent", {
+      type: "char",
+      text: character,
+      unmodifiedText: character,
     });
   }
+}
 
-  static async connect(webSocketDebuggerUrl) {
-    const socket = new WebSocket(webSocketDebuggerUrl);
+async function focusWebViewEditorAtPoint(point, page) {
+  let lastFocusError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await clickWebViewPoint(page, point);
+    await delay(250);
+    await waitForWritableEditor(page);
     try {
-      await withDeadline("Android WebView CDP socket open", new Promise((resolve, reject) => {
-        socket.addEventListener("open", resolve, { once: true });
-        socket.addEventListener("error", () => reject(new Error("Android WebView CDP socket failed")), { once: true });
-      }), 10000);
-      const page = new CdpPage(socket);
-      await page.send("Runtime.enable");
-      return page;
+      await focusEditor(page);
+      lastFocusError = null;
+      break;
     } catch (error) {
-      try {
-        socket.close();
-      } catch {}
-      throw error;
+      lastFocusError = error;
+      await delay(250);
     }
   }
-
-  send(method, params = {}) {
-    const id = this.nextId++;
-    return withDeadline(method, new Promise((resolve, reject) => {
-      this.pending.set(id, { method, resolve, reject });
-      this.socket.send(JSON.stringify({ id, method, params }));
-    }));
-  }
-
-  async evaluate(expression) {
-    const response = await this.send("Runtime.evaluate", {
-      expression,
-      awaitPromise: true,
-      returnByValue: true,
-      userGesture: true,
-    });
-    if (response.exceptionDetails) {
-      const description = response.exceptionDetails.exception?.description
-        ?? response.exceptionDetails.text
-        ?? "JavaScript evaluation failed";
-      throw new Error(description);
-    }
-    return response.result?.value;
-  }
-
-  call(fn, ...args) {
-    return this.evaluate(`(${fn.toString()})(...${JSON.stringify(args)})`);
-  }
-
-  async close() {
-    if (this.socket.readyState === WebSocket.CLOSED) return;
-    this.socket.close();
-    await withDeadline("Android WebView CDP socket close", new Promise((resolve) => {
-      this.socket.addEventListener("close", resolve, { once: true });
-    }), 2000).catch(() => {});
-  }
+  if (lastFocusError) throw lastFocusError;
 }
 
-async function listTargets() {
-  const response = await withDeadline("Android WebView target discovery", fetch(`${cdpEndpoint}/json`), 10000);
-  if (!response.ok) throw new Error(`CDP target discovery returned ${response.status}`);
-  return response.json();
-}
-
-async function findAppPage() {
-  const targets = await listTargets();
-  const discoveredTargets = targets.map(({ type, title, url }) => ({ type, title, url }));
-  const target = targets.find((candidate) =>
-    candidate.webSocketDebuggerUrl
-    && candidate.type === "page"
-    && candidate.url === "http://tauri.localhost/");
-  if (!target) {
-    throw new Error(`Android WebView target unavailable; targets=${JSON.stringify(discoveredTargets)}`);
-  }
-  console.log(`mobile-android-lifecycle: attaching page CDP ${target.title}`);
-  let page;
-  try {
-    page = await CdpPage.connect(target.webSocketDebuggerUrl);
-    console.log("mobile-android-lifecycle: page CDP attached");
-    await waitUntil("Android app DOM", () => page.call(() =>
-      Boolean(document.querySelector("[data-deve-sync-status]"))), 10000);
-    await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
-  } catch (error) {
-    const diagnostics = page
-      ? await page.call(() => ({
-        url: location.href,
-        readyState: document.readyState,
-        title: document.title,
-        bodyText: (document.body?.textContent ?? "").slice(0, 500),
-        bodyHtml: (document.body?.innerHTML ?? "").slice(0, 500),
-      })).catch((diagnosticError) => ({ diagnosticError: diagnosticError.message }))
-      : { diagnosticError: "page unavailable before Runtime.enable" };
-    await page?.close();
-    throw new Error(`${error.message}; page=${JSON.stringify(diagnostics)}`);
-  }
-  return page;
-}
-
-async function findStableAppPage() {
-  return waitUntil("stable Android WebView page", async () => {
-    try {
-      return await findAppPage();
-    } catch (error) {
-      const message = String(error?.message ?? error);
-      if (message.includes("Inspected target navigated or closed")
-        || message.includes("CDP socket closed")
-        || message.includes("Android WebView target unavailable")) {
-        console.log(`mobile-android-lifecycle: retrying page CDP after navigation: ${message}`);
-        return null;
-      }
-      throw error;
-    }
-  }, 60000);
-}
-
-function visibleElement(selector) {
-  return [...document.querySelectorAll(selector)].find((element) => {
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-  }) ?? null;
+async function inputAndroidEditorText(content, point, page) {
+  await focusWebViewEditorAtPoint(point, page);
+  // Android WebView can report DOM focus before its input connection has
+  // settled after an adb tap. Let it settle, then dispatch keyboard characters.
+  await delay(300);
+  await dispatchWebViewText(page, content);
 }
 
 async function waitForReady(page) {
@@ -240,21 +150,48 @@ async function assertWritableIdentityCapability(page) {
   }
 }
 
-async function waitForWritableEditor(page) {
+async function waitForWritableEditor(page, timeout = 30000) {
   await waitUntil("visible Android editor", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement("[data-deve-editor-host=true]"))));
-  await waitUntil("writable Android editor", () => page.call(() =>
-    globalThis.__deveVisibleElement("[data-deve-editor-host=true]")
-      ?.getAttribute("data-deve-editor-readonly") === "false"));
+    Boolean(globalThis.__deveVisibleElement("[data-deve-editor-host=true]"))), timeout);
+  await waitUntil("writable Android editor", () => page.call(() => {
+    const host = globalThis.__deveVisibleElement("[data-deve-editor-host=true]");
+    const codeHost = globalThis.__deveVisibleElement("[data-deve-editor-codemirror-host=true]");
+    const content = globalThis.__deveVisibleElement(".cm-content");
+    const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
+    return host?.getAttribute("data-deve-editor-readonly") === "false"
+      && content?.getAttribute("contenteditable") === "true"
+      && codeHost?.isConnected === true
+      && bootstrap?.editorBridgeReady === true
+      && bootstrap?.activeHost === codeHost;
+  }), timeout);
+}
+
+async function reloadWithWebSocketDeliveryGate(page) {
+  await installWebSocketDeliveryGate(page);
+  await page.send("Page.reload", { ignoreCache: true });
+  await waitUntil("reloaded Android app DOM", () => page.call(() =>
+    Boolean(document.querySelector("[data-deve-sync-status]"))), 30000);
+  await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
 }
 
 function editorContent(page) {
   return page.call(() => window.getEditorContent?.() ?? null);
 }
 
-async function pendingCount(page) {
-  return Number(await page.call(() =>
-    document.querySelector("[data-deve-pending-ack-count]")?.getAttribute("data-deve-pending-ack-count")));
+function editorDiagnostics(page) {
+  return page.call(() => ({
+    bridgeContent: window.getEditorContent?.() ?? null,
+    domContent: globalThis.__deveVisibleElement(".cm-content")?.textContent ?? null,
+    readOnly: globalThis.__deveVisibleElement("[data-deve-editor-host=true]")
+      ?.getAttribute("data-deve-editor-readonly") ?? null,
+    pending: document.querySelector("[data-deve-mobile-pending-ack-count]")
+      ?.getAttribute("data-deve-mobile-pending-ack-count")
+      ?? document.querySelector("[data-deve-pending-ack-count]")
+        ?.getAttribute("data-deve-pending-ack-count")
+      ?? null,
+    syncStatus: document.querySelector("[data-deve-sync-status]")
+      ?.getAttribute("data-deve-sync-status") ?? null,
+  }));
 }
 
 function nativeInvoke(page, command, args = {}) {
@@ -263,16 +200,6 @@ function nativeInvoke(page, command, args = {}) {
     if (typeof invoke !== "function") throw new Error("Tauri invoke bridge unavailable");
     return invoke(invokeCommand, invokeArgs);
   }, command, args);
-}
-
-async function setNetworkLatency(page, latency) {
-  await page.send("Network.enable");
-  await page.send("Network.emulateNetworkConditions", {
-    offline: false,
-    latency,
-    downloadThroughput: -1,
-    uploadThroughput: -1,
-  });
 }
 
 async function click(page, selector) {
@@ -318,58 +245,28 @@ async function createDocument(page, path, content) {
   await waitUntil("editor bridge", () => page.call(() =>
     typeof window.getEditorContent === "function" && typeof window.getEditorContent() === "string"));
   console.log("mobile-android-lifecycle: editor bridge ready");
-  await typeEditor(page, content, waitUntil);
+  const observedContent = await typeEditor(page, content, waitUntil, inputAndroidEditorText);
   console.log("mobile-android-lifecycle: initial editor input visible");
-  await waitUntil("initial edit ack", async () => (await pendingCount(page)) === 0);
+  await waitUntil("initial edit ack", async () => (await readPendingAckCount(page)) === 0);
   console.log("mobile-android-lifecycle: initial edit acknowledged");
+  return observedContent;
 }
 
-async function openSourceControl(page) {
-  const mobile = await page.call(() =>
-    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
-  if (mobile) {
-    await openMobileSidebarView(page, "source_control", { click, waitUntil });
-    return;
-  }
-  await click(page, "[data-deve-activity-more-button]");
-  await waitUntil("Source Control menu item", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement(
-      '[data-deve-activity-more-item="activity_more_item_source_control"]'))));
-  await click(page, '[data-deve-activity-more-item="activity_more_item_source_control"]');
-}
-
-async function commit(page, message) {
-  await openSourceControl(page);
-  const textarea = 'textarea[name="commit-message"]';
-  await waitUntil("commit message input", () => page.call((selector) =>
-    Boolean(globalThis.__deveVisibleElement(selector)), textarea));
-  await waitUntil("commit input enabled", () => page.call((selector) =>
-    !globalThis.__deveVisibleElement(selector)?.disabled, textarea));
-  await fill(page, textarea, message);
-  await waitUntil("commit enabled", () => page.call(() => {
-    const field = globalThis.__deveVisibleElement('textarea[name="commit-message"]');
-    const panel = field?.closest("div.border-t");
-    const button = panel?.querySelector("button:has(.codicon-check)");
-    return Boolean(button && !button.disabled);
-  }));
-  const committed = await page.call(() => {
-    const field = globalThis.__deveVisibleElement('textarea[name="commit-message"]');
-    const button = field?.closest("div.border-t")?.querySelector("button:has(.codicon-check)");
-    if (!button) return false;
-    button.click();
-    return true;
+function commit(page, message) {
+  return commitSourceControlChange(page, message, {
+    click,
+    waitUntil,
+    delay,
+    inputText: async (value) => dispatchWebViewText(page, value),
   });
-  if (!committed) throw new Error("commit action not found");
-  await waitUntil("commit complete", () => page.call(() =>
-    document.querySelector('textarea[name="commit-message"]')?.value === ""));
-  await closeMobileSidebar(page, { click, waitUntil });
 }
 
 async function main() {
   if (!cdpEndpoint || !adb || !serial) {
     throw new Error("CDP endpoint, adb path, and emulator serial are required");
   }
-  const page = await findStableAppPage();
+  const page = await findStableAppPage({ cdpEndpoint, withDeadline, waitUntil });
+  await reloadWithWebSocketDeliveryGate(page);
 
   console.log("mobile-android-lifecycle: waiting for native session");
   await assertWritableIdentityCapability(page);
@@ -383,26 +280,69 @@ async function main() {
   const initial = `Android lifecycle smoke ${stamp}`;
   await createDocument(page, `android-lifecycle-${stamp}.md`, initial);
   await commit(page, `android lifecycle initial ${stamp}`);
+  await waitForWritableEditor(page);
+  await waitUntil("committed document projection restored", () => page.call((expected) =>
+    window.getEditorContent?.()?.includes(expected) ?? false,
+  initial));
   const serviceBeforeSuspend = await nativeInvoke(page, "native_backend_get_service_state");
   assert.equal(serviceBeforeSuspend?.backend_running, true, "embedded transport must be running");
 
-  await setNetworkLatency(page, 5000);
-  const pendingText = ` pending-across-restart-${stamp}`;
-  await typeEditor(page, pendingText, waitUntil);
-  await waitUntil("nonzero pending before suspend", async () => (await pendingCount(page)) > 0);
-  const contentBeforeSuspend = await editorContent(page);
-  const pendingBeforeSuspend = await pendingCount(page);
+  const pendingText = `-pending-across-restart-${stamp}`;
+  adbCommand("shell", "input", "keyevent", "111");
+  const keyboardResize = await proveSameBreakpointKeyboardResize(page, {
+    waitUntil,
+    activateKeyboard: focusWebViewEditorAtPoint,
+  });
+  console.log(
+    `mobile-android-lifecycle: keyboard resize ${JSON.stringify(keyboardResize)}`,
+  );
+
+  await pauseWebSocketDelivery(page);
+  await dispatchWebViewText(page, pendingText);
+  const contentBeforeSuspend = await waitUntil("pending editor input", () => page.call(
+    (expected) => {
+      const observed = window.getEditorContent?.();
+      return observed?.includes(expected) ? observed : null;
+    },
+    pendingText,
+  ));
+  await waitUntil("nonzero pending before suspend", async () => (await readPendingAckCount(page)) > 0);
+  const deliveryGate = await waitUntil("buffered outbound write before suspend", async () => {
+    const gate = await inspectWebSocketDeliveryGate(page);
+    return gate.pending > 0 ? gate : null;
+  }, 10000);
+  console.log(`mobile-android-lifecycle: pending delivery gate ${JSON.stringify(deliveryGate)}`);
+  assert.ok(deliveryGate.pending > 0, "lifecycle smoke must buffer a real outbound write");
+  const pendingBeforeSuspend = await readPendingAckCount(page);
   assert.ok(pendingBeforeSuspend > 0, "lifecycle smoke must preserve a real pending overlay");
 
   console.log("mobile-android-lifecycle: backgrounding app");
   adbCommand("shell", "input", "keyevent", "3");
   await waitUntil("suspended editor read-only", () => page.call(() =>
     document.querySelector("[data-deve-editor-host=true]")?.getAttribute("data-deve-editor-readonly") === "true"));
-  const blockedText = ` MUST-NOT-APPLY-${stamp}`;
-  await focusEditor(page);
+  const suspendedDiagnostics = await editorDiagnostics(page);
+  console.log(`mobile-android-lifecycle: suspended editor ${JSON.stringify(suspendedDiagnostics)}`);
+  assert.equal(
+    Number(suspendedDiagnostics.pending),
+    pendingBeforeSuspend,
+    "suspend must retain the pending overlay signal before blocked input",
+  );
+  const suspendedProjectionContent = suspendedDiagnostics.bridgeContent;
+  const blockedText = `-MUST-NOT-APPLY-${stamp}`;
+  await focusEditor(page, { writable: false });
   await page.send("Input.insertText", { text: blockedText });
-  assert.equal(await editorContent(page), contentBeforeSuspend, "suspended editor must reject writes");
-  assert.equal(await pendingCount(page), pendingBeforeSuspend, "suspend must preserve pending count");
+  const blockedDiagnostics = await editorDiagnostics(page);
+  console.log(`mobile-android-lifecycle: blocked input editor ${JSON.stringify(blockedDiagnostics)}`);
+  assert.equal(
+    blockedDiagnostics.bridgeContent,
+    suspendedProjectionContent,
+    "suspended editor must reject writes",
+  );
+  assert.equal(
+    await readPendingAckCount(page),
+    pendingBeforeSuspend,
+    "suspend must preserve pending count",
+  );
 
   console.log("mobile-android-lifecycle: stopping current transport generation");
   await nativeInvoke(page, "native_backend_debug_stop_transport");
@@ -410,7 +350,8 @@ async function main() {
     const state = await nativeInvoke(page, "native_backend_get_service_state");
     return state?.backend_running === false;
   });
-  await setNetworkLatency(page, 0);
+  const discarded = await discardAndResumeWebSocketDelivery(page);
+  assert.ok(discarded.released > 0, "stale transport writes must be discarded before resume");
 
   console.log("mobile-android-lifecycle: resuming app");
   adbCommand("shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1");
@@ -421,15 +362,48 @@ async function main() {
       && state.endpoint !== serviceBeforeSuspend.endpoint
       ? state
       : null;
+  }, 120000).catch(async (error) => {
+    const state = await nativeInvoke(page, "native_backend_get_service_state").catch(
+      (nativeError) => ({ error: nativeError.message }),
+    );
+    throw new Error(`${error.message}; native=${JSON.stringify(state)}`);
   });
   assert.equal(serviceAfterResume.service_state, "endpoint_session_ready");
-  await waitForReady(page);
-  await waitForWritableEditor(page);
-  assert.equal(await editorContent(page), contentBeforeSuspend, "resume must preserve document content");
-  await waitUntil("preserved pending replay ack", async () => (await pendingCount(page)) === 0);
-  const resumedText = ` resumed ${stamp}`;
-  await typeEditor(page, resumedText, waitUntil);
-  await waitUntil("resumed edit ack", async () => (await pendingCount(page)) === 0);
+  await waitForWritableEditor(page, 60000).catch(async (error) => {
+    const diagnostics = await page.call(() => ({
+      url: location.href,
+      readyState: document.readyState,
+      syncStatus: document.querySelector("[data-deve-sync-status]")
+        ?.getAttribute("data-deve-sync-status") ?? null,
+      pending: document.querySelector("[data-deve-mobile-pending-ack-count]")
+        ?.getAttribute("data-deve-mobile-pending-ack-count") ?? null,
+      bootPanelDisplay: getComputedStyle(document.querySelector("#boot-panel")).display,
+      bootPanelDetail: document.querySelector("#boot-panel-detail")?.textContent ?? null,
+      bodyText: (document.body?.textContent ?? "").replace(/\s+/g, " ").slice(0, 800),
+    }));
+    const nativeState = await nativeInvoke(page, "native_backend_get_service_state").catch(
+      (nativeError) => ({ error: nativeError.message }),
+    );
+    const gate = await inspectWebSocketDeliveryGate(page).catch(
+      (gateError) => ({ error: gateError.message }),
+    );
+    throw new Error(
+      `${error.message}; page=${JSON.stringify(diagnostics)}; native=${JSON.stringify(nativeState)}; gate=${JSON.stringify(gate)}`,
+    );
+  });
+  await waitUntil("replacement generation pending replay", async () =>
+    (await editorContent(page)) === contentBeforeSuspend, 30000).catch(async (error) => {
+    const diagnostics = await editorDiagnostics(page).catch(
+      (diagnosticError) => ({ error: diagnosticError.message }),
+    );
+    throw new Error(
+      `${error.message}; expected=${JSON.stringify(contentBeforeSuspend)}; editor=${JSON.stringify(diagnostics)}`,
+    );
+  });
+  await waitUntil("preserved pending replay ack", async () => (await readPendingAckCount(page)) === 0);
+  const resumedText = `-resumed-${stamp}`;
+  await typeEditor(page, resumedText, waitUntil, inputAndroidEditorText);
+  await waitUntil("resumed edit ack", async () => (await readPendingAckCount(page)) === 0);
   await commit(page, `android lifecycle resumed ${stamp}`);
 
   console.log("mobile-android-lifecycle: requesting graceful native exit");

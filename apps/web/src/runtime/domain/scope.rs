@@ -87,6 +87,7 @@ impl Deref for PendingBranchSwitch {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PendingRepoSwitchKind {
     Switch,
+    RestoreSession,
     Create,
     RenameCurrent,
     RemoveCurrent,
@@ -116,6 +117,14 @@ impl PendingRepoSwitch {
         Self::new(expected_name, switch_nonce, PendingRepoSwitchKind::Switch)
     }
 
+    pub fn restore_session(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
+        Self::new(
+            expected_name,
+            switch_nonce,
+            PendingRepoSwitchKind::RestoreSession,
+        )
+    }
+
     pub fn create(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
         Self::new(expected_name, switch_nonce, PendingRepoSwitchKind::Create)
     }
@@ -138,6 +147,10 @@ impl PendingRepoSwitch {
 
     pub fn expected_name(&self) -> &str {
         &self.expected_name
+    }
+
+    pub fn restores_session_scope(&self) -> bool {
+        self.kind == PendingRepoSwitchKind::RestoreSession
     }
 }
 

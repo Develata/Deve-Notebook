@@ -31,6 +31,7 @@
 - 用户应能看到 branch、ready/read-only、基础统计信息。
 - bottom bar 在窄屏下应可折叠/展开，不应挤压主内容区到不可用。
 - 移动辅助键盘栏必须服从完整 repo write gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑、撤销或重做。
+- 软键盘导致 viewport resize 时，只要宽度没有跨越 mobile breakpoint，就必须保留当前编辑器 mount、projection load session 与输入焦点，不得重新发送 OpenDoc 或用 Snapshot 打断正在进行的输入。
 
 ### 4. 搜索与 Sheet
 
@@ -52,13 +53,14 @@
 - LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`、transport task、shutdown sender、随机 endpoint 与 session generation；authority runtime 每个 app 进程只初始化一次，普通退出和切换 Remote Backend 必须先有界关闭 transport 与全部 runtime tasks，RemoteBrowser 不创建 supervisor。
 - 系统暂停时编辑器立即只读但不清空未确认编辑；恢复时重新验证 auth、node role、WS 与 current scope。若 transport 已退出，则在同一 authority runtime 上创建新的随机 endpoint/session，generation token 校验通过后安装新 cookie/bootstrap，再通知 Web 恢复；旧 scope 写入必须被拒绝。
 - resume probe 在 native lifecycle lock 外执行，shutdown 可取消正在进行的 reprobe；固定初始 bootstrap、旧 endpoint 与迟到的旧 generation 结果不得覆盖 current generation。
-- resume 使用 single-flight gate；probe 必须验证返回 endpoint 属于当前随机 listener。transport replacement 会关闭旧 WebSocket generation，Web 通过 typed rebind control 重新读取 session-scoped bootstrap 并连接新 endpoint，不 reload 页面或清空 pending。
+- resume 使用 single-flight gate；probe 必须验证返回 endpoint 属于当前随机 listener。transport replacement 会关闭旧 WebSocket generation，Web 通过 typed rebind control 重新读取 session-scoped bootstrap 并连接新 endpoint，不 reload 页面或清空 pending。同一 local branch、同一 repo UUID 的内部 session restore 被服务端确认后，browser document runtime 会把保留的 pending rows 重绑到新 scope；普通 repo/branch 切换不会这样做，且 fresh writer-ready 前不会 replay。
 - current-generation cookie/bootstrap 安装与 resumed 事件是一次受校验的 WebView handoff；任一步失败都会进入结构化 error。Mobile LocalBackend 关闭可选 prewarm，以保证 suspend/exit 的有界 task join；其他 runtime task 仍由唯一 authority runtime 持有并关闭。
 - lifecycle handoff 不持 state mutex 跨 WebView 调用，且所有 resumed/suspended/error 事件使用单调 transition guard。无法证明旧 WebSocket sessions 已 retired 时进入 `runtime_restart_required`，本进程不再自动创建 transport。
 - service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
 - bundled Web shell 仍需 IndexedDB 与不可导出的 WebCrypto Ed25519 repo identity；Android System WebView 缺少该能力时保持 storage-limited 只读，LocalBackend 不得以 native session 绕过 browser identity。
 - WebCrypto Ed25519 不可用时，横幅会提示更新浏览器或 Android System WebView；target-host smoke 先验证真实 key generation，再执行创建、编辑、提交与 lifecycle 流程。
+- Android target-host smoke 先构建 APK 并释放 Gradle daemon，再以 low-RAM 模式和有界 RAM 启动绑定本次进程的专用 emulator serial 与 AVD；它兼容目标镜像发布的 `sys.boot_completed` / `dev.bootcomplete` 完成信号，并在 package manager ready 后才继续。首次创建文档时会立即向当前 CodeMirror host 输入文本；同 breakpoint 的真实键盘 viewport resize 必须保持同一 host 与 OpenDoc request；跨 generation pending 通过暂停并丢弃旧 transport 的 outbound edit frame 证明，只有 replacement generation 的产品 replay 能让后端首次看到该文本。editor mount 以 host owner 隔离，旧 surface 的迟到 cleanup 不会销毁新 editor 或吞掉第一笔输入；提交必须在 NoteGit history 中出现对应 message 后才算成功。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标

@@ -4,7 +4,7 @@
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!
 use super::{ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl};
-use crate::components::layout_breakpoint::{current_viewport_width, viewport_width_maps_to_mobile};
+use crate::components::layout_breakpoint::{changed_mobile_breakpoint, current_viewport_width};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -60,7 +60,9 @@ pub fn use_mobile_breakpoint() -> ReadSignal<bool> {
     let (is_mobile, set_is_mobile) = signal(false);
     let update_is_mobile = move || {
         let width = current_viewport_width().unwrap_or(1024.0);
-        set_is_mobile.set(viewport_width_maps_to_mobile(width));
+        if let Some(next) = changed_mobile_breakpoint(is_mobile.get_untracked(), width) {
+            set_is_mobile.set(next);
+        }
     };
     update_is_mobile();
     window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_is_mobile());

@@ -5,13 +5,16 @@ use crate::env_gate::binary_flag_from_env;
 use anyhow::{Result, bail};
 use std::env;
 
+mod android;
+
+pub use self::android::run_mobile_android_emulator_install_startup_smoke;
+
 const QUICK_LABEL: &str = "local-quick-gate";
 const DEEP_LABEL: &str = "deep-audit-gate";
 const DESKTOP_PLATFORM_LABEL: &str = "desktop-platform-package-build-check";
 const DESKTOP_STARTUP_LABEL: &str = "desktop-package-startup-smoke-check";
 const DESKTOP_NATIVE_SESSION_LABEL: &str = "desktop-native-session-package-smoke-check";
 const DESKTOP_INSTALLER_LABEL: &str = "desktop-installer-smoke-check";
-const ANDROID_EMULATOR_LABEL: &str = "mobile-android-emulator-install-startup-smoke-check";
 
 pub fn run_local_quick_gate() -> Result<()> {
     flag_from_env(QUICK_LABEL, "DEVE_QUICK_GATE_TESTS", true)?;
@@ -100,51 +103,6 @@ pub fn run_desktop_installer_smoke() -> Result<()> {
         "target/desktop-installer-smoke",
     )?;
     ok(DESKTOP_INSTALLER_LABEL)
-}
-
-pub fn run_mobile_android_emulator_install_startup_smoke() -> Result<()> {
-    flag_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED",
-        false,
-    )?;
-    positive_integer_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL",
-        "35",
-    )?;
-    non_empty_string_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET",
-        "default",
-    )?;
-    non_empty_string_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_ARCH",
-        "x86_64",
-    )?;
-    non_empty_string_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME",
-        "deve-mobile-smoke-api35-default-x86_64",
-    )?;
-    non_empty_string_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_DEVICE",
-        "pixel_2",
-    )?;
-    positive_integer_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS",
-        "900",
-    )?;
-    positive_integer_from_env(
-        ANDROID_EMULATOR_LABEL,
-        "DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS",
-        "120",
-    )?;
-    android_package_target_from_env(ANDROID_EMULATOR_LABEL)?;
-    ok(ANDROID_EMULATOR_LABEL)
 }
 
 fn ok(label: &'static str) -> Result<()> {
@@ -317,29 +275,11 @@ fn normalize_selector(value: &str) -> String {
     value.trim().to_string()
 }
 
-fn android_package_target_from_env(label: &str) -> Result<String> {
-    match env::var("DEVE_MOBILE_ANDROID_PACKAGE_TARGET") {
-        Ok(value) => validate_android_package_target(label, &value),
-        Err(env::VarError::NotPresent) => validate_android_package_target(label, "x86_64"),
-        Err(env::VarError::NotUnicode(_)) => {
-            bail!("{label}: DEVE_MOBILE_ANDROID_PACKAGE_TARGET must be valid Unicode")
-        }
-    }
-}
-
-fn validate_android_package_target(label: &str, target: &str) -> Result<String> {
-    match target {
-        "aarch64" | "armv7" | "i686" | "x86_64" => Ok(target.to_string()),
-        _ => bail!("{label}: unsupported Android target: {target}"),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        ANDROID_EMULATOR_LABEL, BundlePolicy, DESKTOP_INSTALLER_LABEL, DESKTOP_PLATFORM_LABEL,
-        DESKTOP_STARTUP_LABEL, parse_positive_integer, validate_android_package_target,
-        validate_desktop_bundles, validate_local_quick_gate_target_dir,
+        BundlePolicy, DESKTOP_INSTALLER_LABEL, DESKTOP_PLATFORM_LABEL, DESKTOP_STARTUP_LABEL,
+        parse_positive_integer, validate_desktop_bundles, validate_local_quick_gate_target_dir,
     };
     use crate::env_gate::parse_binary_flag;
 
@@ -462,15 +402,5 @@ mod tests {
                 .is_err()
             );
         }
-    }
-
-    #[test]
-    fn android_package_target_matches_android_shell_gate() {
-        for target in ["aarch64", "armv7", "i686", "x86_64"] {
-            validate_android_package_target(ANDROID_EMULATOR_LABEL, target)
-                .expect("supported Android target");
-        }
-
-        assert!(validate_android_package_target(ANDROID_EMULATOR_LABEL, "mips64").is_err());
     }
 }

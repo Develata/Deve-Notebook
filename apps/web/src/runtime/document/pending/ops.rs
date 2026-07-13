@@ -30,6 +30,25 @@ pub fn push_pending_edit(pending: &mut PendingLocalEdits, input: PendingLocalEdi
     });
 }
 
+pub fn rebind_pending_scope(
+    pending: &mut PendingLocalEdits,
+    repo_id: RepoId,
+    previous_scope_nonce: u64,
+    next_scope_nonce: u64,
+) -> usize {
+    if previous_scope_nonce == next_scope_nonce {
+        return 0;
+    }
+    let mut rebound = 0;
+    for edit in pending.values_mut().flatten() {
+        if edit.repo_id == repo_id && edit.scope_nonce == previous_scope_nonce {
+            edit.scope_nonce = next_scope_nonce;
+            rebound += 1;
+        }
+    }
+    rebound
+}
+
 fn ack_pending_edit(
     pending: &mut PendingLocalEdits,
     repo_id: Option<RepoId>,

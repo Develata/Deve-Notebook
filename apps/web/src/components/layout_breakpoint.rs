@@ -9,6 +9,11 @@ pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool {
     width <= MOBILE_BREAKPOINT_WIDTH
 }
 
+pub(crate) fn changed_mobile_breakpoint(current: bool, width: f64) -> Option<bool> {
+    let next = viewport_width_maps_to_mobile(width);
+    (next != current).then_some(next)
+}
+
 pub(crate) fn mobile_command_surface_matches(viewport_mobile: bool, touch_mobile: bool) -> bool {
     viewport_mobile || touch_mobile
 }
@@ -52,8 +57,8 @@ fn current_touch_input_maps_to_mobile() -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        MOBILE_BREAKPOINT_WIDTH, current_command_surface_maps_to_mobile, current_viewport_width,
-        mobile_command_surface_matches, viewport_width_maps_to_mobile,
+        MOBILE_BREAKPOINT_WIDTH, changed_mobile_breakpoint, current_command_surface_maps_to_mobile,
+        current_viewport_width, mobile_command_surface_matches, viewport_width_maps_to_mobile,
     };
 
     #[test]
@@ -64,6 +69,15 @@ mod tests {
             MOBILE_BREAKPOINT_WIDTH + 0.1
         ));
         assert!(!viewport_width_maps_to_mobile(1024.0));
+    }
+
+    #[test]
+    fn mobile_viewport_mapping_only_emits_real_breakpoint_transitions() {
+        assert_eq!(changed_mobile_breakpoint(false, 375.0), Some(true));
+        assert_eq!(changed_mobile_breakpoint(true, 375.0), None);
+        assert_eq!(changed_mobile_breakpoint(true, 700.0), None);
+        assert_eq!(changed_mobile_breakpoint(true, 1024.0), Some(false));
+        assert_eq!(changed_mobile_breakpoint(false, 1024.0), None);
     }
 
     #[test]

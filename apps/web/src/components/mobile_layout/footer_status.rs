@@ -14,13 +14,12 @@ use crate::runtime::document::pending::{
 };
 use crate::runtime::domain::LoadPhase;
 use crate::runtime::{
-    document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
-    session_client::SessionClient,
+    rendering_client::RenderingClient, scope_client::ScopeClient, session_client::SessionClient,
 };
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-fn pending_ack_count_for_current_scope(
+pub(crate) fn pending_ack_count_for_current_scope(
     pending: &PendingLocalEdits,
     current_doc: Option<DocId>,
     current_repo_id: Option<&str>,
@@ -54,23 +53,16 @@ fn mobile_load_status_text(
 
 /// Connection status indicator (green/yellow/red dot + text).
 #[component]
-pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
+pub fn StatusView(locale: RwSignal<Locale>, pending_ack_count: Memo<usize>) -> impl IntoView {
     let session = expect_context::<SessionClient>();
     let scope = expect_context::<ScopeClient>();
-    let document = expect_context::<DocumentClient>();
     let editor = expect_context::<EditorContext>();
     let rendering = expect_context::<RenderingClient>();
 
     move || {
-        let current_doc = document.current_doc.get();
         let current_repo_id = scope.current_repo_id.get();
         let current_scope_nonce = scope.current_scope_nonce.get();
-        let pending_ack_count = pending_ack_count_for_current_scope(
-            &document.pending_local_edits.get(),
-            current_doc,
-            current_repo_id.as_deref(),
-            current_scope_nonce,
-        );
+        let pending_ack_count = pending_ack_count.get();
         let handshake_ready = session.handshake_ready.get();
         let readiness = session.ws.native_runtime_readiness_for(
             current_repo_id.as_deref(),

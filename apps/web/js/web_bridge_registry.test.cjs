@@ -58,6 +58,7 @@ const adapterBridgeNames = [
   "syncEditorStateToRust",
   "scrollGlobal",
   "setReadOnly",
+  "setReadOnlyForHost",
   "updateGutterDiff",
   "getEditorSelection",
   "mobileInsertText",
@@ -77,6 +78,7 @@ const indexBridgeNames = [
   "syncEditorStateToRust",
   "scrollGlobal",
   "setReadOnly",
+  "setReadOnlyForHost",
   "updateGutterDiff",
   "getEditorSelection",
   "mobileUndo",
@@ -723,6 +725,11 @@ assert.doesNotMatch(
   /target\[name\]\s*=\s*value/,
   "missing web bridge registry must fail closed instead of silently assigning globals"
 );
+assert.match(
+  editorAdapterSource,
+  /activateEditorMount\([\s\S]*?\(\) => \{[\s\S]*?ctx\.onDeltaCallback = onDelta;[\s\S]*?EditorState\.create\(/,
+  "editor replacement must retire the old owner before callback and state construction"
+);
 
 for (const name of adapterBridgeNames) {
   assert.match(
@@ -947,6 +954,17 @@ assert.equal(
   "index bootstrap fail-closed write fallbacks must not enqueue state-progressing editor actions"
 );
 let editorReadyCalled = false;
+assert.equal(
+  indexBootstrapBridge.call(
+    "setupCodeMirror",
+    { isConnected: false },
+    () => {},
+    () => {},
+  ),
+  false,
+  "index bootstrap must reject a disconnected editor host before queueing it"
+);
+assert.equal(indexBootstrapState.editorQueue.length, 0);
 const queuedEditorElement = {};
 const queuedEditorUpdate = () => {};
 const queuedEditorReady = () => {
@@ -967,13 +985,39 @@ assert.equal(indexBootstrapState.editorQueue.length, 1);
 assert.equal(indexBootstrapState.editorQueue[0].element, queuedEditorElement);
 assert.equal(indexBootstrapState.editorQueue[0].onUpdate, queuedEditorUpdate);
 assert.equal(indexBootstrapState.editorQueue[0].onReady, queuedEditorReady);
-assert.equal(indexBootstrapBridge.call("destroyEditor"), true);
+assert.equal(indexBootstrapBridge.call("destroyEditor", queuedEditorElement), true);
 assert.equal(
   indexBootstrapState.editorQueue.length,
   0,
   "destroying an unmounted editor must discard its queued callbacks"
 );
 assert.equal(editorReadyCalled, false, "destroying a queued mount must not report readiness");
+const staleQueuedEditorElement = {};
+const replacementQueuedEditorElement = {};
+indexBootstrapBridge.call(
+  "setupCodeMirror",
+  staleQueuedEditorElement,
+  queuedEditorUpdate,
+  queuedEditorReady,
+);
+indexBootstrapBridge.call(
+  "setupCodeMirror",
+  replacementQueuedEditorElement,
+  queuedEditorUpdate,
+  queuedEditorReady,
+);
+assert.equal(
+  indexBootstrapBridge.call("destroyEditor", staleQueuedEditorElement),
+  false,
+  "stale cleanup must not discard a replacement queued mount",
+);
+assert.equal(indexBootstrapState.editorQueue.length, 1);
+assert.equal(indexBootstrapState.editorQueue[0].element, replacementQueuedEditorElement);
+assert.equal(
+  indexBootstrapBridge.call("destroyEditor", replacementQueuedEditorElement),
+  true,
+  "the replacement owner must be able to cancel its own queued mount",
+);
 assert.match(
   indexEditorAdapterSource,
   /editorBootstrapState\.editorBridgeReady = true;[\s\S]*?onReady\(\);/,
@@ -981,8 +1025,18 @@ assert.match(
 );
 assert.match(
   indexEditorAdapterSource,
-  /catch \(e\) \{[\s\S]*?rawSetReadOnly\(true\);[\s\S]*?rawDestroyEditor\(\);[\s\S]*?editorBootstrapState\.editorBridgeReady = false;/,
+  /realInit = \(element, onUpdate, onReady\) => \{[\s\S]*?element\?\.isConnected === false[\s\S]*?initCodeMirror\(element, onUpdate\)/,
+  "lazy editor adapter must reject disconnected mounts before replacing the current view"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /catch \(e\) \{[\s\S]*?rawSetReadOnly\(true\);[\s\S]*?rawDestroyEditor\(element\);[\s\S]*?editorBootstrapState\.failMount\(\);/,
   "editor adapter initialization failure must lock and destroy the view before remaining unready"
+);
+assert.match(
+  indexEditorAdapterSource,
+  /registerEditorBridgeGlobal\("destroyEditor"[\s\S]*?try \{[\s\S]*?rawDestroyEditor\(expectedHost\)[\s\S]*?finally \{[\s\S]*?editorBootstrapState\.resetBridge\(expectedHost\)/,
+  "editor destroy must clear bootstrap ownership even when view teardown throws"
 );
 assert.doesNotMatch(
   indexBridgeSource,
@@ -1097,12 +1151,13 @@ assert.doesNotMatch(
 
 const editorFfiBridgeCalls = [
   ["setupCodeMirror", /bridge_call3\([\s\S]*?"setupCodeMirror"/],
-  ["destroyEditor", /bridge_call0\("destroyEditor"/],
+  ["destroyEditor", /bridge_call1\("destroyEditor"/],
   ["applyRemoteContent", /bridge_call1\("applyRemoteContent"/],
   ["applyRemoteOp", /bridge_call1\("applyRemoteOp"/],
   ["getEditorContent", /bridge_call0\("getEditorContent"/],
   ["scrollGlobal", /bridge_call1\("scrollGlobal"/],
   ["setReadOnly", /bridge_call1\("setReadOnly"/],
+  ["setReadOnlyForHost", /bridge_call2\([\s\S]*?"setReadOnlyForHost"/],
   ["applyRemoteOpsBatch", /bridge_call1\("applyRemoteOpsBatch"/],
   ["syncEditorStateToRust", /bridge_call0\("syncEditorStateToRust"/],
   ["mobileInsertText", /bridge_call1\("mobileInsertText"/],

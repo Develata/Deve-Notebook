@@ -60,6 +60,7 @@ const attachEditorAdapter = (module) => {
     syncEditorStateToRust,
     scrollGlobal,
     setReadOnly,
+    setReadOnlyForHost,
     destroyEditor,
     updateGutterDiff,
     getEditorSelection,
@@ -88,9 +89,11 @@ const attachEditorAdapter = (module) => {
   const rawSetReadOnly = (readOnly) => {
     return setReadOnly(readOnly) === true;
   };
-  const rawDestroyEditor = () => {
-    destroyEditor();
-    return true;
+  const rawSetReadOnlyForHost = (expectedHost, readOnly) => {
+    return setReadOnlyForHost(expectedHost, readOnly) === true;
+  };
+  const rawDestroyEditor = (expectedHost) => {
+    return destroyEditor(expectedHost) === true;
   };
   const replayEditorAction = (action) => {
     switch (action.kind) {
@@ -109,6 +112,12 @@ const attachEditorAdapter = (module) => {
         break;
       case "readOnly":
         rawSetReadOnly(action.payload);
+        break;
+      case "readOnlyForHost":
+        rawSetReadOnlyForHost(
+          action.payload.expectedHost,
+          action.payload.readOnly,
+        );
         break;
       default:
         break;
@@ -163,9 +172,22 @@ const attachEditorAdapter = (module) => {
     return rawSetReadOnly(readOnly);
   }, { role: "wasm-editor-readonly" });
 
-  registerEditorBridgeGlobal("destroyEditor", () => {
-    editorBootstrapState.resetBridge();
-    return rawDestroyEditor();
+  registerEditorBridgeGlobal("setReadOnlyForHost", (expectedHost, readOnly) => {
+    if (!editorBootstrapState.ownsHost(expectedHost)) return false;
+    if (!editorBootstrapState.editorBridgeReady) {
+      queueEditorAction("readOnlyForHost", { expectedHost, readOnly: !!readOnly });
+      return false;
+    }
+    return rawSetReadOnlyForHost(expectedHost, readOnly);
+  }, { role: "wasm-editor-owner-readonly" });
+
+  registerEditorBridgeGlobal("destroyEditor", (expectedHost) => {
+    if (!editorBootstrapState.ownsHost(expectedHost)) return false;
+    try {
+      return rawDestroyEditor(expectedHost) === true;
+    } finally {
+      editorBootstrapState.resetBridge(expectedHost);
+    }
   }, { role: "wasm-editor-lifecycle" });
 
   registerEditorBridgeGlobal("updateGutterDiff", updateGutterDiff || (() => {}), {
@@ -184,11 +206,13 @@ const attachEditorAdapter = (module) => {
   logToOverlay("Adapter imported successfully.");
 
   editorBootstrapState.realInit = (element, onUpdate, onReady) => {
+    if (element?.isConnected === false) return false;
     logToOverlay("Initializing Editor View");
     hideOverlay();
 
     try {
       initCodeMirror(element, onUpdate);
+      editorBootstrapState.activeHost = element;
       editorBootstrapState.editorBridgeReady = true;
       if (editorBootstrapState.pendingEditorActions.length > 0) {
         const pending = editorBootstrapState.takePendingActions();
@@ -211,22 +235,23 @@ const attachEditorAdapter = (module) => {
         // Keep the original initialization error as the visible failure.
       }
       try {
-        rawDestroyEditor();
+        rawDestroyEditor(element);
       } catch (_) {
         // The bridge remains unready even if best-effort cleanup also fails.
       }
-      editorBootstrapState.editorBridgeReady = false;
+      editorBootstrapState.failMount();
       logToOverlay("Init call failed: " + e.message, true);
       throw e;
     }
   };
 
   registerEditorBridgeGlobal("setupCodeMirror", (element, onUpdate, onReady) => {
+    if (element?.isConnected === false) return false;
     logToOverlay("Rust called setupCodeMirror");
     if (editorBootstrapState.realInit) {
       return editorBootstrapState.realInit(element, onUpdate, onReady) === true;
     }
-    queueEditorMount(element, onUpdate, onReady);
+    if (queueEditorMount(element, onUpdate, onReady) === false) return false;
     requestEditorAdapter();
     return true;
   }, { role: "wasm-editor-mount" });

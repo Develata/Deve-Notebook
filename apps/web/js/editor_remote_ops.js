@@ -189,3 +189,8 @@ export function setReadOnly(readOnly) {
   );
   return true;
 }
+
+export function setReadOnlyForHost(expectedHost, readOnly) {
+  if (!expectedHost || ctx.activeHost !== expectedHost) return false;
+  return setReadOnly(readOnly);
+}
