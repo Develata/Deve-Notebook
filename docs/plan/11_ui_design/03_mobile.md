@@ -87,6 +87,7 @@ MobileColdStart
 *   `?ws_port=` 只能作为开发期 fallback。mobile production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
 *   bundled Web shell 仍是 WebLightPeer，repo-scoped browser identity 必须满足 `03_storage/index#browser-storage-layering` 的 IndexedDB + non-extractable WebCrypto Ed25519 合同。Android System WebView 不支持 Ed25519 时必须保持 storage-limited 只读；LocalBackend/native session 不得伪造 browser key、跳过签名或转授 host writer authority。
+*   Android 可写 target-host gate 必须在业务步骤前执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。API level、system-image tag 或 WebView version string 只能作为诊断，不能替代能力证明；不满足时必须输出结构化 blocker 并停止可写 smoke。
 
 **Offline/background semantics**:
 

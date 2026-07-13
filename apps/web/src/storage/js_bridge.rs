@@ -24,25 +24,48 @@ const openDb = () => new Promise((ok, err) => {
   r.onerror = () => err(r.error || new Error('IndexedDB open failed'));
 });
 const sha256Hex = async (bytes) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map((b) => b.toString(16).padStart(2, '0')).join('');
+const validIdentityRecord = (record) => !!record?.privateKey
+  && record.privateKey.type === 'private'
+  && record.privateKey.extractable === false
+  && record.privateKey.algorithm?.name === 'Ed25519'
+  && record.privateKey.usages?.includes('sign')
+  && record?.publicKey?.length === 32;
 async function generateIdentity(repoId) {
   const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+  if (!pair?.privateKey || pair.privateKey.extractable !== false) throw new Error('non-extractable Ed25519 private key unavailable');
   const publicKey = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
   return { repoId, peerId: (await sha256Hex(publicKey)).slice(0, 12), publicKey: Array.from(publicKey), privateKey: pair.privateKey, createdAt: Date.now() };
 }
 export async function probeStorageCapabilities() {
-  const caps = { webcrypto: !!globalThis.crypto?.subtle, indexed_db: false, local_storage: false, ed25519: false };
+  const caps = { webcrypto: !!globalThis.crypto?.subtle, indexed_db: false, local_storage: false, ed25519: false, indexed_db_probe_error: null, ed25519_probe_error: null };
   try { globalThis.localStorage.setItem('__deve_probe__', '1'); globalThis.localStorage.removeItem('__deve_probe__'); caps.local_storage = true; } catch {}
-  try { const db = await openDb(); caps.indexed_db = true; db.close(); } catch {}
-  if (caps.webcrypto) { try { const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']); caps.ed25519 = !!pair?.privateKey; } catch {} }
+  if (globalThis.indexedDB) {
+    try { const db = await openDb(); caps.indexed_db = true; db.close(); }
+    catch (error) { caps.indexed_db_probe_error = String(error?.name || 'Error'); }
+  }
+  if (caps.webcrypto) {
+    try {
+      const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+      caps.ed25519 = !!pair?.privateKey && pair.privateKey.extractable === false;
+      if (!caps.ed25519) caps.ed25519_probe_error = 'invalid_key_result';
+    } catch (error) {
+      if (error?.name !== 'NotSupportedError') caps.ed25519_probe_error = String(error?.name || 'Error');
+    }
+  }
   return JSON.stringify(caps);
 }
 export async function loadOrCreateIdentity(repoId) {
   if (!globalThis.crypto?.subtle) throw new Error('WebCrypto unavailable');
   const db = await openDb();
   try {
-    const store = db.transaction(IDENTITY, 'readwrite').objectStore(IDENTITY);
-    let record = await req(store.get(repoId));
-    if (!record?.privateKey || !record?.publicKey?.length) { record = await generateIdentity(repoId); await req(store.put(record)); }
+    let record = await req(db.transaction(IDENTITY, 'readonly').objectStore(IDENTITY).get(repoId));
+    if (!validIdentityRecord(record)) {
+      const generated = await generateIdentity(repoId);
+      const store = db.transaction(IDENTITY, 'readwrite').objectStore(IDENTITY);
+      const current = await req(store.get(repoId));
+      if (validIdentityRecord(current)) record = current;
+      else { await req(store.put(generated)); record = generated; }
+    }
     return JSON.stringify({ repo_id: record.repoId, peer_id: record.peerId, public_key: Array.from(record.publicKey), created_at: record.createdAt });
   } finally { db.close(); }
 }
@@ -50,7 +73,7 @@ export async function signPeerMessage(repoId, bytes) {
   const db = await openDb();
   try {
     const record = await req(db.transaction(IDENTITY, 'readonly').objectStore(IDENTITY).get(repoId));
-    if (!record?.privateKey) throw new Error('Missing stored private key');
+    if (!validIdentityRecord(record)) throw new Error('Invalid stored Ed25519 identity');
     return new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, record.privateKey, bytes));
   } finally { db.close(); }
 }

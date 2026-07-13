@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-12`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_repair_runtime.rs`, `crates/core/src/ledger/manager/repair_runtime.rs`, `crates/core/src/ledger/snapshot.rs`, `apps/cli/src/commands/export/`
 
@@ -26,6 +26,11 @@
 - `Cookie 可用，IndexedDB 可用，但 WebCrypto key 缺失`
   - 必须重新生成 repo-scoped key 并重新注册 browser peer。
   - 旧 browser peer identity 与旧 cache **MUST** 视为不可恢复。
+- `Cookie 与 IndexedDB 可用，但 WebCrypto Ed25519 算法不可用`
+  - 进入带强类型 `ed25519_unavailable` blocker 的 `DegradedSyncMode`，保持只读。
+  - UI 必须提示更新当前浏览器或 Android System WebView；不得回退到 JS/WASM 私钥实现。
+- 能力探测异常或 identity 恢复异常
+  - 分别进入 `capability_probe_failed` 或 `identity_recovery_failed` blocker；诊断细节只进入日志，UI 不解析错误字符串决定权限。
 - 站点数据被清理
   - 浏览器 **MUST** 视为新 light peer。
   - 任何旧的 peer metadata、pending browser cache、repo-scoped trust state 都不得被猜测恢复。

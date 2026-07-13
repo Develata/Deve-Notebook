@@ -143,6 +143,7 @@
     - WebLightPeer 运行在浏览器环境
   steps:
     - run: cargo test -p deve_web storage_capabilities -- --nocapture
+    - run: cargo test -p deve_web browser_identity_capability -- --nocapture
     - run: cargo test -p deve_web typed_prefs_roundtrip -- --nocapture
     - run: cargo test -p deve_web shortcut_config_roundtrips -- --nocapture
     - run: cargo test -p deve_web locale_preference_uses_ui_prefs -- --nocapture
@@ -152,6 +153,8 @@
   assertions:
     - WebCrypto_Ed25519_key_extractable_false: true
     - IndexedDB_missing_enters_DegradedSyncMode: true
+    - WebCrypto_Ed25519_missing_has_typed_blocker: true
+    - capability_probe_failure_is_not_UI_parsed_authority: true
     - ui_prefs_use_fallback_layer_only: true
     - ui_prefs_last_scope_stores_repo_name_alias_only: true
     - shortcut_prefs_new_writes_use_structured_json: true

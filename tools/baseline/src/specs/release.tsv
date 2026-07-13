@@ -608,6 +608,7 @@ contains	scripts/check-mobile-android-shell-package-build.sh	run_deve_baseline "
 contains	scripts/check-mobile-android-shell-package-build.sh	--debug
 contains	scripts/check-mobile-android-shell-package-build.sh	cargo tauri android init --ci --skip-targets-install
 contains	scripts/check-mobile-android-shell-package-build.sh	cargo tauri android build --ci --features native-packaging
+contains	scripts/check-mobile-android-shell-package-build.sh	run "$ROOT_DIR/scripts/build-web-dist-ci.sh"
 contains	scripts/check-mobile-android-shell-package-build.sh	child-process runtime
 contains	scripts/check-mobile-ios-shell-package-build.sh	DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED
 contains	scripts/check-mobile-ios-shell-package-build.sh	DEVE_MOBILE_IOS_PACKAGE_TARGET:-aarch64-sim
@@ -626,7 +627,7 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	adb_timed install
 contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.category.LAUNCHER
 contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	print_emulator_diagnostics
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	ANDROID_AVD_HOME
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	avdmanager.log

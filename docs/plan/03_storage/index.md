@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-25`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -126,6 +126,12 @@ Git mirror 的生命周期、命令面与失败语义以 `05_diff_logic.md#git-m
 5. 发送 repo-scoped `SyncHello` 完成 browser peer 注册。
 6. 只有当 session、IndexedDB metadata、repo key 三者都齐备时，浏览器才允许进入可同步写态。
 
+浏览器能力探测必须保持三层边界：JS bridge 只调用平台 API 并返回能力事实；
+`browser_identity_client` 把能力事实归一化为强类型 write blocker；UI 只把 blocker
+投影为本地化只读原因与恢复指引。`localStorage` 不属于 writer identity 前置条件。
+WebCrypto、IndexedDB 或 WebCrypto Ed25519 任一必需能力缺失时必须 fail-closed；不得由
+JS/WASM polyfill 生成可导出私钥、伪造平台能力或绕过 browser peer 签名。
+
 > Browser storage recovery semantics（站点数据被清理、IndexedDB/WebCrypto 缺失降级）见 [repair.md](./repair.md)（§3.4.2 Recovery Semantics）。
 
 ### 3.5 Internal Path Normalization {#internal-path-normalization}
@@ -197,6 +203,10 @@ RepoDiscovered
 - `repair_runtime` → [repair.md](./repair.md)
 
 实现必须按这四层收敛；任何 manager/helper 只能作为其中一层的内部细节，不得跨层持有隐式 authority。
+
+浏览器侧另设 `browser_identity_client` 作为本章 storage layering 的 client adapter；
+它只归一化平台 capability、管理 non-extractable browser identity readiness，并向 UI
+投影强类型 blocker，不是第五个 storage authority runtime。
 
 ## 本章相关命令
 

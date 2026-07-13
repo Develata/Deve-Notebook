@@ -58,6 +58,7 @@
 - service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
 - bundled Web shell 仍需 IndexedDB 与不可导出的 WebCrypto Ed25519 repo identity；Android System WebView 缺少该能力时保持 storage-limited 只读，LocalBackend 不得以 native session 绕过 browser identity。
+- WebCrypto Ed25519 不可用时，横幅会提示更新浏览器或 Android System WebView；target-host smoke 先验证真实 key generation，再执行创建、编辑、提交与 lifecycle 流程。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标

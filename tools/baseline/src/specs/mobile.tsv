@@ -117,6 +117,8 @@ contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobil
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-fields-overflow="clip"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="branch"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="status"
+contains	apps/web/src/components/mobile_layout/footer_status.rs	data-deve-sync-status=summary.kind.marker()
+contains	apps/web/src/components/mobile_layout/header.rs	data-deve-mobile-header-action="open_left_drawer"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="words"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="lines"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="col"
@@ -617,6 +619,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_remains_storage_limited_readonly true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_shows_update_guidance true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_writable_smoke_probes_real_nonextractable_ed25519_before_business_flow true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_supervisor_owns_backend_task_shutdown_endpoint_and_generation true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_embedded_authority_runtime_initialized_once_per_process true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: mobile_transport_restart_reuses_repo_sync_and_app_state true
@@ -660,7 +664,13 @@ contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn native_su
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	smoke-mobile-android-lifecycle.sh
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_CDP_ENDPOINT
 contains	scripts/smoke-mobile-android-lifecycle.mjs	mobile-android-lifecycle: backgrounding app
-contains	scripts/smoke-mobile-android-lifecycle.mjs	Android System WebView lacks WebCrypto Ed25519
+contains	scripts/smoke-mobile-android-lifecycle.mjs	Android System WebView WebCrypto capability blocked writable lifecycle
+contains	scripts/smoke-mobile-android-lifecycle.mjs	probeWebCryptoEd25519
+contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-webview-interaction.mjs
+contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/smoke-mobile-android-lifecycle.mjs	suspended editor must reject writes
 contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh

@@ -63,6 +63,9 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Boots an Android emulator target host, builds a debug WebView shell APK, and delegates install/startup smoke without opening process runtime |
 | `smoke-mobile-android-lifecycle.sh` | Drives the debug Android WebView through CDP, verifies non-zero pending preservation, transport-generation recovery, foreground reprobe, resumed commit, and bounded graceful runtime cleanup |
 | `smoke-mobile-android-lifecycle.mjs` | Raw page-target CDP harness for the Android LocalBackend lifecycle smoke; requires WebCrypto Ed25519, uses debug-only lifecycle fault/exit commands, and otherwise submits UI intents only |
+| `lib/mobile-webview-interaction.mjs` | Focus, text-input failure diagnostics, and mobile drawer navigation helpers for the Android WebView lifecycle harness |
+| `lib/webcrypto-capability.mjs` | Shared target-host probe for non-extractable WebCrypto Ed25519 capability; returns stable fail-closed blocker facts only |
+| `webcrypto-capability.test.mjs` | Verifies the Android/WebView probe requests non-extractable Ed25519 signing keys and rejects unsupported or extractable results |
 | `check-mobile-ios-shell-package-build.sh` | Runs the iOS WebView shell package gate only when explicitly required on a macOS target host |
 | `check-graph-baseline.sh` | Verifies Graph remains a read-only derived projection and does not become a ledger/workspace authority path |
 | `check-mobile-baseline.sh` | Verifies Mobile Web shell viewport mapping, drawer gestures, resize-handle exclusion, keyboard toolbar, search top sheet/results scrolling, bottom bar, and editor font-size baseline contracts |

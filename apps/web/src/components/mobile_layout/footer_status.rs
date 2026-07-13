@@ -153,6 +153,7 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
         view! {
             <div
                 class="flex items-center gap-1.5"
+                data-deve-sync-status=summary.kind.marker()
                 data-deve-pending-ack-count=summary.pending_ack_count.to_string()
             >
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>

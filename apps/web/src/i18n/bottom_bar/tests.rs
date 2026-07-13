@@ -1,5 +1,6 @@
 use super::{loading_progress_compact, storage_limited_read_only, toggle_status_details};
 use crate::i18n::Locale;
+use crate::storage::BrowserIdentityBlocker;
 
 #[test]
 fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key() {
@@ -9,12 +10,24 @@ fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key() {
 #[test]
 fn degraded_storage_banner_is_localized_by_locale() {
     assert_eq!(
-        storage_limited_read_only(Locale::En, "IndexedDB=false"),
-        "Storage limited (IndexedDB=false); read-only mode is active"
+        storage_limited_read_only(Locale::En, BrowserIdentityBlocker::IndexedDbUnavailable),
+        "Persistent browser storage is unavailable; read-only mode is active. Allow site storage or use a supported browser."
     );
     assert_eq!(
-        storage_limited_read_only(Locale::Zh, "IndexedDB=false"),
-        "存储受限（IndexedDB=false），当前处于只读模式"
+        storage_limited_read_only(Locale::Zh, BrowserIdentityBlocker::IndexedDbUnavailable),
+        "浏览器持久存储不可用，当前保持只读。请允许站点存储或改用受支持的浏览器。"
+    );
+}
+
+#[test]
+fn ed25519_blocker_copy_points_to_browser_or_system_webview_update() {
+    assert!(
+        storage_limited_read_only(Locale::En, BrowserIdentityBlocker::Ed25519Unavailable)
+            .contains("Android System WebView")
+    );
+    assert!(
+        storage_limited_read_only(Locale::Zh, BrowserIdentityBlocker::Ed25519Unavailable)
+            .contains("Android System WebView")
     );
 }
 

@@ -95,7 +95,7 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
     view! {
         <div
             class="flex items-center gap-2 min-w-0"
-            data-deve-sync-status=move || sync_status_kind_marker(summary.get().kind)
+            data-deve-sync-status=move || summary.get().kind.marker()
             data-deve-pending-ack-count=move || summary.get().pending_ack_count.to_string()
         >
             <div class=move || format!("w-2 h-2 rounded-full {}", color())></div>
@@ -115,24 +115,5 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
                 <span class="text-[10px] text-muted font-mono truncate">{repo_label}</span>
             </Show>
         </div>
-    }
-}
-
-fn sync_status_kind_marker(kind: SyncStatusKind) -> &'static str {
-    match kind {
-        SyncStatusKind::SessionExpired => "session-expired",
-        SyncStatusKind::NativeBootstrapInvalid => "native-bootstrap-invalid",
-        SyncStatusKind::NativeSessionPending => "native-session-pending",
-        SyncStatusKind::NativeServiceOffline => "native-service-offline",
-        SyncStatusKind::NativeReprobeRequired => "native-reprobe-required",
-        SyncStatusKind::Offline => "offline",
-        SyncStatusKind::Reconnecting => "reconnecting",
-        SyncStatusKind::SnapshotLoading => "snapshot-loading",
-        SyncStatusKind::EditorSyncError => "editor-sync-error",
-        SyncStatusKind::ReadOnly => "read-only",
-        SyncStatusKind::HandshakingRepo => "handshaking-repo",
-        SyncStatusKind::PeerNotRegistered => "peer-not-registered",
-        SyncStatusKind::PendingAck => "pending-ack",
-        SyncStatusKind::Ready => "ready",
     }
 }

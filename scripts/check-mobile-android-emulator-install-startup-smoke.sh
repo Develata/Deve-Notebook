@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
-API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-35}"
-SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default}"
+API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
+SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
 ARCH="${DEVE_MOBILE_ANDROID_EMULATOR_ARCH:-x86_64}"
 AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke-api${API_LEVEL}-${SYSTEM_TARGET}-${ARCH}}"
 DEVICE_PROFILE="${DEVE_MOBILE_ANDROID_EMULATOR_DEVICE:-pixel_2}"
@@ -169,6 +169,7 @@ ensure_emulator_process_alive() {
 }
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
+run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 
 if [[ "$REQUIRED" != "1" ]]; then
   echo "mobile-android-emulator-install-startup-smoke-check: emulator smoke not executed; set DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 on an Android target host"

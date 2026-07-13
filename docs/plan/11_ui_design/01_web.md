@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-07`
+- `Last Review`: `2026-07-12`
 - `Counterpart Feature`: `docs/features/08_ui_design_01_web.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
@@ -133,6 +133,7 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
 *   **DegradedSyncMode Banner**:
     *   当 IndexedDB 或 WebCrypto 不可用时，顶部 **MUST** 显示只读横幅，明确原因是浏览器持久存储不可用。
     *   横幅文案 **SHOULD** 说明：允许查看与拉取，禁止编辑提交与 `SyncPush`。
+    *   WebCrypto Ed25519 不可用时，横幅 **MUST** 明确提示更新浏览器或 Android System WebView；UI 只能消费强类型 blocker，不得解析 adapter 错误文本或自行判断 writer authority。
 *   **Editing Guardrails**:
     *   只读模式下编辑器、创建按钮、同步推送按钮 **MUST** 禁用或隐藏。
     *   若仅 user session 有效但 peer identity 缺失，UI **MUST** 允许重试注册，而不是静默失败。

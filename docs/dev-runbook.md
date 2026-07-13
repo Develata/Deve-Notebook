@@ -890,6 +890,11 @@ For emulator install/startup smoke, build an installable debug APK:
 DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1 scripts/check-mobile-android-shell-package-build.sh
 ```
 
+The required Android package gate rebuilds `apps/web/dist` before invoking
+Tauri/Gradle. A pre-existing dist directory is never accepted as evidence for
+the packaged WebView shell, because it may not contain the current capability
+gates or DOM smoke markers.
+
 iOS shell-only package execution is a separate explicit gate:
 
 ```bash
@@ -971,6 +976,14 @@ browser peer identity. LocalBackend installs its HttpOnly native-session cookie
 through a no-argument Tauri command backed by Android CookieManager because the
 current Wry Android `set_cookie` surface is unsupported; cookie material never
 enters JavaScript or command arguments.
+
+The emulator gate defaults to the Android 17 / API 37.1 Google APIs 16 KB
+x86_64 image as the current target-host candidate. Chromium introduced WebCrypto
+Ed25519 in 137; the currently exercised image carries a newer System WebView.
+That default is only a reproducible input:
+the lifecycle harness still proves non-extractable Ed25519 key generation at
+runtime before any create/edit/commit step. Override the image when needed;
+never treat the API level or image tag as capability evidence.
 
 With an already booted emulator and built debug APK, run the narrower gate:
 

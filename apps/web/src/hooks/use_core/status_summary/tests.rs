@@ -176,6 +176,7 @@ fn localizes_ready_status_for_header_and_status_surfaces() {
     let summary = summary(ready_input());
 
     assert_eq!(summary.kind, SyncStatusKind::Ready);
+    assert_eq!(summary.kind.marker(), "ready");
     assert_eq!(summary.display_text(Locale::En), "Ready");
     assert_eq!(summary.display_text(Locale::Zh), "就绪");
 }

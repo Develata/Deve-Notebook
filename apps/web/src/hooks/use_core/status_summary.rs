@@ -26,6 +26,28 @@ pub(crate) enum SyncStatusKind {
     Ready,
 }
 
+impl SyncStatusKind {
+    /// Stable DOM marker shared by desktop and mobile status projections.
+    pub const fn marker(self) -> &'static str {
+        match self {
+            Self::SessionExpired => "session-expired",
+            Self::NativeBootstrapInvalid => "native-bootstrap-invalid",
+            Self::NativeSessionPending => "native-session-pending",
+            Self::NativeServiceOffline => "native-service-offline",
+            Self::NativeReprobeRequired => "native-reprobe-required",
+            Self::Offline => "offline",
+            Self::Reconnecting => "reconnecting",
+            Self::SnapshotLoading => "snapshot-loading",
+            Self::EditorSyncError => "editor-sync-error",
+            Self::ReadOnly => "read-only",
+            Self::HandshakingRepo => "handshaking-repo",
+            Self::PeerNotRegistered => "peer-not-registered",
+            Self::PendingAck => "pending-ack",
+            Self::Ready => "ready",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct SyncStatusSummary {
     pub kind: SyncStatusKind,

@@ -31,6 +31,7 @@ pub fn MobileHeader(
             <button
                 type="button"
                 data-deve-mobile-touch-target="topbar_buttons"
+                data-deve-mobile-header-action="open_left_drawer"
                 class=topbar_button_class()
                 title=move || t::header::file_tree(locale.get())
                 aria-label=move || t::header::file_tree(locale.get())

@@ -28,7 +28,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
         let locale = locale.get();
         let banner = degraded_sync_mode
             .get()
-            .map(|mode| t::bottom_bar::storage_limited_read_only(locale, &mode.reason));
+            .map(|mode| t::bottom_bar::storage_limited_read_only(locale, mode.blocker).to_string());
         set_sync_banner.set(banner);
     });
 

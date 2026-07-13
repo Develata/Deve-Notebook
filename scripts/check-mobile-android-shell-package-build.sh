@@ -94,6 +94,7 @@ DEVE_MOBILE_PACKAGE_TARGETS=android \
   run "$ROOT_DIR/scripts/check-mobile-platform-package-preflight.sh"
 
 configure_gradle_proxy_from_env
+run "$ROOT_DIR/scripts/build-web-dist-ci.sh"
 
 if [[ ! -d "$ROOT_DIR/apps/mobile/gen/android" ]]; then
   (

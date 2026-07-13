@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
+import {
+  closeMobileSidebar,
+  focusEditor,
+  openMobileSidebarView,
+  typeEditor,
+} from "./lib/mobile-webview-interaction.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS ?? "90000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
@@ -32,12 +39,16 @@ async function withDeadline(label, promise, limit = remainingMs()) {
   }
 }
 
-async function waitUntil(label, predicate, timeout = timeoutMs) {
+async function waitUntil(label, predicate, timeout = Math.min(timeoutMs, 30000)) {
   const deadline = Math.min(Date.now() + timeout, harnessDeadline);
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const value = await predicate();
+      const value = await withDeadline(
+        `${label} predicate`,
+        Promise.resolve().then(predicate),
+        Math.max(1, deadline - Date.now()),
+      );
       if (value) return value;
     } catch (error) {
       lastError = error;
@@ -78,14 +89,20 @@ class CdpPage {
 
   static async connect(webSocketDebuggerUrl) {
     const socket = new WebSocket(webSocketDebuggerUrl);
-    await withDeadline("Android WebView CDP socket open", new Promise((resolve, reject) => {
-      socket.addEventListener("open", resolve, { once: true });
-      socket.addEventListener("error", () => reject(new Error("Android WebView CDP socket failed")), { once: true });
-    }), 10000);
-    const page = new CdpPage(socket);
-    await page.send("Runtime.enable");
-    await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
-    return page;
+    try {
+      await withDeadline("Android WebView CDP socket open", new Promise((resolve, reject) => {
+        socket.addEventListener("open", resolve, { once: true });
+        socket.addEventListener("error", () => reject(new Error("Android WebView CDP socket failed")), { once: true });
+      }), 10000);
+      const page = new CdpPage(socket);
+      await page.send("Runtime.enable");
+      return page;
+    } catch (error) {
+      try {
+        socket.close();
+      } catch {}
+      throw error;
+    }
   }
 
   send(method, params = {}) {
@@ -132,19 +149,54 @@ async function listTargets() {
 }
 
 async function findAppPage() {
-  const target = await waitUntil("Android WebView target", async () => {
-    const targets = await listTargets();
-    return targets.find((candidate) =>
-      candidate.webSocketDebuggerUrl
-      && candidate.type === "page"
-      && candidate.url === "http://tauri.localhost/") ?? null;
-  });
+  const targets = await listTargets();
+  const discoveredTargets = targets.map(({ type, title, url }) => ({ type, title, url }));
+  const target = targets.find((candidate) =>
+    candidate.webSocketDebuggerUrl
+    && candidate.type === "page"
+    && candidate.url === "http://tauri.localhost/");
+  if (!target) {
+    throw new Error(`Android WebView target unavailable; targets=${JSON.stringify(discoveredTargets)}`);
+  }
   console.log(`mobile-android-lifecycle: attaching page CDP ${target.title}`);
-  const page = await CdpPage.connect(target.webSocketDebuggerUrl);
-  console.log("mobile-android-lifecycle: page CDP attached");
-  await waitUntil("Android app DOM", () => page.call(() =>
-    Boolean(document.querySelector("[data-deve-sync-status]"))));
+  let page;
+  try {
+    page = await CdpPage.connect(target.webSocketDebuggerUrl);
+    console.log("mobile-android-lifecycle: page CDP attached");
+    await waitUntil("Android app DOM", () => page.call(() =>
+      Boolean(document.querySelector("[data-deve-sync-status]"))), 10000);
+    await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
+  } catch (error) {
+    const diagnostics = page
+      ? await page.call(() => ({
+        url: location.href,
+        readyState: document.readyState,
+        title: document.title,
+        bodyText: (document.body?.textContent ?? "").slice(0, 500),
+        bodyHtml: (document.body?.innerHTML ?? "").slice(0, 500),
+      })).catch((diagnosticError) => ({ diagnosticError: diagnosticError.message }))
+      : { diagnosticError: "page unavailable before Runtime.enable" };
+    await page?.close();
+    throw new Error(`${error.message}; page=${JSON.stringify(diagnostics)}`);
+  }
   return page;
+}
+
+async function findStableAppPage() {
+  return waitUntil("stable Android WebView page", async () => {
+    try {
+      return await findAppPage();
+    } catch (error) {
+      const message = String(error?.message ?? error);
+      if (message.includes("Inspected target navigated or closed")
+        || message.includes("CDP socket closed")
+        || message.includes("Android WebView target unavailable")) {
+        console.log(`mobile-android-lifecycle: retrying page CDP after navigation: ${message}`);
+        return null;
+      }
+      throw error;
+    }
+  }, 60000);
 }
 
 function visibleElement(selector) {
@@ -157,34 +209,33 @@ function visibleElement(selector) {
 
 async function waitForReady(page) {
   await waitUntil("ready sync status", () => page.call(() =>
-    document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready"));
+    document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready"), 60000);
 }
 
 async function assertWritableIdentityCapability(page) {
-  const ed25519 = await page.call(async () => {
-    if (!globalThis.crypto?.subtle) return false;
-    try {
-      const pair = await crypto.subtle.generateKey(
-        { name: "Ed25519" },
-        false,
-        ["sign", "verify"],
-      );
-      return Boolean(pair?.privateKey);
-    } catch {
-      return false;
-    }
-  });
-  if (!ed25519) {
-    await waitUntil("storage-limited read-only identity state", () => page.call(() => {
+  const capability = await withDeadline(
+    "non-extractable WebCrypto Ed25519 capability probe",
+    page.call(probeWebCryptoEd25519),
+    30000,
+  );
+  console.log(`mobile-android-lifecycle: WebCrypto capability ${JSON.stringify(capability)}`);
+  if (!capability.writable) {
+    await waitUntil("storage-limited read-only identity state", () => page.call((blocker) => {
       const status = document.querySelector("[data-deve-sync-status]")
         ?.getAttribute("data-deve-sync-status");
-      const reasonVisible = document.body?.textContent?.includes("Ed25519=false") ?? false;
+      const body = document.body?.textContent ?? "";
+      const reasonVisible = blocker === "ed25519_unavailable"
+        ? body.includes("WebCrypto Ed25519") && body.includes("Android System WebView")
+        : blocker === "webcrypto_unavailable"
+          ? body.includes("Browser cryptography") || body.includes("浏览器加密能力")
+          : body.includes("Browser identity capability check failed")
+            || body.includes("浏览器身份能力探测失败");
       const editorsReadOnly = [...document.querySelectorAll("[data-deve-editor-host=true]")]
         .every((host) => host.getAttribute("data-deve-editor-readonly") === "true");
       return status === "read-only" && reasonVisible && editorsReadOnly;
-    }));
+    }, capability.blocker));
     throw new Error(
-      "Android System WebView lacks WebCrypto Ed25519; writable lifecycle smoke requires the repo-scoped browser identity capability",
+      `Android System WebView WebCrypto capability blocked writable lifecycle: ${capability.blocker}; userAgent=${capability.userAgent}`,
     );
   }
 }
@@ -249,22 +300,11 @@ async function fill(page, selector, value) {
   if (!filled) throw new Error(`visible form field not found: ${selector}`);
 }
 
-async function typeEditor(page, content) {
-  const focused = await page.call(() => {
-    const editor = globalThis.__deveVisibleElement(".cm-content");
-    if (!editor) return false;
-    editor.focus();
-    return true;
-  });
-  if (!focused) throw new Error("visible CodeMirror editor not found");
-  await page.send("Input.insertText", { text: content });
-  await waitUntil("editor input", () => page.call(
-    (expected) => window.getEditorContent?.().includes(expected) ?? false,
-    content,
-  ));
-}
-
 async function createDocument(page, path, content) {
+  console.log(`mobile-android-lifecycle: creating document ${path}`);
+  const mobile = await page.call(() =>
+    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
+  if (mobile) await openMobileSidebarView(page, "explorer", { click, waitUntil });
   await click(page, "[data-deve-new-doc-button=true]");
   await waitUntil("new document input", () => page.call(() =>
     Boolean(globalThis.__deveVisibleElement("[data-deve-search-input=true]"))));
@@ -272,14 +312,25 @@ async function createDocument(page, path, content) {
   await waitUntil("create document action", () => page.call(() =>
     Boolean(globalThis.__deveVisibleElement('[data-deve-search-result-action="create-doc"]'))));
   await click(page, '[data-deve-search-result-action="create-doc"]');
+  console.log("mobile-android-lifecycle: document create intent submitted");
   await waitForWritableEditor(page);
+  console.log("mobile-android-lifecycle: editor writable");
   await waitUntil("editor bridge", () => page.call(() =>
     typeof window.getEditorContent === "function" && typeof window.getEditorContent() === "string"));
-  await typeEditor(page, content);
+  console.log("mobile-android-lifecycle: editor bridge ready");
+  await typeEditor(page, content, waitUntil);
+  console.log("mobile-android-lifecycle: initial editor input visible");
   await waitUntil("initial edit ack", async () => (await pendingCount(page)) === 0);
+  console.log("mobile-android-lifecycle: initial edit acknowledged");
 }
 
 async function openSourceControl(page) {
+  const mobile = await page.call(() =>
+    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
+  if (mobile) {
+    await openMobileSidebarView(page, "source_control", { click, waitUntil });
+    return;
+  }
   await click(page, "[data-deve-activity-more-button]");
   await waitUntil("Source Control menu item", () => page.call(() =>
     Boolean(globalThis.__deveVisibleElement(
@@ -311,17 +362,20 @@ async function commit(page, message) {
   if (!committed) throw new Error("commit action not found");
   await waitUntil("commit complete", () => page.call(() =>
     document.querySelector('textarea[name="commit-message"]')?.value === ""));
+  await closeMobileSidebar(page, { click, waitUntil });
 }
 
 async function main() {
   if (!cdpEndpoint || !adb || !serial) {
     throw new Error("CDP endpoint, adb path, and emulator serial are required");
   }
-  const page = await findAppPage();
+  const page = await findStableAppPage();
 
   console.log("mobile-android-lifecycle: waiting for native session");
   await assertWritableIdentityCapability(page);
+  console.log("mobile-android-lifecycle: WebCrypto capability accepted");
   await waitForReady(page);
+  console.log("mobile-android-lifecycle: native session ready");
   assert.equal(await page.call(() => document.querySelectorAll("#login-username").length), 0,
     "native session must bypass login");
 
@@ -334,7 +388,7 @@ async function main() {
 
   await setNetworkLatency(page, 5000);
   const pendingText = ` pending-across-restart-${stamp}`;
-  await typeEditor(page, pendingText);
+  await typeEditor(page, pendingText, waitUntil);
   await waitUntil("nonzero pending before suspend", async () => (await pendingCount(page)) > 0);
   const contentBeforeSuspend = await editorContent(page);
   const pendingBeforeSuspend = await pendingCount(page);
@@ -345,8 +399,8 @@ async function main() {
   await waitUntil("suspended editor read-only", () => page.call(() =>
     document.querySelector("[data-deve-editor-host=true]")?.getAttribute("data-deve-editor-readonly") === "true"));
   const blockedText = ` MUST-NOT-APPLY-${stamp}`;
-  await page.call(() => globalThis.__deveVisibleElement(".cm-content")?.focus());
-  await page.send("Input.insertText", { text: blockedText }).catch(() => {});
+  await focusEditor(page);
+  await page.send("Input.insertText", { text: blockedText });
   assert.equal(await editorContent(page), contentBeforeSuspend, "suspended editor must reject writes");
   assert.equal(await pendingCount(page), pendingBeforeSuspend, "suspend must preserve pending count");
 
@@ -374,7 +428,7 @@ async function main() {
   assert.equal(await editorContent(page), contentBeforeSuspend, "resume must preserve document content");
   await waitUntil("preserved pending replay ack", async () => (await pendingCount(page)) === 0);
   const resumedText = ` resumed ${stamp}`;
-  await typeEditor(page, resumedText);
+  await typeEditor(page, resumedText, waitUntil);
   await waitUntil("resumed edit ack", async () => (await pendingCount(page)) === 0);
   await commit(page, `android lifecycle resumed ${stamp}`);
 

@@ -24,17 +24,13 @@ pub(super) async fn bootstrap_repo_storage(
             }
         }
         Err(err) => {
-            return Err(DegradedSyncMode {
-                reason: format!("能力探测失败: {}", err),
-            });
+            return Err(DegradedSyncMode::capability_probe_failed(err.to_string()));
         }
     }
 
     let identity = load_or_create_identity(repo_id)
         .await
-        .map_err(|err| DegradedSyncMode {
-            reason: format!("无法恢复浏览器身份: {}", err),
-        })?;
+        .map_err(|err| DegradedSyncMode::identity_recovery_failed(err.to_string()))?;
 
     let metadata = match load_repo_metadata(repo_id).await {
         Ok(metadata) => metadata,
