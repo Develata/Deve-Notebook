@@ -475,4 +475,46 @@
     - ui_assert: source_control_confirmed_ledger_changes_visible_after_apply true
     - ui_assert: external_confirmed_overlap_disables_stage true
     - ui_assert: external_confirmed_overlap_allows_diff_and_discard true
+
+- case_id: DIFF-012
+  goal: Diff typed projection 由 Core 计算，并覆盖 UTF-16、fold、资源上限和完整文档边界。
+  preconditions:
+    - Rust 1.92 toolchain 可用
+  steps:
+    - run: cargo test -p deve_core diff_projection -- --nocapture
+  assertions:
+    - api_assert: diff_projection_references_source_content_by_byte_range true
+    - api_assert: diff_projection_word_ranges_use_utf16 true
+    - api_assert: diff_projection_crosses_legacy_300_line_boundary true
+    - api_assert: diff_projection_folds_include_3_5_8 true
+    - api_assert: diff_projection_resource_limits_fail_closed true
+
+- case_id: DIFF-013
+  goal: WS v13 只传 typed projection，commit diff 使用 summary 加按需精确 target。
+  preconditions:
+    - 当前协议版本为 13
+  steps:
+    - run: cargo test -p deve_cli new_revision_cancels_previous_diff_job -- --nocapture
+    - run: cargo test -p deve_core commit_file_diff_target_mismatch_fails_closed -- --nocapture
+    - run: cargo test -p deve_core diff_protocol_v13_is_lockstep_and_rejects_v12 -- --nocapture
+  assertions:
+    - ws_assert: v12_rejected true
+    - ws_assert: v13_lockstep true
+    - api_assert: commit_diff_list_contains_no_document_body true
+    - api_assert: commit_file_diff_target_mismatch_fails_closed true
+    - api_assert: stale_diff_revision_not_published true
+    - api_assert: scope_switch_cancels_diff_projection true
+
+- case_id: DIFF-014
+  goal: Web 只渲染 typed projection，失败和 stale revision 不触发客户端算法 fallback。
+  preconditions:
+    - Web WASM 测试可用
+  steps:
+    - run: cargo test -p deve_web split_and_unified_only_select_backend_rows -- --nocapture
+    - ui_run: DIFF-FEAT-06
+  assertions:
+    - ui_assert: client_patience_myers_absent true
+    - ui_assert: diff_resource_limit_localized true
+    - ui_assert: merge_draft_preserved_on_projection_error true
+    - ui_assert: commit_diff_loaded_on_demand true
 ```

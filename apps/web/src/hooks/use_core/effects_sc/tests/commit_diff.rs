@@ -3,14 +3,13 @@ use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::effects_sc::{ScMessageContext, handle_sc_message};
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::storage::DegradedSyncMode;
-use deve_core::models::DocId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::source_control::ChangeStatus;
 
 struct CommitDiffDispatchResult {
     handled: bool,
     request_id: Option<String>,
-    diffs: Vec<CommitFileDiff>,
+    diffs: Vec<CommitFileDiffSummary>,
     notice: Option<SourceControlNotice>,
 }
 
@@ -52,7 +51,7 @@ fn dispatch_commit_diff_from_repo(
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
     let (diff, set_diff) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(Some("req-1".to_string()));
-    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
+    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiffSummary>::new());
     let (notice, set_notice) = signal(Some(SourceControlNotice {
         code: ServerErrorCode::ScCommitDiffUnprojectable,
         detail: Some("previous error".into()),
@@ -106,14 +105,11 @@ fn dispatch_commit_diff_from_repo(
             repo_id: Some(message_repo_id_value),
             branch: message_branch,
             scope_nonce: message_scope_nonce,
-            diffs: vec![CommitFileDiff {
-                doc_id: Some(DocId::new()),
-                path: "renamed.md".into(),
-                status: ChangeStatus::Renamed,
-                previous_path: Some("note.md".into()),
-                old_content: "hello".into(),
-                new_content: "hello".into(),
-            }],
+            files: vec![test_commit_summary(
+                "renamed.md",
+                ChangeStatus::Renamed,
+                Some("note.md"),
+            )],
         },
         &ctx,
     );

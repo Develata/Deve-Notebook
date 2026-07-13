@@ -69,7 +69,7 @@ mod tests {
                 title: "renamed.md".into(),
                 tooltip: "archive/renamed.md".into(),
             }),
-            EditorTabItem::Diff(EditorDiffTab {
+            EditorTabItem::Diff(Box::new(EditorDiffTab {
                 key: "diff-1".into(),
                 title: "current.diff".into(),
                 tooltip: "current.diff".into(),
@@ -78,7 +78,7 @@ mod tests {
                     "old".into(),
                     "new".into(),
                 ),
-            }),
+            })),
         ];
 
         assert_eq!(
@@ -333,7 +333,7 @@ fn document_tab_projection(tabs: &[EditorTabItem], doc_id: DocId) -> Option<Edit
 
 fn diff_tab_projection(tabs: &[EditorTabItem], key: &str) -> Option<EditorDiffTab> {
     tabs.iter().find_map(|item| match item {
-        EditorTabItem::Diff(tab) if tab.key == key => Some(tab.clone()),
+        EditorTabItem::Diff(tab) if tab.key == key => Some(tab.as_ref().clone()),
         _ => None,
     })
 }

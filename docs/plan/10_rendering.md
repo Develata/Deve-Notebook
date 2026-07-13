@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-13`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -442,6 +442,13 @@ facades: every entry MUST declare `authority: "none"` and a runtime in
 Entry names, sources, and roles claiming ledger, pending, ack/reject, write-success,
 Source Control, staging, commit anchor, Git mirror, backup, or remote-projection
 authority MUST fail closed before they are written onto `window`.
+
+Diff renderer 也是 projection-only adapter：它可以按 byte range 从 typed
+`DiffProjection` 的 base/target 正文切片、把 UTF-16 word ranges 映射为 DOM span、
+执行 viewport virtualization，并选择后端提供的 context 3/5/8 fold ranges；它不得
+运行 diff 算法、计算 hunk/fold 或根据正文重新作业务判断。scope-local cache 只允许
+保存最多 4 个、编码预算合计不超过 16 MiB 的不可变服务端 projection；draft revision
+不进入 cache，scope 改变必须清空。
 
 ### 12.3 Outline Runtime
 

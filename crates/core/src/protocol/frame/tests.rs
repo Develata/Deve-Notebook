@@ -1,5 +1,80 @@
 use super::*;
 use crate::models::{PeerId, VersionVector};
+use std::sync::Arc;
+
+#[test]
+fn diff_protocol_v13_is_lockstep_and_rejects_v12() {
+    assert_eq!(WS_PROTOCOL_VERSION, 13);
+    assert_eq!(MIN_SUPPORTED_WS_PROTOCOL_VERSION, 13);
+    let frame = ClientFrame {
+        protocol_version: 12,
+        message: ClientMessage::Ping,
+    };
+    let bytes = encode_binary_frame(&frame).unwrap();
+    assert!(matches!(
+        decode_client_binary(&bytes),
+        Err(ProtocolFrameError::UnsupportedVersion { received: 12, .. })
+    ));
+}
+
+#[test]
+fn diff_projection_messages_roundtrip_in_binary_and_json() {
+    let repo_id = uuid::Uuid::new_v4();
+    let client = ClientMessage::ComputeDiffProjection {
+        request_id: "diff-1".into(),
+        revision: 4,
+        base_content: "old 😀".into(),
+        target_content: "new 中文".into(),
+        scope_nonce: Some(9),
+    };
+    match decode_client_binary(&encode_client_binary(&client).unwrap()).unwrap() {
+        ClientMessage::ComputeDiffProjection {
+            request_id,
+            revision,
+            scope_nonce,
+            ..
+        } => {
+            assert_eq!(request_id, "diff-1");
+            assert_eq!(revision, 4);
+            assert_eq!(scope_nonce, Some(9));
+        }
+        other => panic!("expected ComputeDiffProjection, got {other:?}"),
+    }
+
+    let projection = Arc::new(
+        crate::source_control::diff_projection::compute_diff_projection(
+            "old 😀".into(),
+            "new 中文".into(),
+        )
+        .unwrap(),
+    );
+    let server = ServerMessage::DiffProjectionResult {
+        request_id: "diff-1".into(),
+        revision: 4,
+        repo_id,
+        branch: None,
+        scope_nonce: crate::protocol::ScopeNonce::new(9),
+        projection: projection.clone(),
+    };
+    let binary = decode_server_binary(&encode_server_binary(&server).unwrap()).unwrap();
+    let json =
+        decode_server_json(&serde_json::to_string(&ServerFrame::current(server)).unwrap()).unwrap();
+    for decoded in [binary, json] {
+        match decoded {
+            ServerMessage::DiffProjectionResult {
+                request_id,
+                revision,
+                projection: decoded_projection,
+                ..
+            } => {
+                assert_eq!(request_id, "diff-1");
+                assert_eq!(revision, 4);
+                assert_eq!(decoded_projection.projection_id, projection.projection_id);
+            }
+            other => panic!("expected DiffProjectionResult, got {other:?}"),
+        }
+    }
+}
 
 #[test]
 fn client_binary_frame_roundtrips() {

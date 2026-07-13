@@ -75,11 +75,11 @@ async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
     assert_eq!(branch, Some(peer_id));
     assert_eq!(scope_nonce, Some(17));
     assert_eq!(diffs.len(), 1);
-    assert_eq!(diffs[0].doc_id, Some(doc_id));
+    assert_eq!(diffs[0].doc_id, doc_id);
     assert_eq!(diffs[0].path, "note.md");
     assert_eq!(diffs[0].status, ChangeStatus::Modified);
-    assert_eq!(diffs[0].old_content, "hello");
-    assert_eq!(diffs[0].new_content, "hello remote");
+    assert_eq!(diffs[0].target.doc_id, doc_id);
+    assert_eq!(diffs[0].target.path, "note.md");
     Ok(())
 }
 
@@ -140,12 +140,12 @@ async fn readonly_remote_commit_diff_reports_rename_projection() -> anyhow::Resu
     assert_eq!(branch, Some(peer_id));
     assert_eq!(scope_nonce, Some(19));
     assert_eq!(diffs.len(), 1);
-    assert_eq!(diffs[0].doc_id, Some(doc_id));
+    assert_eq!(diffs[0].doc_id, doc_id);
     assert_eq!(diffs[0].previous_path.as_deref(), Some("note.md"));
     assert_eq!(diffs[0].path, "renamed.md");
     assert_eq!(diffs[0].status, ChangeStatus::Renamed);
-    assert_eq!(diffs[0].old_content, "hello");
-    assert_eq!(diffs[0].new_content, "hello");
+    assert_eq!(diffs[0].target.doc_id, doc_id);
+    assert_eq!(diffs[0].target.previous_path.as_deref(), Some("note.md"));
     Ok(())
 }
 

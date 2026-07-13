@@ -66,6 +66,36 @@ pub(super) async fn route_source_control(
             )
             .await;
         }
+        ClientMessage::GetCommitFileDiff {
+            request_id,
+            commit_a,
+            commit_b,
+            target,
+            ..
+        } => {
+            source_control::handle_get_commit_file_diff(
+                state, ch, session, request_id, commit_a, commit_b, target,
+            )
+            .await;
+        }
+        ClientMessage::ComputeDiffProjection {
+            request_id,
+            revision,
+            base_content,
+            target_content,
+            ..
+        } => {
+            source_control::handle_compute_diff_projection(
+                state,
+                ch,
+                session,
+                request_id,
+                revision,
+                base_content,
+                target_content,
+            )
+            .await;
+        }
         ClientMessage::ResolveConflict {
             target, resolution, ..
         } => {

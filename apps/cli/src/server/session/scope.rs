@@ -64,6 +64,7 @@ impl WsSession {
     }
 
     pub fn clear_sync_binding(&mut self) {
+        self.diff_projection_jobs.cancel();
         self.authenticated_peer_id = None;
         self.bound_repo_id = None;
         self.writer_identity = None;
@@ -78,11 +79,18 @@ impl WsSession {
     }
 
     pub fn switch_branch(&mut self, peer_id: Option<String>) {
-        self.active_branch = peer_id.map(PeerId::new);
+        let branch = peer_id.map(PeerId::new);
+        if self.active_branch != branch {
+            self.diff_projection_jobs.cancel();
+        }
+        self.active_branch = branch;
     }
 
     pub fn set_scope_nonce(&mut self, scope_nonce: Option<u64>) {
         if let Some(scope_nonce) = scope_nonce {
+            if self.current_scope_nonce != scope_nonce {
+                self.diff_projection_jobs.cancel();
+            }
             self.current_scope_nonce = scope_nonce;
         }
     }

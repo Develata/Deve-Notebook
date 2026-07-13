@@ -119,9 +119,10 @@ pub(crate) async fn handle_socket(
 
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
+    let (diff_unicast_tx, diff_unicast_rx) = send::new_diff_unicast_channel();
 
     // 将单播队列写入 WebSocket。
-    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx);
+    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx, diff_unicast_rx);
 
     // 订阅广播并尝试转发到单播队列（带背压/丢弃策略）。
     let broadcast_rx = state.tx.subscribe();
@@ -129,7 +130,7 @@ pub(crate) async fn handle_socket(
     let broadcast_task =
         send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), broadcast_filter.clone());
 
-    let ch = DualChannel::new(state.tx.clone(), unicast_tx);
+    let ch = DualChannel::with_diff_channel(state.tx.clone(), unicast_tx, diff_unicast_tx);
 
     tracing::info!("Client connected: {}", peer_id);
 
@@ -185,6 +186,7 @@ pub(crate) async fn handle_socket(
             .source_control_write_grants()
             .revoke_session(&auth_session_id);
     }
+    session.diff_projection_jobs.cancel();
     broadcast_task.abort();
     let _ = broadcast_task.await;
     unicast_task.abort();

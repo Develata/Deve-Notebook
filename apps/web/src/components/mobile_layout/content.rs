@@ -8,11 +8,13 @@
 use crate::components::dashboard::Dashboard;
 use crate::editor::Editor;
 use crate::i18n::{Locale, t};
+use crate::runtime::source_control_client::diff_session::DiffProjectionIntent;
 use crate::runtime::{
     rendering_client::RenderingClient, scope_client::ScopeClient, session_client::SessionClient,
     source_control_client::SourceControlClient,
 };
 use deve_core::models::DocId;
+use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 #[cfg(test)]
@@ -48,12 +50,32 @@ pub fn MobileContent(
     let on_stats = rendering.on_stats;
     let diff_content = source_control.diff_content;
     let set_diff_content = source_control.set_diff_content;
-    let current_repo_id = scope.current_repo_id;
-    let current_repo = scope.current_repo;
     let current_scope_nonce = scope.current_scope_nonce;
     let is_spectator = scope.is_spectator;
     let sync_banner = session.sync_banner;
     let ws = session.ws.clone();
+    let compute_ws = ws.clone();
+    let on_compute_projection = Callback::new(move |intent: DiffProjectionIntent| {
+        set_diff_content.update(|current| {
+            if let Some(current) = current {
+                current.begin_compute(&intent);
+            }
+        });
+        compute_ws.send(ClientMessage::ComputeDiffProjection {
+            request_id: intent.request_id,
+            revision: intent.revision,
+            base_content: intent.base_content,
+            target_content: intent.target_content,
+            scope_nonce: Some(current_scope_nonce.get_untracked()),
+        });
+    });
+    let on_persist_draft = Callback::new(move |draft: String| {
+        set_diff_content.update(|current| {
+            if let Some(current) = current {
+                current.persist_draft(draft);
+            }
+        });
+    });
     view! {
         <div
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"
@@ -69,10 +91,6 @@ pub fn MobileContent(
                 {move || {
                     if let Some(session) = diff_content.get() {
                             let merge_conflict = session.merge_conflict.clone();
-                            let repo_scope = current_repo_id
-                                .get()
-                                .or_else(|| current_repo.get())
-                                .unwrap_or_default();
                             let resolve_ws = ws.clone();
                             let on_resolve = merge_conflict.clone().map(|conflict| {
                                 let resolve_ws = resolve_ws.clone();
@@ -87,15 +105,12 @@ pub fn MobileContent(
                             });
                             view! {
                                 <crate::components::diff_view::DiffView
-                                    repo_scope=repo_scope
-                                    path=session.path
-                                    display_path=session.display_path
-                                    old_content=session.old_content
-                                    new_content=session.new_content
+                                    session=session
                                     is_readonly=is_spectator.get()
                                     force_unified=true
                                     mobile=true
-                                    merge_conflict=merge_conflict
+                                    on_compute_projection=Some(on_compute_projection)
+                                    on_persist_draft=Some(on_persist_draft)
                                     on_resolve_merge_conflict=on_resolve
                                     on_close=Callback::new(move |_| set_diff_content.set(None))
                                 />

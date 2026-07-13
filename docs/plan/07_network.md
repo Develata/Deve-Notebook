@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-13`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -187,7 +187,7 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- `protocol_version` 当前固定为 `12`；当前兼容窗口为 `12..=12`；任何破坏兼容的 schema 或 codec 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- `protocol_version` 当前固定为 `13`；当前兼容窗口为 `13..=13`；v13 将 Diff 改为 typed projection，并把 commit diff 改为 summary + on-demand file projection。v12 不保留 adapter。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
 - 未来若支持滚动升级，必须为每个仍支持的旧 `protocol_version` 维护显式 decode/upgrade adapter，并在 `MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION` 区间内逐版本测试。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned postcard frame。
@@ -212,6 +212,11 @@ enabled = true
   - `NewOp`
   - `Ack`
   - `EditRejected`
+- diff projection:
+  - `GetDocDiff` / `DocDiff`
+  - `GetCommitDiff` / `CommitDiffResult`
+  - `GetCommitFileDiff`
+  - `ComputeDiffProjection` / `DiffProjectionResult` / `DiffProjectionError`
 - repo/runtime:
   - `RepoList`
   - `DocList`
@@ -266,6 +271,11 @@ enabled = true
   - 可选:
     - `snapshot_kind`
 - 所有 sync message 的 `repo_id` 都是 routing 主键；缺失时必须结构化拒绝。
+
+Diff projection request/response 同样必须绑定当前 `repo_id`、`branch` 与
+`scope_nonce`。`ComputeDiffProjection` 还必须携带 request id 与 session 单调 revision；
+服务器每个 WS session 只保留一个活跃计算，新 revision 取消旧计算。结果发送前必须
+再次核对 session generation、revision 与 scope；stale 结果不得进入 Web state。
 
 ## 5. State Machines
 

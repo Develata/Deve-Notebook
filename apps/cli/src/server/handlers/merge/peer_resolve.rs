@@ -4,7 +4,7 @@
 //! Peer merge conflict resolution handlers.
 
 use super::errors;
-use super::peer_apply::{MergeWriteOutcome, write_merged_content};
+use super::peer_apply::{MergeWriteOutcome, default_accept_both, write_merged_content};
 use super::scope::resolve_local_write_scope;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel, session::PendingMergeConflict};
@@ -79,16 +79,9 @@ fn resolved_content(
     match action {
         MergeConflictAction::AcceptCurrent => pending.local_content.clone(),
         MergeConflictAction::AcceptIncoming => pending.incoming_content.clone(),
-        MergeConflictAction::AcceptBoth => result_content
-            .unwrap_or_else(|| accept_both(&pending.local_content, &pending.incoming_content)),
-    }
-}
-
-fn accept_both(current: &str, incoming: &str) -> String {
-    if current.is_empty() || incoming.is_empty() || current.ends_with('\n') {
-        format!("{current}{incoming}")
-    } else {
-        format!("{current}\n{incoming}")
+        MergeConflictAction::AcceptBoth => result_content.unwrap_or_else(|| {
+            default_accept_both(&pending.local_content, &pending.incoming_content)
+        }),
     }
 }
 
@@ -120,9 +113,12 @@ mod tests {
 
     #[test]
     fn accept_both_preserves_line_boundary_without_extra_blank_line() {
-        assert_eq!(accept_both("local", "incoming"), "local\nincoming");
-        assert_eq!(accept_both("local\n", "incoming"), "local\nincoming");
-        assert_eq!(accept_both("", "incoming"), "incoming");
+        assert_eq!(default_accept_both("local", "incoming"), "local\nincoming");
+        assert_eq!(
+            default_accept_both("local\n", "incoming"),
+            "local\nincoming"
+        );
+        assert_eq!(default_accept_both("", "incoming"), "incoming");
     }
 
     #[test]

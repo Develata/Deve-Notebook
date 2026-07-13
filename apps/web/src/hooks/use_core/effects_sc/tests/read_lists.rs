@@ -119,7 +119,7 @@ fn dispatch_read_list_from_repo_with_notice(
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
     let (diff, set_diff) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
-    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
+    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiffSummary>::new());
     let (notice, set_notice) = signal(Some(initial_notice));
     let (current_repo_id, _) = signal(Some(current_repo_id_value.to_string()));
     let (load_state, _) = signal(LoadPhase::Ready);

@@ -12,7 +12,7 @@ use crate::hooks::use_core::SourceControlContext;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, source_control};
 use crate::utils::time::format_relative;
-use deve_core::source_control::{CommitFileDiff, CommitInfo};
+use deve_core::source_control::{CommitFileDiffSummary, CommitInfo};
 use leptos::prelude::*;
 
 #[component]
@@ -24,16 +24,17 @@ pub fn HistoryCommitItem(
     commit: CommitInfo,
     commit_diff_request_id: ReadSignal<Option<String>>,
     set_commit_diff_request_id: WriteSignal<Option<String>>,
-    commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
     notice: ReadSignal<Option<SourceControlNotice>>,
     set_notice: WriteSignal<Option<SourceControlNotice>>,
-    set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     on_get_commit_diff: Callback<(Option<String>, String)>,
 ) -> impl IntoView {
     let source_control = expect_context::<SourceControlContext>();
     let commit_id = commit.id.clone();
     let selected_commit_id = commit_id.clone();
     let commit_for_click = commit.clone();
+    let parent_commit_id = commit.parent_id.clone();
     let visual_state = Signal::derive(move || {
         resolve_history_commit_visual_state(
             selected_commit.get().as_deref(),
@@ -111,6 +112,7 @@ pub fn HistoryCommitItem(
                     <HistoryCommitDetails
                         locale
                         compare_base_commit_id
+                        base_commit_id=compare_base_commit_id.get().or_else(|| parent_commit_id.clone())
                         target_commit_id=commit.id.clone()
                         commit_diff_request_id
                         commit_diff_result

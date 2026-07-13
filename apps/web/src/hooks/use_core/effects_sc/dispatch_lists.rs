@@ -4,6 +4,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::source_control_notice::is_local_command_notice;
+use crate::runtime::source_control_client::diff_cache::{projection_scope_key, put_projection};
 use crate::runtime::source_control_client::diff_session::{DiffSessionWire, MergeConflictSession};
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::{GetUntracked, Set, Update};
@@ -78,27 +79,72 @@ pub(crate) fn handle_sc_list_message(
             scope_nonce,
             doc_id,
             path,
-            old_content,
-            new_content,
+            projection,
         } => {
             if !ctx.in_scope(repo_id, branch) {
                 return true;
             }
-            if !doc_diff_matches_request(
+            let matches_doc_request = doc_diff_matches_request(
                 request_id,
                 ctx.doc_diff_request_id.get_untracked(),
                 *scope_nonce,
                 active_scope_nonce,
-            ) {
+            );
+            let matches_commit_file_request = doc_diff_matches_request(
+                request_id,
+                ctx.commit_diff_request_id.get_untracked(),
+                *scope_nonce,
+                active_scope_nonce,
+            );
+            if !matches_doc_request && !matches_commit_file_request {
+                return true;
+            }
+            let active_request = ctx
+                .diff
+                .get_untracked()
+                .is_some_and(|current| current.matches_pending_request(request_id.as_deref()));
+            if !active_request {
+                if matches_doc_request {
+                    ctx.set_doc_diff_request_id.set(None);
+                }
+                if matches_commit_file_request {
+                    ctx.set_commit_diff_request_id.set(None);
+                }
                 return true;
             }
             clear_non_local_notice(ctx);
-            ctx.set_doc_diff_request_id.set(None);
+            if matches_doc_request {
+                ctx.set_doc_diff_request_id.set(None);
+            }
+            if matches_commit_file_request {
+                ctx.set_commit_diff_request_id.set(None);
+            }
             if is_merge_conflict_diff_fallback(ctx.diff.get_untracked(), request_id, *doc_id, path)
             {
                 return true;
             }
-            apply_doc_diff(*doc_id, path, old_content, new_content, ctx.set_diff);
+            let cache_key = ctx
+                .diff
+                .get_untracked()
+                .filter(|current| current.path == *path)
+                .and_then(|current| current.cache_key);
+            if let Some(cache_key) = cache_key.as_ref() {
+                let repo_key = repo_id.as_ref().map(ToString::to_string);
+                let scope_key = projection_scope_key(
+                    repo_key.as_deref(),
+                    branch.as_ref(),
+                    scope_nonce.unwrap_or(active_scope_nonce),
+                );
+                put_projection(&scope_key, cache_key.clone(), projection.clone());
+            }
+            apply_doc_diff(
+                request_id.as_deref(),
+                *doc_id,
+                path,
+                projection,
+                cache_key,
+                ctx.set_diff,
+            );
             true
         }
         ServerMessage::MergeConflict {
@@ -107,8 +153,7 @@ pub(crate) fn handle_sc_list_message(
             scope_nonce,
             doc_id,
             path,
-            current_content,
-            incoming_content,
+            projection,
             result_content,
             actions,
             ..
@@ -119,17 +164,13 @@ pub(crate) fn handle_sc_list_message(
             clear_non_local_notice(ctx);
             leptos::logging::log!("收到合并冲突: {} ({} actions)", path, actions.len());
             ctx.set_diff.set(Some(
-                DiffSessionWire::new(
-                    path.clone(),
-                    current_content.clone(),
-                    incoming_content.clone(),
-                )
-                .with_doc_id(Some(*doc_id))
-                .with_merge_conflict(MergeConflictSession {
-                    doc_id: *doc_id,
-                    result_content: result_content.clone(),
-                    actions: actions.clone(),
-                }),
+                DiffSessionWire::from_projection(path.clone(), projection.clone())
+                    .with_doc_id(Some(*doc_id))
+                    .with_merge_conflict(MergeConflictSession {
+                        doc_id: *doc_id,
+                        result_content: result_content.clone(),
+                        actions: actions.clone(),
+                    }),
             ));
             true
         }
@@ -138,7 +179,7 @@ pub(crate) fn handle_sc_list_message(
             repo_id,
             branch,
             scope_nonce,
-            diffs,
+            files,
         } => {
             if !ctx.in_scope(repo_id, branch) {
                 return true;
@@ -153,8 +194,56 @@ pub(crate) fn handle_sc_list_message(
             }
             clear_non_local_notice(ctx);
             ctx.set_commit_diff_request_id.set(None);
-            leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
-            ctx.set_commit_diff.set(diffs.clone());
+            leptos::logging::log!("收到提交差异: {} 个文件变更", files.len());
+            ctx.set_commit_diff.set(files.clone());
+            true
+        }
+        ServerMessage::DiffProjectionResult {
+            request_id,
+            revision,
+            repo_id,
+            branch,
+            scope_nonce,
+            projection,
+        } => {
+            if !ctx.in_scope(&Some(*repo_id), branch) || scope_nonce.get() != active_scope_nonce {
+                return true;
+            }
+            ctx.set_diff.update(|current| {
+                if let Some(current) = current
+                    && current.accepts_result(request_id, *revision)
+                {
+                    current.install_projection(projection.clone());
+                }
+            });
+            true
+        }
+        ServerMessage::DiffProjectionError {
+            request_id,
+            revision,
+            repo_id,
+            branch,
+            scope_nonce,
+            error,
+        } => {
+            if !ctx.in_scope(&Some(*repo_id), branch) || scope_nonce.get() != active_scope_nonce {
+                return true;
+            }
+            if *revision == 0 {
+                if ctx.doc_diff_request_id.get_untracked().as_deref() == Some(request_id) {
+                    ctx.set_doc_diff_request_id.set(None);
+                }
+                if ctx.commit_diff_request_id.get_untracked().as_deref() == Some(request_id) {
+                    ctx.set_commit_diff_request_id.set(None);
+                }
+            }
+            ctx.set_diff.update(|current| {
+                if let Some(current) = current
+                    && current.accepts_error(request_id, *revision)
+                {
+                    current.install_error(error.clone());
+                }
+            });
             true
         }
         _ => false,

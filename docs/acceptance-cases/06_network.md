@@ -52,8 +52,8 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 12
-    - min_supported_packet_protocol_version_eq: 12
+    - versioned_packet_protocol_version_eq: 13
+    - min_supported_packet_protocol_version_eq: 13
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true

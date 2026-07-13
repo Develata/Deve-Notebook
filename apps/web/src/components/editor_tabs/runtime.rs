@@ -19,12 +19,13 @@ use super::{
 use crate::components::layout_context::EditorTabLimitControl;
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
-use crate::runtime::source_control_client::diff_session::DiffSessionWire;
+use crate::runtime::source_control_client::diff_session::{DiffProjectionStatus, DiffSessionWire};
 use crate::runtime::{
     document_client::DocumentClient, scope_client::ScopeClient,
     source_control_client::SourceControlClient,
 };
 use deve_core::models::DocId;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use leptos::prelude::*;
 
 pub(crate) struct EditorTabRuntime {
@@ -198,8 +199,12 @@ pub(crate) fn create_editor_tab_runtime(
             &inputs.editor,
             &inputs.scope,
             &inputs.source_control,
+            set_diff_tabs,
         ),
-        on_select_diff: Callback::new(move |session| set_diff_content.set(Some(session))),
+        on_select_diff: Callback::new(move |session| {
+            retire_active_diff(diff_content, set_diff_tabs);
+            set_diff_content.set(Some(session));
+        }),
         on_close_document: build_close_document_callback(
             &inputs.document,
             &inputs.editor,
@@ -265,6 +270,7 @@ fn build_select_document_callback(
     editor: &EditorContext,
     scope: &ScopeClient,
     source_control: &SourceControlClient,
+    set_diff_tabs: WriteSignal<Vec<EditorDiffTab>>,
 ) -> Callback<DocId> {
     let current_doc = document.current_doc;
     let current_repo_id = scope.current_repo_id;
@@ -273,10 +279,12 @@ fn build_select_document_callback(
     let set_pending_navigation = editor.set_pending_navigation;
     let set_current_doc = document.set_current_doc;
     let set_explicit_home = document.set_explicit_home;
+    let diff_content = source_control.diff_content;
     let set_diff_content = source_control.set_diff_content;
 
     Callback::new(move |doc_id| {
         let action = Callback::new(move |_| {
+            retire_active_diff(diff_content, set_diff_tabs);
             set_explicit_home.set(false);
             set_diff_content.set(None);
             set_current_doc.set(Some(doc_id));
@@ -295,4 +303,22 @@ fn build_select_document_callback(
             action,
         );
     })
+}
+
+fn retire_active_diff(
+    diff_content: ReadSignal<Option<DiffSessionWire>>,
+    set_diff_tabs: WriteSignal<Vec<EditorDiffTab>>,
+) {
+    let Some(mut active) = diff_content.get_untracked() else {
+        return;
+    };
+    if !matches!(
+        active.status,
+        DiffProjectionStatus::Debouncing { .. } | DiffProjectionStatus::Computing { .. }
+    ) {
+        return;
+    }
+    active.install_error(ServerError::new(ServerErrorCode::DiffComputeFailed));
+    let tab = diff_tab_from_session(active);
+    set_diff_tabs.update(|tabs| upsert_diff_tab(tabs, tab));
 }

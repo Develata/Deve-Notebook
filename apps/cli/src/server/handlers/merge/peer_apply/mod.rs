@@ -6,7 +6,7 @@
 use super::errors;
 use super::peer_support::resolve_doc_path;
 use crate::server::repo_scope::{ResolvedRepo, ensure_resolved_local_repo_writable};
-use crate::server::{AppState, channel::DualChannel};
+use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::ConflictHunk;
 use deve_core::ledger::merge::MergePreflight;
 use deve_core::models::{DocId, MergeResolution};
@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 pub(super) struct MergeConflictPayload {
     pub(super) doc_id: DocId,
-    pub(super) base: String,
     pub(super) local: String,
     pub(super) remote: String,
     pub(super) conflicts: Vec<ConflictHunk>,
@@ -91,6 +90,7 @@ pub(super) fn broadcast_merge_complete(
 pub(super) fn send_merge_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &mut WsSession,
     path_scope: &ResolvedRepo,
     message_scope: &ResolvedRepo,
     payload: MergeConflictPayload,
@@ -105,49 +105,67 @@ pub(super) fn send_merge_conflict(
     ) else {
         return false;
     };
-    emit_merge_conflict(ch, message_scope, path, payload, scope_nonce);
+    emit_merge_conflict(
+        state,
+        ch,
+        session,
+        message_scope,
+        path,
+        payload,
+        scope_nonce,
+    );
     true
 }
 
 fn emit_merge_conflict(
+    state: &Arc<AppState>,
     ch: &DualChannel,
+    session: &mut WsSession,
     scope: &ResolvedRepo,
     path: String,
     payload: MergeConflictPayload,
     scope_nonce: Option<u64>,
 ) {
     tracing::warn!("Merge Conflict detected for doc {}", payload.doc_id);
-    ch.unicast(ServerMessage::MergeConflict {
-        repo_id: Some(scope.repo_id),
-        branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id: payload.doc_id,
-        path: path.clone(),
-        current_content: payload.local.clone(),
-        incoming_content: payload.remote.clone(),
-        result_content: payload.base,
-        actions: vec![
-            MergeConflictAction::AcceptCurrent,
-            MergeConflictAction::AcceptIncoming,
-            MergeConflictAction::AcceptBoth,
-        ],
-        conflicts: payload.conflicts,
-    });
-    ch.unicast(ServerMessage::DocDiff {
-        request_id: None,
-        repo_id: Some(scope.repo_id),
-        branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id: Some(payload.doc_id),
-        path,
-        old_content: payload.local,
-        new_content: payload.remote,
-    });
+    let actions = vec![
+        MergeConflictAction::AcceptCurrent,
+        MergeConflictAction::AcceptIncoming,
+        MergeConflictAction::AcceptBoth,
+    ];
+    let request_id = format!("merge-{}", payload.doc_id);
+    let result_content = default_accept_both(&payload.local, &payload.remote);
+    let ticket = session.diff_projection_jobs.begin_fixed(
+        request_id,
+        scope.repo_id,
+        scope.branch.clone(),
+        deve_core::protocol::ScopeNonce::new(scope_nonce.unwrap_or_default()),
+    );
+    state.diff_projection_executor().spawn(
+        ticket,
+        payload.local,
+        payload.remote,
+        crate::server::diff_projection::DiffJobResponse::Merge {
+            doc_id: payload.doc_id,
+            path,
+            result_content,
+            actions,
+            conflicts: payload.conflicts,
+        },
+        ch.clone(),
+    );
     errors::storage_conflict(
         ch,
-        "Merge Conflict detected. Showing Diff View.",
+        "Merge Conflict detected. Computing Diff View.",
         scope_nonce,
     );
+}
+
+pub(super) fn default_accept_both(current: &str, incoming: &str) -> String {
+    if current.is_empty() || incoming.is_empty() || current.ends_with('\n') {
+        format!("{current}{incoming}")
+    } else {
+        format!("{current}\n{incoming}")
+    }
 }
 
 #[cfg(test)]

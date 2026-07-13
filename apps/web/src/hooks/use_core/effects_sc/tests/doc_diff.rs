@@ -2,6 +2,7 @@ use super::*;
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::effects_sc::{ScMessageContext, handle_sc_message};
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::runtime::source_control_client::diff_session::DiffProjectionStatus;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::DocId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
@@ -49,17 +50,12 @@ fn dispatch_doc_diff_from_repo(
     let (degraded, _set_degraded) = signal(None::<DegradedSyncMode>);
     let (sync_banner, set_sync_banner) = signal(None::<String>);
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("doc-req-1".to_string()));
-    let (diff, set_diff) = signal(Some(DiffSessionWire {
-        doc_id: None,
-        path: "stale.md".into(),
-        display_path: "stale.md".into(),
-        old_content: "stale-old".into(),
-        new_content: "stale-new".into(),
-        merge_conflict: None,
-        opened_at_ms: 1,
-    }));
+    let (diff, set_diff) = signal(Some(
+        DiffSessionWire::loading("stale.md".into(), "stale.md".into())
+            .with_pending_request("doc-req-1".into()),
+    ));
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
-    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
+    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiffSummary>::new());
     let (notice, set_notice) = signal(Some(SourceControlNotice {
         code: ServerErrorCode::ScDocNotFound,
         detail: Some("previous error".into()),
@@ -116,8 +112,7 @@ fn dispatch_doc_diff_from_repo(
             scope_nonce: message_scope_nonce,
             doc_id: Some(doc_id),
             path: "notes/a.md".into(),
-            old_content: "old".into(),
-            new_content: "new".into(),
+            projection: test_projection("old", "new"),
         },
         &ctx,
     );
@@ -141,8 +136,8 @@ fn assert_stale_doc_diff_preserved(result: DocDiffDispatchResult) {
     assert_eq!(result.request_id.as_deref(), Some("doc-req-1"));
     let diff = result.diff.expect("stale diff");
     assert_eq!(diff.path, "stale.md");
-    assert_eq!(diff.old_content, "stale-old");
-    assert_eq!(diff.new_content, "stale-new");
+    assert!(diff.projection.is_none());
+    assert!(matches!(diff.status, DiffProjectionStatus::Loading));
     assert!(result.notice.is_some());
 }
 
@@ -157,8 +152,9 @@ fn doc_diff_dispatch_accepts_remote_branch_scope() {
     assert_eq!(result.notice, None);
     let diff = result.diff.expect("doc diff");
     assert_eq!(diff.path, "notes/a.md");
-    assert_eq!(diff.old_content, "old");
-    assert_eq!(diff.new_content, "new");
+    let projection = diff.projection.expect("doc projection");
+    assert_eq!(projection.base_content, "old");
+    assert_eq!(projection.target_content, "new");
     assert!(diff.doc_id.is_some());
 }
 

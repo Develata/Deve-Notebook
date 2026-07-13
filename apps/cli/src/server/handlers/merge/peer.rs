@@ -57,7 +57,7 @@ pub(super) async fn handle_merge_peer(
         Ok(MergeEvaluation {
             result:
                 MergeResult::Conflict {
-                    base,
+                    base: _,
                     local,
                     remote,
                     conflicts,
@@ -76,11 +76,11 @@ pub(super) async fn handle_merge_peer(
             let emitted = send_merge_conflict(
                 state,
                 ch,
+                session,
                 &local_scope,
                 &local_scope,
                 MergeConflictPayload {
                     doc_id,
-                    base,
                     local,
                     remote,
                     conflicts,

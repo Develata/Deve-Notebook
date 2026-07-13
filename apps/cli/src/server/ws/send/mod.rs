@@ -16,11 +16,17 @@ use tokio::sync::{broadcast, mpsc};
 ///
 /// 目标：为慢客户端提供背压，避免无界内存增长。
 pub(crate) const UNICAST_CAPACITY: usize = 256;
+pub(crate) const DIFF_UNICAST_CAPACITY: usize = 1;
 
 /// 创建有界单播通道。
 pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Receiver<ServerMessage>)
 {
     mpsc::channel(UNICAST_CAPACITY)
+}
+
+pub(crate) fn new_diff_unicast_channel()
+-> (mpsc::Sender<ServerMessage>, mpsc::Receiver<ServerMessage>) {
+    mpsc::channel(DIFF_UNICAST_CAPACITY)
 }
 
 /// 启动单播发送任务：将单播队列中的消息写入 WebSocket。
@@ -30,13 +36,15 @@ pub(crate) fn new_unicast_channel() -> (mpsc::Sender<ServerMessage>, mpsc::Recei
 pub(crate) fn spawn_unicast_sender_task(
     sender: futures::stream::SplitSink<WebSocket, Message>,
     rx: mpsc::Receiver<ServerMessage>,
+    diff_rx: mpsc::Receiver<ServerMessage>,
 ) -> tokio::task::JoinHandle<()> {
-    spawn_unicast_sender_task_with_encoder(sender, rx, encode_server_message)
+    spawn_unicast_sender_task_with_encoder(sender, rx, diff_rx, encode_server_message)
 }
 
 fn spawn_unicast_sender_task_with_encoder<S, E>(
     mut sender: S,
     mut rx: mpsc::Receiver<ServerMessage>,
+    mut diff_rx: mpsc::Receiver<ServerMessage>,
     encode: E,
 ) -> tokio::task::JoinHandle<()>
 where
@@ -45,7 +53,24 @@ where
     E: Fn(&ServerMessage) -> Result<Vec<u8>, String> + Send + 'static,
 {
     tokio::spawn(async move {
-        while let Some(msg) = rx.recv().await {
+        let mut regular_open = true;
+        let mut diff_open = true;
+        while regular_open || diff_open {
+            let msg = tokio::select! {
+                biased;
+                msg = diff_rx.recv(), if diff_open => {
+                    match msg {
+                        Some(msg) => msg,
+                        None => { diff_open = false; continue; }
+                    }
+                }
+                msg = rx.recv(), if regular_open => {
+                    match msg {
+                        Some(msg) => msg,
+                        None => { regular_open = false; continue; }
+                    }
+                }
+            };
             let bytes = match encode(&msg) {
                 Ok(bytes) => bytes,
                 Err(err) => {

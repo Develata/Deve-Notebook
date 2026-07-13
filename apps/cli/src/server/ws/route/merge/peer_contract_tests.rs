@@ -276,7 +276,7 @@ async fn assert_resolve_merge_conflict_strategy(case: ResolveStrategyCase) -> an
             path: "notes/conflict.md",
             current_content: "local",
             incoming_content: "remote",
-            result_content: "base",
+            result_content: "local\nremote",
             start_line: 0,
             length: 1,
             local_lines: &["local"],

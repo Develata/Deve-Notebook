@@ -23,6 +23,7 @@ pub struct DualChannel {
     pub broadcast: broadcast::Sender<ServerMessage>,
     /// 单播通道 - 单客户端响应
     pub unicast: mpsc::Sender<ServerMessage>,
+    diff_unicast: mpsc::Sender<ServerMessage>,
 }
 
 impl DualChannel {
@@ -31,7 +32,24 @@ impl DualChannel {
         broadcast: broadcast::Sender<ServerMessage>,
         unicast: mpsc::Sender<ServerMessage>,
     ) -> Self {
-        Self { broadcast, unicast }
+        Self {
+            broadcast,
+            diff_unicast: unicast.clone(),
+            unicast,
+        }
+    }
+
+    /// Creates a channel with a dedicated one-slot path for large typed diff payloads.
+    pub(crate) fn with_diff_channel(
+        broadcast: broadcast::Sender<ServerMessage>,
+        unicast: mpsc::Sender<ServerMessage>,
+        diff_unicast: mpsc::Sender<ServerMessage>,
+    ) -> Self {
+        Self {
+            broadcast,
+            unicast,
+            diff_unicast,
+        }
     }
 
     /// 广播消息 (全局事件)
@@ -42,6 +60,14 @@ impl DualChannel {
     /// 单播消息 (单客户端响应)
     pub fn unicast(&self, msg: ServerMessage) {
         send_unicast(&self.unicast, msg);
+    }
+
+    pub(crate) fn diff_unicast_sender(&self) -> mpsc::Sender<ServerMessage> {
+        self.diff_unicast.clone()
+    }
+
+    pub(crate) async fn diff_unicast(&self, message: ServerMessage) -> bool {
+        self.diff_unicast.send(message).await.is_ok()
     }
 
     pub fn send_protocol_error(&self, error: ServerError) {

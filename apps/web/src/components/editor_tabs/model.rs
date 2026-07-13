@@ -51,7 +51,7 @@ pub(crate) struct EditorDiffTab {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum EditorTabItem {
     Document(EditorDocumentTab),
-    Diff(EditorDiffTab),
+    Diff(Box<EditorDiffTab>),
 }
 
 impl EditorTabItem {

@@ -4,8 +4,8 @@
 //! WebSocket outbound delivery regression coverage.
 
 use super::{
-    BroadcastFilter, encode_server_message, new_unicast_channel, spawn_broadcast_forwarder,
-    spawn_unicast_sender_task_with_encoder,
+    BroadcastFilter, encode_server_message, new_diff_unicast_channel, new_unicast_channel,
+    spawn_broadcast_forwarder, spawn_unicast_sender_task_with_encoder,
 };
 use crate::server::session::WsSession;
 use axum::extract::ws::Message;
@@ -218,8 +218,9 @@ async fn lagged_broadcasts_surface_protocol_error() {
 async fn serialization_failures_close_unicast_sender_task() {
     let (sink, mut stream) = futures::channel::mpsc::channel::<Message>(1);
     let (unicast_tx, unicast_rx) = new_unicast_channel();
+    let (_diff_tx, diff_rx) = new_diff_unicast_channel();
 
-    spawn_unicast_sender_task_with_encoder(sink, unicast_rx, |_| {
+    spawn_unicast_sender_task_with_encoder(sink, unicast_rx, diff_rx, |_| {
         Err("synthetic serialization failure".into())
     });
 
@@ -240,4 +241,15 @@ async fn serialization_failures_close_unicast_sender_task() {
         next.is_none(),
         "sender task must close sink after encode failure"
     );
+}
+
+#[test]
+fn diff_unicast_channel_has_exactly_one_waiting_slot() {
+    let (tx, mut rx) = new_diff_unicast_channel();
+    tx.try_send(ServerMessage::Pong).expect("first diff slot");
+    assert!(matches!(
+        tx.try_send(ServerMessage::Pong),
+        Err(tokio::sync::mpsc::error::TrySendError::Full(_))
+    ));
+    assert!(matches!(rx.try_recv(), Ok(ServerMessage::Pong)));
 }

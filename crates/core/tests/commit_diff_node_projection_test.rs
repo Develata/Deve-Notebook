@@ -214,6 +214,49 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
 }
 
 #[test]
+fn commit_file_diff_target_mismatch_fails_closed() {
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "v1");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("v1"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed initial add");
+    repo.stage_pending("notes/a.md").expect("stage first");
+    repo.apply_external_changes().expect("apply external first");
+    let commit = repo
+        .commit_source_control_changes("first")
+        .expect("commit first");
+
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        let mut target =
+            deve_core::source_control::commit_diff::compare_commit_summaries(db, None, &commit.id)?
+                .into_iter()
+                .next()
+                .expect("one summary")
+                .target;
+        target.path = "notes/other.md".into();
+        let error = deve_core::source_control::commit_diff::compare_commit_file_exact(
+            db, None, &commit.id, &target,
+        )
+        .expect_err("mutated exact target must fail closed");
+        anyhow::ensure!(error.to_string().contains("target no longer matches"));
+        Ok(())
+    })
+    .expect("target mismatch");
+}
+
+#[test]
 fn commit_diff_rejects_reversed_commit_order() {
     let (_dir, repo) = new_repo();
     write_workspace_file(&repo, "notes/a.md", "v1");

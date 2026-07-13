@@ -60,9 +60,6 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::UnstageAck { .. }
             | ServerMessage::DiscardAck { .. }
             | ServerMessage::CommitHistory { .. }
-            | ServerMessage::DocDiff { .. }
-            | ServerMessage::MergeConflict { .. }
-            | ServerMessage::CommitDiffResult { .. }
             | ServerMessage::ConflictResolved { .. }
     )
 }

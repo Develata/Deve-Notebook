@@ -176,6 +176,9 @@ pub struct WsSession {
     /// - 60 秒窗口内最多允许 200 条客户端消息。
     pub message_window_started_at: Instant,
     pub message_count_in_window: u16,
+
+    /// Cancellation and stale-result gate for the one active diff projection job.
+    pub(crate) diff_projection_jobs: crate::server::diff_projection::DiffJobGate,
 }
 
 mod rate_limit;
@@ -204,6 +207,7 @@ impl Default for WsSession {
             pending_merge_conflict: None,
             message_window_started_at: Instant::now(),
             message_count_in_window: 0,
+            diff_projection_jobs: crate::server::diff_projection::DiffJobGate::new(),
         }
     }
 }

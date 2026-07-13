@@ -72,6 +72,13 @@
 - Graph 数据面是只读 projection，不写 ledger、workspace、search index 或 source-control state。
 - Web 只验收 repo-scoped nodes / edges / unresolved counts，以及 loading / failed / empty / local-only fallback。
 - 本功能篇不承诺高性能 Web graph renderer、force simulation、Canvas layout、d3-force/Pixi renderer 或 graph interaction state。
+- Diff 行、word highlight、hunk、3/5/8 context fold 与增删统计由后端统一计算；Web
+  只渲染 typed projection。计算中显示 loading；资源超限或计算失败显示可诊断的
+  unavailable 状态，并保留 merge draft，不得退回浏览器本地算法。
+- History 首先显示 commit 文件元数据；用户点击某个文件后才按需加载该文件的 typed
+  projection。精确 target 已过期或与 commit 不匹配时显示结构化错误，不打开错误文件。
+- merge draft 继续 150 ms debounce，但每次只向后端提交递增 revision；旧 revision 的
+  结果不得替换当前草稿预览。
 
 ### 4. Merge / Conflict
 
@@ -271,3 +278,23 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - Stage 与 Apply to Ledger 禁用。
 - Open Diff 可用。
 - Discard External Change 可用，并恢复投影文件到当前 ledger projection。
+
+### DIFF-FEAT-06: Typed projection、按需 commit diff 与 stale draft
+
+前置条件：
+
+- 当前 repo 有普通变更、至少两个 commit，并可打开 merge draft。
+
+步骤：
+
+1. 打开普通 diff，切换 split/unified 与 context 3/5/8，展开一个 fold 并用 hunk 导航。
+2. 打开 history，确认先出现文件列表，再点击一个 rename/modified 文件。
+3. 在 merge draft 中快速连续输入，使旧 revision 晚于新 revision 返回。
+4. 打开超过后端预算的 diff fixture。
+
+期望结果：
+
+- 普通 diff、External Changes、history 与 merge 共用一致的 typed projection renderer。
+- history 只在点击文件后加载正文；rename 元数据与显示路径正确。
+- 当前草稿只展示最新 revision；旧结果不闪回。
+- 超限显示本地化资源限制错误，正文不出现在错误详情，页面不回退客户端计算。

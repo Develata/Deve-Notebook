@@ -18,7 +18,9 @@ use crate::models::DocId;
 use crate::source_control::commit_diff_error::{CommitDiffError, CommitDiffResult};
 use crate::source_control::commit_diff_paths;
 use crate::source_control::commits::COMMITS_TABLE;
-use crate::source_control::types::{ChangeStatus, CommitFileDiff};
+use crate::source_control::types::{
+    ChangeStatus, CommitFileDiff, CommitFileDiffSummary, CommitFileDiffTarget,
+};
 use crate::state::reconstruct_content;
 use anyhow::Result;
 use redb::Database;
@@ -39,6 +41,51 @@ pub fn compare_commits(
     compare_commits_checked(db, commit_a_id, commit_b_id).map_err(Into::into)
 }
 
+/// Build body-free summaries for browser history without retaining every file body.
+pub fn compare_commit_summaries(
+    db: &Database,
+    commit_a_id: Option<&str>,
+    commit_b_id: &str,
+) -> Result<Vec<CommitFileDiffSummary>> {
+    let seq_a = resolve_seq(db, commit_a_id)?;
+    let seq_b = load_commit(db, commit_b_id)?.ledger_seq;
+    let context = compare_context(db, seq_a, seq_b)?;
+    let mut summaries = Vec::new();
+    for doc_id in &context.affected_docs {
+        if let Some(summary) = project_one(db, &context, *doc_id)?.map(|diff| summary_for(&diff)) {
+            summaries.push(summary);
+        }
+    }
+    summaries.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(summaries)
+}
+
+/// Reconstruct exactly one summary target and reject stale/path-only substitutions.
+pub fn compare_commit_file_exact(
+    db: &Database,
+    commit_a_id: Option<&str>,
+    commit_b_id: &str,
+    target: &CommitFileDiffTarget,
+) -> Result<CommitFileDiff> {
+    let seq_a = resolve_seq(db, commit_a_id)?;
+    let seq_b = load_commit(db, commit_b_id)?.ledger_seq;
+    let context = compare_context(db, seq_a, seq_b)?;
+    if !context.affected_docs.contains(&target.doc_id) {
+        return Err(CommitDiffError::TargetMismatch.into());
+    }
+    let diff = project_one(db, &context, target.doc_id)?.ok_or(CommitDiffError::TargetMismatch)?;
+    if (CommitFileDiffTarget {
+        doc_id: target.doc_id,
+        path: diff.path.clone(),
+        previous_path: diff.previous_path.clone(),
+        status: diff.status,
+    }) != *target
+    {
+        return Err(CommitDiffError::TargetMismatch.into());
+    }
+    Ok(diff)
+}
+
 pub(crate) fn compare_commits_checked(
     db: &Database,
     commit_a_id: Option<&str>,
@@ -54,10 +101,29 @@ pub(crate) fn compare_seq_range_checked(
     seq_a: u64,
     seq_b: u64,
 ) -> CommitDiffResult<Vec<CommitFileDiff>> {
+    let context = compare_context(db, seq_a, seq_b)?;
+    let mut diffs = Vec::new();
+    for doc_id in &context.affected_docs {
+        if let Some(diff) = project_one(db, &context, *doc_id)? {
+            diffs.push(diff);
+        }
+    }
+    diffs.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(diffs)
+}
+
+struct CompareContext {
+    seq_a: u64,
+    seq_b: u64,
+    path_map_a: HashMap<DocId, String>,
+    path_map_b: HashMap<DocId, String>,
+    affected_docs: HashSet<DocId>,
+}
+
+fn compare_context(db: &Database, seq_a: u64, seq_b: u64) -> CommitDiffResult<CompareContext> {
     if seq_a >= seq_b {
         return Err(CommitDiffError::InvalidOrder { seq_a, seq_b });
     }
-
     let range_start = seq_a + 1;
     let range_end = seq_b + 1;
     let ops_range =
@@ -70,48 +136,65 @@ pub(crate) fn compare_seq_range_checked(
         })?;
     let path_map_a = commit_diff_paths::doc_paths_at_seq(db, seq_a)?;
     let path_map_b = commit_diff_paths::doc_paths_at_seq(db, seq_b)?;
-    let mut affected_docs = collect_affected_docs(&ops_range, &path_map_a, &path_map_b);
+    let affected_docs = collect_affected_docs(&ops_range, &path_map_a, &path_map_b);
+    Ok(CompareContext {
+        seq_a,
+        seq_b,
+        path_map_a,
+        path_map_b,
+        affected_docs,
+    })
+}
 
-    for (_seq, entry) in &ops_range {
-        let Some(doc_id) = entry.doc_id else {
-            continue;
-        };
-        affected_docs.insert(doc_id);
+fn project_one(
+    db: &Database,
+    context: &CompareContext,
+    doc_id: DocId,
+) -> CommitDiffResult<Option<CommitFileDiff>> {
+    let old_path = context.path_map_a.get(&doc_id).cloned();
+    let new_path = context.path_map_b.get(&doc_id).cloned();
+    let old_content = reconstruct_at_seq(db, doc_id, context.seq_a)?;
+    let new_content = reconstruct_at_seq(db, doc_id, context.seq_b)?;
+    if old_content == new_content && old_path == new_path {
+        return Ok(None);
     }
-
-    let mut diffs = Vec::new();
-    for doc_id in affected_docs.drain() {
-        let old_path = path_map_a.get(&doc_id).cloned();
-        let new_path = path_map_b.get(&doc_id).cloned();
-        let old_content = reconstruct_at_seq(db, doc_id, seq_a)?;
-        let new_content = reconstruct_at_seq(db, doc_id, seq_b)?;
-        if old_content == new_content && old_path == new_path {
-            continue;
-        }
-        let Some(path) = new_path.clone().or(old_path.clone()) else {
-            return Err(CommitDiffError::LostProjectedPath {
-                doc_id,
-                seq_a,
-                seq_b,
-            });
-        };
-        let status = detect_status(
+    let Some(path) = new_path.clone().or(old_path.clone()) else {
+        return Err(CommitDiffError::LostProjectedPath {
+            doc_id,
+            seq_a: context.seq_a,
+            seq_b: context.seq_b,
+        });
+    };
+    Ok(Some(CommitFileDiff {
+        doc_id: Some(doc_id),
+        status: detect_status(
             old_path.as_deref(),
             new_path.as_deref(),
             &old_content,
             &new_content,
-        );
-        diffs.push(CommitFileDiff {
-            doc_id: Some(doc_id),
-            path,
-            status,
-            previous_path: (old_path != new_path).then_some(old_path).flatten(),
-            old_content,
-            new_content,
-        });
+        ),
+        path,
+        previous_path: (old_path != new_path).then_some(old_path).flatten(),
+        old_content,
+        new_content,
+    }))
+}
+
+fn summary_for(diff: &CommitFileDiff) -> CommitFileDiffSummary {
+    let doc_id = diff.doc_id.expect("commit diff projection is doc-backed");
+    let target = CommitFileDiffTarget {
+        doc_id,
+        path: diff.path.clone(),
+        previous_path: diff.previous_path.clone(),
+        status: diff.status,
+    };
+    CommitFileDiffSummary {
+        doc_id,
+        path: diff.path.clone(),
+        previous_path: diff.previous_path.clone(),
+        status: diff.status,
+        target,
     }
-    diffs.sort_by(|a, b| a.path.cmp(&b.path));
-    Ok(diffs)
 }
 
 pub(crate) fn compare_seq_range(

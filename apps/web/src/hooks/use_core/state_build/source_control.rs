@@ -1,7 +1,9 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
+use deve_core::source_control::{
+    ChangeEntry, CommitFileDiffSummary, CommitInfo, ConflictResolution,
+};
 use leptos::prelude::*;
 
 use super::super::callbacks_sc::SourceControlCallbacks;
@@ -29,8 +31,8 @@ pub(super) struct SourceControlStateSection {
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
-    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
-    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,

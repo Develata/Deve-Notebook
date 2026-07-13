@@ -104,7 +104,7 @@ pub(crate) fn ordered_editor_tab_items(
             }
             EditorTabKey::Diff(key) => {
                 if let Some(tab) = diff_tabs.iter().find(|tab| tab.key == *key) {
-                    items.push(EditorTabItem::Diff(tab.clone()));
+                    items.push(EditorTabItem::Diff(Box::new(tab.clone())));
                 }
             }
         }
@@ -118,7 +118,7 @@ pub(crate) fn ordered_editor_tab_items(
     for tab in diff_tabs {
         let key = EditorTabKey::Diff(tab.key.clone());
         if !order.contains(&key) {
-            items.push(EditorTabItem::Diff(tab.clone()));
+            items.push(EditorTabItem::Diff(Box::new(tab.clone())));
         }
     }
     items

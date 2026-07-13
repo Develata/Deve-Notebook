@@ -5,7 +5,7 @@
 //!
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::runtime::source_control_client::diff_session::DiffSessionWire;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
 use leptos::prelude::*;
 
 pub(crate) struct ScStateResetSignals {
@@ -18,11 +18,12 @@ pub(crate) struct ScStateResetSignals {
     pub set_doc_diff_request_id: WriteSignal<Option<String>>,
     pub set_diff: WriteSignal<Option<DiffSessionWire>>,
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
-    pub set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    pub set_commit_diff: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub set_notice: WriteSignal<Option<SourceControlNotice>>,
 }
 
 pub(crate) fn clear_repo_scoped_state(signals: ScStateResetSignals) {
+    crate::runtime::source_control_client::diff_cache::clear_projection_cache();
     signals.set_staged.set(Vec::new());
     signals.set_unstaged.set(Vec::new());
     signals.set_confirmed.set(Vec::new());

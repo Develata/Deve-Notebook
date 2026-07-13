@@ -7,11 +7,12 @@
 //! This adapter emits source-control typed intents for the active scope. Core
 //! and server remain the authority for staging, commit, and diff facts.
 
+pub mod diff_cache;
 pub mod diff_session;
 
 pub use diff_session::DiffSessionWire;
 
-use deve_core::source_control::CommitFileDiff;
+use deve_core::source_control::CommitFileDiffSummary;
 use deve_core::source_control::{ChangeEntry, CommitInfo, ConflictResolution};
 use leptos::prelude::*;
 
@@ -36,8 +37,8 @@ pub struct SourceControlClient {
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
-    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
-    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
     pub on_get_commit_diff: Callback<(Option<String>, String)>,
     pub on_commit_and_push: Callback<String>,

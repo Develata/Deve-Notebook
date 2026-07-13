@@ -12,8 +12,10 @@ use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
 use crate::security::EncryptedOp;
-use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use crate::source_control::diff_projection::DiffProjection;
+use crate::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RepoListEntry {
@@ -55,9 +57,11 @@ pub enum ServerMessage {
     UnstageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     CommitAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, commit_id: String, timestamp: i64 },
     CommitHistory { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, commits: Vec<CommitInfo> },
-    DocDiff { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, #[serde(default)] doc_id: Option<DocId>, path: String, old_content: String, new_content: String },
-    MergeConflict { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, path: String, current_content: String, incoming_content: String, result_content: String, actions: Vec<MergeConflictAction>, conflicts: Vec<ConflictHunk> },
-    CommitDiffResult { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, diffs: Vec<CommitFileDiff> },
+    DocDiff { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, #[serde(default)] doc_id: Option<DocId>, path: String, projection: Arc<DiffProjection> },
+    MergeConflict { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, path: String, projection: Arc<DiffProjection>, result_content: String, actions: Vec<MergeConflictAction>, conflicts: Vec<ConflictHunk> },
+    CommitDiffResult { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, files: Vec<CommitFileDiffSummary> },
+    DiffProjectionResult { request_id: String, revision: u64, repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, scope_nonce: ScopeNonce, projection: Arc<DiffProjection> },
+    DiffProjectionError { request_id: String, revision: u64, repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, scope_nonce: ScopeNonce, error: ServerError },
     DiscardAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     TreeUpdate { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, delta: crate::tree::TreeDelta },
     ProtocolError { error: ServerError, #[serde(default)] switch_nonce: Option<u64>, #[serde(default)] scope_nonce: Option<u64> },

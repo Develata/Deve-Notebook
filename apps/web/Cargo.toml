@@ -30,7 +30,6 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 getrandom_old = { package = "getrandom", version = "0.2", features = ["js"] }
 uuid.workspace = true
 sublime_fuzzy = "0.7.0"
-similar = "2.7.0"
 pulldown-cmark = "0.10"
 wasm-bindgen-futures = "0.4.64"
 

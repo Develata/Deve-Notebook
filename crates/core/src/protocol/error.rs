@@ -87,6 +87,10 @@ pub enum ServerErrorCode {
     PluginRuntimeError,
     #[serde(rename = "PLUGIN_SERIALIZATION_ERROR")]
     PluginSerializationError,
+    #[serde(rename = "DIFF_RESOURCE_LIMIT")]
+    DiffResourceLimit,
+    #[serde(rename = "DIFF_COMPUTE_FAILED")]
+    DiffComputeFailed,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,6 +189,8 @@ mod tests {
                 ServerErrorCode::PluginSerializationError,
                 "PLUGIN_SERIALIZATION_ERROR",
             ),
+            (ServerErrorCode::DiffResourceLimit, "DIFF_RESOURCE_LIMIT"),
+            (ServerErrorCode::DiffComputeFailed, "DIFF_COMPUTE_FAILED"),
         ];
 
         for (code, expected) in cases {

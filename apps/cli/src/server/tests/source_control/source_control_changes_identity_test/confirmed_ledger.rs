@@ -129,16 +129,15 @@ async fn confirmed_ledger_doc_diff_uses_commit_anchor_as_left_side() -> anyhow::
             scope_nonce,
             doc_id: actual_doc_id,
             path: actual_path,
-            old_content,
-            new_content,
+            projection,
             ..
         }) => {
             assert_eq!(request_id.as_deref(), Some("req-confirmed-diff"));
             assert_eq!(scope_nonce, Some(41));
             assert_eq!(actual_doc_id, Some(doc_id));
             assert_eq!(actual_path, path);
-            assert_eq!(old_content, "hello");
-            assert_eq!(new_content, "hello world");
+            assert_eq!(projection.base_content, "hello");
+            assert_eq!(projection.target_content, "hello world");
         }
         other => panic!("expected DocDiff, got {:?}", other),
     }

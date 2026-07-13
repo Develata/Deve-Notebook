@@ -55,4 +55,6 @@ pub(crate) enum CommitDiffError {
     StructureCycle { node_id: NodeId },
     #[error("Commit diff structure references missing node {node_id}")]
     StructureMissingNode { node_id: NodeId },
+    #[error("Commit file diff target no longer matches the requested comparison")]
+    TargetMismatch,
 }

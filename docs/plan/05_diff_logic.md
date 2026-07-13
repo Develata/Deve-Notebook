@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-13`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -196,6 +196,46 @@ RemoteProjectionCommand
   - `NodeId`
   - `DocId`
 - UI 中的 `path` 只是 selector/display，不得作为长期 merge identity。
+
+### 2.5 Typed Diff Projection Contract {#typed-diff-projection-contract}
+
+Diff 算法、replacement pairing、word range、hunk 与 fold 都属于 Core
+projection computation；Web 只渲染后端生成的不可变 typed projection，不得
+重新运行 Patience/Myers、推断 hunk/fold，或在失败时回退客户端算法。
+
+`DiffProjection` 必须只保存一次 `base_content` / `target_content`，并通过
+`DiffCellProjection.byte_range` 引用正文，避免为每个 row 复制行文本。投影至少携带：
+
+- opaque `projection_id`、`DiffAlgorithm::{Myers, PatienceMyers}`、计算耗时；
+- canonical `DiffRowProjection`，其中 `row_id` 从 0 开始、左右 cell 可独立为空；
+- cell 的可选 1-based 行号、相对正文的 UTF-8 byte 半开区间、相对 cell 文本的
+  UTF-16 word highlight 半开区间与 `Context/Add/Delete/Empty` kind；
+- canonical row 半开区间的 hunk、old/new 1-based 行范围；
+- `context_lines = 3/5/8` 的后端 fold ranges，包含稳定 fold id；
+- added/deleted 统计。
+
+输入必须按整个文档计算，不得重新引入固定 300 行分块的语义边界。base 与 target
+UTF-8 合计不得超过 8 MiB，总行数不得超过 100,000；最终协议编码不得超过现有
+16 MiB WS frame。超限或计算失败必须使用 `13_i18n` 的结构化 `DIFF_*` 错误，
+错误详情不得包含正文。Core 计算使用单次 5 秒 wall-clock budget；底层算法 deadline
+只能用于终止病理输入，deadline 到达后的近似结果 **MUST NOT** 发布。行数上限必须在
+分配完整行索引前无分配计数并 fail-fast。
+
+Commit compare 的列表请求只返回 `CommitFileDiffSummary` 元数据和精确
+`CommitFileDiffTarget`。用户选择文件后，服务端必须重新验证 commit A/B 与 target
+的 `doc_id/path/previous_path/status` 完全一致，再重建该文件并计算 projection；任一
+字段不匹配必须 fail-closed。Core/HTTP/plugin 的原始 `CommitFileDiff` 查询可以继续
+作为非浏览器内部接口，但 Web WS 不得一次传输整个提交的所有正文。
+
+可编辑 merge draft 只能发送 base/draft 内容与递增 revision 作为只读计算 intent；
+projection 不授予写入 authority。服务端必须在 session/scope/revision 再验证后发布
+结果，旧 revision 结果静默丢弃。repo/branch/scope 切换或连接关闭必须取消该 session
+的活跃计算。同一 session 的计算必须串行，最新请求最多保留一个等待槽；大型 typed
+projection 必须通过独立的一槽有界出站通道交给 WS sender，不得进入通用 must-deliver
+无界等待任务。
+
+`MergeConflict.result_content` 是后端生成的安全初始 merge draft，不得使用共同祖先正文
+冒充合并结果。Web 可以编辑该 draft，但不得自行推导 AcceptBoth 内容。
 
 ## 3. State Machines
 

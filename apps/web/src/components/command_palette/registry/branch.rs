@@ -48,7 +48,9 @@ mod tests {
     use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
     use crate::runtime::source_control_client::diff_session::DiffSessionWire;
     use deve_core::models::PeerId;
-    use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
+    use deve_core::source_control::{
+        ChangeEntry, CommitFileDiffSummary, CommitInfo, ConflictResolution,
+    };
     use leptos::prelude::{
         Callback, GetUntracked, ReadSignal, Set, Signal, WriteSignal, provide_context, signal,
         use_context,
@@ -70,7 +72,8 @@ mod tests {
         let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
         let (source_control_authority, _) = signal("unknown".to_string());
         let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
-        let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
+        let (commit_diff_result, set_commit_diff_result) =
+            signal(Vec::<CommitFileDiffSummary>::new());
         let clear_notice = Callback::new(move |_| set_notice.set(None));
 
         provide_context(SourceControlContext {

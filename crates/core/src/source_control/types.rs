@@ -122,3 +122,24 @@ pub struct CommitFileDiff {
     /// 新版本内容 (commit_b 时刻)
     pub new_content: String,
 }
+
+/// Exact identity used to re-open one file from a commit comparison.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommitFileDiffTarget {
+    pub doc_id: DocId,
+    pub path: String,
+    #[serde(default)]
+    pub previous_path: Option<String>,
+    pub status: ChangeStatus,
+}
+
+/// Body-free commit comparison row used by Web history.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommitFileDiffSummary {
+    pub doc_id: DocId,
+    pub path: String,
+    #[serde(default)]
+    pub previous_path: Option<String>,
+    pub status: ChangeStatus,
+    pub target: CommitFileDiffTarget,
+}

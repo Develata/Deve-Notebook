@@ -5,6 +5,8 @@
 //! Shared AppState and tree runtime assembly.
 
 #[cfg(not(test))]
+use crate::server::diff_projection::DiffProjectionExecutor;
+#[cfg(not(test))]
 use crate::server::source_control_grants::SourceControlWriteGrants;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
 use deve_core::ledger::RepoManager;
@@ -47,6 +49,8 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         #[cfg(feature = "search")]
         search_available: parts.search_available,
         identity_key: parts.identity_key,
+        #[cfg(not(test))]
+        diff_projection_executor: Arc::new(DiffProjectionExecutor::new()),
         #[cfg(not(test))]
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
     })

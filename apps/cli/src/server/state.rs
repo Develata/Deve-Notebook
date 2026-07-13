@@ -3,6 +3,7 @@
 //!
 //! Shared Axum/WebSocket runtime state.
 
+use super::diff_projection::DiffProjectionExecutor;
 use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
 use super::tree_state::RepoTreeRegistry;
@@ -25,10 +26,35 @@ pub struct AppState {
     pub search_available: bool,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
     #[cfg(not(test))]
+    pub(crate) diff_projection_executor: Arc<DiffProjectionExecutor>,
+    #[cfg(not(test))]
     pub(crate) source_control_write_grants: Arc<SourceControlWriteGrants>,
 }
 
 impl AppState {
+    #[cfg(not(test))]
+    pub(crate) fn diff_projection_executor(&self) -> Arc<DiffProjectionExecutor> {
+        self.diff_projection_executor.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn diff_projection_executor(&self) -> Arc<DiffProjectionExecutor> {
+        use std::collections::HashMap;
+        use std::sync::{Mutex, OnceLock};
+
+        static TEST_EXECUTORS: OnceLock<Mutex<HashMap<usize, Arc<DiffProjectionExecutor>>>> =
+            OnceLock::new();
+        let key = self as *const Self as usize;
+        let stores = TEST_EXECUTORS.get_or_init(|| Mutex::new(HashMap::new()));
+        let Ok(mut stores) = stores.lock() else {
+            return Arc::new(DiffProjectionExecutor::new());
+        };
+        stores
+            .entry(key)
+            .or_insert_with(|| Arc::new(DiffProjectionExecutor::new()))
+            .clone()
+    }
+
     pub(crate) fn revoke_source_control_write_grant_for_session(&self, session: &WsSession) {
         if let Some(auth_session_id) = session.auth_session_id() {
             self.source_control_write_grants()

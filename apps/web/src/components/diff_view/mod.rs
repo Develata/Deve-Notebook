@@ -1,42 +1,32 @@
+//! Backend-projected diff renderer.
 //! plan_ref:
-//!   - 05_diff_logic#source-control-runtime
-//!   - 11_ui_design/01_web#web-layout-persistence
-//!
-mod anchor;
-mod body;
-mod cache;
-mod conflict_actions;
-mod fold;
-mod fold_controls;
-pub mod header;
-mod lifecycle;
-mod line_render;
-mod metrics;
-pub mod model;
-mod navigation;
-mod split_columns;
-mod split_pane;
-mod state;
-mod title;
-pub mod unified;
-mod unified_pane;
-mod viewport;
+//!   - 05_diff_logic#typed-diff-projection-contract
+//!   - 10_rendering#large-document-runtime
 
-use self::body::{DiffBody, DiffBodyDeps};
-use self::conflict_actions::{MergeConflictActions, accept_both_content};
-use self::header::DiffHeader;
-use self::lifecycle::{setup_anchor_effects, setup_shortcuts};
-use self::model::hunk_fold::build_folded_rows;
-use self::model::split_fold::build_folded_split_rows;
-use self::navigation::create_hunk_nav;
-use self::state::create_compute_state;
+mod conflict_actions;
+mod projection;
+mod projection_model;
+mod projection_row;
+mod projection_text;
+mod surface;
+mod title;
+
+use self::conflict_actions::MergeConflictActions;
+use self::surface::ProjectionSurface;
 use self::title::diff_title;
-use self::viewport::create_unified_viewport;
-use crate::i18n::Locale;
-use deve_core::protocol::MergeConflictAction;
-use fold::create_fold_state;
-use leptos::html;
+use crate::components::icons::X;
+use crate::i18n::{Locale, t};
+use crate::runtime::source_control_client::diff_session::{
+    DiffProjectionIntent, DiffProjectionStatus, DiffSessionWire, next_diff_revision,
+};
+use deve_core::protocol::{MergeConflictAction, ServerError, ServerErrorCode};
+use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
+const DIFF_CLOSE_BUTTON_CLASS: &str = "diff-close-button min-h-11 min-w-11 rounded p-1 text-[var(--diff-muted)] hover:bg-[var(--diff-btn-hover)]";
 
 pub(crate) fn diff_view_class(mobile: bool) -> &'static str {
     if mobile {
@@ -48,126 +38,195 @@ pub(crate) fn diff_view_class(mobile: bool) -> &'static str {
 
 #[component]
 pub fn DiffView(
-    repo_scope: String,
-    path: String,
-    display_path: String,
-    old_content: String,
-    new_content: String,
+    session: DiffSessionWire,
     #[prop(default = false)] is_readonly: bool,
     #[prop(default = false)] force_unified: bool,
     #[prop(default = false)] mobile: bool,
-    merge_conflict: Option<
-        crate::runtime::source_control_client::diff_session::MergeConflictSession,
-    >,
+    on_compute_projection: Option<Callback<DiffProjectionIntent>>,
+    on_persist_draft: Option<Callback<String>>,
     on_resolve_merge_conflict: Option<Callback<(MergeConflictAction, Option<String>)>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let filename = diff_title(&path, &display_path);
-    let default_accept_both_content = accept_both_content(&old_content, &new_content);
+    let filename = diff_title(&session.path, &session.display_path);
+    let projection = session.projection.clone();
+    let initial_draft = session
+        .draft_content
+        .clone()
+        .or_else(|| projection.as_ref().map(|p| p.target_content.clone()))
+        .unwrap_or_default();
+    let (is_editing, set_is_editing) = signal(false);
+    let (draft, set_draft) = signal(initial_draft);
+    let (status, set_status) = signal(session.status.clone());
+    let initial_revision = session.latest_revision;
+    let debounce_timer: Rc<RefCell<Option<Timeout>>> = Rc::new(RefCell::new(None));
 
-    let compute = create_compute_state(
-        repo_scope,
-        path.clone(),
-        if force_unified { "unified" } else { "split" },
-        5,
-        old_content,
-        new_content,
-    );
-    let left_ref = NodeRef::<html::Div>::new();
-    let right_ref = NodeRef::<html::Div>::new();
-    let (syncing_left, set_syncing_left) = signal(false);
-    let (syncing_right, set_syncing_right) = signal(false);
-    let fold_state = create_fold_state();
-    Effect::new(move |_| {
-        let _ = compute.unified_lines.get();
-        fold_state.clear_expanded.run(());
-    });
-    let folded_rows = Memo::new(move |_| {
-        build_folded_rows(
-            &compute.unified_lines.get(),
-            fold_state.context_lines.get(),
-            fold_state.folding_enabled.get(),
-            &fold_state.expanded_folds.get(),
-        )
-    });
-    let split_rows = Memo::new(move |_| {
-        let (left, right) = compute.diff_result.get();
-        build_folded_split_rows(
-            &left,
-            &right,
-            fold_state.context_lines.get(),
-            fold_state.folding_enabled.get(),
-            &fold_state.expanded_folds.get(),
-        )
-    });
-    let viewport = create_unified_viewport(folded_rows);
-    let nav = create_hunk_nav(
-        compute.unified_lines,
-        force_unified,
-        viewport.unified_ref,
-        left_ref,
-        right_ref,
-    );
+    let submit = {
+        let projection = projection.clone();
+        move |target_content: String| {
+            let next_revision = next_diff_revision();
+            let request_id = uuid::Uuid::new_v4().to_string();
+            let intent = DiffProjectionIntent {
+                request_id: request_id.clone(),
+                revision: next_revision,
+                base_content: projection
+                    .as_ref()
+                    .map(|projection| projection.base_content.clone())
+                    .unwrap_or_default(),
+                target_content,
+            };
+            if let Some(on_compute) = on_compute_projection {
+                set_status.set(DiffProjectionStatus::Computing {
+                    request_id,
+                    revision: next_revision,
+                });
+                on_compute.run(intent);
+            } else {
+                set_status.set(DiffProjectionStatus::Unavailable(ServerError::new(
+                    ServerErrorCode::DiffComputeFailed,
+                )));
+            }
+        }
+    };
+    let submit = StoredValue::new(submit);
+    {
+        let debounce_timer = debounce_timer.clone();
+        let seen = Rc::new(RefCell::new(false));
+        Effect::new(move |_| {
+            let content = draft.get();
+            if !*seen.borrow() {
+                *seen.borrow_mut() = true;
+                return;
+            }
+            let pending_revision = initial_revision.saturating_add(1);
+            set_status.set(DiffProjectionStatus::Debouncing {
+                revision: pending_revision,
+            });
+            if let Some(timer) = debounce_timer.borrow_mut().take() {
+                timer.cancel();
+            }
+            let timer = Timeout::new(DIFF_EDIT_DEBOUNCE_MS, move || {
+                submit.with_value(|submit| submit(content));
+            });
+            *debounce_timer.borrow_mut() = Some(timer);
+        });
+    }
 
-    let fold_for_controls = fold_state.clone();
-    let fold_for_render = fold_state.clone();
-    let cache_hit = Signal::derive(move || compute.metrics.cache_hit.get());
-    let cache_hit_ratio = Signal::derive(move || compute.metrics.cache_hit_ratio.get());
-    let compute_ms = Signal::derive(move || compute.metrics.last_compute_ms.get());
-    let algorithm = Signal::derive(move || compute.metrics.algorithm.get());
-    setup_anchor_effects(
-        force_unified,
-        compute.compute_state,
-        viewport.unified_ref,
-        left_ref,
-    );
-    setup_shortcuts(on_close, nav.on_prev_hunk, nav.on_next_hunk);
-    let content_signal = compute.content;
-    let resolved_content = Signal::derive(move || content_signal.get());
+    let retry = (projection.is_some() && on_compute_projection.is_some()).then(|| {
+        Callback::new(move |_| {
+            submit.with_value(|submit| submit(draft.get_untracked()));
+        })
+    });
+    let added = projection.as_ref().map_or(0, |p| p.added_lines);
+    let deleted = projection.as_ref().map_or(0, |p| p.deleted_lines);
+    let algorithm = projection.as_ref().map(|p| match p.algorithm {
+        deve_core::source_control::diff_projection::DiffAlgorithm::Myers => "Myers".to_string(),
+        deve_core::source_control::diff_projection::DiffAlgorithm::PatienceMyers => {
+            "Patience+Myers".to_string()
+        }
+    });
+    let compute_ms = projection.as_ref().map_or(0, |p| {
+        p.compute_micros.div_ceil(1000).min(u32::MAX as u64) as u32
+    });
+    let merge_conflict = session.merge_conflict.clone();
 
     view! {
-        <div class=move || diff_view_class(mobile)>
-            <DiffHeader mobile=mobile filename=filename is_readonly=is_readonly is_editing=compute.is_editing hunk_index_text=nav.hunk_index_text has_hunks=nav.has_hunks added_count=nav.added_count deleted_count=nav.deleted_count cache_hit=cache_hit cache_hit_ratio=cache_hit_ratio compute_ms=compute_ms algorithm=algorithm on_prev_hunk=nav.on_prev_hunk on_next_hunk=nav.on_next_hunk toggle_edit=Callback::new(move |_| compute.set_is_editing.update(|v| *v = !*v)) on_close=on_close />
+        <div class=move || diff_view_class(mobile) data-deve-diff-projection="typed-v13">
+            <div class=move || if mobile {
+                "flex-none border-b border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-3 py-2"
+            } else {
+                "flex-none h-10 border-b border-[var(--diff-border)] flex items-center justify-between px-4 bg-[var(--diff-header-bg)]"
+            }>
+                <div class="flex min-w-0 items-center gap-2">
+                    <span class="font-semibold text-[var(--diff-fg)]">{move || format!("{}:", t::diff::title(locale.get()))}</span>
+                    <span class="truncate text-[var(--diff-filename)]" title=filename.clone()>{filename.clone()}</span>
+                    <span class="rounded bg-[var(--diff-line-add)] px-1.5 py-0.5 text-[11px]" title=move || t::diff::added(locale.get())>{format!("+{added}")}</span>
+                    <span class="rounded bg-[var(--diff-line-del)] px-1.5 py-0.5 text-[11px]" title=move || t::diff::deleted(locale.get())>{format!("-{deleted}")}</span>
+                    {algorithm.map(|algorithm| view! {
+                        <span class="hidden text-[11px] text-[var(--diff-muted)] md:inline" title=move || t::diff::algorithm_help(locale.get())>{move || t::diff::algorithm(locale.get(), &algorithm)}</span>
+                    })}
+                    <span class="hidden text-[11px] text-[var(--diff-muted)] md:inline" title=move || t::diff::compute_ms_help(locale.get())>{move || t::diff::compute_ms(locale.get(), compute_ms)}</span>
+                    <Show when=move || is_readonly>
+                        <span class="rounded bg-[var(--diff-pill-bg)] px-2 py-0.5 text-xs text-[var(--diff-pill-fg)]">{move || t::diff::read_only(locale.get())}</span>
+                    </Show>
+                </div>
+                <div class="flex items-center gap-2">
+                    <Show when=move || !is_readonly>
+                        <button
+                            class="diff-edit-toggle rounded border border-[var(--diff-border)] px-3 py-1 text-xs text-[var(--diff-fg)] hover:bg-[var(--diff-btn-hover)]"
+                            on:click=move |_| set_is_editing.update(|editing| *editing = !*editing)
+                        >
+                            {move || if is_editing.get() { t::diff::preview_diff(locale.get()) } else { t::diff::edit(locale.get()) }}
+                        </button>
+                    </Show>
+                    <button
+                        data-deve-mobile-diff-action="diff-close-button"
+                        class=DIFF_CLOSE_BUTTON_CLASS
+                        on:click=move |_| on_close.run(())
+                        title=move || t::diff::close_diff_view(locale.get())
+                    ><X class="h-5 w-5"/></button>
+                </div>
+            </div>
+
             {merge_conflict.and_then(|conflict| {
                 on_resolve_merge_conflict.map(|on_resolve| view! {
                     <MergeConflictActions
-                        mobile=mobile
-                        conflict=conflict
-                        resolved_content=resolved_content
-                        is_editing=compute.is_editing
-                        accept_both_content=default_accept_both_content.clone()
-                        on_resolve=on_resolve
+                        mobile
+                        conflict
+                        resolved_content=draft
+                        on_resolve
                     />
                 })
             })}
-            <DiffBody deps=DiffBodyDeps {
-                force_unified,
-                locale,
-                compute,
-                fold_controls: fold_for_controls,
-                fold_render: fold_for_render,
-                folded_rows,
-                split_rows,
-                viewport,
-                left_ref,
-                right_ref,
-                syncing_left,
-                set_syncing_left,
-                syncing_right,
-                set_syncing_right,
-            } />
+
+            <div class="relative flex-1 min-h-0">
+                <Show
+                    when=move || is_editing.get()
+                    fallback=move || view! {
+                        <ProjectionSurface
+                            projection=projection.clone()
+                            status=status.get()
+                            force_unified
+                            on_retry=retry
+                        />
+                    }
+                >
+                    <textarea
+                        name="diff-edit-draft"
+                        data-deve-diff-draft="true"
+                        class="h-full w-full resize-none border-0 bg-[var(--diff-bg)] p-3 font-mono text-[13px] text-[var(--diff-fg)] outline-none"
+                        prop:value=move || draft.get()
+                        on:input=move |event| set_draft.set(event_target_value(&event))
+                        on:change=move |event| {
+                            if let Some(on_persist) = on_persist_draft {
+                                on_persist.run(event_target_value(&event));
+                            }
+                        }
+                    ></textarea>
+                </Show>
+            </div>
         </div>
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::diff_view_class;
+    use super::{DIFF_CLOSE_BUTTON_CLASS, DIFF_EDIT_DEBOUNCE_MS, diff_view_class};
 
     #[test]
     fn mobile_diff_uses_mobile_dom_marker() {
         assert!(diff_view_class(true).contains("diff-view-mobile"));
         assert!(!diff_view_class(false).contains("diff-view-mobile"));
+    }
+
+    #[test]
+    fn draft_projection_debounce_is_contract_value() {
+        assert_eq!(DIFF_EDIT_DEBOUNCE_MS, 150);
+    }
+
+    #[test]
+    fn mobile_diff_close_button_is_touch_safe() {
+        assert!(DIFF_CLOSE_BUTTON_CLASS.contains("min-h-11"));
+        assert!(DIFF_CLOSE_BUTTON_CLASS.contains("min-w-11"));
     }
 }

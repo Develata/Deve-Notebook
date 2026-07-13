@@ -15,8 +15,8 @@ mod remote_test_support;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::ScPathTarget;
-use deve_core::protocol::ServerMessage;
+use deve_core::models::{DocId, PeerId, RepoId};
+use deve_core::protocol::{ScPathTarget, ScopeNonce};
 use std::sync::Arc;
 
 /// 获取文档的 Diff。
@@ -53,14 +53,87 @@ pub async fn handle_get_doc_diff(
         }
     };
 
-    ch.unicast(ServerMessage::DocDiff {
-        request_id: Some(request_id),
-        repo_id: Some(scope.repo_id),
-        branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id,
-        path: normalized,
-        old_content,
-        new_content,
-    });
+    spawn_document_projection(
+        state,
+        ch,
+        session,
+        DocumentProjectionRequest {
+            request_id,
+            repo_id: scope.repo_id,
+            branch: scope.branch,
+            scope_nonce: ScopeNonce::new(scope_nonce.unwrap_or_default()),
+            doc_id,
+            path: normalized,
+            base_content: old_content,
+            target_content: new_content,
+        },
+    );
+}
+
+pub async fn handle_compute_diff_projection(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    request_id: String,
+    revision: u64,
+    base_content: String,
+    target_content: String,
+) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
+        Ok(scope) => scope,
+        Err(error) => return super::errors::send_ws_scoped(ch, error, scope_nonce),
+    };
+    let nonce = ScopeNonce::new(scope_nonce.unwrap_or_default());
+    let Some(ticket) = session.diff_projection_jobs.begin_draft(
+        request_id,
+        revision,
+        scope.repo_id,
+        scope.branch,
+        nonce,
+    ) else {
+        return;
+    };
+    state.diff_projection_executor().spawn(
+        ticket,
+        base_content,
+        target_content,
+        crate::server::diff_projection::DiffJobResponse::Draft,
+        ch.clone(),
+    );
+}
+
+pub(super) struct DocumentProjectionRequest {
+    request_id: String,
+    repo_id: RepoId,
+    branch: Option<PeerId>,
+    scope_nonce: ScopeNonce,
+    doc_id: Option<DocId>,
+    path: String,
+    base_content: String,
+    target_content: String,
+}
+
+pub(super) fn spawn_document_projection(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    request: DocumentProjectionRequest,
+) {
+    let ticket = session.diff_projection_jobs.begin_fixed(
+        request.request_id,
+        request.repo_id,
+        request.branch,
+        request.scope_nonce,
+    );
+    state.diff_projection_executor().spawn(
+        ticket,
+        request.base_content,
+        request.target_content,
+        crate::server::diff_projection::DiffJobResponse::Document {
+            doc_id: request.doc_id,
+            path: request.path,
+        },
+        ch.clone(),
+    );
 }

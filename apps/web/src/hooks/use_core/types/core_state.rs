@@ -12,7 +12,9 @@ use crate::runtime::domain::{
 };
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
+use deve_core::source_control::{
+    ChangeEntry, CommitFileDiffSummary, CommitInfo, ConflictResolution,
+};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
@@ -115,8 +117,8 @@ pub struct CoreState {
     pub diff_content: ReadSignal<Option<DiffSessionWire>>,
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
-    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
-    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,

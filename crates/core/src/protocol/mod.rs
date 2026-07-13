@@ -43,7 +43,7 @@ pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
 pub use frame::{
     MAX_SYNC_FACT_BYTES_PER_PAYLOAD, MAX_SYNC_FACTS_PER_PAYLOAD, MAX_WS_FRAME_BYTES,
-    MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION,
+    MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION, server_binary_payload_size,
 };
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
 pub use relay_proxy::{

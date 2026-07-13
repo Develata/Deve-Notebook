@@ -60,6 +60,15 @@ pub(super) fn create_get_doc_diff_callback(
         };
         let request_id = uuid::Uuid::new_v4().to_string();
         set_request_id.set(Some(request_id.clone()));
+        let display_path = entry
+            .renamed_from
+            .as_ref()
+            .map(|old| format!("{old} -> {}", entry.path))
+            .unwrap_or_else(|| entry.path.clone());
+        set_diff_content.set(Some(
+            DiffSessionWire::loading(entry.path.clone(), display_path)
+                .with_pending_request(request_id.clone()),
+        ));
         ws.send(ClientMessage::GetDocDiff {
             request_id,
             target: to_target(&entry),

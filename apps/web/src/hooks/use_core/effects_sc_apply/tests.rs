@@ -8,6 +8,7 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, signal};
 use std::cell::Cell;
+use std::sync::Arc;
 
 fn gate_state(
     connection_status: ConnectionStatus,
@@ -30,10 +31,31 @@ fn gate_state(
 
 #[test]
 fn apply_doc_diff_preserves_doc_identity() {
-    let (diff, set_diff) = signal(None);
+    let request_id = "request-1";
+    let (diff, set_diff) = signal(Some(
+        crate::runtime::source_control_client::diff_session::DiffSessionWire::loading(
+            "notes/a.md".into(),
+            "notes/a.md".into(),
+        )
+        .with_pending_request(request_id.into()),
+    ));
     let doc_id = DocId::new();
 
-    apply_doc_diff(Some(doc_id), "notes/a.md", "old", "new", set_diff);
+    let projection = Arc::new(
+        deve_core::source_control::diff_projection::compute_diff_projection(
+            "old".into(),
+            "new".into(),
+        )
+        .unwrap(),
+    );
+    apply_doc_diff(
+        Some(request_id),
+        Some(doc_id),
+        "notes/a.md",
+        &projection,
+        None,
+        set_diff,
+    );
 
     let session = diff.get_untracked().expect("diff session");
     assert_eq!(session.doc_id, Some(doc_id));

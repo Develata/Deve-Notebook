@@ -39,15 +39,11 @@ fn deleted_docless_entry_reports_unavailable_diff_notice() {
 fn unavailable_doc_diff_clears_stale_session() {
     let (_request_id, set_request_id) = signal(Some("doc-diff-req".to_string()));
     let (notice, set_notice) = signal(None);
-    let (diff_content, set_diff_content) = signal(Some(DiffSessionWire {
-        doc_id: None,
-        path: "note.md".into(),
-        display_path: "note.md".into(),
-        old_content: "before".into(),
-        new_content: "after".into(),
-        merge_conflict: None,
-        opened_at_ms: 1,
-    }));
+    let (diff_content, set_diff_content) = signal(Some(DiffSessionWire::new(
+        "note.md".into(),
+        "before".into(),
+        "after".into(),
+    )));
 
     clear_stale_doc_diff(
         set_request_id,

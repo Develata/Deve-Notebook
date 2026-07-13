@@ -13,6 +13,7 @@ use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
 use crate::security::EncryptedOp;
+use crate::source_control::CommitFileDiffTarget;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -272,6 +273,22 @@ pub enum ClientMessage {
         request_id: String,
         commit_a: Option<String>,
         commit_b: String,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
+    GetCommitFileDiff {
+        request_id: String,
+        commit_a: Option<String>,
+        commit_b: String,
+        target: CommitFileDiffTarget,
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
+    ComputeDiffProjection {
+        request_id: String,
+        revision: u64,
+        base_content: String,
+        target_content: String,
         #[serde(default)]
         scope_nonce: Option<u64>,
     },

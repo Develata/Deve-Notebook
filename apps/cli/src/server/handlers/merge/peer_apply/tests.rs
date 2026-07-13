@@ -11,11 +11,12 @@ use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test]
 async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
+    let (_dir, state, _seeded_doc_id, seeded_repo_id) = degraded_app_state().unwrap();
     let (broadcast_tx, _) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = mpsc::channel(8);
     let ch = DualChannel::new(broadcast_tx, unicast_tx);
     let doc_id = DocId::new();
-    let repo_id = uuid::Uuid::new_v4();
+    let repo_id = seeded_repo_id;
     let scope = ResolvedRepo {
         repo_id,
         repo_name: "notes".into(),
@@ -28,13 +29,15 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
         remote_lines: vec!["remote".into()],
     };
 
+    let mut session = crate::server::session::WsSession::new();
     emit_merge_conflict(
+        &state,
         &ch,
+        &mut session,
         &scope,
         "docs/a.md".into(),
         MergeConflictPayload {
             doc_id,
-            base: "base".into(),
             local: "local".into(),
             remote: "remote".into(),
             conflicts: vec![hunk.clone()],
@@ -42,64 +45,48 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
         Some(7),
     );
 
-    match unicast_rx.recv().await {
-        Some(ServerMessage::MergeConflict {
-            repo_id: Some(actual_repo),
-            branch,
-            scope_nonce,
-            doc_id: actual_doc,
-            path,
-            current_content,
-            incoming_content,
-            result_content,
-            actions,
-            conflicts,
-        }) => {
-            assert_eq!(actual_repo, repo_id);
-            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("remote-a"));
-            assert_eq!(scope_nonce, Some(7));
-            assert_eq!(actual_doc, doc_id);
-            assert_eq!(path, "docs/a.md");
-            assert_eq!(current_content, "local");
-            assert_eq!(incoming_content, "remote");
-            assert_eq!(result_content, "base");
-            assert_eq!(actions.len(), 3);
-            assert_eq!(conflicts, vec![hunk]);
+    let mut saw_projection = false;
+    let mut saw_error = false;
+    for _ in 0..2 {
+        match tokio::time::timeout(std::time::Duration::from_secs(2), unicast_rx.recv())
+            .await
+            .expect("merge response timeout")
+        {
+            Some(ServerMessage::MergeConflict {
+                repo_id: Some(actual_repo),
+                branch,
+                scope_nonce,
+                doc_id: actual_doc,
+                path,
+                projection,
+                result_content,
+                actions,
+                conflicts,
+            }) => {
+                assert_eq!(actual_repo, repo_id);
+                assert_eq!(branch.as_ref().map(PeerId::as_str), Some("remote-a"));
+                assert_eq!(scope_nonce, Some(7));
+                assert_eq!(actual_doc, doc_id);
+                assert_eq!(path, "docs/a.md");
+                assert_eq!(projection.base_content, "local");
+                assert_eq!(projection.target_content, "remote");
+                assert_eq!(result_content, "local\nremote");
+                assert_eq!(actions.len(), 3);
+                assert_eq!(conflicts, vec![hunk.clone()]);
+                saw_projection = true;
+            }
+            Some(ServerMessage::ProtocolError {
+                error, scope_nonce, ..
+            }) => {
+                assert_eq!(error.code, ServerErrorCode::StorageConflict);
+                assert_eq!(scope_nonce, Some(7));
+                saw_error = true;
+            }
+            other => panic!("expected typed merge response, got {other:?}"),
         }
-        other => panic!("expected typed MergeConflict first, got {other:?}"),
     }
-
-    match unicast_rx.recv().await {
-        Some(ServerMessage::DocDiff {
-            request_id: None,
-            repo_id: Some(actual_repo),
-            branch,
-            scope_nonce,
-            doc_id: actual_doc_id,
-            path,
-            old_content,
-            new_content,
-        }) => {
-            assert_eq!(actual_repo, repo_id);
-            assert_eq!(branch.as_ref().map(PeerId::as_str), Some("remote-a"));
-            assert_eq!(scope_nonce, Some(7));
-            assert_eq!(actual_doc_id, Some(doc_id));
-            assert_eq!(path, "docs/a.md");
-            assert_eq!(old_content, "local");
-            assert_eq!(new_content, "remote");
-        }
-        other => panic!("expected DocDiff fallback second, got {other:?}"),
-    }
-
-    match unicast_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::StorageConflict);
-            assert_eq!(scope_nonce, Some(7));
-        }
-        other => panic!("expected StorageConflict third, got {other:?}"),
-    }
+    assert!(saw_projection);
+    assert!(saw_error);
 }
 
 #[tokio::test]

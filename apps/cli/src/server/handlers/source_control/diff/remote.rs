@@ -9,7 +9,7 @@ use crate::server::handlers::source_control::errors;
 use crate::server::handlers::source_control::repo_scope;
 use crate::server::repo_scope::resolve_local_counterpart_repo;
 use crate::server::session::WsSession;
-use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ScPathTarget, ScopeNonce, ServerErrorCode};
 use std::sync::Arc;
 
 use super::remote_content::{local_counterpart_content, resolve_remote_content};
@@ -74,14 +74,19 @@ pub(super) async fn handle_remote_diff(
         }
     };
 
-    ch.unicast(ServerMessage::DocDiff {
-        request_id: Some(request_id),
-        repo_id: Some(scope.repo_id),
-        branch: scope.branch.clone(),
-        scope_nonce,
-        doc_id: Some(doc_id),
-        path,
-        old_content,
-        new_content,
-    });
+    super::spawn_document_projection(
+        state,
+        ch,
+        session,
+        super::DocumentProjectionRequest {
+            request_id,
+            repo_id: scope.repo_id,
+            branch: scope.branch,
+            scope_nonce: ScopeNonce::new(scope_nonce.unwrap_or_default()),
+            doc_id: Some(doc_id),
+            path,
+            base_content: old_content,
+            target_content: new_content,
+        },
+    );
 }

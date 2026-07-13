@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-13`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -364,6 +364,10 @@ overlay state row 至少需要：
 - 不得把 DOM buffer、localStorage 或 stale scope message 当成已确认事实。
 - editor adapter/replay 失败必须记录结构化的 client-side failure kind；只有显式 Retry 或新的
   doc/scope generation 可以清除该错误。
+- Diff draft runtime 只保存用户草稿、request/revision 与不可变 typed projection；
+  150 ms debounce 后只发送 `ComputeDiffProjection` intent。计算中不得继续展示与当前
+  draft 不一致的旧 preview；失败时保留草稿并展示结构化 unavailable/resource-limit，
+  不得回退浏览器 Diff 算法。
 
 ## 12. Refactor Target
 

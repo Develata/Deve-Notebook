@@ -34,7 +34,6 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_with_inline_math_keeps_line_class true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_opener_inside_math_frontmatter_not_styled true
-contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	ACTIVE_CJK_ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	const activeCjkCandidate = isActiveLine
@@ -86,7 +85,6 @@ contains	apps/web/style/_typography.css	--deve-heading-inline-line-height: 1.2;
 contains	apps/web/style/_typography.css	.markdown-body h1
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-008
 contains	docs/acceptance-cases/05_ui.md	cli_assert: editor_history_keymap_bound true
-contains	docs/acceptance-bindings.tsv	UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow
 contains	apps/web/js/editor_adapter.js	history()
 contains	apps/web/js/editor_adapter.js	historyKeymap
 contains	apps/web/js/editor_adapter.js	export function mobileInsertText(text)
@@ -144,7 +142,6 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_ffi_selection_reads_through_bridge_registry true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_ffi_browser_calls_read_through_bridge_registry true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_ffi_unready_write_queries_fail_closed true
-contains	docs/acceptance-bindings.tsv	RENDER-BRIDGE-001|manual-cli|docs/registry/runtime-skeleton-registry.md|editor widget bridge registry boundary
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/katex_bridge.js
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/rendering_bridge.js
 contains	apps/web/index.html	src="js/web_bridge_registry.js?rev=20260705-bridge-policy"
@@ -272,7 +269,6 @@ contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LINK-001
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-LINK-001	ui_keydown: "Ctrl"
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-LINK-001	navigation_not_triggered_first_click true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-LINK-001	navigation_triggered_second_click true
-contains	docs/acceptance-bindings.tsv	RENDER-LINK-001|manual-chrome|docs/features/03_rendering.md|Ctrl/Cmd link activation gate workflow
 contains	docs/plan/10_rendering.md	### 5.2 Link Activation {#link-activation-gate}
 contains	docs/plan/AGENTS.md	10_rendering#link-activation-gate
 contains	apps/web/src/hooks/use_ctrl_key.rs	10_rendering#link-activation-gate

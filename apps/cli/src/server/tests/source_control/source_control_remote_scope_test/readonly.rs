@@ -37,12 +37,12 @@ async fn readonly_remote_diff_is_allowed_without_locked_db() -> anyhow::Result<(
         Some(ServerMessage::DocDiff {
             repo_id,
             doc_id: actual_doc_id,
-            new_content,
+            projection,
             ..
         }) => {
             assert_eq!(repo_id, Some(test_id));
             assert_eq!(actual_doc_id, Some(doc_id));
-            assert_eq!(new_content, "remote");
+            assert_eq!(projection.target_content, "remote");
         }
         other => panic!("expected DocDiff, got {:?}", other),
     }

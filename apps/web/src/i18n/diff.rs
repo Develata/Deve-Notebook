@@ -46,6 +46,55 @@ pub fn computing(locale: Locale) -> &'static str {
     }
 }
 
+pub fn loading(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Loading diff projection...",
+        Locale::Zh => "正在加载对比投影...",
+    }
+}
+
+pub fn waiting_for_draft(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Waiting to compute draft...",
+        Locale::Zh => "等待计算草稿对比...",
+    }
+}
+
+pub fn projection_unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Diff projection unavailable",
+        Locale::Zh => "对比投影不可用",
+    }
+}
+
+pub fn retry(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Retry",
+        Locale::Zh => "重试",
+    }
+}
+
+pub fn split(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Split",
+        Locale::Zh => "分栏",
+    }
+}
+
+pub fn unified(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unified",
+        Locale::Zh => "统一",
+    }
+}
+
+pub fn invalid_projection(locale: Locale, detail: &str) -> String {
+    match locale {
+        Locale::En => format!("Invalid diff projection: {detail}"),
+        Locale::Zh => format!("对比投影无效：{detail}"),
+    }
+}
+
 pub fn prev_change(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Previous change",
@@ -116,27 +165,6 @@ pub fn context_lines(locale: Locale) -> &'static str {
     }
 }
 
-pub fn cache_hit(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Cache hit",
-        Locale::Zh => "缓存命中",
-    }
-}
-
-pub fn cache_miss(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Cache miss",
-        Locale::Zh => "缓存未命中",
-    }
-}
-
-pub fn cache_state_help(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Shows whether the current diff reused a result from the frontend DiffCache.",
-        Locale::Zh => "表示当前 diff 是否复用了前端 DiffCache 的计算结果。",
-    }
-}
-
 pub fn compute_ms(locale: Locale, ms: u32) -> String {
     match locale {
         Locale::En => format!("{} ms", ms),
@@ -147,9 +175,9 @@ pub fn compute_ms(locale: Locale, ms: u32) -> String {
 pub fn compute_ms_help(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Elapsed time for the latest frontend diff computation; small files or cached paths can show 0 ms."
+            "Elapsed time for the latest backend diff computation; small files or cached projections can show 0 ms."
         }
-        Locale::Zh => "最近一次前端 diff 计算耗时；小文件或缓存路径可能显示 0 毫秒。",
+        Locale::Zh => "最近一次后端 diff 计算耗时；小文件或缓存投影可能显示 0 毫秒。",
     }
 }
 
@@ -176,20 +204,6 @@ pub fn algorithm_help(locale: Locale) -> &'static str {
             "Current line diff algorithm. Myers is the default; complex inputs may use Patience+Myers."
         }
         Locale::Zh => "当前行级 diff 算法。默认 Myers，复杂场景可能使用耐心法+Myers。",
-    }
-}
-
-pub fn cache_ratio(locale: Locale, ratio: u32) -> String {
-    match locale {
-        Locale::En => format!("Hit: {}%", ratio),
-        Locale::Zh => format!("命中率: {}%", ratio),
-    }
-}
-
-pub fn cache_ratio_help(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Percentage of sampled diff computations on this page that hit the cache.",
-        Locale::Zh => "本页 diff 计算采样中命中缓存的百分比。",
     }
 }
 

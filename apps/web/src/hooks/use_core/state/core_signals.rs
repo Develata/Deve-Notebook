@@ -6,7 +6,7 @@ use crate::editor::EditorStats;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 use std::collections::HashMap;
@@ -123,8 +123,8 @@ pub struct CoreSignals {
     pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     pub commit_diff_request_id: ReadSignal<Option<String>>,
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
-    pub commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
-    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    pub commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
+    pub set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub source_control_notice: ReadSignal<Option<SourceControlNotice>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub tree_nodes: ReadSignal<Vec<FileNode>>,

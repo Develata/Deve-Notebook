@@ -97,6 +97,8 @@ impl ClientMessage {
             | Self::GetCommitHistory { scope_nonce, .. }
             | Self::GetDocDiff { scope_nonce, .. }
             | Self::GetCommitDiff { scope_nonce, .. }
+            | Self::GetCommitFileDiff { scope_nonce, .. }
+            | Self::ComputeDiffProjection { scope_nonce, .. }
             | Self::ResolveConflict { scope_nonce, .. }
             | Self::CommitAndPush { scope_nonce, .. }
             | Self::RemoteProjectionTransport { scope_nonce, .. } => {

@@ -44,8 +44,7 @@ async fn readonly_remote_doc_diff_uses_shadow_projection() -> anyhow::Result<()>
             scope_nonce,
             doc_id: actual_doc_id,
             path,
-            old_content,
-            new_content,
+            projection,
         }) => {
             assert_eq!(request_id.as_deref(), Some("doc-req-1"));
             assert_eq!(repo_id, Some(test_id));
@@ -53,8 +52,8 @@ async fn readonly_remote_doc_diff_uses_shadow_projection() -> anyhow::Result<()>
             assert_eq!(scope_nonce, Some(23));
             assert_eq!(actual_doc_id, Some(doc_id));
             assert_eq!(path, "note.md");
-            assert_eq!(old_content, "");
-            assert_eq!(new_content, "hello remote");
+            assert_eq!(projection.base_content, "");
+            assert_eq!(projection.target_content, "hello remote");
         }
         other => panic!("expected DocDiff, got {:?}", other),
     }

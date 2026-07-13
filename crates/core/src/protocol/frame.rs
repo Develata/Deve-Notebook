@@ -9,8 +9,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 12;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 12;
+pub const WS_PROTOCOL_VERSION: u16 = 13;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 13;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 /// Bound fact-count allocation before a transfer payload is materialized.
 pub const MAX_SYNC_FACTS_PER_PAYLOAD: u64 = 16 * 1024;
@@ -42,6 +42,12 @@ pub struct ClientFrame {
 pub struct ServerFrame {
     pub protocol_version: u16,
     pub message: ServerMessage,
+}
+
+#[derive(Serialize)]
+struct ServerFrameRef<'a> {
+    protocol_version: u16,
+    message: &'a ServerMessage,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -93,6 +99,16 @@ pub fn encode_client_binary_with_version(
 
 pub fn encode_server_binary(message: &ServerMessage) -> Result<Vec<u8>, ProtocolFrameError> {
     encode_server_binary_with_version(message, WS_PROTOCOL_VERSION)
+}
+
+/// Exact postcard payload size for the current server frame without cloning or encoding it.
+pub fn server_binary_payload_size(message: &ServerMessage) -> Result<u64, ProtocolFrameError> {
+    postcard::experimental::serialized_size(&ServerFrameRef {
+        protocol_version: WS_PROTOCOL_VERSION,
+        message,
+    })
+    .map(|size| size as u64)
+    .map_err(codec_error)
 }
 
 pub fn encode_server_binary_with_version(

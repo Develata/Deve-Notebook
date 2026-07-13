@@ -1,6 +1,7 @@
 use super::DualChannel;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::{MergeConflictAction, ServerMessage};
+use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -155,33 +156,42 @@ async fn conflict_resolved_is_not_dropped_when_unicast_queue_is_full() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn merge_conflict_is_not_dropped_when_unicast_queue_is_full() {
+async fn merge_conflict_uses_dedicated_bounded_diff_queue() {
     let (broadcast_tx, _) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = mpsc::channel(1);
-    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+    let (diff_tx, mut diff_rx) = mpsc::channel(1);
+    let ch = DualChannel::with_diff_channel(broadcast_tx, unicast_tx, diff_tx);
     let doc_id = DocId::new();
+    let projection = Arc::new(
+        deve_core::source_control::diff_projection::compute_diff_projection(
+            "local".into(),
+            "remote".into(),
+        )
+        .unwrap(),
+    );
 
     ch.unicast(ServerMessage::Pong);
-    ch.unicast(ServerMessage::MergeConflict {
-        repo_id: Some(uuid::Uuid::nil()),
-        branch: Some(PeerId::new("peer-a")),
-        scope_nonce: Some(5),
-        doc_id,
-        path: "notes/a.md".into(),
-        current_content: "local".into(),
-        incoming_content: "remote".into(),
-        result_content: "base".into(),
-        actions: vec![
-            MergeConflictAction::AcceptCurrent,
-            MergeConflictAction::AcceptIncoming,
-            MergeConflictAction::AcceptBoth,
-        ],
-        conflicts: Vec::new(),
-    });
+    assert!(
+        ch.diff_unicast(ServerMessage::MergeConflict {
+            repo_id: Some(uuid::Uuid::nil()),
+            branch: Some(PeerId::new("peer-a")),
+            scope_nonce: Some(5),
+            doc_id,
+            path: "notes/a.md".into(),
+            projection,
+            result_content: "base".into(),
+            actions: vec![
+                MergeConflictAction::AcceptCurrent,
+                MergeConflictAction::AcceptIncoming,
+                MergeConflictAction::AcceptBoth,
+            ],
+            conflicts: Vec::new(),
+        })
+        .await
+    );
 
     assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
-    tokio::task::yield_now().await;
-    match unicast_rx.recv().await {
+    match diff_rx.recv().await {
         Some(ServerMessage::MergeConflict {
             repo_id,
             branch,

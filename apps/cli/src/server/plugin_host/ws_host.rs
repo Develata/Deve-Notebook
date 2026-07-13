@@ -29,7 +29,8 @@ async fn handle_socket(
 ) {
     let (sender, mut receiver) = socket.split();
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
-    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx);
+    let (diff_unicast_tx, diff_unicast_rx) = send::new_diff_unicast_channel();
+    let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx, diff_unicast_rx);
 
     let broadcast_rx = state.tx.subscribe();
     let broadcast_task = send::spawn_broadcast_forwarder(
@@ -37,7 +38,7 @@ async fn handle_socket(
         unicast_tx.clone(),
         send::BroadcastFilter::allow_all(),
     );
-    let ch = DualChannel::new(state.tx.clone(), unicast_tx);
+    let ch = DualChannel::with_diff_channel(state.tx.clone(), unicast_tx, diff_unicast_tx);
     tracing::info!("Plugin host client connected: {}", peer_id);
 
     while let Some(msg) = receiver.next().await {

@@ -344,7 +344,6 @@ case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-003	cli_assert: mobile_chat_retry_button_marker_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-003	cli_assert: mobile_chat_retry_prompt_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-003	ui_assert: retry_action_triggered true
-contains	docs/acceptance-bindings.tsv	UI-MOB-014|manual-chrome|docs/features/10_ai_agent.md|mobile chat error recovery workflow
 contains	apps/web/src/components/chat/panel/status.rs	data-deve-chat-error-banner=move || chat_error_banner_marker(error_code.get().is_some())
 contains	apps/web/src/components/chat/panel/status.rs	data-deve-chat-action=move || chat_retry_button_marker(error_code.get().is_some())
 contains	apps/web/src/components/chat/panel/status.rs	fn mobile_chat_error_banner_marker_is_visible_only_on_error()
@@ -367,7 +366,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-015	cli_assert: mobile_more_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-015	cli_assert: mobile_more_menu_items_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-015	ui_assert: sidebar_icon_count_at_least 1
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-015	ui_assert: more_menu_has_sidebar_entries true
-contains	docs/acceptance-bindings.tsv	UI-MOB-015|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile sidebar more workflow
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	data-deve-mobile-sidebar-icon-tabs=move || mobile_sidebar_icon_tabs_marker(open.get())
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	data-deve-mobile-sidebar-action=mobile_more_button_marker()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	data-deve-mobile-touch-target=mobile_more_button_marker()
@@ -404,7 +402,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	cli_assert: mobile_more_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	cli_assert: mobile_more_pin_action_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	cli_assert: mobile_more_pin_toggle_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	cli_assert: mobile_more_pin_keeps_menu_open_bound true
-contains	docs/acceptance-bindings.tsv	UI-MOB-016|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile more menu pin workflow
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	pub(super) fn mobile_more_after_item_click() -> bool
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	pub(super) fn mobile_more_after_escape() -> bool
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	pub(super) fn mobile_more_after_pin_click(open: bool) -> bool
@@ -425,7 +422,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-017	cli_assert: mobile_diff_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-017	cli_assert: mobile_diff_hides_accessory_toolbar_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-017	ui_assert: mobile_chat_chip_visible false
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-017	ui_assert: mobile_accessory_toolbar_visible false
-contains	docs/acceptance-bindings.tsv	UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff overlay workflow
 contains	docs/plan/11_ui_design/03_mobile.md	移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。
 contains	apps/web/src/components/diff_view/mod.rs	pub(crate) fn diff_view_class(mobile: bool) -> &'static str
 contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_uses_mobile_dom_marker()
@@ -442,10 +438,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	cli_assert: mobile_diff_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	cli_assert: mobile_diff_close_returns_editor_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	ui_assert: element_visible ".diff-view-mobile" false
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	ui_assert: editor_visible true
-contains	docs/acceptance-bindings.tsv	UI-MOB-018|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff close workflow
-contains	apps/web/src/components/diff_view/header.rs	data-deve-mobile-diff-action=mobile_diff_close_button_marker()
-contains	apps/web/src/components/diff_view/header.rs	fn mobile_diff_close_button_marker_is_stable()
-contains	apps/web/src/components/diff_view/header.rs	fn mobile_diff_close_button_is_touch_safe()
+contains	apps/web/src/components/diff_view/mod.rs	data-deve-mobile-diff-action="diff-close-button"
+contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_uses_mobile_dom_marker()
+contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_close_button_is_touch_safe()
 contains	apps/web/src/components/mobile_layout/content.rs	pub(crate) enum MobileContentSurface
 contains	apps/web/src/components/mobile_layout/content.rs	pub(crate) fn mobile_content_surface_after_diff_close(
 contains	apps/web/src/components/mobile_layout/content.rs	fn mobile_diff_close_returns_to_editor_surface()
@@ -461,7 +456,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	cli_assert: mobile_toolb
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_assert: accessory_toolbar_buttons_disabled_when_write_blocked true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_assert: mobile_undo_disabled_when_write_blocked true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_assert: mobile_redo_disabled_when_write_blocked true
-contains	docs/acceptance-bindings.tsv	UI-MOB-019|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile accessory toolbar write gate
 contains	docs/features/08_ui_design_03_mobile.md	移动辅助键盘栏必须服从完整 repo write gate
 contains	docs/features/08_ui_design_03_mobile.md	撤销或重做
 contains	docs/plan/11_ui_design/03_mobile.md	| `↩` Undo | `↪` Redo |
@@ -493,7 +487,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_sourc
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	ui_assert: source_control_git_status_cli_notice_visible false
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_external_groups_absent true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	ui_assert: source_control_commit_controls_confirmed_rows_and_actions_min_size "44x44"
-contains	docs/acceptance-bindings.tsv	UI-MOB-023|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile source control read gate workflow
 contains	docs/plan/11_ui_design/03_mobile.md	Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate
 contains	docs/features/08_ui_design_03_mobile.md	移动端 Source Control 必须显示与桌面相同的 Source Control read surface
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-024
@@ -559,7 +552,6 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_diff_keeps_source_control_state true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: staged_pending_commit_state_unchanged true
-contains	docs/acceptance-bindings.tsv	UI-MOB-021|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile document diff switcher workflow
 contains	docs/plan/11_ui_design/03_mobile.md	Mobile Surface Switcher {#mobile-surface-switcher}
 contains	docs/plan/11_ui_design/03_mobile.md	docs/acceptance-cases/17_mobile_surface_switcher.md
 contains	docs/plan/11_ui_design/03_mobile.md	顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间

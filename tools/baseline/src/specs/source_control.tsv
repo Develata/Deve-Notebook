@@ -494,95 +494,49 @@ absent	apps/web/src/components/sidebar/source_control/staged_section.rs	cursor-p
 absent	apps/web/src/components/sidebar/source_control/unstaged_section.rs	cursor-pointer
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: scripts/check-source-control-baseline.sh
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web diff_first_viewport -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_window_bound true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_spacer_bound true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_marker_bound true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_initial_compute_deferred true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_full_compute_chunked true
-contains	docs/acceptance-bindings.tsv	UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff first viewport workflow
-contains	apps/web/src/components/diff_view/unified.rs	pub const DIFF_VIEWPORT_CHUNK_SIZE: usize = 80;
-contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_initial_window_is_bounded_for_long_doc()
-contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_spacers_preserve_scroll_extent()
-contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_clamps_stale_scroll_after_shorter_doc()
-contains	apps/web/src/components/diff_view/model/model_chunk.rs	pub struct DiffChunkJob
-contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_preview_bounds_initial_compute_rows()
-contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_matches_sync_chunked_output()
-contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_handles_insert_only_document()
-contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_handles_delete_only_document()
-contains	apps/web/src/components/diff_view/state/compute/mod.rs	start_chunked_diff(
-contains	apps/web/src/components/diff_view/state/compute/mod.rs	ComputePhase::PartialReady
-contains	apps/web/src/components/diff_view/state/compute/mod.rs	preview_diff(old_content_ref.as_str(), &text)
-contains	apps/web/src/components/diff_view/state/compute/helpers.rs	pub key: Option<String>
-contains	apps/web/src/components/diff_view/state/compute/helpers.rs	initial_cached_or_preview(
-contains	apps/web/src/components/diff_view/state/compute/helpers.rs	preview_diff(
-contains	apps/web/src/components/diff_view/state/compute/helpers.rs	pub const INITIAL_DIFF_PREVIEW_BYTES
-contains	apps/web/src/components/diff_view/state/compute/helpers.rs	fn exceeds_preview_window(
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_initial_cache_miss_uses_preview()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_long_initial_defers_cache_key()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_short_initial_builds_cache_key()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_large_single_line_defers_cache_key()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_large_single_line_preview_is_byte_bounded()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_preview_respects_utf8_byte_boundary()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_initial_short_cache_miss_is_complete()
-contains	apps/web/src/components/diff_view/viewport.rs	pub const DEFAULT_DIFF_VIEWPORT_HEIGHT_PX: i32 = 600;
-contains	apps/web/src/components/diff_view/viewport.rs	fn diff_first_viewport_default_height_is_stable()
-contains	apps/web/src/components/diff_view/unified_pane.rs	data-deve-diff-first-viewport=move ||
-contains	apps/web/src/components/diff_view/unified_pane.rs	fn diff_first_viewport_marker_requires_ready_visible_rows()
-contains	docs/acceptance-bindings.tsv	UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|mobile diff edit debounce workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|desktop diff chat coexistence workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|diff i18n copy workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-005|manual-chrome|docs/features/07_diff_logic.md|diff compute indicator workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-006|manual-chrome|docs/features/07_diff_logic.md|diff hunk button navigation workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-007|manual-chrome|docs/features/07_diff_logic.md|diff word-level replace highlight workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-008|manual-chrome|docs/features/07_diff_logic.md|diff bracket and alt-key navigation workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-009|manual-chrome|docs/features/07_diff_logic.md|diff header change stats workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-010|manual-chrome|docs/features/07_diff_logic.md|diff unchanged-region folding workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-011|manual-chrome|docs/features/07_diff_logic.md|diff context-lines switch workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-012|manual-chrome|docs/features/07_diff_logic.md|diff semantic anchor restore workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-013|manual-chrome|docs/features/07_diff_logic.md|diff cache badge and compute time workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-014|manual-chrome|docs/features/07_diff_logic.md|diff cache invalidation workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-015|manual-chrome|docs/features/07_diff_logic.md|diff algorithm label workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff F7 navigation workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff cache ratio workflow
-contains	docs/acceptance-bindings.tsv	UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff repo-scope cache isolation workflow
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-002	run: cargo test -p deve_web diff_edit_debounce -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web viewport_keeps_bounded_window -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_typed_projection_viewport_window_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_typed_projection_spacer_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_typed_projection_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_frontend_algorithm_absent true
+contains	apps/web/src/components/diff_view/projection_model.rs	const VIEWPORT_CHUNK: usize = 80;
+contains	apps/web/src/components/diff_view/projection_model.rs	fn viewport_keeps_bounded_window()
+contains	apps/web/src/components/diff_view/projection.rs	data-deve-diff-viewport="virtualized"
+contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="typed-v13"
+contains	crates/core/src/source_control/diff_projection/algorithm.rs	capture_diff_slices_deadline(
+absent	apps/web/Cargo.toml	similar.workspace = true
+absent_tree	apps/web/src/components/diff_view	capture_diff_slices
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-002	run: cargo test -p deve_web draft_projection_debounce_is_contract_value -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-004	run: scripts/check-source-control-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-004	cli_assert: diff_hardcoded_copy_absent true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-005	run: cargo test -p deve_web diff_compute_indicator -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-006	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-007	run: cargo test -p deve_web diff_replace_lines -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-008	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-009	run: cargo test -p deve_web diff_header_change_stats -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-010	run: cargo test -p deve_web diff_fold_rows -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-011	run: cargo test -p deve_web diff_context_lines -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-012	run: cargo test -p deve_web diff_semantic_anchor -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-013	run: cargo test -p deve_web diff_cache -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-013	run: cargo test -p deve_web diff_elapsed_ms -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-014	run: cargo test -p deve_web diff_cache -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-015	run: cargo test -p deve_web diff_algorithm_label -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-016	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-017	run: cargo test -p deve_web diff_cache_ratio -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-018	run: cargo test -p deve_web diff_cache_key -- --nocapture
-contains	apps/web/src/components/diff_view/state/compute/mod.rs	pub const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
-contains	apps/web/src/components/diff_view/state/compute/mod.rs	fn diff_edit_debounce_matches_acceptance_contract()
-contains	apps/web/src/components/diff_view/state/mod.rs	fn diff_compute_indicator_tracks_non_ready_phases()
-contains	apps/web/src/components/diff_view/navigation.rs	fn diff_hunk_navigation_indices_wrap()
-contains	apps/web/src/components/diff_view/navigation.rs	fn diff_header_change_stats_count_added_and_deleted_lines()
-contains	apps/web/src/components/diff_view/model.rs	fn diff_replace_lines_emit_word_level_ranges()
-contains	apps/web/src/components/diff_view/model/hunk_fold.rs	fn diff_fold_rows_collapse_and_expand_unchanged_region()
-contains	apps/web/src/components/diff_view/model/hunk_fold.rs	fn diff_context_lines_change_fold_count()
-contains	apps/web/src/components/diff_view/anchor.rs	fn diff_semantic_anchor_delta_preserves_original_offset()
-contains	apps/web/src/components/diff_view/cache.rs	fn diff_cache_key_is_scoped_by_repo_path_mode_and_context()
-contains	apps/web/src/components/diff_view/metrics.rs	fn diff_cache_ratio_updates_from_samples()
-contains	apps/web/src/components/diff_view/metrics.rs	fn diff_elapsed_ms_saturates_for_clock_skew()
-contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_algorithm_label_names_are_stable()
-contains	apps/web/src/components/diff_view/header.rs	t::diff::cache_state_help
-contains	apps/web/src/components/diff_view/header.rs	t::diff::cache_ratio_help
-contains	apps/web/src/components/diff_view/header.rs	t::diff::compute_ms_help
-contains	apps/web/src/i18n/diff.rs	pub fn cache_state_help
-contains	apps/web/src/i18n/diff.rs	pub fn cache_ratio_help
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-005	run: cargo test -p deve_web result_identity_is_request_and_revision_exact -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-006	run: cargo test -p deve_web hunk_navigation_targets_virtualized_row_index -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-007	run: cargo test -p deve_web converts_emoji_and_cjk_utf16_ranges_without_splitting_utf8 -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-008	run: cargo test -p deve_web hunk_navigation_keyboard_contract_is_stable -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-009	run: cargo test -p deve_core diff_projection_crosses_legacy_300_line_boundary -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-010	run: cargo test -p deve_web split_and_unified_only_select_backend_rows -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-011	run: cargo test -p deve_core diff_projection_folds_include_3_5_8 -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-012	run: cargo test -p deve_web result_identity_is_request_and_revision_exact -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-013	run: cargo test -p deve_core diff_projection_references_source_content_by_byte_range -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-014	run: cargo test -p deve_web cache_is_scope_local_and_lru_bounded -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-015	run: cargo test -p deve_core diff_projection_reports_backend_algorithm -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-016	run: cargo test -p deve_web hunk_navigation_keyboard_contract_is_stable -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-017	run: cargo test -p deve_web projection_error_keeps_base_projection_and_draft_for_retry -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-018	run: cargo test -p deve_web cache_is_scope_local_and_lru_bounded -- --nocapture
+contains	apps/web/src/components/diff_view/mod.rs	const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
+contains	apps/web/src/components/diff_view/mod.rs	fn draft_projection_debounce_is_contract_value()
+contains	apps/web/src/runtime/source_control_client/diff_session.rs	fn result_identity_is_request_and_revision_exact()
+contains	apps/web/src/components/diff_view/projection.rs	fn hunk_navigation_keyboard_contract_is_stable()
+contains	apps/web/src/components/diff_view/projection_model.rs	fn hunk_navigation_targets_virtualized_row_index()
+contains	apps/web/src/components/diff_view/projection_text.rs	fn converts_emoji_and_cjk_utf16_ranges_without_splitting_utf8()
+contains	crates/core/src/source_control/diff_projection/tests.rs	fn diff_projection_folds_include_3_5_8()
+contains	crates/core/src/source_control/diff_projection/tests.rs	fn diff_projection_reports_backend_algorithm()
+contains	apps/web/src/runtime/source_control_client/diff_cache.rs	fn cache_is_scope_local_and_lru_bounded()
+contains	apps/web/src/runtime/source_control_client/diff_session.rs	fn projection_error_keeps_base_projection_and_draft_for_retry()
+contains	apps/web/src/components/diff_view/surface.rs	data-deve-diff-status="unavailable"
+contains	apps/web/src/components/diff_view/mod.rs	t::diff::compute_ms_help
 contains	apps/web/src/i18n/diff.rs	pub fn compute_ms_help
+contains	apps/web/src/i18n/diff.rs	pub fn projection_unavailable
 absent_tree	apps/web/src/components/diff_view	"Diff:"
 absent_tree	apps/web/src/components/diff_view	"Read Only"
 absent_tree	apps/web/src/components/diff_view	"Preview Diff"
@@ -601,7 +555,7 @@ contains	crates/core/src/protocol/server.rs	DocDiff {
 contains	crates/core/src/protocol/server.rs	#[serde(default)] doc_id: Option<DocId>
 contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	doc_diff_payload_for_target_in_local_repo
 contains	crates/core/src/ledger/manager/source_control_workdir_diff.rs	workdir_diff_payload_for_target_in_local_repo
-contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	doc_id: Some(doc_id)
+contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	Some(doc_id),
 contains	apps/web/src/runtime/source_control_client/diff_session.rs	pub doc_id: Option<DocId>
 contains	apps/web/src/hooks/use_core/effects_sc_apply/tests.rs	apply_doc_diff_preserves_doc_identity
 absent	crates/core/src/ledger/manager/source_control_target_lookup.rs	resolve_canonical_path

@@ -15,7 +15,7 @@ use crate::runtime::{
 };
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
 use deve_core::tree::FileNode;
 use leptos::prelude::{Callable, Callback, GetUntracked, signal};
 
@@ -123,7 +123,7 @@ fn closing_last_active_document_returns_home_without_activating_inactive_diff_ta
     };
     let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
-    let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
+    let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiffSummary>::new());
     let source_control = SourceControlClient {
         staged_changes: signal(Vec::<ChangeEntry>::new()).0,
         unstaged_changes: signal(Vec::<ChangeEntry>::new()).0,

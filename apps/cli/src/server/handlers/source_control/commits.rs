@@ -6,7 +6,11 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::{
+    MAX_WS_FRAME_BYTES, ScopeNonce, ServerError, ServerErrorCode, ServerMessage,
+    server_binary_payload_size,
+};
+use deve_core::source_control::CommitFileDiffTarget;
 use std::sync::Arc;
 
 const COMMIT_AND_PUSH_CLI_ONLY_DETAIL: &str = "Commit & Push is CLI-only; create a NoteGit commit first, then run `deve ngit push` explicitly.";
@@ -99,22 +103,106 @@ pub async fn handle_get_commit_diff(
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
-    match super::commits_query::diff_commits(state, &scope, commit_a.as_deref(), &commit_b) {
-        Ok(diffs) => {
-            tracing::info!("Returning diff with {} file changes", diffs.len());
-            ch.unicast(ServerMessage::CommitDiffResult {
+    let query_state = state.clone();
+    let query_scope = scope.clone();
+    let query_commit_a = commit_a.clone();
+    let query_commit_b = commit_b.clone();
+    let result = state
+        .diff_projection_executor()
+        .run_bounded(move || {
+            super::commits_query::diff_commit_summaries(
+                &query_state,
+                &query_scope,
+                query_commit_a.as_deref(),
+                &query_commit_b,
+            )
+        })
+        .await;
+    match result {
+        Ok(files) => {
+            tracing::info!("Returning diff with {} file changes", files.len());
+            let message = ServerMessage::CommitDiffResult {
                 request_id: Some(request_id),
                 repo_id: Some(scope.repo_id),
                 branch: scope.branch.clone(),
                 scope_nonce,
-                diffs,
-            });
+                files,
+            };
+            match server_binary_payload_size(&message) {
+                Ok(size) if size <= MAX_WS_FRAME_BYTES => {
+                    let _ = ch.diff_unicast(message).await;
+                }
+                Ok(size) => super::errors::send_ws_code_scoped(
+                    ch,
+                    ServerErrorCode::DiffResourceLimit,
+                    format!("encoded_bytes={size}; limit={MAX_WS_FRAME_BYTES}"),
+                    scope_nonce,
+                ),
+                Err(_) => super::errors::send_ws_code_scoped(
+                    ch,
+                    ServerErrorCode::DiffComputeFailed,
+                    "commit diff summary serialization failed",
+                    scope_nonce,
+                ),
+            }
         }
         Err(e) => {
             tracing::error!("Failed to get commit diff: {:?}", e);
             super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }
+}
+
+pub async fn handle_get_commit_file_diff(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    request_id: String,
+    commit_a: Option<String>,
+    commit_b: String,
+    target: CommitFileDiffTarget,
+) {
+    let response_scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let scope = match super::repo_scope::resolve_current_repo_scope(state, session) {
+        Ok(scope) => scope,
+        Err(error) => return super::errors::send_ws_scoped(ch, error, response_scope_nonce),
+    };
+    let nonce = ScopeNonce::new(response_scope_nonce.unwrap_or_default());
+    let ticket = session.diff_projection_jobs.begin_fixed(
+        request_id,
+        scope.repo_id,
+        scope.branch.clone(),
+        nonce,
+    );
+    let query_state = state.clone();
+    let query_scope = scope;
+    state.diff_projection_executor().spawn_loaded(
+        ticket,
+        move || {
+            let diff = super::commits_query::diff_commit_file(
+                &query_state,
+                &query_scope,
+                commit_a.as_deref(),
+                &commit_b,
+                &target,
+            )
+            .map_err(|error| {
+                let detail = error
+                    .detail
+                    .unwrap_or_else(|| format!("commit diff failed: {:?}", error.code));
+                ServerError::with_detail(ServerErrorCode::DiffComputeFailed, detail)
+            })?;
+            Ok((
+                diff.old_content,
+                diff.new_content,
+                crate::server::diff_projection::DiffJobResponse::Document {
+                    doc_id: diff.doc_id,
+                    path: diff.path,
+                },
+            ))
+        },
+        ch.clone(),
+    );
 }
 
 /// 拒绝兼容期 `CommitAndPush` wire frame。

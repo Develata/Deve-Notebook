@@ -1,21 +1,15 @@
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	run: scripts/check-ui-desktop-baseline.sh
-case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	run: cargo test -p deve_web desktop_diff_scroll -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	run: cargo test -p deve_web split_and_unified_only_select_backend_rows -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_canonical_column_markers_bound true
-case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_diff_scroll_sync_ratio_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_diff_shared_projection_viewport_bound true
 contains	apps/web/src/components/desktop_layout/sidebar.rs	data-deve-desktop-col="1-sidebar"
-contains	apps/web/src/components/diff_view/split_pane.rs	data-deve-desktop-col="2-diff-old"
-contains	apps/web/src/components/diff_view/split_pane.rs	data-deve-desktop-col="3-editor"
+contains	apps/web/src/components/desktop_layout/content.rs	data-deve-desktop-col="3-display-editor"
+contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="typed-v13"
 contains	apps/web/src/editor/mod.rs	data-deve-desktop-col="4-outline"
 contains	apps/web/src/components/desktop_chat_panel.rs	data-deve-desktop-col="5-chat"
-contains	apps/web/src/components/diff_view/split_pane.rs	synced_scroll_top(
-contains	apps/web/src/components/diff_view/split_pane.rs	source_top as f64 / source_max as f64
-contains	apps/web/src/components/diff_view/split_pane.rs	right.set_scroll_top(target_top);
-contains	apps/web/src/components/diff_view/split_pane.rs	left.set_scroll_top(target_top);
-contains	apps/web/src/components/diff_view/split_pane.rs	set_syncing_left.set(false);
-contains	apps/web/src/components/diff_view/split_pane.rs	set_syncing_right.set(false);
-contains	apps/web/src/components/diff_view/split_pane.rs	fn desktop_diff_scroll_syncs_col3_to_col2_by_ratio()
-contains	apps/web/src/components/diff_view/split_pane.rs	fn desktop_diff_scroll_sync_skips_noop_target_update()
+contains	apps/web/src/components/diff_view/projection.rs	data-deve-diff-viewport="virtualized"
+contains	apps/web/src/components/diff_view/projection_model.rs	fn split_and_unified_only_select_backend_rows()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	run: scripts/check-ui-desktop-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	run: cargo test -p deve_web desktop_layout_resize -- --nocapture
@@ -186,7 +180,6 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_ex
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_default_unavailable true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_default_not_resolved true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_markdown_target_bound true
-contains	docs/acceptance-bindings.tsv	UI-WEB-007|manual-chrome|docs/features/08_ui_design_01_web.md|file tree context action registry workflow
 contains	docs/features/08_ui_design_01_web.md	文件树右键菜单应由 Context Action registry 投影
 contains	docs/plan/11_ui_design/index.md	Context Action resolver 属于 Flow Coordination
 contains	docs/features/08_ui_design_01_web.md	复制绝对路径

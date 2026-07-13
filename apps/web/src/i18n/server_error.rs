@@ -91,6 +91,12 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Plugin result is not serializable"
         }
         (Locale::Zh, ServerErrorCode::PluginSerializationError) => "插件结果不可序列化",
+        (Locale::En, ServerErrorCode::DiffResourceLimit) => {
+            "Diff exceeds the supported resource limit"
+        }
+        (Locale::Zh, ServerErrorCode::DiffResourceLimit) => "差异超过支持的资源限制",
+        (Locale::En, ServerErrorCode::DiffComputeFailed) => "Diff projection could not be computed",
+        (Locale::Zh, ServerErrorCode::DiffComputeFailed) => "无法计算差异投影",
         (Locale::En, ServerErrorCode::GraphDegradedProjectionRequired) => {
             "Graph projection requires explicit degraded export"
         }

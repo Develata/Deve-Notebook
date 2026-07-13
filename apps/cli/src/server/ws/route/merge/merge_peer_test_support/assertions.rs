@@ -1,5 +1,5 @@
 use deve_core::models::{DocId, PeerId};
-use deve_core::protocol::{MergeConflictAction, ServerMessage};
+use deve_core::protocol::{MergeConflictAction, ServerErrorCode, ServerMessage};
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::{Duration, timeout};
 
@@ -46,18 +46,31 @@ pub(crate) async fn expect_merge_conflict(
     uni_rx: &mut mpsc::Receiver<ServerMessage>,
     expected: MergeConflictExpectation<'_>,
 ) -> anyhow::Result<()> {
-    match timeout(Duration::from_secs(2), uni_rx.recv())
-        .await?
-        .expect("merge conflict")
-    {
+    let message = loop {
+        let message = timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("merge conflict");
+        if matches!(
+            &message,
+            ServerMessage::ProtocolError {
+                error,
+                scope_nonce,
+                ..
+            } if error.code == ServerErrorCode::StorageConflict
+                && *scope_nonce == expected.scope_nonce
+        ) {
+            continue;
+        }
+        break message;
+    };
+    match message {
         ServerMessage::MergeConflict {
             repo_id: actual_repo,
             branch: actual_branch,
             scope_nonce: actual_scope_nonce,
             doc_id: actual_doc_id,
             path,
-            current_content,
-            incoming_content,
+            projection,
             result_content,
             actions,
             conflicts,
@@ -67,8 +80,8 @@ pub(crate) async fn expect_merge_conflict(
             assert_eq!(actual_scope_nonce, expected.scope_nonce);
             assert_eq!(actual_doc_id, expected.doc_id);
             assert_eq!(path, expected.path);
-            assert_eq!(current_content, expected.current_content);
-            assert_eq!(incoming_content, expected.incoming_content);
+            assert_eq!(projection.base_content, expected.current_content);
+            assert_eq!(projection.target_content, expected.incoming_content);
             assert_eq!(result_content, expected.result_content);
             assert_eq!(actions.len(), 3);
             assert!(actions.contains(&MergeConflictAction::AcceptCurrent));

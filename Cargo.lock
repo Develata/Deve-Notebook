@@ -1381,7 +1381,6 @@ dependencies = [
  "pulldown-cmark",
  "serde",
  "serde_json",
- "similar",
  "sublime_fuzzy",
  "tracing",
  "tracing-wasm",

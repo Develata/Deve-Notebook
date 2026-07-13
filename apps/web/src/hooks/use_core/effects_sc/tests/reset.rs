@@ -30,25 +30,18 @@ fn clear_repo_scoped_state_resets_source_control_view() {
     }]);
     let (history_request_id, set_history_request_id) = signal(Some("history-req".to_string()));
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(Some("doc-req".to_string()));
-    let (diff, set_diff) = signal(Some(DiffSessionWire {
-        doc_id: None,
-        path: "a.md".into(),
-        display_path: "a.md".into(),
-        old_content: "old".into(),
-        new_content: "new".into(),
-        merge_conflict: None,
-        opened_at_ms: 1,
-    }));
+    let (diff, set_diff) = signal(Some(DiffSessionWire::new(
+        "a.md".into(),
+        "old".into(),
+        "new".into(),
+    )));
     let (commit_diff_request_id, set_commit_diff_request_id) =
         signal(Some("commit-req".to_string()));
-    let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
-        doc_id: None,
-        path: "notes/a.md".into(),
-        status: deve_core::source_control::ChangeStatus::Modified,
-        previous_path: None,
-        old_content: "old".into(),
-        new_content: "new".into(),
-    }]);
+    let (commit_diff, set_commit_diff) = signal(vec![test_commit_summary(
+        "notes/a.md",
+        deve_core::source_control::ChangeStatus::Modified,
+        None,
+    )]);
     let (notice, set_notice) = signal(Some(SourceControlNotice {
         code: deve_core::protocol::ServerErrorCode::ScNothingToCommit,
         detail: None,

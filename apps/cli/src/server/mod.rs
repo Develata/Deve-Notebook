@@ -10,6 +10,7 @@ pub mod auth;
 pub mod channel;
 #[cfg(test)]
 include!("test_modules.rs");
+mod diff_projection;
 mod error_classify;
 pub mod handlers;
 mod launch;

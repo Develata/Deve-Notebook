@@ -28,7 +28,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
     let (diff, set_diff) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
-    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
+    let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiffSummary>::new());
     let (notice, set_notice) = signal(None::<SourceControlNotice>);
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
     let (load_state, _) = signal(LoadPhase::Ready);
@@ -171,14 +171,11 @@ fn commit_ack_clears_open_source_control_diffs() {
         "# External pending".into(),
     )));
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
-    let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
-        doc_id: None,
-        path: "external/fs-pending.md".into(),
-        status: ChangeStatus::Added,
-        previous_path: None,
-        old_content: String::new(),
-        new_content: "# External pending".into(),
-    }]);
+    let (commit_diff, set_commit_diff) = signal(vec![test_commit_summary(
+        "external/fs-pending.md",
+        ChangeStatus::Added,
+        None,
+    )]);
     let (_notice, set_notice) = signal(None::<SourceControlNotice>);
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
     let (load_state, _) = signal(LoadPhase::Ready);

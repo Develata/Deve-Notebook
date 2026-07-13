@@ -4,7 +4,7 @@
 use crate::components::sidebar::source_control::history_commit_item::HistoryCommitItem;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::Locale;
-use deve_core::source_control::{CommitFileDiff, CommitInfo};
+use deve_core::source_control::{CommitFileDiffSummary, CommitInfo};
 use leptos::prelude::*;
 
 #[component]
@@ -16,10 +16,10 @@ pub fn HistoryTimeline(
     commit_history: ReadSignal<Vec<CommitInfo>>,
     commit_diff_request_id: ReadSignal<Option<String>>,
     set_commit_diff_request_id: WriteSignal<Option<String>>,
-    commit_diff_result: ReadSignal<Vec<CommitFileDiff>>,
+    commit_diff_result: ReadSignal<Vec<CommitFileDiffSummary>>,
     notice: ReadSignal<Option<SourceControlNotice>>,
     set_notice: WriteSignal<Option<SourceControlNotice>>,
-    set_commit_diff_result: WriteSignal<Vec<CommitFileDiff>>,
+    set_commit_diff_result: WriteSignal<Vec<CommitFileDiffSummary>>,
     on_get_commit_diff: Callback<(Option<String>, String)>,
 ) -> impl IntoView {
     view! {

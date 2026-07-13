@@ -18,6 +18,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod api;
 pub mod diff;
+pub mod diff_projection;
 pub mod line_diff;
 pub mod types;
 
@@ -49,5 +50,6 @@ pub use api::{DelegatedSourceControlApi, SourceControlApi};
 pub(crate) use commit_diff_error::CommitDiffError;
 pub use line_diff::ChangeRange;
 pub use types::{
-    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution,
+    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitFileDiffSummary,
+    CommitFileDiffTarget, CommitInfo, ConflictResolution,
 };

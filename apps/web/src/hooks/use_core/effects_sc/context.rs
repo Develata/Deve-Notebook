@@ -5,7 +5,7 @@
 //!
 use crate::api::WsService;
 use deve_core::models::PeerId;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
 use leptos::prelude::*;
 
 use super::super::effects_sc_scope::matches_current_scope;
@@ -35,7 +35,7 @@ pub(crate) struct ScMessageContext<'a> {
     pub(crate) set_diff: WriteSignal<Option<DiffSessionWire>>,
     pub(crate) commit_diff_request_id: ReadSignal<Option<String>>,
     pub(crate) set_commit_diff_request_id: WriteSignal<Option<String>>,
-    pub(crate) set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
+    pub(crate) set_commit_diff: WriteSignal<Vec<CommitFileDiffSummary>>,
     pub(crate) set_notice: WriteSignal<Option<SourceControlNotice>>,
     pub(crate) current_repo_id: ReadSignal<Option<String>>,
     pub(crate) load_state: ReadSignal<LoadPhase>,
