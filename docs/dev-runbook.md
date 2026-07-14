@@ -1055,8 +1055,11 @@ scripts/smoke-mobile-android-remote-browser.sh
 ```
 
 The HTTPS instance and credentials are test-only and must be retired after the
-receipt run. This smoke does not close the separate Mobile native
-RemoteBrowser-to-LocalBackend control gap.
+receipt run. The smoke uses a preference-driven RemoteBrowser launch, invokes
+the platform-native recovery control, and binds the resulting receipt to the
+typed recovery transition, CDP surface retirement, fresh local scope/session,
+and graceful process cleanup. CLI/environment remote overrides intentionally
+hide the recovery control and cannot satisfy this journey.
 
 Required iOS mode needs macOS, a built simulator `.app`, and a booted simulator:
 

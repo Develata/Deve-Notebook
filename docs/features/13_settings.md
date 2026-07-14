@@ -33,7 +33,7 @@
 - 最大文档标签页数是本地 UI 偏好，只限制 Markdown 文档标签页自动淘汰，不限制 Diff 标签页，也不持久化打开文档列表；该数字输入必须在 blur / Enter / change 时提交，输入两位数的中间过程不应触发临时淘汰。
 - AI Chat 面板可见性是本地 UI 偏好；关闭后应同时移除 Chat 面板和桌面 Chat 分界线，不应改变 AI 后端配置。
 - Backend section 在普通浏览器和 RemoteBrowser 中必须显示 native-only unavailable；只有 typed bundled-local capability 存在时才可校验并保存 Remote Backend。Remote URL 未经 native node-role 校验成功不能保存，校验中/失败/成功都应有可见反馈。
-- 切回 Local Backend 是 native-owned lifecycle 操作，不属于 Web Settings。Desktop 原生菜单/托盘保存 host-local preference 并重启壳层；Mobile 原生控件当前登记为 required gap。该操作不写浏览器 localStorage、不写 `config.toml`、不保存 session/token。
+- 切回 Local Backend 是 native-owned lifecycle 操作，不属于 Web Settings。Desktop 原生菜单/托盘保存 host-local preference 并重启壳层；Mobile 的 Android/iOS 平台原生控件交给 native coordinator 销毁远端 WebView并建立新的 embedded runtime。该操作不写浏览器 localStorage、不写 `config.toml`、不保存或复用远端 session/token。
 - Settings 模态框只保留右上角关闭按钮；底部不应再渲染大号关闭按钮。
 - 设置不应表现为“点了没反应”。
 

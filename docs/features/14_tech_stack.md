@@ -21,6 +21,7 @@
 - Web 是当前最直接可见的交付形态。
 - CLI / Docker / Server 是系统控制与部署面的一部分。
 - Desktop / Android / 后续 iOS 属于多端支持矩阵，但阶段成熟度可能不同。
+- Mobile 平台 bridge 依赖仅在对应 Android/iOS target 且启用 `native-packaging` 时进入构建；默认 Mobile skeleton 不携带 JNI、Objective-C 或 Tauri packaging runtime。
 
 ### 2. 资源预算的可感知影响
 

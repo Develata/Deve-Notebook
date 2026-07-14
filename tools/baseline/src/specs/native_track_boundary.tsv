@@ -109,6 +109,8 @@ contains	apps/desktop/tauri.conf.json	"productName": "Deve Notebook"
 contains	apps/desktop/tauri.conf.json	"icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]
 contains	apps/desktop/tauri.conf.json	"createUpdaterArtifacts": false
 contains	apps/mobile/Cargo.toml	native-packaging = [
+contains	apps/mobile/Cargo.toml	"dep:objc2-ui-kit"
+contains	apps/mobile/Cargo.toml	objc2-ui-kit = { version = "0.3.2", optional = true, default-features = false
 contains	apps/mobile/Cargo.toml	"dep:deve_cli"
 contains	apps/mobile/Cargo.toml	"dep:getrandom"
 contains	apps/mobile/Cargo.toml	"dep:indexmap_1"

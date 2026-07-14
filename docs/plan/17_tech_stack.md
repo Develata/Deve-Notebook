@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -109,6 +109,7 @@ Gate 状态：
 - Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；Android shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-android-shell-package-execution-gate` 单独打开。
 - iOS shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-ios-shell-package-execution-gate` 单独打开；Mobile runtime entrypoint、process runtime、native authority write path 与 release ready 不得由 Android/iOS package execution 隐式打开。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
+- Mobile Android JNI 与 iOS Objective-C shell bridge 依赖（`jni`、`block2`、`objc2`、`objc2-core-foundation`、`objc2-foundation`、`objc2-ui-kit`）必须保持 target-scoped、optional、`default-features = false`，并仅由 `native-packaging` feature 启用；其源码只允许位于 Mobile native entry/lifecycle/embedded-backend binding 内。
 - Native shell runtime 分为 `LocalBackend` 与 `RemoteBrowser` 两种互斥模式。`LocalBackend` 是 Desktop/Android/Mobile native-packaging 默认模式，启动受控本机 service 并自动初始化 app-private ledger/repo/projection；业务写入仍必须经 server/core writer gate。
 - `RemoteBrowser` 是显式远端 HTTPS origin 壳层模式，只把 WebView 导航到远端 Docker/Web URL；不得启动本机 service，不得注入本地 endpoint/session bootstrap。
 - `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopAndMobileDependencySpikeOpen`；

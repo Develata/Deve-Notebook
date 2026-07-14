@@ -11,6 +11,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod android;
+
+use android::validate_android_claims;
+
 #[derive(Debug, Deserialize)]
 struct Receipt {
     schema: u8,
@@ -173,80 +177,6 @@ fn validate_receipt(
     Ok(())
 }
 
-fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Result<()> {
-    if receipt.schema != 3 {
-        bail!("Android writable evidence requires receipt schema 3 typed claims");
-    }
-    let claims = receipt
-        .claims
-        .as_ref()
-        .context("Android receipt is missing typed target/probe claims")?;
-    let expected_producer = match row.mode.as_str() {
-        "local-backend" => "smoke-mobile-android-lifecycle",
-        "remote-browser" => "smoke-mobile-android-remote-browser",
-        other => bail!("unsupported Android evidence mode {other}"),
-    };
-    let expected_artifact = match row.mode.as_str() {
-        "local-backend" => "smoke-mobile-android-lifecycle.sh",
-        "remote-browser" => "smoke-mobile-android-remote-browser.sh",
-        _ => unreachable!(),
-    };
-    if claims.get("producer").and_then(Value::as_str) != Some(expected_producer) {
-        bail!("Android claims producer does not match {expected_producer}");
-    }
-    if !receipt
-        .command_artifacts
-        .iter()
-        .any(|artifact| artifact == expected_artifact)
-    {
-        bail!("Android receipt command is not bound to {expected_artifact}");
-    }
-    if claims.get("mode").and_then(Value::as_str) != Some(row.mode.as_str()) {
-        bail!("Android claims mode does not match receipt mode");
-    }
-    let target = claims
-        .get("target")
-        .context("Android claims target is missing")?;
-    let sdk = target.get("sdkLevel").and_then(Value::as_u64).unwrap_or(0);
-    let provider_major = target
-        .get("webViewProviderMajor")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    if sdk < 29
-        || provider_major < 137
-        || target.get("supportBaseline").and_then(Value::as_bool) != Some(true)
-    {
-        bail!("Android target does not meet API 29 / WebView 137 support baseline");
-    }
-    let webcrypto = claims
-        .get("webcrypto")
-        .context("Android claims WebCrypto probe is missing")?;
-    if webcrypto.get("writable").and_then(Value::as_bool) != Some(true)
-        || !webcrypto.get("blocker").is_some_and(Value::is_null)
-    {
-        bail!("Android target did not pass the real Ed25519 writer probe");
-    }
-    let journey = claims
-        .get("journey")
-        .context("Android claims journey result is missing")?;
-    if journey
-        .get("writableLifecycleComplete")
-        .and_then(Value::as_bool)
-        != Some(true)
-    {
-        bail!("Android writable lifecycle journey is incomplete");
-    }
-    let executable = Path::new(&receipt.command_program)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or("")
-        .to_ascii_lowercase();
-    if !matches!(executable.as_str(), "bash" | "bash.exe" | "sh" | "sh.exe") {
-        bail!("Android receipt producer must be invoked through the shell harness");
-    }
-    Ok(())
-}
-
 fn expected_target_os(surface: &str) -> &str {
     match surface {
         "web" => "web",
@@ -335,7 +265,7 @@ mod tests {
     #[test]
     fn target_host_receipt_rejects_dirty_and_stale_evidence() {
         let now = Utc::now();
-        let row = MatrixRow {
+        let mut row = MatrixRow {
             requirement_id: "journey.android".into(),
             journey_id: "android-local-backend".into(),
             flow_id: "none".into(),
@@ -406,6 +336,65 @@ mod tests {
         assert!(validate_receipt(&record, &row, "abc", now).is_err());
         record.receipt.target_os = "android".into();
         record.relative_path = "receipts/other.json".into();
+        assert!(validate_receipt(&record, &row, "abc", now).is_err());
+
+        row.mode = "remote-browser".into();
+        record.relative_path = "receipts/smoke.android.json".into();
+        record.receipt.mode = "remote-browser".into();
+        record.receipt.command_artifacts = vec!["smoke-mobile-android-remote-browser.sh".into()];
+        record.receipt.claims.as_mut().unwrap()["producer"] =
+            json!("smoke-mobile-android-remote-browser");
+        record.receipt.claims.as_mut().unwrap()["mode"] = json!("remote-browser");
+        assert!(validate_receipt(&record, &row, "abc", now).is_err());
+        {
+            let claims = record.receipt.claims.as_mut().unwrap();
+            for claim in [
+                "loginOrNativeSession",
+                "edit",
+                "commitHistory",
+                "backgroundResume",
+                "zeroNativeIpc",
+                "nativeLocalRecovery",
+                "remoteSurfaceDestroyedBeforeLocalIpc",
+                "freshLocalEndpointSessionScope",
+                "remoteAuthorityNotReused",
+                "noOrphanEmbeddedRuntime",
+            ] {
+                claims["journey"][claim] = json!(true);
+            }
+            claims["recovery"] = json!({
+                "transition": {
+                    "recoveryId": 1,
+                    "phase": "local_window_created",
+                    "remoteSurfaceRetired": true,
+                    "preferenceCommittedAfterRemoteRetirement": true,
+                    "localPluginsRegisteredAfterRemoteRetirement": true,
+                    "supervisorManaged": true,
+                    "localWindowCreated": true,
+                    "activeRuntimeOwners": 1,
+                    "lastError": null
+                },
+                "remote": {
+                    "origin": "https://remote.example",
+                    "repoId": "11111111-1111-4111-8111-111111111111",
+                    "scopeNonce": 7
+                },
+                "local": {
+                    "origin": "http://tauri.localhost",
+                    "endpoint": "http://127.0.0.1:49152",
+                    "sessionGeneration": 1,
+                    "repoId": "22222222-2222-4222-8222-222222222222",
+                    "scopeNonce": 1
+                },
+                "remoteTargetRetired": true,
+                "authorityTupleChanged": true,
+                "appPidStable": true,
+                "processExitedAfterGracefulShutdown": true
+            });
+        }
+        assert!(validate_receipt(&record, &row, "abc", now).is_ok());
+        record.receipt.claims.as_mut().unwrap()["recovery"]["transition"]["activeRuntimeOwners"] =
+            json!(2);
         assert!(validate_receipt(&record, &row, "abc", now).is_err());
     }
 }

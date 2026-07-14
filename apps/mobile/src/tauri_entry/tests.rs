@@ -18,27 +18,32 @@ fn mobile_tauri_runtime_surface_is_shell_only() {
 
 #[test]
 fn mobile_tauri_remote_browser_resolves_https_target_without_init_script() {
-    let target = remote_browser_target_for_launch_options(
+    let mode = mobile_tauri_mode_for_inputs(
         &MobileTauriLaunchOptions {
             remote_url: Some("https://deve.example".to_string()),
             local_backend: None,
         },
         &NativeBackendPreference::local(),
+        None,
     )
-    .expect("remote target")
-    .expect("remote mode");
+    .expect("remote target");
 
-    assert_eq!(target.https_origin, "https://deve.example");
+    assert_eq!(
+        mode.remote_target.expect("remote mode").https_origin,
+        "https://deve.example"
+    );
+    assert!(!mode.native_local_recovery_control);
 }
 
 #[test]
 fn mobile_tauri_remote_browser_rejects_non_https_origin() {
-    let error = remote_browser_target_for_launch_options(
+    let error = mobile_tauri_mode_for_inputs(
         &MobileTauriLaunchOptions {
             remote_url: Some("http://deve.example".to_string()),
             local_backend: None,
         },
         &NativeBackendPreference::local(),
+        None,
     )
     .expect_err("http remote target must fail");
 
@@ -70,18 +75,32 @@ fn mobile_launch_options_reject_conflicting_local_and_remote_modes() {
     .expect_err("conflicting mode must fail");
 
     assert_eq!(error, MobileTauriLaunchOptionsError::ConflictingModes);
+
+    let error = mobile_tauri_mode_for_inputs(
+        &MobileTauriLaunchOptions {
+            remote_url: Some("https://deve.example".to_string()),
+            local_backend: Some(true),
+        },
+        &NativeBackendPreference::local(),
+        None,
+    )
+    .expect_err("constructed conflicting mode must fail");
+    assert!(matches!(error, MobileTauriModeError::ConflictingModes));
 }
 
 #[test]
 fn mobile_host_backend_preference_can_select_remote_browser() {
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let target =
-        remote_browser_target_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
-            .expect("target")
-            .expect("remote target");
+    let mode =
+        mobile_tauri_mode_for_inputs(&MobileTauriLaunchOptions::default(), &preference, None)
+            .expect("target");
 
-    assert_eq!(target.https_origin, "https://pref.example");
+    assert_eq!(
+        mode.remote_target.expect("remote target").https_origin,
+        "https://pref.example"
+    );
+    assert!(mode.native_local_recovery_control);
 }
 
 #[test]
@@ -92,23 +111,30 @@ fn mobile_local_backend_option_overrides_remote_preference() {
         local_backend: Some(true),
     };
 
-    let target = remote_browser_target_for_launch_options(&options, &preference).expect("target");
+    let mode = mobile_tauri_mode_for_inputs(&options, &preference, None).expect("target");
 
-    assert!(target.is_none());
+    assert!(mode.remote_target.is_none());
+    assert!(!mode.native_local_recovery_control);
 }
 
 #[test]
 fn mobile_remote_env_overrides_host_backend_preference() {
-    let _lock = ENV_LOCK.lock().expect("env lock");
-    let _guard = EnvGuard::set(DEVE_NATIVE_REMOTE_URL_ENV, Some("https://env.example"));
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let target =
-        remote_browser_target_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
-            .expect("target")
-            .expect("remote target");
+    let mode = mobile_tauri_mode_for_inputs(
+        &MobileTauriLaunchOptions::default(),
+        &preference,
+        Some(NativeRemoteTarget {
+            https_origin: "https://env.example".to_string(),
+        }),
+    )
+    .expect("target");
 
-    assert_eq!(target.https_origin, "https://env.example");
+    assert_eq!(
+        mode.remote_target.expect("remote target").https_origin,
+        "https://env.example"
+    );
+    assert!(!mode.native_local_recovery_control);
 }
 
 #[test]
@@ -127,35 +153,4 @@ fn mobile_tauri_main_window_creation_is_deferred_until_bootstrap() {
             .and_then(|value| value.as_bool()),
         Some(false)
     );
-}
-
-static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-struct EnvGuard {
-    key: &'static str,
-    old: Option<String>,
-}
-
-impl EnvGuard {
-    fn set(key: &'static str, value: Option<&str>) -> Self {
-        let old = std::env::var(key).ok();
-        unsafe {
-            match value {
-                Some(value) => std::env::set_var(key, value),
-                None => std::env::remove_var(key),
-            }
-        }
-        Self { key, old }
-    }
-}
-
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        unsafe {
-            match self.old.as_ref() {
-                Some(value) => std::env::set_var(self.key, value),
-                None => std::env::remove_var(self.key),
-            }
-        }
-    }
 }

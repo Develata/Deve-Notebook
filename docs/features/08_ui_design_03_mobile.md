@@ -47,7 +47,8 @@
 - Mobile 可从可信 bundled `LocalBackend` Settings 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
 - RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；远端页面不注册 backend facade，也不能调用 native IPC。
-- Mobile 原生 “Use Local Backend” 控件尚未落地，当前作为 required gap；不得用 Web fallback 冒充已完成。
+- preference-driven RemoteBrowser 必须显示 Android/iOS 平台原生 “Use Local Backend” 控件；显式 CLI/env override 必须隐藏。控件只调用 native coordinator，不进入远端 DOM，也不注册 RemoteBrowser IPC。
+- 切回 local 时必须销毁远端 WebView，启动新的 embedded supervisor，并以新的随机 endpoint、native session、repo handshake 与 scope 创建 bundled-local WebView；远端 cookie/session/authority 不得复用。
 - `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不注册 Tauri commands，也不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 主 WebView 由 native 以已校验 HTTPS `WindowConfig` 直接创建，不通过 bundled 页面或远端页面的 init-script redirect 过渡。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
@@ -185,14 +186,15 @@
 3. 模拟 foreground reprobe，并检查 writer gate 状态。
 4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失。
 5. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin且旧 embedded service 已有界退出。
-6. 模拟 RemoteBrowser 失联，确认远端页面没有 backend facade/native IPC；记录 Mobile 原生切回 local 控件仍是 required gap。
+6. 模拟 RemoteBrowser 失联，确认远端页面没有 backend facade/native IPC；通过平台原生 “Use Local Backend” 控件切换。
+7. 确认远端 WebView 被销毁，bundled-local WebView 使用新的 loopback endpoint/session/scope，且切换前后没有孤儿 embedded runtime。
 
 期望结果：
 
 - 默认 LocalBackend 可以启动 embedded loopback service。
 - RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
 - Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
-- RemoteBrowser 失联时保持只读且不暴露 native IPC；当前不能声明 Mobile 原生切回 LocalBackend 已验收。
+- RemoteBrowser 失联时保持只读且不暴露 native IPC；native 恢复入口可在不复用远端 authority 的前提下建立全新 LocalBackend runtime。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
 - 后端退出后恢复使用新的随机 endpoint/session，不扫描端口；stale scope 被拒绝且 pending overlay 保留。
 - app exit 后 transport、metrics、prewarm、watcher 与 P2P task 不残留；RemoteBrowser 全程不创建 embedded runtime。

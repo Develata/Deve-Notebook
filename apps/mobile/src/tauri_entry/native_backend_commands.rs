@@ -5,6 +5,7 @@
 //! LocalBackend-only Mobile IPC surface. RemoteBrowser never installs this plugin.
 
 use crate::embedded_backend::MobileEmbeddedBackendSupervisor;
+use crate::tauri_entry::backend_recovery::MobileBackendRecoveryState;
 use crate::tauri_lifecycle::shutdown_mobile_backend_before_restart;
 use crate::{MobileNativeBackendState, probe_mobile_native_remote_backend};
 use deve_core::native_adapter::{NativeBackendPreference, NativeBackendValidationResult};
@@ -31,7 +32,7 @@ fn ensure_bundled_local_origin(window: &WebviewWindow<Wry>) -> Result<(), String
 #[tauri::command]
 async fn native_backend_get_config(
     window: WebviewWindow<Wry>,
-    state: State<'_, MobileNativeBackendState>,
+    state: State<'_, std::sync::Arc<MobileNativeBackendState>>,
 ) -> Result<NativeBackendPreference, String> {
     ensure_bundled_local_origin(&window)?;
     state.preference().map_err(|error| error.to_string())
@@ -50,6 +51,18 @@ async fn native_backend_get_service_state(
         .snapshot()
         .map(Some)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn native_backend_get_recovery_state(
+    window: WebviewWindow<Wry>,
+    app: AppHandle<Wry>,
+) -> Result<crate::tauri_entry::backend_recovery::MobileBackendRecoverySnapshot, String> {
+    ensure_bundled_local_origin(&window)?;
+    let state = app
+        .try_state::<std::sync::Arc<MobileBackendRecoveryState>>()
+        .ok_or_else(|| "mobile backend recovery state unavailable".to_string())?;
+    state.snapshot()
 }
 
 #[tauri::command]
@@ -131,7 +144,7 @@ async fn native_backend_validate_remote(
 async fn native_backend_save_remote(
     window: WebviewWindow<Wry>,
     app: AppHandle<Wry>,
-    state: State<'_, MobileNativeBackendState>,
+    state: State<'_, std::sync::Arc<MobileNativeBackendState>>,
     remote_url: String,
 ) -> Result<NativeBackendValidationResult, String> {
     ensure_bundled_local_origin(&window)?;
@@ -159,6 +172,7 @@ pub(super) fn mobile_local_backend_command_plugin() -> tauri::plugin::TauriPlugi
         .invoke_handler(tauri::generate_handler![
             native_backend_get_config,
             native_backend_get_service_state,
+            native_backend_get_recovery_state,
             native_backend_prepare_webview_session,
             native_backend_debug_stop_transport,
             native_backend_debug_request_exit,

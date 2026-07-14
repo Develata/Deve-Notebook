@@ -696,7 +696,21 @@ contains	scripts/lib/android-business-flow.mjs	./mobile-source-control-interacti
 contains	scripts/smoke-mobile-android-remote-browser.sh	DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED
 contains	scripts/smoke-mobile-android-remote-browser.mjs	smoke-mobile-android-remote-browser
 contains	scripts/smoke-mobile-android-remote-browser.mjs	probeWebCryptoEd25519
+contains	scripts/smoke-mobile-android-remote-browser.mjs	freshLocalEndpointSessionScope
+contains	scripts/smoke-mobile-android-remote-browser.mjs	remoteAuthorityNotReused
+contains	scripts/smoke-mobile-android-remote-browser.mjs	native_backend_get_service_state
+contains	scripts/smoke-mobile-android-remote-browser.mjs	native_backend_get_recovery_state
+contains	scripts/smoke-mobile-android-remote-browser.mjs	RemoteBrowser CDP target retirement
+contains	scripts/smoke-mobile-android-remote-browser.mjs	processExitedAfterGracefulShutdown
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	MobileBackendRecoveryCoordinator
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	remove_platform_recovery_control
+contains	apps/mobile/src/tauri_entry/backend_recovery/state.rs	MobileBackendRecoveryState
+contains	apps/mobile/src/tauri_entry/backend_recovery/state.rs	active_runtime_owners
+contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	installUseLocalBackendControl
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	removeUseLocalBackendControl
+contains	apps/mobile/src/tauri_lifecycle.rs	MobileBackendRecoveryState
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-remote-browser.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"

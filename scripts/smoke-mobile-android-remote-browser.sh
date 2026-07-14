@@ -110,8 +110,8 @@ DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS="$(((GLOBAL_DEADLINE - SECONDS) * 1000))" 
 timeout "$((GLOBAL_DEADLINE - SECONDS))" node "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.mjs"
 
 LOGCAT="$(adb_cmd logcat -d 2>/dev/null | tr -d '\r')"
-if printf '%s\n' "$LOGCAT" | grep -F "deve_mobile LocalBackend" >/dev/null; then
-  fail "RemoteBrowser started or attempted the embedded LocalBackend"
-fi
+printf '%s\n' "$LOGCAT" \
+  | grep -F "deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime" >/dev/null \
+  || fail "native recovery did not establish a fresh LocalBackend runtime"
 echo "mobile-android-remote-browser-smoke: app_id=$APP_ID serial=$SERIAL pid=$PID"
 echo "mobile-android-remote-browser-smoke: ok"

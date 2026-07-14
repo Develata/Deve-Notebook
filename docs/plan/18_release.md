@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -210,7 +210,8 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 `edit-sync-offline-recovery`、`source-control`、`external-changes`、`notegit`、
 `p2p-gap-recovery`、`docker-multiclient`、`desktop-local-backend`、
-`desktop-remote-browser`、`android-local-backend`、`android-remote-browser`、
+`desktop-remote-browser`、`android-local-backend`、`android-remote-browser`（含 native-owned
+`Use Local Backend` 恢复、新 endpoint/session/scope 与零 RemoteBrowser IPC）、
 `release-artifacts`、`security-supply-chain`。矩阵必须为这些 journey 的适用 surface/mode
 登记 `tag-ready/required` 需求；iOS target-host 仍为 `advisory/conditional`，必须如实说明
 目标宿主与证据缺口，不能伪装为现有证据。

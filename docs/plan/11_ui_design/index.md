@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-30`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -519,7 +519,7 @@ PinnedSetChanged
 - `RemoteBrowser` **MUST** 只接受 HTTPS origin URL；不接受 userinfo、query、fragment 或业务子路径。RemoteBrowser 壳层不拥有本机 repo、ledger 或 writer gate，只消费远端 Web 同源 `/api` 与 `/ws`。
 - Settings 保存 `RemoteBrowser` 前 **MUST** 由 native 侧短超时探测 `<origin>/api/node/role` 并取得结构化 Deve node role；校验失败不得写入 host-local preference。远端登录态仍由远端 Web 自行管理，native bridge 不保存远端凭证。
 - native Settings bridge **MUST** 只在可信 bundled `LocalBackend` origin 注册，并只暴露读取当前 backend preference、校验 remote origin、保存 remote preference 三个窄接口。bridge capability 必须来自 typed native bootstrap；`window.__TAURI_INTERNALS__` 存在本身不得被解释为获得 capability。普通浏览器与 `RemoteBrowser` 不得注册该 facade，也不得注册可被远端页面调用的 native command。
-- `RemoteBrowser` 失联时 UI 语义等价浏览器断连锁屏/只读；切回 `LocalBackend` 属于 native-owned lifecycle 操作，不属于远端 DOM intent。Desktop 必须通过原生菜单/托盘入口保存 host-local `local` preference 并重启 shell；Mobile 在平台原生控件落地前必须把该能力登记为 required gap。切换过程不得复用旧 endpoint、旧 session、旧 repo scope 或旧 `scope_nonce`。
+- `RemoteBrowser` 失联时 UI 语义等价浏览器断连锁屏/只读；切回 `LocalBackend` 属于 native-owned lifecycle 操作，不属于远端 DOM intent。Desktop 必须通过原生菜单/托盘入口保存 host-local `local` preference 并重启 shell；Mobile 必须通过 Android/iOS 平台原生控件交给 host coordinator，在当前进程内销毁远端 WebView、启动新的 embedded supervisor 并创建 bundled-local WebView。该控件只在 host preference 选择 `RemoteBrowser` 时出现；显式 CLI/env override 下必须隐藏。切换过程不得复用旧 endpoint、旧 session、旧 repo scope 或旧 `scope_nonce`，也不得在远端 WebView 存活时注册 LocalBackend command/plugin。
 - service 端口 **MUST** 使用本机随机可用端口，并只保存在运行时内存中。
 - 端口占用时，service boot **MUST** 自动回退到新的可用端口并重新绑定。
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。

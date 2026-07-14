@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -317,8 +317,9 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - native `RemoteBrowser` 不得注入 LocalBackend bootstrap capability，不得注册 application command
   handler 或 Web facade。远端页面的登录、编辑和 commit/history 必须仅经远端同源 HTTP/WS 完成。
 - Desktop 从 `RemoteBrowser` 回到 `LocalBackend` 只能由 native-owned 菜单/托盘 coordinator 发起；
-  RemoteBrowser 的 auth cookie、endpoint、session、repo scope 与 `scope_nonce` 不得迁移或复用到新
-  LocalBackend 进程。Mobile 原生恢复控件未实现时必须保持明确 gap，不得用远端 DOM IPC 替代。
+  Mobile 只能由 Android/iOS 平台原生恢复控件交给 native coordinator 发起。RemoteBrowser 的 auth
+  cookie、endpoint、session、repo scope 与 `scope_nonce` 不得迁移或复用到新 LocalBackend runtime；
+  切换前必须销毁远端 WebView，且远端页面始终不得用 DOM IPC 替代原生入口。
 - 服务端 CSP 不得为了 native shell 模式切换而放宽 `connect-src` 到 `ipc.localhost`；正确实现必须让
   RemoteBrowser 页面根本不发出该请求。
 

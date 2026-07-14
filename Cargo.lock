@@ -1350,11 +1350,16 @@ dependencies = [
 name = "deve_mobile"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "deve_cli",
  "deve_core",
  "getrandom 0.3.4",
  "indexmap 1.9.3",
  "jni",
+ "objc2",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-ui-kit",
  "reqwest 0.12.28",
  "serde",
  "serde_json",

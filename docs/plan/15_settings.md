@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -141,7 +141,7 @@ Desktop/Mobile native shell 可以在 Settings 暴露 Backend section，但其�
 *   保存 `remote` 前必须由 native 侧短超时请求 `<origin>/api/node/role`，确认响应是结构化 Deve node role；校验失败不得保存。远端认证、cookie 与登录态由远端 Web 自行处理。
 *   该 preference 不得保存远端凭证、session/token、native session material、P2P token、repo id、branch、`scope_nonce`、writer readiness 或任何 authority fact。
 *   普通浏览器与 native `RemoteBrowser` 中的 Settings 必须把 Backend section 标为 native-only unavailable，不提供伪保存、伪校验、Web “Use local backend”或写浏览器存储的替代路径。只有 typed bundled-local bootstrap 明确授予 `backend_preference_control` 时才可注册 Web facade。
-*   native `RemoteBrowser` 失联时仍按浏览器断连锁屏/只读语义处理；切回 `local` preference 属于 native-owned lifecycle 操作。Desktop 由原生菜单/托盘 coordinator 承载；Mobile 在原生控件实现前保持 required gap，二者都不得向远端页面开放 IPC。
+*   native `RemoteBrowser` 失联时仍按浏览器断连锁屏/只读语义处理；切回 `local` preference 属于 native-owned lifecycle 操作。Desktop 由原生菜单/托盘 coordinator 承载；Mobile 由 Android/iOS 平台原生控件与 native coordinator 承载。Mobile 控件只在 preference-driven RemoteBrowser 中可用，显式 CLI/env override 下必须隐藏；两者都不得向远端页面开放 IPC，也不得复用远端 session/scope。
 
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |

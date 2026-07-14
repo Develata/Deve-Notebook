@@ -50,8 +50,8 @@
 - Desktop/Mobile RemoteBrowser 中的正常远端登录只建立远端 browser session，不开放宿主 native IPC。
 - 普通 Docker 浏览器和 RemoteBrowser 即使运行环境存在 `__TAURI_INTERNALS__`，没有 typed bundled-local
   capability 时也不得注册 backend facade。
-- 远端页面不能用 IPC 切回 LocalBackend。Desktop 只能通过原生菜单/托盘恢复；Mobile 在原生控件落地前
-  明确显示为未完成能力，不以 Web fallback 伪装。
+- 远端页面不能用 IPC 切回 LocalBackend。Desktop 只能通过原生菜单/托盘恢复；Mobile 只能通过
+  Android/iOS 平台原生控件交给 native coordinator 恢复，不以 Web fallback 伪装。
 - 切回 LocalBackend 后必须建立新 endpoint/session/scope；远端 auth cookie 与旧 authority 不得复用。
 
 ## 非目标

@@ -7,6 +7,7 @@ fn main() {
                 .commands(&[
                     "native_backend_get_config",
                     "native_backend_get_service_state",
+                    "native_backend_get_recovery_state",
                     "native_backend_prepare_webview_session",
                     "native_backend_debug_stop_transport",
                     "native_backend_debug_request_exit",

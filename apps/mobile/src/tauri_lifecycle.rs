@@ -11,6 +11,7 @@ use crate::embedded_backend::{
     MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT, MobileEmbeddedBackendServiceState,
     MobileEmbeddedBackendSupervisor,
 };
+use crate::tauri_entry::backend_recovery::MobileBackendRecoveryState;
 
 #[cfg(mobile)]
 const NATIVE_SUSPENDED_EVENT: &str = "deve-native-suspended";
@@ -96,6 +97,13 @@ pub(crate) fn handle_mobile_run_event<R: tauri::Runtime>(
     let RunEvent::ExitRequested { code, api, .. } = event else {
         return;
     };
+    if app
+        .try_state::<Arc<MobileBackendRecoveryState>>()
+        .is_some_and(|state| state.is_active())
+    {
+        api.prevent_exit();
+        return;
+    }
     let Some(state) = app.try_state::<Arc<MobileEmbeddedBackendSupervisor>>() else {
         return;
     };

@@ -886,6 +886,7 @@ contains	tools/baseline/src/native_process_adapter_gate.rs	DEVE_NATIVE_PROCESS_A
 contains	tools/baseline/src/native_process_adapter_gate.rs	process_observation
 contains	tools/baseline/src/specs/native_process_adapter_gate.tsv	ExplicitNativeAuthorityOptIn
 contains	tools/baseline/src/native_track_boundary.rs	check_no_packaging_dependency_leak
+contains	tools/baseline/src/native_track_boundary.rs	objc2-ui-kit
 contains	tools/baseline/src/native_track_boundary.rs	check_no_process_runtime_leak
 contains	tools/baseline/src/native_track_boundary.rs	desktop process runtime must remain authority-free
 contains	tools/baseline/src/specs/native_track_boundary.tsv	runtime_crate: "tauri"
@@ -1046,4 +1047,5 @@ contains	scripts/smoke-desktop-remote-browser.mjs	desktop-remote-browser-webview
 contains	scripts/smoke-desktop-remote-browser.test.mjs	RemoteBrowser WebView proof covers facade, IPC, CSP, and real business UI
 contains	scripts/smoke-mobile-android-remote-browser.sh	mobile-android-remote-browser-smoke: ok
 contains	scripts/smoke-mobile-android-remote-browser.mjs	mobile-android-remote-browser: ok
-contains	tools/baseline/src/acceptance_matrix/tag_ready.rs	Android writable evidence requires receipt schema 3 typed claims
+contains	tools/baseline/src/acceptance_matrix/tag_ready/android.rs	Android RemoteBrowser journey is missing required claim
+contains	tools/baseline/src/acceptance_matrix/tag_ready/android.rs	Android writable evidence requires receipt schema 3 typed claims

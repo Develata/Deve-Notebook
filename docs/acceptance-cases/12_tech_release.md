@@ -168,6 +168,7 @@
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-native-process-adapter-gate.sh
+    - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-target-host-evidence.sh
     - run: scripts/install-native-target-host-tools.sh
     - run: scripts/check-desktop-package-preflight.sh
@@ -333,6 +334,7 @@
     - native_assert: desktop_native_session_smoke_uses_temporary_data_root true
     - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true
     - native_assert: mobile_embedded_backend_uses_typed_runtime_auth_material true
+    - dependency_assert: mobile_android_ios_bridge_dependencies_are_target_scoped_optional_and_native_packaging_only true
     - native_assert: remote_browser_accepts_https_origin_only true
     - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true
     - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true

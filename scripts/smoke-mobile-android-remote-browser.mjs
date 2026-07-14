@@ -38,6 +38,20 @@ function adbCommand(...args) {
   execFileSync(adb, ["-s", serial, ...args], { stdio: "inherit", timeout: remainingMs() });
 }
 
+function adbOutput(...args) {
+  return execFileSync(adb, ["-s", serial, ...args], {
+    encoding: "utf8",
+    timeout: remainingMs(),
+  }).replaceAll("\r", "");
+}
+
+function appPid() {
+  return adbOutput("shell", "sh", "-c", `pidof ${appId} 2>/dev/null || true`)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)[0] ?? "";
+}
+
 async function withDeadline(label, promise, limit = remainingMs()) {
   let timer;
   try {
@@ -78,7 +92,77 @@ async function attachRemotePage() {
   return page;
 }
 
-function writeEvidence(capability) {
+async function attachLocalPage() {
+  const page = await findStableAppPage({
+    cdpEndpoint,
+    expectedOrigin: undefined,
+    withDeadline,
+    waitUntil,
+  });
+  await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
+  return page;
+}
+
+async function listCdpTargets() {
+  const response = await withDeadline(
+    "Android WebView target discovery",
+    fetch(`${cdpEndpoint}/json`),
+    10000,
+  );
+  if (!response.ok) throw new Error(`CDP target discovery returned ${response.status}`);
+  return response.json();
+}
+
+async function readScope(page) {
+  return page.call(() => {
+    const status = document.querySelector("[data-deve-sync-status]");
+    return {
+      status: status?.getAttribute("data-deve-sync-status") ?? null,
+      repoId: status?.getAttribute("data-deve-repo-id") ?? null,
+      scopeNonce: Number(status?.getAttribute("data-deve-scope-nonce")),
+    };
+  });
+}
+
+function findNativeRecoveryButtonBounds(xml) {
+  const node = xml
+    .match(/<node\b[^>]*>/g)
+    ?.find((candidate) =>
+      /(?:text|content-desc)="Use Local Backend"/.test(candidate));
+  const bounds = node?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+  if (!bounds) throw new Error(`native Use Local Backend control unavailable; ui=${xml.slice(0, 1000)}`);
+  const [, left, top, right, bottom] = bounds.map(Number);
+  return {
+    x: Math.floor((left + right) / 2),
+    y: Math.floor((top + bottom) / 2),
+  };
+}
+
+function tapNativeRecoveryControl() {
+  const dumpPath = "/sdcard/deve-native-recovery.xml";
+  adbCommand("shell", "uiautomator", "dump", dumpPath);
+  const bounds = findNativeRecoveryButtonBounds(adbOutput("exec-out", "cat", dumpPath));
+  adbCommand("shell", "input", "tap", String(bounds.x), String(bounds.y));
+}
+
+async function nativeInvoke(page, command, args = {}) {
+  const outcome = await page.call(async (invokeCommand, invokeArgs) => {
+    try {
+      const invoke = window.__TAURI_INTERNALS__?.invoke;
+      if (typeof invoke !== "function") throw new Error("Tauri invoke bridge unavailable");
+      return {
+        ok: true,
+        value: await invoke(`plugin:deve-native-backend-commands|${invokeCommand}`, invokeArgs),
+      };
+    } catch (error) {
+      return { ok: false, error: String(error) };
+    }
+  }, command, args);
+  if (!outcome.ok) throw new Error(`native command ${command} failed: ${outcome.error}`);
+  return outcome.value;
+}
+
+function writeEvidence(capability, recovery, journey) {
   if (!evidencePath) return;
   if (!targetFactsPath) throw new Error("Android RemoteBrowser evidence requires target facts");
   const target = JSON.parse(readFileSync(targetFactsPath, "utf8"));
@@ -88,14 +172,8 @@ function writeEvidence(capability) {
     mode: "remote-browser",
     target,
     webcrypto: capability,
-    journey: {
-      loginOrNativeSession: true,
-      edit: true,
-      commitHistory: true,
-      backgroundResume: true,
-      zeroNativeIpc: true,
-      writableLifecycleComplete: true,
-    },
+    journey,
+    recovery,
   };
   mkdirSync(dirname(evidencePath), { recursive: true });
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
@@ -146,6 +224,16 @@ async function main() {
   );
   await commitAndroidChange(page, `android remote smoke ${stamp}`, { waitUntil, delay });
 
+  const remoteRuntime = await page.call(() => ({
+    origin: location.origin,
+    nativeCapability: globalThis.__DEVE_NATIVE_BOOTSTRAP?.capabilities
+      ?.backend_preference_control === true,
+    nativeFacade: Boolean(globalThis.__deveWebBridge?.get?.("__DEVE_NATIVE_BACKEND_CONFIG__")),
+  }));
+  assert.equal(remoteRuntime.origin, new URL(remoteOrigin).origin);
+  assert.equal(remoteRuntime.nativeCapability, false);
+  assert.equal(remoteRuntime.nativeFacade, false);
+
   adbCommand("shell", "input", "keyevent", "3");
   await page.close();
   await delay(500);
@@ -153,14 +241,139 @@ async function main() {
   page = await attachRemotePage();
   await loginAndroidRemote(page, username, password, waitUntil);
   assert.equal(new URL(await page.call(() => location.href)).origin, new URL(remoteOrigin).origin);
+  const remoteScope = await readScope(page);
+  assert.equal(remoteScope.status, "ready");
+  assert.ok(remoteScope.repoId, "RemoteBrowser must expose a repo-scoped ready handshake");
+  assert.ok(Number.isInteger(remoteScope.scopeNonce) && remoteScope.scopeNonce > 0);
 
   const ipcRequests = requests.filter((url) => url.includes("ipc.localhost"));
   const ipcCspErrors = consoleErrors.filter((message) =>
     /ipc\.localhost|content security policy|refused to connect/i.test(message));
   assert.deepEqual(ipcRequests, []);
   assert.deepEqual(ipcCspErrors, []);
-  writeEvidence(capability);
-  await page.close();
+
+  const remotePid = appPid();
+  assert.ok(remotePid, "RemoteBrowser process must remain running before local recovery");
+  const preRecoveryLog = adbOutput("logcat", "-d");
+  assert.doesNotMatch(
+    preRecoveryLog,
+    /deve_mobile .*LocalBackend/,
+    "preference-driven RemoteBrowser must not start LocalBackend before native intent",
+  );
+  tapNativeRecoveryControl();
+  await page.close().catch(() => {});
+  const remoteSurfaceRetired = await waitUntil("RemoteBrowser CDP target retirement", async () => {
+    const targets = await listCdpTargets();
+    return !targets.some((target) => {
+      try {
+        return target.type === "page"
+          && new URL(target.url).origin === new URL(remoteOrigin).origin;
+      } catch {
+        return false;
+      }
+    });
+  }, 30000);
+  page = await attachLocalPage();
+  const localRuntime = await waitUntil("fresh LocalBackend bootstrap", async () => {
+    const runtime = await page.call(() => ({
+      origin: location.origin,
+      httpBase: globalThis.__DEVE_NATIVE_BOOTSTRAP?.http_base ?? null,
+      sessionBound: globalThis.__DEVE_NATIVE_BOOTSTRAP?.session_bound === true,
+      nativeCapability: globalThis.__DEVE_NATIVE_BOOTSTRAP?.capabilities
+        ?.backend_preference_control === true,
+      nativeFacade: Boolean(globalThis.__deveWebBridge?.get?.("__DEVE_NATIVE_BACKEND_CONFIG__")),
+    }));
+    return runtime.origin === "http://tauri.localhost"
+      && /^http:\/\/127\.0\.0\.1:\d+$/.test(runtime.httpBase ?? "")
+      && runtime.sessionBound
+      && runtime.nativeCapability
+      && runtime.nativeFacade
+      ? runtime
+      : null;
+  }, 60000);
+  const service = await waitUntil("fresh LocalBackend service state", async () => {
+    const state = await nativeInvoke(page, "native_backend_get_service_state");
+    return state?.backend_running
+      && state.service_state === "endpoint_session_ready"
+      && state.session_generation === 1
+      && state.endpoint === localRuntime.httpBase
+      ? state
+      : null;
+  }, 30000);
+  const localScope = await waitUntil("fresh LocalBackend repo scope", async () => {
+    const scope = await readScope(page);
+    return scope.status === "ready"
+      && scope.repoId
+      && Number.isInteger(scope.scopeNonce)
+      && scope.scopeNonce > 0
+      ? scope
+      : null;
+  }, 60000);
+  const transition = await nativeInvoke(page, "native_backend_get_recovery_state");
+  assert.equal(transition.phase, "local_window_created");
+  assert.equal(transition.remoteSurfaceRetired, true);
+  assert.equal(transition.preferenceCommittedAfterRemoteRetirement, true);
+  assert.equal(transition.localPluginsRegisteredAfterRemoteRetirement, true);
+  assert.equal(transition.supervisorManaged, true);
+  assert.equal(transition.localWindowCreated, true);
+  assert.equal(transition.activeRuntimeOwners, 1);
+  assert.equal(transition.lastError, null);
+  const localPid = appPid();
+  assert.equal(localPid, remotePid, "mobile recovery must not orphan or replace the app process");
+  assert.notEqual(localRuntime.origin, remoteRuntime.origin);
+  const authorityTupleChanged = remoteRuntime.origin !== localRuntime.origin
+    && `${remoteScope.repoId}:${remoteScope.scopeNonce}`
+      !== `${localScope.repoId}:${localScope.scopeNonce}`;
+  assert.equal(authorityTupleChanged, true, "remote authority tuple must not be reused locally");
+
+  await nativeInvoke(page, "native_backend_debug_request_exit").catch((error) => {
+    if (!/CDP socket closed|Inspected target navigated or closed/i.test(String(error))) throw error;
+  });
+  await page.close().catch(() => {});
+  const processExitedAfterGracefulShutdown = await waitUntil(
+    "Mobile LocalBackend graceful process exit",
+    () => appPid() === "",
+    30000,
+  );
+  const recovery = {
+    transition,
+    remote: {
+      origin: remoteRuntime.origin,
+      repoId: remoteScope.repoId,
+      scopeNonce: remoteScope.scopeNonce,
+    },
+    local: {
+      origin: localRuntime.origin,
+      endpoint: service.endpoint,
+      sessionGeneration: service.session_generation,
+      repoId: localScope.repoId,
+      scopeNonce: localScope.scopeNonce,
+    },
+    remoteTargetRetired: remoteSurfaceRetired,
+    authorityTupleChanged,
+    appPidStable: localPid === remotePid,
+    processExitedAfterGracefulShutdown,
+  };
+  const journey = {
+    loginOrNativeSession: true,
+    edit: true,
+    commitHistory: true,
+    backgroundResume: true,
+    zeroNativeIpc: ipcRequests.length === 0 && ipcCspErrors.length === 0,
+    nativeLocalRecovery: transition.phase === "local_window_created",
+    remoteSurfaceDestroyedBeforeLocalIpc: remoteSurfaceRetired
+      && transition.remoteSurfaceRetired
+      && transition.localPluginsRegisteredAfterRemoteRetirement,
+    freshLocalEndpointSessionScope: Boolean(localScope.repoId)
+      && localScope.scopeNonce > 0
+      && service.session_generation === 1,
+    remoteAuthorityNotReused: authorityTupleChanged,
+    noOrphanEmbeddedRuntime: transition.activeRuntimeOwners === 1
+      && processExitedAfterGracefulShutdown,
+    writableLifecycleComplete: true,
+  };
+  assert.ok(Object.values(journey).every((value) => value === true));
+  writeEvidence(capability, recovery, journey);
   console.log("mobile-android-remote-browser: ok");
 }
 

@@ -9,9 +9,14 @@ license.workspace = true
 default = []
 native-packaging = [
   "dep:deve_cli",
+  "dep:block2",
   "dep:getrandom",
   "dep:indexmap_1",
   "dep:jni",
+  "dep:objc2",
+  "dep:objc2-core-foundation",
+  "dep:objc2-foundation",
+  "dep:objc2-ui-kit",
   "dep:reqwest",
   "dep:tauri",
   "dep:tauri-build",
@@ -38,6 +43,25 @@ tokio = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21", optional = true }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+block2 = { version = "0.6.2", optional = true, default-features = false }
+objc2 = { version = "0.6.4", optional = true, default-features = false }
+objc2-core-foundation = { version = "0.3.2", optional = true, default-features = false, features = ["objc2"] }
+objc2-foundation = { version = "0.3.2", optional = true, default-features = false, features = ["std", "NSString"] }
+objc2-ui-kit = { version = "0.3.2", optional = true, default-features = false, features = [
+  "std",
+  "block2",
+  "objc2-core-foundation",
+  "UIAction",
+  "UIButton",
+  "UIControl",
+  "UIImage",
+  "UIMenuElement",
+  "UIResponder",
+  "UIView",
+  "UIViewController",
+] }
 
 [build-dependencies]
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }
