@@ -96,7 +96,7 @@ async fn create_doc_fails_closed_when_target_path_is_unstatable() -> anyhow::Res
             .detail
             .as_deref()
             .unwrap_or_default()
-            .contains("Failed to check create target"),
+            .contains("Failed to stat Projection Workspace ancestor while resolving"),
         "unexpected detail: {:?}",
         error.detail
     );

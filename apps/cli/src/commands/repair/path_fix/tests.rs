@@ -8,9 +8,28 @@ use deve_core::models::DocId;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 #[cfg(unix)]
+use std::io::ErrorKind;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::tempdir;
+
+#[cfg(unix)]
+fn assert_permission_denied_by_workspace_ancestor(err: &anyhow::Error) {
+    assert!(
+        err.to_string()
+            .contains("Failed to stat Projection Workspace ancestor while resolving"),
+        "unexpected workspace containment diagnostic: {err:#}"
+    );
+    assert!(
+        err.chain().any(|cause| {
+            cause
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|io_err| io_err.kind() == ErrorKind::PermissionDenied)
+        }),
+        "workspace containment error must preserve PermissionDenied in its chain: {err:#}"
+    );
+}
 
 #[test]
 fn path_exists_for_repair_prefers_tracked_lookup() -> anyhow::Result<()> {
@@ -225,11 +244,7 @@ fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> 
     .expect_err("unstatable source must fail closed");
 
     std::fs::set_permissions(&notes_dir, original)?;
-    assert!(
-        err.to_string()
-            .contains("Failed to stat workspace path while validating repair source")
-            || err.to_string().contains("Permission denied")
-    );
+    assert_permission_denied_by_workspace_ancestor(&err);
     Ok(())
 }
 
@@ -258,10 +273,6 @@ fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Res
         .expect_err("unstatable source must fail closed");
 
     std::fs::set_permissions(&notes_dir, original)?;
-    assert!(
-        err.to_string()
-            .contains("Failed to stat workspace path while renaming repair source")
-            || err.to_string().contains("Permission denied")
-    );
+    assert_permission_denied_by_workspace_ancestor(&err);
     Ok(())
 }
