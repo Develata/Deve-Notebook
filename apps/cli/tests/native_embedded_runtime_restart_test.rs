@@ -60,7 +60,10 @@ async fn connect_generation_websocket(
     generation: u64,
 ) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>> {
     let secret = format!("{generation:064x}");
-    let response = reqwest::Client::new()
+    let response = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("loopback HTTP client")
         .post(format!("http://127.0.0.1:{port}/api/auth/native-session"))
         .header(NATIVE_SESSION_BOOTSTRAP_HEADER, secret)
         .send()
@@ -71,7 +74,13 @@ async fn connect_generation_websocket(
         .get(reqwest::header::SET_COOKIE)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.split(';').next())
-        .expect("session cookie");
+        .unwrap_or_else(|| {
+            panic!(
+                "session cookie: status={}, native_session_rejected={}",
+                response.status(),
+                response.headers().contains_key("x-no-op")
+            )
+        });
     let mut request = format!("ws://127.0.0.1:{port}/ws")
         .into_client_request()
         .expect("WS request");
