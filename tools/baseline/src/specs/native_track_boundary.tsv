@@ -9,6 +9,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_after_main_window_close true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-local-backend-lifecycle.ps1 -ShutdownMode CloseMainWindow
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	scripts/check-desktop-remote-browser-smoke.ps1
 contains	apps/desktop/src/tauri_entry/tests.rs	desktop_shutdown_action_stops_backend_before_main_window_exit
 contains	apps/desktop/src/tauri_entry/tests.rs	desktop_process_exit_stops_backend_without_recursive_exit_request
 contains	apps/desktop/src/tauri_bootstrap_test/local_service.rs	tauri_state_drop_stops_running_local_service
@@ -100,7 +101,8 @@ contains	apps/desktop/Cargo.toml	"dep:windows-sys"
 contains	apps/desktop/Cargo.toml	"tauri/tray-icon"
 contains	apps/desktop/Cargo.toml	"tauri/wry"
 contains	apps/desktop/Cargo.toml	features = ["std"]
-contains	apps/desktop/build.rs	tauri_build::build()
+contains	apps/desktop/build.rs	tauri_build::try_build(
+contains	apps/desktop/build.rs	deve-native-backend-commands
 contains	apps/desktop/src/main.rs	run_desktop_tauri_app
 contains	apps/desktop/tauri.conf.json	"identifier": "dev.deve.notebook"
 contains	apps/desktop/tauri.conf.json	"productName": "Deve Notebook"
@@ -119,7 +121,8 @@ contains	apps/mobile/tauri.conf.json	"identifier": "dev.deve.notebook.mobile"
 contains	apps/mobile/tauri.conf.json	"productName": "Deve Notebook"
 contains	apps/mobile/tauri.conf.json	"icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]
 contains	apps/mobile/tauri.conf.json	"createUpdaterArtifacts": false
-contains	apps/mobile/build.rs	tauri_build::build()
+contains	apps/mobile/build.rs	tauri_build::try_build(
+contains	apps/mobile/build.rs	deve-native-backend-commands
 contains	apps/mobile/gen/android/settings.gradle	include ':app'
 contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:name=".MainActivity"
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	class MainActivity : TauriActivity()
@@ -138,13 +141,18 @@ contains	apps/desktop/src/packaging.rs	menu_and_tray_runtime_deferred: false
 contains	apps/desktop/src/packaging.rs	menu_runtime_imported: true
 contains	apps/desktop/src/packaging.rs	tray_runtime_imported: true
 contains	apps/desktop/src/packaging.rs	actions_are_ui_intents_only: true
-contains	apps/desktop/src/packaging.rs	opens_process_runtime: false
+contains	apps/desktop/src/packaging.rs	opens_process_runtime: true
+contains	apps/desktop/src/packaging.rs	process_runtime_changes_are_mode_coordinated: true
 contains	apps/desktop/src/packaging.rs	opens_authority_write_path: false
 contains	apps/desktop/src/menu_tray.rs	tauri::menu
 contains	apps/desktop/src/menu_tray.rs	tauri::tray
 contains	apps/desktop/src/menu_tray.rs	build_desktop_menu
 contains	apps/desktop/src/menu_tray.rs	build_desktop_tray_icon
 contains	apps/desktop/src/menu_tray.rs	resolve_desktop_menu_action_id
+contains	apps/desktop/src/menu_tray.rs	DESKTOP_MENU_APP_USE_LOCAL_BACKEND_ID
+contains	apps/desktop/src/tauri_entry/native_backend_commands.rs	struct DesktopBackendModeCoordinator
+contains	apps/desktop/src/tauri_entry/native_backend_commands.rs	deve-native-backend-commands
+absent	apps/desktop/src/tauri_entry/mod.rs	window.navigate
 contains	apps/desktop/src/tauri_entry/mod.rs	tauri::Builder::default()
 contains	apps/desktop/src/tauri_entry/mod.rs	tauri::generate_context!()
 contains	apps/desktop/src/tauri_entry/smoke.rs	DesktopTauriRuntimeSurface

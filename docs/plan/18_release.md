@@ -143,6 +143,18 @@ Windows packaged UI evidence 必须独立于快速 startup marker probe。它使
 Settings 焦点约束，并在关闭窗口后证明 sidecar 无孤儿进程。该 CDP automation 只操作已安装
 壳层所承载的 Web UI，不授予脚本或 Desktop shell 任何 ledger / Source Control authority。
 
+Desktop RemoteBrowser target-host evidence 必须使用 host-local remote preference（不得依赖
+CLI/env override）启动已安装壳层，并证明：远端 HTTPS 页面可登录、编辑、commit/history；
+不存在 `ipc.localhost` 请求、CSP 错误、native bootstrap capability 或可调用 Tauri handler；
+原生菜单/托盘切回 local 后进程重启并取得全新的 endpoint/session/scope；切换前后无孤儿
+sidecar，旧 remote authority 不得复用。服务端 `connect-src` CSP 不得为该 smoke 放宽。
+
+Android writable target-host receipt 必须同时记录 Android API level、当前 WebView provider
+包名/完整版本、AVD/system-image 或真实设备标识，以及 non-extractable Ed25519 probe 结果。
+正式支持基线为 API 29+ / provider major 137+；低于基线或 probe 失败只能生成不满足
+tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、WASM fallback 或
+软件密钥降级来满足该 receipt。
+
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
 发布与验收基线可以提供 Rust developer CLI mirror，用于替代对 host bash/awk/rg runtime 敏感的纯文本合同检查。该入口由独立 workspace tool crate `tools/baseline`（package `deve_baseline`）承载，属于 developer/release tooling，不属于普通用户 `deve` 命令面；它 **MUST NOT** 依赖 `deve_cli` 产品 runtime，默认也 **MUST NOT** 依赖 `deve_core`，更 **MUST NOT** 获得 ledger、projection、source-control 或 native authority 写权限。
@@ -209,12 +221,18 @@ first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 一致；使用 `acceptance-matrix --render` 才能显式刷新该投影。
 
 `deve_baseline acceptance-receipt --evidence-id <id> --evidence-ref <relative-json>
---surface <surface> --mode <mode> --target-os <target> --output <file> -- <command...>`
+--surface <surface> --mode <mode> --target-os <target> --output <file>
+[--claims <producer-json>] -- <command...>`
 包装真实命令，并记录 receipt schema、evidence ID/ref、命令前后 HEAD/dirty、host OS/arch、
-target OS、surface/mode、开始/结束 UTC 时间、退出状态与稳定命令指纹。只有命令成功、
+target OS、surface/mode、开始/结束 UTC 时间、退出状态、稳定命令指纹与脚本 artifact。只有命令成功、
 前后 HEAD 相同且 worktree 始终 clean 时才写 `passed`；其他情况仍必须原子写出 `failed`
 receipt 并返回非零。Receipt output 必须位于 Git worktree 外，且其尾部路径必须与
 `evidence_ref` 一致，避免 evidence 文件本身污染被测工作树。
+
+Android writable receipt 必须使用 schema 3 `--claims`，并绑定到对应受控 smoke producer；claims
+至少包含 SDK level、current WebView provider 完整版本、API 29+/WebView 137+ 判定、真实
+non-extractable Ed25519 WebCrypto probe，以及 writable lifecycle 闭环结果。`tag-ready` 不接受
+readonly-negative、瞬态 probe failure、任意 exit-0 命令或未绑定 producer 的 Android receipt。
 
 `deve_baseline acceptance-matrix --tag-ready <receipt-dir>` 只接受矩阵中 `required` 且
 `gate=tag-ready` 的新鲜证据：receipt 必须 `passed`、commit SHA 等于当前 HEAD、平台匹配、

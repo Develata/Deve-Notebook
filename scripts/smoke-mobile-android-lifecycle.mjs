@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
+import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
 import {
   findStableAppPage,
   visibleElement,
@@ -8,12 +11,16 @@ import {
 import {
   clickWebViewPoint,
   focusEditor,
-  openMobileSidebarView,
   proveSameBreakpointKeyboardResize,
   readPendingAckCount,
   typeEditor,
 } from "./lib/mobile-webview-interaction.mjs";
-import { commitSourceControlChange } from "./lib/mobile-source-control-interaction.mjs";
+import {
+  commitAndroidChange,
+  createAndroidDocument,
+  dispatchWebViewText,
+  waitForWritableEditor as waitForWritableAndroidEditor,
+} from "./lib/android-business-flow.mjs";
 import {
   discardAndResumeWebSocketDelivery,
   inspectWebSocketDeliveryGate,
@@ -26,6 +33,9 @@ const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
 const adb = process.env.DEVE_MOBILE_ANDROID_ADB_BIN;
 const serial = process.env.DEVE_MOBILE_ANDROID_SERIAL;
 const appId = process.env.DEVE_MOBILE_ANDROID_APP_ID ?? "dev.deve.notebook.mobile";
+const expectWritable = process.env.DEVE_MOBILE_ANDROID_EXPECT_WRITABLE !== "0";
+const targetFactsPath = process.env.DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH;
+const evidencePath = process.env.DEVE_MOBILE_ANDROID_EVIDENCE_PATH;
 const harnessDeadline = Date.now() + timeoutMs;
 
 function remainingMs() {
@@ -78,19 +88,6 @@ function adbCommand(...args) {
   });
 }
 
-async function dispatchWebViewText(page, value) {
-  if (!/^[A-Za-z0-9 _-]+$/.test(value)) {
-    throw new Error(`Android lifecycle input contains unsupported WebView text: ${value}`);
-  }
-  for (const character of value) {
-    await page.send("Input.dispatchKeyEvent", {
-      type: "char",
-      text: character,
-      unmodifiedText: character,
-    });
-  }
-}
-
 async function focusWebViewEditorAtPoint(point, page) {
   let lastFocusError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -122,7 +119,45 @@ async function waitForReady(page) {
     document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready"), 60000);
 }
 
-async function assertWritableIdentityCapability(page) {
+function readIdentityCapabilityUiState(page, blocker) {
+  return page.call((expectedBlocker) => {
+    const status = document.querySelector("[data-deve-sync-status]")
+      ?.getAttribute("data-deve-sync-status") ?? null;
+    const body = document.body?.textContent ?? "";
+    const reasonVisible = expectedBlocker === "ed25519_unavailable"
+      ? body.includes("WebCrypto Ed25519") && body.includes("Android System WebView")
+      : expectedBlocker === "webcrypto_unavailable"
+        ? body.includes("Browser cryptography") || body.includes("浏览器加密能力")
+        : body.includes("Browser identity capability check failed")
+          || body.includes("浏览器身份能力探测失败");
+    const editors = [...document.querySelectorAll("[data-deve-editor-host=true]")];
+    const editorsReadOnly = editors.length > 0
+      && editors.every((host) => host.getAttribute("data-deve-editor-readonly") === "true");
+    const dashboardCreate = document.querySelector(
+      "[data-deve-dashboard-card='quick-actions'] button[data-deve-mobile-touch-target='dashboard_quick_actions']",
+    );
+    const emptyRepoMutationLocked = editors.length === 0
+      && dashboardCreate instanceof HTMLButtonElement
+      && dashboardCreate.disabled
+      && document.querySelector("[data-deve-new-doc-button=true]") === null;
+    return {
+      ready: status === "read-only"
+        && reasonVisible
+        && (editorsReadOnly || emptyRepoMutationLocked),
+      status,
+      reasonVisible,
+      editorCount: editors.length,
+      editorReadOnlyValues: editors.map((host) => host.getAttribute("data-deve-editor-readonly")),
+      dashboardCreateDisabled: dashboardCreate instanceof HTMLButtonElement
+        ? dashboardCreate.disabled
+        : null,
+      sidebarCreateVisible: document.querySelector("[data-deve-new-doc-button=true]") !== null,
+      bodyExcerpt: body.replace(/\s+/g, " ").trim().slice(0, 800),
+    };
+  }, blocker);
+}
+
+async function verifyIdentityCapability(page) {
   const capability = await withDeadline(
     "non-extractable WebCrypto Ed25519 capability probe",
     page.call(probeWebCryptoEd25519),
@@ -130,40 +165,92 @@ async function assertWritableIdentityCapability(page) {
   );
   console.log(`mobile-android-lifecycle: WebCrypto capability ${JSON.stringify(capability)}`);
   if (!capability.writable) {
-    await waitUntil("storage-limited read-only identity state", () => page.call((blocker) => {
-      const status = document.querySelector("[data-deve-sync-status]")
-        ?.getAttribute("data-deve-sync-status");
-      const body = document.body?.textContent ?? "";
-      const reasonVisible = blocker === "ed25519_unavailable"
-        ? body.includes("WebCrypto Ed25519") && body.includes("Android System WebView")
-        : blocker === "webcrypto_unavailable"
-          ? body.includes("Browser cryptography") || body.includes("浏览器加密能力")
-          : body.includes("Browser identity capability check failed")
-            || body.includes("浏览器身份能力探测失败");
-      const editorsReadOnly = [...document.querySelectorAll("[data-deve-editor-host=true]")]
-        .every((host) => host.getAttribute("data-deve-editor-readonly") === "true");
-      return status === "read-only" && reasonVisible && editorsReadOnly;
-    }, capability.blocker));
-    throw new Error(
-      `Android System WebView WebCrypto capability blocked writable lifecycle: ${capability.blocker}; userAgent=${capability.userAgent}`,
-    );
+    try {
+      await waitUntil("storage-limited read-only identity state", async () =>
+        (await readIdentityCapabilityUiState(page, capability.blocker)).ready);
+    } catch (error) {
+      const observed = await readIdentityCapabilityUiState(page, capability.blocker);
+      throw new Error(`${error.message}; observed=${JSON.stringify(observed)}`);
+    }
   }
+  evaluateWritableProbeExpectation(expectWritable, capability);
+  return capability;
+}
+
+async function proveReadonlyMutationRejected(page) {
+  const before = await page.call(() => {
+    const host = globalThis.__deveVisibleElement("[data-deve-editor-host=true]");
+    const content = globalThis.__deveVisibleElement(".cm-content");
+    const createButton = document.querySelector(
+      "[data-deve-dashboard-card='quick-actions'] button[data-deve-mobile-touch-target='dashboard_quick_actions']",
+    );
+    if (host && content) content.focus();
+    return {
+      hasEditor: Boolean(host && content),
+      text: host && content ? window.getEditorContent?.() ?? content.textContent ?? "" : null,
+      pending: document.querySelector("[data-deve-mobile-pending-ack-count]")
+        ?.getAttribute("data-deve-mobile-pending-ack-count")
+        ?? document.querySelector("[data-deve-pending-ack-count]")
+          ?.getAttribute("data-deve-pending-ack-count")
+        ?? "0",
+      readOnly: host?.getAttribute("data-deve-editor-readonly") ?? null,
+      contentEditable: content?.getAttribute("contenteditable") ?? null,
+      docCount: document.querySelector("[data-deve-dashboard-storage-doc-count]")
+        ?.getAttribute("data-deve-dashboard-storage-doc-count") ?? null,
+      createDisabled: createButton instanceof HTMLButtonElement ? createButton.disabled : null,
+    };
+  });
+  if (before.hasEditor) {
+    assert.equal(before.readOnly, "true");
+    assert.notEqual(before.contentEditable, "true");
+    await page.send("Input.insertText", { text: "MUST_NOT_APPLY" });
+  } else {
+    assert.equal(before.createDisabled, true, "empty read-only repo exposed document creation");
+    await page.call(() => document.querySelector(
+      "[data-deve-dashboard-card='quick-actions'] button[data-deve-mobile-touch-target='dashboard_quick_actions']",
+    )?.click());
+  }
+  await delay(250);
+  const after = await editorDiagnostics(page);
+  if (before.hasEditor) {
+    assert.equal(after.bridgeContent ?? after.domContent, before.text, "read-only editor accepted input");
+  } else {
+    const emptyRepoAfter = await page.call(() => ({
+      docCount: document.querySelector("[data-deve-dashboard-storage-doc-count]")
+        ?.getAttribute("data-deve-dashboard-storage-doc-count") ?? null,
+      editorCount: document.querySelectorAll("[data-deve-editor-host=true]").length,
+      sidebarCreateVisible: document.querySelector("[data-deve-new-doc-button=true]") !== null,
+    }));
+    assert.equal(emptyRepoAfter.docCount, before.docCount, "read-only create attempt changed doc count");
+    assert.equal(emptyRepoAfter.editorCount, 0, "read-only create attempt opened an editor");
+    assert.equal(emptyRepoAfter.sidebarCreateVisible, false, "read-only sidebar exposed document creation");
+  }
+  assert.equal(
+    String(after.pending ?? "0"),
+    String(before.pending),
+    "read-only mutation attempt changed pending state",
+  );
+  return { editorInputRejected: before.hasEditor, emptyRepoCreateRejected: !before.hasEditor };
+}
+
+function writeAndroidEvidence(capability, journey) {
+  if (!evidencePath) return;
+  if (!targetFactsPath) throw new Error("Android evidence requires target facts path");
+  const target = JSON.parse(readFileSync(targetFactsPath, "utf8"));
+  const evidence = {
+    schema: 1,
+    producer: "smoke-mobile-android-lifecycle",
+    mode: "local-backend",
+    target,
+    webcrypto: capability,
+    journey,
+  };
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
 }
 
 async function waitForWritableEditor(page, timeout = 30000) {
-  await waitUntil("visible Android editor", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement("[data-deve-editor-host=true]"))), timeout);
-  await waitUntil("writable Android editor", () => page.call(() => {
-    const host = globalThis.__deveVisibleElement("[data-deve-editor-host=true]");
-    const codeHost = globalThis.__deveVisibleElement("[data-deve-editor-codemirror-host=true]");
-    const content = globalThis.__deveVisibleElement(".cm-content");
-    const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
-    return host?.getAttribute("data-deve-editor-readonly") === "false"
-      && content?.getAttribute("contenteditable") === "true"
-      && codeHost?.isConnected === true
-      && bootstrap?.editorBridgeReady === true
-      && bootstrap?.activeHost === codeHost;
-  }), timeout);
+  return waitForWritableAndroidEditor(page, waitUntil, timeout);
 }
 
 async function reloadWithWebSocketDeliveryGate(page) {
@@ -194,71 +281,42 @@ function editorDiagnostics(page) {
   }));
 }
 
-function nativeInvoke(page, command, args = {}) {
-  return page.call(async (invokeCommand, invokeArgs) => {
-    const invoke = window.__TAURI_INTERNALS__?.invoke;
-    if (typeof invoke !== "function") throw new Error("Tauri invoke bridge unavailable");
-    return invoke(invokeCommand, invokeArgs);
+async function nativeInvoke(page, command, args = {}) {
+  const outcome = await page.call(async (invokeCommand, invokeArgs) => {
+    try {
+      const invoke = window.__TAURI_INTERNALS__?.invoke;
+      if (typeof invoke !== "function") throw new Error("Tauri invoke bridge unavailable");
+      return {
+        ok: true,
+        value: await invoke(`plugin:deve-native-backend-commands|${invokeCommand}`, invokeArgs),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          name: error?.name ?? null,
+          message: error?.message ?? null,
+          detail: String(error),
+        },
+      };
+    }
   }, command, args);
-}
-
-async function click(page, selector) {
-  const clicked = await page.call((target) => {
-    const element = globalThis.__deveVisibleElement(target);
-    if (!element) return false;
-    element.click();
-    return true;
-  }, selector);
-  if (!clicked) throw new Error(`visible click target not found: ${selector}`);
-}
-
-async function fill(page, selector, value) {
-  const filled = await page.call((target, nextValue) => {
-    const element = globalThis.__deveVisibleElement(target);
-    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) return false;
-    const prototype = element instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
-    Object.getOwnPropertyDescriptor(prototype, "value").set.call(element, nextValue);
-    element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: nextValue }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-    return true;
-  }, selector, value);
-  if (!filled) throw new Error(`visible form field not found: ${selector}`);
+  if (!outcome.ok) {
+    throw new Error(`native command ${command} failed: ${JSON.stringify(outcome.error)}`);
+  }
+  return outcome.value;
 }
 
 async function createDocument(page, path, content) {
   console.log(`mobile-android-lifecycle: creating document ${path}`);
-  const mobile = await page.call(() =>
-    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
-  if (mobile) await openMobileSidebarView(page, "explorer", { click, waitUntil });
-  await click(page, "[data-deve-new-doc-button=true]");
-  await waitUntil("new document input", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement("[data-deve-search-input=true]"))));
-  await fill(page, "[data-deve-search-input=true]", `+${path}`);
-  await waitUntil("create document action", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement('[data-deve-search-result-action="create-doc"]'))));
-  await click(page, '[data-deve-search-result-action="create-doc"]');
-  console.log("mobile-android-lifecycle: document create intent submitted");
-  await waitForWritableEditor(page);
-  console.log("mobile-android-lifecycle: editor writable");
-  await waitUntil("editor bridge", () => page.call(() =>
-    typeof window.getEditorContent === "function" && typeof window.getEditorContent() === "string"));
-  console.log("mobile-android-lifecycle: editor bridge ready");
-  const observedContent = await typeEditor(page, content, waitUntil, inputAndroidEditorText);
-  console.log("mobile-android-lifecycle: initial editor input visible");
-  await waitUntil("initial edit ack", async () => (await readPendingAckCount(page)) === 0);
-  console.log("mobile-android-lifecycle: initial edit acknowledged");
-  return observedContent;
+  return createAndroidDocument(page, path, content, {
+    waitUntil,
+    inputEditorText: inputAndroidEditorText,
+  });
 }
 
 function commit(page, message) {
-  return commitSourceControlChange(page, message, {
-    click,
-    waitUntil,
-    delay,
-    inputText: async (value) => dispatchWebViewText(page, value),
-  });
+  return commitAndroidChange(page, message, { waitUntil, delay });
 }
 
 async function main() {
@@ -269,7 +327,27 @@ async function main() {
   await reloadWithWebSocketDeliveryGate(page);
 
   console.log("mobile-android-lifecycle: waiting for native session");
-  await assertWritableIdentityCapability(page);
+  const identityCapability = await verifyIdentityCapability(page);
+  if (!expectWritable) {
+    assert.equal(identityCapability.writable, false);
+    const readonlyProof = await proveReadonlyMutationRejected(page);
+    writeAndroidEvidence(identityCapability, {
+      readonlyMutationRejected: true,
+      ...readonlyProof,
+      writableLifecycleComplete: false,
+    });
+    console.log(
+      `mobile-android-lifecycle: readonly negative evidence accepted blocker=${identityCapability.blocker}`,
+    );
+    try {
+      await nativeInvoke(page, "native_backend_debug_request_exit");
+    } catch (error) {
+      throw new Error(`native graceful exit request failed: ${error.message}`);
+    }
+    await page.close();
+    console.log("mobile-android-lifecycle: readonly-negative ok");
+    return;
+  }
   console.log("mobile-android-lifecycle: WebCrypto capability accepted");
   await waitForReady(page);
   console.log("mobile-android-lifecycle: native session ready");
@@ -406,8 +484,22 @@ async function main() {
   await waitUntil("resumed edit ack", async () => (await readPendingAckCount(page)) === 0);
   await commit(page, `android lifecycle resumed ${stamp}`);
 
+  writeAndroidEvidence(identityCapability, {
+    loginOrNativeSession: true,
+    edit: true,
+    commitHistory: true,
+    backgroundResume: true,
+    staleScopeRejected: true,
+    pendingPreserved: true,
+    writableLifecycleComplete: true,
+  });
+
   console.log("mobile-android-lifecycle: requesting graceful native exit");
-  await nativeInvoke(page, "native_backend_debug_request_exit").catch(() => {});
+  try {
+    await nativeInvoke(page, "native_backend_debug_request_exit");
+  } catch (error) {
+    throw new Error(`native graceful exit request failed: ${error.message}`);
+  }
   await page.close();
   console.log("mobile-android-lifecycle: ok");
 }

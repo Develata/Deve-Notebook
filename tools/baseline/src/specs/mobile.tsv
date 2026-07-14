@@ -611,6 +611,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli --test native_embedded_runtime_restart_test -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli edit_rejects_stale_message_scope_at_writer_gate -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-lifecycle.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-target-capability.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_remains_storage_limited_readonly true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_shows_update_guidance true
@@ -649,7 +651,10 @@ contains	apps/mobile/src/embedded_backend/supervisor_webview.rs	resume_and_compl
 contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
 contains	apps/mobile/src/embedded_backend/supervisor_types.rs	replacement_source
 contains	apps/mobile/src/embedded_backend/cookie.rs	setAcceptThirdPartyCookies
-contains	apps/mobile/src/tauri_entry.rs	native_backend_prepare_webview_session
+contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	native_backend_prepare_webview_session
+contains	apps/mobile/src/tauri_entry.rs	mobile_local_backend_command_plugin()
+contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve-native-backend-commands
+absent	apps/mobile/src/tauri_entry/native_backend_commands.rs	switchLocal
 contains	apps/mobile/src/tauri_entry.rs	MobileEmbeddedBackendSupervisor::start(app_data_dir)
 contains	apps/mobile/src/tauri_entry.rs	app.manage(std::sync::Arc::new(supervisor))
 contains	apps/mobile/src/tauri_lifecycle.rs	WindowEvent::Suspended
@@ -661,15 +666,28 @@ contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	probe_auth_s
 contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn native_suspend_immediately_revokes_write_readiness()
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	smoke-mobile-android-lifecycle.sh
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_CDP_ENDPOINT
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_EXPECT_WRITABLE
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH
+contains	scripts/inspect-android-target-capability.mjs	supportBaseline
+contains	scripts/lib/android-target-capability.mjs	providerMajor >= 137
+contains	scripts/lib/android-target-capability.mjs	sdkLevel >= 29
 contains	scripts/smoke-mobile-android-lifecycle.mjs	mobile-android-lifecycle: backgrounding app
-contains	scripts/smoke-mobile-android-lifecycle.mjs	Android System WebView WebCrypto capability blocked writable lifecycle
+contains	scripts/smoke-mobile-android-lifecycle.mjs	readonly negative evidence accepted
 contains	scripts/smoke-mobile-android-lifecycle.mjs	probeWebCryptoEd25519
+contains	scripts/smoke-mobile-android-lifecycle.mjs	evaluateWritableProbeExpectation
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-webview-interaction.mjs
-contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-source-control-interaction.mjs
+contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/android-business-flow.mjs
+contains	scripts/lib/android-business-flow.mjs	./mobile-source-control-interaction.mjs
+contains	scripts/smoke-mobile-android-remote-browser.sh	DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED
+contains	scripts/smoke-mobile-android-remote-browser.mjs	smoke-mobile-android-remote-browser
+contains	scripts/smoke-mobile-android-remote-browser.mjs	probeWebCryptoEd25519
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-remote-browser.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"

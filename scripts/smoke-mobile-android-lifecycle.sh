@@ -10,6 +10,10 @@ APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
 SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
 TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-180}"
 NODE_SCRIPT="${DEVE_MOBILE_ANDROID_LIFECYCLE_NODE_SCRIPT:-$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.mjs}"
+EXPECT_WRITABLE="${DEVE_MOBILE_ANDROID_EXPECT_WRITABLE:-1}"
+TARGET_FACTS_PATH="${DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH:-}"
+EVIDENCE_PATH="${DEVE_MOBILE_ANDROID_EVIDENCE_PATH:-}"
+TARGET_FACTS_TEMP=0
 
 fail() {
   echo "mobile-android-lifecycle-smoke: $*" >&2
@@ -47,6 +51,9 @@ cleanup() {
   fi
   adb_cleanup_cmd shell am force-stop "$APP_ID"
   adb_cleanup_cmd uninstall "$APP_ID"
+  if [[ "$TARGET_FACTS_TEMP" == "1" ]]; then
+    rm -f "$TARGET_FACTS_PATH"
+  fi
 }
 
 find_webview_socket() {
@@ -76,9 +83,33 @@ command -v timeout >/dev/null 2>&1 || fail "timeout is required"
 [[ -f "$ROOT_DIR/$APK_PATH" ]] && APK_PATH="$ROOT_DIR/$APK_PATH"
 GLOBAL_DEADLINE=$((SECONDS + TIMEOUT_SECS))
 
+if [[ -z "$TARGET_FACTS_PATH" ]]; then
+  TARGET_FACTS_PATH="${TMPDIR:-/tmp}/deve-android-target-facts-$$.json"
+  TARGET_FACTS_TEMP=1
+fi
+
 trap cleanup EXIT
 adb_cmd start-server >/dev/null
 adb_cmd wait-for-device
+SDK_RAW="$(adb_cmd shell getprop ro.build.version.sdk | tr -d '\r')"
+WEBVIEW_CMD_RAW="$(adb_cmd shell cmd webviewupdate getCurrentWebViewPackage 2>&1 | tr -d '\r' || true)"
+WEBVIEW_DUMPSYS_RAW="$(adb_cmd shell dumpsys webviewupdate 2>&1 | tr -d '\r' || true)"
+WEBVIEW_RAW="$WEBVIEW_CMD_RAW
+$WEBVIEW_DUMPSYS_RAW"
+AVD_NAME="$(adb_cmd shell getprop ro.boot.qemu.avd_name 2>/dev/null | tr -d '\r' || true)"
+BUILD_FINGERPRINT="$(adb_cmd shell getprop ro.build.fingerprint 2>/dev/null | tr -d '\r' || true)"
+MODEL="$(adb_cmd shell getprop ro.product.model 2>/dev/null | tr -d '\r' || true)"
+TARGET_FACTS="$(
+  DEVE_ANDROID_TARGET_SDK_RAW="$SDK_RAW" \
+  DEVE_ANDROID_TARGET_WEBVIEW_RAW="$WEBVIEW_RAW" \
+  DEVE_ANDROID_TARGET_AVD_NAME="$AVD_NAME" \
+  DEVE_ANDROID_TARGET_BUILD_FINGERPRINT="$BUILD_FINGERPRINT" \
+  DEVE_ANDROID_TARGET_MODEL="$MODEL" \
+  DEVE_MOBILE_ANDROID_EXPECT_WRITABLE="$EXPECT_WRITABLE" \
+  DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
+  node "$ROOT_DIR/scripts/inspect-android-target-capability.mjs"
+)" || fail "Android target does not satisfy the requested evidence mode"
+echo "mobile-android-lifecycle-smoke: target_facts=$TARGET_FACTS"
 adb_cmd install -r "$APK_PATH" >/dev/null
 adb_cmd logcat -c
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
@@ -107,6 +138,9 @@ DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
 DEVE_MOBILE_ANDROID_ADB_BIN="$(adb_bin)" \
 DEVE_MOBILE_ANDROID_SERIAL="$SERIAL" \
 DEVE_MOBILE_ANDROID_APP_ID="$APP_ID" \
+DEVE_MOBILE_ANDROID_EXPECT_WRITABLE="$EXPECT_WRITABLE" \
+DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
+DEVE_MOBILE_ANDROID_EVIDENCE_PATH="$EVIDENCE_PATH" \
 DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS="$(($(remaining_seconds) * 1000))" \
 timeout "$(remaining_seconds)" node "$NODE_SCRIPT"
 

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
+
+REQUIRED="${DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED:-0}"
+APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
+APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
+SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
+REMOTE_ORIGIN="${DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN:-}"
+USERNAME="${DEVE_MOBILE_ANDROID_REMOTE_USERNAME:-}"
+PASSWORD="${DEVE_MOBILE_ANDROID_REMOTE_PASSWORD:-}"
+TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_SECS:-240}"
+TARGET_FACTS_PATH="${DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH:-}"
+EVIDENCE_PATH="${DEVE_MOBILE_ANDROID_EVIDENCE_PATH:-}"
+TARGET_FACTS_TEMP=0
+
+fail() { echo "mobile-android-remote-browser-smoke: $*" >&2; exit 1; }
+
+adb_bin() { android_tool_path adb || fail "adb is required"; }
+
+adb_cmd() {
+  local limit=$((GLOBAL_DEADLINE - SECONDS))
+  (( limit > 0 )) || fail "global deadline exhausted before adb $*"
+  timeout "$limit" "$(adb_bin)" -s "$SERIAL" "$@"
+}
+
+adb_cleanup_cmd() {
+  timeout 10 "$(adb_bin)" -s "$SERIAL" "$@" >/dev/null 2>&1 || true
+}
+
+app_pid() { adb_cmd shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' | awk '{print $1; exit}'; }
+
+cleanup() {
+  [[ -z "${FORWARD_PORT:-}" ]] || adb_cleanup_cmd forward --remove "tcp:$FORWARD_PORT"
+  adb_cleanup_cmd shell am force-stop "$APP_ID"
+  adb_cleanup_cmd uninstall "$APP_ID"
+  [[ "$TARGET_FACTS_TEMP" != "1" ]] || rm -f "$TARGET_FACTS_PATH"
+}
+
+if [[ "$REQUIRED" != "1" ]]; then
+  echo "mobile-android-remote-browser-smoke: not executed; set DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED=1"
+  echo "mobile-android-remote-browser-smoke: ok"
+  exit 0
+fi
+
+[[ -n "$SERIAL" && -n "$REMOTE_ORIGIN" && -n "$USERNAME" && -n "$PASSWORD" ]] \
+  || fail "serial, remote HTTPS origin, username, and password are required"
+node -e 'const u=new URL(process.argv[1]);if(u.protocol!=="https:"||u.origin!==process.argv[1])process.exit(2)' \
+  "$REMOTE_ORIGIN" || fail "remote target must be an exact HTTPS origin"
+[[ -f "$ROOT_DIR/$APK_PATH" ]] && APK_PATH="$ROOT_DIR/$APK_PATH"
+[[ -f "$APK_PATH" ]] || fail "debug APK not found: $APK_PATH"
+GLOBAL_DEADLINE=$((SECONDS + TIMEOUT_SECS))
+if [[ -z "$TARGET_FACTS_PATH" ]]; then
+  TARGET_FACTS_PATH="${TMPDIR:-/tmp}/deve-android-remote-target-facts-$$.json"
+  TARGET_FACTS_TEMP=1
+fi
+trap cleanup EXIT
+
+adb_cmd start-server >/dev/null
+adb_cmd wait-for-device
+SDK_RAW="$(adb_cmd shell getprop ro.build.version.sdk | tr -d '\r')"
+WEBVIEW_RAW="$(adb_cmd shell cmd webviewupdate getCurrentWebViewPackage 2>&1 | tr -d '\r' || true)
+$(adb_cmd shell dumpsys webviewupdate 2>&1 | tr -d '\r' || true)"
+DEVE_ANDROID_TARGET_SDK_RAW="$SDK_RAW" \
+DEVE_ANDROID_TARGET_WEBVIEW_RAW="$WEBVIEW_RAW" \
+DEVE_ANDROID_TARGET_AVD_NAME="$(adb_cmd shell getprop ro.boot.qemu.avd_name 2>/dev/null | tr -d '\r' || true)" \
+DEVE_ANDROID_TARGET_BUILD_FINGERPRINT="$(adb_cmd shell getprop ro.build.fingerprint 2>/dev/null | tr -d '\r' || true)" \
+DEVE_ANDROID_TARGET_MODEL="$(adb_cmd shell getprop ro.product.model 2>/dev/null | tr -d '\r' || true)" \
+DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=1 \
+DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
+node "$ROOT_DIR/scripts/inspect-android-target-capability.mjs" >/dev/null
+
+adb_cmd install -r "$APK_PATH" >/dev/null
+PREFERENCE_JSON="$(node -e 'process.stdout.write(JSON.stringify({mode:"remote",remote_url:process.argv[1]}))' "$REMOTE_ORIGIN")"
+PREFERENCE_BASE64="$(printf '%s' "$PREFERENCE_JSON" | base64 | tr -d '\r\n')"
+adb_cmd shell run-as "$APP_ID" sh -c \
+  "echo '$PREFERENCE_BASE64' | base64 -d > native-backend.json"
+adb_cmd logcat -c
+adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
+
+PID=""
+while (( SECONDS < GLOBAL_DEADLINE )); do
+  PID="$(app_pid || true)"
+  [[ -z "$PID" ]] || break
+  sleep 1
+done
+[[ -n "$PID" ]] || fail "Android RemoteBrowser app did not remain running"
+SOCKET=""
+while (( SECONDS < GLOBAL_DEADLINE )); do
+  SOCKET="$(adb_cmd shell cat /proc/net/unix 2>/dev/null | tr -d '\r' | awk -v pid="$PID" '$NF ~ /webview_devtools_remote/ && $NF ~ pid"$" {print $NF; exit}')"
+  [[ -z "$SOCKET" ]] || break
+  sleep 1
+done
+[[ -n "$SOCKET" ]] || fail "RemoteBrowser WebView CDP socket unavailable"
+FORWARD_PORT="$(adb_cmd forward tcp:0 "localabstract:${SOCKET#@}" | tr -d '\r')"
+[[ "$FORWARD_PORT" =~ ^[0-9]+$ ]] || fail "adb did not allocate a CDP port"
+
+DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
+DEVE_MOBILE_ANDROID_ADB_BIN="$(adb_bin)" \
+DEVE_MOBILE_ANDROID_SERIAL="$SERIAL" \
+DEVE_MOBILE_ANDROID_APP_ID="$APP_ID" \
+DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$REMOTE_ORIGIN" \
+DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$USERNAME" \
+DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$PASSWORD" \
+DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
+DEVE_MOBILE_ANDROID_EVIDENCE_PATH="$EVIDENCE_PATH" \
+DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS="$(((GLOBAL_DEADLINE - SECONDS) * 1000))" \
+timeout "$((GLOBAL_DEADLINE - SECONDS))" node "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.mjs"
+
+LOGCAT="$(adb_cmd logcat -d 2>/dev/null | tr -d '\r')"
+if printf '%s\n' "$LOGCAT" | grep -F "deve_mobile LocalBackend" >/dev/null; then
+  fail "RemoteBrowser started or attempted the embedded LocalBackend"
+fi
+echo "mobile-android-remote-browser-smoke: app_id=$APP_ID serial=$SERIAL pid=$PID"
+echo "mobile-android-remote-browser-smoke: ok"

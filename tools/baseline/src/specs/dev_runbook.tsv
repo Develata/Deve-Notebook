@@ -39,6 +39,8 @@ contains	docs/dev-runbook.md	docker compose -f docker-compose.dev.yml up --build
 contains	docs/dev-runbook.md	Native Shell Modes
 contains	docs/dev-runbook.md	LocalBackend
 contains	docs/dev-runbook.md	RemoteBrowser
+contains	docs/dev-runbook.md	check-desktop-remote-browser-smoke.ps1
+contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0
 contains	docs/dev-runbook.md	DEVE_NATIVE_REMOTE_URL=https://example.invalid
 contains	docs/dev-runbook.md	local service before reporting `desktop-native-session-smoke: ok`
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-004

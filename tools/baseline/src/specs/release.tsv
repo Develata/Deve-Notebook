@@ -1041,3 +1041,9 @@ contains	scripts/validate-release-image-tags.test.sh	release-image-tags-test: ok
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
 contains	scripts/smoke-desktop-packaged-ui.mjs	desktop-packaged-ui-webview: ok
 contains	scripts/smoke-desktop-packaged-ui.test.mjs	direct execution fails closed without a CDP endpoint
+contains	scripts/check-desktop-remote-browser-smoke.ps1	desktop-remote-browser-smoke: ok
+contains	scripts/smoke-desktop-remote-browser.mjs	desktop-remote-browser-webview: ok
+contains	scripts/smoke-desktop-remote-browser.test.mjs	RemoteBrowser WebView proof covers facade, IPC, CSP, and real business UI
+contains	scripts/smoke-mobile-android-remote-browser.sh	mobile-android-remote-browser-smoke: ok
+contains	scripts/smoke-mobile-android-remote-browser.mjs	mobile-android-remote-browser: ok
+contains	tools/baseline/src/acceptance_matrix/tag_ready.rs	Android writable evidence requires receipt schema 3 typed claims

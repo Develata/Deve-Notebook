@@ -5,6 +5,7 @@ use super::model::MatrixRow;
 use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
+use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,6 +28,10 @@ struct Receipt {
     finished_at: String,
     status: String,
     command_fingerprint: String,
+    command_program: String,
+    #[serde(default)]
+    command_artifacts: Vec<String>,
+    claims: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -91,7 +96,7 @@ fn validate_receipt(
     now: DateTime<Utc>,
 ) -> Result<()> {
     let receipt = &record.receipt;
-    if receipt.schema != 2 {
+    if !matches!(receipt.schema, 2 | 3) {
         bail!("unsupported receipt schema {}", receipt.schema);
     }
     if receipt.status != "passed" {
@@ -153,6 +158,9 @@ fn validate_receipt(
     {
         bail!("receipt command fingerprint is malformed");
     }
+    if row.surface == "android" {
+        validate_android_claims(receipt, row)?;
+    }
     let finished = DateTime::parse_from_rfc3339(&receipt.finished_at)
         .context("receipt finished_at is not RFC3339")?
         .with_timezone(&Utc);
@@ -161,6 +169,80 @@ fn validate_receipt(
     }
     if row.freshness == "target-host-30d" && now - finished > Duration::days(30) {
         bail!("target-host receipt is older than 30 days");
+    }
+    Ok(())
+}
+
+fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Result<()> {
+    if receipt.schema != 3 {
+        bail!("Android writable evidence requires receipt schema 3 typed claims");
+    }
+    let claims = receipt
+        .claims
+        .as_ref()
+        .context("Android receipt is missing typed target/probe claims")?;
+    let expected_producer = match row.mode.as_str() {
+        "local-backend" => "smoke-mobile-android-lifecycle",
+        "remote-browser" => "smoke-mobile-android-remote-browser",
+        other => bail!("unsupported Android evidence mode {other}"),
+    };
+    let expected_artifact = match row.mode.as_str() {
+        "local-backend" => "smoke-mobile-android-lifecycle.sh",
+        "remote-browser" => "smoke-mobile-android-remote-browser.sh",
+        _ => unreachable!(),
+    };
+    if claims.get("producer").and_then(Value::as_str) != Some(expected_producer) {
+        bail!("Android claims producer does not match {expected_producer}");
+    }
+    if !receipt
+        .command_artifacts
+        .iter()
+        .any(|artifact| artifact == expected_artifact)
+    {
+        bail!("Android receipt command is not bound to {expected_artifact}");
+    }
+    if claims.get("mode").and_then(Value::as_str) != Some(row.mode.as_str()) {
+        bail!("Android claims mode does not match receipt mode");
+    }
+    let target = claims
+        .get("target")
+        .context("Android claims target is missing")?;
+    let sdk = target.get("sdkLevel").and_then(Value::as_u64).unwrap_or(0);
+    let provider_major = target
+        .get("webViewProviderMajor")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    if sdk < 29
+        || provider_major < 137
+        || target.get("supportBaseline").and_then(Value::as_bool) != Some(true)
+    {
+        bail!("Android target does not meet API 29 / WebView 137 support baseline");
+    }
+    let webcrypto = claims
+        .get("webcrypto")
+        .context("Android claims WebCrypto probe is missing")?;
+    if webcrypto.get("writable").and_then(Value::as_bool) != Some(true)
+        || !webcrypto.get("blocker").is_some_and(Value::is_null)
+    {
+        bail!("Android target did not pass the real Ed25519 writer probe");
+    }
+    let journey = claims
+        .get("journey")
+        .context("Android claims journey result is missing")?;
+    if journey
+        .get("writableLifecycleComplete")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        bail!("Android writable lifecycle journey is incomplete");
+    }
+    let executable = Path::new(&receipt.command_program)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if !matches!(executable.as_str(), "bash" | "bash.exe" | "sh" | "sh.exe") {
+        bail!("Android receipt producer must be invoked through the shell harness");
     }
     Ok(())
 }
@@ -248,6 +330,7 @@ mod tests {
     use super::{Receipt, ReceiptRecord, validate_receipt};
     use crate::acceptance_matrix::model::MatrixRow;
     use chrono::{Duration, Utc};
+    use serde_json::json;
 
     #[test]
     fn target_host_receipt_rejects_dirty_and_stale_evidence() {
@@ -270,7 +353,7 @@ mod tests {
         let mut record = ReceiptRecord {
             relative_path: "receipts/smoke.android.json".into(),
             receipt: Receipt {
-                schema: 2,
+                schema: 3,
                 evidence_id: "smoke.android".into(),
                 evidence_ref: "receipts/smoke.android.json".into(),
                 head: "abc".into(),
@@ -285,6 +368,20 @@ mod tests {
                 finished_at: now.to_rfc3339(),
                 status: "passed".into(),
                 command_fingerprint: "fnv1a64:0123456789abcdef".into(),
+                command_program: "bash".into(),
+                command_artifacts: vec!["smoke-mobile-android-lifecycle.sh".into()],
+                claims: Some(json!({
+                    "schema": 1,
+                    "producer": "smoke-mobile-android-lifecycle",
+                    "mode": "local-backend",
+                    "target": {
+                        "sdkLevel": 29,
+                        "webViewProviderMajor": 137,
+                        "supportBaseline": true
+                    },
+                    "webcrypto": { "writable": true, "blocker": null },
+                    "journey": { "writableLifecycleComplete": true }
+                })),
             },
         };
         assert!(validate_receipt(&record, &row, "abc", now).is_err());
@@ -293,6 +390,15 @@ mod tests {
         assert!(validate_receipt(&record, &row, "abc", now).is_err());
         record.receipt.finished_at = now.to_rfc3339();
         assert!(validate_receipt(&record, &row, "abc", now).is_ok());
+        record.receipt.command_artifacts.clear();
+        assert!(validate_receipt(&record, &row, "abc", now).is_err());
+        record.receipt.command_artifacts = vec!["smoke-mobile-android-lifecycle.sh".into()];
+        record.receipt.claims.as_mut().unwrap()["webcrypto"]["writable"] = json!(false);
+        record.receipt.claims.as_mut().unwrap()["webcrypto"]["blocker"] =
+            json!("ed25519_unavailable");
+        assert!(validate_receipt(&record, &row, "abc", now).is_err());
+        record.receipt.claims.as_mut().unwrap()["webcrypto"]["writable"] = json!(true);
+        record.receipt.claims.as_mut().unwrap()["webcrypto"]["blocker"] = json!(null);
         record.receipt.mode = "remote-browser".into();
         assert!(validate_receipt(&record, &row, "abc", now).is_err());
         record.receipt.mode = "local-backend".into();

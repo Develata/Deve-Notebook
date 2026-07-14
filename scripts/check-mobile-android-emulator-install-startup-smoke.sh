@@ -320,6 +320,7 @@ ensure_emulator_process_alive() {
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
+run node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 run node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
 run node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
 run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"

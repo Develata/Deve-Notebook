@@ -663,6 +663,29 @@ one installed sibling sidecar while the app is alive and zero after exit before
 running the installer-specific uninstall path. It remains diagnostic-only unless
 `DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1` is set.
 
+The preference-driven RemoteBrowser gate is intentionally separate from CLI or
+environment overrides. Given an isolated installed Windows binary and a
+temporary HTTPS test origin, it pre-seeds only the host-local preference, drives
+remote login/edit/commit/history through WebView2 CDP, reloads after attaching
+diagnostics to prove there is no native facade, `ipc.localhost` request, or
+related CSP error, then invokes the native `Use Local Backend` menu item through
+Windows UI Automation. The restarted process must own exactly one fresh local
+sidecar/session and the normal packaged LocalBackend UI smoke must pass before
+all processes are closed:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-remote-browser-smoke.ps1 `
+  -DesktopBinary C:\path\DeveNotebookInstallerSmoke\deve_desktop.exe `
+  -WorkRoot C:\temp\deve-remote-smoke `
+  -RemoteHttpsOrigin https://temporary-test-origin.example `
+  -Username random-smoke-user `
+  -Password random-smoke-password
+```
+
+The HTTPS origin and credentials must be temporary test material. Stop the
+tunnel/server after the smoke; do not replace this gate with `--remote-url`,
+because explicit overrides deliberately hide the native recovery menu.
+
 Capture the host OS, tool versions, command output, artifact paths, install
 result, startup result, and an explicit statement that no child-process runtime
 or native authority write path was opened. Store the target-host result under
@@ -968,11 +991,14 @@ bounded graceful app/runtime exit. It does not call ledger or Source Control
 authority APIs directly; the fault-injection and exit commands are unavailable
 in release builds.
 
-The writable lifecycle path requires the target Android System WebView to pass
-the actual WebCrypto Ed25519 key-generation probe. A frozen AOSP image without
-that capability remains storage-limited/read-only by contract; the smoke must
-fail with the capability reason instead of waiting indefinitely or bypassing
-browser peer identity. LocalBackend installs its HttpOnly native-session cookie
+The writable lifecycle path records Android SDK level, the current WebView
+provider package/full version, AVD name or device fingerprint, and model before
+installation. It requires Android 10/API 29+ and provider major 137+ as the
+support qualification, then separately requires the actual non-extractable
+WebCrypto Ed25519 key-generation probe. A frozen AOSP image without that
+capability remains storage-limited/read-only by contract; the default writable
+smoke fails with the capability reason instead of waiting indefinitely or
+bypassing browser peer identity. LocalBackend installs its HttpOnly native-session cookie
 through a no-argument Tauri command backed by Android CookieManager because the
 current Wry Android `set_cookie` surface is unsupported; cookie material never
 enters JavaScript or command arguments.
@@ -990,6 +1016,47 @@ With an already booted emulator and built debug APK, run the narrower gate:
 ```bash
 DEVE_MOBILE_ANDROID_SERIAL=emulator-5554 DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh
 ```
+
+Capture an AOSP 124/133-style read-only negative receipt by selecting the
+explicit negative mode. This mode succeeds only when the real Ed25519 probe is
+unavailable and the product visibly remains read-only; it cannot satisfy the
+tag-ready writable receipt:
+
+```bash
+DEVE_MOBILE_ANDROID_SERIAL=emulator-5554 \
+DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 \
+DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 \
+DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH=target/android-smoke/readonly-target.json \
+scripts/smoke-mobile-android-lifecycle.sh
+```
+
+For writable evidence, leave `DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=1` (the
+default), set `DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH`, and set
+`DEVE_MOBILE_ANDROID_EVIDENCE_PATH` to a worktree-external claims JSON. Pass the
+same evidence path to `deve_baseline acceptance-receipt --claims`; tag-ready
+validates the bound smoke producer, current provider, real probe, and completed
+writable lifecycle instead of accepting an arbitrary exit-zero command.
+
+For Android `RemoteBrowser`, prebuild the same debug APK and expose a temporary
+HTTPS Deve origin with random test credentials. The harness writes the remote
+preference into app-private storage before launch, verifies that no embedded
+LocalBackend/native facade/`ipc.localhost` request appears, then runs login,
+edit, commit/history and HOME/resume before emitting the separate remote claims:
+
+```bash
+DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED=1 \
+DEVE_MOBILE_ANDROID_SERIAL=emulator-5554 \
+DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN=https://deve.example \
+DEVE_MOBILE_ANDROID_REMOTE_USERNAME=test-user \
+DEVE_MOBILE_ANDROID_REMOTE_PASSWORD=test-password \
+DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH=/tmp/android-remote-target.json \
+DEVE_MOBILE_ANDROID_EVIDENCE_PATH=/tmp/android-remote-claims.json \
+scripts/smoke-mobile-android-remote-browser.sh
+```
+
+The HTTPS instance and credentials are test-only and must be retired after the
+receipt run. This smoke does not close the separate Mobile native
+RemoteBrowser-to-LocalBackend control gap.
 
 Required iOS mode needs macOS, a built simulator `.app`, and a booted simulator:
 

@@ -58,12 +58,19 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-desktop-installer-smoke.sh` | Verifies target-host Desktop install/startup/real-WebView/NoteGit-Git/uninstall flow while keeping all writes behind the installed sidecar authority path |
 | `check-desktop-packaged-ui-smoke.ps1` | Starts an installed Windows Desktop package with isolated data/WebView2 roots and verifies real UI plus sidecar cleanup through a random CDP endpoint |
 | `smoke-desktop-packaged-ui.mjs` | Drives create/edit/commit/history and Settings focus trapping inside the installed native WebView without direct authority calls |
+| `check-desktop-remote-browser-smoke.ps1` | Runs an installed preference-driven RemoteBrowser, proves zero Web IPC/CSP leakage, invokes native local recovery, and verifies fresh LocalBackend restart plus sidecar cleanup |
+| `smoke-desktop-remote-browser.mjs` | Drives remote login/edit/commit/history through WebView2 CDP and records the no-facade/no-`ipc.localhost` browser contract |
+| `lib/desktop-webview-business-flow.mjs` | Shared UI-only create/edit/commit/history flow used by packaged LocalBackend and RemoteBrowser WebView smokes |
 | `check-desktop-target-host-preflight.sh` | Diagnoses macOS/Windows Desktop target-host prerequisites without claiming package readiness on the wrong host |
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Boots an Android emulator target host, builds a debug WebView shell APK, and delegates install/startup smoke without opening process runtime |
 | `smoke-mobile-android-lifecycle.sh` | Drives the debug Android WebView through CDP, verifies non-zero pending preservation, transport-generation recovery, foreground reprobe, resumed commit, and bounded graceful runtime cleanup |
 | `smoke-mobile-android-lifecycle.mjs` | Raw page-target CDP harness for the Android LocalBackend lifecycle smoke; requires WebCrypto Ed25519, uses debug-only lifecycle fault/exit commands, and otherwise submits UI intents only |
+| `smoke-mobile-android-remote-browser.sh` / `.mjs` | Runs a preference-driven Android RemoteBrowser against an HTTPS Deve origin, proves zero native facade/IPC, real login/edit/commit/history, background recovery, and emits typed writable claims |
+| `lib/android-business-flow.mjs` | Shared Android WebView UI-intent helpers for login, document edit, and Source Control commit/history; it owns no authority and is reused by LocalBackend and RemoteBrowser smokes |
+| `inspect-android-target-capability.mjs` | Records Android SDK, current WebView provider/version, AVD/device identity, and enforces the API 29+/WebView 137+ writable-evidence floor without replacing the real Ed25519 probe |
+| `android-target-capability.test.mjs` | Regression tests for Android target-fact parsing, support qualification, and writable-versus-read-only evidence modes |
 | `lib/mobile-webview-interaction.mjs` | Focus, text-input failure diagnostics, and mobile drawer navigation helpers for the Android WebView lifecycle harness |
 | `lib/mobile-source-control-interaction.mjs` | Source Control open, confirmed-row commit acknowledgement, history proof, and failure diagnostics for the Android WebView lifecycle harness |
 | `lib/android-webview-cdp.mjs` | Raw Android WebView page-target discovery, CDP request routing, evaluation, and bounded reconnect helpers for native lifecycle smoke |

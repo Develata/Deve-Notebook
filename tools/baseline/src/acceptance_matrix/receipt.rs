@@ -5,6 +5,7 @@ use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail};
 use chrono::{SecondsFormat, Utc};
 use serde::Serialize;
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -31,6 +32,8 @@ struct Receipt {
     command_program: String,
     command_arg_count: usize,
     command_fingerprint: String,
+    command_artifacts: Vec<String>,
+    claims: Option<Value>,
 }
 
 pub(crate) fn run(args: &[String]) -> Result<()> {
@@ -89,9 +92,21 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     if head_after.as_deref().is_some_and(|after| after != head) {
         errors.push("HEAD changed during command execution".to_string());
     }
+    let claims = parsed.claims.as_ref().and_then(|path| {
+        match fs::read_to_string(path)
+            .with_context(|| format!("failed to read claims file {}", path.display()))
+            .and_then(|content| serde_json::from_str(&content).context("claims file is not JSON"))
+        {
+            Ok(claims) => Some(claims),
+            Err(error) => {
+                errors.push(error.to_string());
+                None
+            }
+        }
+    });
     let passed = execution.as_ref().is_ok_and(|status| status.success()) && errors.is_empty();
     let receipt = Receipt {
-        schema: 2,
+        schema: 3,
         evidence_id: parsed.evidence_id.clone(),
         evidence_ref: parsed.evidence_ref.clone(),
         head: head.clone(),
@@ -111,6 +126,8 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
         command_program: parsed.command[0].clone(),
         command_arg_count: parsed.command.len().saturating_sub(1),
         command_fingerprint: command_fingerprint(&parsed.command),
+        command_artifacts: command_artifacts(&parsed.command),
+        claims,
     };
     write_atomic(&output_absolute, &serde_json::to_vec_pretty(&receipt)?)?;
     if passed {
@@ -137,6 +154,7 @@ struct ReceiptArgs {
     mode: String,
     target_os: String,
     output: PathBuf,
+    claims: Option<PathBuf>,
     command: Vec<String>,
 }
 
@@ -152,6 +170,7 @@ impl ReceiptArgs {
         let mut mode = None;
         let mut target_os = None;
         let mut output = None;
+        let mut claims = None;
         let mut index = 0usize;
         while index < separator {
             let value = args.get(index + 1).with_context(|| {
@@ -164,6 +183,7 @@ impl ReceiptArgs {
                 "--mode" => mode = Some(value.clone()),
                 "--target-os" => target_os = Some(value.clone()),
                 "--output" => output = Some(PathBuf::from(value)),
+                "--claims" => claims = Some(PathBuf::from(value)),
                 other => bail!("acceptance-receipt: unsupported option {other}"),
             }
             index += 2;
@@ -179,6 +199,7 @@ impl ReceiptArgs {
             mode: mode.context("acceptance-receipt: --mode is required")?,
             target_os: target_os.context("acceptance-receipt: --target-os is required")?,
             output: output.context("acceptance-receipt: --output is required")?,
+            claims,
             command,
         })
     }
@@ -197,6 +218,22 @@ fn command_fingerprint(command: &[String]) -> String {
         }
     }
     format!("fnv1a64:{hash:016x}")
+}
+
+fn command_artifacts(command: &[String]) -> Vec<String> {
+    command
+        .iter()
+        .filter_map(|argument| {
+            let file_name = Path::new(argument).file_name()?.to_str()?;
+            matches!(
+                Path::new(file_name)
+                    .extension()
+                    .and_then(|value| value.to_str()),
+                Some("sh" | "ps1" | "mjs" | "cjs")
+            )
+            .then(|| file_name.to_string())
+        })
+        .collect()
 }
 
 fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> Result<String> {

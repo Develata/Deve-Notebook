@@ -4,9 +4,15 @@ export class CdpPage {
     this.withDeadline = withDeadline;
     this.nextId = 1;
     this.pending = new Map();
+    this.listeners = new Map();
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data));
-      if (message.id === undefined) return;
+      if (message.id === undefined) {
+        for (const listener of this.listeners.get(message.method) ?? []) {
+          listener(message.params ?? {});
+        }
+        return;
+      }
       const waiter = this.pending.get(message.id);
       if (!waiter) return;
       this.pending.delete(message.id);
@@ -47,6 +53,12 @@ export class CdpPage {
     }));
   }
 
+  on(method, listener) {
+    const listeners = this.listeners.get(method) ?? [];
+    listeners.push(listener);
+    this.listeners.set(method, listeners);
+  }
+
   async evaluate(expression) {
     const response = await this.send("Runtime.evaluate", {
       expression,
@@ -84,7 +96,7 @@ export function visibleElement(selector) {
   }) ?? null;
 }
 
-export async function findStableAppPage({ cdpEndpoint, withDeadline, waitUntil }) {
+export async function findStableAppPage({ cdpEndpoint, withDeadline, waitUntil, expectedOrigin }) {
   const listTargets = async () => {
     const response = await withDeadline(
       "Android WebView target discovery",
@@ -98,10 +110,15 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, waitUntil }
   const findAppPage = async () => {
     const targets = await listTargets();
     const discoveredTargets = targets.map(({ type, title, url }) => ({ type, title, url }));
-    const target = targets.find((candidate) =>
-      candidate.webSocketDebuggerUrl
-      && candidate.type === "page"
-      && candidate.url === "http://tauri.localhost/");
+    const target = targets.find((candidate) => {
+      if (!candidate.webSocketDebuggerUrl || candidate.type !== "page") return false;
+      if (!expectedOrigin) return candidate.url === "http://tauri.localhost/";
+      try {
+        return new URL(candidate.url).origin === new URL(expectedOrigin).origin;
+      } catch {
+        return false;
+      }
+    });
     if (!target) {
       throw new Error(`Android WebView target unavailable; targets=${JSON.stringify(discoveredTargets)}`);
     }
