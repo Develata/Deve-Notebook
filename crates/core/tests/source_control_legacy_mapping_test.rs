@@ -136,13 +136,24 @@ fn workdir_diff_fails_closed_on_unstatable_workspace_file() {
     blocked.set_mode(0o000);
     std::fs::set_permissions(&notes_dir, blocked).expect("chmod 000");
 
-    let err = repo
-        .workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md")
-        .expect_err("unstatable workspace file must fail closed");
-
+    let result = repo.workdir_diff_inputs_in_local_repo(repo.local_repo_name(), "notes/a.md");
     std::fs::set_permissions(&notes_dir, original).expect("restore perms");
+    let err = result.expect_err("unstatable workspace file must fail closed");
     assert!(
-        err.to_string().contains("Failed to stat workspace path")
-            || err.to_string().contains("Permission denied")
+        err.to_string()
+            .contains("Failed to stat Projection Workspace ancestor while resolving"),
+        "unexpected workspace containment diagnostic: {err:#}"
+    );
+    assert!(
+        err.chain().any(|cause| {
+            cause
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|io_err| io_err.kind() == std::io::ErrorKind::PermissionDenied)
+        }),
+        "workspace containment error must preserve PermissionDenied in its chain: {err:#}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(file).expect("workspace file preserved"),
+        "workspace hello"
     );
 }

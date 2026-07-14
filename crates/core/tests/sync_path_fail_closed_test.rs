@@ -52,6 +52,22 @@ fn block_dir(path: &std::path::Path) -> std::fs::Permissions {
     original
 }
 
+fn assert_workspace_ancestor_permission_denied(err: &anyhow::Error) {
+    assert!(
+        err.to_string()
+            .contains("Failed to stat Projection Workspace ancestor while resolving"),
+        "unexpected workspace containment diagnostic: {err:#}"
+    );
+    assert!(
+        err.chain().any(|cause| {
+            cause
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|io_err| io_err.kind() == std::io::ErrorKind::PermissionDenied)
+        }),
+        "workspace containment error must preserve PermissionDenied in its chain: {err:#}"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
@@ -62,20 +78,18 @@ fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
     let blocked = repo
         .local_repo_workspace_path("default", "notes")
         .expect("workspace path");
+    let target = blocked.join("a.md");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let sync = SyncManager::new_checked(repo).expect("sync manager");
-    let err = sync
-        .materialize_local_repo("default")
-        .expect_err("unstatable workspace path must fail closed");
-
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
+    let result = sync.materialize_local_repo("default");
     std::fs::set_permissions(&blocked, original).expect("restore perms");
-    let err_text = err.to_string();
+    let err = result.expect_err("unstatable workspace path must fail closed");
+    assert_workspace_ancestor_permission_denied(&err);
     assert!(
-        err_text.contains("Failed to stat workspace path while materializing projection")
-            || err_text.contains("Permission denied"),
-        "{err_text}"
+        !target.try_exists().expect("stat materialize target"),
+        "failed materialization must not leave a workspace projection"
     );
 }
 
@@ -87,19 +101,24 @@ fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() 
     let blocked = repo
         .local_repo_workspace_path("default", "notes")
         .expect("workspace path");
+    let op_count_before = repo
+        .get_local_ops_in_local_repo(repo.local_repo_name(), doc_id)
+        .expect("load ledger ops before reconcile")
+        .len();
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let sync = SyncManager::new_checked(repo).expect("sync manager");
-    let err = sync
-        .reconcile_doc_in_local_repo("default", doc_id)
-        .expect_err("unstatable reconcile path must fail closed");
-
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
+    let result = sync.reconcile_doc_in_local_repo("default", doc_id);
     std::fs::set_permissions(&blocked, original).expect("restore perms");
-    assert!(
-        err.to_string()
-            .contains("Failed to stat workspace document path while reconciling")
-            || err.to_string().contains("Permission denied")
+    let err = result.expect_err("unstatable reconcile path must fail closed");
+    assert_workspace_ancestor_permission_denied(&err);
+    assert_eq!(
+        repo.get_local_ops_in_local_repo(repo.local_repo_name(), doc_id)
+            .expect("load ledger ops after reconcile")
+            .len(),
+        op_count_before,
+        "failed reconciliation must not append ledger facts"
     );
 }
 
@@ -111,17 +130,26 @@ fn bind_workspace_inode_fails_closed_when_workspace_path_is_unstatable() {
     let blocked = repo
         .local_repo_workspace_path("default", "notes")
         .expect("workspace path");
+    let inode_docids_before = repo
+        .run_on_local_repo(
+            repo.local_repo_name(),
+            deve_core::ledger::inode_index::list_docids,
+        )
+        .expect("load inode index before bind");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let err = repo
-        .bind_workspace_inode_in_local_repo("default", "notes/a.md", doc_id)
-        .expect_err("unstatable workspace path must fail closed");
-
+    let result = repo.bind_workspace_inode_in_local_repo("default", "notes/a.md", doc_id);
     std::fs::set_permissions(&blocked, original).expect("restore perms");
-    assert!(
-        err.to_string()
-            .contains("Failed to stat workspace path while binding inode")
-            || err.to_string().contains("Permission denied")
+    let err = result.expect_err("unstatable workspace path must fail closed");
+    assert_workspace_ancestor_permission_denied(&err);
+    assert_eq!(
+        repo.run_on_local_repo(
+            repo.local_repo_name(),
+            deve_core::ledger::inode_index::list_docids
+        )
+        .expect("load inode index after bind"),
+        inode_docids_before,
+        "failed inode binding must not change the inode index"
     );
 }

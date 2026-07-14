@@ -200,19 +200,17 @@ fn discard_tracked_add_fails_closed_on_unstatable_workspace_path() {
 
     std::fs::remove_file(&file).expect("remove canonical");
     std::fs::write(workspace_path(&repo, "notes/b.md"), "hello").expect("write renamed file");
+    let expected_pending = PendingFsEntry {
+        path: "notes/b.md".into(),
+        renamed_from: Some("notes/a.md".into()),
+        doc_id: Some(doc_id),
+        change_type: ChangeStatus::Added,
+        content_hash: pending_fs::content_hash("hello"),
+        detected_at: 2,
+        has_conflict: false,
+    };
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        pending_fs::upsert(
-            db,
-            &PendingFsEntry {
-                path: "notes/b.md".into(),
-                renamed_from: Some("notes/a.md".into()),
-                doc_id: Some(doc_id),
-                change_type: ChangeStatus::Added,
-                content_hash: pending_fs::content_hash("hello"),
-                detected_at: 2,
-                has_conflict: false,
-            },
-        )
+        pending_fs::upsert(db, &expected_pending)
     })
     .expect("seed tracked add");
 
@@ -224,19 +222,39 @@ fn discard_tracked_add_fails_closed_on_unstatable_workspace_path() {
     blocked.set_mode(0o000);
     std::fs::set_permissions(&notes_dir, blocked).expect("chmod 000");
 
-    let err = repo
-        .discard_pending("notes/b.md")
-        .expect_err("unstatable tracked add must fail closed");
-
+    let result = repo.discard_pending("notes/b.md");
     std::fs::set_permissions(&notes_dir, original).expect("restore perms");
+    let err = result.expect_err("unstatable tracked add must fail closed");
     assert!(
-        err.to_string().contains("Failed to stat workspace path")
-            || err.to_string().contains("Permission denied")
+        err.to_string()
+            .contains("Failed to stat Projection Workspace ancestor while resolving"),
+        "unexpected workspace containment diagnostic: {err:#}"
+    );
+    assert!(
+        err.chain().any(|cause| {
+            cause
+                .downcast_ref::<std::io::Error>()
+                .is_some_and(|io_err| io_err.kind() == std::io::ErrorKind::PermissionDenied)
+        }),
+        "workspace containment error must preserve PermissionDenied in its chain: {err:#}"
     );
     let pending = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
             pending_fs::get(db, "notes/b.md")
         })
-        .expect("load pending");
-    assert!(pending.is_some());
+        .expect("load pending")
+        .expect("pending entry preserved");
+    assert_eq!(pending.path, expected_pending.path);
+    assert_eq!(pending.renamed_from, expected_pending.renamed_from);
+    assert_eq!(pending.doc_id, expected_pending.doc_id);
+    assert_eq!(pending.change_type, expected_pending.change_type);
+    assert_eq!(pending.content_hash, expected_pending.content_hash);
+    assert_eq!(pending.detected_at, expected_pending.detected_at);
+    assert_eq!(pending.has_conflict, expected_pending.has_conflict);
+    assert_eq!(
+        std::fs::read_to_string(workspace_path(&repo, "notes/b.md"))
+            .expect("tracked add file preserved"),
+        "hello"
+    );
+    assert!(!file.try_exists().expect("stat canonical path"));
 }
