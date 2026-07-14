@@ -14,6 +14,7 @@
 
 - 用户应能通过 top bar 打开文件树或命令入口。
 - 左/右 drawer 应可打开、关闭、切换，并且与主内容区配合清晰。
+- 从屏幕左边缘向右滑应打开文件树；从屏幕右边缘向左滑应打开当前 Markdown 的逐级标题大纲。该手势可从编辑器边缘开始，但短拖动、纵向滚动、多指操作和靠边按钮点击不能误开 drawer。
 
 ### 2. 移动端核心面板
 
@@ -82,14 +83,17 @@
 
 步骤：
 
-1. 打开左侧 drawer。
-2. 切换到 External Changes、Source Control 或 Search。
-3. 打开并关闭 Outline。
+1. 从屏幕左边缘向右滑，打开文件树 drawer。
+2. 关闭 drawer，再从屏幕右边缘向左滑，打开 Markdown 标题大纲。
+3. 从编辑器内容区的左右边缘重复上述手势，确认两侧 drawer 仍可达。
+4. 执行短拖动、纵向滚动、多指操作，并点击靠边的真实按钮。
+5. 打开左侧 drawer，切换到 External Changes、Source Control 或 Search。
 
 期望结果：
 
 - 关键入口可达、可关闭、不会卡死。
 - drawer、outline、主内容区之间的切换语义清晰。
+- 短拖动、纵向滚动、多指操作与真实按钮点击不会误开 drawer，也不会修改 Markdown 内容或 pending 状态。
 
 ### MOBILE-UI-02: Mobile 壳层一致性
 

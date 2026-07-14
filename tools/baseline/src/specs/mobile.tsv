@@ -17,14 +17,29 @@ contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_threshold_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_axis_lock_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_editor_edge_reachable_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_interactive_tap_safety_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_dom_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: left_drawer_open true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: left_edge_swipe_active_view "Explorer"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: right_drawer_open true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: vertical_and_short_gestures_leave_drawers_closed true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: edge_button_action_not_replaced_by_drawer true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: editor_content_and_pending_unchanged true
 contains	apps/web/src/components/mobile_layout/gesture.rs	pub(super) fn resolve_swipe_outcome(
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_left_from_left_edge()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_file_tree_instead_of_previous_left_view()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_right_from_right_edge()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_closes_open_drawers()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_ignores_short_drags()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_uses_exact_edge_and_distance_boundaries()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_ignores_vertical_and_diagonal_drags()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_allows_editor_content_start()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_rejects_multitouch_start()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_touch_cancel_clears_capture()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_ignores_interactive_targets()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_touch_end_with_remaining_touches_clears_capture()
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer="left"
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-drawer="right"
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer-open=move || open.get().to_string()

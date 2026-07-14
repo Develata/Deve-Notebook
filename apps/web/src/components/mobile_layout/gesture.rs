@@ -9,6 +9,14 @@ use web_sys::TouchEvent;
 
 const EDGE_ZONE: i32 = 20;
 const SWIPE_THRESHOLD: i32 = 50;
+pub(super) const EDGE_SWIPE_BLOCKING_SELECTOR: &str =
+    "button, a, input, textarea, select, summary, [role='button'], [data-no-edge-swipe]";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct TouchPoint {
+    pub x: i32,
+    pub y: i32,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SwipeTarget {
@@ -19,107 +27,147 @@ pub enum SwipeTarget {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SwipeSession {
+    pub target: SwipeTarget,
+    start: TouchPoint,
+}
+
+impl SwipeSession {
+    pub(super) fn new(target: SwipeTarget, start: TouchPoint) -> Self {
+        Self { target, start }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SwipeOutcome {
     OpenLeft,
     OpenRight,
-    CloseDrawers,
+    CloseLeft,
+    CloseRight,
     None,
 }
 
 pub fn build_touch_start(
     show_sidebar: ReadSignal<bool>,
     show_outline: ReadSignal<bool>,
-    set_swipe_start_x: WriteSignal<i32>,
-    set_swipe_target: WriteSignal<Option<SwipeTarget>>,
+    set_swipe_session: WriteSignal<Option<SwipeSession>>,
 ) -> Callback<TouchEvent> {
     Callback::new(move |ev: TouchEvent| {
-        let x = match first_touch_x(&ev) {
-            Some(v) => v,
-            None => return,
+        let Some(start) = first_changed_touch_point(&ev) else {
+            set_swipe_session.set(None);
+            return;
         };
         let width = window_width().unwrap_or(0);
-        let target = resolve_swipe_target(
-            x,
+        let session = resolve_swipe_start(
+            start,
             width,
             show_sidebar.get_untracked(),
             show_outline.get_untracked(),
             is_interactive_target(&ev),
+            ev.touches().length(),
         );
-        set_swipe_start_x.set(x);
-        set_swipe_target.set(target);
+        set_swipe_session.set(session);
     })
 }
 
 pub fn build_touch_end(
-    swipe_target: ReadSignal<Option<SwipeTarget>>,
-    swipe_start_x: ReadSignal<i32>,
+    swipe_session: ReadSignal<Option<SwipeSession>>,
     open_left_drawer: Callback<()>,
     open_right_drawer: Callback<()>,
-    close_drawers: Callback<()>,
-    set_swipe_target: WriteSignal<Option<SwipeTarget>>,
+    close_left_drawer: Callback<()>,
+    close_right_drawer: Callback<()>,
+    set_swipe_session: WriteSignal<Option<SwipeSession>>,
 ) -> Callback<TouchEvent> {
     Callback::new(move |ev: TouchEvent| {
-        let target = swipe_target.get_untracked();
-        let start_x = swipe_start_x.get_untracked();
-        let (outcome, next_target) = resolve_touch_end_outcome(target, start_x, first_touch_x(&ev));
+        let (outcome, next_session) = resolve_touch_end_outcome(
+            swipe_session.get_untracked(),
+            first_changed_touch_point(&ev),
+            ev.touches().length(),
+        );
         match outcome {
             SwipeOutcome::OpenLeft => open_left_drawer.run(()),
             SwipeOutcome::OpenRight => open_right_drawer.run(()),
-            SwipeOutcome::CloseDrawers => close_drawers.run(()),
+            SwipeOutcome::CloseLeft => close_left_drawer.run(()),
+            SwipeOutcome::CloseRight => close_right_drawer.run(()),
             SwipeOutcome::None => {}
         }
-        set_swipe_target.set(next_target);
+        set_swipe_session.set(next_session);
     })
 }
 
-fn first_touch_x(ev: &TouchEvent) -> Option<i32> {
+fn first_changed_touch_point(ev: &TouchEvent) -> Option<TouchPoint> {
     let touches = ev.changed_touches();
     let touch = touches.get(0)?;
-    Some(touch.client_x())
+    Some(TouchPoint {
+        x: touch.client_x(),
+        y: touch.client_y(),
+    })
 }
 
-pub(super) fn resolve_swipe_target(
-    x: i32,
+pub(super) fn resolve_swipe_start(
+    start: TouchPoint,
     width: i32,
     show_sidebar: bool,
     show_outline: bool,
     interactive_target: bool,
-) -> Option<SwipeTarget> {
-    if interactive_target {
+    touch_count: u32,
+) -> Option<SwipeSession> {
+    if interactive_target || touch_count != 1 {
         return None;
     }
-    if show_sidebar {
+    let target = if show_sidebar {
         Some(SwipeTarget::CloseLeft)
     } else if show_outline {
         Some(SwipeTarget::CloseRight)
-    } else if x <= EDGE_ZONE {
+    } else if start.x <= EDGE_ZONE {
         Some(SwipeTarget::OpenLeft)
-    } else if width > 0 && x >= width - EDGE_ZONE {
+    } else if width > 0 && start.x >= width - EDGE_ZONE {
         Some(SwipeTarget::OpenRight)
     } else {
         None
-    }
+    };
+    target.map(|target| SwipeSession::new(target, start))
 }
 
-pub(super) fn resolve_swipe_outcome(target: Option<SwipeTarget>, delta: i32) -> SwipeOutcome {
-    match target {
-        Some(SwipeTarget::OpenLeft) if delta >= SWIPE_THRESHOLD => SwipeOutcome::OpenLeft,
-        Some(SwipeTarget::OpenRight) if delta <= -SWIPE_THRESHOLD => SwipeOutcome::OpenRight,
-        Some(SwipeTarget::CloseLeft) if delta <= -SWIPE_THRESHOLD => SwipeOutcome::CloseDrawers,
-        Some(SwipeTarget::CloseRight) if delta >= SWIPE_THRESHOLD => SwipeOutcome::CloseDrawers,
+pub(super) fn resolve_swipe_outcome(
+    session: Option<SwipeSession>,
+    end: TouchPoint,
+) -> SwipeOutcome {
+    let Some(session) = session else {
+        return SwipeOutcome::None;
+    };
+    let delta_x = end.x - session.start.x;
+    let delta_y = end.y - session.start.y;
+    if delta_x.unsigned_abs() < SWIPE_THRESHOLD as u32
+        || delta_x.unsigned_abs() <= delta_y.unsigned_abs()
+    {
+        return SwipeOutcome::None;
+    }
+    match session.target {
+        SwipeTarget::OpenLeft if delta_x > 0 => SwipeOutcome::OpenLeft,
+        SwipeTarget::OpenRight if delta_x < 0 => SwipeOutcome::OpenRight,
+        SwipeTarget::CloseLeft if delta_x < 0 => SwipeOutcome::CloseLeft,
+        SwipeTarget::CloseRight if delta_x > 0 => SwipeOutcome::CloseRight,
         _ => SwipeOutcome::None,
     }
 }
 
+pub(super) fn clear_swipe_session(session: &mut Option<SwipeSession>) {
+    *session = None;
+}
+
 pub(super) fn resolve_touch_end_outcome(
-    target: Option<SwipeTarget>,
-    start_x: i32,
-    end_x: Option<i32>,
-) -> (SwipeOutcome, Option<SwipeTarget>) {
-    let Some(end_x) = end_x else {
+    session: Option<SwipeSession>,
+    end: Option<TouchPoint>,
+    remaining_touches: u32,
+) -> (SwipeOutcome, Option<SwipeSession>) {
+    if remaining_touches != 0 {
+        return (SwipeOutcome::None, None);
+    }
+    let Some(end) = end else {
         return (SwipeOutcome::None, None);
     };
-    (resolve_swipe_outcome(target, end_x - start_x), None)
+    (resolve_swipe_outcome(session, end), None)
 }
 
 fn is_interactive_target(ev: &TouchEvent) -> bool {
@@ -135,10 +183,7 @@ fn is_interactive_target(ev: &TouchEvent) -> bool {
         return false;
     };
     element
-        .closest(
-            "button, a, input, textarea, select, summary, [role='button'], \
-             [contenteditable='true'], [data-no-edge-swipe]",
-        )
+        .closest(EDGE_SWIPE_BLOCKING_SELECTOR)
         .ok()
         .flatten()
         .is_some()

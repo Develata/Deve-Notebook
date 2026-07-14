@@ -37,13 +37,17 @@ use crate::i18n::Locale;
 use crate::runtime::document_client::DocumentClient;
 use effects::apply_body_scroll_lock;
 use effects::apply_visual_viewport_offset;
-use gesture::{build_touch_end, build_touch_start};
+use gesture::{build_touch_end, build_touch_start, clear_swipe_session};
 use layout_frame::MobileLayoutFrame;
 use layout_runtime::{build_doc_select_callback, build_mobile_title, resolve_content_signal};
 use leptos::prelude::*;
 use source_control_notice::{
     clear_mobile_source_control_notice_for_active_view, clear_mobile_source_control_notice_for_view,
 };
+
+pub(crate) fn edge_swipe_left_drawer_view() -> SidebarView {
+    SidebarView::Explorer
+}
 
 #[component]
 pub fn MobileLayout(
@@ -62,8 +66,7 @@ pub fn MobileLayout(
     let document = expect_context::<DocumentClient>();
     let (show_outline, set_show_outline) = signal(false);
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());
-    let (swipe_start_x, set_swipe_start_x) = signal(0i32);
-    let (swipe_target, set_swipe_target) = signal(None::<gesture::SwipeTarget>);
+    let (swipe_session, set_swipe_session) = signal(None::<gesture::SwipeSession>);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (chat_expanded, set_chat_expanded) = signal(false);
     let source_control_context = use_context::<SourceControlContext>();
@@ -78,6 +81,8 @@ pub fn MobileLayout(
         set_show_sidebar.set(false);
         set_show_outline.set(false);
     });
+    let close_left_drawer = Callback::new(move |_| set_show_sidebar.set(false));
+    let close_right_drawer = Callback::new(move |_| set_show_outline.set(false));
     let open_left_drawer = Callback::new(move |_| {
         search_control.set_show.set(false);
         clear_mobile_source_control_notice_for_view(
@@ -87,24 +92,24 @@ pub fn MobileLayout(
         set_show_outline.set(false);
         set_show_sidebar.set(true);
     });
+    let open_left_drawer_from_gesture = open_left_drawer;
+    let open_file_tree_drawer = Callback::new(move |_| {
+        set_active_view.set(edge_swipe_left_drawer_view());
+        open_left_drawer_from_gesture.run(());
+    });
     let open_right_drawer = Callback::new(move |_| {
         set_show_outline.set(true);
         set_show_sidebar.set(false);
     });
 
-    let on_touch_start = build_touch_start(
-        show_sidebar,
-        show_outline,
-        set_swipe_start_x,
-        set_swipe_target,
-    );
+    let on_touch_start = build_touch_start(show_sidebar, show_outline, set_swipe_session);
     let on_touch_end = build_touch_end(
-        swipe_target,
-        swipe_start_x,
-        open_left_drawer,
+        swipe_session,
+        open_file_tree_drawer,
         open_right_drawer,
-        close_drawers,
-        set_swipe_target,
+        close_left_drawer,
+        close_right_drawer,
+        set_swipe_session,
     );
 
     let on_doc_select = build_doc_select_callback(document.on_doc_select, close_drawers);
@@ -153,7 +158,9 @@ pub fn MobileLayout(
             content_signal=content_signal
             on_touch_start=on_touch_start
             on_touch_end=on_touch_end
-            on_touch_cancel=Callback::new(move |_| set_swipe_target.set(None))
+            on_touch_cancel=Callback::new(move |_| {
+                set_swipe_session.update(clear_swipe_session)
+            })
         />
     }
 }

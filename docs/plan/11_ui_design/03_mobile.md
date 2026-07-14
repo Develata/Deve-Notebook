@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -290,7 +290,10 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 仅支持轻量级 Edge Swipe，参数定义如下：
 *   $Zone_{edge} = 20px$ (从屏幕边缘起算的响应区)。
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
-*   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。
+*   **Direction**: 左边缘向右滑打开 Sidebar / File Tree；右边缘向左滑打开 Outline。Drawer 已打开时，反向滑动只关闭当前 Drawer，不得在同一手势中串联打开另一侧。
+*   **Axis Lock**: 只接受单指、水平位移达到阈值且水平位移绝对值大于垂直位移绝对值的手势；短拖动、纵向滚动、斜向滚动、多指手势与取消事件不得改变 Drawer 状态。
+*   **Editor Reachability**: CodeMirror 编辑内容区可以作为边缘手势起点；手势识别只产生 typed Drawer intent，不读取、修改或提交 Markdown 内容，也不得改变 pending / writer gate / repo scope。
+*   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。识别器在手势达到阈值前不得 `preventDefault` 或触发 Drawer intent；button、link、input、select 及显式 `data-no-edge-swipe` target 必须被排除。
 
 ## 4. Visual Adaptations
 
@@ -421,6 +424,7 @@ Mobile post-gate **MUST** 服从 `./index.md#native-post-gate-common-contract`�
 *   左右 Drawer、Top Sheet、Bottom Sheet、Outline、Search Result 与 Source Control 面板 **MUST** 遵守同一套 touch target、focus 与 selected/active 语义。
 *   Bottom Sheet 手势关闭 **MUST** 具备阈值、防抖与滚动冲突判定；轻微位移不得误关闭。
 *   边缘滑动 **MUST NOT** 抢占靠边真实控件点击。
+*   左边缘右滑与右边缘左滑 **MUST** 分别只产生 Sidebar / Outline typed Drawer intent；纵向滚动、多指、短拖动与取消事件不得打开 Drawer，编辑器边缘仍必须可触发。
 *   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 只改变固定状态。
 *   移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。
 *   移动端 AI Chat **SHOULD** 以页面级或全屏交互呈现，避免半屏手势与编辑器/键盘层级冲突。
