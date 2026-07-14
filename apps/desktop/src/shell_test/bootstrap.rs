@@ -50,6 +50,7 @@ fn desktop_bootstrap_script_exposes_endpoint_but_not_session_secret() {
         ws_base: "ws://127.0.0.1:3001".to_string(),
         node_role: "native-main".to_string(),
         session_bound: true,
+        capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
     };
 
     let script = bootstrap.script_tag().expect("script");
@@ -57,6 +58,7 @@ fn desktop_bootstrap_script_exposes_endpoint_but_not_session_secret() {
     assert!(script.contains("window.__DEVE_NATIVE_BOOTSTRAP"));
     assert!(script.contains("http://127.0.0.1:3001"));
     assert!(script.contains("\"session_bound\":true"));
+    assert!(script.contains("\"backend_preference_control\":true"));
     assert!(!script.contains("token"));
     assert!(!script.contains("secret"));
 }

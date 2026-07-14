@@ -183,7 +183,7 @@ fn mobile_embedded_backend_script(
     );
     #[cfg(target_os = "android")]
     let source = format!(
-        "{source}(()=>{{const k='__DEVE_NATIVE_SESSION_INSTALLED__';const current=window.__DEVE_NATIVE_BOOTSTRAP;let installed=false;try{{installed=window.sessionStorage.getItem(k)===current.http_base;}}catch(_error){{}}if(installed)return;queueMicrotask(()=>Promise.resolve().then(()=>window.__TAURI_INTERNALS__.invoke('native_backend_prepare_webview_session')).then(()=>{{try{{window.sessionStorage.setItem(k,current.http_base);}}catch(_error){{}}window.location.reload();}}).catch(()=>{{window.__DEVE_NATIVE_BOOTSTRAP={{...current,session_bound:false,blocked_reason:'session_invalid'}};window.dispatchEvent(new Event('deve-native-service-error'));}}));}})();"
+        "{source}(()=>{{const k='__DEVE_NATIVE_SESSION_INSTALLED__';const current=window.__DEVE_NATIVE_BOOTSTRAP;let installed=false;try{{installed=window.sessionStorage.getItem(k)===current.http_base;}}catch(_error){{}}if(installed)return;queueMicrotask(()=>Promise.resolve().then(()=>window.__TAURI_INTERNALS__.invoke('plugin:deve-native-backend-commands|native_backend_prepare_webview_session')).then(()=>{{try{{window.sessionStorage.setItem(k,current.http_base);}}catch(_error){{}}window.location.reload();}}).catch(()=>{{window.__DEVE_NATIVE_BOOTSTRAP={{...current,session_bound:false,blocked_reason:'session_invalid'}};window.dispatchEvent(new Event('deve-native-service-error'));}}));}})();"
     );
     let replacement_source = format!(
         "(()=>{{const k='__DEVE_NATIVE_BOOTSTRAP_CURRENT__';const current={payload};try{{window.sessionStorage.setItem(k,JSON.stringify(current));}}catch(_error){{}}window.__DEVE_NATIVE_BOOTSTRAP=current;}})();"
@@ -323,6 +323,7 @@ mod tests {
                 ws_base: "ws://127.0.0.1:40123".to_string(),
                 node_role: "main".to_string(),
                 session_bound: true,
+                capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
             },
             cookie,
         )

@@ -9,6 +9,7 @@ fn success_bootstrap() -> DesktopBootstrap {
         ws_base: "ws://127.0.0.1:3001".to_string(),
         node_role: "native-main".to_string(),
         session_bound: true,
+        capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
     }
 }
 

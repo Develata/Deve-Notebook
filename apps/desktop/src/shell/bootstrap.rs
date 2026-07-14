@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 
-use deve_core::native_adapter::validate_native_endpoint_ready;
+use deve_core::native_adapter::{NativeShellCapabilities, validate_native_endpoint_ready};
 
 use super::DesktopShell;
 use crate::types::{
@@ -24,6 +24,7 @@ impl DesktopShell {
             ws_base: endpoint.ws_base.clone(),
             node_role: endpoint.node_role.clone(),
             session_bound: endpoint.session_bound,
+            capabilities: NativeShellCapabilities::local_backend(),
         })
     }
 
@@ -32,13 +33,16 @@ impl DesktopShell {
             DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline => {
                 Some(DesktopRecoveryBootstrap {
                     service_state: "service_offline",
+                    capabilities: NativeShellCapabilities::local_backend(),
                 })
             }
             DesktopServiceState::SessionInvalid => Some(DesktopRecoveryBootstrap {
                 service_state: "session_invalid",
+                capabilities: NativeShellCapabilities::local_backend(),
             }),
             DesktopServiceState::ForegroundReprobe => Some(DesktopRecoveryBootstrap {
                 service_state: "foreground_reprobe",
+                capabilities: NativeShellCapabilities::local_backend(),
             }),
             DesktopServiceState::ColdStart
             | DesktopServiceState::ServiceStarting

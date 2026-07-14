@@ -218,4 +218,22 @@
   assertions:
     - cli_assert: identity_key_permission_corrected_to_0600 true
     - cli_assert: identity_key_non_file_fails_closed true
+
+- case_id: AUTH-017
+  goal: RemoteBrowser 的远端认证会话不得升级为宿主 native IPC capability。
+  preconditions:
+    - Docker HTTPS origin 可登录
+    - 已构建 preference-driven Desktop RemoteBrowser 包
+  steps:
+    - run: node --test apps/web/js/web_bridge_registry.test.cjs
+    - run: cargo test -p deve_desktop --features native-packaging desktop_local_backend_bridge -- --nocapture
+    - run: cargo test -p deve_mobile --features native-packaging mobile_tauri_remote_browser -- --nocapture
+    - run: node --test scripts/smoke-desktop-remote-browser.test.mjs
+    - run: scripts/check-desktop-remote-browser-smoke.ps1
+  assertions:
+    - browser_assert: docker_and_remote_browser_have_no_native_backend_facade true
+    - browser_assert: remote_browser_has_no_ipc_localhost_request_or_csp_error true
+    - native_assert: remote_browser_registers_no_application_commands true
+    - native_assert: switch_local_uses_new_endpoint_session_scope true
+    - security_assert: server_csp_unchanged true
 ```

@@ -11,16 +11,22 @@ const unavailable = (error = "native backend bridge unavailable") => ({
 });
 
 const browserWindow = typeof window === "undefined" ? null : window;
+const NATIVE_BACKEND_COMMAND_PREFIX = "plugin:deve-native-backend-commands|";
 
-const hasTauriInvoke = () =>
-  typeof browserWindow?.__TAURI_INTERNALS__?.invoke === "function";
+const hasBackendPreferenceCapability = () =>
+  browserWindow?.__DEVE_NATIVE_BOOTSTRAP?.capabilities
+    ?.backend_preference_control === true;
+
+const hasNativeBackendControl = () =>
+  hasBackendPreferenceCapability()
+  && typeof browserWindow?.__TAURI_INTERNALS__?.invoke === "function";
 
 async function callNative(command, args = {}) {
-  if (!hasTauriInvoke()) return unavailable();
+  if (!hasNativeBackendControl()) return unavailable();
   try {
     return {
       available: true,
-      value: await invoke(command, args),
+      value: await invoke(`${NATIVE_BACKEND_COMMAND_PREFIX}${command}`, args),
     };
   } catch (error) {
     return unavailable(String(error?.message || error));
@@ -28,25 +34,26 @@ async function callNative(command, args = {}) {
 }
 
 const nativeBackendConfigFacade = {
-  available: hasTauriInvoke,
+  available: hasNativeBackendControl,
   getConfig: async () => callNative("native_backend_get_config"),
   validateRemote: async (remoteUrl) =>
     callNative("native_backend_validate_remote", { remoteUrl }),
   saveRemote: async (remoteUrl) =>
     callNative("native_backend_save_remote", { remoteUrl }),
-  switchLocal: async () => callNative("native_backend_switch_local"),
 };
 
-const bridge = browserWindow?.__deveWebBridge;
-if (!bridge || typeof bridge.register !== "function") {
-  throw new Error(
-    "web bridge registry unavailable before registering native backend config",
-  );
-}
+if (hasNativeBackendControl()) {
+  const bridge = browserWindow?.__deveWebBridge;
+  if (!bridge || typeof bridge.register !== "function") {
+    throw new Error(
+      "web bridge registry unavailable before registering native backend config",
+    );
+  }
 
-bridge.register("__DEVE_NATIVE_BACKEND_CONFIG__", nativeBackendConfigFacade, {
-  runtime: "native_shell_mode_runtime",
-  source: "native-backend-bridge",
-  authority: "none",
-  role: "host-local-backend-preference-facade",
-});
+  bridge.register("__DEVE_NATIVE_BACKEND_CONFIG__", nativeBackendConfigFacade, {
+    runtime: "native_shell_mode_runtime",
+    source: "native-backend-bridge",
+    authority: "none",
+    role: "host-local-backend-preference-facade",
+  });
+}

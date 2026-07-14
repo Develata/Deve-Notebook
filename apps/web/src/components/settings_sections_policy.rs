@@ -157,10 +157,6 @@ pub(super) fn native_backend_button_state(mode: &str) -> NativeBackendButtonStat
     }
 }
 
-pub(super) fn native_backend_can_switch_local(mode: &str) -> bool {
-    mode == "remote"
-}
-
 pub(super) fn native_backend_validation_state(
     busy: bool,
     feedback: &str,

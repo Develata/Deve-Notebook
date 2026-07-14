@@ -108,14 +108,14 @@ fn desktop_host_backend_preference_can_select_remote_browser() {
     let _guard = EnvGuard::set(crate::DEVE_NATIVE_REMOTE_URL_ENV, None);
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let bootstrap = remote_browser_bootstrap_for_launch_options(
+    let target = remote_browser_target_for_launch_options(
         &DesktopTauriLaunchOptions::default(),
         &preference,
     )
-    .expect("bootstrap")
-    .expect("remote bootstrap");
+    .expect("target")
+    .expect("remote target");
 
-    assert!(bootstrap.source().contains("https://pref.example"));
+    assert_eq!(target.https_origin, "https://pref.example");
 }
 
 #[test]
@@ -128,10 +128,56 @@ fn desktop_local_backend_option_overrides_remote_preference() {
         local_backend: Some(true),
     };
 
-    let bootstrap =
-        remote_browser_bootstrap_for_launch_options(&options, &preference).expect("bootstrap");
+    let target = remote_browser_target_for_launch_options(&options, &preference).expect("target");
 
-    assert!(bootstrap.is_none());
+    assert!(target.is_none());
+}
+
+#[test]
+fn desktop_native_local_transition_is_only_visible_for_remote_preference() {
+    let default_options = DesktopTauriLaunchOptions::default();
+    assert!(native_local_transition_menu_is_visible(
+        &default_options,
+        true,
+        false
+    ));
+    assert!(!native_local_transition_menu_is_visible(
+        &DesktopTauriLaunchOptions {
+            remote_url: Some("https://override.example".to_string()),
+            local_backend: None,
+        },
+        true,
+        false
+    ));
+    assert!(!native_local_transition_menu_is_visible(
+        &default_options,
+        true,
+        true
+    ));
+    assert!(!native_local_transition_menu_is_visible(
+        &default_options,
+        false,
+        false
+    ));
+}
+
+#[test]
+fn desktop_local_backend_bridge_requires_local_bootstrap_and_no_remote_mode() {
+    assert!(local_backend_bridge_is_enabled(false, true));
+    assert!(!local_backend_bridge_is_enabled(true, true));
+    assert!(!local_backend_bridge_is_enabled(false, false));
+}
+
+#[test]
+fn desktop_tauri_main_window_creation_is_deferred_until_shell_mode_is_known() {
+    let config: serde_json::Value =
+        serde_json::from_str(include_str!("../../tauri.conf.json")).expect("tauri config");
+    assert_eq!(
+        config
+            .pointer("/app/windows/0/create")
+            .and_then(|value| value.as_bool()),
+        Some(false)
+    );
 }
 
 #[test]
@@ -181,15 +227,14 @@ fn desktop_remote_env_overrides_host_backend_preference() {
     );
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let bootstrap = remote_browser_bootstrap_for_launch_options(
+    let target = remote_browser_target_for_launch_options(
         &DesktopTauriLaunchOptions::default(),
         &preference,
     )
-    .expect("bootstrap")
-    .expect("remote bootstrap");
+    .expect("target")
+    .expect("remote target");
 
-    assert!(bootstrap.source().contains("https://env.example"));
-    assert!(!bootstrap.source().contains("https://pref.example"));
+    assert_eq!(target.https_origin, "https://env.example");
 }
 
 #[test]
@@ -207,6 +252,10 @@ fn desktop_menu_actions_map_only_to_shell_effects() {
         DesktopTauriShellEffect::ShowMainWindow
     );
     assert_eq!(
+        menu_action_shell_effect(DesktopMenuAction::UseLocalBackend),
+        DesktopTauriShellEffect::UseLocalBackend
+    );
+    assert_eq!(
         menu_action_shell_effect(DesktopMenuAction::QuitRequested),
         DesktopTauriShellEffect::QuitRequested
     );
@@ -221,6 +270,10 @@ fn desktop_tray_actions_map_only_to_shell_effects() {
     assert_eq!(
         tray_action_shell_effect(DesktopTrayAction::ToggleWindowVisibility),
         DesktopTauriShellEffect::ToggleMainWindowVisibility
+    );
+    assert_eq!(
+        tray_action_shell_effect(DesktopTrayAction::UseLocalBackend),
+        DesktopTauriShellEffect::UseLocalBackend
     );
     assert_eq!(
         tray_action_shell_effect(DesktopTrayAction::QuitRequested),

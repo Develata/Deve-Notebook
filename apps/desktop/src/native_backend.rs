@@ -36,8 +36,6 @@ pub enum DesktopNativeBackendError {
     ProbeRedirected,
     #[error("desktop remote backend returned invalid node role payload")]
     InvalidNodeRolePayload,
-    #[error("desktop native backend app navigation failed: {0}")]
-    NavigationFailed(String),
 }
 
 pub struct DesktopNativeBackendState {

@@ -19,6 +19,7 @@ pub const DESKTOP_MENU_ROOT_ID: &str = "deve-menu-root";
 pub const DESKTOP_MENU_APP_SHOW_MAIN_WINDOW_ID: &str = "deve.menu.app.show_main_window";
 pub const DESKTOP_MENU_APP_OPEN_COMMAND_PALETTE_ID: &str = "deve.menu.app.open_command_palette";
 pub const DESKTOP_MENU_APP_OPEN_SETTINGS_ID: &str = "deve.menu.app.open_settings";
+pub const DESKTOP_MENU_APP_USE_LOCAL_BACKEND_ID: &str = "deve.menu.app.use_local_backend";
 pub const DESKTOP_MENU_APP_QUIT_REQUESTED_ID: &str = "deve.menu.app.quit_requested";
 pub const DESKTOP_MENU_WINDOW_SHOW_MAIN_WINDOW_ID: &str = "deve.menu.window.show_main_window";
 pub const DESKTOP_MENU_HELP_OPEN_COMMAND_PALETTE_ID: &str = "deve.menu.help.open_command_palette";
@@ -26,17 +27,32 @@ pub const DESKTOP_MENU_HELP_OPEN_COMMAND_PALETTE_ID: &str = "deve.menu.help.open
 pub const DESKTOP_TRAY_MENU_ID: &str = "deve-tray-menu";
 pub const DESKTOP_TRAY_SHOW_MAIN_WINDOW_ID: &str = "deve.tray.show_main_window";
 pub const DESKTOP_TRAY_TOGGLE_WINDOW_VISIBILITY_ID: &str = "deve.tray.toggle_window_visibility";
+pub const DESKTOP_TRAY_USE_LOCAL_BACKEND_ID: &str = "deve.tray.use_local_backend";
 pub const DESKTOP_TRAY_QUIT_REQUESTED_ID: &str = "deve.tray.quit_requested";
 
-pub fn build_desktop_menu<R, M>(manager: &M) -> tauri::Result<Menu<R>>
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DesktopNativeMenuPolicy {
+    pub show_use_local_backend: bool,
+}
+
+pub fn build_desktop_menu<R, M>(
+    manager: &M,
+    policy: DesktopNativeMenuPolicy,
+) -> tauri::Result<Menu<R>>
 where
     R: Runtime,
     M: Manager<R>,
 {
-    let app_menu = SubmenuBuilder::with_id(manager, DESKTOP_MENU_APP_ID, "Deve")
+    let mut app_menu = SubmenuBuilder::with_id(manager, DESKTOP_MENU_APP_ID, "Deve")
         .text(DESKTOP_MENU_APP_SHOW_MAIN_WINDOW_ID, "Show Main Window")
         .text(DESKTOP_MENU_APP_OPEN_COMMAND_PALETTE_ID, "Command Palette")
-        .text(DESKTOP_MENU_APP_OPEN_SETTINGS_ID, "Settings")
+        .text(DESKTOP_MENU_APP_OPEN_SETTINGS_ID, "Settings");
+    if policy.show_use_local_backend {
+        app_menu = app_menu
+            .separator()
+            .text(DESKTOP_MENU_APP_USE_LOCAL_BACKEND_ID, "Use Local Backend");
+    }
+    let app_menu = app_menu
         .separator()
         .text(DESKTOP_MENU_APP_QUIT_REQUESTED_ID, "Quit")
         .build()?;
@@ -55,18 +71,26 @@ where
         .build()
 }
 
-pub fn build_desktop_tray_menu<R, M>(manager: &M) -> tauri::Result<Menu<R>>
+pub fn build_desktop_tray_menu<R, M>(
+    manager: &M,
+    policy: DesktopNativeMenuPolicy,
+) -> tauri::Result<Menu<R>>
 where
     R: Runtime,
     M: Manager<R>,
 {
-    MenuBuilder::with_id(manager, DESKTOP_TRAY_MENU_ID)
+    let mut menu = MenuBuilder::with_id(manager, DESKTOP_TRAY_MENU_ID)
         .text(DESKTOP_TRAY_SHOW_MAIN_WINDOW_ID, "Show Main Window")
         .text(
             DESKTOP_TRAY_TOGGLE_WINDOW_VISIBILITY_ID,
             "Toggle Window Visibility",
-        )
-        .separator()
+        );
+    if policy.show_use_local_backend {
+        menu = menu
+            .separator()
+            .text(DESKTOP_TRAY_USE_LOCAL_BACKEND_ID, "Use Local Backend");
+    }
+    menu.separator()
         .text(DESKTOP_TRAY_QUIT_REQUESTED_ID, "Quit")
         .build()
 }
@@ -92,6 +116,7 @@ pub fn resolve_desktop_menu_action_id(id: &str) -> Option<DesktopMenuAction> {
             Some(DesktopMenuAction::OpenCommandPalette)
         }
         DESKTOP_MENU_APP_OPEN_SETTINGS_ID => Some(DesktopMenuAction::OpenSettings),
+        DESKTOP_MENU_APP_USE_LOCAL_BACKEND_ID => Some(DesktopMenuAction::UseLocalBackend),
         DESKTOP_MENU_APP_QUIT_REQUESTED_ID => Some(DesktopMenuAction::QuitRequested),
         _ => None,
     }
@@ -101,6 +126,7 @@ pub fn resolve_desktop_tray_action_id(id: &str) -> Option<DesktopTrayAction> {
     match id {
         DESKTOP_TRAY_SHOW_MAIN_WINDOW_ID => Some(DesktopTrayAction::ShowMainWindow),
         DESKTOP_TRAY_TOGGLE_WINDOW_VISIBILITY_ID => Some(DesktopTrayAction::ToggleWindowVisibility),
+        DESKTOP_TRAY_USE_LOCAL_BACKEND_ID => Some(DesktopTrayAction::UseLocalBackend),
         DESKTOP_TRAY_QUIT_REQUESTED_ID => Some(DesktopTrayAction::QuitRequested),
         _ => None,
     }
@@ -129,6 +155,10 @@ mod tests {
             Some(DesktopMenuAction::OpenSettings)
         );
         assert_eq!(
+            resolve_desktop_menu_action_id(DESKTOP_MENU_APP_USE_LOCAL_BACKEND_ID),
+            Some(DesktopMenuAction::UseLocalBackend)
+        );
+        assert_eq!(
             resolve_desktop_menu_action_id(DESKTOP_MENU_APP_QUIT_REQUESTED_ID),
             Some(DesktopMenuAction::QuitRequested)
         );
@@ -144,6 +174,10 @@ mod tests {
         assert_eq!(
             resolve_desktop_tray_action_id(DESKTOP_TRAY_TOGGLE_WINDOW_VISIBILITY_ID),
             Some(DesktopTrayAction::ToggleWindowVisibility)
+        );
+        assert_eq!(
+            resolve_desktop_tray_action_id(DESKTOP_TRAY_USE_LOCAL_BACKEND_ID),
+            Some(DesktopTrayAction::UseLocalBackend)
         );
         assert_eq!(
             resolve_desktop_tray_action_id(DESKTOP_TRAY_QUIT_REQUESTED_ID),

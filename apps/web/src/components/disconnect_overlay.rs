@@ -7,45 +7,10 @@
 use crate::api::ConnectionStatus;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 
 #[component]
 pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let (show_native_local_action, set_show_native_local_action) = signal(false);
-    let (native_local_busy, set_native_local_busy) = signal(false);
-    let (native_local_feedback, set_native_local_feedback) = signal(String::new());
-
-    spawn_local(async move {
-        let config = crate::api::get_native_backend_config().await;
-        set_show_native_local_action.set(native_local_backend_action_available(
-            config.available,
-            &config.mode,
-        ));
-    });
-
-    let switch_native_local = move |_| {
-        if native_local_busy.get_untracked() || !show_native_local_action.get_untracked() {
-            return;
-        }
-        set_native_local_busy.set(true);
-        set_native_local_feedback
-            .set(t::settings::local_backend_switching(locale.get_untracked()).to_string());
-        spawn_local(async move {
-            let config = crate::api::switch_native_backend_local().await;
-            set_native_local_busy.set(false);
-            if config.available {
-                set_show_native_local_action.set(false);
-                set_native_local_feedback
-                    .set(t::settings::local_backend_saved(locale.get_untracked()).to_string());
-            } else {
-                set_native_local_feedback.set(config.error_message.unwrap_or_else(|| {
-                    t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
-                }));
-            }
-        });
-    };
-
     view! {
         {move || {
             let status = status.get();
@@ -73,32 +38,6 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                                     overlay_status_copy(current_locale, status)
                                 )}
                             </div>
-                            <Show when=move || show_native_local_action.get()>
-                                <div class="mt-5 flex flex-col items-center gap-2">
-                                    <button
-                                        class="min-h-[44px] rounded bg-accent px-4 py-2 text-sm font-bold text-on-accent transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled=move || native_local_busy.get()
-                                        on:click=switch_native_local
-                                        data-deve-native-backend-use-local-overlay="true"
-                                    >
-                                        {move || t::settings::use_local_backend(locale.get())}
-                                    </button>
-                                    <p
-                                        class="text-xs text-muted"
-                                        data-deve-native-backend-use-local-feedback=move || {
-                                            if native_local_busy.get() {
-                                                "pending"
-                                            } else if native_local_feedback.get().is_empty() {
-                                                "idle"
-                                            } else {
-                                                "reported"
-                                            }
-                                        }
-                                    >
-                                        {move || native_local_feedback.get()}
-                                    </p>
-                                </div>
-                            </Show>
                         </div>
                     </div>
                 }.into_any()
@@ -148,13 +87,9 @@ fn overlay_status_copy(locale: Locale, status: ConnectionStatus) -> &'static str
     }
 }
 
-fn native_local_backend_action_available(bridge_available: bool, mode: &str) -> bool {
-    bridge_available && mode == "remote"
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{native_local_backend_action_available, overlay_copy, overlay_status_copy};
+    use super::{overlay_copy, overlay_status_copy};
     use crate::api::ConnectionStatus;
     use crate::i18n::{Locale, t};
 
@@ -187,13 +122,5 @@ mod tests {
             overlay_status_copy(Locale::En, ConnectionStatus::NativeServiceOffline),
             t::bottom_bar::native_service_offline(Locale::En)
         );
-    }
-
-    #[test]
-    fn native_local_backend_overlay_action_requires_native_remote_mode() {
-        assert!(native_local_backend_action_available(true, "remote"));
-        assert!(!native_local_backend_action_available(true, "local"));
-        assert!(!native_local_backend_action_available(false, "remote"));
-        assert!(!native_local_backend_action_available(true, "unexpected"));
     }
 }

@@ -9,6 +9,23 @@ pub const NATIVE_SESSION_BOOTSTRAP_HEADER: &str = "x-deve-native-session-secret"
 pub const NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN: &str = "http://tauri.localhost";
 pub const NATIVE_TAURI_CUSTOM_PROTOCOL_ORIGIN: &str = "tauri://localhost";
 
+/// Capabilities granted to the trusted bundled native Web shell.
+///
+/// The object is an application-control projection, not business authority.
+/// RemoteBrowser never receives it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NativeShellCapabilities {
+    pub backend_preference_control: bool,
+}
+
+impl NativeShellCapabilities {
+    pub const fn local_backend() -> Self {
+        Self {
+            backend_preference_control: true,
+        }
+    }
+}
+
 pub fn native_tauri_allowed_origins() -> Vec<String> {
     vec![
         NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN.to_string(),

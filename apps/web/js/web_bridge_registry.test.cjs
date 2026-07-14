@@ -609,8 +609,18 @@ const nativeBridgeRuntimeSource = nativeBackendBridgeSource.replace(
   'import { invoke } from "@tauri-apps/api/core";',
   "const invoke = async (command, args) => ({ command, args });"
 );
+assert.match(
+  nativeBackendBridgeSource,
+  /plugin:deve-native-backend-commands\|/,
+  "native bridge commands must route through the LocalBackend-only Tauri plugin",
+);
 const nativeBridgeRuntimeContext = {
   window: {
+    __DEVE_NATIVE_BOOTSTRAP: {
+      capabilities: {
+        backend_preference_control: true,
+      },
+    },
     __TAURI_INTERNALS__: {
       invoke: () => undefined,
     },
@@ -643,10 +653,34 @@ assert.equal(
 assert.equal(
   nativeBridgeRuntimeContext.window.__DEVE_NATIVE_BACKEND_CONFIG__.available(),
   true,
-  "native backend facade must preserve Tauri invoke availability probing"
+  "native backend facade must require typed LocalBackend capability and Tauri invoke"
+);
+const nativeBridgeInvokeOnlyContext = {
+  window: {
+    __TAURI_INTERNALS__: {
+      invoke: () => undefined,
+    },
+  },
+};
+vm.runInNewContext(registrySource, nativeBridgeInvokeOnlyContext, {
+  filename: "web_bridge_registry.js",
+});
+vm.runInNewContext(nativeBridgeRuntimeSource, nativeBridgeInvokeOnlyContext, {
+  filename: "native_backend_bridge.js",
+});
+assert.equal(
+  nativeBridgeInvokeOnlyContext.window.__deveWebBridge
+    .get("__DEVE_NATIVE_BACKEND_CONFIG__"),
+  undefined,
+  "Tauri internals alone must not grant the LocalBackend bridge capability",
 );
 assert.throws(
-  () => vm.runInNewContext(nativeBridgeRuntimeSource, { window: {} }, {
+  () => vm.runInNewContext(nativeBridgeRuntimeSource, { window: {
+    __DEVE_NATIVE_BOOTSTRAP: {
+      capabilities: { backend_preference_control: true },
+    },
+    __TAURI_INTERNALS__: { invoke: () => undefined },
+  } }, {
     filename: "native_backend_bridge.js",
   }),
   /web bridge registry unavailable before registering native backend config/,
@@ -1311,6 +1345,16 @@ assert.match(
 
 assert.match(
   nativeBackendBridgeSource,
+  /backend_preference_control\s*===\s*true/,
+  "native backend bridge must require the typed LocalBackend capability"
+);
+assert.doesNotMatch(
+  nativeBackendBridgeSource,
+  /switchLocal/,
+  "native backend bridge must not expose remote-to-local lifecycle control"
+);
+assert.match(
+  nativeBackendBridgeSource,
   /bridge\.register\("__DEVE_NATIVE_BACKEND_CONFIG__"/,
   "native backend config facade must be registered through the browser bridge registry"
 );
@@ -1416,7 +1460,7 @@ assert.doesNotMatch(
   "i18n copy must not read the copy registry through bracket globals"
 );
 
-const bridgeScriptRev = "20260705-bridge-policy";
+const bridgeScriptRev = "20260713-native-capability";
 function scriptIndex(src) {
   return indexHtmlSource.indexOf(`src="${src}?rev=${bridgeScriptRev}"`);
 }

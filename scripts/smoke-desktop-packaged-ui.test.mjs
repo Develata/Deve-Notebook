@@ -10,14 +10,18 @@ import { isDirectInvocation } from "./smoke-desktop-packaged-ui.mjs";
 
 const scriptUrl = new URL("./smoke-desktop-packaged-ui.mjs", import.meta.url);
 const source = fs.readFileSync(scriptUrl, "utf8");
+const businessFlowSource = fs.readFileSync(
+  new URL("./lib/desktop-webview-business-flow.mjs", import.meta.url),
+  "utf8",
+);
 
 test("packaged smoke uses real UI intents for document and source-control flows", () => {
-  assert.match(source, /data-deve-search-result-action="create-doc/);
-  assert.match(source, /cm\.click\(\{ force: true \}\)/);
-  assert.match(source, /cm\.pressSequentially\(content/);
-  assert.match(source, /textarea\[name="commit-message"\]/);
-  assert.match(source, /data-deve-sc-panel-body="history"/);
-  assert.doesNotMatch(source, /fetch\([^)]*(ledger|commit|source.control)/i);
+  assert.match(businessFlowSource, /data-deve-search-result-action=\\?"create-doc/);
+  assert.match(businessFlowSource, /cm\.click\(\{ force: true \}\)/);
+  assert.match(businessFlowSource, /cm\.pressSequentially\(content/);
+  assert.match(businessFlowSource, /textarea\[name=\\?"commit-message\\?"\]/);
+  assert.match(businessFlowSource, /data-deve-sc-panel-body=\\?"history\\?"/);
+  assert.doesNotMatch(businessFlowSource, /fetch\([^)]*(ledger|commit|source.control)/i);
 });
 
 test("packaged smoke checks modal focus trap and Escape", () => {

@@ -97,6 +97,8 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
             class="flex items-center gap-2 min-w-0"
             data-deve-sync-status=move || summary.get().kind.marker()
             data-deve-pending-ack-count=move || summary.get().pending_ack_count.to_string()
+            data-deve-repo-id=move || scope.current_repo_id.get().unwrap_or_default()
+            data-deve-scope-nonce=move || scope.current_scope_nonce.get().to_string()
         >
             <div class=move || format!("w-2 h-2 rounded-full {}", color())></div>
             <span class="text-xs text-secondary font-medium">{text}</span>

@@ -55,8 +55,7 @@ pub use shell::MobileShell;
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
     MobileTauriLaunchOptions, MobileTauriLaunchOptionsError, MobileTauriModeError,
-    MobileTauriRemoteBrowserScript, MobileTauriRuntimeSurface,
-    mobile_tauri_remote_browser_init_script, mobile_tauri_runtime_surface, run_mobile_tauri_app,
+    MobileTauriRuntimeSurface, mobile_tauri_runtime_surface, run_mobile_tauri_app,
     run_mobile_tauri_app_with_launch_options,
 };
 pub use types::{

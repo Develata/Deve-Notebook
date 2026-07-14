@@ -69,28 +69,11 @@ pub fn remote_backend_requires_validation(locale: Locale) -> &'static str {
 
 pub fn native_backend_unavailable(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Native-only setting unavailable in a regular browser.",
-        Locale::Zh => "普通浏览器中不可用：这是 native-only 设置。",
-    }
-}
-
-pub fn use_local_backend(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Use Local Backend",
-        Locale::Zh => "使用本地后端",
-    }
-}
-
-pub fn local_backend_switching(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Switching to local backend...",
-        Locale::Zh => "正在切换到本地后端...",
-    }
-}
-
-pub fn local_backend_saved(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Local backend saved. The native shell will restart the local service.",
-        Locale::Zh => "本地后端已保存。Native 壳层将重启本机服务。",
+        Locale::En => {
+            "Native backend controls are unavailable here. In Desktop RemoteBrowser, use the app's native menu or tray to return to LocalBackend."
+        }
+        Locale::Zh => {
+            "此处不提供 native 后端控制。Desktop RemoteBrowser 请使用应用原生菜单或托盘切回 LocalBackend。"
+        }
     }
 }

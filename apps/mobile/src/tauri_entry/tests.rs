@@ -17,51 +17,29 @@ fn mobile_tauri_runtime_surface_is_shell_only() {
 }
 
 #[test]
-fn mobile_tauri_remote_browser_accepts_https_origin_without_native_bootstrap() {
-    let script = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
-        https_origin: "https://deve.example".to_string(),
-    })
-    .expect("remote script");
+fn mobile_tauri_remote_browser_resolves_https_target_without_init_script() {
+    let target = remote_browser_target_for_launch_options(
+        &MobileTauriLaunchOptions {
+            remote_url: Some("https://deve.example".to_string()),
+            local_backend: None,
+        },
+        &NativeBackendPreference::local(),
+    )
+    .expect("remote target")
+    .expect("remote mode");
 
-    assert!(
-        script
-            .source()
-            .contains("window.top===window&&window.location.origin!==target")
-    );
-    assert!(script.source().contains("window.location.replace(target)"));
-    assert!(script.source().contains("https://deve.example"));
-    assert!(!script.source().contains("__DEVE_NATIVE_BOOTSTRAP"));
-    assert!(!script.source().contains("http_base"));
-    assert!(!script.source().contains("ws_base"));
-}
-
-#[test]
-fn mobile_tauri_remote_browser_redirect_is_top_frame_and_same_origin_guarded() {
-    let script = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
-        https_origin: "https://deve.example".to_string(),
-    })
-    .expect("remote script");
-    let source = script.source();
-
-    let target = source
-        .find("const target=new URL")
-        .expect("target origin must be normalized before navigation");
-    let guard = source
-        .find("window.top===window&&window.location.origin!==target")
-        .expect("top-frame and same-origin guard");
-    let redirect = source
-        .find("window.location.replace(target)")
-        .expect("guarded redirect");
-
-    assert!(target < guard);
-    assert!(guard < redirect);
+    assert_eq!(target.https_origin, "https://deve.example");
 }
 
 #[test]
 fn mobile_tauri_remote_browser_rejects_non_https_origin() {
-    let error = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
-        https_origin: "http://deve.example".to_string(),
-    })
+    let error = remote_browser_target_for_launch_options(
+        &MobileTauriLaunchOptions {
+            remote_url: Some("http://deve.example".to_string()),
+            local_backend: None,
+        },
+        &NativeBackendPreference::local(),
+    )
     .expect_err("http remote target must fail");
 
     assert!(matches!(
@@ -98,12 +76,12 @@ fn mobile_launch_options_reject_conflicting_local_and_remote_modes() {
 fn mobile_host_backend_preference_can_select_remote_browser() {
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let script =
-        remote_browser_script_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
-            .expect("script")
-            .expect("remote script");
+    let target =
+        remote_browser_target_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
+            .expect("target")
+            .expect("remote target");
 
-    assert!(script.source().contains("https://pref.example"));
+    assert_eq!(target.https_origin, "https://pref.example");
 }
 
 #[test]
@@ -114,9 +92,9 @@ fn mobile_local_backend_option_overrides_remote_preference() {
         local_backend: Some(true),
     };
 
-    let script = remote_browser_script_for_launch_options(&options, &preference).expect("script");
+    let target = remote_browser_target_for_launch_options(&options, &preference).expect("target");
 
-    assert!(script.is_none());
+    assert!(target.is_none());
 }
 
 #[test]
@@ -125,13 +103,12 @@ fn mobile_remote_env_overrides_host_backend_preference() {
     let _guard = EnvGuard::set(DEVE_NATIVE_REMOTE_URL_ENV, Some("https://env.example"));
     let preference = NativeBackendPreference::remote("https://pref.example");
 
-    let script =
-        remote_browser_script_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
-            .expect("script")
-            .expect("remote script");
+    let target =
+        remote_browser_target_for_launch_options(&MobileTauriLaunchOptions::default(), &preference)
+            .expect("target")
+            .expect("remote target");
 
-    assert!(script.source().contains("https://env.example"));
-    assert!(!script.source().contains("https://pref.example"));
+    assert_eq!(target.https_origin, "https://env.example");
 }
 
 #[test]

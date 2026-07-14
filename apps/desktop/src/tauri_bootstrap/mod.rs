@@ -4,10 +4,7 @@
 
 use std::sync::Mutex;
 
-use deve_core::native_adapter::{
-    NativeAdapterError, NativeProcessRuntimeSnapshot, NativeRemoteTarget,
-    validate_native_remote_target,
-};
+use deve_core::native_adapter::NativeProcessRuntimeSnapshot;
 use tauri::plugin::TauriPlugin;
 use thiserror::Error;
 
@@ -26,7 +23,6 @@ mod cookie;
 use cookie::{tauri_cookie_from_native_session, validate_tauri_bootstrap_source};
 
 const DESKTOP_LOCAL_BACKEND_PORT_ATTEMPTS: usize = 3;
-pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopTauriBootstrapScript {
@@ -100,8 +96,6 @@ pub enum DesktopTauriBootstrapError {
     NativeSessionCookieRequired,
     #[error("desktop Tauri bootstrap source contains forbidden material: {marker}")]
     ForbiddenMaterial { marker: &'static str },
-    #[error(transparent)]
-    RemoteTarget(#[from] NativeAdapterError),
 }
 
 impl DesktopTauriBootstrapScript {
@@ -170,6 +164,7 @@ pub fn desktop_tauri_service_offline_init_script()
 -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
     desktop_tauri_recovery_init_script(DesktopRecoveryBootstrap {
         service_state: "service_offline",
+        capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
     })
 }
 
@@ -177,23 +172,8 @@ pub fn desktop_tauri_session_invalid_init_script()
 -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
     desktop_tauri_recovery_init_script(DesktopRecoveryBootstrap {
         service_state: "session_invalid",
+        capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
     })
-}
-
-pub fn desktop_tauri_remote_browser_init_script(
-    target: &NativeRemoteTarget,
-) -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
-    validate_native_remote_target(target)?;
-    let origin = serde_json::to_string(&target.https_origin)
-        .expect("serializing a validated HTTPS origin string cannot fail");
-    DesktopTauriBootstrapScript::new(
-        format!(
-            "(()=>{{const target=new URL({origin}).origin;if(window.top===window&&window.location.origin!==target){{window.location.replace(target);}}}})();"
-        ),
-        false,
-        false,
-        None,
-    )
 }
 
 pub fn desktop_tauri_bootstrap_plugin<R: tauri::Runtime>(
@@ -229,25 +209,6 @@ pub fn desktop_tauri_local_service_bootstrap_with_policy(
         Ok(result) => result,
         Err(error) => local_service_recovery_bootstrap(error),
     }
-}
-
-pub fn desktop_tauri_remote_browser_bootstrap_from_env()
--> Result<Option<DesktopTauriBootstrapScript>, DesktopTauriBootstrapError> {
-    let Some(value) = std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV) else {
-        return Ok(None);
-    };
-    if value.is_empty() {
-        return Ok(None);
-    }
-    desktop_tauri_remote_browser_bootstrap_from_origin(&value.to_string_lossy()).map(Some)
-}
-
-pub fn desktop_tauri_remote_browser_bootstrap_from_origin(
-    https_origin: &str,
-) -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
-    desktop_tauri_remote_browser_init_script(&NativeRemoteTarget {
-        https_origin: https_origin.to_string(),
-    })
 }
 
 pub fn try_desktop_tauri_local_service_bootstrap_from_env(

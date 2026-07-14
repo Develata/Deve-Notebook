@@ -2,9 +2,9 @@ use super::{
     BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
     SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, ai_chat_visibility_button_state,
     editor_density_button_state, editor_wrap_button_state, language_button_state,
-    native_backend_button_state, native_backend_can_switch_local,
-    native_backend_unavailable_feedback, native_backend_validation_state, reserved_setting_state,
-    sync_mode_button_state, theme_button_state,
+    native_backend_button_state, native_backend_unavailable_feedback,
+    native_backend_validation_state, reserved_setting_state, sync_mode_button_state,
+    theme_button_state,
 };
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
 use crate::components::settings_prefs::{
@@ -124,13 +124,6 @@ fn native_backend_buttons_reflect_local_remote_mode() {
 }
 
 #[test]
-fn native_backend_switch_local_only_has_effect_from_remote_mode() {
-    assert!(!native_backend_can_switch_local("local"));
-    assert!(native_backend_can_switch_local("remote"));
-    assert!(!native_backend_can_switch_local("unexpected"));
-}
-
-#[test]
 fn native_backend_validation_state_does_not_treat_failed_feedback_as_success() {
     assert_eq!(
         native_backend_validation_state(false, "remote backend probe failed", "remote", false),
@@ -162,7 +155,7 @@ fn native_backend_unavailable_feedback_localizes_known_bridge_reason_at_render_t
     );
     assert_eq!(
         native_backend_unavailable_feedback(Locale::En, "native backend bridge unavailable"),
-        "Native-only setting unavailable in a regular browser."
+        t::settings::native_backend_unavailable(Locale::En)
     );
     assert_eq!(
         native_backend_unavailable_feedback(Locale::Zh, ""),

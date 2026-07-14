@@ -2,8 +2,8 @@
 //!   - 15_settings#native-host-local-backend-preference
 
 use crate::components::settings_sections_policy::{
-    native_backend_button_state, native_backend_can_switch_local,
-    native_backend_unavailable_feedback, native_backend_validation_state,
+    native_backend_button_state, native_backend_unavailable_feedback,
+    native_backend_validation_state,
 };
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -88,37 +88,6 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         });
     };
 
-    let switch_local = move |_| {
-        if busy.get_untracked() {
-            return;
-        }
-        if !native_backend_can_switch_local(&mode.get_untracked()) {
-            return;
-        }
-        set_busy.set(true);
-        set_remote_validation_succeeded.set(false);
-        set_feedback.set(t::settings::local_backend_switching(locale.get_untracked()).to_string());
-        spawn_local(async move {
-            let config: crate::api::NativeBackendConfig =
-                crate::api::switch_native_backend_local().await;
-            if !begin_async_completion(set_busy, false) {
-                return;
-            }
-            if config.available {
-                set_available.set(true);
-                set_mode.set("local".to_string());
-                set_remote_draft.set(config.remote_url);
-                set_remote_validation_succeeded.set(false);
-                set_feedback
-                    .set(t::settings::local_backend_saved(locale.get_untracked()).to_string());
-            } else {
-                set_available.set(false);
-                set_remote_validation_succeeded.set(false);
-                set_feedback.set(config.error_message.unwrap_or_default());
-            }
-        });
-    };
-
     view! {
         <div
             class="bg-sidebar p-4 rounded-lg border border-default"
@@ -135,7 +104,11 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     <button
                         class=move || button_state.get().local_class
                         disabled=move || !available.get() || busy.get()
-                        on:click=switch_local
+                        on:click=move |_| {
+                            set_remote_validation_succeeded.set(false);
+                            set_feedback.set(String::new());
+                            set_mode.set("local".to_string());
+                        }
                     >
                         {move || t::settings::local_backend_label(locale.get())}
                     </button>
@@ -192,14 +165,6 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                             data-deve-native-backend-save-remote="true"
                         >
                             {move || t::settings::validate_and_save_remote(locale.get())}
-                        </button>
-                        <button
-                            class="min-h-[44px] px-3 py-2 text-sm font-medium text-muted hover:bg-active rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled=move || busy.get()
-                            on:click=switch_local
-                            data-deve-native-backend-use-local="true"
-                        >
-                            {move || t::settings::use_local_backend(locale.get())}
                         </button>
                     </div>
                     <p

@@ -238,7 +238,7 @@
     - cli_assert: image_widget_does_not_read_debug_view_global true
     - cli_assert: chat_math_globals_registered_through_bridge true
     - cli_assert: chat_math_missing_registry_fails_closed true
-    - cli_assert: native_backend_config_global_registered_through_bridge true
+    - cli_assert: native_backend_config_bridge_registered_only_with_typed_local_capability true
     - cli_assert: bridge_registry_rejects_authority_globals true
     - cli_assert: bridge_registry_rejects_authority_names true
     - cli_assert: bridge_registry_rejects_authority_sources true

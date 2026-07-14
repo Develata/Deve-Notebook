@@ -7,6 +7,7 @@ use deve_core::native_adapter::{
     NativeAdapterError, NativeEndpointReady, NativeProcessAdapterError,
     NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceOffline,
     NativeServiceRestarting, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
+    NativeShellCapabilities,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -192,6 +193,7 @@ pub struct DesktopBootstrap {
     pub ws_base: String,
     pub node_role: String,
     pub session_bound: bool,
+    pub capabilities: NativeShellCapabilities,
 }
 
 impl DesktopBootstrap {
@@ -208,6 +210,7 @@ impl DesktopBootstrap {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DesktopRecoveryBootstrap {
     pub service_state: &'static str,
+    pub capabilities: NativeShellCapabilities,
 }
 
 impl DesktopRecoveryBootstrap {

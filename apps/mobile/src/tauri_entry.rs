@@ -11,17 +11,19 @@
 //! source-control, search, Git, or `.notegit` authority.
 
 use deve_core::native_adapter::{
-    NativeAdapterError, NativeBackendPreference, NativeBackendValidationResult, NativeRemoteTarget,
-    NativeShellMode, native_shell_mode_for_backend_preference, validate_native_remote_target,
+    NativeAdapterError, NativeBackendPreference, NativeRemoteTarget, NativeShellMode,
+    native_shell_mode_for_backend_preference, validate_native_remote_target,
 };
-use tauri::{AppHandle, Manager, State, WebviewWindowBuilder, Wry};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use thiserror::Error;
 
 use crate::MobileNativeBackendState;
 use crate::embedded_backend::{MobileEmbeddedBackendSupervisor, mobile_embedded_backend_plugin};
-use crate::tauri_lifecycle::{
-    handle_mobile_run_event, handle_mobile_window_event, shutdown_mobile_backend_before_restart,
-};
+use crate::tauri_lifecycle::{handle_mobile_run_event, handle_mobile_window_event};
+
+mod native_backend_commands;
+
+use native_backend_commands::mobile_local_backend_command_plugin;
 
 const MOBILE_TAURI_MAIN_WINDOW_LABEL: &str = "main";
 pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
@@ -67,23 +69,10 @@ pub fn mobile_tauri_runtime_surface() -> MobileTauriRuntimeSurface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MobileTauriRemoteBrowserScript {
-    source: String,
-}
-
-impl MobileTauriRemoteBrowserScript {
-    pub fn source(&self) -> &str {
-        &self.source
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum MobileTauriModeError {
     #[error(transparent)]
     RemoteTarget(#[from] NativeAdapterError),
-    #[error("mobile RemoteBrowser source contains forbidden material: {marker}")]
-    ForbiddenMaterial { marker: &'static str },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -144,7 +133,7 @@ impl MobileTauriLaunchOptions {
             return Err(MobileTauriLaunchOptionsError::ConflictingModes);
         }
         if let Some(remote_url) = options.remote_url.as_deref() {
-            mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
+            validate_native_remote_target(&NativeRemoteTarget {
                 https_origin: remote_url.to_string(),
             })
             .map_err(|_| MobileTauriLaunchOptionsError::InvalidRemoteUrl)?;
@@ -153,21 +142,8 @@ impl MobileTauriLaunchOptions {
     }
 }
 
-pub fn mobile_tauri_remote_browser_init_script(
-    target: &NativeRemoteTarget,
-) -> Result<MobileTauriRemoteBrowserScript, MobileTauriModeError> {
-    validate_native_remote_target(target)?;
-    let origin = serde_json::to_string(&target.https_origin)
-        .expect("serializing a validated HTTPS origin string cannot fail");
-    let source = format!(
-        "(()=>{{const target=new URL({origin}).origin;if(window.top===window&&window.location.origin!==target){{window.location.replace(target);}}}})();"
-    );
-    validate_mobile_remote_script_source(&source)?;
-    Ok(MobileTauriRemoteBrowserScript { source })
-}
-
-fn mobile_tauri_remote_browser_script_from_env()
--> Result<Option<MobileTauriRemoteBrowserScript>, MobileTauriModeError> {
+fn mobile_tauri_remote_browser_target_from_env()
+-> Result<Option<NativeRemoteTarget>, MobileTauriModeError> {
     let Some(value) = std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV) else {
         return Ok(None);
     };
@@ -177,32 +153,8 @@ fn mobile_tauri_remote_browser_script_from_env()
     let target = NativeRemoteTarget {
         https_origin: value.to_string_lossy().into_owned(),
     };
-    mobile_tauri_remote_browser_init_script(&target).map(Some)
-}
-
-fn validate_mobile_remote_script_source(source: &str) -> Result<(), MobileTauriModeError> {
-    let source_lower = source.to_ascii_lowercase();
-    for marker in [
-        "<script",
-        "</script",
-        "token",
-        "secret",
-        "localstorage",
-        "location.href",
-    ] {
-        if source_lower.contains(marker) {
-            return Err(MobileTauriModeError::ForbiddenMaterial { marker });
-        }
-    }
-    Ok(())
-}
-
-fn mobile_tauri_remote_browser_plugin<R: tauri::Runtime>(
-    script: MobileTauriRemoteBrowserScript,
-) -> tauri::plugin::TauriPlugin<R> {
-    tauri::plugin::Builder::<R, ()>::new("deve-mobile-remote-browser")
-        .js_init_script(script.source)
-        .build()
+    validate_native_remote_target(&target)?;
+    Ok(Some(target))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -222,24 +174,14 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
 
     builder = builder
         .on_window_event(handle_mobile_window_event)
-        .invoke_handler(tauri::generate_handler![
-            native_backend_get_config,
-            native_backend_get_service_state,
-            native_backend_prepare_webview_session,
-            native_backend_debug_stop_transport,
-            native_backend_debug_request_exit,
-            native_backend_validate_remote,
-            native_backend_save_remote,
-            native_backend_switch_local,
-        ])
         .setup(move |app| {
             let app_data_dir_result = app.path().app_data_dir().map_err(|error| error.to_string());
             let host_backend_preference = load_host_backend_preference(&app_data_dir_result);
-            let remote_browser_script = match remote_browser_script_for_launch_options(
+            let remote_browser_target = match remote_browser_target_for_launch_options(
                 &options,
                 &host_backend_preference,
             ) {
-                Ok(script) => script,
+                Ok(target) => target,
                 Err(error) => {
                     eprintln!("deve_mobile RemoteBrowser config failed closed: {error}");
                     return Ok(());
@@ -249,15 +191,7 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
                 app_data_dir_result.clone(),
             ));
 
-            if let Some(script) = remote_browser_script {
-                if let Err(error) = app
-                    .handle()
-                    .plugin(mobile_tauri_remote_browser_plugin(script))
-                {
-                    eprintln!("deve_mobile RemoteBrowser plugin failed closed: {error}");
-                    return Ok(());
-                }
-            } else if options.local_backend != Some(false) {
+            if remote_browser_target.is_none() && options.local_backend != Some(false) {
                 let app_data_dir = match app_data_dir_result {
                     Ok(path) => path,
                     Err(error) => {
@@ -267,6 +201,14 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
                 };
                 match MobileEmbeddedBackendSupervisor::start(app_data_dir) {
                     Ok((supervisor, bootstrap)) => {
+                        if let Err(error) =
+                            app.handle().plugin(mobile_local_backend_command_plugin())
+                        {
+                            eprintln!(
+                                "deve_mobile LocalBackend command plugin failed closed: {error}"
+                            );
+                            return Ok(());
+                        }
                         if let Err(error) = app
                             .handle()
                             .plugin(mobile_embedded_backend_plugin(&bootstrap.script))
@@ -282,7 +224,7 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
                     }
                 }
             }
-            create_mobile_main_window(app);
+            create_mobile_main_window(app, remote_browser_target.as_ref());
             Ok(())
         });
 
@@ -296,28 +238,30 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
     app.run(handle_mobile_run_event);
 }
 
-fn remote_browser_script_for_launch_options(
+fn remote_browser_target_for_launch_options(
     options: &MobileTauriLaunchOptions,
     host_backend_preference: &NativeBackendPreference,
-) -> Result<Option<MobileTauriRemoteBrowserScript>, MobileTauriModeError> {
+) -> Result<Option<NativeRemoteTarget>, MobileTauriModeError> {
     if let Some(remote_url) = options.remote_url.as_deref() {
-        return mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
+        let target = NativeRemoteTarget {
             https_origin: remote_url.to_string(),
-        })
-        .map(Some);
+        };
+        validate_native_remote_target(&target)?;
+        return Ok(Some(target));
     }
     if options.local_backend == Some(true) {
         return Ok(None);
     }
-    if let Some(script) = mobile_tauri_remote_browser_script_from_env()? {
-        return Ok(Some(script));
+    if let Some(target) = mobile_tauri_remote_browser_target_from_env()? {
+        return Ok(Some(target));
     }
     if options.local_backend == Some(false) {
         return Ok(None);
     }
     match native_shell_mode_for_backend_preference(host_backend_preference) {
         Ok(NativeShellMode::RemoteBrowser { target }) => {
-            mobile_tauri_remote_browser_init_script(&target).map(Some)
+            validate_native_remote_target(&target)?;
+            Ok(Some(target))
         }
         Ok(NativeShellMode::LocalBackend) => Ok(None),
         Err(error) => Err(MobileTauriModeError::RemoteTarget(error)),
@@ -343,140 +287,36 @@ fn is_non_flag_value(value: &str) -> bool {
     !value.trim().is_empty() && !value.starts_with("--")
 }
 
-#[tauri::command]
-async fn native_backend_get_config(
-    state: State<'_, MobileNativeBackendState>,
-) -> Result<NativeBackendPreference, String> {
-    state.preference().map_err(|error| error.to_string())
-}
-
-#[tauri::command]
-async fn native_backend_get_service_state(
-    app: AppHandle<Wry>,
-) -> Result<Option<crate::MobileEmbeddedBackendSupervisorSnapshot>, String> {
-    let Some(state) = app.try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>() else {
-        return Ok(None);
-    };
-    state
-        .snapshot()
-        .map(Some)
-        .map_err(|error| error.to_string())
-}
-
-#[tauri::command]
-async fn native_backend_prepare_webview_session(app: AppHandle<Wry>) -> Result<(), String> {
-    let state = app
-        .try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>()
-        .ok_or_else(|| "mobile embedded runtime unavailable".to_string())?;
-    let webview = app
-        .get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL)
-        .ok_or_else(|| "mobile main WebView unavailable".to_string())?;
-    #[cfg(mobile)]
-    {
-        state
-            .prepare_initial_webview_session(&webview)
-            .await
-            .map_err(|error| error.to_string())
-    }
-    #[cfg(not(mobile))]
-    {
-        let _ = (state, webview);
-        Err("mobile WebView session preparation is unavailable on this target".to_string())
-    }
-}
-
-#[tauri::command]
-async fn native_backend_debug_stop_transport(app: AppHandle<Wry>) -> Result<(), String> {
-    #[cfg(debug_assertions)]
-    {
-        let state = app
-            .try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>()
-            .ok_or_else(|| "mobile embedded runtime unavailable".to_string())?;
-        state
-            .stop_transport_for_lifecycle_smoke()
-            .map_err(|error| error.to_string())
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        let _ = app;
-        Err("mobile lifecycle fault injection is debug-only".to_string())
-    }
-}
-
-#[tauri::command]
-async fn native_backend_debug_request_exit(app: AppHandle<Wry>) -> Result<(), String> {
-    #[cfg(debug_assertions)]
-    {
-        app.exit(0);
-        Ok(())
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        let _ = app;
-        Err("mobile lifecycle exit probe is debug-only".to_string())
-    }
-}
-
-#[tauri::command]
-async fn native_backend_validate_remote(remote_url: String) -> NativeBackendValidationResult {
-    crate::probe_mobile_native_remote_backend(&remote_url).await
-}
-
-#[tauri::command]
-async fn native_backend_save_remote(
-    app: AppHandle<Wry>,
-    state: State<'_, MobileNativeBackendState>,
-    remote_url: String,
-) -> Result<NativeBackendValidationResult, String> {
-    let result = crate::probe_mobile_native_remote_backend(&remote_url).await;
-    if !result.ok {
-        return Ok(result);
-    }
-    let origin = result
-        .https_origin
-        .as_deref()
-        .ok_or_else(|| crate::MobileNativeBackendError::InvalidNodeRolePayload.to_string())?;
-    state
-        .save_preference(NativeBackendPreference::remote(origin))
-        .map_err(|error| error.to_string())?;
-    shutdown_mobile_backend_before_restart(&app).await?;
-    app.request_restart();
-    Ok(result)
-}
-
-#[tauri::command]
-async fn native_backend_switch_local(
-    app: AppHandle<Wry>,
-    state: State<'_, MobileNativeBackendState>,
-) -> Result<NativeBackendPreference, String> {
-    let preference = NativeBackendPreference::local();
-    state
-        .save_preference(preference.clone())
-        .map_err(|error| error.to_string())?;
-    shutdown_mobile_backend_before_restart(&app).await?;
-    app.request_restart();
-    Ok(preference)
-}
-
-fn create_mobile_main_window<R: tauri::Runtime>(app: &tauri::App<R>) {
+fn create_mobile_main_window<R: tauri::Runtime>(
+    app: &tauri::App<R>,
+    remote_target: Option<&NativeRemoteTarget>,
+) {
     if app
         .get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL)
         .is_some()
     {
         return;
     }
-    let Some(window_config) = app
+    let Some(mut window_config) = app
         .config()
         .app
         .windows
         .iter()
         .find(|window| window.label == MOBILE_TAURI_MAIN_WINDOW_LABEL)
+        .cloned()
     else {
         eprintln!("deve_mobile Tauri config is missing main window");
         return;
     };
+    if let Some(target) = remote_target {
+        let Ok(url) = tauri::Url::parse(&target.https_origin) else {
+            eprintln!("deve_mobile RemoteBrowser URL parse failed closed");
+            return;
+        };
+        window_config.url = WebviewUrl::External(url);
+    }
     if let Err(error) =
-        WebviewWindowBuilder::from_config(app, window_config).and_then(|builder| builder.build())
+        WebviewWindowBuilder::from_config(app, &window_config).and_then(|builder| builder.build())
     {
         eprintln!("deve_mobile main WebView creation failed closed: {error}");
     }

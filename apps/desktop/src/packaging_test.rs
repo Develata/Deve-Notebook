@@ -120,6 +120,7 @@ fn desktop_menu_tray_runtime_binding_declares_ui_intents_only() {
             DesktopMenuAction::ShowMainWindow,
             DesktopMenuAction::OpenCommandPalette,
             DesktopMenuAction::OpenSettings,
+            DesktopMenuAction::UseLocalBackend,
             DesktopMenuAction::QuitRequested,
         ]
     );
@@ -128,6 +129,7 @@ fn desktop_menu_tray_runtime_binding_declares_ui_intents_only() {
         [
             DesktopTrayAction::ShowMainWindow,
             DesktopTrayAction::ToggleWindowVisibility,
+            DesktopTrayAction::UseLocalBackend,
             DesktopTrayAction::QuitRequested,
         ]
     );
@@ -135,6 +137,7 @@ fn desktop_menu_tray_runtime_binding_declares_ui_intents_only() {
     assert!(surface.menu_runtime_imported);
     assert!(surface.tray_runtime_imported);
     assert!(surface.actions_are_ui_intents_only);
-    assert!(!surface.opens_process_runtime);
+    assert!(surface.opens_process_runtime);
+    assert!(surface.process_runtime_changes_are_mode_coordinated);
     assert!(!surface.opens_authority_write_path);
 }

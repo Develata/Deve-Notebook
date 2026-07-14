@@ -27,8 +27,8 @@ fn reserved_setting_copy_marks_future_boundary() {
 
 #[test]
 fn native_backend_copy_marks_native_only_and_validation_boundary() {
-    assert!(native_backend_unavailable(Locale::En).contains("Native-only"));
-    assert!(native_backend_unavailable(Locale::Zh).contains("native-only"));
+    assert!(native_backend_unavailable(Locale::En).contains("native menu"));
+    assert!(native_backend_unavailable(Locale::Zh).contains("原生菜单"));
     assert!(remote_backend_requires_validation(Locale::En).contains("validation"));
     assert!(remote_backend_requires_validation(Locale::Zh).contains("校验"));
 }

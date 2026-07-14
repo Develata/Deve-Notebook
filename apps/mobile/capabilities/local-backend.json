@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile-local-backend",
+  "description": "Allow the bundled LocalBackend WebView to use host-local backend and lifecycle commands.",
+  "local": true,
+  "windows": ["main"],
+  "permissions": ["deve-native-backend-commands:default"]
+}

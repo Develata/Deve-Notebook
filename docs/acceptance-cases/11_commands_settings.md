@@ -303,13 +303,15 @@
     - browser_open: "Settings"
     - ui_assert: native_backend_section_unavailable_in_browser true
     - native_validate_remote_backend: "https://example.invalid"
-    - native_switch_backend: "local"
+    - desktop_native_menu_switch_backend: "local"
   assertions:
     - route_absent: "/api/settings/native-backend"
     - browser_storage_absent: "deve.native.backend"
     - config_assert: native_backend_preference_not_written_to_config_toml true
     - native_assert: remote_backend_save_requires_node_role_probe true
-    - native_assert: use_local_backend_saves_host_local_preference true
+    - native_assert: desktop_use_local_backend_saves_host_local_preference true
+    - browser_assert: remote_browser_exposes_no_backend_preference_ipc true
+    - gap_assert: mobile_use_local_backend_native_control_required true
 
 - case_id: SET-008
   goal: 静态 P2P peer 配置必须把 peer_id 表达为 expected authenticated identity，而不是显示 label。

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 
-use deve_core::native_adapter::validate_native_endpoint_ready;
+use deve_core::native_adapter::{NativeShellCapabilities, validate_native_endpoint_ready};
 
 use super::MobileShell;
 use crate::types::{
@@ -23,6 +23,7 @@ impl MobileShell {
             ws_base: endpoint.ws_base.clone(),
             node_role: endpoint.node_role.clone(),
             session_bound: endpoint.session_bound,
+            capabilities: NativeShellCapabilities::local_backend(),
         })
     }
 
@@ -31,14 +32,17 @@ impl MobileShell {
             MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline => {
                 Some(MobileRecoveryBootstrap {
                     service_state: "service_offline",
+                    capabilities: NativeShellCapabilities::local_backend(),
                 })
             }
             MobileServiceState::SessionInvalid => Some(MobileRecoveryBootstrap {
                 service_state: "session_invalid",
+                capabilities: NativeShellCapabilities::local_backend(),
             }),
             MobileServiceState::ForegroundReprobe | MobileServiceState::BackgroundSuspended => {
                 Some(MobileRecoveryBootstrap {
                     service_state: "foreground_reprobe",
+                    capabilities: NativeShellCapabilities::local_backend(),
                 })
             }
             MobileServiceState::ColdStart

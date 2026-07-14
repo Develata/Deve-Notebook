@@ -42,11 +42,11 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 *   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
 *   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff 与 bootstrap plugin 注册之后创建；不得先创建无 endpoint/session bootstrap 的主 WebView。Android Wry 不实现 `WebView::set_cookie`，因此 Android 必须在 WebView 已登记后通过无参数 native command 调用系统 `CookieManager` 安装 HttpOnly cookie，确认成功后才 reload 一次并进入 authenticated runtime；cookie/token/secret 不得进入 command 参数、JavaScript 或 bootstrap payload。
-*   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
-*   Mobile Settings 必须与 Desktop 共用 native backend preference 语义：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。
+*   `RemoteBrowser { https_origin }` 是显式远端模式。壳层必须在创建主 WebView 前把已校验 origin 写入 native `WindowConfig`，不得靠远端页面执行 init-script redirect；后续 `/api` 与 `/ws` 均由浏览器同源规则解析。native 壳不提供本机 session cookie、端口、repo bootstrap、native bootstrap capability 或 Tauri command handler。
+*   Mobile Settings 只允许在可信 bundled `LocalBackend` origin 使用 native backend preference bridge：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。bridge capability 必须来自 typed native bootstrap，不得由 `__TAURI_INTERNALS__` 推断。
 *   Mobile `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。启动参数/环境覆盖只用于诊断和脚本启动，不得回写 preference。
 *   Mobile Tauri bundle 必须加载 `frontendDist` 资产，并通过 native bootstrap 或 RemoteBrowser 导航决定后端；不得把主 WebView 固定到开发服务 `devUrl = http://127.0.0.1:3001`。
-*   Mobile 在 `RemoteBrowser` 失联时沿用普通浏览器锁屏/只读语义；native 锁屏或 Settings 可提供“Use local backend”入口。该入口必须保存 `local` preference、启动 embedded loopback service，并重载 bundled Web shell。
+*   Mobile 在 `RemoteBrowser` 失联时沿用普通浏览器锁屏/只读语义，远端 DOM 不得调用本机 IPC。Mobile 原生“Use Local Backend”控件尚未实现时必须登记为 required gap；不得保留 Web fallback、伪装成已验收能力或为此暴露 RemoteBrowser command handler。
 *   从后台恢复时，`LocalBackend` 必须重新 probe session、node role、WS repo handshake 与 current `scope_nonce`；`RemoteBrowser` 的恢复语义等价于浏览器页面恢复，不得伪装本地 authority。
 
 **Adapter inputs**:
@@ -87,7 +87,8 @@ MobileColdStart
 *   `?ws_port=` 只能作为开发期 fallback。mobile production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
 *   bundled Web shell 仍是 WebLightPeer，repo-scoped browser identity 必须满足 `03_storage/index#browser-storage-layering` 的 IndexedDB + non-extractable WebCrypto Ed25519 合同。Android System WebView 不支持 Ed25519 时必须保持 storage-limited 只读；LocalBackend/native session 不得伪造 browser key、跳过签名或转授 host writer authority。
-*   Android 可写 target-host gate 必须在业务步骤前执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。API level、system-image tag 或 WebView version string 只能作为诊断，不能替代能力证明；不满足时必须输出结构化 blocker 并停止可写 smoke。
+*   Android 正式支持与可写 evidence baseline 是 Android 10 / API 29+ 且当前 WebView provider major 137+。该版本基线只决定 support/receipt 资格，不得替代真实 capability probe，也不得在前端解析 UA 或硬编码 OS gate。
+*   Android 可写 target-host gate 必须在业务步骤前记录 API level、WebView provider package/version、AVD/system-image 或真实设备标识，并执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。只有版本基线与 probe 同时满足才可生成 writable receipt；不满足时必须输出结构化 blocker、证明编辑器保持只读并停止可写业务步骤。
 *   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式和有界 RAM 启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后仍须确认 package manager 可用，不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
 *   Android lifecycle gate 必须在首次文档 editor host 进入当前 generation 的可写状态后立即注入第一笔真实输入并证明内容与 pending 链均保留。跨 transport generation 的 pending 证据必须在旧 generation 暂停一笔真实 outbound edit frame、确认前端 pending 非空、随后丢弃旧 frame 后取得；replacement generation 只能依靠产品 pending replay 使后端首次看到该唯一文本，不能用已写入服务端的 Snapshot 替代 pending 保留证明。CodeMirror mount/cleanup 必须服从 `10_rendering#document-authority-bridge` 的 owner-scoped 生命周期；迟到 cleanup 不得销毁新 WebView editor。
 

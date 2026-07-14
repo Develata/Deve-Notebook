@@ -131,6 +131,10 @@ Git mirror 的生命周期、命令面与失败语义以 `05_diff_logic.md#git-m
 投影为本地化只读原因与恢复指引。`localStorage` 不属于 writer identity 前置条件。
 WebCrypto、IndexedDB 或 WebCrypto Ed25519 任一必需能力缺失时必须 fail-closed；不得由
 JS/WASM polyfill 生成可导出私钥、伪造平台能力或绕过 browser peer 签名。
+Android native WebView 的正式可写 evidence baseline 是 API 29+ 与当前 provider major 137+；
+版本事实只属于 support/receipt 诊断，最终 writer identity 仍必须由上述真实 non-extractable
+Ed25519 probe 证明。技术上通过 probe 但低于支持基线的设备不得生成正式 target-host receipt，
+而缺失 probe 的任何设备都不得因版本号、native session 或 host capability 获得写权限。
 
 > Browser storage recovery semantics（站点数据被清理、IndexedDB/WebCrypto 缺失降级）见 [repair.md](./repair.md)（§3.4.2 Recovery Semantics）。
 

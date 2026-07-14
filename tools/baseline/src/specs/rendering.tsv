@@ -130,7 +130,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_math_extensions_use_katex_bridge_facade true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_adapter_does_not_register_debug_view true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: image_widget_does_not_read_debug_view_global true
-case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: native_backend_config_global_registered_through_bridge true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: native_backend_config_bridge_registered_only_with_typed_local_capability true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_rejects_authority_globals true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_rejects_authority_names true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: bridge_registry_rejects_authority_sources true
@@ -144,10 +144,10 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-BRIDGE-001	cli_assert: editor_ffi_unready_write_queries_fail_closed true
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/katex_bridge.js
 contains	docs/registry/runtime-skeleton-registry.md	apps/web/js/rendering_bridge.js
-contains	apps/web/index.html	src="js/web_bridge_registry.js?rev=20260705-bridge-policy"
-contains	apps/web/index.html	src="js/index_theme_bootstrap.js?rev=20260705-bridge-policy"
-contains	apps/web/index.html	src="js/katex_bridge.js?rev=20260705-bridge-policy"
-contains	apps/web/index.html	src="js/index_editor_adapter.js?rev=20260705-bridge-policy"
+contains	apps/web/index.html	src="js/web_bridge_registry.js?rev=20260713-native-capability"
+contains	apps/web/index.html	src="js/index_theme_bootstrap.js?rev=20260713-native-capability"
+contains	apps/web/index.html	src="js/katex_bridge.js?rev=20260713-native-capability"
+contains	apps/web/index.html	src="js/index_editor_adapter.js?rev=20260713-native-capability"
 contains	apps/web/js/katex_bridge.js	bridge.register("__deveKatex"
 contains	apps/web/js/katex_bridge.js	role: "katex-render-facade"
 contains	apps/web/js/rendering_bridge.js	getRenderingBridgeGlobal("__deveKatex")
@@ -247,9 +247,11 @@ contains	apps/web/js/chat_math.js	web bridge registry unavailable before registe
 absent	apps/web/js/chat_math.js	window.renderChatMath =
 absent	apps/web/js/chat_math.js	window.__deveChatMath =
 contains	apps/web/js/native_backend_bridge.js	bridge.register("__DEVE_NATIVE_BACKEND_CONFIG__"
+contains	apps/web/js/native_backend_bridge.js	backend_preference_control === true
 contains	apps/web/js/native_backend_bridge.js	runtime: "native_shell_mode_runtime"
 contains	apps/web/js/native_backend_bridge.js	authority: "none"
 contains	apps/web/js/native_backend_bridge.js	web bridge registry unavailable before registering native backend config
+absent	apps/web/js/native_backend_bridge.js	switchLocal
 absent	apps/web/js/native_backend_bridge.js	window.__DEVE_NATIVE_BACKEND_CONFIG__ =
 contains	apps/web/js/web_bridge_registry.test.cjs	native backend config facade must be registered through the browser bridge registry
 contains	apps/web/js/editor_remote_ops.js	Transaction.addToHistory.of(false)

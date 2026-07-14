@@ -37,10 +37,13 @@
 - Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、默认 repo/projection 初始化、loopback endpoint、session handoff、健康探测和重启协调。
 - LocalBackend 的 `deve_cli serve --native-loopback` 后端应随 Desktop 父进程生命周期停止；Windows target-host 关闭或终止 Desktop 后不应留下孤儿本地后端。其它 target-host 在具备等价平台约束前不得宣称同等级别的异常终止保护。
 - Desktop 可通过启动参数 `--remote-url https://host[:port]` 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；脚本化/诊断启动仍可使用 `DEVE_NATIVE_REMOTE_URL`。
-- Desktop Settings 提供 Backend section，可在 Local Backend 与 Remote Backend 之间切换。默认 Local Backend 不要求用户单独启动后端。
+- Desktop bundled LocalBackend Settings 提供 Backend section，可校验并切换到 Remote Backend。默认 Local Backend 不要求用户单独启动后端。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
-- RemoteBackend 失联时 UI 沿用浏览器锁屏/只读语义；native-only “Use local backend” 入口可切回 Local Backend、启动本机后端并重载 bundled Web shell。
-- `RemoteBrowser` 不启动本地后端，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
+- RemoteBackend 失联时 UI 沿用浏览器锁屏/只读语义；远端页面不显示可调用 IPC 的恢复按钮。Desktop 原生主菜单和托盘中的 “Use Local Backend” 通过 host coordinator 保存 local preference 并重启壳层。
+- `RemoteBrowser` 不启动本地后端，不注入本地 endpoint/session bootstrap，不注册 native bridge/Tauri commands，也不把远端 URL 保存为本地 writer authority。
+- `RemoteBrowser` 主 WebView 由 native 以已校验 HTTPS `WindowConfig` 直接创建，不通过 bundled 页面或远端页面的 init-script redirect 过渡。
+- 单独存在 `__TAURI_INTERNALS__` 不代表拥有 LocalBackend capability；普通 Docker 浏览器和 RemoteBrowser 均不注册 backend facade。
+- LocalBackend 切换到 RemoteBrowser 必须在停止 sidecar 后重启壳层，不在同一 native process 中直接导航远端 origin。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。
 - service 端口、session secret 与 P2P token material 不应出现在 URL、日志、Web localStorage 或可见 bootstrap payload。
@@ -50,7 +53,6 @@
 
 ## 非目标
 
-- 当前阶段不在本章定义 Tauri 原生托盘、系统菜单等平台整合细节。
 - 当前阶段不要求 Chrome MCP 覆盖真正的原生窗口管理能力。
 - 快速 startup marker 只属于 entrypoint probe，不单独构成 packaged UI 可用证据。
 - 当前阶段不把 Desktop native packaging 解释为签名 release readiness；LocalBackend 与 RemoteBrowser 仍需各自独立 smoke 验收。
@@ -103,13 +105,14 @@
 1. 默认环境启动 Desktop shell。
 2. 检查本地 loopback service health、native session handoff 与 Web shell 可用性。
 3. 切换到 RemoteBrowser HTTPS origin。
-4. 在 Settings 中切回 Local Backend。
-5. 检查壳层只加载远端 origin，且不启动本地 service 或注入本地 bootstrap；切回 local 后重新启动本地 service 并重载 bundled Web shell。
+4. 确认远端页面没有 native bridge、`ipc.localhost` 请求或 CSP 错误。
+5. 通过 Desktop 原生菜单/托盘切回 Local Backend。
+6. 检查壳层只加载远端 origin，且不启动本地 service 或注入本地 bootstrap；切回 local 后进程重启、重新启动本地 service 并取得新 session/scope。
 
 期望结果：
 
 - 默认 LocalBackend 可以启动受控 local service，并且 UI 写入仍经过本地 server/core writer gate。
 - RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
 - Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
-- RemoteBrowser 失联时 native-only 入口可切回 LocalBackend。
+- RemoteBrowser 失联时 Desktop 原生菜单/托盘入口可切回 LocalBackend；远端 DOM 不拥有该操作。
 - URL、日志、localStorage 与 bootstrap payload 不暴露 service secret 或 P2P token material。

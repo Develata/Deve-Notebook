@@ -13,23 +13,29 @@
 
 use crate::{
     DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopLocalServiceEntrypointPolicy,
-    DesktopLocalServiceTauriState, DesktopMenuAction, DesktopNativeBackendState, DesktopTrayAction,
-    build_desktop_menu, build_desktop_tray_icon, build_desktop_tray_menu,
-    desktop_tauri_bootstrap_plugin, desktop_tauri_local_service_bootstrap_from_env,
-    desktop_tauri_local_service_bootstrap_with_policy,
-    desktop_tauri_remote_browser_bootstrap_from_env,
-    desktop_tauri_remote_browser_bootstrap_from_origin, resolve_desktop_local_service_data_root,
+    DesktopLocalServiceTauriState, DesktopMenuAction, DesktopNativeBackendState,
+    DesktopNativeMenuPolicy, DesktopTrayAction, build_desktop_menu, build_desktop_tray_icon,
+    build_desktop_tray_menu, desktop_tauri_bootstrap_plugin,
+    desktop_tauri_local_service_bootstrap_from_env,
+    desktop_tauri_local_service_bootstrap_with_policy, resolve_desktop_local_service_data_root,
     resolve_desktop_menu_action_id, resolve_desktop_tray_action_id,
 };
 use deve_core::native_adapter::{
-    NativeBackendPreference, NativeBackendValidationResult, NativeShellMode,
-    native_shell_mode_for_backend_preference,
+    NativeAdapterError, NativeBackendPreference, NativeRemoteTarget, NativeShellMode,
+    native_shell_mode_for_backend_preference, validate_native_remote_target,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager, RunEvent, Runtime, State, WindowEvent, Wry};
+use tauri::{
+    AppHandle, Manager, RunEvent, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry,
+};
 use thiserror::Error;
 
+mod native_backend_commands;
 mod smoke;
+
+pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
+
+use native_backend_commands::{desktop_local_backend_command_plugin, switch_to_local_backend};
 
 pub use smoke::{
     DESKTOP_TAURI_NATIVE_SESSION_SMOKE_OK, DESKTOP_TAURI_STARTUP_SMOKE_OK,
@@ -41,6 +47,7 @@ pub use smoke::{
 pub enum DesktopTauriShellEffect {
     ShowMainWindow,
     ToggleMainWindowVisibility,
+    UseLocalBackend,
     QuitRequested,
 }
 
@@ -119,8 +126,10 @@ impl DesktopTauriLaunchOptions {
             return Err(DesktopTauriLaunchOptionsError::ConflictingModes);
         }
         if let Some(remote_url) = options.remote_url.as_deref() {
-            desktop_tauri_remote_browser_bootstrap_from_origin(remote_url)
-                .map_err(|_| DesktopTauriLaunchOptionsError::InvalidRemoteUrl)?;
+            validate_native_remote_target(&NativeRemoteTarget {
+                https_origin: remote_url.to_string(),
+            })
+            .map_err(|_| DesktopTauriLaunchOptionsError::InvalidRemoteUrl)?;
         }
         Ok(options)
     }
@@ -131,6 +140,7 @@ pub fn menu_action_shell_effect(action: DesktopMenuAction) -> DesktopTauriShellE
         DesktopMenuAction::ShowMainWindow
         | DesktopMenuAction::OpenCommandPalette
         | DesktopMenuAction::OpenSettings => DesktopTauriShellEffect::ShowMainWindow,
+        DesktopMenuAction::UseLocalBackend => DesktopTauriShellEffect::UseLocalBackend,
         DesktopMenuAction::QuitRequested => DesktopTauriShellEffect::QuitRequested,
     }
 }
@@ -141,6 +151,7 @@ pub fn tray_action_shell_effect(action: DesktopTrayAction) -> DesktopTauriShellE
         DesktopTrayAction::ToggleWindowVisibility => {
             DesktopTauriShellEffect::ToggleMainWindowVisibility
         }
+        DesktopTrayAction::UseLocalBackend => DesktopTauriShellEffect::UseLocalBackend,
         DesktopTrayAction::QuitRequested => DesktopTauriShellEffect::QuitRequested,
     }
 }
@@ -155,16 +166,16 @@ pub fn run_desktop_tauri_app_with_launch_options(
     let native_backend_data_root =
         resolve_desktop_local_service_data_root().map_err(|error| error.to_string());
     let host_backend_preference = load_host_backend_preference(&native_backend_data_root);
-    let remote_browser_bootstrap =
-        match remote_browser_bootstrap_for_launch_options(&options, &host_backend_preference) {
-            Ok(bootstrap) => bootstrap,
+    let remote_browser_target =
+        match remote_browser_target_for_launch_options(&options, &host_backend_preference) {
+            Ok(target) => target,
             Err(error) => {
-                eprintln!("desktop remote browser bootstrap refused: {error}");
+                eprintln!("desktop remote browser target refused: {error}");
                 return Ok(());
             }
         };
     let timestamp_unix_ms = current_unix_time_millis();
-    let mut local_service_bootstrap = if remote_browser_bootstrap.is_none() {
+    let mut local_service_bootstrap = if remote_browser_target.is_none() {
         match options.local_backend {
             Some(true) => desktop_tauri_local_service_bootstrap_with_policy(
                 timestamp_unix_ms,
@@ -180,31 +191,41 @@ pub fn run_desktop_tauri_app_with_launch_options(
         .as_mut()
         .and_then(|bootstrap| bootstrap.runtime.take());
     let native_backend_state = DesktopNativeBackendState::from_data_root(native_backend_data_root);
+    let local_backend_bridge_enabled = local_backend_bridge_is_enabled(
+        remote_browser_target.is_some(),
+        local_service_bootstrap.is_some(),
+    );
+    let show_use_local_backend = native_local_transition_menu_is_visible(
+        &options,
+        remote_browser_target.is_some(),
+        remote_url_env_override_present(),
+    );
+    let menu_policy = DesktopNativeMenuPolicy {
+        show_use_local_backend,
+    };
     let mut builder = tauri::Builder::default();
 
-    if let Some(script) = remote_browser_bootstrap.as_ref() {
-        builder = builder.plugin(desktop_tauri_bootstrap_plugin(script));
-    } else if let Some(bootstrap) = local_service_bootstrap.as_ref() {
+    if let Some(bootstrap) = local_service_bootstrap.as_ref() {
         builder = builder.plugin(desktop_tauri_bootstrap_plugin(&bootstrap.script));
     }
 
+    if local_backend_bridge_enabled {
+        builder = builder.plugin(desktop_local_backend_command_plugin());
+    } else if remote_browser_target.is_some() && !show_use_local_backend {
+        eprintln!(
+            "desktop RemoteBrowser backend override active; native Use Local Backend is disabled"
+        );
+    }
+
     builder
-        .invoke_handler(tauri::generate_handler![
-            native_backend_get_config,
-            native_backend_validate_remote,
-            native_backend_save_remote,
-            native_backend_switch_local,
-        ])
         .setup(move |app| {
             app.manage(native_backend_state);
             if let Some(runtime) = service_runtime.take() {
                 app.manage(DesktopLocalServiceTauriState::new(runtime));
             }
+            create_desktop_main_window(app, remote_browser_target.as_ref(), menu_policy)?;
 
-            let menu = build_desktop_menu(app)?;
-            app.set_menu(menu)?;
-
-            let tray_menu = build_desktop_tray_menu(app)?;
+            let tray_menu = build_desktop_tray_menu(app, menu_policy)?;
             let _tray = build_desktop_tray_icon(app, &tray_menu)?;
 
             Ok(())
@@ -231,29 +252,65 @@ pub fn run_desktop_tauri_app_with_launch_options(
     Ok(())
 }
 
-fn remote_browser_bootstrap_for_launch_options(
+fn remote_browser_target_for_launch_options(
     options: &DesktopTauriLaunchOptions,
     host_backend_preference: &NativeBackendPreference,
-) -> Result<Option<crate::DesktopTauriBootstrapScript>, crate::DesktopTauriBootstrapError> {
+) -> Result<Option<NativeRemoteTarget>, NativeAdapterError> {
     if let Some(remote_url) = options.remote_url.as_deref() {
-        return desktop_tauri_remote_browser_bootstrap_from_origin(remote_url).map(Some);
+        return validated_remote_target(remote_url).map(Some);
     }
     if options.local_backend == Some(true) {
         return Ok(None);
     }
-    if let Some(bootstrap) = desktop_tauri_remote_browser_bootstrap_from_env()? {
-        return Ok(Some(bootstrap));
+    if let Some(remote_url) =
+        std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV).filter(|value| !value.is_empty())
+    {
+        return validated_remote_target(&remote_url.to_string_lossy()).map(Some);
     }
     if options.local_backend == Some(false) {
         return Ok(None);
     }
     match native_shell_mode_for_backend_preference(host_backend_preference) {
         Ok(NativeShellMode::RemoteBrowser { target }) => {
-            desktop_tauri_remote_browser_bootstrap_from_origin(&target.https_origin).map(Some)
+            validate_native_remote_target(&target)?;
+            Ok(Some(target))
         }
         Ok(NativeShellMode::LocalBackend) => Ok(None),
-        Err(error) => Err(crate::DesktopTauriBootstrapError::RemoteTarget(error)),
+        Err(error) => Err(error),
     }
+}
+
+fn validated_remote_target(origin: &str) -> Result<NativeRemoteTarget, NativeAdapterError> {
+    let target = NativeRemoteTarget {
+        https_origin: origin.to_string(),
+    };
+    validate_native_remote_target(&target)?;
+    Ok(target)
+}
+
+fn create_desktop_main_window(
+    app: &tauri::App<Wry>,
+    remote_target: Option<&NativeRemoteTarget>,
+    menu_policy: DesktopNativeMenuPolicy,
+) -> tauri::Result<()> {
+    let mut window_config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == DESKTOP_TAURI_MAIN_WINDOW_LABEL)
+        .cloned()
+        .ok_or_else(|| tauri::Error::AssetNotFound("desktop main window config".into()))?;
+    if let Some(target) = remote_target {
+        window_config.url = WebviewUrl::External(
+            tauri::Url::parse(&target.https_origin).map_err(tauri::Error::InvalidUrl)?,
+        );
+    }
+    let menu = build_desktop_menu(app, menu_policy)?;
+    WebviewWindowBuilder::from_config(app, &window_config)?
+        .menu(menu)
+        .build()?;
+    Ok(())
 }
 
 fn load_host_backend_preference(
@@ -282,69 +339,33 @@ fn current_unix_time_millis() -> i64 {
     }
 }
 
-#[tauri::command]
-async fn native_backend_get_config(
-    state: State<'_, DesktopNativeBackendState>,
-) -> Result<NativeBackendPreference, String> {
-    state.preference().map_err(|error| error.to_string())
+fn remote_url_env_override_present() -> bool {
+    std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV).is_some_and(|value| !value.is_empty())
 }
 
-#[tauri::command]
-async fn native_backend_validate_remote(remote_url: String) -> NativeBackendValidationResult {
-    crate::probe_desktop_native_remote_backend(&remote_url).await
+fn local_backend_bridge_is_enabled(
+    remote_browser_active: bool,
+    local_service_bootstrap_present: bool,
+) -> bool {
+    !remote_browser_active && local_service_bootstrap_present
 }
 
-#[tauri::command]
-async fn native_backend_save_remote(
-    app: AppHandle<Wry>,
-    state: State<'_, DesktopNativeBackendState>,
-    remote_url: String,
-) -> Result<NativeBackendValidationResult, String> {
-    let result = crate::probe_desktop_native_remote_backend(&remote_url).await;
-    if !result.ok {
-        return Ok(result);
-    }
-    let origin = result
-        .https_origin
-        .as_deref()
-        .ok_or_else(|| crate::DesktopNativeBackendError::InvalidNodeRolePayload.to_string())?;
-    state
-        .save_preference(NativeBackendPreference::remote(origin))
-        .map_err(|error| error.to_string())?;
-    if let Some(local_state) = app.try_state::<crate::DesktopLocalServiceTauriState>() {
-        local_state
-            .stop(current_unix_time_millis())
-            .map_err(|error| error.to_string())?;
-    }
-    if let Some(window) = app.get_webview_window(DESKTOP_TAURI_MAIN_WINDOW_LABEL) {
-        let url = tauri::Url::parse(origin)
-            .map_err(|error| crate::DesktopNativeBackendError::NavigationFailed(error.to_string()))
-            .map_err(|error| error.to_string())?;
-        window
-            .navigate(url)
-            .map_err(|error| crate::DesktopNativeBackendError::NavigationFailed(error.to_string()))
-            .map_err(|error| error.to_string())?;
-    }
-    Ok(result)
+fn native_local_transition_menu_is_visible(
+    options: &DesktopTauriLaunchOptions,
+    remote_browser_active: bool,
+    env_remote_override_present: bool,
+) -> bool {
+    remote_browser_active
+        && options.remote_url.is_none()
+        && !env_remote_override_present
+        && options.local_backend.is_none()
 }
 
-#[tauri::command]
-async fn native_backend_switch_local(
-    app: AppHandle<Wry>,
-    state: State<'_, DesktopNativeBackendState>,
-) -> Result<NativeBackendPreference, String> {
-    let preference = NativeBackendPreference::local();
-    state
-        .save_preference(preference.clone())
-        .map_err(|error| error.to_string())?;
-    app.request_restart();
-    Ok(preference)
-}
-
-fn apply_shell_effect<R: Runtime>(app: &AppHandle<R>, effect: DesktopTauriShellEffect) {
+fn apply_shell_effect(app: &AppHandle<Wry>, effect: DesktopTauriShellEffect) {
     match effect {
         DesktopTauriShellEffect::ShowMainWindow => show_main_window(app),
         DesktopTauriShellEffect::ToggleMainWindowVisibility => toggle_main_window_visibility(app),
+        DesktopTauriShellEffect::UseLocalBackend => switch_to_local_backend(app),
         DesktopTauriShellEffect::QuitRequested => app.exit(0),
     }
 }

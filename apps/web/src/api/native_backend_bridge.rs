@@ -41,13 +41,6 @@ pub async fn save_native_backend_remote(remote_url: String) -> NativeBackendVali
     }
 }
 
-pub async fn switch_native_backend_local() -> NativeBackendConfig {
-    match call_facade_method("switchLocal", Array::new()).await {
-        Ok(value) => parse_config_response(&value),
-        Err(error) => NativeBackendConfig::unavailable(Some(error)),
-    }
-}
-
 async fn call_facade_method(method: &str, args: Array) -> Result<JsValue, String> {
     let facade =
         native_backend_facade().ok_or_else(|| "native backend bridge unavailable".to_string())?;

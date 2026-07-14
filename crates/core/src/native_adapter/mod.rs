@@ -56,8 +56,9 @@ pub use types::{
     NativeAdapterSnapshot, NativeAdapterState, NativeBackendMode, NativeBackendPreference,
     NativeBackendValidationResult, NativeEndpointReady, NativePlatformEvent,
     NativePlatformEventEffect, NativePlatformEventKind, NativeRemoteTarget, NativeRuntimeReadiness,
-    NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended, NativeShellMode,
-    classify_native_platform_event, native_tauri_allowed_origins, platform_event_can_grant_write,
+    NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended, NativeShellCapabilities,
+    NativeShellMode, classify_native_platform_event, native_tauri_allowed_origins,
+    platform_event_can_grant_write,
 };
 pub use validation::{
     NativeAdapterError, can_load_native_web_shell, can_show_native_writable_shell,

@@ -5,7 +5,7 @@ use deve_core::native_adapter::{
     NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapterError,
     NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceOffline,
     NativeServiceRestarting, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
-    NativeServiceSuspended,
+    NativeServiceSuspended, NativeShellCapabilities,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -85,6 +85,7 @@ pub struct MobileBootstrap {
     pub ws_base: String,
     pub node_role: String,
     pub session_bound: bool,
+    pub capabilities: NativeShellCapabilities,
 }
 
 impl MobileBootstrap {
@@ -99,6 +100,7 @@ impl MobileBootstrap {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MobileRecoveryBootstrap {
     pub service_state: &'static str,
+    pub capabilities: NativeShellCapabilities,
 }
 
 impl MobileRecoveryBootstrap {

@@ -307,6 +307,21 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
   - 生产环境下通过明文 `ws://` 暴露跨公网 session traffic。
   - 让浏览器在 HTTPS 页面中降级连接明文 ws。
 
+### 6.10 Native Shell IPC 与 Remote Session 隔离 {#native-shell-ipc-session-isolation}
+
+- 远端 HTTPS 页面建立有效 JWT/browser session，只授权该远端 origin 的 HTTP/WS 入口；它不授予
+  Desktop/Mobile 宿主 IPC、backend preference、local session、debug 或 service-control capability。
+- native `LocalBackend` command surface 只能在可信 bundled origin 注册，并由 typed
+  `NativeShellCapabilities.backend_preference_control` 与真实 native invoke 同时确认。单独存在
+  `window.__TAURI_INTERNALS__` 不得被解释为 capability。
+- native `RemoteBrowser` 不得注入 LocalBackend bootstrap capability，不得注册 application command
+  handler 或 Web facade。远端页面的登录、编辑和 commit/history 必须仅经远端同源 HTTP/WS 完成。
+- Desktop 从 `RemoteBrowser` 回到 `LocalBackend` 只能由 native-owned 菜单/托盘 coordinator 发起；
+  RemoteBrowser 的 auth cookie、endpoint、session、repo scope 与 `scope_nonce` 不得迁移或复用到新
+  LocalBackend 进程。Mobile 原生恢复控件未实现时必须保持明确 gap，不得用远端 DOM IPC 替代。
+- 服务端 CSP 不得为了 native shell 模式切换而放宽 `connect-src` 到 `ipc.localhost`；正确实现必须让
+  RemoteBrowser 页面根本不发出该请求。
+
 ## 7. Session Probe Policy {#session-probe-policy}
 
 - `/api/auth/status` 周期探测只应在前台活动页面进行
@@ -324,6 +339,7 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - brute-force lockout
 - malformed origin / cors reject
 - ws handshake unauthorized
+- RemoteBrowser 页面错误获得 native IPC/backend capability
 
 错误码清单以 `13_i18n.md#i18n-error-code-catalog` 为唯一权威。
 
@@ -366,6 +382,7 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - 把 `Unauthorized` 伪装成断网。
 - 在生产默认放开 CORS Any。
 - 用裸字符串错误代替稳定 auth error contract。
+- 把已认证远端 browser session 当成本机 native IPC capability。
 
 ## 11. Runtime Boundary
 

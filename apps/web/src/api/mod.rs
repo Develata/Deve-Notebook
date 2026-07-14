@@ -51,7 +51,7 @@ pub(crate) use self::host_file::{
 };
 pub(crate) use self::native_backend_bridge::{
     NativeBackendConfig, NativeBackendValidation, get_native_backend_config,
-    save_native_backend_remote, switch_native_backend_local,
+    save_native_backend_remote,
 };
 pub(crate) use self::native_http::api_url;
 pub use self::service::WsService;

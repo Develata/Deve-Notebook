@@ -147,6 +147,8 @@ pub fn StatusView(locale: RwSignal<Locale>, pending_ack_count: Memo<usize>) -> i
                 class="flex items-center gap-1.5"
                 data-deve-sync-status=summary.kind.marker()
                 data-deve-pending-ack-count=summary.pending_ack_count.to_string()
+                data-deve-repo-id=current_repo_id.unwrap_or_default()
+                data-deve-scope-nonce=current_scope_nonce.to_string()
             >
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
                 <span class="text-[11px] text-secondary font-medium">{text}</span>

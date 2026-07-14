@@ -76,6 +76,7 @@ pub enum DesktopMenuAction {
     ShowMainWindow,
     OpenCommandPalette,
     OpenSettings,
+    UseLocalBackend,
     QuitRequested,
 }
 
@@ -83,6 +84,7 @@ pub enum DesktopMenuAction {
 pub enum DesktopTrayAction {
     ShowMainWindow,
     ToggleWindowVisibility,
+    UseLocalBackend,
     QuitRequested,
 }
 
@@ -98,6 +100,7 @@ pub struct DesktopMenuTraySurface {
     pub tray_runtime_imported: bool,
     pub actions_are_ui_intents_only: bool,
     pub opens_process_runtime: bool,
+    pub process_runtime_changes_are_mode_coordinated: bool,
     pub opens_authority_write_path: bool,
 }
 
@@ -106,7 +109,7 @@ impl DesktopMenuTraySurface {
         self.menu_runtime_imported
             && self.tray_runtime_imported
             && self.actions_are_ui_intents_only
-            && !self.opens_process_runtime
+            && (!self.opens_process_runtime || self.process_runtime_changes_are_mode_coordinated)
             && !self.opens_authority_write_path
     }
 }
@@ -193,7 +196,8 @@ const MENU_TRAY_SURFACE: DesktopMenuTraySurface = DesktopMenuTraySurface {
     menu_runtime_imported: true,
     tray_runtime_imported: true,
     actions_are_ui_intents_only: true,
-    opens_process_runtime: false,
+    opens_process_runtime: true,
+    process_runtime_changes_are_mode_coordinated: true,
     opens_authority_write_path: false,
 };
 
@@ -201,12 +205,14 @@ const MENU_ACTIONS: &[DesktopMenuAction] = &[
     DesktopMenuAction::ShowMainWindow,
     DesktopMenuAction::OpenCommandPalette,
     DesktopMenuAction::OpenSettings,
+    DesktopMenuAction::UseLocalBackend,
     DesktopMenuAction::QuitRequested,
 ];
 
 const TRAY_ACTIONS: &[DesktopTrayAction] = &[
     DesktopTrayAction::ShowMainWindow,
     DesktopTrayAction::ToggleWindowVisibility,
+    DesktopTrayAction::UseLocalBackend,
     DesktopTrayAction::QuitRequested,
 ];
 

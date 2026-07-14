@@ -43,10 +43,12 @@
 - Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、默认 repo/projection 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
 - `LocalBackend` 必须在主 WebView 创建前完成 native session handoff 与 bootstrap 注入。Android 因 Wry cookie API 不受支持，必须在 WebView 登记后以无参数 native command 调用系统 CookieManager 安装 HttpOnly cookie，确认后只 reload 一次；cookie/secret 不得进入 JS 或 command 参数。
 - Mobile v1 不使用 child process。
-- Mobile 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；Settings 中的 Backend section 与 Desktop 使用同一套 Local Backend / Remote Backend 语义。
+- Mobile 可从可信 bundled `LocalBackend` Settings 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
-- RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；native-only “Use local backend” 入口可切回 Local Backend、启动 embedded loopback service 并重载 bundled Web shell。
-- `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
+- RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；远端页面不注册 backend facade，也不能调用 native IPC。
+- Mobile 原生 “Use Local Backend” 控件尚未落地，当前作为 required gap；不得用 Web fallback 冒充已完成。
+- `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不注册 Tauri commands，也不把远端 URL 保存为本地 writer authority。
+- `RemoteBrowser` 主 WebView 由 native 以已校验 HTTPS `WindowConfig` 直接创建，不通过 bundled 页面或远端页面的 init-script redirect 过渡。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - Mobile native bundle 不应固定依赖开发期 `http://127.0.0.1:3001` devUrl；生产 shell 加载 bundled frontendDist，并由 native backend mode 决定连接 local 或 remote。
 - 后台或系统暂停期间不承诺长时同步；回到前台后必须重新探测 service 与 writer gate。
@@ -59,7 +61,8 @@
 - service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
 - bundled Web shell 仍需 IndexedDB 与不可导出的 WebCrypto Ed25519 repo identity；Android System WebView 缺少该能力时保持 storage-limited 只读，LocalBackend 不得以 native session 绕过 browser identity。
-- WebCrypto Ed25519 不可用时，横幅会提示更新浏览器或 Android System WebView；target-host smoke 先验证真实 key generation，再执行创建、编辑、提交与 lifecycle 流程。
+- Android 正式支持/可写 evidence baseline 为 Android 10/API 29+ 与当前 WebView provider 137+；版本事实只用于 support/receipt，真实 non-extractable Ed25519 probe 仍是 writer gate 的最终判据。
+- WebCrypto Ed25519 不可用时，横幅会提示更新浏览器或 Android System WebView；target-host smoke 记录 API、provider、AVD/设备标识并先验证真实 key generation，再执行创建、编辑、提交与 lifecycle 流程。低于支持基线或 probe 失败只能产生只读负向证据。
 - Android target-host smoke 先构建 APK 并释放 Gradle daemon，再以 low-RAM 模式和有界 RAM 启动绑定本次进程的专用 emulator serial 与 AVD；它兼容目标镜像发布的 `sys.boot_completed` / `dev.bootcomplete` 完成信号，并在 package manager ready 后才继续。首次创建文档时会立即向当前 CodeMirror host 输入文本；同 breakpoint 的真实键盘 viewport resize 必须保持同一 host 与 OpenDoc request；跨 generation pending 通过暂停并丢弃旧 transport 的 outbound edit frame 证明，只有 replacement generation 的产品 replay 能让后端首次看到该文本。editor mount 以 host owner 隔离，旧 surface 的迟到 cleanup 不会销毁新 editor 或吞掉第一笔输入；提交必须在 NoteGit history 中出现对应 message 后才算成功。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
@@ -178,14 +181,14 @@
 3. 模拟 foreground reprobe，并检查 writer gate 状态。
 4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失。
 5. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin且旧 embedded service 已有界退出。
-6. 模拟 RemoteBrowser 失联，并使用 native-only “Use local backend” 切回 local。
+6. 模拟 RemoteBrowser 失联，确认远端页面没有 backend facade/native IPC；记录 Mobile 原生切回 local 控件仍是 required gap。
 
 期望结果：
 
 - 默认 LocalBackend 可以启动 embedded loopback service。
 - RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
 - Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
-- RemoteBrowser 失联时 native-only 入口可切回 LocalBackend。
+- RemoteBrowser 失联时保持只读且不暴露 native IPC；当前不能声明 Mobile 原生切回 LocalBackend 已验收。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
 - 后端退出后恢复使用新的随机 endpoint/session，不扫描端口；stale scope 被拒绝且 pending overlay 保留。
 - app exit 后 transport、metrics、prewarm、watcher 与 P2P task 不残留；RemoteBrowser 全程不创建 embedded runtime。

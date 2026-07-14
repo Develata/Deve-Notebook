@@ -45,11 +45,21 @@
 - Source Control HTTP write grant 必须绑定到同一个 dev browser session；另一个 localhost browser/profile/script
   缺少相同且签名有效的 dev session cookie 时，不应复用该 grant。
 
+### 5. Native RemoteBrowser 会话隔离
+
+- Desktop/Mobile RemoteBrowser 中的正常远端登录只建立远端 browser session，不开放宿主 native IPC。
+- 普通 Docker 浏览器和 RemoteBrowser 即使运行环境存在 `__TAURI_INTERNALS__`，没有 typed bundled-local
+  capability 时也不得注册 backend facade。
+- 远端页面不能用 IPC 切回 LocalBackend。Desktop 只能通过原生菜单/托盘恢复；Mobile 在原生控件落地前
+  明确显示为未完成能力，不以 Web fallback 伪装。
+- 切回 LocalBackend 后必须建立新 endpoint/session/scope；远端 auth cookie 与旧 authority 不得复用。
+
 ## 非目标
 
 - 当前阶段不把 peer identity 暴露为用户层可见登录概念。
 - 当前阶段不允许未授权状态继续假装可写。
 - anonymous localhost dev cookie 不是远程访问凭据，也不允许扩大为生产免密登录。
+- 远端 browser auth session 不是 native IPC 或本机 backend preference capability。
 
 ## Chrome MCP 验收实例
 
@@ -102,3 +112,20 @@
 
 - 断网表现为重连/离线提示。
 - 401/403 表现为需要重新认证，而不是继续重连。
+
+### AUTH-FEAT-04: RemoteBrowser 不获得宿主 IPC
+
+前置条件：
+
+- 普通 Docker 浏览器与 preference-driven Desktop RemoteBrowser 均连接同一 HTTPS 测试 origin。
+
+步骤：
+
+1. 分别完成登录、编辑和 commit/history。
+2. 重新加载页面并采集 network/console。
+3. 从 Desktop 原生菜单切回 LocalBackend。
+
+期望结果：
+
+- 两种远端页面都没有 native backend facade 或 `ipc.localhost` 请求，也没有相关 CSP 错误。
+- Desktop 新进程建立新的 LocalBackend session/scope，旧远端 auth/authority 不复用。
