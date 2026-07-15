@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CdpPage } from "./lib/android-webview-cdp.mjs";
+import {
+  CdpPage,
+  isExpectedCdpTargetRetirement,
+} from "./lib/android-webview-cdp.mjs";
 import {
   clickWebViewPoint,
   editorFocusMatchesMode,
@@ -73,6 +76,23 @@ test("timed-out Android CDP commands cannot retain pending response waiters", as
     /synthetic command timeout/,
   );
   assert.equal(page.pending.size, 0);
+});
+
+test("graceful exit accepts only CDP target retirement transport races", () => {
+  assert.equal(
+    isExpectedCdpTargetRetirement(
+      new Error("CDP socket closed during Runtime.evaluate"),
+    ),
+    true,
+  );
+  assert.equal(
+    isExpectedCdpTargetRetirement("Inspected target navigated or closed"),
+    true,
+  );
+  assert.equal(
+    isExpectedCdpTargetRetirement(new Error("native command denied")),
+    false,
+  );
 });
 
 test("writable editor focus requires a contenteditable CodeMirror surface", () => {

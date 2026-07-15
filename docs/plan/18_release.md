@@ -165,6 +165,11 @@ Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、DOM pro
 renderer（包括系统 low-memory 回收后正在重建的 renderer）不得占满整个 lifecycle deadline；
 但总 journey deadline、WebCrypto probe 与业务断言不得因此放宽。
 
+Mobile graceful-exit smoke 可以把 exit command 后立即发生的 CDP target retirement 视为
+“响应可能被进程退出截断”，但不得仅凭该 transport error 宣布成功。外层 target-host gate
+仍必须证明 app PID 在有界时间内消失、出现 clean shutdown marker，且不存在 shutdown
+failed-closed marker；其它 native command error 必须原样失败。
+
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
 发布与验收基线可以提供 Rust developer CLI mirror，用于替代对 host bash/awk/rg runtime 敏感的纯文本合同检查。该入口由独立 workspace tool crate `tools/baseline`（package `deve_baseline`）承载，属于 developer/release tooling，不属于普通用户 `deve` 命令面；它 **MUST NOT** 依赖 `deve_cli` 产品 runtime，默认也 **MUST NOT** 依赖 `deve_core`，更 **MUST NOT** 获得 ledger、projection、source-control 或 native authority 写权限。

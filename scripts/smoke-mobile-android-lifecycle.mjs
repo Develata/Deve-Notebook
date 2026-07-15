@@ -6,6 +6,7 @@ import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
 import {
   findStableAppPage,
+  isExpectedCdpTargetRetirement,
   visibleElement,
 } from "./lib/android-webview-cdp.mjs";
 import {
@@ -307,6 +308,18 @@ async function nativeInvoke(page, command, args = {}) {
   return outcome.value;
 }
 
+async function requestGracefulNativeExit(page) {
+  try {
+    await nativeInvoke(page, "native_backend_debug_request_exit");
+  } catch (error) {
+    if (!isExpectedCdpTargetRetirement(error)) {
+      throw new Error(`native graceful exit request failed: ${error.message}`);
+    }
+    console.log("mobile-android-lifecycle: exit acknowledged by CDP target retirement");
+  }
+  await page.close().catch(() => {});
+}
+
 async function createDocument(page, path, content) {
   console.log(`mobile-android-lifecycle: creating document ${path}`);
   return createAndroidDocument(page, path, content, {
@@ -339,12 +352,7 @@ async function main() {
     console.log(
       `mobile-android-lifecycle: readonly negative evidence accepted blocker=${identityCapability.blocker}`,
     );
-    try {
-      await nativeInvoke(page, "native_backend_debug_request_exit");
-    } catch (error) {
-      throw new Error(`native graceful exit request failed: ${error.message}`);
-    }
-    await page.close();
+    await requestGracefulNativeExit(page);
     console.log("mobile-android-lifecycle: readonly-negative ok");
     return;
   }
@@ -495,12 +503,7 @@ async function main() {
   });
 
   console.log("mobile-android-lifecycle: requesting graceful native exit");
-  try {
-    await nativeInvoke(page, "native_backend_debug_request_exit");
-  } catch (error) {
-    throw new Error(`native graceful exit request failed: ${error.message}`);
-  }
-  await page.close();
+  await requestGracefulNativeExit(page);
   console.log("mobile-android-lifecycle: ok");
 }
 

@@ -1008,6 +1008,11 @@ settles memory pressure. The CDP helper bounds each discovery command and
 retries the page within the lifecycle deadline; it does not extend that
 deadline or weaken WebCrypto and business-flow assertions.
 
+The debug graceful-exit command may retire its CDP target before its invoke
+response returns. The harness accepts only that narrow transport race and then
+requires bounded process disappearance plus the clean-shutdown logcat marker;
+all command errors and failed-shutdown markers remain failures.
+
 iOS shell-only package execution is a separate explicit gate:
 
 ```bash

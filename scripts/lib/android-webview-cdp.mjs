@@ -1,5 +1,11 @@
 const DISCOVERY_COMMAND_TIMEOUT_MS = 10_000;
 
+export function isExpectedCdpTargetRetirement(error) {
+  const message = String(error?.message ?? error);
+  return /CDP socket closed during Runtime\.evaluate|Inspected target navigated or closed/i
+    .test(message);
+}
+
 export class CdpPage {
   constructor(socket, withDeadline) {
     this.socket = socket;

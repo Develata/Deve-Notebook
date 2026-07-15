@@ -4,7 +4,11 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
-import { findStableAppPage, visibleElement } from "./lib/android-webview-cdp.mjs";
+import {
+  findStableAppPage,
+  isExpectedCdpTargetRetirement,
+  visibleElement,
+} from "./lib/android-webview-cdp.mjs";
 import {
   commitAndroidChange,
   createAndroidDocument,
@@ -333,7 +337,7 @@ async function main() {
   assert.equal(authorityTupleChanged, true, "remote authority tuple must not be reused locally");
 
   await nativeInvoke(page, "native_backend_debug_request_exit").catch((error) => {
-    if (!/CDP socket closed|Inspected target navigated or closed/i.test(String(error))) throw error;
+    if (!isExpectedCdpTargetRetirement(error)) throw error;
   });
   await page.close().catch(() => {});
   const processExitedAfterGracefulShutdown = await waitUntil(
