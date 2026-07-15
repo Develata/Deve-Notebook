@@ -160,6 +160,11 @@ Android package producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，
 context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的旧 dist，
 也不得让 clean-worktree target-host receipt 在进入真实 package build 前失败。
 
+Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、DOM probe 与诊断读取
+限制为短时单命令窗口，并在超时后移除 pending waiter、关闭旧连接后重试。单个冷启动
+renderer（包括系统 low-memory 回收后正在重建的 renderer）不得占满整个 lifecycle deadline；
+但总 journey deadline、WebCrypto probe 与业务断言不得因此放宽。
+
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
 发布与验收基线可以提供 Rust developer CLI mirror，用于替代对 host bash/awk/rg runtime 敏感的纯文本合同检查。该入口由独立 workspace tool crate `tools/baseline`（package `deve_baseline`）承载，属于 developer/release tooling，不属于普通用户 `deve` 命令面；它 **MUST NOT** 依赖 `deve_cli` 产品 runtime，默认也 **MUST NOT** 依赖 `deve_core`，更 **MUST NOT** 获得 ledger、projection、source-control 或 native authority 写权限。

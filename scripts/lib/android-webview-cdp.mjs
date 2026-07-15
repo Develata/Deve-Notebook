@@ -1,3 +1,5 @@
+const DISCOVERY_COMMAND_TIMEOUT_MS = 10_000;
+
 export class CdpPage {
   constructor(socket, withDeadline) {
     this.socket = socket;
@@ -35,7 +37,7 @@ export class CdpPage {
         socket.addEventListener("error", () => reject(new Error("Android WebView CDP socket failed")), { once: true });
       }), 10000);
       const page = new CdpPage(socket, withDeadline);
-      await page.send("Runtime.enable");
+      await page.send("Runtime.enable", {}, DISCOVERY_COMMAND_TIMEOUT_MS);
       return page;
     } catch (error) {
       try {
@@ -45,12 +47,17 @@ export class CdpPage {
     }
   }
 
-  send(method, params = {}) {
+  async send(method, params = {}, timeoutMs) {
     const id = this.nextId++;
-    return this.withDeadline(method, new Promise((resolve, reject) => {
+    const command = new Promise((resolve, reject) => {
       this.pending.set(id, { method, resolve, reject });
       this.socket.send(JSON.stringify({ id, method, params }));
-    }));
+    });
+    try {
+      return await this.withDeadline(method, command, timeoutMs);
+    } finally {
+      this.pending.delete(id);
+    }
   }
 
   on(method, listener) {
@@ -59,13 +66,13 @@ export class CdpPage {
     this.listeners.set(method, listeners);
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, timeoutMs) {
     const response = await this.send("Runtime.evaluate", {
       expression,
       awaitPromise: true,
       returnByValue: true,
       userGesture: true,
-    });
+    }, timeoutMs);
     if (response.exceptionDetails) {
       const description = response.exceptionDetails.exception?.description
         ?? response.exceptionDetails.text
@@ -77,6 +84,13 @@ export class CdpPage {
 
   call(fn, ...args) {
     return this.evaluate(`(${fn.toString()})(...${JSON.stringify(args)})`);
+  }
+
+  callWithin(timeoutMs, fn, ...args) {
+    return this.evaluate(
+      `(${fn.toString()})(...${JSON.stringify(args)})`,
+      timeoutMs,
+    );
   }
 
   async close() {
@@ -127,12 +141,17 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, waitUntil, 
     try {
       page = await CdpPage.connect(target.webSocketDebuggerUrl, withDeadline);
       console.log("mobile-android-lifecycle: page CDP attached");
-      await waitUntil("Android app DOM", () => page.call(() =>
-        Boolean(document.querySelector("[data-deve-sync-status]"))), 10000);
-      await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
+      await waitUntil("Android app DOM", () => page.callWithin(
+        DISCOVERY_COMMAND_TIMEOUT_MS,
+        () => Boolean(document.querySelector("[data-deve-sync-status]")),
+      ), 10000);
+      await page.evaluate(
+        `globalThis.__deveVisibleElement = ${visibleElement.toString()}`,
+        DISCOVERY_COMMAND_TIMEOUT_MS,
+      );
     } catch (error) {
       const diagnostics = page
-        ? await page.call(() => ({
+        ? await page.callWithin(DISCOVERY_COMMAND_TIMEOUT_MS, () => ({
           url: location.href,
           readyState: document.readyState,
           title: document.title,

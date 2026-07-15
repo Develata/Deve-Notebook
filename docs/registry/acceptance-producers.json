@@ -432,13 +432,20 @@
         "scripts/lib/android-tools.sh",
         "scripts/smoke-mobile-android-lifecycle.sh",
         "scripts/smoke-mobile-android-lifecycle.mjs",
+        "scripts/smoke-mobile-android-remote-browser.sh",
+        "scripts/smoke-mobile-android-remote-browser.mjs",
         "scripts/inspect-android-target-capability.mjs",
+        "scripts/webcrypto-capability.test.mjs",
         "scripts/lib/webcrypto-capability.mjs",
+        "scripts/android-target-capability.test.mjs",
         "scripts/lib/android-target-capability.mjs",
+        "scripts/mobile-webview-interaction.test.mjs",
         "scripts/lib/android-webview-cdp.mjs",
         "scripts/lib/mobile-webview-interaction.mjs",
         "scripts/lib/mobile-source-control-interaction.mjs",
         "scripts/lib/android-business-flow.mjs",
+        "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
       ],
       "steps": [
@@ -501,13 +508,20 @@
         "scripts/lib/android-tools.sh",
         "scripts/smoke-mobile-android-remote-browser.sh",
         "scripts/smoke-mobile-android-remote-browser.mjs",
+        "scripts/smoke-mobile-android-lifecycle.sh",
         "scripts/inspect-android-target-capability.mjs",
+        "scripts/webcrypto-capability.test.mjs",
         "scripts/lib/webcrypto-capability.mjs",
+        "scripts/android-target-capability.test.mjs",
         "scripts/lib/android-target-capability.mjs",
+        "scripts/mobile-webview-interaction.test.mjs",
         "scripts/lib/android-webview-cdp.mjs",
         "scripts/lib/mobile-webview-interaction.mjs",
         "scripts/lib/mobile-source-control-interaction.mjs",
-        "scripts/lib/android-business-flow.mjs"
+        "scripts/lib/android-business-flow.mjs",
+        "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/websocket-delivery-gate.test.mjs",
+        "scripts/lib/websocket-delivery-gate.mjs"
       ],
       "steps": [
         {

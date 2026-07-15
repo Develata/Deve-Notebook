@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { CdpPage } from "./lib/android-webview-cdp.mjs";
 import {
   clickWebViewPoint,
   editorFocusMatchesMode,
@@ -12,6 +13,67 @@ import {
   typeAndroidTextField,
 } from "./lib/mobile-webview-interaction.mjs";
 import { focusEditor } from "./lib/mobile-webview-interaction.mjs";
+
+class SilentSocket extends EventTarget {
+  static CLOSED = 3;
+
+  constructor() {
+    super();
+    this.readyState = 0;
+    queueMicrotask(() => {
+      this.readyState = 1;
+      this.dispatchEvent(new Event("open"));
+    });
+  }
+
+  send() {}
+
+  close() {
+    this.readyState = SilentSocket.CLOSED;
+    this.dispatchEvent(new Event("close"));
+  }
+}
+
+test("Android CDP discovery bounds Runtime.enable and retires its waiter", async () => {
+  const originalWebSocket = globalThis.WebSocket;
+  const observed = [];
+  globalThis.WebSocket = SilentSocket;
+  const withDeadline = async (label, promise, limit) => {
+    observed.push({ label, limit });
+    if (label === "Runtime.enable") throw new Error("synthetic command timeout");
+    return promise;
+  };
+
+  try {
+    await assert.rejects(
+      CdpPage.connect("ws://android.test/page", withDeadline),
+      /synthetic command timeout/,
+    );
+  } finally {
+    if (originalWebSocket === undefined) delete globalThis.WebSocket;
+    else globalThis.WebSocket = originalWebSocket;
+  }
+
+  assert.deepEqual(
+    observed.find(({ label }) => label === "Runtime.enable"),
+    { label: "Runtime.enable", limit: 10_000 },
+  );
+});
+
+test("timed-out Android CDP commands cannot retain pending response waiters", async () => {
+  const socket = new SilentSocket();
+  const page = new CdpPage(socket, async (label, _promise, limit) => {
+    assert.equal(label, "Runtime.evaluate");
+    assert.equal(limit, 25);
+    throw new Error("synthetic command timeout");
+  });
+
+  await assert.rejects(
+    page.send("Runtime.evaluate", {}, 25),
+    /synthetic command timeout/,
+  );
+  assert.equal(page.pending.size, 0);
+});
 
 test("writable editor focus requires a contenteditable CodeMirror surface", () => {
   assert.equal(editorFocusMatchesMode("true", true), true);

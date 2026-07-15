@@ -1003,6 +1003,11 @@ must consume the newly built current-HEAD dist. A pre-existing dist directory
 is never accepted as evidence for the packaged WebView shell, because it may
 not contain the current capability gates or DOM smoke markers.
 
+Cold Android WebView startup can recycle its first renderer while the system
+settles memory pressure. The CDP helper bounds each discovery command and
+retries the page within the lifecycle deadline; it does not extend that
+deadline or weaken WebCrypto and business-flow assertions.
+
 iOS shell-only package execution is a separate explicit gate:
 
 ```bash
