@@ -7,7 +7,7 @@ use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::ExternalApplyReceipt;
 use serde_json::json;
 
 use super::REMOTE_PROXY_SCOPE_NONCE;
@@ -57,7 +57,7 @@ pub(super) fn unstage_file(
 pub(super) fn apply_external_changes(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,
-) -> Result<Vec<ChangeEntry>> {
+) -> Result<ExternalApplyReceipt> {
     let url = format!("{}/api/delegated/sc/apply-external-changes", api.base_url);
     let res = super::block_on_safe(async {
         http::send_json(api.delegated_post(&url).json(&json!({

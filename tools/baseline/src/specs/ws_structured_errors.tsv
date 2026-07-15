@@ -14,4 +14,4 @@ contains	apps/web/src/hooks/use_core/effects/message_dispatch_route_protocol.rs	
 contains	apps/web/src/i18n/server_error.rs	ServerErrorCode
 contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncVersionMismatch
 contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncInvalidPayload
-contains	apps/web/src/api/incoming/decode.rs	ServerErrorCode::SyncInvalidPayload
+contains	apps/web/src/api/incoming/decode.rs	Result<ServerMessage, ProtocolFrameError>

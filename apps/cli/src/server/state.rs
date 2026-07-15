@@ -4,6 +4,7 @@
 //! Shared Axum/WebSocket runtime state.
 
 use super::diff_projection::DiffProjectionExecutor;
+use super::repo_mutation::RepoMutationPublicationGate;
 use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
 use super::tree_state::RepoTreeRegistry;
@@ -29,6 +30,8 @@ pub struct AppState {
     pub(crate) diff_projection_executor: Arc<DiffProjectionExecutor>,
     #[cfg(not(test))]
     pub(crate) source_control_write_grants: Arc<SourceControlWriteGrants>,
+    #[cfg(not(test))]
+    pub(crate) repo_mutation_gate: Arc<RepoMutationPublicationGate>,
 }
 
 impl AppState {
@@ -82,6 +85,29 @@ impl AppState {
         stores
             .entry(key)
             .or_insert_with(|| Arc::new(SourceControlWriteGrants::new()))
+            .clone()
+    }
+
+    #[cfg(not(test))]
+    pub(crate) fn repo_mutation_gate(&self) -> Arc<RepoMutationPublicationGate> {
+        self.repo_mutation_gate.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn repo_mutation_gate(&self) -> Arc<RepoMutationPublicationGate> {
+        use std::collections::HashMap;
+        use std::sync::{Mutex, OnceLock};
+
+        static TEST_GATES: OnceLock<Mutex<HashMap<usize, Arc<RepoMutationPublicationGate>>>> =
+            OnceLock::new();
+        let key = self as *const Self as usize;
+        let stores = TEST_GATES.get_or_init(|| Mutex::new(HashMap::new()));
+        let Ok(mut stores) = stores.lock() else {
+            return Arc::new(RepoMutationPublicationGate::new());
+        };
+        stores
+            .entry(key)
+            .or_insert_with(|| Arc::new(RepoMutationPublicationGate::new()))
             .clone()
     }
 }

@@ -67,14 +67,57 @@ pub(super) async fn create_doc(
         },
     )
     .await?;
-    let mut created = CreatedDoc::new(path);
-    for _ in 0..6 {
-        created.track(recv_server_message(ws).await?, repo_id, scope_nonce);
-        if created.is_settled() {
-            return Ok(created.doc_id.expect("settled doc id"));
+    let doc_id = assert_create_recovery(
+        recv_server_message(ws).await?,
+        repo_id,
+        scope_nonce,
+    );
+    send_client_message(
+        ws,
+        ClientMessage::ListDocs {
+            request_id: "create-recovery".into(),
+            scope_nonce: Some(scope_nonce),
+        },
+    )
+    .await?;
+    let mut saw_doc_list = false;
+    let mut saw_tree = false;
+    let mut saw_scope = false;
+    for _ in 0..3 {
+        match recv_server_message(ws).await? {
+            ServerMessage::RepoSwitched { uuid, branch, .. } => {
+                assert_eq!(uuid, repo_id.to_string());
+                assert_eq!(branch, None);
+                saw_scope = true;
+            }
+            ServerMessage::DocList {
+                request_id,
+                repo_id: Some(actual),
+                branch,
+                scope_nonce: actual_scope,
+                docs,
+            } => {
+                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
+                assert_eq!(request_id.as_deref(), Some("create-recovery"));
+                assert!(docs.iter().any(|(id, candidate)| *id == doc_id && candidate == path));
+                saw_doc_list = true;
+            }
+            ServerMessage::TreeUpdate {
+                request_id,
+                repo_id: Some(actual),
+                branch,
+                scope_nonce: actual_scope,
+                ..
+            } => {
+                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
+                assert_eq!(request_id.as_deref(), Some("create-recovery"));
+                saw_tree = true;
+            }
+            other => anyhow::bail!("expected create recovery projection, got {other:?}"),
         }
     }
-    anyhow::bail!("created doc view did not settle: {path}");
+    anyhow::ensure!(saw_scope && saw_doc_list && saw_tree, "created doc recovery did not settle");
+    Ok(doc_id)
 }
 
 pub(super) async fn expect_edit_committed(
@@ -184,64 +227,28 @@ fn assert_origin(
     assert_eq!((origin.client_id, origin.client_op_id), (client_id, client_op_id));
 }
 
-struct CreatedDoc<'a> {
-    path: &'a str,
-    doc_id: Option<DocId>,
-    saw_tree: bool,
-    saw_fs: bool,
-}
-
-impl<'a> CreatedDoc<'a> {
-    fn new(path: &'a str) -> Self {
-        Self {
-            path,
-            doc_id: None,
-            saw_tree: false,
-            saw_fs: false,
+fn assert_create_recovery(
+    message: ServerMessage,
+    repo_id: uuid::Uuid,
+    scope_nonce: u64,
+) -> DocId {
+    match message {
+        ServerMessage::ProjectionRecoveryRequired(required) => {
+            assert_eq!(
+                (required.repo_id, required.branch, required.scope_nonce),
+                (repo_id, None, Some(scope_nonce))
+            );
+            assert_eq!(
+                required.cause,
+                deve_core::protocol::ProjectionRecoveryCause::DocumentMutation
+            );
+            match required.plan.documents {
+                deve_core::protocol::DocumentRecoveryScope::Exact(docs) if docs.len() == 1 => {
+                    docs[0]
+                }
+                other => panic!("create recovery must identify one exact document, got {other:?}"),
+            }
         }
-    }
-
-    fn is_settled(&self) -> bool {
-        self.doc_id.is_some() && self.saw_tree && self.saw_fs
-    }
-
-    fn track(&mut self, message: ServerMessage, repo_id: uuid::Uuid, scope_nonce: u64) {
-        match message {
-            ServerMessage::DocList {
-                repo_id: Some(actual),
-                branch,
-                scope_nonce: actual_scope,
-                docs,
-                ..
-            } => {
-                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
-                self.doc_id = docs
-                    .into_iter()
-                    .find(|(_id, path)| path == self.path)
-                    .map(|(id, _path)| id);
-            }
-            ServerMessage::TreeUpdate {
-                repo_id: Some(actual),
-                branch,
-                scope_nonce: actual_scope,
-                ..
-            } => {
-                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
-                self.saw_tree = true;
-            }
-            ServerMessage::FsChangeDetected {
-                repo_id: Some(actual),
-                branch,
-                scope_nonce: actual_scope,
-                path,
-                change_type,
-                ..
-            } => {
-                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
-                assert_eq!((path.as_str(), change_type.as_str()), (self.path, "added"));
-                self.saw_fs = true;
-            }
-            other => panic!("expected create-doc view message, got {other:?}"),
-        }
+        other => panic!("expected create projection recovery, got {other:?}"),
     }
 }

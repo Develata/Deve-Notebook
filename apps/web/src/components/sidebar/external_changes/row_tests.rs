@@ -52,8 +52,17 @@ fn mobile_external_changes_touch_targets_min_size_bound() {
 fn external_changes_row_default_click_opens_diff_without_button_bubbling() {
     let source = include_str!("row.rs");
 
-    assert!(source.contains("on_get_doc_diff.run(entry_store.get_value())"));
+    assert!(source.contains("on_get_doc_diff.run(entry_for_open_diff.as_ref().clone())"));
     assert!(source.contains("event.stop_propagation();"));
+}
+
+#[test]
+fn external_changes_actions_do_not_cross_owner_scoped_reactive_values() {
+    let source = include_str!("row.rs");
+
+    assert!(!source.contains("Signal::derive"));
+    assert!(!source.contains("StoredValue"));
+    assert!(source.contains("can_write=core.can_write"));
 }
 
 #[test]

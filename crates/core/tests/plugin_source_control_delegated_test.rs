@@ -5,7 +5,8 @@ use deve_core::plugin::manifest::{Capability, PluginManifest};
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{
-    ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, SourceControlApi,
+    ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, ExternalApplyReceipt,
+    SourceControlApi,
 };
 
 #[derive(Default)]
@@ -106,7 +107,7 @@ impl SourceControlApi for RecordingDelegatedSourceControlApi {
     fn apply_external_changes_in_repo(
         &self,
         _repo: &RepoSelector,
-    ) -> anyhow::Result<Vec<ChangeEntry>> {
+    ) -> anyhow::Result<ExternalApplyReceipt> {
         self.unused()
     }
 }

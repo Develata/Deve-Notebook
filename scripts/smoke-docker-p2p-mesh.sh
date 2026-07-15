@@ -14,6 +14,8 @@ PORT_B="${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}"
 REQUIRED="${DEVE_DOCKER_P2P_MESH_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_P2P_MESH_KEEP:-0}"
 SKIP_BUILD="${DEVE_DOCKER_P2P_MESH_SKIP_BUILD:-0}"
+IMAGE="${DEVE_DOCKER_P2P_MESH_IMAGE:-${DEVE_RELEASE_CANDIDATE_IMAGE:-deve-p2p-mesh-smoke:local}}"
+EXPECTED_IMAGE_ID="${DEVE_RELEASE_CANDIDATE_IMAGE_ID:-}"
 INJECT_SEQUENCE_GAP="${DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
 DOCKER_BUILDKIT_MODE="${DEVE_DOCKER_P2P_MESH_BUILDKIT:-0}"
@@ -62,6 +64,15 @@ docker_cmd() {
   command "$DOCKER_BIN" "$@"
 }
 
+verify_candidate_image() {
+  [[ -n "$EXPECTED_IMAGE_ID" ]] || return 0
+  local observed
+  observed="$(docker_cmd image inspect --format '{{.Id}}' "$IMAGE")" \
+    || fail "could not inspect candidate image identity: $IMAGE"
+  [[ "$observed" == "$EXPECTED_IMAGE_ID" ]] \
+    || fail "candidate image identity mismatch: expected=$EXPECTED_IMAGE_ID observed=$observed"
+}
+
 docker_compose() {
   AUTH_SECRET="$AUTH_SECRET" \
   AUTH_USER="$AUTH_USER" \
@@ -73,6 +84,7 @@ docker_compose() {
   DEVE_DOCKER_P2P_MESH_PEER_A_ID="$PEER_A_EXPECTED_ID" \
   DEVE_DOCKER_P2P_MESH_PEER_B_ID="$PEER_B_EXPECTED_ID" \
   DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP="$INJECT_SEQUENCE_GAP" \
+  DEVE_DOCKER_P2P_MESH_IMAGE="$IMAGE" \
   DEVE_DOCKER_P2P_MESH_A_PORT="$PORT_A" \
   DEVE_DOCKER_P2P_MESH_B_PORT="$PORT_B" \
   DOCKER_BUILDKIT="$DOCKER_BUILDKIT_MODE" \
@@ -675,6 +687,9 @@ trap cleanup EXIT
 
 if [[ "$SKIP_BUILD" != "1" && "$SKIP_BUILD" != "true" ]]; then
   docker_compose build peer-a
+else
+  docker_cmd image inspect "$IMAGE" >/dev/null 2>&1 || fail "existing image not found: $IMAGE"
+  verify_candidate_image
 fi
 docker_compose up -d --no-build
 
@@ -760,6 +775,7 @@ if is_true "$INJECT_SEQUENCE_GAP"; then
 fi
 
 assert_no_token_material_in_logs_or_persisted_data "final"
+verify_candidate_image
 
 if ! is_true "$KEEP"; then
   cleanup || fail "compose cleanup failed after successful smoke"

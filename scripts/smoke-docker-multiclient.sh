@@ -15,7 +15,8 @@ BASE_ORIGIN="${BASE_URL%/}"
 REQUIRED="${DEVE_DOCKER_MULTI_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_MULTI_KEEP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
-IMAGE="${DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient}"
+IMAGE="${DEVE_DOCKER_MULTI_IMAGE:-${DEVE_RELEASE_CANDIDATE_IMAGE:-deve-notebook:local-multiclient}}"
+EXPECTED_IMAGE_ID="${DEVE_RELEASE_CANDIDATE_IMAGE_ID:-}"
 SKIP_BUILD="${DEVE_DOCKER_MULTI_SKIP_BUILD:-0}"
 AUTH_SECRET="${DEVE_DOCKER_MULTI_AUTH_SECRET:-deve_docker_multi_secret_32_bytes_ok!!}"
 AUTH_USER="${DEVE_DOCKER_MULTI_AUTH_USER:-admin}"
@@ -39,6 +40,15 @@ skip() {
 
 docker_cmd() {
   command "$DOCKER_BIN" "$@"
+}
+
+verify_candidate_image() {
+  [[ -n "$EXPECTED_IMAGE_ID" ]] || return 0
+  local observed
+  observed="$(docker_cmd image inspect --format '{{.Id}}' "$IMAGE")" \
+    || fail "could not inspect candidate image identity: $IMAGE"
+  [[ "$observed" == "$EXPECTED_IMAGE_ID" ]] \
+    || fail "candidate image identity mismatch: expected=$EXPECTED_IMAGE_ID observed=$observed"
 }
 
 docker_compose() {
@@ -119,6 +129,9 @@ playwright_module_available() {
 }
 
 run_playwright() {
+  local container_id
+  container_id="$(docker_compose ps -q deve-server)"
+  [[ -n "$container_id" ]] || fail "compose service container id is unavailable"
   node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
   mkdir -p "$PLAYWRIGHT_WORK_DIR"
   if [[ ! -f "$PLAYWRIGHT_WORK_DIR/package.json" ]]; then
@@ -134,6 +147,8 @@ run_playwright() {
   DEVE_DOCKER_MULTI_AUTH_USER="$AUTH_USER" \
   DEVE_DOCKER_MULTI_AUTH_PASSWORD="$AUTH_PASSWORD" \
   DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json" \
+  DEVE_DOCKER_MULTI_DOCKER_BIN="$DOCKER_BIN" \
+  DEVE_DOCKER_MULTI_CONTAINER_ID="$container_id" \
     node "$NODE_SCRIPT"
 }
 
@@ -152,6 +167,7 @@ trap cleanup EXIT
 
 if [[ "$SKIP_BUILD" == "1" || "$SKIP_BUILD" == "true" ]]; then
   docker_cmd image inspect "$IMAGE" >/dev/null 2>&1 || fail "existing image not found: $IMAGE"
+  verify_candidate_image
   echo "docker-multiclient-smoke: using existing image $IMAGE"
   docker_compose up -d --no-build
 else
@@ -167,5 +183,7 @@ if ! run_playwright; then
   diagnose
   fail "Playwright multi-client smoke failed"
 fi
+
+verify_candidate_image
 
 echo "docker-multiclient-smoke: ok"

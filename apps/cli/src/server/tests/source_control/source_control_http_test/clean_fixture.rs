@@ -6,8 +6,12 @@
 
 use super::support::{ProxyHarness, seed_pending, write_workspace_file};
 use deve_core::git_bridge::get_record;
-use deve_core::protocol::{ServerError, ServerErrorCode};
-use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
+use deve_core::protocol::{
+    DocumentRecoveryScope, ProjectionRecoveryCause, ServerError, ServerErrorCode, ServerMessage,
+};
+use deve_core::source_control::{
+    ChangeEntry, ChangeStatus, CommitInfo, ExternalApplyReceipt,
+};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Result<()> {
@@ -55,8 +59,9 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
 
     post_path(&harness, "/api/sc/stage-pending", "smoke/a.md").await?;
     let applied = post_apply_external_changes(&harness).await?;
-    assert_eq!(applied.len(), 1);
-    assert_eq!(applied[0].path, "smoke/a.md");
+    assert_eq!(applied.applied_target_count, 1);
+    assert_eq!(applied.affected_docs.len(), 1);
+    assert!(applied.authority_head.storage_key() > 0);
     assert!(
         harness
             .repo
@@ -98,6 +103,40 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_external_apply_returns_receipt_and_broadcasts_one_recovery() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    write_workspace_file(&harness.dir, "smoke/live.md", "hello");
+    seed_pending(&harness.repo, "smoke/live.md", ChangeStatus::Added, "hello");
+    post_path(&harness, "/api/sc/stage-pending", "smoke/live.md").await?;
+    let mut events = harness.state.tx.subscribe();
+
+    let applied = post_apply_external_changes(&harness).await?;
+    assert_eq!(applied.applied_target_count, 1);
+    let recovery = tokio::time::timeout(std::time::Duration::from_secs(1), events.recv()).await??;
+    match recovery {
+        ServerMessage::ProjectionRecoveryRequired(required) => {
+            assert_eq!(required.repo_id, applied.repo_id);
+            assert_eq!(required.cause, ProjectionRecoveryCause::ExternalApply);
+            assert_eq!(
+                required.plan.documents,
+                DocumentRecoveryScope::Exact(applied.affected_docs.clone())
+            );
+            assert!(required.plan.refresh_doc_list);
+            assert!(required.plan.refresh_source_control);
+            assert!(required.plan.refresh_external_changes);
+        }
+        other => panic!("expected one typed recovery after External Apply, got {other:?}"),
+    }
+    assert!(
+        events.try_recv().is_err(),
+        "apply published unexpected extra events"
+    );
+
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
     let repo_name = harness.repo.local_repo_name();
@@ -131,7 +170,12 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
         harness.repo.list_pending_fs_in_local_repo(repo_name)?.len(),
         1
     );
-    assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
     harness.shutdown().await;
     Ok(())
 }
@@ -145,7 +189,12 @@ async fn http_source_control_commit_always_queues_git_main_mirror() -> anyhow::R
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&repo_root)?;
 
     write_workspace_file(&harness.dir, "smoke/mirror.md", "hello");
-    seed_pending(&harness.repo, "smoke/mirror.md", ChangeStatus::Added, "hello");
+    seed_pending(
+        &harness.repo,
+        "smoke/mirror.md",
+        ChangeStatus::Added,
+        "hello",
+    );
     post_path(&harness, "/api/sc/stage-pending", "smoke/mirror.md").await?;
     post_apply_external_changes(&harness).await?;
 
@@ -191,9 +240,7 @@ async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow
     Ok(())
 }
 
-async fn post_apply_external_changes(
-    harness: &ProxyHarness,
-) -> anyhow::Result<Vec<ChangeEntry>> {
+async fn post_apply_external_changes(harness: &ProxyHarness) -> anyhow::Result<ExternalApplyReceipt> {
     harness.grant_browser_write(1)?;
     let response = harness
         .client

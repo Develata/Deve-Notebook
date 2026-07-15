@@ -3,7 +3,9 @@
 //!
 //! Scope nonce stamping for runtime broadcasts.
 
-use deve_core::protocol::{ServerError, ServerMessage};
+#[cfg(test)]
+use deve_core::protocol::ServerError;
+use deve_core::protocol::ServerMessage;
 
 pub(super) fn stamp_scope_nonce(msg: ServerMessage, scope_nonce: u64) -> ServerMessage {
     match msg {
@@ -63,10 +65,15 @@ pub(super) fn stamp_scope_nonce(msg: ServerMessage, scope_nonce: u64) -> ServerM
             peer_id,
             scope_nonce: Some(scope_nonce),
         },
+        ServerMessage::ProjectionRecoveryRequired(mut recovery) => {
+            recovery.scope_nonce = Some(scope_nonce);
+            ServerMessage::ProjectionRecoveryRequired(recovery)
+        }
         other => other,
     }
 }
 
+#[cfg(test)]
 pub(super) fn scoped_protocol_error(
     error: ServerError,
     switch_nonce: Option<u64>,

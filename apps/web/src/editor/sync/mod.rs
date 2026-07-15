@@ -14,6 +14,7 @@ mod history_replay;
 mod history_resend;
 mod key;
 mod live;
+mod recovery;
 mod route_doc;
 mod route_payload;
 mod scope;
@@ -31,6 +32,13 @@ use route_payload::route_payload_message;
 use scope::{ScopedMessageScope, SyncPayloadScope, accepts_sync_payload};
 
 pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
+    let msg = match msg {
+        ServerMessage::ProjectionRecoveryRequired(required) => {
+            recovery::handle_required(ctx, required);
+            return;
+        }
+        other => other,
+    };
     let Some(msg) = route_doc_message(msg, ctx) else {
         return;
     };

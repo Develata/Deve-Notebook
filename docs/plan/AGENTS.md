@@ -99,6 +99,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `03_storage/authority#facts-partition` | `authority.md ### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
 | `03_storage/authority#ledger-entry-format-contract` | `authority.md ### 4.1.1 Ledger Entry Format Contract` | LedgerEntry 序列化/解码格式与版本兼容合同 |
 | `03_storage/authority#redb-schema-version-contract` | `authority.md ### 4.3.1 Redb Schema Version Gate` | redb schema 版本闸门与迁移/拒绝边界 |
+| `03_storage/authority#repo-mutation-publication-gate` | `authority.md ### 6.1.1 Repository Mutation Publication Gate` | repo-scoped 本地 authority writer 串行、提交结果分类与有序 projection recovery 发布 |
 | `03_storage/projection#projection-contract` | `projection.md ## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
 | `03_storage/watcher#watcher-contract` | `watcher.md ## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `03_storage/repair#backup-export` | `repair.md ### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
@@ -116,6 +117,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
+| `07_network#projection-recovery-contract` | `### 4.3.1 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
 | `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
 | `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
@@ -185,6 +187,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `18_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
 | `09_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
 | `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
+| `09_web_thin_client_ledger#projection-recovery-coordinator` | `### 8.1.1 Projection Recovery Coordinator` | Web generation-bound projection recovery、pending 保留、gap reconnect 与显式 Retry |
 | `19_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `19_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
 | `06_backup#projection-backup-scope` | `## 1. Scope` | Projection Backup 只搬运 Markdown Projection Workspace files；Ledger history backup 属于非目标 |

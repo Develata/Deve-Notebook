@@ -53,6 +53,9 @@ pub(super) async fn handle_confirm_merge(
     let Some(repo_id) = resolve_write_repo_id(state, ch, session, scope_nonce) else {
         return;
     };
+    // Pending payloads are authenticated remote-shadow input. Their engine
+    // already owns the shadow merge guard; they must not acquire the local
+    // authority publication gate or allocate local fact sequence numbers.
     let Some(merged) = with_engine_mut(state, ch, repo_id, scope_nonce, |engine| {
         engine.merge_pending()
     }) else {
@@ -61,7 +64,7 @@ pub(super) async fn handle_confirm_merge(
     match merged {
         Ok(count) => {
             tracing::info!("Merged {} pending operations", count);
-            ch.broadcast(ServerMessage::MergeComplete {
+            let _ = state.tx.send(ServerMessage::MergeComplete {
                 repo_id: Some(repo_id),
                 branch: session.active_branch.clone(),
                 scope_nonce,

@@ -7,18 +7,9 @@ use crate::server::repo_scope::{
     ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
-use deve_core::models::{DocId, Op};
-use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
+use deve_core::models::DocId;
+use deve_core::protocol::{ServerError, ServerMessage};
 use std::sync::Arc;
-
-pub(super) struct CommittedEdit {
-    pub(super) scope_nonce: u64,
-    pub(super) doc_id: DocId,
-    pub(super) global_seq: u64,
-    pub(super) op: Op,
-    pub(super) client_id: u64,
-    pub(super) client_op_id: u64,
-}
 
 pub(super) fn edit_response_scope_nonce(
     session: &WsSession,
@@ -70,46 +61,5 @@ pub(super) fn reject_edit(
         doc_id,
         client_op_id,
         error,
-    });
-}
-
-pub(super) fn broadcast_and_ack_committed_edit(
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
-    edit: CommittedEdit,
-) {
-    ch.broadcast(ServerMessage::NewOp {
-        repo_id: scope.repo_id,
-        branch: scope.branch.clone(),
-        scope_nonce: Some(edit.scope_nonce),
-        doc_id: edit.doc_id,
-        entry: ConfirmedOp::new(
-            edit.global_seq,
-            edit.op,
-            Some(ClientOrigin {
-                client_id: edit.client_id,
-                client_op_id: edit.client_op_id,
-            }),
-        ),
-    });
-    ch.unicast(ServerMessage::Ack {
-        repo_id: scope.repo_id,
-        branch: scope.branch.clone(),
-        scope_nonce: Some(edit.scope_nonce),
-        doc_id: edit.doc_id,
-        seq: edit.global_seq,
-        client_op_id: edit.client_op_id,
-    });
-}
-
-pub(super) fn report_projection_writeback_fault(
-    ch: &DualChannel,
-    scope_nonce: Option<u64>,
-    detail: impl Into<String>,
-) {
-    ch.unicast(ServerMessage::ProtocolError {
-        error: ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail),
-        switch_nonce: None,
-        scope_nonce,
     });
 }

@@ -30,6 +30,7 @@ async fn handle_socket(
     let (sender, mut receiver) = socket.split();
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
     let (diff_unicast_tx, diff_unicast_rx) = send::new_diff_unicast_channel();
+    let (retire_session_tx, mut retire_session_rx) = tokio::sync::watch::channel(false);
     let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx, diff_unicast_rx);
 
     let broadcast_rx = state.tx.subscribe();
@@ -38,10 +39,27 @@ async fn handle_socket(
         unicast_tx.clone(),
         send::BroadcastFilter::allow_all(),
     );
-    let ch = DualChannel::with_diff_channel(state.tx.clone(), unicast_tx, diff_unicast_tx);
+    let ch = DualChannel::with_diff_channel_and_retirement(
+        state.tx.clone(),
+        unicast_tx,
+        diff_unicast_tx,
+        retire_session_tx,
+    );
     tracing::info!("Plugin host client connected: {}", peer_id);
 
-    while let Some(msg) = receiver.next().await {
+    loop {
+        let msg = tokio::select! {
+            changed = retire_session_rx.changed() => {
+                if changed.is_err() || *retire_session_rx.borrow() {
+                    break;
+                }
+                continue;
+            }
+            msg = receiver.next() => {
+                let Some(msg) = msg else { break; };
+                msg
+            }
+        };
         let msg = match msg {
             Ok(msg) => msg,
             Err(e) => {

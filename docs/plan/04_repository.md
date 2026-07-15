@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -268,6 +268,11 @@ ReadonlyDegraded
   - `rename_node`
   - `move_node`
 - delta 构造必须来源于 Structure Facts 应用结果，而不是 handler 直接篡改 path 表。
+- 在线 Docs create/copy/rename/delete 与 repo authority mutation 必须进入
+  `03_storage/authority#repo-mutation-publication-gate`。批量结构变化完成后只发布一个由
+  后端指定刷新范围的 projection recovery；不得由 Web 根据路径或操作类型猜测应刷新哪些投影。
+- 多事务旧流程若中途失败且已有事实提交，必须报告 committed-partial、标记必要 degraded
+  状态并发布 recovery；不得以普通失败隐藏已经成立的前缀 authority effect。
 
 ### 5.5 Sorting Contract
 

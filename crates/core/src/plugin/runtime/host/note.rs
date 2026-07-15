@@ -1,7 +1,6 @@
 //! plan_ref:
 //!   - 19_plugins#plugin-runtime-boundary
 //!
-use crate::ledger::reconcile;
 use crate::models::DocId;
 use crate::plugin::manifest::Capability;
 use crate::state;
@@ -62,24 +61,14 @@ fn read_managed_note(path: &Path) -> Result<String> {
 }
 
 fn write_managed_note(path: &Path, content: &str) -> Result<()> {
-    let (repo_name, _repo_path) = managed_target_parts(path)?;
-    let repo = super::repo_manager()?;
-    let sync = super::sync_manager()?;
-    let doc_id = ensure_managed_note_target(path)?;
-    let ops = repo.get_local_ops_in_local_repo(&repo_name, doc_id)?;
-    let entries: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
-    let patch = reconcile::compute_reconcile_patch(&entries, content)?;
-    if !patch.is_empty() {
-        reconcile::append_patch_in_local_repo(repo.as_ref(), &repo_name, doc_id, "plugin", &patch)?;
-    }
-    sync.persist_doc_in_local_repo(&repo_name, doc_id)
-}
-
-fn ensure_managed_note_target(path: &Path) -> Result<DocId> {
     let (repo_name, repo_path) = managed_target_parts(path)?;
-    let (doc_id, _ops) = super::repo_manager()?
-        .apply_file_structure_in_local_repo(&repo_name, &repo_path, None, "plugin")?;
-    Ok(doc_id)
+    super::managed_note::managed_note_mutation_host()?.write_managed_note(
+        super::ManagedNoteWriteIntent {
+            repo_name,
+            repo_path,
+            content: content.to_owned(),
+        },
+    )
 }
 
 fn resolve_managed_note_target(path: &Path) -> Result<DocId> {

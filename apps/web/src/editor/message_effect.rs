@@ -4,9 +4,11 @@
 //!
 use super::EditorStats;
 use super::sync;
+use crate::api::IncomingBatch;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
 use crate::runtime::domain::EditorSyncFailure;
+use crate::runtime::projection_recovery::ProjectionRecoveryCoordinator;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
@@ -22,6 +24,8 @@ pub struct ServerMessageEffectCtx {
     pub open_request_id: ReadSignal<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
+    pub pending_resend_generation: Arc<AtomicU64>,
+    pub projection_recovery: ProjectionRecoveryCoordinator,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub set_content: WriteSignal<String>,
@@ -49,6 +53,8 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         open_request_id,
         session_generation,
         ready_generation,
+        pending_resend_generation,
+        projection_recovery,
         buffered_live_ops,
         buffered_encrypted_ops,
         set_content,
@@ -67,14 +73,31 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
         set_snapshot_reopen_attempted,
         set_open_request_id,
     } = ctx;
-    let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+    // The editor consumer is mounted after the global consumer. Older retained
+    // messages predate this document session and are not part of its cursor.
+    let (last_msg_seq, set_last_msg_seq) = signal(ws.msg_seq.get_untracked());
 
     Effect::new(move |_| {
         let _ = ws.msg_seq.get();
-        for (seq, connection_epoch, msg) in ws.messages_since(last_msg_seq.get_untracked()) {
+        let current_connection_epoch = ws.connection_epoch.get_untracked();
+        if ws.reconnect_for_resync_pending(current_connection_epoch) {
+            set_last_msg_seq.set(ws.msg_seq.get_untracked());
+            return;
+        }
+        let messages = match ws.messages_since(last_msg_seq.get_untracked()) {
+            IncomingBatch::Messages(messages) => messages,
+            IncomingBatch::Gap { latest_seq } => {
+                set_last_msg_seq.set(latest_seq);
+                core.set_load_state
+                    .set(crate::runtime::domain::LoadPhase::Resyncing);
+                ws.request_reconnect_for_resync(current_connection_epoch);
+                return;
+            }
+        };
+        for (seq, connection_epoch, msg) in messages {
             if !crate::api::is_current_connection_message(
                 connection_epoch,
-                ws.connection_epoch.get_untracked(),
+                current_connection_epoch,
             ) {
                 set_last_msg_seq.set(seq);
                 continue;
@@ -87,9 +110,12 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 ),
                 session_generation: session_generation.clone(),
                 ready_generation: ready_generation.clone(),
+                pending_resend_generation: pending_resend_generation.clone(),
+                projection_recovery: projection_recovery.clone(),
                 buffered_live_ops: buffered_live_ops.clone(),
                 buffered_encrypted_ops: buffered_encrypted_ops.clone(),
                 active_branch: core.active_branch,
+                current_doc: core.current_doc,
                 pending_branch_switch: core.pending_branch_switch,
                 current_repo_id: core.current_repo_id,
                 current_scope_nonce: core.current_scope_nonce,

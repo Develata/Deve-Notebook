@@ -112,12 +112,10 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_commit.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             ensure_write_allowed(&selector)?;
-            let commit =
-                super::commit_source_control_changes_in_repo(repo.as_ref(), &selector, message)
-                    .map_err(|e| e.to_string())?;
+            let commit = super::commit_source_control_changes_in_repo(&selector, message)
+                .map_err(|e| e.to_string())?;
             let json = serde_json::to_value(&commit).map_err(|e| e.to_string())?;
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())
         },

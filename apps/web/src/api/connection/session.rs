@@ -22,6 +22,7 @@ use super::ConnectionControl;
 pub(super) enum ConnectedSessionOutcome {
     Lost,
     RebindRequested,
+    ResyncRequested,
 }
 
 #[derive(Clone)]
@@ -122,6 +123,12 @@ pub(super) async fn run_connected_session(
             command = control => match command {
                 Some(ConnectionControl::RebindNativeEndpoint) => {
                     return ConnectedSessionOutcome::RebindRequested;
+                }
+                Some(ConnectionControl::ReconnectForResync { connection_epoch }) => {
+                    if connection_epoch == signals.connection_epoch {
+                        return ConnectedSessionOutcome::ResyncRequested;
+                    }
+                    continue;
                 }
                 None => return ConnectedSessionOutcome::Lost,
             },

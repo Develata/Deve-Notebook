@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 use super::source_control_scope_test_support as support;
 use support::{
-    build_state, grant_browser_write, recv_commit_diff, recv_history, seed_pending,
+    bind_browser_writer, build_state, recv_commit_diff, recv_history, seed_pending,
     write_workspace_file,
 };
 

@@ -9,12 +9,16 @@
 //! Source Control commit/history/graph state remains outside this facade.
 
 use crate::api::{
-    ExternalChangesMutationError, ExternalChangesTargetOp, apply_external_changes_to_ledger,
-    fetch_external_changes, mutate_external_change_target,
+    ExternalChangesMutationError, ExternalChangesTargetOp, WsService, fetch_external_changes,
+    mutate_external_change_target,
 };
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -52,21 +56,35 @@ pub fn create_external_changes_refresh_callback(
     set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
     on_error: Callback<ExternalChangesMutationError>,
 ) -> Callback<()> {
+    let latest_request_generation = Arc::new(AtomicU64::new(0u64));
     Callback::new(move |()| {
+        let request_generation = latest_request_generation
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1)
+            .max(1);
+        let response_generation = latest_request_generation.clone();
         let repo_id = scope.current_repo_id.get_untracked();
         let scope_nonce = scope.current_scope_nonce.get_untracked();
         let request_repo_id = repo_id.clone();
         spawn_local(async move {
             match fetch_external_changes(repo_id, scope_nonce).await {
                 Ok(snapshot) => {
-                    if !scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    if !request_is_current(
+                        response_generation.load(Ordering::Relaxed),
+                        request_generation,
+                    ) || !scope_is_current(scope, &request_repo_id, scope_nonce)
+                    {
                         return;
                     }
                     set_staged_changes.set(snapshot.staged);
                     set_unstaged_changes.set(snapshot.unstaged);
                 }
                 Err(error) => {
-                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    if request_is_current(
+                        response_generation.load(Ordering::Relaxed),
+                        request_generation,
+                    ) && scope_is_current(scope, &request_repo_id, scope_nonce)
+                    {
                         on_error.run(error);
                     }
                 }
@@ -77,8 +95,8 @@ pub fn create_external_changes_refresh_callback(
 
 pub fn create_external_changes_mutation_callbacks(
     scope: ExternalChangesHttpScope,
+    ws: WsService,
     on_refresh: Callback<()>,
-    on_apply_confirmed_changes: Callback<Vec<ChangeEntry>>,
     on_error: Callback<ExternalChangesMutationError>,
 ) -> ExternalChangesMutationCallbacks {
     ExternalChangesMutationCallbacks {
@@ -112,7 +130,7 @@ pub fn create_external_changes_mutation_callbacks(
             on_refresh.clone(),
             on_error.clone(),
         ),
-        on_apply_to_ledger: apply_callback(scope, on_refresh, on_apply_confirmed_changes, on_error),
+        on_apply_to_ledger: apply_callback(scope, ws),
     }
 }
 
@@ -177,32 +195,13 @@ fn targets_callback(
     })
 }
 
-fn apply_callback(
-    scope: ExternalChangesHttpScope,
-    on_refresh: Callback<()>,
-    on_apply_confirmed_changes: Callback<Vec<ChangeEntry>>,
-    on_error: Callback<ExternalChangesMutationError>,
-) -> Callback<()> {
+fn apply_callback(scope: ExternalChangesHttpScope, ws: WsService) -> Callback<()> {
     Callback::new(move |()| {
-        let repo_id = scope.current_repo_id.get_untracked();
+        if scope.current_repo_id.get_untracked().is_none() {
+            return;
+        }
         let scope_nonce = scope.current_scope_nonce.get_untracked();
-        let request_repo_id = repo_id.clone();
-        spawn_local(async move {
-            match apply_external_changes_to_ledger(repo_id, scope_nonce).await {
-                Ok(confirmed_changes) => {
-                    if !scope_is_current(scope, &request_repo_id, scope_nonce) {
-                        return;
-                    }
-                    on_apply_confirmed_changes.run(confirmed_changes);
-                    on_refresh.run(());
-                }
-                Err(error) => {
-                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
-                        on_error.run(error);
-                    }
-                }
-            }
-        });
+        ws.request_external_apply(scope_nonce);
     })
 }
 
@@ -234,9 +233,13 @@ fn scope_matches(
     request_repo_id == current_repo_id && request_scope_nonce == current_scope_nonce
 }
 
+fn request_is_current(latest_generation: u64, response_generation: u64) -> bool {
+    latest_generation == response_generation
+}
+
 #[cfg(test)]
 mod tests {
-    use super::scope_matches;
+    use super::{request_is_current, scope_matches};
 
     #[test]
     fn external_changes_scope_guard_rejects_stale_responses() {
@@ -258,5 +261,11 @@ mod tests {
             &Some("repo-1".into()),
             8
         ));
+    }
+
+    #[test]
+    fn external_changes_request_generation_rejects_older_same_scope_response() {
+        assert!(request_is_current(4, 4));
+        assert!(!request_is_current(5, 4));
     }
 }

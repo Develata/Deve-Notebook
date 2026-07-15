@@ -7,6 +7,40 @@ use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::source_control::ChangeStatus;
 
 #[test]
+fn external_apply_ack_only_completes_correlated_transport_request() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let repo_id = uuid::Uuid::new_v4();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    let signals = crate::hooks::use_core::state::init_signals(ws.status);
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    signals.set_current_scope_nonce.set(7);
+    let request_id = ws.request_external_apply(7);
+    let _ = ws.drain_sent_for_test();
+    let schedule_refresh = || {};
+    let ctx = ScMessageContext::from_core_signals(signals, &schedule_refresh, &ws);
+
+    assert!(handle_sc_message(
+        &ServerMessage::ExternalApplyAck {
+            request_id: request_id.clone(),
+            receipt: deve_core::source_control::ExternalApplyReceipt {
+                repo_id,
+                authority_head: deve_core::models::GlobalSeq::from_storage_key(9),
+                affected_docs: vec![deve_core::models::DocId::new()],
+                applied_target_count: 1,
+            },
+            repo_id,
+            branch: None,
+            scope_nonce: deve_core::protocol::ScopeNonce::new(7),
+        },
+        &ctx,
+    ));
+
+    assert!(!ws.complete_external_apply(&request_id));
+    assert!(signals.confirmed_changes.get_untracked().is_empty());
+}
+
+#[test]
 fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();

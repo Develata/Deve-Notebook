@@ -70,8 +70,13 @@ pub fn apply(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "source-control write")?;
-        let confirmed = repo.apply_external_changes_in_local_repo(&repo_name)?;
-        println!("sc_apply[{repo_name}]: confirmed={}", confirmed.len());
+        let receipt = repo.apply_external_changes_in_local_repo(&repo_name)?;
+        println!(
+            "sc_apply[{repo_name}]: authority_head={} applied_targets={} affected_docs={}",
+            receipt.authority_head,
+            receipt.applied_target_count,
+            receipt.affected_docs.len()
+        );
     }
     Ok(())
 }

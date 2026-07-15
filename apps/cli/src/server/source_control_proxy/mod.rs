@@ -15,7 +15,8 @@ use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{
-    ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, SourceControlApi,
+    ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, ExternalApplyReceipt,
+    SourceControlApi,
 };
 
 const REMOTE_PROXY_SCOPE_NONCE: u64 = DELEGATED_SC_SCOPE_NONCE;
@@ -138,7 +139,7 @@ impl SourceControlApi for RemoteSourceControlApi {
         commits::commit_source_control_changes(self, repo, message)
     }
 
-    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
+    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<ExternalApplyReceipt> {
         mutations::apply_external_changes(self, repo)
     }
 }

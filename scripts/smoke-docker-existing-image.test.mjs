@@ -11,6 +11,7 @@ const compose = fs.readFileSync(
   new URL("../docker-compose.multiclient.yml", import.meta.url),
   "utf8",
 );
+const p2p = fs.readFileSync(new URL("./smoke-docker-p2p-mesh.sh", import.meta.url), "utf8");
 const releaseWorkflow = fs.readFileSync(
   new URL("../.github/workflows/release.yml", import.meta.url),
   "utf8",
@@ -33,6 +34,16 @@ test("multiclient existing-image mode validates the image and prohibits compose 
 test("compose binds the explicitly selected candidate image", () => {
   assert.match(compose, /image: \$\{DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient\}/);
   assert.match(multiclient, /DEVE_DOCKER_MULTI_IMAGE="\$IMAGE"/);
+});
+
+test("Docker acceptance smokes bind and revalidate one immutable candidate image ID", () => {
+  for (const source of [multiclient, p2p]) {
+    assert.match(source, /DEVE_RELEASE_CANDIDATE_IMAGE/);
+    assert.match(source, /DEVE_RELEASE_CANDIDATE_IMAGE_ID/);
+    assert.match(source, /docker_cmd image inspect --format '\{\{\.Id\}\}' "\$IMAGE"/);
+    assert.match(source, /candidate image identity mismatch/);
+  }
+  assert.match(p2p, /DEVE_DOCKER_P2P_MESH_IMAGE="\$IMAGE"/);
 });
 
 test("release workflow validates the complete tag set before the first push", () => {

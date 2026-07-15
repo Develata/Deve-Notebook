@@ -49,7 +49,8 @@ pub(super) async fn handle_resolve_merge_conflict(
         &content,
         resolution,
         scope_nonce,
-    );
+    )
+    .await;
     if should_restore_pending(outcome) {
         session.pending_merge_conflict = Some(pending);
     }

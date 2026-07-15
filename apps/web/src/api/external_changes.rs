@@ -44,20 +44,6 @@ pub async fn mutate_external_change_target(
     post_json(op.endpoint(), &payload).await
 }
 
-pub async fn apply_external_changes_to_ledger(
-    repo_id: Option<String>,
-    scope_nonce: u64,
-) -> Result<Vec<ChangeEntry>, ExternalChangesMutationError> {
-    post_json_for_response(
-        "/api/sc/apply-external-changes",
-        &ApplyExternalChangesPayload {
-            scope_nonce,
-            repo_id,
-        },
-    )
-    .await
-}
-
 pub async fn fetch_external_changes(
     repo_id: Option<String>,
     scope_nonce: u64,
@@ -111,13 +97,6 @@ impl TargetMutationPayload {
     }
 }
 
-#[derive(Serialize)]
-struct ApplyExternalChangesPayload {
-    scope_nonce: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    repo_id: Option<String>,
-}
-
 fn sc_query_url(path: &str, repo_id: Option<&str>, scope_nonce: u64) -> String {
     let mut url = format!("{path}?scope_nonce={scope_nonce}");
     if let Some(repo_id) = repo_id {
@@ -142,31 +121,6 @@ async fn get_json<T: DeserializeOwned>(path: &str) -> Result<T, ExternalChangesM
     }
     response
         .json::<T>()
-        .await
-        .map_err(|_| ExternalChangesMutationError::RequestFailed)
-}
-
-async fn post_json_for_response<T: Serialize, R: DeserializeOwned>(
-    path: &str,
-    payload: &T,
-) -> Result<R, ExternalChangesMutationError> {
-    let api = api_url(path);
-    let mut request = Request::post(&api.url);
-    if api.include_credentials {
-        request = request.credentials(RequestCredentials::Include);
-    }
-    let response = request
-        .header("Content-Type", "application/json")
-        .json(payload)
-        .map_err(|_| ExternalChangesMutationError::RequestBuild)?
-        .send()
-        .await
-        .map_err(|_| ExternalChangesMutationError::RequestFailed)?;
-    if !response.ok() {
-        return Err(rejected_error(response).await);
-    }
-    response
-        .json::<R>()
         .await
         .map_err(|_| ExternalChangesMutationError::RequestFailed)
 }

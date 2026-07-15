@@ -25,6 +25,7 @@ mod message_dispatch_shadow;
 mod message_dispatch_sync;
 mod message_dispatch_write;
 mod message_projection;
+mod message_projection_recovery;
 mod message_protocol;
 mod message_refresh;
 mod message_repo_bootstrap;
@@ -48,6 +49,10 @@ pub fn setup_handshake_effect(ws: &WsService, signals: HandshakeSignals) {
 }
 
 /// 设置消息处理 Effect。
-pub fn setup_message_effect(ws: &WsService, signals: &CoreSignals) {
-    message::setup(ws, signals);
+pub fn setup_message_effect(
+    ws: &WsService,
+    signals: &CoreSignals,
+    external_changes_refresh: leptos::prelude::Callback<()>,
+) {
+    message::setup(ws, signals, external_changes_refresh);
 }

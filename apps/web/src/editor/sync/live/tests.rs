@@ -75,9 +75,13 @@ fn echoed_live_ctx<'a>(
             client_id: Some(client_id),
             session_generation: Arc::new(AtomicU64::new(1)),
             ready_generation: Arc::new(AtomicU64::new(1)),
+            pending_resend_generation: Arc::new(AtomicU64::new(0)),
+            projection_recovery:
+                crate::runtime::projection_recovery::ProjectionRecoveryCoordinator::default(),
             buffered_live_ops: Arc::new(Mutex::new(Vec::new())),
             buffered_encrypted_ops: Arc::new(Mutex::new(Vec::new())),
             active_branch,
+            current_doc: signal(Some(doc_id)).0,
             pending_branch_switch,
             current_repo_id,
             current_scope_nonce,

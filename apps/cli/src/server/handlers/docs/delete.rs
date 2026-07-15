@@ -9,12 +9,11 @@
 //! # 删除文档处理器
 
 use super::errors;
-use super::node_helpers::broadcast_local_projection_refresh;
 use super::node_target::resolve_node_target;
-use super::notify_fs_refresh;
 use super::{normalize_repo_path_input, resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::session::WsSession;
 use deve_core::models::NodeKind;
 use deve_core::protocol::doc_file_op_errors as path_err;
@@ -59,70 +58,89 @@ pub async fn handle_delete_doc(
         }
     };
 
-    // 3. 更新 Ledger
-    if target.kind == NodeKind::Dir {
-        if let Err(e) = state.repo.apply_dir_delete_structure_in_local_repo(
-            &scope.repo_name,
-            &target.repo_path,
-            "local_delete",
-        ) {
-            tracing::error!("目录删除结构事实失败: {:?}", e);
+    let execution = state
+        .repo_mutation_gate()
+        .execute_repo(scope.repo_id, &state.tx, || {
+            let scope = match crate::server::repo_mutation::revalidate_writable_resolved_repo(
+                state, &scope,
+            ) {
+                Ok(scope) => scope,
+                Err(error) => return MutationExecution::not_committed(error),
+            };
+            let current_target = match resolve_node_target(state, &scope, &target.repo_path) {
+                Ok(Some(current_target))
+                    if current_target.kind == target.kind
+                        && current_target.doc_id == target.doc_id =>
+                {
+                    current_target
+                }
+                Ok(_) => {
+                    return MutationExecution::not_committed(anyhow::anyhow!(
+                        "Delete target changed while waiting for mutation permit"
+                    ));
+                }
+                Err(error) => return MutationExecution::not_committed(error),
+            };
+            let documents = current_target.doc_id.map_or(
+                deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                |doc_id| deve_core::protocol::DocumentRecoveryScope::Exact(vec![doc_id]),
+            );
+            let publication = MutationPublication::document_recovery(scope.repo_id, documents);
+            if current_target.kind == NodeKind::Dir {
+                if let Err(error) = state.repo.apply_dir_delete_structure_in_local_repo(
+                    &scope.repo_name,
+                    &current_target.repo_path,
+                    "local_delete",
+                ) {
+                    return MutationExecution::not_committed(error);
+                }
+                match state
+                    .sync_manager
+                    .rebuild_projection_local_repo(&scope.repo_name)
+                {
+                    Ok(_) => MutationExecution::committed((), publication),
+                    Err(error) => MutationExecution::projection_degraded((), error, publication),
+                }
+            } else {
+                if let Err(error) = state.repo.apply_file_delete_structure_in_local_repo(
+                    &scope.repo_name,
+                    &current_target.repo_path,
+                    current_target.doc_id,
+                    "local_delete",
+                ) {
+                    return MutationExecution::not_committed(error);
+                }
+                match state.sync_manager.remove_projection_path_in_local_repo(
+                    &scope.repo_name,
+                    &current_target.repo_path,
+                ) {
+                    Ok(_) => MutationExecution::committed((), publication),
+                    Err(error) => MutationExecution::projection_degraded((), error, publication),
+                }
+            }
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { .. }) => {}
+        Ok(MutationExecution::NotCommitted(error)) => {
             errors::storage_persist_failed_scoped(
                 ch,
-                format!("Failed to delete directory: {}", e),
+                format!("Failed to delete node: {error}"),
                 scope_nonce,
             );
-            return;
         }
-        if let Err(e) = state
-            .sync_manager
-            .rebuild_projection_local_repo(&scope.repo_name)
-        {
-            tracing::error!("目录删除后重建投影失败: {:?}", e);
+        Ok(MutationExecution::ProjectionDegraded { error, .. })
+        | Ok(MutationExecution::CommittedPartial { error, .. }) => {
             errors::storage_persist_failed_scoped(
                 ch,
-                format!("Failed to rebuild deleted directory projection: {}", e),
+                format!("Failed to rebuild deleted node projection: {error}"),
                 scope_nonce,
             );
-            return;
         }
-    } else {
-        if let Err(e) = state.repo.apply_file_delete_structure_in_local_repo(
-            &scope.repo_name,
-            &target.repo_path,
-            target.doc_id,
-            "local_delete",
-        ) {
-            tracing::error!("文件删除结构事实失败: {:?}", e);
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to delete file: {}", e),
-                scope_nonce,
-            );
-            return;
-        }
-        if let Err(e) = state
-            .sync_manager
-            .remove_projection_path_in_local_repo(&scope.repo_name, &target.repo_path)
-        {
-            tracing::error!("删除文件投影失败 {}: {:?}", target.repo_path, e);
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to delete file: {}", e),
-                scope_nonce,
-            );
-            return;
-        }
-    }
-
-    if let Err(e) = broadcast_local_projection_refresh(state, ch, session, &scope) {
-        tracing::error!("删除后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed_scoped(
+        Err(error) => errors::storage_persist_failed_scoped(
             ch,
-            format!("Failed to refresh deleted node view: {}", e),
+            format!("Failed to serialize node delete: {error}"),
             scope_nonce,
-        );
-        return;
+        ),
     }
-    notify_fs_refresh(ch, scope.repo_id, &target.repo_path, "deleted");
 }

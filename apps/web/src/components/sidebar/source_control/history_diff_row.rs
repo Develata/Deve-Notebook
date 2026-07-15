@@ -61,6 +61,7 @@ pub fn HistoryDiffRow(
                             display_path.clone(),
                             projection,
                         )
+                        .with_doc_id(Some(target.doc_id))
                         .with_cache_key(cache_key),
                     ));
                     return;
@@ -69,6 +70,7 @@ pub fn HistoryDiffRow(
                 source_control.set_commit_diff_request_id.set(Some(request_id.clone()));
                 source_control.set_diff_content.set(Some(
                     DiffSessionWire::loading(canonical_path.clone(), display_path.clone())
+                        .with_doc_id(Some(target.doc_id))
                         .with_pending_request(request_id.clone())
                         .with_cache_key(cache_key),
                 ));

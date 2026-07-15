@@ -75,6 +75,7 @@ pub enum LoadPhase {
     #[default]
     Ready,
     Loading,
+    Resyncing,
     Partial,
     Error,
 }
@@ -84,6 +85,7 @@ impl LoadPhase {
         match self {
             Self::Ready => "ready",
             Self::Loading => "loading",
+            Self::Resyncing => "resyncing",
             Self::Partial => "partial",
             Self::Error => "error",
         }
@@ -100,6 +102,7 @@ impl LoadPhase {
         match value {
             "ready" => Some(Self::Ready),
             "loading" => Some(Self::Loading),
+            "resyncing" => Some(Self::Resyncing),
             "partial" => Some(Self::Partial),
             "error" => Some(Self::Error),
             _ => None,

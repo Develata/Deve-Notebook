@@ -164,6 +164,8 @@
     - run: cargo test -p deve_cli http_source_control_commit_always_queues_git_main_mirror -- --nocapture
     - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
     - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture
+    - run: cargo test -p deve_cli ws_source_control_live_writer_renews_expired_http_grant -- --nocapture
+    - run: cargo test -p deve_cli ws_source_control_grant_refresh_rejects_stale_writer_binding -- --nocapture
     - run: cargo test -p deve_cli source_control_write_grant_creation_fails_closed -- --nocapture
     - run: cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture
     - run: cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
@@ -441,6 +443,7 @@
     - run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
     - run: cargo test -p deve_cli sc_stage_all_keeps_ordinary_external_staging -- --nocapture
     - run: cargo test -p deve_cli sc_apply_moves_ordinary_external_staging_to_ledger_without_commit_anchor -- --nocapture
+    - run: cargo test -p deve_cli http_external_apply_returns_receipt_and_broadcasts_one_recovery -- --nocapture
     - run: cargo test -p deve_web external_changes -- --nocapture
     - run: cargo test -p deve_web source_control_confirmed_only_view -- --nocapture
     - ui_open: "External Changes"
@@ -473,6 +476,10 @@
     - ui_assert: external_changes_apply_label_not_commit true
     - ui_assert: source_control_external_working_groups_absent true
     - ui_assert: source_control_confirmed_ledger_changes_visible_after_apply true
+    - ui_assert: external_apply_updates_open_documents_in_same_repo true
+    - ui_assert: external_apply_unrelated_document_keeps_current_editor_writable true
+    - api_assert: external_apply_receipt_bound_to_authority_head true
+    - api_assert: external_apply_large_batch_publishes_one_recovery true
     - ui_assert: external_confirmed_overlap_disables_stage true
     - ui_assert: external_confirmed_overlap_allows_diff_and_discard true
 
@@ -490,16 +497,18 @@
     - api_assert: diff_projection_resource_limits_fail_closed true
 
 - case_id: DIFF-013
-  goal: WS v13 只传 typed projection，commit diff 使用 summary 加按需精确 target。
+  goal: 首个公开 WS epoch 只传 backend typed projection，commit diff 使用 summary 加按需精确 target。
   preconditions:
-    - 当前协议版本为 13
+    - 当前协议 namespace 为 F4/v1 lockstep
   steps:
     - run: cargo test -p deve_cli new_revision_cancels_previous_diff_job -- --nocapture
     - run: cargo test -p deve_core commit_file_diff_target_mismatch_fails_closed -- --nocapture
-    - run: cargo test -p deve_core diff_protocol_v13_is_lockstep_and_rejects_v12 -- --nocapture
+    - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
+    - run: cargo test -p deve_core historical_development_ws_namespace_is_rejected -- --nocapture
   assertions:
-    - ws_assert: v12_rejected true
-    - ws_assert: v13_lockstep true
+    - ws_assert: f4_v1_lockstep true
+    - ws_assert: f4_v0_and_f4_v13_rejected true
+    - ws_assert: historical_f3_v13_rejected true
     - api_assert: commit_diff_list_contains_no_document_body true
     - api_assert: commit_file_diff_target_mismatch_fails_closed true
     - api_assert: stale_diff_revision_not_published true

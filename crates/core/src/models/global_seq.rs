@@ -1,5 +1,7 @@
 //! plan_ref:
 //!   - 03_storage/authority#facts-partition
+//!
+//! Ledger-wide durable append-order identity shared by storage and wire receipts.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -7,7 +9,7 @@ use std::fmt;
 /// Ledger-wide durable append order.
 ///
 /// The on-disk redb key remains `u64`; this type marks the authority boundary
-/// where the next ledger-wide sequence is allocated.
+/// where the next ledger-wide sequence is allocated or reported.
 #[repr(transparent)]
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,

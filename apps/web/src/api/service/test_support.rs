@@ -29,6 +29,8 @@ impl WsService {
         let msg_seq_value = messages.back().map_or(0, |(seq, _, _)| *seq);
         let (msg_seq, _set_msg_seq) = signal(msg_seq_value);
         let (connection_epoch, _set_connection_epoch) = signal(current_connection_epoch);
+        let (reconnect_requested_epoch, set_reconnect_requested_epoch) = signal(None::<u64>);
+        let (external_apply_request_id, set_external_apply_request_id) = signal(None::<String>);
         let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
@@ -63,6 +65,10 @@ impl WsService {
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,
+            reconnect_requested_epoch,
+            set_reconnect_requested_epoch,
+            external_apply_request_id,
+            set_external_apply_request_id,
             writer_session_nonce: 1,
             msg_queue,
             tx,

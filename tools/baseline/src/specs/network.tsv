@@ -20,8 +20,8 @@ contains	apps/cli/src/server/router.rs	public = Router::new()
 contains	apps/cli/src/server/node_role_http.rs	"role": r.role
 contains	apps/cli/src/server/node_role_http.rs	"ws_port": r.ws_port
 contains	apps/cli/src/server/node_role_http.rs	"main_port": r.main_port
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 13;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 13;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 1;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 1;
 contains	crates/core/src/sync/protocol.rs	Wire range is closed
 contains	docs/acceptance-cases/06_network.md	case_id: NET-019
 contains	apps/cli/src/server/p2p/fault_injection.rs	DEVE_P2P_FAULT_INJECT_SEQUENCE_GAP
@@ -52,7 +52,7 @@ contains	crates/core/src/sync/buffer.rs	manual_pending_payload_fact_and_encoded_
 contains	crates/core/src/sync/engine/manual/tests.rs	failed_manual_merge_restores_payloads_and_all_resource_counters
 contains	crates/core/src/sync/engine/manual/tests.rs	transport_clone_does_not_copy_manual_pending_queue
 contains	apps/cli/src/server/handlers/sync/hello/mod.rs	engine.clone_for_transport()
-contains	crates/core/src/protocol/frame.rs	pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
+contains	crates/core/src/protocol/frame.rs	pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF4";
 contains	crates/core/src/protocol/frame.rs	missing WS frame magic
 contains	apps/cli/src/server/ws/receive/mod.rs	MISSING_WS_FRAME_MAGIC
 contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	Some("missing WS frame magic")
@@ -65,7 +65,7 @@ contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_LEGACY_WS_JSON
 contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ENV
 contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	unsupported_versioned_json_reports_version_mismatch
 contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	malformed_versioned_binary_reports_invalid_payload
-contains	apps/web/src/api/incoming/tests.rs	binary_malformed_versioned_payload_surfaces_protocol_error
+contains	apps/web/src/api/incoming/tests.rs	binary_malformed_versioned_payload_is_fatal
 contains	apps/web/src/api/service.rs	writer_ready_scope_nonce
 contains	apps/web/src/api/service/readiness.rs	writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>)
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_write.rs	ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str())
@@ -78,10 +78,10 @@ contains	apps/cli/src/server/session/writer.rs	pub scope_nonce: u64
 contains	apps/cli/src/server/session/scope.rs	writer_peer_id_for(&self, repo_id: &RepoId, scope_nonce: Option<u64>)
 contains	apps/cli/src/server/handlers/sync/writer/mod.rs	session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce)
 contains	apps/cli/src/server/handlers/document/edit_checks.rs	.writer_peer_id_for(repo_id, requested_scope_nonce)
-contains	apps/cli/src/server/handlers/document/edit_apply.rs	with_repo_write_gate(repo_id, || append_client_edit_locked(input))
-contains	apps/cli/src/server/handlers/document/write_gate.rs	HashMap<RepoId, Arc<Mutex<()>>
-contains	apps/cli/src/server/handlers/document/write_gate.rs	fn repo_write_gate_serializes_same_repo()
-contains	docs/acceptance-cases/14_operation_flow_refs.md	cargo test -p deve_cli repo_write_gate_serializes_same_repo -- --nocapture
+contains	apps/cli/src/server/handlers/document/edit_apply.rs	.execute_repo(repo_id, &state.tx, || {
+contains	apps/cli/src/server/repo_mutation/gate.rs	pub(crate) struct RepoMutationPublicationGate
+contains	apps/cli/src/server/repo_mutation/tests.rs	async fn serializes_same_repo_and_preserves_publication_order()
+contains	docs/acceptance-cases/14_operation_flow_refs.md	cargo test -p deve_cli serializes_same_repo_and_preserves_publication_order -- --nocapture
 contains	apps/cli/src/server/ws/route/core_scoped.rs	document::handle_edit(
 contains	apps/cli/src/server/handlers/sync/snapshot.rs	snapshot_kind: Some("full".to_string())
 contains	crates/core/src/protocol/session_proof.rs	pub struct SessionProof
@@ -169,3 +169,13 @@ contains	apps/cli/src/server/p2p_connector.rs	"duplicate_sync_hello"
 contains	apps/cli/src/server/p2p_connector/tests.rs	fn p2p_connector_static_token_header_errors_are_terminal
 absent	apps/web/src/api/connection_urls.rs	Scanning ports
 absent	apps/cli/src/server/ws/auth.rs	token == expected
+contains	crates/core/src/protocol/projection_recovery.rs	pub struct ProjectionRecoveryRequired
+contains	crates/core/src/protocol/projection_recovery.rs	pub enum DocumentRecoveryScope
+contains	apps/cli/src/server/repo_mutation/gate.rs	pub(crate) struct RepoMutationPublicationGate
+contains	apps/cli/src/server/repo_mutation/gate.rs	execute_catalog_repo
+contains	apps/cli/src/server/ws/send/mod.rs	unicast_tx.send(msg).await
+contains	apps/web/src/api/incoming.rs	pub(crate) enum IncomingBatch
+contains	apps/web/src/runtime/projection_recovery/editor_cycle.rs	pub struct ProjectionRecoveryCoordinator
+contains	docs/acceptance-cases/06_network.md	case_id: NET-020
+contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn first_public_ws_epoch_is_lockstep()
+contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn historical_development_ws_namespace_is_rejected()

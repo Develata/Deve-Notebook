@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-14`
 - `Authority Owns`: `op 维度 latency / RSS budget；CI fuse 阈值`
 - `Authority Defers To`: `17_tech_stack#performance-profiles-and-feature-matrix (profile 枚举与 feature matrix)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (perf-sensitive flows)`
@@ -45,6 +45,16 @@
 | cold mount (repo open → ready) | `low-spec` | 500ms | 1200ms | ≤64MB | `REL-002` startup bench |
 
 **RSS baseline（常驻基线，非 op 增量）**：`standard` ≤ 128MB，`low-spec` ≤ 64MB（各 profile 的 `MEM_CACHE_MB` 默认值定义见 `17_tech_stack`，本章不复制其数值）。前端 WASM 堆目标见 `17_tech_stack` §4（Mobile < 64MB / Desktop < 128MB）；本章不重定义 WASM 堆约束。
+
+Repository mutation / recovery 专项预算：
+
+- 无竞争 `RepoMutationPublicationGate` permit acquisition + bookkeeping p95 `< 1ms`。
+- 普通 edit→ack p95 相对本批前基线回归不得超过 `10ms`，且相对回归不得超过 `5%`；普通按键
+  不得触发 Snapshot/recovery。
+- 小文档 projection recovery 目标：本地 `50–300ms`，远端 `150–800ms`；约 1 MiB 文档本地
+  `<1s`、远端 `<3s`。
+- gate registry 使用弱引用；External Apply 大批次只发布一条 recovery，不能把 fact 数放大为
+  broadcast queue、task 或 Web incoming memory 增长。
 
 ## 3. CI Fuse Thresholds {#perf-budget-fuse}
 

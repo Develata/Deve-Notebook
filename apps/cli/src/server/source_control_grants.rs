@@ -148,6 +148,24 @@ impl SourceControlWriteGrants {
         )
     }
 
+    /// Refresh the HTTP mutation lease after the caller has proved an exact,
+    /// live browser writer binding on the current WebSocket session.
+    pub(crate) fn refresh_browser_local_from_live_writer(
+        &self,
+        auth_session_id: AuthSessionId,
+        repo_id: RepoId,
+        writer_peer_id: PeerId,
+        scope_nonce: u64,
+    ) -> Result<(), ServerError> {
+        self.grant(
+            auth_session_id,
+            repo_id,
+            SourceControlGrantBranch::Local,
+            writer_peer_id,
+            scope_nonce,
+        )
+    }
+
     fn authorize_for_branch(
         &self,
         auth_session_id: &AuthSessionId,

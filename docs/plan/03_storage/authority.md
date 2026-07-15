@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-14`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -212,6 +212,54 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 - **MUST NOT** 先改 Projection Workspace 再补 ledger。
 - Path A 写入成功后 **MUST NOT** 回灌到 `pending_fs_ops` 或 staging；Source Control 只能通过 confirmed ledger dirty projection 展示它。
 
+### 6.1.1 Repository Mutation Publication Gate {#repo-mutation-publication-gate}
+
+所有在线、进程内、面向 Local Branch 的 authority writer **MUST** 经过同一个
+process-scoped `RepoMutationPublicationGate`。该 gate 以 `RepoId` 为粒度串行化同一 repo
+的本地写入，不同 repo 仍可并行；registry 必须使用弱引用回收闲置 repo permit，不得让
+访问过的 repo 永久累积。
+
+Repo catalog create 使用独立的 typed `Catalog` lane；rename/remove 必须按固定
+`Catalog -> Repo(RepoId)` 顺序同时持有 catalog 与目标 repo permit。不得用 nil UUID 或字符串
+哨兵伪装 catalog identity，也不得允许 repo lifecycle 与该 repo 的 authority writer 并发。已经持有任意
+repo permit 的调用不得再获取 `Catalog` lane；这一反向嵌套必须 fail-closed，避免与
+`Catalog -> Repo(RepoId)` 形成 ABBA 死锁。
+
+覆盖范围包括 Browser Edit、Docs create/copy/rename/delete 与 repo authority mutation、
+External Apply、Source Control commit（含 resolved-conflict 与 commit-and-push 的 authority
+部分）、merge result、plugin `note_write`，以及未来启用的 local reconcile。Watcher 只写
+External Changes pending，不进入该 gate；认证 remote shadow ingest、离线 repair/export 与
+diagnostic 明确排除。
+
+repo selector、名称或路径只用于锁外定位候选身份。每个 writer 在获得 permit 后 **MUST** 重新解析并
+exact-compare 当前 `RepoId`、名称绑定与 local-writable 状态；rename/remove 后同名新 repo 不得继承旧请求
+的写权限。Git mirror queue 等延后投影操作必须携带提交时的 expected `RepoId`，执行时再次验证，不能只按
+可复用的 repo 名称回查。
+
+固定锁序为：
+
+```text
+local repo mutation permit -> shadow merge guard -> redb write transaction
+```
+
+同一调用不得嵌套获取相同 repo permit。目录扫描、正文重建、diff/patch 计算、External Apply preflight、
+resolved-conflict commit preflight 与 Rhai 执行必须在 permit 外完成；获得 permit 后必须 exact-compare
+preflight 捕获的 repo identity、ledger head、path/staging evidence。临界区只允许 mutable revalidation、authority
+transaction、必要 projection writeback 或 degraded marker、typed receipt 构造与 publication
+enqueue；目录扫描、diff、正文预读、网络、Rhai、HTTP response 与 Git mirror 必须在锁外。
+
+server runtime 必须用 typed `MutationExecution` 区分：
+
+- `NotCommitted`：authority 未提交，不发布成功或恢复信号。
+- `Committed`：完整提交，并在释放 permit 前按顺序 enqueue 对应确认或恢复消息。
+- `ProjectionDegraded`：authority 已提交但 projection/writeback 降级；仍发布恢复消息并报告 degraded。
+- `CommittedPartial`：仅用于仍由多个旧事务组成、无法伪称原子的流程；只要已有 authority
+  effect 就必须发布恢复消息并报告 partial。
+
+普通单次编辑仍发布一个 confirmed `NewOp`。External Apply、Docs bulk、merge、plugin 等
+批量/跨投影写入只发布一个 typed projection recovery；不得把已提交后的 enrichment 或
+projection 查询失败伪报为“authority 未提交”。
+
 ### 6.3 Path C: Stage -> Apply to Ledger -> Commit Anchor
 
 1. 从 `pending_fs_ops` 迁移到 `staging`；一个用户 stage batch 的 pending remove、staged insert 与两侧 DocId index 更新必须在同一事务提交。
@@ -228,6 +276,7 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 - Apply 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 workspace 内容快照。
 - staging 后 workspace 内容发生变化时，Apply **MUST** fail-closed、保留 staging，并要求重新 scan/stage；不得静默应用未确认的新内容。
 - Apply **MUST NOT** 在 hash preflight 后再次从 workspace 读取内容；本批所有 structure/content facts、identity index 更新与本次 staged snapshot 的 exact consumption 必须在同一 ledger write transaction 提交，任一 target 失败则整批回滚。事务开始时必须比较 preflight 前捕获的 ledger head；head 漂移表示 confirmed/content base 已变化，整批 fail-closed 并要求刷新重试。事务不得清空 preflight 后新加入的其他 staging；原 staged row 被替换或移除时必须 fail-closed。
+- Apply 成功必须返回 `ExternalApplyReceipt { repo_id, authority_head: GlobalSeq, affected_docs, applied_target_count }`。receipt 只描述已经提交的 authority 结果；不得在 commit 后依赖 confirmed-list enrichment 才判定成功，也不得携带由 Web 重算的逐 fact diff。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
 - 当 staged 为空但存在 `ConfirmedLedgerChange` 时，commit **MUST** 只创建覆盖当前 ledger head 的 commit anchor，不得重复追加内容或结构 facts。
 - commit 覆盖 confirmed ledger dirty 时，全部 committed snapshot baselines 与对应 commit payload/order anchor 必须在同一个 redb write transaction 提交；任一 snapshot 或 anchor/order 写入失败都不得留下半提交。Git mirror queue 只能在该事务成功后作为可恢复 projection 操作排队，排队失败不得回滚 NoteGit commit。

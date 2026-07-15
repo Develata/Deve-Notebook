@@ -5,7 +5,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_can
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_diff_shared_projection_viewport_bound true
 contains	apps/web/src/components/desktop_layout/sidebar.rs	data-deve-desktop-col="1-sidebar"
 contains	apps/web/src/components/desktop_layout/content.rs	data-deve-desktop-col="3-display-editor"
-contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="typed-v13"
+contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="backend-typed"
 contains	apps/web/src/editor/mod.rs	data-deve-desktop-col="4-outline"
 contains	apps/web/src/components/desktop_chat_panel.rs	data-deve-desktop-col="5-chat"
 contains	apps/web/src/components/diff_view/projection.rs	data-deve-diff-viewport="virtualized"

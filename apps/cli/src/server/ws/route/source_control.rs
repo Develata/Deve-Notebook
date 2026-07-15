@@ -47,8 +47,8 @@ pub(super) async fn route_source_control(
         ClientMessage::Commit { message, .. } => {
             source_control::handle_commit(state, ch, session, message).await;
         }
-        ClientMessage::ApplyExternalChanges { .. } => {
-            source_control::handle_apply_external_changes(state, ch, session).await;
+        ClientMessage::ApplyExternalChanges { request_id, .. } => {
+            source_control::handle_apply_external_changes(state, ch, session, request_id).await;
         }
         ClientMessage::GetCommitHistory {
             request_id, limit, ..

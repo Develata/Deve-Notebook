@@ -8,10 +8,9 @@
 use super::checked_exists;
 use super::errors;
 use super::file_register::create_file_from_content;
-use super::node_helpers::broadcast_incremental_tree_deltas;
-use super::notify_fs_refresh;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::session::WsSession;
 use std::sync::Arc;
@@ -70,28 +69,54 @@ pub async fn handle_file_create(
         }
     }
 
-    let ops = match create_file_from_content(state, scope, filename, "", "local_create") {
-        Ok((_doc_id, ops)) => ops,
-        Err(e) => {
+    let execution = state
+        .repo_mutation_gate()
+        .execute_repo(scope.repo_id, &state.tx, || {
+            let scope =
+                match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
+                {
+                    Ok(scope) => scope,
+                    Err(error) => return MutationExecution::not_committed(error),
+                };
+            match create_file_from_content(state, &scope, filename, "", "local_create") {
+                Ok((doc_id, ops)) => MutationExecution::committed(
+                    (doc_id, ops),
+                    MutationPublication::document_recovery(
+                        scope.repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::Exact(vec![doc_id]),
+                    ),
+                ),
+                // The file registration helper spans the authority append and
+                // projection writeback. Conservatively publish recovery when
+                // it cannot prove the append did not commit.
+                Err(error) => MutationExecution::committed_partial(
+                    error,
+                    MutationPublication::document_recovery(
+                        scope.repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                    ),
+                ),
+            }
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { .. }) => {}
+        Ok(MutationExecution::NotCommitted(e))
+        | Ok(MutationExecution::CommittedPartial { error: e, .. })
+        | Ok(MutationExecution::ProjectionDegraded { error: e, .. }) => {
             tracing::error!("文件创建失败: {:?}", e);
             errors::storage_persist_failed_scoped(
                 ch,
                 format!("Failed to create file: {}", e),
                 scope_nonce,
             );
-            return;
         }
-    };
-
-    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
-        tracing::error!("文件创建后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed_scoped(
-            ch,
-            format!("Failed to refresh created file view: {}", e),
-            scope_nonce,
-        );
-        return;
+        Err(e) => {
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to serialize file create: {e}"),
+                scope_nonce,
+            );
+        }
     }
-
-    notify_fs_refresh(ch, scope.repo_id, filename, "added");
 }

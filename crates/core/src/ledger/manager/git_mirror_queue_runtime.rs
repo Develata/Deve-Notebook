@@ -11,7 +11,11 @@ use crate::ledger::RepoManager;
 use crate::models::RepoId;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn queue_repo_id(repo: &RepoManager, repo_name: &str) -> Option<RepoId> {
+pub(super) fn binding_is_current(
+    repo: &RepoManager,
+    repo_name: &str,
+    expected_repo_id: RepoId,
+) -> bool {
     let repo_root = match repo.local_repo_workspace_root(repo_name) {
         Ok(root) => root,
         Err(err) => {
@@ -20,29 +24,38 @@ pub(super) fn queue_repo_id(repo: &RepoManager, repo_name: &str) -> Option<RepoI
                 error = %err,
                 "Git mirror queue skipped because workspace root is unavailable"
             );
-            return None;
+            return false;
         }
     };
     match crate::git_bridge::inspect_repo_root(&repo_root) {
         Ok(status) if status.state == crate::git_bridge::GitMirrorState::Ready => {}
-        Ok(_) => return None,
+        Ok(_) => return false,
         Err(err) => {
             tracing::warn!(
                 repo_name,
                 error = %err,
                 "Git mirror queue skipped because mirror status could not be inspected"
             );
-            return None;
+            return false;
         }
     }
     match repo.run_on_local_repo(repo_name, RepoManager::read_repo_info_from_db) {
-        Ok(Some(info)) => Some(info.uuid),
+        Ok(Some(info)) if info.uuid == expected_repo_id => true,
+        Ok(Some(info)) => {
+            tracing::warn!(
+                repo_name,
+                expected_repo_id = %expected_repo_id,
+                observed_repo_id = %info.uuid,
+                "Git mirror queue skipped because repository identity changed"
+            );
+            false
+        }
         Ok(None) => {
             tracing::warn!(
                 repo_name,
                 "Git mirror queue skipped because repository metadata is missing"
             );
-            None
+            false
         }
         Err(err) => {
             tracing::warn!(
@@ -50,7 +63,7 @@ pub(super) fn queue_repo_id(repo: &RepoManager, repo_name: &str) -> Option<RepoI
                 error = %err,
                 "Git mirror queue skipped because repository metadata could not be read"
             );
-            None
+            false
         }
     }
 }

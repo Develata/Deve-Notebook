@@ -9,6 +9,7 @@ use crate::repo_init::initialize_local_repo_workspace;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::repo_list::repo_list_message;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::session::WsSession;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::path::PathBuf;
@@ -72,20 +73,67 @@ pub(super) async fn handle_create_repo(
             return;
         }
     };
-    let report = match initialize_local_repo_workspace(
-        state.repo.ledger_dir(),
-        &repo_name,
-        &projection_base,
-        state.repo.snapshot_depth(),
-        None,
-        None,
-    ) {
-        Ok(report) => report,
-        Err(err) => {
+    let repo_id = deve_core::models::RepoId::new_v4();
+    let execution = state
+        .repo_mutation_gate()
+        .execute_catalog(&state.tx, || {
+            // Revalidate the catalog name after waiting for the catalog permit.
+            match state.repo.get_repo_info_for(None, Some(&repo_name)) {
+                Ok(Some(_)) => {
+                    return MutationExecution::not_committed(anyhow::anyhow!(
+                        "Repository already exists: {repo_name}"
+                    ));
+                }
+                Ok(None) => {}
+                Err(error) => return MutationExecution::not_committed(error),
+            }
+            match initialize_local_repo_workspace(
+                state.repo.ledger_dir(),
+                &repo_name,
+                &projection_base,
+                state.repo.snapshot_depth(),
+                Some(repo_id),
+                None,
+            ) {
+                Ok(report) => MutationExecution::committed(
+                    report,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::None,
+                    ),
+                ),
+                // Workspace initialization spans catalog, database, and
+                // projection setup. An opaque error cannot prove that none of
+                // those durable phases committed.
+                Err(error) => MutationExecution::committed_partial(
+                    error,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::None,
+                    ),
+                ),
+            }
+        })
+        .await;
+    let report = match execution {
+        Ok(MutationExecution::Committed { value, .. }) => value,
+        Ok(MutationExecution::NotCommitted(err))
+        | Ok(MutationExecution::ProjectionDegraded { error: err, .. })
+        | Ok(MutationExecution::CommittedPartial { error: err, .. }) => {
             ch.send_protocol_error_with_switch_nonce(
                 ServerError::with_detail(
                     ServerErrorCode::StoragePersistFailed,
                     format!("Failed to create repository {repo_name}: {err}"),
+                ),
+                switch_nonce,
+            );
+            return;
+        }
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::StoragePersistFailed,
+                    format!("Failed to serialize repository create: {error}"),
                 ),
                 switch_nonce,
             );

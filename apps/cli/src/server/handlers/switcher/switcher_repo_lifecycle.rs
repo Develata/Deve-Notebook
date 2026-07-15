@@ -5,6 +5,7 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::repo_list::repo_list_message;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::session::WsSession;
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -42,13 +43,46 @@ pub(super) async fn handle_rename_repo(
         return;
     }
 
-    let summary = match state.repo.rename_local_repo(repo_id, &name) {
-        Ok(summary) => summary,
-        Err(err) => {
+    let execution = state
+        .repo_mutation_gate()
+        .execute_catalog_repo(repo_id, &state.tx, || {
+            match state.repo.rename_local_repo(repo_id, &name) {
+                Ok(summary) => MutationExecution::committed(
+                    summary,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                    ),
+                ),
+                Err(error) => MutationExecution::committed_partial(
+                    error,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                    ),
+                ),
+            }
+        })
+        .await;
+    let summary = match execution {
+        Ok(MutationExecution::Committed { value, .. }) => value,
+        Ok(MutationExecution::NotCommitted(err))
+        | Ok(MutationExecution::ProjectionDegraded { error: err, .. })
+        | Ok(MutationExecution::CommittedPartial { error: err, .. }) => {
             ch.send_protocol_error_with_switch_nonce(
                 ServerError::with_detail(
                     ServerErrorCode::StoragePersistFailed,
                     format!("Failed to rename repository: {err}"),
+                ),
+                switch_nonce,
+            );
+            return;
+        }
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::StoragePersistFailed,
+                    format!("Failed to serialize repository rename: {error}"),
                 ),
                 switch_nonce,
             );
@@ -117,15 +151,51 @@ pub(super) async fn handle_remove_repo(
         None
     };
 
-    if let Err(err) = state.repo.remove_local_repo(repo_id) {
-        ch.send_protocol_error_with_switch_nonce(
-            ServerError::with_detail(
-                ServerErrorCode::StoragePersistFailed,
-                format!("Failed to remove repository: {err}"),
-            ),
-            switch_nonce,
-        );
-        return;
+    let execution = state
+        .repo_mutation_gate()
+        .execute_catalog_repo(repo_id, &state.tx, || {
+            match state.repo.remove_local_repo(repo_id) {
+                Ok(summary) => MutationExecution::committed(
+                    summary,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                    ),
+                ),
+                Err(error) => MutationExecution::committed_partial(
+                    error,
+                    MutationPublication::document_recovery(
+                        repo_id,
+                        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
+                    ),
+                ),
+            }
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { .. }) => {}
+        Ok(MutationExecution::NotCommitted(err))
+        | Ok(MutationExecution::ProjectionDegraded { error: err, .. })
+        | Ok(MutationExecution::CommittedPartial { error: err, .. }) => {
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::StoragePersistFailed,
+                    format!("Failed to remove repository: {err}"),
+                ),
+                switch_nonce,
+            );
+            return;
+        }
+        Err(error) => {
+            ch.send_protocol_error_with_switch_nonce(
+                ServerError::with_detail(
+                    ServerErrorCode::StoragePersistFailed,
+                    format!("Failed to serialize repository removal: {error}"),
+                ),
+                switch_nonce,
+            );
+            return;
+        }
     }
 
     emit_repo_list(state, ch, session, switch_nonce);

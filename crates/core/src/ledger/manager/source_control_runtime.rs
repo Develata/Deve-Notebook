@@ -9,7 +9,10 @@ use crate::ledger::manager::source_control_write_runtime::SourceControlWriteRunt
 use crate::ledger::manager::types::RepoManager;
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo};
+use crate::source_control::{
+    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ExternalApplyOutcome,
+    ExternalApplyReceipt,
+};
 use anyhow::Result;
 
 pub(crate) struct SourceControlRuntime<'a> {
@@ -122,8 +125,16 @@ impl<'a> SourceControlRuntime<'a> {
     pub(crate) fn apply_external_changes_in_local_repo(
         &self,
         repo_name: &str,
-    ) -> Result<Vec<ChangeEntry>> {
+    ) -> Result<ExternalApplyReceipt> {
         self.write().apply_external_changes_in_local_repo(repo_name)
+    }
+
+    pub(crate) fn apply_external_changes_with_outcome_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<ExternalApplyOutcome> {
+        self.write()
+            .apply_external_changes_with_outcome_in_local_repo(repo_name)
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

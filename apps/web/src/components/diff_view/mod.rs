@@ -22,8 +22,6 @@ use crate::runtime::source_control_client::diff_session::{
 use deve_core::protocol::{MergeConflictAction, ServerError, ServerErrorCode};
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
 const DIFF_CLOSE_BUTTON_CLASS: &str = "diff-close-button min-h-11 min-w-11 rounded p-1 text-[var(--diff-muted)] hover:bg-[var(--diff-btn-hover)]";
@@ -59,7 +57,7 @@ pub fn DiffView(
     let (draft, set_draft) = signal(initial_draft);
     let (status, set_status) = signal(session.status.clone());
     let initial_revision = session.latest_revision;
-    let debounce_timer: Rc<RefCell<Option<Timeout>>> = Rc::new(RefCell::new(None));
+    let debounce_timer = StoredValue::new_local(None::<Timeout>);
 
     let submit = {
         let projection = projection.clone();
@@ -88,33 +86,18 @@ pub fn DiffView(
             }
         }
     };
-    let submit = StoredValue::new(submit);
-    {
-        let debounce_timer = debounce_timer.clone();
-        let seen = Rc::new(RefCell::new(false));
-        Effect::new(move |_| {
-            let content = draft.get();
-            if !*seen.borrow() {
-                *seen.borrow_mut() = true;
-                return;
-            }
-            let pending_revision = initial_revision.saturating_add(1);
-            set_status.set(DiffProjectionStatus::Debouncing {
-                revision: pending_revision,
-            });
-            if let Some(timer) = debounce_timer.borrow_mut().take() {
-                timer.cancel();
-            }
-            let timer = Timeout::new(DIFF_EDIT_DEBOUNCE_MS, move || {
-                submit.with_value(|submit| submit(content));
-            });
-            *debounce_timer.borrow_mut() = Some(timer);
-        });
-    }
+    // The callback and timer are owner-scoped arena values. Closing a transient
+    // diff view disposes both before a delayed callback can touch its signals.
+    // Projection requests are driven by user input only; mounting a view must
+    // not enqueue an unsolicited recomputation.
+    let submit = StoredValue::new_local(submit);
 
     let retry = (projection.is_some() && on_compute_projection.is_some()).then(|| {
         Callback::new(move |_| {
-            submit.with_value(|submit| submit(draft.get_untracked()));
+            let Some(content) = draft.try_get_untracked() else {
+                return;
+            };
+            let _ = submit.try_with_value(|submit| submit(content));
         })
     });
     let added = projection.as_ref().map_or(0, |p| p.added_lines);
@@ -131,7 +114,7 @@ pub fn DiffView(
     let merge_conflict = session.merge_conflict.clone();
 
     view! {
-        <div class=move || diff_view_class(mobile) data-deve-diff-projection="typed-v13">
+        <div class=move || diff_view_class(mobile) data-deve-diff-projection="backend-typed">
             <div class=move || if mobile {
                 "flex-none border-b border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-3 py-2"
             } else {
@@ -196,7 +179,27 @@ pub fn DiffView(
                         data-deve-diff-draft="true"
                         class="h-full w-full resize-none border-0 bg-[var(--diff-bg)] p-3 font-mono text-[13px] text-[var(--diff-fg)] outline-none"
                         prop:value=move || draft.get()
-                        on:input=move |event| set_draft.set(event_target_value(&event))
+                        on:input=move |event| {
+                            let content = event_target_value(&event);
+                            set_draft.set(content.clone());
+                            let pending_revision = initial_revision.saturating_add(1);
+                            if set_status
+                                .try_set(DiffProjectionStatus::Debouncing {
+                                    revision: pending_revision,
+                                })
+                                .is_some()
+                            {
+                                return;
+                            }
+                            let _ = debounce_timer.try_update_value(|slot| {
+                                if let Some(timer) = slot.take() {
+                                    timer.cancel();
+                                }
+                                *slot = Some(Timeout::new(DIFF_EDIT_DEBOUNCE_MS, move || {
+                                    let _ = submit.try_with_value(|submit| submit(content));
+                                }));
+                            });
+                        }
                         on:change=move |event| {
                             if let Some(on_persist) = on_persist_draft {
                                 on_persist.run(event_target_value(&event));

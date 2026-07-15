@@ -53,3 +53,4 @@ blueprint in `docs/plan/`.
 | [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Accepted |
 | [0007](./0007-projection-backup-first-tag-route.md) | Projection Backup first-tag route | Accepted |
 | [0008](./0008-s3-compatible-remote-projection-credential-binding.md) | S3-compatible Remote Projection credential binding | Accepted |
+| [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Accepted |

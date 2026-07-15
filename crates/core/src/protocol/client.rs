@@ -2,6 +2,7 @@
 //! 客户端 WebSocket 消息协议。
 //! plan_ref:
 //!   - 07_network#web-ws-runtime
+//!   - 07_network#projection-recovery-contract
 //!   - 09_web_thin_client_ledger#web-edit-intent
 
 use crate::models::{DocId, Op, PeerFactSeq, PeerId, VersionVector};
@@ -233,6 +234,7 @@ pub enum ClientMessage {
         scope_nonce: Option<u64>,
     },
     ApplyExternalChanges {
+        request_id: String,
         #[serde(default)]
         scope_nonce: Option<u64>,
     },

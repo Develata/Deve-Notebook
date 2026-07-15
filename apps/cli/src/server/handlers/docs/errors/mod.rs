@@ -61,19 +61,6 @@ pub(super) fn storage_persist_failed_scoped(
     );
 }
 
-pub(super) fn projection_refresh_failed_scoped(
-    ch: &DualChannel,
-    detail: impl Into<String>,
-    scope_nonce: Option<u64>,
-) {
-    send(
-        ch,
-        ServerErrorCode::StoragePersistFailed,
-        detail,
-        scope_nonce,
-    );
-}
-
 pub(super) fn classified_failure_scoped(
     ch: &DualChannel,
     detail: impl Into<String>,

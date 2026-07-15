@@ -99,6 +99,15 @@ impl BroadcastFilter {
                     false,
                 ) && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
             }
+            ServerMessage::ProjectionRecoveryRequired(recovery) => {
+                matches_scope(
+                    scope.active_repo_id,
+                    scope.active_branch.as_ref(),
+                    &Some(recovery.repo_id),
+                    recovery.branch.as_ref(),
+                    recovery.branch.is_none(),
+                ) && matches_runtime_scope_nonce(scope.scope_nonce, recovery.scope_nonce)
+            }
             ServerMessage::PeerDeleted { scope_nonce, .. } => {
                 scope.browser_session
                     && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)

@@ -69,7 +69,7 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.switch_repo(repo_name.clone(), None);
-    grant_browser_write(&state, &mut session, repo_id, 34)?;
+    bind_browser_writer(&state, &mut session, repo_id, 34)?;
 
     handle_resolve_conflict(
         &state,
@@ -180,7 +180,7 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.switch_repo(repo_name.clone(), None);
-    grant_browser_write(&state, &mut session, repo_id, 33)?;
+    bind_browser_writer(&state, &mut session, repo_id, 33)?;
 
     handle_resolve_conflict(
         &state,

@@ -71,26 +71,45 @@ async fn create_doc(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<DocI
         },
     )
     .await?;
-    let mut created_doc = None;
-    let mut saw_tree_update = false;
-    for _ in 0..4 {
-        track_create_view_message(
-            recv_server_message(ws).await?,
-            repo_id,
-            &mut created_doc,
-            &mut saw_tree_update,
-        );
-        if created_doc.is_some() && saw_tree_update {
-            break;
+    let doc_id = match recv_server_message(ws).await? {
+        ServerMessage::ProjectionRecoveryRequired(required) => {
+            assert_eq!(required.repo_id, repo_id);
+            assert_eq!(required.scope_nonce, Some(SCOPE));
+            match required.plan.documents {
+                deve_core::protocol::DocumentRecoveryScope::Exact(docs) if docs.len() == 1 => {
+                    docs[0]
+                }
+                other => anyhow::bail!("create recovery must identify one doc, got {other:?}"),
+            }
+        }
+        other => anyhow::bail!("expected create recovery, got {other:?}"),
+    };
+    send_client_message(
+        ws,
+        ClientMessage::ListDocs {
+            request_id: "writer-gate-recovery".into(),
+            scope_nonce: Some(SCOPE),
+        },
+    )
+    .await?;
+    let mut saw_doc_list = false;
+    let mut saw_tree = false;
+    let mut saw_scope = false;
+    for _ in 0..3 {
+        match recv_server_message(ws).await? {
+            ServerMessage::RepoSwitched { uuid, .. } => {
+                assert_eq!(uuid, repo_id.to_string());
+                saw_scope = true;
+            }
+            ServerMessage::DocList { docs, .. } => {
+                assert!(docs.iter().any(|(id, path)| *id == doc_id && path == "writer-gate.md"));
+                saw_doc_list = true;
+            }
+            ServerMessage::TreeUpdate { .. } => saw_tree = true,
+            other => anyhow::bail!("expected create recovery projection, got {other:?}"),
         }
     }
-    let Some(doc_id) = created_doc else {
-        anyhow::bail!("created doc did not appear in DocList");
-    };
-    if !saw_tree_update {
-        anyhow::bail!("created doc did not produce a TreeUpdate");
-    }
-    drain_create_tail(ws, repo_id).await?;
+    anyhow::ensure!(saw_scope && saw_doc_list && saw_tree, "create recovery did not settle");
     Ok(doc_id)
 }
 
@@ -128,16 +147,6 @@ async fn assert_no_commit_echo(ws: &mut TestWs, expected_doc: DocId) -> anyhow::
         reject_commit_echo(&msg, expected_doc)?;
     }
     anyhow::bail!("server kept emitting messages after rejected edit");
-}
-
-async fn drain_create_tail(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<()> {
-    for _ in 0..4 {
-        let Some(msg) = recv_optional_server_message(ws, Duration::from_millis(120)).await? else {
-            return Ok(());
-        };
-        assert_create_tail_message(msg, repo_id);
-    }
-    anyhow::bail!("create doc emitted too many tail messages");
 }
 
 fn reject_commit_echo(message: &ServerMessage, expected_doc: DocId) -> anyhow::Result<()> {
@@ -182,60 +191,5 @@ fn is_commit_echo(message: &ServerMessage, expected_doc: DocId) -> bool {
                     })
         }
         _ => false,
-    }
-}
-
-fn track_create_view_message(
-    message: ServerMessage,
-    repo_id: uuid::Uuid,
-    created_doc: &mut Option<DocId>,
-    saw_tree_update: &mut bool,
-) {
-    match message {
-        ServerMessage::DocList {
-            repo_id: Some(actual),
-            branch,
-            scope_nonce,
-            docs,
-            ..
-        } => {
-            assert_eq!(actual, repo_id);
-            assert_eq!(branch, None);
-            assert_eq!(scope_nonce, Some(SCOPE));
-            if let Some((doc_id, _path)) =
-                docs.into_iter().find(|(_id, path)| path == "writer-gate.md")
-            {
-                *created_doc = Some(doc_id);
-            }
-        }
-        ServerMessage::TreeUpdate {
-            repo_id: Some(actual),
-            branch,
-            scope_nonce,
-            ..
-        } => {
-            assert_eq!(actual, repo_id);
-            assert_eq!(branch, None);
-            assert_eq!(scope_nonce, Some(SCOPE));
-            *saw_tree_update = true;
-        }
-        ServerMessage::FsChangeDetected { .. } => {}
-        other => panic!("expected create-doc view message, got {other:?}"),
-    }
-}
-
-fn assert_create_tail_message(message: ServerMessage, repo_id: uuid::Uuid) {
-    match message {
-        ServerMessage::FsChangeDetected {
-            repo_id: Some(actual),
-            path,
-            change_type,
-            ..
-        } => {
-            assert_eq!(actual, repo_id);
-            assert_eq!(path, "writer-gate.md");
-            assert_eq!(change_type, "added");
-        }
-        other => panic!("unexpected create-doc tail message, got {other:?}"),
     }
 }

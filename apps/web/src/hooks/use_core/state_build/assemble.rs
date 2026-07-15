@@ -69,16 +69,10 @@ pub(super) fn assemble_core_state(
         set_external_unstaged_changes,
         external_changes_error.clone(),
     );
-    let external_changes_apply_confirmed = {
-        let set_confirmed_changes = sc.set_confirmed_changes;
-        Callback::new(move |confirmed_changes| {
-            set_confirmed_changes.set(confirmed_changes);
-        })
-    };
     let external_changes_mutations = create_external_changes_mutation_callbacks(
         external_changes_scope,
+        ws.clone(),
         external_changes_refresh.clone(),
-        external_changes_apply_confirmed,
         external_changes_error,
     );
     let runtime_clients = CoreRuntimeClients {

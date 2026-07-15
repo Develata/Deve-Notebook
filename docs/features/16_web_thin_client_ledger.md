@@ -26,6 +26,11 @@
 - 当前 repo 未握手完成时，页面不能假装可写。
 - 切 repo、切 branch、重连后，写入状态必须随当前 scope 切换。
 - 断线、未授权或 native session 阻塞时必须撤销旧 writer-ready，直到新连接完成当前 scope 的握手与 writer registration。
+- 收到命中当前文档的后端 projection recovery 时，旧 document projection-ready generation
+  必须立即失效；同一连接/scope 的 repo writer grant 保留，以允许新的 `OpenDoc` 完成恢复。
+  检测到 incoming gap 时则撤销 repo writer-ready 并退休连接。页面保留 pending edits，以新
+  generation 的 Snapshot/History 恢复；只有 fresh document projection-ready 后才重发一次。
+- recovery plan 未命中当前文档时，仅刷新后端指定的列表投影，当前编辑器不得被无谓锁住。
 
 ### 4. 离开文档保护
 
@@ -39,6 +44,17 @@
 - 当前阶段不允许 UI 仅凭快照加载完成就认为当前可写。
 
 ## Chrome MCP 验收实例
+
+### WEBWRITE-FEAT-00: Projection Recovery 保留 Pending
+
+前置条件：两个客户端打开同一 repo，客户端 A 当前文档存在 pending overlay。
+
+步骤：在客户端 B 通过 External Changes 应用一次命中 A 当前文档的批量修改；随后注入一次
+浏览器 incoming gap，并恢复网络。
+
+期望结果：A 进入只读 `Resyncing`，pending 不丢失；只处理 fresh generation 的
+Snapshot/History，writer-ready 恢复后 pending 只重发一次。对无关文档执行相同 Apply 时，A 的
+当前编辑器保持可写。若 adapter/replay 再次失败，页面进入可诊断 Error 并只提供显式 Retry。
 
 ### WEBWRITE-FEAT-01: Pending -> Ack
 

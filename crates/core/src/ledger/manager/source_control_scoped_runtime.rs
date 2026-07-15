@@ -7,7 +7,9 @@
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use crate::source_control::{
+    ChangeEntry, CommitFileDiff, CommitInfo, ExternalApplyOutcome, ExternalApplyReceipt,
+};
 use anyhow::Result;
 
 pub(crate) struct SourceControlScopedRuntime<'a> {
@@ -127,11 +129,21 @@ impl<'a> SourceControlScopedRuntime<'a> {
     pub(crate) fn apply_external_changes_in_repo(
         &self,
         repo: &RepoSelector,
-    ) -> Result<Vec<ChangeEntry>> {
+    ) -> Result<ExternalApplyReceipt> {
         let repo_name = self.resolve_local_repo_for_execution(repo)?;
         self.manager
             .source_control_runtime()
             .apply_external_changes_in_local_repo(&repo_name)
+    }
+
+    pub(crate) fn apply_external_changes_with_outcome_in_repo(
+        &self,
+        repo: &RepoSelector,
+    ) -> Result<ExternalApplyOutcome> {
+        let repo_name = self.resolve_local_repo_for_execution(repo)?;
+        self.manager
+            .source_control_runtime()
+            .apply_external_changes_with_outcome_in_local_repo(&repo_name)
     }
 }
 

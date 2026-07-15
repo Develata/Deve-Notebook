@@ -19,11 +19,14 @@
 pub mod api;
 pub mod diff;
 pub mod diff_projection;
+mod external_apply;
 pub mod line_diff;
 pub mod types;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod changes;
+#[cfg(not(target_arch = "wasm32"))]
+mod commit_authority;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod commit_diff;
 #[cfg(not(target_arch = "wasm32"))]
@@ -47,7 +50,16 @@ pub mod staging;
 #[cfg(not(target_arch = "wasm32"))]
 pub use api::{DelegatedSourceControlApi, SourceControlApi};
 #[cfg(not(target_arch = "wasm32"))]
+pub use commit_authority::CommitAuthorityFailure;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use commit_diff_error::CommitDiffError;
+#[cfg(not(target_arch = "wasm32"))]
+pub use external_apply::ExternalApplyOutcome;
+pub use external_apply::ExternalApplyReceipt;
+#[cfg(not(target_arch = "wasm32"))]
+pub use external_apply::PreparedExternalApply;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use external_apply::{PreparedExternalTarget, PreparedUpsert};
 pub use line_diff::ChangeRange;
 pub use types::{
     ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitFileDiffSummary,

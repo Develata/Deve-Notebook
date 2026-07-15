@@ -33,13 +33,13 @@ pub(super) fn write_workspace_file(dir: &TempDir, repo_name: &str, path: &str, c
     scope_support::write_workspace_file(dir, repo_name, path, content);
 }
 
-pub(super) fn grant_browser_write(
+pub(super) fn bind_browser_writer(
     state: &Arc<AppState>,
     session: &mut WsSession,
     repo_id: uuid::Uuid,
     scope_nonce: u64,
 ) -> anyhow::Result<()> {
-    scope_support::grant_browser_write(state, session, repo_id, scope_nonce)
+    scope_support::bind_browser_writer(state, session, repo_id, scope_nonce)
 }
 
 pub(super) fn git(path: &Path, args: &[&str]) -> String {

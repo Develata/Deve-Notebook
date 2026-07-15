@@ -1,8 +1,9 @@
 //! plan_ref:
 //!   - 07_network#web-ws-runtime
 //!
-use crate::api::{WsService, is_current_connection_message};
+use crate::api::{IncomingBatch, WsService, is_current_connection_message};
 use crate::i18n::{Locale, t};
+use crate::runtime::projection_recovery::{ProjectionRefreshCoordinator, ProjectionRefreshScope};
 use deve_core::protocol::ClientMessage;
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
@@ -12,16 +13,18 @@ use std::rc::Rc;
 use super::super::state::CoreSignals;
 use super::super::write_gate::RepoWriteGateState;
 use super::message_dispatch;
+use super::message_projection_recovery;
 use super::message_refresh::{capture_refresh_scope, should_send_refresh_through_read_gate};
 
 /// 设置消息处理 Effect。
-pub fn setup(ws: &WsService, signals: &CoreSignals) {
+pub fn setup(ws: &WsService, signals: &CoreSignals, external_changes_refresh: Callback<()>) {
     let ws_rx = ws.clone();
     let signals = *signals;
     let degraded_sync_mode = signals.degraded_sync_mode;
     let set_sync_banner = signals.set_sync_banner;
     let changes_refresh = Rc::new(RefCell::new(None::<Timeout>));
     let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+    let projection_refresh = ProjectionRefreshCoordinator::default();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     Effect::new(move |_| {
@@ -118,45 +121,115 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
         let _ = ws_rx.msg_seq.get();
         process_available_messages(
             &ws_rx,
-            signals,
-            locale.get_untracked(),
-            last_msg_seq,
-            set_last_msg_seq,
-            &schedule_refresh,
+            MessageProcessingContext {
+                signals,
+                locale: locale.get_untracked(),
+                last_msg_seq,
+                set_last_msg_seq,
+                schedule_refresh: &schedule_refresh,
+                external_changes_refresh,
+                projection_refresh: &projection_refresh,
+            },
         );
     });
 }
 
-fn process_available_messages<F>(
-    ws_rx: &WsService,
+struct MessageProcessingContext<'a> {
     signals: CoreSignals,
     locale: Locale,
     last_msg_seq: ReadSignal<u64>,
     set_last_msg_seq: WriteSignal<u64>,
-    schedule_refresh: &F,
-) where
-    F: Fn(),
-{
-    for (seq, connection_epoch, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
-        let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
+    schedule_refresh: &'a dyn Fn(),
+    external_changes_refresh: Callback<()>,
+    projection_refresh: &'a ProjectionRefreshCoordinator,
+}
+
+fn process_available_messages(ws_rx: &WsService, context: MessageProcessingContext<'_>) {
+    let MessageProcessingContext {
+        signals,
+        locale,
+        last_msg_seq,
+        set_last_msg_seq,
+        schedule_refresh,
+        external_changes_refresh,
+        projection_refresh,
+    } = context;
+    let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
+    projection_refresh.enter_scope(ProjectionRefreshScope {
+        connection_epoch: current_connection_epoch,
+        repo_id: signals
+            .current_repo_id
+            .get_untracked()
+            .and_then(|repo_id| repo_id.parse().ok()),
+        branch: signals.active_branch.get_untracked(),
+        scope_nonce: signals.current_scope_nonce.get_untracked(),
+        scope_switch_pending: signals.pending_repo_switch.get_untracked().is_some()
+            || signals.pending_branch_switch.get_untracked().is_some(),
+    });
+    if ws_rx.reconnect_for_resync_pending(current_connection_epoch) {
+        set_last_msg_seq.set(ws_rx.msg_seq.get_untracked());
+        return;
+    }
+    let messages = match ws_rx.messages_since(last_msg_seq.get_untracked()) {
+        IncomingBatch::Messages(messages) => messages,
+        IncomingBatch::Gap { latest_seq } => {
+            set_last_msg_seq.set(latest_seq);
+            signals
+                .set_load_state
+                .set(crate::runtime::domain::LoadPhase::Resyncing);
+            ws_rx.request_reconnect_for_resync(current_connection_epoch);
+            return;
+        }
+    };
+    for (seq, connection_epoch, msg) in messages {
         if !is_current_connection_message(connection_epoch, current_connection_epoch) {
             set_last_msg_seq.set(seq);
             continue;
         }
-        message_dispatch::handle_message(msg, ws_rx, signals, locale, schedule_refresh);
+        if let deve_core::protocol::ServerMessage::ProjectionRecoveryRequired(required) = msg {
+            message_projection_recovery::handle_required(
+                required,
+                ws_rx,
+                signals,
+                external_changes_refresh,
+                projection_refresh,
+            );
+        } else {
+            let refresh_response = message_projection_recovery::capture_response(&msg);
+            message_projection_recovery::retire_failed_refresh(
+                &msg,
+                ws_rx,
+                signals,
+                projection_refresh,
+            );
+            message_dispatch::handle_message(msg, ws_rx, signals, locale, schedule_refresh);
+            if let Some((response, request_id)) = refresh_response {
+                message_projection_recovery::response_completed(
+                    response,
+                    &request_id,
+                    ws_rx,
+                    signals,
+                    external_changes_refresh,
+                    projection_refresh,
+                );
+            }
+        }
         set_last_msg_seq.set(seq);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::process_available_messages;
+    use super::{MessageProcessingContext, process_available_messages};
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::state::init_signals;
-    use deve_core::protocol::ServerMessage;
+    use crate::runtime::domain::LoadPhase;
+    use deve_core::protocol::{ClientMessage, ServerMessage};
     use leptos::prelude::*;
     use leptos::reactive::owner::Owner;
     use std::collections::VecDeque;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn metrics_message(uptime_secs: u64, active_connections: u32) -> ServerMessage {
         ServerMessage::SystemMetrics {
@@ -187,11 +260,15 @@ mod tests {
 
         process_available_messages(
             &ws,
-            signals,
-            crate::i18n::Locale::En,
-            last_msg_seq,
-            set_last_msg_seq,
-            &|| {},
+            MessageProcessingContext {
+                signals,
+                locale: crate::i18n::Locale::En,
+                last_msg_seq,
+                set_last_msg_seq,
+                schedule_refresh: &|| {},
+                external_changes_refresh: Callback::new(|()| {}),
+                projection_refresh: &Default::default(),
+            },
         );
 
         let metrics = signals
@@ -202,5 +279,99 @@ mod tests {
         assert_eq!(metrics.uptime_secs, 20);
         assert_eq!(metrics.active_connections, 2);
         assert!(signals.system_metrics_live.get_untracked());
+    }
+
+    #[test]
+    fn incoming_gap_retires_epoch_without_processing_retained_suffix() {
+        let runtime = Owner::new();
+        runtime.set();
+        let ws = WsService::new_with_incoming_for_test(
+            ConnectionStatus::Connected,
+            4,
+            VecDeque::from([
+                (45, 4, metrics_message(10, 1)),
+                (46, 4, metrics_message(20, 2)),
+            ]),
+        );
+        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        let signals = init_signals(ws.status);
+        let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+
+        process_available_messages(
+            &ws,
+            MessageProcessingContext {
+                signals,
+                locale: crate::i18n::Locale::En,
+                last_msg_seq,
+                set_last_msg_seq,
+                schedule_refresh: &|| {},
+                external_changes_refresh: Callback::new(|()| {}),
+                projection_refresh: &Default::default(),
+            },
+        );
+
+        assert!(signals.system_metrics.get_untracked().is_none());
+        assert_eq!(last_msg_seq.get_untracked(), 46);
+        assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+        assert_eq!(ws.drain_connection_controls_for_test().len(), 1);
+    }
+
+    #[test]
+    fn projection_recovery_coalesces_duplicate_refresh_and_locks_affected_doc() {
+        let runtime = Owner::new();
+        runtime.set();
+        let repo_id = deve_core::models::RepoId::new_v4();
+        let doc_id = deve_core::models::DocId::new();
+        let required = deve_core::protocol::ProjectionRecoveryRequired {
+            repo_id,
+            branch: None,
+            scope_nonce: Some(7),
+            cause: deve_core::protocol::ProjectionRecoveryCause::ExternalApply,
+            plan: deve_core::protocol::ProjectionRecoveryPlan::external_apply(vec![doc_id]),
+        };
+        let ws = WsService::new_with_incoming_for_test(
+            ConnectionStatus::Connected,
+            4,
+            VecDeque::from([
+                (
+                    1,
+                    4,
+                    ServerMessage::ProjectionRecoveryRequired(required.clone()),
+                ),
+                (2, 4, ServerMessage::ProjectionRecoveryRequired(required)),
+            ]),
+        );
+        let signals = init_signals(ws.status);
+        signals.set_current_repo_id.set(Some(repo_id.to_string()));
+        signals.set_current_scope_nonce.set(7);
+        signals.set_current_doc.set(Some(doc_id));
+        let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+        let external_refreshes = Arc::new(AtomicUsize::new(0));
+        let refresh_counter = external_refreshes.clone();
+
+        process_available_messages(
+            &ws,
+            MessageProcessingContext {
+                signals,
+                locale: crate::i18n::Locale::En,
+                last_msg_seq,
+                set_last_msg_seq,
+                schedule_refresh: &|| {},
+                external_changes_refresh: Callback::new(move |()| {
+                    refresh_counter.fetch_add(1, Ordering::Relaxed);
+                }),
+                projection_refresh: &Default::default(),
+            },
+        );
+
+        assert_eq!(signals.load_state.get_untracked(), LoadPhase::Resyncing);
+        assert_eq!(external_refreshes.load(Ordering::Relaxed), 1);
+        let sent = ws.drain_sent_for_test();
+        assert_eq!(sent.len(), 2);
+        assert!(matches!(sent.first(), Some(ClientMessage::ListDocs { .. })));
+        assert!(matches!(
+            sent.get(1),
+            Some(ClientMessage::GetChanges { .. })
+        ));
     }
 }

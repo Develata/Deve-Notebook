@@ -50,7 +50,7 @@ pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
     std::fs::write(abs, content).expect("write workspace file");
 }
 
-pub(super) fn grant_default_browser_write(
+pub(super) fn bind_default_browser_writer(
     state: &Arc<AppState>,
     session: &mut WsSession,
     scope_nonce: u64,
@@ -65,7 +65,13 @@ pub(super) fn grant_default_browser_write(
     ));
     session.mark_browser_session();
     session.bind_auth_session(auth_session_id.clone());
+    session.switch_repo("default".into(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
+    session.set_sync_scope_nonce(scope_nonce);
+    session.set_authenticated(PeerId::new("test-peer"));
+    session.bind_repo(repo_id);
+    session.mark_sync_hello_accepted();
+    session.set_writer_identity(repo_id, PeerId::new("test-peer"), scope_nonce);
     state
         .source_control_write_grants()
         .grant(

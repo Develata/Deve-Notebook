@@ -5,7 +5,7 @@
 use super::super::errors::{self, ScOp};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, CommitInfo, SourceControlApi};
+use deve_core::source_control::SourceControlApi;
 
 pub fn stage_pending(
     repo: &dyn SourceControlApi,
@@ -100,21 +100,4 @@ pub fn unstage_many(
         }
     }
     Ok(visible_paths)
-}
-
-pub fn commit_source_control_changes(
-    repo: &dyn SourceControlApi,
-    selector: &RepoSelector,
-    message: &str,
-) -> super::ScResult<CommitInfo> {
-    repo.commit_source_control_changes_in_repo(selector, message)
-        .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
-}
-
-pub fn apply_external_changes(
-    repo: &dyn SourceControlApi,
-    selector: &RepoSelector,
-) -> super::ScResult<Vec<ChangeEntry>> {
-    repo.apply_external_changes_in_repo(selector)
-        .map_err(|e| errors::map_repo_error(ScOp::ApplyExternalChanges, e))
 }

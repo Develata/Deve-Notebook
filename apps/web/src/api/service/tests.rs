@@ -1,6 +1,8 @@
 use super::readiness::{is_current_connection_message, writer_ready_matches};
 use super::{ConnectionStatus, WsService};
+use crate::api::connection::ConnectionControl;
 use crate::api::write_gate::{set_status_and_revoke_writer_ready, status_revokes_writer_ready};
+use deve_core::protocol::ClientMessage;
 use leptos::prelude::GetUntracked;
 
 #[test]
@@ -182,4 +184,46 @@ fn connected_status_does_not_clear_existing_writer_ready() {
 
     assert!(ws.writer_ready_for(Some("repo-a"), Some(7)));
     assert!(ws.writer_client_id.get_untracked().is_some());
+}
+
+#[test]
+fn incoming_gap_reconnect_is_coalesced_per_connection_epoch() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = super::WsService::new_for_test(crate::api::ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(ws.request_reconnect_for_resync(9));
+    assert!(!ws.request_reconnect_for_resync(9));
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert_eq!(
+        ws.drain_connection_controls_for_test(),
+        vec![ConnectionControl::ReconnectForResync {
+            connection_epoch: 9
+        }]
+    );
+}
+
+#[test]
+fn external_apply_request_is_correlated_without_projection_state_update() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = super::WsService::new_for_test(crate::api::ConnectionStatus::Connected);
+
+    let request_id = ws.request_external_apply(7);
+    let sent = ws.drain_sent_for_test();
+    assert_eq!(sent.len(), 1);
+    match &sent[0] {
+        ClientMessage::ApplyExternalChanges {
+            request_id: actual_request_id,
+            scope_nonce,
+        } => {
+            assert_eq!(actual_request_id, &request_id);
+            assert_eq!(*scope_nonce, Some(7));
+        }
+        other => panic!("expected ApplyExternalChanges, got {other:?}"),
+    }
+    assert!(!ws.complete_external_apply("stale"));
+    assert!(ws.complete_external_apply(&request_id));
+    assert!(!ws.complete_external_apply(&request_id));
 }

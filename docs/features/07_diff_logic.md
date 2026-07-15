@@ -138,6 +138,9 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 ### 7. HTTP Source Control Write Grant
 
 - Browser 通过 WebSocket 完成 `SyncHello + RegisterWriter` 后，HTTP stage/discard/unstage/commit 才能使用同一 session 的短生命周期 write grant。
+- 活跃 WebSocket 上的 Source Control 写操作以当前连接精确匹配的 authenticated writer binding 为准；
+  成功验证后由 server infra 续租同 session 的 HTTP grant。用户长时间编辑后不应仅因 HTTP lease
+  自然过期而被迫重连；没有 live writer proof 的直接 HTTP mutation 仍按 expiry fail-closed。
 - 普通 HTTP mutation 的 `scope_nonce` 必须匹配 server-side active grant；任意非零 nonce 或 remote proxy 固定 nonce 不能绕过 writer gate。
 - anonymous localhost 模式下的“同一 session”由 dev session cookie 区分；不能把所有 localhost 请求视为同一个 dev-wide writer grant identity。
 - 如果请求同时携带有效 JWT 与 dev session cookie，HTTP/WS Source Control grant 必须共同绑定 JWT session，不能由 dev cookie 覆盖。
@@ -199,9 +202,13 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 期望结果：
 
 - 外部修改写入 ledger facts。
+- 当前同 repo 已打开受影响文档的客户端收到一次后端 typed recovery plan；命中当前文档时进入
+  短暂只读恢复并精确收敛，未命中时编辑器保持可写。不得要求用户手动重开，也不得由浏览器
+  从文件内容重算操作。
 - External Changes staged/unstaged 列表刷新。
 - Source Control 显示对应 `Confirmed Ledger Changes`。
 - history / graph 不因 `Apply to Ledger` 创建新 commit anchor。
+- 一次大批 Apply 只产生一条恢复信号；请求本身返回带 request id 的 typed receipt ack。
 
 ### DIFF-FEAT-02: 打开 Diff 与 History
 

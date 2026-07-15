@@ -9,14 +9,12 @@ use super::super::effects_sc;
 use super::super::state::CoreSignals;
 use super::message_runtime_remaining::handle_remaining;
 
-pub fn handle_sc_or_remaining<F>(
+pub fn handle_sc_or_remaining(
     msg: ServerMessage,
     ws: &WsService,
     signals: CoreSignals,
-    schedule_refresh: &F,
-) where
-    F: Fn(),
-{
+    schedule_refresh: &dyn Fn(),
+) {
     let ctx = effects_sc::ScMessageContext::from_core_signals(signals, schedule_refresh, ws);
     if !effects_sc::handle_sc_message(&msg, &ctx) {
         handle_remaining(msg, signals);

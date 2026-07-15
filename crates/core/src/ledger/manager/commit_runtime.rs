@@ -15,8 +15,8 @@ use crate::ledger::schema::LEDGER_OPS;
 use crate::ledger::{ops, range};
 use crate::models::DocId;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, external_overlap, ledger_dirty,
-    staging,
+    ChangeEntry, ChangeStatus, CommitAuthorityFailure, CommitInfo, ExternalApplyOutcome,
+    ExternalApplyReceipt, changes, commits, external_overlap, ledger_dirty, staging,
 };
 use anyhow::Result;
 use redb::{Database, ReadableTable, WriteTransaction};
@@ -40,10 +40,36 @@ impl<'a> CommitRuntime<'a> {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
-        let message = message.trim();
-        if message.is_empty() {
-            anyhow::bail!("source control commit requires a non-empty message");
-        }
+        let repo_id = self.manager.run_on_local_repo(repo_name, |db| {
+            RepoManager::read_repo_info_from_db(db)?
+                .map(|info| info.uuid)
+                .ok_or_else(|| anyhow::anyhow!("Repository metadata missing for {repo_name}"))
+        })?;
+        let commit = self
+            .commit_source_control_authority_in_local_repo(repo_name, message)
+            .map_err(CommitAuthorityFailure::into_error)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        self.enqueue_git_mirror_projection_in_local_repo(repo_name, repo_id, &commit);
+        Ok(commit)
+    }
+
+    pub(crate) fn commit_source_control_authority_in_local_repo(
+        &self,
+        repo_name: &str,
+        message: &str,
+    ) -> std::result::Result<CommitInfo, CommitAuthorityFailure> {
+        let prepared = self
+            .prepare_source_control_commit_in_local_repo(repo_name)
+            .map_err(CommitAuthorityFailure::NotCommitted)?;
+        self.commit_source_control_authority_with_prepared_in_local_repo(
+            repo_name, message, prepared,
+        )
+    }
+
+    pub(crate) fn prepare_source_control_commit_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Option<crate::source_control::PreparedExternalApply>> {
         let staged = self
             .manager
             .run_on_local_repo(repo_name, staging::list_staged_entries)?;
@@ -54,63 +80,104 @@ impl<'a> CommitRuntime<'a> {
                 "Cannot commit mixed resolved-conflict and ordinary external staged changes"
             );
         }
-        let confirmed = if staged.is_empty() || !has_resolved_conflict_staged {
-            self.manager
-                .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?
+        if has_resolved_conflict_staged {
+            self.prepare_external_changes_in_local_repo(repo_name)
+                .map(Some)
         } else {
-            self.apply_external_changes_in_local_repo(repo_name)?
-        };
-        if confirmed.is_empty() {
-            anyhow::bail!("Nothing to commit: confirmed ledger changes are empty");
+            Ok(None)
         }
-        #[cfg(not(target_arch = "wasm32"))]
-        let git_mirror_repo_id = git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name);
+    }
 
-        let final_confirmed = self
-            .manager
-            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
-        let doc_count = covered_doc_count(&final_confirmed);
-        let (expected_base_seq, expected_ledger_head) = confirmed_range(&final_confirmed)?;
-        let expected_parent_id = self.manager.run_on_local_repo(repo_name, |db| {
-            let parent_id = commits::get_latest_id(db)?;
-            let parent_seq = match parent_id.as_deref() {
-                Some(parent_id) => commits::get(db, parent_id)?.ledger_seq,
-                None => 0,
-            };
-            if parent_seq != expected_base_seq {
-                anyhow::bail!(
-                    "Source control commit base changed before snapshot preparation: expected {}, observed {}",
-                    expected_base_seq,
-                    parent_seq
-                );
-            }
-            Ok(parent_id)
-        })?;
-        let commit = self.manager.run_on_local_repo(repo_name, |db| {
-            let snapshots = plan_confirmed_commit_snapshots(&final_confirmed);
-            persist_commit_state_atomically(
-                db,
-                &snapshots,
-                expected_ledger_head,
-                expected_parent_id.as_deref(),
-                message,
-                doc_count,
-            )
-        })?;
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(repo_id) = git_mirror_repo_id
-            && let Err(err) = self.manager.run_on_local_repo(repo_name, |db| {
-                crate::git_bridge::queue_deve_commit(db, repo_id, &commit)?;
-                Ok(())
-            })
-        {
-            tracing::warn!(
-                repo_name,
-                deve_commit_id = %commit.id,
-                error = %err,
-                "Git mirror queue update failed after Deve commit; ledger commit is kept"
-            );
+    pub(crate) fn commit_source_control_authority_with_prepared_in_local_repo(
+        &self,
+        repo_name: &str,
+        message: &str,
+        prepared_external: Option<crate::source_control::PreparedExternalApply>,
+    ) -> std::result::Result<CommitInfo, CommitAuthorityFailure> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Err(CommitAuthorityFailure::NotCommitted(anyhow::anyhow!(
+                "source control commit requires a non-empty message"
+            )));
         }
+        let staged = self
+            .manager
+            .run_on_local_repo(repo_name, staging::list_staged_entries)
+            .map_err(CommitAuthorityFailure::NotCommitted)?;
+        let has_resolved_conflict_staged = staged.iter().any(|(_, entry)| entry.resolved_conflict);
+        if has_resolved_conflict_staged && !staged.iter().all(|(_, entry)| entry.resolved_conflict)
+        {
+            return Err(CommitAuthorityFailure::NotCommitted(anyhow::anyhow!(
+                "Cannot commit mixed resolved-conflict and ordinary external staged changes"
+            )));
+        }
+        let (confirmed, external_apply) = if staged.is_empty() || !has_resolved_conflict_staged {
+            if prepared_external.is_some() {
+                return Err(CommitAuthorityFailure::NotCommitted(anyhow::anyhow!(
+                    "Source control staging mode changed after commit preflight"
+                )));
+            }
+            (
+                self.manager
+                    .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)
+                    .map_err(CommitAuthorityFailure::NotCommitted)?,
+                None,
+            )
+        } else {
+            let prepared_external = prepared_external.ok_or_else(|| {
+                CommitAuthorityFailure::NotCommitted(anyhow::anyhow!(
+                    "Resolved-conflict commit requires prepared External Apply state"
+                ))
+            })?;
+            let outcome = self
+                .commit_prepared_external_changes_in_local_repo(repo_name, prepared_external)
+                .map_err(CommitAuthorityFailure::NotCommitted)?;
+            let receipt = outcome.receipt;
+            let confirmed = self
+                .manager
+                .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)
+                .map_err(|error| classify_commit_failure(Some(receipt.clone()), error))?;
+            (confirmed, Some(receipt))
+        };
+        let commit_result = (|| -> Result<(CommitInfo, u32)> {
+            if confirmed.is_empty() {
+                anyhow::bail!("Nothing to commit: confirmed ledger changes are empty");
+            }
+            let final_confirmed = self
+                .manager
+                .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+            let doc_count = covered_doc_count(&final_confirmed);
+            let (expected_base_seq, expected_ledger_head) = confirmed_range(&final_confirmed)?;
+            let expected_parent_id = self.manager.run_on_local_repo(repo_name, |db| {
+                let parent_id = commits::get_latest_id(db)?;
+                let parent_seq = match parent_id.as_deref() {
+                    Some(parent_id) => commits::get(db, parent_id)?.ledger_seq,
+                    None => 0,
+                };
+                if parent_seq != expected_base_seq {
+                    anyhow::bail!(
+                        "Source control commit base changed before snapshot preparation: expected {}, observed {}",
+                        expected_base_seq,
+                        parent_seq
+                    );
+                }
+                Ok(parent_id)
+            })?;
+            let commit = self.manager.run_on_local_repo(repo_name, |db| {
+                let snapshots = plan_confirmed_commit_snapshots(&final_confirmed);
+                persist_commit_state_atomically(
+                    db,
+                    &snapshots,
+                    expected_ledger_head,
+                    expected_parent_id.as_deref(),
+                    message,
+                    doc_count,
+                )
+            })?;
+            Ok((commit, doc_count))
+        })();
+        let (commit, doc_count) =
+            commit_result.map_err(|error| classify_commit_failure(external_apply, error))?;
         tracing::info!(
             "Committed {} files in {}: {}",
             doc_count,
@@ -120,14 +187,68 @@ impl<'a> CommitRuntime<'a> {
         Ok(commit)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn enqueue_git_mirror_projection_in_local_repo(
+        &self,
+        repo_name: &str,
+        expected_repo_id: crate::models::RepoId,
+        commit: &CommitInfo,
+    ) {
+        if !git_mirror_queue_runtime::binding_is_current(self.manager, repo_name, expected_repo_id)
+        {
+            return;
+        }
+        if let Err(err) = self.manager.run_on_local_repo(repo_name, |db| {
+            let observed = RepoManager::read_repo_info_from_db(db)?
+                .map(|info| info.uuid)
+                .ok_or_else(|| anyhow::anyhow!("Repository metadata missing for {repo_name}"))?;
+            if observed != expected_repo_id {
+                anyhow::bail!(
+                    "Git mirror queue repository identity changed: expected {expected_repo_id}, observed {observed}"
+                );
+            }
+            crate::git_bridge::queue_deve_commit(db, expected_repo_id, commit)?;
+            Ok(())
+        }) {
+            tracing::warn!(
+                repo_name,
+                deve_commit_id = %commit.id,
+                error = %err,
+                "Git mirror queue update failed after Deve commit; ledger commit is kept"
+            );
+        }
+    }
+
     pub(crate) fn apply_external_changes_in_local_repo(
         &self,
         repo_name: &str,
-    ) -> Result<Vec<ChangeEntry>> {
+    ) -> Result<ExternalApplyReceipt> {
+        Ok(self
+            .apply_external_changes_with_outcome_in_local_repo(repo_name)?
+            .receipt)
+    }
+
+    pub(crate) fn apply_external_changes_with_outcome_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<ExternalApplyOutcome> {
+        let prepared = self.prepare_external_changes_in_local_repo(repo_name)?;
+        self.commit_prepared_external_changes_in_local_repo(repo_name, prepared)
+    }
+
+    pub(crate) fn prepare_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<crate::source_control::PreparedExternalApply> {
         let staged = self
             .manager
             .run_on_local_repo(repo_name, staging::list_staged_entries)?;
         let staged_snapshot = staged.clone();
+        let repo_id = self.manager.run_on_local_repo(repo_name, |db| {
+            RepoManager::read_repo_info_from_db(db)?
+                .map(|info| info.uuid)
+                .ok_or_else(|| anyhow::anyhow!("Repository metadata missing for {repo_name}"))
+        })?;
         let expected_ledger_head = self
             .manager
             .run_on_local_repo(repo_name, range::get_max_seq)?;
@@ -141,23 +262,42 @@ impl<'a> CommitRuntime<'a> {
         targets.sort_by_key(|target| target.delete_only);
         ensure_external_targets_do_not_overlap_confirmed(&targets, &confirmed)?;
         commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &mut targets)?;
-        self.manager
-            .apply_external_targets_atomically_in_local_repo(
-                repo_name,
-                &targets,
-                &staged_snapshot,
-                expected_ledger_head,
-            )?;
+        self.manager.prepare_external_apply_in_local_repo(
+            repo_name,
+            targets,
+            staged_snapshot,
+            expected_ledger_head,
+            repo_id,
+        )
+    }
 
-        let final_confirmed = self
+    pub(crate) fn commit_prepared_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+        prepared: crate::source_control::PreparedExternalApply,
+    ) -> Result<ExternalApplyOutcome> {
+        let outcome = self
             .manager
-            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+            .commit_prepared_external_apply_in_local_repo(repo_name, prepared)?;
         tracing::info!(
             "Applied {} external changes to ledger in {}",
-            targets.len(),
+            outcome.receipt.applied_target_count,
             repo_name
         );
-        Ok(final_confirmed)
+        Ok(outcome)
+    }
+}
+
+fn classify_commit_failure(
+    external_apply: Option<ExternalApplyReceipt>,
+    error: anyhow::Error,
+) -> CommitAuthorityFailure {
+    match external_apply {
+        Some(external_apply) => CommitAuthorityFailure::CommittedPartial {
+            external_apply,
+            error,
+        },
+        None => CommitAuthorityFailure::NotCommitted(error),
     }
 }
 

@@ -7,7 +7,8 @@
 use crate::ledger::manager::types::RepoManager;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, external_overlap, ledger_dirty, pending_fs, staging,
+    ChangeEntry, ChangeStatus, CommitInfo, ExternalApplyOutcome, ExternalApplyReceipt,
+    external_overlap, ledger_dirty, pending_fs, staging,
 };
 use anyhow::Result;
 use std::collections::HashSet;
@@ -47,10 +48,19 @@ impl<'a> SourceControlWriteRuntime<'a> {
     pub(crate) fn apply_external_changes_in_local_repo(
         &self,
         repo_name: &str,
-    ) -> Result<Vec<ChangeEntry>> {
+    ) -> Result<ExternalApplyReceipt> {
         self.manager
             .commit_runtime()
             .apply_external_changes_in_local_repo(repo_name)
+    }
+
+    pub(crate) fn apply_external_changes_with_outcome_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<ExternalApplyOutcome> {
+        self.manager
+            .commit_runtime()
+            .apply_external_changes_with_outcome_in_local_repo(repo_name)
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

@@ -3,6 +3,7 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
 //!   - 07_network#web-ws-runtime
+//!   - 07_network#projection-recovery-contract
 //!   - 07_network#relay-proxy-attribution-contract
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
@@ -29,6 +30,7 @@ pub mod error;
 pub mod frame;
 mod json_wire;
 pub mod merge_conflict;
+pub mod projection_recovery;
 pub mod relay_proxy;
 pub mod remote_projection;
 pub mod sc_path_target;
@@ -46,6 +48,10 @@ pub use frame::{
     MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION, server_binary_payload_size,
 };
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
+pub use projection_recovery::{
+    DocumentRecoveryScope, ProjectionRecoveryCause, ProjectionRecoveryPlan,
+    ProjectionRecoveryRequired,
+};
 pub use relay_proxy::{
     DirectSyncPushAttributionInput, DirectSyncSnapshotAttributionInput, RelayProxyRoute,
     RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,

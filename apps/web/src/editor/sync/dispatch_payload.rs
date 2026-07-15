@@ -150,9 +150,13 @@ mod tests {
             client_id: None,
             session_generation: Arc::new(AtomicU64::new(1)),
             ready_generation: Arc::new(AtomicU64::new(1)),
+            pending_resend_generation: Arc::new(AtomicU64::new(0)),
+            projection_recovery:
+                crate::runtime::projection_recovery::ProjectionRecoveryCoordinator::default(),
             buffered_live_ops: Arc::new(Mutex::new(Vec::new())),
             buffered_encrypted_ops: Arc::new(Mutex::new(Vec::new())),
             active_branch,
+            current_doc: signal(Some(doc_id)).0,
             pending_branch_switch,
             current_repo_id,
             current_scope_nonce,
@@ -204,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn write_ready_resend_sends_pending_edit_when_native_runtime_is_ready() {
+    fn write_ready_resend_sends_pending_edit_once_per_ready_generation() {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
@@ -214,6 +218,7 @@ mod tests {
         ws.mark_writer_ready(repo_id.to_string(), 17, "web-light-peer");
         let ctx = write_ready_ctx(&ws, repo_id, doc_id, 17);
 
+        handle_write_ready_message(&ctx, repo_id, None, 17);
         handle_write_ready_message(&ctx, repo_id, None, 17);
 
         let sent = ws.drain_sent_for_test();

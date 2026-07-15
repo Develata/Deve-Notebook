@@ -11,6 +11,7 @@ use crate::editor::EditorStats;
 use crate::runtime::document::{confirm, pending};
 use crate::runtime::domain::EditorSyncFailureCode;
 use crate::runtime::domain::LoadPhase;
+use crate::runtime::projection_recovery::RecoveryCompletion;
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
@@ -96,6 +97,13 @@ pub(super) fn handle_history(ctx: &SyncContext, expected_generation: u64, ops: V
     emit_stats(ctx.on_stats, &txt);
     ctx.set_content.set(txt);
     ctx.set_playback_version.set(next_version);
+    if let RecoveryCompletion::ReopenTrailing(_) = ctx
+        .projection_recovery
+        .finish_generation(expected_generation)
+    {
+        super::recovery::reopen_active(ctx);
+        return;
+    }
     ctx.mark_live_ready(expected_generation);
     ctx.set_editor_sync_failure.set(None);
     ctx.set_load_state.set(LoadPhase::Ready);

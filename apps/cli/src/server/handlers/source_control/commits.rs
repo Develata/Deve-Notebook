@@ -5,6 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::session::WsSession;
 use deve_core::protocol::{
     MAX_WS_FRAME_BYTES, ScopeNonce, ServerError, ServerErrorCode, ServerMessage,
@@ -38,23 +39,108 @@ pub async fn handle_apply_external_changes(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
+    request_id: String,
 ) {
+    if !session.is_browser_session() {
+        return super::errors::send_ws_code_scoped(
+            ch,
+            ServerErrorCode::ScRepoContextInvalid,
+            "External apply requires a browser writer session",
+            None,
+        );
+    }
+    let ack_scope_nonce = ScopeNonce::new(session.scope_nonce());
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let scope =
         match super::repo_scope::resolve_current_authorized_writable_local_repo(state, session) {
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::apply_external_changes(state.repo.as_ref(), &selector) {
-        Ok(_) => {
-            tracing::info!("Applied external changes to ledger");
-            super::changes::handle_get_changes(state, ch, session, None).await;
+    let prepared = match state
+        .repo
+        .prepare_external_changes_in_local_repo(&scope.repo_name)
+    {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            return super::errors::send_ws_scoped(
+                ch,
+                super::errors::map_repo_error(super::errors::ScOp::ApplyExternalChanges, error),
+                scope_nonce,
+            );
         }
-        Err(e) => {
+    };
+    let execution = state
+        .repo_mutation_gate()
+        .execute_repo(scope.repo_id, &state.tx, || {
+            let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
+                state,
+                scope.repo_id,
+                &scope.repo_name,
+            ) {
+                Ok(repo_name) => repo_name,
+                Err(error) => {
+                    return MutationExecution::not_committed(super::errors::map_repo_error(
+                        super::errors::ScOp::ApplyExternalChanges,
+                        error,
+                    ));
+                }
+            };
+            match state
+                .repo
+                .commit_prepared_external_changes_in_local_repo(&repo_name, prepared)
+                .map_err(|error| {
+                    super::errors::map_repo_error(super::errors::ScOp::ApplyExternalChanges, error)
+                }) {
+                Ok(outcome) => {
+                    let receipt = outcome.receipt;
+                    let publication = MutationPublication::external_apply_recovery(
+                        receipt.repo_id,
+                        receipt.affected_docs.clone(),
+                    );
+                    MutationExecution::committed(receipt, publication)
+                }
+                Err(error) => MutationExecution::not_committed(error),
+            }
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { value: receipt, .. }) => {
+            tracing::info!("Applied external changes to ledger");
+            ch.unicast(ServerMessage::ExternalApplyAck {
+                request_id,
+                repo_id: scope.repo_id,
+                branch: scope.branch.clone(),
+                scope_nonce: ack_scope_nonce,
+                receipt,
+            });
+        }
+        Ok(MutationExecution::NotCommitted(e)) => {
             tracing::error!("Failed to apply external changes to ledger: {:?}", e);
             super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
+        Ok(MutationExecution::ProjectionDegraded {
+            value: receipt,
+            error,
+            ..
+        }) => {
+            ch.unicast(ServerMessage::ExternalApplyAck {
+                request_id,
+                repo_id: scope.repo_id,
+                branch: scope.branch.clone(),
+                scope_nonce: ack_scope_nonce,
+                receipt,
+            });
+            super::errors::send_ws_scoped(ch, error, scope_nonce);
+        }
+        Ok(MutationExecution::CommittedPartial { error, .. }) => {
+            super::errors::send_ws_scoped(ch, error, scope_nonce);
+        }
+        Err(error) => super::errors::send_ws_code_scoped(
+            ch,
+            ServerErrorCode::StoragePersistFailed,
+            error.to_string(),
+            scope_nonce,
+        ),
     }
 }
 

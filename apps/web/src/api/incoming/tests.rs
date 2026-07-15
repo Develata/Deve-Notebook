@@ -1,6 +1,7 @@
-use super::decode::{decode_binary_message, decode_text_message};
+use super::decode::decode_binary_message;
 use super::handle_socket_event;
 use super::push_server_message;
+use super::{IncomingBatch, messages_since};
 use crate::api::ConnectionStatus;
 use crate::api::socket::{SocketEvent, SocketMessage};
 use deve_core::codec;
@@ -10,7 +11,8 @@ use deve_core::protocol::ServerError;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::protocol::ServerMessage;
 use deve_core::protocol::frame::{
-    WS_PROTOCOL_VERSION, encode_server_binary, encode_server_binary_with_version,
+    ProtocolFrameError, WS_PROTOCOL_VERSION, encode_server_binary,
+    encode_server_binary_with_version,
 };
 use leptos::prelude::GetUntracked;
 use std::collections::VecDeque;
@@ -89,15 +91,44 @@ fn incoming_queue_keeps_latest_messages_in_order() {
 }
 
 #[test]
+fn incoming_gap_never_exposes_retained_suffix() {
+    let mut queue = VecDeque::new();
+    for seq in 45..=300 {
+        push_server_message(&mut queue, seq, 7, ServerMessage::Pong);
+    }
+
+    assert!(matches!(
+        messages_since(&queue, 0),
+        IncomingBatch::Gap { latest_seq: 300 }
+    ));
+}
+
+#[test]
+fn incoming_gap_boundary_returns_contiguous_messages() {
+    let mut queue = VecDeque::new();
+    for seq in 45..=47 {
+        push_server_message(&mut queue, seq, 7, ServerMessage::Pong);
+    }
+
+    let IncomingBatch::Messages(messages) = messages_since(&queue, 44) else {
+        panic!("cursor immediately before oldest entry is contiguous");
+    };
+    assert_eq!(
+        messages.iter().map(|(seq, _, _)| *seq).collect::<Vec<_>>(),
+        vec![45, 46, 47]
+    );
+}
+
+#[test]
 fn binary_json_legacy_payload_is_rejected() {
     let bytes = br#""Pong""#;
-    assert!(decode_binary_message(bytes).is_none());
+    assert!(decode_binary_message(bytes).is_err());
 }
 
 #[test]
 fn binary_raw_codec_payload_is_rejected() {
     let bytes = codec::encode(&ServerMessage::Pong).unwrap();
-    assert!(decode_binary_message(&bytes).is_none());
+    assert!(decode_binary_message(&bytes).is_err());
 }
 
 #[test]
@@ -105,71 +136,69 @@ fn binary_versioned_frame_decodes_server_message() {
     let bytes = encode_server_binary(&ServerMessage::Pong).unwrap();
     assert!(matches!(
         decode_binary_message(&bytes),
-        Some(ServerMessage::Pong)
+        Ok(ServerMessage::Pong)
     ));
 }
 
 #[test]
-fn binary_unsupported_server_version_surfaces_protocol_error() {
+fn binary_unsupported_server_version_is_fatal() {
     let bytes =
         encode_server_binary_with_version(&ServerMessage::Pong, WS_PROTOCOL_VERSION + 1).unwrap();
 
-    match decode_binary_message(&bytes) {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncVersionMismatch);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| { detail.contains("unsupported WS protocol version") })
-            );
-        }
-        other => panic!("expected ProtocolError, got {other:?}"),
-    }
+    assert!(matches!(
+        decode_binary_message(&bytes),
+        Err(ProtocolFrameError::UnsupportedVersion { .. })
+    ));
+
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (_, set_status) = leptos::prelude::signal(ConnectionStatus::Connected);
+    let (_, set_msg_seq) = leptos::prelude::signal(0u64);
+    let (msg_queue, set_msg_queue) =
+        leptos::prelude::signal(VecDeque::<(u64, u64, ServerMessage)>::new());
+    let mut confirmed_connected = true;
+    assert!(!handle_socket_event(
+        SocketEvent::Message(SocketMessage::Bytes(bytes)),
+        &mut confirmed_connected,
+        set_msg_seq,
+        set_msg_queue,
+        set_status,
+        42,
+    ));
+    assert!(msg_queue.get_untracked().is_empty());
 }
 
 #[test]
-fn binary_malformed_versioned_payload_surfaces_protocol_error() {
+fn binary_malformed_versioned_payload_is_fatal() {
     let mut bytes = encode_server_binary(&ServerMessage::Pong).unwrap();
     bytes.pop();
 
-    match decode_binary_message(&bytes) {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
-            assert_eq!(error.detail.as_deref(), Some("Invalid WS server frame"));
-        }
-        other => panic!("expected malformed payload ProtocolError, got {other:?}"),
-    }
-}
-
-#[test]
-fn text_legacy_json_still_decodes_server_message() {
     assert!(matches!(
-        decode_text_message(r#""Pong""#),
-        Some(ServerMessage::Pong)
+        decode_binary_message(&bytes),
+        Err(ProtocolFrameError::Decode(_))
     ));
 }
 
 #[test]
-fn text_unsupported_server_version_surfaces_protocol_error() {
-    let text = serde_json::json!({
-        "protocol_version": WS_PROTOCOL_VERSION + 1,
-        "message": "Pong"
-    })
-    .to_string();
+fn text_frame_retires_binary_only_connection() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (_, set_status) = leptos::prelude::signal(ConnectionStatus::Disconnected);
+    let (_, set_msg_seq) = leptos::prelude::signal(0u64);
+    let (msg_queue, set_msg_queue) =
+        leptos::prelude::signal(VecDeque::<(u64, u64, ServerMessage)>::new());
+    let mut confirmed_connected = false;
 
-    match decode_text_message(&text) {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::SyncVersionMismatch);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| { detail.contains("unsupported WS protocol version") })
-            );
-        }
-        other => panic!("expected ProtocolError, got {other:?}"),
-    }
+    assert!(!handle_socket_event(
+        SocketEvent::Message(SocketMessage::Text(r#""Pong""#.into())),
+        &mut confirmed_connected,
+        set_msg_seq,
+        set_msg_queue,
+        set_status,
+        42,
+    ));
+    assert!(!confirmed_connected);
+    assert!(msg_queue.get_untracked().is_empty());
 }
 
 #[test]
@@ -190,7 +219,7 @@ fn binary_raw_codec_history_payload_is_rejected() {
         )],
     })
     .unwrap();
-    assert!(decode_binary_message(&bytes).is_none());
+    assert!(decode_binary_message(&bytes).is_err());
 }
 
 #[test]
@@ -201,5 +230,5 @@ fn binary_raw_codec_protocol_error_payload_is_rejected() {
         scope_nonce: Some(7),
     })
     .unwrap();
-    assert!(decode_binary_message(&bytes).is_none());
+    assert!(decode_binary_message(&bytes).is_err());
 }

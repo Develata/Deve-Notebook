@@ -4,13 +4,15 @@
 //! WebSocket outbound broadcast and unicast delivery runtime.
 
 pub(crate) use super::filter::BroadcastFilter;
-use crate::server::channel::try_send_with_delivery_class;
 use axum::extract::ws::{Message, WebSocket};
+use deve_core::protocol::ServerMessage;
 use deve_core::protocol::frame::encode_server_binary;
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use futures::{Sink, SinkExt};
 use tokio::sync::broadcast::error::RecvError;
+use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{broadcast, mpsc};
+
+use crate::server::metrics;
 
 /// 单播队列容量（每个连接）。
 ///
@@ -108,20 +110,46 @@ pub(crate) fn spawn_broadcast_forwarder(
                         continue;
                     }
                     let must_deliver = must_deliver_broadcast(&msg);
-                    try_send_with_delivery_class(&unicast_tx, msg, must_deliver);
+                    if must_deliver {
+                        if unicast_tx.send(msg).await.is_err() {
+                            break;
+                        }
+                    } else {
+                        match unicast_tx.try_send(msg) {
+                            Ok(()) => {}
+                            Err(TrySendError::Full(_)) => {
+                                metrics::record_noncritical_broadcast_drop();
+                                let counters = metrics::delivery_metrics_snapshot();
+                                tracing::warn!(
+                                    noncritical_broadcast_drops =
+                                        counters.noncritical_broadcast_drops,
+                                    "Dropping non-critical broadcast for slow WS session"
+                                );
+                            }
+                            Err(TrySendError::Closed(_)) => break,
+                        }
+                    }
                 }
                 Err(RecvError::Lagged(skipped)) => {
-                    tracing::warn!("WS broadcast lagged; skipped {} messages", skipped);
-                    let error = ServerError::with_detail(
-                        ServerErrorCode::RequestFailed,
-                        format!(
-                            "WS broadcast lagged; skipped {skipped} messages; reconnect or reopen to resync"
-                        ),
+                    metrics::record_broadcast_lag();
+                    let counters = metrics::delivery_metrics_snapshot();
+                    tracing::warn!(
+                        skipped,
+                        broadcast_lag_events = counters.broadcast_lag_events,
+                        "WS broadcast lagged; scheduling scoped recovery"
                     );
-                    let Some(msg) = filter.scoped_protocol_error(error, None) else {
+                    let Some(msg) = filter.scoped_broadcast_gap_recovery(skipped) else {
                         continue;
                     };
-                    try_send_with_delivery_class(&unicast_tx, msg, true);
+                    metrics::record_broadcast_recovery();
+                    let counters = metrics::delivery_metrics_snapshot();
+                    tracing::debug!(
+                        broadcast_recoveries = counters.broadcast_recoveries,
+                        "Enqueuing scoped recovery after broadcast lag"
+                    );
+                    if unicast_tx.send(msg).await.is_err() {
+                        break;
+                    }
                 }
                 Err(RecvError::Closed) => break,
             }
@@ -136,6 +164,7 @@ fn must_deliver_broadcast(msg: &ServerMessage) -> bool {
             | ServerMessage::CommitAck { .. }
             | ServerMessage::MergeComplete { .. }
             | ServerMessage::NewOp { .. }
+            | ServerMessage::ProjectionRecoveryRequired(_)
             | ServerMessage::PeerDeleted { .. }
     )
 }

@@ -198,6 +198,7 @@ fn retry_initial_snapshot_once(ctx: &SyncContext, gate: &SnapshotRequestGate) {
     }
 
     let request_id = advance_session_generation(&ctx.session_generation);
+    ctx.projection_recovery.mark_generation(request_id);
     ctx.set_snapshot_reopen_attempted.set(true);
     ctx.set_editor_sync_failure.set(None);
     ctx.ready_generation.store(0, Ordering::Relaxed);
@@ -212,7 +213,12 @@ fn retry_initial_snapshot_once(ctx: &SyncContext, gate: &SnapshotRequestGate) {
     ctx.set_local_version.set(0);
     ctx.set_history.set(Vec::new());
     ctx.set_playback_version.set(0);
-    ctx.set_load_state.set(LoadPhase::Loading);
+    ctx.set_load_state
+        .set(if ctx.projection_recovery.is_active() {
+            LoadPhase::Resyncing
+        } else {
+            LoadPhase::Loading
+        });
     ctx.set_load_progress.set((0, 0));
     ctx.set_load_eta_ms.set(0);
     ctx.ws.send(ClientMessage::OpenDoc {

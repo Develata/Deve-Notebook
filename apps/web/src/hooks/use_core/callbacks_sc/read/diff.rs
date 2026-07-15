@@ -67,6 +67,7 @@ pub(super) fn create_get_doc_diff_callback(
             .unwrap_or_else(|| entry.path.clone());
         set_diff_content.set(Some(
             DiffSessionWire::loading(entry.path.clone(), display_path)
+                .with_doc_id(entry.doc_id)
                 .with_pending_request(request_id.clone()),
         ));
         ws.send(ClientMessage::GetDocDiff {

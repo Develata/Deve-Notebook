@@ -4,7 +4,11 @@
 //! Broadcast filter outbound nonce stamping helpers.
 
 use super::{BroadcastFilter, stamp};
-use deve_core::protocol::{ServerError, ServerMessage};
+#[cfg(test)]
+use deve_core::protocol::ServerError;
+use deve_core::protocol::{
+    ProjectionRecoveryCause, ProjectionRecoveryPlan, ProjectionRecoveryRequired, ServerMessage,
+};
 
 impl BroadcastFilter {
     pub(crate) fn stamp_scope_nonce(&self, msg: ServerMessage) -> Option<ServerMessage> {
@@ -21,6 +25,7 @@ impl BroadcastFilter {
         Some(stamp::stamp_scope_nonce(msg, scope.scope_nonce.get()))
     }
 
+    #[cfg(test)]
     pub(crate) fn scoped_protocol_error(
         &self,
         error: ServerError,
@@ -42,6 +47,29 @@ impl BroadcastFilter {
             error,
             switch_nonce,
             scope_nonce,
+        ))
+    }
+
+    pub(crate) fn scoped_broadcast_gap_recovery(&self, skipped: u64) -> Option<ServerMessage> {
+        let scope = self.scope.as_ref()?;
+        let scope = match scope.read() {
+            Ok(scope) => scope,
+            Err(_) => {
+                tracing::error!(
+                    "WS broadcast filter read lock poisoned while building gap recovery"
+                );
+                return None;
+            }
+        };
+        let repo_id = scope.active_repo_id?;
+        Some(ServerMessage::ProjectionRecoveryRequired(
+            ProjectionRecoveryRequired {
+                repo_id,
+                branch: scope.active_branch.clone(),
+                scope_nonce: Some(scope.scope_nonce.get()),
+                cause: ProjectionRecoveryCause::BroadcastGap { skipped },
+                plan: ProjectionRecoveryPlan::broadcast_gap(),
+            },
         ))
     }
 }

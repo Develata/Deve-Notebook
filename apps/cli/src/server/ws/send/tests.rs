@@ -4,14 +4,15 @@
 //! WebSocket outbound delivery regression coverage.
 
 use super::{
-    BroadcastFilter, encode_server_message, new_diff_unicast_channel, new_unicast_channel,
-    spawn_broadcast_forwarder, spawn_unicast_sender_task_with_encoder,
+    BroadcastFilter, UNICAST_CAPACITY, encode_server_message, new_diff_unicast_channel,
+    new_unicast_channel, spawn_broadcast_forwarder, spawn_unicast_sender_task_with_encoder,
 };
+use crate::server::metrics;
 use crate::server::session::WsSession;
 use axum::extract::ws::Message;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::frame::decode_server_binary;
-use deve_core::protocol::{ConfirmedOp, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ConfirmedOp, ProjectionRecoveryCause, ServerMessage};
 use futures::StreamExt;
 use tokio::sync::broadcast;
 use tokio::time::{Duration, timeout};
@@ -37,9 +38,11 @@ async fn critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_f
 
     spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), filter);
 
-    unicast_tx
-        .try_send(ServerMessage::Pong)
-        .expect("fill unicast queue");
+    for _ in 0..UNICAST_CAPACITY {
+        unicast_tx
+            .try_send(ServerMessage::Pong)
+            .expect("fill unicast queue");
+    }
     broadcast_tx
         .send(ServerMessage::CommitAck {
             repo_id: Some(repo_id),
@@ -49,21 +52,34 @@ async fn critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_f
             timestamp: 1,
         })
         .expect("broadcast commit ack");
+    broadcast_tx
+        .send(ServerMessage::CommitAck {
+            repo_id: Some(repo_id),
+            branch: None,
+            scope_nonce: None,
+            commit_id: "c2".into(),
+            timestamp: 2,
+        })
+        .expect("broadcast second commit ack");
 
-    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    for _ in 0..UNICAST_CAPACITY {
+        assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    }
     tokio::task::yield_now().await;
-    match unicast_rx.recv().await {
-        Some(ServerMessage::CommitAck {
-            repo_id: seen_repo_id,
-            scope_nonce,
-            commit_id,
-            ..
-        }) => {
-            assert_eq!(seen_repo_id, Some(repo_id));
-            assert_eq!(scope_nonce, Some(11));
-            assert_eq!(commit_id, "c1");
+    for expected in ["c1", "c2"] {
+        match unicast_rx.recv().await {
+            Some(ServerMessage::CommitAck {
+                repo_id: seen_repo_id,
+                scope_nonce,
+                commit_id,
+                ..
+            }) => {
+                assert_eq!(seen_repo_id, Some(repo_id));
+                assert_eq!(scope_nonce, Some(11));
+                assert_eq!(commit_id, expected);
+            }
+            other => panic!("expected ordered CommitAck, got {:?}", other),
         }
-        other => panic!("expected queued CommitAck, got {:?}", other),
     }
 }
 
@@ -79,9 +95,11 @@ async fn new_op_broadcast_uses_recipient_nonce_when_unicast_queue_is_full() {
 
     spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), filter);
 
-    unicast_tx
-        .try_send(ServerMessage::Pong)
-        .expect("fill unicast queue");
+    for _ in 0..UNICAST_CAPACITY {
+        unicast_tx
+            .try_send(ServerMessage::Pong)
+            .expect("fill unicast queue");
+    }
     broadcast_tx
         .send(ServerMessage::NewOp {
             repo_id,
@@ -99,7 +117,9 @@ async fn new_op_broadcast_uses_recipient_nonce_when_unicast_queue_is_full() {
         })
         .expect("broadcast new op");
 
-    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    for _ in 0..UNICAST_CAPACITY {
+        assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    }
     tokio::task::yield_now().await;
     match unicast_rx.recv().await {
         Some(ServerMessage::NewOp {
@@ -126,9 +146,11 @@ async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
 
     spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), filter);
 
-    unicast_tx
-        .try_send(ServerMessage::Pong)
-        .expect("fill unicast queue");
+    for _ in 0..UNICAST_CAPACITY {
+        unicast_tx
+            .try_send(ServerMessage::Pong)
+            .expect("fill unicast queue");
+    }
     broadcast_tx
         .send(ServerMessage::PeerDeleted {
             peer_id: "peer-a".into(),
@@ -136,7 +158,9 @@ async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
         })
         .expect("broadcast peer deleted");
 
-    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    for _ in 0..UNICAST_CAPACITY {
+        assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    }
     tokio::task::yield_now().await;
     match unicast_rx.recv().await {
         Some(ServerMessage::PeerDeleted {
@@ -152,6 +176,7 @@ async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn non_critical_broadcasts_still_drop_when_unicast_queue_is_full() {
+    let before = metrics::delivery_metrics_snapshot();
     let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();
 
@@ -161,23 +186,40 @@ async fn non_critical_broadcasts_still_drop_when_unicast_queue_is_full() {
         BroadcastFilter::allow_all(),
     );
 
-    unicast_tx
-        .try_send(ServerMessage::Pong)
-        .expect("fill unicast queue");
+    for _ in 0..UNICAST_CAPACITY {
+        unicast_tx
+            .try_send(ServerMessage::Pong)
+            .expect("fill unicast queue");
+    }
     broadcast_tx
         .send(ServerMessage::Pong)
         .expect("broadcast pong");
 
-    assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
-    tokio::task::yield_now().await;
+    timeout(Duration::from_secs(1), async {
+        while metrics::delivery_metrics_snapshot().noncritical_broadcast_drops
+            <= before.noncritical_broadcast_drops
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("broadcast drop metric");
+    for _ in 0..UNICAST_CAPACITY {
+        assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    }
     assert!(
         unicast_rx.try_recv().is_err(),
         "non-critical broadcast must still be droppable"
     );
+    assert!(
+        metrics::delivery_metrics_snapshot().noncritical_broadcast_drops
+            > before.noncritical_broadcast_drops
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn lagged_broadcasts_surface_protocol_error() {
+async fn lagged_broadcasts_surface_scoped_recovery() {
+    let before = metrics::delivery_metrics_snapshot();
     let (broadcast_tx, broadcast_rx) = broadcast::channel(1);
     let (unicast_tx, mut unicast_rx) = new_unicast_channel();
     let mut session = WsSession::new();
@@ -198,20 +240,19 @@ async fn lagged_broadcasts_surface_protocol_error() {
     );
 
     match unicast_rx.recv().await {
-        Some(ServerMessage::ProtocolError {
-            error, scope_nonce, ..
-        }) => {
-            assert_eq!(error.code, ServerErrorCode::RequestFailed);
-            assert_eq!(scope_nonce, Some(17));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("WS broadcast lagged"))
-            );
+        Some(ServerMessage::ProjectionRecoveryRequired(recovery)) => {
+            assert_eq!(recovery.repo_id, uuid::Uuid::nil());
+            assert_eq!(recovery.scope_nonce, Some(17));
+            assert!(matches!(
+                recovery.cause,
+                ProjectionRecoveryCause::BroadcastGap { skipped: 1 }
+            ));
         }
-        other => panic!("expected lagged ProtocolError, got {:?}", other),
+        other => panic!("expected lagged projection recovery, got {:?}", other),
     }
+    let after = metrics::delivery_metrics_snapshot();
+    assert!(after.broadcast_lag_events > before.broadcast_lag_events);
+    assert!(after.broadcast_recoveries > before.broadcast_recoveries);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

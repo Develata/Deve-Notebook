@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-13`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -278,6 +278,16 @@ PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
 - `Apply to Ledger` / `确认外部修改` **MUST** 使用 core/server 写入路径把 staged external changes
   转换为 ledger facts；成功后清空 External Changes staging，并让 Source Control 从 commit anchor 到
   ledger head 派生 `ConfirmedLedgerChange`。
+- Apply 事务成功后，Core **MUST** 返回 typed
+  `ExternalApplyReceipt { repo_id, authority_head: GlobalSeq, affected_docs, applied_target_count }`；HTTP 直接返回
+  receipt，WS request 必须带 `request_id` 并返回 `ExternalApplyAck`。server 对一次 Apply 只发布一条
+  `ProjectionRecoveryRequired`，由 recovery plan 指定受影响文档以及 DocList/tree、Source Control、
+  External Changes 是否刷新；不得逐 fact 广播 `ExternalApplyContentFact` / `NewOp`，也不得在 commit
+  后查询 confirmed list 才决定 Apply 是否成功。事务失败不得发布前缀事件，Web 不得从 HTTP
+  response、workspace 正文或路径重算 content ops。
+- Apply 的目录扫描、workspace 读取、内容重建与 patch 计算必须在 repo permit 外产生 opaque prepared
+  input；进入 permit 后必须重新绑定 exact `RepoId`，并 exact-compare ledger head、staged rows 与 path
+  identity，再由单个 authority transaction 消费。任一比较失败都保留原 staging 并要求重新 preflight。
 - `Apply to Ledger` **MUST NOT** 创建 commit anchor、更新 history、写 Git main mirror queue 或把 staged
   external changes 伪装成 Source Control commit。
 - 当 external change 与 confirmed ledger dirty 指向同一 `DocId`，或缺失 `DocId` 时指向同一 canonical
@@ -494,7 +504,7 @@ MergeRequested
    External Changes runtime。
 7. 重建或增量更新 projection / committed snapshot base。
 
-原子性约束：步骤 5 对应的 commit payload/order anchor 与步骤 7 的全部 committed snapshot baseline 必须在同一个 redb write transaction 内提交；事务必须 exact-compare 预检得到的 ledger head，head 漂移或任一文档 snapshot、commit/order 写入失败时整笔回滚。snapshot 必须在该事务视图内逐文档读取 facts、重建并立即写入，不得同时缓存全部 dirty 文档的完整内容。Git mirror queue 必须在该事务 commit 之后执行，失败只产生可恢复诊断，不得撤销 NoteGit commit。
+原子性约束：步骤 5 对应的 commit payload/order anchor 与步骤 7 的全部 committed snapshot baseline 必须在同一个 redb write transaction 内提交；事务必须 exact-compare 预检得到的 ledger head，head 漂移或任一文档 snapshot、commit/order 写入失败时整笔回滚。resolved-conflict patch 与 commit snapshot 的只读准备必须发生在 repo permit 外，permit 内只做 exact revalidation 与提交。snapshot 必须在该事务视图内逐文档读取 facts、重建并立即写入，不得同时缓存全部 dirty 文档的完整内容。Git mirror queue 必须在该事务 commit 之后执行，并携带提交时的 expected `RepoId`；执行时名称若已重绑到其他 repo 必须拒绝。queue 失败只产生可恢复诊断，不得撤销 NoteGit commit。
 
 规则：
 
@@ -646,6 +656,15 @@ authenticated session 内完成 `SyncHello` 与 `RegisterWriter` 后，server �
 - 目标是 local writable branch；
 - 请求 `scope_nonce` 与 active grant 完全匹配；
 - grant 仍属于当前 browser session 的 active writer grant，且未过期。
+- WebSocket Source Control mutation 不得把这个 HTTP lease 当作当前连接的 writer authority：它必须重新
+  验证当前 `WsSession` 的 authenticated peer、local repo、sync handshake、registered writer 与
+  `scope_nonce` 全部精确匹配。验证成功后可以为同一 session 续租 HTTP grant；因此仅 HTTP grant
+  自然过期不得让仍然活跃且精确绑定的 WS writer 永久进入 stale scope。没有 live writer proof 的
+  HTTP 请求仍必须在 lease 过期后 fail-closed，前端不得自行续租或伪造 writer identity。
+- Source Control commit、resolved-conflict commit、commit-and-push 的 authority 部分与 merge result
+  必须进入 `03_storage/authority#repo-mutation-publication-gate`。Commit anchor lifecycle event 与
+  projection recovery 必须按 gate 内 enqueue 顺序发布；Git mirror queue、push 与 HTTP response
+  delivery 保持在 gate 外，失败不得回滚已经成立的 NoteGit commit。
 
 WS repo switch、branch switch、disconnect、session invalid、writer unregister、重新绑定 writer，或任何
 repo/scope recovery / sync guard / Browser `SyncHello` failure 路径导致当前 scope runtime binding 被清理时，

@@ -3,7 +3,7 @@ use crate::server::{AppState, channel::DualChannel, tree_state::RepoTreeRegistry
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{FactActor, Op, PeerId};
-use deve_core::protocol::ServerErrorCode;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -116,7 +116,8 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
             "changed",
             MergeResolution::AcceptIncoming,
             Some(13)
-        ),
+        )
+        .await,
         MergeWriteOutcome::CommitFailed
     );
 

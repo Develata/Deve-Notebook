@@ -51,7 +51,7 @@
 - `Surface`: `external-changes-panel`
 - `Trigger`: 点击 `Apply to Ledger` / `确认外部修改`
 - `Preconditions`: staged external changes 非空，write gate 未阻塞，且 staged set 不与 confirmed ledger dirty 重叠
-- `Immediate Result`: 服务端把 staged external changes 转换为 ledger facts，清空 External Changes staging；Source Control 后续显示对应 `Confirmed Ledger Changes`
+- `Immediate Result`: 服务端把 staged external changes 转换为 ledger facts，清空 External Changes staging，返回绑定 authority head 的 typed receipt，并为同 repo session 发布一次后端指定范围的 projection recovery；命中当前文档时通过 fresh Snapshot/History 收敛，Source Control 后续显示对应 `Confirmed Ledger Changes`
 - `Application Entry`: `crates/core/src/ledger/manager/commit_runtime.rs`, `apps/cli/src/server/handlers/source_control/service/write.rs`, `apps/web/src/runtime/external_changes_client/mod.rs`
 
 ### `op.external-changes.overlap-blocked`

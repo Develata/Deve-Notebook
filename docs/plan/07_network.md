@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-13`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -186,15 +186,20 @@ enabled = true
 
 ### 4.2 Serialization
 
-- WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- `protocol_version` 当前固定为 `13`；当前兼容窗口为 `13..=13`；v13 将 Diff 改为 typed projection，并把 commit diff 改为 summary + on-demand file projection。v12 不保留 adapter。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
+- 首个公开 wire epoch 固定为 `protocol_version = 1`，兼容窗口为 `1..=1`。历史未发布开发 namespace
+  `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v13 全部 fail-closed，不提供 adapter。F4/v1 发布后只允许
+  单调升级，不得再次重置或复用旧 `(magic, version)` identity。任何后续破坏兼容的 schema 或
+  codec 变更 **MUST** bump F4 内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
 - 未来若支持滚动升级，必须为每个仍支持的旧 `protocol_version` 维护显式 decode/upgrade adapter，并在 `MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION` 区间内逐版本测试。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned postcard frame。
-- 浏览器客户端到服务端 **SHOULD** 优先使用 versioned postcard frame；text-frame versioned JSON 只能作为调试入口保留。
+- 浏览器生产客户端到服务端 **MUST** 使用 versioned postcard binary frame；收到任意 text frame、损坏
+  binary frame 或不支持的 wire identity 时必须退休当前 connection epoch 并重连，不得把错误帧投影成
+  普通业务消息继续消费。text-frame versioned JSON 只能由 server 的显式 development/debug 入口解析。
 - 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认运行时合同。
 - 旧式 JSON debug frame 缺少 `known_vector` / `server_vector` 时，只能按空向量兼容解析；新发送的 sync frame **MUST** 显式携带这些字段。
-- 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF3` magic 的二进制帧。
+- 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
 ### 4.3 Core Message Families
@@ -212,6 +217,7 @@ enabled = true
   - `NewOp`
   - `Ack`
   - `EditRejected`
+  - `ProjectionRecoveryRequired`
 - diff projection:
   - `GetDocDiff` / `DocDiff`
   - `GetCommitDiff` / `CommitDiffResult`
@@ -222,6 +228,38 @@ enabled = true
   - `DocList`
   - `TreeUpdate`
   - `ProtocolError`
+
+### 4.3.1 Projection Recovery Wire Contract {#projection-recovery-contract}
+
+后端统一使用以下 typed wire 表示“authority 已变化或消息完整性已无法证明，客户端必须按指定
+范围刷新 projection”：
+
+```text
+ProjectionRecoveryRequired {
+  repo_id,
+  branch,
+  scope_nonce,
+  cause: ProjectionRecoveryCause,
+  plan: ProjectionRecoveryPlan,
+}
+
+DocumentRecoveryScope = None | Exact(Vec<DocId>) | CurrentDocument
+ProjectionRecoveryPlan {
+  documents,
+  refresh_doc_list,
+  refresh_source_control,
+  refresh_external_changes,
+}
+```
+
+`ProjectionRecoveryCause` 至少区分 ExternalApply、DocumentMutation、SourceControlCommit、Merge、
+PluginMutation 与 `BroadcastGap { skipped }`。plan 是 server authority 的投影刷新决定；Web 只能
+执行 typed refresh，不得根据 cause、路径或正文推断业务恢复范围。
+
+`ClientMessage::ApplyExternalChanges` 必须携带 `request_id`；成功返回
+`ExternalApplyAck { request_id, receipt, repo_id, branch, scope_nonce }`。该 Ack 与 recovery signal
+用途不同：Ack 关联请求，recovery 使同 repo 各 session 收敛。二者都不得携带逐 fact content
+广播替代物。
 
 ### 4.4 Routing Rule
 
@@ -442,6 +480,18 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `Unauthorized`、`repo route mismatch`、configured `peer_id` mismatch、invalid static `repo_id` / `ws_url`、missing / empty / header-invalid outbound token env、`malformed session proof` 不得继续普通无限重连。
 - full peer connector backoff 与 browser reconnect backoff 可以共用节奏，但必须按 peer endpoint 独立计数；单个 peer 失败不得阻塞其他 peer connector。
 
+### 8.1 Ordered Delivery and Gap Recovery
+
+- 同一个 server broadcast forwarder 对关键消息必须沿同一 sender 有序 `send().await`；队列满时
+  禁止创建 detached send task。sender 关闭时应退休该 forwarder。
+- 直接关键 unicast 队列满时不得后台补发或重排；必须退休当前 session，依靠新 connection epoch
+  的 Snapshot/History 收敛。非关键消息可以按受控策略丢弃，但必须有指标。
+- broadcast receiver `Lagged(skipped)` 必须发送 scoped `ProjectionRecoveryRequired`，不得伪装成
+  普通 `RequestFailed`。
+- Web incoming ring 可以保持有界，但 sequence cursor 检测到本地 gap 时必须返回 typed gap，且
+  两个消费者都不得继续处理缺口后的消息。runtime 立即撤销 writer-ready，并按 connection epoch
+  合并为一次 `ReconnectForResync`。
+
 ## 9. Failure Modes
 
 - ws disconnected
@@ -566,11 +616,19 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `EmbeddedServerRuntime` **MUST** own cancellation and join handles for every background task it starts. Axum listener shutdown alone is not a complete runtime shutdown；normal native app exit 必须先停止 active transport generation，再在有界时间内 cancel/join metrics、prewarm、P2P connector，并释放 watcher ownership。
 - transport generation 可以针对新端口重建 node-role、native-session bridge、allowed-origin router 与 port hint，但必须复用同一 `AppState`。process-scoped runtime fatal failure 必须 fail-closed 并要求 app restart；不得在同一进程中创建第二套 authority runtime。
 - 每个 transport generation 必须拥有其升级后的 WebSocket session cancellation 与 join 边界。listener shutdown 必须先拒绝新 upgrade、通知该 generation 的全部已升级 session 退出，并可抢占当前 in-flight handler future，然后撤销 browser writer grant 并等待 session idle；旧 generation 的 sender/broadcast task、认证状态或 `AppState` 引用不得跨到新 endpoint。transport error 只有在 runtime 明确携带 `sessions_retired=true` 证明时才允许 replacement；任何 shutdown/join/idle 证明失败都必须熔断到 app restart。Mobile 为满足有界 app exit 可以关闭可选 prewarm，但不得 detach 或跳过其他 runtime task 的 cancellation/join；一般 runtime 的 prewarm 也必须协作取消，取消后不得保存部分 snapshot。
+- `AppState` 必须持有 process-scoped `RepoMutationPublicationGate`，并把 local authority mutation 与
+  对应 publication enqueue 作为同一个 repo permit 内的有序阶段；不得把 socket delivery、网络或
+  Git mirror 放入临界区。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 
 - 负责 browser peer identity、repo-scoped handshake、client-side durable state probe 与 stale message discard。
 - Web runtime 不得在 disconnected、unauthorized 或 peer identity 缺失时保持可写。
+- Web runtime 必须把 incoming queue gap 当成 connection integrity failure：停止消费该 gap 后的
+  所有消息、撤销 writer-ready、退休当前 connection epoch，再由 fresh handshake/snapshot 恢复。
+- typed projection refresh 必须绑定 connection epoch、repo/branch/scope nonce 与单调 flight id；任一 refresh
+  request 失败或在有界超时内未完成时，Web 必须退休该 flight 并通过 fresh connection resync，不能永久
+  卡在只读 loading，也不能接受迟到 response 恢复 readiness。
 
 ### 12.5 Native Full Peer Runtime {#native-full-peer-runtime}
 

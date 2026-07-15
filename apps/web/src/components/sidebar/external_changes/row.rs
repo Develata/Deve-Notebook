@@ -10,6 +10,35 @@ use crate::hooks::use_core::ExternalChangesContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
+use std::sync::Arc;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExternalChangeAction {
+    OpenDiff,
+    Discard,
+    Stage,
+    Unstage,
+}
+
+impl ExternalChangeAction {
+    fn marker(self) -> &'static str {
+        match self {
+            Self::OpenDiff => "open-diff",
+            Self::Discard => "discard",
+            Self::Stage => "stage",
+            Self::Unstage => "unstage",
+        }
+    }
+
+    fn title(self, locale: Locale) -> &'static str {
+        match self {
+            Self::OpenDiff => t::external_changes::open_diff(locale),
+            Self::Discard => t::external_changes::discard(locale),
+            Self::Stage => t::external_changes::stage(locale),
+            Self::Unstage => t::external_changes::unstage(locale),
+        }
+    }
+}
 
 pub(super) fn external_change_row(
     entry: ChangeEntry,
@@ -17,17 +46,24 @@ pub(super) fn external_change_row(
     core: ExternalChangesContext,
     locale: RwSignal<Locale>,
 ) -> AnyView {
-    let entry_store = StoredValue::new(entry);
-    let display_path = entry_store.get_value().path;
+    let entry = Arc::new(entry);
+    let display_path = entry.path.clone();
     let display_name = file_name(&display_path);
     let directory = directory_name(&display_path);
     let core_for_row_click = core.clone();
+    let entry_for_row_click = Arc::clone(&entry);
+    let entry_for_open_diff = Arc::clone(&entry);
+    let has_conflict = entry.has_conflict;
 
     view! {
         <div
             class="group flex min-h-11 cursor-pointer items-center gap-2 px-3 py-1 hover:bg-hover md:min-h-9"
             data-deve-external-changes-row=display_path.clone()
-            on:click=move |_| core_for_row_click.on_get_doc_diff.run(entry_store.get_value())
+            on:click=move |_| {
+                core_for_row_click
+                    .on_get_doc_diff
+                    .run(entry_for_row_click.as_ref().clone())
+            }
         >
             <FileText class="h-3.5 w-3.5 shrink-0 text-muted" />
             <div class="min-w-0 flex-1">
@@ -35,7 +71,7 @@ pub(super) fn external_change_row(
                     <span class="truncate text-[12px] text-primary">{display_name}</span>
                     <span class="shrink truncate text-[11px] text-muted">{directory}</span>
                 </div>
-                <Show when=move || external_change_is_overlap_blocked(&entry_store.get_value())>
+                {has_conflict.then(|| view! {
                     <div
                         class="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-warning"
                         data-deve-external-overlap="true"
@@ -43,62 +79,58 @@ pub(super) fn external_change_row(
                         <AlertTriangle class="h-3 w-3" />
                         <span>{move || t::external_changes::overlap_blocked(locale.get())}</span>
                     </div>
-                </Show>
+                })}
             </div>
             <div class="flex shrink-0 items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                 <ExternalChangeIconButton
-                    title=Signal::derive(move || {
-                        t::external_changes::open_diff(locale.get()).to_string()
-                    })
-                    disabled=Signal::derive(|| false)
+                    action=ExternalChangeAction::OpenDiff
+                    locale
                     on_click=Callback::new({
                         let core = core.clone();
-                        move |_| core.on_get_doc_diff.run(entry_store.get_value())
+                        move |_| core.on_get_doc_diff.run(entry_for_open_diff.as_ref().clone())
                     })
                 >
                     <FileText class="h-3.5 w-3.5" />
                 </ExternalChangeIconButton>
-                {move || row_write_actions(entry_store, is_staged, core.clone(), locale)}
+                {row_write_actions(entry, is_staged, core, locale)}
             </div>
         </div>
     }.into_any()
 }
 
 fn row_write_actions(
-    entry_store: StoredValue<ChangeEntry>,
+    entry: Arc<ChangeEntry>,
     is_staged: bool,
     core: ExternalChangesContext,
     locale: RwSignal<Locale>,
 ) -> AnyView {
-    if external_change_is_overlap_blocked(&entry_store.get_value()) {
-        return discard_action(entry_store, core, locale).into_any();
+    if external_change_is_overlap_blocked(&entry) {
+        return discard_action(entry, core, locale).into_any();
     }
     if is_staged {
-        return unstage_action(entry_store, core, locale).into_any();
+        return unstage_action(entry, core, locale).into_any();
     }
     view! {
-        {discard_action(entry_store, core.clone(), locale)}
-        {stage_action(entry_store, core, locale)}
+        {discard_action(Arc::clone(&entry), core.clone(), locale)}
+        {stage_action(entry, core, locale)}
     }
     .into_any()
 }
 
 fn discard_action(
-    entry_store: StoredValue<ChangeEntry>,
+    entry: Arc<ChangeEntry>,
     core: ExternalChangesContext,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
-    let core_for_disabled = core.clone();
     let core_for_click = core.clone();
 
     view! {
         <ExternalChangeIconButton
-            title=Signal::derive(move || {
-                t::external_changes::discard(locale.get()).to_string()
-            })
-            disabled=Signal::derive(move || !core_for_disabled.can_write.get())
+            action=ExternalChangeAction::Discard
+            locale
+            can_write=core.can_write
             on_click=Callback::new(move |_| {
-                core_for_click.on_discard_file.run(entry_store.get_value())
+                core_for_click.on_discard_file.run(entry.as_ref().clone())
             })
         >
             <RotateCcw class="h-3.5 w-3.5" />
@@ -107,21 +139,19 @@ fn discard_action(
 }
 
 fn stage_action(
-    entry_store: StoredValue<ChangeEntry>,
+    entry: Arc<ChangeEntry>,
     core: ExternalChangesContext,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
-    let core_for_disabled = core.clone();
     let core_for_click = core.clone();
 
     view! {
         <ExternalChangeIconButton
-            title=Signal::derive(move || {
-                t::external_changes::stage(locale.get()).to_string()
-            })
-            disabled=Signal::derive(move || !core_for_disabled.can_write.get())
+            action=ExternalChangeAction::Stage
+            locale
+            can_write=core.can_write
             on_click=Callback::new(move |_| {
-                core_for_click.on_stage_file.run(entry_store.get_value())
+                core_for_click.on_stage_file.run(entry.as_ref().clone())
             })
         >
             <Plus class="h-3.5 w-3.5" />
@@ -130,21 +160,19 @@ fn stage_action(
 }
 
 fn unstage_action(
-    entry_store: StoredValue<ChangeEntry>,
+    entry: Arc<ChangeEntry>,
     core: ExternalChangesContext,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
-    let core_for_disabled = core.clone();
     let core_for_click = core.clone();
 
     view! {
         <ExternalChangeIconButton
-            title=Signal::derive(move || {
-                t::external_changes::unstage(locale.get()).to_string()
-            })
-            disabled=Signal::derive(move || !core_for_disabled.can_write.get())
+            action=ExternalChangeAction::Unstage
+            locale
+            can_write=core.can_write
             on_click=Callback::new(move |_| {
-                core_for_click.on_unstage_file.run(entry_store.get_value())
+                core_for_click.on_unstage_file.run(entry.as_ref().clone())
             })
         >
             <Minus class="h-3.5 w-3.5" />
@@ -154,19 +182,22 @@ fn unstage_action(
 
 #[component]
 fn ExternalChangeIconButton(
-    #[prop(into)] title: Signal<String>,
-    #[prop(into)] disabled: Signal<bool>,
+    action: ExternalChangeAction,
+    locale: RwSignal<Locale>,
+    #[prop(optional)] can_write: Option<Signal<bool>>,
     on_click: Callback<()>,
     children: Children,
 ) -> impl IntoView {
+    let marker = action.marker();
     view! {
         <button
             type="button"
             class="inline-flex h-11 w-11 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 md:h-7 md:w-7"
-            title=move || title.get()
-            aria-label=move || title.get()
-            disabled=move || disabled.get()
+            title=move || action.title(locale.get())
+            aria-label=move || action.title(locale.get())
+            disabled=move || can_write.is_some_and(|can_write| !can_write.get())
             data-deve-mobile-touch-target="external-changes-action"
+            data-deve-external-action=marker
             on:click=move |event| {
                 event.stop_propagation();
                 on_click.run(());

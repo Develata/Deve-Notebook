@@ -39,8 +39,8 @@ pub(crate) use self::auth_probe::probe_auth_status_with_http_base;
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
 pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_for_http_base};
 pub(crate) use self::external_changes::{
-    ExternalChangesMutationError, ExternalChangesTargetOp, apply_external_changes_to_ledger,
-    fetch_external_changes, mutate_external_change_target,
+    ExternalChangesMutationError, ExternalChangesTargetOp, fetch_external_changes,
+    mutate_external_change_target,
 };
 #[cfg(test)]
 pub use self::git_mirror::GitMirrorRepairReviewRecord;
@@ -49,6 +49,7 @@ pub use self::graph::{GraphProjectionFetchError, fetch_graph_projection};
 pub(crate) use self::host_file::{
     copy_host_file_absolute_path_to_clipboard, reveal_host_file_in_system_explorer,
 };
+pub(crate) use self::incoming::IncomingBatch;
 pub(crate) use self::native_backend_bridge::{
     NativeBackendConfig, NativeBackendValidation, get_native_backend_config,
     save_native_backend_remote,

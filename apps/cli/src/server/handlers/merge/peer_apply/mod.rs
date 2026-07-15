@@ -5,12 +5,13 @@
 
 use super::errors;
 use super::peer_support::resolve_doc_path;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::repo_scope::{ResolvedRepo, ensure_resolved_local_repo_writable};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::ConflictHunk;
 use deve_core::ledger::merge::MergePreflight;
 use deve_core::models::{DocId, MergeResolution};
-use deve_core::protocol::{MergeConflictAction, ServerMessage};
+use deve_core::protocol::MergeConflictAction;
 use std::sync::Arc;
 
 pub(super) struct MergeConflictPayload {
@@ -27,7 +28,7 @@ pub(super) enum MergeWriteOutcome {
     CommittedWritebackFailed,
 }
 
-pub(super) fn write_merged_content(
+pub(super) async fn write_merged_content(
     state: &Arc<AppState>,
     ch: &DualChannel,
     scope: &ResolvedRepo,
@@ -40,51 +41,73 @@ pub(super) fn write_merged_content(
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return MergeWriteOutcome::CommitFailed;
     }
-    let outcome = match state.repo.commit_peer_merge_in_local_repo(
-        &scope.repo_name,
-        preflight,
-        content,
-        resolution,
-    ) {
-        Ok(outcome) => outcome,
-        Err(err) => {
+    let execution = state
+        .repo_mutation_gate()
+        .execute_repo(scope.repo_id, &state.tx, || {
+            let scope =
+                match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
+                {
+                    Ok(scope) => scope,
+                    Err(error) => return MutationExecution::not_committed(error),
+                };
+            let outcome = match state.repo.commit_peer_merge_in_local_repo(
+                &scope.repo_name,
+                preflight,
+                content,
+                resolution,
+            ) {
+                Ok(outcome) => outcome,
+                Err(error) => return MutationExecution::not_committed(error),
+            };
+            let merged_count = u32::from(outcome.content_changed);
+            let publication = MutationPublication::MergeComplete {
+                repo_id: scope.repo_id,
+                branch: scope.branch.clone(),
+                scope_nonce,
+                merged_count,
+                recovery: MutationPublication::merge_recovery(scope.repo_id, preflight.doc_id()),
+            };
+            if outcome.content_changed
+                && let Err(error) = state
+                    .sync_manager
+                    .persist_doc_in_local_repo(&scope.repo_name, preflight.doc_id())
+            {
+                return MutationExecution::projection_degraded(outcome, error, publication);
+            }
+            MutationExecution::committed(outcome, publication)
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { .. }) => {
+            tracing::info!("Merge Success for doc {}", preflight.doc_id());
+            MergeWriteOutcome::Committed
+        }
+        Ok(MutationExecution::NotCommitted(err)) => {
             errors::storage_persist_failed(
                 ch,
                 format!("Failed to append merged content and checkpoint: {}", err),
                 scope_nonce,
             );
-            return MergeWriteOutcome::CommitFailed;
+            MergeWriteOutcome::CommitFailed
         }
-    };
-    if outcome.content_changed
-        && let Err(err) = state
-            .sync_manager
-            .persist_doc_in_local_repo(&scope.repo_name, preflight.doc_id())
-    {
-        errors::storage_persist_failed(
-            ch,
-            format!("Failed to persist merged content: {}", err),
-            scope_nonce,
-        );
-        return MergeWriteOutcome::CommittedWritebackFailed;
+        Ok(MutationExecution::ProjectionDegraded { error, .. })
+        | Ok(MutationExecution::CommittedPartial { error, .. }) => {
+            errors::storage_persist_failed(
+                ch,
+                format!("Failed to persist merged content: {error}"),
+                scope_nonce,
+            );
+            MergeWriteOutcome::CommittedWritebackFailed
+        }
+        Err(error) => {
+            errors::storage_persist_failed(
+                ch,
+                format!("Failed to serialize merged content: {error}"),
+                scope_nonce,
+            );
+            MergeWriteOutcome::CommitFailed
+        }
     }
-    tracing::info!("Merge Success for doc {}", preflight.doc_id());
-    broadcast_merge_complete(ch, scope, u32::from(outcome.content_changed), scope_nonce);
-    MergeWriteOutcome::Committed
-}
-
-pub(super) fn broadcast_merge_complete(
-    ch: &DualChannel,
-    scope: &ResolvedRepo,
-    merged_count: u32,
-    scope_nonce: Option<u64>,
-) {
-    ch.broadcast(ServerMessage::MergeComplete {
-        repo_id: Some(scope.repo_id),
-        branch: scope.branch.clone(),
-        scope_nonce,
-        merged_count,
-    });
 }
 
 pub(super) fn send_merge_conflict(

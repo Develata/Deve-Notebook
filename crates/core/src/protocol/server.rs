@@ -2,18 +2,20 @@
 //! 服务端 WebSocket 消息协议。
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
+//!   - 07_network#projection-recovery-contract
 //!   - 09_web_thin_client_ledger#web-edit-intent
 
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
 use super::merge_conflict::{ConflictHunk, MergeConflictAction};
 use crate::models::{DocId, PeerFactSeq, PeerId, RepoId, VersionVector};
+use crate::protocol::ProjectionRecoveryRequired;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
 use crate::security::EncryptedOp;
 use crate::source_control::diff_projection::DiffProjection;
-use crate::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo};
+use crate::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo, ExternalApplyReceipt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -37,6 +39,7 @@ pub enum ServerMessage {
     SyncPushSnapshot { source_peer_id: PeerId, repo_id: RepoId, waterline: PeerFactSeq, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(default)] source_proof: Option<SyncSourceProof>, payload: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
+    ProjectionRecoveryRequired(ProjectionRecoveryRequired),
     Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },
     History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
     DocList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, docs: Vec<(DocId, String)> },
@@ -53,6 +56,7 @@ pub enum ServerMessage {
     PeerDeleted { peer_id: String, #[serde(default)] scope_nonce: Option<u64> },
     EditRejected { scope_nonce: ScopeNonce, doc_id: DocId, client_op_id: u64, error: ServerError },
     ChangesList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, staged: Vec<ChangeEntry>, unstaged: Vec<ChangeEntry>, #[serde(default)] confirmed: Vec<ChangeEntry> },
+    ExternalApplyAck { request_id: String, receipt: ExternalApplyReceipt, repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, scope_nonce: ScopeNonce },
     StageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     UnstageAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, path: String },
     CommitAck { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, commit_id: String, timestamp: i64 },

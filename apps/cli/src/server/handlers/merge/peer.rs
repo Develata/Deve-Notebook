@@ -52,7 +52,8 @@ pub(super) async fn handle_merge_peer(
                 &content,
                 resolution,
                 scope_nonce,
-            );
+            )
+            .await;
         }
         Ok(MergeEvaluation {
             result:

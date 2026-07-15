@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  exerciseRepoLifecycle,
+  exerciseSourceControlAndExternalChanges,
+} from "./lib/docker-multiclient-product-journeys.mjs";
 
 const playwrightRequire = createRequire(
   process.env.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM ?? import.meta.url,
@@ -14,6 +18,9 @@ const headless = !["0", "false", "no"].includes(
   (process.env.DEVE_DOCKER_MULTI_HEADLESS ?? "1").toLowerCase(),
 );
 const timeoutMs = Number(process.env.DEVE_DOCKER_MULTI_TIMEOUT_MS ?? "60000");
+const productJourneys = ["1", "true"].includes(
+  (process.env.DEVE_DOCKER_MULTI_PRODUCT_JOURNEYS ?? "0").toLowerCase(),
+);
 export const renderedShellSelector = "#login-username, [data-deve-sync-status]";
 
 export function renderedShellPresent(selector, root = document) {
@@ -78,11 +85,17 @@ function attachDiagnostics(page, label) {
   });
   page.on("console", (msg) => {
     if (msg.type() === "error") {
-      diag.consoleErrors.push({ message: msg.text(), duringOffline: diag.offline });
+      const message = msg.text();
+      diag.consoleErrors.push({ message, duringOffline: diag.offline });
+      if (!diag.offline) {
+        console.error(`docker-multiclient-smoke: ${label} console error: ${message}`);
+      }
     }
   });
   page.on("pageerror", (err) => {
-    diag.pageErrors.push(err.message);
+    const detail = err.stack || err.message;
+    diag.pageErrors.push(detail);
+    console.error(`docker-multiclient-smoke: ${label} page error: ${detail}`);
   });
 
   return diag;
@@ -358,6 +371,11 @@ async function main() {
     await login(pageA, diagA);
     await login(pageB, diagB);
 
+    let repoLifecycle = null;
+    if (productJourneys) {
+      repoLifecycle = await exerciseRepoLifecycle(pageA);
+    }
+
     await createDocAndType(pageA, docPath, content);
     await openDoc(pageB, docPath);
     await waitForEditorContains(pageB, content);
@@ -371,6 +389,16 @@ async function main() {
       (await editorContent(pageA))?.includes(recoveryContent),
       "client-a must receive client-b's post-reconnect edit",
     );
+    let productEvidence = null;
+    if (productJourneys) {
+      productEvidence = await exerciseSourceControlAndExternalChanges({
+        page: pageA,
+        peerPage: pageB,
+        repoId: repoLifecycle.initialRepoId,
+        path: docPath,
+        currentContent: `${content}${recoveryContent}`,
+      });
+    }
     await assertPageHealthy(pageA, diagA);
     await assertPageHealthy(pageB, diagB);
 
@@ -378,6 +406,8 @@ async function main() {
       status: "ok",
       baseUrl,
       docPath,
+      repoLifecycle,
+      productEvidence,
       clients: [
         { label: diagA.label, ws: diagA.wsUrls.length },
         { label: diagB.label, ws: diagB.wsUrls.length },

@@ -5,6 +5,7 @@
 use super::open_scope::OpenRequestKey;
 use crate::hooks::use_core::EditorContext;
 use crate::runtime::domain::EditorSyncFailure;
+use crate::runtime::projection_recovery::ProjectionRecoveryCoordinator;
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
@@ -30,6 +31,8 @@ pub(super) struct EditorRuntime {
     pub set_retry_nonce: WriteSignal<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
+    pub pending_resend_generation: Arc<AtomicU64>,
+    pub projection_recovery: ProjectionRecoveryCoordinator,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub history: ReadSignal<Vec<(u64, deve_core::models::Op)>>,
@@ -54,6 +57,8 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
     let (retry_nonce, set_retry_nonce) = signal(0u64);
     let session_generation = Arc::new(AtomicU64::new(0));
     let ready_generation = Arc::new(AtomicU64::new(0));
+    let pending_resend_generation = Arc::new(AtomicU64::new(0));
+    let projection_recovery = ProjectionRecoveryCoordinator::default();
     let buffered_live_ops = Arc::new(Mutex::new(Vec::new()));
     let buffered_encrypted_ops = Arc::new(Mutex::new(Vec::<EncryptedOp>::new()));
     let (history, set_history) = signal(Vec::<(u64, deve_core::models::Op)>::new());
@@ -79,6 +84,8 @@ pub(super) fn build_editor_runtime(core: &EditorContext) -> EditorRuntime {
         set_retry_nonce,
         session_generation,
         ready_generation,
+        pending_resend_generation,
+        projection_recovery,
         buffered_live_ops,
         buffered_encrypted_ops,
         history,

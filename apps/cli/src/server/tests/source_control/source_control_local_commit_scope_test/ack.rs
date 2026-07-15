@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{build_state, grant_default_browser_write, write_workspace_file};
+use super::support::{bind_default_browser_writer, build_state, write_workspace_file};
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_commit, session::WsSession,
 };
@@ -9,6 +9,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tokio::sync::mpsc;
+use tokio::time::{Duration, timeout};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
@@ -40,11 +41,15 @@ async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
     let mut rx = state.tx.subscribe();
     let mut session = WsSession::new();
     session.switch_repo("default".into(), None);
-    grant_default_browser_write(&state, &mut session, 23)?;
+    bind_default_browser_writer(&state, &mut session, 23)?;
 
     handle_commit(&state, &ch, &mut session, "initial".into()).await;
 
-    match rx.recv().await.expect("broadcast ack") {
+    match timeout(Duration::from_secs(5), rx.recv())
+        .await
+        .expect("broadcast ack timeout")
+        .expect("broadcast ack")
+    {
         ServerMessage::CommitAck {
             repo_id,
             scope_nonce,

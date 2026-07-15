@@ -27,6 +27,54 @@ mod cgroup;
 /// 全局操作计数器 (Handler 中调用 `increment_ops()` 累加)
 static OPS_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Process-scoped WS delivery counters. These remain deliberately separate
+/// from the public wire metrics so delivery diagnostics do not expand the WS
+/// protocol merely to observe local queue pressure.
+static NONCRITICAL_UNICAST_DROPS: AtomicU64 = AtomicU64::new(0);
+static NONCRITICAL_BROADCAST_DROPS: AtomicU64 = AtomicU64::new(0);
+static CRITICAL_SESSION_RETIREMENTS: AtomicU64 = AtomicU64::new(0);
+static BROADCAST_LAG_EVENTS: AtomicU64 = AtomicU64::new(0);
+static BROADCAST_RECOVERIES: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct DeliveryMetricsSnapshot {
+    pub(crate) noncritical_unicast_drops: u64,
+    pub(crate) noncritical_broadcast_drops: u64,
+    pub(crate) critical_session_retirements: u64,
+    pub(crate) broadcast_lag_events: u64,
+    pub(crate) broadcast_recoveries: u64,
+}
+
+pub(crate) fn record_noncritical_unicast_drop() {
+    NONCRITICAL_UNICAST_DROPS.fetch_add(1, Ordering::Relaxed);
+}
+
+pub(crate) fn record_noncritical_broadcast_drop() {
+    NONCRITICAL_BROADCAST_DROPS.fetch_add(1, Ordering::Relaxed);
+}
+
+pub(crate) fn record_critical_session_retirement() {
+    CRITICAL_SESSION_RETIREMENTS.fetch_add(1, Ordering::Relaxed);
+}
+
+pub(crate) fn record_broadcast_lag() {
+    BROADCAST_LAG_EVENTS.fetch_add(1, Ordering::Relaxed);
+}
+
+pub(crate) fn record_broadcast_recovery() {
+    BROADCAST_RECOVERIES.fetch_add(1, Ordering::Relaxed);
+}
+
+pub(crate) fn delivery_metrics_snapshot() -> DeliveryMetricsSnapshot {
+    DeliveryMetricsSnapshot {
+        noncritical_unicast_drops: NONCRITICAL_UNICAST_DROPS.load(Ordering::Relaxed),
+        noncritical_broadcast_drops: NONCRITICAL_BROADCAST_DROPS.load(Ordering::Relaxed),
+        critical_session_retirements: CRITICAL_SESSION_RETIREMENTS.load(Ordering::Relaxed),
+        broadcast_lag_events: BROADCAST_LAG_EVENTS.load(Ordering::Relaxed),
+        broadcast_recoveries: BROADCAST_RECOVERIES.load(Ordering::Relaxed),
+    }
+}
+
 /// 服务器启动时间 (OnceLock: 初始化一次，无 unsafe)
 static START_TIME: OnceLock<Instant> = OnceLock::new();
 

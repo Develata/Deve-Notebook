@@ -9,10 +9,10 @@
 
 mod delivery;
 
+pub(crate) use delivery::DeliveryOutcome;
 use delivery::send_unicast;
-pub(crate) use delivery::try_send_with_delivery_class;
 use deve_core::protocol::{ServerError, ServerMessage};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch};
 
 /// 双通道上下文
 ///
@@ -24,6 +24,7 @@ pub struct DualChannel {
     /// 单播通道 - 单客户端响应
     pub unicast: mpsc::Sender<ServerMessage>,
     diff_unicast: mpsc::Sender<ServerMessage>,
+    retire_session: Option<watch::Sender<bool>>,
 }
 
 impl DualChannel {
@@ -32,23 +33,50 @@ impl DualChannel {
         broadcast: broadcast::Sender<ServerMessage>,
         unicast: mpsc::Sender<ServerMessage>,
     ) -> Self {
+        let (retire_session, _) = watch::channel(false);
         Self {
             broadcast,
             diff_unicast: unicast.clone(),
             unicast,
+            retire_session: Some(retire_session),
         }
     }
 
     /// Creates a channel with a dedicated one-slot path for large typed diff payloads.
+    #[cfg(test)]
     pub(crate) fn with_diff_channel(
         broadcast: broadcast::Sender<ServerMessage>,
         unicast: mpsc::Sender<ServerMessage>,
         diff_unicast: mpsc::Sender<ServerMessage>,
     ) -> Self {
+        let (retire_session, _) = watch::channel(false);
         Self {
             broadcast,
             unicast,
             diff_unicast,
+            retire_session: Some(retire_session),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn retirement_receiver(&self) -> watch::Receiver<bool> {
+        self.retire_session
+            .as_ref()
+            .expect("test channel has retirement signal")
+            .subscribe()
+    }
+
+    pub(crate) fn with_diff_channel_and_retirement(
+        broadcast: broadcast::Sender<ServerMessage>,
+        unicast: mpsc::Sender<ServerMessage>,
+        diff_unicast: mpsc::Sender<ServerMessage>,
+        retire_session: watch::Sender<bool>,
+    ) -> Self {
+        Self {
+            broadcast,
+            unicast,
+            diff_unicast,
+            retire_session: Some(retire_session),
         }
     }
 
@@ -59,7 +87,11 @@ impl DualChannel {
 
     /// 单播消息 (单客户端响应)
     pub fn unicast(&self, msg: ServerMessage) {
-        send_unicast(&self.unicast, msg);
+        if send_unicast(&self.unicast, msg) == DeliveryOutcome::CriticalQueueFull
+            && let Some(retire_session) = &self.retire_session
+        {
+            let _ = retire_session.send(true);
+        }
     }
 
     pub(crate) fn diff_unicast_sender(&self) -> mpsc::Sender<ServerMessage> {

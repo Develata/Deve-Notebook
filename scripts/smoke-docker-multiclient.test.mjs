@@ -15,6 +15,7 @@ import {
   webSocketMatchesExpectedOrigin,
   waitForRenderedShell,
 } from "./smoke-docker-multiclient.mjs";
+import { selectWorkspaceRoot } from "./lib/docker-multiclient-product-journeys.mjs";
 
 test("pending marker parser rejects malformed counts", async () => {
   const page = {
@@ -146,4 +147,38 @@ test("direct execution enters main instead of silently succeeding", () => {
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test("product journey accepts one canonical projection workspace only", () => {
+  assert.equal(
+    selectWorkspaceRoot(
+      "/notes/default--11111111-1111-4111-8111-111111111111\n",
+      "11111111-1111-4111-8111-111111111111",
+    ),
+    "/notes/default--11111111-1111-4111-8111-111111111111",
+  );
+  assert.equal(
+    selectWorkspaceRoot(
+      "/notes/one--11111111-1111-4111-8111-111111111111\n/notes/two--22222222-2222-4222-8222-222222222222\n",
+      "22222222-2222-4222-8222-222222222222",
+    ),
+    "/notes/two--22222222-2222-4222-8222-222222222222",
+  );
+  assert.throws(() => selectWorkspaceRoot(
+    "/tmp/escaped\n",
+    "11111111-1111-4111-8111-111111111111",
+  ));
+});
+
+test("tag-ready product journey covers repo, typed diff, source control, and external apply", () => {
+  const source = fs.readFileSync(
+    new URL("./lib/docker-multiclient-product-journeys.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /data-deve-repo-switcher-create-input/);
+  assert.match(source, /data-deve-diff-projection=\\?"backend-typed/);
+  assert.match(source, /textarea\[name=\\?"commit-message/);
+  assert.match(source, /data-deve-external-section-body=\\?"pending/);
+  assert.match(source, /data-deve-external-apply=\\?"true/);
+  assert.match(source, /external workspace mutation must not bypass ledger authority/);
 });

@@ -106,6 +106,14 @@ impl EmbeddedServerRuntime {
             search_available,
             identity_key: key_pair,
         });
+        #[cfg(not(test))]
+        deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
+            crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
+        ))?;
+        #[cfg(not(test))]
+        deve_core::plugin::runtime::host::set_managed_source_control_mutation_host(Arc::new(
+            crate::server::repo_mutation::CliManagedSourceControlMutationHost::new(&app_state),
+        ))?;
         let p2p_inbound_token_env = p2p.inbound_token_env.clone();
         let background_tasks =
             runtime::spawn_background_runtime_tasks(p2p, app_state.clone(), repo, prewarm_enabled);

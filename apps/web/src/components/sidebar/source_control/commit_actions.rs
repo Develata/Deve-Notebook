@@ -37,6 +37,7 @@ pub fn CommitActions(
         <div class="flex relative">
             <button
                 type="button"
+                data-deve-source-control-commit-action="commit"
                 class=move || commit_primary_button_class(show_write_actions.get())
                 disabled=move || !can_commit_now.get()
                 title=move || commit_action_title.get()

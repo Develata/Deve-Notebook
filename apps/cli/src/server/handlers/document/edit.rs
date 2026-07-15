@@ -9,9 +9,7 @@ use std::sync::Arc;
 
 use super::EditRequest;
 use super::edit_apply::{ClientEditAppend, append_client_edit};
-use super::edit_checks::{
-    ExistingClientOpCheck, confirm_existing_client_op, reject_missing_doc, writer_peer_id,
-};
+use super::edit_checks::{reject_missing_doc, writer_peer_id};
 use super::edit_support::{edit_response_scope_nonce, reject_edit, resolve_edit_scope};
 
 pub(super) async fn handle_edit(
@@ -74,31 +72,6 @@ pub(super) async fn handle_edit(
     ) else {
         return;
     };
-    if let Err(err) = state
-        .repo
-        .repair_client_op_index_if_missing_in_local_repo(&scope.repo_name)
-    {
-        reject_edit(
-            ch,
-            response_scope_nonce,
-            doc_id,
-            client_op_id,
-            ServerError::with_detail(ServerErrorCode::StoragePersistFailed, err.to_string()),
-        );
-        return;
-    }
-    if confirm_existing_client_op(ExistingClientOpCheck {
-        state,
-        scope: &scope,
-        ch,
-        scope_nonce: response_scope_nonce,
-        doc_id,
-        op: &op,
-        client_id,
-        client_op_id,
-    }) {
-        return;
-    }
     append_client_edit(ClientEditAppend {
         state,
         scope: &scope,
@@ -108,5 +81,6 @@ pub(super) async fn handle_edit(
         op,
         client_id,
         client_op_id,
-    });
+    })
+    .await;
 }

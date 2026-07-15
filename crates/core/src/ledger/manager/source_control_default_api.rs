@@ -7,7 +7,7 @@
 //! 把历史单 repo 便捷方法与 repo-scoped 执行路径隔离。
 
 use crate::ledger::RepoManager;
-use crate::source_control::{ChangeEntry, CommitInfo};
+use crate::source_control::{ChangeEntry, CommitInfo, ExternalApplyReceipt};
 use anyhow::Result;
 
 impl RepoManager {
@@ -32,7 +32,7 @@ impl RepoManager {
     }
 
     /// 将 External Changes staging 显式写入 ledger，但不创建 Source Control commit anchor。
-    pub fn apply_external_changes(&self) -> Result<Vec<ChangeEntry>> {
+    pub fn apply_external_changes(&self) -> Result<ExternalApplyReceipt> {
         self.apply_external_changes_in_local_repo(self.local_repo_name())
     }
 

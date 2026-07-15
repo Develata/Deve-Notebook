@@ -51,9 +51,9 @@
   assertions:
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
-    - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 13
-    - min_supported_packet_protocol_version_eq: 13
+    - binary_packet_magic_eq: "DEVEWSF4"
+    - versioned_packet_protocol_version_eq: 1
+    - min_supported_packet_protocol_version_eq: 1
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
@@ -391,4 +391,27 @@
     - snapshot_requires_exact_source_range_1_through_waterline: true
     - merge_anchor_consumes_peer_fact_seq_and_roundtrips_in_full_log_snapshot: true
     - merge_anchor_does_not_mutate_content_or_structure_projection: true
+
+- case_id: NET-020
+  goal: Repo 写入发布、关键消息顺序、browser incoming gap 与 generation-bound projection recovery fail-closed。
+  preconditions:
+    - 两个 browser session 绑定同一 local repo
+    - 测试入口可注入 broadcast lag、local incoming gap 与 adapter/replay failure
+  steps:
+    - run: cargo test -p deve_cli serializes_same_repo_and_preserves_publication_order -- --nocapture
+    - run: cargo test -p deve_cli critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full -- --nocapture
+    - run: cargo test -p deve_web incoming_gap -- --nocapture
+    - run: cargo test -p deve_web projection_recovery -- --nocapture
+    - ui_run: WEBWRITE-FEAT-00
+  assertions:
+    - same_repo_mutations_are_serialized true
+    - different_repo_mutations_can_overlap true
+    - committed_degraded_or_partial_always_publishes_recovery true
+    - broadcast_lag_emits_scoped_projection_recovery true
+    - critical_queue_full_retires_session_without_detached_resend true
+    - incoming_gap_discards_message_suffix_and_reconnects_once_per_epoch true
+    - pending_overlay_survives_recovery_and_replays_once true
+    - unrelated_document_recovery_keeps_editor_writable true
+    - stale_generation_cannot_restore_writer_ready true
+    - repeated_adapter_failure_requires_explicit_retry true
 ```

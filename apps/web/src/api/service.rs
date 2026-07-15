@@ -16,12 +16,15 @@ use self::service_ping::spawn_ping_loop;
 use super::connection::{
     ConnectionControl, ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager,
 };
+use super::incoming::{IncomingBatch, messages_since};
 use super::status::ConnectionStatus;
 use super::write_gate::WriterReadyResetSignals;
 use super::writer_id::new_writer_session_nonce;
 
 mod readiness;
+mod recovery;
 mod service_ping;
+mod source_control;
 #[cfg(test)]
 mod test_support;
 
@@ -48,6 +51,10 @@ pub struct WsService {
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
+    reconnect_requested_epoch: ReadSignal<Option<u64>>,
+    set_reconnect_requested_epoch: WriteSignal<Option<u64>>,
+    external_apply_request_id: ReadSignal<Option<String>>,
+    set_external_apply_request_id: WriteSignal<Option<String>>,
     writer_session_nonce: u64,
     msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
     tx: UnboundedSender<ClientMessage>,
@@ -66,6 +73,8 @@ impl WsService {
         let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
         let (msg_seq, set_msg_seq) = signal(0u64);
         let (connection_epoch, set_connection_epoch) = signal(0u64);
+        let (reconnect_requested_epoch, set_reconnect_requested_epoch) = signal(None::<u64>);
+        let (external_apply_request_id, set_external_apply_request_id) = signal(None::<String>);
         let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
@@ -131,6 +140,10 @@ impl WsService {
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,
+            reconnect_requested_epoch,
+            set_reconnect_requested_epoch,
+            external_apply_request_id,
+            set_external_apply_request_id,
             writer_session_nonce: new_writer_session_nonce(),
             msg_queue,
             tx,
@@ -158,12 +171,9 @@ impl WsService {
         }
     }
 
-    pub fn messages_since(&self, after_seq: u64) -> Vec<(u64, u64, ServerMessage)> {
+    pub(crate) fn messages_since(&self, after_seq: u64) -> IncomingBatch {
         self.msg_queue
-            .get_untracked()
-            .into_iter()
-            .filter(|(seq, _, _)| *seq > after_seq)
-            .collect()
+            .with_untracked(|queue| messages_since(queue, after_seq))
     }
 }
 

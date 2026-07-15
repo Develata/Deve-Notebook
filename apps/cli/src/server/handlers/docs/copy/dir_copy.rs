@@ -9,7 +9,7 @@ use crate::server::repo_scope::run_on_resolved_local_repo;
 use deve_core::ledger::node_check::NodeConsistencyReport;
 use std::path::Path;
 
-use super::register::{CopyRegisterCtx, register_copied_docs};
+use super::register::CopyRegisterCtx;
 
 pub(super) fn copy_dir(
     ctx: CopyRegisterCtx<'_>,
@@ -18,9 +18,6 @@ pub(super) fn copy_dir(
     src_path: &str,
     dest_path: &str,
 ) -> bool {
-    if !register_copied_docs(ctx, src, src_path, dest_path) {
-        return false;
-    }
     if !copy_dir_on_disk(ctx.ch, src, dst, src_path, ctx.scope_nonce) {
         return false;
     }

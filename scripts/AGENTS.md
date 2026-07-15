@@ -92,7 +92,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `smoke-runtime-happy-path.sh` | Runs temporary-repo Axum/WebSocket happy-path tests for switch, handshake, writer, edit, open, history, and reconnect bootstrap |
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke, or verifies an explicitly supplied existing candidate image without rebuilding |
-| `smoke-docker-multiclient.sh` | Builds or reuses one Docker candidate image, then drives multiple isolated Playwright browser clients |
+| `smoke-docker-multiclient.sh` | Builds or reuses one Docker candidate image, then drives isolated Playwright clients; the required product tier also proves repo lifecycle, typed diff, Source Control, and External Changes |
+| `lib/docker-multiclient-product-journeys.mjs` | UI-only Docker browser journey helper plus a narrow `docker exec` projection mutation used to prove External Changes does not bypass ledger authority |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
 | `lib/android-tools.sh` | Shared Android SDK / Android Studio JBR discovery helpers for local and target-host Android gates |
 

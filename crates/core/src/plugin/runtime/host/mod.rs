@@ -23,6 +23,10 @@ mod fs;
 #[cfg(not(target_arch = "wasm32"))]
 mod git;
 #[cfg(not(target_arch = "wasm32"))]
+mod managed_note;
+#[cfg(not(target_arch = "wasm32"))]
+mod managed_source_control;
+#[cfg(not(target_arch = "wasm32"))]
 mod note;
 #[cfg(not(target_arch = "wasm32"))]
 mod path_guard;
@@ -49,6 +53,16 @@ use crate::source_control::{DelegatedSourceControlApi, SourceControlApi};
 use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, OnceLock};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use managed_note::{
+    ManagedNoteMutationHost, ManagedNoteWriteIntent, set_managed_note_mutation_host,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use managed_source_control::{
+    ManagedSourceControlCommitIntent, ManagedSourceControlMutationHost,
+    set_managed_source_control_mutation_host,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
@@ -154,17 +168,21 @@ pub fn ensure_source_control_write_allowed(selector: &RepoSelector) -> Result<()
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn commit_source_control_changes_in_repo(
-    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     message: &str,
 ) -> Result<CommitInfo, anyhow::Error> {
     match source_control_mode()? {
         SourceControlHostMode::Local => {
-            repo.commit_source_control_changes_in_repo(selector, message)
+            managed_source_control::managed_source_control_mutation_host()?.commit_source_control(
+                ManagedSourceControlCommitIntent {
+                    selector: selector.clone(),
+                    message: message.to_owned(),
+                },
+            )
         }
         SourceControlHostMode::RemoteDelegated => {
             // RemoteSourceControlApi forwards to the authoritative main process.
-            repo.commit_source_control_changes_in_repo(selector, message)
+            source_control_api()?.commit_source_control_changes_in_repo(selector, message)
         }
     }
 }
@@ -212,14 +230,6 @@ pub(crate) fn repo_manager() -> Result<Arc<RepoManager>, anyhow::Error> {
         .get()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("RepoManager not configured"))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn sync_manager() -> Result<Arc<SyncManager>, anyhow::Error> {
-    SYNC_MANAGER
-        .get()
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("SyncManager not configured"))
 }
 
 /// 注册核心 API 到 Rhai 引擎。

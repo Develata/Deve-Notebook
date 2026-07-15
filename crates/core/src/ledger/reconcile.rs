@@ -61,8 +61,9 @@ pub(crate) fn append_patch_to_txn(
     peer_label: &str,
     repo_scope: &str,
     patch: &[Op],
-) -> Result<()> {
+) -> Result<Vec<(u64, Op)>> {
     let actor = FactActor::new(peer_label)?;
+    let mut appended = Vec::with_capacity(patch.len());
     for op in patch {
         let next_peer_seq = ops::write_direct::next_peer_fact_seq(write_txn, origin_peer_id)?;
         let entry = LedgerEntry::new_content_with_actor(
@@ -75,7 +76,8 @@ pub(crate) fn append_patch_to_txn(
             None,
             None,
         );
-        ops::append_op_to_txn(write_txn, &entry, repo_scope)?;
+        let global_seq = ops::append_op_to_txn(write_txn, &entry, repo_scope)?;
+        appended.push((global_seq, op.clone()));
     }
-    Ok(())
+    Ok(appended)
 }

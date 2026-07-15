@@ -2,7 +2,7 @@
 //!   - 07_network#web-ws-runtime
 //!
 
-use self::decode::{decode_binary_message, decode_text_message};
+use self::decode::{decode_binary_message, preview_bytes};
 use super::ConnectionStatus;
 use super::socket::{SocketEvent, SocketMessage};
 use deve_core::protocol::ServerMessage;
@@ -14,6 +14,36 @@ mod decode;
 mod tests;
 
 const MAX_INCOMING_MESSAGES: usize = 256;
+
+pub(crate) type IncomingMessage = (u64, u64, ServerMessage);
+
+/// A loss-aware view over the bounded incoming ring.
+///
+/// Once a consumer cursor falls behind the oldest retained message, returning
+/// the retained suffix would let the UI observe an authority projection with a
+/// missing prefix. Consumers must reconnect instead.
+#[derive(Debug)]
+pub(crate) enum IncomingBatch {
+    Messages(Vec<IncomingMessage>),
+    Gap { latest_seq: u64 },
+}
+
+pub(crate) fn messages_since(queue: &VecDeque<IncomingMessage>, after_seq: u64) -> IncomingBatch {
+    let Some((oldest_seq, _, _)) = queue.front() else {
+        return IncomingBatch::Messages(Vec::new());
+    };
+    let latest_seq = queue.back().map_or(*oldest_seq, |(seq, _, _)| *seq);
+    if after_seq.saturating_add(1) < *oldest_seq {
+        return IncomingBatch::Gap { latest_seq };
+    }
+    IncomingBatch::Messages(
+        queue
+            .iter()
+            .filter(|(seq, _, _)| *seq > after_seq)
+            .cloned()
+            .collect(),
+    )
+}
 
 pub fn enqueue_server_message(
     set_msg_seq: WriteSignal<u64>,
@@ -44,8 +74,8 @@ pub fn handle_socket_event(
 ) -> bool {
     match event {
         SocketEvent::Opened => {}
-        SocketEvent::Message(SocketMessage::Bytes(bytes)) => {
-            if let Some(server_msg) = decode_binary_message(&bytes) {
+        SocketEvent::Message(SocketMessage::Bytes(bytes)) => match decode_binary_message(&bytes) {
+            Ok(server_msg) => {
                 return confirm_and_enqueue_server_message(
                     confirmed_connected,
                     set_status,
@@ -56,19 +86,22 @@ pub fn handle_socket_event(
                     server_msg,
                 );
             }
-        }
-        SocketEvent::Message(SocketMessage::Text(txt)) => {
-            if let Some(server_msg) = decode_text_message(&txt) {
-                return confirm_and_enqueue_server_message(
-                    confirmed_connected,
-                    set_status,
-                    set_msg_seq,
-                    set_msg_queue,
-                    connection_epoch,
-                    "text",
-                    server_msg,
+            Err(error) => {
+                leptos::logging::error!(
+                    "Fatal WS binary frame: len={}, head={}, error={}",
+                    bytes.len(),
+                    preview_bytes(&bytes),
+                    error
                 );
+                return false;
             }
+        },
+        SocketEvent::Message(SocketMessage::Text(txt)) => {
+            leptos::logging::error!(
+                "Fatal WS text frame in binary-only runtime: len={}",
+                txt.len()
+            );
+            return false;
         }
         SocketEvent::Error => {
             leptos::logging::error!("WS Read Error: browser error event");

@@ -77,7 +77,7 @@ fn doc_diff_read_gate_allows_remote_branch_spectator_reads() {
     let (handshake_ready, _) = signal(false);
     let (request_id, set_request_id) = signal(None::<String>);
     let (_notice, set_notice) = signal(None::<SourceControlNotice>);
-    let (_diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
+    let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
     let doc_id = DocId::new();
 
     let callback = create_get_doc_diff_callback(
@@ -115,6 +115,12 @@ fn doc_diff_read_gate_allows_remote_branch_spectator_reads() {
         target_seq: None,
     });
 
+    assert_eq!(
+        diff_content
+            .get_untracked()
+            .and_then(|session| session.doc_id),
+        Some(doc_id),
+    );
     let request_id = request_id.get_untracked().expect("doc diff request");
     let sent = ws.drain_sent_for_test();
     assert_eq!(sent.len(), 1);

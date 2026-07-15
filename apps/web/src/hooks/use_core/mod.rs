@@ -96,10 +96,17 @@ pub fn use_core() -> CoreState {
             set_handshake_ready: signals.set_handshake_ready,
         },
     );
-    effects::setup_message_effect(&ws, &signals);
-
     let callbacks = build_callbacks(&ws, &signals);
     let state = build_core_state(ws, &signals, status_text, callbacks, locale);
+    effects::setup_message_effect(
+        &state.ws,
+        &signals,
+        state
+            .runtime_clients
+            .external_changes
+            .on_get_changes
+            .clone(),
+    );
 
     provide_context(state.clone());
     provide::provide_sub_contexts(&state);

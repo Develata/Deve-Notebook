@@ -6,7 +6,24 @@
 use super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op, PeerId};
-use deve_core::protocol::{ConfirmedOp, ServerMessage};
+use deve_core::protocol::{
+    ConfirmedOp, ProjectionRecoveryCause, ProjectionRecoveryPlan, ProjectionRecoveryRequired,
+    ServerMessage,
+};
+
+fn recovery(
+    repo_id: uuid::Uuid,
+    branch: Option<PeerId>,
+    scope_nonce: Option<u64>,
+) -> ServerMessage {
+    ServerMessage::ProjectionRecoveryRequired(ProjectionRecoveryRequired {
+        repo_id,
+        branch,
+        scope_nonce,
+        cause: ProjectionRecoveryCause::DocumentMutation,
+        plan: ProjectionRecoveryPlan::external_apply(vec![DocId::new()]),
+    })
+}
 
 #[test]
 fn rejects_new_op_from_other_branch() {
@@ -153,6 +170,28 @@ fn rejects_peer_deleted_for_non_browser_unbound_sessions() {
         peer_id: "peer-a".into(),
         scope_nonce: Some(7),
     }));
+}
+
+#[test]
+fn projection_recovery_requires_exact_repo_branch_and_scope_nonce() {
+    let repo_id = uuid::Uuid::new_v4();
+    let mut session = WsSession::new();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(9));
+    let filter = BroadcastFilter::for_session(&session);
+
+    assert!(filter.should_forward(&recovery(repo_id, None, Some(9))));
+    assert!(!filter.should_forward(&recovery(uuid::Uuid::new_v4(), None, Some(9))));
+    assert!(!filter.should_forward(&recovery(repo_id, None, Some(8))));
+    assert!(!filter.should_forward(&recovery(repo_id, None, None)));
+
+    session.switch_branch(Some("peer-a".into()));
+    let remote_filter = BroadcastFilter::for_session(&session);
+    assert!(!remote_filter.should_forward(&recovery(
+        repo_id,
+        Some(PeerId::new("peer-b")),
+        Some(9),
+    )));
 }
 
 mod extra;

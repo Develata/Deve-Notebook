@@ -6,7 +6,7 @@
 
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ExternalApplyReceipt};
 use anyhow::Result;
 
 pub trait SourceControlApi: Send + Sync {
@@ -32,7 +32,7 @@ pub trait SourceControlApi: Send + Sync {
         message: &str,
     ) -> Result<CommitInfo>;
 
-    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>>;
+    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<ExternalApplyReceipt>;
 }
 
 pub trait DelegatedSourceControlApi: SourceControlApi {}

@@ -11,15 +11,13 @@ use super::message_dispatch_route_protocol::route_protocol_and_write_message;
 use super::message_dispatch_route_runtime::route_runtime_message;
 use super::message_sync_dispatch::handle_sc_or_remaining;
 
-pub fn handle_message<F>(
+pub fn handle_message(
     msg: ServerMessage,
     ws: &WsService,
     signals: CoreSignals,
     locale: crate::i18n::Locale,
-    schedule_refresh: &F,
-) where
-    F: Fn(),
-{
+    schedule_refresh: &dyn Fn(),
+) {
     let Some(msg) = route_projection_and_sync_message(msg, signals) else {
         return;
     };

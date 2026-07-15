@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{build_state, grant_default_browser_write, write_workspace_file};
+use super::support::{bind_default_browser_writer, build_state, write_workspace_file};
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_commit, session::WsSession,
 };
@@ -12,6 +12,7 @@ use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use std::sync::Arc;
 use tokio::sync::mpsc;
+use tokio::time::{Duration, timeout};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyhow::Result<()> {
@@ -43,7 +44,7 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    grant_default_browser_write(&state, &mut session, 29)?;
+    bind_default_browser_writer(&state, &mut session, 29)?;
     session.set_active_db(DatabaseHandle {
         db: stale_db,
         readonly: false,
@@ -57,7 +58,11 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
 
     handle_commit(&state, &ch, &mut session, "stale".into()).await;
 
-    match uni_rx.recv().await.expect("stale scope error") {
+    match timeout(Duration::from_secs(5), uni_rx.recv())
+        .await
+        .expect("stale scope error timeout")
+        .expect("stale scope error")
+    {
         ServerMessage::ProtocolError {
             error,
             scope_nonce,
@@ -68,7 +73,7 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
                 error
                     .detail
                     .as_deref()
-                    .is_some_and(|detail| detail.contains("source control write grant"))
+                    .is_some_and(|detail| detail.contains("source control live writer binding"))
             );
             assert_eq!(scope_nonce, Some(29));
         }

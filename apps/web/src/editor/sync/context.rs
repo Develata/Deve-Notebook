@@ -12,6 +12,7 @@ use crate::runtime::document::pending::PendingLocalEdits;
 use crate::runtime::domain::{
     EditorSyncFailure, EditorSyncFailureCode, LoadPhase, PendingBranchSwitch, PendingRepoSwitch,
 };
+use crate::runtime::projection_recovery::ProjectionRecoveryCoordinator;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
@@ -66,9 +67,12 @@ pub struct SyncContext<'a> {
     pub client_id: Option<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub ready_generation: Arc<AtomicU64>,
+    pub pending_resend_generation: Arc<AtomicU64>,
+    pub projection_recovery: ProjectionRecoveryCoordinator,
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
+    pub current_doc: ReadSignal<Option<DocId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,

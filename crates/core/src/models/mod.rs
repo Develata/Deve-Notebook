@@ -9,6 +9,7 @@
 //!
 //! **核心功能清单**:
 //! - `PeerId`: P2P 网络中的节点唯一标识符 (栈分配优化)。
+//! - `GlobalSeq`: repo database 内的本地持久化顺序（不参与 P2P 排序）。
 //! - `DocId`: 文档唯一标识符（基于 UUID）。
 //! - `NodeId`: 统一节点标识符（文件/目录）。
 //! - `Op`: 编辑操作（Insert / Delete）。
@@ -24,11 +25,13 @@ use std::fmt;
 use uuid::Uuid;
 
 mod fact_identity;
+mod global_seq;
 mod ledger_decode;
 mod ledger_event;
 pub mod version_vector;
 
 pub use fact_identity::{FactActor, FactActorError, PeerFactSeq};
+pub use global_seq::GlobalSeq;
 pub use ledger_decode::{
     LEDGER_ENTRY_FORMAT_MAGIC, LEDGER_ENTRY_FORMAT_VERSION, deserialize_ledger_entry,
     serialize_ledger_entry,

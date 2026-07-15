@@ -2,17 +2,15 @@
 //!   - 07_network#server-ws-runtime
 //!   - 05_diff_logic#source-control-runtime
 
+use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
     expect_sync_hello_and_shadow_list, recv_server_message, send_client_message,
     switch_to_notes_repo,
 };
-use super::ws_source_control_acceptance_support::{
-    SourceControlWsHarness, TestWs, send_scoped,
-};
-use super::sync_hello_test_support::signed_hello_for_scope;
+use super::ws_source_control_acceptance_support::{SourceControlWsHarness, TestWs, send_scoped};
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
-use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
+use deve_core::source_control::ChangeEntry;
 
 const SCOPE: u64 = 1;
 const PATH: &str = "sc/ws-added.md";
@@ -58,14 +56,14 @@ async fn ws_source_control_stage_commit_history_roundtrip() -> anyhow::Result<()
 
     send_scoped(
         &mut ws,
-        |scope_nonce| ClientMessage::ApplyExternalChanges { scope_nonce },
+        |scope_nonce| ClientMessage::ApplyExternalChanges {
+            request_id: "apply-external".into(),
+            scope_nonce,
+        },
         SCOPE,
     )
     .await?;
-    assert_apply_external_changes_list(
-        recv_server_message(&mut ws).await?,
-        harness.repo_id,
-    );
+    assert_apply_external_ack_and_recovery(&mut ws, harness.repo_id).await?;
     request_history(&mut ws).await?;
     assert_empty_history(recv_server_message(&mut ws).await?, harness.repo_id);
 
@@ -79,6 +77,7 @@ async fn ws_source_control_stage_commit_history_roundtrip() -> anyhow::Result<()
     )
     .await?;
     let commit_id = assert_commit_ack(recv_server_message(&mut ws).await?, harness.repo_id);
+    assert_commit_recovery(recv_server_message(&mut ws).await?, harness.repo_id);
 
     request_history(&mut ws).await?;
     assert_single_commit_history(
@@ -134,10 +133,7 @@ async fn request_changes(ws: &mut TestWs, request_id: &str) -> anyhow::Result<()
     .await
 }
 
-async fn register_writer(
-    ws: &mut TestWs,
-    harness: &SourceControlWsHarness,
-) -> anyhow::Result<()> {
+async fn register_writer(ws: &mut TestWs, harness: &SourceControlWsHarness) -> anyhow::Result<()> {
     let remote = IdentityKeyPair::generate();
     let hello = signed_hello_for_scope(&remote, harness.repo_id, SCOPE);
     send_client_message(
@@ -152,14 +148,8 @@ async fn register_writer(
         },
     )
     .await?;
-    expect_sync_hello_and_shadow_list(
-        ws,
-        harness.repo_id,
-        SCOPE,
-        &harness.local_peer_id,
-        &remote,
-    )
-    .await?;
+    expect_sync_hello_and_shadow_list(ws, harness.repo_id, SCOPE, &harness.local_peer_id, &remote)
+        .await?;
     send_client_message(
         ws,
         ClientMessage::RegisterWriter {
@@ -220,7 +210,10 @@ fn assert_changes_with_optional_request(
             unstaged,
             confirmed,
         } => {
-            assert_eq!((actual_repo, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
+            assert_eq!(
+                (actual_repo, branch, scope_nonce),
+                (repo_id, None, Some(SCOPE))
+            );
             assert_eq!(actual_request.as_deref(), request_id);
             assert_eq!(paths(staged), staged_paths);
             assert_eq!(paths(unstaged), unstaged_paths);
@@ -230,35 +223,40 @@ fn assert_changes_with_optional_request(
     }
 }
 
-fn assert_apply_external_changes_list(message: ServerMessage, repo_id: uuid::Uuid) {
-    match message {
-        ServerMessage::ChangesList {
-            request_id,
-            repo_id: Some(actual_repo),
-            branch,
-            scope_nonce,
-            staged,
-            unstaged,
-            confirmed,
-        } => {
-            assert_eq!((actual_repo, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
-            assert_eq!(request_id, None);
-            assert!(staged.is_empty(), "staged external changes must be cleared after apply");
-            assert!(
-                unstaged.is_empty(),
-                "unstaged external changes should be empty in this scenario"
-            );
-            assert_eq!(confirmed.len(), 1);
-            let entry = &confirmed[0];
-            assert_eq!(entry.path, PATH);
-            assert_eq!(entry.domain, ChangeDomain::ConfirmedLedger);
-            assert_eq!(entry.status, ChangeStatus::Added);
-            let base_seq = entry.base_seq.expect("confirmed entry base seq");
-            let target_seq = entry.target_seq.expect("confirmed entry target seq");
-            assert!(target_seq > base_seq);
+async fn assert_apply_external_ack_and_recovery(
+    ws: &mut TestWs,
+    repo_id: uuid::Uuid,
+) -> anyhow::Result<()> {
+    let mut saw_ack = false;
+    let mut saw_recovery = false;
+    for _ in 0..2 {
+        match recv_server_message(ws).await? {
+            ServerMessage::ExternalApplyAck {
+                request_id,
+                receipt,
+                repo_id: actual_repo,
+                branch,
+                scope_nonce,
+            } => {
+                assert_eq!(request_id, "apply-external");
+                assert_eq!(actual_repo, repo_id);
+                assert_eq!(branch, None);
+                assert_eq!(scope_nonce.get(), SCOPE);
+                assert_eq!(receipt.repo_id, repo_id);
+                assert_eq!(receipt.applied_target_count, 1);
+                saw_ack = true;
+            }
+            ServerMessage::ProjectionRecoveryRequired(recovery) => {
+                assert_eq!(recovery.repo_id, repo_id);
+                assert_eq!(recovery.branch, None);
+                assert_eq!(recovery.scope_nonce, Some(SCOPE));
+                saw_recovery = true;
+            }
+            other => anyhow::bail!("expected ExternalApplyAck/recovery, got {other:?}"),
         }
-        other => panic!("expected ChangesList, got {other:?}"),
     }
+    anyhow::ensure!(saw_ack && saw_recovery, "missing apply ack or recovery");
+    Ok(())
 }
 
 fn assert_stage_ack(message: ServerMessage, repo_id: uuid::Uuid) {
@@ -308,6 +306,23 @@ fn assert_commit_ack(message: ServerMessage, repo_id: uuid::Uuid) -> String {
             commit_id
         }
         other => panic!("expected CommitAck, got {other:?}"),
+    }
+}
+
+fn assert_commit_recovery(message: ServerMessage, repo_id: uuid::Uuid) {
+    match message {
+        ServerMessage::ProjectionRecoveryRequired(required) => {
+            assert_eq!(
+                (required.repo_id, required.branch, required.scope_nonce),
+                (repo_id, None, Some(SCOPE))
+            );
+            assert_eq!(
+                required.cause,
+                deve_core::protocol::ProjectionRecoveryCause::SourceControlCommit
+            );
+            assert!(required.plan.refresh_source_control);
+        }
+        other => panic!("expected Source Control projection recovery, got {other:?}"),
     }
 }
 

@@ -3,12 +3,12 @@
 //!   - 04_repository#tree-projection-contract
 //!   - 03_storage/watcher#watcher-contract
 
-use super::errors;
-use super::node_helpers::broadcast_incremental_tree_deltas;
-use super::notify_fs_refresh;
+use super::{checked_exists, errors};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::repo_scope::ResolvedRepo;
+use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
@@ -43,55 +43,91 @@ pub(super) async fn handle_file_rename(
             return;
         }
     };
-    let ops = match state.repo.apply_file_structure_in_local_repo(
-        &scope.repo_name,
-        dst_path,
-        Some(doc_id),
-        "local_rename",
-    ) {
-        Ok((_doc_id, ops)) => ops,
-        Err(e) => {
+    let execution = state
+        .repo_mutation_gate()
+        .execute_repo(scope.repo_id, &state.tx, || {
+            let scope =
+                match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
+                {
+                    Ok(scope) => scope,
+                    Err(error) => return MutationExecution::not_committed(error),
+                };
+            match state
+                .repo
+                .get_tracked_docid_in_local_repo(&scope.repo_name, src_path)
+            {
+                Ok(Some(current_doc_id)) if current_doc_id == doc_id => {}
+                Ok(_) => {
+                    return MutationExecution::not_committed(anyhow::anyhow!(
+                        "Rename source changed while waiting for mutation permit"
+                    ));
+                }
+                Err(error) => return MutationExecution::not_committed(error),
+            }
+            let destination = match local_repo_path(state, &scope, dst_path) {
+                Ok(path) => path,
+                Err(error) => return MutationExecution::not_committed(error),
+            };
+            match checked_exists(&destination, "rename destination revalidation") {
+                Ok(false) => {}
+                Ok(true) => {
+                    return MutationExecution::not_committed(anyhow::anyhow!(
+                        "Rename destination appeared while waiting for mutation permit"
+                    ));
+                }
+                Err(error) => return MutationExecution::not_committed(error),
+            }
+            let (_doc_id, ops) = match state.repo.apply_file_structure_in_local_repo(
+                &scope.repo_name,
+                dst_path,
+                Some(doc_id),
+                "local_rename",
+            ) {
+                Ok(value) => value,
+                Err(error) => return MutationExecution::not_committed(error),
+            };
+            let publication = MutationPublication::document_recovery(
+                scope.repo_id,
+                deve_core::protocol::DocumentRecoveryScope::Exact(vec![doc_id]),
+            );
+            if let Err(error) = state
+                .sync_manager
+                .persist_doc_in_local_repo(&scope.repo_name, doc_id)
+            {
+                return MutationExecution::projection_degraded(ops, error, publication);
+            }
+            if let Err(error) = state
+                .sync_manager
+                .remove_projection_path_in_local_repo(&scope.repo_name, src_path)
+            {
+                return MutationExecution::projection_degraded(ops, error, publication);
+            }
+            MutationExecution::committed(ops, publication)
+        })
+        .await;
+    match execution {
+        Ok(MutationExecution::Committed { .. }) => {}
+        Ok(MutationExecution::NotCommitted(e)) => {
             tracing::error!("重命名结构事实失败: {:?}", e);
             errors::storage_persist_failed_scoped(
                 ch,
                 format!("Failed to rename file: {}", e),
                 scope_nonce,
             );
-            return;
         }
-    };
-    if let Err(e) = state
-        .sync_manager
-        .persist_doc_in_local_repo(&scope.repo_name, doc_id)
-    {
-        tracing::error!("重命名投影持久化失败: {:?}", e);
-        errors::storage_persist_failed_scoped(
+        Ok(MutationExecution::ProjectionDegraded { error, .. })
+        | Ok(MutationExecution::CommittedPartial { error, .. }) => {
+            tracing::error!("文件重命名后投影失败: {:?}", error);
+            errors::storage_persist_failed_scoped(
+                ch,
+                format!("Failed to materialize renamed file: {error}"),
+                scope_nonce,
+            );
+        }
+        Err(error) => errors::storage_persist_failed_scoped(
             ch,
-            format!("Failed to materialize renamed file: {}", e),
+            format!("Failed to serialize file rename: {error}"),
             scope_nonce,
-        );
-        return;
+        ),
     }
-    if let Err(e) = state
-        .sync_manager
-        .remove_projection_path_in_local_repo(&scope.repo_name, src_path)
-    {
-        tracing::error!("旧路径投影清理失败 {}: {:?}", src_path, e);
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to remove old file: {}", e),
-            scope_nonce,
-        );
-        return;
-    }
-    if let Err(e) = broadcast_incremental_tree_deltas(state, ch, session, scope, &ops) {
-        tracing::error!("文件重命名后刷新视图失败: {:?}", e);
-        errors::projection_refresh_failed_scoped(
-            ch,
-            format!("Failed to refresh renamed file view: {}", e),
-            scope_nonce,
-        );
-        return;
-    }
-    notify_fs_refresh(ch, scope.repo_id, dst_path, "renamed");
 }

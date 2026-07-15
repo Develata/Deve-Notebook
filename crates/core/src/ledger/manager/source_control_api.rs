@@ -8,7 +8,10 @@
 use crate::ledger::RepoManager;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
+use crate::source_control::{
+    ChangeEntry, CommitFileDiff, CommitInfo, ExternalApplyOutcome, ExternalApplyReceipt,
+    SourceControlApi,
+};
 use anyhow::Result;
 
 impl SourceControlApi for RepoManager {
@@ -71,8 +74,18 @@ impl SourceControlApi for RepoManager {
             .commit_source_control_changes_in_repo(repo, message)
     }
 
-    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
+    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<ExternalApplyReceipt> {
         self.source_control_scoped_runtime()
             .apply_external_changes_in_repo(repo)
+    }
+}
+
+impl RepoManager {
+    pub fn apply_external_changes_with_outcome_in_repo(
+        &self,
+        repo: &RepoSelector,
+    ) -> Result<ExternalApplyOutcome> {
+        self.source_control_scoped_runtime()
+            .apply_external_changes_with_outcome_in_repo(repo)
     }
 }

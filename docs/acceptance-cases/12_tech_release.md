@@ -115,8 +115,9 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 3" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`WS_PROTOCOL_VERSION = 13;`" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 13;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`WS_PROTOCOL_VERSION = 1;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 1;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
     - stdout_contains: "storage-repo-baseline-check: ok"

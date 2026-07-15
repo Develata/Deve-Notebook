@@ -55,8 +55,10 @@ pub(super) fn use_editor(
     let set_reopen_attempted = runtime.set_snapshot_reopen_attempted;
     let set_last_open_request_key = runtime.set_last_open_request_key;
     let set_retry_nonce = runtime.set_retry_nonce;
+    let projection_recovery = runtime.projection_recovery.clone();
     let retry_sync = Callback::new(move |_| {
         super::ffi::set_read_only(true);
+        projection_recovery.reset();
         set_failure.set(None);
         set_reopen_attempted.set(false);
         set_last_open_request_key.set(None);

@@ -18,12 +18,27 @@ pub(super) enum SourceControlWriteAuthority<'a> {
     DelegatedRemoteProxy,
 }
 
+#[derive(Clone, Debug)]
+pub(super) struct AuthorizedRepoBinding {
+    pub(super) repo_id: RepoId,
+    repo_name: String,
+}
+
+impl AuthorizedRepoBinding {
+    pub(super) fn pinned_selector(&self) -> RepoSelector {
+        RepoSelector {
+            repo_id: Some(self.repo_id),
+            repo_name: Some(self.repo_name.clone()),
+        }
+    }
+}
+
 pub(super) fn authorize_http_write(
     state: &Arc<AppState>,
     selector: &RepoSelector,
     scope_nonce: u64,
     authority: SourceControlWriteAuthority<'_>,
-) -> Result<(), ServerError> {
+) -> Result<AuthorizedRepoBinding, ServerError> {
     let writable_repo = resolve_http_writable_repo(state, selector)?;
     match authority {
         SourceControlWriteAuthority::BrowserSessionGrant(auth_session_id) => {
@@ -40,11 +55,15 @@ pub(super) fn authorize_http_write(
             }
         }
     }
-    Ok(())
+    Ok(AuthorizedRepoBinding {
+        repo_id: writable_repo.repo_id,
+        repo_name: writable_repo.repo_name,
+    })
 }
 
 struct HttpWritableRepo {
     repo_id: RepoId,
+    repo_name: String,
 }
 
 fn resolve_http_writable_repo(
@@ -67,5 +86,5 @@ fn resolve_http_writable_repo(
             )
         })?;
     crate::server::repo_scope::ensure_local_repo_projection_writable(state, &repo_name)?;
-    Ok(HttpWritableRepo { repo_id })
+    Ok(HttpWritableRepo { repo_id, repo_name })
 }

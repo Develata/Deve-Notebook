@@ -75,16 +75,26 @@ pub(super) fn write_workspace_file(dir: &TempDir, repo_name: &str, path: &str, c
     std::fs::write(abs, content).expect("write workspace file");
 }
 
-pub(super) fn grant_browser_write(
+pub(super) fn bind_browser_writer(
     state: &Arc<AppState>,
     session: &mut WsSession,
     repo_id: RepoId,
     scope_nonce: u64,
 ) -> anyhow::Result<()> {
+    let repo_name = session
+        .active_repo
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!("browser writer fixture requires an active repo"))?;
     let auth_session_id = AuthSessionId::for_test(&format!("source-control:{repo_id}:{scope_nonce}"));
     session.mark_browser_session();
     session.bind_auth_session(auth_session_id.clone());
+    session.switch_repo(repo_name, Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
+    session.set_sync_scope_nonce(scope_nonce);
+    session.set_authenticated(PeerId::new("test-peer"));
+    session.bind_repo(repo_id);
+    session.mark_sync_hello_accepted();
+    session.set_writer_identity(repo_id, PeerId::new("test-peer"), scope_nonce);
     state
         .source_control_write_grants()
         .grant(

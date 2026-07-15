@@ -131,10 +131,10 @@ contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert!(entr
 contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(seq, global_seq);
 contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(entry.seq, global_seq);
 cargo_test_lib	deve_cli	edit_acknowledges_ledger_commit_when_workspace_writeback_fails
-contains	apps/cli/src/server/handlers/document/edit_apply.rs	CommitOutcome::WritebackFailed
-contains	apps/cli/src/server/handlers/document/edit_apply.rs	emit_commit_outcome(
-contains	apps/cli/src/server/handlers/document/write_confirmation.rs	broadcast_and_ack_committed_edit(
-contains	apps/cli/src/server/handlers/document/write_confirmation.rs	report_projection_writeback_fault(
+contains	apps/cli/src/server/handlers/document/edit_apply.rs	MutationExecution::projection_degraded(
+contains	apps/cli/src/server/handlers/document/edit_apply.rs	emit_write_confirmation(
+contains	apps/cli/src/server/handlers/document/write_confirmation.rs	Ok(MutationExecution::ProjectionDegraded {
+contains	apps/cli/src/server/handlers/document/write_confirmation.rs	ch.send_protocol_error_with_scope_nonce(error, Some(scope_nonce));
 contains	crates/core/src/sync/projection_fault_journal.rs	struct DurableProjectionFault
 contains	crates/core/tests/durable_projection_fault_test.rs	fn durable_projection_fault_survives_sync_manager_restart()
 contains	crates/core/tests/remote_repo_catalog_missing_test.rs	fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()

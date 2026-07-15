@@ -75,7 +75,9 @@
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
   Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
-- 当前 first-tag 精确基线为 ledger entry format v3 / `DEVELDG3`、redb schema v3、WS protocol lockstep `13..=13`。schema v2 只允许显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
+- 当前 first-tag 精确基线为 ledger entry format v3 / `DEVELDG3`、redb schema v3、WS binary
+  namespace `DEVEWSF4` 且 protocol lockstep `1..=1`。历史未发布 F2/F3 namespace 与 storage
+  schema v2 只允许 fail-closed 或显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。
 - 矩阵允许诚实显示 PVR、SBOM/checksum/provenance、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing 等 blocker；这些 gap 不阻止普通开发提交，但必须阻止正式 tag。
 - Receipt 同时绑定 evidence locator、surface/mode、target OS 与命令前后 clean HEAD；平台 producer/聚合尚未闭环时，tag workflow 必须在任何公开发布前明确失败。

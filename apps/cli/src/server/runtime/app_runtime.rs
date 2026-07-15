@@ -7,6 +7,8 @@
 #[cfg(not(test))]
 use crate::server::diff_projection::DiffProjectionExecutor;
 #[cfg(not(test))]
+use crate::server::repo_mutation::RepoMutationPublicationGate;
+#[cfg(not(test))]
 use crate::server::source_control_grants::SourceControlWriteGrants;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
 use deve_core::ledger::RepoManager;
@@ -53,5 +55,7 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         diff_projection_executor: Arc::new(DiffProjectionExecutor::new()),
         #[cfg(not(test))]
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
+        #[cfg(not(test))]
+        repo_mutation_gate: Arc::new(RepoMutationPublicationGate::new()),
     })
 }

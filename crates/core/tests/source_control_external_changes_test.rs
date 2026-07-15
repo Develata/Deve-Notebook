@@ -24,11 +24,15 @@ fn assert_apply_external_changes_writes_ledger_without_commit_anchor() {
     repo.stage_pending("notes/external.md")
         .expect("stage external add");
 
-    let confirmed = repo
+    let receipt = repo
         .apply_external_changes()
         .expect("apply external changes");
 
-    assert!(ledger_head(&repo) > before_head);
+    let after_head = ledger_head(&repo);
+    assert!(after_head > before_head);
+    assert_eq!(receipt.authority_head.storage_key(), after_head);
+    assert_eq!(receipt.applied_target_count, 1);
+    assert_eq!(receipt.affected_docs.len(), 1);
     assert!(repo.list_staged().expect("staged after apply").is_empty());
     assert!(
         repo.list_pending_fs()
@@ -41,6 +45,9 @@ fn assert_apply_external_changes_writes_ledger_without_commit_anchor() {
             .is_empty(),
         "Apply to Ledger must not create a Source Control commit anchor"
     );
+    let confirmed = repo
+        .list_confirmed_ledger_changes()
+        .expect("confirmed changes after apply");
     assert!(confirmed.iter().any(|entry| {
         entry.path == "notes/external.md"
             && entry.domain == ChangeDomain::ConfirmedLedger

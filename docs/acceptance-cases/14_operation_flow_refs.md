@@ -76,7 +76,7 @@
 - case_id: WEBWRITE-FEAT-01
   goal: Pending local edit is cleared by confirmed Ack/NewOp.
   steps:
-    - run: "cargo test -p deve_cli repo_write_gate_serializes_same_repo -- --nocapture"
+    - run: "cargo test -p deve_cli serializes_same_repo_and_preserves_publication_order -- --nocapture"
     - run: "cargo test -p deve_cli duplicate_client_op_returns_original_ack_without_append -- --nocapture"
     - run: "cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture"
     - run: "cargo test -p deve_web echoed_new_op_clears_matching_pending_overlay -- --nocapture"

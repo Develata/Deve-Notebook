@@ -57,6 +57,8 @@ pub(super) fn setup_editor_effects(
         open_request_id: runtime.open_request_id,
         session_generation: runtime.session_generation.clone(),
         ready_generation: runtime.ready_generation.clone(),
+        pending_resend_generation: runtime.pending_resend_generation.clone(),
+        projection_recovery: runtime.projection_recovery.clone(),
         buffered_live_ops: runtime.buffered_live_ops.clone(),
         buffered_encrypted_ops: runtime.buffered_encrypted_ops.clone(),
         set_content: runtime.set_content,
@@ -82,6 +84,7 @@ pub(super) fn setup_editor_effects(
         buffered_live_ops: runtime.buffered_live_ops.clone(),
         buffered_encrypted_ops: runtime.buffered_encrypted_ops.clone(),
         set_repo_key: runtime.set_repo_key,
+        projection_recovery: runtime.projection_recovery.clone(),
     });
     setup_editor_mount_effect(EditorMountEffectCtx {
         doc_id,

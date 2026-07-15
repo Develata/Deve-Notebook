@@ -279,7 +279,7 @@ fuzz/performance/privacy policy 属 P2 advisory。本批只建立诚实 gate，�
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。v2 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
+> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。首个公开 WS wire epoch 为 `DEVEWSF4` / v1 lockstep；历史未发布 F2/F3 namespace 不进入兼容承诺，F4/v1 发布后只允许单调升级。v2 storage 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
 
 ## 4. Open Source License (开源协议)
 

@@ -53,7 +53,6 @@ pub mod range;
 pub mod reconcile;
 mod runtime_tables;
 pub mod schema;
-pub mod seq;
 pub mod shadow;
 mod shadow_binding;
 mod shadow_manager;
@@ -65,9 +64,9 @@ pub mod traits;
 // ========== 公开导出 ==========
 
 pub use self::schema::*;
+pub use crate::models::GlobalSeq;
 pub use manager::local_fact_writer::LocalFactWriter;
 pub use manager::types::*;
-pub use seq::GlobalSeq;
 pub(crate) use shadow_transfer::ShadowPayload; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
 // We don't need to export manager::core because impl blocks are attached to the struct.
 // But we might want to export the module for some reason? No, usually not.

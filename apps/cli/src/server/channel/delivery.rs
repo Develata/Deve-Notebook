@@ -5,27 +5,56 @@ use deve_core::protocol::ServerMessage;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TrySendError;
 
+use crate::server::metrics;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DeliveryOutcome {
+    Queued,
+    Dropped,
+    Closed,
+    CriticalQueueFull,
+}
+
 pub(crate) fn try_send_with_delivery_class(
     tx: &mpsc::Sender<ServerMessage>,
     msg: ServerMessage,
     must_deliver: bool,
-) {
-    if let Err(error) = tx.try_send(msg) {
-        match error {
-            TrySendError::Full(msg) if must_deliver => schedule_must_deliver(tx.clone(), msg),
+) -> DeliveryOutcome {
+    match tx.try_send(msg) {
+        Ok(()) => DeliveryOutcome::Queued,
+        Err(error) => match error {
+            TrySendError::Full(_) if must_deliver => {
+                metrics::record_critical_session_retirement();
+                let counters = metrics::delivery_metrics_snapshot();
+                tracing::warn!(
+                    critical_session_retirements = counters.critical_session_retirements,
+                    "Critical unicast queue full; retiring session for resync"
+                );
+                DeliveryOutcome::CriticalQueueFull
+            }
             TrySendError::Full(_) => {
-                tracing::warn!("Unicast channel full; dropping message");
+                metrics::record_noncritical_unicast_drop();
+                let counters = metrics::delivery_metrics_snapshot();
+                tracing::warn!(
+                    noncritical_unicast_drops = counters.noncritical_unicast_drops,
+                    "Unicast channel full; dropping non-critical message"
+                );
+                DeliveryOutcome::Dropped
             }
             TrySendError::Closed(_) => {
                 tracing::debug!("Unicast channel closed; dropping message");
+                DeliveryOutcome::Closed
             }
-        }
+        },
     }
 }
 
-pub(super) fn send_unicast(tx: &mpsc::Sender<ServerMessage>, msg: ServerMessage) {
+pub(super) fn send_unicast(
+    tx: &mpsc::Sender<ServerMessage>,
+    msg: ServerMessage,
+) -> DeliveryOutcome {
     let must_deliver = must_deliver_unicast(&msg);
-    try_send_with_delivery_class(tx, msg, must_deliver);
+    try_send_with_delivery_class(tx, msg, must_deliver)
 }
 
 fn must_deliver_unicast(msg: &ServerMessage) -> bool {
@@ -56,20 +85,12 @@ fn must_deliver_unicast(msg: &ServerMessage) -> bool {
             | ServerMessage::PendingOpsInfo { .. }
             | ServerMessage::PendingDiscarded { .. }
             | ServerMessage::ChangesList { .. }
+            | ServerMessage::ExternalApplyAck { .. }
+            | ServerMessage::ProjectionRecoveryRequired(_)
             | ServerMessage::StageAck { .. }
             | ServerMessage::UnstageAck { .. }
             | ServerMessage::DiscardAck { .. }
             | ServerMessage::CommitHistory { .. }
             | ServerMessage::ConflictResolved { .. }
     )
-}
-
-fn schedule_must_deliver(tx: mpsc::Sender<ServerMessage>, msg: ServerMessage) {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        handle.spawn(async move {
-            let _ = tx.send(msg).await;
-        });
-    } else if tx.blocking_send(msg).is_err() {
-        tracing::debug!("Unicast channel closed outside runtime; dropping critical message");
-    }
 }

@@ -8,8 +8,12 @@ use crate::runtime::document::pending;
 use crate::runtime::scope_client::{LocalScopeSignals, stable_local_scope_nonce};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::GetUntracked;
+use std::sync::atomic::Ordering;
 
 pub(super) fn resend_pending_edits_if_ready(ctx: &SyncContext) {
+    if !ctx.is_live_ready() {
+        return;
+    }
     if repo_write_block_untracked(
         ctx.ws,
         RepoWriteSignals {
@@ -24,6 +28,14 @@ pub(super) fn resend_pending_edits_if_ready(ctx: &SyncContext) {
         },
     )
     .is_some()
+    {
+        return;
+    }
+    let generation = ctx.current_generation();
+    if ctx
+        .pending_resend_generation
+        .swap(generation, Ordering::Relaxed)
+        == generation
     {
         return;
     }

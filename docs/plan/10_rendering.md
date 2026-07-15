@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-13`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -112,6 +112,10 @@ OpenDoc
 本地 version/history 不得推进到失败 batch 之后，pending overlay 不得重发。初始 snapshot
 adapter 写入失败最多自动 reopen 一次；再次失败显示诊断与显式 Retry，Retry 必须使用新的
 generation/request。
+
+由后端 projection recovery plan 命中当前文档时，Open Document pipeline 以 `Resyncing` 状态
+重新执行；旧 generation 的 Snapshot、History、NewOp 或 adapter completion 不得恢复可写。
+pending overlay 必须保留，并且仅在新 generation 的 writer-ready 后重放/重发一次。
 
 ### 3.2 Live Editing
 

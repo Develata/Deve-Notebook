@@ -7,7 +7,7 @@ use super::diff_doc_target;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{
-    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, SourceControlApi,
+    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ExternalApplyReceipt, SourceControlApi,
 };
 use std::sync::Mutex;
 
@@ -79,7 +79,10 @@ impl SourceControlApi for FakeRepo {
         unreachable!("unused in this test")
     }
 
-    fn apply_external_changes_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<ChangeEntry>> {
+    fn apply_external_changes_in_repo(
+        &self,
+        _: &RepoSelector,
+    ) -> anyhow::Result<ExternalApplyReceipt> {
         unreachable!("unused in this test")
     }
 }

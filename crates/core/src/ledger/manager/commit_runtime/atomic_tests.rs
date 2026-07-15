@@ -19,6 +19,33 @@ fn database() -> Result<(TempDir, Database)> {
     Ok((dir, db))
 }
 
+#[test]
+fn post_external_apply_commit_failure_is_typed_as_committed_partial() {
+    let receipt = ExternalApplyReceipt {
+        repo_id: crate::models::RepoId::new_v4(),
+        authority_head: crate::models::GlobalSeq::from_storage_key(7),
+        affected_docs: vec![DocId::new()],
+        applied_target_count: 1,
+    };
+    let failure = classify_commit_failure(
+        Some(receipt.clone()),
+        anyhow::anyhow!("injected anchor preparation failure"),
+    );
+
+    match failure {
+        CommitAuthorityFailure::CommittedPartial {
+            external_apply,
+            error,
+        } => {
+            assert_eq!(external_apply, receipt);
+            assert!(error.to_string().contains("injected"));
+        }
+        CommitAuthorityFailure::NotCommitted(error) => {
+            panic!("committed prefix was lost: {error}")
+        }
+    }
+}
+
 fn seed_content_fact(db: &Database, doc_id: DocId, seq: u64, content: &str) -> Result<()> {
     let entry = LedgerEntry::new_content(
         doc_id,

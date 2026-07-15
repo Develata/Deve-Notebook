@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-13`
+- `Last Review`: `2026-07-14`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -316,6 +316,28 @@ overlay state row 至少需要：
 - reconcile 识别 SHOULD 基于 `client_id + client_op_id` 或等价 origin metadata。
 - 不得长期依赖“内容恰好相同”的弱判定。
 
+### 8.1.1 Projection Recovery Coordinator {#projection-recovery-coordinator}
+
+匹配当前 repo/branch/scope 的 `ProjectionRecoveryRequired` 由一个高内聚
+`ProjectionRecoveryCoordinator` 执行：
+
+- 严格按 server `ProjectionRecoveryPlan` 刷新 DocList/tree、Source Control 与 External Changes；
+  Web 不从 cause 自行推断业务刷新。
+- 只有 `DocumentRecoveryScope` 命中当前文档时，编辑器进入 `Resyncing` 并撤销该文档的
+  projection-ready generation；连接与 repo scope 未变化时保留服务端签发的 session/repo
+  writer grant，使新的 `OpenDoc` 能完成恢复。incoming gap、断线、认证或 scope 失效才撤销
+  repo writer-ready 并退休连接；无关文档恢复不得锁住当前编辑器。
+- 保留 pending overlay，清除旧 confirmed generation buffer，以新 generation/request 执行
+  `OpenDoc -> Snapshot -> History -> pending replay`。
+- stale Snapshot/History/NewOp 不得推进 version 或恢复写权限；pending 只有在 fresh document
+  projection-ready generation 后重发一次。
+- 重复 invalidation 必须合并；恢复中最多登记一次 trailing reopen，不得并行启动无界恢复。
+- adapter/replay 再次失败进入 `EditorSyncError`，只允许显式 Retry；不得无限自动 reopen。
+
+Web incoming ring 检测到 sequence gap 后，必须停止处理缺口之后的消息并发出
+`ReconnectForResync`。来自 editor 与 application consumer 的重复请求按 connection epoch 合并，
+不能让旧连接消息继续驱动当前 scope。
+
 ### 8.2 Reconnect Recovery
 
 - 重连后必须按当前 `repo_id` 重新握手。
@@ -368,6 +390,8 @@ overlay state row 至少需要：
   150 ms debounce 后只发送 `ComputeDiffProjection` intent。计算中不得继续展示与当前
   draft 不一致的旧 preview；失败时保留草稿并展示结构化 unavailable/resource-limit，
   不得回退浏览器 Diff 算法。
+- projection recovery runtime 只维护连接完整性、generation、pending overlay 与后端指定的 typed
+  refresh；不得计算 ledger facts、diff、冲突、affected docs 或 authority 结果。
 
 ## 12. Refactor Target
 

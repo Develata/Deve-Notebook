@@ -156,7 +156,7 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn local_browser_source_control_writes_require_session_grant() -> anyhow::Result<()> {
+async fn local_browser_source_control_writes_require_live_writer_binding() -> anyhow::Result<()> {
     let (dir, state, _default_id, test_id) = build_state()?;
     state.repo.ensure_local_repo_workspace_identity("test")?;
     write_workspace_file(&dir, "test", "notes/pending.md", "pending");
@@ -236,7 +236,7 @@ async fn commit_and_push_ws_returns_cli_only_blocker_without_commit() -> anyhow:
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.switch_repo("test".into(), Some(test_id));
-    grant_browser_write(&state, &mut session, test_id, 47)?;
+    bind_browser_writer(&state, &mut session, test_id, 47)?;
 
     handle_commit_and_push(&state, &ch, &mut session, "publish".into()).await;
 
@@ -297,7 +297,7 @@ async fn expect_stale_grant_error(rx: &mut mpsc::Receiver<ServerMessage>, nonce:
                 error
                     .detail
                     .as_deref()
-                    .is_some_and(|detail| detail.contains("source control write grant"))
+                    .is_some_and(|detail| detail.contains("source control live writer binding"))
             );
             assert_eq!(scope_nonce, Some(nonce));
         }

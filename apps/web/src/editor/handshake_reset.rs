@@ -5,6 +5,7 @@
 use super::buffered_ops::clear_sync_buffers;
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::EditorContext;
+use crate::runtime::projection_recovery::ProjectionRecoveryCoordinator;
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};
 use leptos::prelude::*;
@@ -18,6 +19,7 @@ pub struct HandshakeResetCtx {
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub set_repo_key: WriteSignal<Option<RepoKey>>,
+    pub projection_recovery: ProjectionRecoveryCoordinator,
 }
 
 pub fn setup_handshake_reset_effect(ctx: HandshakeResetCtx) {
@@ -31,6 +33,7 @@ pub fn setup_handshake_reset_effect(ctx: HandshakeResetCtx) {
             return;
         }
         ctx.ready_generation.store(0, Ordering::Relaxed);
+        ctx.projection_recovery.reset();
         clear_sync_buffers(
             &ctx.buffered_live_ops,
             &ctx.buffered_encrypted_ops,

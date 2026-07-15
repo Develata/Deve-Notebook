@@ -22,7 +22,6 @@ mod create_folder;
 mod delete;
 mod errors;
 mod file_register;
-mod node_helpers;
 mod node_target;
 mod path_validation;
 mod rename;

@@ -5,22 +5,39 @@ use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::manifest::{Capability, PluginManifest};
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
+use deve_core::source_control::{
+    ChangeEntry, CommitFileDiff, CommitInfo, ExternalApplyReceipt, SourceControlApi,
+};
 use deve_core::sync::SyncManager;
 
 #[derive(Default)]
-struct RecordingSourceControlApi {
+struct RecordingSourceControlApi;
+
+#[derive(Default)]
+struct RecordingManagedSourceControlHost {
     commit_message: Mutex<Option<String>>,
 }
 
-impl RecordingSourceControlApi {
+impl host::ManagedSourceControlMutationHost for RecordingManagedSourceControlHost {
+    fn commit_source_control(
+        &self,
+        intent: host::ManagedSourceControlCommitIntent,
+    ) -> anyhow::Result<CommitInfo> {
+        *self.commit_message.lock().expect("commit message lock") = Some(intent.message.clone());
+        Ok(commit_info(&intent.message))
+    }
+}
+
+impl RecordingManagedSourceControlHost {
     fn commit_message(&self) -> Option<String> {
         self.commit_message
             .lock()
             .expect("commit message lock")
             .clone()
     }
+}
 
+impl RecordingSourceControlApi {
     fn unused<T>(&self) -> anyhow::Result<T> {
         Err(anyhow::anyhow!("unexpected source-control API call"))
     }
@@ -91,16 +108,15 @@ impl SourceControlApi for RecordingSourceControlApi {
     fn commit_source_control_changes_in_repo(
         &self,
         _repo: &RepoSelector,
-        message: &str,
+        _message: &str,
     ) -> anyhow::Result<CommitInfo> {
-        *self.commit_message.lock().expect("commit message lock") = Some(message.to_string());
-        Ok(commit_info(message))
+        self.unused()
     }
 
     fn apply_external_changes_in_repo(
         &self,
         _repo: &RepoSelector,
-    ) -> anyhow::Result<Vec<ChangeEntry>> {
+    ) -> anyhow::Result<ExternalApplyReceipt> {
         self.unused()
     }
 }
@@ -129,9 +145,12 @@ fn plugin_sc_commit_uses_ngit_authority_api() {
         .expect("workspace identity");
     let repo = Arc::new(repo);
     let sync = Arc::new(SyncManager::new_checked(repo.clone()).expect("sync manager"));
-    let api = Arc::new(RecordingSourceControlApi::default());
+    let api = Arc::new(RecordingSourceControlApi);
+    let managed = Arc::new(RecordingManagedSourceControlHost::default());
 
     host::set_source_control_api(api.clone()).expect("source control api");
+    host::set_managed_source_control_mutation_host(managed.clone())
+        .expect("managed source control host");
     host::set_repo_manager(repo).expect("repo manager");
     host::set_sync_manager(sync).expect("sync manager");
 
@@ -152,5 +171,5 @@ fn plugin_sc_commit_uses_ngit_authority_api() {
         .eval::<rhai::Dynamic>("sc_commit(\"plugin commit\")")
         .expect("plugin sc_commit");
 
-    assert_eq!(api.commit_message().as_deref(), Some("plugin commit"));
+    assert_eq!(managed.commit_message().as_deref(), Some("plugin commit"));
 }

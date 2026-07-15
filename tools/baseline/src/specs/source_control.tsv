@@ -267,6 +267,8 @@ contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	remote_source_control_proxy_reads_use_delegated_capability
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage/authority.rs	http_source_control_write_grant_requires_local_branch
 contains	apps/cli/src/server/source_control_grants/tests.rs	source_control_write_grant_creation_fails_closed
+contains	apps/cli/src/server/handlers/source_control/repo_scope/tests.rs	ws_source_control_live_writer_renews_expired_http_grant
+contains	apps/cli/src/server/handlers/source_control/repo_scope/tests.rs	ws_source_control_grant_refresh_rejects_stale_writer_binding
 contains	apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs	source_control_scope_cleanup_revokes_write_grant
 contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs	switch_branch_failure_revokes_source_control_write_grant
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_uses_ngit_authority
@@ -502,7 +504,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_fronte
 contains	apps/web/src/components/diff_view/projection_model.rs	const VIEWPORT_CHUNK: usize = 80;
 contains	apps/web/src/components/diff_view/projection_model.rs	fn viewport_keeps_bounded_window()
 contains	apps/web/src/components/diff_view/projection.rs	data-deve-diff-viewport="virtualized"
-contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="typed-v13"
+contains	apps/web/src/components/diff_view/mod.rs	data-deve-diff-projection="backend-typed"
 contains	crates/core/src/source_control/diff_projection/algorithm.rs	capture_diff_slices_deadline(
 absent	apps/web/Cargo.toml	similar.workspace = true
 absent_tree	apps/web/src/components/diff_view	capture_diff_slices
@@ -594,3 +596,8 @@ contains	crates/core/src/git_bridge/git_cmd.rs	pub const DEVE_GIT_EXECUTABLE_UNA
 contains	crates/core/src/git_bridge/git_cmd.rs	trusted Desktop host reported Git unavailable
 contains	crates/core/src/git_bridge/git_cmd.rs	resolve_git_executable
 contains	crates/core/src/git_bridge/error/command.rs	git executable is invalid
+contains	crates/core/src/source_control/external_apply.rs	pub struct ExternalApplyReceipt
+contains	crates/core/src/source_control/commit_authority.rs	pub enum CommitAuthorityFailure
+contains	apps/cli/src/server/handlers/source_control/commits.rs	ServerMessage::ExternalApplyAck
+contains	apps/cli/src/server/repo_mutation/publication.rs	pub(crate) fn external_apply_recovery
+absent	crates/core/src/protocol/server.rs	ExternalApplyContentFact

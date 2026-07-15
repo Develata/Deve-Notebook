@@ -120,6 +120,7 @@ pub(crate) async fn handle_socket(
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
     let (diff_unicast_tx, diff_unicast_rx) = send::new_diff_unicast_channel();
+    let (retire_session_tx, mut retire_session_rx) = tokio::sync::watch::channel(false);
 
     // 将单播队列写入 WebSocket。
     let unicast_task = send::spawn_unicast_sender_task(sender, unicast_rx, diff_unicast_rx);
@@ -130,7 +131,12 @@ pub(crate) async fn handle_socket(
     let broadcast_task =
         send::spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), broadcast_filter.clone());
 
-    let ch = DualChannel::with_diff_channel(state.tx.clone(), unicast_tx, diff_unicast_tx);
+    let ch = DualChannel::with_diff_channel_and_retirement(
+        state.tx.clone(),
+        unicast_tx,
+        diff_unicast_tx,
+        retire_session_tx,
+    );
 
     tracing::info!("Client connected: {}", peer_id);
 
@@ -139,6 +145,12 @@ pub(crate) async fn handle_socket(
         let next_message = receiver.next();
         tokio::pin!(next_message);
         let msg = tokio::select! {
+            changed = retire_session_rx.changed() => {
+                if changed.is_err() || *retire_session_rx.borrow() {
+                    break;
+                }
+                continue;
+            }
             changed = transport_shutdown.changed() => {
                 if changed.is_err() || *transport_shutdown.borrow() {
                     break;
@@ -168,6 +180,12 @@ pub(crate) async fn handle_socket(
         );
         tokio::pin!(handle_incoming);
         let flow = tokio::select! {
+            changed = retire_session_rx.changed() => {
+                if changed.is_err() || *retire_session_rx.borrow() {
+                    break;
+                }
+                continue;
+            }
             changed = transport_shutdown.changed() => {
                 if changed.is_err() || *transport_shutdown.borrow() {
                     break;

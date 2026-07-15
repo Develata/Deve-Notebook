@@ -16,6 +16,25 @@ pub(crate) fn handle_sc_ack_message(
     active_scope_nonce: u64,
 ) -> bool {
     match msg {
+        ServerMessage::ExternalApplyAck {
+            request_id,
+            receipt,
+            repo_id,
+            branch,
+            scope_nonce,
+        } => {
+            if !ctx.in_ack_scope(&Some(*repo_id), branch, Some(scope_nonce.get())) {
+                return true;
+            }
+            if ctx.ws.complete_external_apply(request_id) {
+                leptos::logging::log!(
+                    "External Apply committed: targets={}, authority_head={}",
+                    receipt.applied_target_count,
+                    receipt.authority_head
+                );
+            }
+            true
+        }
         ServerMessage::StageAck {
             repo_id,
             branch,

@@ -25,6 +25,7 @@ pub mod plugin_host;
 pub mod plugin_response;
 pub mod prewarm;
 mod rate_limit;
+mod repo_mutation;
 mod repo_scope;
 mod router;
 mod runtime;

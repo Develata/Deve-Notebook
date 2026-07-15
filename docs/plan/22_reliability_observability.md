@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-14`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Projection Backup 文件传输边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -50,6 +50,9 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | `repo_name` | string | SHOULD | 当前 `RepoNameBinding.repo_name`；仅用于人工识别，不得作为机器身份 |
 | `error_code` | string | 条件 | 失败事件 MUST；取值唯一引用 `13_i18n#i18n-error-code-catalog`，本章不定义 |
 | `span_id` / `trace_id` | string | SHOULD | 关联 §4 tracing span |
+| `mutation_outcome` | enum | 条件 | repo authority writer 结果：`not_committed` / `committed` / `projection_degraded` / `committed_partial` |
+| `recovery_cause` | string | 条件 | typed projection recovery 事件原因；不得携带正文 |
+| `connection_epoch` | int | 条件 | browser incoming gap / reconnect / session retirement 事件 |
 
 规则：字段名稳定、snake_case；新增字段 SHOULD 复用既有语义而非另造同义字段。
 
@@ -66,6 +69,9 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 规则：
 - latency histogram 的 budget 对照唯一引用 `21_perf_budget`；本章不定义阈值。
 - 维度标签 SHOULD 含 `runtime` 与（写路径）`repo_scope`；高基数标签（如 doc_id）**MUST NOT** 作为标签。
+- repo mutation runtime 至少观测 permit wait/hold latency、committed-degraded/partial 次数、每次 mutation
+  enqueue 的 recovery 数；transport 至少观测 critical queue retirement、broadcast lag 与 browser
+  incoming gap。doc id、request id 与正文不得作为 metric label。
 - 容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域：
   memory 使用当前 cgroup usage；CPU 使用当前 cgroup usage delta，并按可见祖先中最严
   quota 与 effective cpuset 的较小 capacity 归一化到 `0..=100%`。每个 metric 应按

@@ -45,6 +45,7 @@ pub(super) const DEV_WS_PORT: u16 = 3001;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ConnectionControl {
     RebindNativeEndpoint,
+    ReconnectForResync { connection_epoch: u64 },
 }
 
 #[derive(Clone)]
@@ -205,6 +206,15 @@ pub fn spawn_connection_manager(
                             backoff.reset();
                             continue 'bootstrap;
                         }
+                        if outcome == ConnectedSessionOutcome::ResyncRequested {
+                            backoff.reset();
+                            if !try_set_connection_status(&signals, ConnectionStatus::Disconnected)
+                            {
+                                return;
+                            }
+                            url_idx = 0;
+                            continue;
+                        }
 
                         if !signals.lifecycle.is_active() {
                             return;
@@ -295,10 +305,13 @@ enum BackoffWait {
 }
 
 async fn wait_for_rebind(control_rx: &mut UnboundedReceiver<ConnectionControl>) -> bool {
-    matches!(
-        control_rx.next().await,
-        Some(ConnectionControl::RebindNativeEndpoint)
-    )
+    loop {
+        match control_rx.next().await {
+            Some(ConnectionControl::RebindNativeEndpoint) => return true,
+            Some(ConnectionControl::ReconnectForResync { .. }) => continue,
+            None => return false,
+        }
+    }
 }
 
 async fn wait_for_backoff_or_rebind(
@@ -314,6 +327,7 @@ async fn wait_for_backoff_or_rebind(
         _ = timer => BackoffWait::Elapsed,
         command = control => match command {
             Some(ConnectionControl::RebindNativeEndpoint) => BackoffWait::Rebind,
+            Some(ConnectionControl::ReconnectForResync { .. }) => BackoffWait::Elapsed,
             None => BackoffWait::Closed,
         },
     }

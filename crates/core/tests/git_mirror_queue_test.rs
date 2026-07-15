@@ -82,6 +82,74 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
 }
 
 #[test]
+fn authority_only_commit_defers_git_mirror_projection() {
+    let (_dir, repo) = new_repo();
+    let root = repo_root(&repo);
+    std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&root).expect("gitignore");
+    write_workspace_file(&repo, "notes/a.md", "hello");
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
+
+    let commit = repo
+        .commit_source_control_authority_in_local_repo("default", "authority only")
+        .expect("authority commit");
+    let before_projection = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            Ok(git_bridge::get_record(db, &commit.id)?)
+        })
+        .expect("read deferred mirror record");
+    assert!(before_projection.is_none());
+
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))
+        .expect("repo info")
+        .expect("default repo")
+        .uuid;
+    repo.enqueue_git_mirror_projection_in_local_repo("default", repo_id, &commit);
+    let after_projection = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            Ok(git_bridge::get_record(db, &commit.id)?)
+        })
+        .expect("read queued mirror record");
+    assert!(after_projection.is_some());
+}
+
+#[test]
+fn deferred_git_mirror_projection_rejects_rebound_repo_name() {
+    let (_dir, repo) = new_repo();
+    let root = repo_root(&repo);
+    std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&root).expect("gitignore");
+    write_workspace_file(&repo, "notes/a.md", "hello");
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
+
+    let commit = repo
+        .commit_source_control_authority_in_local_repo("default", "authority only")
+        .expect("authority commit");
+    repo.enqueue_git_mirror_projection_in_local_repo(
+        "default",
+        deve_core::models::RepoId::new_v4(),
+        &commit,
+    );
+
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            Ok(git_bridge::get_record(db, &commit.id)?)
+        })
+        .expect("read mirror record");
+    assert!(
+        record.is_none(),
+        "a reused repo name must not project a commit from another RepoId"
+    );
+}
+
+#[test]
 fn commit_without_git_mirror_keeps_no_mirror_record() {
     let (_dir, repo) = new_repo();
     write_workspace_file(&repo, "notes/a.md", "hello");
