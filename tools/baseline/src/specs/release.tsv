@@ -71,6 +71,7 @@ contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与已签名 A
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
 contains	.github/workflows/release-candidate.yml	workflow_dispatch:
 contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT
+contains	.github/workflows/release-candidate.yml	Install Linux native preflight dependencies
 contains	.github/workflows/release-candidate.yml	cargo run --locked --quiet -p deve_baseline -- full
 contains	.github/workflows/release-candidate.yml	Build linux/amd64 image once
 contains	.github/workflows/release-candidate.yml	--platform linux/amd64
