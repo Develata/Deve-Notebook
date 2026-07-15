@@ -68,6 +68,7 @@
     - release_assert: docker_build_metadata_uses_injective_safe_tag_mapping true
     - release_assert: prerelease_does_not_update_registry_latest true
     - release_assert: candidate_version_and_all_jobs_bound_to_exact_head true
+    - release_assert: candidate_builds_current_head_web_dist_before_native_preflight true
     - release_assert: annotated_tag_binds_exactly_one_aggregate_run true
     - release_assert: docker_candidate_built_once_smoked_archived_and_attested_before_tag true
     - release_assert: windows_macos_signed_android_artifacts_built_before_tag true

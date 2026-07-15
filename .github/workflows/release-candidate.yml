@@ -76,6 +76,15 @@ jobs:
           bash scripts/check-release-version-match.test.sh
           cargo fmt --all -- --check
 
+      - name: Install Web projection build tool
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "0"
+        run: scripts/install-native-target-host-tools.sh
+
+      - name: Build exact Web projection
+        run: scripts/build-web-dist-ci.sh
+
       - name: Verify baseline and plan contracts
         run: |
           set -euo pipefail

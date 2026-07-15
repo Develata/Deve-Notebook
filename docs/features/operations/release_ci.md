@@ -25,7 +25,7 @@
 - `Surface`: `github-actions`
 - `Trigger`: maintainer dispatches `release-candidate.yml`
 - `Preconditions`: checkout and Rust toolchain install succeeded
-- `Immediate Result`: full baseline、clippy、WASM check、tests 与 security producer 在任何 tag 前运行
+- `Immediate Result`: 同一 HEAD 的真实 Web dist 先于 native preflight 构建，随后 full baseline、clippy、WASM check、tests 与 security producer 在任何 tag 前运行
 - `Application Entry`: `.github/workflows/release-candidate.yml`
 
 ### `op.release.ci.publish-container`

@@ -170,10 +170,11 @@ Android writable target-host receipt 必须同时记录 Android API level、当�
 tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、WASM fallback 或
 软件密钥降级来满足该 receipt。
 
-Android package producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行任何启用
-`native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri compile-time
-context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的旧 dist，
-也不得让 clean-worktree target-host receipt 在进入真实 package build 前失败。
+任何 candidate / target-host producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行
+任何启用 `native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri
+compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的
+旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
+真实 package build 前失败。
 
 Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、DOM probe 与诊断读取
 限制为短时单命令窗口，并在超时后移除 pending waiter、关闭旧连接后重试。单个冷启动

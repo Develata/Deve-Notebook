@@ -72,6 +72,8 @@ contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_win
 contains	.github/workflows/release-candidate.yml	workflow_dispatch:
 contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT
 contains	.github/workflows/release-candidate.yml	Install Linux native preflight dependencies
+contains	.github/workflows/release-candidate.yml	Build exact Web projection
+contains	.github/workflows/release-candidate.yml	scripts/build-web-dist-ci.sh
 contains	.github/workflows/release-candidate.yml	cargo run --locked --quiet -p deve_baseline -- full
 contains	.github/workflows/release-candidate.yml	Build linux/amd64 image once
 contains	.github/workflows/release-candidate.yml	--platform linux/amd64
