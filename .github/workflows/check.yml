@@ -48,6 +48,11 @@ jobs:
           targets: wasm32-unknown-unknown
           components: clippy,rustfmt
 
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
       - name: Cache cargo registry and build
         uses: actions/cache@v6
         with:
@@ -70,6 +75,9 @@ jobs:
         run: |
           cargo run --quiet -p deve_baseline -- acceptance-run --tier ci --plan
           cargo run --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
+
+      - name: Execute required CI acceptance evidence
+        run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
 
       - name: Check plan coverage
         run: |

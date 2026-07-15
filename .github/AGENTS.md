@@ -26,6 +26,7 @@ repo metadata.
 | `workflows/release-native.yml` | Reusable Windows/macOS/Android build and single-release publish track; Linux Desktop and iOS excluded from first tag |
 | `workflows/docker-smoke.yml` | Optional manual Docker release smoke on a GitHub-hosted Linux runner |
 | `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |
+| `workflows/acceptance-aggregate.yml` | Manual exact-HEAD receipt collector and pre-publish tag-ready gate |
 
 ## For AI Agents
 

@@ -14,7 +14,7 @@ use super::receipt::ensure_output_outside_worktree;
 use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail};
 use plan::{RunArgs, build_plan, preflight_execution, print_plan};
-use runner::{run_producer, staging_directory};
+use runner::{run_producer, run_static_producer, staging_directory};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -39,20 +39,47 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     if parsed.plan {
         return Ok(());
     }
-    let receipt_dir = parsed
-        .receipt_dir
-        .as_ref()
-        .context("acceptance-run: --receipt-dir is required unless --plan is used")?;
-    let receipt_dir = absolute(ctx.root(), receipt_dir);
-    ensure_output_outside_worktree(ctx.root(), &receipt_dir)?;
     preflight_execution(ctx.root(), &parsed, &plans)?;
-    if plans.iter().all(|plan| !plan.selected) {
+    let selected = plans
+        .iter()
+        .filter(|plan| plan.selected)
+        .collect::<Vec<_>>();
+    let emits_receipts = selected.iter().any(|plan| plan.emits_receipts());
+    let emits_static = selected.iter().any(|plan| !plan.emits_receipts());
+    if emits_receipts && emits_static {
+        bail!("acceptance-run: one tier may not mix receipt and test/script producers");
+    }
+    if emits_static {
+        if parsed.receipt_dir.is_some() {
+            bail!("acceptance-run: test/script producers do not accept --receipt-dir");
+        }
+        let state_root = staging_directory(&std::env::temp_dir().join("deve-acceptance-ci"))?;
+        ensure_output_outside_worktree(ctx.root(), &state_root)?;
+        fs::create_dir(&state_root)?;
+        let result = selected
+            .into_iter()
+            .try_for_each(|plan| run_static_producer(ctx.root(), &state_root, plan));
+        let cleanup = fs::remove_dir_all(&state_root);
+        result?;
+        cleanup.with_context(|| {
+            format!(
+                "acceptance-run: failed to remove static producer state {}",
+                state_root.display()
+            )
+        })?;
         println!(
-            "acceptance-run: tier={} has no command producers",
-            parsed.tier
+            "acceptance-run: tier={} producer(s)={} ok",
+            parsed.tier,
+            plans.iter().filter(|plan| plan.selected).count()
         );
         return Ok(());
     }
+    let receipt_dir = parsed
+        .receipt_dir
+        .as_ref()
+        .context("acceptance-run: --receipt-dir is required for receipt producers")?;
+    let receipt_dir = absolute(ctx.root(), receipt_dir);
+    ensure_output_outside_worktree(ctx.root(), &receipt_dir)?;
     if receipt_dir.exists() {
         bail!(
             "acceptance-run: receipt directory already exists: {}",
@@ -117,16 +144,30 @@ pub(in crate::acceptance_matrix) fn receipt_bindings(
     rows: &[MatrixRow],
 ) -> Result<BTreeMap<String, ReceiptProducerBinding>> {
     let registry = registry::read_and_validate(root, rows)?;
+    let receipt_ids = rows
+        .iter()
+        .filter(|row| row.evidence_kind == "receipt")
+        .map(|row| row.evidence_id.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
     let mut bindings = BTreeMap::new();
     for producer in &registry.producers {
+        let evidence_ids = producer
+            .evidence_ids
+            .iter()
+            .filter(|id| receipt_ids.contains(id.as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        if evidence_ids.is_empty() {
+            continue;
+        }
         let binding = ReceiptProducerBinding {
             producer_id: producer.producer_id.clone(),
             contract_fingerprint: registry::contract_fingerprint(producer)?,
-            evidence_ids: producer.evidence_ids.clone(),
+            evidence_ids,
             artifacts: producer.artifacts.clone(),
             bound_env: producer.bound_env.clone(),
         };
-        for evidence_id in &producer.evidence_ids {
+        for evidence_id in &binding.evidence_ids {
             bindings.insert(evidence_id.clone(), binding.clone());
         }
     }

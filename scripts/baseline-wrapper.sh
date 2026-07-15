@@ -75,6 +75,37 @@ baseline_windows_exe() {
   [[ "$path" == *.exe ]]
 }
 
+baseline_windows_drive_path() {
+  local path="$1"
+  [[ "$path" =~ ^[A-Za-z]:[\\/] ]]
+}
+
+baseline_npm_runtime_uses_windows_paths() {
+  local root_dir="$1"
+  local npm_bin="$2"
+  local runtime_prefix
+
+  baseline_repo_on_wsl_windows_mount "$root_dir" || return 1
+  runtime_prefix="$("$npm_bin" prefix -g 2>/dev/null | tr -d '\r' | head -n 1)" || return 1
+  baseline_windows_drive_path "$runtime_prefix"
+}
+
+baseline_npm_prefix_path() {
+  local root_dir="$1"
+  local npm_bin="$2"
+  local prefix_path="$3"
+
+  if baseline_npm_runtime_uses_windows_paths "$root_dir" "$npm_bin"; then
+    if ! command -v wslpath >/dev/null 2>&1; then
+      echo "baseline npm path conversion: wslpath is required for Windows-backed npm" >&2
+      return 1
+    fi
+    wslpath -w "$prefix_path"
+  else
+    printf '%s\n' "$prefix_path"
+  fi
+}
+
 baseline_windows_path_to_unix() {
   local path="$1"
   local drive rest lower
@@ -160,8 +191,20 @@ run_deve_baseline() {
   local root_dir="$1"
   local baseline="$2"
   local label="$3"
+  local baseline_bin="${DEVE_BASELINE_BIN:-}"
   local cargo_bin="${CARGO_BIN:-${CARGO:-}}"
   shift 3
+
+  if [[ -n "$baseline_bin" ]]; then
+    if ! (
+      cd "$root_dir"
+      "$baseline_bin" "$baseline" "$@"
+    ); then
+      echo "$label: $baseline_bin $baseline failed" >&2
+      return 1
+    fi
+    return 0
+  fi
 
   if [[ -z "$cargo_bin" ]]; then
     cargo_bin="$(resolve_baseline_cargo "$root_dir" || true)"

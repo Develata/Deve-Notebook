@@ -40,7 +40,7 @@
 
 - 验收矩阵描述每个功能或发布旅程需要什么证据；它不是 smoke 脚本，也不会仅凭路径存在就声称功能已通过。
 - Smoke 是 producer 的一种，负责在 Docker、真实浏览器、Desktop WebView 或 Android emulator/设备上执行一条具体业务旅程。
-- Rust `deve_baseline acceptance-run` 根据 producer registry 选择并执行适用 smoke，生成绑定 HEAD、平台、surface/mode、producer contract 与完整 execution evidence 集合的 receipts；`acceptance-collect` 只聚合完整且同源的 receipt group，不修改产品数据或业务 authority。
+- Rust `deve_baseline acceptance-run` 根据 producer registry 选择并执行适用 evidence：`ci` 层运行明确绑定的 test/script 且不伪造 receipts，runtime 层生成绑定 HEAD、平台、surface/mode、producer contract 与完整 execution evidence 集合的 receipts；`acceptance-collect` 只聚合完整且同源的 receipt group，不修改产品数据或业务 authority。
 - Windows 可以完整驱动 Android emulator 的 LocalBackend/RemoteBrowser lifecycle；最终可写结论仍由 emulator 内的 WebView provider 与 non-extractable Ed25519 WebCrypto probe 决定。
 - “矩阵结构完整”“producer 已登记”“当前宿主 smoke 通过”“跨平台 tag-ready”是四个不同结论，界面和发布说明不得混用。
 

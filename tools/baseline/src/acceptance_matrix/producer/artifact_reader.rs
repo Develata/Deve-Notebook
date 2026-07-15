@@ -253,4 +253,71 @@ mod tests {
         let _ = fs::remove_dir_all(root);
         let _ = fs::remove_dir_all(original);
     }
+
+    #[test]
+    fn artifact_reader_rejects_excessive_directory_depth() {
+        let root = temp_root();
+        let mut directory = root.join("receipts");
+        for _ in 0..33 {
+            directory = directory.join("d");
+        }
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(directory.join("receipt.json"), b"{}").unwrap();
+        let reader = ReceiptArtifactRoot::open(&root).unwrap();
+
+        let error = reader.json_files().unwrap_err();
+
+        assert!(error.to_string().contains("directory depth exceeds 32"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn artifact_reader_rejects_symlink_entries() {
+        use std::os::unix::fs::symlink;
+
+        let root = temp_root();
+        let outside = root.with_extension("outside");
+        fs::create_dir_all(root.join("receipts")).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        symlink(&outside, root.join("receipts/link")).unwrap();
+        let reader = ReceiptArtifactRoot::open(&root).unwrap();
+
+        let error = reader.json_files().unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("symlink/reparse entry is forbidden")
+        );
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(outside);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn artifact_reader_rejects_reparse_entries_when_symlinks_are_available() {
+        use std::os::windows::fs::symlink_dir;
+
+        let root = temp_root();
+        let outside = root.with_extension("outside");
+        fs::create_dir_all(root.join("receipts")).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        if symlink_dir(&outside, root.join("receipts/link")).is_err() {
+            let _ = fs::remove_dir_all(root);
+            let _ = fs::remove_dir_all(outside);
+            return;
+        }
+        let reader = ReceiptArtifactRoot::open(&root).unwrap();
+
+        let error = reader.json_files().unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("symlink/reparse entry is forbidden")
+        );
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(outside);
+    }
 }

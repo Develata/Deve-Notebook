@@ -97,6 +97,7 @@ contains	.github/workflows/check.yml	workflow_dispatch:
 contains	.github/workflows/check.yml	contents: read
 contains	.github/workflows/check.yml	cargo fmt --check
 contains	.github/workflows/check.yml	cargo run --quiet -p deve_baseline -- all
+contains	.github/workflows/check.yml	acceptance-run --tier ci
 contains	.github/workflows/check.yml	scripts/check-perf-budget-baseline.sh
 contains	.github/workflows/check.yml	cargo clippy --locked --all-targets -- -D warnings
 contains	.github/workflows/check.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
@@ -111,10 +112,24 @@ absent	.github/workflows/check.yml	ghcr.io
 absent	.github/workflows/check.yml	tags: ['v*']
 contains	.github/workflows/docker-smoke.yml	workflow_dispatch:
 contains	.github/workflows/docker-smoke.yml	actions/checkout@v6
+contains	.github/workflows/docker-smoke.yml	actions/setup-node@v6
+contains	.github/workflows/docker-smoke.yml	node-version: 24
 contains	.github/workflows/docker-smoke.yml	docker version
-contains	.github/workflows/docker-smoke.yml	DEVE_DOCKER_SMOKE_REQUIRED: "1"
-contains	.github/workflows/docker-smoke.yml	DEVE_DOCKER_SMOKE_IMAGE: deve-notebook:ci-smoke-${{ github.run_id }}
-contains	.github/workflows/docker-smoke.yml	scripts/smoke-docker-release.sh
+contains	.github/workflows/docker-smoke.yml	Build acceptance candidate image once
+contains	.github/workflows/docker-smoke.yml	acceptance-run
+contains	.github/workflows/docker-smoke.yml	--tier full
+contains	.github/workflows/docker-smoke.yml	acceptance-collect
+contains	.github/workflows/docker-smoke.yml	deve-acceptance-receipts-linux
+contains	.github/workflows/acceptance-aggregate.yml	workflow_dispatch:
+contains	.github/workflows/acceptance-aggregate.yml	receipt_run_ids:
+contains	.github/workflows/acceptance-aggregate.yml	.head_sha
+contains	.github/workflows/acceptance-aggregate.yml	deve-acceptance-receipts-*
+contains	.github/workflows/acceptance-aggregate.yml	acceptance-collect
+contains	.github/workflows/acceptance-aggregate.yml	--tag-ready
+contains	.github/workflows/acceptance-aggregate.yml	deve-acceptance-tag-ready-${{ github.sha }}
+contains	.github/workflows/release.yml	Require exact-HEAD aggregated acceptance receipts
+contains	.github/workflows/release.yml	acceptance-aggregate.yml/runs?head_sha=$GITHUB_SHA
+contains	.github/workflows/release.yml	deve-acceptance-tag-ready-$GITHUB_SHA
 contains	.github/workflows/native-target-host.yml	workflow_dispatch:
 contains	.github/workflows/native-target-host.yml	target:
 contains	.github/workflows/native-target-host.yml	required_preflight:
@@ -171,7 +186,14 @@ contains	.github/workflows/native-target-host.yml	DEVE_MOBILE_ANDROID_PACKAGE_TA
 contains	.github/workflows/native-target-host.yml	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS=120
 contains	.github/workflows/native-target-host.yml	DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
 contains	.github/workflows/native-target-host.yml	DEVE_MOBILE_IOS_PACKAGE_TARGET: aarch64-sim
-contains	.github/workflows/native-target-host.yml	DEVE_MOBILE_IOS_BOOT_SIMULATOR: "1"
+contains	docs/registry/acceptance-producers.json	"DEVE_MOBILE_IOS_BOOT_SIMULATOR": "1"
+contains	.github/workflows/native-target-host.yml	desktop_remote_https_origin:
+contains	.github/workflows/native-target-host.yml	--producer desktop.remote-browser
+contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-desktop-remote
+contains	.github/workflows/native-target-host.yml	--producer desktop.macos-target-host
+contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-desktop-macos
+contains	.github/workflows/native-target-host.yml	--producer ios.simulator-lifecycle
+contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-ios-simulator
 contains	.github/AGENTS.md	optional target-host workflows
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DISPATCH
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE
@@ -729,10 +751,11 @@ contains	scripts/smoke-runtime-recovery-path.sh	status_summary
 contains	scripts/smoke-runtime-recovery-path.sh	auth_probe
 contains	scripts/smoke-runtime-recovery-path.sh	expected at least one test
 contains	scripts/check-release-audit-gate.sh	cargo audit
-contains	scripts/check-release-audit-gate.sh	npm --prefix
+contains	scripts/check-release-audit-gate.sh	"$npm_bin" --prefix "$package_root" audit --audit-level=high
 contains	scripts/check-release-audit-gate.sh	apps/web/package-lock.json
 contains	scripts/check-release-audit-gate.sh	audit --audit-level=high
 contains	scripts/check-release-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-release-audit-gate.sh	baseline_npm_prefix_path "$ROOT_DIR" "$npm_bin" "$ROOT_DIR/apps/web"
 contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate"
 contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-missing"
 contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "npm-audit-missing"
@@ -740,6 +763,11 @@ contains	scripts/check-release-audit-gate.sh	DEVE_RELEASE_AUDIT_REQUIRED
 contains	docs/features/operations/release_quality_gates.md	runtime happy-path and recovery smokes remain explicit local/CI script gates
 contains	scripts/baseline-wrapper.sh	resolve_baseline_cargo()
 contains	scripts/baseline-wrapper.sh	baseline_repo_on_wsl_windows_mount()
+contains	scripts/baseline-wrapper.sh	baseline_npm_runtime_uses_windows_paths()
+contains	scripts/baseline-wrapper.sh	baseline_npm_prefix_path()
+contains	scripts/baseline-wrapper.sh	wslpath -w "$prefix_path"
+contains	scripts/baseline-wrapper.sh	local baseline_bin="${DEVE_BASELINE_BIN:-}"
+contains	scripts/baseline-wrapper.sh	"$baseline_bin" "$baseline" "$@"
 contains	scripts/baseline-wrapper.sh	[[ "$root_dir" == /mnt/* ]] && grep -qi microsoft /proc/version
 contains	scripts/baseline-wrapper.sh	login_cargo="$(bash -lc 'command -v cargo' 2>/dev/null | head -n 1)"
 contains	scripts/baseline-wrapper.sh	bash -lc 'command -v cargo || command -v cargo.exe'
@@ -749,6 +777,9 @@ contains	scripts/baseline-wrapper.sh	cargo_bin="$(resolve_baseline_cargo "$root_
 contains	scripts/baseline-wrapper.sh	run_deve_baseline()
 contains	scripts/baseline-wrapper.sh	"$baseline" "$@"
 contains	scripts/baseline-wrapper.sh	local cargo_bin="${CARGO_BIN:-${CARGO:-}}"
+contains	scripts/baseline-wrapper.test.sh	Windows-backed npm runtime must be detected
+contains	scripts/baseline-wrapper.test.sh	runner-owned baseline executable was not reused
+contains	docs/registry/acceptance-producers.json	scripts/baseline-wrapper.test.sh
 contains	scripts/check-acceptance-matrix.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-acceptance-matrix.sh	run_deve_baseline "$ROOT_DIR" "acceptance-matrix" "acceptance-matrix-check"
 contains	scripts/check-architecture-registry.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"

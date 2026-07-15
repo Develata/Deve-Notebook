@@ -2,10 +2,10 @@
 //! plan_ref: 18_release#first-tag-acceptance-matrix
 
 use super::model::{Producer, ProducerArg, ProducerStep};
-use super::plan::ProducerPlan;
+use super::plan::{ProducerPlan, git_output, git_status};
 use super::registry;
 use crate::acceptance_matrix::receipt::{
-    CommandStep, EvidenceSpec, ExecutionSpec, execute_and_write,
+    CommandStep, EvidenceSpec, ExecutionSpec, execute_and_write, run_step,
 };
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
@@ -18,43 +18,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub(super) fn run_producer(root: &Path, receipt_dir: &Path, plan: &ProducerPlan<'_>) -> Result<()> {
     let claims_root = receipt_dir.join("claims").join(&plan.producer.producer_id);
     let state_root = receipt_dir.join("state").join(&plan.producer.producer_id);
-    let mut environment = plan.producer.environment.clone();
-    fs::create_dir_all(&state_root).with_context(|| {
-        format!(
-            "acceptance-run: failed to create producer state directory {}",
-            state_root.display()
-        )
-    })?;
-    environment.insert(
-        "DEVE_ACCEPTANCE_PRODUCER_STATE_DIR".into(),
-        state_root.to_string_lossy().replace('\\', "/"),
-    );
-    for name in &plan.producer.required_env {
-        let value = std::env::var(name).with_context(|| {
-            format!(
-                "acceptance-run: producer {} missing required environment {name}",
-                plan.producer.producer_id
-            )
-        })?;
-        environment.insert(name.clone(), value);
-    }
-    let producer_inputs = plan
-        .producer
-        .bound_env
-        .iter()
-        .map(|name| {
-            environment
-                .get(name)
-                .cloned()
-                .map(|value| (name.clone(), value))
-                .with_context(|| {
-                    format!(
-                        "acceptance-run: producer {} missing bound environment {name}",
-                        plan.producer.producer_id
-                    )
-                })
-        })
-        .collect::<Result<BTreeMap<_, _>>>()?;
+    let (mut environment, producer_inputs) = producer_environment(plan.producer, &state_root)?;
     let mut evidence = Vec::new();
     for row in &plan.evidence {
         let claims = plan.producer.claims_env.get(&row.evidence_id).map(|name| {
@@ -80,25 +44,153 @@ pub(super) fn run_producer(root: &Path, receipt_dir: &Path, plan: &ProducerPlan<
             )
         })?;
     }
-    let steps = resolve_steps(plan.producer, &plan.producer.steps, &environment)?;
-    let finally_steps = resolve_steps(plan.producer, &plan.producer.finally_steps, &environment)?;
+    let execution_spec = execution_spec(plan.producer, &environment, producer_inputs)?;
     println!(
         "acceptance-run: running {} ({})",
         plan.producer.producer_id, plan.producer.note
     );
-    execute_and_write(
-        root,
-        &evidence,
-        &ExecutionSpec {
-            producer_id: plan.producer.producer_id.clone(),
-            producer_contract: registry::contract_fingerprint(plan.producer)?,
-            command_artifacts: plan.producer.artifacts.clone(),
-            producer_inputs,
-            steps,
-            finally_steps,
-            timeout: Duration::from_secs(plan.producer.timeout_seconds),
-        },
-    )
+    execute_and_write(root, &evidence, &execution_spec)
+}
+
+pub(super) fn run_static_producer(
+    root: &Path,
+    state_parent: &Path,
+    plan: &ProducerPlan<'_>,
+) -> Result<()> {
+    let state_root = state_parent.join(&plan.producer.producer_id);
+    let (environment, producer_inputs) = producer_environment(plan.producer, &state_root)?;
+    let execution_spec = execution_spec(plan.producer, &environment, producer_inputs)?;
+    let head = git_output(root, ["rev-parse", "HEAD"])?;
+    let started = std::time::Instant::now();
+    println!(
+        "acceptance-run: running {} ({})",
+        plan.producer.producer_id, plan.producer.note
+    );
+    let mut primary_error = None;
+    for step in &execution_spec.steps {
+        let remaining = execution_spec.timeout.saturating_sub(started.elapsed());
+        if remaining.is_zero() {
+            primary_error = Some(anyhow::anyhow!(
+                "acceptance-run: producer {} timed out before the next step",
+                plan.producer.producer_id
+            ));
+            break;
+        }
+        match run_step(root, step, remaining) {
+            Ok(status) if status.success() => {}
+            Ok(_) => {
+                primary_error = Some(anyhow::anyhow!(
+                    "acceptance-run: producer {} command {} returned non-zero",
+                    plan.producer.producer_id,
+                    step.program
+                ));
+                break;
+            }
+            Err(error) => {
+                primary_error = Some(error.context(format!(
+                    "acceptance-run: producer {} failed",
+                    plan.producer.producer_id
+                )));
+                break;
+            }
+        }
+    }
+    let mut cleanup_errors = Vec::new();
+    for step in &execution_spec.finally_steps {
+        match run_step(root, step, Duration::from_secs(60)) {
+            Ok(status) if status.success() => {}
+            Ok(_) => {
+                cleanup_errors.push(format!("cleanup step {} returned non-zero", step.program))
+            }
+            Err(error) => {
+                cleanup_errors.push(format!("cleanup step {} failed: {error}", step.program))
+            }
+        }
+    }
+    let head_after = git_output(root, ["rev-parse", "HEAD"])?;
+    let dirty_after = git_status(root)?;
+    if head_after != head || !dirty_after.is_empty() {
+        bail!(
+            "acceptance-run: producer {} changed HEAD or dirtied the worktree",
+            plan.producer.producer_id
+        );
+    }
+    if !cleanup_errors.is_empty() {
+        bail!(
+            "acceptance-run: producer {} cleanup failed: {}",
+            plan.producer.producer_id,
+            cleanup_errors.join("; ")
+        );
+    }
+    if let Some(error) = primary_error {
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn producer_environment(
+    producer: &Producer,
+    state_root: &Path,
+) -> Result<(BTreeMap<String, String>, BTreeMap<String, String>)> {
+    let mut environment = producer.environment.clone();
+    let baseline_executable = std::env::current_exe()
+        .context("acceptance-run: failed to resolve the current baseline executable")?;
+    environment.insert(
+        "DEVE_BASELINE_BIN".into(),
+        baseline_executable.display().to_string(),
+    );
+    fs::create_dir_all(state_root).with_context(|| {
+        format!(
+            "acceptance-run: failed to create producer state directory {}",
+            state_root.display()
+        )
+    })?;
+    environment.insert(
+        "DEVE_ACCEPTANCE_PRODUCER_STATE_DIR".into(),
+        state_root.to_string_lossy().replace('\\', "/"),
+    );
+    for name in &producer.required_env {
+        let value = std::env::var(name).with_context(|| {
+            format!(
+                "acceptance-run: producer {} missing required environment {name}",
+                producer.producer_id
+            )
+        })?;
+        environment.insert(name.clone(), value);
+    }
+    let producer_inputs = producer
+        .bound_env
+        .iter()
+        .map(|name| {
+            environment
+                .get(name)
+                .cloned()
+                .map(|value| (name.clone(), value))
+                .with_context(|| {
+                    format!(
+                        "acceptance-run: producer {} missing bound environment {name}",
+                        producer.producer_id
+                    )
+                })
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+    Ok((environment, producer_inputs))
+}
+
+fn execution_spec(
+    producer: &Producer,
+    environment: &BTreeMap<String, String>,
+    producer_inputs: BTreeMap<String, String>,
+) -> Result<ExecutionSpec> {
+    Ok(ExecutionSpec {
+        producer_id: producer.producer_id.clone(),
+        producer_contract: registry::contract_fingerprint(producer)?,
+        command_artifacts: producer.artifacts.clone(),
+        producer_inputs,
+        steps: resolve_steps(producer, &producer.steps, environment)?,
+        finally_steps: resolve_steps(producer, &producer.finally_steps, environment)?,
+        timeout: Duration::from_secs(producer.timeout_seconds),
+    })
 }
 
 pub(super) fn staging_directory(output: &Path) -> Result<PathBuf> {
@@ -136,6 +228,7 @@ fn resolve_steps(
                 .args
                 .iter()
                 .map(|argument| match argument {
+                    ProducerArg::LiteralString(literal) => Ok(literal.clone()),
                     ProducerArg::Literal { literal } => Ok(literal.clone()),
                     ProducerArg::Env { env } => environment.get(env).cloned().with_context(|| {
                         format!(

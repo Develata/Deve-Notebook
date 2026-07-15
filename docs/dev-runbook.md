@@ -143,8 +143,8 @@ The acceptance matrix and the smoke harnesses have different jobs:
 
 - `docs/registry/acceptance-matrix.tsv` states which evidence each case or
   first-tag journey requires.
-- `docs/registry/acceptance-producers.json` binds runtime receipt evidence to
-  typed command steps.
+- `docs/registry/acceptance-producers.json` binds executable test/script and
+  runtime receipt evidence to typed command steps.
 - `deve_baseline acceptance-run` plans or executes those producers; it owns
   timeout, clean-HEAD checks, schema 3 receipts, producer-contract and execution
   group binding, Android claims, and failure reporting.
@@ -160,10 +160,20 @@ cargo run --locked -p deve_baseline -- acceptance-run --tier target-host --plan
 cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
 ```
 
-Execution requires a clean worktree and a receipt directory outside the repo.
+Execution requires a clean worktree. Runtime receipt tiers also require a
+receipt directory outside the repo; the CI test/script tier deliberately writes
+no receipts and is run without `--receipt-dir`.
 It is intentionally sequential for low-memory hosts. On Windows the runner
 selects Git for Windows Bash; set `DEVE_ACCEPTANCE_BASH` only when Git Bash is
 installed elsewhere.
+CI Cargo steps select one explicit `--lib`, `--bin`, or `--test` target so a
+function selector does not repeatedly enumerate every integration binary.
+When a registered baseline script already owns a complete selector group, the
+producer runs that script once instead of duplicating its Cargo commands.
+Nested baseline wrapper scripts automatically reuse the runner's current
+`deve_baseline` executable. Do not clear the runner-owned `DEVE_BASELINE_BIN`:
+re-entering through `cargo run -p deve_baseline` would contend with the running
+Windows executable and needlessly rebuild the tool on every script step.
 An `--evidence-id` filter selects the owning producer and still emits that
 producer's complete atomic receipt group. Runner-owned state directories let
 finally steps clean only resources created by the current execution.
@@ -172,13 +182,20 @@ finally steps clean only resources created by the current execution.
 `manual.unbound` receipts. It cannot substitute for a registry-owned producer
 at tag-ready. A producer-owned output directory is published only after its
 receipt set is complete; the collector rejects partial or mixed execution IDs.
-Collector inputs are canonical-root pinned and limited to 4096 JSON files,
+Collector inputs are canonical-root pinned, reject symlink/reparse entries and
+directory trees deeper than 32 levels, and are limited to 4096 JSON files,
 1 MiB per receipt, and 16 MiB total.
 
 ```powershell
 $receiptRoot = Join-Path $env:TEMP "deve-acceptance-$((git rev-parse --short HEAD).Trim())"
 cargo run --locked -p deve_baseline -- acceptance-run `
   --tier full --receipt-dir $receiptRoot
+```
+
+Run the source-bound executable evidence selected for ordinary CI:
+
+```bash
+cargo run --locked -p deve_baseline -- acceptance-run --tier ci
 ```
 
 Windows Docker results are valid development evidence, but Docker tag-ready

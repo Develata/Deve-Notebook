@@ -18,6 +18,8 @@ pub(super) struct ProducerRegistry {
 pub(super) struct Producer {
     pub(super) producer_id: String,
     pub(super) evidence_ids: Vec<String>,
+    #[serde(default)]
+    pub(super) dependencies: Vec<String>,
     pub(super) tiers: Vec<String>,
     pub(super) host_os: Vec<String>,
     pub(super) timeout_seconds: u64,
@@ -49,6 +51,7 @@ pub(super) struct ProducerStep {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub(super) enum ProducerArg {
+    LiteralString(String),
     Literal { literal: String },
     Env { env: String },
 }

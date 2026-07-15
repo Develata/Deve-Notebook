@@ -9,17 +9,60 @@ permissions:
 jobs:
   docker-release-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
 
       - name: Show Docker version
         run: docker version
 
-      - name: Run Docker release smoke
-        env:
-          DEVE_DOCKER_SMOKE_REQUIRED: "1"
-          DEVE_DOCKER_SMOKE_IMAGE: deve-notebook:ci-smoke-${{ github.run_id }}
-          DEVE_DOCKER_SMOKE_CONTAINER: deve-docker-smoke-${{ github.run_id }}
-          DEVE_DOCKER_SMOKE_PORT: "32133"
-        run: scripts/smoke-docker-release.sh
+      - name: Build acceptance candidate image once
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="deve-notebook:acceptance-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker build --tag "$image" .
+          image_id="$(docker image inspect --format '{{.Id}}' "$image")"
+          echo "DEVE_RELEASE_CANDIDATE_IMAGE=$image" >>"$GITHUB_ENV"
+          echo "DEVE_RELEASE_CANDIDATE_IMAGE_ID=$image_id" >>"$GITHUB_ENV"
+
+      - name: Execute Docker acceptance producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier full
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker"
+
+      - name: Execute security acceptance producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer security.tag-ready-audit
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-security"
+
+      - name: Collect Linux acceptance receipts
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-collect
+          --output "$RUNNER_TEMP/deve-acceptance-linux"
+          "$RUNNER_TEMP/deve-acceptance-docker"
+          "$RUNNER_TEMP/deve-acceptance-security"
+
+      - name: Upload Linux acceptance receipts
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-acceptance-receipts-linux
+          path: ${{ runner.temp }}/deve-acceptance-linux
+          if-no-files-found: error
+          retention-days: 30

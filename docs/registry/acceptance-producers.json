@@ -1,6 +1,406 @@
 {
-  "schema": 1,
+  "schema": 2,
   "producers": [
+    {
+      "producer_id": "ci.native-ipc-isolation",
+      "evidence_ids": [
+        "smoke.auth-native-ipc-isolation"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 120,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/smoke-desktop-remote-browser.test.mjs"
+      ],
+      "steps": [
+        {
+          "program": "node",
+          "args": [
+            {
+              "literal": "--test"
+            },
+            {
+              "literal": "scripts/smoke-desktop-remote-browser.test.mjs"
+            }
+          ]
+        }
+      ],
+      "note": "Exercise the source-bound native IPC isolation harness"
+    },
+    {
+      "producer_id": "ci.diff-projection",
+      "evidence_ids": [
+        "test.core.diff-projection",
+        "test.protocol.diff-projection",
+        "test.web.diff-projection"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 600,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "diff_projection_resource_limits_fail_closed" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "first_public_ws_epoch_is_lockstep" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "split_and_unified_only_select_backend_rows" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Run the typed diff projection and public protocol epoch selectors"
+    },
+    {
+      "producer_id": "ci.projection-recovery",
+      "evidence_ids": [
+        "test.cli.critical-delivery-order",
+        "test.cli.repo-mutation-publication",
+        "test.web.incoming-gap",
+        "test.web.projection-recovery"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 900,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "serializes_same_repo_and_preserves_publication_order" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "incoming_gap" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "projection_recovery" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Run repository publication ordering and Web recovery selectors"
+    },
+    {
+      "producer_id": "ci.storage-browser-boundaries",
+      "evidence_ids": [
+        "script.browser-prefs-boundary",
+        "test.core.materialize-projection",
+        "test.core.projection-workspace-child-path",
+        "test.core.projection-workspace-existing-ancestor",
+        "test.web.browser-identity-capability",
+        "test.web.locale-preference",
+        "test.web.output-write-classification",
+        "test.web.shortcut-config-roundtrips",
+        "test.web.storage-capabilities",
+        "test.web.typed-prefs-roundtrip"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-browser-prefs-boundary.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-browser-prefs-boundary.sh" }]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--test" },
+            { "literal": "materialize_projection_test" }, { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--lib" },
+            { "literal": "projection_workspace_child_path" }, { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--lib" },
+            { "literal": "projection_workspace_existing_ancestor" }, { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "browser_identity_capability" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "locale_preference_uses_ui_prefs" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "output_write_classification" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "shortcut_config_roundtrips" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "storage_capabilities" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" },
+            { "literal": "deve_web" }, { "literal": "typed_prefs_roundtrip" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Run browser preference and projection workspace boundary evidence"
+    },
+    {
+      "producer_id": "ci.storage-repository-cases",
+      "evidence_ids": [
+        "script.storage-repo-baseline",
+        "test.case.store-002",
+        "test.case.store-006",
+        "test.case.store-008",
+        "test.case.store-009",
+        "test.case.store-012",
+        "test.case.store-013",
+        "test.case.store-015",
+        "test.case.store-016",
+        "test.case.store-017",
+        "test.case.store-018",
+        "test.case.store-019",
+        "test.case.store-020",
+        "test.case.store-021",
+        "test.case.store-022"
+      ],
+      "dependencies": [],
+      "tiers": ["ci"],
+      "host_os": ["linux", "macos", "windows"],
+      "timeout_seconds": 2400,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-storage-repo-baseline.sh",
+        "scripts/check-repo-file-ops-baseline.sh"
+      ],
+      "steps": [
+        {"program":"bash","args":["scripts/check-storage-repo-baseline.sh"]},
+        {"program":"bash","args":["scripts/check-repo-file-ops-baseline.sh"]}
+      ],
+      "note": "Execute the complete declared command groups for the first Storage and Repository evidence migration batch"
+    },
+    {
+      "producer_id": "desktop.macos-target-host",
+      "evidence_ids": [
+        "smoke.desktop.macos-target-host"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "target-host"
+      ],
+      "host_os": [
+        "macos"
+      ],
+      "timeout_seconds": 7200,
+      "required_env": [],
+      "environment": {
+        "DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED": "1",
+        "DEVE_DESKTOP_PACKAGE_BUNDLES": "app,dmg",
+        "DEVE_DESKTOP_PACKAGE_NO_SIGN": "1",
+        "DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED": "1",
+        "DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-desktop-platform-package-build.sh",
+        "scripts/check-desktop-package-startup-smoke.sh",
+        "scripts/check-desktop-native-session-package-smoke.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-desktop-platform-package-build.sh" }]
+        },
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-desktop-package-startup-smoke.sh" }]
+        },
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-desktop-native-session-package-smoke.sh" }]
+        }
+      ],
+      "note": "Build and exercise the unsigned macOS Desktop target-host package"
+    },
+    {
+      "producer_id": "ios.simulator-lifecycle",
+      "evidence_ids": [
+        "smoke.ios.simulator-lifecycle"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "target-host"
+      ],
+      "host_os": [
+        "macos"
+      ],
+      "timeout_seconds": 7200,
+      "required_env": [],
+      "environment": {
+        "DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED": "1",
+        "DEVE_MOBILE_IOS_PACKAGE_TARGET": "aarch64-sim",
+        "DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED": "1",
+        "DEVE_MOBILE_IOS_BOOT_SIMULATOR": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-mobile-ios-shell-package-build.sh",
+        "scripts/check-mobile-ios-install-startup-smoke.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-mobile-ios-shell-package-build.sh" }]
+        },
+        {
+          "program": "bash",
+          "args": [{ "literal": "scripts/check-mobile-ios-install-startup-smoke.sh" }]
+        }
+      ],
+      "note": "Build and exercise the conditional iOS Simulator target-host lifecycle"
+    },
     {
       "producer_id": "android.local-backend",
       "evidence_ids": [
@@ -358,9 +758,19 @@
       },
       "claims_env": {},
       "artifacts": [
+        "scripts/baseline-wrapper.sh",
+        "scripts/baseline-wrapper.test.sh",
         "scripts/check-release-audit-gate.sh"
       ],
       "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/baseline-wrapper.test.sh"
+            }
+          ]
+        },
         {
           "program": "bash",
           "args": [

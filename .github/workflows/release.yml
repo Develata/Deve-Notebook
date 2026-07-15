@@ -4,6 +4,7 @@ on:
     tags: ['v*']
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -91,12 +92,24 @@ jobs:
           DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0 scripts/check-native-process-adapter-gate.sh
           scripts/check-graph-baseline.sh
 
-      # This intentionally blocks every tag before any publish job while the
-      # P0 platform receipt producer/aggregation requirement remains open.
-      - name: Block release until first-tag acceptance receipts are aggregated
+      - name: Require exact-HEAD aggregated acceptance receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           receipt_root="$RUNNER_TEMP/deve-acceptance-receipts"
-          mkdir -p "$receipt_root"
+          runs="$(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/acceptance-aggregate.yml/runs?head_sha=$GITHUB_SHA&status=success&event=workflow_dispatch&per_page=100")"
+          run_id="$(jq -r --arg head "$GITHUB_SHA" \
+            '[.workflow_runs[] | select(.head_sha == $head and .conclusion == "success")] | sort_by(.created_at) | last | .id // empty' \
+            <<<"$runs")"
+          [[ "$run_id" =~ ^[1-9][0-9]*$ ]] || {
+            echo "release: no successful acceptance aggregation exists for HEAD $GITHUB_SHA" >&2
+            exit 1
+          }
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+            --name "deve-acceptance-tag-ready-$GITHUB_SHA" \
+            --dir "$receipt_root"
           cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
       
       - name: Run tests

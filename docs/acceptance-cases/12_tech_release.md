@@ -395,6 +395,7 @@
   steps:
     - run: cargo run --locked -p deve_baseline -- acceptance-matrix
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci --plan
+    - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
     - run: cargo test --locked -p deve_baseline acceptance_matrix -- --nocapture
     - run: receipt_root="$(mktemp -d)" && ! cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
@@ -408,13 +409,17 @@
     - contract_assert: receipt_head_surface_mode_platform_and_locator_bound true
     - contract_assert: receipt_producer_contract_and_execution_group_bound true
     - contract_assert: every_required_receipt_has_exactly_one_typed_producer true
+    - contract_assert: every_required_ci_test_or_script_has_exactly_one_typed_producer true
+    - contract_assert: ci_tier_executes_nonempty_producer_set_without_receipts true
     - contract_assert: producer_shell_command_strings_forbidden true
     - contract_assert: producer_bound_environment_is_public_non_secret true
     - contract_assert: producer_timeout_failure_writes_failed_receipts true
     - contract_assert: evidence_filter_selects_complete_atomic_producer_group true
     - contract_assert: receipt_collection_is_root_pinned_and_resource_bounded true
+    - contract_assert: receipt_collection_rejects_excessive_directory_depth true
     - contract_assert: receipt_collection_rejects_inconsistent_execution_fields true
     - contract_assert: producer_finally_cleanup_is_execution_scoped_and_bounded true
     - contract_assert: one_producer_execution_atomically_emits_multiple_bound_receipts true
+    - contract_assert: explicit_cross_workflow_run_ids_are_head_bound_before_collection true
     - release_assert: explicit_p0_gap_blocks_tag_ready true
 ```

@@ -1,0 +1,109 @@
+name: Acceptance Receipt Aggregate
+
+on:
+  workflow_dispatch:
+    inputs:
+      receipt_run_ids:
+        description: Comma-separated Docker/native target-host workflow run IDs for this exact candidate HEAD.
+        type: string
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: acceptance-aggregate-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+
+      - name: Download exact-HEAD receipt artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT_RUN_IDS: ${{ inputs.receipt_run_ids }}
+        run: |
+          set -euo pipefail
+          download_root="$RUNNER_TEMP/deve-acceptance-artifacts"
+          mkdir -p "$download_root"
+          IFS=',' read -r -a requested_ids <<<"$RECEIPT_RUN_IDS"
+          declare -A seen=()
+          accepted=0
+          for raw_id in "${requested_ids[@]}"; do
+            run_id="${raw_id//[[:space:]]/}"
+            [[ "$run_id" =~ ^[1-9][0-9]*$ ]] || {
+              echo "acceptance aggregate: invalid workflow run id '$raw_id'" >&2
+              exit 1
+            }
+            [[ -z "${seen[$run_id]+present}" ]] || {
+              echo "acceptance aggregate: duplicate workflow run id $run_id" >&2
+              exit 1
+            }
+            seen[$run_id]=1
+            metadata="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+            head_sha="$(jq -r '.head_sha' <<<"$metadata")"
+            conclusion="$(jq -r '.conclusion' <<<"$metadata")"
+            workflow_path="$(jq -r '.path' <<<"$metadata")"
+            [[ "$head_sha" == "$GITHUB_SHA" ]] || {
+              echo "acceptance aggregate: run $run_id head mismatch: expected=$GITHUB_SHA observed=$head_sha" >&2
+              exit 1
+            }
+            [[ "$conclusion" == "success" ]] || {
+              echo "acceptance aggregate: run $run_id is not successful: $conclusion" >&2
+              exit 1
+            }
+            case "$workflow_path" in
+              .github/workflows/docker-smoke.yml|.github/workflows/native-target-host.yml) ;;
+              *)
+                echo "acceptance aggregate: workflow is not an allowed receipt producer: $workflow_path" >&2
+                exit 1
+                ;;
+            esac
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --pattern 'deve-acceptance-receipts-*' \
+              --dir "$download_root/run-$run_id"
+            accepted=$((accepted + 1))
+          done
+          [[ "$accepted" -gt 0 ]] || {
+            echo "acceptance aggregate: at least one source run is required" >&2
+            exit 1
+          }
+
+      - name: Collect and validate candidate receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          download_root="$RUNNER_TEMP/deve-acceptance-artifacts"
+          collected="$RUNNER_TEMP/deve-acceptance-collected"
+          mapfile -d '' receipt_dirs < <(find "$download_root" -type d -name receipts -print0 | sort -z)
+          [[ "${#receipt_dirs[@]}" -gt 0 ]] || {
+            echo "acceptance aggregate: downloaded artifacts contain no receipts directory" >&2
+            exit 1
+          }
+          artifact_roots=()
+          for receipt_dir in "${receipt_dirs[@]}"; do
+            artifact_roots+=("${receipt_dir%/receipts}")
+          done
+          cargo run --locked --quiet -p deve_baseline -- acceptance-collect \
+            --output "$collected" "${artifact_roots[@]}"
+          cargo run --locked --quiet -p deve_baseline -- acceptance-matrix \
+            --tag-ready "$collected"
+
+      - name: Upload exact-HEAD tag-ready receipt set
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-acceptance-tag-ready-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-collected
+          if-no-files-found: error
+          retention-days: 30

@@ -81,7 +81,10 @@ run_npm_audit() {
   [[ -f "$ROOT_DIR/apps/web/package-lock.json" ]] || return
 
   if command -v npm >/dev/null 2>&1; then
-    npm --prefix "$ROOT_DIR/apps/web" audit --audit-level=high
+    local npm_bin package_root
+    npm_bin="$(command -v npm)"
+    package_root="$(baseline_npm_prefix_path "$ROOT_DIR" "$npm_bin" "$ROOT_DIR/apps/web")"
+    "$npm_bin" --prefix "$package_root" audit --audit-level=high
     return
   fi
 

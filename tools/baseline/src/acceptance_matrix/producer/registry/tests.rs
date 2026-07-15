@@ -1,16 +1,19 @@
 use super::{
-    sensitive_env_name, valid_env_name, valid_identifier, validate_producer,
+    sensitive_env_name, valid_env_name, valid_identifier, validate_dependencies, validate_producer,
     validate_shell_invocation, validate_step,
 };
-use crate::acceptance_matrix::producer::model::{Producer, ProducerArg, ProducerStep};
+use crate::acceptance_matrix::producer::model::{
+    Producer, ProducerArg, ProducerRegistry, ProducerStep,
+};
 use crate::acceptance_matrix::receipt_limits::MAX_EXECUTION_RECEIPTS;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 fn producer() -> Producer {
     Producer {
         producer_id: "test.producer".into(),
         evidence_ids: vec!["test.evidence".into()],
+        dependencies: Vec::new(),
         tiers: vec!["ci".into()],
         host_os: vec!["windows".into()],
         timeout_seconds: 1,
@@ -82,7 +85,7 @@ fn producer_rejects_an_oversized_atomic_evidence_group() {
         .map(|index| format!("test.evidence-{index}"))
         .collect();
 
-    assert!(validate_producer(Path::new("."), &producer).is_err());
+    assert!(validate_producer(Path::new("."), &producer, &BTreeMap::new()).is_err());
 }
 
 #[test]
@@ -97,4 +100,42 @@ fn producer_rejects_sensitive_environment_in_process_arguments() {
     };
 
     assert!(validate_step(Path::new("."), &producer, &step).is_err());
+}
+
+#[test]
+fn ci_cargo_test_steps_require_a_narrow_target() {
+    let producer = producer();
+    let broad = ProducerStep {
+        program: "cargo".into(),
+        args: ["test", "--locked", "-p", "deve_core", "selector"]
+            .into_iter()
+            .map(|literal| ProducerArg::LiteralString(literal.into()))
+            .collect(),
+    };
+    assert!(validate_step(Path::new("."), &producer, &broad).is_err());
+
+    let mut narrow = broad;
+    narrow
+        .args
+        .insert(4, ProducerArg::LiteralString("--lib".into()));
+    assert!(validate_step(Path::new("."), &producer, &narrow).is_ok());
+}
+
+#[test]
+fn producer_dependencies_reject_cycles() {
+    let mut one = producer();
+    one.producer_id = "test.one".into();
+    one.dependencies = vec!["test.two".into()];
+    let mut two = producer();
+    two.producer_id = "test.two".into();
+    two.dependencies = vec!["test.one".into()];
+    let registry = ProducerRegistry {
+        schema: 2,
+        producers: vec![one, two],
+    };
+    let ids = BTreeSet::from(["test.one", "test.two"]);
+
+    let error = validate_dependencies(&registry, &ids).unwrap_err();
+
+    assert!(error.to_string().contains("dependency cycle"));
 }

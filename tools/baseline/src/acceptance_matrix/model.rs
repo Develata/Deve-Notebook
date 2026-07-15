@@ -19,7 +19,7 @@ pub(super) const HEADER: [&str; 13] = [
     "note",
 ];
 
-pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 15] = [
+pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 16] = [
     ("auth-session", "web", "browser", "tag-ready", "required"),
     ("repo-lifecycle", "web", "browser", "tag-ready", "required"),
     (
@@ -92,6 +92,13 @@ pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 15] = [
         "multi-platform",
         "tag-ready",
         "required",
+    ),
+    (
+        "release-artifacts",
+        "macos",
+        "target-host",
+        "advisory",
+        "conditional",
     ),
     (
         "release-artifacts",

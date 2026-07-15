@@ -11,7 +11,11 @@ use std::time::{Duration, Instant};
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const TERMINATION_WAIT: Duration = Duration::from_secs(5);
 
-pub(super) fn run_step(root: &Path, step: &CommandStep, timeout: Duration) -> Result<ExitStatus> {
+pub(in crate::acceptance_matrix) fn run_step(
+    root: &Path,
+    step: &CommandStep,
+    timeout: Duration,
+) -> Result<ExitStatus> {
     let mut command = Command::new(&step.program);
     command.args(&step.args).envs(&step.env).current_dir(root);
     configure_process_group(&mut command);

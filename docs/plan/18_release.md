@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-15`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -213,8 +213,9 @@ first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 `desktop-remote-browser`、`android-local-backend`、`android-remote-browser`（含 native-owned
 `Use Local Backend` 恢复、新 endpoint/session/scope 与零 RemoteBrowser IPC）、
 `release-artifacts`、`security-supply-chain`。矩阵必须为这些 journey 的适用 surface/mode
-登记 `tag-ready/required` 需求；iOS target-host 仍为 `advisory/conditional`，必须如实说明
-目标宿主与证据缺口，不能伪装为现有证据。
+登记 `tag-ready/required` 需求；macOS unsigned target-host 与 iOS Simulator target-host 仍为
+`advisory/conditional`，必须由真实 host receipt 证明已执行，同时不得伪装为 signing、notarization、
+physical-device 或 store readiness。
 
 `deve_baseline acceptance-matrix` 属于普通 CI 的结构 gate，负责 case、flow、journey、
 枚举、唯一键、rationale 与 evidence locator 完整性；它不把过期或尚未采集的运行时
@@ -244,31 +245,44 @@ worktree clean，并满足 `current-head` / `target-host-30d` / `first-tag-once`
 地满足 tag-ready。普通 CI 只阻断结构漂移；正式 tag workflow 必须汇总各平台 receipts
 后再运行 tag-ready。
 
-`docs/registry/acceptance-producers.json` 是 receipt producer 的唯一人工维护注册表。
-它只登记 producer ID、覆盖的 `evidence_id`、执行层级、适用 host OS、超时、必需环境变量、
+`docs/registry/acceptance-producers.json` 是可执行 evidence producer 的唯一人工维护注册表。
+它登记 producer ID、覆盖的 `test` / `script` / `receipt` `evidence_id`、执行层级、适用 host OS、超时、必需环境变量、
 claims 输出变量、可公开且非凭据的 bound environment、受控 artifact 清单，以及由 `program + args[]` 组成的命令步骤；不得保存 shell command string，
-不得在 JSON 中拼接凭据，也不得把普通文档/source reference 冒充运行时 producer。矩阵中每个
-`tag-ready/required/receipt` evidence 必须恰好由一个 producer 覆盖；producer 也不得引用矩阵
-之外或非 receipt 的 evidence。
+不得在 JSON 中拼接凭据，也不得把普通文档/source reference 冒充可执行 producer。矩阵中每个
+`tag-ready/required/receipt` evidence，以及每个 `ci/required/test|script` evidence，必须恰好由一个
+producer 覆盖；producer 不得引用矩阵之外的 evidence，也不得在同一个 producer 中混合
+静态 `test|script` evidence 与 runtime `receipt` evidence。registry schema v2 还必须显式登记
+producer dependencies；runner 以稳定拓扑顺序执行，拒绝未知 dependency、cycle 或依赖被 filter
+切掉的 partial plan。
 
 `deve_baseline acceptance-run --tier <ci|full|target-host|tag-ready> --plan`
 只做确定性解析与预检，输出将运行、因 host 不匹配而不可运行、缺少环境变量或不能满足
-tag-ready host 约束的 producer，不启动外部命令。去掉 `--plan` 后必须显式提供位于 worktree
-外的 `--receipt-dir`；runner 默认按 producer ID 顺序串行执行，低内存宿主不得由工具隐式并发。
+tag-ready host 约束的 producer，不启动外部命令，并输出 selected/ready/unavailable 汇总，禁止
+空 tier 静默成功。去掉 `--plan` 后，包含 runtime `receipt` evidence 的 tier 必须显式提供位于
+worktree 外的 `--receipt-dir`；只包含 `test|script` evidence 的 `ci` tier不产生 receipt，因而
+不得要求或接受伪造的 receipt 输出目录。runner 以稳定拓扑顺序串行执行，低内存宿主不得由工具隐式并发。
 `--producer <id>` / `--evidence-id <id>` 只允许缩小 producer 执行面；evidence filter 只选择其
 owner producer，不得切开该 producer 的原子 evidence group。一次 producer 执行可以覆盖多个
 evidence，但命令只能运行一次；每个 evidence 仍获得独立 locator、surface、mode 与 target OS
 绑定的 schema 3 receipt。每组 receipt 还必须绑定 producer ID、当前 registry contract 指纹、唯一
 execution ID、该次执行的完整 evidence 集合与受控 artifact 清单。多 evidence producer 必须先完成
 全部序列化与临时写入再发布；单次原子 execution group 最多 64 个 receipt，任一 sibling 的 claims、
-构造或资源预算失败必须令整组一致 failed。进程中断留下的部分集合不能通过 collector 或 tag-ready。`ci` 层只执行快速、确定性的 host-local producer；已有 workflow
-拥有的 fmt/clippy/workspace test 不得为制造 receipt 而重复运行。`full` 增加 Docker/browser
+构造或资源预算失败必须令整组一致 failed。进程中断留下的部分集合不能通过 collector 或 tag-ready。
+`ci` 层必须执行矩阵中全部 `ci/required/test|script` evidence 的 host-local producer；它们是
+明确 selector / script 的验收绑定，不生成或上传 receipt。workflow 自身的 fmt/clippy/workspace
+test 仍保持独立 authority，CI evidence producer 不得用一个笼统的全 workspace command冒充
+尚未绑定的 case evidence。Cargo test step 必须显式选择 `--lib`、`--bin <name>` 或
+`--test <name>`，禁止为一个函数 selector 反复枚举无关 integration target。若受控 baseline script
+已经执行完整 selector group，producer 必须以该 script 作为唯一命令入口，不得先逐条执行再重复运行 script。
+`full` 增加 Docker/browser
 业务闭环，`target-host` 选择当前宿主的 native/mobile producers，`tag-ready` 用于候选证据生产
 与跨平台缺口预检，不能把单一宿主误报为覆盖所有平台。
 
 Rust runner 独占以下 infra：参数/registry 校验、HEAD/dirty 前后快照、单调超时、子进程终止、
 失败 receipt、producer claims 读取、命令指纹、execution group 与 receipt 发布。命令超时后
 必须有界终止进程树并继续执行显式 finally steps；runner 不依赖被强杀 shell 的 trap 完成清理。
+runner 必须把当前已启动的 `deve_baseline` 绝对路径作为内部执行环境交给受控步骤；嵌套 baseline
+wrapper 必须复用该进程映像，不得再次 `cargo run -p deve_baseline` 并尝试覆盖 Windows 上正在运行的 EXE。
 runner 为每次 producer 执行提供隔离的临时 state directory，使 finally step 只能回收本次执行
 登记的宿主资源。Android 外部 finalizer 只能在 emulator serial 与登记 AVD 精确匹配后请求
 设备退出；owner file 中的 PID 只用于有界观察资源消失，不能授权外部脚本按裸 PID 发送信号。
@@ -281,14 +295,19 @@ Windows host 驱动 emulator，但 receipt 的 target OS 仍为 `android`，且�
 与 Ed25519 probe，而不是根据宿主或版本号推断可写。
 
 `deve_baseline acceptance-collect --output <receipt-root> <artifact-root>...` 负责 pre-publish
-聚合：只接收普通 JSON 文件，拒绝 symlink/reparse escape、重复 `evidence_id`、重复 locator、
+聚合：只接收普通 JSON 文件，拒绝 symlink/reparse escape、超过 32 层的目录树、重复 `evidence_id`、重复 locator、
 不完整或混合 execution group、非规范相对路径和越界目录；枚举时固定 canonical root，读取
 前后必须重验同一 root identity。单个 receipt JSON 上限 1 MiB，单次聚合最多 4096 个文件且
 JSON 总量上限 16 MiB；producer 写入侧单个原子 execution group 最多 64 个 evidence，claims
 读取、receipt 序列化与临时发布仍应用 1 MiB 单文件、16 MiB 整组预算；跨 producer 的 collector
 总文件上限仍为 4096。超限时生成有界 failed receipt 或在执行前拒绝，
 不得先无界分配再交由 collector 拒绝。execution group 必须统一验证 HEAD/host/timestamps/status、command
-fingerprint、artifacts 与 producer inputs。collector 使用临时目录完成全部校验后再原子发布。release workflow 必须先
+fingerprint、artifacts 与 producer inputs。collector 使用临时目录完成全部校验后再原子发布。
+候选 HEAD 必须先通过独立的 receipt aggregation workflow：该 workflow 只接受显式 workflow run
+ID，逐一验证 source run 成功且 `headSha` 等于自身 checkout HEAD，按 allowlist 下载
+`deve-acceptance-receipts-*` artifact，再调用 Rust collector 与 tag-ready gate；成功后只上传绑定
+该 HEAD 的聚合 receipt artifact。tag-triggered release orchestrator 只能下载同 HEAD 的成功聚合
+artifact 并再次运行 tag-ready，不得自行选择“最新”但 SHA 不匹配的 evidence。release workflow 必须先
 下载各平台 receipt artifact、调用 collector，再运行 `acceptance-matrix --tag-ready`，并且该
 gate 必须位于任何 image tag/push、Release asset upload 或 GitHub Release 创建之前。producer
 失败、缺失、过期或平台不匹配均保持 fail-closed，禁止用空目录或跳过 job 伪装成功。

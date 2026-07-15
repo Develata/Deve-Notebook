@@ -14,6 +14,7 @@ mod publication;
 
 pub(super) use executor::execute_and_write;
 pub(super) use model::{CommandStep, EvidenceSpec, ExecutionSpec, Receipt};
+pub(in crate::acceptance_matrix) use process::run_step;
 pub(super) use publication::ensure_output_outside_worktree;
 
 const DEFAULT_TIMEOUT_SECS: u64 = 3_600;

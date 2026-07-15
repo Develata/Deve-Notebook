@@ -71,6 +71,8 @@ fn git_visible_rust_sources_define(root: &Path, search_root: &Path, filter: &str
     let test_function = Regex::new(
         r"(?ms)#\[(?:tokio::)?test[^\]]*\][^\{;]*?\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(",
     )?;
+    let test_module =
+        Regex::new(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;")?;
     for rel in paths
         .lines()
         .filter(|line| Path::new(line).extension().and_then(|value| value.to_str()) == Some("rs"))
@@ -80,6 +82,9 @@ fn git_visible_rust_sources_define(root: &Path, search_root: &Path, filter: &str
                 test_function
                     .captures_iter(&content)
                     .any(|capture| capture[1].contains(filter))
+                    || test_module
+                        .captures_iter(&content)
+                        .any(|capture| capture[1].contains(filter))
             })
             .unwrap_or(false)
         {
@@ -213,7 +218,8 @@ impl TestCatalog {
 
 #[cfg(test)]
 mod tests {
-    use super::TestSelector;
+    use super::{TestSelector, git_visible_rust_sources_define};
+    use std::fs;
 
     #[test]
     fn test_selector_requires_package_and_understands_test_targets() {
@@ -230,5 +236,40 @@ mod tests {
             Some("materialize_projection_test")
         );
         assert!(TestSelector::parse("cargo test -p missing").is_err());
+    }
+
+    #[test]
+    fn source_validation_accepts_cargo_module_filters() {
+        let root =
+            std::env::temp_dir().join(format!("deve-acceptance-selector-{}", std::process::id()));
+        let repository = root.join("repository");
+        fs::create_dir_all(repository.join("package")).unwrap();
+        fs::write(
+            repository.join("package/lib.rs"),
+            "#[cfg(test)]\nmod document_scope_bootstrap_test;\n",
+        )
+        .unwrap();
+        let init = std::process::Command::new("git")
+            .args(["init", "--quiet"])
+            .current_dir(&repository)
+            .status()
+            .unwrap();
+        assert!(init.success());
+        let accepted = git_visible_rust_sources_define(
+            &repository,
+            &repository.join("package"),
+            "document_scope_bootstrap",
+        )
+        .unwrap();
+        assert!(accepted);
+        assert!(
+            !git_visible_rust_sources_define(
+                &repository,
+                &repository.join("package"),
+                "missing_filter"
+            )
+            .unwrap()
+        );
+        fs::remove_dir_all(&root).unwrap();
     }
 }

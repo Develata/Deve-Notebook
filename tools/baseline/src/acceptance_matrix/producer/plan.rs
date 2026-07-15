@@ -18,13 +18,21 @@ pub(super) struct ProducerPlan<'a> {
     missing_env: Vec<String>,
 }
 
+impl ProducerPlan<'_> {
+    pub(super) fn emits_receipts(&self) -> bool {
+        self.evidence
+            .iter()
+            .any(|row| row.evidence_kind == "receipt")
+    }
+}
+
 pub(super) fn build_plan<'a>(
     args: &RunArgs,
     registry: &'a ProducerRegistry,
     rows: &'a [MatrixRow],
 ) -> Result<Vec<ProducerPlan<'a>>> {
     validate_filters(args, registry, rows)?;
-    let evidence_rows = receipt_rows(rows);
+    let evidence_rows = executable_evidence_rows(rows);
     let mut plans = Vec::new();
     for producer in &registry.producers {
         if !producer.tiers.contains(&args.tier) {
@@ -70,8 +78,57 @@ pub(super) fn build_plan<'a>(
             missing_env,
         });
     }
-    plans.sort_by(|left, right| left.producer.producer_id.cmp(&right.producer.producer_id));
+    if plans.is_empty() {
+        bail!(
+            "acceptance-run: tier {} has no registered producers",
+            args.tier
+        );
+    }
+    let producers = registry
+        .producers
+        .iter()
+        .map(|producer| (producer.producer_id.as_str(), producer))
+        .collect::<BTreeMap<_, _>>();
+    plans.sort_by(|left, right| {
+        dependency_depth(left.producer, &producers)
+            .cmp(&dependency_depth(right.producer, &producers))
+            .then_with(|| left.producer.producer_id.cmp(&right.producer.producer_id))
+    });
+    let selected = plans
+        .iter()
+        .filter(|plan| plan.selected)
+        .map(|plan| plan.producer.producer_id.as_str())
+        .collect::<BTreeSet<_>>();
+    if selected.is_empty() {
+        bail!(
+            "acceptance-run: filters selected no producers for tier {}",
+            args.tier
+        );
+    }
+    for plan in plans.iter().filter(|plan| plan.selected) {
+        for dependency in &plan.producer.dependencies {
+            if !selected.contains(dependency.as_str()) {
+                bail!(
+                    "acceptance-run: selected producer {} requires dependency {dependency}; filters may not create a partial dependency plan",
+                    plan.producer.producer_id
+                );
+            }
+        }
+    }
     Ok(plans)
+}
+
+fn dependency_depth<'a>(
+    producer: &'a Producer,
+    producers: &BTreeMap<&'a str, &'a Producer>,
+) -> usize {
+    producer
+        .dependencies
+        .iter()
+        .filter_map(|dependency| producers.get(dependency.as_str()))
+        .map(|dependency| dependency_depth(dependency, producers) + 1)
+        .max()
+        .unwrap_or(0)
 }
 
 fn validate_filters(args: &RunArgs, registry: &ProducerRegistry, rows: &[MatrixRow]) -> Result<()> {
@@ -87,12 +144,12 @@ fn validate_filters(args: &RunArgs, registry: &ProducerRegistry, rows: &[MatrixR
     }
     let evidence: BTreeSet<_> = rows
         .iter()
-        .filter(|row| row.evidence_kind == "receipt")
+        .filter(|row| matches!(row.evidence_kind.as_str(), "test" | "script" | "receipt"))
         .map(|row| row.evidence_id.as_str())
         .collect();
     for evidence_id in &args.evidence_ids {
         if !evidence.contains(evidence_id.as_str()) {
-            bail!("acceptance-run: unknown receipt evidence {evidence_id}");
+            bail!("acceptance-run: unknown executable evidence {evidence_id}");
         }
     }
     Ok(())
@@ -133,6 +190,20 @@ pub(super) fn print_plan(args: &RunArgs, plans: &[ProducerPlan<'_>]) {
             }
         );
     }
+    let selected = plans.iter().filter(|plan| plan.selected).count();
+    let ready = plans
+        .iter()
+        .filter(|plan| {
+            plan.selected
+                && plan.host_supported
+                && plan.tag_ready_host_supported
+                && plan.missing_env.is_empty()
+        })
+        .count();
+    println!(
+        "acceptance-run plan summary: selected={selected} ready={ready} unavailable={}",
+        selected.saturating_sub(ready)
+    );
 }
 
 pub(super) fn preflight_execution(
@@ -145,12 +216,6 @@ pub(super) fn preflight_execution(
     }
     let selected: Vec<_> = plans.iter().filter(|plan| plan.selected).collect();
     if selected.is_empty() {
-        if args.tier == "ci" && args.producers.is_empty() && args.evidence_ids.is_empty() {
-            println!(
-                "acceptance-run: ci tier has no duplicate command producers; workflow fmt/clippy/tests remain authoritative"
-            );
-            return Ok(());
-        }
         bail!(
             "acceptance-run: filters selected no producers for tier {}",
             args.tier
@@ -182,9 +247,9 @@ pub(super) fn preflight_execution(
     Ok(())
 }
 
-fn receipt_rows(rows: &[MatrixRow]) -> BTreeMap<&str, &MatrixRow> {
+fn executable_evidence_rows(rows: &[MatrixRow]) -> BTreeMap<&str, &MatrixRow> {
     rows.iter()
-        .filter(|row| row.evidence_kind == "receipt")
+        .filter(|row| matches!(row.evidence_kind.as_str(), "test" | "script" | "receipt"))
         .map(|row| (row.evidence_id.as_str(), row))
         .collect()
 }
@@ -197,7 +262,7 @@ fn tag_ready_host_supports(row: &MatrixRow, host: &str) -> bool {
     }
 }
 
-fn git_status(root: &Path) -> Result<String> {
+pub(super) fn git_status(root: &Path) -> Result<String> {
     git_output(
         root,
         [
@@ -211,7 +276,7 @@ fn git_status(root: &Path) -> Result<String> {
     )
 }
 
-fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> Result<String> {
+pub(super) fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> Result<String> {
     let output = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -323,10 +388,11 @@ mod tests {
         let args = ["--tier", "full", "--plan", "--evidence-id", "smoke.one"].map(str::to_string);
         let args = RunArgs::parse(&args).unwrap();
         let registry = ProducerRegistry {
-            schema: 1,
+            schema: 2,
             producers: vec![Producer {
                 producer_id: "smoke.group".into(),
                 evidence_ids: vec!["smoke.one".into(), "smoke.two".into()],
+                dependencies: Vec::new(),
                 tiers: vec!["full".into()],
                 host_os: vec![std::env::consts::OS.into()],
                 timeout_seconds: 1,
@@ -367,5 +433,53 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["smoke.one", "smoke.two"]
         );
+    }
+
+    #[test]
+    fn producer_filter_may_not_cut_a_declared_dependency() {
+        let args = ["--tier", "ci", "--plan", "--producer", "ci.child"].map(str::to_string);
+        let args = RunArgs::parse(&args).unwrap();
+        let producer = |producer_id: &str, evidence_id: &str, dependencies: Vec<String>| Producer {
+            producer_id: producer_id.into(),
+            evidence_ids: vec![evidence_id.into()],
+            dependencies,
+            tiers: vec!["ci".into()],
+            host_os: vec![std::env::consts::OS.into()],
+            timeout_seconds: 1,
+            required_env: Vec::new(),
+            bound_env: Vec::new(),
+            environment: BTreeMap::new(),
+            claims_env: BTreeMap::new(),
+            artifacts: Vec::new(),
+            steps: Vec::new(),
+            finally_steps: Vec::new(),
+            note: "fixture".into(),
+        };
+        let registry = ProducerRegistry {
+            schema: 2,
+            producers: vec![
+                producer("ci.parent", "test.parent", Vec::new()),
+                producer("ci.child", "test.child", vec!["ci.parent".into()]),
+            ],
+        };
+        let rows = ["test.parent", "test.child"].map(|evidence_id| MatrixRow {
+            requirement_id: format!("requirement.{evidence_id}"),
+            journey_id: "none".into(),
+            flow_id: "none".into(),
+            case_id: "none".into(),
+            surface: "core".into(),
+            mode: "integration".into(),
+            gate: "ci".into(),
+            requirement: "required".into(),
+            evidence_kind: "test".into(),
+            evidence_id: evidence_id.into(),
+            evidence_ref: "cargo test -p deve_core fixture -- --nocapture".into(),
+            freshness: "source-bound".into(),
+            note: String::new(),
+        });
+
+        let error = build_plan(&args, &registry, &rows).unwrap_err();
+
+        assert!(error.to_string().contains("requires dependency ci.parent"));
     }
 }
