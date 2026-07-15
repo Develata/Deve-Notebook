@@ -10,7 +10,23 @@ use text::{
     yaml_mapping_block,
 };
 
+const ANDROID_SIGNING_SECRETS: [&str; 4] = [
+    "ANDROID_KEYSTORE_BASE64",
+    "ANDROID_KEYSTORE_PASSWORD",
+    "ANDROID_KEY_ALIAS",
+    "ANDROID_KEY_PASSWORD",
+];
+
 pub(super) fn check(root: &Path) -> Result<()> {
+    require_single_tag_entry(root)?;
+    check_candidate(root)?;
+    check_native_candidate(root)?;
+    check_aggregate(root)?;
+    check_promotion(root)?;
+    Ok(())
+}
+
+fn require_single_tag_entry(root: &Path) -> Result<()> {
     let workflow_dir = root.join(".github/workflows");
     let mut direct_tag_entries = Vec::new();
     for entry in fs::read_dir(&workflow_dir).context("read .github/workflows")? {
@@ -39,143 +55,315 @@ pub(super) fn check(root: &Path) -> Result<()> {
             direct_tag_entries
         );
     }
+    Ok(())
+}
 
-    let release = read_workflow(root, "release.yml")?;
-    let test = yaml_mapping_block(&release, 2, "test")?;
-    require_ordered_text(
-        &test,
-        &[
-            "Validate SemVer release tag",
-            "invalid SemVer release tag",
-            "uses: actions/checkout@v6",
-        ],
-        "release.yml test job",
-    )?;
-
-    let native_call = yaml_mapping_block(&release, 2, "native")?;
-    require_text(&native_call, "needs: docker", "release.yml native job")?;
+fn check_candidate(root: &Path) -> Result<()> {
+    let candidate = read_workflow(root, "release-candidate.yml")?;
+    require_text(&candidate, "workflow_dispatch:", "release-candidate.yml")?;
+    require_text(&candidate, "version:", "release-candidate.yml input")?;
     require_text(
-        &native_call,
-        "uses: ./.github/workflows/release-native.yml",
-        "release.yml native job",
+        &candidate,
+        "group: release-candidate-${{ github.sha }}-${{ inputs.version }}",
+        "release-candidate.yml concurrency",
     )?;
-    if native_call.contains("secrets: inherit") {
-        bail!("release-baseline-check: reusable native workflow must not inherit all secrets");
+    if has_v_tag_trigger(&candidate) || candidate.contains("  push:") {
+        bail!("release-baseline-check: release-candidate.yml must be manual-only");
     }
-    let native_secret_map = yaml_mapping_block(&native_call, 4, "secrets")?;
-    require_exact_mapping_keys(
-        &native_secret_map,
-        6,
-        &ANDROID_SIGNING_SECRETS,
-        "release.yml native secret map",
-    )?;
-    for secret in ANDROID_SIGNING_SECRETS {
-        let mapping = format!("{secret}: ${{{{ secrets.{secret} }}}}");
-        require_text(
-            &native_secret_map,
-            &mapping,
-            "release.yml native secret map",
-        )?;
-    }
-
-    let native = read_workflow(root, "release-native.yml")?;
-    let on = yaml_mapping_block(&native, 0, "on")?;
-    let workflow_call = yaml_mapping_block(&on, 2, "workflow_call")?;
-    let declared_secrets = yaml_mapping_block(&workflow_call, 4, "secrets")?;
-    require_exact_mapping_keys(
-        &declared_secrets,
-        6,
-        &ANDROID_SIGNING_SECRETS,
-        "release-native.yml declared secrets",
-    )?;
-    if native.lines().any(|line| line == "  push:") || has_v_tag_trigger(&native) {
-        bail!("release-baseline-check: release-native.yml must not have a direct push/tag trigger");
-    }
-    for secret in ANDROID_SIGNING_SECRETS {
-        let declaration = yaml_mapping_block(&declared_secrets, 6, secret)?;
-        require_text(
-            &declaration,
-            "required: false",
-            "release-native.yml declared secret",
-        )?;
-    }
-
-    let publish = yaml_mapping_block(&native, 2, "publish")?;
-    for required in [
-        "needs: [desktop-windows, mobile-android, desktop-macos]",
-        "name: deve-desktop-windows",
-        "name: deve-mobile-android",
-        "name: deve-desktop-macos",
-        "Validate native artifact manifest",
-        "expected exactly four downloaded files",
-        "Require absent or draft GitHub Release",
-        "existing GitHub Release must be draft before asset upload",
-        "draft: true",
-        "diff -u native-asset-manifest.txt uploaded-asset-manifest.txt",
-        "gh release edit \"$GITHUB_REF_NAME\"",
+    let candidate_header = candidate.split("\njobs:").next().unwrap_or(&candidate);
+    for forbidden in [
+        "artifact-metadata: write",
+        "attestations: write",
+        "id-token: write",
     ] {
-        require_text(&publish, required, "release-native.yml publish job")?;
-    }
-    require_ordered_text(
-        &publish,
-        &[
-            "Download Windows artifacts",
-            "Download Android artifact",
-            "Download macOS artifact",
-            "Validate native artifact manifest",
-            "expected exactly four downloaded files",
-            "Require absent or draft GitHub Release",
-            "existing GitHub Release must be draft before asset upload",
-            "Upload validated assets to a draft GitHub Release",
-            "draft: true",
-            "Verify draft assets and publish GitHub Release",
-            "release must remain draft before asset verification",
-            "diff -u native-asset-manifest.txt uploaded-asset-manifest.txt",
-            "gh release edit \"$GITHUB_REF_NAME\"",
-            "diff -u native-asset-manifest.txt published-asset-manifest.txt",
-        ],
-        "release-native.yml publish job",
-    )?;
-
-    if publish.matches("uses: actions/download-artifact@").count() != 3 {
-        bail!(
-            "release-baseline-check: release-native.yml publish must download exactly three allowlisted artifact containers"
-        );
-    }
-    if publish
-        .matches("gh release edit \"$GITHUB_REF_NAME\"")
-        .count()
-        != 1
-    {
-        bail!(
-            "release-baseline-check: release-native.yml publish must make the draft public exactly once"
-        );
-    }
-
-    let release_action = "uses: softprops/action-gh-release@";
-    if native.matches(release_action).count() != 1 || !publish.contains(release_action) {
-        bail!(
-            "release-baseline-check: release-native.yml must call action-gh-release exactly once inside publish"
-        );
-    }
-    for build_job in ["desktop-windows", "mobile-android", "desktop-macos"] {
-        let block = yaml_mapping_block(&native, 2, build_job)?;
-        if block.contains(release_action) {
+        if candidate_header.contains(forbidden) {
             bail!(
-                "release-baseline-check: native build job {build_job} must not publish a GitHub Release"
+                "release-baseline-check: release-candidate.yml top-level permissions overgrant {forbidden}"
             );
         }
     }
 
+    let validate = yaml_mapping_block(&candidate, 2, "validate")?;
+    require_ordered_text(
+        &validate,
+        &[
+            "Checkout exact dispatch commit",
+            "ref: ${{ github.sha }}",
+            "Lock candidate version and commit",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
+            "scripts/check-release-version-match.sh \"v$VERSION\"",
+            "cargo fmt --all -- --check",
+            "cargo run --locked --quiet -p deve_baseline -- all",
+            "cargo run --locked --quiet -p deve_baseline -- full",
+            "cargo clippy --locked --all-targets -- -D warnings",
+            "cargo test --locked",
+        ],
+        "release-candidate.yml validate job",
+    )?;
+
+    let docker = yaml_mapping_block(&candidate, 2, "docker-linux-amd64")?;
+    require_ordered_text(
+        &docker,
+        &[
+            "Build linux/amd64 image once",
+            "--platform linux/amd64",
+            "--producer docker.multiclient-product",
+            "--producer docker.p2p-gap-recovery",
+            "--producer security.tag-ready-audit",
+            "docker save --output",
+            "docker image rm",
+            "docker load --input",
+            "Generate exact Docker image SPDX 2.3 SBOM",
+            "deve-docker-candidate-${{ github.sha }}",
+        ],
+        "release-candidate.yml Docker job",
+    )?;
+    if docker.matches("docker buildx build").count() != 1 {
+        bail!("release-baseline-check: candidate Docker image must be built exactly once");
+    }
+
+    let native_call = yaml_mapping_block(&candidate, 2, "native")?;
+    require_text(
+        &native_call,
+        "uses: ./.github/workflows/release-native.yml",
+        "release-candidate.yml native call",
+    )?;
+    require_text(
+        &native_call,
+        "candidate_head: ${{ github.sha }}",
+        "release-candidate.yml native call",
+    )?;
+    if native_call.contains("secrets: inherit") {
+        bail!("release-baseline-check: candidate must not inherit all native secrets");
+    }
+    let secret_map = yaml_mapping_block(&native_call, 4, "secrets")?;
+    require_exact_mapping_keys(
+        &secret_map,
+        6,
+        &ANDROID_SIGNING_SECRETS,
+        "release-candidate.yml native secret map",
+    )?;
+
+    let assemble = yaml_mapping_block(&candidate, 2, "assemble")?;
+    require_ordered_text(
+        &assemble,
+        &[
+            "Generate exact source SPDX 2.3 SBOM before artifact download",
+            "Download exact Windows candidate",
+            "Download exact macOS candidate",
+            "Download exact Android candidate",
+            "Download exact Docker candidate",
+            "Materialize a strict candidate tree",
+            "require_count windows",
+            "require_count macos",
+            "require_count android",
+            "require_count docker",
+            "actions/attest@a1948c3f048ba23858d222213b7c278aabede763",
+            "sbom-path:",
+            "create-storage-record: false",
+            "Seal the returned attestation bundles",
+            "--provenance-bundle",
+            "--docker-sbom-bundle",
+            "release-candidate assemble",
+            "release-candidate verify",
+            "--producer release.candidate-bundle",
+            "deve-release-candidate-${{ github.sha }}",
+        ],
+        "release-candidate.yml assemble job",
+    )?;
+    for permission in [
+        "artifact-metadata: write",
+        "attestations: write",
+        "id-token: write",
+    ] {
+        require_text(
+            &assemble,
+            permission,
+            "release-candidate.yml assemble permissions",
+        )?;
+    }
     Ok(())
 }
 
-const ANDROID_SIGNING_SECRETS: [&str; 4] = [
-    "ANDROID_KEYSTORE_BASE64",
-    "ANDROID_KEYSTORE_PASSWORD",
-    "ANDROID_KEY_ALIAS",
-    "ANDROID_KEY_PASSWORD",
-];
+fn check_native_candidate(root: &Path) -> Result<()> {
+    let native = read_workflow(root, "release-native.yml")?;
+    let on = yaml_mapping_block(&native, 0, "on")?;
+    let workflow_call = yaml_mapping_block(&on, 2, "workflow_call")?;
+    let inputs = yaml_mapping_block(&workflow_call, 4, "inputs")?;
+    require_exact_mapping_keys(
+        &inputs,
+        6,
+        &["candidate_head", "version"],
+        "release-native.yml inputs",
+    )?;
+    let secrets = yaml_mapping_block(&workflow_call, 4, "secrets")?;
+    require_exact_mapping_keys(
+        &secrets,
+        6,
+        &ANDROID_SIGNING_SECRETS,
+        "release-native.yml secrets",
+    )?;
+    for secret in ANDROID_SIGNING_SECRETS {
+        let declaration = yaml_mapping_block(&secrets, 6, secret)?;
+        require_text(
+            &declaration,
+            "required: true",
+            "release-native.yml signing secret",
+        )?;
+    }
+    if has_v_tag_trigger(&native)
+        || native.contains("  push:")
+        || native.contains("gh release")
+        || native.contains("softprops/action-gh-release")
+        || native.contains("  publish:")
+    {
+        bail!("release-baseline-check: release-native.yml must remain build/smoke-only");
+    }
+    for job in ["desktop-windows", "desktop-macos", "mobile-android"] {
+        yaml_mapping_block(&native, 2, job)?;
+    }
+    for required in [
+        "--producer desktop.local-backend",
+        "--producer desktop.remote-browser",
+        "--producer desktop.macos-target-host",
+        "--producer android.local-backend",
+        "--producer android.remote-browser",
+        "deve-notebook-${VERSION}-macos-${arch}.dmg",
+        "--ks-pass env:ANDROID_KEYSTORE_PASSWORD",
+        "--key-pass env:ANDROID_KEY_PASSWORD",
+        "apksigner\" verify --verbose --print-certs",
+        "android-signer-sha256.txt",
+    ] {
+        require_text(&native, required, "release-native.yml")?;
+    }
+    for forbidden in [
+        "desktop-linux:",
+        "mobile-ios:",
+        "deve-desktop-linux",
+        "deve-mobile-ios",
+        "DEVE_DESKTOP_PACKAGE_BUNDLES: deb,appimage",
+        "macos-universal",
+        "pass:$ANDROID_KEYSTORE_PASSWORD",
+        "pass:$ANDROID_KEY_PASSWORD",
+    ] {
+        if native.contains(forbidden) {
+            bail!("release-baseline-check: forbidden first-tag native surface {forbidden}");
+        }
+    }
+    Ok(())
+}
+
+fn check_aggregate(root: &Path) -> Result<()> {
+    let aggregate = read_workflow(root, "acceptance-aggregate.yml")?;
+    require_ordered_text(
+        &aggregate,
+        &[
+            "receipt_run_ids:",
+            "exactly one release-candidate run ID is required",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
+            ".github/workflows/release-candidate.yml",
+            "deve-release-candidate-$GITHUB_SHA",
+            "deve-acceptance-receipts-*",
+            "Verify sealed artifacts and GitHub attestations",
+            "candidate manifest run attempt does not match Actions metadata",
+            "provenance-attestation",
+            "docker-sbom-attestation",
+            "scripts/check-release-candidate-bundle.sh",
+            "acceptance-collect",
+            "acceptance-matrix",
+            "--tag-ready",
+            "deve-release-sealed-${{ github.sha }}",
+        ],
+        "acceptance-aggregate.yml",
+    )?;
+    if has_v_tag_trigger(&aggregate) || aggregate.contains("  push:") {
+        bail!("release-baseline-check: acceptance aggregate must be manual-only");
+    }
+    require_text(
+        &aggregate,
+        "persist-credentials: false",
+        "acceptance aggregate checkout",
+    )?;
+    Ok(())
+}
+
+fn check_promotion(root: &Path) -> Result<()> {
+    let release = read_workflow(root, "release.yml")?;
+    let promote = yaml_mapping_block(&release, 2, "promote-sealed-candidate")?;
+    require_ordered_text(
+        &promote,
+        &[
+            "Validate SemVer tag before checkout",
+            "invalid SemVer release tag",
+            "uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "Bind annotated tag to one aggregate run",
+            "git rev-parse \"${GITHUB_REF}^{}\"",
+            "Deve-Acceptance-Aggregate-Run:",
+            ".github/workflows/acceptance-aggregate.yml",
+            "bound aggregate run must be immutable attempt 1",
+            "deve-release-sealed-$GITHUB_SHA",
+            "Verify candidate bytes, tag version, attestations, and receipts",
+            "provenance-attestation",
+            "docker-sbom-attestation",
+            "scripts/check-release-candidate-bundle.sh",
+            "acceptance-matrix",
+            "--tag-ready",
+            "Create or validate draft and upload unchanged assets",
+            "scripts/check-release-tag-binding.sh",
+            "scripts/probe-release-remote.sh",
+            "gh release upload",
+            "docker load --input",
+            "release-version-order",
+            "registry_version=\"${version/+/_build_}\"",
+            "docker push \"$VERSION_TAG\"",
+            "docker buildx imagetools inspect",
+            "actions/attest@a1948c3f048ba23858d222213b7c278aabede763",
+            "create-storage-record: false",
+            "Publish verified GitHub Release",
+            "gh release edit",
+        ],
+        "release.yml promotion job",
+    )?;
+    require_text(
+        &release,
+        "group: release-promotion-${{ github.repository }}",
+        "release.yml promotion concurrency",
+    )?;
+    require_text(
+        &release,
+        "persist-credentials: false",
+        "release.yml checkout",
+    )?;
+    require_text(
+        &release,
+        "already_published",
+        "published-release idempotent recovery",
+    )?;
+    for forbidden in [
+        "docker build ",
+        "docker buildx build",
+        "docker/build-push-action",
+        "cargo tauri",
+        "cargo test",
+        "cargo clippy",
+        "scripts/build-web-dist-ci.sh",
+        "uses: ./.github/workflows/release-native.yml",
+        "secrets: inherit",
+        "runs?head_sha=$GITHUB_SHA",
+    ] {
+        if promote.contains(forbidden) {
+            bail!(
+                "release-baseline-check: tag promotion contains forbidden rebuild/latest-selection token {forbidden}"
+            );
+        }
+    }
+    if release.matches("gh release edit").count() != 1 {
+        bail!("release-baseline-check: release.yml must publish the verified draft exactly once");
+    }
+    Ok(())
+}
 
 fn read_workflow(root: &Path, name: &str) -> Result<String> {
     let path = root.join(".github/workflows").join(name);

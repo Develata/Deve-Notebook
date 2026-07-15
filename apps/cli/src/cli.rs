@@ -72,6 +72,9 @@ pub(crate) enum Commands {
         dry_run: bool,
         #[arg(long, hide = true)]
         native_loopback: bool,
+        /// Bind an ordinary release backend to 127.0.0.1 without native session semantics.
+        #[arg(long, hide = true, conflicts_with = "native_loopback")]
+        loopback_only: bool,
     },
     /// Export ledger to JSONL or Markdown
     Export {

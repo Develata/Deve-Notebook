@@ -12,57 +12,48 @@ absent_tree	scripts	bincode
 absent	docs/registry/release-audit-warning-registry.md	RUSTSEC-2025-0141
 absent	docs/registry/release-audit-warning-registry.md	bincode
 contains	.github/workflows/release.yml	tags: ['v*']
-contains	.github/workflows/release.yml	Validate SemVer release tag
+contains	.github/workflows/release.yml	Validate SemVer tag before checkout
 contains	.github/workflows/release.yml	invalid SemVer release tag
-contains	.github/workflows/release.yml	needs: docker
-contains	.github/workflows/release.yml	uses: ./.github/workflows/release-native.yml
 absent	.github/workflows/release.yml	secrets: inherit
-contains	.github/workflows/release.yml	ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-contains	.github/workflows/release.yml	cargo clippy --locked --all-targets -- -D warnings
-contains	.github/workflows/release.yml	actions/checkout@v6
-contains	.github/workflows/release.yml	Match tag to checked-out package versions
+contains	.github/workflows/release.yml	persist-credentials: false
+contains	.github/workflows/release.yml	Bind annotated tag to one aggregate run
+contains	.github/workflows/release.yml	Deve-Acceptance-Aggregate-Run:
+contains	.github/workflows/release.yml	git rev-parse "${GITHUB_REF}^{}"
 contains	.github/workflows/release.yml	bash scripts/check-release-version-match.sh "$GITHUB_REF_NAME"
-contains	.github/workflows/release.yml	Test release smoke harnesses
-contains	.github/workflows/release.yml	actions/setup-node@v6
-contains	.github/workflows/release.yml	node-version: 24
-contains	.github/workflows/release.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
-contains	.github/workflows/release.yml	cargo install cargo-audit --locked
-contains	.github/workflows/release.yml	DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
-contains	.github/workflows/release.yml	cargo run --locked -p deve_baseline -- release-audit-gate tag-ready
-contains	.github/workflows/release.yml	scripts/plan-coverage.sh --write-report
-contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
-contains	.github/workflows/release.yml	scripts/check-architecture-registry.sh
-contains	.github/workflows/release.yml	scripts/check-native-track-boundary.sh
-contains	.github/workflows/release.yml	DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0 scripts/check-native-process-adapter-gate.sh
-contains	.github/workflows/release.yml	scripts/check-graph-baseline.sh
-absent	.github/workflows/release.yml	scripts/check-native-packaging-gate.sh
-absent	.github/workflows/release.yml	scripts/check-mobile-platform-package-preflight.sh
-absent	.github/workflows/release.yml	scripts/check-mobile-android-shell-package-build.sh
-absent	.github/workflows/release.yml	scripts/check-desktop-signing-preflight.sh
-absent	.github/workflows/release.yml	scripts/check-mobile-android-release-preflight.sh
-contains	.github/workflows/release.yml	cargo test --locked
+contains	.github/workflows/release.yml	scripts/check-release-candidate-bundle.sh
+contains	.github/workflows/release.yml	acceptance-matrix
+contains	.github/workflows/release.yml	--tag-ready
+contains	.github/workflows/release.yml	scripts/check-release-tag-binding.sh
+contains	.github/workflows/release.yml	scripts/probe-release-remote.sh
+contains	.github/workflows/release.yml	already_published
+contains	.github/workflows/release.yml	docker load --input
+contains	.github/workflows/release.yml	release-version-order
+contains	.github/workflows/release.yml	registry_version="${version/+/_build_}"
+contains	.github/workflows/release.yml	create-storage-record: false
+contains	.github/workflows/release.yml	gh release upload
+contains	.github/workflows/release.yml	gh release edit "$GITHUB_REF_NAME"
+contains	scripts/probe-release-remote.sh	404)
+contains	scripts/probe-release-remote.sh	transport failed
+contains	scripts/probe-release-remote.test.sh	GitHub 503 must fail closed
+contains	scripts/probe-release-remote.test.sh	ghcr-token-transient
+absent	.github/workflows/release.yml	docker buildx build
+absent	.github/workflows/release.yml	docker/build-push-action
+absent	.github/workflows/release.yml	uses: ./.github/workflows/release-native.yml
+absent	.github/workflows/release.yml	cargo tauri
+absent	.github/workflows/release.yml	cargo test --locked
 contains	.github/workflows/release-native.yml	workflow_call:
 absent	.github/workflows/release-native.yml	tags: ['v*']
-contains	.github/workflows/release-native.yml	publish:
-contains	.github/workflows/release-native.yml	needs: [desktop-windows, mobile-android, desktop-macos]
-contains	.github/workflows/release-native.yml	actions/download-artifact@v8
-contains	.github/workflows/release-native.yml	Validate native artifact manifest
-contains	.github/workflows/release-native.yml	expected exactly four downloaded files
-contains	.github/workflows/release-native.yml	Require absent or draft GitHub Release
-contains	.github/workflows/release-native.yml	existing GitHub Release must be draft before asset upload
-contains	.github/workflows/release-native.yml	Upload validated assets to a draft GitHub Release
-contains	.github/workflows/release-native.yml	draft: true
-contains	.github/workflows/release-native.yml	diff -u native-asset-manifest.txt uploaded-asset-manifest.txt
-contains	.github/workflows/release-native.yml	gh release edit "$GITHUB_REF_NAME"
-contains	.github/workflows/release-native.yml	Linux GTK3/WebKitGTK desktop artifacts
-contains	.github/workflows/release-native.yml	0006 excludes from the first-tag release set
-contains	.github/workflows/release-native.yml	deve-desktop-windows
-contains	.github/workflows/release-native.yml	deve-mobile-android
-contains	.github/workflows/release-native.yml	deve-desktop-macos
-contains	.github/workflows/release-native.yml	softprops/action-gh-release@v2
-contains	.github/workflows/release-native.yml	DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
 contains	.github/workflows/release-native.yml	ANDROID_KEYSTORE_BASE64
-contains	.github/workflows/release-native.yml	UNSIGNED APK that cannot be installed
+contains	.github/workflows/release-native.yml	--producer desktop.local-backend
+contains	.github/workflows/release-native.yml	--producer desktop.remote-browser
+contains	.github/workflows/release-native.yml	--producer android.local-backend
+contains	.github/workflows/release-native.yml	--producer android.remote-browser
+contains	.github/workflows/release-native.yml	--ks-pass env:ANDROID_KEYSTORE_PASSWORD
+contains	.github/workflows/release-native.yml	android-signer-sha256.txt
+absent	.github/workflows/release-native.yml	publish:
+absent	.github/workflows/release-native.yml	gh release
+absent	.github/workflows/release-native.yml	softprops/action-gh-release
+absent	.github/workflows/release-native.yml	macos-universal
 absent	.github/workflows/release-native.yml	desktop-linux:
 absent	.github/workflows/release-native.yml	deve-desktop-linux
 absent	.github/workflows/release-native.yml	mobile-ios:
@@ -76,19 +67,20 @@ absent	apps/mobile/tauri.conf.json	"version": "0.0.1"
 contains	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "0.1.0"
 absent	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "1.0"
 contains	docs/plan/18_release.md	.github/workflows/release-native.yml
-contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK
+contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与已签名 Android ARM64 APK
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
-contains	.github/workflows/release.yml	docker/build-push-action@v6
-contains	.github/workflows/release.yml	platforms: linux/amd64
-contains	.github/workflows/release.yml	type=raw,value=latest
-contains	.github/workflows/release.yml	Build release candidate image once
-contains	.github/workflows/release.yml	push: false
-contains	.github/workflows/release.yml	DEVE_DOCKER_SMOKE_SKIP_BUILD: '1'
-contains	.github/workflows/release.yml	DEVE_DOCKER_MULTI_SKIP_BUILD: '1'
-contains	.github/workflows/release.yml	Verify candidate identity after smokes
-contains	.github/workflows/release.yml	docker buildx imagetools inspect
-contains	.github/workflows/release.yml	Validate tags and push verified candidate image
-contains	.github/workflows/release.yml	flavor: latest=false
+contains	.github/workflows/release-candidate.yml	workflow_dispatch:
+contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT
+contains	.github/workflows/release-candidate.yml	cargo run --locked --quiet -p deve_baseline -- full
+contains	.github/workflows/release-candidate.yml	Build linux/amd64 image once
+contains	.github/workflows/release-candidate.yml	--platform linux/amd64
+contains	.github/workflows/release-candidate.yml	--producer docker.multiclient-product
+contains	.github/workflows/release-candidate.yml	--producer docker.p2p-gap-recovery
+contains	.github/workflows/release-candidate.yml	--producer security.tag-ready-audit
+contains	.github/workflows/release-candidate.yml	docker save --output
+contains	.github/workflows/release-candidate.yml	anchore/sbom-action@
+contains	.github/workflows/release-candidate.yml	actions/attest@
+contains	.github/workflows/release-candidate.yml	--producer release.candidate-bundle
 contains	.github/workflows/release.yml	validate-release-image-tags.sh
 contains	.github/workflows/check.yml	name: Check
 contains	.github/workflows/check.yml	branches: [main]
@@ -122,22 +114,28 @@ contains	.github/workflows/docker-smoke.yml	acceptance-collect
 contains	.github/workflows/docker-smoke.yml	deve-acceptance-receipts-linux
 contains	.github/workflows/acceptance-aggregate.yml	workflow_dispatch:
 contains	.github/workflows/acceptance-aggregate.yml	receipt_run_ids:
-contains	.github/workflows/acceptance-aggregate.yml	.head_sha
+contains	.github/workflows/acceptance-aggregate.yml	GITHUB_RUN_ATTEMPT
+contains	.github/workflows/acceptance-aggregate.yml	.run_attempt
+contains	.github/workflows/acceptance-aggregate.yml	persist-credentials: false
 contains	.github/workflows/acceptance-aggregate.yml	deve-acceptance-receipts-*
+contains	.github/workflows/acceptance-aggregate.yml	scripts/check-release-candidate-bundle.sh
 contains	.github/workflows/acceptance-aggregate.yml	acceptance-collect
 contains	.github/workflows/acceptance-aggregate.yml	--tag-ready
-contains	.github/workflows/acceptance-aggregate.yml	deve-acceptance-tag-ready-${{ github.sha }}
-contains	.github/workflows/release.yml	Require exact-HEAD aggregated acceptance receipts
-contains	.github/workflows/release.yml	acceptance-aggregate.yml/runs?head_sha=$GITHUB_SHA
-contains	.github/workflows/release.yml	deve-acceptance-tag-ready-$GITHUB_SHA
+contains	.github/workflows/acceptance-aggregate.yml	deve-release-sealed-${{ github.sha }}
+contains	.github/workflows/release.yml	deve-release-sealed-$GITHUB_SHA
+absent	.github/workflows/release.yml	acceptance-aggregate.yml/runs?head_sha=$GITHUB_SHA
 contains	.github/workflows/native-target-host.yml	workflow_dispatch:
 contains	.github/workflows/native-target-host.yml	target:
 contains	.github/workflows/native-target-host.yml	required_preflight:
 contains	.github/workflows/native-target-host.yml	run_desktop_package_build:
 contains	.github/workflows/native-target-host.yml	run_desktop_startup_smoke:
 contains	.github/workflows/native-target-host.yml	run_desktop_installer_smoke:
+contains	.github/workflows/native-target-host.yml	run_desktop_remote_browser_smoke:
+contains	.github/workflows/native-target-host.yml	desktop_remote_head_proof_url:
 contains	.github/workflows/native-target-host.yml	run_mobile_android_package_build:
 contains	.github/workflows/native-target-host.yml	run_mobile_android_install_startup_smoke:
+contains	.github/workflows/native-target-host.yml	run_mobile_android_remote_browser_smoke:
+contains	.github/workflows/native-target-host.yml	mobile_android_remote_head_proof_url:
 contains	.github/workflows/native-target-host.yml	run_mobile_ios_package_build:
 contains	.github/workflows/native-target-host.yml	run_mobile_ios_install_startup_smoke:
 contains	.github/workflows/native-target-host.yml	aarch64-apple-ios-sim
@@ -190,6 +188,20 @@ contains	docs/registry/acceptance-producers.json	"DEVE_MOBILE_IOS_BOOT_SIMULATOR
 contains	.github/workflows/native-target-host.yml	desktop_remote_https_origin:
 contains	.github/workflows/native-target-host.yml	--producer desktop.remote-browser
 contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-desktop-remote
+contains	.github/workflows/native-target-host.yml	steps.desktop_remote_fixture.outputs.source_kind == 'internal'
+contains	.github/workflows/native-target-host.yml	Desktop Windows external RemoteBrowser diagnostic
+contains	.github/workflows/native-target-host.yml	steps.android_remote_fixture.outputs.source_kind == 'internal'
+contains	.github/workflows/native-target-host.yml	Mobile Android external RemoteBrowser diagnostic
+contains	.github/workflows/native-target-host.yml	--external-head-proof-url
+contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.ps1 stop
+contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.sh stop
+contains	.github/workflows/native-target-host.yml	scripts/desktop-install-root.test.ps1
+contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.test.ps1
+contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.test.sh
+contains	scripts/remote-browser-fixture.sh	serve --port '{port}' --loopback-only
+contains	scripts/remote-browser-fixture.ps1	"--loopback-only"
+contains	docs/registry/acceptance-producers.json	"DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/desktop-install-root.ps1"
 contains	.github/workflows/native-target-host.yml	--producer desktop.macos-target-host
 contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-desktop-macos
 contains	.github/workflows/native-target-host.yml	--producer ios.simulator-lifecycle
@@ -198,9 +210,23 @@ contains	.github/AGENTS.md	optional target-host workflows
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DISPATCH
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_REMOTE_BROWSER_SMOKE
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_HTTPS_ORIGIN
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_USERNAME
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_HEAD_PROOF_URL
 contains	scripts/dispatch-native-target-host-workflow.sh	desktop installer smoke requires DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true
+contains	scripts/dispatch-native-target-host-workflow.sh	desktop RemoteBrowser smoke requires desktop package build and installer smoke
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_USERNAME
+contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL
+contains	scripts/dispatch-native-target-host-workflow.sh	Android RemoteBrowser smoke requires Android package build and install/startup smoke
+contains	scripts/dispatch-native-target-host-workflow.sh	external override requires HTTPS origin, username, and same-origin HEAD proof URL together
+contains	scripts/dispatch-native-target-host-workflow.sh	contains a forbidden CR/LF control character
+absent	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_PASSWORD
+absent	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_PASSWORD
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE
 contains	scripts/dispatch-native-target-host-workflow.sh	WORKFLOW_FILE="native-target-host.yml"
@@ -208,6 +234,11 @@ contains	scripts/dispatch-native-target-host-workflow.sh	workflow run "$WORKFLOW
 contains	scripts/dispatch-native-target-host-workflow.sh	DEVE_GITHUB_TOKEN
 contains	scripts/dispatch-native-target-host-workflow.sh	api.github.com/repos
 contains	scripts/dispatch-native-target-host-workflow.sh	dry-run
+contains	scripts/dispatch-native-target-host-workflow.test.sh	run_desktop_remote_browser_smoke=true
+contains	scripts/dispatch-native-target-host-workflow.test.sh	run_mobile_android_remote_browser_smoke=true
+contains	scripts/dispatch-native-target-host-workflow.test.sh	dispatch command unexpectedly contains a password/auth-secret input
+contains	scripts/dispatch-native-target-host-workflow.test.sh	API payload unexpectedly contains a password, auth secret, or dispatch token
+contains	scripts/dispatch-native-target-host-workflow.test.sh	dispatch-native-target-host-workflow-test: ok
 contains	scripts/install-native-target-host-tools.sh	trunk-rs/trunk/releases/download
 contains	scripts/install-native-target-host-tools.sh	tauri-apps/tauri/releases/download
 contains	scripts/install-native-target-host-tools.sh	native-target-host-tools-install: ok
@@ -490,19 +521,18 @@ contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-005
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-001
 contains	docs/acceptance-cases/12_tech_release.md	tags: ['v*']
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	release_yml_is_only_direct_v_tag_entry true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	non_semver_v_tag_rejected_before_checkout_build_publish true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_delivery_uses_workflow_call_after_docker true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	github_release_created_once_after_all_native_builds true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	non_semver_v_tag_rejected_before_checkout_or_promotion true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	candidate_version_and_all_jobs_bound_to_exact_head true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	github_release_created_once_from_sealed_native_assets true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_failure_creates_no_github_release true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_manifest_requires_exact_allowlisted_asset_set true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	native_manifest_rejects_extra_downloaded_files true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	candidate_manifest_rejects_path_escape_symlink_reparse_duplicate_extra_or_corrupt_files true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	candidate_and_aggregate_rerun_rejected_in_favor_of_fresh_dispatch true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	existing_public_release_rejected_before_asset_upload true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	github_release_remains_draft_until_remote_asset_manifest_matches true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	reusable_native_receives_only_android_signing_secrets true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	docker_image_may_publish_before_native_delivery_completes
-contains	docs/acceptance-cases/12_tech_release.md	type=semver,pattern={{version}}
-contains	docs/acceptance-cases/12_tech_release.md	type=raw,value=latest
-contains	docs/acceptance-cases/12_tech_release.md	ghcr.io/${{ github.repository }}
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	sealed_provenance_and_spdx_attestation_bundles_verified_offline true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	sealed_android_apk_signer_reextracted_and_exactly_one true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	latest_requires_strict_semver_and_git_history_progression true
 absent	docs/acceptance-cases/12_tech_release.md	run: ls dist
 absent	docs/acceptance-cases/12_tech_release.md	stdout_contains: "v1.0.0"
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release-audit-gate
@@ -524,7 +554,7 @@ contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_P2P_MESH_REQUIRED=
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-010	live post-reconnect vector equality is not exposed
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_has_no_independent_tag_trigger true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_publish_waits_for_all_required_builds true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	release_native_is_build_and_target_host_smoke_only true
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_DOCKER_BIN=/path/to/docker
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/smoke-runtime-happy-path.sh
@@ -843,7 +873,7 @@ contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- 
 contains	docs/acceptance-cases/12_tech_release.md	validation_script_ownership_policy_classified true
 contains	tools/baseline/src/main.rs	"full" => run_full_baselines()
 contains	tools/baseline/src/main.rs	"acceptance-matrix" => acceptance_matrix::run(&command_args)
-contains	.github/workflows/release.yml	cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
+contains	.github/workflows/release.yml	--tag-ready "$DEVE_SEALED_ROOT/receipts"
 contains	tools/baseline/src/main.rs	"architecture-registry" => architecture_registry::run()
 contains	tools/baseline/src/main.rs	mod cargo_gate;
 contains	tools/baseline/src/main.rs	mod desktop_package_preflight;
@@ -1070,8 +1100,12 @@ case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_git_unava
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_packaged_ui_uses_installed_binary_and_real_webview true
 contains	scripts/check-release-version-match.sh	release-version-match: ok
 contains	scripts/check-release-version-match.test.sh	release-version-match-test: ok
-contains	scripts/validate-release-image-tags.sh	expected exactly version and latest image tags before push
+contains	scripts/validate-release-image-tags.sh	registry_version="${VERSION/+/_build_}"
 contains	scripts/validate-release-image-tags.test.sh	release-image-tags-test: ok
+contains	scripts/check-android-apk-signer.sh	expected exactly one APK signer
+contains	scripts/check-android-apk-signer.test.sh	android-apk-signer-test: ok
+contains	scripts/check-release-tag-binding.sh	remote annotated tag object changed
+contains	tools/baseline/src/release_version_order.rs	candidate release precedence
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
 contains	scripts/smoke-desktop-packaged-ui.mjs	desktop-packaged-ui-webview: ok
 contains	scripts/smoke-desktop-packaged-ui.test.mjs	direct execution fails closed without a CDP endpoint

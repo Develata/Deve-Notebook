@@ -45,7 +45,10 @@ mod network;
 mod perf_budget;
 mod release;
 mod release_audit_gate;
+mod release_candidate;
+mod release_version_order;
 mod reliability_observability;
+mod remote_fixture_password;
 mod rendering;
 mod repo_file_ops;
 mod script_gate_preflight;
@@ -90,6 +93,9 @@ fn run() -> Result<()> {
         "architecture-registry" => architecture_registry::run(),
         "network" => network::run(),
         "release" => release::run(),
+        "release-candidate" => release_candidate::run(&command_args),
+        "release-version-order" => release_version_order::run(&command_args),
+        "remote-fixture-password-hash" => remote_fixture_password::run(&command_args),
         "dev-runbook" => dev_runbook::run(),
         "diff-color" => diff_color::run(),
         "feature-operation-paths" => feature_operation_paths::run(),
@@ -157,7 +163,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-matrix|acceptance-receipt|acceptance-run|acceptance-collect|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|backup|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|perf-budget|reliability-observability|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-matrix|acceptance-receipt|acceptance-run|acceptance-collect|architecture-registry|network|release|release-candidate|release-version-order|remote-fixture-password-hash|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|backup|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|perf-budget|reliability-observability|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
             );
             Ok(())
         }

@@ -7,11 +7,11 @@
             app_release_tag_push [label="git::push_tag", fillcolor="#bfdbfe"];
             app_release_tag_filter [label="release.yml::tag_filter", fillcolor="#eff6ff"];
             app_release_tag_dispatch [label="release.yml::workflow_dispatch", fillcolor="#eff6ff"];
-            app_release_quality_job [label="release.yml::test_job", fillcolor="#eff6ff"];
-            app_release_quality_clippy [label="release.yml::clippy_gate", fillcolor="#bfdbfe"];
-            app_release_quality_tests [label="release.yml::test_gate", fillcolor="#bfdbfe"];
+            app_release_quality_job [label="release-candidate.yml::validate_job", fillcolor="#eff6ff"];
+            app_release_quality_clippy [label="release-candidate.yml::clippy_gate", fillcolor="#bfdbfe"];
+            app_release_quality_tests [label="release-candidate.yml::test_gate", fillcolor="#bfdbfe"];
             app_release_publish_login [label="release.yml::registry_login", fillcolor="#eff6ff"];
-            app_release_publish_metadata [label="release.yml::docker_metadata", fillcolor="#eff6ff"];
+            app_release_publish_metadata [label="release.yml::docker_safe_tag_policy", fillcolor="#eff6ff"];
             app_release_publish_push [label="release.yml::image_push", fillcolor="#bfdbfe"];
             app_release_verify_workflow [label="workflow::surface_inspection", fillcolor="#eff6ff"];
             app_release_verify_channel [label="release::channel_surface", fillcolor="#eff6ff"];

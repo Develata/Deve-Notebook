@@ -103,6 +103,16 @@ impl ServerLaunchOptions {
         }
     }
 
+    pub fn loopback_release(port: u16) -> Self {
+        Self {
+            port,
+            bind_host: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            advertised_host: "127.0.0.1",
+            runtime_environment: RuntimeEnvironment::from_env(),
+            native: None,
+        }
+    }
+
     pub fn native_loopback(port: u16, session_bound: bool) -> Self {
         Self {
             port,
@@ -240,6 +250,17 @@ mod tests {
         assert_eq!(launch.node_role_label(), "main");
         assert_eq!(launch.runtime_environment(), RuntimeEnvironment::from_env());
         assert_eq!(launch.native_service_summary(), None);
+    }
+
+    #[test]
+    fn loopback_release_is_main_without_native_session_surface() {
+        let launch = ServerLaunchOptions::loopback_release(3001);
+
+        assert_eq!(launch.bind_addr(), SocketAddr::from(([127, 0, 0, 1], 3001)));
+        assert_eq!(launch.ws_display_base(), "ws://127.0.0.1:3001");
+        assert_eq!(launch.node_role_label(), "main");
+        assert_eq!(launch.native_service_summary(), None);
+        assert!(!launch.is_native_loopback());
     }
 
     #[test]

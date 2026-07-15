@@ -41,6 +41,10 @@ on:
         description: Temporary Desktop RemoteBrowser smoke username.
         type: string
         default: ""
+      desktop_remote_head_proof_url:
+        description: Same-origin HTTPS endpoint whose body is the exact candidate commit SHA (external override only).
+        type: string
+        default: ""
       run_mobile_android_package_build:
         description: Run Mobile Android shell-only package build after preflight.
         type: boolean
@@ -59,6 +63,10 @@ on:
         default: ""
       mobile_android_remote_username:
         description: Temporary Android RemoteBrowser smoke username.
+        type: string
+        default: ""
+      mobile_android_remote_head_proof_url:
+        description: Same-origin HTTPS endpoint whose body is the exact candidate commit SHA (external override only).
         type: string
         default: ""
       run_mobile_ios_package_build:
@@ -266,6 +274,16 @@ jobs:
         id: desktop_windows_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
+      - name: Desktop RemoteBrowser fixture regressions
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/desktop-install-root.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop install-root regression failed' }
+          pwsh -NoProfile -File scripts/remote-browser-fixture.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser fixture regression failed' }
+          node --test scripts/smoke-desktop-remote-browser.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser source regression failed' }
+
       - name: Reject Desktop Windows startup smoke without package build
         id: desktop_windows_invalid_startup_request
         if: ${{ ! inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke }}
@@ -281,9 +299,9 @@ jobs:
           exit 1
 
       - name: Reject incomplete Desktop RemoteBrowser request
-        if: ${{ inputs.run_desktop_remote_browser_smoke && (! inputs.run_desktop_package_build || ! inputs.run_desktop_installer_smoke || inputs.desktop_remote_https_origin == '' || inputs.desktop_remote_username == '') }}
+        if: ${{ inputs.run_desktop_remote_browser_smoke && (! inputs.run_desktop_package_build || ! inputs.run_desktop_installer_smoke) }}
         run: |
-          echo "Desktop RemoteBrowser smoke requires package build, installer smoke, HTTPS origin, username, and DEVE_DESKTOP_REMOTE_PASSWORD."
+          echo "Desktop RemoteBrowser smoke requires package build and installer smoke. HTTPS credentials are optional paired overrides; otherwise the job creates an exact-HEAD fixture."
           exit 1
 
       - name: Desktop Windows package build
@@ -341,23 +359,126 @@ jobs:
           Remove-Item -LiteralPath $workRoot -Recurse -Force -ErrorAction SilentlyContinue
           $process = Start-Process -FilePath $installers[0].FullName -ArgumentList @('/S', "/D=$installRoot") -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "NSIS install failed with exit code $($process.ExitCode)" }
+          $marker = @{ schema = 1; marker = 'deve-desktop-remote-browser-smoke' } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText(
+            (Join-Path $installRoot '.deve-desktop-install-root.json'),
+            $marker,
+            [System.Text.UTF8Encoding]::new($false)
+          )
           $binaries = @(Get-ChildItem $installRoot -Recurse -File | Where-Object { $_.Name -in @('deve_desktop.exe', 'Deve Notebook.exe') })
           if ($binaries.Count -ne 1) { throw "expected exactly one installed Desktop binary, found $($binaries.Count)" }
           "DEVE_DESKTOP_BINARY=$($binaries[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "DEVE_DESKTOP_REMOTE_WORK_ROOT=$workRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "DEVE_DESKTOP_REMOTE_INSTALL_ROOT=$installRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Desktop Windows RemoteBrowser acceptance producer
+      - name: Prepare Desktop RemoteBrowser HTTPS fixture
+        id: desktop_remote_fixture
         if: ${{ inputs.run_desktop_remote_browser_smoke && inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
+        shell: pwsh
         env:
-          DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN: ${{ inputs.desktop_remote_https_origin }}
-          DEVE_DESKTOP_REMOTE_USERNAME: ${{ inputs.desktop_remote_username }}
-          DEVE_DESKTOP_REMOTE_PASSWORD: ${{ secrets.DEVE_DESKTOP_REMOTE_PASSWORD }}
-        run: >-
-          cargo run --locked -p deve_baseline -- acceptance-run
-          --tier target-host
-          --producer desktop.remote-browser
-          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-remote"
+          EXTERNAL_ORIGIN: ${{ inputs.desktop_remote_https_origin }}
+          EXTERNAL_USERNAME: ${{ inputs.desktop_remote_username }}
+          EXTERNAL_HEAD_PROOF_URL: ${{ inputs.desktop_remote_head_proof_url }}
+          EXTERNAL_PASSWORD: ${{ secrets.DEVE_DESKTOP_REMOTE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Assert-NoControl([string]$Value, [string]$Label) {
+            if ($Value.IndexOfAny([char[]]"`r`n`0") -ge 0) { throw "$Label contains a forbidden control character" }
+          }
+          $externalValues = @($env:EXTERNAL_ORIGIN, $env:EXTERNAL_USERNAME, $env:EXTERNAL_HEAD_PROOF_URL)
+          $externalCount = @($externalValues | Where-Object { -not [string]::IsNullOrEmpty($_) }).Count
+          if ($externalCount -ne 0 -and $externalCount -ne 3) {
+            throw 'Desktop RemoteBrowser external override requires origin, username, and same-origin HEAD proof URL together'
+          }
+          foreach ($entry in @(
+            @($env:EXTERNAL_ORIGIN, 'origin'), @($env:EXTERNAL_USERNAME, 'username'),
+            @($env:EXTERNAL_HEAD_PROOF_URL, 'HEAD proof URL'), @($env:EXTERNAL_PASSWORD, 'password')
+          )) { Assert-NoControl $entry[0] $entry[1] }
+
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          if ($externalCount -eq 3) {
+            $sourceKind = 'external'
+            if (-not $env:EXTERNAL_PASSWORD) { throw 'Desktop RemoteBrowser external override requires DEVE_DESKTOP_REMOTE_PASSWORD' }
+            Write-Output "::add-mask::$env:EXTERNAL_USERNAME"
+            Write-Output "::add-mask::$env:EXTERNAL_PASSWORD"
+            $externalCredentials = Join-Path $env:RUNNER_TEMP 'deve-desktop-external-credentials.json'
+            try {
+              @{ username = $env:EXTERNAL_USERNAME; password = $env:EXTERNAL_PASSWORD } |
+                ConvertTo-Json | Set-Content -LiteralPath $externalCredentials -Encoding utf8
+              $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 start `
+                --state-dir $stateRoot `
+                --expected-head $env:GITHUB_SHA `
+                --external-origin $env:EXTERNAL_ORIGIN `
+                --external-head-proof-url $env:EXTERNAL_HEAD_PROOF_URL `
+                --external-credentials-file $externalCredentials
+            } finally {
+              Remove-Item -LiteralPath $externalCredentials -Force -ErrorAction SilentlyContinue
+            }
+          } else {
+            $sourceKind = 'internal'
+            cargo build --locked -p deve_baseline
+            if ($LASTEXITCODE -ne 0) { throw 'failed to build fixture password hasher' }
+            $headProof = Join-Path $env:RUNNER_TEMP 'deve-desktop-backend-head.txt'
+            [System.IO.File]::WriteAllText($headProof, $env:GITHUB_SHA, [System.Text.UTF8Encoding]::new($false))
+            $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 start `
+              --state-dir $stateRoot `
+              --expected-head $env:GITHUB_SHA `
+              --backend-executable (Resolve-Path target/release/deve_cli.exe).Path `
+              --backend-head-file $headProof `
+              --password-hasher (Resolve-Path target/debug/deve_baseline.exe).Path `
+              --password-hasher-arg remote-fixture-password-hash
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'failed to start Desktop RemoteBrowser fixture' }
+          $fixture = Get-Content -Raw -LiteralPath $envFile.Trim() | ConvertFrom-Json
+          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
+          Write-Output "::add-mask::$($credentials.username)"
+          Write-Output "::add-mask::$($credentials.password)"
+          if ($credentials.auth_secret) { Write-Output "::add-mask::$($credentials.auth_secret)" }
+          "source_kind=$sourceKind" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Desktop Windows RemoteBrowser acceptance producer
+        if: ${{ inputs.run_desktop_remote_browser_smoke && inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_remote_fixture.outputs.source_kind == 'internal' }}
+        shell: pwsh
+        run: |
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          $fixture = Get-Content -Raw -LiteralPath (Join-Path $stateRoot 'fixture-env.json') | ConvertFrom-Json
+          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
+          $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $fixture.https_origin
+          $env:DEVE_DESKTOP_REMOTE_USERNAME = $credentials.username
+          $env:DEVE_DESKTOP_REMOTE_PASSWORD = $credentials.password
+          cargo run --locked -p deve_baseline -- acceptance-run `
+            --tier target-host `
+            --producer desktop.remote-browser `
+            --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-remote"
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser acceptance producer failed' }
+
+      - name: Desktop Windows external RemoteBrowser diagnostic
+        if: ${{ inputs.run_desktop_remote_browser_smoke && inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_remote_fixture.outputs.source_kind == 'external' }}
+        shell: pwsh
+        run: |
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          $fixture = Get-Content -Raw -LiteralPath (Join-Path $stateRoot 'fixture-env.json') | ConvertFrom-Json
+          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
+          $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $fixture.https_origin
+          $env:DEVE_DESKTOP_REMOTE_USERNAME = $credentials.username
+          $env:DEVE_DESKTOP_REMOTE_PASSWORD = $credentials.password
+          pwsh -NoProfile -File scripts/check-desktop-remote-browser-smoke.ps1 `
+            -DesktopBinary $env:DEVE_DESKTOP_BINARY `
+            -InstallRoot $env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT `
+            -WorkRoot $env:DEVE_DESKTOP_REMOTE_WORK_ROOT `
+            -RemoteHttpsOrigin $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN `
+            -Username $env:DEVE_DESKTOP_REMOTE_USERNAME
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop external RemoteBrowser diagnostic failed' }
+
+      - name: Stop Desktop RemoteBrowser HTTPS fixture
+        if: ${{ always() && inputs.run_desktop_remote_browser_smoke }}
+        shell: pwsh
+        run: |
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          if (Test-Path -LiteralPath (Join-Path $stateRoot 'fixture-state.json') -PathType Leaf) {
+            pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 stop --state-dir $stateRoot
+            if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser fixture cleanup failed' }
+          }
 
       - name: Uninstall isolated Desktop RemoteBrowser candidate
         if: ${{ always() && inputs.run_desktop_remote_browser_smoke }}
@@ -367,12 +488,15 @@ jobs:
           if ([string]::IsNullOrEmpty($env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT) -or !(Test-Path -LiteralPath $env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT)) { exit 0 }
           $uninstallers = @(Get-ChildItem $env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT -Recurse -File | Where-Object { $_.Name -match '^(uninstall|unins.*)\.exe$' })
           if ($uninstallers.Count -ne 1) { throw "expected exactly one RemoteBrowser uninstaller, found $($uninstallers.Count)" }
+          $markerPath = Join-Path $env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT '.deve-desktop-install-root.json'
+          if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) { throw 'validated install-root marker is missing before uninstall' }
+          Remove-Item -LiteralPath $markerPath -Force
           $process = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "RemoteBrowser uninstall failed with exit code $($process.ExitCode)" }
           if (Test-Path -LiteralPath $env:DEVE_DESKTOP_REMOTE_INSTALL_ROOT) { throw 'RemoteBrowser install root remains after uninstall' }
 
       - name: Upload Desktop Windows RemoteBrowser receipts
-        if: ${{ always() && inputs.run_desktop_remote_browser_smoke }}
+        if: ${{ always() && inputs.run_desktop_remote_browser_smoke && steps.desktop_remote_fixture.outputs.source_kind == 'internal' }}
         uses: actions/upload-artifact@v7
         with:
           name: deve-acceptance-receipts-desktop-remote
@@ -481,6 +605,11 @@ jobs:
           DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: "0"
         run: scripts/check-native-process-adapter-gate.sh
 
+      - name: Linux RemoteBrowser fixture regressions
+        run: |
+          bash scripts/remote-browser-fixture.test.sh
+          bash scripts/dispatch-native-target-host-workflow.test.sh
+
       - name: Reject Android install smoke without package build
         id: mobile_android_invalid_request
         if: ${{ ! inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
@@ -489,9 +618,9 @@ jobs:
           exit 1
 
       - name: Reject Android RemoteBrowser smoke without complete execution inputs
-        if: ${{ inputs.run_mobile_android_remote_browser_smoke && (! inputs.run_mobile_android_package_build || ! inputs.run_mobile_android_install_startup_smoke || inputs.mobile_android_remote_https_origin == '' || inputs.mobile_android_remote_username == '') }}
+        if: ${{ inputs.run_mobile_android_remote_browser_smoke && (! inputs.run_mobile_android_package_build || ! inputs.run_mobile_android_install_startup_smoke || (inputs.mobile_android_remote_https_origin == '') != (inputs.mobile_android_remote_username == '')) }}
         run: |
-          echo "Android RemoteBrowser smoke requires package build, install/startup smoke, HTTPS origin, and username."
+          echo "Android RemoteBrowser smoke requires package build and install/startup; external override must provide both HTTPS origin and username."
           exit 1
 
       - name: Mobile Android shell package build (standalone)
@@ -528,20 +657,106 @@ jobs:
           path: ${{ runner.temp }}/deve-acceptance-android-local
           if-no-files-found: error
 
-      - name: Mobile Android RemoteBrowser acceptance producer
+      - name: Prepare Android RemoteBrowser HTTPS fixture
+        id: android_remote_fixture
         if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke }}
         env:
-          DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN: ${{ inputs.mobile_android_remote_https_origin }}
-          DEVE_MOBILE_ANDROID_REMOTE_USERNAME: ${{ inputs.mobile_android_remote_username }}
-          DEVE_MOBILE_ANDROID_REMOTE_PASSWORD: ${{ secrets.DEVE_MOBILE_ANDROID_REMOTE_PASSWORD }}
-        run: >-
-          cargo run --locked -p deve_baseline -- acceptance-run
-          --tier target-host
-          --producer android.remote-browser
-          --receipt-dir "${{ runner.temp }}/deve-acceptance-android-remote"
+          EXTERNAL_ORIGIN: ${{ inputs.mobile_android_remote_https_origin }}
+          EXTERNAL_USERNAME: ${{ inputs.mobile_android_remote_username }}
+          EXTERNAL_HEAD_PROOF_URL: ${{ inputs.mobile_android_remote_head_proof_url }}
+          EXTERNAL_PASSWORD: ${{ secrets.DEVE_MOBILE_ANDROID_REMOTE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for value in "$EXTERNAL_ORIGIN" "$EXTERNAL_USERNAME" "$EXTERNAL_HEAD_PROOF_URL" "$EXTERNAL_PASSWORD"; do
+            [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || { echo 'Android external override contains a forbidden control character' >&2; exit 1; }
+          done
+          external_count=0
+          for value in "$EXTERNAL_ORIGIN" "$EXTERNAL_USERNAME" "$EXTERNAL_HEAD_PROOF_URL"; do [[ -z "$value" ]] || external_count=$((external_count + 1)); done
+          [[ "$external_count" == 0 || "$external_count" == 3 ]] || { echo 'Android external override requires origin, username, and same-origin HEAD proof URL together' >&2; exit 1; }
+
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          if [[ "$external_count" == 3 ]]; then
+            source_kind=external
+            [[ -n "$EXTERNAL_PASSWORD" ]] || { echo 'Android external override requires DEVE_MOBILE_ANDROID_REMOTE_PASSWORD' >&2; exit 1; }
+            echo "::add-mask::$EXTERNAL_USERNAME"
+            echo "::add-mask::$EXTERNAL_PASSWORD"
+            external_credentials="$RUNNER_TEMP/deve-android-external-credentials.json"
+            trap 'rm -f -- "$external_credentials"' EXIT
+            node - "$external_credentials" "$EXTERNAL_USERNAME" "$EXTERNAL_PASSWORD" <<'NODE'
+          const fs = require("fs");
+          fs.writeFileSync(process.argv[2], JSON.stringify({username: process.argv[3], password: process.argv[4]}) + "\n", {mode: 0o600});
+          NODE
+            env_file="$(bash scripts/remote-browser-fixture.sh start \
+              --state-dir "$state_root" \
+              --expected-head "$GITHUB_SHA" \
+              --external-origin "$EXTERNAL_ORIGIN" \
+              --external-head-proof-url "$EXTERNAL_HEAD_PROOF_URL" \
+              --external-credentials-file "$external_credentials")"
+            rm -f -- "$external_credentials"
+            trap - EXIT
+          else
+            source_kind=internal
+            cargo build --locked --release -p deve_cli
+            cargo build --locked -p deve_baseline
+            head_proof="$RUNNER_TEMP/deve-android-backend-head.txt"
+            printf '%s' "$GITHUB_SHA" >"$head_proof"
+            env_file="$(bash scripts/remote-browser-fixture.sh start \
+              --state-dir "$state_root" \
+              --expected-head "$GITHUB_SHA" \
+              --backend-executable "$GITHUB_WORKSPACE/target/release/deve_cli" \
+              --backend-head-file "$head_proof" \
+              --password-hasher "$GITHUB_WORKSPACE/target/debug/deve_baseline" \
+              --password-hasher-arg remote-fixture-password-hash)"
+          fi
+          origin="$(jq -r .https_origin "$env_file")"
+          credentials_file="$(jq -r .credentials_file "$env_file")"
+          username="$(jq -r .username "$credentials_file")"
+          password="$(jq -r .password "$credentials_file")"
+          auth_secret="$(jq -r .auth_secret "$credentials_file")"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          [[ "$auth_secret" == "null" ]] || echo "::add-mask::$auth_secret"
+          printf 'source_kind=%s\n' "$source_kind" >>"$GITHUB_OUTPUT"
+
+      - name: Mobile Android RemoteBrowser acceptance producer
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke && steps.android_remote_fixture.outputs.source_kind == 'internal' }}
+        run: |
+          set -euo pipefail
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          fixture="$state_root/fixture-env.json"
+          credentials_file="$(jq -r .credentials_file "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$(jq -r .https_origin "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
+          export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
+          cargo run --locked -p deve_baseline -- acceptance-run \
+            --tier target-host \
+            --producer android.remote-browser \
+            --receipt-dir "${{ runner.temp }}/deve-acceptance-android-remote"
+
+      - name: Mobile Android external RemoteBrowser diagnostic
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke && steps.android_remote_fixture.outputs.source_kind == 'external' }}
+        run: |
+          set -euo pipefail
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          fixture="$state_root/fixture-env.json"
+          credentials_file="$(jq -r .credentials_file "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$(jq -r .https_origin "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
+          export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
+          export DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1
+          export DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY=remote
+          bash scripts/check-mobile-android-emulator-install-startup-smoke.sh
+
+      - name: Stop Android RemoteBrowser HTTPS fixture
+        if: ${{ always() && inputs.run_mobile_android_remote_browser_smoke }}
+        run: |
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          if [[ -f "$state_root/fixture-state.json" ]]; then
+            bash scripts/remote-browser-fixture.sh stop --state-dir "$state_root"
+          fi
 
       - name: Upload Mobile Android RemoteBrowser receipt
-        if: ${{ always() && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke }}
+        if: ${{ always() && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke && steps.android_remote_fixture.outputs.source_kind == 'internal' }}
         uses: actions/upload-artifact@v7
         with:
           name: deve-acceptance-receipts-android-remote

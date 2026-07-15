@@ -3,7 +3,9 @@ contains	docs/plan/18_release.md	non-vulnerability `cargo audit` warning
 contains	docs/features/15_release.md	release audit warning registry
 contains	docs/acceptance-cases/12_tech_release.md	cargo_audit_warnings_match_registry
 contains	docs/dev-runbook.md	cargo run -p deve_baseline -- release-audit-gate tag-ready
-contains	.github/workflows/release.yml	cargo run --locked -p deve_baseline -- release-audit-gate tag-ready
+contains	.github/workflows/release-candidate.yml	--producer security.tag-ready-audit
+contains	.github/workflows/acceptance-aggregate.yml	acceptance-matrix
+contains	.github/workflows/acceptance-aggregate.yml	--tag-ready
 contains	docs/registry/release-audit-warning-registry.md	# Release Audit Warning Registry
 contains	docs/plan/18_release.md	synthetic `YANKED`
 contains	docs/features/15_release.md	synthetic `YANKED`

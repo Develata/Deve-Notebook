@@ -1,17 +1,27 @@
 name: Release
+
 on:
   push:
     tags: ['v*']
 
 permissions:
   actions: read
-  contents: read
+  artifact-metadata: write
+  attestations: write
+  contents: write
+  id-token: write
+  packages: write
+
+concurrency:
+  group: release-promotion-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
-  test:
+  promote-sealed-candidate:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      - name: Validate SemVer release tag
+      - name: Validate SemVer tag before checkout
         shell: bash
         run: |
           set -euo pipefail
@@ -19,214 +29,333 @@ jobs:
           prerelease_id='(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)'
           build_id='[0-9A-Za-z-]+'
           semver="^v${core}\.${core}\.${core}(-${prerelease_id}(\.${prerelease_id})*)?(\+${build_id}(\.${build_id})*)?$"
-          if [[ ! "$GITHUB_REF_NAME" =~ $semver ]]; then
+          [[ "$GITHUB_REF_NAME" =~ $semver ]] || {
             echo "invalid SemVer release tag: $GITHUB_REF_NAME" >&2
             exit 1
-          fi
+          }
 
-      - uses: actions/checkout@v6
-
-      - name: Match tag to checked-out package versions
-        run: bash scripts/check-release-version-match.sh "$GITHUB_REF_NAME"
-      
-      - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          toolchain: 1.92
-          targets: wasm32-unknown-unknown
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Install Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Test release smoke harnesses
-        run: |
-          bash scripts/check-release-version-match.test.sh
-          bash scripts/validate-release-image-tags.test.sh
-          node --test scripts/smoke-docker-existing-image.test.mjs
-          node --test scripts/smoke-desktop-packaged-ui.test.mjs
-      
-      - name: Cache cargo registry and build
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Run clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
-
-      - name: Check web WASM target
-        run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-
-      - name: Audit dependencies
-        run: |
-          DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
-          cargo run --locked -p deve_baseline -- release-audit-gate tag-ready
-
-      - name: Check plan coverage
-        run: |
-          scripts/plan-coverage.sh --write-report --check-reverse-coverage
-          scripts/plan-coverage.sh --check-metadata-completeness
-          scripts/plan-coverage.sh --check-perf-budget
-          scripts/check-perf-budget-baseline.sh
-          scripts/check-reliability-observability-baseline.sh
-          scripts/plan-coverage.sh --check-no-adr-plan-ref
-          scripts/plan-coverage.sh --check-md-links
-          scripts/plan-coverage-selftest.sh
-
-      - name: Check architecture registry
-        run: scripts/check-architecture-registry.sh
-
-      - name: Check native boundary and graph baselines
-        run: |
-          scripts/check-native-track-boundary.sh
-          DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0 scripts/check-native-process-adapter-gate.sh
-          scripts/check-graph-baseline.sh
-
-      - name: Require exact-HEAD aggregated acceptance receipts
+      - name: Bind annotated tag to one aggregate run
+        id: aggregate
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          receipt_root="$RUNNER_TEMP/deve-acceptance-receipts"
-          runs="$(gh api \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/acceptance-aggregate.yml/runs?head_sha=$GITHUB_SHA&status=success&event=workflow_dispatch&per_page=100")"
-          run_id="$(jq -r --arg head "$GITHUB_SHA" \
-            '[.workflow_runs[] | select(.head_sha == $head and .conclusion == "success")] | sort_by(.created_at) | last | .id // empty' \
-            <<<"$runs")"
-          [[ "$run_id" =~ ^[1-9][0-9]*$ ]] || {
-            echo "release: no successful acceptance aggregation exists for HEAD $GITHUB_SHA" >&2
+          git cat-file -e "$GITHUB_REF^{tag}" 2>/dev/null || {
+            echo "release tag must be annotated and bind an aggregate run" >&2
             exit 1
           }
+          [[ "$(git rev-parse "${GITHUB_REF}^{}")" == "$GITHUB_SHA" ]] || {
+            echo "annotated tag does not peel to the release event commit" >&2
+            exit 1
+          }
+          message="$(git for-each-ref --format='%(contents)' "refs/tags/$GITHUB_REF_NAME")"
+          mapfile -t bindings < <(grep -E '^Deve-Acceptance-Aggregate-Run: [1-9][0-9]*$' <<<"$message" || true)
+          [[ "${#bindings[@]}" -eq 1 ]] || {
+            echo "annotated tag must contain exactly one Deve-Acceptance-Aggregate-Run trailer" >&2
+            exit 1
+          }
+          run_id="${bindings[0]#*: }"
+          metadata="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+          [[ "$(jq -r .head_sha <<<"$metadata")" == "$GITHUB_SHA" ]] || {
+            echo "aggregate run HEAD does not match tag target" >&2
+            exit 1
+          }
+          [[ "$(jq -r .conclusion <<<"$metadata")" == success ]] || {
+            echo "aggregate run is not successful" >&2
+            exit 1
+          }
+          [[ "$(jq -r .path <<<"$metadata")" == .github/workflows/acceptance-aggregate.yml ]] || {
+            echo "bound run is not acceptance-aggregate.yml" >&2
+            exit 1
+          }
+          [[ "$(jq -r .run_attempt <<<"$metadata")" == 1 ]] || {
+            echo "bound aggregate run must be immutable attempt 1" >&2
+            exit 1
+          }
+          sealed="$RUNNER_TEMP/deve-release-sealed"
+          mkdir -p "$sealed"
           gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
-            --name "deve-acceptance-tag-ready-$GITHUB_SHA" \
-            --dir "$receipt_root"
-          cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
-      
-      - name: Run tests
-        run: cargo test --locked
+            --name "deve-release-sealed-$GITHUB_SHA" --dir "$sealed"
+          printf 'run_id=%s\n' "$run_id" >>"$GITHUB_OUTPUT"
+          printf 'DEVE_RELEASE_TAG_OBJECT=%s\n' "$(git rev-parse "$GITHUB_REF")" >>"$GITHUB_ENV"
+          printf 'DEVE_SEALED_ROOT=%s\n' "$sealed" >>"$GITHUB_ENV"
 
-  docker:
-    runs-on: ubuntu-latest
-    needs: test
-    env:
-      RELEASE_CANDIDATE_IMAGE: deve-notebook:release-candidate-${{ github.run_id }}-${{ github.run_attempt }}
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: 1.92
+
+      - name: Verify candidate bytes, tag version, attestations, and receipts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          candidate="$DEVE_SEALED_ROOT/candidate"
+          manifest="$candidate/release-candidate.json"
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$(jq -er .head_sha "$manifest")" == "$GITHUB_SHA" ]] || { echo 'candidate HEAD mismatch' >&2; exit 1; }
+          [[ "$(jq -er .version "$manifest")" == "$version" ]] || { echo 'candidate version mismatch' >&2; exit 1; }
+          bash scripts/check-release-version-match.sh "$GITHUB_REF_NAME"
+          artifact_path() {
+            jq -er --arg role "$1" '.artifacts[] | select(.role == $role) | .path' "$manifest"
+          }
+          export DEVE_BASELINE_BIN="$GITHUB_WORKSPACE/target/debug/deve_baseline"
+          export DEVE_RELEASE_CANDIDATE_DIR="$candidate"
+          export DEVE_RELEASE_CANDIDATE_HEAD="$GITHUB_SHA"
+          export DEVE_RELEASE_CANDIDATE_VERSION="$version"
+          export DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH=.github/workflows/release-candidate.yml
+          export DEVE_RELEASE_CANDIDATE_RUN_ID="$(jq -er .workflow.run_id "$manifest")"
+          export DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT="$(jq -er .workflow.run_attempt "$manifest")"
+          export DEVE_RELEASE_CANDIDATE_IMAGE_ID="$(jq -er .docker_image_id "$manifest")"
+          export DEVE_RELEASE_ANDROID_SIGNER_SHA256="$(jq -er .android_signer_sha256 "$manifest")"
+          export DEVE_RELEASE_WINDOWS_MSI="$(artifact_path windows-msi)"
+          export DEVE_RELEASE_WINDOWS_NSIS="$(artifact_path windows-nsis)"
+          export DEVE_RELEASE_MACOS_DMG="$(artifact_path macos-dmg)"
+          export DEVE_RELEASE_ANDROID_APK="$(artifact_path android-arm64-apk)"
+          export DEVE_RELEASE_DOCKER_ARCHIVE="$(artifact_path docker-linux-amd64-archive)"
+          export DEVE_RELEASE_SOURCE_SBOM="$(artifact_path source-spdx)"
+          export DEVE_RELEASE_IMAGE_SBOM="$(artifact_path image-spdx)"
+          export DEVE_RELEASE_PROVENANCE_BUNDLE="$(artifact_path provenance-attestation)"
+          export DEVE_RELEASE_DOCKER_SBOM_BUNDLE="$(artifact_path docker-sbom-attestation)"
+          export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1
+          cargo build --locked -p deve_baseline
+          bash scripts/check-release-candidate-bundle.sh
+          cargo run --locked --quiet -p deve_baseline -- acceptance-matrix \
+            --tag-ready "$DEVE_SEALED_ROOT/receipts"
+
+      - name: Stage unchanged public release assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="$DEVE_SEALED_ROOT/candidate"
+          manifest="$candidate/release-candidate.json"
+          asset_list="$RUNNER_TEMP/release-assets.txt"
+          name_list="$RUNNER_TEMP/release-asset-names.txt"
+          jq -er '.artifacts[] | select(.public == true) | .path' "$manifest" >"$asset_list"
+          printf '%s\n' release-candidate.json SHA256SUMS >>"$asset_list"
+          while IFS= read -r relative; do
+            [[ -f "$candidate/$relative" ]] || { echo "missing release asset: $relative" >&2; exit 1; }
+            basename "$relative"
+          done <"$asset_list" | sort >"$name_list"
+          [[ "$(sort -u "$name_list" | wc -l)" -eq "$(wc -l <"$name_list")" ]] || {
+            echo "release assets contain duplicate basenames" >&2
+            exit 1
+          }
+          printf 'asset_list=%s\n' "$asset_list" >>"$GITHUB_OUTPUT"
+          printf 'name_list=%s\n' "$name_list" >>"$GITHUB_OUTPUT"
+
+      - name: Create or validate draft and upload unchanged assets
+        id: github_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_LIST: ${{ steps.assets.outputs.asset_list }}
+          NAME_LIST: ${{ steps.assets.outputs.name_list }}
+        run: |
+          set -euo pipefail
+          bash scripts/check-release-tag-binding.sh \
+            "$GITHUB_REF_NAME" "$DEVE_RELEASE_TAG_OBJECT" "$GITHUB_SHA"
+          candidate="$DEVE_SEALED_ROOT/candidate"
+          release_json="$RUNNER_TEMP/existing-release.json"
+          release_state="$(bash scripts/probe-release-remote.sh \
+            github-tag "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$release_json")"
+          already_published=0
+          if [[ "$release_state" == present ]]; then
+            draft="$(jq -er '.draft | if type == "boolean" then tostring else error("invalid draft") end' "$release_json")"
+            jq -r '.assets[].name' "$release_json" | sort >"$RUNNER_TEMP/existing-assets.txt"
+            comm -23 "$RUNNER_TEMP/existing-assets.txt" "$NAME_LIST" | grep -q . && {
+              echo "existing release contains unexpected assets" >&2
+              exit 1
+            }
+            if [[ "$draft" == false ]]; then
+              already_published=1
+              diff -u "$NAME_LIST" "$RUNNER_TEMP/existing-assets.txt"
+              expected_prerelease=false
+              version_without_build="${GITHUB_REF_NAME%%+*}"
+              [[ "$version_without_build" == *-* ]] && expected_prerelease=true
+              [[ "$(jq -er '.prerelease | if type == "boolean" then tostring else error("invalid prerelease") end' "$release_json")" == "$expected_prerelease" ]] || {
+                echo "published release prerelease classification does not match the sealed version" >&2
+                exit 1
+              }
+              echo "published release already contains the exact sealed asset set; validating idempotent recovery"
+            fi
+          elif [[ "$release_state" == absent ]]; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --generate-notes \
+              --title "Deve Notebook $GITHUB_REF_NAME"
+          else
+            echo "unexpected GitHub Release probe state: $release_state" >&2
+            exit 1
+          fi
+          if [[ "$already_published" == 0 ]]; then
+            upload=()
+            while IFS= read -r relative; do upload+=("$candidate/$relative"); done <"$ASSET_LIST"
+            gh release upload "$GITHUB_REF_NAME" --clobber "${upload[@]}"
+          fi
+
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort \
+            >"$RUNNER_TEMP/uploaded-assets.txt"
+          diff -u "$NAME_LIST" "$RUNNER_TEMP/uploaded-assets.txt"
+          remote="$RUNNER_TEMP/remote-release-assets"
+          mkdir -p "$remote"
+          gh release download "$GITHUB_REF_NAME" --dir "$remote"
+          while IFS= read -r relative; do
+            name="$(basename "$relative")"
+            expected="$(sha256sum "$candidate/$relative" | cut -d' ' -f1)"
+            observed="$(sha256sum "$remote/$name" | cut -d' ' -f1)"
+            [[ "$expected" == "$observed" ]] || {
+              echo "release asset digest mismatch: $name" >&2
+              exit 1
+            }
+          done <"$ASSET_LIST"
+          printf 'already_published=%s\n' "$already_published" >>"$GITHUB_OUTPUT"
+
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          flavor: latest=false
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-      
-      - name: Build release candidate image once
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          load: true
-          push: false
-          platforms: linux/amd64
-          tags: ${{ env.RELEASE_CANDIDATE_IMAGE }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
-      - name: Record release candidate image ID
-        id: candidate
+      - name: Load and validate sealed Docker archive
+        id: docker
         shell: bash
-        run: echo "image_id=$(docker image inspect --format '{{.Id}}' "$RELEASE_CANDIDATE_IMAGE")" >>"$GITHUB_OUTPUT"
-
-      - name: Smoke exact release candidate image
         env:
-          DEVE_DOCKER_SMOKE_REQUIRED: '1'
-          DEVE_DOCKER_SMOKE_SKIP_BUILD: '1'
-          DEVE_DOCKER_SMOKE_IMAGE: ${{ env.RELEASE_CANDIDATE_IMAGE }}
-        run: scripts/smoke-docker-release.sh
-
-      - name: Browser-smoke exact release candidate image
-        env:
-          DEVE_DOCKER_MULTI_REQUIRED: '1'
-          DEVE_DOCKER_MULTI_SKIP_BUILD: '1'
-          DEVE_DOCKER_MULTI_IMAGE: ${{ env.RELEASE_CANDIDATE_IMAGE }}
-        run: scripts/smoke-docker-multiclient.sh
-
-      - name: Verify candidate identity after smokes
-        shell: bash
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          observed="$(docker image inspect --format '{{.Id}}' "$RELEASE_CANDIDATE_IMAGE")"
-          [[ "$observed" == "${{ steps.candidate.outputs.image_id }}" ]] || {
-            echo "release candidate image changed during smoke: expected=${{ steps.candidate.outputs.image_id }} observed=$observed" >&2
+          candidate="$DEVE_SEALED_ROOT/candidate"
+          manifest="$candidate/release-candidate.json"
+          archive="$(jq -er '.artifacts[] | select(.role == "docker-linux-amd64-archive") | .path' "$manifest")"
+          expected="$(jq -er .docker_image_id "$manifest")"
+          docker load --input "$candidate/$archive"
+          docker image inspect "$expected" >/dev/null
+          observed="$(docker image inspect --format '{{.Id}}' "$expected")"
+          [[ "$observed" == "$expected" ]] || { echo 'loaded Docker image ID mismatch' >&2; exit 1; }
+          repository="${GITHUB_REPOSITORY,,}"
+          version="${GITHUB_REF_NAME#v}"
+          registry_version="${version/+/_build_}"
+          version_tag="ghcr.io/$repository:$registry_version"
+          latest_tag="ghcr.io/$repository:latest"
+          args=("$version" "$version_tag")
+          update_latest=0
+          if [[ "${version%%+*}" != *-* ]]; then
+            args+=("$latest_tag")
+            update_latest=1
+            latest_release="$RUNNER_TEMP/latest-release.json"
+            latest_state="$(bash scripts/probe-release-remote.sh \
+              github-latest "$GITHUB_REPOSITORY" "$latest_release")"
+            if [[ "$latest_state" == present ]]; then
+              prior_tag="$(jq -er .tag_name "$latest_release")"
+              if [[ "$prior_tag" != "$GITHUB_REF_NAME" ]]; then
+                target/debug/deve_baseline release-version-order "$prior_tag" "$GITHUB_REF_NAME"
+                git rev-parse "refs/tags/$prior_tag^{}" >/dev/null
+                git merge-base --is-ancestor "refs/tags/$prior_tag^{}" "$GITHUB_SHA" || {
+                  echo "refusing to move latest backward or across divergent history: $prior_tag" >&2
+                  exit 1
+                }
+              fi
+            elif [[ "$latest_state" == absent ]]; then
+              registry_latest_state="$(bash scripts/probe-release-remote.sh \
+                ghcr-tag "$repository" latest)"
+              if [[ "$registry_latest_state" == present ]]; then
+                docker pull "$latest_tag" >/dev/null
+                [[ "$(docker image inspect --format '{{.Id}}' "$latest_tag")" == "$expected" ]] || {
+                  echo 'registry latest exists without a release and points at other image bytes' >&2
+                  exit 1
+                }
+              elif [[ "$registry_latest_state" != absent ]]; then
+                echo "unexpected GHCR latest probe state: $registry_latest_state" >&2
+                exit 1
+              fi
+            else
+              echo "unexpected GitHub latest probe state: $latest_state" >&2
+              exit 1
+            fi
+          fi
+          mapfile -t validated < <(bash scripts/validate-release-image-tags.sh "${args[@]}")
+          [[ "${#validated[@]}" -eq "$((1 + update_latest))" ]] || { echo 'Docker tag validation failed' >&2; exit 1; }
+          printf 'image_id=%s\nversion_tag=%s\nlatest_tag=%s\nupdate_latest=%s\n' \
+            "$expected" "${validated[0]}" "${validated[1]:-}" "$update_latest" >>"$GITHUB_OUTPUT"
+
+      - name: Promote exact Docker bytes and verify remote digest
+        id: registry
+        shell: bash
+        env:
+          IMAGE_ID: ${{ steps.docker.outputs.image_id }}
+          VERSION_TAG: ${{ steps.docker.outputs.version_tag }}
+          LATEST_TAG: ${{ steps.docker.outputs.latest_tag }}
+          UPDATE_LATEST: ${{ steps.docker.outputs.update_latest }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bash scripts/check-release-tag-binding.sh \
+            "$GITHUB_REF_NAME" "$DEVE_RELEASE_TAG_OBJECT" "$GITHUB_SHA"
+          repository="${GITHUB_REPOSITORY,,}"
+          version="${GITHUB_REF_NAME#v}"
+          registry_version="${version/+/_build_}"
+          version_state="$(bash scripts/probe-release-remote.sh \
+            ghcr-tag "$repository" "$registry_version")"
+          if [[ "$version_state" == present ]]; then
+            docker pull "$VERSION_TAG" >/dev/null
+            [[ "$(docker image inspect --format '{{.Id}}' "$VERSION_TAG")" == "$IMAGE_ID" ]] || {
+              echo 'immutable version tag already exists with a different image identity' >&2
+              exit 1
+            }
+            docker tag "$IMAGE_ID" "$VERSION_TAG"
+            echo 'immutable version tag already contains the sealed image; continuing partial retry'
+          elif [[ "$version_state" == absent ]]; then
+            docker tag "$IMAGE_ID" "$VERSION_TAG"
+            docker push "$VERSION_TAG"
+          else
+            echo "unexpected GHCR version probe state: $version_state" >&2
             exit 1
-          }
+          fi
+          version_digest="$(docker buildx imagetools inspect "$VERSION_TAG" --format '{{.Manifest.Digest}}')"
+          [[ -n "$version_digest" ]]
+          if [[ "$UPDATE_LATEST" == 1 ]]; then
+            docker tag "$IMAGE_ID" "$LATEST_TAG"
+            docker push "$LATEST_TAG"
+            latest_digest="$(docker buildx imagetools inspect "$LATEST_TAG" --format '{{.Manifest.Digest}}')"
+            [[ "$latest_digest" == "$version_digest" ]] || {
+              echo "remote Docker latest digest mismatch" >&2
+              exit 1
+            }
+          fi
+          printf 'subject_name=%s\nsubject_digest=%s\n' "${VERSION_TAG%:*}" "$version_digest" >>"$GITHUB_OUTPUT"
 
-      - name: Validate tags and push verified candidate image
-        id: pushed_tags
+      - name: Attest promoted registry manifest
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-name: ${{ steps.registry.outputs.subject_name }}
+          subject-digest: ${{ steps.registry.outputs.subject_digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Publish verified GitHub Release
+        shell: bash
         env:
-          RELEASE_IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
-        shell: bash
+          GH_TOKEN: ${{ github.token }}
+          ALREADY_PUBLISHED: ${{ steps.github_release.outputs.already_published }}
         run: |
           set -euo pipefail
-          mapfile -t tags < <(printf '%s\n' "$RELEASE_IMAGE_TAGS" | sed '/^$/d')
-          mapfile -t validated_tags < <(bash scripts/validate-release-image-tags.sh "$RELEASE_VERSION" "${tags[@]}")
-          [[ "${#validated_tags[@]}" -eq 2 ]] || { echo "release tag validator returned an invalid result" >&2; exit 1; }
-          version_tag="${validated_tags[0]}"
-          latest_tag="${validated_tags[1]}"
-          echo "latest_tag=$latest_tag" >>"$GITHUB_OUTPUT"
-          echo "version_tag=$version_tag" >>"$GITHUB_OUTPUT"
-          for tag in "$version_tag" "$latest_tag"; do
-            docker tag "$RELEASE_CANDIDATE_IMAGE" "$tag"
-            docker push "$tag"
-          done
-
-      - name: Verify remote release tag digests
-        shell: bash
-        run: |
-          set -euo pipefail
-          version_tag='${{ steps.pushed_tags.outputs.version_tag }}'
-          latest_tag='${{ steps.pushed_tags.outputs.latest_tag }}'
-          first_digest="$(docker buildx imagetools inspect "$version_tag" --format '{{.Manifest.Digest}}')"
-          second_digest="$(docker buildx imagetools inspect "$latest_tag" --format '{{.Manifest.Digest}}')"
-          [[ -n "$first_digest" && "$first_digest" == "$second_digest" ]] || {
-            echo "remote release tag digest mismatch: $version_tag=$first_digest $latest_tag=$second_digest" >&2
-            exit 1
-          }
-
-  native:
-    needs: docker
-    permissions:
-      contents: write
-    uses: ./.github/workflows/release-native.yml
-    secrets:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          bash scripts/check-release-tag-binding.sh \
+            "$GITHUB_REF_NAME" "$DEVE_RELEASE_TAG_OBJECT" "$GITHUB_SHA"
+          if [[ "$ALREADY_PUBLISHED" == 1 ]]; then
+            echo "GitHub Release was already public; reapplying the idempotent release classification after sealed-state validation"
+          fi
+          args=(--draft=false)
+          version_without_build="${GITHUB_REF_NAME%%+*}"
+          if [[ "$version_without_build" == *-* ]]; then
+            args+=(--prerelease)
+          else
+            args+=(--prerelease=false --latest)
+          fi
+          gh release edit "$GITHUB_REF_NAME" "${args[@]}"

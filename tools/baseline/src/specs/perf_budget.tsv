@@ -27,7 +27,7 @@ contains	docs/features/operations/tech_stack_runtime_budget_check.md	budget cont
 contains	docs/features/operations/tech_stack_runtime_budget_check.md	`PERF-001` open-doc / edit-ack / cold-mount / RSS contract entries are bound
 contains	scripts/check-perf-budget-baseline.sh	run_deve_baseline "$ROOT_DIR" "perf-budget" "perf-budget-baseline-check"
 contains	.github/workflows/check.yml	scripts/check-perf-budget-baseline.sh
-contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
+contains	.github/workflows/release-candidate.yml	scripts/check-perf-budget-baseline.sh
 contains	tools/baseline/src/main.rs	mod perf_budget;
 contains	tools/baseline/src/main.rs	"perf-budget" => perf_budget::run()
 contains	tools/baseline/src/main.rs	perf_budget::run_text()?

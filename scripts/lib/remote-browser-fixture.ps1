@@ -1,0 +1,420 @@
+Set-StrictMode -Version Latest
+
+$script:RemoteFixtureCloudflaredVersion = "2026.7.2"
+$script:RemoteFixtureCloudflaredWindowsAmd64Sha256 = "CDB5D4432F6AE1595654A692A51308B69D2BF7AF961F5578D9391837CF072DF9"
+$script:RemoteFixtureCloudflaredDownloadTimeoutSeconds = 180
+$script:RemoteFixtureCloudflaredDownloadLimitBytes = 134217728
+
+function New-RemoteFixtureRandomHex {
+    param([Parameter(Mandatory)][int]$Bytes)
+    $buffer = [byte[]]::new($Bytes)
+    [Security.Cryptography.RandomNumberGenerator]::Fill($buffer)
+    return [Convert]::ToHexString($buffer).ToLowerInvariant()
+}
+
+function Resolve-RemoteFixtureStateDirectory {
+    param([Parameter(Mandatory)][string]$Path)
+    if ($Path.IndexOfAny([char[]]"`r`n`t") -ge 0) {
+        throw "state directory contains a control character"
+    }
+    if (Test-Path -LiteralPath $Path) {
+        $item = Get-Item -LiteralPath $Path -Force
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "state directory must not be a symlink or reparse point: $Path"
+        }
+    } else {
+        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+    }
+    return (Get-Item -LiteralPath $Path -Force).FullName
+}
+
+function Assert-RemoteFixtureHttpsOrigin {
+    param([Parameter(Mandatory)][string]$Origin)
+    $uri = $null
+    if (-not [Uri]::TryCreate($Origin, [UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -ne "https" -or
+        $uri.AbsolutePath -ne "/" -or
+        $uri.Query -or $uri.Fragment -or $uri.UserInfo) {
+        throw "expected an exact HTTPS origin, got: $Origin"
+    }
+}
+
+function Assert-RemoteFixtureExpectedHead {
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$ExpectedHead
+    )
+    if ($ExpectedHead -notmatch '^[0-9a-fA-F]{40}$') {
+        throw "expected HEAD must be a full 40-character commit SHA"
+    }
+    $actual = (& git -C $RepoRoot rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $actual -ine $ExpectedHead) {
+        throw "workspace HEAD mismatch: expected $ExpectedHead, observed $actual"
+    }
+}
+
+function Get-RemoteFixtureFreePort {
+    $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+    try {
+        $listener.Start()
+        return ([Net.IPEndPoint]$listener.LocalEndpoint).Port
+    } finally {
+        $listener.Stop()
+    }
+}
+
+function ConvertTo-RemoteFixtureWindowsArgument {
+    param([AllowEmptyString()][Parameter(Mandatory)][string]$Value)
+    if ($Value.Length -gt 0 -and $Value -notmatch '[\s"]') { return $Value }
+    $builder = [Text.StringBuilder]::new('"')
+    $backslashes = 0
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq '\') {
+            $backslashes++
+        } elseif ($character -eq '"') {
+            [void]$builder.Append(('\' * (($backslashes * 2) + 1)))
+            [void]$builder.Append('"')
+            $backslashes = 0
+        } else {
+            [void]$builder.Append(('\' * $backslashes))
+            [void]$builder.Append($character)
+            $backslashes = 0
+        }
+    }
+    [void]$builder.Append(('\' * ($backslashes * 2)))
+    [void]$builder.Append('"')
+    return $builder.ToString()
+}
+
+function Start-RemoteFixtureProcess {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter()][string[]]$ArgumentList = @(),
+        [Parameter(Mandatory)][string]$WorkingDirectory,
+        [Parameter(Mandatory)][string]$StdoutPath,
+        [Parameter(Mandatory)][string]$StderrPath,
+        [Parameter()][hashtable]$Environment = @{}
+    )
+    $encodedArguments = @($ArgumentList | ForEach-Object { ConvertTo-RemoteFixtureWindowsArgument $_ }) -join ' '
+    $parameters = @{
+        FilePath = $FilePath
+        ArgumentList = $encodedArguments
+        WorkingDirectory = $WorkingDirectory
+        RedirectStandardOutput = $StdoutPath
+        RedirectStandardError = $StderrPath
+        PassThru = $true
+        WindowStyle = "Hidden"
+    }
+    $startProcess = Get-Command Start-Process
+    if ($Environment.Count -gt 0 -and $startProcess.Parameters.ContainsKey("Environment")) {
+        $parameters.Environment = $Environment
+        return Start-Process @parameters
+    }
+
+    $previous = @{}
+    try {
+        foreach ($entry in $Environment.GetEnumerator()) {
+            $previous[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, "Process")
+            [Environment]::SetEnvironmentVariable($entry.Key, [string]$entry.Value, "Process")
+        }
+        return Start-Process @parameters
+    } finally {
+        foreach ($entry in $Environment.GetEnumerator()) {
+            [Environment]::SetEnvironmentVariable($entry.Key, $previous[$entry.Key], "Process")
+        }
+    }
+}
+
+function Get-RemoteFixtureOutputBytes {
+    param([Parameter(Mandatory)][string[]]$Paths)
+    [long]$total = 0
+    foreach ($path in $Paths) {
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            $total += (Get-Item -LiteralPath $path -Force).Length
+        }
+    }
+    return $total
+}
+
+function Limit-RemoteFixtureOutputFiles {
+    param(
+        [Parameter(Mandatory)][string[]]$Paths,
+        [Parameter(Mandatory)][long]$CombinedLimitBytes
+    )
+    $perFileLimit = [Math]::Floor($CombinedLimitBytes / $Paths.Count)
+    foreach ($path in $Paths) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+        $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+        try {
+            if ($stream.Length -gt $perFileLimit) { $stream.SetLength($perFileLimit) }
+        } finally {
+            $stream.Dispose()
+        }
+    }
+}
+
+function Stop-RemoteFixtureBoundedProcessTree {
+    param(
+        [Parameter(Mandatory)][Diagnostics.Process]$Process,
+        [Parameter(Mandatory)][string]$Label
+    )
+    $Process.Refresh()
+    if ($Process.HasExited) { return }
+    try {
+        $Process.Kill($true)
+    } catch {
+        $Process.Refresh()
+        if (-not $Process.HasExited) {
+            throw "failed to terminate $Label process tree: $($_.Exception.Message)"
+        }
+    }
+    if (-not $Process.WaitForExit(7000)) {
+        throw "$Label process tree survived bounded termination"
+    }
+}
+
+function Invoke-RemoteFixtureBoundedProcess {
+    param(
+        [Parameter(Mandatory)][string]$Label,
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter()][string[]]$ArgumentList = @(),
+        [Parameter(Mandatory)][string]$WorkingDirectory,
+        [Parameter(Mandatory)][string]$StdoutPath,
+        [Parameter(Mandatory)][string]$StderrPath,
+        [Parameter()][hashtable]$Environment = @{},
+        [ValidateRange(1, 3600)][int]$TimeoutSeconds = 60,
+        [ValidateRange(1024, 268435456)][long]$OutputLimitBytes = 4194304
+    )
+    foreach ($path in @($StdoutPath, $StderrPath)) {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    }
+    $process = Start-RemoteFixtureProcess -FilePath $FilePath -ArgumentList $ArgumentList `
+        -WorkingDirectory $WorkingDirectory -StdoutPath $StdoutPath -StderrPath $StderrPath `
+        -Environment $Environment
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    $failure = $null
+    while (-not $process.HasExited) {
+        $outputBytes = Get-RemoteFixtureOutputBytes -Paths @($StdoutPath, $StderrPath)
+        if ($outputBytes -gt $OutputLimitBytes) {
+            $failure = "exceeded the combined output limit of $OutputLimitBytes bytes"
+            break
+        }
+        if ([DateTimeOffset]::UtcNow -ge $deadline) {
+            $failure = "timed out after $TimeoutSeconds seconds"
+            break
+        }
+        Start-Sleep -Milliseconds 50
+        $process.Refresh()
+    }
+    if ($failure) {
+        Stop-RemoteFixtureBoundedProcessTree -Process $process -Label $Label
+        Limit-RemoteFixtureOutputFiles -Paths @($StdoutPath, $StderrPath) -CombinedLimitBytes $OutputLimitBytes
+        throw "$Label $failure"
+    }
+    # WaitForExit() after HasExited ensures redirected file handles are flushed.
+    $process.WaitForExit()
+    $outputBytes = Get-RemoteFixtureOutputBytes -Paths @($StdoutPath, $StderrPath)
+    if ($outputBytes -gt $OutputLimitBytes) {
+        Limit-RemoteFixtureOutputFiles -Paths @($StdoutPath, $StderrPath) -CombinedLimitBytes $OutputLimitBytes
+        throw "$Label exceeded the combined output limit of $OutputLimitBytes bytes"
+    }
+    return [pscustomobject]@{
+        ExitCode = $process.ExitCode
+        StdoutPath = $StdoutPath
+        StderrPath = $StderrPath
+        OutputBytes = $outputBytes
+    }
+}
+
+function Invoke-RemoteFixtureBoundedDownload {
+    param(
+        [Parameter(Mandatory)][string]$Url,
+        [Parameter(Mandatory)][string]$Destination,
+        [ValidateRange(1, 3600)][int]$TimeoutSeconds = $script:RemoteFixtureCloudflaredDownloadTimeoutSeconds,
+        [ValidateRange(1024, 1073741824)][long]$MaximumBytes = $script:RemoteFixtureCloudflaredDownloadLimitBytes
+    )
+    Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+    $handler = [Net.Http.HttpClientHandler]::new()
+    $handler.AllowAutoRedirect = $true
+    $handler.MaxAutomaticRedirections = 5
+    $client = [Net.Http.HttpClient]::new($handler)
+    $client.Timeout = [Threading.Timeout]::InfiniteTimeSpan
+    $cancellation = [Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds($TimeoutSeconds))
+    $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $Url)
+    $response = $null
+    $inputStream = $null
+    $outputStream = $null
+    try {
+        $response = $client.SendAsync(
+            $request,
+            [Net.Http.HttpCompletionOption]::ResponseHeadersRead,
+            $cancellation.Token
+        ).GetAwaiter().GetResult()
+        [void]$response.EnsureSuccessStatusCode()
+        $contentLength = $response.Content.Headers.ContentLength
+        if ($null -ne $contentLength -and [long]$contentLength -gt $MaximumBytes) {
+            throw "cloudflared download exceeds the $MaximumBytes byte limit"
+        }
+        $inputStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $outputStream = [IO.File]::Open(
+            $Destination,
+            [IO.FileMode]::CreateNew,
+            [IO.FileAccess]::Write,
+            [IO.FileShare]::None
+        )
+        $buffer = [byte[]]::new(65536)
+        [long]$written = 0
+        while (($read = $inputStream.ReadAsync($buffer, 0, $buffer.Length, $cancellation.Token).GetAwaiter().GetResult()) -gt 0) {
+            $written += $read
+            if ($written -gt $MaximumBytes) {
+                throw "cloudflared download exceeds the $MaximumBytes byte limit"
+            }
+            $outputStream.Write($buffer, 0, $read)
+        }
+        $outputStream.Flush($true)
+    } catch [OperationCanceledException] {
+        throw "cloudflared download timed out after $TimeoutSeconds seconds"
+    } catch [AggregateException] {
+        if ($_.Exception.GetBaseException() -is [OperationCanceledException]) {
+            throw "cloudflared download timed out after $TimeoutSeconds seconds"
+        }
+        throw
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+        $request.Dispose()
+        $cancellation.Dispose()
+        $client.Dispose()
+        $handler.Dispose()
+    }
+}
+
+function Get-RemoteFixtureProcessToken {
+    param([Parameter(Mandatory)][int]$ProcessId)
+    $process = Get-Process -Id $ProcessId -ErrorAction Stop
+    return $process.StartTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Stop-RemoteFixtureProcess {
+    param(
+        [Parameter(Mandatory)][string]$Label,
+        [AllowNull()][object]$ProcessId,
+        [AllowNull()][string]$ExpectedToken
+    )
+    if ($null -eq $ProcessId) { return }
+    $process = Get-Process -Id ([int]$ProcessId) -ErrorAction SilentlyContinue
+    if ($null -eq $process) { return }
+    $actual = $process.StartTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture)
+    if (-not $ExpectedToken -or $actual -ne $ExpectedToken) {
+        throw "refusing to stop reused or unowned $Label PID $ProcessId"
+    }
+    $process.Kill($true)
+    if (-not $process.WaitForExit(7000)) {
+        throw "$Label PID $ProcessId survived bounded cleanup"
+    }
+}
+
+function Install-RemoteFixtureCloudflared {
+    param(
+        [Parameter(Mandatory)][string]$StateDirectory,
+        [string]$SuppliedPath
+    )
+    if (-not [Environment]::Is64BitOperatingSystem) {
+        throw "pinned cloudflared fixture currently supports Windows amd64 only"
+    }
+    $tools = Join-Path $StateDirectory "tools"
+    New-Item -ItemType Directory -Force $tools | Out-Null
+    $target = Join-Path $tools "cloudflared.exe"
+    $temporary = "$target.tmp"
+    $completed = $false
+    try {
+        if ($SuppliedPath) {
+            $item = Get-Item -LiteralPath $SuppliedPath -Force
+            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $item.PSIsContainer) {
+                throw "supplied cloudflared must be a regular non-reparse file"
+            }
+            if ($item.Length -gt $script:RemoteFixtureCloudflaredDownloadLimitBytes) {
+                throw "supplied cloudflared exceeds the $script:RemoteFixtureCloudflaredDownloadLimitBytes byte limit"
+            }
+            Copy-Item -LiteralPath $item.FullName -Destination $temporary -Force
+        } else {
+            $url = "https://github.com/cloudflare/cloudflared/releases/download/$script:RemoteFixtureCloudflaredVersion/cloudflared-windows-amd64.exe"
+            Invoke-RemoteFixtureBoundedDownload -Url $url -Destination $temporary
+        }
+        $observed = (Get-FileHash -Algorithm SHA256 -LiteralPath $temporary).Hash
+        if ($observed -ne $script:RemoteFixtureCloudflaredWindowsAmd64Sha256) {
+            throw "cloudflared checksum mismatch: expected $script:RemoteFixtureCloudflaredWindowsAmd64Sha256, observed $observed"
+        }
+        Move-Item -LiteralPath $temporary -Destination $target -Force
+        $completed = $true
+        return $target
+    } finally {
+        if (-not $completed) {
+            Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Wait-RemoteFixtureHttp {
+    param(
+        [Parameter(Mandatory)][string]$Url,
+        [AllowNull()][Diagnostics.Process]$Process,
+        [Parameter(Mandatory)][string]$LogPath
+    )
+    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+        try {
+            Invoke-WebRequest -Uri $Url -Method Get -TimeoutSec 2 -UseBasicParsing | Out-Null
+            return
+        } catch {
+            if ($null -ne $Process -and $Process.HasExited) {
+                throw "process exited before health check succeeded; log: $LogPath"
+            }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+    throw "timed out waiting for $Url; log: $LogPath"
+}
+
+function Wait-RemoteFixtureTunnelOrigin {
+    param(
+        [Parameter(Mandatory)][Diagnostics.Process]$Process,
+        [Parameter(Mandatory)][string[]]$LogPaths
+    )
+    $pattern = 'https://[A-Za-z0-9-]+\.trycloudflare\.com'
+    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+        foreach ($path in $LogPaths) {
+            if (Test-Path -LiteralPath $path) {
+                $match = [regex]::Match((Get-Content -Raw -LiteralPath $path), $pattern)
+                if ($match.Success) {
+                    Assert-RemoteFixtureHttpsOrigin $match.Value
+                    return $match.Value
+                }
+            }
+        }
+        if ($Process.HasExited) { throw "cloudflared exited before publishing an HTTPS origin" }
+        Start-Sleep -Milliseconds 250
+    }
+    throw "timed out waiting for cloudflared quick-tunnel origin"
+}
+
+function Assert-RemoteFixtureContainerOwner {
+    param(
+        [Parameter(Mandatory)][string]$ContainerName,
+        [Parameter(Mandatory)][string]$FixtureId
+    )
+    $owner = (& docker inspect --format '{{ index .Config.Labels "deve.remote-fixture-id" }}' $ContainerName 2>$null).Trim()
+    if ($LASTEXITCODE -ne 0 -or $owner -ne $FixtureId) {
+        throw "refusing to remove container without matching fixture owner label: $ContainerName"
+    }
+}
+
+function Test-RemoteFixtureContainerExists {
+    param([Parameter(Mandatory)][string]$ContainerName)
+    $names = @(& docker ps --all --filter "name=^/$ContainerName`$" --format '{{.Names}}' 2>$null)
+    if ($LASTEXITCODE -ne 0) { throw "failed to query Docker while checking owned container: $ContainerName" }
+    $matches = @($names | Where-Object { $_ -eq $ContainerName })
+    if ($matches.Count -eq 1 -and $names.Count -eq 1) { return $true }
+    if ($names.Count -eq 0) { return $false }
+    throw "Docker returned an ambiguous exact-name result for: $ContainerName"
+}

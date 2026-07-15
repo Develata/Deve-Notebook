@@ -47,6 +47,16 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-native-target-host-evidence.sh` | Verifies Desktop/Mobile target-host evidence reports include host, artifact, install/startup, and no-process/no-authority fields |
 | `collect-native-target-host-evidence.sh` | Downloads Native Target Host workflow evidence artifacts through GitHub CLI or token-backed API fallback and validates each report |
 | `dispatch-native-target-host-workflow.sh` | Builds or explicitly dispatches the manual Native Target Host GitHub Actions workflow through GitHub CLI or token-backed API fallback |
+| `dispatch-native-target-host-workflow.test.sh` | Verifies RemoteBrowser dispatch fields, platform dependencies, API fallback parity, and absence of password dispatch inputs |
+| `remote-browser-fixture.{sh,ps1}` | Owns exact-HEAD loopback backend, random credentials, pinned HTTPS tunnel, and fail-closed cleanup for RemoteBrowser target-host evidence |
+| `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, secret cleanup, PID ownership, and platform lifecycle invariants |
+| `lib/remote-browser-fixture-json.sh` | Serializes the fixed private fixture state/environment JSON schemas without owning lifecycle decisions |
+| `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |
+| `lib/desktop-install-root.ps1` | Canonical Win32 install-root validator shared by the packaged Desktop RemoteBrowser smoke and tests |
+| `check-release-candidate-bundle.sh` | Recomputes the Rust-owned sealed candidate contract, re-extracts the APK signer, and verifies fixed provenance/SPDX bundles against exact workflow/HEAD |
+| `check-android-apk-signer{,.test}.sh` | Verifies a sealed APK has exactly one expected SHA-256 signer without trusting a companion manifest value |
+| `check-release-tag-binding.sh` | Revalidates the remote annotated tag object and its directly peeled candidate commit before public mutations |
+| `probe-release-remote.sh` | Distinguishes GitHub Release and GHCR present/explicit-404-absent/error states before promotion |
 | `install-native-target-host-tools.sh` | Installs pinned Trunk and Tauri CLI release binaries for manual target-host workflows without compiling those tools from source |
 | `build-web-dist-ci.sh` | Builds Web assets in native target-host CI with explicit npm/trunk command diagnostics |
 | `write-native-target-host-evidence.sh` | Writes validated Desktop/Mobile target-host evidence reports for manual workflow artifacts or local target-host runs |

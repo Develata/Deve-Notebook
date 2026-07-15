@@ -9,8 +9,16 @@ REQUIRED_PREFLIGHT="${DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT:-false}"
 RUN_DESKTOP_PACKAGE_BUILD="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD:-false}"
 RUN_DESKTOP_STARTUP_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE:-false}"
 RUN_DESKTOP_INSTALLER_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE:-false}"
+RUN_DESKTOP_REMOTE_BROWSER_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_REMOTE_BROWSER_SMOKE:-false}"
+DESKTOP_REMOTE_HTTPS_ORIGIN="${DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_HTTPS_ORIGIN:-}"
+DESKTOP_REMOTE_USERNAME="${DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_USERNAME:-}"
+DESKTOP_REMOTE_HEAD_PROOF_URL="${DEVE_NATIVE_TARGET_HOST_DESKTOP_REMOTE_HEAD_PROOF_URL:-}"
 RUN_MOBILE_ANDROID_PACKAGE_BUILD="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD:-false}"
 RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE:-false}"
+RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE:-false}"
+MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="${DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN:-}"
+MOBILE_ANDROID_REMOTE_USERNAME="${DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_USERNAME:-}"
+MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL="${DEVE_NATIVE_TARGET_HOST_MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL:-}"
 RUN_MOBILE_IOS_PACKAGE_BUILD="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD:-false}"
 RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE:-false}"
 DISPATCH="${DEVE_NATIVE_TARGET_HOST_DISPATCH:-0}"
@@ -29,6 +37,51 @@ normalize_bool() {
     0|false|FALSE|no|NO) printf 'false' ;;
     *) fail "invalid boolean: $1" ;;
   esac
+}
+
+reject_crlf() {
+  local label="$1"
+  local value="$2"
+
+  if [[ "$value" == *$'\r'* || "$value" == *$'\n'* ]]; then
+    fail "$label contains a forbidden CR/LF control character"
+  fi
+}
+
+validate_external_override() {
+  local label="$1"
+  local enabled="$2"
+  local origin="$3"
+  local username="$4"
+  local head_proof_url="$5"
+  local count=0
+  local value
+
+  reject_crlf "$label HTTPS origin" "$origin"
+  reject_crlf "$label username" "$username"
+  reject_crlf "$label HEAD proof URL" "$head_proof_url"
+
+  for value in "$origin" "$username" "$head_proof_url"; do
+    if [[ -n "$value" ]]; then
+      count=$((count + 1))
+    fi
+  done
+
+  if [[ "$count" != 0 && "$count" != 3 ]]; then
+    fail "$label external override requires HTTPS origin, username, and same-origin HEAD proof URL together"
+  fi
+  if [[ "$count" == 3 && "$enabled" != "true" ]]; then
+    fail "$label external override requires its RemoteBrowser smoke to be enabled"
+  fi
+  if [[ "$count" == 3 ]]; then
+    if [[ ! "$origin" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
+      fail "$label external override requires an exact HTTPS origin"
+    fi
+    case "$head_proof_url" in
+      "$origin"|"$origin"/*) ;;
+      *) fail "$label HEAD proof URL must use the RemoteBrowser HTTPS origin" ;;
+    esac
+  fi
 }
 
 resolve_repository() {
@@ -71,7 +124,7 @@ dispatch_payload() {
   local python
 
   python="$(python_bin)" || fail "python3 or python is required for GitHub API dispatch fallback"
-  "$python" - "$REF" "$TARGET" "$REQUIRED_PREFLIGHT" "$RUN_DESKTOP_PACKAGE_BUILD" "$RUN_DESKTOP_STARTUP_SMOKE" "$RUN_DESKTOP_INSTALLER_SMOKE" "$RUN_MOBILE_ANDROID_PACKAGE_BUILD" "$RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE" "$RUN_MOBILE_IOS_PACKAGE_BUILD" "$RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE" <<'PY'
+  "$python" - "$REF" "$TARGET" "$REQUIRED_PREFLIGHT" "$RUN_DESKTOP_PACKAGE_BUILD" "$RUN_DESKTOP_STARTUP_SMOKE" "$RUN_DESKTOP_INSTALLER_SMOKE" "$RUN_DESKTOP_REMOTE_BROWSER_SMOKE" "$DESKTOP_REMOTE_HTTPS_ORIGIN" "$DESKTOP_REMOTE_USERNAME" "$DESKTOP_REMOTE_HEAD_PROOF_URL" "$RUN_MOBILE_ANDROID_PACKAGE_BUILD" "$RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE" "$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE" "$MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN" "$MOBILE_ANDROID_REMOTE_USERNAME" "$MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL" "$RUN_MOBILE_IOS_PACKAGE_BUILD" "$RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE" <<'PY'
 import json
 import sys
 
@@ -82,8 +135,16 @@ import sys
     run_desktop_package_build,
     run_desktop_startup_smoke,
     run_desktop_installer_smoke,
+    run_desktop_remote_browser_smoke,
+    desktop_remote_https_origin,
+    desktop_remote_username,
+    desktop_remote_head_proof_url,
     run_mobile_android_package_build,
     run_mobile_android_install_startup_smoke,
+    run_mobile_android_remote_browser_smoke,
+    mobile_android_remote_https_origin,
+    mobile_android_remote_username,
+    mobile_android_remote_head_proof_url,
     run_mobile_ios_package_build,
     run_mobile_ios_install_startup_smoke,
 ) = sys.argv[1:]
@@ -95,8 +156,16 @@ payload = {
         "run_desktop_package_build": run_desktop_package_build,
         "run_desktop_startup_smoke": run_desktop_startup_smoke,
         "run_desktop_installer_smoke": run_desktop_installer_smoke,
+        "run_desktop_remote_browser_smoke": run_desktop_remote_browser_smoke,
+        "desktop_remote_https_origin": desktop_remote_https_origin,
+        "desktop_remote_username": desktop_remote_username,
+        "desktop_remote_head_proof_url": desktop_remote_head_proof_url,
         "run_mobile_android_package_build": run_mobile_android_package_build,
         "run_mobile_android_install_startup_smoke": run_mobile_android_install_startup_smoke,
+        "run_mobile_android_remote_browser_smoke": run_mobile_android_remote_browser_smoke,
+        "mobile_android_remote_https_origin": mobile_android_remote_https_origin,
+        "mobile_android_remote_username": mobile_android_remote_username,
+        "mobile_android_remote_head_proof_url": mobile_android_remote_head_proof_url,
         "run_mobile_ios_package_build": run_mobile_ios_package_build,
         "run_mobile_ios_install_startup_smoke": run_mobile_ios_install_startup_smoke,
     },
@@ -135,8 +204,10 @@ REQUIRED_PREFLIGHT="$(normalize_bool "$REQUIRED_PREFLIGHT")"
 RUN_DESKTOP_PACKAGE_BUILD="$(normalize_bool "$RUN_DESKTOP_PACKAGE_BUILD")"
 RUN_DESKTOP_STARTUP_SMOKE="$(normalize_bool "$RUN_DESKTOP_STARTUP_SMOKE")"
 RUN_DESKTOP_INSTALLER_SMOKE="$(normalize_bool "$RUN_DESKTOP_INSTALLER_SMOKE")"
+RUN_DESKTOP_REMOTE_BROWSER_SMOKE="$(normalize_bool "$RUN_DESKTOP_REMOTE_BROWSER_SMOKE")"
 RUN_MOBILE_ANDROID_PACKAGE_BUILD="$(normalize_bool "$RUN_MOBILE_ANDROID_PACKAGE_BUILD")"
 RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE="$(normalize_bool "$RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE")"
+RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE="$(normalize_bool "$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE")"
 RUN_MOBILE_IOS_PACKAGE_BUILD="$(normalize_bool "$RUN_MOBILE_IOS_PACKAGE_BUILD")"
 RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE="$(normalize_bool "$RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE")"
 
@@ -146,6 +217,32 @@ fi
 if [[ "$RUN_DESKTOP_PACKAGE_BUILD" != "true" && "$RUN_DESKTOP_INSTALLER_SMOKE" == "true" ]]; then
   fail "desktop installer smoke requires DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true"
 fi
+if [[ "$RUN_DESKTOP_REMOTE_BROWSER_SMOKE" == "true" && ( "$RUN_DESKTOP_PACKAGE_BUILD" != "true" || "$RUN_DESKTOP_INSTALLER_SMOKE" != "true" ) ]]; then
+  fail "desktop RemoteBrowser smoke requires desktop package build and installer smoke"
+fi
+if [[ "$RUN_DESKTOP_REMOTE_BROWSER_SMOKE" == "true" && "$TARGET" != "all" && "$TARGET" != "desktop-windows" ]]; then
+  fail "desktop RemoteBrowser smoke requires target=all or target=desktop-windows"
+fi
+
+if [[ "$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE" == "true" && ( "$RUN_MOBILE_ANDROID_PACKAGE_BUILD" != "true" || "$RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE" != "true" ) ]]; then
+  fail "Android RemoteBrowser smoke requires Android package build and install/startup smoke"
+fi
+if [[ "$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE" == "true" && "$TARGET" != "all" && "$TARGET" != "mobile-android" ]]; then
+  fail "Android RemoteBrowser smoke requires target=all or target=mobile-android"
+fi
+
+validate_external_override \
+  "desktop RemoteBrowser" \
+  "$RUN_DESKTOP_REMOTE_BROWSER_SMOKE" \
+  "$DESKTOP_REMOTE_HTTPS_ORIGIN" \
+  "$DESKTOP_REMOTE_USERNAME" \
+  "$DESKTOP_REMOTE_HEAD_PROOF_URL"
+validate_external_override \
+  "Android RemoteBrowser" \
+  "$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE" \
+  "$MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN" \
+  "$MOBILE_ANDROID_REMOTE_USERNAME" \
+  "$MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL"
 
 if [[ -z "$REF" ]]; then
   REF="$(git -C "$ROOT_DIR" branch --show-current 2>/dev/null || true)"
@@ -153,6 +250,9 @@ fi
 if [[ -z "$REF" ]]; then
   REF="main"
 fi
+reject_crlf "Git ref" "$REF"
+reject_crlf "GitHub repository" "$REPOSITORY"
+reject_crlf "GitHub token" "$TOKEN"
 
 command_args=(
   workflow run "$WORKFLOW_FILE"
@@ -161,8 +261,16 @@ command_args=(
   --field "run_desktop_package_build=$RUN_DESKTOP_PACKAGE_BUILD"
   --field "run_desktop_startup_smoke=$RUN_DESKTOP_STARTUP_SMOKE"
   --field "run_desktop_installer_smoke=$RUN_DESKTOP_INSTALLER_SMOKE"
+  --field "run_desktop_remote_browser_smoke=$RUN_DESKTOP_REMOTE_BROWSER_SMOKE"
+  --field "desktop_remote_https_origin=$DESKTOP_REMOTE_HTTPS_ORIGIN"
+  --field "desktop_remote_username=$DESKTOP_REMOTE_USERNAME"
+  --field "desktop_remote_head_proof_url=$DESKTOP_REMOTE_HEAD_PROOF_URL"
   --field "run_mobile_android_package_build=$RUN_MOBILE_ANDROID_PACKAGE_BUILD"
   --field "run_mobile_android_install_startup_smoke=$RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE"
+  --field "run_mobile_android_remote_browser_smoke=$RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE"
+  --field "mobile_android_remote_https_origin=$MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN"
+  --field "mobile_android_remote_username=$MOBILE_ANDROID_REMOTE_USERNAME"
+  --field "mobile_android_remote_head_proof_url=$MOBILE_ANDROID_REMOTE_HEAD_PROOF_URL"
   --field "run_mobile_ios_package_build=$RUN_MOBILE_IOS_PACKAGE_BUILD"
   --field "run_mobile_ios_install_startup_smoke=$RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE"
   --ref "$REF"

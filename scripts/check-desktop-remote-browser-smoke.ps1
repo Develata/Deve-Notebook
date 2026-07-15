@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DesktopBinary,
     [Parameter(Mandatory = $true)]
+    [string]$InstallRoot,
+    [Parameter(Mandatory = $true)]
     [string]$WorkRoot,
     [Parameter(Mandatory = $true)]
     [string]$RemoteHttpsOrigin,
@@ -53,6 +55,8 @@ function Wait-ForCdp($Port, $Deadline) {
     }
     Fail "timed out waiting for WebView2 CDP endpoint on port $Port"
 }
+
+. (Join-Path $PSScriptRoot "lib/desktop-install-root.ps1")
 
 Add-Type @'
 using System;
@@ -168,15 +172,16 @@ if (
 ) {
     Fail "RemoteHttpsOrigin must be an HTTPS origin"
 }
-$desktopPath = (Resolve-Path -LiteralPath $DesktopBinary -ErrorAction Stop).Path
+try {
+    $install = Assert-DeveDesktopInstallRoot -InstallRoot $InstallRoot -DesktopBinary $DesktopBinary
+} catch {
+    Fail $_.Exception.Message
+}
+$desktopPath = $install.DesktopBinary
+$installRootPath = $install.InstallRoot
+
 $workRootPath = [System.IO.Path]::GetFullPath($WorkRoot)
-$sidecarPath = Join-Path (Split-Path -Parent $desktopPath) "deve_cli.exe"
-if (-not (Test-Path -LiteralPath $sidecarPath -PathType Leaf)) {
-    Fail "deve_cli sidecar is missing next to installed Desktop binary"
-}
-if ($desktopPath -notmatch '(?i)DeveNotebookInstallerSmoke') {
-    Fail "DesktopBinary must point at the isolated installed package"
-}
+$sidecarPath = $install.Sidecar
 if (@(Get-InstalledSidecars $sidecarPath).Count -ne 0) {
     Fail "installed sidecar path already has running native-loopback processes"
 }

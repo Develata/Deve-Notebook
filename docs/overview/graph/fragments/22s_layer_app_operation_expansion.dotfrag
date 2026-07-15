@@ -5,8 +5,8 @@
             color="#2563eb";
 
             app_release_dispatch [label="release.yml::dispatch", fillcolor="#bfdbfe"];
-            app_release_quality [label="release.yml::test job", fillcolor="#eff6ff"];
-            app_release_publish [label="release.yml::docker job", fillcolor="#bfdbfe"];
+            app_release_quality [label="release-candidate.yml::validate job", fillcolor="#eff6ff"];
+            app_release_publish [label="release.yml::sealed promotion job", fillcolor="#bfdbfe"];
             app_release_coverage [label="workflow coverage inspection", fillcolor="#bfdbfe"];
         }
 

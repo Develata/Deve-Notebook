@@ -15,7 +15,7 @@
 - `Surface`: `repo-files`
 - `Trigger`: maintainer checks release automation scope
 - `Preconditions`: `.github/workflows/` is readable
-- `Immediate Result`: repo shows `release.yml` as the sole tag orchestrator and `release-native.yml` as its reusable native delivery track
+- `Immediate Result`: repo shows `release-candidate.yml` and `acceptance-aggregate.yml` as pre-tag evidence/sealing workflows, `release.yml` as the sole tag promotion orchestrator, and `release-native.yml` as build-only candidate infrastructure
 - `Application Entry`: `.github/workflows/`
 
 ### `op.release.verify.inspect-release-channel`
@@ -23,7 +23,7 @@
 - `Name`: `Inspect Release Channel Surface`
 - `Surface`: `ci-or-registry-metadata`
 - `Trigger`: maintainer verifies naming and channel exposure
-- `Preconditions`: release workflow and Docker metadata are readable
+- `Preconditions`: sealed manifest, Docker-safe tag mapping, Release assets and registry metadata are readable
 - `Immediate Result`: stable release channel remains distinguishable from future channels
 - `Application Entry`: `.github/workflows/release.yml`
 
@@ -33,7 +33,7 @@
 - `Surface`: `docker`
 - `Trigger`: deployer validates published server image
 - `Preconditions`: Docker runtime and release image are available
-- `Immediate Result`: current container delivery path can be smoke-tested from an existing image without rebuilding; release automation can verify version/latest resolve to one manifest digest
+- `Immediate Result`: current container delivery path can be smoke-tested from an existing image without rebuilding; stable release automation verifies version/latest resolve to one manifest digest while prerelease never mutates latest
 - `Application Entry`: `Dockerfile`, `docker-compose.yml`
 
 ## Response Flow

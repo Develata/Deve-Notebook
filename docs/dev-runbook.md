@@ -349,6 +349,64 @@ before provider I/O and before ambient AWS credentials are resolved.
 
 ## Docker Release Smoke
 
+The first-tag channel is prepared before any tag exists. Dispatch the candidate
+at the intended HEAD, wait for it to pass, then aggregate that exact run:
+
+```bash
+gh workflow run release-candidate.yml --ref main -f version=0.1.0
+candidate_run_id="$(gh run list --workflow release-candidate.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$candidate_run_id" --exit-status
+gh workflow run acceptance-aggregate.yml --ref main -f receipt_run_ids="$candidate_run_id"
+aggregate_run_id="$(gh run list --workflow acceptance-aggregate.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$aggregate_run_id" --exit-status
+```
+
+Only after version/CHANGELOG/release-set freeze and every remaining tag blocker
+is closed, create an annotated tag that immutably selects that aggregate. A
+lightweight tag, a missing trailer, or more than one trailer is rejected:
+
+```bash
+git tag -a v0.1.0 -m "Deve-Acceptance-Aggregate-Run: $aggregate_run_id"
+git push origin v0.1.0
+```
+
+The tag workflow downloads only that sealed bundle. It never rebuilds Docker,
+Desktop, macOS, or Android bytes.
+
+Candidate and aggregate artifacts are immutable. Do not rerun a failed run after
+any artifact may have been uploaded; both workflows reject `run_attempt != 1`.
+Dispatch a new run ID instead. The candidate verifier uses Release basenames in
+public `SHA256SUMS`, validates bounded SPDX document structure, verifies the
+sealed provenance and Docker-SPDX bundles against the exact workflow/HEAD, and
+re-extracts exactly one Android APK signer. macOS DMGs keep their actual
+`macos-x64` or `macos-arm64` suffix; host-only output is never called universal.
+The workflow entrypoint is `scripts/check-release-candidate-bundle.sh`; it binds
+the Rust candidate verifier, APK signer recheck, and both typed attestation
+bundle verifications into one fail-closed gate.
+The aggregate and promotion paths call `scripts/check-android-apk-signer.sh`
+against the sealed APK itself; they never trust only the signer value copied
+into the candidate manifest.
+
+Full SemVer remains unchanged in the Git tag, workspace, manifest and GitHub
+Release. Docker maps the unique `+` separator to `_build_`; prereleases never
+update `latest`. Stable `latest` advances only when both SemVer precedence and
+Git ancestry move forward.
+
+Promotion classifies GitHub Release and GHCR state with
+`scripts/probe-release-remote.sh`: only an explicit HTTP 404 is `absent`;
+authentication, transport, rate-limit, and 5xx outcomes stop the workflow. If a
+runner loses the result after the Release was made public, rerun is idempotent
+only when the annotated tag, complete asset names and hashes, prerelease flag,
+immutable version image ID, and registry digest all still match the same sealed
+candidate. The original success path performs no extra network read after
+`gh release edit` returns successfully. A validated already-public retry still
+reapplies the stable/latest or prerelease classification idempotently so GitHub
+Latest and GHCR `latest` cannot diverge.
+Immediately before draft upload, registry mutation, and final publication,
+`scripts/check-release-tag-binding.sh` re-fetches the remote annotated tag and
+requires both its object ID and directly peeled candidate commit to remain
+unchanged.
+
 Before a tag-triggered release, require the tag (including prerelease/build
 metadata) to match the workspace plus both Tauri manifests exactly. The fixture
 test covers stable and prerelease/build versions as well as each mismatch:
@@ -357,6 +415,8 @@ test covers stable and prerelease/build versions as well as each mismatch:
 bash scripts/check-release-version-match.sh v0.1.0
 bash scripts/check-release-version-match.test.sh
 bash scripts/validate-release-image-tags.test.sh
+bash scripts/check-android-apk-signer.test.sh
+bash scripts/probe-release-remote.test.sh
 ```
 
 `scripts/validate-release-image-tags.sh` is the workflow's pre-push guard. It
@@ -756,18 +816,40 @@ Windows UI Automation. The restarted process must own exactly one fresh local
 sidecar/session and the normal packaged LocalBackend UI smoke must pass before
 all processes are closed:
 
+The installer owner must write
+`<InstallRoot>/.deve-desktop-install-root.json` with exactly
+`{"schema":1,"marker":"deve-desktop-remote-browser-smoke"}`. The smoke resolves
+the install root, marker, Desktop binary, and sibling sidecar through final-path
+handles; a symlink/junction escape or a merely similar path prefix is rejected.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-remote-browser-smoke.ps1 `
-  -DesktopBinary C:\path\DeveNotebookInstallerSmoke\deve_desktop.exe `
+  -DesktopBinary C:\isolated\DeveNotebook\deve_desktop.exe `
+  -InstallRoot C:\isolated\DeveNotebook `
   -WorkRoot C:\temp\deve-remote-smoke `
   -RemoteHttpsOrigin https://temporary-test-origin.example `
   -Username random-smoke-user `
   -Password random-smoke-password
 ```
 
-The HTTPS origin and credentials must be temporary test material. Stop the
-tunnel/server after the smoke; do not replace this gate with `--remote-url`,
-because explicit overrides deliberately hide the native recovery menu.
+The HTTPS origin and credentials must be temporary test material. This manual
+external-origin route is diagnostic-only and cannot satisfy a tag-ready receipt:
+a same-origin HEAD proof is still a deployment assertion, not proof of the
+backend executable bytes. Formal Desktop/Android RemoteBrowser receipts therefore
+use the workflow-owned internal fixture from the candidate HEAD.
+
+`scripts/remote-browser-fixture.ps1` and
+`scripts/remote-browser-fixture.sh` expose `start|run|stop`. Internal mode starts
+the current-HEAD CLI as an ordinary `main` backend with hidden `--loopback-only`
+(never native session semantics), generates random credentials without secret
+argv, and downloads the pinned cloudflared binary only after its fixed SHA-256
+matches. `run` installs signal/finally cleanup around the child command. `stop`
+checks PID start tokens and container owner labels, removes every owned resource,
+and deletes state only after absence is proven. If Docker/process inspection or
+secret deletion is uncertain, it fails and preserves `.fixture-owner` plus
+`fixture-state.json` so the same `stop --state-dir ...` can be retried. Do not
+replace this gate with `--remote-url`, because explicit shell overrides
+deliberately hide the native recovery menu.
 
 Capture the host OS, tool versions, command output, artifact paths, install
 result, startup result, and an explicit statement that no child-process runtime
@@ -810,8 +892,16 @@ DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos 
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-android DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-windows DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_REMOTE_BROWSER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-android DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_REMOTE_BROWSER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-ios DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 ```
+
+Omitting the RemoteBrowser origin/username/HEAD-proof triplet selects the
+internal exact-HEAD fixture and is the only tag-ready path. Supplying all three
+`DEVE_NATIVE_TARGET_HOST_{DESKTOP|MOBILE_ANDROID}_REMOTE_*` values selects the
+external diagnostic path; passwords are never dispatch inputs and remain GitHub
+repository secrets.
 
 The helper is dry-run by default and requires an authenticated GitHub CLI before
 it can dispatch the manual workflow. If `gh` is unavailable, the helper can use
@@ -880,7 +970,7 @@ Artifact interpretation:
 
 - Docker: validate with `DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh` or production compose with explicit `AUTH_SECRET` / `AUTH_PASS`.
 - Desktop macOS: `.app/.dmg` evidence is shell-only; unsigned CI artifacts do not claim signing, notarization, or Gatekeeper release readiness.
-- Desktop Windows: MSI/NSIS evidence covers package build, startup smoke, and installer install/uninstall smoke; it does not claim signed installer readiness.
+- Desktop Windows: MSI/NSIS evidence covers package build, LocalBackend/NoteGit startup, and installer install/uninstall smoke. RemoteBrowser/native recovery runs against the NSIS installation as the shared Desktop runtime payload representative; it does not claim separate MSI installer-engine RemoteBrowser coverage. It does not claim signed installer readiness.
 - Android: emulator evidence covers shell APK install/startup; it does not claim Play Store, signed release, or physical-device readiness.
 - iOS: simulator evidence covers shell `.app` install/startup; it does not claim device signing, TestFlight, App Store, or physical-device readiness.
 

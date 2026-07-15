@@ -331,10 +331,15 @@ treated as a release evidence gap, not as a reason to weaken checks.
 ## Release Workflows
 
 - `check.yml`: branch push / pull request checks only.
-- `release.yml`: tag `v*` quality gates and GHCR Docker publishing.
-- `release-native.yml`: tag `v*` native package workflow. Current native
-  artifacts remain shell/package evidence and do not imply signing, store, or
-  physical-device readiness.
+- `release-candidate.yml`: manual exact-HEAD quality, Docker/native target-host,
+  SBOM, checksum and attestation candidate sealing.
+- `acceptance-aggregate.yml`: exact-run receipt/candidate verification and
+  immutable tag-ready bundle aggregation.
+- `release.yml`: tag `v*` promotion only; it reuses the sealed bytes and does not
+  rebuild or repackage them.
+- `release-native.yml`: reusable pre-tag native build/smoke workflow. Native
+  artifacts remain explicit platform evidence and do not imply notarization,
+  store, or physical-device readiness.
 - `native-target-host.yml`: manual target-host diagnostics and evidence
   collection.
 

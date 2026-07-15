@@ -11,48 +11,48 @@
 
 ### `op.release.quality.start-test-job`
 
-- `Name`: `Start Release Test Job`
+- `Name`: `Start Candidate Quality Gate`
 - `Surface`: `github-actions`
-- `Trigger`: release workflow dispatches the `test` job
+- `Trigger`: maintainer dispatches `release-candidate.yml`
 - `Preconditions`: checkout and Rust toolchain setup succeed
 - `Immediate Result`: release enters the verification stage before publish
-- `Application Entry`: `.github/workflows/release.yml`
+- `Application Entry`: `.github/workflows/release-candidate.yml`
 
 ### `op.release.quality.run-clippy`
 
 - `Name`: `Run Clippy Gate`
 - `Surface`: `github-actions`
-- `Trigger`: release test job reaches lint stage
+- `Trigger`: candidate validate job reaches lint stage
 - `Preconditions`: workspace dependencies are available
 - `Immediate Result`: warning-level regressions block publish
-- `Application Entry`: `.github/workflows/release.yml`
+- `Application Entry`: `.github/workflows/release-candidate.yml`
 
 ### `op.release.quality.check-web-wasm`
 
 - `Name`: `Check Web WASM Target`
 - `Surface`: `github-actions`
-- `Trigger`: release test job reaches browser build compatibility stage
+- `Trigger`: candidate validate job reaches browser build compatibility stage
 - `Preconditions`: `wasm32-unknown-unknown` target is installed
 - `Immediate Result`: protocol or shared-core references to backend-only modules fail before publish
-- `Application Entry`: `.github/workflows/release.yml`, `apps/web/`
+- `Application Entry`: `.github/workflows/release-candidate.yml`, `apps/web/`
 
 ### `op.release.quality.audit-dependencies`
 
 - `Name`: Audit Dependency Advisories
 - `Surface`: `github-actions`, `local-or-ci-script`
-- `Trigger`: release test job or maintainer release preflight reaches dependency audit stage
+- `Trigger`: candidate Docker job invokes the current-HEAD security producer or maintainer runs the local preflight
 - `Preconditions`: `cargo-audit` and `npm` are available, or local diagnostic-only skip is acceptable
 - `Immediate Result`: high-risk dependency advisories block release when required mode is enabled
-- `Application Entry`: `.github/workflows/release.yml`, `scripts/check-release-audit-gate.sh`
+- `Application Entry`: `.github/workflows/release-candidate.yml`, `docs/registry/acceptance-producers.json`, `scripts/check-release-audit-gate.sh`
 
 ### `op.release.quality.run-tests`
 
 - `Name`: `Run Test Gate`
 - `Surface`: `github-actions`
-- `Trigger`: release test job reaches test stage
+- `Trigger`: candidate validate job reaches test stage
 - `Preconditions`: build artifacts can be produced
 - `Immediate Result`: failing tests stop later release steps
-- `Application Entry`: `.github/workflows/release.yml`
+- `Application Entry`: `.github/workflows/release-candidate.yml`
 
 ### `op.release.quality.run-runtime-happy-path-smoke`
 
@@ -85,19 +85,19 @@
 
 - `Name`: `Validate Acceptance Matrix`
 - `Surface`: `github-actions`, `local-or-ci-script`
-- `Trigger`: branch CI validates structure; tag workflow validates fresh receipts
+- `Trigger`: branch CI validates structure; candidate/aggregate generate and validate fresh receipts; tag workflow revalidates the sealed receipt set
 - `Preconditions`: matrix authority, operation coverage, generated projection, and receipt directory are readable
 - `Immediate Result`: missing case/flow/journey relations block CI; missing, dirty, stale, wrong-platform, or failed required evidence blocks tag-ready
 - `Application Entry`: `tools/baseline/src/acceptance_matrix/`, `scripts/check-acceptance-matrix.sh`
 
 ## Response Flow
 
-1. Release dispatch enters the `test` job.
+1. Candidate dispatch enters the exact-HEAD `validate` job.
 2. Instruction interface is the CI job surface and its ordered verification steps.
 3. Flow coordination enforces lint, web WASM compatibility, dependency audit, governance baselines, and test gates before publish; runtime happy-path and recovery smokes remain explicit local/CI script gates.
 4. Execution domains are CI release logic, quality gates, runtime budget policy, and reliability/observability governance.
 
 ## Notes
 
-- Current workflow explicitly models `clippy`, `deve_web` WASM check, dependency audit, governance baseline checks, and `cargo test`; runtime smoke scripts are local/CI gates that can be run before broader release verification.
+- Candidate workflow explicitly models `clippy`, `deve_web` WASM check, full baseline and `cargo test`; dependency audit is a current-HEAD producer receipt, while runtime smoke scripts remain explicit candidate/local gates.
 - Main objects: `quality::gate`, `ci::workflow`, `runtime::budget`, `observability::contract`.

@@ -47,16 +47,32 @@ native Desktop package.
 CI/CD 基于 GitHub Actions。
 
 > [!NOTE]
-> 首个公开 tag 的发布基线由 `.github/workflows/release.yml` 作为唯一
-> `v*` tag orchestrator，并调用 reusable `.github/workflows/release-native.yml`。
+> 首个公开 tag 的构建与验收由手动 `.github/workflows/release-candidate.yml`
+> 在 tag 前完成；`.github/workflows/acceptance-aggregate.yml` 封存 exact-HEAD
+> candidate 与 receipts。`.github/workflows/release.yml` 仍是唯一 `v*` tag
+> orchestrator，但只能提升已封存字节，禁止重新 build 或重新 package。
 > `nightly.yml` 与
 > `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
 
-### 2.1 Workflow: `release.yml`
-*   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
+### 2.1 Workflows: `release-candidate.yml`, `acceptance-aggregate.yml`, `release.yml`
+
+*   **Candidate Trigger**: maintainer 在候选 HEAD 上手动 dispatch
+    `release-candidate.yml`，输入的版本必须与 workspace、Desktop Tauri、Mobile
+    Tauri 版本逐字节一致；所有 jobs 必须绑定该次 `github.sha`。candidate 与 aggregate
+    artifact 均为 immutable single-attempt evidence；`run_attempt != 1` 必须 fail-closed，
+    部分失败后只能重新 dispatch 获得新的 run ID，禁止覆盖旧 run 下的封存字节。
+*   **Tag Trigger**: Push annotated tag `v*` (e.g., `v1.2.3`)。tag message 必须
+    恰好包含一个 `Deve-Acceptance-Aggregate-Run: <run-id>` trailer，将不可变 tag
+    显式绑定到同 HEAD 的成功 aggregate run；lightweight tag 与缺失/重复 trailer
+    必须 fail-closed。tag 只是已封存候选的 promotion 指令，不再承担 build。
 *   **Steps**:
-    1.  **Tag Gate**: GitHub 的 `v*` glob 只负责触发；workflow 的第一个 step 必须按 SemVer 2.0.0（含可选 prerelease/build metadata）验证 `GITHUB_REF_NAME`，非 SemVer `v*` tag 必须在 checkout、build 或 publish 前 fail-closed。checkout 后必须把去掉单个前导 `v` 的 tag 与 workspace package version、Desktop Tauri version、Mobile Tauri version 做逐字节 exact compare；prerelease 与 build metadata 不得被归一化或忽略，任一不一致都必须在 build/publish 前失败。
-    2.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, and `cargo test --locked`. The native process adapter gate is scoped with `DEVE_NATIVE_PROCESS_ADAPTER_RUN_NATIVE_PACKAGING_TESTS=0` in `release.yml`, so it verifies no-Tauri/process authority boundaries without compiling native-packaging dependencies.
+    1.  **Candidate Gate**: candidate workflow 先完成 quality、dependency/security、
+        Linux Docker、Windows Desktop、Android target-host 验收；每个平台 receipt
+        必须来自同一 HEAD。远端浏览器 fixture 默认启动 current-HEAD loopback backend、
+        随机凭据与 checksum-bound 临时 HTTPS tunnel，且 finally 回收所有 owned resource；
+        外部 staging override 必须显式提供 same-origin HEAD proof，但只能生成诊断结果，
+        不得生成或上传 tag-ready receipt；正式 receipt 只接受 workflow 自建的 exact-HEAD fixture。
+    2.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native boundary checks that do not build Linux GTK3 artifacts, graph baseline, `cargo test --locked` 与 current-HEAD dependency/security receipt。
         Dependency audit belongs to this gate: `scripts/check-release-audit-gate.sh`
         **MUST** fail on cargo/npm vulnerabilities and **MUST** compare every
         non-vulnerability `cargo audit` warning with
@@ -67,37 +83,36 @@ CI/CD 基于 GitHub Actions。
         warning kind, rationale, replacement route, and whether first-tag
         readiness requires a separate USER decision or replacement before
         public tag.
-    3.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。release job 只构建一次本地 candidate image，并记录其 image ID。
+    3.  **Candidate Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。candidate workflow 只构建一次 `linux/amd64` image，并记录其 image ID；同一 run 还构建 Windows MSI/NSIS、按真实 host architecture 标记为 `macos-x64` 或 `macos-arm64` 的 DMG，以及已签名 Android ARM64 APK。不得把 host-only DMG 重命名为 universal。Android signing secrets 缺失、签名数不为一或 `apksigner verify` / certificate digest 复核失败时，candidate 必须失败，不能以 unsigned artifact 代替。
     4.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
-    5.  **Exact Image Smoke**: runtime/login smoke 与 Playwright 双客户端 smoke 必须复用同一 candidate image，禁止在 smoke 内重新 build；全部 smoke 后 image ID 必须仍与构建时一致。
-    6.  **Docker Push**: 仅在 exact image smoke 成功后，才把 candidate image 赋予 version 与 `latest` tag 并 push。
+    5.  **Exact Candidate Evidence**: runtime/login、Playwright 双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须复用同一 candidate image；Desktop 必须安装并测试最终封存的 MSI/NSIS。LocalBackend、NoteGit 与 install/uninstall boundary 对两种 Windows installer 分别执行；RemoteBrowser/native-recovery journey 以 NSIS 安装面代表共享 Desktop runtime payload，不将该 receipt 扩张声明为 MSI installer-engine 的 RemoteBrowser 证明。GitHub x86_64 Android emulator 使用同一 HEAD 的 target-compatible x86_64 package 验证 LocalBackend/RemoteBrowser lifecycle，随后单独构建、签名并验证封存的 ARM64 APK；该 emulator receipt 不得冒充 ARM64 APK 的逐字节安装证据。smoke 禁止对 Docker/Desktop candidate 隐式 rebuild。
+    6.  **Seal**: `deve_baseline release-candidate assemble/verify` 对下载容器与候选目录的精确 allowlist 执行规范相对路径、symlink/reparse、目录/文件总预算、结构文件大小上限、流式 SHA-256、HEAD、版本、workflow identity、Docker image ID 与 Android signer 校验，确定性生成 `release-candidate.json`、内部 candidate checksums 与公开 `SHA256SUMS`。公开 checksum 使用唯一 asset basename，以便直接验证 GitHub Release 扁平资产；内部 checksum 保留 candidate-relative path。source/workspace 与 exact Docker image 分别生成有完整 document/package/relationship 结构的 SPDX 2.3 JSON；source SBOM 不得冒充 MSI/DMG/APK 的逐字节 SBOM。实际制品和 SBOM 使用 GitHub artifact attestation 生成固定 provenance 与 Docker-SPDX bundle；个人仓库显式关闭 organization-only storage record，但保留 bundle 与 registry attestation。
+    7.  **Aggregate**: `acceptance-aggregate.yml` 只接受显式 candidate/source run ID 与 attempt 1，先重算 candidate manifest/checksums、重新从 sealed APK 提取唯一 signer certificate，再使用封存 bundle、固定 signer workflow、source HEAD 与 SPDX predicate 验证 attestation，随后执行 receipt collect 与 tag-ready。成功后上传 sealed exact-HEAD candidate bundle；artifact 过期、HEAD 或版本变化必须整批重跑。
+    8.  **Promote**: `release.yml` 从 annotated tag trailer 显式绑定的成功 aggregate run 下载 sealed bundle并再次 verify；不得按“最新成功 run”自行选择。promotion 在 repository scope 串行，并在 draft upload、registry mutation 与公开 Release 前重复确认 remote annotated tag object 仍直接 peel 到 candidate HEAD。GitHub Release 与 GHCR 的存在性探测使用 `present / explicit HTTP 404 absent / error` 三态；鉴权、限流、网络或 5xx 一律 fail-closed，不得进入 create/push 分支。Docker archive load 后 image ID 必须匹配 manifest，随后才赋 version tag；stable release 仅在当前版本具有严格更高 SemVer precedence 且 prior latest tag commit 是当前 commit 祖先时更新 `latest`，prerelease 不更新 `latest`。SemVer build metadata 在 manifest/GitHub Release 中原样保留，并以无碰撞 `+` → `_build_` 映射形成 Docker-safe version tag。native assets 原样上传 draft Release，禁止重命名、重压缩或重新构建。
+    9.  **Remote Verify**: stable Docker version/latest 必须解析到同一 registry manifest digest并生成 registry digest attestation；已存在的 immutable version tag 只有在 pull 后 image ID 与 sealed candidate 完全一致时才允许恢复 partial run，否则 fail-closed。GitHub Release 远端资产名称与 SHA-256 必须与 sealed manifest 完全相等后才可公开。
         *   **Registry**: GHCR (`ghcr.io`).
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
-        *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
-        *   **Digest Verification**: push 后必须从 registry 解析 version 与 `latest`，两者 manifest digest 必须完全相同；不一致时 release job 失败。
+        *   **Tags**: stable 使用 `latest` 与 Docker-safe version；prerelease 只有 Docker-safe version。Git tag / manifest version 仍保留完整 SemVer。
+        *   **Digest Verification**: stable push 后必须从 registry 解析 version 与 `latest`，两者 manifest digest 必须完全相同；不一致时 release job 失败。
 
-`release-native.yml` 是 reusable native delivery track，不得独立监听 `v*` tag。
-`release.yml` 的 quality gates 与 Docker publish 成功后才可调用它。Windows
-MSI/NSIS、macOS DMG 与 Android ARM64 APK 的 build jobs 只能先上传 workflow
-artifacts；三个必需 build jobs 全部成功后，单一 publish job 才可创建或更新一次
-draft GitHub Release。publish job 必须按 allowlisted artifact names 下载，先验证三个容器内
-总文件数恰为四，再验证恰好存在
-Windows MSI、Windows NSIS、macOS DMG 与 Android ARM64 APK，拒绝缺失、重复 basename
-或额外 artifact；上传后必须从 GitHub Release API 复核 asset manifest，完全相等后才可
-把 draft 发布为公开 GitHub Release。任一 native build、manifest、upload 或复核步骤失败时
-不得留下公开的 partial GitHub Release。Reusable workflow 只接收四个 Android signing
-secrets，不得继承全部 repository / organization secrets。Windows/macOS public-preview artifacts 可以保持 unsigned，Android
-仅在 keystore secrets 齐全时产生已签名 APK，否则只能上传明确标记、不可安装的
-unsigned diagnostic artifact。该 workflow **MUST NOT** 构建 Linux
+`.github/workflows/release-native.yml` 是 candidate workflow 的 reusable native **build-only** track，
+不得独立监听 `v*` tag，也不得创建 GitHub Release。Windows MSI/NSIS、macOS DMG
+与 Android ARM64 APK 只能上传到本次 candidate run；候选组装器拒绝缺失、重复 basename
+或额外 artifact。Reusable workflow 只接收四个 Android signing secrets，不得继承全部
+repository / organization secrets。Windows/macOS public-preview artifacts 可以保持
+unsigned；Android candidate 必须已签名且 signer certificate 必须进入 manifest。该 workflow **MUST NOT** 构建 Linux
 GTK3/WebKitGTK 4.x Desktop artifacts 或 iOS artifacts，也不得把 package artifact
 存在性表述为 signing、notarization、store 或 physical-device readiness。
 
-该 first-tag orchestrator 是最小收敛而非跨 registry 强事务：Docker version / latest
-image 可以在 native track 完成前已发布。若随后 native build 或 publish verification
-失败，workflow 必须以失败结束且不得留下公开 GitHub Release；draft 与已发布 GHCR tag
-的保留、删除或重跑由 maintainer 显式恢复流程处理，不得把 partial delivery 报告为完整 release。
-同一 tag 重跑时，asset upload 前只允许 GitHub Release 不存在或仍为 draft；若该 tag 已有
-公开 Release，workflow 必须在修改任何公开资产前 fail-closed，等待 maintainer 显式恢复。
+该 first-tag orchestrator 仍不是跨 registry 强事务，但 native build/target-host failure
+发生在 tag 前，因此不得先发布 GHCR。promotion 期间若 registry push 已发生而后续步骤失败，
+workflow 必须失败并保持 GitHub Release 为 draft；重跑只允许用相同 sealed candidate 修复
+partial delivery。若公开 Release mutation 已成功而 runner 随后进入 committed-unknown，重跑仅在
+remote annotated tag、完整资产名称与 SHA-256、prerelease 分类、immutable version image identity
+和最终 registry digest 全部与该 candidate 一致时幂等成功；任一不一致都 fail-closed。原始成功
+路径在 `gh release edit` 返回成功后不再执行非必要的 post-publish 网络读取，避免制造无法区分的
+假失败。已公开 stable Release 的恢复仍须幂等重放 `--latest` 分类，避免 GitHub Latest 与
+GHCR `latest` 分叉；prerelease 同理重放其非 latest 分类。
 
 Web 与 CLI 仍由 `deve_cli` 主通道承载：Docker image 在构建 `deve_cli` 前嵌入
 release Web assets，Desktop LocalBackend package 将同一 CLI 作为受控 sidecar。
@@ -169,6 +184,16 @@ Mobile graceful-exit smoke 可以把 exit command 后立即发生的 CDP target 
 “响应可能被进程退出截断”，但不得仅凭该 transport error 宣布成功。外层 target-host gate
 仍必须证明 app PID 在有界时间内消失、出现 clean shutdown marker，且不存在 shutdown
 failed-closed marker；其它 native command error 必须原样失败。
+
+#### RemoteBrowser Candidate Fixture {#remote-browser-candidate-fixture}
+
+RemoteBrowser target-host fixture 属于 release infra，不拥有产品 authority。内部 fixture
+使用普通 `main` node role 的 loopback-only release 启动入口，必须只监听 `127.0.0.1`，
+不得启用 native session、native bootstrap 或 LocalBackend service surface。随机 username、
+password 与 auth secret 只能存在于进程级环境或受限临时文件，禁止进入 argv 或 job-wide
+environment；启动、子命令或清理任一步失败都必须 best-effort 回收全部 owned process、
+container 与 tunnel，并在无法证明资源已消失时保留 owner/state 供重试。外部 staging
+只能用于诊断，不能满足 first-tag receipt。
 
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
@@ -320,21 +345,42 @@ JSON 总量上限 16 MiB；producer 写入侧单个原子 execution group 最多
 fingerprint、artifacts 与 producer inputs。collector 使用临时目录完成全部校验后再原子发布。
 候选 HEAD 必须先通过独立的 receipt aggregation workflow：该 workflow 只接受显式 workflow run
 ID，逐一验证 source run 成功且 `headSha` 等于自身 checkout HEAD，按 allowlist 下载
-`deve-acceptance-receipts-*` artifact，再调用 Rust collector 与 tag-ready gate；成功后只上传绑定
-该 HEAD 的聚合 receipt artifact。tag-triggered release orchestrator 只能下载同 HEAD 的成功聚合
-artifact 并再次运行 tag-ready，不得自行选择“最新”但 SHA 不匹配的 evidence。release workflow 必须先
-下载各平台 receipt artifact、调用 collector，再运行 `acceptance-matrix --tag-ready`，并且该
-gate 必须位于任何 image tag/push、Release asset upload 或 GitHub Release 创建之前。producer
+`deve-acceptance-receipts-*` 与 `deve-release-candidate-*` artifact；先由 Rust 重算 manifest/checksums，
+再验证 attestations，随后调用 collector 与 tag-ready gate。成功后只上传绑定该 HEAD、版本与
+candidate run identity 的 sealed bundle。tag-triggered release orchestrator 只能下载 annotated
+tag 中唯一 `Deve-Acceptance-Aggregate-Run` trailer 显式绑定、
+同 HEAD/版本的成功 aggregate artifact 并再次运行 candidate verify 与 tag-ready，不得自行选择
+“最新” evidence，也不得 rebuild。该 gate 必须位于任何 image tag/push、Release asset upload
+或 GitHub Release 创建之前。producer
 失败、缺失、过期或平台不匹配均保持 fail-closed，禁止用空目录或跳过 job 伪装成功。
 
-当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 未启用；发布
-资产缺少 SBOM、SHA-256 checksum 与 provenance/attestation；Docker、Desktop、Android、
-RemoteBrowser 仍需 current-HEAD candidate receipts；首个版本、CHANGELOG 与 release set
-尚未冻结；Android 已有 `apksigner` workflow，但仍缺 current-HEAD secrets、签名验证与安装
-证据。开源治理文件、ruleset、
+当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 未启用；Docker、Desktop、Android、
+RemoteBrowser 仍需在合并后的 current HEAD 实际运行 candidate workflow 并生成 producer-bound receipts；首个版本、CHANGELOG 与 release set
+尚未冻结。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
+但在 current HEAD 的成功 run/receipt 出现前仍不能声称签名或安装证据已满足。开源治理文件、ruleset、
 Dependabot/CodeQL/container scan、operator runbook 属 P1；toolchain pins、`.editorconfig`、
 fuzz/performance/privacy policy 属 P2 advisory。本批只建立诚实 gate，不顺带声称这些缺口
 已经关闭。
+
+### 2.1.5 Artifact Identity and Integrity {#artifact-identity-and-integrity}
+
+`deve_baseline release-candidate assemble|verify` 独占 candidate manifest 与 checksum
+policy。Candidate root 必须是实际目录；所有输入使用 canonical forward-slash relative
+path，逐层拒绝 symlink/reparse、`.`、`..`、absolute/drive/UNC、非普通文件与 root escape。
+工具以 64 KiB buffer 流式计算 SHA-256 和大小，对 MSI、NSIS、DMG、signed ARM64 APK、
+Docker linux/amd64 archive、source SPDX、image SPDX、provenance bundle 与 Docker-SPDX bundle 执行精确
+allowlist；重复角色路径、控制文件 basename 冲突、缺失或额外文件/目录全部 fail-closed。
+SPDX/bundle/manifest/checksum 解析具有明确资源上限；SPDX 必须包含规范 document identity、
+creation info、实体与 relationships，不得仅凭 `spdxVersion` 字段通过。
+
+Canonical manifest schema 1 绑定 HEAD、workspace version、workflow path/run ID/attempt、
+Docker image ID、Android signer certificate SHA-256 与排序后的 artifact records。公开
+`SHA256SUMS` 以 GitHub Release 实际 basename 覆盖发布资产、SBOM、attestation bundle 与 manifest；内部
+candidate checksum 还覆盖 Docker archive 和公开 checksum 文件。`verify` 必须重新读取、
+重算并逐字节复核 canonical JSON/checksum 投影，不能信任 workflow 传入的预计算 hash。
+平台签名、Syft 扫描和 GitHub attestation 由窄 workflow action 执行；Rust 工具仍拥有
+subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只调用 `apksigner` / `gh`
+完成宿主签名解析和密码学 bundle 校验。
 
 ### 2.2 Deferred Workflows (推迟的工作流)
 
@@ -449,6 +495,8 @@ Web dashboard 通过 `SystemMetrics` 展示的 CPU / memory gauge 必须遵循
 - [ ] 所有 CI 测试通过 (Green).
 - [ ] `CHANGELOG.md` 已更新。
 - [ ] 关键依赖 (Dependencies) 无高危审计漏洞 (`cargo audit`, `npm audit`).
+- [ ] exact-HEAD pre-tag candidate bundle 已通过 Rust manifest/checksum 复核、SBOM 与
+      provenance attestation 验证；tag promotion 未重新构建任何字节。
 - [ ] 非漏洞依赖 warning 均有 registry allowlist 理由或替换路线；首个正式 tag 前
       `tag_blocker=yes` 项已被 USER 决策、替换或重新归类。
 - [ ] Remote Projection S3-compatible credential binding 遵循 ADR 0008 的长期 profile

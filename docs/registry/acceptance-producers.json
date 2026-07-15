@@ -606,15 +606,23 @@
       "timeout_seconds": 1200,
       "required_env": [
         "DEVE_DESKTOP_BINARY",
+        "DEVE_DESKTOP_REMOTE_INSTALL_ROOT",
         "DEVE_DESKTOP_REMOTE_WORK_ROOT",
         "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN",
         "DEVE_DESKTOP_REMOTE_USERNAME",
         "DEVE_DESKTOP_REMOTE_PASSWORD"
       ],
+      "bound_env": [
+        "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
+      ],
       "environment": {},
       "claims_env": {},
       "artifacts": [
-        "scripts/check-desktop-remote-browser-smoke.ps1"
+        "scripts/check-desktop-remote-browser-smoke.ps1",
+        "scripts/lib/desktop-install-root.ps1",
+        "scripts/smoke-desktop-remote-browser.mjs",
+        "scripts/smoke-desktop-packaged-ui.mjs",
+        "scripts/lib/desktop-webview-business-flow.mjs"
       ],
       "steps": [
         {
@@ -634,6 +642,12 @@
             },
             {
               "env": "DEVE_DESKTOP_BINARY"
+            },
+            {
+              "literal": "-InstallRoot"
+            },
+            {
+              "env": "DEVE_DESKTOP_REMOTE_INSTALL_ROOT"
             },
             {
               "literal": "-WorkRoot"
@@ -750,6 +764,71 @@
         }
       ],
       "note": "Inject a peer fact sequence gap, prove projection blocking, restore the missing fact, and converge"
+    },
+    {
+      "producer_id": "release.candidate-bundle",
+      "evidence_ids": [
+        "release.candidate-artifacts",
+        "release.sbom",
+        "release.checksum",
+        "release.provenance"
+      ],
+      "tiers": [
+        "tag-ready"
+      ],
+      "dependencies": [],
+      "host_os": [
+        "linux"
+      ],
+      "timeout_seconds": 1800,
+      "required_env": [
+        "DEVE_RELEASE_CANDIDATE_DIR",
+        "DEVE_RELEASE_CANDIDATE_HEAD",
+        "DEVE_RELEASE_CANDIDATE_VERSION",
+        "DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH",
+        "DEVE_RELEASE_CANDIDATE_RUN_ID",
+        "DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID",
+        "DEVE_RELEASE_ANDROID_SIGNER_SHA256",
+        "DEVE_RELEASE_WINDOWS_MSI",
+        "DEVE_RELEASE_WINDOWS_NSIS",
+        "DEVE_RELEASE_MACOS_DMG",
+        "DEVE_RELEASE_ANDROID_APK",
+        "DEVE_RELEASE_DOCKER_ARCHIVE",
+        "DEVE_RELEASE_SOURCE_SBOM",
+        "DEVE_RELEASE_IMAGE_SBOM",
+        "DEVE_RELEASE_PROVENANCE_BUNDLE",
+        "DEVE_RELEASE_DOCKER_SBOM_BUNDLE"
+      ],
+      "bound_env": [
+        "DEVE_RELEASE_CANDIDATE_HEAD",
+        "DEVE_RELEASE_CANDIDATE_VERSION",
+        "DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH",
+        "DEVE_RELEASE_CANDIDATE_RUN_ID",
+        "DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID",
+        "DEVE_RELEASE_ANDROID_SIGNER_SHA256"
+      ],
+      "environment": {
+        "DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-release-candidate-bundle.sh",
+        "scripts/check-android-apk-signer.sh",
+        "scripts/check-android-apk-signer.test.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-release-candidate-bundle.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Atomically verify sealed candidate artifacts, SPDX documents, checksums, and GitHub attestations"
     },
     {
       "producer_id": "security.tag-ready-audit",

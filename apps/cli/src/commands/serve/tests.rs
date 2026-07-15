@@ -279,6 +279,7 @@ async fn serve_dry_run_validates_runtime_without_binding() {
             sync_mode: SyncMode::Auto,
             p2p: P2pConfig::default(),
             native_loopback: false,
+            loopback_only: false,
         },
     )
     .await
@@ -303,10 +304,38 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
             sync_mode: SyncMode::Auto,
             p2p: P2pConfig::default(),
             native_loopback: true,
+            loopback_only: false,
         },
     )
     .await
     .expect_err("native loopback must fail closed on occupied port");
+
+    assert!(err.to_string().contains("refusing proxy fallback"), "{err}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn release_loopback_refuses_proxy_fallback_when_port_is_occupied() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("occupy loopback port");
+    let port = listener.local_addr().expect("listener addr").port();
+
+    let err = run(
+        &ledger_dir,
+        ServeOptions {
+            port,
+            snapshot_depth: 8,
+            dev: false,
+            dry_run: false,
+            profile: AppProfile::Standard,
+            sync_mode: SyncMode::Auto,
+            p2p: P2pConfig::default(),
+            native_loopback: false,
+            loopback_only: true,
+        },
+    )
+    .await
+    .expect_err("release loopback must fail closed on occupied port");
 
     assert!(err.to_string().contains("refusing proxy fallback"), "{err}");
 }
@@ -337,6 +366,7 @@ async fn serve_dev_does_not_mutate_existing_deve_env() {
             sync_mode: SyncMode::Auto,
             p2p: P2pConfig::default(),
             native_loopback: false,
+            loopback_only: false,
         },
     )
     .await

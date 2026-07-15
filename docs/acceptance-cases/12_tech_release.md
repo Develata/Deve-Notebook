@@ -42,8 +42,10 @@
     - stdout_contains: "profile = 'low-spec'"
 
 - case_id: REL-001
-  goal: 当前 release channel 由单一 tag orchestrator 顺序协调 GHCR/Docker 与 reusable native delivery。
+  goal: 当前 release channel 在 tag 前构建、验收、哈希并 attest 一个 exact-HEAD candidate；单一 tag orchestrator 只提升 sealed bytes。
   preconditions:
+    - `.github/workflows/release-candidate.yml` 可读
+    - `.github/workflows/acceptance-aggregate.yml` 可读
     - `.github/workflows/release.yml` 可读
     - `.github/workflows/release-native.yml` 可读
   steps:
@@ -51,28 +53,42 @@
     - run: cargo run -p deve_baseline -- release
     - run: scripts/check-release-version-match.test.sh
     - run: scripts/validate-release-image-tags.test.sh
-    - run: rg -n "tags: \\['v\\*'\\]|type=semver,pattern=\\{\\{version\\}\\}|type=raw,value=latest|ghcr.io/\\$\\{\\{ github.repository \\}\\}" .github/workflows/release.yml
+    - run: cargo test --locked -p deve_baseline release_candidate -- --nocapture
+    - run: rg -n "tags: \\['v\\*'\\]|Deve-Acceptance-Aggregate-Run|docker load --input|gh release upload" .github/workflows/release.yml
   assertions:
     - stdout_contains: "release-baseline-check: ok"
     - stdout_contains: "tags: ['v*']"
-    - stdout_contains: "type=semver,pattern={{version}}"
-    - stdout_contains: "type=raw,value=latest"
-    - stdout_contains: "ghcr.io/${{ github.repository }}"
+    - stdout_contains: "Deve-Acceptance-Aggregate-Run"
+    - stdout_contains: "docker load --input"
+    - stdout_contains: "gh release upload"
     - release_assert: release_yml_is_only_direct_v_tag_entry true
-    - release_assert: non_semver_v_tag_rejected_before_checkout_build_publish true
+    - release_assert: non_semver_v_tag_rejected_before_checkout_or_promotion true
     - release_assert: checked_out_workspace_desktop_mobile_versions_exact_match_tag true
-    - release_assert: prerelease_and_build_metadata_are_not_normalized_away true
-    - release_assert: docker_candidate_built_once_and_smoked_without_rebuild true
-    - release_assert: version_and_latest_remote_manifest_digests_match true
-    - release_assert: native_delivery_uses_workflow_call_after_docker true
-    - release_assert: github_release_created_once_after_all_native_builds true
+    - release_assert: prerelease_and_build_metadata_preserved_in_manifest_and_git_release true
+    - release_assert: docker_build_metadata_uses_injective_safe_tag_mapping true
+    - release_assert: prerelease_does_not_update_registry_latest true
+    - release_assert: candidate_version_and_all_jobs_bound_to_exact_head true
+    - release_assert: annotated_tag_binds_exactly_one_aggregate_run true
+    - release_assert: docker_candidate_built_once_smoked_archived_and_attested_before_tag true
+    - release_assert: windows_macos_signed_android_artifacts_built_before_tag true
+    - release_assert: candidate_manifest_rejects_path_escape_symlink_reparse_duplicate_extra_or_corrupt_files true
+    - release_assert: candidate_and_aggregate_rerun_rejected_in_favor_of_fresh_dispatch true
+    - release_assert: source_and_docker_spdx_subjects_are_distinct true
+    - release_assert: sealed_provenance_and_spdx_attestation_bundles_verified_offline true
+    - release_assert: sealed_android_apk_signer_reextracted_and_exactly_one true
+    - release_assert: aggregate_recomputes_hashes_and_verifies_attestation_before_tag_ready true
+    - release_assert: tag_orchestrator_loads_sealed_docker_archive_without_rebuild true
+    - release_assert: stable_version_and_latest_remote_manifest_digests_match true
+    - release_assert: latest_requires_strict_semver_and_git_history_progression true
+    - release_assert: native_delivery_is_build_only_candidate_workflow true
+    - release_assert: github_release_created_once_from_sealed_native_assets true
     - release_assert: native_failure_creates_no_github_release true
     - release_assert: native_manifest_requires_exact_allowlisted_asset_set true
     - release_assert: native_manifest_rejects_extra_downloaded_files true
     - release_assert: existing_public_release_rejected_before_asset_upload true
     - release_assert: github_release_remains_draft_until_remote_asset_manifest_matches true
     - security_assert: reusable_native_receives_only_android_signing_secrets true
-    - evidence_boundary: docker_image_may_publish_before_native_delivery_completes
+    - evidence_boundary: promotion_is_not_cross_registry_atomic
 
 - case_id: REL-002
   goal: Docker release 镜像 boot/auth 与 embedded frontend metadata preflight 可用。
@@ -213,9 +229,9 @@
     - release_assert: first_tag_native_artifacts_windows_macos_android_only true
     - release_assert: linux_desktop_and_ios_artifacts_excluded_from_first_tag true
     - release_assert: native_public_preview_signing_boundaries_explicit true
-    - release_assert: release_native_artifacts_attach_to_github_release true
+    - release_assert: sealed_native_artifacts_attach_to_github_release_only_during_tag_promotion true
     - release_assert: release_native_has_no_independent_tag_trigger true
-    - release_assert: release_native_publish_waits_for_all_required_builds true
+    - release_assert: release_native_is_build_and_target_host_smoke_only true
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"
     - cli_assert: graph_projection_cli_and_http_share_adapter true
@@ -326,6 +342,10 @@
     - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable
     - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-desktop-packaged-ui-smoke.ps1 -DesktopBinary <installed_deve_desktop.exe> -WorkRoot <temp_root>
     - run: node --test scripts/smoke-desktop-packaged-ui.test.mjs
+    - run: node --test scripts/smoke-desktop-remote-browser.test.mjs
+    - run: pwsh -NoProfile -File scripts/desktop-install-root.test.ps1
+    - run: pwsh -NoProfile -File scripts/remote-browser-fixture.test.ps1
+    - run: bash scripts/remote-browser-fixture.test.sh
     - run: cargo test -p deve_core native_adapter -- --nocapture
     - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
     - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
@@ -421,5 +441,7 @@
     - contract_assert: producer_finally_cleanup_is_execution_scoped_and_bounded true
     - contract_assert: one_producer_execution_atomically_emits_multiple_bound_receipts true
     - contract_assert: explicit_cross_workflow_run_ids_are_head_bound_before_collection true
+    - contract_assert: candidate_and_receipt_source_runs_are_explicit_head_version_bound true
+    - contract_assert: sealed_candidate_artifact_expiry_requires_full_regeneration true
     - release_assert: explicit_p0_gap_blocks_tag_ready true
 ```

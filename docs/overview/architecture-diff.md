@@ -24,7 +24,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Flow set | aligned | the same 74 high-value flows exist on both sides |
 | User operations | aligned | current IDs and flow grouping match |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | aligned | release / CI now treats `release.yml` as the only required workflow surface |
+| Coordination/execution mapping | aligned | release / CI separates pre-tag candidate build/smoke, receipt aggregation, reusable native execution, and tag-only sealed promotion |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry

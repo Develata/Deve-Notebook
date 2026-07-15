@@ -10,7 +10,13 @@ fail() {
 }
 
 [[ -n "$VERSION" ]] || fail "metadata version is empty"
-[[ "$#" -eq 2 ]] || fail "expected exactly version and latest image tags before push, got $#"
+version_without_build="${VERSION%%+*}"
+registry_version="${VERSION/+/_build_}"
+if [[ "$version_without_build" == *-* ]]; then
+  [[ "$#" -eq 1 ]] || fail "prerelease images must not update latest"
+else
+  [[ "$#" -eq 2 ]] || fail "stable releases require exactly version and latest image tags"
+fi
 
 latest_tag=""
 version_tag=""
@@ -24,8 +30,12 @@ for tag in "$@"; do
   fi
 done
 
-[[ -n "$latest_tag" && -n "$version_tag" ]] || fail "release tags must contain one latest and one version tag"
-[[ "$version_tag" == *:"$VERSION" ]] || fail "version tag does not end with metadata version: $version_tag expected=$VERSION"
-[[ "${latest_tag%:latest}" == "${version_tag%:"$VERSION"}" ]] || fail "release tags do not share one repository: $latest_tag $version_tag"
+[[ -n "$version_tag" ]] || fail "release tags must contain one version tag"
+[[ "$version_tag" == *:"$registry_version" ]] || fail "version tag does not preserve the Docker-safe metadata mapping: $version_tag expected=$registry_version"
+if [[ "$version_without_build" != *-* ]]; then
+  [[ -n "$latest_tag" ]] || fail "stable release tags must contain latest"
+  [[ "${latest_tag%:latest}" == "${version_tag%:"$registry_version"}" ]] || fail "release tags do not share one repository: $latest_tag $version_tag"
+fi
 
-printf '%s\n%s\n' "$version_tag" "$latest_tag"
+printf '%s\n' "$version_tag"
+[[ -z "$latest_tag" ]] || printf '%s\n' "$latest_tag"

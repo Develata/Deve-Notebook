@@ -1,0 +1,417 @@
+name: Seal Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact workspace version without a v prefix.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-candidate-${{ github.sha }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact dispatch commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Lock candidate version and commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate runs are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
+          [[ "$VERSION" != v* && "$VERSION" != *$'\n'* && "$VERSION" != *$'\r'* ]]
+          scripts/check-release-version-match.sh "v$VERSION"
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: "1.92"
+          targets: wasm32-unknown-unknown
+          components: clippy,rustfmt
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Verify candidate scripts and formatting
+        run: |
+          set -euo pipefail
+          bash -n scripts/check-release-candidate-bundle.sh
+          bash scripts/check-release-version-match.test.sh
+          cargo fmt --all -- --check
+
+      - name: Verify baseline and plan contracts
+        run: |
+          set -euo pipefail
+          cargo run --locked --quiet -p deve_baseline -- all
+          cargo run --locked --quiet -p deve_baseline -- full
+          scripts/plan-coverage.sh --check-reverse-coverage
+          scripts/plan-coverage.sh --check-metadata-completeness
+          scripts/plan-coverage.sh --check-perf-budget
+          scripts/check-perf-budget-baseline.sh
+          scripts/check-reliability-observability-baseline.sh
+          scripts/plan-coverage.sh --check-no-adr-plan-ref
+          scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
+
+      - name: Verify Rust and Web projection
+        run: |
+          set -euo pipefail
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo check --locked -p deve_web --target wasm32-unknown-unknown
+          cargo test --locked
+
+  docker-linux-amd64:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: "1.92"
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Build linux/amd64 image once
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          image="deve-notebook:candidate-${GITHUB_SHA}"
+          docker buildx build \
+            --load \
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --tag "$image" .
+          image_id="$(docker image inspect --format '{{.Id}}' "$image")"
+          [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$(docker image inspect --format '{{.Architecture}}/{{.Os}}' "$image")" == linux/amd64 ]]
+          printf 'DEVE_RELEASE_CANDIDATE_IMAGE=%s\n' "$image" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$image_id" >>"$GITHUB_ENV"
+
+      - name: Run multiclient, offline, Source Control and External Changes
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier full
+          --producer docker.multiclient-product
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker-product"
+
+      - name: Run P2P gap and recovery against the same image
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier full
+          --producer docker.p2p-gap-recovery
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker-p2p"
+
+      - name: Run current-HEAD security audit producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer security.tag-ready-audit
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-security"
+
+      - name: Save the already-smoked image bytes
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist-docker
+          archive="dist-docker/deve-notebook-${VERSION}-linux-amd64.tar"
+          docker save --output "$archive" "$DEVE_RELEASE_CANDIDATE_IMAGE"
+          printf '%s\n' "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" >dist-docker/docker-image-id.txt
+          docker image rm "$DEVE_RELEASE_CANDIDATE_IMAGE"
+          docker load --input "$archive"
+          loaded_id="$(docker image inspect --format '{{.Id}}' "$DEVE_RELEASE_CANDIDATE_IMAGE")"
+          [[ "$loaded_id" == "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]]
+
+      - name: Generate exact Docker image SPDX 2.3 SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ env.DEVE_RELEASE_CANDIDATE_IMAGE }}
+          format: spdx-json
+          output-file: dist-docker/docker-image.spdx.json
+          upload-artifact: false
+
+      - name: Upload exact Docker candidate bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-docker-candidate-${{ github.sha }}
+          path: dist-docker
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Linux receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-linux-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-*
+          if-no-files-found: error
+          retention-days: 14
+
+  native:
+    needs: validate
+    uses: ./.github/workflows/release-native.yml
+    with:
+      version: ${{ inputs.version }}
+      candidate_head: ${{ github.sha }}
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+  assemble:
+    needs: [validate, docker-linux-amd64, native]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Bind private candidate work roots
+        run: |
+          printf 'CANDIDATE_DIR=%s\n' "$RUNNER_TEMP/deve-release-candidate" >>"$GITHUB_ENV"
+          printf 'INCOMING_DIR=%s\n' "$RUNNER_TEMP/deve-release-incoming" >>"$GITHUB_ENV"
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: "1.92"
+
+      - name: Prepare exact source SBOM destination
+        run: mkdir -p "$RUNNER_TEMP/deve-source-sbom"
+
+      - name: Generate exact source SPDX 2.3 SBOM before artifact download
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: .
+          format: spdx-json
+          output-file: ${{ runner.temp }}/deve-source-sbom/source.spdx.json
+          upload-artifact: false
+
+      - name: Download exact Windows candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-native-windows-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-incoming/windows
+
+      - name: Download exact macOS candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-native-macos-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-incoming/macos
+
+      - name: Download exact Android candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-native-android-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-incoming/android
+
+      - name: Download exact Docker candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-docker-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-incoming/docker
+
+      - name: Download all platform receipts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: deve-acceptance-receipts-*-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-incoming/receipts
+          merge-multiple: false
+
+      - name: Materialize a strict candidate tree
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          mkdir -p "$CANDIDATE_DIR"/artifacts/{windows,macos,android,docker} "$CANDIDATE_DIR"/sbom "$CANDIDATE_DIR"/attestations
+          cp -- "$RUNNER_TEMP/deve-source-sbom/source.spdx.json" "$CANDIDATE_DIR/sbom/source.spdx.json"
+
+          require_count() {
+            local label="$1" root="$2" expected="$3"
+            [[ -d "$root" ]] || { printf '%s: missing incoming directory\n' "$label" >&2; exit 1; }
+            [[ -z "$(find "$root" -type l -print -quit)" ]] || { printf '%s: symlink is forbidden\n' "$label" >&2; exit 1; }
+            mapfile -d '' files < <(find "$root" -type f -print0)
+            [[ ${#files[@]} -eq "$expected" ]] || { printf '%s: expected %s files, found %s\n' "$label" "$expected" "${#files[@]}" >&2; exit 1; }
+          }
+          require_one() {
+            local label="$1" root="$2" pattern="$3" destination="$4"
+            mapfile -d '' matches < <(find "$root" -type f -path "$pattern" -print0)
+            [[ ${#matches[@]} -eq 1 ]] || { printf '%s: expected one match, found %s\n' "$label" "${#matches[@]}" >&2; exit 1; }
+            cp -- "${matches[0]}" "$destination"
+          }
+          windows="$INCOMING_DIR/windows"; macos="$INCOMING_DIR/macos"; android="$INCOMING_DIR/android"; docker="$INCOMING_DIR/docker"
+          require_count windows "$windows" 2
+          require_count macos "$macos" 1
+          require_count android "$android" 2
+          require_count docker "$docker" 3
+          require_one windows-msi "$windows" '*.msi' "$CANDIDATE_DIR/artifacts/windows/deve-notebook-${VERSION}-windows-x64.msi"
+          require_one windows-nsis "$windows" '*.exe' "$CANDIDATE_DIR/artifacts/windows/deve-notebook-${VERSION}-windows-x64-setup.exe"
+          mapfile -d '' macos_matches < <(find "$macos" -type f -name "deve-notebook-${VERSION}-macos-*.dmg" -print0)
+          [[ ${#macos_matches[@]} -eq 1 ]]
+          macos_name="$(basename "${macos_matches[0]}")"
+          [[ "$macos_name" == "deve-notebook-${VERSION}-macos-x64.dmg" || \
+             "$macos_name" == "deve-notebook-${VERSION}-macos-arm64.dmg" ]]
+          cp -- "${macos_matches[0]}" "$CANDIDATE_DIR/artifacts/macos/$macos_name"
+          printf 'artifacts/macos/%s\n' "$macos_name" >"$INCOMING_DIR/macos-relative.txt"
+          require_one android-apk "$android" '*-android-arm64.apk' "$CANDIDATE_DIR/artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
+          require_one android-signer "$android" '*/android-signer-sha256.txt' "$INCOMING_DIR/android-signer-sha256.txt"
+          require_one docker-archive "$docker" '*-linux-amd64.tar' "$CANDIDATE_DIR/artifacts/docker/deve-notebook-${VERSION}-linux-amd64.tar"
+          require_one image-sbom "$docker" '*/docker-image.spdx.json' "$CANDIDATE_DIR/sbom/docker-image.spdx.json"
+          require_one image-id "$docker" '*/docker-image-id.txt' "$INCOMING_DIR/docker-image-id.txt"
+          [[ "$(<"$INCOMING_DIR/docker-image-id.txt")" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$(<"$INCOMING_DIR/android-signer-sha256.txt")" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ -z "$(git status --porcelain --untracked-files=all)" ]]
+
+      - name: Generate provenance for every sealed subject
+        id: provenance_attestation
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: |
+            ${{ runner.temp }}/deve-release-candidate/artifacts/**/*
+            ${{ runner.temp }}/deve-release-candidate/sbom/*.spdx.json
+          create-storage-record: false
+
+      - name: Bind Docker SBOM to the exact Docker archive
+        id: docker_sbom_attestation
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: ${{ runner.temp }}/deve-release-candidate/artifacts/docker/*.tar
+          sbom-path: ${{ runner.temp }}/deve-release-candidate/sbom/docker-image.spdx.json
+          create-storage-record: false
+
+      - name: Seal the returned attestation bundles
+        env:
+          PROVENANCE_BUNDLE: ${{ steps.provenance_attestation.outputs.bundle-path }}
+          DOCKER_SBOM_BUNDLE: ${{ steps.docker_sbom_attestation.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          [[ -f "$PROVENANCE_BUNDLE" && -f "$DOCKER_SBOM_BUNDLE" ]]
+          cp -- "$PROVENANCE_BUNDLE" "$CANDIDATE_DIR/attestations/provenance.bundle"
+          cp -- "$DOCKER_SBOM_BUNDLE" "$CANDIDATE_DIR/attestations/docker-sbom.bundle"
+
+      - name: Assemble and independently verify canonical candidate controls
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          cargo build --locked -p deve_baseline
+          image_id="$(<"$INCOMING_DIR/docker-image-id.txt")"
+          signer="$(<"$INCOMING_DIR/android-signer-sha256.txt")"
+          macos_path="$(<"$INCOMING_DIR/macos-relative.txt")"
+          args=(
+            --candidate-dir "$CANDIDATE_DIR" --output release-candidate.json
+            --head "$GITHUB_SHA" --version "$VERSION"
+            --workflow-path .github/workflows/release-candidate.yml
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --docker-image-id "$image_id" --android-signer-sha256 "$signer"
+            --windows-msi "artifacts/windows/deve-notebook-${VERSION}-windows-x64.msi"
+            --windows-nsis "artifacts/windows/deve-notebook-${VERSION}-windows-x64-setup.exe"
+            --macos-dmg "$macos_path"
+            --android-apk "artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
+            --docker-archive "artifacts/docker/deve-notebook-${VERSION}-linux-amd64.tar"
+            --source-sbom sbom/source.spdx.json
+            --image-sbom sbom/docker-image.spdx.json
+            --provenance-bundle attestations/provenance.bundle
+            --docker-sbom-bundle attestations/docker-sbom.bundle
+          )
+          target/debug/deve_baseline release-candidate assemble "${args[@]}"
+          target/debug/deve_baseline release-candidate verify "${args[@]}"
+
+      - name: Generate atomic release candidate receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          DEVE_BASELINE_BIN: ${{ github.workspace }}/target/debug/deve_baseline
+          DEVE_RELEASE_CANDIDATE_DIR: ${{ runner.temp }}/deve-release-candidate
+          DEVE_RELEASE_CANDIDATE_HEAD: ${{ github.sha }}
+          DEVE_RELEASE_CANDIDATE_VERSION: ${{ inputs.version }}
+          DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH: .github/workflows/release-candidate.yml
+          DEVE_RELEASE_CANDIDATE_RUN_ID: ${{ github.run_id }}
+          DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          [[ -z "$(git status --porcelain --untracked-files=all)" ]]
+          export DEVE_RELEASE_CANDIDATE_IMAGE_ID="$(<"$INCOMING_DIR/docker-image-id.txt")"
+          export DEVE_RELEASE_ANDROID_SIGNER_SHA256="$(<"$INCOMING_DIR/android-signer-sha256.txt")"
+          export DEVE_RELEASE_WINDOWS_MSI="artifacts/windows/deve-notebook-${VERSION}-windows-x64.msi"
+          export DEVE_RELEASE_WINDOWS_NSIS="artifacts/windows/deve-notebook-${VERSION}-windows-x64-setup.exe"
+          export DEVE_RELEASE_MACOS_DMG="$(<"$INCOMING_DIR/macos-relative.txt")"
+          export DEVE_RELEASE_ANDROID_APK="artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
+          export DEVE_RELEASE_DOCKER_ARCHIVE="artifacts/docker/deve-notebook-${VERSION}-linux-amd64.tar"
+          export DEVE_RELEASE_SOURCE_SBOM=sbom/source.spdx.json
+          export DEVE_RELEASE_IMAGE_SBOM=sbom/docker-image.spdx.json
+          export DEVE_RELEASE_PROVENANCE_BUNDLE=attestations/provenance.bundle
+          export DEVE_RELEASE_DOCKER_SBOM_BUNDLE=attestations/docker-sbom.bundle
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run \
+            --tier tag-ready \
+            --producer release.candidate-bundle \
+            --receipt-dir "$RUNNER_TEMP/deve-acceptance-release-candidate"
+
+      - name: Upload sealed exact-HEAD candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-release-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-release-candidate
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+      - name: Upload candidate receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-release-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-release-candidate
+          if-no-files-found: error
+          retention-days: 14

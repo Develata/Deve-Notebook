@@ -34,6 +34,7 @@ pub struct ServeOptions {
     pub sync_mode: SyncMode,
     pub p2p: P2pConfig,
     pub native_loopback: bool,
+    pub loopback_only: bool,
 }
 
 /// 启动后端服务器
@@ -53,6 +54,7 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         sync_mode,
         p2p,
         native_loopback,
+        loopback_only,
     } = options;
     let runtime_environment = RuntimeEnvironment::for_serve(dev);
     if dev {
@@ -66,6 +68,8 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
 
     let launch = if native_loopback {
         server::ServerLaunchOptions::native_loopback(port, false)
+    } else if loopback_only {
+        server::ServerLaunchOptions::loopback_release(port)
     } else {
         server::ServerLaunchOptions::release(port)
     }
@@ -74,9 +78,9 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
     let listener = match tokio::net::TcpListener::bind(bind_addr).await {
         Ok(listener) => listener,
         Err(err) if err.kind() == std::io::ErrorKind::AddrInUse => {
-            if native_loopback {
+            if native_loopback || loopback_only {
                 anyhow::bail!(
-                    "Native loopback serve port {} is already in use; refusing proxy fallback",
+                    "Loopback-only serve port {} is already in use; refusing proxy fallback",
                     port
                 );
             }
@@ -93,6 +97,8 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
 
     if native_loopback {
         tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
+    } else if loopback_only {
+        tracing::info!("Release loopback-only serve mode enabled on {}", bind_addr);
     }
     server::start_server_with_bound_listener(
         repo_arc, launch, plugins, profile, sync_mode, p2p, listener,

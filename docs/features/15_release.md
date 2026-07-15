@@ -24,16 +24,18 @@
 
 - Web / Server / Docker 是当前主要交付面。
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
-- 首个公开 tag 只由 `release.yml` 直接监听；`v*` glob 触发后必须先验证完整 SemVer，checkout 后去掉前导 `v` 的 tag 还必须与 workspace、Desktop Tauri、Mobile Tauri 版本逐字节一致，包含 prerelease/build metadata。非法或不一致 tag 在 build/publish 前失败。它在 quality gates 与 Docker publish 成功后调用 reusable native delivery track。Windows MSI/NSIS、macOS DMG 与 Android ARM64 APK 全部构建成功后，publish job 还要验证 downloaded containers 总文件数与 exact artifact manifest；资产先上传到 draft，GitHub API 复核完整后才公开一次 GitHub Release。Linux Desktop 与 iOS 不在 first-tag artifact set。
-- Docker release image 只构建一次；runtime/login 与双客户端浏览器 smoke 必须运行该 candidate image，成功后才赋予 version/latest tag 并 push。两个远端 tag 必须解析到同一 manifest digest，smoke 不得通过隐式 rebuild 测到另一份内容。
+- 首个公开 tag 只由 `release.yml` 直接监听；真正的构建与 target-host 验收由 tag 前手动 `release-candidate.yml` 完成。候选输入版本必须与 workspace、Desktop Tauri、Mobile Tauri 版本逐字节一致，所有 receipts 和制品绑定同一 HEAD。聚合器验证后封存 candidate bundle；maintainer 必须创建 annotated tag，并用唯一 `Deve-Acceptance-Aggregate-Run: <run-id>` trailer 绑定该 aggregate。tag workflow 只提升该 bundle，禁止重新 build、package、rename 或选择“最新”但未绑定的 run。Windows MSI/NSIS、macOS DMG 与已签名 Android ARM64 APK、Docker archive、SBOM、checksums 和 attestations 作为一个 allowlisted set 被复核；资产先上传到 draft，远端名称与 SHA-256 完全一致后才公开。Linux Desktop 与 iOS 不在 first-tag artifact set。
+- Docker release image 在 candidate workflow 只构建一次；runtime/login、双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须运行该 exact image。候选封存 Docker archive SHA-256 与 image ID；tag 后 load 同一 archive，成功后才 push Docker-safe version tag。stable 只有在 SemVer 与 Git ancestry 均前进时才更新 `latest`，prerelease 不更新；stable 的两个远端 tag 必须解析到同一 manifest digest并生成 registry digest attestation。
 - Windows/macOS public-preview packages 可以 unsigned；Android 只有在 signing secrets 齐全时才是可安装 signed APK，否则只能作为明确标记的 unsigned diagnostic artifact。任何这些 artifacts 都不等于 signing、notarization、store 或 physical-device readiness。
+- Android GitHub target-host lifecycle 运行同一 HEAD 的 x86_64 emulator package；封存的 ARM64 APK 另经严格签名与 signer 复核。前者证明功能与 WebCrypto capability，后者证明候选字节和签名身份，不能把 x86_64 receipt 写成 ARM64 逐字节安装证据。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 - 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
-- Docker image 可能先于 native track 完成而发布；native build 失败时不得留下公开 GitHub Release，也不得把已有 GHCR image 表述为完整 first-tag delivery。
+- candidate 阶段任何 native build、signing、target-host、manifest 或 attestation 失败都发生在公开 tag 前，不得发布 GHCR 或 GitHub Release。candidate/aggregate artifact immutable，失败后必须 fresh dispatch，禁止覆盖同一 run ID。promotion 阶段仍不是跨服务强事务；若 GHCR 已 push 而后续步骤失败，Release 必须保持 draft并把状态明确报告为 partial delivery；只允许同一 sealed candidate 做幂等恢复。
 - Windows packaged UI gate 必须驱动已安装 Desktop 的真实 WebView，覆盖 native session、创建/编辑、commit/history、Settings focus trap 与关闭后 sidecar 清理；快速 marker startup probe 仍保留，但不能单独证明 UI 可用。
-- Native build、manifest、draft upload 或 API 复核失败时，公开 GitHub Release 必须保持不存在；失败产生的 draft 只作为显式恢复对象，不得被报告为已发布版本。
-- 同一 tag 的 workflow rerun 只允许复用 draft；若 Release 已公开，必须在上传资产前拒绝自动覆盖并转入 maintainer 显式恢复。
+- Windows LocalBackend、NoteGit 与安装/卸载 smoke 分别覆盖 MSI 和 NSIS；RemoteBrowser/native recovery 在共享 Desktop runtime payload 上由 NSIS 安装面执行一次，其证据不扩张为 MSI installer-engine 的 RemoteBrowser 声明。
+- Native build、manifest、draft upload 或 API 复核失败时不得把不完整状态报告为已发布版本；失败产生的 draft 只作为显式恢复对象。若公开 mutation 已成功但 runner 未能确认，同一 candidate 的重跑必须先复核完整远端状态。
+- 同一 tag 的 workflow rerun 只允许复用 byte-identical draft、image-ID 相同的 immutable version tag，或 tag、完整资产名称/摘要、prerelease 分类与 registry identity 都精确匹配的已公开 Release。任何 remote probe 只有明确 HTTP 404 才表示不存在；网络、认证、限流和 5xx 均 fail-closed，且 registry version 指向其它 image identity 时禁止覆盖。
 
 ### 2. 版本与升级预期
 
@@ -79,7 +81,7 @@
   namespace `DEVEWSF4` 且 protocol lockstep `1..=1`。历史未发布 F2/F3 namespace 与 storage
   schema v2 只允许 fail-closed 或显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。
-- 矩阵允许诚实显示 PVR、SBOM/checksum/provenance、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing 等 blocker；这些 gap 不阻止普通开发提交，但必须阻止正式 tag。
+- 矩阵允许诚实显示 PVR、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing target-host evidence 等 blocker；SBOM/checksum/provenance 只能由 exact candidate producer receipt 关闭，不能改成 source-ref。这些 gap 不阻止普通开发提交，但必须阻止正式 tag。
 - Receipt 同时绑定 evidence locator、surface/mode、target OS 与命令前后 clean HEAD；平台 producer/聚合尚未闭环时，tag workflow 必须在任何公开发布前明确失败。
 - 普通 CI 必须实际执行 producer registry 中全部适用的 required test/script evidence，不能只打印 plan；候选聚合 workflow 必须验证显式 source run 与当前 HEAD 相同，Rust collector/tag-ready 通过后，tag workflow 才能进入任何公开发布步骤。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。

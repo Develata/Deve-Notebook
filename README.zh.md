@@ -309,9 +309,13 @@ iOS、签名或 target-host 工具时，应记录为 release evidence gap，而�
 ## Release Workflows
 
 - `check.yml`：branch push / pull request check-only。
-- `release.yml`：tag `v*` quality gates 与 GHCR Docker publishing。
-- `release-native.yml`：tag `v*` native package workflow。当前 native artifacts
-  仍是 shell/package evidence，不表示 signing、store 或 physical-device readiness。
+- `release-candidate.yml`：手动执行 exact-HEAD quality、Docker/native target-host、
+  SBOM、checksum 与 attestation candidate sealing。
+- `acceptance-aggregate.yml`：验证显式 candidate run 的 receipts/制品并聚合不可变
+  tag-ready bundle。
+- `release.yml`：tag `v*` 只提升 sealed bytes，不重新构建或打包。
+- `release-native.yml`：tag 前 reusable native build/smoke workflow。当前 native
+  artifacts 仍是明确的平台证据，不表示 notarization、store 或 physical-device readiness。
 - `native-target-host.yml`：manual target-host diagnostics 与 evidence collection。
 
 只有 branch CI 变绿且明确接受 tag-triggered workflow 范围后，才应创建或移动 release tag。

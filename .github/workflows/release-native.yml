@@ -1,92 +1,78 @@
-name: Release Native Packages
+name: Build and Smoke Native Candidate
 
-# Reusable native delivery track called by the tag-triggered release orchestrator.
-#
-# The Docker/Web release baseline stays in `release.yml`; this workflow is the
-# native delivery track described in docs/plan/18_release.md §2.1. It builds
-# installable desktop/mobile packages after the Docker release job succeeds and
-# attaches them to one GitHub Release only after all required native builds pass,
-# except Linux GTK3/WebKitGTK desktop artifacts, which ADR
-# 0006 excludes from the first-tag release set. It reuses the same package-build scripts as
-# `native-target-host.yml` (single source of truth for "how to build a package").
-#
-# Caveats (see docs/plan/18_release.md §1.1 / §2.1):
-#   - Linux GTK3/WebKitGTK desktop bundles are intentionally not produced by
-#     this first-tag delivery workflow. Reintroducing them requires reopening
-#     ADR 0006 / release-audit warning blockers and refreshing target-host
-#     evidence for the maintained native shell stack.
-#   - Windows bundles ship UNSIGNED. SmartScreen will show an "unknown
-#     publisher" prompt; this is expected for an unsigned open-source build.
-#   - Android requires signing to install. The APK is signed only when the
-#     keystore secrets below are configured; otherwise an UNSIGNED,
-#     non-installable APK is uploaded for inspection only.
-#   - Producing artifacts here does NOT by itself constitute Desktop/Mobile
-#     "release readiness" (signing/store/physical-device acceptance are still
-#     governed by 18_release §2.1).
-#
-# Optional repository secrets for a signed, installable Android APK
-# (a local `keytool`-generated keystore is sufficient — no paid cert / store):
-#   ANDROID_KEYSTORE_BASE64    base64 of a JKS/PKCS12 keystore
-#   ANDROID_KEYSTORE_PASSWORD  keystore (store) password
-#   ANDROID_KEY_ALIAS          key alias
-#   ANDROID_KEY_PASSWORD       key password (often equal to the store password)
-
+# Build-only reusable workflow.  The caller owns candidate assembly and release
+# promotion; this workflow never creates or mutates a GitHub Release.
 on:
   workflow_call:
+    inputs:
+      version:
+        description: Exact workspace version without a v prefix.
+        required: true
+        type: string
+      candidate_head:
+        description: Exact 40-character candidate commit.
+        required: true
+        type: string
     secrets:
       ANDROID_KEYSTORE_BASE64:
-        required: false
+        required: true
       ANDROID_KEYSTORE_PASSWORD:
-        required: false
+        required: true
       ANDROID_KEY_ALIAS:
-        required: false
+        required: true
       ANDROID_KEY_PASSWORD:
-        required: false
+        required: true
 
-concurrency:
-  group: release-native-${{ github.ref }}
-  cancel-in-progress: false
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
-  # Mark semver prerelease tags (anything containing a hyphen, e.g. v1.0.0-rc.1)
-  # as GitHub pre-releases.
-  IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
 
 jobs:
   desktop-windows:
     runs-on: windows-latest
-    permissions:
-      contents: read
+    timeout-minutes: 150
     defaults:
       run:
         shell: bash
-    env:
-      DEVE_DESKTOP_TARGET_HOSTS: windows
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.candidate_head }}
+          persist-credentials: false
+
+      - name: Verify candidate identity and version
+        env:
+          EXPECTED_HEAD: ${{ inputs.candidate_head }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
+          [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
+          scripts/check-release-version-match.sh "v$VERSION"
 
       - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
         with:
           toolchain: "1.92"
           targets: wasm32-unknown-unknown,x86_64-pc-windows-msvc
 
       - name: Install Node.js 24
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
-      - name: Cache cargo registry
-        uses: actions/cache@v6
+      - name: Cache Cargo inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-native-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-native-
+          key: ${{ runner.os }}-candidate-native-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install native packaging tools (trunk + tauri CLI)
+      - name: Install native packaging tools
         env:
           DEVE_NATIVE_INSTALL_TRUNK: "1"
           DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
@@ -95,338 +81,383 @@ jobs:
       - name: Install NSIS
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $nsis = "${env:ProgramFiles(x86)}\NSIS"
-          if (!(Test-Path "$nsis\makensis.exe")) {
-            choco install nsis -y --no-progress
-          }
-          if (!(Test-Path "$nsis\makensis.exe")) {
-            throw "NSIS makensis.exe was not installed at $nsis"
-          }
+          if (!(Test-Path "$nsis\makensis.exe")) { choco install nsis -y --no-progress }
+          if (!(Test-Path "$nsis\makensis.exe")) { throw "NSIS is unavailable at $nsis" }
           Add-Content -Path $env:GITHUB_PATH -Value $nsis
 
-      - name: Build web dist
+      - name: Build exact Web projection
         run: scripts/build-web-dist-ci.sh
 
-      - name: Build Windows installers (msi, nsis; unsigned)
-        env:
-          DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
-          DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
-          DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
-        run: scripts/check-desktop-platform-package-build.sh
+      - name: Run installed LocalBackend and NoteGit producer
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer desktop.local-backend
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-local"
 
-      - name: Collect Windows installers
+      - name: Install exact NSIS candidate for RemoteBrowser
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p dist-release
-          shopt -s nullglob
-          copied=0
-          for f in target/release/bundle/msi/*.msi target/release/bundle/nsis/*.exe; do
-            cp "$f" dist-release/
-            copied=$((copied + 1))
-          done
-          [ "$copied" -gt 0 ] || { echo "no Windows installers under target/release/bundle"; exit 1; }
-          ls -la dist-release
+          $ErrorActionPreference = 'Stop'
+          $installers = @(Get-ChildItem target/release/bundle/nsis -Filter *.exe -File)
+          if ($installers.Count -ne 1) { throw "expected one NSIS candidate, found $($installers.Count)" }
+          $installRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-candidate-install'
+          $workRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-candidate-work'
+          Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $workRoot -Recurse -Force -ErrorAction SilentlyContinue
+          $process = Start-Process -FilePath $installers[0].FullName -ArgumentList @('/S', "/D=$installRoot") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "NSIS install failed: $($process.ExitCode)" }
+          $marker = @{ schema = 1; marker = 'deve-desktop-remote-browser-smoke' } | ConvertTo-Json -Compress
+          [IO.File]::WriteAllText((Join-Path $installRoot '.deve-desktop-install-root.json'), $marker, [Text.UTF8Encoding]::new($false))
+          $binaries = @(Get-ChildItem $installRoot -Recurse -File | Where-Object { $_.Name -in @('deve_desktop.exe', 'Deve Notebook.exe') })
+          if ($binaries.Count -ne 1) { throw "expected one installed Desktop binary, found $($binaries.Count)" }
+          "DEVE_DESKTOP_BINARY=$($binaries[0].FullName)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DEVE_DESKTOP_REMOTE_INSTALL_ROOT=$installRoot" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "DEVE_DESKTOP_REMOTE_WORK_ROOT=$workRoot" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v7
+      - name: Start exact-HEAD RemoteBrowser fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cargo build --locked --release -p deve_cli
+          if ($LASTEXITCODE -ne 0) { throw 'failed to build candidate backend' }
+          cargo build --locked -p deve_baseline
+          if ($LASTEXITCODE -ne 0) { throw 'failed to build password helper' }
+          $headFile = Join-Path $env:RUNNER_TEMP 'deve-candidate-head.txt'
+          [IO.File]::WriteAllText($headFile, $env:GITHUB_SHA, [Text.UTF8Encoding]::new($false))
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 start `
+            --state-dir $stateRoot `
+            --expected-head $env:GITHUB_SHA `
+            --backend-executable (Resolve-Path target/release/deve_cli.exe).Path `
+            --backend-head-file $headFile `
+            --password-hasher (Resolve-Path target/debug/deve_baseline.exe).Path `
+            --password-hasher-arg remote-fixture-password-hash
+          if ($LASTEXITCODE -ne 0) { throw 'RemoteBrowser fixture failed to start' }
+          $fixture = Get-Content -Raw -LiteralPath $envFile.Trim() | ConvertFrom-Json
+          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
+          Write-Output "::add-mask::$($credentials.username)"
+          Write-Output "::add-mask::$($credentials.password)"
+          if ($credentials.auth_secret) { Write-Output "::add-mask::$($credentials.auth_secret)" }
+
+      - name: Run exact installed RemoteBrowser and native recovery producer
+        shell: pwsh
+        run: |
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          $fixture = Get-Content -Raw -LiteralPath (Join-Path $stateRoot 'fixture-env.json') | ConvertFrom-Json
+          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
+          $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $fixture.https_origin
+          $env:DEVE_DESKTOP_REMOTE_USERNAME = $credentials.username
+          $env:DEVE_DESKTOP_REMOTE_PASSWORD = $credentials.password
+          cargo run --locked -p deve_baseline -- acceptance-run `
+            --tier target-host `
+            --producer desktop.remote-browser `
+            --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-remote"
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser producer failed' }
+
+      - name: Stop fixture and uninstall isolated candidate
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $failed = $false
+          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
+          if (Test-Path -LiteralPath (Join-Path $stateRoot 'fixture-state.json') -PathType Leaf) {
+            pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 stop --state-dir $stateRoot
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          $installRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-candidate-install'
+          if ($installRoot -and (Test-Path -LiteralPath $installRoot)) {
+            $marker = Join-Path $installRoot '.deve-desktop-install-root.json'
+            Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+            $uninstallers = @(Get-ChildItem $installRoot -Recurse -File | Where-Object { $_.Name -match '^(uninstall|unins.*)\.exe$' })
+            if ($uninstallers.Count -ne 1) { $failed = $true }
+            else {
+              $process = Start-Process -FilePath $uninstallers[0].FullName -ArgumentList '/S' -Wait -PassThru
+              if ($process.ExitCode -ne 0 -or (Test-Path -LiteralPath $installRoot)) { $failed = $true }
+            }
+          }
+          if ($failed) { throw 'candidate fixture or install cleanup was incomplete' }
+
+      - name: Collect exact Windows candidates
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path dist-native -Force | Out-Null
+          $msi = @(Get-ChildItem target/release/bundle/msi -Filter *.msi -File)
+          $nsis = @(Get-ChildItem target/release/bundle/nsis -Filter *.exe -File)
+          if ($msi.Count -ne 1 -or $nsis.Count -ne 1) { throw 'expected exactly one MSI and one NSIS candidate' }
+          Copy-Item -LiteralPath $msi[0].FullName -Destination "dist-native/deve-notebook-$env:VERSION-windows-x64.msi"
+          Copy-Item -LiteralPath $nsis[0].FullName -Destination "dist-native/deve-notebook-$env:VERSION-windows-x64-setup.exe"
+
+      - name: Upload exact Windows candidate bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: deve-desktop-windows
-          path: dist-release
+          name: deve-native-windows-${{ inputs.candidate_head }}
+          path: dist-native
           if-no-files-found: error
+          retention-days: 14
 
-  mobile-android:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      DEVE_MOBILE_PACKAGE_TARGETS: android
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@stable
+      - name: Upload Windows receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          toolchain: "1.92"
-          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
-
-      - name: Install Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Install Java 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Cache cargo registry
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-native-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-native-
-
-      - name: Set up Android SDK components (uses preinstalled SDK/NDK)
-        run: |
-          set -euo pipefail
-          test -n "${ANDROID_HOME:-}"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "build-tools;34.0.0" >/dev/null
-
-      - name: Install native packaging tools (trunk + tauri CLI)
-        env:
-          DEVE_NATIVE_INSTALL_TRUNK: "1"
-          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
-        run: scripts/install-native-target-host-tools.sh
-
-      - name: Build web dist
-        run: scripts/build-web-dist-ci.sh
-
-      - name: Build Android APK (release, unsigned)
-        env:
-          DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
-          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: aarch64
-          DEVE_MOBILE_ANDROID_PACKAGE_APK: "1"
-          DEVE_MOBILE_ANDROID_PACKAGE_AAB: "0"
-        run: scripts/check-mobile-android-shell-package-build.sh
-
-      - name: Sign / collect Android APK
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          VERSION: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist-release
-          unsigned="$(find apps/mobile/gen/android/app/build/outputs/apk -path '*release*' -name '*-unsigned.apk' -print -quit)"
-          [ -n "$unsigned" ] || unsigned="$(find apps/mobile/gen/android/app/build/outputs/apk -path '*release*' -name '*.apk' -print -quit)"
-          [ -n "$unsigned" ] || { echo "no release APK found under apps/mobile/gen/android/.../outputs/apk"; exit 1; }
-          echo "release APK: $unsigned"
-
-          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            buildtools="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)"
-            echo "build-tools: $buildtools"
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
-            aligned="$RUNNER_TEMP/aligned.apk"
-            signed="dist-release/deve-notebook-${VERSION}-android-arm64.apk"
-            "$buildtools/zipalign" -f -p 4 "$unsigned" "$aligned"
-            "$buildtools/apksigner" sign \
-              --ks "$RUNNER_TEMP/release.keystore" \
-              --ks-pass "pass:${ANDROID_KEYSTORE_PASSWORD}" \
-              --ks-key-alias "${ANDROID_KEY_ALIAS}" \
-              --key-pass "pass:${ANDROID_KEY_PASSWORD}" \
-              --out "$signed" "$aligned"
-            "$buildtools/apksigner" verify --verbose "$signed"
-            echo "signed APK: $signed"
-          else
-            echo "::warning::ANDROID_KEYSTORE_BASE64 not set — uploading an UNSIGNED APK that cannot be installed. Configure the keystore secrets to ship an installable APK."
-            cp "$unsigned" "dist-release/deve-notebook-${VERSION}-android-arm64-unsigned.apk"
-          fi
-          ls -la dist-release
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: deve-mobile-android
-          path: dist-release
+          name: deve-acceptance-receipts-desktop-${{ inputs.candidate_head }}
+          path: ${{ runner.temp }}/deve-acceptance-desktop-*
           if-no-files-found: error
+          retention-days: 14
 
   desktop-macos:
     runs-on: macos-latest
-    permissions:
-      contents: read
-    env:
-      DEVE_DESKTOP_TARGET_HOSTS: macos
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.candidate_head }}
+          persist-credentials: false
+
+      - name: Verify candidate identity and version
+        env:
+          EXPECTED_HEAD: ${{ inputs.candidate_head }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
+          [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
+          scripts/check-release-version-match.sh "v$VERSION"
 
       - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
         with:
           toolchain: "1.92"
           targets: wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install Node.js 24
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
-      - name: Cache cargo registry
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-native-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-native-
-
-      - name: Install native packaging tools (trunk + tauri CLI)
+      - name: Install native packaging tools
         env:
           DEVE_NATIVE_INSTALL_TRUNK: "1"
           DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
         run: scripts/install-native-target-host-tools.sh
 
-      - name: Build web dist
+      - name: Build exact Web projection
         run: scripts/build-web-dist-ci.sh
 
-      - name: Build macOS bundle (dmg; unsigned, not notarized)
-        env:
-          DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
-          DEVE_DESKTOP_PACKAGE_BUNDLES: app,dmg
-          DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
-        run: scripts/check-desktop-platform-package-build.sh
+      - name: Build and smoke exact macOS candidate
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer desktop.macos-target-host
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-macos"
 
-      - name: Collect macOS dmg
+      - name: Collect exact macOS candidate
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          mkdir -p dist-release
           shopt -s nullglob
-          copied=0
-          for f in target/release/bundle/dmg/*.dmg; do
-            cp "$f" dist-release/
-            copied=$((copied + 1))
-          done
-          [ "$copied" -gt 0 ] || { echo "no macOS dmg under target/release/bundle/dmg"; exit 1; }
-          ls -la dist-release
+          files=(target/release/bundle/dmg/*.dmg)
+          [[ ${#files[@]} -eq 1 ]]
+          case "$(uname -m)" in
+            x86_64) arch=x64 ;;
+            arm64) arch=arm64 ;;
+            *) echo "unsupported macOS runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          mkdir -p dist-native
+          cp -- "${files[0]}" "dist-native/deve-notebook-${VERSION}-macos-${arch}.dmg"
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v7
+      - name: Upload exact macOS candidate bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: deve-desktop-macos
-          path: dist-release
+          name: deve-native-macos-${{ inputs.candidate_head }}
+          path: dist-native
           if-no-files-found: error
+          retention-days: 14
 
-  publish:
-    needs: [desktop-windows, mobile-android, desktop-macos]
+      - name: Upload macOS receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-desktop-macos-${{ inputs.candidate_head }}
+          path: ${{ runner.temp }}/deve-acceptance-desktop-macos
+          if-no-files-found: error
+          retention-days: 14
+
+  mobile-android:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 210
     steps:
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v8
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          name: deve-desktop-windows
-          path: native-artifacts/windows
+          ref: ${{ inputs.candidate_head }}
+          persist-credentials: false
 
-      - name: Download Android artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: deve-mobile-android
-          path: native-artifacts/android
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: deve-desktop-macos
-          path: native-artifacts/macos
-
-      - name: Validate native artifact manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mapfile -d '' downloaded_files < <(find native-artifacts -type f -print0)
-          if [ "${#downloaded_files[@]}" -ne 4 ]; then
-            echo "native artifacts: expected exactly four downloaded files, found ${#downloaded_files[@]}" >&2
-            printf '  %s\n' "${downloaded_files[@]}" >&2
-            exit 1
-          fi
-
-          collect_one() {
-            local label="$1"
-            local directory="$2"
-            local pattern="$3"
-            local matches=()
-            mapfile -d '' matches < <(find "$directory" -maxdepth 1 -type f -name "$pattern" -print0)
-            if [ "${#matches[@]}" -ne 1 ]; then
-              echo "$label: expected exactly one '$pattern' file in $directory, found ${#matches[@]}" >&2
-              return 1
-            fi
-            printf '%s' "${matches[0]}"
-          }
-
-          windows_msi="$(collect_one windows-msi native-artifacts/windows '*.msi')"
-          windows_nsis="$(collect_one windows-nsis native-artifacts/windows '*.exe')"
-          macos_dmg="$(collect_one macos-dmg native-artifacts/macos '*.dmg')"
-          android_apk="$(collect_one android-arm64 native-artifacts/android 'deve-notebook-*-android-arm64*.apk')"
-
-          mkdir -p dist-release
-          declare -A seen=()
-          for file in "$windows_msi" "$windows_nsis" "$macos_dmg" "$android_apk"; do
-            name="${file##*/}"
-            if [ -n "${seen[$name]+present}" ]; then
-              echo "duplicate release asset basename: $name" >&2
-              exit 1
-            fi
-            seen[$name]=1
-            cp "$file" "dist-release/$name"
-          done
-
-          find dist-release -maxdepth 1 -type f -printf '%f\n' | sort > native-asset-manifest.txt
-          [ "$(wc -l < native-asset-manifest.txt)" -eq 4 ]
-          cat native-asset-manifest.txt
-
-      - name: Require absent or draft GitHub Release
-        shell: bash
+      - name: Verify candidate identity, version, and signing inputs
         env:
-          GH_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD: ${{ inputs.candidate_head }}
+          VERSION: ${{ inputs.version }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          lookup_error="$RUNNER_TEMP/release-lookup.err"
-          if existing_draft="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" --jq '.draft' 2>"$lookup_error")"; then
-            [ "$existing_draft" = "true" ] || {
-              echo "existing GitHub Release must be draft before asset upload" >&2
-              exit 1
-            }
-          elif grep -q '(HTTP 404)' "$lookup_error"; then
-            echo "no existing GitHub Release; a draft may be created"
-          else
-            cat "$lookup_error" >&2
-            exit 1
-          fi
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
+          [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
+          scripts/check-release-version-match.sh "v$VERSION"
+          [[ -n "$KEYSTORE" && -n "$STORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]
 
-      - name: Upload validated assets to a draft GitHub Release
-        id: draft_release
-        uses: softprops/action-gh-release@v2
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
         with:
-          files: |
-            dist-release/*.msi
-            dist-release/*.exe
-            dist-release/*.dmg
-            dist-release/deve-notebook-*-android-arm64*.apk
-          draft: true
-          prerelease: ${{ env.IS_PRERELEASE }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+          toolchain: "1.92"
+          targets: wasm32-unknown-unknown,x86_64-linux-android,aarch64-linux-android
 
-      - name: Verify draft assets and publish GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install Java 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Enable Android emulator acceleration
         run: |
           set -euo pipefail
-          release_state="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')"
-          [ "$release_state" = "true" ] || { echo "release must remain draft before asset verification" >&2; exit 1; }
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
-          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > uploaded-asset-manifest.txt
-          diff -u native-asset-manifest.txt uploaded-asset-manifest.txt
+      - name: Install native packaging tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
+        run: scripts/install-native-target-host-tools.sh
 
-          publish_args=(--draft=false)
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            publish_args+=(--prerelease)
-          else
-            publish_args+=(--prerelease=false --latest)
-          fi
-          gh release edit "$GITHUB_REF_NAME" "${publish_args[@]}"
+      - name: Build exact Web projection
+        run: scripts/build-web-dist-ci.sh
 
-          release_state="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')"
-          [ "$release_state" = "false" ] || { echo "release remained draft after publish" >&2; exit 1; }
-          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > published-asset-manifest.txt
-          diff -u native-asset-manifest.txt published-asset-manifest.txt
+      - name: Run API 29+ WebView 137+ LocalBackend writable lifecycle
+        env:
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.1"
+          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis_ps16k
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer android.local-backend
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-android-local"
+
+      - name: Start exact-HEAD Android RemoteBrowser fixture
+        run: |
+          set -euo pipefail
+          cargo build --locked --release -p deve_cli
+          cargo build --locked -p deve_baseline
+          head_file="$RUNNER_TEMP/deve-android-candidate-head.txt"
+          printf '%s' "$GITHUB_SHA" >"$head_file"
+          bash scripts/remote-browser-fixture.sh start \
+            --state-dir "$RUNNER_TEMP/deve-android-remote-fixture" \
+            --expected-head "$GITHUB_SHA" \
+            --backend-executable "$GITHUB_WORKSPACE/target/release/deve_cli" \
+            --backend-head-file "$head_file" \
+            --password-hasher "$GITHUB_WORKSPACE/target/debug/deve_baseline" \
+            --password-hasher-arg remote-fixture-password-hash >/dev/null
+
+      - name: Run RemoteBrowser writable lifecycle and native local recovery
+        env:
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.1"
+          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis_ps16k
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/deve-android-remote-fixture/fixture-env.json"
+          credentials_file="$(jq -r .credentials_file "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$(jq -r .https_origin "$fixture")"
+          export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
+          export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
+          echo "::add-mask::$DEVE_MOBILE_ANDROID_REMOTE_USERNAME"
+          echo "::add-mask::$DEVE_MOBILE_ANDROID_REMOTE_PASSWORD"
+          cargo run --locked -p deve_baseline -- acceptance-run \
+            --tier target-host \
+            --producer android.remote-browser \
+            --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote"
+
+      - name: Stop Android fixture and emulator
+        if: ${{ always() }}
+        run: |
+          set +e
+          status=0
+          [[ ! -f "$RUNNER_TEMP/deve-android-remote-fixture/fixture-state.json" ]] || \
+            bash scripts/remote-browser-fixture.sh stop --state-dir "$RUNNER_TEMP/deve-android-remote-fixture" || status=1
+          bash scripts/cleanup-mobile-android-emulator.sh || status=1
+          exit "$status"
+
+      - name: Build final ARM64 APK
+        env:
+          DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: aarch64
+          DEVE_MOBILE_ANDROID_PACKAGE_APK: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_AAB: "0"
+        run: |
+          set -euo pipefail
+          rm -rf -- apps/mobile/gen/android/app/build/outputs/apk
+          scripts/check-mobile-android-shell-package-build.sh
+
+      - name: Sign and verify exact ARM64 APK
+        env:
+          VERSION: ${{ inputs.version }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' apks < <(find apps/mobile/gen/android/app/build/outputs/apk -path '*release*' -type f -name '*-unsigned.apk' -print0)
+          [[ ${#apks[@]} -eq 1 ]] || { printf 'expected one unsigned ARM64 APK, found %s\n' "${#apks[@]}" >&2; exit 1; }
+          buildtools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1)"
+          [[ -x "$buildtools/apksigner" && -x "$buildtools/zipalign" ]]
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode >"$RUNNER_TEMP/release.keystore"
+          trap 'rm -f -- "$RUNNER_TEMP/release.keystore" "$RUNNER_TEMP/aligned.apk"' EXIT
+          mkdir -p dist-native
+          "$buildtools/zipalign" -f -p 4 "${apks[0]}" "$RUNNER_TEMP/aligned.apk"
+          signed="dist-native/deve-notebook-${VERSION}-android-arm64.apk"
+          "$buildtools/apksigner" sign \
+            --ks "$RUNNER_TEMP/release.keystore" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$signed" "$RUNNER_TEMP/aligned.apk"
+          "$buildtools/apksigner" verify --verbose --print-certs "$signed" | tee "$RUNNER_TEMP/apksigner.txt"
+          signer="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apksigner.txt" | head -n1 | tr '[:upper:]' '[:lower:]')"
+          [[ "$signer" =~ ^[0-9a-f]{64}$ ]]
+          printf 'sha256:%s\n' "$signer" >dist-native/android-signer-sha256.txt
+
+      - name: Upload exact signed Android candidate bytes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-native-android-${{ inputs.candidate_head }}
+          path: dist-native
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Android receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-android-${{ inputs.candidate_head }}
+          path: ${{ runner.temp }}/deve-acceptance-android-*
+          if-no-files-found: error
+          retention-days: 14

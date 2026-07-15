@@ -54,3 +54,4 @@ blueprint in `docs/plan/`.
 | [0007](./0007-projection-backup-first-tag-route.md) | Projection Backup first-tag route | Accepted |
 | [0008](./0008-s3-compatible-remote-projection-credential-binding.md) | S3-compatible Remote Projection credential binding | Accepted |
 | [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Accepted |
+| [0010](./0010-sealed-pre-tag-release-candidate.md) | Sealed pre-tag release candidate promotion | Accepted |

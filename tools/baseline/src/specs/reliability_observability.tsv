@@ -73,7 +73,7 @@ contains	scripts/check-reliability-observability-baseline.sh	run_deve_baseline "
 contains	scripts/AGENTS.md	`check-reliability-observability-baseline.sh`
 contains	scripts/check-deep-audit-gate.sh	scripts/check-reliability-observability-baseline.sh
 contains	.github/workflows/check.yml	scripts/check-reliability-observability-baseline.sh
-contains	.github/workflows/release.yml	scripts/check-reliability-observability-baseline.sh
+contains	.github/workflows/release-candidate.yml	scripts/check-reliability-observability-baseline.sh
 contains	tools/baseline/src/main.rs	mod reliability_observability;
 contains	tools/baseline/src/main.rs	"reliability-observability" => reliability_observability::run()
 contains	tools/baseline/src/main.rs	reliability_observability::run_text()?

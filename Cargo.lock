@@ -1247,10 +1247,14 @@ name = "deve_baseline"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "argon2",
  "chrono",
+ "rand_core 0.6.4",
  "regex",
+ "semver",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

@@ -38,6 +38,7 @@ pub async fn run(
             dev,
             dry_run,
             native_loopback,
+            loopback_only,
         }) => {
             commands::serve::run(
                 ledger_dir,
@@ -50,6 +51,7 @@ pub async fn run(
                     sync_mode: config.sync_mode,
                     p2p: config.p2p.clone(),
                     native_loopback,
+                    loopback_only,
                 },
             )
             .await?
