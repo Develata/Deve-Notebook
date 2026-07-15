@@ -155,6 +155,11 @@ Android writable target-host receipt 必须同时记录 Android API level、当�
 tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、WASM fallback 或
 软件密钥降级来满足该 receipt。
 
+Android package producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行任何启用
+`native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri compile-time
+context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的旧 dist，
+也不得让 clean-worktree target-host receipt 在进入真实 package build 前失败。
+
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 
 发布与验收基线可以提供 Rust developer CLI mirror，用于替代对 host bash/awk/rg runtime 敏感的纯文本合同检查。该入口由独立 workspace tool crate `tools/baseline`（package `deve_baseline`）承载，属于 developer/release tooling，不属于普通用户 `deve` 命令面；它 **MUST NOT** 依赖 `deve_cli` 产品 runtime，默认也 **MUST NOT** 依赖 `deve_core`，更 **MUST NOT** 获得 ledger、projection、source-control 或 native authority 写权限。

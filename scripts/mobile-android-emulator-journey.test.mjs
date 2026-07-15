@@ -30,6 +30,10 @@ const ownerLibrary = fs.readFileSync(
   new URL("./lib/android-emulator-owner.sh", import.meta.url),
   "utf8",
 );
+const packageBuilder = fs.readFileSync(
+  new URL("./check-mobile-android-shell-package-build.sh", import.meta.url),
+  "utf8",
+);
 const producerRegistry = JSON.parse(fs.readFileSync(
   new URL("../docs/registry/acceptance-producers.json", import.meta.url),
   "utf8",
@@ -109,4 +113,19 @@ test("runner-owned Android owner paths reject ambient override escape", () => {
   assert.match(ownerLibrary, /DEVE_ACCEPTANCE_PRODUCER_STATE_DIR/);
   assert.match(ownerLibrary, /"\$override" == "\$expected"/);
   assert.match(cleanup, /launch state and PID disagree/);
+});
+
+test("Android package build creates the current Web dist before native preflight", () => {
+  const requiredBranch = packageBuilder.indexOf(
+    'DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1',
+  );
+  const webDistBuild = packageBuilder.indexOf(
+    'run "$ROOT_DIR/scripts/build-web-dist-ci.sh"',
+  );
+  assert.ok(webDistBuild >= 0, "required package path must build the Web dist");
+  assert.ok(requiredBranch >= 0, "required package path must run native preflight");
+  assert.ok(
+    webDistBuild < requiredBranch,
+    "Tauri native-packaging compile must see the current-HEAD Web dist",
+  );
 });

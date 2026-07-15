@@ -104,12 +104,12 @@ if [[ "$REQUIRED" != "1" ]]; then
   exit 0
 fi
 
+configure_gradle_proxy_from_env
+run "$ROOT_DIR/scripts/build-web-dist-ci.sh"
+
 DEVE_MOBILE_PACKAGE_TARGETS=android \
   DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 \
   run "$ROOT_DIR/scripts/check-mobile-platform-package-preflight.sh"
-
-configure_gradle_proxy_from_env
-run "$ROOT_DIR/scripts/build-web-dist-ci.sh"
 
 if [[ ! -d "$ROOT_DIR/apps/mobile/gen/android" ]]; then
   (

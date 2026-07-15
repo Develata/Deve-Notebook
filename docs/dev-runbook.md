@@ -996,10 +996,12 @@ For emulator install/startup smoke, build an installable debug APK:
 DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1 scripts/check-mobile-android-shell-package-build.sh
 ```
 
-The required Android package gate rebuilds `apps/web/dist` before invoking
-Tauri/Gradle. A pre-existing dist directory is never accepted as evidence for
-the packaged WebView shell, because it may not contain the current capability
-gates or DOM smoke markers.
+The required Android package gate rebuilds `apps/web/dist` before any
+`native-packaging` Cargo check/test or Tauri/Gradle invocation. Tauri validates
+`frontendDist` while compiling its context, so the preflight compile surface
+must consume the newly built current-HEAD dist. A pre-existing dist directory
+is never accepted as evidence for the packaged WebView shell, because it may
+not contain the current capability gates or DOM smoke markers.
 
 iOS shell-only package execution is a separate explicit gate:
 
