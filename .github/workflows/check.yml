@@ -66,6 +66,11 @@ jobs:
       - name: Check Rust baseline contracts
         run: cargo run --quiet -p deve_baseline -- all
 
+      - name: Check acceptance producer plan
+        run: |
+          cargo run --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          cargo run --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
+
       - name: Check plan coverage
         run: |
           scripts/plan-coverage.sh --check-reverse-coverage

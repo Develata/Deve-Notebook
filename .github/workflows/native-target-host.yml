@@ -37,6 +37,18 @@ on:
         description: Run Mobile Android emulator install/startup smoke after package build.
         type: boolean
         default: false
+      run_mobile_android_remote_browser_smoke:
+        description: Also run Android RemoteBrowser writable lifecycle and native local recovery.
+        type: boolean
+        default: false
+      mobile_android_remote_https_origin:
+        description: Exact temporary HTTPS Deve origin for Android RemoteBrowser smoke.
+        type: string
+        default: ""
+      mobile_android_remote_username:
+        description: Temporary Android RemoteBrowser smoke username.
+        type: string
+        default: ""
       run_mobile_ios_package_build:
         description: Run Mobile iOS shell-only package build after preflight.
         type: boolean
@@ -257,11 +269,20 @@ jobs:
 
       - name: Desktop Windows package build
         id: desktop_windows_package_build
-        if: ${{ inputs.run_desktop_package_build }}
+        if: ${{ inputs.run_desktop_package_build && ! inputs.run_desktop_installer_smoke }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
           DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
         run: scripts/check-desktop-platform-package-build.sh
+
+      - name: Desktop Windows installed acceptance producer
+        id: desktop_windows_installer_smoke
+        if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer desktop.local-backend
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-local"
 
       - name: Desktop Windows package startup smoke
         id: desktop_windows_startup_smoke
@@ -279,13 +300,14 @@ jobs:
           DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
         run: scripts/check-desktop-native-session-package-smoke.sh
 
-      - name: Desktop Windows installer install/uninstall smoke
-        id: desktop_windows_installer_smoke
-        if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
-        env:
-          DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED: "1"
-          DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
-        run: scripts/check-desktop-installer-smoke.sh
+
+      - name: Upload Desktop Windows acceptance receipts
+        if: ${{ always() && inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-acceptance-receipts-desktop-local
+          path: ${{ runner.temp }}/deve-acceptance-desktop-local
+          if-no-files-found: error
 
       - name: Upload Desktop Windows package artifacts
         if: ${{ inputs.run_desktop_package_build }}
@@ -312,7 +334,7 @@ jobs:
             process_gate=${{ steps.desktop_windows_process_gate.outcome }}
             invalid_startup_request=${{ inputs.run_desktop_startup_smoke && ! inputs.run_desktop_package_build && steps.desktop_windows_invalid_startup_request.outcome || 'skipped' }}
             invalid_installer_request=${{ inputs.run_desktop_installer_smoke && ! inputs.run_desktop_package_build && steps.desktop_windows_invalid_installer_request.outcome || 'skipped' }}
-            package_build=${{ inputs.run_desktop_package_build && steps.desktop_windows_package_build.outcome || 'skipped' }}
+            package_build=${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_windows_installer_smoke.outcome || inputs.run_desktop_package_build && steps.desktop_windows_package_build.outcome || 'skipped' }}
             startup_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_startup_smoke.outcome || 'skipped' }}
             native_session_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_native_session_smoke.outcome || 'skipped' }}
             installer_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_windows_installer_smoke.outcome || 'skipped' }}
@@ -396,6 +418,12 @@ jobs:
           echo "Android install/startup smoke requires run_mobile_android_package_build=true."
           exit 1
 
+      - name: Reject Android RemoteBrowser smoke without complete execution inputs
+        if: ${{ inputs.run_mobile_android_remote_browser_smoke && (! inputs.run_mobile_android_package_build || ! inputs.run_mobile_android_install_startup_smoke || inputs.mobile_android_remote_https_origin == '' || inputs.mobile_android_remote_username == '') }}
+        run: |
+          echo "Android RemoteBrowser smoke requires package build, install/startup smoke, HTTPS origin, and username."
+          exit 1
+
       - name: Mobile Android shell package build (standalone)
         id: mobile_android_package_build
         if: ${{ inputs.run_mobile_android_package_build && ! inputs.run_mobile_android_install_startup_smoke }}
@@ -414,10 +442,41 @@ jobs:
         id: mobile_android_install_startup_smoke
         if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
         env:
-          DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED: "1"
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
           DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS: "120"
-        run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer android.local-backend
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-android-local"
+
+      - name: Upload Mobile Android LocalBackend receipt
+        if: ${{ always() && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-acceptance-receipts-android-local
+          path: ${{ runner.temp }}/deve-acceptance-android-local
+          if-no-files-found: error
+
+      - name: Mobile Android RemoteBrowser acceptance producer
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke }}
+        env:
+          DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN: ${{ inputs.mobile_android_remote_https_origin }}
+          DEVE_MOBILE_ANDROID_REMOTE_USERNAME: ${{ inputs.mobile_android_remote_username }}
+          DEVE_MOBILE_ANDROID_REMOTE_PASSWORD: ${{ secrets.DEVE_MOBILE_ANDROID_REMOTE_PASSWORD }}
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer android.remote-browser
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-android-remote"
+
+      - name: Upload Mobile Android RemoteBrowser receipt
+        if: ${{ always() && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && inputs.run_mobile_android_remote_browser_smoke }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-acceptance-receipts-android-remote
+          path: ${{ runner.temp }}/deve-acceptance-android-remote
+          if-no-files-found: error
 
       - name: Mobile Android shell package build covered by emulator smoke
         id: mobile_android_package_build_via_emulator

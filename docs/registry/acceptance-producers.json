@@ -1,0 +1,376 @@
+{
+  "schema": 1,
+  "producers": [
+    {
+      "producer_id": "android.local-backend",
+      "evidence_ids": [
+        "smoke.android.local-backend"
+      ],
+      "tiers": [
+        "target-host",
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 3600,
+      "required_env": [],
+      "environment": {
+        "DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED": "1",
+        "DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY": "local"
+      },
+      "claims_env": {
+        "smoke.android.local-backend": "DEVE_MOBILE_ANDROID_LOCAL_EVIDENCE_PATH"
+      },
+      "artifacts": [
+        "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/android-emulator-cleanup.test.sh",
+        "scripts/cleanup-mobile-android-emulator.sh",
+        "scripts/lib/android-emulator-owner.sh",
+        "scripts/lib/android-tools.sh",
+        "scripts/smoke-mobile-android-lifecycle.sh",
+        "scripts/smoke-mobile-android-lifecycle.mjs",
+        "scripts/inspect-android-target-capability.mjs",
+        "scripts/lib/webcrypto-capability.mjs",
+        "scripts/lib/android-target-capability.mjs",
+        "scripts/lib/android-webview-cdp.mjs",
+        "scripts/lib/mobile-webview-interaction.mjs",
+        "scripts/lib/mobile-source-control-interaction.mjs",
+        "scripts/lib/android-business-flow.mjs",
+        "scripts/lib/websocket-delivery-gate.mjs"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-mobile-android-emulator-install-startup-smoke.sh"
+            }
+          ]
+        }
+      ],
+      "finally_steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/cleanup-mobile-android-emulator.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Build and run the Android LocalBackend writable lifecycle on an API 29+ WebView 137+ target"
+    },
+    {
+      "producer_id": "android.remote-browser",
+      "evidence_ids": [
+        "smoke.android.remote-browser"
+      ],
+      "tiers": [
+        "target-host",
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 3600,
+      "required_env": [
+        "DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN",
+        "DEVE_MOBILE_ANDROID_REMOTE_USERNAME",
+        "DEVE_MOBILE_ANDROID_REMOTE_PASSWORD"
+      ],
+      "bound_env": [
+        "DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN"
+      ],
+      "environment": {
+        "DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED": "1",
+        "DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY": "remote"
+      },
+      "claims_env": {
+        "smoke.android.remote-browser": "DEVE_MOBILE_ANDROID_REMOTE_EVIDENCE_PATH"
+      },
+      "artifacts": [
+        "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/android-emulator-cleanup.test.sh",
+        "scripts/cleanup-mobile-android-emulator.sh",
+        "scripts/lib/android-emulator-owner.sh",
+        "scripts/lib/android-tools.sh",
+        "scripts/smoke-mobile-android-remote-browser.sh",
+        "scripts/smoke-mobile-android-remote-browser.mjs",
+        "scripts/inspect-android-target-capability.mjs",
+        "scripts/lib/webcrypto-capability.mjs",
+        "scripts/lib/android-target-capability.mjs",
+        "scripts/lib/android-webview-cdp.mjs",
+        "scripts/lib/mobile-webview-interaction.mjs",
+        "scripts/lib/mobile-source-control-interaction.mjs",
+        "scripts/lib/android-business-flow.mjs"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-mobile-android-emulator-install-startup-smoke.sh"
+            }
+          ]
+        }
+      ],
+      "finally_steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/cleanup-mobile-android-emulator.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Build and run Android RemoteBrowser HTTPS login, edit, commit, resume, native local recovery, and zero-IPC proof on a self-owned emulator"
+    },
+    {
+      "producer_id": "desktop.local-backend",
+      "evidence_ids": [
+        "smoke.desktop.local-backend",
+        "smoke.desktop.notegit"
+      ],
+      "tiers": [
+        "target-host",
+        "tag-ready"
+      ],
+      "host_os": [
+        "windows"
+      ],
+      "timeout_seconds": 7200,
+      "required_env": [],
+      "environment": {
+        "DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED": "1",
+        "DEVE_DESKTOP_PACKAGE_BUNDLES": "msi,nsis",
+        "DEVE_DESKTOP_PACKAGE_NO_SIGN": "1",
+        "DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-desktop-platform-package-build.sh",
+        "scripts/check-desktop-installer-smoke.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-desktop-platform-package-build.sh"
+            }
+          ]
+        },
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-desktop-installer-smoke.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend, native session, NoteGit, Git bridge, and orphan cleanup"
+    },
+    {
+      "producer_id": "desktop.remote-browser",
+      "evidence_ids": [
+        "smoke.desktop.remote-browser"
+      ],
+      "tiers": [
+        "target-host",
+        "tag-ready"
+      ],
+      "host_os": [
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [
+        "DEVE_DESKTOP_BINARY",
+        "DEVE_DESKTOP_REMOTE_WORK_ROOT",
+        "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN",
+        "DEVE_DESKTOP_REMOTE_USERNAME",
+        "DEVE_DESKTOP_REMOTE_PASSWORD"
+      ],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-desktop-remote-browser-smoke.ps1"
+      ],
+      "steps": [
+        {
+          "program": "pwsh",
+          "args": [
+            {
+              "literal": "-NoProfile"
+            },
+            {
+              "literal": "-File"
+            },
+            {
+              "literal": "scripts/check-desktop-remote-browser-smoke.ps1"
+            },
+            {
+              "literal": "-DesktopBinary"
+            },
+            {
+              "env": "DEVE_DESKTOP_BINARY"
+            },
+            {
+              "literal": "-WorkRoot"
+            },
+            {
+              "env": "DEVE_DESKTOP_REMOTE_WORK_ROOT"
+            },
+            {
+              "literal": "-RemoteHttpsOrigin"
+            },
+            {
+              "env": "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
+            },
+            {
+              "literal": "-Username"
+            },
+            {
+              "env": "DEVE_DESKTOP_REMOTE_USERNAME"
+            }
+          ]
+        }
+      ],
+      "note": "Exercise packaged Windows RemoteBrowser and native-owned recovery to a fresh LocalBackend without remote IPC"
+    },
+    {
+      "producer_id": "docker.multiclient-product",
+      "evidence_ids": [
+        "smoke.web.auth-session",
+        "smoke.web.repo-lifecycle",
+        "smoke.docker.edit-sync-offline",
+        "smoke.web.source-control",
+        "smoke.web.external-changes",
+        "smoke.docker.multiclient"
+      ],
+      "tiers": [
+        "full",
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "windows"
+      ],
+      "timeout_seconds": 3600,
+      "required_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "bound_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "environment": {
+        "DEVE_DOCKER_MULTI_REQUIRED": "1",
+        "DEVE_DOCKER_MULTI_PRODUCT_JOURNEYS": "1",
+        "DEVE_DOCKER_MULTI_SKIP_BUILD": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/smoke-docker-multiclient.sh",
+        "scripts/smoke-docker-multiclient.mjs",
+        "scripts/lib/docker-multiclient-product-journeys.mjs"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/smoke-docker-multiclient.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Run authenticated Docker browser repo, multiclient edit/offline recovery, Source Control, and External Changes journeys"
+    },
+    {
+      "producer_id": "docker.p2p-gap-recovery",
+      "evidence_ids": [
+        "smoke.docker.p2p-gap-recovery"
+      ],
+      "tiers": [
+        "full",
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "windows"
+      ],
+      "timeout_seconds": 3600,
+      "required_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "bound_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "environment": {
+        "DEVE_DOCKER_P2P_MESH_REQUIRED": "1",
+        "DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP": "1",
+        "DEVE_DOCKER_P2P_MESH_SKIP_BUILD": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/smoke-docker-p2p-mesh.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/smoke-docker-p2p-mesh.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Inject a peer fact sequence gap, prove projection blocking, restore the missing fact, and converge"
+    },
+    {
+      "producer_id": "security.tag-ready-audit",
+      "evidence_ids": [
+        "audit.security.tag-ready"
+      ],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1800,
+      "required_env": [],
+      "environment": {
+        "DEVE_RELEASE_AUDIT_REQUIRED": "1",
+        "DEVE_RELEASE_TAG_READY_REQUIRED": "1"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "scripts/check-release-audit-gate.sh"
+      ],
+      "steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/check-release-audit-gate.sh"
+            }
+          ]
+        }
+      ],
+      "note": "Run dependency and release security audit gates against the candidate HEAD"
+    }
+  ]
+}

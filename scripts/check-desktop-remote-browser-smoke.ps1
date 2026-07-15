@@ -7,14 +7,17 @@ param(
     [string]$RemoteHttpsOrigin,
     [Parameter(Mandatory = $true)]
     [string]$Username,
-    [Parameter(Mandatory = $true)]
-    [string]$Password,
+    [string]$Password = $env:DEVE_DESKTOP_REMOTE_PASSWORD,
     [int]$StartupTimeoutSeconds = 60,
     [int]$ExitTimeoutSeconds = 15,
     [int]$NpmTimeoutSeconds = 180
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrEmpty($Password)) {
+    throw "desktop-remote-browser-smoke: Password or DEVE_DESKTOP_REMOTE_PASSWORD is required"
+}
 
 function Fail($Message) { throw "desktop-remote-browser-smoke: $Message" }
 

@@ -103,6 +103,32 @@ async function attachLocalPage() {
   return page;
 }
 
+async function observeRemoteGeneration(page, observations) {
+  page.on("Network.requestWillBeSent", ({ request }) => {
+    observations.requests.push(request?.url ?? "");
+  });
+  page.on("Log.entryAdded", ({ entry }) => {
+    if (entry?.level === "error") observations.consoleErrors.push(entry.text ?? "");
+  });
+  await page.send("Network.enable");
+  await page.send("Log.enable");
+  await page.send("Page.reload", { ignoreCache: true });
+  await waitUntil("RemoteBrowser DOM reload", () => page.call(() =>
+    Boolean(document.querySelector("[data-deve-sync-status]"))), 30000);
+  await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
+  await assertRemoteBridgeIsolation(page);
+}
+
+async function assertRemoteBridgeIsolation(page) {
+  const bridge = await page.call(() => ({
+    capability: globalThis.__DEVE_NATIVE_BOOTSTRAP?.capabilities
+      ?.backend_preference_control === true,
+    facade: Boolean(globalThis.__deveWebBridge?.get?.("__DEVE_NATIVE_BACKEND_CONFIG__")),
+    directFacade: Boolean(globalThis.__DEVE_NATIVE_BACKEND_CONFIG__),
+  }));
+  assert.deepEqual(bridge, { capability: false, facade: false, directFacade: false });
+}
+
 async function listCdpTargets() {
   const response = await withDeadline(
     "Android WebView target discovery",
@@ -184,27 +210,9 @@ async function main() {
     throw new Error("CDP endpoint, remote origin, credentials, adb, and serial are required");
   }
   assert.equal(new URL(remoteOrigin).protocol, "https:");
+  const observations = { requests: [], consoleErrors: [] };
   let page = await attachRemotePage();
-  const requests = [];
-  const consoleErrors = [];
-  page.on("Network.requestWillBeSent", ({ request }) => requests.push(request?.url ?? ""));
-  page.on("Log.entryAdded", ({ entry }) => {
-    if (entry?.level === "error") consoleErrors.push(entry.text ?? "");
-  });
-  await page.send("Network.enable");
-  await page.send("Log.enable");
-  await page.send("Page.reload", { ignoreCache: true });
-  await waitUntil("RemoteBrowser DOM reload", () => page.call(() =>
-    Boolean(document.querySelector("[data-deve-sync-status]"))), 30000);
-  await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
-
-  const bridge = await page.call(() => ({
-    capability: globalThis.__DEVE_NATIVE_BOOTSTRAP?.capabilities
-      ?.backend_preference_control === true,
-    facade: Boolean(globalThis.__deveWebBridge?.get?.("__DEVE_NATIVE_BACKEND_CONFIG__")),
-    directFacade: Boolean(globalThis.__DEVE_NATIVE_BACKEND_CONFIG__),
-  }));
-  assert.deepEqual(bridge, { capability: false, facade: false, directFacade: false });
+  await observeRemoteGeneration(page, observations);
   const capability = await withDeadline(
     "RemoteBrowser Ed25519 probe",
     page.call(probeWebCryptoEd25519),
@@ -223,31 +231,29 @@ async function main() {
     },
   );
   await commitAndroidChange(page, `android remote smoke ${stamp}`, { waitUntil, delay });
+  await assertRemoteBridgeIsolation(page);
 
   const remoteRuntime = await page.call(() => ({
     origin: location.origin,
-    nativeCapability: globalThis.__DEVE_NATIVE_BOOTSTRAP?.capabilities
-      ?.backend_preference_control === true,
-    nativeFacade: Boolean(globalThis.__deveWebBridge?.get?.("__DEVE_NATIVE_BACKEND_CONFIG__")),
   }));
   assert.equal(remoteRuntime.origin, new URL(remoteOrigin).origin);
-  assert.equal(remoteRuntime.nativeCapability, false);
-  assert.equal(remoteRuntime.nativeFacade, false);
 
   adbCommand("shell", "input", "keyevent", "3");
   await page.close();
   await delay(500);
   adbCommand("shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1");
   page = await attachRemotePage();
+  await observeRemoteGeneration(page, observations);
   await loginAndroidRemote(page, username, password, waitUntil);
+  await assertRemoteBridgeIsolation(page);
   assert.equal(new URL(await page.call(() => location.href)).origin, new URL(remoteOrigin).origin);
   const remoteScope = await readScope(page);
   assert.equal(remoteScope.status, "ready");
   assert.ok(remoteScope.repoId, "RemoteBrowser must expose a repo-scoped ready handshake");
   assert.ok(Number.isInteger(remoteScope.scopeNonce) && remoteScope.scopeNonce > 0);
 
-  const ipcRequests = requests.filter((url) => url.includes("ipc.localhost"));
-  const ipcCspErrors = consoleErrors.filter((message) =>
+  const ipcRequests = observations.requests.filter((url) => url.includes("ipc.localhost"));
+  const ipcCspErrors = observations.consoleErrors.filter((message) =>
     /ipc\.localhost|content security policy|refused to connect/i.test(message));
   assert.deepEqual(ipcRequests, []);
   assert.deepEqual(ipcCspErrors, []);

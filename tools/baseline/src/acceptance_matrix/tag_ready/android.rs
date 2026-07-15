@@ -16,6 +16,9 @@ pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Res
         .claims
         .as_ref()
         .context("Android receipt is missing typed target/probe claims")?;
+    if claims.get("schema").and_then(Value::as_u64) != Some(1) {
+        bail!("Android claims schema is unsupported");
+    }
     let expected_producer = match row.mode.as_str() {
         "local-backend" => "smoke-mobile-android-lifecycle",
         "remote-browser" => "smoke-mobile-android-remote-browser",
@@ -29,11 +32,12 @@ pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Res
     if claims.get("producer").and_then(Value::as_str) != Some(expected_producer) {
         bail!("Android claims producer does not match {expected_producer}");
     }
-    if !receipt
-        .command_artifacts
-        .iter()
-        .any(|artifact| artifact == expected_artifact)
-    {
+    if !receipt.command_artifacts.iter().any(|artifact| {
+        Path::new(artifact)
+            .file_name()
+            .and_then(|value| value.to_str())
+            == Some(expected_artifact)
+    }) {
         bail!("Android receipt command is not bound to {expected_artifact}");
     }
     if claims.get("mode").and_then(Value::as_str) != Some(row.mode.as_str()) {
@@ -53,6 +57,8 @@ pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Res
     if row.mode == "remote-browser" {
         validate_remote_journey(journey)?;
         validate_remote_recovery(claims)?;
+    } else {
+        validate_local_journey(journey)?;
     }
     let executable = Path::new(&receipt.command_program)
         .file_name()
@@ -61,6 +67,22 @@ pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Res
         .to_ascii_lowercase();
     if !matches!(executable.as_str(), "bash" | "bash.exe" | "sh" | "sh.exe") {
         bail!("Android receipt producer must be invoked through the shell harness");
+    }
+    Ok(())
+}
+
+fn validate_local_journey(journey: &Value) -> Result<()> {
+    for claim in [
+        "loginOrNativeSession",
+        "edit",
+        "commitHistory",
+        "backgroundResume",
+        "staleScopeRejected",
+        "pendingPreserved",
+    ] {
+        if journey.get(claim).and_then(Value::as_bool) != Some(true) {
+            bail!("Android LocalBackend journey is missing required claim {claim}");
+        }
     }
     Ok(())
 }
@@ -74,11 +96,39 @@ fn validate_target_and_webcrypto(claims: &Value) -> Result<()> {
         .get("webViewProviderMajor")
         .and_then(Value::as_u64)
         .unwrap_or(0);
+    let provider_package = target
+        .get("webViewProviderPackage")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let provider_version = target
+        .get("webViewProviderVersion")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let version_major = provider_version
+        .split('.')
+        .next()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0);
+    let build_fingerprint = target
+        .get("buildFingerprint")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let model = target.get("model").and_then(Value::as_str).unwrap_or("");
     if sdk < 29
         || provider_major < 137
+        || provider_package.is_empty()
+        || !provider_package
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_'))
+        || provider_version.split('.').count() < 2
+        || version_major != provider_major
+        || build_fingerprint.is_empty()
+        || model.is_empty()
         || target.get("supportBaseline").and_then(Value::as_bool) != Some(true)
     {
-        bail!("Android target does not meet API 29 / WebView 137 support baseline");
+        bail!(
+            "Android target does not include a qualified API 29 / WebView 137 provider and device identity"
+        );
     }
     let webcrypto = claims
         .get("webcrypto")

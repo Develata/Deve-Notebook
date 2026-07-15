@@ -387,12 +387,15 @@
     - contract_assert: resilience_playbook_index_bound true
 
 - case_id: REL-014
-  goal: 分层验收矩阵对 case、operation flow、first-tag journey 与 evidence receipt fail-closed。
+  goal: 分层验收矩阵与 Rust producer runner 对 case、operation flow、first-tag journey、实际 smoke 和 evidence receipt fail-closed。
   preconditions:
     - `docs/registry/acceptance-matrix.tsv` 可读
+    - `docs/registry/acceptance-producers.json` 可读
     - Rust 1.92 toolchain 可用
   steps:
     - run: cargo run --locked -p deve_baseline -- acceptance-matrix
+    - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci --plan
+    - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
     - run: cargo test --locked -p deve_baseline acceptance_matrix -- --nocapture
     - run: receipt_root="$(mktemp -d)" && ! cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
   assertions:
@@ -403,5 +406,15 @@
     - contract_assert: generated_acceptance_matrix_drift_rejected true
     - contract_assert: dirty_failed_stale_or_missing_receipt_rejected true
     - contract_assert: receipt_head_surface_mode_platform_and_locator_bound true
+    - contract_assert: receipt_producer_contract_and_execution_group_bound true
+    - contract_assert: every_required_receipt_has_exactly_one_typed_producer true
+    - contract_assert: producer_shell_command_strings_forbidden true
+    - contract_assert: producer_bound_environment_is_public_non_secret true
+    - contract_assert: producer_timeout_failure_writes_failed_receipts true
+    - contract_assert: evidence_filter_selects_complete_atomic_producer_group true
+    - contract_assert: receipt_collection_is_root_pinned_and_resource_bounded true
+    - contract_assert: receipt_collection_rejects_inconsistent_execution_fields true
+    - contract_assert: producer_finally_cleanup_is_execution_scoped_and_bounded true
+    - contract_assert: one_producer_execution_atomically_emits_multiple_bound_receipts true
     - release_assert: explicit_p0_gap_blocks_tag_ready true
 ```

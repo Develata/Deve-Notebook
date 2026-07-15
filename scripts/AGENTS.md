@@ -64,7 +64,11 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-desktop-target-host-preflight.sh` | Diagnoses macOS/Windows Desktop target-host prerequisites without claiming package readiness on the wrong host |
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
-| `check-mobile-android-emulator-install-startup-smoke.sh` | Boots an Android emulator target host, builds a debug WebView shell APK, and delegates install/startup smoke without opening process runtime |
+| `check-mobile-android-emulator-install-startup-smoke.sh` | Owns an Android emulator target lifecycle, builds a debug WebView shell APK, and selects an explicit LocalBackend or RemoteBrowser writable journey before bounded cleanup |
+| `android-emulator-cleanup.test.sh` | Exercises emulator cleanup ownership rejection and the verified `emu kill` shutdown transition without touching ambient ADB targets |
+| `cleanup-mobile-android-emulator.sh` | Uses the runner-scoped serial plus exact AVD identity to request Android emulator shutdown; recorded PID is observation-only outside the owning shell, and cleanup waits for disappearance before evidence publication |
+| `lib/android-emulator-owner.sh` | Canonicalizes the runner-owned emulator state path and rejects ambient owner-file overrides that escape the current execution directory |
+| `mobile-android-emulator-journey.test.mjs` | Verifies the shared emulator owner keeps local/remote journey selection and claims outputs explicit |
 | `smoke-mobile-android-lifecycle.sh` | Drives the debug Android WebView through CDP, verifies non-zero pending preservation, transport-generation recovery, foreground reprobe, resumed commit, and bounded graceful runtime cleanup |
 | `smoke-mobile-android-lifecycle.mjs` | Raw page-target CDP harness for the Android LocalBackend lifecycle smoke; requires WebCrypto Ed25519, uses debug-only lifecycle fault/exit commands, and otherwise submits UI intents only |
 | `smoke-mobile-android-remote-browser.sh` / `.mjs` | Runs a preference-driven Android RemoteBrowser against an HTTPS Deve origin, proves zero native facade/IPC, real login/edit/commit/history/background recovery, invokes the platform-owned local recovery control, verifies a fresh LocalBackend endpoint/session/scope, and emits typed writable claims |

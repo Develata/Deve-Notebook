@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
@@ -17,7 +18,9 @@ EMULATOR_PORT="${DEVE_MOBILE_ANDROID_EMULATOR_PORT:-5584}"
 EMULATOR_SERIAL="emulator-$EMULATOR_PORT"
 EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
+OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
+JOURNEY="${DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local}"
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
@@ -67,12 +70,38 @@ adb_cmd() {
 }
 
 cleanup() {
-  if [[ -n "${EMULATOR_SERIAL:-}" ]]; then
-    adb_cmd -s "$EMULATOR_SERIAL" emu kill >/dev/null 2>&1 || true
-  fi
-  if [[ -n "${EMULATOR_PID:-}" ]]; then
+  local cleanup_status=0
+  DEVE_MOBILE_ANDROID_EMULATOR_OWNER_FILE="$OWNER_FILE" \
+    bash "$ROOT_DIR/scripts/cleanup-mobile-android-emulator.sh" \
+    || cleanup_status=$?
+  if (( cleanup_status != 0 )) \
+      && [[ -n "${EMULATOR_PID:-}" ]] \
+      && jobs -pr | grep -Fx -- "$EMULATOR_PID" >/dev/null 2>&1; then
     kill "$EMULATOR_PID" >/dev/null 2>&1 || true
   fi
+  return "$cleanup_status"
+}
+
+cleanup_on_exit() {
+  local status=$?
+  local cleanup_status=0
+  trap - EXIT
+  cleanup || cleanup_status=$?
+  if (( status != 0 )); then
+    exit "$status"
+  fi
+  exit "$cleanup_status"
+}
+
+write_emulator_owner() {
+  local pid="${1:-}"
+  local launch_state="reserved"
+  local temporary="$OWNER_FILE.tmp.$$"
+  [[ -z "$pid" ]] || launch_state="launched"
+  mkdir -p "$(dirname "$OWNER_FILE")"
+  printf 'launch_state=%s\nemulator_pid=%s\nemulator_serial=%s\navd_name=%s\n' \
+    "$launch_state" "$pid" "$EMULATOR_SERIAL" "$AVD_NAME" >"$temporary"
+  mv -f -- "$temporary" "$OWNER_FILE"
 }
 
 print_emulator_diagnostics() {
@@ -323,18 +352,25 @@ run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 run node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 run node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
 run node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
+run node --test "$ROOT_DIR/scripts/mobile-android-emulator-journey.test.mjs"
 run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
 verify_boot_completion_contract
 verify_sdk_package_reuse_contract
+run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
 validate_emulator_port
 validate_emulator_ram
 validate_lifecycle_timeout
 
+case "$JOURNEY" in
+  local | remote) ;;
+  *) fail "DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY must be local or remote" ;;
+esac
+
 if [[ "$REQUIRED" != "1" ]]; then
   echo "mobile-android-emulator-install-startup-smoke-check: emulator smoke not executed; set DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 on an Android target host"
-  echo "mobile-android-emulator-install-startup-smoke-check: api=$API_LEVEL target=$SYSTEM_TARGET arch=$ARCH avd=$AVD_NAME"
+  echo "mobile-android-emulator-install-startup-smoke-check: api=$API_LEVEL target=$SYSTEM_TARGET arch=$ARCH avd=$AVD_NAME journey=$JOURNEY"
   echo "mobile-android-emulator-install-startup-smoke-check: ok"
   exit 0
 fi
@@ -363,7 +399,11 @@ stop_android_gradle_daemon
 
 ensure_emulator_serial_available
 
-trap cleanup EXIT
+if [[ -f "$OWNER_FILE" ]]; then
+  cleanup || fail "stale owned Android emulator could not be cleaned"
+fi
+trap cleanup_on_exit EXIT
+write_emulator_owner
 
 emulator_cmd \
   -avd "$AVD_NAME" \
@@ -379,6 +419,7 @@ emulator_cmd \
   -wipe-data \
   >"$LOG_DIR/emulator.log" 2>&1 &
 EMULATOR_PID="$!"
+write_emulator_owner "$EMULATOR_PID"
 
 wait_for_boot
 
@@ -392,12 +433,21 @@ adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
   run "$ROOT_DIR/scripts/check-mobile-android-install-startup-smoke.sh"
 )
 
-(
-  export DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1
-  export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
-  export DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS="$LIFECYCLE_TIMEOUT_SECS"
-  run "$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.sh"
-)
+if [[ "$JOURNEY" == "local" ]]; then
+  (
+    export DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1
+    export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+    export DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS="$LIFECYCLE_TIMEOUT_SECS"
+    run bash "$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.sh"
+  )
+else
+  (
+    export DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED=1
+    export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+    export DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_SECS="$LIFECYCLE_TIMEOUT_SECS"
+    run bash "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.sh"
+  )
+fi
 
-echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
+echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL journey=$JOURNEY log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
 echo "mobile-android-emulator-install-startup-smoke-check: ok"

@@ -225,7 +225,9 @@ first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 --surface <surface> --mode <mode> --target-os <target> --output <file>
 [--claims <producer-json>] -- <command...>`
 包装真实命令，并记录 receipt schema、evidence ID/ref、命令前后 HEAD/dirty、host OS/arch、
-target OS、surface/mode、开始/结束 UTC 时间、退出状态、稳定命令指纹与脚本 artifact。只有命令成功、
+target OS、surface/mode、开始/结束 UTC 时间、退出状态、稳定命令指纹与脚本 artifact。该低层命令
+生成的 receipt 明确标记为 `manual.unbound`，只用于开发诊断，不能满足 tag-ready；正式候选证据
+必须由 `acceptance-run` 按 producer registry 生成。只有命令成功、
 前后 HEAD 相同且 worktree 始终 clean 时才写 `passed`；其他情况仍必须原子写出 `failed`
 receipt 并返回非零。Receipt output 必须位于 Git worktree 外，且其尾部路径必须与
 `evidence_ref` 一致，避免 evidence 文件本身污染被测工作树。
@@ -242,10 +244,54 @@ worktree clean，并满足 `current-head` / `target-host-30d` / `first-tag-once`
 地满足 tag-ready。普通 CI 只阻断结构漂移；正式 tag workflow 必须汇总各平台 receipts
 后再运行 tag-ready。
 
-当前 tag workflow 在平台 receipt producers 与 pre-publish aggregation 尚未完成时，必须使用
-worktree 外的空 receipt root 提前 fail-closed，禁止 Docker push 或 GitHub Release；该缺口
-作为独立 P0 requirement 保留。后续 P0 关闭它时，必须先让各平台 job 产出并上传 receipt，
-再在任何公开发布动作前聚合并执行 tag-ready，不得仅删除前置失败 gate。
+`docs/registry/acceptance-producers.json` 是 receipt producer 的唯一人工维护注册表。
+它只登记 producer ID、覆盖的 `evidence_id`、执行层级、适用 host OS、超时、必需环境变量、
+claims 输出变量、可公开且非凭据的 bound environment、受控 artifact 清单，以及由 `program + args[]` 组成的命令步骤；不得保存 shell command string，
+不得在 JSON 中拼接凭据，也不得把普通文档/source reference 冒充运行时 producer。矩阵中每个
+`tag-ready/required/receipt` evidence 必须恰好由一个 producer 覆盖；producer 也不得引用矩阵
+之外或非 receipt 的 evidence。
+
+`deve_baseline acceptance-run --tier <ci|full|target-host|tag-ready> --plan`
+只做确定性解析与预检，输出将运行、因 host 不匹配而不可运行、缺少环境变量或不能满足
+tag-ready host 约束的 producer，不启动外部命令。去掉 `--plan` 后必须显式提供位于 worktree
+外的 `--receipt-dir`；runner 默认按 producer ID 顺序串行执行，低内存宿主不得由工具隐式并发。
+`--producer <id>` / `--evidence-id <id>` 只允许缩小 producer 执行面；evidence filter 只选择其
+owner producer，不得切开该 producer 的原子 evidence group。一次 producer 执行可以覆盖多个
+evidence，但命令只能运行一次；每个 evidence 仍获得独立 locator、surface、mode 与 target OS
+绑定的 schema 3 receipt。每组 receipt 还必须绑定 producer ID、当前 registry contract 指纹、唯一
+execution ID、该次执行的完整 evidence 集合与受控 artifact 清单。多 evidence producer 必须先完成
+全部序列化与临时写入再发布；单次原子 execution group 最多 64 个 receipt，任一 sibling 的 claims、
+构造或资源预算失败必须令整组一致 failed。进程中断留下的部分集合不能通过 collector 或 tag-ready。`ci` 层只执行快速、确定性的 host-local producer；已有 workflow
+拥有的 fmt/clippy/workspace test 不得为制造 receipt 而重复运行。`full` 增加 Docker/browser
+业务闭环，`target-host` 选择当前宿主的 native/mobile producers，`tag-ready` 用于候选证据生产
+与跨平台缺口预检，不能把单一宿主误报为覆盖所有平台。
+
+Rust runner 独占以下 infra：参数/registry 校验、HEAD/dirty 前后快照、单调超时、子进程终止、
+失败 receipt、producer claims 读取、命令指纹、execution group 与 receipt 发布。命令超时后
+必须有界终止进程树并继续执行显式 finally steps；runner 不依赖被强杀 shell 的 trap 完成清理。
+runner 为每次 producer 执行提供隔离的临时 state directory，使 finally step 只能回收本次执行
+登记的宿主资源。Android 外部 finalizer 只能在 emulator serial 与登记 AVD 精确匹配后请求
+设备退出；owner file 中的 PID 只用于有界观察资源消失，不能授权外部脚本按裸 PID 发送信号。
+只有实际启动 emulator 的 shell 仍能证明该 PID 是自己的活动后台 job 时，才可在自身 EXIT trap
+内发送信号。reserved launch 无法取得可验证设备身份时必须 fail-closed 并保留诊断，不能宣称清理成功。
+Docker、Playwright、ADB、
+WebView CDP、Tauri installer 与签名等宿主动作仍可由窄 shell/PowerShell/Node 脚本承载；这些
+脚本不得重新实现矩阵选择、receipt schema、freshness 或聚合判断。Android producer 可在
+Windows host 驱动 emulator，但 receipt 的 target OS 仍为 `android`，且必须通过实际 provider
+与 Ed25519 probe，而不是根据宿主或版本号推断可写。
+
+`deve_baseline acceptance-collect --output <receipt-root> <artifact-root>...` 负责 pre-publish
+聚合：只接收普通 JSON 文件，拒绝 symlink/reparse escape、重复 `evidence_id`、重复 locator、
+不完整或混合 execution group、非规范相对路径和越界目录；枚举时固定 canonical root，读取
+前后必须重验同一 root identity。单个 receipt JSON 上限 1 MiB，单次聚合最多 4096 个文件且
+JSON 总量上限 16 MiB；producer 写入侧单个原子 execution group 最多 64 个 evidence，claims
+读取、receipt 序列化与临时发布仍应用 1 MiB 单文件、16 MiB 整组预算；跨 producer 的 collector
+总文件上限仍为 4096。超限时生成有界 failed receipt 或在执行前拒绝，
+不得先无界分配再交由 collector 拒绝。execution group 必须统一验证 HEAD/host/timestamps/status、command
+fingerprint、artifacts 与 producer inputs。collector 使用临时目录完成全部校验后再原子发布。release workflow 必须先
+下载各平台 receipt artifact、调用 collector，再运行 `acceptance-matrix --tag-ready`，并且该
+gate 必须位于任何 image tag/push、Release asset upload 或 GitHub Release 创建之前。producer
+失败、缺失、过期或平台不匹配均保持 fail-closed，禁止用空目录或跳过 job 伪装成功。
 
 当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 未启用；发布
 资产缺少 SBOM、SHA-256 checksum 与 provenance/attestation；Docker、Desktop、Android、

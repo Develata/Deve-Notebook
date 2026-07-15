@@ -137,6 +137,72 @@ scripts/plan-coverage.sh --check-reverse-coverage
 Do not put `scripts/plan-coverage.sh --summary-missing-plan-ref` into the quick
 gate. It is an audit command and can be handled as a separate performance debt.
 
+## Automated Acceptance Producers
+
+The acceptance matrix and the smoke harnesses have different jobs:
+
+- `docs/registry/acceptance-matrix.tsv` states which evidence each case or
+  first-tag journey requires.
+- `docs/registry/acceptance-producers.json` binds runtime receipt evidence to
+  typed command steps.
+- `deve_baseline acceptance-run` plans or executes those producers; it owns
+  timeout, clean-HEAD checks, schema 3 receipts, producer-contract and execution
+  group binding, Android claims, and failure reporting.
+- `deve_baseline acceptance-collect` merges receipt artifacts without following
+  symlinks or accepting duplicate evidence.
+
+Inspect a tier without running external tools:
+
+```bash
+cargo run --locked -p deve_baseline -- acceptance-run --tier ci --plan
+cargo run --locked -p deve_baseline -- acceptance-run --tier full --plan
+cargo run --locked -p deve_baseline -- acceptance-run --tier target-host --plan
+cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
+```
+
+Execution requires a clean worktree and a receipt directory outside the repo.
+It is intentionally sequential for low-memory hosts. On Windows the runner
+selects Git for Windows Bash; set `DEVE_ACCEPTANCE_BASH` only when Git Bash is
+installed elsewhere.
+An `--evidence-id` filter selects the owning producer and still emits that
+producer's complete atomic receipt group. Runner-owned state directories let
+finally steps clean only resources created by the current execution.
+
+`acceptance-receipt` is a low-level diagnostic wrapper and emits
+`manual.unbound` receipts. It cannot substitute for a registry-owned producer
+at tag-ready. A producer-owned output directory is published only after its
+receipt set is complete; the collector rejects partial or mixed execution IDs.
+Collector inputs are canonical-root pinned and limited to 4096 JSON files,
+1 MiB per receipt, and 16 MiB total.
+
+```powershell
+$receiptRoot = Join-Path $env:TEMP "deve-acceptance-$((git rev-parse --short HEAD).Trim())"
+cargo run --locked -p deve_baseline -- acceptance-run `
+  --tier full --receipt-dir $receiptRoot
+```
+
+Windows Docker results are valid development evidence, but Docker tag-ready
+receipts are intentionally Linux-host-bound. Windows is a supported Android
+target host: the LocalBackend producer builds the x86_64 APK, owns an API 37.1
+Google APIs AVD, records the current WebView provider and real Ed25519 probe,
+drives the writable lifecycle, and cleans the emulator. RemoteBrowser uses the
+same emulator owner with `DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY=remote` and also
+requires an exact HTTPS origin plus temporary credentials.
+
+Aggregate downloaded workflow artifacts before the final gate:
+
+```bash
+RECEIPT_TMP=/tmp # use /private/tmp on macOS because /tmp is a symlink
+cargo run --locked -p deve_baseline -- acceptance-collect \
+  --output "$RECEIPT_TMP/deve-collected-receipts" artifact-linux artifact-windows artifact-android
+cargo run --locked -p deve_baseline -- acceptance-matrix \
+  --tag-ready "$RECEIPT_TMP/deve-collected-receipts"
+```
+
+Passing a structural matrix check, registering a producer, passing one host's
+smoke, and satisfying cross-platform tag-ready are four distinct conclusions.
+Current explicit `gap` rows continue to block the first tag.
+
 ## Production Auth
 
 Production is the default when `--dev` is not used and `DEVE_ENV` is not

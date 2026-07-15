@@ -5,9 +5,12 @@ use crate::context::BaselineContext;
 use anyhow::{Result, bail};
 use std::path::Path;
 
+mod execution_group;
 mod model;
 mod parse;
+mod producer;
 mod receipt;
+mod receipt_limits;
 mod render;
 mod tag_ready;
 mod test_selector;
@@ -17,6 +20,7 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     let ctx = BaselineContext::new("acceptance-matrix")?;
     let rows = parse::read_matrix(ctx.root())?;
     validate::validate(ctx.root(), &rows)?;
+    producer::validate_registry(ctx.root(), &rows)?;
     match args {
         [] => render::check_drift(ctx.root(), &rows)?,
         [action] if action == "--render" => render::write(ctx.root(), &rows)?,
@@ -39,4 +43,12 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
 
 pub(crate) fn run_receipt(args: &[String]) -> Result<()> {
     receipt::run(args)
+}
+
+pub(crate) fn run_producers(args: &[String]) -> Result<()> {
+    producer::run(args)
+}
+
+pub(crate) fn collect_receipts(args: &[String]) -> Result<()> {
+    producer::collect::run(args)
 }
