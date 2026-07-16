@@ -20,7 +20,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::handshake_proof::verify_sync_hello_proof;
 use futures::StreamExt;
 use std::sync::Arc;
-use tokio::time::{Duration, timeout};
+use tokio::time::{Duration, Instant, timeout_at};
 use tokio_tungstenite::tungstenite::Message;
 
 const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(5);
@@ -38,14 +38,36 @@ where
         + futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error>
         + Unpin,
 {
+    drive_sync_exchange_with_timeouts(
+        peer,
+        repo_id,
+        state,
+        socket,
+        HANDSHAKE_READ_TIMEOUT,
+        EXCHANGE_IDLE_TIMEOUT,
+    )
+    .await
+}
+
+pub(super) async fn drive_sync_exchange_with_timeouts<S>(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    state: Arc<AppState>,
+    socket: &mut S,
+    handshake_timeout: Duration,
+    exchange_idle_timeout: Duration,
+) -> Result<ExchangeStats>
+where
+    S: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>>
+        + futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error>
+        + Unpin,
+{
     let mut stats = ExchangeStats::default();
+    let handshake_deadline = Instant::now() + handshake_timeout;
+    let mut exchange_idle_deadline = None;
     for frame_index in 0..MAX_EXCHANGE_FRAMES {
-        let read_timeout = if stats.saw_hello {
-            EXCHANGE_IDLE_TIMEOUT
-        } else {
-            HANDSHAKE_READ_TIMEOUT
-        };
-        let frame = match timeout(read_timeout, socket.next()).await {
+        let read_deadline = exchange_idle_deadline.unwrap_or(handshake_deadline);
+        let frame = match timeout_at(read_deadline, socket.next()).await {
             Ok(Some(Ok(frame))) => frame,
             Ok(Some(Err(err))) => return Err(err).context("P2P peer returned websocket error"),
             Ok(None) if stats.saw_hello => return Ok(stats),
@@ -59,6 +81,9 @@ where
         let message = decode_server_message(frame)
             .with_context(|| format!("Failed to decode P2P server frame {frame_index}"))?;
         handle_server_message(peer, repo_id, &state, socket, message, &mut stats).await?;
+        if stats.saw_hello {
+            exchange_idle_deadline = Some(Instant::now() + exchange_idle_timeout);
+        }
     }
     if stats.saw_hello {
         Ok(stats)

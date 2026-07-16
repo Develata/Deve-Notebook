@@ -200,10 +200,14 @@ wait_for_peer() {
 }
 
 wait_for_mesh_handshake() {
+  local connections_a
+  local connections_b
   local logs
   for _ in $(seq 1 60); do
-    logs="$(docker_compose logs --no-color 2>/dev/null || true)"
-    if grep -q "P2P mesh connector handshake completed" <<<"$logs"; then
+    connections_a="$(mesh_connection_count peer-a "$PEER_B_EXPECTED_ID")"
+    connections_b="$(mesh_connection_count peer-b "$PEER_A_EXPECTED_ID")"
+    if (( connections_a > 0 && connections_b > 0 )); then
+      logs="$(docker_compose logs --no-color 2>/dev/null || true)"
       if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
         fail "P2P token material appeared in compose logs"
       fi
@@ -214,19 +218,20 @@ wait_for_mesh_handshake() {
   return 1
 }
 
-mesh_handshake_count() {
-  local service="$1"
-  local logs
-  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-  grep -c "P2P mesh connector handshake completed" <<<"$logs" || true
-}
-
 mesh_connection_count() {
   local service="$1"
   local peer_id="$2"
   local logs
   logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-MESH_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$peer_id" <<'PY'
+  count_mesh_evidence_in_logs "$logs" "$peer_id" "$REPO_ID"
+}
+
+count_mesh_evidence_in_logs() {
+  local logs="$1"
+  local peer_id="$2"
+  local repo_id="$3"
+  [[ -n "$peer_id" && -n "$repo_id" ]] || return 1
+MESH_LOGS="$logs" REPO_ID="$repo_id" "$PYTHON_BIN" - "$peer_id" <<'PY'
 import os
 import re
 import sys
@@ -234,8 +239,8 @@ import sys
 peer_id = sys.argv[1]
 repo_id = os.environ["REPO_ID"]
 ansi = re.compile(r"\x1b\[[0-9;]*m")
-hello_pattern = re.compile(
-    r"Handling SyncHello from " + re.escape(peer_id) + r" for repo " + re.escape(repo_id)
+bound_pattern = re.compile(
+    r"Session bound to peer " + re.escape(peer_id) + r" and repo " + re.escape(repo_id)
 )
 authenticated = f'authenticated_peer_id="{peer_id}"'
 
@@ -244,7 +249,7 @@ for raw_line in os.environ["MESH_LOGS"].splitlines():
     line = ansi.sub("", raw_line)
     if "P2P mesh connector handshake completed" in line and authenticated in line:
         count += 1
-    elif hello_pattern.search(line):
+    elif bound_pattern.search(line):
         count += 1
 print(count)
 PY
@@ -381,15 +386,15 @@ for line in reversed(os.environ["MESH_LOGS"].splitlines()):
     if match:
         print(match.group(1).strip('"'))
         raise SystemExit(0)
-# The two-peer smoke has exactly one remote per service. If the outbound
-# connector keeps the socket open, the completion log can lag behind inbound
-# admission; the SyncHello log is still emitted after peer authentication.
-hello_pattern = re.compile(
-    r"Handling SyncHello from ([^ ]+) for repo " + re.escape(repo_id)
+# The two-peer smoke has exactly one remote per service. Transport control
+# frames can keep the outbound exchange open, delaying its completion log; the
+# server emits this fallback only after signature validation and session bind.
+bound_pattern = re.compile(
+    r"Session bound to peer ([^ ]+) and repo " + re.escape(repo_id)
 )
 for line in reversed(os.environ["MESH_LOGS"].splitlines()):
     line = ansi.sub("", line)
-    match = hello_pattern.search(line)
+    match = bound_pattern.search(line)
     if match:
         print(match.group(1).strip('"'))
         raise SystemExit(0)

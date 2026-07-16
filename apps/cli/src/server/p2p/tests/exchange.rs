@@ -1,4 +1,7 @@
-use super::super::exchange::{MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message};
+use super::super::exchange::{
+    MAX_EXCHANGE_FRAMES, drive_sync_exchange, drive_sync_exchange_with_timeouts,
+    handle_server_message,
+};
 use super::support::{
     DelayedFrame, DelayedSocket, MockSocket, REMOTE_PEER_ID, THIRD_PARTY_PEER_ID, append_local_op,
     authenticated_stats, peer, peer_with_id, signed_server_hello, test_state, test_state_with_dir,
@@ -56,6 +59,86 @@ async fn p2p_exchange_responds_to_ping_without_aborting_handshake() -> anyhow::R
 
     assert!(stats.saw_hello);
     assert_eq!(socket.sent, vec![Message::Pong(vec![1, 2, 3])]);
+    Ok(())
+}
+
+#[tokio::test]
+async fn p2p_exchange_transport_ping_does_not_extend_application_idle_deadline()
+-> anyhow::Result<()> {
+    let identity = Arc::new(IdentityKeyPair::generate());
+    let (_dir, state) = test_state_with_dir(identity)?;
+    let repo_id = state
+        .repo
+        .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+        .expect("repo info")
+        .uuid;
+    let remote = IdentityKeyPair::generate();
+    let remote_peer = remote.peer_id();
+    let hello = Message::Binary(encode_server_binary(&signed_server_hello(
+        &remote,
+        repo_id,
+        VersionVector::new(),
+    ))?);
+    let mut socket = DelayedSocket::new(vec![
+        DelayedFrame::Ready(hello),
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(Message::Ping(vec![1])),
+        },
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(Message::Ping(vec![2])),
+        },
+    ]);
+
+    let stats = drive_sync_exchange_with_timeouts(
+        &peer_with_id(repo_id, remote_peer.as_str()),
+        repo_id,
+        state,
+        &mut socket,
+        Duration::from_millis(50),
+        Duration::from_millis(50),
+    )
+    .await?;
+
+    assert!(stats.saw_hello);
+    assert_eq!(socket.sent, vec![Message::Pong(vec![1])]);
+    Ok(())
+}
+
+#[tokio::test]
+async fn p2p_exchange_transport_ping_does_not_extend_handshake_deadline() -> anyhow::Result<()> {
+    let identity = Arc::new(IdentityKeyPair::generate());
+    let (_dir, state) = test_state_with_dir(identity)?;
+    let repo_id = uuid::Uuid::new_v4();
+    let mut socket = DelayedSocket::new(vec![
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(Message::Ping(vec![1])),
+        },
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(Message::Ping(vec![2])),
+        },
+    ]);
+
+    let err = drive_sync_exchange_with_timeouts(
+        &peer(repo_id),
+        repo_id,
+        state,
+        &mut socket,
+        Duration::from_millis(50),
+        Duration::from_millis(50),
+    )
+    .await
+    .expect_err("transport-only traffic must not keep a missing handshake alive");
+
+    assert!(err.to_string().contains("handshake timed out"));
+    assert_eq!(socket.sent, vec![Message::Pong(vec![1])]);
     Ok(())
 }
 

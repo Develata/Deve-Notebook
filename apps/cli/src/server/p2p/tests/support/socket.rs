@@ -16,6 +16,11 @@ pub(crate) enum DelayedFrame {
         sleep: Pin<Box<Sleep>>,
         message: Option<Message>,
     },
+    AfterPoll {
+        delay: std::time::Duration,
+        sleep: Option<Pin<Box<Sleep>>>,
+        message: Option<Message>,
+    },
 }
 
 pub(crate) struct DelayedSocket {
@@ -83,6 +88,19 @@ impl Stream for DelayedSocket {
                 _ => unreachable!("front frame is ready"),
             },
             DelayedFrame::After { sleep, message } => {
+                if sleep.as_mut().poll(cx).is_pending() {
+                    return Poll::Pending;
+                }
+                let message = message.take().expect("delayed message");
+                self.incoming.pop_front();
+                Poll::Ready(Some(Ok(message)))
+            }
+            DelayedFrame::AfterPoll {
+                delay,
+                sleep,
+                message,
+            } => {
+                let sleep = sleep.get_or_insert_with(|| Box::pin(tokio::time::sleep(*delay)));
                 if sleep.as_mut().poll(cx).is_pending() {
                     return Poll::Pending;
                 }

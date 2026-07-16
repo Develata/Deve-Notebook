@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import test from "node:test";
 
@@ -16,6 +17,30 @@ const releaseWorkflow = fs.readFileSync(
   new URL("../.github/workflows/release.yml", import.meta.url),
   "utf8",
 );
+
+function meshEvidenceCount(logs, peerId, repoId) {
+  const start = p2p.indexOf("count_mesh_evidence_in_logs() {");
+  const end = p2p.indexOf("server_peer_id_from_logs() {", start);
+  assert.ok(start >= 0 && end > start, "mesh evidence parser function must exist");
+  const python = process.env.DEVE_DOCKER_P2P_MESH_PYTHON_BIN
+    ?? "python3";
+  const parser = p2p.slice(start, end).replaceAll("\r\n", "\n");
+  const command = `${parser}
+count_mesh_evidence_in_logs "$MESH_LOGS" "$PEER_ID" "$REPO_ID"`;
+  const forwarded = "MESH_LOGS:PEER_ID:PYTHON_BIN:REPO_ID";
+  return spawnSync("bash", ["-s"], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      MESH_LOGS: logs,
+      PEER_ID: peerId,
+      PYTHON_BIN: python,
+      REPO_ID: repoId,
+      WSLENV: process.env.WSLENV ? `${process.env.WSLENV}:${forwarded}` : forwarded,
+    },
+    input: command,
+  });
+}
 
 test("release existing-image mode validates the image and bypasses build", () => {
   assert.match(
@@ -46,11 +71,58 @@ test("Docker acceptance smokes bind and revalidate one immutable candidate image
   assert.match(p2p, /DEVE_DOCKER_P2P_MESH_IMAGE="\$IMAGE"/);
 });
 
+test("P2P readiness accepts both authenticated admissions without waiting for exchange close", () => {
+  const waitStart = p2p.indexOf("wait_for_mesh_handshake() {");
+  const countStart = p2p.indexOf("mesh_connection_count() {");
+  assert.ok(waitStart >= 0 && countStart > waitStart, "mesh readiness functions must exist");
+  const wait = p2p.slice(waitStart, countStart);
+  assert.match(wait, /mesh_connection_count peer-a "\$PEER_B_EXPECTED_ID"/);
+  assert.match(wait, /mesh_connection_count peer-b "\$PEER_A_EXPECTED_ID"/);
+  assert.match(wait, /connections_a > 0 && connections_b > 0/);
+  assert.doesNotMatch(wait, /grep -q "P2P mesh connector handshake completed"/);
+
+  const countEnd = p2p.indexOf("server_peer_id_from_logs() {", countStart);
+  const count = p2p.slice(countStart, countEnd);
+  assert.match(count, /Session bound to peer/);
+  assert.doesNotMatch(count, /Handling SyncHello from/);
+});
+
+test("P2P mesh evidence parser is identity-, repo-, and authentication-bound", () => {
+  const peer = "abcdef123456";
+  const repo = "11111111-1111-1111-1111-111111111111";
+  const bound = `\u001b[32mSession bound to peer ${peer} and repo ${repo}\u001b[0m`;
+  const completed = `P2P mesh connector handshake completed authenticated_peer_id="${peer}"`;
+
+  for (const logs of [bound, completed]) {
+    const result = meshEvidenceCount(logs, peer, repo);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), "1");
+  }
+
+  for (const logs of [
+    `Handling SyncHello from ${peer} for repo ${repo}`,
+    `Session bound to peer deadbeef0000 and repo ${repo}`,
+    `Session bound to peer ${peer} and repo 22222222-2222-2222-2222-222222222222`,
+  ]) {
+    const result = meshEvidenceCount(logs, peer, repo);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), "0");
+  }
+
+  const emptyPeer = meshEvidenceCount(bound, "", repo);
+  assert.notEqual(emptyPeer.status, 0, "empty expected peer identity must fail closed");
+});
+
 test("release workflow validates the complete tag set before the first push", () => {
   const validation = releaseWorkflow.indexOf("validate-release-image-tags.sh");
-  const firstPush = releaseWorkflow.indexOf('docker push "$tag"');
+  const versionOutput = releaseWorkflow.indexOf("version_tag=%s");
+  const latestOutput = releaseWorkflow.indexOf("latest_tag=%s");
+  const versionPush = releaseWorkflow.indexOf('docker push "$VERSION_TAG"');
+  const latestPush = releaseWorkflow.indexOf('docker push "$LATEST_TAG"');
   assert.ok(validation >= 0, "tag-set validation marker must exist");
-  assert.ok(firstPush > validation, "tag-set validation must run before any image push");
-  assert.match(releaseWorkflow, /flavor: latest=false/);
-  assert.match(releaseWorkflow, /latest_tag=.*GITHUB_OUTPUT[\s\S]*version_tag=.*GITHUB_OUTPUT/);
+  assert.ok(versionOutput > validation, "validated version tag must be exported");
+  assert.ok(latestOutput > versionOutput, "validated latest tag must be exported after version");
+  assert.ok(versionPush > validation, "version tag validation must precede its push");
+  assert.ok(latestPush > validation, "latest tag validation must precede its push");
+  assert.match(releaseWorkflow, /"\$\{validated\[0\]\}" "\$\{validated\[1\]:-\}"/);
 });
