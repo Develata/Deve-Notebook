@@ -799,7 +799,8 @@ startup probe, uninstalls by deleting the copied bundle, and verifies removal.
 On Windows it runs MSI/NSIS silent install, probes the installed binary, then
 runs LocalBackend lifecycle and local-bare-remote Git bridge checks. It also
 invokes `scripts/check-desktop-packaged-ui-smoke.ps1`, which starts the installed
-window with isolated data/WebView2 state and a random CDP port, and drives
+window with isolated data/WebView2 state and a WebView2-assigned ephemeral CDP
+endpoint discovered through the isolated `EBWebView/DevToolsActivePort`, and drives
 `scripts/smoke-desktop-packaged-ui.mjs` through native session, document edit,
 NoteGit commit/history, and Settings focus-trap flows. The gate requires exactly
 one installed sibling sidecar while the app is alive and zero after exit before

@@ -249,6 +249,8 @@ fn check_native_candidate(root: &Path) -> Result<()> {
             "Verify Windows Playwright process adapter",
             "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1",
             "pwsh -NoProfile -File scripts/playwright-core-process.test.ps1",
+            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1",
+            "pwsh -NoProfile -File scripts/webview2-cdp.test.ps1",
             "Build exact Web projection",
             "--producer desktop.local-backend",
             "--producer desktop.remote-browser",
@@ -292,6 +294,9 @@ fn check_native_candidate(root: &Path) -> Result<()> {
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1",
         "pwsh -NoProfile -File scripts/playwright-core-process.test.ps1",
         "scripts/playwright-core-process.test.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1",
+        "pwsh -NoProfile -File scripts/webview2-cdp.test.ps1",
+        "scripts/webview2-cdp.test.ps1",
         "deve-notebook-${VERSION}-macos-${arch}.dmg",
         "--ks-pass env:ANDROID_KEYSTORE_PASSWORD",
         "--key-pass env:ANDROID_KEY_PASSWORD",
@@ -313,6 +318,30 @@ fn check_native_candidate(root: &Path) -> Result<()> {
         if native.contains(forbidden) {
             bail!("release-baseline-check: forbidden first-tag native surface {forbidden}");
         }
+    }
+    for relative in [
+        "scripts/check-desktop-packaged-ui-smoke.ps1",
+        "scripts/check-desktop-remote-browser-smoke.ps1",
+    ] {
+        let path = root.join(relative);
+        let script = fs::read_to_string(&path)
+            .with_context(|| format!("read WebView2 CDP smoke {}", path.display()))?;
+        validate_webview2_cdp_arguments(&script, relative)?;
+    }
+    Ok(())
+}
+
+fn validate_webview2_cdp_arguments(script: &str, label: &str) -> Result<()> {
+    const KEY: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+    const PORT: &str = "--remote-debugging-port=";
+    const ASSIGNMENT: &str = "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"";
+    if script.lines().filter(|line| *line == ASSIGNMENT).count() != 1
+        || script.matches(KEY).count() != 1
+        || script.matches(PORT).count() != 1
+    {
+        bail!(
+            "release-baseline-check: {label} must set the exact WebView2-assigned CDP argument once"
+        );
     }
     Ok(())
 }
@@ -451,7 +480,7 @@ fn read_workflow(root: &Path, name: &str) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::validated_mobile_android_job;
+    use super::{validate_webview2_cdp_arguments, validated_mobile_android_job};
 
     #[test]
     fn android_candidate_disables_unrelated_linux_host_packaging_check() {
@@ -475,6 +504,24 @@ mod tests {
             assert!(
                 validated_mobile_android_job(invalid).is_err(),
                 "invalid fixture unexpectedly passed: {invalid}"
+            );
+        }
+    }
+
+    #[test]
+    fn desktop_cdp_smokes_use_one_exact_webview2_assigned_port() {
+        let valid = "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"\n";
+        validate_webview2_cdp_arguments(valid, "valid").expect("valid CDP assignment");
+
+        for invalid in [
+            "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=9222\"\n",
+            "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0 --remote-allow-origins=*\"\n",
+            "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"\n$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"\n",
+            "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"\n# --remote-debugging-port=9222\n",
+        ] {
+            assert!(
+                validate_webview2_cdp_arguments(invalid, "invalid").is_err(),
+                "invalid CDP assignment unexpectedly passed: {invalid}"
             );
         }
     }

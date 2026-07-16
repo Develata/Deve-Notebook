@@ -64,6 +64,8 @@ contains	.github/workflows/release-native.yml	Verify Windows Playwright process 
 contains	.github/workflows/release-native.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1
 contains	.github/workflows/release-native.yml	pwsh -NoProfile -File scripts/playwright-core-process.test.ps1
 contains	.github/workflows/release-native.yml	scripts/playwright-core-process.test.ps1
+contains	.github/workflows/release-native.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1
+contains	.github/workflows/release-native.yml	pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
 contains	.github/workflows/release-native.yml	--ks-pass env:ANDROID_KEYSTORE_PASSWORD
 contains	.github/workflows/release-native.yml	android-signer-sha256.txt
 absent	.github/workflows/release-native.yml	publish:
@@ -221,11 +223,14 @@ contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture
 contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.sh stop
 contains	.github/workflows/native-target-host.yml	scripts/desktop-install-root.test.ps1
 contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.test.ps1
+contains	.github/workflows/native-target-host.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1
+contains	.github/workflows/native-target-host.yml	pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
 contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.test.sh
 contains	scripts/remote-browser-fixture.sh	serve --port '{port}' --loopback-only
 contains	scripts/remote-browser-fixture.ps1	"--loopback-only"
 contains	docs/registry/acceptance-producers.json	"DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
 contains	docs/registry/acceptance-producers.json	"scripts/lib/desktop-install-root.ps1"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/webview2-cdp.ps1"
 contains	.github/workflows/native-target-host.yml	--producer desktop.macos-target-host
 contains	.github/workflows/native-target-host.yml	deve-acceptance-receipts-desktop-macos
 contains	.github/workflows/native-target-host.yml	--producer ios.simulator-lifecycle
@@ -1138,6 +1143,21 @@ contains	tools/baseline/src/release_version_order.rs	candidate release precedenc
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	Install-DevePlaywrightCore
 contains	scripts/check-desktop-remote-browser-smoke.ps1	Install-DevePlaywrightCore
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	--remote-debugging-port=0
+contains	scripts/check-desktop-remote-browser-smoke.ps1	--remote-debugging-port=0
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	Wait-DeveWebView2CdpEndpoint
+contains	scripts/check-desktop-remote-browser-smoke.ps1	Wait-DeveWebView2CdpEndpoint
+absent	scripts/check-desktop-packaged-ui-smoke.ps1	Get-FreeLoopbackPort
+absent	scripts/check-desktop-remote-browser-smoke.ps1	Get-FreeLoopbackPort
+absent	scripts/check-desktop-packaged-ui-smoke.ps1	--remote-allow-origins
+absent	scripts/check-desktop-remote-browser-smoke.ps1	--remote-allow-origins
+contains	scripts/lib/webview2-cdp.ps1	EBWebView\DevToolsActivePort
+contains	scripts/lib/webview2-cdp.ps1	$webSocket.AbsolutePath -ne $activePort.BrowserTarget
+contains	scripts/lib/webview2-cdp.ps1	$endpoint/json/list
+contains	scripts/lib/webview2-cdp.ps1	host process exited before CDP became ready
+contains	scripts/lib/webview2-cdp.ps1	sanitized diagnostic
+contains	scripts/webview2-cdp.test.ps1	webview2-cdp-test: ok
+contains	scripts/webview2-cdp.test.ps1	browser target mismatch must fail closed
 absent	scripts/check-desktop-packaged-ui-smoke.ps1	Start-Process -FilePath $npm
 absent	scripts/check-desktop-remote-browser-smoke.ps1	Start-Process -FilePath $npm
 contains	scripts/lib/playwright-core.ps1	Resolve-DeveNpmCliPath

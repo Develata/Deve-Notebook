@@ -11,19 +11,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "lib\playwright-core.ps1")
+. (Join-Path $PSScriptRoot "lib\webview2-cdp.ps1")
 
 function Fail($Message) {
     throw "desktop-packaged-ui-smoke: $Message"
-}
-
-function Get-FreeLoopbackPort {
-    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
-    $listener.Start()
-    try {
-        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
-    } finally {
-        $listener.Stop()
-    }
 }
 
 function Get-InstalledSidecars($ExecutablePath) {
@@ -79,27 +70,36 @@ try {
     Fail $_.Exception.Message
 }
 
-$cdpPort = Get-FreeLoopbackPort
 $psi = [System.Diagnostics.ProcessStartInfo]::new()
 $psi.FileName = $desktopPath
 $psi.Arguments = "--local-backend"
 $psi.UseShellExecute = $false
 $psi.Environment["DEVE_DESKTOP_DATA_DIR"] = $dataRoot
 $psi.Environment["WEBVIEW2_USER_DATA_FOLDER"] = $webviewRoot
-$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=$cdpPort --remote-allow-origins=http://127.0.0.1:$cdpPort"
+$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=0"
 $desktop = [System.Diagnostics.Process]::Start($psi)
 $success = $false
 
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
+    try {
+        $cdp = Wait-DeveWebView2CdpEndpoint `
+            -HostProcess $desktop `
+            -WebViewUserDataRoot $webviewRoot `
+            -Deadline $deadline `
+            -Label "packaged Desktop" `
+            -RequiredPageOrigins @("http://tauri.localhost", "tauri://localhost")
+    } catch {
+        Fail $_.Exception.Message
+    }
     while ([DateTime]::UtcNow -lt $deadline) {
         $sidecars = @(Get-InstalledSidecars $sidecarPath)
-        try {
-            $version = Invoke-RestMethod -Uri "http://127.0.0.1:$cdpPort/json/version" -TimeoutSec 2
-            if ($null -ne $version.webSocketDebuggerUrl -and $sidecars.Count -ge 1) {
-                break
-            }
-        } catch {
+        if ($sidecars.Count -ge 1) {
+            break
+        }
+        $desktop.Refresh()
+        if ($desktop.HasExited) {
+            Fail "packaged Desktop exited before its sidecar became ready (exit code $($desktop.ExitCode))"
         }
         Start-Sleep -Milliseconds 250
     }
@@ -110,11 +110,7 @@ try {
     if ($sidecars.Count -ne 1) {
         Fail "packaged Desktop started multiple native-loopback sidecars: $($sidecars.ProcessId -join ',')"
     }
-    if ([DateTime]::UtcNow -ge $deadline) {
-        Fail "timed out waiting for WebView2 CDP endpoint on port $cdpPort"
-    }
-
-    $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = "http://127.0.0.1:$cdpPort"
+    $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = $cdp.Endpoint
     $env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM = $packageJson
     try {
         & $node (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs")
@@ -147,9 +143,24 @@ try {
     $success = $true
     Write-Host "desktop-packaged-ui-smoke: ok"
 } finally {
+    if (-not $success) {
+        try {
+            Write-DeveWebView2CdpDiagnostics `
+                -HostProcess $desktop `
+                -WebViewUserDataRoot $webviewRoot `
+                -OutputPath (Join-Path $runRoot "webview2-cdp-diagnostic.json") `
+                -Label "packaged Desktop"
+        } catch {
+            Write-Warning "desktop-packaged-ui-smoke: failed to write sanitized CDP diagnostic: $($_.Exception.Message)"
+        }
+    }
     Stop-ProcessIfAlive $desktop.Id
-    foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
-        Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
+    try {
+        foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
+            Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
+        }
+    } catch {
+        Write-Warning "desktop-packaged-ui-smoke: sidecar cleanup observation failed: $($_.Exception.Message)"
     }
     if ($success -and (Test-Path -LiteralPath $runRoot)) {
         Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction SilentlyContinue

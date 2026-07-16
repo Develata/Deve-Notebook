@@ -98,6 +98,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell process adapter regression failed' }
           pwsh -NoProfile -File scripts/playwright-core-process.test.ps1
           if ($LASTEXITCODE -ne 0) { throw 'PowerShell process adapter regression failed' }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell WebView2 CDP regression failed' }
+          pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'PowerShell WebView2 CDP regression failed' }
 
       - name: Build exact Web projection
         run: scripts/build-web-dist-ci.sh

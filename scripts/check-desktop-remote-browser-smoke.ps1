@@ -18,18 +18,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "lib\playwright-core.ps1")
+. (Join-Path $PSScriptRoot "lib\webview2-cdp.ps1")
 
 if ([string]::IsNullOrEmpty($Password)) {
     throw "desktop-remote-browser-smoke: Password or DEVE_DESKTOP_REMOTE_PASSWORD is required"
 }
 
 function Fail($Message) { throw "desktop-remote-browser-smoke: $Message" }
-
-function Get-FreeLoopbackPort {
-    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
-    $listener.Start()
-    try { return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port } finally { $listener.Stop() }
-}
 
 function Get-InstalledSidecars($ExecutablePath) {
     $expectedPath = [System.IO.Path]::GetFullPath($ExecutablePath)
@@ -45,17 +40,6 @@ function Stop-ProcessIfAlive($ProcessId) {
     if ($null -ne $ProcessId -and $null -ne (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
         Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
     }
-}
-
-function Wait-ForCdp($Port, $Deadline) {
-    while ([DateTime]::UtcNow -lt $Deadline) {
-        try {
-            $version = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/json/version" -TimeoutSec 2
-            if ($null -ne $version.webSocketDebuggerUrl) { return }
-        } catch {}
-        Start-Sleep -Milliseconds 250
-    }
-    Fail "timed out waiting for WebView2 CDP endpoint on port $Port"
 }
 
 . (Join-Path $PSScriptRoot "lib/desktop-install-root.ps1")
@@ -226,26 +210,34 @@ try {
     Fail $_.Exception.Message
 }
 
-$cdpPort = Get-FreeLoopbackPort
 $psi = [System.Diagnostics.ProcessStartInfo]::new()
 $psi.FileName = $desktopPath
 $psi.UseShellExecute = $false
 $psi.Environment["DEVE_DESKTOP_DATA_DIR"] = $dataRoot
 $psi.Environment.Remove("DEVE_NATIVE_REMOTE_URL") | Out-Null
 $psi.Environment["WEBVIEW2_USER_DATA_FOLDER"] = $webviewRoot
-$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=$cdpPort --remote-allow-origins=http://127.0.0.1:$cdpPort"
+$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=0"
 $desktop = [System.Diagnostics.Process]::Start($psi)
 $replacement = $null
 $success = $false
 
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
-    Wait-ForCdp $cdpPort $deadline
+    try {
+        $remoteCdp = Wait-DeveWebView2CdpEndpoint `
+            -HostProcess $desktop `
+            -WebViewUserDataRoot $webviewRoot `
+            -Deadline $deadline `
+            -Label "RemoteBrowser" `
+            -RequiredPageOrigins @($remote.GetLeftPart([UriPartial]::Authority))
+    } catch {
+        Fail $_.Exception.Message
+    }
     if (@(Get-InstalledSidecars $sidecarPath).Count -ne 0) {
         Fail "RemoteBrowser started a local sidecar"
     }
 
-    $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = "http://127.0.0.1:$cdpPort"
+    $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = $remoteCdp.Endpoint
     $env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM = $packageJson
     $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $remote.GetLeftPart([UriPartial]::Authority)
     $env:DEVE_DESKTOP_REMOTE_USERNAME = $Username
@@ -269,11 +261,25 @@ try {
     }
     $restartDeadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
     $replacement = Find-ReplacementDesktop $desktopPath $oldPid $restartDeadline
-    Wait-ForCdp $cdpPort $restartDeadline
+    try {
+        $localCdp = Wait-DeveWebView2CdpEndpoint `
+            -HostProcess $replacement `
+            -WebViewUserDataRoot $webviewRoot `
+            -Deadline $restartDeadline `
+            -Label "restarted LocalBackend" `
+            -RequiredPageOrigins @("http://tauri.localhost", "tauri://localhost")
+    } catch {
+        Fail $_.Exception.Message
+    }
+    $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = $localCdp.Endpoint
 
     $sidecars = @()
     while ([DateTime]::UtcNow -lt $restartDeadline) {
         $sidecars = @(Get-InstalledSidecars $sidecarPath)
+        $replacement.Refresh()
+        if ($replacement.HasExited) {
+            Fail "restarted LocalBackend exited before its sidecar became ready (exit code $($replacement.ExitCode))"
+        }
         if ($sidecars.Count -eq 1) { break }
         Start-Sleep -Milliseconds 250
     }
@@ -322,10 +328,31 @@ try {
 } finally {
     Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT -ErrorAction SilentlyContinue
     Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM -ErrorAction SilentlyContinue
+    if (-not $success) {
+        $diagnosticProcess = $desktop
+        $diagnosticLabel = "RemoteBrowser"
+        if ($null -ne $replacement) {
+            $diagnosticProcess = $replacement
+            $diagnosticLabel = "restarted LocalBackend"
+        }
+        try {
+            Write-DeveWebView2CdpDiagnostics `
+                -HostProcess $diagnosticProcess `
+                -WebViewUserDataRoot $webviewRoot `
+                -OutputPath (Join-Path $runRoot "webview2-cdp-diagnostic.json") `
+                -Label $diagnosticLabel
+        } catch {
+            Write-Warning "desktop-remote-browser-smoke: failed to write sanitized CDP diagnostic: $($_.Exception.Message)"
+        }
+    }
     Stop-ProcessIfAlive $desktop.Id
     if ($null -ne $replacement) { Stop-ProcessIfAlive $replacement.Id }
-    foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
-        Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
+    try {
+        foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
+            Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
+        }
+    } catch {
+        Write-Warning "desktop-remote-browser-smoke: sidecar cleanup observation failed: $($_.Exception.Message)"
     }
     if ($success -and (Test-Path -LiteralPath $runRoot)) {
         Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction SilentlyContinue
