@@ -44,3 +44,13 @@
 ## Retired Cleanup Policy
 
 重复短报告会被合并到主题 baseline；被合并的原文件只在 git history 中保留。需要追溯具体批次时，先读主题 baseline 的 `Retired Source Reports` 列表，再查对应提交历史。
+
+## Retired Root Work Artifacts
+
+| Retired file | Source commit |
+| --- | --- |
+| `HANDOFF.md` | `6c71510e7` |
+| `CLAUDE_OPUS_HANDOFF_2026-03-24.md` | `59cea5b48` |
+| `add_path_comments.ps1` | `1aa391f7f` |
+
+恢复渠道仅为 Git 历史；本索引不保留过时全文。
