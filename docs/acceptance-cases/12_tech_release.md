@@ -437,6 +437,8 @@
     - contract_assert: producer_shell_command_strings_forbidden true
     - contract_assert: producer_bound_environment_is_public_non_secret true
     - contract_assert: producer_timeout_failure_writes_failed_receipts true
+    - contract_assert: producer_timeout_cleanup_preserves_runner_process_group true
+    - contract_assert: producer_timeout_cleanup_is_child_group_bound true
     - contract_assert: evidence_filter_selects_complete_atomic_producer_group true
     - contract_assert: receipt_collection_is_root_pinned_and_resource_bounded true
     - contract_assert: receipt_collection_rejects_excessive_directory_depth true

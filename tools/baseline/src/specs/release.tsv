@@ -567,6 +567,10 @@ case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	reusable_native_r
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	sealed_provenance_and_spdx_attestation_bundles_verified_offline true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	sealed_android_apk_signer_reextracted_and_exactly_one true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-001	latest_requires_strict_semver_and_git_history_progression true
+contains	docs/plan/18_release.md	只有通过该隔离校验的 child group 才能接收 TERM/KILL
+contains	docs/features/15_release.md	producer 超时清理必须只终止经隔离校验的 child process group
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-014	producer_timeout_cleanup_preserves_runner_process_group true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-014	producer_timeout_cleanup_is_child_group_bound true
 absent	docs/acceptance-cases/12_tech_release.md	run: ls dist
 absent	docs/acceptance-cases/12_tech_release.md	stdout_contains: "v1.0.0"
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release-audit-gate

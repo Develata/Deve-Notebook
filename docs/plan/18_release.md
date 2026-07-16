@@ -321,7 +321,15 @@ test 仍保持独立 authority，CI evidence producer 不得用一个笼统的�
 
 Rust runner 独占以下 infra：参数/registry 校验、HEAD/dirty 前后快照、单调超时、子进程终止、
 失败 receipt、producer claims 读取、命令指纹、execution group 与 receipt 发布。命令超时后
-必须有界终止进程树并继续执行显式 finally steps；runner 不依赖被强杀 shell 的 trap 完成清理。
+必须有界终止 runner 直接创建的隔离 child process group，并继续执行显式 finally steps；runner
+不依赖被强杀 shell 的 trap 完成清理，也不把任意主动脱离该 group 的进程伪装成 runner 可追踪的
+descendant。producer 若会创建 `setsid`、daemon 或其他 group 外宿主资源，必须在脱离前把可验证
+ownership 写入本次 execution state directory，并由显式 finally step 有界回收。
+Unix host 在发送进程组信号前必须通过 OS process-group API 证明 child PGID 恰好等于 child PID，
+且与 runner 自身 PGID 不同；只有通过该隔离校验的 child group 才能接收 TERM/KILL。校验失败时
+只能 best-effort 终止 direct child、将 group cleanup 记为 fail-closed，绝不能向 runner/父进程组
+发送信号。Windows `taskkill /T` 启动失败或返回 non-zero 时同样只能执行 direct-child fallback，
+并将 cleanup 记为 fail-closed，不能把未验证的 descendant cleanup 报告为成功。
 runner 必须把当前已启动的 `deve_baseline` 绝对路径作为内部执行环境交给受控步骤；嵌套 baseline
 wrapper 必须复用该进程映像，不得再次 `cargo run -p deve_baseline` 并尝试覆盖 Windows 上正在运行的 EXE。
 runner 为每次 producer 执行提供隔离的临时 state directory，使 finally step 只能回收本次执行
