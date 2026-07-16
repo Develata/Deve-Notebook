@@ -48,6 +48,13 @@ contains	.github/workflows/release-native.yml	--producer desktop.local-backend
 contains	.github/workflows/release-native.yml	--producer desktop.remote-browser
 contains	.github/workflows/release-native.yml	--producer android.local-backend
 contains	.github/workflows/release-native.yml	--producer android.remote-browser
+contains	.github/workflows/release-native.yml	release candidate Windows runs are immutable
+contains	.github/workflows/release-native.yml	release candidate macOS runs are immutable
+contains	.github/workflows/release-native.yml	release candidate Android runs are immutable
+contains	.github/workflows/release-native.yml	Verify Windows Playwright process adapter
+contains	.github/workflows/release-native.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1
+contains	.github/workflows/release-native.yml	pwsh -NoProfile -File scripts/playwright-core-process.test.ps1
+contains	.github/workflows/release-native.yml	scripts/playwright-core-process.test.ps1
 contains	.github/workflows/release-native.yml	--ks-pass env:ANDROID_KEYSTORE_PASSWORD
 contains	.github/workflows/release-native.yml	android-signer-sha256.txt
 absent	.github/workflows/release-native.yml	publish:
@@ -76,6 +83,10 @@ contains	.github/workflows/release-candidate.yml	Build exact Web projection
 contains	.github/workflows/release-candidate.yml	scripts/build-web-dist-ci.sh
 contains	.github/workflows/release-candidate.yml	cargo run --locked --quiet -p deve_baseline -- full
 contains	.github/workflows/release-candidate.yml	Build linux/amd64 image once
+contains	.github/workflows/release-candidate.yml	release candidate Docker runs are immutable
+contains	.github/workflows/release-candidate.yml	Lock immutable candidate attempt
+contains	.github/workflows/release-candidate.yml	release candidate assembly is immutable
+contains	.github/workflows/release-candidate.yml	{{.Os}}/{{.Architecture}}
 contains	.github/workflows/release-candidate.yml	--platform linux/amd64
 contains	.github/workflows/release-candidate.yml	--producer docker.multiclient-product
 contains	.github/workflows/release-candidate.yml	--producer docker.p2p-gap-recovery
@@ -119,6 +130,7 @@ contains	.github/workflows/acceptance-aggregate.yml	workflow_dispatch:
 contains	.github/workflows/acceptance-aggregate.yml	receipt_run_ids:
 contains	.github/workflows/acceptance-aggregate.yml	GITHUB_RUN_ATTEMPT
 contains	.github/workflows/acceptance-aggregate.yml	.run_attempt
+contains	.github/workflows/acceptance-aggregate.yml	candidate run attempt must be 1; dispatch a fresh release candidate
 contains	.github/workflows/acceptance-aggregate.yml	persist-credentials: false
 contains	.github/workflows/acceptance-aggregate.yml	deve-acceptance-receipts-*
 contains	.github/workflows/acceptance-aggregate.yml	scripts/check-release-candidate-bundle.sh
@@ -298,6 +310,11 @@ contains	scripts/check-desktop-native-session-package-smoke.sh	desktop-native-se
 contains	apps/desktop/src/tauri_entry/smoke.rs	local_service_stopped_after_smoke
 contains	scripts/check-desktop-package-startup-smoke.sh	explicit_bundle exe
 contains	scripts/check-desktop-native-session-package-smoke.sh	explicit_bundle exe
+contains	scripts/baseline-wrapper.sh	baseline_ascii_lower
+contains	scripts/check-desktop-package-startup-smoke.sh	baseline_ascii_lower "$1"
+contains	scripts/check-desktop-native-session-package-smoke.sh	baseline_ascii_lower "$1"
+absent	scripts/check-desktop-package-startup-smoke.sh	${1,,}
+absent	scripts/check-desktop-native-session-package-smoke.sh	${1,,}
 contains	scripts/check-desktop-package-startup-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_STARTUP_SMOKE=1
 contains	scripts/check-desktop-native-session-package-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_DATA_DIR="$data_dir"
 contains	scripts/check-desktop-native-session-package-smoke.sh	target/desktop-native-session-smoke
@@ -1110,6 +1127,18 @@ contains	scripts/check-android-apk-signer.test.sh	android-apk-signer-test: ok
 contains	scripts/check-release-tag-binding.sh	remote annotated tag object changed
 contains	tools/baseline/src/release_version_order.rs	candidate release precedence
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	Install-DevePlaywrightCore
+contains	scripts/check-desktop-remote-browser-smoke.ps1	Install-DevePlaywrightCore
+absent	scripts/check-desktop-packaged-ui-smoke.ps1	Start-Process -FilePath $npm
+absent	scripts/check-desktop-remote-browser-smoke.ps1	Start-Process -FilePath $npm
+contains	scripts/lib/playwright-core.ps1	Resolve-DeveNpmCliPath
+contains	scripts/lib/playwright-core.ps1	Assert-DevePlaywrightCorePackage
+contains	scripts/lib/playwright-core.ps1	ConvertTo-DeveWindowsProcessArgument
+contains	scripts/lib/playwright-core.ps1	System32\taskkill.exe
+contains	scripts/lib/playwright-core.ps1	$taskkillExit -ne 0
+absent	scripts/lib/playwright-core.ps1	.ArgumentList
+absent	scripts/lib/playwright-core.ps1	.Kill($true)
+contains	scripts/playwright-core-process.test.ps1	playwright-core-process-test: ok
 contains	scripts/smoke-desktop-packaged-ui.mjs	desktop-packaged-ui-webview: ok
 contains	scripts/smoke-desktop-packaged-ui.test.mjs	direct execution fails closed without a CDP endpoint
 contains	scripts/check-desktop-remote-browser-smoke.ps1	desktop-remote-browser-smoke: ok

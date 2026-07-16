@@ -46,7 +46,8 @@ record_missing() {
 }
 
 is_windows_exe_path() {
-  local path="${1,,}"
+  local path
+  path="$(baseline_ascii_lower "$1")"
   [[ "$path" == *.exe ]]
 }
 

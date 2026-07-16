@@ -71,8 +71,13 @@ run_baseline_cargo() {
 }
 
 baseline_windows_exe() {
-  local path="${1,,}"
+  local path
+  path="$(baseline_ascii_lower "$1")"
   [[ "$path" == *.exe ]]
+}
+
+baseline_ascii_lower() {
+  LC_ALL=C tr '[:upper:]' '[:lower:]' <<<"$1"
 }
 
 baseline_windows_drive_path() {

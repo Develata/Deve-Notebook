@@ -346,7 +346,8 @@
       "artifacts": [
         "scripts/check-desktop-platform-package-build.sh",
         "scripts/check-desktop-package-startup-smoke.sh",
-        "scripts/check-desktop-native-session-package-smoke.sh"
+        "scripts/check-desktop-native-session-package-smoke.sh",
+        "scripts/baseline-wrapper.sh"
       ],
       "steps": [
         {
@@ -569,7 +570,11 @@
       "claims_env": {},
       "artifacts": [
         "scripts/check-desktop-platform-package-build.sh",
-        "scripts/check-desktop-installer-smoke.sh"
+        "scripts/check-desktop-installer-smoke.sh",
+        "scripts/check-desktop-packaged-ui-smoke.ps1",
+        "scripts/lib/playwright-core.ps1",
+        "scripts/smoke-desktop-packaged-ui.mjs",
+        "scripts/lib/desktop-webview-business-flow.mjs"
       ],
       "steps": [
         {
@@ -620,6 +625,7 @@
       "artifacts": [
         "scripts/check-desktop-remote-browser-smoke.ps1",
         "scripts/lib/desktop-install-root.ps1",
+        "scripts/lib/playwright-core.ps1",
         "scripts/smoke-desktop-remote-browser.mjs",
         "scripts/smoke-desktop-packaged-ui.mjs",
         "scripts/lib/desktop-webview-business-flow.mjs"

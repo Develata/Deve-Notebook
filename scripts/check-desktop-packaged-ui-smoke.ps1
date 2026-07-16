@@ -10,6 +10,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "lib\playwright-core.ps1")
+
 function Fail($Message) {
     throw "desktop-packaged-ui-smoke: $Message"
 }
@@ -68,22 +70,13 @@ if (-not (Test-Path -LiteralPath $packageJson -PathType Leaf)) {
     Set-Content -LiteralPath $packageJson -Encoding utf8 -Value '{"private":true,"type":"module"}'
 }
 
-$npm = (Get-Command npm.cmd -ErrorAction Stop).Source
 $node = (Get-Command node.exe -ErrorAction Stop).Source
-$playwrightModule = Join-Path $playwrightRoot "node_modules\playwright-core\package.json"
-if (-not (Test-Path -LiteralPath $playwrightModule -PathType Leaf)) {
-    $quotedPlaywrightRoot = '"' + $playwrightRoot + '"'
-    $npmProcess = Start-Process -FilePath $npm -ArgumentList @(
-        "--prefix", $quotedPlaywrightRoot, "install", "--no-audit", "--no-fund", "playwright-core@1.58.2"
-    ) -NoNewWindow -PassThru
-    if (-not $npmProcess.WaitForExit($NpmTimeoutSeconds * 1000)) {
-        & taskkill.exe /PID $npmProcess.Id /T /F 2>$null | Out-Null
-        Fail "playwright-core install exceeded ${NpmTimeoutSeconds}s"
-    }
-    $npmProcess.Refresh()
-    if ($npmProcess.ExitCode -ne 0) {
-        Fail "failed to install playwright-core (exit $($npmProcess.ExitCode))"
-    }
+try {
+    Install-DevePlaywrightCore `
+        -PlaywrightRoot $playwrightRoot `
+        -TimeoutSeconds $NpmTimeoutSeconds
+} catch {
+    Fail $_.Exception.Message
 }
 
 $cdpPort = Get-FreeLoopbackPort

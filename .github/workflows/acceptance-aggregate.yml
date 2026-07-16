@@ -65,6 +65,10 @@ jobs:
             echo "acceptance aggregate: run is not owned by release-candidate.yml" >&2
             exit 1
           }
+          [[ "$(jq -er .run_attempt <<<"$metadata")" == 1 ]] || {
+            echo 'acceptance aggregate: candidate run attempt must be 1; dispatch a fresh release candidate' >&2
+            exit 1
+          }
 
           candidate="$RUNNER_TEMP/deve-release-candidate"
           receipts="$RUNNER_TEMP/deve-acceptance-download"

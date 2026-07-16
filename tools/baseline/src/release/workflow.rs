@@ -116,8 +116,12 @@ fn check_candidate(root: &Path) -> Result<()> {
     require_ordered_text(
         &docker,
         &[
+            "Verify exact checkout",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
             "Build linux/amd64 image once",
             "--platform linux/amd64",
+            "docker image inspect --format '{{.Os}}/{{.Architecture}}'",
             "--producer docker.multiclient-product",
             "--producer docker.p2p-gap-recovery",
             "--producer security.tag-ready-audit",
@@ -159,6 +163,10 @@ fn check_candidate(root: &Path) -> Result<()> {
     require_ordered_text(
         &assemble,
         &[
+            "Checkout exact candidate",
+            "Lock immutable candidate attempt",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
             "Generate exact source SPDX 2.3 SBOM before artifact download",
             "Download exact Windows candidate",
             "Download exact macOS candidate",
@@ -230,15 +238,60 @@ fn check_native_candidate(root: &Path) -> Result<()> {
     {
         bail!("release-baseline-check: release-native.yml must remain build/smoke-only");
     }
-    for job in ["desktop-windows", "desktop-macos", "mobile-android"] {
-        yaml_mapping_block(&native, 2, job)?;
-    }
+    let desktop_windows = yaml_mapping_block(&native, 2, "desktop-windows")?;
+    require_ordered_text(
+        &desktop_windows,
+        &[
+            "Verify candidate identity and version",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
+            "Install native packaging tools",
+            "Verify Windows Playwright process adapter",
+            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1",
+            "pwsh -NoProfile -File scripts/playwright-core-process.test.ps1",
+            "Build exact Web projection",
+            "--producer desktop.local-backend",
+            "--producer desktop.remote-browser",
+        ],
+        "release-native.yml desktop-windows job",
+    )?;
+
+    let desktop_macos = yaml_mapping_block(&native, 2, "desktop-macos")?;
+    require_ordered_text(
+        &desktop_macos,
+        &[
+            "Verify candidate identity and version",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
+            "Build exact Web projection",
+            "--producer desktop.macos-target-host",
+        ],
+        "release-native.yml desktop-macos job",
+    )?;
+
+    let mobile_android = yaml_mapping_block(&native, 2, "mobile-android")?;
+    require_ordered_text(
+        &mobile_android,
+        &[
+            "Verify candidate identity, version, and signing inputs",
+            "GITHUB_RUN_ATTEMPT",
+            "dispatch a fresh run instead of rerunning",
+            "Build exact Web projection",
+            "--producer android.local-backend",
+            "--producer android.remote-browser",
+        ],
+        "release-native.yml mobile-android job",
+    )?;
     for required in [
         "--producer desktop.local-backend",
         "--producer desktop.remote-browser",
         "--producer desktop.macos-target-host",
         "--producer android.local-backend",
         "--producer android.remote-browser",
+        "Verify Windows Playwright process adapter",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1",
+        "pwsh -NoProfile -File scripts/playwright-core-process.test.ps1",
+        "scripts/playwright-core-process.test.ps1",
         "deve-notebook-${VERSION}-macos-${arch}.dmg",
         "--ks-pass env:ANDROID_KEYSTORE_PASSWORD",
         "--key-pass env:ANDROID_KEY_PASSWORD",
@@ -274,6 +327,7 @@ fn check_aggregate(root: &Path) -> Result<()> {
             "GITHUB_RUN_ATTEMPT",
             "dispatch a fresh run instead of rerunning",
             ".github/workflows/release-candidate.yml",
+            "candidate run attempt must be 1; dispatch a fresh release candidate",
             "deve-release-candidate-$GITHUB_SHA",
             "deve-acceptance-receipts-*",
             "Verify sealed artifacts and GitHub attestations",

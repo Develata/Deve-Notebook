@@ -49,6 +49,10 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate Windows runs are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
           [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
           scripts/check-release-version-match.sh "v$VERSION"
@@ -86,6 +90,14 @@ jobs:
           if (!(Test-Path "$nsis\makensis.exe")) { choco install nsis -y --no-progress }
           if (!(Test-Path "$nsis\makensis.exe")) { throw "NSIS is unavailable at $nsis" }
           Add-Content -Path $env:GITHUB_PATH -Value $nsis
+
+      - name: Verify Windows Playwright process adapter
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell process adapter regression failed' }
+          pwsh -NoProfile -File scripts/playwright-core-process.test.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'PowerShell process adapter regression failed' }
 
       - name: Build exact Web projection
         run: scripts/build-web-dist-ci.sh
@@ -227,6 +239,10 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate macOS runs are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
           [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
           scripts/check-release-version-match.sh "v$VERSION"
@@ -311,6 +327,10 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate Android runs are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD" ]]
           [[ "$GITHUB_SHA" == "$EXPECTED_HEAD" ]]
           scripts/check-release-version-match.sh "v$VERSION"

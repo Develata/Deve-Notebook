@@ -17,6 +17,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "lib\playwright-core.ps1")
+
 if ([string]::IsNullOrEmpty($Password)) {
     throw "desktop-remote-browser-smoke: Password or DEVE_DESKTOP_REMOTE_PASSWORD is required"
 }
@@ -215,19 +217,13 @@ $packageJson = Join-Path $playwrightRoot "package.json"
 if (-not (Test-Path -LiteralPath $packageJson -PathType Leaf)) {
     [System.IO.File]::WriteAllText($packageJson, '{"private":true,"type":"module"}', $utf8NoBom)
 }
-$npm = (Get-Command npm.cmd -ErrorAction Stop).Source
 $node = (Get-Command node.exe -ErrorAction Stop).Source
-if (-not (Test-Path -LiteralPath (Join-Path $playwrightRoot "node_modules\playwright-core\package.json"))) {
-    $npmProcess = Start-Process -FilePath $npm -ArgumentList @(
-        "--prefix", ('"' + $playwrightRoot + '"'), "install", "--no-audit", "--no-fund",
-        "playwright-core@1.58.2"
-    ) -NoNewWindow -PassThru
-    if (-not $npmProcess.WaitForExit($NpmTimeoutSeconds * 1000)) {
-        & taskkill.exe /PID $npmProcess.Id /T /F 2>$null | Out-Null
-        Fail "playwright-core install exceeded ${NpmTimeoutSeconds}s"
-    }
-    $npmProcess.Refresh()
-    if ($npmProcess.ExitCode -ne 0) { Fail "failed to install playwright-core" }
+try {
+    Install-DevePlaywrightCore `
+        -PlaywrightRoot $playwrightRoot `
+        -TimeoutSeconds $NpmTimeoutSeconds
+} catch {
+    Fail $_.Exception.Message
 }
 
 $cdpPort = Get-FreeLoopbackPort

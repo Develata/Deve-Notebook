@@ -378,13 +378,13 @@ fi
 require_command timeout
 require_android_tool sdkmanager
 require_android_tool avdmanager
-require_android_tool emulator
-require_android_tool adb
 
 mkdir -p "$LOG_DIR" "$AVD_HOME"
 export ANDROID_AVD_HOME="$AVD_HOME"
 
 install_sdk_packages
+require_android_tool emulator
+require_android_tool adb
 ensure_avd
 
 # Build the exact package before reserving several GiB for the emulator. This

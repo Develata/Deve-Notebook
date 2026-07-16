@@ -129,3 +129,18 @@ test("Android package build creates the current Web dist before native preflight
     "Tauri native-packaging compile must see the current-HEAD Web dist",
   );
 });
+
+test("Android emulator runtime tools are required after SDK package repair", () => {
+  const installPackages = orchestrator.lastIndexOf("install_sdk_packages");
+  const requireEmulator = orchestrator.lastIndexOf("require_android_tool emulator");
+  const requireAdb = orchestrator.lastIndexOf("require_android_tool adb");
+  assert.ok(installPackages >= 0, "emulator orchestration must install missing SDK packages");
+  assert.ok(
+    installPackages < requireEmulator,
+    "the emulator binary must be checked after the SDK package installer can repair it",
+  );
+  assert.ok(
+    installPackages < requireAdb,
+    "adb must be checked after the SDK package installer can repair platform-tools",
+  );
+});

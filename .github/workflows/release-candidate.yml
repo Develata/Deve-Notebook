@@ -117,7 +117,13 @@ jobs:
           persist-credentials: false
 
       - name: Verify exact checkout
-        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate Docker runs are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
@@ -146,7 +152,7 @@ jobs:
             --tag "$image" .
           image_id="$(docker image inspect --format '{{.Id}}' "$image")"
           [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
-          [[ "$(docker image inspect --format '{{.Architecture}}/{{.Os}}' "$image")" == linux/amd64 ]]
+          [[ "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")" == linux/amd64 ]]
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE=%s\n' "$image" >>"$GITHUB_ENV"
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$image_id" >>"$GITHUB_ENV"
 
@@ -238,6 +244,14 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Lock immutable candidate attempt
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate assembly is immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
 
       - name: Bind private candidate work roots
         run: |
