@@ -1,5 +1,6 @@
 //! Cross-platform filesystem object identity for pinned artifact roots.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 #[cfg(unix)]
 use anyhow::Context;

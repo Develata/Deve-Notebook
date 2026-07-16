@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_diff_logic#merge-contract
+//!
 // apps/web/src/components/merge_modal_slot.rs
 use crate::components::merge_modal::MergeModal;
 use leptos::prelude::*;

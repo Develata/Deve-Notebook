@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/index#context-action-surface
+//!   - 03_storage/projection#projection-contract
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 13_i18n#i18n-keys-reference
+//!
 // apps\web\src\i18n
 //! # I18n Playback Module (回放翻译)
 

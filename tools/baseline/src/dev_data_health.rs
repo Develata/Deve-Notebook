@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 04_repository#repo-health-and-repair
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

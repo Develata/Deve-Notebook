@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_storage/authority#repo-mutation-publication-gate
+//!
 //! Durable mutation outcome classification.
 
 use super::MutationPublication;

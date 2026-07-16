@@ -1,4 +1,9 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 05_diff_logic#authority-diff-core
+//!   - 05_diff_logic#git-mirror-lifecycle
+//!   - 05_diff_logic#remote-projection-transport
+//!   - 05_diff_logic#typed-diff-projection-contract
+//!   - 12_source_control_ui#external-changes-sibling-view
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

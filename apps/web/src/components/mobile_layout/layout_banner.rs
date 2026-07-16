@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_web_thin_client_ledger#write-readiness
+//!   - 11_ui_design/03_mobile#mobile-responsive-layout
+//!
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 

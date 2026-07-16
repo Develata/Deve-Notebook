@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/index#native-adapter-gate-registry
 
 use crate::cargo_gate::{CargoRunner, CargoTest};
 use crate::context::BaselineContext;

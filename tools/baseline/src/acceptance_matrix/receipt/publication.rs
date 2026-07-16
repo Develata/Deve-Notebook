@@ -1,5 +1,6 @@
 //! Reparse-aware, rollback-safe receipt publication.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::acceptance_matrix::receipt_limits::{
     MAX_RECEIPT_FILES, add_total_bytes, validate_file_size,

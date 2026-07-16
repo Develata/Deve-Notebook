@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use anyhow::{Result, bail};
 use std::env;

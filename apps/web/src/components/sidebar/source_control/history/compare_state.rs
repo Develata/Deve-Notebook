@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 05_diff_logic#source-control-runtime
+//!
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use deve_core::source_control::CommitFileDiffSummary;
 use leptos::prelude::*;

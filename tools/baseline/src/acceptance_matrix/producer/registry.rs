@@ -1,5 +1,6 @@
 //! Producer registry parsing and contract validation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 mod producer_validation;
 

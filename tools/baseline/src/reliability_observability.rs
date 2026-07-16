@@ -1,4 +1,11 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 22_reliability_observability#slo-sli-catalog
+//!   - 22_reliability_observability#telemetry-schema
+//!   - 22_reliability_observability#metrics-taxonomy
+//!   - 22_reliability_observability#tracing-span-boundary
+//!   - 22_reliability_observability#observation-to-health-mapping
+//!   - 22_reliability_observability#alerting-tier
+//!   - 22_reliability_observability#resilience-playbook-index
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

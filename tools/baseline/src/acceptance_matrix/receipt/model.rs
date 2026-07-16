@@ -1,5 +1,6 @@
 //! Acceptance receipt and command execution data model.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

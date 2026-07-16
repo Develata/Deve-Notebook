@@ -1,5 +1,6 @@
 //! Pure producer selection, host compatibility, and clean-tree preflight.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{Producer, ProducerRegistry};
 use crate::acceptance_matrix::model::MatrixRow;

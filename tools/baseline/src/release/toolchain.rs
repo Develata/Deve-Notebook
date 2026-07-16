@@ -1,4 +1,5 @@
-//! plan_ref: 17_tech_stack#canonical-rust-toolchain
+//! plan_ref:
+//!   - 17_tech_stack#canonical-rust-toolchain
 
 use anyhow::{Context, Result, bail};
 use std::collections::{BTreeMap, BTreeSet};

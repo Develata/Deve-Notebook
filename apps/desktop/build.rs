@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 17_tech_stack#native-packaging-dependency-gate
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
+//!
 fn main() {
     #[cfg(feature = "native-packaging")]
     tauri_build::try_build(

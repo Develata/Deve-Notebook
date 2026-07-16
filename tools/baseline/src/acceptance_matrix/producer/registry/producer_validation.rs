@@ -1,5 +1,6 @@
 //! Per-producer command, environment, and evidence contract validation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::acceptance_matrix::model::MatrixRow;
 use crate::acceptance_matrix::producer::model::{Producer, ProducerArg, ProducerStep};

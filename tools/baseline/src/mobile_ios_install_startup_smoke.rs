@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;

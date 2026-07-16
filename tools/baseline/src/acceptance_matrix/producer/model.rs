@@ -1,5 +1,6 @@
 //! Typed acceptance producer registry model.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

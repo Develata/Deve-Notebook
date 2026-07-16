@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-android-shell-package-execution-gate
+//!   - 11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate
 
 use anyhow::{Context, Result, bail};
 use std::path::Path;

@@ -1,4 +1,10 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 05_diff_logic#typed-diff-projection-contract
+//!   - 11_ui_design/01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#single-binary-distribution
+//!   - 11_ui_design/index#editor-group-tabstrip
+//!   - 11_ui_design/index#context-action-surface
+//!   - 11_ui_design/index#layout-navigation-and-focus
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

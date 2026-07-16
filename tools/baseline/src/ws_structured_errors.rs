@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 13_i18n#i18n-error-code-catalog
+//!   - 07_network#server-ws-runtime
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;

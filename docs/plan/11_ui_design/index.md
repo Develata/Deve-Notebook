@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -128,7 +128,7 @@ Context action 是 command/control 体系在具体对象上的投影，不是某
 - host-file action 的执行域 MUST 重新解析当前 repo scope，并基于 `03_storage/projection#projection-locator-contract` 计算 projection workspace root；后端必须 canonicalize root 与 target，确认 target 仍位于 workspace 内，且不得暴露 `.git/`、`.notegit/` 内部路径。
 - Web 前端 MUST NOT 拼接、缓存或推断绝对路径，也不得直接执行系统资源管理器、shell command、exe 或 script；前端只能提交 `ContextActionIntent` 并调用后端返回 canonical path 或执行受控 reveal。
 
-### 3.4 Layout Tokens and Layer Registry
+### 3.4 Layout Tokens and Layer Registry {#layout-tokens-and-layer-registry}
 
 - design tokens MUST 通过 CSS variables 暴露，禁止 view 组件散布硬编码色值当作跨模块契约。
 - shell 分层至少保留以下 z-index registry：
@@ -546,7 +546,7 @@ PinnedSetChanged
 - 让 shell 组件自行猜测 repo writable / readonly 状态。
 - 用普通 `div` 冒充需要 button semantics 的交互控件。
 
-## 10. Runtime Boundary
+## 10. Runtime Boundary {#ui-runtime-boundary}
 
 ### 10.1 View / Shell Layer
 

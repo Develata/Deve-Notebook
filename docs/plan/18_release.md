@@ -404,7 +404,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 *   **Update**: 使用 Tauri Updater 机制，公钥 (`pubkey.pem`) 硬编码在客户端，私钥仅在 CI Secret 中。
 *   **Container**: 镜像使用 GitHub Actor 签名 (Keyless signing with Sigstore/Cosign optional).
 
-## 3. Versioning (版本规范)
+## 3. Versioning (版本规范) {#release-versioning}
 
 遵循 **Semantic Versioning 2.0.0** (`MAJOR.MINOR.PATCH`).
 

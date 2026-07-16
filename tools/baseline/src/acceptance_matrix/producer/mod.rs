@@ -1,5 +1,6 @@
 //! Rust-first acceptance producer planning, execution, and receipt aggregation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 pub(super) mod artifact_reader;
 pub(super) mod collect;

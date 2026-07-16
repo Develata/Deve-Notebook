@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;

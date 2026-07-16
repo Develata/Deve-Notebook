@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 20_operations_catalog#opid-catalog
 
 use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail};

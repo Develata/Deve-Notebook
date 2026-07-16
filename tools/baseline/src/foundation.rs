@@ -1,4 +1,7 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 01_terminology#normative-language
+//!   - 01_terminology#core-definitions
+//!   - 02_positioning#core-boundaries
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

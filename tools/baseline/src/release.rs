@@ -1,4 +1,9 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#developer-baseline-checkers
+//!   - 17_tech_stack#canonical-rust-toolchain
+//!   - 18_release#first-tag-acceptance-matrix
+//!   - 18_release#artifact-identity-and-integrity
+//!   - 18_release#release-versioning
 
 mod toolchain;
 mod workflow;

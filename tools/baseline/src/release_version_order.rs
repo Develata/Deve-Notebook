@@ -1,4 +1,5 @@
-//! plan_ref: docs/plan/18_release.md#release-pipeline-skeleton
+//! plan_ref:
+//!   - 18_release#release-versioning
 
 use anyhow::{Result, bail};
 use semver::{BuildMetadata, Version};

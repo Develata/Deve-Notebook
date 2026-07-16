@@ -1,5 +1,6 @@
 //! Machine-readable acceptance matrix and first-tag evidence gate.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::context::BaselineContext;
 use anyhow::{Result, bail};

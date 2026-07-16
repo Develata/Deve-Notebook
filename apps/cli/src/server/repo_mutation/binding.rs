@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_storage/authority#repo-mutation-publication-gate
+//!
 //! Exact local-repository identity validation after acquiring a mutation permit.
 
 use crate::server::{

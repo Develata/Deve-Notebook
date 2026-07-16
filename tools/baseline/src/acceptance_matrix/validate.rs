@@ -1,5 +1,6 @@
 //! Structural validation for acceptance requirements and evidence locators.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{FIRST_TAG_JOURNEYS, FlowCase, MatrixRow};
 use super::parse::{collect_case_ids, collect_flow_cases};

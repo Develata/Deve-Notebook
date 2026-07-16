@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 18_release#artifact-identity-and-integrity
+//!
 use super::manifest::ArtifactRole;
 use super::paths::validate_relative_path;
 use anyhow::{Result, bail};

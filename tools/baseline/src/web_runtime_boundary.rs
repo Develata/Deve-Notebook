@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/index#ui-runtime-boundary
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 15_settings#browser-ui-prefs
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;

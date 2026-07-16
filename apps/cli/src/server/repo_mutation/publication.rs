@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_storage/authority#repo-mutation-publication-gate
+//!   - 07_network#projection-recovery-contract
+//!
 //! Sealed mutation publication vocabulary and wire ordering.
 
 use deve_core::models::{DocId, PeerId, RepoId};

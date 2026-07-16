@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!
 pub mod actions;
 pub mod drag_overlay;
 pub mod drop_handler;

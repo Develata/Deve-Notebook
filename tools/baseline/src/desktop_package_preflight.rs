@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 17_tech_stack#native-packaging-dependency-gate
 
 use crate::cargo_gate::{CargoRunner, CargoTest, require_tree_contains_regex, tree_contains_regex};
 use crate::context::BaselineContext;

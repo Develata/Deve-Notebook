@@ -1,6 +1,6 @@
 //! Fresh receipt validation for first-tag requirements.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
-
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 use super::execution_group::validate_execution_groups;
 use super::model::MatrixRow;
 use super::producer::artifact_reader::{ReceiptArtifactBudget, ReceiptArtifactRoot};

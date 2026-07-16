@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#runtime-observability
+//!   - 22_reliability_observability#metrics-taxonomy
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

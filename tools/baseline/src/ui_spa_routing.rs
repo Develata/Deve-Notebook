@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/01_web#single-binary-distribution
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

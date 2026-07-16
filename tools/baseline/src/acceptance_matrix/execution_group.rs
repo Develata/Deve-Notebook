@@ -1,5 +1,6 @@
 //! Cross-artifact receipt execution-group invariants.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::receipt::Receipt;
 use anyhow::{Result, bail};

@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#release-versioning
 
 use anyhow::{Context, Result, bail};
 

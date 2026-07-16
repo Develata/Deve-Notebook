@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!
 mod apply;
 mod send;
 mod send_backend;

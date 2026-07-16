@@ -1,4 +1,8 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/index#native-adapter-gate-registry
+//!   - 11_ui_design/02_desktop#desktop-current-native-boundary
+//!   - 11_ui_design/03_mobile#mobile-current-native-boundary
+//!   - 17_tech_stack#native-packaging-dependency-gate
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;

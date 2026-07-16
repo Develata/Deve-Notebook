@@ -1,4 +1,7 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-responsive-layout
+//!   - 11_ui_design/03_mobile#mobile-interaction-design
+//!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

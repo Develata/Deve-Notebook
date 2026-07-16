@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 18_release#artifact-identity-and-integrity
+//!
 use super::manifest::{ArtifactRecord, ArtifactRole};
 use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};

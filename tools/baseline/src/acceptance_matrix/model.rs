@@ -1,5 +1,6 @@
 //! Acceptance matrix data model.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 pub(super) const MATRIX_PATH: &str = "docs/registry/acceptance-matrix.tsv";
 pub(super) const RENDERED_PATH: &str = "docs/acceptance-matrix.md";

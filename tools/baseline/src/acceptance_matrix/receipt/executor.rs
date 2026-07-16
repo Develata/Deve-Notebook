@@ -1,5 +1,6 @@
 //! Bounded process execution and atomic receipt publication.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{EvidenceSpec, ExecutionSpec, Receipt};
 use super::process::run_step;

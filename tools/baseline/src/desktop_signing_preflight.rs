@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#artifact-identity-and-integrity
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;

@@ -1,4 +1,5 @@
-//! plan_ref: docs/plan/18_release.md#artifact-identity-and-integrity
+//! plan_ref:
+//!   - 18_release#artifact-identity-and-integrity
 //!
 //! Deterministic, fail-closed assembly and verification of a pre-tag release
 //! candidate.  The workflow owns platform-specific builds and signing; this

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_network#projection-recovery-contract
+//!   - 09_web_thin_client_ledger#projection-recovery-coordinator
+//!
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ProjectionRecoveryPlan, ProjectionRecoveryRequired};
 use std::sync::{Arc, Mutex};

@@ -6,7 +6,7 @@
 #
 # Exit codes:
 #   0 — all checks passed
-#   1 — blocking violations found (size fuse, dangling plan_ref, i18n leak)
+#   1 — blocking violations found (size fuse, missing/dangling plan_ref, i18n leak)
 #   2 — usage / environment error
 #
 # Output:
@@ -25,7 +25,7 @@ if [[ "${GIT_BIN##*/}" == "git.exe" ]] && command -v wslpath >/dev/null 2>&1; th
 fi
 PLAN_DIR="$ROOT/docs/plan"
 RUNTIME_REGISTRY="$ROOT/docs/registry/runtime-skeleton-registry.md"
-CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
+CODE_ROOTS=(apps crates tools)
 FUSE_LINES=500
 SOFT_LINES=250
 # Canonical plan_ref / AGENTS anchor core pattern (single source of truth).
@@ -33,6 +33,10 @@ SOFT_LINES=250
 # multi-file chapter path (`03_storage/authority`), followed by `#<anchor>`.
 PLAN_REF_CORE='[0-9][0-9]_[A-Za-z0-9_]+(/[A-Za-z0-9_]+)?#[A-Za-z0-9_-]+'
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
+PLAN_REF_EXEMPTIONS="$ROOT/scripts/plan-ref-exemptions.tsv"
+PLAN_ANCHOR_REGISTRY="$PLAN_DIR/AGENTS.md"
+PLAN_ANCHOR_REGISTRY_START='<!-- stable-plan-anchor-registry:start -->'
+PLAN_ANCHOR_REGISTRY_END='<!-- stable-plan-anchor-registry:end -->'
 I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
 I18N_FORBIDDEN_ENGLISH_LITERALS=(
   '"Pin"'
@@ -47,25 +51,13 @@ I18N_FORBIDDEN_ENGLISH_LITERALS=(
 is_allowlisted() {
   local rel="$1"
   [ -f "$ALLOWLIST" ] || return 1
-  grep -Fxq "$rel" <(grep -v '^\s*#' "$ALLOWLIST" | grep -v '^\s*$')
+  grep -Fxq "$rel" <(grep -v '^[[:space:]]*#' "$ALLOWLIST" | grep -v '^[[:space:]]*$')
 }
 
 is_i18n_allowlisted() {
   local rel_hit="$1"
   [ -f "$I18N_ALLOWLIST" ] || return 1
-  grep -Fxq "$rel_hit" <(grep -v '^\s*#' "$I18N_ALLOWLIST" | grep -v '^\s*$')
-}
-
-is_plan_ref_missing_exempt() {
-  local rel="$1"
-  case "$rel" in
-    */target/*|*/tests/*|*/benches/*) return 0 ;;
-    */*_test/*|*/*_tests/*|*/test_*/*) return 0 ;;
-    *_test.rs|*_tests.rs|*_test_*.rs|*_test_support.rs|*/tests.rs|*/test_modules.rs) return 0 ;;
-    */channel_test/*|*/switcher_prepare_test/*) return 0 ;;
-    */generated/*|*_generated.rs|*/vendor/*|*/public/*|*/dist/*) return 0 ;;
-  esac
-  return 1
+  grep -Fxq "$rel_hit" <(grep -v '^[[:space:]]*#' "$I18N_ALLOWLIST" | grep -v '^[[:space:]]*$')
 }
 REPORT_LINES=()
 WRITE_REPORT=0
@@ -182,55 +174,228 @@ ensure_git_repo_readable() {
   fi
 }
 
-tracked_rust_files() {
-  git_in_repo ls-files -- 'crates' 'apps' |
-    grep -E '\.rs$' |
-    sed "s|^|$ROOT/|"
+RUST_SOURCE_RELS=()
+RUST_SOURCE_FILES=()
+declare -A RUST_SOURCE_REL_MAP=()
+TRACKED_RUST_SOURCE_FILES=()
+declare -A TRACKED_RUST_SOURCE_REL_MAP=()
+RUST_BATCH_SIZE=100
+
+load_rust_source_files() {
+  local list_file tracked_list_file rel
+  list_file="$(mktemp)" || return 2
+  if ! git_in_repo ls-files -z --cached --others --exclude-standard -- "${CODE_ROOTS[@]}" >"$list_file"; then
+    rm -f "$list_file"
+    echo "ERROR: plan-coverage: failed to enumerate Rust source files" >&2
+    return 2
+  fi
+  while IFS= read -r -d '' rel; do
+    case "$rel" in
+      *.rs)
+        [ -f "$ROOT/$rel" ] || continue
+        if [[ "$rel" == *$'\t'* || "$rel" == *$'\n'* ]]; then
+          rm -f "$list_file"
+          echo "ERROR: plan-coverage: Rust source path contains a tab/newline: $rel" >&2
+          return 2
+        fi
+        RUST_SOURCE_RELS+=("$rel")
+        RUST_SOURCE_FILES+=("$ROOT/$rel")
+        RUST_SOURCE_REL_MAP["$rel"]=1
+        ;;
+    esac
+  done <"$list_file"
+  rm -f "$list_file"
+
+  tracked_list_file="$(mktemp)" || return 2
+  if ! git_in_repo ls-files -z --cached -- "${CODE_ROOTS[@]}" >"$tracked_list_file"; then
+    rm -f "$tracked_list_file"
+    echo "ERROR: plan-coverage: failed to enumerate tracked Rust source files" >&2
+    return 2
+  fi
+  while IFS= read -r -d '' rel; do
+    case "$rel" in
+      *.rs)
+        [ -f "$ROOT/$rel" ] || continue
+        TRACKED_RUST_SOURCE_FILES+=("$ROOT/$rel")
+        TRACKED_RUST_SOURCE_REL_MAP["$rel"]=1
+        ;;
+    esac
+  done <"$tracked_list_file"
+  rm -f "$tracked_list_file"
 }
 
-tracked_rust_line_counts() {
-  git_in_repo grep -n -I -e '^' -- 'crates' 'apps' |
-    awk -F: -v root="$ROOT" '
-      $1 ~ /\.rs$/ { counts[$1] = $2 }
-      END {
-        for (f in counts) print counts[f], root "/" f
+rust_source_scan() {
+  local start
+  local -a batch=()
+  for ((start = 0; start < ${#RUST_SOURCE_FILES[@]}; start += RUST_BATCH_SIZE)); do
+    batch=("${RUST_SOURCE_FILES[@]:start:RUST_BATCH_SIZE}")
+    awk '
+      FILENAME != current {
+        if (current != "") print current "\tLINES\t" count
+        current = FILENAME
+        count = 0
+        active = 0
       }
-    ' |
-    sort -k2,2
-}
-
-tracked_plan_ref_entries() {
-  git_in_repo grep -n -I -e '^//\! plan_ref:' -e '^//\! *- ' -- 'crates' 'apps' |
-    awk -F: -v root="$ROOT" '
-      $1 !~ /\.rs$/ { next }
       {
-        file = $1
-        line_no = $2 + 0
+        count++
+        line_no = FNR
         line = $0
-        sub(/^[^:]*:[0-9]+:/, "", line)
-        full = root "/" file
+        sub(/\r$/, "", line)
       }
       line ~ /^\/\/! plan_ref:/ {
-        active[file] = 1
-        last[file] = line_no
-        print full "\tHEADER\t" line
+        active = 1
+        last = line_no
+        print FILENAME "\tHEADER\t" line
         if (line ~ /^\/\/![[:space:]]*plan_ref:[[:space:]]*[^[:space:]]/ &&
             line !~ /^\/\/![[:space:]]*plan_ref:[[:space:]]*infra[[:space:]]*$/) {
-          print full "\tHEADER_INVALID\t" line
+          print FILENAME "\tHEADER_INVALID\t" line
         }
         next
       }
-      active[file] && line_no == last[file] + 1 && line ~ /^\/\/![[:space:]]*-[[:space:]]*/ {
-        last[file] = line_no
+      active && line_no == last + 1 && line ~ /^\/\/![[:space:]]*-[[:space:]]*/ {
+        last = line_no
         sub(/^\/\/![[:space:]]*-[[:space:]]*/, "", line)
         split(line, parts, /[[:space:]]/)
-        print full "\tREF\t" parts[1]
+        print FILENAME "\tREF\t" parts[1]
         next
       }
-      {
-        active[file] = 0
-      }
-    '
+      { active = 0 }
+      END { if (current != "") print current "\tLINES\t" count }
+    ' "${batch[@]}"
+  done
+}
+
+RUST_SCAN_READY=0
+RUST_SCAN_OUTPUT=""
+
+prepare_rust_source_scan() {
+  [ "$RUST_SCAN_READY" -eq 0 ] || return 0
+  RUST_SCAN_OUTPUT="$(rust_source_scan)"
+  RUST_SCAN_READY=1
+}
+
+all_plan_ref_entries() {
+  local f entry_kind entry_value
+  prepare_rust_source_scan
+  while IFS=$'\t' read -r f entry_kind entry_value; do
+    [ "$entry_kind" = "LINES" ] && continue
+    printf '%s\t%s\t%s\n' "$f" "$entry_kind" "$entry_value"
+  done <<<"$RUST_SCAN_OUTPUT"
+}
+
+declare -A PLAN_REF_EXEMPTION_KIND=()
+declare -A PLAN_REF_EXEMPTION_OWNER=()
+declare -A PLAN_REF_EXEMPTION_REASON=()
+
+is_explicit_test_surface() {
+  local rel="$1"
+  case "$rel" in
+    */tests/*|*/benches/*|*/*_test/*|*/*_tests/*|*/test_*/*|*/*_test_support/*) return 0 ;;
+    *_test.rs|*_tests.rs|*_test_*.rs|*_test_support.rs|*/test_support.rs|*/tests.rs|*/test_modules.rs) return 0 ;;
+    */channel_test/*|*/switcher_prepare_test/*) return 0 ;;
+  esac
+  return 1
+}
+
+load_plan_ref_exemptions() {
+  local raw stripped line_no=0 path kind owner reason owner_is_safe
+  local -a fields=()
+  if [ ! -f "$PLAN_REF_EXEMPTIONS" ]; then
+    err "plan-ref-exemptions: missing registry ${PLAN_REF_EXEMPTIONS#$ROOT/}"
+    blocking=$((blocking + 1))
+    return 0
+  fi
+
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    line_no=$((line_no + 1))
+    raw="${raw%$'\r'}"
+    stripped="${raw#"${raw%%[![:space:]]*}"}"
+    stripped="${stripped%"${stripped##*[![:space:]]}"}"
+    case "$stripped" in
+      ''|'#'*) continue ;;
+    esac
+    fields=()
+    IFS=$'\t' read -r -a fields <<<"$raw"
+    if [ "${#fields[@]}" -ne 4 ]; then
+      err "plan-ref-exemptions:$line_no: expected 4 tab-separated fields"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    path="${fields[0]}"
+    kind="${fields[1]}"
+    owner="${fields[2]}"
+    reason="${fields[3]}"
+    reason="${reason#"${reason%%[![:space:]]*}"}"
+    reason="${reason%"${reason##*[![:space:]]}"}"
+
+    case "$path" in
+      apps/*.rs|crates/*.rs|tools/*.rs) ;;
+      *)
+        err "plan-ref-exemptions:$line_no: path must be an exact apps/crates/tools Rust path: $path"
+        blocking=$((blocking + 1))
+        continue
+        ;;
+    esac
+    if [[ "$path" == /* || "$path" == *\\* || "$path" == ../* || "$path" == */../* || "$path" == */.. || "$path" == *$'\t'* ]]; then
+      err "plan-ref-exemptions:$line_no: unsafe path: $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    if [ -n "${PLAN_REF_EXEMPTION_KIND[$path]+x}" ]; then
+      err "plan-ref-exemptions:$line_no: duplicate path: $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    if [ -z "${RUST_SOURCE_REL_MAP[$path]+x}" ]; then
+      err "plan-ref-exemptions:$line_no: stale or absent Rust source: $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    case "$kind" in
+      test|generated|local-only-infra) ;;
+      *)
+        err "plan-ref-exemptions:$line_no: invalid kind '$kind' for $path"
+        blocking=$((blocking + 1))
+        continue
+        ;;
+    esac
+    if [ "$kind" = "test" ] && ! is_explicit_test_surface "$path"; then
+      err "plan-ref-exemptions:$line_no: test entry is outside an explicit test/bench surface: $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    if [ -z "$reason" ] || [ "$reason" = "$kind" ]; then
+      err "plan-ref-exemptions:$line_no: non-generic reason required for $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+    if [ "$kind" = "generated" ]; then
+      owner_is_safe=1
+      case "$owner" in
+        ''|'-'|/*|*\\*|../*|*/../*|*/..|*'*'*|*'?'*|*'['*|*$'\t'*|*$'\n'*) owner_is_safe=0 ;;
+      esac
+      if [ "$owner_is_safe" -ne 1 ] || \
+         [ ! -f "$ROOT/$owner" ] || [ -L "$ROOT/$owner" ] || \
+         [ "$(git_in_repo ls-files --error-unmatch -- ":(literal)$owner" 2>/dev/null || true)" != "$owner" ]; then
+        err "plan-ref-exemptions:$line_no: generated owner must be one exact present tracked producer file for $path: $owner"
+        blocking=$((blocking + 1))
+        continue
+      fi
+      if ! head -n 20 "$ROOT/$path" | grep -Eqi '(generated|do not edit)'; then
+        err "plan-ref-exemptions:$line_no: generated source lacks provenance marker: $path"
+        blocking=$((blocking + 1))
+        continue
+      fi
+    elif [ "$owner" != "-" ]; then
+      err "plan-ref-exemptions:$line_no: owner must be '-' for $kind entry $path"
+      blocking=$((blocking + 1))
+      continue
+    fi
+
+    PLAN_REF_EXEMPTION_KIND["$path"]="$kind"
+    PLAN_REF_EXEMPTION_OWNER["$path"]="$owner"
+    PLAN_REF_EXEMPTION_REASON["$path"]="$reason"
+  done <"$PLAN_REF_EXEMPTIONS"
 }
 
 tracked_i18n_cjk_hits() {
@@ -272,47 +437,58 @@ cleanup_rewrite_tmp_files() {
 }
 
 plan_ref_rewrite_candidate_files() {
-  local grep_output
-  local grep_error
-  local grep_status
-  grep_error="$(mktemp)" || return 2
-  REWRITE_TMP_FILES+=("$grep_error")
+  local output rc rel
   set +e
-  grep_output="$(git_in_repo grep -l -F -- "$REWRITE_FROM" -- 'crates' 'apps' 2>"$grep_error")"
-  grep_status=$?
+  output="$(git_in_repo grep -l -F -- "$REWRITE_FROM" -- "${CODE_ROOTS[@]}" 2>/dev/null)"
+  rc=$?
   set -e
-  if [ "$grep_status" -eq 1 ] && [ ! -s "$grep_error" ]; then
-    return 0
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+    echo "ERROR: rewrite-plan-ref candidate scan failed" >&2
+    return 2
   fi
-  if [ "$grep_status" -ne 0 ]; then
-    printf 'ERROR: rewrite-plan-ref candidate scan failed:\n%s\n' "$grep_output" >&2
-    cat "$grep_error" >&2
-    return "$grep_status"
-  fi
-  if [ -s "$grep_error" ]; then
-    cat "$grep_error" >&2
-  fi
-  printf '%s\n' "$grep_output" |
-    awk -v root="$ROOT" '{ sub(/\r$/, "", $0); if ($0 ~ /\.rs$/) print root "/" $0 }'
-}
-
-# resolve_plan_anchor <chapter_ref> -> echoes the chapter markdown file path.
-# Supports single-file chapters (`04_repository`) and multi-file chapter paths
-# (`03_storage/authority`). The chapter_ref is the part before the `#` anchor.
-resolve_plan_anchor() {
-  local chapter_ref="$1"
-  printf '%s/%s.md' "$PLAN_DIR" "$chapter_ref"
+  [ "$rc" -eq 0 ] || return 0
+  while IFS= read -r rel; do
+    [ -n "${TRACKED_RUST_SOURCE_REL_MAP[$rel]+x}" ] || continue
+    printf '%s\n' "$ROOT/$rel"
+  done <<<"$output"
 }
 
 declare -A PLAN_CHAPTER_EXISTS_CACHE=()
-declare -A PLAN_ANCHOR_EXISTS_CACHE=()
+declare -A PLAN_ANCHOR_INDEX=()
+PLAN_ANCHOR_INDEX_LOADED=0
+
+load_plan_anchor_index() {
+  [ "$PLAN_ANCHOR_INDEX_LOADED" -eq 0 ] || return 0
+  local chapter anchor nullglob_was_set=0
+  shopt -q nullglob && nullglob_was_set=1
+  shopt -s nullglob
+  local -a plan_files=("$PLAN_DIR"/*.md "$PLAN_DIR"/*/*.md)
+  [ "$nullglob_was_set" -eq 1 ] || shopt -u nullglob
+  while IFS=$'\t' read -r chapter anchor; do
+    [ -n "$chapter" ] && [ -n "$anchor" ] || continue
+    PLAN_ANCHOR_INDEX["$chapter#$anchor"]=1
+  done < <(
+    awk -v plan_dir="$PLAN_DIR" '
+      {
+        rest = $0
+        while (match(rest, /\{#[A-Za-z0-9_-]+\}/)) {
+          anchor = substr(rest, RSTART + 2, RLENGTH - 3)
+          chapter = substr(FILENAME, length(plan_dir) + 2)
+          sub(/\.md$/, "", chapter)
+          print chapter "\t" anchor
+          rest = substr(rest, RSTART + RLENGTH)
+        }
+      }
+    ' "${plan_files[@]}"
+  )
+  PLAN_ANCHOR_INDEX_LOADED=1
+}
 
 plan_chapter_exists() {
   local chapter="$1"
   local cached="${PLAN_CHAPTER_EXISTS_CACHE[$chapter]+x}"
   if [ -z "$cached" ]; then
-    local chapter_file
-    chapter_file="$(resolve_plan_anchor "$chapter")"
+    local chapter_file="$PLAN_DIR/$chapter.md"
     if [ -f "$chapter_file" ]; then
       PLAN_CHAPTER_EXISTS_CACHE["$chapter"]=1
     else
@@ -326,22 +502,13 @@ plan_anchor_exists() {
   local chapter="$1"
   local anchor="$2"
   local key="$chapter#$anchor"
-  local cached="${PLAN_ANCHOR_EXISTS_CACHE[$key]+x}"
-  if [ -z "$cached" ]; then
-    local chapter_file
-    chapter_file="$(resolve_plan_anchor "$chapter")"
-    if [ -f "$chapter_file" ] && grep -Fq "{#$anchor}" "$chapter_file"; then
-      PLAN_ANCHOR_EXISTS_CACHE["$key"]=1
-    else
-      PLAN_ANCHOR_EXISTS_CACHE["$key"]=0
-    fi
-  fi
-  [ "${PLAN_ANCHOR_EXISTS_CACHE[$key]}" = "1" ]
+  load_plan_anchor_index
+  [ -n "${PLAN_ANCHOR_INDEX[$key]+x}" ]
 }
 
 # extract_plan_ref_blocks <file> -> echoes each `//!   - <ref>` list line that
 # lives inside a `//! plan_ref:` block. It remains the rewrite-mode extractor;
-# full-report scans use tracked_plan_ref_entries for the same contiguous-block
+# full-report scans use all_plan_ref_entries for the same contiguous-block
 # semantics without per-file shelling.
 extract_plan_ref_blocks() {
   local f="$1"
@@ -350,8 +517,8 @@ extract_plan_ref_blocks() {
 
 # resolve_agents_anchor_ref <ref> -> echoes "chapter_ref<TAB>anchor".
 # Only splits the AGENTS registry cell string; it performs no file/anchor
-# existence check. Callers that need validation must call resolve_plan_anchor
-# on the returned chapter_ref to avoid a second resolution implementation.
+# existence check. Callers validate the returned parts through the shared
+# plan_chapter_exists / plan_anchor_exists index.
 # Skip status (planned/no-code-yet | no-rust-plan-ref) is derived separately
 # from the registry row marker by Check 7's planned_anchor_map.
 resolve_agents_anchor_ref() {
@@ -631,43 +798,16 @@ run_check_md_links() {
 # references `adr/` (a 2-digit chapter prefix is required elsewhere, so `adr/`
 # in a plan_ref line is unambiguously an ADR reference).
 run_check_no_adr_plan_ref() {
-  local hits=0 report
+  local hits=0 report f entry_kind entry_value
   report="$(
-    (git_in_repo grep -n -I -E \
-      -e '^//\![[:space:]]*plan_ref:' \
-      -e '^//\![[:space:]]*-[[:space:]]*' \
-      -- 'crates' 'apps' 2>/dev/null || true) |
-      awk -F: -v root="$ROOT" '
-        $1 !~ /\.rs$/ { next }
-        {
-          file = $1
-          line_no = $2 + 0
-          line = $0
-          sub(/^[^:]*:[0-9]+:/, "", line)
-          full = root "/" file
-        }
-        line ~ /^\/\/![[:space:]]*plan_ref:/ {
-          active[file] = 1
-          last[file] = line_no
-          if (line ~ /^\/\/![[:space:]]*plan_ref:.*adr\//) {
-            print "ERROR: no-adr-plan-ref: " full " plan_ref header references an ADR: " line
-          }
-          next
-        }
-        active[file] && line_no == last[file] + 1 && line ~ /^\/\/![[:space:]]*-[[:space:]]*/ {
-          last[file] = line_no
-          token = line
-          sub(/^\/\/![[:space:]]*-[[:space:]]*/, "", token)
-          sub(/[[:space:]].*$/, "", token)
-          if (token ~ /(^|[^[:alnum:]_])adr\//) {
-            print "ERROR: no-adr-plan-ref: " full " plan_ref targets an ADR: " token
-          }
-          next
-        }
-        {
-          active[file] = 0
-        }
-      '
+    while IFS=$'\t' read -r f entry_kind entry_value; do
+      [ -n "${f:-}" ] || continue
+      if [ "$entry_kind" = "HEADER" ] && [[ "$entry_value" == *adr/* ]]; then
+        printf 'ERROR: no-adr-plan-ref: %s plan_ref header references an ADR: %s\n' "$f" "$entry_value"
+      elif [ "$entry_kind" = "REF" ] && [[ "$entry_value" == adr/* || "$entry_value" == */adr/* ]]; then
+        printf 'ERROR: no-adr-plan-ref: %s plan_ref targets an ADR: %s\n' "$f" "$entry_value"
+      fi
+    done < <(all_plan_ref_entries)
   )"
   if [ -n "$report" ]; then
     printf '%s\n' "$report" >&2
@@ -683,6 +823,13 @@ run_check_no_adr_plan_ref() {
 
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
 ensure_git_repo_readable
+case "$MODE" in
+  full|rewrite|no-adr-check)
+    if ! load_rust_source_files; then
+      exit 2
+    fi
+    ;;
+esac
 
 case "$MODE" in
   rewrite)
@@ -714,16 +861,20 @@ esac
 
 blocking=0
 soft_warnings=0
-rust_files=()
+rust_files=("${RUST_SOURCE_FILES[@]}")
 declare -A rust_file_lines=()
+for f in "${rust_files[@]}"; do
+  rust_file_lines["$f"]=0
+done
 
 # ---------------------------------------------------------------------------
 # Check 1 — Single-file size fuse (> 500 hard, > 250 soft)
 # ---------------------------------------------------------------------------
 log "== Check 1: single-file size fuse =="
-while read -r lines f; do
-  [ -n "${f:-}" ] || continue
-  rust_files+=("$f")
+prepare_rust_source_scan
+while IFS=$'\t' read -r f entry_kind entry_value; do
+  [ "$entry_kind" = "LINES" ] || continue
+  lines="$entry_value"
   rust_file_lines["$f"]="$lines"
   rel="${f#$ROOT/}"
   if [ "$lines" -gt "$FUSE_LINES" ]; then
@@ -738,7 +889,7 @@ while read -r lines f; do
     log "soft($lines): $f"
     soft_warnings=$((soft_warnings + 1))
   fi
-done < <(tracked_rust_line_counts)
+done <<<"$RUST_SCAN_OUTPUT"
 log "fuse violations: $blocking, soft warnings: $soft_warnings"
 log ""
 
@@ -752,21 +903,27 @@ dangling_refs=0
 annotated_refs=0
 missing_ref_files=()
 declare -A plan_coverage_map=()
-declare -A annotated_file_map=()
+declare -A header_count_map=()
+declare -A invalid_header_map=()
+declare -A infra_header_map=()
+declare -A real_ref_count_map=()
+
+load_plan_ref_exemptions
 
 while IFS=$'\t' read -r f entry_kind entry_value; do
   [ -n "${f:-}" ] || continue
   rel="${f#$ROOT/}"
-  if [ -z "${annotated_file_map[$f]+x}" ]; then
-    annotated_file_map["$f"]=1
-    annotated_refs=$((annotated_refs + 1))
+  if [ "$entry_kind" = "HEADER" ]; then
+    header_count_map["$f"]=$(( ${header_count_map[$f]:-0} + 1 ))
+    if [ "$entry_value" = "//! plan_ref: infra" ]; then
+      infra_header_map["$f"]=1
+    fi
+    continue
   fi
 
-  # B3.4 guard: the `//! plan_ref:` header tail MUST be empty or exactly `infra`.
-  # Any other inline content (e.g. `//! plan_ref: 04_repository#x`) would bypass
-  # entry extraction so dangling / reverse-coverage / no-adr all skip it.
   if [ "$entry_kind" = "HEADER_INVALID" ]; then
     err "invalid-plan-ref-header: $rel — '//! plan_ref:' header tail must be empty or 'infra'"
+    invalid_header_map["$f"]=1
     blocking=$((blocking + 1))
     continue
   fi
@@ -778,7 +935,7 @@ while IFS=$'\t' read -r f entry_kind entry_value; do
   # multi-file chapter path (`03_storage/authority`).
   ref="$entry_value"
   [ -z "$ref" ] && continue
-  [ "$ref" = "infra" ] && continue
+  real_ref_count_map["$f"]=$(( ${real_ref_count_map[$f]:-0} + 1 ))
 
   plan_ref_anchor_re="^${PLAN_REF_CORE}$"
   if ! [[ "$ref" =~ $plan_ref_anchor_re ]]; then
@@ -800,29 +957,78 @@ while IFS=$'\t' read -r f entry_kind entry_value; do
     blocking=$((blocking + 1))
   else
     key="$ref"
-    plan_coverage_map["$key"]+="$f "
+    plan_coverage_map["$key"]+="$rel"$'\n'
   fi
-done < <(tracked_plan_ref_entries)
+done <<<"$RUST_SCAN_OUTPUT"
 
 for f in "${rust_files[@]}"; do
-  [ -z "${annotated_file_map[$f]+x}" ] || continue
   rel="${f#$ROOT/}"
-  lines="${rust_file_lines[$f]:-0}"
-  [ "$lines" -lt 20 ] && continue
-  if is_plan_ref_missing_exempt "$rel"; then
+  header_count="${header_count_map[$f]:-0}"
+  real_ref_count="${real_ref_count_map[$f]:-0}"
+  exemption_kind="${PLAN_REF_EXEMPTION_KIND[$rel]:-}"
+
+  if [ "$header_count" -gt 1 ]; then
+    err "duplicate-plan-ref-header: $rel — expected exactly one header"
+    blocking=$((blocking + 1))
+  fi
+  if [ -n "${infra_header_map[$f]+x}" ] && [ "$real_ref_count" -gt 0 ]; then
+    err "invalid-plan-ref-header: $rel — infra cannot be combined with plan anchors"
+    blocking=$((blocking + 1))
+  fi
+  if [ "$header_count" -gt 0 ] && [ "$real_ref_count" -eq 0 ] && \
+     [ -z "${infra_header_map[$f]+x}" ] && [ -z "${invalid_header_map[$f]+x}" ]; then
+    err "empty-plan-ref-header: $rel — add at least one stable anchor or use a reasoned exemption"
+    blocking=$((blocking + 1))
+  fi
+
+  if [ "$real_ref_count" -gt 0 ]; then
+    annotated_refs=$((annotated_refs + 1))
+    if [ -n "$exemption_kind" ]; then
+      err "plan-ref-exemptions: stale exemption on anchored module: $rel"
+      blocking=$((blocking + 1))
+    fi
+    continue
+  fi
+
+  if [ -n "${infra_header_map[$f]+x}" ]; then
+    if [ "$exemption_kind" = "local-only-infra" ]; then
+      missing_refs_exempt=$((missing_refs_exempt + 1))
+    else
+      err "plan-ref-exemptions: infra header requires exact local-only-infra entry: $rel"
+      blocking=$((blocking + 1))
+    fi
+    continue
+  fi
+
+  if [ "$header_count" -gt 0 ]; then
+    if [ -n "$exemption_kind" ]; then
+      err "plan-ref-exemptions: exemption cannot mask malformed/empty header: $rel"
+      blocking=$((blocking + 1))
+    fi
+    continue
+  fi
+
+  if [ "$exemption_kind" = "test" ] || [ "$exemption_kind" = "generated" ]; then
     missing_refs_exempt=$((missing_refs_exempt + 1))
+    continue
+  fi
+  if [ "$exemption_kind" = "local-only-infra" ]; then
+    err "plan-ref-exemptions: local-only-infra entry requires exact '//! plan_ref: infra' header: $rel"
+    blocking=$((blocking + 1))
     continue
   fi
   missing_refs=$((missing_refs + 1))
   missing_ref_files+=("$rel")
+  err "missing-plan-ref: $rel"
+  blocking=$((blocking + 1))
 done
 
 log "modules with plan_ref: $annotated_refs"
-log "modules without plan_ref (soft): $missing_refs"
+log "modules without plan_ref (blocking): $missing_refs"
 log "modules without plan_ref (exempt): $missing_refs_exempt"
 log "dangling plan_ref (blocking): $dangling_refs"
 if [ "$LIST_MISSING_PLAN_REF" = "1" ]; then
-  log "missing plan_ref files (soft):"
+  log "missing plan_ref files (blocking):"
   if [ "${#missing_ref_files[@]}" -eq 0 ]; then
     log "    (none)"
   else
@@ -832,7 +1038,7 @@ if [ "$LIST_MISSING_PLAN_REF" = "1" ]; then
   fi
 fi
 if [ "$SUMMARY_MISSING_PLAN_REF" = "1" ]; then
-  log "missing plan_ref summary (soft):"
+  log "missing plan_ref summary (blocking):"
   log "total: $missing_refs"
   log_missing_plan_ref_groups "by workspace member:" 2 "$MISSING_PLAN_REF_SUMMARY_TOP"
   log_missing_plan_ref_groups "by directory depth 4 (top $MISSING_PLAN_REF_SUMMARY_TOP):" 4 "$MISSING_PLAN_REF_SUMMARY_TOP"
@@ -982,22 +1188,74 @@ agents_anchor_dangling=0
 agents_anchor_unused=0
 agents_anchor_missing=0
 agents_anchor_planned=0
+agents_anchor_registry_errors=0
 declare -A agents_anchor_map=()
 declare -A dangling_anchor_map=()
 declare -A planned_anchor_map=()
-# B4.1 — registry rows trailing `planned/no-code-yet` (governance 先登记后落地)
-# or `no-rust-plan-ref` (shell/non-Rust contract, e.g. the perf-budget fuse)
-# carry no Rust plan_ref by design; the unused check and reverse-coverage skip
-# them. Only the row's first column (the anchor) is taken, so a backticked
-# defer ref in the description column is never mis-classified as planned.
-while IFS= read -r pref; do
-  [ -n "$pref" ] || continue
-  planned_anchor_map["$pref"]=1
-done < <(grep -E "^\| \`${PLAN_REF_CORE}\`.*(planned/no-code-yet|no-rust-plan-ref)" "$PLAN_DIR/AGENTS.md" | sed -E "s@^\| \`(${PLAN_REF_CORE})\`.*@\1@" | sort -u)
 
-while IFS= read -r ref; do
-  [ -n "$ref" ] || continue
-  agents_anchor_map["$ref"]=1
+# Only the explicitly delimited three-column registry is authoritative. A ref
+# mentioned in prose, examples, or another table MUST NOT silently register an
+# anchor. Exact markers and row shape also make duplicate/malformed rows
+# machine-detectable.
+registry_start_count="$(grep -Fxc "$PLAN_ANCHOR_REGISTRY_START" "$PLAN_ANCHOR_REGISTRY" 2>/dev/null || true)"
+registry_end_count="$(grep -Fxc "$PLAN_ANCHOR_REGISTRY_END" "$PLAN_ANCHOR_REGISTRY" 2>/dev/null || true)"
+registry_start_count="${registry_start_count:-0}"
+registry_end_count="${registry_end_count:-0}"
+if [ "$registry_start_count" -ne 1 ] || [ "$registry_end_count" -ne 1 ]; then
+  err "agents-anchor-registry: expected exactly one start/end marker in ${PLAN_ANCHOR_REGISTRY#$ROOT/}"
+  agents_anchor_registry_errors=$((agents_anchor_registry_errors + 1))
+  blocking=$((blocking + 1))
+else
+  registry_header_count=0
+  registry_separator_count=0
+  registry_row_count=0
+  registry_row_re="^\\| \`(${PLAN_REF_CORE})\` \\| [^|]+ \\| [^|]+ \\|$"
+  while IFS= read -r registry_line || [ -n "$registry_line" ]; do
+    registry_line="${registry_line%$'\r'}"
+    case "$registry_line" in
+      '') continue ;;
+      '| Anchor | Plan 位置 | 语义 |')
+        registry_header_count=$((registry_header_count + 1))
+        continue
+        ;;
+      '|---|---|---|')
+        registry_separator_count=$((registry_separator_count + 1))
+        continue
+        ;;
+    esac
+    if ! [[ "$registry_line" =~ $registry_row_re ]]; then
+      err "agents-anchor-registry: malformed row: $registry_line"
+      agents_anchor_registry_errors=$((agents_anchor_registry_errors + 1))
+      blocking=$((blocking + 1))
+      continue
+    fi
+    ref="${BASH_REMATCH[1]}"
+    if [ -n "${agents_anchor_map[$ref]+x}" ]; then
+      err "agents-anchor-registry: duplicate anchor: $ref"
+      agents_anchor_registry_errors=$((agents_anchor_registry_errors + 1))
+      blocking=$((blocking + 1))
+      continue
+    fi
+    agents_anchor_map["$ref"]=1
+    registry_row_count=$((registry_row_count + 1))
+    if [[ "$registry_line" == *planned/no-code-yet* || "$registry_line" == *no-rust-plan-ref* ]]; then
+      planned_anchor_map["$ref"]=1
+    fi
+  done < <(
+    awk -v start="$PLAN_ANCHOR_REGISTRY_START" -v end="$PLAN_ANCHOR_REGISTRY_END" '
+      $0 == start { in_registry = 1; next }
+      $0 == end { exit }
+      in_registry { print }
+    ' "$PLAN_ANCHOR_REGISTRY"
+  )
+  if [ "$registry_header_count" -ne 1 ] || [ "$registry_separator_count" -ne 1 ] || [ "$registry_row_count" -eq 0 ]; then
+    err "agents-anchor-registry: expected one header, one separator, and at least one anchor row"
+    agents_anchor_registry_errors=$((agents_anchor_registry_errors + 1))
+    blocking=$((blocking + 1))
+  fi
+fi
+
+for ref in "${!agents_anchor_map[@]}"; do
   IFS=$'\t' read -r chapter anchor < <(resolve_agents_anchor_ref "$ref") || true
   if ! plan_chapter_exists "$chapter"; then
     err "agents-anchor-dangling: $ref chapter not found"
@@ -1010,7 +1268,7 @@ while IFS= read -r ref; do
     blocking=$((blocking + 1))
     dangling_anchor_map["$ref"]=1
   fi
-done < <(grep -oE "\`${PLAN_REF_CORE}\`" "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
+done
 
 for ref in "${!agents_anchor_map[@]}"; do
   [ -n "${plan_coverage_map[$ref]+x}" ] && continue
@@ -1026,16 +1284,17 @@ done
 
 for ref in "${!plan_coverage_map[@]}"; do
   if [ -z "${agents_anchor_map[$ref]+x}" ]; then
-    log "agents-anchor-missing(soft): $ref"
+    err "agents-anchor-missing(blocking): $ref"
     agents_anchor_missing=$((agents_anchor_missing + 1))
-    soft_warnings=$((soft_warnings + 1))
+    blocking=$((blocking + 1))
   fi
 done
 
 log "agents anchor dangling (blocking): $agents_anchor_dangling"
 log "agents anchor unused (soft): $agents_anchor_unused"
 log "agents anchor no-rust-plan-ref skip (info): $agents_anchor_planned"
-log "agents anchor missing from registry (soft): $agents_anchor_missing"
+log "agents anchor missing from registry (blocking): $agents_anchor_missing"
+log "agents anchor registry format errors (blocking): $agents_anchor_registry_errors"
 log ""
 
 # ---------------------------------------------------------------------------
@@ -1065,10 +1324,10 @@ log ""
 log "== Reverse coverage matrix (plan anchor → files) =="
 for key in "${!plan_coverage_map[@]}"; do
   log "$key"
-  for f in ${plan_coverage_map[$key]}; do
-    rel="${f#$ROOT/}"
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
     log "    $rel"
-  done
+  done <<<"${plan_coverage_map[$key]}"
 done
 log ""
 
@@ -1077,7 +1336,7 @@ log ""
 # ---------------------------------------------------------------------------
 log "== Summary =="
 log "blocking violations: $blocking"
-log "soft warnings: $((soft_warnings + missing_refs))"
+log "soft warnings: $soft_warnings"
 
 if [ "$WRITE_REPORT" = "1" ]; then
   printf '%s\n' "${REPORT_LINES[@]}" > "$ROOT/scripts/plan-coverage.txt"

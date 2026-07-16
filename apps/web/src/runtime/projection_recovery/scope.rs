@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_network#projection-recovery-contract
+//!   - 09_web_thin_client_ledger#projection-recovery-coordinator
+//!
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{
     DocumentRecoveryScope, ProjectionRecoveryPlan, ProjectionRecoveryRequired,

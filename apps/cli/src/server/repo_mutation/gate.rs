@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 03_storage/authority#repo-mutation-publication-gate
+//!
 //! Repo/catalog lane registry, nesting guard, and permit lifecycle.
 
 use super::MutationExecution;

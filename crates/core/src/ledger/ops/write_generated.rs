@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_storage/authority#facts-partition
+//!   - 10_rendering#document-authority-bridge
+//!
 use crate::ledger::runtime_tables;
 use crate::ledger::schema::CLIENT_OP_INDEX;
 use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId};

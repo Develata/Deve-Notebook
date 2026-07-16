@@ -5,14 +5,14 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-10`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
 
 本章定义关键术语与规范性用语。
 
-## 1. Normative Language (规范性用语)
+## 1. Normative Language (规范性用语) {#normative-language}
 
 * **MUST / 必须**：不可违反；违反即视为设计不成立或实现错误。
 * **SHOULD / 应**：强烈建议；除非有明确理由与替代方案，否则不应偏离。
@@ -24,7 +24,7 @@
 * 任何影响一致性与安全性的事实 MUST 位于 Ledger，或 MUST 可由 Ledger 唯一推导；Projection Workspace / Markdown 仅承载可读投影。
 * 需要明确边界时，使用“**非目标**”直接排除。
 
-## 2. Core Definitions (核心术语定义)
+## 2. Core Definitions (核心术语定义) {#core-definitions}
 
 *   **Ledger (账本)**：系统唯一真值源（Source of Truth）；只追加、不可就地修改的账本事实序列 $L = [Fact_1, Fact_2, ..., Fact_n]$。
     *   任何状态变更 $S_{t+1} = Apply(S_t, Fact_{t+1})$ 必须且只能由 Ledger 确定性推导。

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 17_tech_stack#search-baseline
+//!   - 14_commands#command-palette-shortcuts
+//!
 mod actions;
 mod execute;
 mod providers;

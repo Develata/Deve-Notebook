@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 05_diff_logic#authority-diff-core
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;

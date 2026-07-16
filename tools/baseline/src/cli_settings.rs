@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 14_commands#cli-commands
+//!   - 15_settings#configuration-settings
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

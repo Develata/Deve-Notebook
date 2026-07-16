@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 17_tech_stack#native-packaging-dependency-gate
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;

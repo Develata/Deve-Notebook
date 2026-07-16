@@ -1,5 +1,6 @@
 //! Bounded, fail-closed acceptance receipt artifact reader.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::file_identity::FileIdentity;
 use crate::acceptance_matrix::receipt_limits::{

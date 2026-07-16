@@ -1,5 +1,6 @@
 //! Safe cross-platform acceptance receipt aggregation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::artifact_reader::{ReceiptArtifactBudget, ReceiptArtifactRoot};
 use crate::acceptance_matrix::execution_group::validate_execution_groups;

@@ -1,5 +1,6 @@
 //! Narrow Argon2id password hasher for target-host RemoteBrowser fixtures.
-//! plan_ref: 18_release#remote-browser-candidate-fixture
+//! plan_ref:
+//!   - 18_release#remote-browser-candidate-fixture
 
 use anyhow::{Context, Result, bail};
 use argon2::{

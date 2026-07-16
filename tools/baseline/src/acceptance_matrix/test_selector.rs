@@ -1,5 +1,6 @@
 //! Cargo test evidence selector validation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::MatrixRow;
 use anyhow::{Context, Result, bail};

@@ -1,5 +1,6 @@
 //! Side-effecting producer execution and host tool resolution.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{Producer, ProducerArg, ProducerStep};
 use super::plan::{ProducerPlan, git_output, git_status};

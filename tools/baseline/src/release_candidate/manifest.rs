@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 18_release#artifact-identity-and-integrity
+//!
 //! Canonical schema owned by the release-candidate baseline command.
 
 use anyhow::{Context, Result, bail};

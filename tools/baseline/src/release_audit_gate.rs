@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 23_threat_model#supply-chain
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::context::BaselineContext;
 use crate::env_gate::binary_flag_from_env;

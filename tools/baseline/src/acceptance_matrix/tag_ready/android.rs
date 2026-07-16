@@ -1,5 +1,6 @@
 //! Android producer-bound target and recovery receipt validation.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use std::path::Path;
 

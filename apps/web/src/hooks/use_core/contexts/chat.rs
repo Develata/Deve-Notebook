@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!
 use leptos::prelude::*;
 
 use super::super::state::PluginResponse;

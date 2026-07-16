@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 15_settings#configuration-settings
+//!   - 15_settings#browser-ui-prefs
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

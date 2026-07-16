@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-android-shell-package-execution-gate
+//!
 //! Android emulator/package preflight parsing.
 
 use super::{flag_from_env, non_empty_string_from_env, ok, positive_integer_from_env};

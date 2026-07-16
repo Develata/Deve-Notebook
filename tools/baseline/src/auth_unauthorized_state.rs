@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 08_auth#unauthorized-disconnected-ui
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;

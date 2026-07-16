@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 18_release#developer-baseline-checkers
 
 use crate::context::BaselineContext;
 use anyhow::{Result, bail};

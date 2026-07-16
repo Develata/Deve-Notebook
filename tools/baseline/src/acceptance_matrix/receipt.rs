@@ -1,5 +1,6 @@
 //! Command execution and schema 3 receipt writer for release evidence.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail};

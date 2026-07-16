@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-22 | Updated: 2026-04-24 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-07-16 -->
 
 # scripts
 
@@ -12,6 +12,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | File | Description |
 |------|-------------|
 | `plan-coverage.sh` | Plan-code coverage, file-size fuse, i18n leak, and acceptance binding checks |
+| `plan-ref-exemptions.tsv` | Exact-path, typed, reasoned exemptions for test/generated/repo-local infra Rust modules |
+| `plan-coverage-selftest.sh` | Positive/negative fixtures for plan reference, exemption, and governance scanner rules |
 | `check-local-quick-gate.sh` | Fast local implementation gate: diff hygiene, core/CLI checks, focused governance, and focused tests |
 | `check-deep-audit-gate.sh` | Explicit deep audit gate: governance suite, baseline scripts, runtime smokes, and optional full/Docker tests |
 | `lint-low-mem.cmd` | Windows CMD script — runs clippy with reduced memory |

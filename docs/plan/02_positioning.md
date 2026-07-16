@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.3`
-- `Last Review`: `2026-07-05`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
@@ -19,7 +19,7 @@
 
 **项目定位**: 个人部署在服务器上，仅供自己使用的开源个人 Wiki Markdown 笔记项目（支持 LaTeX 数学公式）。
 
-## 3. Core Boundaries (核心边界)
+## 3. Core Boundaries (核心边界) {#core-boundaries}
 
 以下边界用于防止核心膨胀；与任何其它章节冲突时，以本节为准。
 

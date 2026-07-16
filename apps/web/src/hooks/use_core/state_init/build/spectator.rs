@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
+//!
 use crate::api::ConnectionStatus;
 use leptos::prelude::*;
 

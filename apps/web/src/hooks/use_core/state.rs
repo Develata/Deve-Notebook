@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
+//!
 // apps/web/src/hooks/use_core/state.rs
 //! # 状态信号声明
 //!

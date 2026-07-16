@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_storage/repair#backup-export
+//!   - 04_repository#tree-projection-contract
+//!
 use super::{LegacyLedgerEntry, doc};
 use anyhow::{Context, Result, anyhow, bail};
 use deve_core::models::{DocId, LedgerEvent, NodeId, Op, StructureOp};

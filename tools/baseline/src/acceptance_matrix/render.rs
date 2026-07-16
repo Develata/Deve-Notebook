@@ -1,5 +1,6 @@
 //! Deterministic human-readable projection of the acceptance matrix.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{MATRIX_PATH, MatrixRow, RENDERED_PATH};
 use anyhow::{Context, Result, bail};

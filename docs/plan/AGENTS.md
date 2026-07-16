@@ -77,7 +77,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 - 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter-path>#<stable-anchor-id>`。
 - `<chapter-path>` 可以是单文件章节的 basename（如 `04_repository`），也可以是多文件章节的相对路径（如 `03_storage/authority`，对应 `docs/plan/03_storage/authority.md`）。chapter-path 只允许一层子文件，不得出现多级子目录。
 - `#` 后面是 plan 章节里用 `{#id}` 声明的稳定 anchor，**MUST NOT** 依赖自然语言标题文字。
-- 纯工具/util 模块（如 `utils/path.rs`）可使用 `//! plan_ref: infra` 标记为基础设施，豁免章节追溯。
+- 测试、生成源码与真正 repo-local infra 只能通过 `scripts/plan-ref-exemptions.tsv` 的**精确文件路径 + 类别 + 理由**显式豁免；不得再依赖文件名、目录名或行数启发式自动跳过。
+- repo-local infra 模块同时 MUST 使用精确 `//! plan_ref: infra` header，并在 exemption registry 中登记为 `local-only-infra`；`infra` 只表示分类，不能自行充当无理由豁免。
+- `generated` 豁免的文件 MUST 带明确的 generated / do-not-edit provenance marker；手写文件名包含 `generated` 不构成豁免依据。
 - 同一模块 MAY 引用多个章节；跨域模块应优先拆分而非堆叠引用。
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
 - 新增 plan_ref 时 MUST 在 plan 章节相应节加上 `{#anchor-id}`；若无 anchor，MUST 先补 anchor 再写代码引用。
@@ -88,11 +90,16 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 本表记录 `docs/plan/` 中可被代码 `plan_ref` 引用的稳定锚点。锚点出现在本表不代表当前必须已有代码引用；是否已被实现覆盖以 `scripts/plan-coverage.sh` 的反向覆盖矩阵为准。
 
+<!-- stable-plan-anchor-registry:start -->
 | Anchor | Plan 位置 | 语义 |
 |---|---|---|
+| `01_terminology#normative-language` | `## 1. Normative Language` | MUST/SHOULD/MAY 规范词义与合同解释边界 |
+| `01_terminology#core-definitions` | `## 2. Core Definitions` | ledger/projection/runtime/authority 等核心术语唯一语义 |
+| `02_positioning#core-boundaries` | `## 3. Core Boundaries` | 首发核心 MUST/MUST NOT、插件可选面与产品定位边界 |
+| `10_rendering#current-rendering-split` | `## 1.1 Rendering Capability Boundary` | baseline/extended rendering 能力分层与 source-first projection 边界 |
 | `10_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
 | `10_rendering#link-activation-gate` | `### 5.2 Link Activation` | Ctrl/Cmd 链接激活闸门、全局 modifier state 与 guarded external open |
-| `10_rendering#code-block-toolbar-contract` | `### 6.4 Code Block Toolbar Contract` | CodeMirror adapter 代码块 Copy/Ellipsis toolbar、可扩展菜单与空 action 状态; no-rust-plan-ref |
+| `10_rendering#code-block-toolbar-contract` | `### 6.4 Code Block Toolbar Contract` | CodeMirror adapter 代码块 Copy/Ellipsis toolbar、可扩展菜单与空 action 状态 |
 | `10_rendering#outline-projection` | `### 6.5 Outline Projection` | Outline heading scan、inline projection 与跳转语义 |
 | `10_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
 | `10_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
@@ -118,6 +125,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
 | `07_network#projection-recovery-contract` | `### 4.3.1 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
+| `07_network#native-full-peer-runtime` | `### 12.5 Native Full Peer Runtime` | CLI/native FullPeer transport、repo-scoped admission 与宿主 runtime 边界 |
 | `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
 | `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
@@ -127,23 +135,26 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `05_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
 | `05_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
 | `05_diff_logic#remote-projection-transport` | `### 2.3.2 Remote Projection Transport Lifecycle` | WebDAV/S3 Markdown Projection Workspace push/pull、External Changes admission 与非 backup 边界 |
+| `05_diff_logic#typed-diff-projection-contract` | `### 2.5 Typed Diff Projection Contract` | backend-owned typed diff projection、显示层消费与 authority-neutral diff 边界 |
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
 | `11_ui_design/index#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
+| `11_ui_design/index#layout-tokens-and-layer-registry` | `### 3.4 Layout Tokens and Layer Registry` | canonical semantic color、z-index 与 shared layout token registry |
+| `11_ui_design/index#ui-runtime-boundary` | `## 10. Runtime Boundary` | view/control/runtime 依赖方向与薄前端壳层边界 |
 | `11_ui_design/index#editor-group-tabstrip` | `### 3.6 Editor Group Tabs` | 主编辑区 doc/diff tab strip 的 view-local 状态、切换、关闭与 authority 边界 |
 | `11_ui_design/index#context-action-surface` | `### 3.3.1 Context Action Surface` | file tree/menu/command/shortcut 的 ContextAction 投影、执行边界与 external action provenance 合同 |
 | `11_ui_design/index#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
 | `11_ui_design/index#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
 | `11_ui_design/01_web#single-binary-distribution` | `## 1. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
 | `11_ui_design/01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
-| `11_ui_design/02_desktop#desktop-current-native-boundary` | `## 1. 原生适配器边界` | Desktop native adapter 当前边界与 post-gate 目标区分（check-native-track-boundary.sh 断言）; no-rust-plan-ref |
+| `11_ui_design/02_desktop#desktop-current-native-boundary` | `## 1. 原生适配器边界` | Desktop native adapter 当前边界与 post-gate 目标区分（deve_baseline native-track-boundary 断言） |
 | `11_ui_design/02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
 | `11_ui_design/02_desktop#desktop-native-shell-modes` | `### 1.1.1 Desktop Native Shell Modes` | Desktop `NativeShellMode` 的 `LocalBackend` / `RemoteBrowser` 语义、sidecar/loopback/session handoff 与 remote preference 探测边界 |
 | `11_ui_design/02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
 | `11_ui_design/02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
 | `11_ui_design/02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
 | `11_ui_design/02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
-| `11_ui_design/03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
+| `11_ui_design/03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分（deve_baseline native-track-boundary 断言） |
 | `11_ui_design/03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
 | `11_ui_design/03_mobile#mobile-native-shell-modes` | `### 1.1.1 Mobile Native Shell Modes` | Mobile `NativeShellMode` 的 embedded loopback/session bootstrap、WebView readiness 与 `RemoteBrowser` 边界 |
 | `11_ui_design/03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
@@ -182,9 +193,16 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `15_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
 | `17_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |
 | `17_tech_stack#search-baseline` | `### 1.2 搜索基线` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
+| `17_tech_stack#git-ecosystem-bridge` | `### 1.3 Git 生态镜像桥` | Git executable / mirror bridge 只服务 ecosystem interop，不拥有 NoteGit authority |
 | `17_tech_stack#native-packaging-dependency-gate` | `### 1.4 原生打包依赖门禁` | Desktop/Mobile native-packaging optional dependency 与 gate policy |
+| `17_tech_stack#canonical-rust-toolchain` | `### Canonical Rust Toolchain` | workspace Rust toolchain pin、release baseline 与 target-host 一致性 |
 | `17_tech_stack#performance-profiles-and-feature-matrix` | `## 3. Performance Profiles & Feature Matrix` | profile 枚举（standard/low-spec）与 feature matrix 权威；op 维度 budget 归 21_perf_budget |
 | `18_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
+| `18_release#developer-baseline-checkers` | `### 2.1.1 Developer Baseline Checkers` | deve_baseline 确定性规则、TSV 执行器与无产品 authority 的治理边界 |
+| `18_release#remote-browser-candidate-fixture` | `#### RemoteBrowser Candidate Fixture` | exact-HEAD RemoteBrowser target-host fixture、credential hygiene 与证据边界 |
+| `18_release#first-tag-acceptance-matrix` | `### 2.1.4 First-tag Acceptance Matrix` | 首发 journey、producer/receipt 唯一性与 tag-ready 验收矩阵 |
+| `18_release#artifact-identity-and-integrity` | `### 2.1.5 Artifact Identity and Integrity` | candidate artifact identity、checksums、SBOM、provenance 与 sealed bundle 合同 |
+| `18_release#release-versioning` | `## 3. Versioning` | SemVer tag、Cargo/app version 与 release promotion 顺序合同 |
 | `09_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
 | `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
 | `09_web_thin_client_ledger#projection-recovery-coordinator` | `### 8.1.1 Projection Recovery Coordinator` | Web generation-bound projection recovery、pending 保留、gap reconnect 与显式 Retry |
@@ -202,36 +220,37 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#projection-backup-provider-dispatch-contract` | `## 11. Runtime Boundary` | provider dispatch 属于 Remote Projection Transport；不得直接写 Ledger/SC/Git 或确认 External Changes |
 | `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 | `12_source_control_ui#external-changes-sibling-view` | `## 4.1 External Changes Sibling View` | External Changes 同级入口、投影偏差导入 ledger 与 Source Control commit anchor 分离边界 |
-| `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）；由 architecture-registry baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `21_perf_budget#critical-path-budget` | `## 2. Critical Path Budget` | 关键路径 P50/P99 latency 与 RSS budget 表；由 `deve_baseline perf-budget` / `PERF-001` baseline 绑定（tools/shell 合同，无 crates/apps Rust plan_ref）；no-rust-plan-ref |
+| `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 deve_baseline architecture-registry 绑定 |
+| `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引；由 deve_baseline architecture-registry 绑定 |
+| `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引；由 deve_baseline architecture-registry 绑定 |
+| `20_operations_catalog#configuration-entry-index` | `## 6. Configuration Entry Index` | 配置入口主索引（定义 defer 各原章）；由 deve_baseline architecture-registry 绑定 |
+| `21_perf_budget#critical-path-budget` | `## 2. Critical Path Budget` | 关键路径 P50/P99 latency 与 RSS budget 表；由 deve_baseline perf-budget / PERF-001 绑定 |
 | `21_perf_budget#perf-budget-fuse` | `## 3. CI Fuse Thresholds` | CI fuse 阈值；由 scripts/plan-coverage.sh --check-perf-budget enforcing（shell 合同，无 Rust plan_ref）; no-rust-plan-ref |
-| `22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
-| `22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref |
+| `22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
 | `23_threat_model#stride-catalog` | `## 3. STRIDE Catalog` | STRIDE 威胁面与缓解归属目录；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
-| `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
-| `23_threat_model#algorithm-deprecation` | `## 5. Algorithm Deprecation` | 加密原语退役策略与迁移窗口；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |
-| `23_threat_model#supply-chain` | `## 6. Supply Chain` | SBOM/reproducible build/dependency gate/signing 策略；SECURITY.md/auth baseline 断言，无 Rust plan_ref; no-rust-plan-ref |
-| `23_threat_model#coordinated-vulnerability-disclosure` | `## 7. Coordinated Vulnerability Disclosure` | CVD 渠道/embargo/SLA 策略；SECURITY.md/auth baseline 断言，无 Rust plan_ref; no-rust-plan-ref |
+| `23_threat_model#key-lifecycle` | `## 4. Key Lifecycle (高层流程)` | 密钥生命周期高层流程（具体协议 defer 08/06/07）；由 auth/security baseline 绑定 |
+| `23_threat_model#algorithm-deprecation` | `## 5. Algorithm Deprecation` | 加密原语退役策略与迁移窗口；由 auth/security baseline 绑定 |
+| `23_threat_model#supply-chain` | `## 6. Supply Chain` | SBOM/reproducible build/dependency gate/signing 策略；由 release-audit/auth baseline 绑定 |
+| `23_threat_model#coordinated-vulnerability-disclosure` | `## 7. Coordinated Vulnerability Disclosure` | CVD 渠道/embargo/SLA 策略；由 SECURITY/auth baseline 绑定 |
+<!-- stable-plan-anchor-registry:end -->
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 
-`scripts/plan-coverage.sh` 扫描 `crates/` 与 `apps/` 下所有 `.rs` 文件，输出：
-1. 无 `plan_ref` 注解的非测试源码模块计数（warning，非阻塞）
+`scripts/plan-coverage.sh` 扫描 `apps/`、`crates/` 与 `tools/` 下所有 present、非 ignored `.rs` 文件，输出：
+1. 无规范 `plan_ref` 且没有精确显式豁免的源码模块清单（error，阻塞）
 2. 引用了已不存在的章节或章节名的模块清单（error，阻塞）
 3. plan 章节的反向覆盖矩阵：每个 `§section` 被哪些代码文件引用
 
 默认输出保持 CI 友好的计数与反向覆盖矩阵；需要处理 `plan_ref` 债务时，可运行 `scripts/plan-coverage.sh --summary-missing-plan-ref` 输出聚合分布，或运行 `scripts/plan-coverage.sh --list-missing-plan-ref` 输出非豁免 missing 模块路径清单。
 
-测试文件、test support、bench、generated/vendor/dist/public glue 不计入缺失注解 warning；但这些文件一旦声明 `plan_ref`，仍会参与 dangling 校验和反向覆盖矩阵。普通 `src/bin` 和 runtime support 文件不默认豁免。
+`scripts/plan-ref-exemptions.tsv` 是唯一豁免输入。每行必须声明一个 Rust 文件的精确 repo-relative path、`test` / `generated` / `local-only-infra` 类别、owner（generated 必须指向 tracked producer，其余为 `-`）和非空理由；`test` 还必须位于明确的 test/bench/test-support surface。重复、越界、缺失、陈旧、类别/header 不一致或 generated provenance 缺失均为 blocking。任何文件一旦声明真实 `plan_ref`，对应豁免必须删除；普通 `src/bin`、runtime support、短文件以及仅因名称含 `test` / `generated` 的文件均不默认豁免。
 
 CI 流水线 MUST 运行此脚本；产出的 `plan-coverage.txt` 作为 PR artifact 留存。
 

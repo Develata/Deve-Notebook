@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 21_perf_budget#critical-path-budget
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

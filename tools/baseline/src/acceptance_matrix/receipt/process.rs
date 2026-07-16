@@ -1,5 +1,6 @@
 //! Bounded producer process and process-tree lifecycle.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::CommandStep;
 use anyhow::{Context, Result, bail};

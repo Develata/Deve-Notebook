@@ -1,4 +1,9 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 14_commands#command-palette-shortcuts
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#trusted-agent-bridge
+//!   - 19_plugins#skills-cli-extension-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

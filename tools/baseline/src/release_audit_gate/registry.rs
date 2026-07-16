@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 23_threat_model#supply-chain
 
 use super::LABEL;
 use anyhow::{Result, bail};

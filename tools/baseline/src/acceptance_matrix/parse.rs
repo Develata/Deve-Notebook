@@ -1,5 +1,6 @@
 //! Parsers for acceptance cases, operation coverage, and the matrix TSV.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use super::model::{FlowCase, HEADER, MATRIX_PATH, MatrixRow};
 use anyhow::{Context, Result, bail};

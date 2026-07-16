@@ -1,4 +1,6 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 10_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
 
 use crate::context::BaselineContext;
 use crate::spec::{RunMode, run_tsv_with_mode};

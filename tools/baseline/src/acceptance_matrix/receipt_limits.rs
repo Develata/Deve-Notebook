@@ -1,5 +1,6 @@
 //! Shared receipt/claims resource limits for producers, collectors, and tag-ready.
-//! plan_ref: 18_release#first-tag-acceptance-matrix
+//! plan_ref:
+//!   - 18_release#first-tag-acceptance-matrix
 
 use anyhow::{Context, Result, bail};
 use std::fs::{self, File};

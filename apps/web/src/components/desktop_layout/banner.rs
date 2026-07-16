@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 09_web_thin_client_ledger#write-readiness
+//!
 use leptos::prelude::*;
 
 #[component]

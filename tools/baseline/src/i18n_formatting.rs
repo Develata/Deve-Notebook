@@ -1,4 +1,5 @@
-//! plan_ref: infra
+//! plan_ref:
+//!   - 13_i18n#i18n-facade-contract
 
 use crate::context::BaselineContext;
 use crate::spec::run_tsv;
