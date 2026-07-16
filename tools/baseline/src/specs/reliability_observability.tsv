@@ -47,13 +47,13 @@ contains	docs/plan/22_reliability_observability.md	`Quarantined` → `T1`
 contains	docs/plan/22_reliability_observability.md	其余 `Degraded*` → `T2`
 contains	docs/plan/22_reliability_observability.md	## 8. Resilience Playbook Index
 contains	docs/plan/22_reliability_observability.md	`06_backup#projection-backup-pull-state-machine-contract`
-contains	docs/plan/AGENTS.md	`22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
-contains	docs/plan/AGENTS.md	`22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 REL-013 baseline / tools/shell 合同绑定，无 crates/apps Rust plan_ref；no-rust-plan-ref
+contains	docs/plan/AGENTS.md	`22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/coverage-matrix.md	| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |
 contains	docs/features/operation-coverage.md	| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`, `REL-014` |
 contains	docs/features/operations/release_quality_gates.md	- `Related Acceptance Cases`: `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`, `REL-014`
