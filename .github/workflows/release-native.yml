@@ -310,6 +310,10 @@ jobs:
   mobile-android:
     runs-on: ubuntu-latest
     timeout-minutes: 210
+    env:
+      # Android packaging cross-compiles the native shell. Do not compile the
+      # unrelated Linux GTK host surface during target-host preflight.
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

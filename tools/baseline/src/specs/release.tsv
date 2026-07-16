@@ -59,6 +59,7 @@ contains	.github/workflows/release-native.yml	--producer android.remote-browser
 contains	.github/workflows/release-native.yml	release candidate Windows runs are immutable
 contains	.github/workflows/release-native.yml	release candidate macOS runs are immutable
 contains	.github/workflows/release-native.yml	release candidate Android runs are immutable
+contains	.github/workflows/release-native.yml	DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
 contains	.github/workflows/release-native.yml	Verify Windows Playwright process adapter
 contains	.github/workflows/release-native.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/playwright-core-process.test.ps1
 contains	.github/workflows/release-native.yml	pwsh -NoProfile -File scripts/playwright-core-process.test.ps1

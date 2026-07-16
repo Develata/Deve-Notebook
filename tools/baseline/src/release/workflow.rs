@@ -269,7 +269,7 @@ fn check_native_candidate(root: &Path) -> Result<()> {
         "release-native.yml desktop-macos job",
     )?;
 
-    let mobile_android = yaml_mapping_block(&native, 2, "mobile-android")?;
+    let mobile_android = validated_mobile_android_job(&native)?;
     require_ordered_text(
         &mobile_android,
         &[
@@ -315,6 +315,21 @@ fn check_native_candidate(root: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn validated_mobile_android_job(native: &str) -> Result<String> {
+    let mobile_android = yaml_mapping_block(native, 2, "mobile-android")?;
+    let job_env = yaml_mapping_block(&mobile_android, 4, "env")?;
+    const KEY: &str = "DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK:";
+    const ASSIGNMENT: &str = "      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"";
+    if job_env.lines().filter(|line| *line == ASSIGNMENT).count() != 1
+        || mobile_android.matches(KEY).count() != 1
+    {
+        bail!(
+            "release-baseline-check: release-native.yml mobile-android job-level env must set {KEY} \"0\" exactly once"
+        );
+    }
+    Ok(mobile_android)
 }
 
 fn check_aggregate(root: &Path) -> Result<()> {
@@ -432,4 +447,35 @@ fn check_promotion(root: &Path) -> Result<()> {
 fn read_workflow(root: &Path, name: &str) -> Result<String> {
     let path = root.join(".github/workflows").join(name);
     fs::read_to_string(&path).with_context(|| format!("read workflow {}", path.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validated_mobile_android_job;
+
+    #[test]
+    fn android_candidate_disables_unrelated_linux_host_packaging_check() {
+        let valid = r#"jobs:
+  mobile-android:
+    env:
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
+    steps: []
+"#;
+        validated_mobile_android_job(valid).expect("valid Android job");
+
+        for invalid in [
+            "jobs:\n  mobile-android:\n    steps: []\n",
+            "jobs:\n  mobile-android:\n    env:\n      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"1\"\n",
+            "jobs:\n  desktop-linux:\n    env:\n      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n  mobile-android:\n    steps: []\n",
+            "jobs:\n  mobile-android:\n    env:\n      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n",
+            "jobs:\n  mobile-android:\n    steps:\n      - name: too narrow\n        env:\n          DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n        run: true\n",
+            "jobs:\n  mobile-android:\n    env:\n      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n    steps:\n      - name: duplicate override\n        env:\n          DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n        run: true\n",
+            "jobs:\n  mobile-android:\n    env:\n      COMMENT: |\n        DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n    steps: []\n",
+        ] {
+            assert!(
+                validated_mobile_android_job(invalid).is_err(),
+                "invalid fixture unexpectedly passed: {invalid}"
+            );
+        }
+    }
 }
