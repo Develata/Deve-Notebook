@@ -28,7 +28,7 @@ fn test_doc_ops_queries_fail_closed_on_dangling_index() -> Result<()> {
         let table = read.open_multimap_table(DOC_OPS)?;
         table
             .get(doc_id.as_u128())?
-            .last()
+            .next_back()
             .transpose()?
             .map(|seq| seq.value())
             .ok_or_else(|| anyhow::anyhow!("missing DOC_OPS entry for {}", doc_id))
@@ -77,7 +77,7 @@ fn test_node_ops_queries_fail_closed_on_dangling_index() -> Result<()> {
         let table = read.open_multimap_table(NODE_OPS)?;
         table
             .get(node_id.as_u128())?
-            .last()
+            .next_back()
             .transpose()?
             .map(|seq| seq.value())
             .ok_or_else(|| anyhow::anyhow!("missing NODE_OPS entry for {}", node_id))

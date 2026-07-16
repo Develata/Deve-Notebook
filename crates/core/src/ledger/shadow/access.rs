@@ -65,9 +65,12 @@ impl<'a> ShadowRepo<'a> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_multimap_table(DOC_OPS)?;
 
-        // Optimization: Redb Multimap values are sorted, so the last one is the max.
-        let iter = table.get(doc_id.as_u128())?;
-        let max_seq = iter.last().transpose()?.map(|v| v.value());
+        // Redb Multimap values are sorted; read the back instead of scanning every value.
+        let max_seq = table
+            .get(doc_id.as_u128())?
+            .next_back()
+            .transpose()?
+            .map(|v| v.value());
         Ok(max_seq)
     }
 
@@ -111,35 +114,96 @@ mod tests {
         // Ensure shadow DB exists
         ensure_shadow_db(&remotes_dir, &shadow_dbs, &peer_id, &repo_id)?;
 
-        // Write some test data (simulating append_remote_op)
+        let doc_id = DocId::new();
+        let other_doc_id = DocId::new();
+
+        // Write healthy, peer-contiguous ledger rows and insert their index keys out of order.
         {
             let dbs = shadow_dbs.read().unwrap();
             let peer_repos = dbs.get(&peer_id).unwrap();
             let db = peer_repos.get(&repo_id).unwrap();
 
-            let doc_id = DocId::new();
-            let entry = LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 0,
-                    content: "test".into(),
-                },
-                1000,
-                peer_id.clone(),
-                1,
-                None,
-                None,
-            );
+            let entries = [
+                (
+                    1,
+                    doc_id,
+                    LedgerEntry::new_content(
+                        doc_id,
+                        Op::Insert {
+                            pos: 0,
+                            content: "a".into(),
+                        },
+                        1000,
+                        peer_id.clone(),
+                        1,
+                        None,
+                        None,
+                    ),
+                ),
+                (
+                    2,
+                    doc_id,
+                    LedgerEntry::new_content(
+                        doc_id,
+                        Op::Insert {
+                            pos: 1,
+                            content: "b".into(),
+                        },
+                        1001,
+                        peer_id.clone(),
+                        2,
+                        None,
+                        None,
+                    ),
+                ),
+                (
+                    3,
+                    doc_id,
+                    LedgerEntry::new_content(
+                        doc_id,
+                        Op::Insert {
+                            pos: 2,
+                            content: "c".into(),
+                        },
+                        1002,
+                        peer_id.clone(),
+                        3,
+                        None,
+                        None,
+                    ),
+                ),
+                (
+                    4,
+                    other_doc_id,
+                    LedgerEntry::new_content(
+                        other_doc_id,
+                        Op::Insert {
+                            pos: 0,
+                            content: "other".into(),
+                        },
+                        1003,
+                        peer_id.clone(),
+                        4,
+                        None,
+                        None,
+                    ),
+                ),
+            ];
 
             // Direct write for testing
             let write_txn = db.begin_write()?;
             {
                 let mut table = write_txn.open_table(LEDGER_OPS)?;
-                let bytes = serialize_ledger_entry(&entry)?;
-                table.insert(1u64, bytes.as_slice())?;
+                for (global_seq, _, entry) in &entries {
+                    let bytes = serialize_ledger_entry(entry)?;
+                    table.insert(*global_seq, bytes.as_slice())?;
+                }
 
                 let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
+                doc_ops.insert(doc_id.as_u128(), 3u64)?;
                 doc_ops.insert(doc_id.as_u128(), 1u64)?;
+                doc_ops.insert(doc_id.as_u128(), 2u64)?;
+                doc_ops.insert(other_doc_id.as_u128(), 4u64)?;
             }
             write_txn.commit()?;
         }
@@ -156,7 +220,10 @@ mod tests {
 
         // Verify read-only access works
         let max_seq = shadow_repo.get_global_max_seq()?;
-        assert_eq!(max_seq, 1);
+        assert_eq!(max_seq, 4);
+        assert_eq!(shadow_repo.get_max_seq(doc_id)?, Some(3));
+        assert_eq!(shadow_repo.get_max_seq(other_doc_id)?, Some(4));
+        assert_eq!(shadow_repo.get_max_seq(DocId::new())?, None);
 
         Ok(())
     }
