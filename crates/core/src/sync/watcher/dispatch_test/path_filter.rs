@@ -1,6 +1,11 @@
+use super::super::WatcherCallback;
 use super::super::dispatch::dispatch_batch;
-use super::super::dispatch_test_support::{commit_doc, event_for, new_sync, rename_event};
+use super::super::dispatch_test_support::{
+    accessed_dir_event, assert_fs_message, commit_doc, event_for, new_sync, removed_dir_event,
+    rename_event,
+};
 use crate::source_control::ChangeStatus;
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn dispatch_batch_ignores_event_paths_outside_repo_root() -> anyhow::Result<()> {
@@ -105,6 +110,85 @@ fn dispatch_batch_scans_repo_root_directory_event() -> anyhow::Result<()> {
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].path, "root.md");
     assert_eq!(pending[0].status, ChangeStatus::Added);
+    Ok(())
+}
+
+#[test]
+fn dispatch_batch_rescans_removed_directory_after_path_disappears() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    commit_doc(&repo, &sync, &repo_name, "notes/removed/a.md", "base")?;
+    let removed = repo_root.join("notes").join("removed");
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let callback_messages = messages.clone();
+    let callback: WatcherCallback = Arc::new(move |message| {
+        callback_messages
+            .lock()
+            .expect("messages lock")
+            .push(message);
+    });
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![accessed_dir_event(removed.clone())],
+        Some(&callback),
+    )?;
+    assert!(messages.lock().expect("messages lock").is_empty());
+
+    std::fs::remove_dir_all(&removed)?;
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![removed_dir_event(removed)],
+        Some(&callback),
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert!(pending.iter().any(|entry| {
+        entry.path == "notes/removed/a.md" && entry.status == ChangeStatus::Deleted
+    }));
+    let messages = messages.lock().expect("messages lock");
+    assert_eq!(messages.len(), 1);
+    assert_fs_message(&messages[0], "notes/removed", "dir_changed");
+    Ok(())
+}
+
+#[test]
+fn dispatch_batch_coalesces_removed_directories_to_one_refresh() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    commit_doc(&repo, &sync, &repo_name, "one/a.md", "a")?;
+    commit_doc(&repo, &sync, &repo_name, "two/b.md", "b")?;
+    let one = repo_root.join("one");
+    let two = repo_root.join("two");
+    std::fs::remove_dir_all(&one)?;
+    std::fs::remove_dir_all(&two)?;
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let callback_messages = messages.clone();
+    let callback: WatcherCallback = Arc::new(move |message| {
+        callback_messages
+            .lock()
+            .expect("messages lock")
+            .push(message);
+    });
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![removed_dir_event(one), removed_dir_event(two)],
+        Some(&callback),
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert!(pending.iter().any(|entry| entry.path == "one/a.md"));
+    assert!(pending.iter().any(|entry| entry.path == "two/b.md"));
+    assert_eq!(messages.lock().expect("messages lock").len(), 1);
     Ok(())
 }
 

@@ -3,6 +3,7 @@
 //!
 use crate::api::WsService;
 use deve_core::protocol::ServerMessage;
+use leptos::prelude::Callback;
 
 use super::super::state::CoreSignals;
 use super::message_dispatch_route_control::route_control_message;
@@ -17,6 +18,7 @@ pub fn handle_message(
     signals: CoreSignals,
     locale: crate::i18n::Locale,
     schedule_refresh: &dyn Fn(),
+    external_changes_refresh: Callback<()>,
 ) {
     let Some(msg) = route_projection_and_sync_message(msg, signals) else {
         return;
@@ -30,5 +32,5 @@ pub fn handle_message(
     let Some(msg) = route_protocol_and_write_message(msg, ws, locale, signals) else {
         return;
     };
-    handle_sc_or_remaining(msg, ws, signals, schedule_refresh);
+    handle_sc_or_remaining(msg, ws, signals, schedule_refresh, external_changes_refresh);
 }

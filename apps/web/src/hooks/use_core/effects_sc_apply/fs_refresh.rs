@@ -35,7 +35,7 @@ pub(in crate::hooks::use_core) fn refresh_after_fs_change(
     signals: FsRefreshSignals,
     schedule_refresh: &dyn Fn(),
     ws: &WsService,
-) {
+) -> bool {
     let conflict_tag = if has_conflict { " [冲突]" } else { "" };
     if has_conflict || change_type != "dir_changed" {
         leptos::logging::log!("文件变更: {} ({}){}", path, change_type, conflict_tag);
@@ -74,7 +74,7 @@ pub(in crate::hooks::use_core) fn refresh_after_fs_change(
             pending_repo_switch: pending_repo_switch.is_some(),
         },
     ) {
-        return;
+        return false;
     }
     schedule_refresh();
     let request_id = uuid::Uuid::new_v4().to_string();
@@ -86,4 +86,5 @@ pub(in crate::hooks::use_core) fn refresh_after_fs_change(
         request_id,
         scope_nonce: Some(current_scope_nonce),
     });
+    true
 }

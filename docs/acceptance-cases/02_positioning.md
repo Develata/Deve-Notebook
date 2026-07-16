@@ -21,10 +21,12 @@
   steps:
     - run: powershell -Command "'v1' | Set-Content -Path ${DEVE_DATA_DIR}/notes/main/test.md"
     - run: powershell -Command "Start-Sleep -Milliseconds 500"
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_atomic_replace_records_single_final_candidate -- --nocapture
   assertions:
     - log_contains: "watch"  # Watcher 有事件日志
     - pending_fs_ops_contains: "test.md"  # 仅进入工作区待确认集合
     - ledger_op_not_appended: "test.md"
+    - api_assert: atomic_replace_has_one_final_pending_candidate true
 
 - case_id: POS-003
   goal: 双向闭环无死循环。
@@ -33,9 +35,11 @@
   steps:
     - run: powershell -Command "'loop-test' | Set-Content -Path ${DEVE_DATA_DIR}/notes/main/loop.md"
     - run: powershell -Command "Start-Sleep -Milliseconds 1000"
+    - run: cargo test -p deve_core --test watcher_writeback_loop -- --nocapture
   assertions:
     - log_not_contains: "repeat-trigger"  # 不出现重复循环标记
     - pending_fs_ops_count_increases_by: 1
+    - api_assert: projection_writeback_absent_after_watcher_liveness_sentinel true
 
 - case_id: POS-004
   goal: 重命名不丢 DocId。

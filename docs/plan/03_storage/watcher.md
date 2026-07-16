@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-07-16`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher.rs`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`
 
@@ -62,6 +62,8 @@ FsEvent
 
 - 必须存在统一 `FsWatcherBackend` trait。
 - Desktop / Android / iOS 后端必须在后端层归一化事件语义。
+- read/open/access 等非变更目录事件 **MUST NOT** 触发 repo scan，也不得占用目录刷新
+  cooldown；未知变更类型可按 fail-safe 路径触发 scan。
 
 ### 8.2 Startup Semantics
 
@@ -87,11 +89,18 @@ FsEvent
 
 - queue overflow / dropped events 时，watcher **MUST** 触发全量 reconcile。
 - reconcile 完成前 **MUST** 暂停继续消费增量事件。
+- backend 作为 recoverable event batch 上报的 error 与显式 rescan flag **MUST**
+  收敛为同一个 rescan barrier；全量 reconcile 同步完成后，才允许消费下一批增量事件。
+  backend receive/worker fatal error 的状态与恢复策略不由本条定义。
 
 ### 8.6 Lifecycle
 
 - repo close / switch **MUST** 停止对应 watcher 并 drain 事件。
 - 同一 repo **MUST NOT** 同时存在多个 watcher。
+- stop **MUST** 等待底层 watcher/debouncer event thread 与外层 consumer thread
+  退出；stop 返回后不得再产生 callback 或 `pending_fs_ops` candidate。
+- consumer 因 receive/dispatch/reconcile 错误退出时也 **MUST** 执行 backend stop/join；
+  cleanup 失败不得覆盖 primary failure。
 
 ### 8.7 Debounce and Atomic Write Semantics
 
@@ -99,6 +108,15 @@ FsEvent
 - debounce window **MUST NOT** 为 `0`
 - atomic write / temp-file replace 必须统一收敛成单次 pending modify / rename candidate
 - rename pair 识别失败时，宁可退化为 pending delete + pending create，也不得伪造 authority rename
+- 目录删除事件即使在消费时目标路径已经不存在，也 **MUST** 依据 backend remove
+  kind 触发 repo-scoped scan；不得用 post-event `metadata(NotFound)` 将其静默过滤。
+- 目录删除 scan **MUST NOT** 被通用目录 cooldown 丢弃；同一 debounced batch 内的
+  多个删除目录事件 **MAY** 合并为一次 repo scan。
+- atomic temp-file replace 的 pending hash **MUST** 对应最终目标文件内容；临时文件
+  **MUST NOT** 单独进入 `pending_fs_ops`。
+- 成功完成目录 scan 或 full reconcile 后，watcher **MUST** 经既有 typed callback
+  发送一次 repo-scoped `dir_changed` refresh；消费端据此重新读取 External Changes
+  与 tree projection，该消息本身不改变 authority。
 
 ## 10. Forbidden Patterns（watcher）
 

@@ -93,5 +93,16 @@ pub(super) fn message(
     })
 }
 
+pub(super) fn dir_changed_message(repo_id: crate::models::RepoId, path: &str) -> ServerMessage {
+    ServerMessage::FsChangeDetected {
+        repo_id: Some(repo_id),
+        branch: None,
+        scope_nonce: None,
+        path: path.to_string(),
+        change_type: "dir_changed".to_string(),
+        has_conflict: false,
+    }
+}
+
 #[cfg(test)]
 mod tests;

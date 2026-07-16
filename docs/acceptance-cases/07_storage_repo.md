@@ -88,6 +88,12 @@
   steps:
     - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
     - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
+    - run: cargo test -p deve_core --lib dispatch_batch_rescans_removed_directory_after_path_disappears -- --nocapture
+    - run: cargo test -p deve_core --lib full_rescan_emits_repo_scoped_dir_changed_message -- --nocapture
+    - run: cargo test -p deve_core --lib consumer_failure_still_stops_backend -- --nocapture
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_stop_prevents_post_stop_delivery -- --nocapture
+    - run: cargo test -p deve_web fs_change_refreshes_external_changes_sibling_view -- --nocapture
     - run: cargo test -p deve_core internal_repo_path_uses_segment_semantics -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_respects_deveignore_for_matching_markdown -- --nocapture
@@ -95,7 +101,12 @@
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
+    - api_assert: removed_directory_rescans_tracked_descendants true
+    - ws_assert: directory_rescan_emits_repo_scoped_dir_changed true
     - cli_assert: duplicate_watcher_start_fails_closed true
+    - api_assert: consumer_failure_stops_backend true
+    - api_assert: watcher_stop_blocks_post_stop_delivery true
+    - web_assert: fs_change_refreshes_external_changes_sibling_view true
     - cli_assert: internal_notegit_and_git_segments_ignored true
     - cli_assert: notegit_backup_sibling_not_rejected_by_prefix true
     - cli_assert: pending_fs_ops_ignores_deveignore true
@@ -266,12 +277,14 @@
     - run: cargo test -p deve_core notify_rescan_flag_requests_rescan -- --nocapture
     - run: cargo test -p deve_core watcher_rejects_zero_debounce_window -- --nocapture
     - run: cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_atomic_replace_records_single_final_candidate -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: watcher_backend_error_triggers_rescan true
     - cli_assert: watcher_rescan_flag_triggers_rescan true
     - cli_assert: zero_debounce_rejected true
     - cli_assert: modify_burst_collapses_to_single_pending_entry true
+    - api_assert: atomic_replace_has_one_final_pending_candidate true
 
 - case_id: STORE-017
   goal: Repo catalog hard fail / quarantine。

@@ -15,7 +15,17 @@ impl SyncManager {
         if !self.dir_refresh_guard.should_refresh(repo_id) {
             return Ok(None);
         }
+        self.force_dir_refresh(repo_name, repo_id, repo_path)
+            .map(Some)
+    }
+
+    pub(crate) fn force_dir_refresh(
+        &self,
+        repo_name: &str,
+        repo_id: RepoId,
+        repo_path: &str,
+    ) -> Result<(RepoId, String)> {
         super::scan::scan_local_repo(&self.repo, &self.vfs, repo_name)?;
-        Ok(Some((repo_id, repo_path.to_string())))
+        Ok((repo_id, repo_path.to_string()))
     }
 }

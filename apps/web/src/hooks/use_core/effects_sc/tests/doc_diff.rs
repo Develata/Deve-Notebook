@@ -102,6 +102,7 @@ fn dispatch_doc_diff_from_repo(
         pending_repo_switch,
         current_scope_nonce,
         schedule_refresh: &schedule_refresh,
+        external_changes_refresh: Callback::new(|()| {}),
         ws: &ws,
     };
     let handled = handle_sc_message(

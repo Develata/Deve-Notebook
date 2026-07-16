@@ -162,6 +162,7 @@ fn dispatch_read_list_from_repo_with_notice(
         pending_repo_switch,
         current_scope_nonce,
         schedule_refresh: &schedule_refresh,
+        external_changes_refresh: Callback::new(|()| {}),
         ws: &ws,
     };
     let msg = match kind {

@@ -14,7 +14,8 @@
 //! 重复信号触发同一 `(path, status, hash, ...)` 的 upsert **MUST** 产生
 //! 字节相同的 side table 行。`detected_at` 仅在语义字段变化时更新；
 //! 若所有语义字段与已存在条目相等，`upsert` **MUST** 跳过写入，
-//! 保持原行（含原 `detected_at`）不变。详见 plan 04_storage#watcher-contract。
+//! 保持原行（含原 `detected_at`）不变。详见 plan
+//! 03_storage/watcher#watcher-contract。
 //!
 //! **存储结构**:
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)

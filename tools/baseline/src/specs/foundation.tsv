@@ -24,11 +24,15 @@ case_contains	docs/acceptance-cases/02_positioning.md	POS-001	ledger/remotes
 contains	apps/cli/src/commands/init.rs	fn init_creates_trinity_workspace_layout()
 case_contains	docs/acceptance-cases/02_positioning.md	POS-002	pending_fs_ops_contains: "test.md"
 case_contains	docs/acceptance-cases/02_positioning.md	POS-002	ledger_op_not_appended: "test.md"
+case_contains	docs/acceptance-cases/02_positioning.md	POS-002	cargo test -p deve_core --test watcher_platform_fs watcher_atomic_replace_records_single_final_candidate -- --nocapture
 case_contains	docs/acceptance-cases/02_positioning.md	POS-003	pending_fs_ops_count_increases_by: 1
+case_contains	docs/acceptance-cases/02_positioning.md	POS-003	cargo test -p deve_core --test watcher_writeback_loop -- --nocapture
 contains	crates/core/tests/watcher_create_modify_delete.rs	fn watcher_records_create_modify_delete_candidates()
 contains	crates/core/tests/watcher_create_modify_delete.rs	h.wait_pending("main", "notes/live.md", ChangeStatus::Modified)?
 contains	crates/core/tests/watcher_writeback_loop.rs	fn projection_writeback_events_are_suppressed()
-contains	crates/core/tests/watcher_writeback_loop.rs	list_pending_fs_in_local_repo("main")?.is_empty()
+contains	crates/core/tests/watcher_writeback_loop.rs	h.wait_pending("main", "notes/watcher-live.md", ChangeStatus::Added)?
+contains	crates/core/tests/watcher_writeback_loop.rs	entry.path != "notes/live.md"
+contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_atomic_replace_records_single_final_candidate()
 case_contains	docs/acceptance-cases/02_positioning.md	POS-004	watcher_pairs_rename_and_preserves_doc_identity
 contains	crates/core/tests/watcher_rename_pairing.rs	fn watcher_pairs_rename_and_preserves_doc_identity()
 contains	crates/core/tests/watcher_rename_pairing.rs	assert_eq!(added.doc_id, Some(doc_id));

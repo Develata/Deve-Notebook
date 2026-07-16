@@ -21,6 +21,8 @@
 - 外部编辑器或文件系统导致的偏差，应以工作区变更形式出现。
 - 用户应能区分“工作区有变化”和“已经提交到权威状态”。
 - `.deveignore` 命中的外部路径不应由 watcher/scan 加入工作区变更列表，即使它们在 watcher 启动前已存在或由目录事件触发了扫描。
+- 外部整目录删除与原子替换完成后，External Changes 应自动刷新到最终 pending 状态；
+  这类刷新不代表变更已经写入 Ledger。
 
 ### 3. 异常恢复
 
@@ -111,3 +113,21 @@
 
 - 两个 ignored 文件都不出现在 pending / staged / committed 变化中。
 - 文件树不把 ignored 文件当作可同步笔记。
+
+### STORAGE-FEAT-05: 外部目录删除刷新 External Changes
+
+前置条件：
+
+- repo 中存在一个包含多个已确认 Markdown 的目录；External Changes 面板已打开。
+
+步骤：
+
+1. 在外部文件管理器或终端中删除该目录。
+2. 等待 watcher debounce 完成。
+3. 观察当前 repo 的 External Changes 变更列表。
+
+期望结果：
+
+- 目录内已跟踪 Markdown 自动显示为待确认删除，无需另一个文件事件触发刷新。
+- Ledger 在用户显式 Apply / Commit 前不增加对应删除事实。
+- 临时 access/open 目录事件不会产生虚假的 External Changes 刷新。

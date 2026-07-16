@@ -5,7 +5,7 @@ use notify_debouncer_full::{
     DebouncedEvent,
     notify::{
         Event, EventKind,
-        event::{ModifyKind, RenameMode},
+        event::{AccessKind, AccessMode, ModifyKind, RemoveKind, RenameMode},
     },
 };
 use redb::ReadableTable;
@@ -56,6 +56,28 @@ pub(super) fn rename_event(old: std::path::PathBuf, new: std::path::PathBuf) -> 
         Event {
             kind: EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
             paths: vec![old, new],
+            attrs: Default::default(),
+        },
+        Instant::now(),
+    )
+}
+
+pub(super) fn removed_dir_event(path: std::path::PathBuf) -> DebouncedEvent {
+    DebouncedEvent::new(
+        Event {
+            kind: EventKind::Remove(RemoveKind::Folder),
+            paths: vec![path],
+            attrs: Default::default(),
+        },
+        Instant::now(),
+    )
+}
+
+pub(super) fn accessed_dir_event(path: std::path::PathBuf) -> DebouncedEvent {
+    DebouncedEvent::new(
+        Event {
+            kind: EventKind::Access(AccessKind::Open(AccessMode::Any)),
+            paths: vec![path],
             attrs: Default::default(),
         },
         Instant::now(),

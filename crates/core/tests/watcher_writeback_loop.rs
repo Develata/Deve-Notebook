@@ -4,6 +4,9 @@
 mod common;
 mod watcher_test_support;
 
+use deve_core::source_control::ChangeStatus;
+use deve_core::sync::watcher::DEFAULT_DEBOUNCE;
+use std::time::Duration;
 use watcher_test_support::Harness;
 
 #[test]
@@ -13,22 +16,17 @@ fn projection_writeback_events_are_suppressed() -> anyhow::Result<()> {
     h.start_watchers()?;
 
     h.sync.persist_doc_in_local_repo("main", doc_id)?;
-    wait_no_pending(&h, "notes/live.md")?;
-    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
-    Ok(())
-}
+    let sentinel = h.workspace_path("main", "notes/watcher-live.md")?;
+    std::fs::write(&sentinel, "external")?;
+    h.wait_pending("main", "notes/watcher-live.md", ChangeStatus::Added)?;
+    std::thread::sleep(DEFAULT_DEBOUNCE * 3 + Duration::from_millis(200));
 
-fn wait_no_pending(h: &Harness, path: &str) -> anyhow::Result<()> {
-    let start = std::time::Instant::now();
-    while start.elapsed() < std::time::Duration::from_millis(700) {
-        if h.repo
-            .list_pending_fs_in_local_repo("main")?
+    let pending = h.repo.list_pending_fs_in_local_repo("main")?;
+    assert!(
+        pending
             .iter()
-            .all(|entry| entry.path != path)
-        {
-            return Ok(());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(25));
-    }
-    anyhow::bail!("timeout waiting for no pending entry: {path}");
+            .any(|entry| entry.path == "notes/watcher-live.md")
+    );
+    assert!(pending.iter().all(|entry| entry.path != "notes/live.md"));
+    Ok(())
 }

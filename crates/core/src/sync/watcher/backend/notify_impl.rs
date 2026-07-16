@@ -49,7 +49,9 @@ impl FsWatcherBackend for NotifyBackend {
     }
 
     fn stop(&mut self) -> Result<(), WatcherError> {
-        self.debouncer.take();
+        if let Some(debouncer) = self.debouncer.take() {
+            debouncer.stop();
+        }
         Ok(())
     }
 }
@@ -80,7 +82,9 @@ fn keep_event(repo_root: &Path, event: &notify_debouncer_full::DebouncedEvent) -
         };
         let rel = to_forward_slash(&rel.to_string_lossy());
         filter::allows_repo_path(&rel)
-            || (filter::allows_repo_dir_path(&rel) && (path.is_dir() || keep_removed_dir_candidate))
+            || (filter::allows_repo_dir_path(&rel)
+                && filter::allows_directory_refresh(&event.kind)
+                && (path.is_dir() || keep_removed_dir_candidate))
     })
 }
 

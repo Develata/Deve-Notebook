@@ -202,7 +202,14 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
                 signals,
                 projection_refresh,
             );
-            message_dispatch::handle_message(msg, ws_rx, signals, locale, schedule_refresh);
+            message_dispatch::handle_message(
+                msg,
+                ws_rx,
+                signals,
+                locale,
+                schedule_refresh,
+                external_changes_refresh,
+            );
             if let Some((response, request_id)) = refresh_response {
                 message_projection_recovery::response_completed(
                     response,

@@ -5,6 +5,10 @@ use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::storage::DegradedSyncMode;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::source_control::ChangeStatus;
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
 
 #[test]
 fn external_apply_ack_only_completes_correlated_transport_request() {
@@ -18,7 +22,12 @@ fn external_apply_ack_only_completes_correlated_transport_request() {
     let request_id = ws.request_external_apply(7);
     let _ = ws.drain_sent_for_test();
     let schedule_refresh = || {};
-    let ctx = ScMessageContext::from_core_signals(signals, &schedule_refresh, &ws);
+    let ctx = ScMessageContext::from_core_signals(
+        signals,
+        &schedule_refresh,
+        Callback::new(|()| {}),
+        &ws,
+    );
 
     assert!(handle_sc_message(
         &ServerMessage::ExternalApplyAck {
@@ -105,6 +114,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
         pending_repo_switch,
         current_scope_nonce,
         schedule_refresh: &schedule_refresh,
+        external_changes_refresh: Callback::new(|()| {}),
         ws: &ws,
     };
 
@@ -180,6 +190,58 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
 }
 
 #[test]
+fn fs_change_refreshes_external_changes_sibling_view() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let repo_id = uuid::Uuid::new_v4();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.set_node_role_for_test("main");
+    ws.mark_writer_ready(repo_id.to_string(), 7, "web-light-peer");
+    let signals = crate::hooks::use_core::state::init_signals(ws.status);
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    signals.set_current_scope_nonce.set(7);
+    signals.set_load_state.set(LoadPhase::Ready);
+    signals.set_handshake_ready.set(true);
+    let refreshes = Arc::new(AtomicUsize::new(0));
+    let refresh_counter = refreshes.clone();
+    let schedule_refresh = || {};
+    let ctx = ScMessageContext::from_core_signals(
+        signals,
+        &schedule_refresh,
+        Callback::new(move |()| {
+            refresh_counter.fetch_add(1, Ordering::Relaxed);
+        }),
+        &ws,
+    );
+
+    assert!(handle_sc_message(
+        &ServerMessage::FsChangeDetected {
+            repo_id: Some(repo_id),
+            branch: None,
+            scope_nonce: Some(7),
+            path: "watched-folder".into(),
+            change_type: "dir_changed".into(),
+            has_conflict: false,
+        },
+        &ctx,
+    ));
+    assert_eq!(refreshes.load(Ordering::Relaxed), 1);
+
+    assert!(handle_sc_message(
+        &ServerMessage::FsChangeDetected {
+            repo_id: Some(repo_id),
+            branch: None,
+            scope_nonce: Some(6),
+            path: "watched-folder".into(),
+            change_type: "dir_changed".into(),
+            has_conflict: false,
+        },
+        &ctx,
+    ));
+    assert_eq!(refreshes.load(Ordering::Relaxed), 1);
+}
+
+#[test]
 fn commit_ack_clears_open_source_control_diffs() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
@@ -252,6 +314,7 @@ fn commit_ack_clears_open_source_control_diffs() {
         pending_repo_switch,
         current_scope_nonce,
         schedule_refresh: &schedule_refresh,
+        external_changes_refresh: Callback::new(|()| {}),
         ws: &ws,
     };
 

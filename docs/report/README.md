@@ -41,6 +41,11 @@
 - 已知过时断言包括：Watcher backend 缺失、WS Unauthorized 为 plain text、Agent Bridge 默认拉起 CLI、locale detection 缺失、`server/mod.rs` 过大，以及 MCP 可作为产品 runtime 方向。
 - `legacy-acceptance-checklist-2026-05-01.md` 已删除；权威入口是 `docs/acceptance-cases/00_index.md`。
 
+## Pending Decisions
+
+- `watcher-failure-semantics-decision-2026-07-16.md`：startup cut、worker failure state、
+  Windows overflow recovery 与 lifecycle transaction；等待 USER 裁定，未构成 live contract。
+
 ## Retired Cleanup Policy
 
 重复短报告会被合并到主题 baseline；被合并的原文件只在 git history 中保留。需要追溯具体批次时，先读主题 baseline 的 `Retired Source Reports` 列表，再查对应提交历史。

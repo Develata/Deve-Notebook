@@ -98,3 +98,41 @@ jobs:
 
       - name: Run tests
         run: cargo test --locked
+
+  watcher-native-fs:
+    name: Watcher real filesystem (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+
+      - name: Cache cargo registry and watcher build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-watcher-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-watcher-
+            ${{ runner.os }}-cargo-
+
+      - name: Run watcher platform filesystem evidence
+        run: cargo test --locked -p deve_core --test watcher_platform_fs -- --nocapture --test-threads=1
+
+      - name: Run watcher writeback-loop evidence
+        run: cargo test --locked -p deve_core --test watcher_writeback_loop -- --nocapture --test-threads=1
+
+      - name: Run watcher rename-pairing evidence
+        run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1

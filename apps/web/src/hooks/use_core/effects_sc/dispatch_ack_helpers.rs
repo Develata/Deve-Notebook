@@ -3,7 +3,7 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
-use leptos::prelude::Set;
+use leptos::prelude::{Callable, Set};
 
 use super::super::effects_sc_apply::{
     CommitRefreshSignals, FsRefreshSignals, refresh_after_commit, refresh_after_fs_change,
@@ -61,7 +61,7 @@ pub(super) fn handle_fs_change_ack(
     change_type: &str,
     has_conflict: bool,
 ) {
-    refresh_after_fs_change(
+    if refresh_after_fs_change(
         path,
         change_type,
         has_conflict,
@@ -82,7 +82,9 @@ pub(super) fn handle_fs_change_ack(
         },
         ctx.schedule_refresh,
         ctx.ws,
-    );
+    ) {
+        ctx.external_changes_refresh.run(());
+    }
 }
 
 pub(super) fn handle_conflict_resolved_ack(

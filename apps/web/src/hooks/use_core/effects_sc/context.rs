@@ -46,6 +46,7 @@ pub(crate) struct ScMessageContext<'a> {
     pub(crate) pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub(crate) current_scope_nonce: ReadSignal<u64>,
     pub(crate) schedule_refresh: &'a dyn Fn(),
+    pub(crate) external_changes_refresh: Callback<()>,
     pub(crate) ws: &'a WsService,
 }
 
@@ -53,6 +54,7 @@ impl ScMessageContext<'_> {
     pub(crate) fn from_core_signals<'a>(
         signals: CoreSignals,
         schedule_refresh: &'a dyn Fn(),
+        external_changes_refresh: Callback<()>,
         ws: &'a WsService,
     ) -> ScMessageContext<'a> {
         ScMessageContext {
@@ -86,6 +88,7 @@ impl ScMessageContext<'_> {
             pending_repo_switch: signals.pending_repo_switch,
             current_scope_nonce: signals.current_scope_nonce,
             schedule_refresh,
+            external_changes_refresh,
             ws,
         }
     }

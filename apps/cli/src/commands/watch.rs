@@ -4,7 +4,7 @@
 //!   - 03_storage/watcher#watcher-contract
 //!   - 14_commands#cli-commands
 //!
-//! 启动文件系统监听，实时捕获变更并同步到 Ledger。
+//! 启动文件系统监听，将外部变更归一化为待确认文件系统 candidate。
 
 use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
@@ -18,7 +18,7 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 /// 监控命令入口
 ///
 /// **功能**:
-/// 启动文件系统监听，实时捕获变更并同步到 `ledger`。
+/// 启动文件系统监听，将外部变更写入 `pending_fs_ops`；不会直接写入 Ledger。
 /// 组合 `RepoManager`, `SyncManager` 和 `Watcher`。
 ///
 /// **阻塞行为**:

@@ -18,6 +18,7 @@ use crate::sync::SyncManager;
 use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
+use tracing::warn;
 
 pub type WatcherCallback = Arc<dyn Fn(ServerMessage) + Send + Sync>;
 pub const DEFAULT_DEBOUNCE: Duration = Duration::from_millis(150);
@@ -130,9 +131,37 @@ fn run_loop(
     stop_rx: std::sync::mpsc::Receiver<()>,
     callback: Option<WatcherCallback>,
 ) -> Result<(), WatcherError> {
+    let consume_result = consume_loop(
+        sync, repo_name, repo_id, repo_root, backend, stop_rx, callback,
+    );
+    let stop_result = backend.stop();
+    match (consume_result, stop_result) {
+        (Err(primary), Err(cleanup)) => {
+            warn!(
+                primary_error = %primary,
+                cleanup_error = %cleanup,
+                "watcher backend cleanup failed after consumer failure"
+            );
+            Err(primary)
+        }
+        (Err(primary), Ok(())) => Err(primary),
+        (Ok(()), Err(cleanup)) => Err(cleanup),
+        (Ok(()), Ok(())) => Ok(()),
+    }
+}
+
+fn consume_loop(
+    sync: Arc<SyncManager>,
+    repo_name: &str,
+    repo_id: RepoId,
+    repo_root: std::path::PathBuf,
+    backend: &mut dyn backend::FsWatcherBackend,
+    stop_rx: std::sync::mpsc::Receiver<()>,
+    callback: Option<WatcherCallback>,
+) -> Result<(), WatcherError> {
     loop {
         if stop_rx.try_recv().is_ok() {
-            return backend.stop();
+            return Ok(());
         }
         match backend.recv(Duration::from_millis(100))? {
             Some(backend::BackendBatch::Events(events)) => {
@@ -146,17 +175,51 @@ fn run_loop(
                 )?;
             }
             Some(backend::BackendBatch::Rescan) => {
-                crate::sync::scan::scan_local_repo(&sync.repo, &sync.vfs, repo_name)?
+                rescan_and_notify(&sync, repo_name, repo_id, callback.as_ref())?
             }
             None => {}
         }
     }
 }
 
+fn rescan_and_notify(
+    sync: &SyncManager,
+    repo_name: &str,
+    repo_id: RepoId,
+    callback: Option<&WatcherCallback>,
+) -> Result<(), WatcherError> {
+    let (refreshed_repo_id, refreshed_path) = sync.force_dir_refresh(repo_name, repo_id, "")?;
+    if let Some(cb) = callback {
+        cb(crate::sync::pending::dir_changed_message(
+            refreshed_repo_id,
+            &refreshed_path,
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use std::sync::mpsc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Mutex, mpsc};
+
+    struct FailingBackend {
+        stopped: Arc<AtomicBool>,
+    }
+
+    impl backend::FsWatcherBackend for FailingBackend {
+        fn recv(&self, _timeout: Duration) -> Result<Option<backend::BackendBatch>, WatcherError> {
+            Err(WatcherError::WatcherInitFailed(
+                "injected backend failure".into(),
+            ))
+        }
+
+        fn stop(&mut self) -> Result<(), WatcherError> {
+            self.stopped.store(true, Ordering::SeqCst);
+            Ok(())
+        }
+    }
 
     fn stop_observed_handle() -> (
         registry::WatcherHandle,
@@ -207,5 +270,63 @@ mod lifecycle_tests {
         stop_handle(original).expect("stop first watcher");
         first_stopped.recv().expect("first watcher received stop");
         registry::finish_stop(repo_id).expect("finish stop first watcher");
+    }
+
+    #[test]
+    fn consumer_failure_still_stops_backend() {
+        let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
+            dispatch_test_support::new_sync().expect("watcher fixture");
+        let stopped = Arc::new(AtomicBool::new(false));
+        let mut backend = FailingBackend {
+            stopped: stopped.clone(),
+        };
+        let (_stop_tx, stop_rx) = mpsc::channel();
+
+        let error = run_loop(
+            sync,
+            &repo_name,
+            repo_id,
+            repo_root,
+            &mut backend,
+            stop_rx,
+            None,
+        )
+        .expect_err("injected receive failure must escape");
+
+        assert!(error.to_string().contains("injected backend failure"));
+        assert!(stopped.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn full_rescan_emits_repo_scoped_dir_changed_message() {
+        let (_dir, _repo, sync, repo_name, repo_id, _repo_root) =
+            dispatch_test_support::new_sync().expect("watcher fixture");
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        let callback_messages = messages.clone();
+        let callback: WatcherCallback = Arc::new(move |message| {
+            callback_messages
+                .lock()
+                .expect("messages lock")
+                .push(message);
+        });
+
+        rescan_and_notify(&sync, &repo_name, repo_id, Some(&callback))
+            .expect("full watcher rescan");
+
+        let messages = messages.lock().expect("messages lock");
+        assert_eq!(messages.len(), 1);
+        match &messages[0] {
+            ServerMessage::FsChangeDetected {
+                repo_id: message_repo_id,
+                path,
+                change_type,
+                ..
+            } => {
+                assert_eq!(*message_repo_id, Some(repo_id));
+                assert_eq!(path, "");
+                assert_eq!(change_type, "dir_changed");
+            }
+            other => panic!("unexpected message: {other:?}"),
+        }
     }
 }
