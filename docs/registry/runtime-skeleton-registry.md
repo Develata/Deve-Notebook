@@ -32,7 +32,8 @@
 |---|---|---|---|---|
 | `authority_storage_runtime` | `已收敛` | `crates/core/src/ledger/manager/authority_storage_runtime.rs` | `docs/tasks/18_infra_runtime.md` | Ledger append validation、host-bound local fact writer、peer fact sequence 与 authority table 边界。 |
 | `repo_mutation_publication_runtime` | `已收敛` | `apps/cli/src/server/repo_mutation/` | `待分配` | process-scoped RepoId permit、local authority writer 提交结果分类与 ordered publication enqueue；watcher、remote shadow ingest、offline repair/export/diagnostic 排除。 |
-| `projection_persistence_runtime` | `已收敛` | `crates/core/src/sync/projection_persistence_runtime.rs` | `docs/tasks/18_infra_runtime.md` | 从 ledger fold 派生 projection、workspace writeback 与 drift explanation。 |
+| `projection_persistence_runtime` | `已收敛` | `crates/core/src/sync/projection_persistence_runtime.rs` | `docs/tasks/18_infra_runtime.md` | 顶层 storage infra：从 ledger fold 派生 projection、workspace writeback 与 drift explanation；通过 typed boundary 使用其 `projection_locator_runtime` 子 runtime。 |
+| `projection_locator_runtime` | `已收敛` | `crates/core/src/ledger/manager/projection_locator.rs` | `docs/tasks/18_infra_runtime.md` | `projection_persistence_runtime` 下独立命名的 host-local 子 runtime；唯一拥有 `projection-locators.toml` 查询、校验与变更，派生 workspace root 并执行 admission/conflict gate；不拥有 ledger、projection 内容、writeback 或 repo identity。 |
 | `watcher_runtime` | `部分承载` | `crates/core/src/sync/watcher/`; `crates/core/src/watcher.rs` | `docs/tasks/18_infra_runtime.md` | 只把外部文件事件归一化为 `pending_fs_ops`。 |
 | `repair_runtime` | `已收敛` | `crates/core/src/ledger/manager/repair_runtime.rs` | `docs/tasks/18_infra_runtime.md` | Degraded、quarantine 与 repair action 边界。 |
 | `projection_repair_runtime` | `已收敛` | `crates/core/src/sync/projection_repair_runtime.rs` | `docs/tasks/18_infra_runtime.md` | Projection rebuild、projection repair 与 repair diagnostics。 |

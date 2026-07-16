@@ -5,11 +5,11 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-16`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
-> 本文件是 `03_storage` 章的 `projection_persistence_runtime` 子合同：projection locator layout 与 projection / persistence contract。章节骨架与总览见 [index.md](./index.md)。
+> 本文件是 `03_storage` 章的 `projection_persistence_runtime` 子合同：projection locator layout 与 projection / persistence contract。`projection_locator_runtime` 在该顶层 storage infra 内作为独立命名的 host-local 子 runtime，拥有 locator 状态与文件边界，但不增加第五个顶层 storage runtime。章节骨架与总览见 [index.md](./index.md)。
 
 ## 3. Physical Layout（projection 部分）
 
@@ -52,6 +52,16 @@ ProjectionLocatorValue = {
   canonicalized_at,
 }
 ```
+
+Runtime ownership：
+
+- `projection_locator_runtime` 是 `projection_persistence_runtime` 下的独立子 runtime，唯一拥有
+  `ledger/.host/projection-locators.toml` 的读取、校验与变更权限。
+- projection persistence、repo scope 与 repair 只能通过 locator 的 typed query / command
+  使用或变更 locator；不得各自解析或写入 locator 文件。
+- locator runtime 只拥有 host-local `RepoId -> projection_base` 绑定、workspace root 派生、
+  admission 与冲突检查；它不拥有 ledger facts、projection 内容、workspace writeback、
+  repo identity 或 repair 状态迁移。
 
 约束：
 
@@ -112,3 +122,5 @@ Intent -> Ledger Facts -> Projection -> Projection Workspace
 
 - 负责由 ledger fold 派生 projection、workspace writeback、projection cleanup 与 drift 解释。
 - projection 失败不得伪装成 authority 成功。
+- 内部 `projection_locator_runtime` 负责 host-local locator 查询、命令与 admission；父 runtime
+  通过 typed boundary 消费其结果，不得直接拥有 locator 文件。

@@ -1,10 +1,11 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
+//!   - 03_storage/projection#projection-locator-contract
 
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::repo_catalog_runtime::RepoCatalogRuntime;
-use crate::ledger::manager::types::RepoManager;
+use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use anyhow::{Result, anyhow};
 
 impl<'a> RepoCatalogRuntime<'a> {
@@ -55,44 +56,50 @@ impl<'a> RepoCatalogRuntime<'a> {
 
     pub(crate) fn list_local_execution_names(&self) -> Result<Vec<String>> {
         self.refresh_local_catalog()?;
-        let local_dir = RepoManager::checked_local_dir_for(
-            &self.manager.ledger_dir,
-            "listing execution names",
-        )?;
+        Ok(self
+            .local_repo_info_snapshot("listing execution names")?
+            .into_iter()
+            .map(|(stem, _)| stem)
+            .collect())
+    }
 
+    /// Returns a typed catalog snapshot for locator repair preflight only.
+    ///
+    /// This deliberately does not refresh or authorize the normal execution catalog: repair must
+    /// validate a proposed display-name correction before committing metadata or moving workspace
+    /// files.
+    pub(crate) fn local_repo_infos_for_locator_repair_validation(
+        &self,
+    ) -> Result<Vec<(String, RepoInfo)>> {
+        self.local_repo_info_snapshot("validating Projection Locator repair")
+    }
+
+    fn local_repo_info_snapshot(&self, context: &str) -> Result<Vec<(String, RepoInfo)>> {
+        let local_dir = RepoManager::checked_local_dir_for(&self.manager.ledger_dir, context)?;
         let mut repos = Vec::new();
-        for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
+        for (path, stem) in redb_repo_entries(&local_dir, context)? {
             if stem == self.manager.local_repo_name {
                 let info = self.manager.get_repo_info()?.ok_or_else(|| {
                     anyhow!(
-                        "Broken local repo {} while listing execution names: repository metadata missing",
-                        stem
+                        "Broken local repo {} while {}: repository metadata missing",
+                        stem,
+                        context
                     )
                 })?;
                 if self.manager.is_local_repo_removed(info.uuid)? {
                     continue;
                 }
-                repos.push(stem);
+                repos.push((stem, info));
                 continue;
             }
-            let info = RepoManager::read_required_repo_info_from_path(
-                &path,
-                &stem,
-                "listing execution names",
-            )
-            .map_err(|err| {
-                anyhow!(
-                    "Broken local repo {} while listing execution names: {}",
-                    stem,
-                    err
-                )
-            })?;
+            let info = RepoManager::read_required_repo_info_from_path(&path, &stem, context)
+                .map_err(|err| anyhow!("Broken local repo {} while {}: {}", stem, context, err))?;
             if self.manager.is_local_repo_removed(info.uuid)? {
                 continue;
             }
-            repos.push(stem);
+            repos.push((stem, info));
         }
-        repos.sort();
+        repos.sort_by(|(left, _), (right, _)| left.cmp(right));
         Ok(repos)
     }
 }

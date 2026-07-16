@@ -4,6 +4,41 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[test]
+fn projection_locator_record_query_rejects_duplicate_repo_id() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let base = dir.path().join("notes");
+    std::fs::create_dir_all(&base)?;
+    let repo_id = uuid::Uuid::new_v4();
+
+    write_projection_locator_file(
+        &projection_locator_path_for(&ledger),
+        &ProjectionLocatorFile {
+            version: 1,
+            locators: vec![
+                ProjectionLocatorRecord {
+                    repo_id,
+                    repo_name_hint: "default".into(),
+                    projection_base_abs: std::fs::canonicalize(&base)?,
+                    canonicalized_at_unix_ms: 1,
+                },
+                ProjectionLocatorRecord {
+                    repo_id,
+                    repo_name_hint: "duplicate".into(),
+                    projection_base_abs: std::fs::canonicalize(&base)?,
+                    canonicalized_at_unix_ms: 2,
+                },
+            ],
+        },
+    )?;
+
+    let err = projection_locator_record_for_repo_id(&ledger, repo_id)
+        .expect_err("duplicate locator records must fail closed");
+    assert!(err.to_string().contains("duplicate record"));
+    Ok(())
+}
+
+#[test]
 fn projection_locator_runtime_check_validates_full_map_conflicts() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;

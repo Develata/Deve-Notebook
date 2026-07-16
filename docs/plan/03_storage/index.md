@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -13,6 +13,9 @@
 > **本章已按 §12 Refactor Target 拆分为四个 runtime 子文件**：
 > [authority](./authority.md) · [projection](./projection.md) · [watcher](./watcher.md) · [repair](./repair.md)。
 > 本文件承载章节骨架、总览实体、物理布局与跨层边界；各 runtime 专属合同见对应子文件。
+> `projection_locator_runtime` 是 `projection_persistence_runtime` 内独立命名的 host-local
+> 子 runtime，不增加第五个 storage authority / infra 层；其所有权与禁止跨界见
+> [projection.md#projection-locator-contract](./projection.md#projection-locator-contract)。
 
 ## 1. Scope
 
@@ -207,6 +210,8 @@ RepoDiscovered
 - `repair_runtime` → [repair.md](./repair.md)
 
 实现必须按这四层收敛；任何 manager/helper 只能作为其中一层的内部细节，不得跨层持有隐式 authority。
+`projection_locator_runtime` 作为 `projection_persistence_runtime` 的独立子 runtime，唯一拥有
+host-local locator 文件；该父子关系不得被解释为新的顶层 storage authority 层。
 
 浏览器侧另设 `browser_identity_client` 作为本章 storage layering 的 client adapter；
 它只归一化平台 capability、管理 non-extractable browser identity readiness，并向 UI

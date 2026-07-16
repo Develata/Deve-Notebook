@@ -7,9 +7,11 @@ use crate::models::RepoId;
 use crate::utils::notegit;
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Component, Path, PathBuf};
-use unicode_normalization::UnicodeNormalization;
+
+mod file_validation;
+mod map_validation;
 
 const LOCATOR_VERSION: u32 = 1;
 const LOCATOR_FILE: &str = "projection-locators.toml";
@@ -23,7 +25,7 @@ pub struct ProjectionLocatorRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ProjectionLocatorFile {
+struct ProjectionLocatorFile {
     pub(crate) version: u32,
     #[serde(default)]
     pub(crate) locators: Vec<ProjectionLocatorRecord>,
@@ -39,7 +41,7 @@ impl Default for ProjectionLocatorFile {
 }
 
 impl RepoManager {
-    pub fn projection_locator_path(&self) -> PathBuf {
+    fn projection_locator_path(&self) -> PathBuf {
         projection_locator_path_for(&self.ledger_dir)
     }
 
@@ -184,6 +186,24 @@ impl RepoManager {
         self.validate_projection_locator_records(&file.locators, true)
     }
 
+    pub(crate) fn validate_projection_locator_map_for_workspace_repair(
+        &self,
+        repo_id: RepoId,
+        proposed_name: &str,
+        old_root: &Path,
+        new_root: &Path,
+    ) -> Result<()> {
+        let file = self.read_projection_locator_file()?;
+        map_validation::validate_projection_locator_records_for_workspace_repair(
+            self,
+            &file.locators,
+            repo_id,
+            proposed_name,
+            old_root,
+            new_root,
+        )
+    }
+
     pub fn check_projection_locator_for_local_repo(&self, repo_name: &str) -> Result<PathBuf> {
         let info = self.local_repo_info_for_locator(repo_name)?;
         let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
@@ -221,15 +241,19 @@ impl RepoManager {
         records: &[ProjectionLocatorRecord],
         require_all_local_locators: bool,
     ) -> Result<()> {
-        validate_projection_locator_records(self, records, require_all_local_locators)
+        map_validation::validate_projection_locator_records(
+            self,
+            records,
+            require_all_local_locators,
+        )
     }
 }
 
-pub(crate) fn projection_locator_path_for(ledger_dir: &Path) -> PathBuf {
+fn projection_locator_path_for(ledger_dir: &Path) -> PathBuf {
     notegit::host_dir(ledger_dir).join(LOCATOR_FILE)
 }
 
-pub(crate) fn read_projection_locator_file(path: &Path) -> Result<ProjectionLocatorFile> {
+fn read_projection_locator_file(path: &Path) -> Result<ProjectionLocatorFile> {
     if !path
         .try_exists()
         .with_context(|| format!("Failed to stat Projection Locator file: {:?}", path))?
@@ -247,7 +271,30 @@ pub(crate) fn read_projection_locator_file(path: &Path) -> Result<ProjectionLoca
             path
         ));
     }
+    file_validation::validate_projection_locator_file_shape(&file.locators)?;
     Ok(file)
+}
+
+pub(crate) fn projection_locator_record_for_repo_id(
+    ledger_dir: &Path,
+    repo_id: RepoId,
+) -> Result<Option<ProjectionLocatorRecord>> {
+    let file = read_projection_locator_file(&projection_locator_path_for(ledger_dir))?;
+    let Some(mut record) = file
+        .locators
+        .into_iter()
+        .find(|record| record.repo_id == repo_id)
+    else {
+        return Ok(None);
+    };
+    record.projection_base_abs =
+        std::fs::canonicalize(&record.projection_base_abs).with_context(|| {
+            format!(
+                "Failed to canonicalize Projection Locator base for repo {}: {:?}",
+                repo_id, record.projection_base_abs
+            )
+        })?;
+    Ok(Some(record))
 }
 
 pub(crate) fn locator_authorizes_repo_name(
@@ -256,11 +303,8 @@ pub(crate) fn locator_authorizes_repo_name(
     repo_name: &str,
 ) -> Result<bool> {
     let repo_name_hint = safe_repo_path_segment(repo_name)?;
-    let file = read_projection_locator_file(&projection_locator_path_for(ledger_dir))?;
-    Ok(file
-        .locators
-        .iter()
-        .any(|record| record.repo_id == repo_id && record.repo_name_hint == repo_name_hint))
+    Ok(projection_locator_record_for_repo_id(ledger_dir, repo_id)?
+        .is_some_and(|record| record.repo_name_hint == repo_name_hint))
 }
 
 fn write_projection_locator_file(path: &Path, file: &ProjectionLocatorFile) -> Result<()> {
@@ -347,122 +391,7 @@ fn is_windows_reserved_device_name(segment: &str) -> bool {
             .is_some_and(|n| (1..=9).contains(&n))
 }
 
-fn validate_projection_locator_records(
-    repo: &RepoManager,
-    records: &[ProjectionLocatorRecord],
-    require_all_local_locators: bool,
-) -> Result<()> {
-    let mut records_by_id = HashMap::new();
-    for record in records {
-        if records_by_id.insert(record.repo_id, record).is_some() {
-            return Err(anyhow!(
-                "Projection Locator contains duplicate record for repo {}",
-                record.repo_id
-            ));
-        }
-    }
-
-    let mut local_infos_by_id = HashMap::new();
-    let mut local_infos = Vec::new();
-    for repo_name in repo.list_local_repo_names_for_execution()? {
-        let info = repo
-            .get_repo_info_for(None, Some(&repo_name))?
-            .ok_or_else(|| anyhow!("Local repo metadata is missing for {}", repo_name))?;
-        local_infos_by_id.insert(info.uuid, repo_name.clone());
-        local_infos.push((repo_name, info));
-    }
-
-    for record in records {
-        if !local_infos_by_id.contains_key(&record.repo_id) {
-            return Err(anyhow!(
-                "Projection Locator references unknown local repo {}",
-                record.repo_id
-            ));
-        }
-    }
-
-    let ledger_dir =
-        std::fs::canonicalize(&repo.ledger_dir).unwrap_or_else(|_| repo.ledger_dir.clone());
-    let mut roots: Vec<(RepoId, PathBuf, String)> = Vec::new();
-    for (repo_name, info) in local_infos {
-        let Some(record) = records_by_id.get(&info.uuid) else {
-            if require_all_local_locators {
-                return Err(anyhow!(
-                    "Projection Locator missing for local repo {}",
-                    info.name
-                ));
-            }
-            continue;
-        };
-        if !record.projection_base_abs.is_absolute() {
-            return Err(anyhow!(
-                "Projection Locator for {} must use an absolute projection base",
-                repo_name
-            ));
-        }
-        let projection_base_abs =
-            std::fs::canonicalize(&record.projection_base_abs).with_context(|| {
-                format!(
-                    "Failed to canonicalize Projection Locator base for {}: {:?}",
-                    repo_name, record.projection_base_abs
-                )
-            })?;
-        let workspace_segment = repo_workspace_segment(&info.name, info.uuid)?;
-        let root = projection_base_abs.join(&workspace_segment);
-        if root.starts_with(&ledger_dir) {
-            return Err(anyhow!(
-                "Projection workspace for {} must not be inside ledger_dir: {:?}",
-                repo_name,
-                root
-            ));
-        }
-        if root
-            .components()
-            .any(|component| matches!(component, Component::Normal(name) if name == ".notegit" || name == ".git"))
-        {
-            return Err(anyhow!(
-                "Projection workspace for {} must not be inside .notegit or .git: {:?}",
-                repo_name,
-                root
-            ));
-        }
-        roots.push((
-            info.uuid,
-            root,
-            normalized_workspace_key(&projection_base_abs, &workspace_segment),
-        ));
-    }
-
-    for idx in 0..roots.len() {
-        for other in (idx + 1)..roots.len() {
-            let (left_id, left_root, left_key) = &roots[idx];
-            let (right_id, right_root, right_key) = &roots[other];
-            if left_key == right_key {
-                return Err(anyhow!(
-                    "Projection workspace conflict: repos {} and {} resolve to {:?}",
-                    left_id,
-                    right_id,
-                    left_root
-                ));
-            }
-            if left_root.starts_with(right_root) || right_root.starts_with(left_root) {
-                return Err(anyhow!(
-                    "Projection workspace nesting conflict between {:?} and {:?}",
-                    left_root,
-                    right_root
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn normalized_workspace_key(base: &Path, workspace_segment: &str) -> String {
-    crate::utils::path::path_to_forward_slash(&base.join(workspace_segment))
-        .nfc()
-        .collect::<String>()
-        .to_ascii_lowercase()
-}
-
+#[cfg(test)]
+use map_validation::normalized_workspace_key;
 #[cfg(test)]
 mod tests;

@@ -98,28 +98,14 @@ pub(super) fn prepare_workspace_root_repair(
     if previous_name.trim().is_empty() {
         return Ok(None);
     }
-    let locator_path =
-        crate::ledger::manager::projection_locator::projection_locator_path_for(ledger_dir);
     let locator =
-        crate::ledger::manager::projection_locator::read_projection_locator_file(&locator_path)?
-            .locators
-            .into_iter()
-            .find(|record| record.repo_id == repo_id);
+        crate::ledger::manager::projection_locator::projection_locator_record_for_repo_id(
+            ledger_dir, repo_id,
+        )?;
     let Some(locator) = locator else {
         return Ok(None);
     };
-    if !locator.projection_base_abs.is_absolute() {
-        return Err(anyhow!(
-            "Broken local repo {} while repairing local catalog: Projection Locator base must be absolute",
-            current_name
-        ));
-    }
-    let projection_base_abs = std::fs::canonicalize(&locator.projection_base_abs).with_context(|| {
-        format!(
-            "Failed to canonicalize Projection Locator base while repairing local catalog: {:?}",
-            locator.projection_base_abs
-        )
-    })?;
+    let projection_base_abs = locator.projection_base_abs;
     let previous_segment =
         crate::ledger::manager::projection_locator::repo_workspace_segment(previous_name, repo_id)?;
     let current_segment =
@@ -187,6 +173,20 @@ pub(super) fn preflight_workspace_root_repair(
     manager: &RepoManager,
     plan: &WorkspaceRootRepairPlan,
 ) -> Result<()> {
+    manager
+        .validate_projection_locator_map_for_workspace_repair(
+            plan.repo_id,
+            &plan.current_name,
+            &plan.old_root,
+            &plan.new_root,
+        )
+        .map_err(|err| {
+            anyhow!(
+                "Workspace root realign for {} refused: invalid Projection Locator map: {}",
+                plan.current_name,
+                err
+            )
+        })?;
     let pending = manager.run_on_local_repo_stem(&plan.stem, |db| {
         crate::source_control::pending_fs::list_all(db)
     })?;

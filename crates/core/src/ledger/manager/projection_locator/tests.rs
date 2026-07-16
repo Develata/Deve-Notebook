@@ -1,9 +1,53 @@
 use super::*;
 use crate::sync::SyncManager;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 mod validation;
+
+fn locator_base_from_file(path: &Path) -> anyhow::Result<String> {
+    let content = std::fs::read_to_string(path)?;
+    let value: toml::Value = toml::from_str(&content)?;
+    Ok(value["locators"][0]["projection_base_abs"]
+        .as_str()
+        .expect("projection base")
+        .to_string())
+}
+
+#[test]
+fn set_projection_base_for_all_local_repos_checked_restores_previous_root_when_catalog_refresh_fails()
+-> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    let first_projection_base = dir.path().join("notes-a");
+    std::fs::create_dir_all(&first_projection_base)?;
+    repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)?;
+    assert_eq!(
+        repo.local_repo_workspace_root("default")?,
+        std::fs::canonicalize(&first_projection_base)?.join(repo_workspace_segment(
+            "default",
+            repo.get_repo_info()?.expect("default repo").uuid,
+        )?)
+    );
+
+    std::fs::remove_dir_all(ledger.join("local"))?;
+
+    let second_projection_base = dir.path().join("notes-b");
+    let err = repo
+        .set_projection_base_for_all_local_repos_checked(&second_projection_base)
+        .expect_err("catalog refresh failure must fail closed");
+    assert!(err.to_string().contains("local"));
+
+    assert_eq!(
+        locator_base_from_file(&repo.projection_locator_path())?,
+        std::fs::canonicalize(&first_projection_base)?
+            .to_string_lossy()
+            .to_string()
+    );
+    Ok(())
+}
 
 #[test]
 fn projection_locator_toml_roundtrip() -> anyhow::Result<()> {
@@ -27,6 +71,10 @@ fn projection_locator_toml_roundtrip() -> anyhow::Result<()> {
     let reopened = read_projection_locator_file(&repo.projection_locator_path())?;
     assert_eq!(reopened.version, 1);
     assert_eq!(reopened.locators, locators);
+    assert_eq!(
+        projection_locator_record_for_repo_id(&ledger, repo_id)?,
+        Some(locators[0].clone())
+    );
     Ok(())
 }
 

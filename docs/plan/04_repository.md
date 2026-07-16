@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -433,14 +433,19 @@ ReadonlyDegraded
 
 ## 10. Refactor Target
 
-长期应将 repo 逻辑显式收敛成三个独立 runtime：
+长期应将 repo 逻辑显式收敛成四个独立 runtime：
 
 - `repo_catalog_runtime`
 - `projection_locator_runtime`
 - `repo_scope_runtime`
 - `projection_repair_runtime`
 
-未来重构 **MUST** 收敛到这三个 runtime；`RepoManager`、CLI switcher handlers 与 `use_core` effects 不得共享隐式 repo scope 状态。
+其中 `projection_locator_runtime` 在 repository 责任带中保持独立命名和唯一 host-local
+locator ownership，但在 storage 顶层分层中归属于
+`projection_persistence_runtime` 子 runtime；该父子关系不得把 locator 提升为 ledger、
+projection 内容或 writeback authority。
+
+未来重构 **MUST** 收敛到这四个 runtime；`RepoManager`、CLI switcher handlers 与 `use_core` effects 不得共享隐式 repo scope 状态。
 
 ## 本章相关命令
 
