@@ -10,7 +10,7 @@
 - **核心引擎**: Redb 追加日志存储、ledger-first authority、repo-scoped projection workspace
 - **Leptos 前端**: CodeMirror 6 编辑器、Markdown 预览、KaTeX 数学公式与基础双语 UI
 - **Source Control**: 类 Git 工作流（Watcher → pending → Stage → Commit）与 fail-closed scope gate
-- **Docker 部署**: 多阶段 Dockerfile（rust:1.92 + trunk + esbuild → debian:bookworm-slim）
+- **Docker 部署**: 多阶段 Dockerfile（rust:1.97.0 + trunk + esbuild → debian:bookworm-slim）
 - **Docker Compose**: 单服务配置，512m 内存限制，命名卷持久化
 - **CI/CD**: GitHub Actions release.yml（tag 触发）与 native release workflow
 - **静态文件服务**: Axum ServeDir 模块，SPA fallback 支持
@@ -20,7 +20,7 @@
 - **Docker smoke preflight**: release、multiclient、P2P mesh smoke 在真实 Docker 动作前统一执行 Rust CLI 参数和环境校验
 
 ### Changed
-- **Rust 1.92**: release workflow 使用固定 Rust 1.92 toolchain 与 Edition 2024
+- **Rust 1.97.0**: workspace、release workflow、Docker 与 native package gates 使用固定 Rust 1.97.0 toolchain 与 Edition 2024
 - **Runtime smoke**: runtime happy/recovery smoke 复用 baseline wrapper 的 cargo 解析逻辑，提高 WSL/Git Bash/Windows 入口稳定性
 
 ### Fixed

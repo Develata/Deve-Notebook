@@ -13,10 +13,10 @@
 
 - `Name`: `Inspect Dependency Manifest`
 - `Surface`: `repo-files`
-- `Trigger`: maintainer reads `Cargo.toml` or `apps/web/package.json`
+- `Trigger`: maintainer reads `Cargo.toml`, `rust-toolchain.toml`, or `apps/web/package.json`
 - `Preconditions`: dependency manifests are available
 - `Immediate Result`: direct dependencies can be compared with the plan
-- `Application Entry`: `Cargo.toml`, `apps/web/package.json`
+- `Application Entry`: `Cargo.toml`, `rust-toolchain.toml`, `apps/web/package.json`
 
 ### `op.tech.deps.inspect-lockfile`
 

@@ -12,6 +12,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.97"
 authors = ["Deve-Note Contributors"]
 license = "MIT"
 repository = "https://github.com/Develata/Deve-Notebook.git"

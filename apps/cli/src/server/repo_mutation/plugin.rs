@@ -143,12 +143,26 @@ impl ManagedNoteMutationHost for CliManagedNoteMutationHost {
     }
 }
 
+#[cfg_attr(
+    test,
+    expect(
+        dead_code,
+        reason = "managed-note host registration is disabled in the lib test build"
+    )
+)]
 struct PreparedManagedNoteWrite {
     existing_doc_id: Option<DocId>,
     expected_ledger_head: u64,
     patch: Vec<Op>,
 }
 
+#[cfg_attr(
+    test,
+    expect(
+        dead_code,
+        reason = "managed-note host registration is disabled in the lib test build"
+    )
+)]
 fn prepare_managed_note_write(
     state: &Arc<AppState>,
     intent: &ManagedNoteWriteIntent,

@@ -33,6 +33,7 @@
 - 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
 - candidate 阶段任何 native build、signing、target-host、manifest 或 attestation 失败都发生在公开 tag 前，不得发布 GHCR 或 GitHub Release。candidate/aggregate artifact immutable，失败后必须 fresh dispatch，禁止覆盖同一 run ID。promotion 阶段仍不是跨服务强事务；若 GHCR 已 push 而后续步骤失败，Release 必须保持 draft并把状态明确报告为 partial delivery；只允许同一 sealed candidate 做幂等恢复。
 - candidate / target-host 只要会触发 `native-packaging` compile-time context，就必须先用同一 HEAD 构建真实 `apps/web/dist`；不得依赖 runner 残留、空目录或占位前端绕过 `frontendDist` 校验。
+- candidate、普通 CI、Docker builder 与 native target-host jobs 必须使用根 `rust-toolchain.toml` 规定的精确 Rust 1.97.0；浮动 `stable`、minor-only pin 或与 Cargo MSRV 不一致的 job 必须在构建前失败。
 - Windows packaged UI gate 必须驱动已安装 Desktop 的真实 WebView，覆盖 native session、创建/编辑、commit/history、Settings focus trap 与关闭后 sidecar 清理；快速 marker startup probe 仍保留，但不能单独证明 UI 可用。
 - Windows LocalBackend、NoteGit 与安装/卸载 smoke 分别覆盖 MSI 和 NSIS；RemoteBrowser/native recovery 在共享 Desktop runtime payload 上由 NSIS 安装面执行一次，其证据不扩张为 MSI installer-engine 的 RemoteBrowser 声明。
 - Native build、manifest、draft upload 或 API 复核失败时不得把不完整状态报告为已发布版本；失败产生的 draft 只作为显式恢复对象。若公开 mutation 已成功但 runner 未能确认，同一 candidate 的重跑必须先复核完整远端状态。

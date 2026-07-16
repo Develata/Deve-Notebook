@@ -116,7 +116,7 @@ arbitrary custom host.
 
 Main development path:
 
-- Rust 1.92 or a compatible Edition 2024 toolchain.
+- Rust 1.97.0 (pinned by `rust-toolchain.toml`) with Edition 2024 support.
 - `wasm32-unknown-unknown` target for Web checks.
 - Node.js 24 and npm for CI parity.
 - Trunk for the WebAssembly frontend.

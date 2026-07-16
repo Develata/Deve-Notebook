@@ -33,6 +33,7 @@
 
 - 产品应清楚区分“当前已稳定支持”和“未来计划支持”。
 - 不应让未完成平台被误导成已正式可用。
+- 开发、CI、Docker 与 native package gate 统一使用根 `rust-toolchain.toml` 钉住的 Rust 1.97.0；Cargo workspace MSRV 为 1.97，任一入口漂移必须由 release baseline fail-closed。
 - Git ecosystem bridge 稳定边界是 CLI status/export/import/push 与 Web CLI-only notices；可点击 Git mirror repair UI 不得被描述为已完成。
 - Git repair UI 后续边界必须保持 `.notegit` / ledger authority，`.git` 只作为 projection mirror；任何写 Git 的路径都必须显式、可审计、可失败关闭。
 

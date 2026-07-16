@@ -5,16 +5,16 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
-- `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
+- `Primary Code Areas`: `rust-toolchain.toml`, `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
 
 ## 1. Technology Stack
 
 | **Layer**    | **Technology**           | **Decision**      | **Selection Reasoning**             |
 | :----------- | :----------------------- | :---------------- | :---------------------------------- |
-| **Language** | Rust 1.92 / Edition 2024 | Selected          | 与 workspace MSRV 对齐，全栈统一。 |
+| **Language** | Rust 1.97.0 / Edition 2024 | Selected          | 与 workspace MSRV 1.97 对齐，全栈统一。 |
 | **Frontend** | **Leptos v0.7**          | Selected          | 信号驱动 (Signals)，性能极致。      |
 | **UI**       | **Tailwind CSS**         | Selected          | 原子化 CSS。                        |
 | **Router**   | **leptos_router**        | Selected          | 前端路由管理。                      |
@@ -38,6 +38,18 @@
 | **Git Ecosystem** | **First-class mirror bridge** | Mirror Bridge | `.notegit/` 保持 authority；`.git/` 只作为生态镜像层，详见 `03_storage`（`#git-ecosystem-coexistence`）与 `05_diff_logic`。 |
 | **Build**    | **Tauri v2**             | Native Target / Deferred Packaging | Desktop/Mobile 目标采用 Tauri v2；真实 packaging 依赖必须经过 native-packaging gate。 |
 | **Plugins**  | **Compatibility Host + Interface Reserved** | Boundary Reserved | 保留 Rhai/plugin-host 兼容边界与 Trusted CLI/Calculation future 接口；不要求插件市场或完整扩展平台。 |
+
+### Canonical Rust Toolchain {#canonical-rust-toolchain}
+
+仓库唯一的 Rust toolchain 权威是根目录 `rust-toolchain.toml`。它必须精确钉住
+`1.97.0`、`minimal` profile、`rustfmt` / `clippy` 组件与
+`wasm32-unknown-unknown` target；workspace package metadata 以
+`rust-version = "1.97"` 声明 MSRV，所有成员 crate 必须继承该字段。
+
+CI、Docker builder、Android package build 与 Linux Apptainer/Slurm gate 必须镜像同一
+`1.97.0` patch 版本，且由 Rust release baseline 检查 action revision、toolchain input、
+镜像 tag、脚本默认值和 Cargo metadata 的一致性。平台专用 target 仍由对应 job 按需安装，
+不得为了 pin 一致性把所有 native target 常驻加入默认开发 toolchain。
 
 ### 1.1 图谱可视化 {#graph-visualization}
 

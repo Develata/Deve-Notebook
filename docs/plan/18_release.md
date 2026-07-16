@@ -5,10 +5,10 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-15`
+- `Last Review`: `2026-07-16`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
-- `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
+- `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
 
 本章定义发布策略、版本规范与 CI/CD。
 
@@ -359,8 +359,9 @@ tag 中唯一 `Deve-Acceptance-Aggregate-Run` trailer 显式绑定、
 RemoteBrowser 仍需在合并后的 current HEAD 实际运行 candidate workflow 并生成 producer-bound receipts；首个版本、CHANGELOG 与 release set
 尚未冻结。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
 但在 current HEAD 的成功 run/receipt 出现前仍不能声称签名或安装证据已满足。开源治理文件、ruleset、
-Dependabot/CodeQL/container scan、operator runbook 属 P1；toolchain pins、`.editorconfig`、
-fuzz/performance/privacy policy 属 P2 advisory。本批只建立诚实 gate，不顺带声称这些缺口
+Dependabot/CodeQL/container scan、operator runbook 属 P1；`.editorconfig`、
+fuzz/performance/privacy policy 属 P2 advisory。Rust toolchain pin 由
+`17_tech_stack#canonical-rust-toolchain` 与 release baseline 关闭；本批只建立诚实 gate，不顺带声称其它缺口
 已经关闭。
 
 ### 2.1.5 Artifact Identity and Integrity {#artifact-identity-and-integrity}
@@ -458,7 +459,7 @@ services:
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
-*   **Builder**: `rust:1.92-bookworm` (Multi-stage build)，包含 Node.js、固定版本的 Cargo-installed tools（当前为 `trunk`）与 `wasm32-unknown-unknown` target。
+*   **Builder**: `rust:1.97.0-bookworm` (Multi-stage build)，必须与根 `rust-toolchain.toml`、Cargo MSRV、CI 和 native package gates 的精确 toolchain pin 同步；包含 Node.js、固定版本的 Cargo-installed tools（当前为 `trunk`）与 `wasm32-unknown-unknown` target。
 *   **Optimization**: Docker 发布基线 **MUST** 使用 locked direct release build；依赖缓存层属于可选构建优化，只有在 locked CI 与 Docker smoke 通过后才可进入发布基线。
 *   **Frontend Delivery**: runtime image 只交付单个嵌入前端静态资源的 `deve_cli` 二进制；正常 Docker 部署 **MUST NOT** 依赖 `/app/static` 或 `DEVE_STATIC_DIR`。嵌入或显式静态根的 `index.html` **MUST NOT** 包含 Trunk development live-reload 标记；显式 `DEVE_STATIC_DIR` 命中该类 index 时 fail-closed，嵌入式前端命中该类 index 时不得被报告或服务为 `embedded-frontend`，发布 smoke 不能只依赖 `/api/node/role` 的 `api-only`，还必须用浏览器入口证明 release frontend 可用。
 *   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` **MUST** 支持 `DEVE_DOCKER_BIN` 以覆盖非默认 Docker CLI 路径，并在 Docker 缺失或不可达时输出 Docker binary/context 诊断。release 与 multiclient smoke 还必须支持显式 existing-image 模式；该模式要求 image 已存在、禁止重新 build，并使 release workflow 能证明运行与浏览器 smoke 覆盖的是即将发布的同一 image ID。

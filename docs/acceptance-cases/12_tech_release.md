@@ -4,12 +4,14 @@
 - case_id: TECH-001
   goal: 技术栈版本匹配计划。
   preconditions:
-    - Cargo.toml/package.json 可读
+    - Cargo.toml、rust-toolchain.toml 与 apps/web/package.json 可读
   steps:
     - run: rg -n "leptos|redb|argon2|ed25519" Cargo.toml
+    - run: cargo run --locked --quiet -p deve_baseline -- release
   assertions:
     - stdout_contains: "leptos"
     - stdout_contains: "redb"
+    - stdout_contains: "release-baseline-check: ok"
 
 - case_id: TECH-002
   goal: Markdown 导出遵循 CommonMark + GFM。
@@ -412,7 +414,7 @@
   preconditions:
     - `docs/registry/acceptance-matrix.tsv` 可读
     - `docs/registry/acceptance-producers.json` 可读
-    - Rust 1.92 toolchain 可用
+    - Rust 1.97.0 toolchain 可用
   steps:
     - run: cargo run --locked -p deve_baseline -- acceptance-matrix
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci --plan

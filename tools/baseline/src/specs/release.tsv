@@ -1,5 +1,13 @@
 git_tracked	Cargo.lock
 git_not_ignored	Cargo.lock
+contains	rust-toolchain.toml	channel = "1.97.0"
+contains	rust-toolchain.toml	profile = "minimal"
+contains	rust-toolchain.toml	components = ["rustfmt", "clippy"]
+contains	rust-toolchain.toml	targets = ["wasm32-unknown-unknown"]
+contains	Cargo.toml	rust-version = "1.97"
+contains	Dockerfile	FROM rust:1.97.0-bookworm AS build-env
+contains	docs/plan/17_tech_stack.md	#canonical-rust-toolchain
+contains	docs/registry/acceptance-matrix.tsv	source.toolchain-pins
 absent	Cargo.lock	name = "bincode"
 absent	Cargo.toml	bincode
 regex_absent_tree_ext	crates	rs	\bbincode\b

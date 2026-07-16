@@ -747,7 +747,7 @@ contains	scripts/lib/websocket-delivery-gate.mjs	WebSocket.prototype.send = func
 contains	apps/web/src/runtime/domain/scope.rs	RestoreSession
 contains	apps/web/src/runtime/document/pending/ops.rs	pub fn rebind_pending_scope
 contains	apps/web/src/hooks/use_core/effects/message_control.rs	session_restore_rebind_target
-contains	scripts/check-mobile-android-shell-package-build.sh	RUST_TOOLCHAIN="${DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN:-1.92.0}"
+contains	scripts/check-mobile-android-shell-package-build.sh	RUST_TOOLCHAIN="${DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN:-1.97.0}"
 contains	scripts/check-mobile-android-shell-package-build.sh	CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
 contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh

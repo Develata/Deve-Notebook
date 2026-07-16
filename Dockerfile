@@ -3,7 +3,7 @@
 # 包含后端 API（Axum）和前端 SPA（Leptos）
 
 # 阶段 1: build-env — 构建前后端所需工具
-FROM rust:1.92-bookworm AS build-env
+FROM rust:1.97.0-bookworm AS build-env
 RUN cargo install trunk --locked --version 0.21.14 && \
     rustup target add wasm32-unknown-unknown && \
     curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \

@@ -428,7 +428,7 @@ p1.metadata.description	none	none	none	github	metadata	advisory	conditional	gap	
 p1.metadata.homepage	none	none	none	github	metadata	advisory	conditional	gap	gap.metadata.homepage	GitHub homepage is missing	none	repository homepage remains follow-up metadata work
 p1.metadata.topics	none	none	none	github	metadata	advisory	conditional	gap	gap.metadata.topics	GitHub topics are missing	none	repository topics remain follow-up metadata work
 p1.metadata.demo	none	none	none	github	metadata	advisory	conditional	gap	gap.metadata.demo	demo metadata is missing	none	repository demo metadata remains follow-up work
-p2.toolchain-pins	none	none	none	repository	tooling	advisory	conditional	gap	gap.toolchain-pins	toolchain pin files are missing	none	toolchain pins remain later engineering hardening
+p2.toolchain-pins	none	none	none	repository	tooling	ci	required	source-ref	source.toolchain-pins	rust-toolchain.toml	source-bound	exact Rust toolchain pin is enforced by the release baseline
 p2.editorconfig	none	none	none	repository	tooling	advisory	conditional	gap	gap.editorconfig	.editorconfig is missing	none	editor configuration remains later engineering hardening
 p2.fuzz	none	none	none	repository	tooling	advisory	conditional	gap	gap.fuzz	fuzzing gate is missing	none	fuzzing remains later engineering hardening
 p2.performance	none	none	none	repository	tooling	advisory	conditional	gap	gap.performance	performance evidence gate is missing	none	performance evidence remains later engineering hardening

@@ -45,10 +45,7 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
     let Some(msg) = route_payload_message(msg, ctx) else {
         return;
     };
-    if let ServerMessage::SyncHello {
-        peer_id, vector: _, ..
-    } = msg
-    {
+    if let ServerMessage::SyncHello { peer_id, .. } = msg {
         let _ = peer_id;
     }
 }

@@ -104,7 +104,7 @@ repo metadata、locator string、浏览器状态、普通日志或 README 示例
 
 主开发路径需要：
 
-- Rust 1.92 或兼容 Edition 2024 的 toolchain。
+- Rust 1.97.0（由 `rust-toolchain.toml` 精确钉住），支持 Edition 2024。
 - Web 检查需要 `wasm32-unknown-unknown` target。
 - Node.js 24 与 npm，用于和 CI 保持一致。
 - 用于 WebAssembly 前端的 Trunk。

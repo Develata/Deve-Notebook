@@ -86,10 +86,10 @@ jobs:
           printf 'DEVE_RELEASE_TAG_OBJECT=%s\n' "$(git rev-parse "$GITHUB_REF")" >>"$GITHUB_ENV"
           printf 'DEVE_SEALED_ROOT=%s\n' "$sealed" >>"$GITHUB_ENV"
 
-      - name: Install Rust 1.92
-        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
-          toolchain: 1.92
+          toolchain: "1.97.0"
 
       - name: Verify candidate bytes, tag version, attestations, and receipts
         shell: bash

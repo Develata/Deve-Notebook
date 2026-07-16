@@ -486,7 +486,7 @@
 - case_id: DIFF-012
   goal: Diff typed projection 由 Core 计算，并覆盖 UTF-16、fold、资源上限和完整文档边界。
   preconditions:
-    - Rust 1.92 toolchain 可用
+    - Rust 1.97.0 toolchain 可用
   steps:
     - run: cargo test -p deve_core diff_projection -- --nocapture
   assertions:
