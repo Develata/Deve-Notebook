@@ -5,8 +5,9 @@
 use super::docs_seed_test_support::seed_file;
 use super::docs_test_support::{channel, docs_harness, local_session, recv_protocol_error};
 use super::handlers::docs::{
-    handle_copy_doc, handle_create_doc, handle_move_doc, handle_rename_doc,
+    handle_copy_doc, handle_create_doc, handle_delete_doc, handle_move_doc, handle_rename_doc,
 };
+use crate::server::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
 use deve_core::protocol::ServerErrorCode;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -125,5 +126,45 @@ async fn move_rejects_traversal_source_before_resolving_target() -> anyhow::Resu
     let (error, _) = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::RequestFailed);
     assert_eq!(error.detail.as_deref(), Some("Invalid path: ../secret.md"));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn workspace_ingestion_failure_precedes_docs_workspace_lookups() -> anyhow::Result<()> {
+    let h = docs_harness()?;
+    seed_file(&h, "notes/existing.md", "hello")?;
+    h.state
+        .set_watcher_runtime_view_for_test(WatcherRuntimeView::with_state_for_test(
+            h.repo_id,
+            1,
+            RepoMountState::Failed,
+        ));
+
+    let assert_unavailable = |error: deve_core::protocol::ServerError| {
+        assert_eq!(
+            error.code,
+            ServerErrorCode::StorageWorkspaceIngestionUnavailable
+        );
+    };
+
+    let (ch, mut rx) = channel(&h.state);
+    let mut session = local_session(&h.state, h.repo_id);
+    handle_create_doc(&h.state, &ch, &mut session, "notes/existing.md".into()).await;
+    assert_unavailable(recv_protocol_error(&mut rx).await.0);
+
+    let (ch, mut rx) = channel(&h.state);
+    handle_delete_doc(&h.state, &ch, &mut session, "notes/missing.md".into()).await;
+    assert_unavailable(recv_protocol_error(&mut rx).await.0);
+
+    let (ch, mut rx) = channel(&h.state);
+    handle_rename_doc(
+        &h.state,
+        &ch,
+        &mut session,
+        "notes/missing.md".into(),
+        "notes/renamed.md".into(),
+    )
+    .await;
+    assert_unavailable(recv_protocol_error(&mut rx).await.0);
     Ok(())
 }

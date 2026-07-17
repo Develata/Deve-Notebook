@@ -39,7 +39,7 @@ pub(super) async fn append_client_edit(input: ClientEditAppend<'_>) {
     } = input;
     let gate = state.repo_mutation_gate();
     let execution = gate
-        .execute_repo(repo_id, &state.tx, || {
+        .execute_mounted_repo(repo_id, &state.tx, || {
             let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
                 state,
                 repo_id,

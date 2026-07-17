@@ -22,9 +22,8 @@ and the code constants above. A format change must update `docs/plan/` first,
 then this registry and the matching baseline spec before code can claim first-tag
 readiness.
 
-Implementation status at W0: the approved first-tag contract is frozen at F4/v2,
-while `crates/core/src/protocol/frame.rs` and the release baseline still expose the
-unpublished development F4/v1 shape. Therefore `deve_baseline release`, REL-003,
-release candidate and tag-ready are intentionally blocking until W4 performs the
-single code/baseline cutover; no W0-W3 result may be reported as format-bound or
-release-ready.
+Implementation status at W4: the code constants and network/release baselines now
+use the approved F4/v2 lockstep shape. This closes the unpublished F4/v1 cutover,
+but does not by itself make the repository release-ready: later watcher evidence,
+release-freeze, acceptance, producer-receipt, candidate, aggregate, and tag-ready
+gates remain authoritative.

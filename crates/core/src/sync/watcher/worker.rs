@@ -3,8 +3,8 @@
 
 use super::backend::{BackendSignal, FsWatcherBackend};
 use super::{
-    RepoWatcherWorkerState, WatcherFailure, WatcherFailureKind, WatcherFailurePhase,
-    WatcherRefresh, WatcherRefreshCallback, dispatch, panic_message,
+    RepoWatcherWorkerState, WatcherFailure, WatcherFailureCallback, WatcherFailureKind,
+    WatcherFailurePhase, WatcherRefresh, WatcherRefreshCallback, dispatch, panic_message,
 };
 use crate::models::RepoId;
 use crate::sync::SyncManager;
@@ -23,6 +23,7 @@ pub(crate) struct WorkerInput {
     pub backend: Box<dyn FsWatcherBackend>,
     pub stop_rx: mpsc::Receiver<()>,
     pub refresh: Option<WatcherRefreshCallback>,
+    pub failure: Option<WatcherFailureCallback>,
     pub state: Arc<RwLock<WorkerStateSlot>>,
 }
 
@@ -54,6 +55,7 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
         mut backend,
         stop_rx,
         refresh,
+        failure: failure_callback,
         state,
     } = input;
     let primary = catch_unwind(AssertUnwindSafe(|| {
@@ -74,28 +76,77 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
             panic_message(panic),
         ))
     });
-    if let Err(failure) = &primary {
-        replace_state(
+    let primary_failed = primary.is_err();
+    let callback_cleanup = if let Err(primary_failure) = &primary {
+        publish_failure_cut(
             &state,
             generation,
-            RepoWatcherWorkerState::Failed(failure.clone()),
-        );
-    }
+            primary_failure,
+            failure_callback.as_ref(),
+        )
+    } else {
+        None
+    };
     let cleanup = stop_backend(backend.as_mut());
-    let result = match (primary, cleanup) {
+    let mut result = match (primary, cleanup) {
         (Err(failure), Err(cleanup)) => Err(failure.with_cleanup(cleanup.to_string())),
         (Err(failure), Ok(())) => Err(failure),
         (Ok(()), Err(cleanup)) => Err(cleanup),
         (Ok(()), Ok(())) => Ok(()),
     };
+    if let Some(callback_cleanup) = callback_cleanup
+        && let Err(failure) = &mut result
+    {
+        failure.cleanup.push(callback_cleanup);
+    }
+    if !primary_failed
+        && let Err(failure) = &result
+        && let Some(callback_cleanup) =
+            publish_failure_cut(&state, generation, failure, failure_callback.as_ref())
+        && let Err(current) = &mut result
+    {
+        current.cleanup.push(callback_cleanup);
+    }
     if let Err(failure) = &result {
         replace_state(
             &state,
             generation,
             RepoWatcherWorkerState::Failed(failure.clone()),
         );
+        tracing::error!(
+            %repo_id,
+            generation,
+            phase = ?failure.phase,
+            kind = ?failure.kind,
+            primary = %failure.primary,
+            cleanup = ?failure.cleanup,
+            "workspace ingestion watcher failed"
+        );
     }
     result
+}
+
+fn publish_failure_cut(
+    state: &RwLock<WorkerStateSlot>,
+    generation: u64,
+    failure: &WatcherFailure,
+    callback: Option<&WatcherFailureCallback>,
+) -> Option<String> {
+    replace_state(
+        state,
+        generation,
+        RepoWatcherWorkerState::Failed(failure.clone()),
+    );
+    callback.and_then(|callback| {
+        catch_unwind(AssertUnwindSafe(|| callback(failure.clone())))
+            .err()
+            .map(|panic| {
+                format!(
+                    "watcher failure callback panicked: {}",
+                    panic_message(panic)
+                )
+            })
+    })
 }
 
 fn consume_loop(

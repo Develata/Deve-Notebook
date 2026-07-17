@@ -4,7 +4,9 @@
 //! Peer merge conflict resolution handlers.
 
 use super::errors;
-use super::peer_apply::{MergeWriteOutcome, default_accept_both, write_merged_content};
+use super::peer_apply::{
+    MergeWriteOutcome, MergeWriteRequest, default_accept_both, write_merged_content,
+};
 use super::scope::resolve_local_write_scope;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel, session::PendingMergeConflict};
@@ -23,6 +25,14 @@ pub(super) async fn handle_resolve_merge_conflict(
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
+    };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error(ch, error.server_error(), scope_nonce);
+            return;
+        }
     };
     let Some(pending) = session.pending_merge_conflict.take() else {
         errors::storage_not_found(ch, "No pending merge conflict", scope_nonce);
@@ -44,11 +54,14 @@ pub(super) async fn handle_resolve_merge_conflict(
     let outcome = write_merged_content(
         state,
         ch,
-        &scope,
-        &pending.preflight,
-        &content,
-        resolution,
-        scope_nonce,
+        MergeWriteRequest {
+            scope: &scope,
+            admission,
+            preflight: &pending.preflight,
+            content: &content,
+            resolution,
+            scope_nonce,
+        },
     )
     .await;
     if should_restore_pending(outcome) {

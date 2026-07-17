@@ -64,7 +64,7 @@ impl std::error::Error for ServerTransportServeError {}
 pub(crate) struct EmbeddedServerRuntime {
     transport: ServerTransportRuntime,
     background_tasks: Option<runtime::BackgroundRuntimeTasks>,
-    watcher_guard: Option<runtime::watcher_runtime::FileWatcherRuntimeGuard>,
+    watcher_supervisor: Option<runtime::watcher_runtime::WatcherSupervisor>,
 }
 
 impl EmbeddedServerRuntime {
@@ -95,6 +95,8 @@ impl EmbeddedServerRuntime {
 
         let sync_engine = build_sync_engine(peer_id, repo.clone(), sync_mode);
         let tree_manager = runtime::build_tree_registry();
+        let watcher_supervisor = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
+        let watcher_runtime = watcher_supervisor.view();
         let app_state = runtime::build_app_state(runtime::AppStateParts {
             repo: repo.clone(),
             sync_manager: sync_manager.clone(),
@@ -105,8 +107,8 @@ impl EmbeddedServerRuntime {
             #[cfg(feature = "search")]
             search_available,
             identity_key: key_pair,
+            watcher_runtime,
         });
-        let watcher_guard = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
         #[cfg(not(test))]
         deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
             crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
@@ -127,7 +129,7 @@ impl EmbeddedServerRuntime {
                 p2p_inbound_token_env,
             },
             background_tasks: Some(background_tasks),
-            watcher_guard: Some(watcher_guard),
+            watcher_supervisor: Some(watcher_supervisor),
         })
     }
 
@@ -140,13 +142,15 @@ impl EmbeddedServerRuntime {
             Some(tasks) => tasks.shutdown(timeout).await,
             None => Ok(()),
         };
-        let watcher_result = match self.watcher_guard.take() {
-            Some(guard) => match tokio::task::spawn_blocking(move || guard.shutdown()).await {
-                Ok(result) => result,
-                Err(error) => Err(anyhow::anyhow!(
-                    "watcher shutdown coordination task failed: {error}"
-                )),
-            },
+        let watcher_result = match self.watcher_supervisor.take() {
+            Some(supervisor) => {
+                match tokio::task::spawn_blocking(move || supervisor.shutdown()).await {
+                    Ok(result) => result.map_err(anyhow::Error::from),
+                    Err(error) => Err(anyhow::anyhow!(
+                        "watcher shutdown coordination task failed: {error}"
+                    )),
+                }
+            }
             None => Ok(()),
         };
         combine_runtime_shutdown_results(background_result, watcher_result)

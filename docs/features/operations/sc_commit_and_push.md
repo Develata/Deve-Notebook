@@ -36,16 +36,7 @@
 - `Immediate Result`: 展示 Git push CLI-only notice；Web 不发送 Git writer intent
 - `Application Entry`: `apps/web/src/components/sidebar/source_control/commit_controller.rs`
 
-### `op.sc.commit-publish.receive-result`
-
-- `Name`: `Reject Legacy CommitAndPush Frame`
-- `Surface`: `source-control-panel`
-- `Trigger`: 旧客户端仍发送 `ClientMessage::CommitAndPush`
-- `Preconditions`: 请求已通过 scope gate
-- `Immediate Result`: 服务端返回结构化 CLI-only blocker；不创建 commit、不排队 Git mirror、不执行 Git push
-- `Application Entry`: `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
-
 ## Notes
 
-- `CommitAndPush` wire frame 仅作为兼容入口保留，避免协议枚举形状变化；它不是可执行 Git push 能力。
+- `CommitAndPush` 不是 WS v2 wire surface；UI callback 只更新本地 notice，不调用 WebSocket client。
 - 正常发布流程是先执行 Web `Commit` 或 CLI `deve sc commit`，再通过显式 CLI `deve ngit push` 发布 Git mirror。

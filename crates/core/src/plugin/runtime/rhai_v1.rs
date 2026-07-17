@@ -16,7 +16,7 @@ use crate::plugin::manifest::PluginManifest;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::runtime::module_resolver::GuardedFileModuleResolver;
 use anyhow::{Result, anyhow};
-use rhai::{AST, Dynamic, Engine, Scope};
+use rhai::{AST, Dynamic, Engine, EvalAltResult, Scope};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -99,13 +99,35 @@ impl PluginRuntime for RhaiRuntime {
             .lock()
             .map_err(|_| anyhow!("Failed to lock plugin scope"))?;
 
-        self.engine
-            .call_fn(&mut scope, ast, fn_name, args)
-            .map_err(|e| anyhow!("Runtime error in function '{}': {}", fn_name, e))
+        match self.engine.call_fn(&mut scope, ast, fn_name, args) {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                if let Some(server_error) = plugin_host_server_error(&error) {
+                    return Err(anyhow::Error::new(server_error.clone()));
+                }
+                Err(anyhow!(
+                    "Runtime error in function '{}': {}",
+                    fn_name,
+                    error
+                ))
+            }
+        }
     }
 
     fn manifest(&self) -> &PluginManifest {
         &self.manifest
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn plugin_host_server_error(error: &EvalAltResult) -> Option<&host::PluginHostServerError> {
+    match error {
+        EvalAltResult::ErrorSystem(_, source) => {
+            source.downcast_ref::<host::PluginHostServerError>()
+        }
+        EvalAltResult::ErrorInFunctionCall(_, _, inner, _)
+        | EvalAltResult::ErrorInModule(_, inner, _) => plugin_host_server_error(inner),
+        _ => None,
     }
 }
 
@@ -190,5 +212,57 @@ mod tests {
         let mut rt = RhaiRuntime::new(manifest.clone(), PathBuf::from("."));
 
         assert!(rt.load(manifest, r#"fn run() { eval("40 + 2") }"#).is_err());
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn nested_rhai_error_preserves_typed_plugin_host_server_error() {
+        let server_error = crate::protocol::ServerError::workspace_ingestion_unavailable();
+        let nested = EvalAltResult::ErrorInFunctionCall(
+            "writer".to_string(),
+            "test".to_string(),
+            Box::new(EvalAltResult::ErrorSystem(
+                "host".to_string(),
+                Box::new(host::PluginHostServerError(server_error.clone())),
+            )),
+            rhai::Position::NONE,
+        );
+
+        assert_eq!(
+            plugin_host_server_error(&nested).map(|error| error.0.clone()),
+            Some(server_error)
+        );
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn rhai_call_returns_typed_plugin_host_server_error() {
+        let manifest = PluginManifest {
+            id: "typed-host-error".into(),
+            name: "Typed Host Error".into(),
+            version: "0.1".into(),
+            entry: "main.rhai".into(),
+            capabilities: Default::default(),
+        };
+        let mut runtime = RhaiRuntime::new(manifest.clone(), PathBuf::from("."));
+        runtime
+            .engine
+            .register_fn("typed_fail", || -> Result<(), Box<EvalAltResult>> {
+                Err(host::server_error_to_eval(
+                    crate::protocol::ServerError::workspace_ingestion_unavailable(),
+                ))
+            });
+        runtime
+            .load(manifest, "fn run() { typed_fail(); }")
+            .expect("script loads");
+
+        let error = runtime.call("run", Vec::new()).expect_err("typed failure");
+        let typed = error
+            .downcast_ref::<host::PluginHostServerError>()
+            .expect("typed host error survives Rhai call");
+        assert_eq!(
+            typed.0,
+            crate::protocol::ServerError::workspace_ingestion_unavailable()
+        );
     }
 }

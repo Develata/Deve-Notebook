@@ -3,21 +3,27 @@
 //!   - 07_network#server-ws-runtime
 //!   - 14_commands#cli-commands
 //!
-//! Host-owned watcher handle collection shared by server startup and the
-//! standalone watch command. W4 evolves this owner into WatcherSupervisor.
+//! Standalone-watch owner. The embedded server uses its separate
+//! `WatcherSupervisor`; this collection only preserves fail-all CLI semantics.
 
 use deve_core::models::RepoId;
 use deve_core::sync::watcher::{
-    RepoWatcherHandle, RepoWatcherStart, RepoWatcherWorkerState, WatcherFailure, WatcherStartError,
+    RepoWatcherHandle, RepoWatcherStart, WatcherFailure, WatcherStartError,
 };
 use std::collections::HashSet;
+use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
 pub(crate) struct OwnedWatcherHandles {
     handles: Vec<RepoWatcherHandle>,
+    terminal_rx: mpsc::Receiver<WatcherFailure>,
 }
 
 impl OwnedWatcherHandles {
     pub(crate) fn start_all(starts: Vec<RepoWatcherStart>) -> Result<Self, WatcherBatchStartError> {
+        if starts.is_empty() {
+            return Err(WatcherBatchStartError::Empty);
+        }
         let mut repo_ids = HashSet::with_capacity(starts.len());
         for start in &starts {
             if !repo_ids.insert(start.repo_id()) {
@@ -26,8 +32,13 @@ impl OwnedWatcherHandles {
         }
 
         let mut handles = Vec::with_capacity(starts.len());
+        let (terminal_tx, terminal_rx) = mpsc::channel();
         for start in starts {
             let repo_id = start.repo_id();
+            let failure_tx = terminal_tx.clone();
+            let start = start.with_failure_callback(Arc::new(move |failure| {
+                let _ = failure_tx.send(failure);
+            }));
             match RepoWatcherHandle::start(start) {
                 Ok(handle) => handles.push(handle),
                 Err(source) => {
@@ -40,16 +51,15 @@ impl OwnedWatcherHandles {
                 }
             }
         }
-        Ok(Self { handles })
+        drop(terminal_tx);
+        Ok(Self {
+            handles,
+            terminal_rx,
+        })
     }
 
-    pub(crate) fn terminal_failure(&self) -> Option<WatcherFailure> {
-        self.handles
-            .iter()
-            .find_map(|handle| match handle.snapshot().worker_state() {
-                RepoWatcherWorkerState::Running => None,
-                RepoWatcherWorkerState::Failed(failure) => Some(failure.clone()),
-            })
+    pub(crate) fn wait_terminal_failure(&self, timeout: Duration) -> Option<WatcherFailure> {
+        self.terminal_rx.recv_timeout(timeout).ok()
     }
 
     pub(crate) fn shutdown(mut self) -> Result<(), WatcherCollectionShutdownError> {
@@ -76,6 +86,7 @@ impl Drop for OwnedWatcherHandles {
 
 #[derive(Debug)]
 pub(crate) enum WatcherBatchStartError {
+    Empty,
     DuplicateRepo(RepoId),
     Start {
         repo_id: RepoId,
@@ -87,6 +98,7 @@ pub(crate) enum WatcherBatchStartError {
 impl std::fmt::Display for WatcherBatchStartError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Empty => formatter.write_str("standalone watch requires at least one repository"),
             Self::DuplicateRepo(repo_id) => {
                 write!(
                     formatter,
@@ -111,7 +123,7 @@ impl std::fmt::Display for WatcherBatchStartError {
 impl std::error::Error for WatcherBatchStartError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::DuplicateRepo(_) => None,
+            Self::Empty | Self::DuplicateRepo(_) => None,
             Self::Start { source, .. } => Some(source),
         }
     }
@@ -186,6 +198,16 @@ mod tests {
             .get_repo_info_for(None, Some("main"))?
             .expect("main repo");
         Ok((dir, repo, sync, info.name, info.uuid))
+    }
+
+    #[test]
+    fn standalone_watch_empty_batch_fails_closed() {
+        let error = match OwnedWatcherHandles::start_all(Vec::new()) {
+            Ok(_) => panic!("empty watcher batch must fail"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(error, WatcherBatchStartError::Empty));
     }
 
     #[test]

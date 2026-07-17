@@ -4,6 +4,7 @@
 //! Repo switch preparation and database handle resolution.
 
 use crate::server::AppState;
+use crate::server::repo_mutation::RepoMutationGateError;
 use crate::server::session::WsSession;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::RepoId;
@@ -21,7 +22,7 @@ pub(super) struct PreparedRepoSwitch {
 
 pub(crate) use branch::validate_branch_target;
 
-pub(super) fn prepare_repo_switch(
+pub(super) async fn prepare_repo_switch(
     state: &Arc<AppState>,
     branch: Option<&deve_core::models::PeerId>,
     repo_name: String,
@@ -45,9 +46,27 @@ pub(super) fn prepare_repo_switch(
         });
     }
     let display_name = repo_info.name;
-    let degraded_docs_only = match state.sync_manager.materialize_local_repo(&repo_name) {
-        Ok(()) => false,
-        Err(err) if recovery::should_degrade_local_projection(&err) => {
+    let prepared = state
+        .sync_manager
+        .prepare_local_repo_materialization(&repo_name)?;
+    let execution = state
+        .repo_mutation_gate()
+        .execute_mounted_repo_unpublished(repo_info.uuid, || {
+            let bound_name = match state
+                .repo
+                .resolve_local_repo_name_for_execution(Some(repo_info.uuid), Some(&repo_name))
+            {
+                Ok(name) => name,
+                Err(error) => return Err(error),
+            };
+            state
+                .sync_manager
+                .apply_prepared_local_repo_materialization(&bound_name, prepared)
+        })
+        .await;
+    let degraded_docs_only = match execution {
+        Ok(Ok(())) => false,
+        Ok(Err(err)) if recovery::should_degrade_local_projection(&err) => {
             tracing::warn!(
                 repo_name = %repo_name,
                 error = %err,
@@ -55,7 +74,15 @@ pub(super) fn prepare_repo_switch(
             );
             true
         }
-        Err(err) => return Err(err),
+        Ok(Err(err)) => return Err(err),
+        Err(RepoMutationGateError::WorkspaceIngestionUnavailable) => {
+            tracing::warn!(
+                repo_name = %repo_name,
+                "Skipping local projection materialization because workspace ingestion is unavailable"
+            );
+            false
+        }
+        Err(error) => return Err(anyhow::Error::new(error)),
     };
     Ok(PreparedRepoSwitch {
         repo_name: display_name,

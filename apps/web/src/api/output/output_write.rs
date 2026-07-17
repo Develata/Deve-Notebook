@@ -27,7 +27,6 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::SyncPushSnapshot { .. }
             | ClientMessage::Commit { .. }
             | ClientMessage::ApplyExternalChanges { .. }
-            | ClientMessage::CommitAndPush { .. }
             | ClientMessage::StageFile { .. }
             | ClientMessage::StageFiles { .. }
             | ClientMessage::UnstageFile { .. }

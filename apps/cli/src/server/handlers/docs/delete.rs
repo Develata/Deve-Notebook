@@ -40,6 +40,14 @@ pub async fn handle_delete_doc(
     if !validate_file_path(&path, ch, scope_nonce) {
         return;
     }
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+            return;
+        }
+    };
 
     tracing::info!("handle_delete_doc: path={}", path);
     let target = match resolve_node_target(state, &scope, &path) {
@@ -58,9 +66,8 @@ pub async fn handle_delete_doc(
         }
     };
 
-    let execution = state
-        .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+    let execution = gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope = match crate::server::repo_mutation::revalidate_writable_resolved_repo(
                 state, &scope,
             ) {
@@ -137,10 +144,6 @@ pub async fn handle_delete_doc(
                 scope_nonce,
             );
         }
-        Err(error) => errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to serialize node delete: {error}"),
-            scope_nonce,
-        ),
+        Err(error) => errors::server_error_scoped(ch, error.server_error(), scope_nonce),
     }
 }

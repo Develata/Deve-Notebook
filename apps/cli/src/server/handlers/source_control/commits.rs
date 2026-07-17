@@ -14,8 +14,6 @@ use deve_core::protocol::{
 use deve_core::source_control::CommitFileDiffTarget;
 use std::sync::Arc;
 
-const COMMIT_AND_PUSH_CLI_ONLY_DETAIL: &str = "Commit & Push is CLI-only; create a NoteGit commit first, then run `deve ngit push` explicitly.";
-
 /// 创建提交 (保存快照)
 pub async fn handle_commit(
     state: &Arc<AppState>,
@@ -56,6 +54,11 @@ pub async fn handle_apply_external_changes(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => return super::errors::send_ws_scoped(ch, error.server_error(), scope_nonce),
+    };
     let prepared = match state
         .repo
         .prepare_external_changes_in_local_repo(&scope.repo_name)
@@ -69,9 +72,8 @@ pub async fn handle_apply_external_changes(
             );
         }
     };
-    let execution = state
-        .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+    let execution = gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
                 state,
                 scope.repo_id,
@@ -135,12 +137,7 @@ pub async fn handle_apply_external_changes(
         Ok(MutationExecution::CommittedPartial { error, .. }) => {
             super::errors::send_ws_scoped(ch, error, scope_nonce);
         }
-        Err(error) => super::errors::send_ws_code_scoped(
-            ch,
-            ServerErrorCode::StoragePersistFailed,
-            error.to_string(),
-            scope_nonce,
-        ),
+        Err(error) => super::errors::send_ws_scoped(ch, error.server_error(), scope_nonce),
     }
 }
 
@@ -288,29 +285,5 @@ pub async fn handle_get_commit_file_diff(
             ))
         },
         ch.clone(),
-    );
-}
-
-/// 拒绝兼容期 `CommitAndPush` wire frame。
-///
-/// Web `Commit & Push` 只展示 CLI-only notice。旧客户端若仍发送该消息，
-/// 服务端保留 scope / write gate 校验，但不得创建 commit 或触发 Git main mirror write。
-pub async fn handle_commit_and_push(
-    state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &mut WsSession,
-    _message: String,
-) {
-    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if let Err(e) =
-        super::repo_scope::resolve_current_authorized_writable_local_repo(state, session)
-    {
-        return super::errors::send_ws_scoped(ch, e, scope_nonce);
-    }
-    super::errors::send_ws_code_scoped(
-        ch,
-        ServerErrorCode::ScRepoContextInvalid,
-        COMMIT_AND_PUSH_CLI_ONLY_DETAIL,
-        scope_nonce,
     );
 }

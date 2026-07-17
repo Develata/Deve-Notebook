@@ -26,7 +26,7 @@ pub use handle::RepoWatcherHandle;
 pub use refresh::{WatcherRefresh, WatcherRefreshCallback, WatcherRefreshKind};
 pub use types::{
     RepoWatcherSnapshot, RepoWatcherStart, RepoWatcherWorkerState, WatcherFailure,
-    WatcherFailureKind, WatcherFailurePhase, WatcherStartError,
+    WatcherFailureCallback, WatcherFailureKind, WatcherFailurePhase, WatcherStartError,
 };
 
 pub(crate) type WatcherCallback = WatcherRefreshCallback;

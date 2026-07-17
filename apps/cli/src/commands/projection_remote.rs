@@ -25,7 +25,13 @@ use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) use profile_command::run_s3_profile_action;
-pub(crate) use resolved::{ProjectionRemoteExecutionSummary, run_for_resolved_repo};
+#[cfg(test)]
+pub(crate) use resolved::prepared_pull_for_test;
+pub(crate) use resolved::{
+    PreparedProjectionRemotePull, ProjectionRemoteExecutionSummary, apply_prepared_pull,
+    finalize_prepared_pull_after_scan, prepare_pull_for_resolved_repo, run_for_resolved_repo,
+    scan_prepared_pull,
+};
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum ProjectionRemoteAction {

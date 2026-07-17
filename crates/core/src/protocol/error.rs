@@ -2,6 +2,7 @@
 //!   - 07_network#server-ws-runtime
 //!   - 08_auth#unauthorized-handling
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 13_i18n#i18n-error-code-catalog
 
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +48,8 @@ pub enum ServerErrorCode {
     StorageConflict,
     #[serde(rename = "STORAGE_PERSIST_FAILED")]
     StoragePersistFailed,
+    #[serde(rename = "STORAGE_WORKSPACE_INGESTION_UNAVAILABLE")]
+    StorageWorkspaceIngestionUnavailable,
     #[serde(rename = "PLUGIN_INVALID_MESSAGE")]
     PluginInvalidMessage,
     #[serde(rename = "PLUGIN_UNSUPPORTED_MESSAGE")]
@@ -110,6 +113,13 @@ impl ServerError {
             detail: Some(detail.into()),
         }
     }
+
+    pub fn workspace_ingestion_unavailable() -> Self {
+        Self::with_detail(
+            ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+            "Workspace changes are temporarily unavailable; restart the service to recover.",
+        )
+    }
 }
 
 #[cfg(test)]
@@ -138,6 +148,19 @@ mod tests {
         let decoded: ServerError = codec::decode(&encoded).unwrap();
         assert_eq!(decoded.code, ServerErrorCode::ScDocNotFound);
         assert_eq!(decoded.detail.as_deref(), Some("missing doc"));
+    }
+
+    #[test]
+    fn workspace_ingestion_error_uses_fixed_generic_detail() {
+        let error = ServerError::workspace_ingestion_unavailable();
+        assert_eq!(
+            error.code,
+            ServerErrorCode::StorageWorkspaceIngestionUnavailable
+        );
+        assert_eq!(
+            error.detail.as_deref(),
+            Some("Workspace changes are temporarily unavailable; restart the service to recover.")
+        );
     }
 
     #[test]
@@ -191,6 +214,10 @@ mod tests {
             ),
             (ServerErrorCode::DiffResourceLimit, "DIFF_RESOURCE_LIMIT"),
             (ServerErrorCode::DiffComputeFailed, "DIFF_COMPUTE_FAILED"),
+            (
+                ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+                "STORAGE_WORKSPACE_INGESTION_UNAVAILABLE",
+            ),
         ];
 
         for (code, expected) in cases {

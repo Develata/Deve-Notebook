@@ -54,7 +54,6 @@ apps/cli/src/server/channel/tests/request_response.rs	test	-	Test-only module; p
 apps/cli/src/server/channel/tests/sync_control.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 apps/cli/src/server/diff_projection/tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 apps/cli/src/server/handlers/admin/tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.
-apps/cli/src/server/handlers/docs/copy/dir_copy/tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 apps/cli/src/server/handlers/docs/copy/path_validation_tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 apps/cli/src/server/handlers/docs/create/tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 apps/cli/src/server/handlers/docs/delete/tests.rs	test	-	Test-only module; production behavior is traced through the exercised module.

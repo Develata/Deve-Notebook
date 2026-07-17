@@ -6,7 +6,7 @@
 use super::{checked_exists, errors};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_mutation::{MutationExecution, MutationPublication};
+use crate::server::repo_mutation::{MountedRepoAdmission, MutationExecution, MutationPublication};
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
@@ -17,6 +17,7 @@ pub(super) async fn handle_file_rename(
     ch: &DualChannel,
     session: &mut WsSession,
     scope: &ResolvedRepo,
+    admission: MountedRepoAdmission,
     src_path: &str,
     dst_path: &str,
 ) {
@@ -45,7 +46,7 @@ pub(super) async fn handle_file_rename(
     };
     let execution = state
         .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope =
                 match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
                 {
@@ -124,10 +125,6 @@ pub(super) async fn handle_file_rename(
                 scope_nonce,
             );
         }
-        Err(error) => errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to serialize file rename: {error}"),
-            scope_nonce,
-        ),
+        Err(error) => errors::server_error_scoped(ch, error.server_error(), scope_nonce),
     }
 }

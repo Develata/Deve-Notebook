@@ -245,6 +245,13 @@ workspace/ledger/staging/Git side effect 之前返回
 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE`。该错误码与 HTTP/WS 映射由
 `13_i18n#i18n-error-code-catalog` 和 `07_network` 唯一定义。
 
+已越过 admission cut、但按合同必须在 permit 外执行 scan 的 operation，可以持有一次性
+completion continuation。continuation 必须同时绑定原 mount slot/generation 与 repo-lane
+revision：repo-local watcher 在 cut 后进入 `Failed` 不得阻断该 operation 的清理/最终化；
+slot replacement、lifecycle transition 或 scan 期间任何后续受管 repo writer 则必须使旧
+continuation fail-closed。旧 continuation 不得据此执行可能覆盖新 writer 的 rollback；应保留
+可诊断 staging/workspace 事实并进入显式 repair。
+
 supervisor map mutex 不得跨 repo permit 获取或等待、I/O、scan、join、await 与 publication；
 持有 map mutex 时禁止获取 Catalog/Repo permit。exact revalidation 只读 token 指向的原子
 slot state，不重新获取 supervisor map mutex，从而避免 Map↔Repo 反向嵌套。

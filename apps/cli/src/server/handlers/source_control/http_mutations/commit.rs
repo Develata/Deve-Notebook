@@ -47,22 +47,34 @@ async fn commit_through_gate(
     let repo_id = binding.repo_id;
     let pinned = binding.pinned_selector();
     let expected_name = pinned.repo_name.as_deref().unwrap_or_default();
+    let repo_name = match crate::server::repo_mutation::prepare_writable_local_repo(
+        state,
+        repo_id,
+        expected_name,
+    ) {
+        Ok(name) => name,
+        Err(error) => {
+            return errors::http(errors::map_repo_error(errors::ScOp::Commit, error));
+        }
+    };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(repo_id) {
+        Ok(admission) => admission,
+        Err(error) => return errors::http(error.server_error()),
+    };
     let prepared_external = match state
         .repo
-        .prepare_source_control_commit_in_local_repo(expected_name)
+        .prepare_source_control_commit_in_local_repo(&repo_name)
     {
         Ok(prepared) => prepared,
         Err(error) => {
             return errors::http(errors::map_repo_error(errors::ScOp::Commit, error));
         }
     };
-    match state
-        .repo_mutation_gate()
-        .execute_repo(repo_id, &state.tx, || {
+    match gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
-                state,
-                repo_id,
-                expected_name,
+                state, repo_id, &repo_name,
             ) {
                 Ok(repo_name) => repo_name,
                 Err(error) => {
@@ -124,10 +136,7 @@ async fn commit_through_gate(
             value: (info, _), ..
         }) => Json::<CommitInfo>(info).into_response(),
         Ok(MutationExecution::CommittedPartial { error, .. }) => errors::http(error),
-        Err(error) => errors::http(deve_core::protocol::ServerError::with_detail(
-            deve_core::protocol::ServerErrorCode::StoragePersistFailed,
-            error.to_string(),
-        )),
+        Err(error) => errors::http(error.server_error()),
     }
 }
 

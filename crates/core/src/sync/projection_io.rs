@@ -2,6 +2,7 @@
 //!   - 03_storage/projection#projection-contract
 
 use super::{SnapshotPolicy, SyncManager, rebuild};
+use crate::ledger::ops;
 use crate::models::DocId;
 use crate::utils::fs::checked_exists;
 use anyhow::{Result, anyhow};
@@ -58,6 +59,52 @@ pub(super) fn persist_doc_at_path(
             "SyncManager: Failed to save snapshot for {}: {:?}",
             doc_id, e
         );
+    }
+    Ok(())
+}
+
+pub(super) fn persist_prepared_doc_content(
+    sync: &SyncManager,
+    repo_name: &str,
+    doc_id: DocId,
+    path: &str,
+    content: &str,
+) -> Result<()> {
+    let current_path = sync
+        .repo
+        .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+        .map(|meta| meta.path)
+        .ok_or_else(|| anyhow!("prepared projection doc metadata disappeared: {doc_id}"))?;
+    if current_path != path {
+        return Err(anyhow!(
+            "prepared projection path changed before writeback: expected {}, observed {}",
+            path,
+            current_path
+        ));
+    }
+    let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
+    if let Some(parent) = file_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    sync.repo.record_projection_write(repo_name, path, content);
+    if let Err(error) = std::fs::write(&file_path, content) {
+        sync.repo.clear_projection_guard(repo_name, path);
+        return Err(error.into());
+    }
+    sync.repo
+        .bind_workspace_inode_in_local_repo(repo_name, path, doc_id)?;
+    let max_seq = sync
+        .repo
+        .run_on_local_repo(repo_name, |db| ops::max_seq_from_db(db, doc_id))?;
+    let policy = SnapshotPolicy::default();
+    let doc_len = content.encode_utf16().count();
+    if max_seq > 0
+        && policy.should_snapshot(doc_len, max_seq, 0)
+        && let Err(error) = sync
+            .repo
+            .save_snapshot_in_local_repo(repo_name, doc_id, max_seq, content)
+    {
+        warn!("SyncManager: Failed to save prepared snapshot for {doc_id}: {error:?}");
     }
     Ok(())
 }

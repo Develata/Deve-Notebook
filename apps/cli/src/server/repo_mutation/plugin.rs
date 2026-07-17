@@ -6,16 +6,18 @@
 //! execution finishes capability/path validation before entering this adapter;
 //! only the authority mutation and projection writeback hold the repo permit.
 
-use super::{MutationExecution, MutationPublication};
+use super::{MutationExecution, MutationPublication, RepoMutationGateError};
 use crate::server::AppState;
 use anyhow::{Context, Result};
 use deve_core::ledger::{range, reconcile};
 use deve_core::models::{DocId, Op};
+use deve_core::plugin::runtime::host::PluginHostServerError;
 use deve_core::plugin::runtime::host::{ManagedNoteMutationHost, ManagedNoteWriteIntent};
 use deve_core::plugin::runtime::host::{
     ManagedSourceControlCommitIntent, ManagedSourceControlMutationHost,
+    ManagedSourceControlStageIntent,
 };
-use deve_core::source_control::{CommitAuthorityFailure, CommitInfo};
+use deve_core::source_control::{CommitAuthorityFailure, CommitInfo, SourceControlApi};
 use std::sync::{Arc, Weak};
 
 #[cfg_attr(test, allow(dead_code))]
@@ -43,48 +45,53 @@ impl ManagedNoteMutationHost for CliManagedNoteMutationHost {
             .get_repo_info_for(None, Some(&intent.repo_name))?
             .map(|info| info.uuid)
             .context("managed-note repo metadata missing")?;
-        let prepared = prepare_managed_note_write(&state, &intent, repo_id)?;
+        let expected_repo_name =
+            super::prepare_writable_local_repo(&state, repo_id, &intent.repo_name)?;
         let runtime = tokio::runtime::Handle::try_current()
             .context("managed-note mutation requires the server Tokio runtime")?;
         let gate = state.repo_mutation_gate();
+        let admission = gate
+            .admit_mounted_repo(repo_id)
+            .map_err(plugin_gate_error)?;
+        let prepared = prepare_managed_note_write(&state, &intent, repo_id)?;
         let tx = state.tx.clone();
         require_multithread_runtime(&runtime)?;
         let execution = tokio::task::block_in_place(|| {
-            runtime.block_on(gate.execute_repo(repo_id, &tx, || {
-            let repo_name = match super::revalidate_writable_local_repo(
-                &state,
-                repo_id,
-                &intent.repo_name,
-            ) {
-                Ok(repo_name) => repo_name,
-                Err(error) => return MutationExecution::not_committed(error),
-            };
-            let current_head = match state
-                .repo
-                .run_on_local_repo(&repo_name, range::get_max_seq)
-            {
-                Ok(head) => head,
-                Err(error) => return MutationExecution::not_committed(error),
-            };
-            if current_head != prepared.expected_ledger_head {
-                return MutationExecution::not_committed(anyhow::anyhow!(
-                    "managed-note authority changed while waiting for mutation permit: expected head {}, observed {}",
-                    prepared.expected_ledger_head,
-                    current_head
-                ));
-            }
-            match state
-                .repo
-                .get_tracked_docid_in_local_repo(&repo_name, &intent.repo_path)
-            {
-                Ok(current) if current == prepared.existing_doc_id => {}
-                Ok(_) => {
+            runtime.block_on(gate.execute_admitted_mounted_repo(admission, &tx, || {
+                let repo_name = match super::revalidate_writable_local_repo(
+                    &state,
+                    repo_id,
+                    &expected_repo_name,
+                ) {
+                    Ok(repo_name) => repo_name,
+                    Err(error) => return MutationExecution::not_committed(error),
+                };
+                let current_head = match state
+                    .repo
+                    .run_on_local_repo(&repo_name, range::get_max_seq)
+                {
+                    Ok(head) => head,
+                    Err(error) => return MutationExecution::not_committed(error),
+                };
+                if current_head != prepared.expected_ledger_head {
                     return MutationExecution::not_committed(anyhow::anyhow!(
-                        "managed-note path identity changed while waiting for mutation permit"
+                        "managed-note authority changed while waiting for mutation permit: expected head {}, observed {}",
+                        prepared.expected_ledger_head,
+                        current_head
                     ));
                 }
-                Err(error) => return MutationExecution::not_committed(error),
-            }
+                match state
+                    .repo
+                    .get_tracked_docid_in_local_repo(&repo_name, &intent.repo_path)
+                {
+                    Ok(current) if current == prepared.existing_doc_id => {}
+                    Ok(_) => {
+                        return MutationExecution::not_committed(anyhow::anyhow!(
+                            "managed-note path identity changed while waiting for mutation permit"
+                        ));
+                    }
+                    Err(error) => return MutationExecution::not_committed(error),
+                }
 
             let (doc_id, structure_ops) = match state.repo.apply_file_structure_in_local_repo(
                 &repo_name,
@@ -130,9 +137,9 @@ impl ManagedNoteMutationHost for CliManagedNoteMutationHost {
                 }
                 Err(error) => MutationExecution::not_committed(error),
             }
-        }))
+            }))
         })
-        .map_err(anyhow::Error::new)?;
+        .map_err(plugin_gate_error)?;
 
         match execution {
             MutationExecution::Committed { .. } => Ok(()),
@@ -216,6 +223,52 @@ impl CliManagedSourceControlMutationHost {
 }
 
 impl ManagedSourceControlMutationHost for CliManagedSourceControlMutationHost {
+    fn stage_source_control(&self, intent: ManagedSourceControlStageIntent) -> Result<()> {
+        let state = self
+            .state
+            .upgrade()
+            .context("managed source-control server state is unavailable")?;
+        let repo_name = state.repo.resolve_local_repo_name_for_execution(
+            intent.selector.repo_id,
+            intent.selector.repo_name.as_deref(),
+        )?;
+        let repo_id = state
+            .repo
+            .get_repo_info_for(None, Some(&repo_name))?
+            .map(|info| info.uuid)
+            .context("managed source-control repo metadata missing")?;
+        let repo_name = super::prepare_writable_local_repo(&state, repo_id, &repo_name)?;
+        let runtime = tokio::runtime::Handle::try_current()
+            .context("managed source-control mutation requires the server Tokio runtime")?;
+        require_multithread_runtime(&runtime)?;
+        let gate = state.repo_mutation_gate();
+        let admission = gate
+            .admit_mounted_repo(repo_id)
+            .map_err(plugin_gate_error)?;
+        let execution = tokio::task::block_in_place(|| {
+            runtime.block_on(
+                gate.execute_admitted_mounted_repo_unpublished(admission, || {
+                    let bound_name =
+                        match super::revalidate_writable_local_repo(&state, repo_id, &repo_name) {
+                            Ok(name) => name,
+                            Err(error) => return Err(error),
+                        };
+                    let selector = deve_core::ledger::traits::RepoSelector {
+                        repo_id: Some(repo_id),
+                        repo_name: Some(bound_name),
+                    };
+                    state.repo.stage_pending_in_repo(&selector, &intent.target)
+                }),
+            )
+        })
+        .map_err(plugin_gate_error)?;
+
+        match execution {
+            Ok(()) => Ok(()),
+            Err(error) => Err(error),
+        }
+    }
+
     fn commit_source_control(
         &self,
         intent: ManagedSourceControlCommitIntent,
@@ -233,16 +286,20 @@ impl ManagedSourceControlMutationHost for CliManagedSourceControlMutationHost {
             .get_repo_info_for(None, Some(&repo_name))?
             .map(|info| info.uuid)
             .context("managed source-control repo metadata missing")?;
+        let repo_name = super::prepare_writable_local_repo(&state, repo_id, &repo_name)?;
         let runtime = tokio::runtime::Handle::try_current()
             .context("managed source-control mutation requires the server Tokio runtime")?;
+        require_multithread_runtime(&runtime)?;
+        let gate = state.repo_mutation_gate();
+        let admission = gate
+            .admit_mounted_repo(repo_id)
+            .map_err(plugin_gate_error)?;
         let prepared_external = state
             .repo
             .prepare_source_control_commit_in_local_repo(&repo_name)?;
-        require_multithread_runtime(&runtime)?;
-        let gate = state.repo_mutation_gate();
         let tx = state.tx.clone();
         let execution = tokio::task::block_in_place(|| {
-            runtime.block_on(gate.execute_repo(repo_id, &tx, || {
+            runtime.block_on(gate.execute_admitted_mounted_repo(admission, &tx, || {
                 let bound_name =
                     match super::revalidate_writable_local_repo(&state, repo_id, &repo_name) {
                         Ok(name) => name,
@@ -282,7 +339,7 @@ impl ManagedSourceControlMutationHost for CliManagedSourceControlMutationHost {
                 }
             }))
         })
-        .map_err(anyhow::Error::new)?;
+        .map_err(plugin_gate_error)?;
 
         match execution {
             MutationExecution::Committed { value: info, .. } => {
@@ -298,9 +355,39 @@ impl ManagedSourceControlMutationHost for CliManagedSourceControlMutationHost {
     }
 }
 
+fn plugin_gate_error(error: RepoMutationGateError) -> anyhow::Error {
+    if error == RepoMutationGateError::WorkspaceIngestionUnavailable {
+        anyhow::Error::new(PluginHostServerError(error.server_error()))
+    } else {
+        anyhow::Error::new(error)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::require_multithread_runtime;
+    use super::{plugin_gate_error, require_multithread_runtime};
+    use crate::server::repo_mutation::RepoMutationGateError;
+    use deve_core::plugin::runtime::host::PluginHostServerError;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn workspace_ingestion_error_mapping_plugin_gate_preserves_typed_code() {
+        let error = plugin_gate_error(RepoMutationGateError::WorkspaceIngestionUnavailable);
+        let typed = error
+            .downcast_ref::<PluginHostServerError>()
+            .expect("typed plugin host error");
+        assert_eq!(
+            typed.0.code,
+            ServerErrorCode::StorageWorkspaceIngestionUnavailable
+        );
+    }
+
+    #[test]
+    fn plugin_gate_keeps_non_ingestion_failures_untyped() {
+        let error = plugin_gate_error(RepoMutationGateError::RegistryPoisoned);
+        assert!(error.downcast_ref::<PluginHostServerError>().is_none());
+        assert!(error.downcast_ref::<RepoMutationGateError>().is_some());
+    }
 
     #[test]
     fn current_thread_runtime_fails_closed_before_block_in_place() {

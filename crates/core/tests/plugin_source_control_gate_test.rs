@@ -16,9 +16,18 @@ struct RecordingSourceControlApi;
 #[derive(Default)]
 struct RecordingManagedSourceControlHost {
     commit_message: Mutex<Option<String>>,
+    staged_path: Mutex<Option<String>>,
 }
 
 impl host::ManagedSourceControlMutationHost for RecordingManagedSourceControlHost {
+    fn stage_source_control(
+        &self,
+        intent: host::ManagedSourceControlStageIntent,
+    ) -> anyhow::Result<()> {
+        *self.staged_path.lock().expect("staged path lock") = Some(intent.target.path);
+        Ok(())
+    }
+
     fn commit_source_control(
         &self,
         intent: host::ManagedSourceControlCommitIntent,
@@ -34,6 +43,10 @@ impl RecordingManagedSourceControlHost {
             .lock()
             .expect("commit message lock")
             .clone()
+    }
+
+    fn staged_path(&self) -> Option<String> {
+        self.staged_path.lock().expect("staged path lock").clone()
     }
 }
 
@@ -167,9 +180,15 @@ fn plugin_sc_commit_uses_ngit_authority_api() {
     let mut engine = rhai::Engine::new();
     host::register_core_api(&mut engine, &manifest);
 
+    host::stage_source_control_pending_in_repo(
+        &RepoSelector::default(),
+        &ScPathTarget::from_path("notes/plugin.md"),
+    )
+    .expect("plugin sc_stage managed dispatch");
     let _ = engine
         .eval::<rhai::Dynamic>("sc_commit(\"plugin commit\")")
         .expect("plugin sc_commit");
 
     assert_eq!(managed.commit_message().as_deref(), Some("plugin commit"));
+    assert_eq!(managed.staged_path().as_deref(), Some("notes/plugin.md"));
 }

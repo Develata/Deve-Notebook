@@ -7,7 +7,7 @@ use super::node_target::resolve_node_target;
 use super::{checked_exists, errors};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_mutation::{MutationExecution, MutationPublication};
+use crate::server::repo_mutation::{MountedRepoAdmission, MutationExecution, MutationPublication};
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::repo_scope::local_repo_path;
 use crate::server::session::WsSession;
@@ -18,13 +18,14 @@ pub(super) async fn handle_dir_rename(
     ch: &DualChannel,
     session: &mut WsSession,
     scope: &ResolvedRepo,
+    admission: MountedRepoAdmission,
     old_path: &str,
     dst_name: &str,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let execution = state
         .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope =
                 match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
                 {
@@ -110,10 +111,6 @@ pub(super) async fn handle_dir_rename(
         }
         Ok(MutationExecution::ProjectionDegraded { error: None, .. })
         | Ok(MutationExecution::CommittedPartial { error: None, .. }) => {}
-        Err(error) => errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to serialize directory rename: {error}"),
-            scope_nonce,
-        ),
+        Err(error) => errors::server_error_scoped(ch, error.server_error(), scope_nonce),
     }
 }

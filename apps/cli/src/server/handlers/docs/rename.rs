@@ -47,6 +47,14 @@ pub async fn handle_rename_doc(
     if !validate_file_path(&old_path, ch, scope_nonce) {
         return;
     }
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+            return;
+        }
+    };
 
     let src = match resolve_node_target(state, &scope, &old_path) {
         Ok(Some(target)) => target,
@@ -116,10 +124,28 @@ pub async fn handle_rename_doc(
 
     // 3. 执行重命名
     if src.kind == NodeKind::File {
-        handle_file_rename(state, ch, session, &scope, &src.repo_path, &dst_name).await;
+        handle_file_rename(
+            state,
+            ch,
+            session,
+            &scope,
+            admission,
+            &src.repo_path,
+            &dst_name,
+        )
+        .await;
         return;
     }
-    handle_dir_rename(state, ch, session, &scope, &src.repo_path, &dst_name).await;
+    handle_dir_rename(
+        state,
+        ch,
+        session,
+        &scope,
+        admission,
+        &src.repo_path,
+        &dst_name,
+    )
+    .await;
 }
 
 /// 处理移动文档请求 (委托给 rename)

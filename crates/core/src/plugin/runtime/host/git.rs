@@ -97,12 +97,11 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_stage.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             ensure_write_allowed(&selector)?;
             let target = resolve_sc_target_for_host(path)?;
-            repo.stage_pending_in_repo(&selector, &target)
-                .map_err(|e| e.to_string().into())
+            super::stage_source_control_pending_in_repo(&selector, &target)
+                .map_err(super::host_error_to_eval)
         },
     );
 
@@ -115,7 +114,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let selector = RepoSelector::default();
             ensure_write_allowed(&selector)?;
             let commit = super::commit_source_control_changes_in_repo(&selector, message)
-                .map_err(|e| e.to_string())?;
+                .map_err(super::host_error_to_eval)?;
             let json = serde_json::to_value(&commit).map_err(|e| e.to_string())?;
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())
         },
@@ -123,8 +122,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
 }
 
 fn ensure_write_allowed(selector: &RepoSelector) -> Result<(), Box<EvalAltResult>> {
-    super::ensure_source_control_write_allowed(selector)
-        .map_err(|error| plugin_error_text(error).into())
+    super::ensure_source_control_write_allowed(selector).map_err(super::server_error_to_eval)
 }
 
 fn resolve_sc_target_for_host(path: &str) -> Result<ScPathTarget, Box<EvalAltResult>> {
@@ -139,9 +137,4 @@ fn resolve_sc_target_for_host(path: &str) -> Result<ScPathTarget, Box<EvalAltRes
             target::resolve_local_sc_target(repo_manager.as_ref(), path)
         }
     }
-}
-
-fn plugin_error_text(error: crate::protocol::ServerError) -> String {
-    let crate::protocol::ServerError { code, detail } = error;
-    detail.unwrap_or_else(|| format!("Plugin source-control write rejected: {code:?}"))
 }

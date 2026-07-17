@@ -22,8 +22,16 @@ pub async fn handle_stage_file(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::stage_pending(state.repo.as_ref(), &selector, &target) {
+    let path = target.path.clone();
+    match super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::StagePending(path),
+        |selector| super::service::stage_pending(state.repo.as_ref(), selector, &target),
+    )
+    .await
+    {
         Ok(path) => {
             tracing::info!("Staged file: {}", path);
             ch.unicast(ServerMessage::StageAck {
@@ -53,8 +61,16 @@ pub async fn handle_unstage_file(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::unstage_file(state.repo.as_ref(), &selector, &target) {
+    let path = target.path.clone();
+    match super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::Unstage(path),
+        |selector| super::service::unstage_file(state.repo.as_ref(), selector, &target),
+    )
+    .await
+    {
         Ok(path) => {
             tracing::info!("Unstaged file: {}", path);
             ch.unicast(ServerMessage::UnstageAck {
@@ -84,8 +100,15 @@ pub async fn handle_stage_files(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::stage_pending_many(state.repo.as_ref(), &selector, targets) {
+    match super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::StagePending("batch".into()),
+        |selector| super::service::stage_pending_many(state.repo.as_ref(), selector, targets),
+    )
+    .await
+    {
         Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to stage files: {:?}", e);
@@ -107,8 +130,15 @@ pub async fn handle_unstage_files(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::service::unstage_many(state.repo.as_ref(), &selector, targets) {
+    match super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::Unstage("batch".into()),
+        |selector| super::service::unstage_many(state.repo.as_ref(), selector, targets),
+    )
+    .await
+    {
         Ok(_) => super::changes::handle_get_changes(state, ch, session, None).await,
         Err(e) => {
             tracing::error!("Failed to unstage files: {:?}", e);

@@ -25,8 +25,16 @@ pub async fn handle_discard_file(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    match super::local_discard::discard_via_sync_manager(state, &selector, &target) {
+    let path = target.path.clone();
+    match super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::DiscardPending(path),
+        |selector| super::local_discard::discard_via_sync_manager(state, selector, &target),
+    )
+    .await
+    {
         Ok(path) => {
             tracing::info!("Discard pending workspace change: {}", path);
             ch.unicast(ServerMessage::DiscardAck {

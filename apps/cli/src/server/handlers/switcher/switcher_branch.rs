@@ -80,14 +80,14 @@ pub(super) async fn handle_switch_branch(
             return;
         }
     };
-    let prepared = match prepare::prepare_target_repo_switch(state, target_branch_ref, target_repo)
-    {
-        Ok(prepared) => prepared,
-        Err(error) => {
-            ch.send_protocol_error_with_switch_nonce(error, switch_nonce);
-            return;
-        }
-    };
+    let prepared =
+        match prepare::prepare_target_repo_switch(state, target_branch_ref, target_repo).await {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                ch.send_protocol_error_with_switch_nonce(error, switch_nonce);
+                return;
+            }
+        };
     let payload = match preload_branch_switch(state, target_branch_ref, prepared.as_ref()) {
         Ok(payload) => payload,
         Err(err) => {

@@ -23,6 +23,14 @@ pub async fn handle_folder_create(
     filename: &str,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+            return;
+        }
+    };
     let folder_path = filename.trim_end_matches('/');
     match checked_existing_is_dir(path, "folder create target") {
         Ok(Some(false)) => {
@@ -41,9 +49,8 @@ pub async fn handle_folder_create(
             return;
         }
     }
-    let execution = state
-        .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+    let execution = gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope =
                 match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
                 {
@@ -99,10 +106,6 @@ pub async fn handle_folder_create(
                 scope_nonce,
             );
         }
-        Err(error) => errors::storage_persist_failed_scoped(
-            ch,
-            format!("Failed to serialize folder create: {error}"),
-            scope_nonce,
-        ),
+        Err(error) => errors::server_error_scoped(ch, error.server_error(), scope_nonce),
     }
 }

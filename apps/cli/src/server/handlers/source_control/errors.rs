@@ -40,9 +40,9 @@ fn status(code: ServerErrorCode) -> StatusCode {
         | ServerErrorCode::StorageNotFound
         | ServerErrorCode::DocNotFound
         | ServerErrorCode::PluginUnknownPlugin => StatusCode::NOT_FOUND,
-        ServerErrorCode::StorageDbLocked | ServerErrorCode::SyncDisconnected => {
-            StatusCode::SERVICE_UNAVAILABLE
-        }
+        ServerErrorCode::StorageDbLocked
+        | ServerErrorCode::StorageWorkspaceIngestionUnavailable
+        | ServerErrorCode::SyncDisconnected => StatusCode::SERVICE_UNAVAILABLE,
         ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing => {
             StatusCode::UNAUTHORIZED
         }
@@ -121,6 +121,10 @@ mod tests {
         assert_eq!(
             status(ServerErrorCode::PluginCapabilityDenied),
             StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            status(ServerErrorCode::StorageWorkspaceIngestionUnavailable),
+            StatusCode::SERVICE_UNAVAILABLE
         );
     }
 }

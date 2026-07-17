@@ -70,7 +70,7 @@ UI / HTTP / WS handlers
 - durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
-The doc-side ownership slice is approved, while implementation convergence remains tracked as `部分承载` in the runtime registry until owned lifecycle, mounted admission, repo isolation and Windows overflow evidence are sealed. This section does not mark the 74-flow modeled operation slice as aligned ahead of code.
+The ownership slice, owned supervisor, exact-slot mounted admission and runtime failure cut are implemented. Convergence remains tracked as `部分承载` until dynamic lifecycle, bootstrap repo isolation, public aggregate health, E2 shutdown and Windows overflow evidence are sealed; the 74-flow modeled operation slice is not marked aligned ahead of W10 evidence.
 
 ## Artifact Roles
 

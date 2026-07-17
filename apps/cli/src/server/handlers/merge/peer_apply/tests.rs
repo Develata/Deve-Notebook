@@ -106,16 +106,20 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
     };
     let preflight =
         crate::server::session::test_merge_preflight(repo_id, doc_id, "base", "changed");
+    let admission = state.repo_mutation_gate().admit_mounted_repo(repo_id)?;
 
     assert_eq!(
         write_merged_content(
             &state,
             &ch,
-            &scope,
-            &preflight,
-            "changed",
-            MergeResolution::AcceptIncoming,
-            Some(13)
+            MergeWriteRequest {
+                scope: &scope,
+                admission,
+                preflight: &preflight,
+                content: "changed",
+                resolution: MergeResolution::AcceptIncoming,
+                scope_nonce: Some(13),
+            }
         )
         .await,
         MergeWriteOutcome::CommitFailed

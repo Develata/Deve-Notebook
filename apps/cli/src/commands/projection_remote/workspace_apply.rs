@@ -4,10 +4,16 @@
 //!   - 06_backup#projection-backup-verification-contract
 
 use deve_core::remote_projection::{RemoteProjectionFile, RemoteProjectionProviderError};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 use uuid::Uuid;
+
+mod rollback;
+
+pub(in crate::commands::projection_remote) use rollback::AppliedPullFiles;
+use rollback::{AppliedPullFile, file_sha256, rollback_applied_pull_files};
 
 pub(in crate::commands::projection_remote) fn write_pull_files(
     workspace: &Path,
@@ -25,12 +31,9 @@ pub(in crate::commands::projection_remote) fn write_pull_files(
     let targets = validate_pull_targets(&workspace_root, files)?;
     let staging = stage_pull_files(&workspace_root, files)?;
     match apply_staged_pull_files(&workspace_root, &staging, &targets) {
-        Ok((applied, created_dirs)) => Ok(AppliedPullFiles {
-            staging: Some(staging),
-            applied,
-            created_dirs,
-            committed: false,
-        }),
+        Ok((applied, created_dirs)) => {
+            Ok(AppliedPullFiles::pending(staging, applied, created_dirs))
+        }
         Err(err) => {
             let _ = fs::remove_dir_all(&staging);
             Err(err)
@@ -39,66 +42,10 @@ pub(in crate::commands::projection_remote) fn write_pull_files(
 }
 
 #[derive(Debug)]
-pub(in crate::commands::projection_remote) struct AppliedPullFiles {
-    staging: Option<PathBuf>,
-    applied: Vec<AppliedPullFile>,
-    created_dirs: Vec<PathBuf>,
-    committed: bool,
-}
-
-impl AppliedPullFiles {
-    fn empty() -> Self {
-        Self {
-            staging: None,
-            applied: Vec::new(),
-            created_dirs: Vec::new(),
-            committed: true,
-        }
-    }
-
-    pub(in crate::commands::projection_remote) fn commit(mut self) {
-        self.committed = true;
-        self.cleanup_staging();
-    }
-
-    pub(in crate::commands::projection_remote) fn rollback_after_failed_scan(
-        mut self,
-    ) -> Result<(), RemoteProjectionProviderError> {
-        self.committed = true;
-        let result = rollback_applied_pull_files(&mut self.applied, &mut self.created_dirs);
-        self.cleanup_staging();
-        result
-    }
-
-    fn cleanup_staging(&mut self) {
-        if let Some(staging) = self.staging.take() {
-            let _ = fs::remove_dir_all(staging);
-        }
-    }
-}
-
-impl Drop for AppliedPullFiles {
-    fn drop(&mut self) {
-        if self.committed {
-            return;
-        }
-        if let Err(err) = rollback_applied_pull_files(&mut self.applied, &mut self.created_dirs) {
-            tracing::warn!("failed to roll back remote projection pull workspace apply: {err}");
-        }
-        self.cleanup_staging();
-    }
-}
-
-#[derive(Debug)]
 struct PullTarget {
     relative_path: String,
     target: PathBuf,
-}
-
-#[derive(Debug)]
-struct AppliedPullFile {
-    target: PathBuf,
-    backup: Option<PathBuf>,
+    applied_fingerprint: [u8; 32],
 }
 
 fn validate_pull_targets(
@@ -114,6 +61,7 @@ fn validate_pull_targets(
         targets.push(PullTarget {
             relative_path: file.path().to_string(),
             target,
+            applied_fingerprint: Sha256::digest(file.content()).into(),
         });
     }
     Ok(targets)
@@ -222,10 +170,11 @@ fn replace_from_staging(
     } else {
         None
     };
-    applied.push(AppliedPullFile {
-        target: target.target.clone(),
+    applied.push(AppliedPullFile::new(
+        target.target.clone(),
         backup,
-    });
+        target.applied_fingerprint,
+    ));
 
     let temp_target = temporary_target_path(&target.target)?;
     if let Err(err) = fs::copy(&staged, &temp_target) {
@@ -242,49 +191,13 @@ fn replace_from_staging(
             target.target.display()
         ))
     })?;
+    let observed = file_sha256(&target.target)?;
+    if observed != target.applied_fingerprint {
+        return Err(RemoteProjectionProviderError::ProviderIo(
+            "installed projection file fingerprint mismatch".to_string(),
+        ));
+    }
     Ok(())
-}
-
-fn rollback_applied_pull_files(
-    applied: &mut Vec<AppliedPullFile>,
-    created_dirs: &mut Vec<PathBuf>,
-) -> Result<(), RemoteProjectionProviderError> {
-    let mut rollback_errors = Vec::new();
-    while let Some(item) = applied.pop() {
-        match fs::symlink_metadata(&item.target) {
-            Ok(metadata) if metadata.is_file() || metadata.file_type().is_symlink() => {
-                if let Err(err) = fs::remove_file(&item.target) {
-                    rollback_errors.push(format!("remove {}: {err}", item.target.display()));
-                }
-            }
-            Ok(_) => {}
-            Err(err) if err.kind() == ErrorKind::NotFound => {}
-            Err(err) => rollback_errors.push(format!("stat {}: {err}", item.target.display())),
-        }
-        if let Some(backup) = item.backup
-            && let Err(err) = fs::rename(&backup, &item.target)
-        {
-            rollback_errors.push(format!(
-                "restore {} from {}: {err}",
-                item.target.display(),
-                backup.display()
-            ));
-        }
-    }
-    while let Some(dir) = created_dirs.pop() {
-        match fs::remove_dir(&dir) {
-            Ok(()) => {}
-            Err(err) if err.kind() == ErrorKind::NotFound => {}
-            Err(err) => rollback_errors.push(format!("remove dir {}: {err}", dir.display())),
-        }
-    }
-    if rollback_errors.is_empty() {
-        Ok(())
-    } else {
-        Err(RemoteProjectionProviderError::ProviderIo(
-            rollback_errors.join("; "),
-        ))
-    }
 }
 
 fn validate_existing_parent_chain(

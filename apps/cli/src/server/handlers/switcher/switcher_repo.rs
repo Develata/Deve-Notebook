@@ -71,7 +71,7 @@ pub(super) async fn handle_switch_repo(
         }
     };
 
-    let prepared = match prepare_repo_switch(state, branch.as_ref(), repo_name.clone()) {
+    let prepared = match prepare_repo_switch(state, branch.as_ref(), repo_name.clone()).await {
         Ok(prepared) => prepared,
         Err(err) => {
             ch.send_protocol_error_with_switch_nonce(

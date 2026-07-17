@@ -9,7 +9,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn test_copy_dir_assets_only_skips_markdown() {
+fn prepared_asset_copy_skips_markdown_and_applies_assets() {
     let tmp = tempdir().unwrap();
     let src = tmp.path().join("src_dir");
     let dst = tmp.path().join("dst_dir");
@@ -20,7 +20,8 @@ fn test_copy_dir_assets_only_skips_markdown() {
     fs::write(src.join("sub/b.md"), "content b").unwrap();
     fs::write(src.join("sub/c.png"), "asset c").unwrap();
 
-    copy_dir_assets_only(&src, &dst).unwrap();
+    let prepared = prepare_dir_asset_copies(&src, &dst).unwrap();
+    apply_prepared_asset_copies(&prepared).unwrap();
 
     assert!(!dst.join("a.md").exists());
     assert!(!dst.join("sub/b.md").exists());
@@ -92,7 +93,8 @@ fn test_deep_directory_no_stack_overflow() {
     fs::write(current.join("deep.bin"), "deep asset").unwrap();
 
     let dst = tmp.path().join("dst");
-    copy_dir_assets_only(&tmp.path().join("level_0"), &dst).unwrap();
+    let prepared = prepare_dir_asset_copies(&tmp.path().join("level_0"), &dst).unwrap();
+    apply_prepared_asset_copies(&prepared).unwrap();
 
     let mut check_path = dst.clone();
     for i in 1..100 {
@@ -100,4 +102,37 @@ fn test_deep_directory_no_stack_overflow() {
     }
     assert!(!check_path.join("deep.md").exists());
     assert!(check_path.join("deep.bin").exists());
+}
+
+#[test]
+fn prepared_asset_copy_rejects_source_drift_before_copy() {
+    let tmp = tempdir().unwrap();
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(src.join("asset.bin"), "before").unwrap();
+    let prepared = prepare_dir_asset_copies(&src, &dst).unwrap();
+
+    fs::write(src.join("asset.bin"), "changed payload").unwrap();
+    let error = apply_prepared_asset_copies(&prepared).expect_err("source drift must reject");
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(!dst.join("asset.bin").exists());
+}
+
+#[test]
+fn prepared_asset_copy_rejects_destination_drift() {
+    let tmp = tempdir().unwrap();
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(&src).unwrap();
+    fs::write(src.join("asset.bin"), "source").unwrap();
+    let prepared = prepare_dir_asset_copies(&src, &dst).unwrap();
+    fs::create_dir_all(&dst).unwrap();
+    fs::write(dst.join("asset.bin"), "newer").unwrap();
+
+    let error = apply_prepared_asset_copies(&prepared).expect_err("destination drift must reject");
+
+    assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
+    assert_eq!(fs::read_to_string(dst.join("asset.bin")).unwrap(), "newer");
 }

@@ -76,7 +76,9 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
-case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli workspace_ingestion_error_mapping_remote_projection_uses_protocol_error -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli deferred_rollback_refuses_to_overwrite_a_newer_workspace_change -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli admitted_continuation_cannot_cross_intervening_repo_writer -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_cli remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	api_assert: remote_projection_fake_adapter_markdown_only true
@@ -186,7 +188,9 @@ contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_webdav_pul
 contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_pull_without_external_changes_confirmation_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/tests/identity.rs	fn run_checks_workspace_identity_before_provider_io()
-contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_uses_repo_url_locator()
+contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn workspace_ingestion_error_mapping_remote_projection_uses_protocol_error()
+contains	apps/cli/src/commands/projection_remote/workspace_apply_tests.rs	fn deferred_rollback_refuses_to_overwrite_a_newer_workspace_change()
+contains	apps/cli/src/server/repo_mutation/tests/continuation.rs	async fn admitted_continuation_cannot_cross_intervening_repo_writer()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_missing_transport_url_fails_closed()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor()
 contains	apps/cli/src/server/handlers/source_control/remote_projection.rs	fn s3_custom_endpoint_repo_url_gate_is_case_insensitive()
@@ -230,12 +234,13 @@ contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage:
 absent	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::CommitAndPush
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	commit_and_push_cli_only_banner
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	source_control_scope_nonce(scope)
-contains	apps/cli/src/server/ws/route/source_control.rs	ClientMessage::CommitAndPush { message, .. }
-contains	apps/cli/src/server/ws/route/source_control.rs	source_control::handle_commit_and_push
-contains	apps/cli/src/server/handlers/source_control/commits.rs	COMMIT_AND_PUSH_CLI_ONLY_DETAIL
-contains	apps/cli/src/server/handlers/source_control/commits.rs	resolve_current_authorized_writable_local_repo
+absent	crates/core/src/protocol/client.rs	CommitAndPush
+absent	apps/cli/src/server/ws/route/source_control.rs	ClientMessage::CommitAndPush
+absent	apps/cli/src/server/ws/route/source_control.rs	handle_commit_and_push
+absent	apps/cli/src/server/handlers/source_control/commits.rs	handle_commit_and_push
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	commit_and_push_callback_uses_cli_only_banner
+contains	docs/features/operations/sc_commit_and_push.md	CommitAndPush` 不是 WS v2 wire surface
 contains	apps/cli/src/server/ws/route/source_control/tests.rs	source_control_scope_nonce_gate_rejects_missing_scope_before_handler
-contains	apps/cli/src/server/tests/source_control/source_control_scope_test/write_extra.rs	commit_and_push_ws_returns_cli_only_blocker_without_commit
 contains	apps/cli/src/server/handlers/source_control/http_scope.rs	source control scope nonce missing
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	test_http_status_rejects_missing_scope_nonce
 contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage/authority.rs	test_http_stage_rejects_missing_scope_nonce_before_mutation
@@ -543,8 +548,8 @@ absent_tree	apps/web/src/components/diff_view	"Diff:"
 absent_tree	apps/web/src/components/diff_view	"Read Only"
 absent_tree	apps/web/src/components/diff_view	"Preview Diff"
 absent_tree	apps/web/src/components/diff_view	"Close Diff View"
-contains	docs/features/operations/sc_commit_and_push.md	结构化 CLI-only blocker
-contains	apps/cli/src/server/handlers/source_control/commits.rs	Commit & Push
+contains	docs/features/operations/sc_commit_and_push.md	UI callback 只更新本地 notice，不调用 WebSocket client
+absent	apps/cli/src/server/handlers/source_control/commits.rs	Commit & Push
 absent	apps/cli/src/server/handlers/source_control/commits.rs	Commit & Push failed
 absent	apps/cli/src/server/handlers/source_control/commits.rs	SyncPush
 contains	docs/plan/05_diff_logic.md	canonical targets

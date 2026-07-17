@@ -47,6 +47,45 @@ impl SyncManager {
         }
     }
 
+    /// Writes content prepared from a stable preflight without rebuilding the
+    /// document while the server repository permit is held.
+    pub fn persist_prepared_doc_content_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        content: &str,
+    ) -> Result<()> {
+        let target_path = self
+            .repo
+            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)?
+            .map(|meta| meta.path)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Tracked document projection missing for {} in repo {} while persisting prepared projection",
+                    doc_id,
+                    repo_name
+                )
+            })?;
+        match projection_io::persist_prepared_doc_content(
+            self,
+            repo_name,
+            doc_id,
+            &target_path,
+            content,
+        ) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                self.mark_projection_writeback_fault_for_doc(
+                    repo_name,
+                    doc_id,
+                    Some(&target_path),
+                    &error,
+                );
+                Err(error)
+            }
+        }
+    }
+
     pub fn remove_projection_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
         match projection_io::remove_projection_path(self, repo_name, path) {
             Ok(()) => Ok(()),

@@ -304,11 +304,6 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
-    CommitAndPush {
-        message: String,
-        #[serde(default)]
-        scope_nonce: Option<u64>,
-    },
     RemoteProjectionTransport {
         provider: RemoteProjectionProvider,
         direction: RemoteProjectionDirection,

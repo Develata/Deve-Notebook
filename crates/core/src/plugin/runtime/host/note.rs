@@ -46,7 +46,7 @@ pub fn register_note_api(engine: &mut Engine, caps: Arc<Capability>) {
                     )
                     .into()
                 })?;
-            write_managed_note(&target, content).map_err(|e| e.to_string().into())
+            write_managed_note(&target, content).map_err(super::host_error_to_eval)
         },
     );
 }

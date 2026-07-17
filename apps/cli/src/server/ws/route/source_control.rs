@@ -101,9 +101,6 @@ pub(super) async fn route_source_control(
         } => {
             source_control::handle_resolve_conflict(state, ch, session, target, resolution).await;
         }
-        ClientMessage::CommitAndPush { message, .. } => {
-            source_control::handle_commit_and_push(state, ch, session, message).await;
-        }
         ClientMessage::GetDocDiff {
             request_id, target, ..
         } => {

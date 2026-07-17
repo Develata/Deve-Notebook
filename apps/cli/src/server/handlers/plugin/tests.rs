@@ -3,7 +3,8 @@ use crate::server::channel::DualChannel;
 use anyhow::Result;
 use deve_core::plugin::manifest::PluginManifest;
 use deve_core::plugin::runtime::PluginRuntime;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::plugin::runtime::host::PluginHostServerError;
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use rhai::Dynamic;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -17,6 +18,53 @@ struct ProbePlugin {
     called: Arc<AtomicBool>,
     manifest: PluginManifest,
     result: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Copy)]
+enum ProbeFailure {
+    TypedIngestion,
+    TextOnly,
+}
+
+struct FailingPlugin {
+    manifest: PluginManifest,
+    failure: ProbeFailure,
+}
+
+impl FailingPlugin {
+    fn new(failure: ProbeFailure) -> Self {
+        Self {
+            manifest: PluginManifest {
+                id: "failure-probe".to_string(),
+                name: "Failure probe".to_string(),
+                version: "0.0.0".to_string(),
+                entry: "main.rhai".to_string(),
+                capabilities: Default::default(),
+            },
+            failure,
+        }
+    }
+}
+
+impl PluginRuntime for FailingPlugin {
+    fn load(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn call(&self, _fn_name: &str, _args: Vec<Dynamic>) -> Result<Dynamic> {
+        match self.failure {
+            ProbeFailure::TypedIngestion => Err(anyhow::Error::new(PluginHostServerError(
+                ServerError::workspace_ingestion_unavailable(),
+            ))),
+            ProbeFailure::TextOnly => {
+                anyhow::bail!("workspace ingestion is unavailable")
+            }
+        }
+    }
+
+    fn manifest(&self) -> &PluginManifest {
+        &self.manifest
+    }
 }
 
 impl ProbePlugin {
@@ -208,6 +256,81 @@ async fn missing_plugin_returns_unknown_plugin_error() {
                     .detail
                     .as_deref()
                     .is_some_and(|detail| detail.contains("missing-plugin"))
+            );
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn workspace_ingestion_error_mapping_plugin_uses_protocol_error() {
+    let plugins: Vec<Box<dyn PluginRuntime>> =
+        vec![Box::new(FailingPlugin::new(ProbeFailure::TypedIngestion))];
+    let (tx, _) = broadcast::channel(4);
+    let (uni_tx, mut uni_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(tx, uni_tx);
+
+    handle_plugin_call_with_plugins(
+        &plugins,
+        &ch,
+        "req-ingestion".to_string(),
+        "failure-probe".to_string(),
+        "write".to_string(),
+        vec![],
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("protocol response") {
+        ServerMessage::ProtocolError { error, .. } => {
+            assert_eq!(
+                error.code,
+                ServerErrorCode::StorageWorkspaceIngestionUnavailable
+            );
+            assert_eq!(
+                error.detail.as_deref(),
+                Some(
+                    "Workspace changes are temporarily unavailable; restart the service to recover."
+                )
+            );
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
+    assert!(uni_rx.try_recv().is_err(), "must emit exactly one response");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn workspace_ingestion_error_mapping_plugin_does_not_classify_text() {
+    let plugins: Vec<Box<dyn PluginRuntime>> =
+        vec![Box::new(FailingPlugin::new(ProbeFailure::TextOnly))];
+    let (tx, _) = broadcast::channel(4);
+    let (uni_tx, mut uni_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(tx, uni_tx);
+
+    handle_plugin_call_with_plugins(
+        &plugins,
+        &ch,
+        "req-text".to_string(),
+        "failure-probe".to_string(),
+        "write".to_string(),
+        vec![],
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("plugin response") {
+        ServerMessage::PluginResponse {
+            req_id,
+            result,
+            error,
+        } => {
+            assert_eq!(req_id, "req-text");
+            assert!(result.is_none());
+            let error = error.expect("runtime error");
+            assert_eq!(error.code, ServerErrorCode::PluginRuntimeError);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("workspace ingestion is unavailable"))
             );
         }
         other => panic!("unexpected message: {other:?}"),

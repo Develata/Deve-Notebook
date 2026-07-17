@@ -7,7 +7,6 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::session::WsSession;
-use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 pub(super) async fn commit_with_ack(
@@ -24,6 +23,11 @@ pub(super) async fn commit_with_ack(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => return super::errors::send_ws_scoped(ch, error.server_error(), scope_nonce),
+    };
     let prepared_external = match state
         .repo
         .prepare_source_control_commit_in_local_repo(&scope.repo_name)
@@ -37,9 +41,8 @@ pub(super) async fn commit_with_ack(
             );
         }
     };
-    let execution = state
-        .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+    let execution = gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
                 state,
                 scope.repo_id,
@@ -114,10 +117,6 @@ pub(super) async fn commit_with_ack(
             );
             super::errors::send_ws_scoped(ch, error, scope_nonce);
         }
-        Err(error) => super::errors::send_ws_scoped(
-            ch,
-            ServerError::with_detail(ServerErrorCode::StoragePersistFailed, error.to_string()),
-            scope_nonce,
-        ),
+        Err(error) => super::errors::send_ws_scoped(ch, error.server_error(), scope_nonce),
     }
 }

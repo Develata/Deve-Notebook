@@ -5,7 +5,7 @@
 
 use super::errors;
 use super::peer_support::resolve_doc_path;
-use crate::server::repo_mutation::{MutationExecution, MutationPublication};
+use crate::server::repo_mutation::{MountedRepoAdmission, MutationExecution, MutationPublication};
 use crate::server::repo_scope::{ResolvedRepo, ensure_resolved_local_repo_writable};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::merge::ConflictHunk;
@@ -28,22 +28,35 @@ pub(super) enum MergeWriteOutcome {
     CommittedWritebackFailed,
 }
 
+pub(super) struct MergeWriteRequest<'a> {
+    pub(super) scope: &'a ResolvedRepo,
+    pub(super) admission: MountedRepoAdmission,
+    pub(super) preflight: &'a MergePreflight,
+    pub(super) content: &'a str,
+    pub(super) resolution: MergeResolution,
+    pub(super) scope_nonce: Option<u64>,
+}
+
 pub(super) async fn write_merged_content(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    scope: &ResolvedRepo,
-    preflight: &MergePreflight,
-    content: &str,
-    resolution: MergeResolution,
-    scope_nonce: Option<u64>,
+    request: MergeWriteRequest<'_>,
 ) -> MergeWriteOutcome {
+    let MergeWriteRequest {
+        scope,
+        admission,
+        preflight,
+        content,
+        resolution,
+        scope_nonce,
+    } = request;
     if let Err(error) = ensure_resolved_local_repo_writable(state, scope) {
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return MergeWriteOutcome::CommitFailed;
     }
     let execution = state
         .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope =
                 match crate::server::repo_mutation::revalidate_writable_resolved_repo(state, scope)
                 {
@@ -100,11 +113,7 @@ pub(super) async fn write_merged_content(
             MergeWriteOutcome::CommittedWritebackFailed
         }
         Err(error) => {
-            errors::storage_persist_failed(
-                ch,
-                format!("Failed to serialize merged content: {error}"),
-                scope_nonce,
-            );
+            errors::server_error(ch, error.server_error(), scope_nonce);
             MergeWriteOutcome::CommitFailed
         }
     }

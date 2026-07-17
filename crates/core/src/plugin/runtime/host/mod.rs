@@ -52,6 +52,8 @@ use crate::source_control::{DelegatedSourceControlApi, SourceControlApi};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
+use rhai::EvalAltResult;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, OnceLock};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -61,8 +63,40 @@ pub use managed_note::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use managed_source_control::{
     ManagedSourceControlCommitIntent, ManagedSourceControlMutationHost,
-    set_managed_source_control_mutation_host,
+    ManagedSourceControlStageIntent, set_managed_source_control_mutation_host,
 };
+
+/// Engine-neutral carrier that preserves a product `ServerError` across a
+/// plugin engine's host-error envelope without classifying display text.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug)]
+pub struct PluginHostServerError(pub ServerError);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl std::fmt::Display for PluginHostServerError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "plugin host request rejected: {:?}", self.0.code)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl std::error::Error for PluginHostServerError {}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn server_error_to_eval(error: ServerError) -> Box<EvalAltResult> {
+    Box::new(EvalAltResult::ErrorSystem(
+        "plugin host request rejected".to_string(),
+        Box::new(PluginHostServerError(error)),
+    ))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) fn host_error_to_eval(error: anyhow::Error) -> Box<EvalAltResult> {
+    match error.downcast::<PluginHostServerError>() {
+        Ok(error) => server_error_to_eval(error.0),
+        Err(error) => error.to_string().into(),
+    }
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
@@ -183,6 +217,26 @@ pub fn commit_source_control_changes_in_repo(
         SourceControlHostMode::RemoteDelegated => {
             // RemoteSourceControlApi forwards to the authoritative main process.
             source_control_api()?.commit_source_control_changes_in_repo(selector, message)
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn stage_source_control_pending_in_repo(
+    selector: &RepoSelector,
+    target: &crate::protocol::ScPathTarget,
+) -> Result<(), anyhow::Error> {
+    match source_control_mode()? {
+        SourceControlHostMode::Local => {
+            managed_source_control::managed_source_control_mutation_host()?.stage_source_control(
+                ManagedSourceControlStageIntent {
+                    selector: selector.clone(),
+                    target: target.clone(),
+                },
+            )
+        }
+        SourceControlHostMode::RemoteDelegated => {
+            source_control_api()?.stage_pending_in_repo(selector, target)
         }
     }
 }

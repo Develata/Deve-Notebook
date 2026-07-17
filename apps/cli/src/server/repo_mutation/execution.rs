@@ -51,8 +51,8 @@ impl<T, E> MutationExecution<T, E> {
     pub(super) fn publication(&self) -> Option<&MutationPublication> {
         match self {
             Self::NotCommitted(_) => None,
-            Self::Committed { publication, .. }
-            | Self::ProjectionDegraded { publication, .. }
+            Self::Committed { publication, .. } => Some(publication),
+            Self::ProjectionDegraded { publication, .. }
             | Self::CommittedPartial { publication, .. } => Some(publication),
         }
     }

@@ -111,6 +111,7 @@ where
         backend,
         stop_rx,
         refresh: start.refresh,
+        failure: start.failure,
         state: worker_state,
     };
     if let Err(error) = handoff_tx.send(input) {

@@ -4,14 +4,14 @@
 //!
 //! WebSocket execution for remote Markdown projection transport intents.
 
-use crate::commands::projection_remote::{self, ProjectionRemoteExecutionSummary};
+use crate::commands::projection_remote::{self, PreparedProjectionRemotePull};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use anyhow::Result;
-use deve_core::protocol::ServerErrorCode;
 use deve_core::protocol::{
     REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, RemoteProjectionDirection,
     RemoteProjectionProvider,
 };
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 pub async fn handle_remote_projection_transport(
@@ -21,32 +21,26 @@ pub async fn handle_remote_projection_transport(
     provider: RemoteProjectionProvider,
     direction: RemoteProjectionDirection,
 ) {
-    handle_remote_projection_transport_with_executor(
+    handle_remote_projection_transport_with_pull_preparer(
         state,
         ch,
         session,
         provider,
         direction,
-        projection_remote::run_for_resolved_repo,
+        projection_remote::prepare_pull_for_resolved_repo,
     )
     .await;
 }
 
-async fn handle_remote_projection_transport_with_executor<F>(
+async fn handle_remote_projection_transport_with_pull_preparer<F>(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     provider: RemoteProjectionProvider,
     direction: RemoteProjectionDirection,
-    executor: F,
+    pull_preparer: F,
 ) where
-    F: FnOnce(
-            Arc<deve_core::ledger::RepoManager>,
-            &str,
-            RemoteProjectionProvider,
-            RemoteProjectionDirection,
-            &str,
-        ) -> Result<ProjectionRemoteExecutionSummary>
+    F: FnOnce(RemoteProjectionProvider, &str) -> Result<PreparedProjectionRemotePull>
         + Send
         + 'static,
 {
@@ -70,12 +64,49 @@ async fn handle_remote_projection_transport_with_executor<F>(
 
     let repo = state.repo.clone();
     let repo_name = scope.repo_name.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        executor(repo, &repo_name, provider, direction, &locator)
-    })
-    .await;
+    let repo_id = scope.repo_id;
+    let result = if direction == RemoteProjectionDirection::Pull {
+        let gate = state.repo_mutation_gate();
+        let admission = match gate.admit_mounted_repo(repo_id) {
+            Ok(admission) => admission,
+            Err(error) => {
+                return super::errors::send_ws_scoped(ch, error.server_error(), scope_nonce);
+            }
+        };
+        super::remote_projection_pull::execute(
+            super::remote_projection_pull::PullExecutionInput {
+                state: state.clone(),
+                gate,
+                admission,
+                repo_name: repo_name.clone(),
+                repo_id,
+                provider,
+                locator,
+            },
+            pull_preparer,
+        )
+        .await
+    } else {
+        match tokio::task::spawn_blocking(move || {
+            projection_remote::run_for_resolved_repo(
+                repo, &repo_name, provider, direction, &locator,
+            )
+        })
+        .await
+        {
+            Ok(Ok(summary)) => Ok(summary),
+            Ok(Err(error)) => Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                remote_projection_provider_io_not_ready_detail(error),
+            )),
+            Err(error) => Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                remote_projection_provider_io_not_ready_detail(error),
+            )),
+        }
+    };
     match result {
-        Ok(Ok(summary)) => {
+        Ok(summary) => {
             tracing::info!(
                 provider = summary.provider.as_str(),
                 direction = summary.direction.as_str(),
@@ -88,18 +119,7 @@ async fn handle_remote_projection_transport_with_executor<F>(
             );
             super::changes::handle_get_changes(state, ch, session, None).await;
         }
-        Ok(Err(error)) => super::errors::send_ws_code_scoped(
-            ch,
-            ServerErrorCode::ScRepoContextInvalid,
-            remote_projection_provider_io_not_ready_detail(error),
-            scope_nonce,
-        ),
-        Err(error) => super::errors::send_ws_code_scoped(
-            ch,
-            ServerErrorCode::ScRepoContextInvalid,
-            remote_projection_provider_io_not_ready_detail(error),
-            scope_nonce,
-        ),
+        Err(error) => super::errors::send_ws_scoped(ch, error, scope_nonce),
     }
 }
 
@@ -142,15 +162,19 @@ fn is_s3_custom_https_locator(locator: &str) -> bool {
         .is_some_and(|scheme| scheme.eq_ignore_ascii_case("s3+https://"))
 }
 
-fn remote_projection_provider_io_not_ready_detail(error: impl std::fmt::Display) -> String {
+pub(super) fn remote_projection_provider_io_not_ready_detail(
+    error: impl std::fmt::Display,
+) -> String {
     format!("{REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL}; {error}")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
     use crate::server::sync_hello_test_support::{build_state, unicast_channel};
     use deve_core::protocol::ServerMessage;
+    use deve_core::remote_projection::RemoteProjectionFile;
     use deve_core::source_control::ChangeStatus;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{Duration, timeout};
@@ -206,7 +230,8 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn remote_projection_transport_uses_repo_url_locator() -> anyhow::Result<()> {
+    async fn workspace_ingestion_error_mapping_remote_projection_uses_protocol_error()
+    -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
@@ -236,32 +261,33 @@ mod tests {
             search_available: false,
             identity_key,
         });
+        let repo_id = state
+            .repo
+            .get_repo_info_for(None, Some("notes"))?
+            .expect("notes repo")
+            .uuid;
+        state.set_watcher_runtime_view_for_test(WatcherRuntimeView::with_state_for_test(
+            repo_id,
+            1,
+            RepoMountState::Mounted,
+        ));
         state.repo.ensure_local_repo_workspace_identity("notes")?;
         let (ch, mut uni_rx) = unicast_channel(&state);
         let mut session = crate::server::session::WsSession::new();
 
-        handle_remote_projection_transport_with_executor(
+        handle_remote_projection_transport_with_pull_preparer(
             &state,
             &ch,
             &mut session,
             RemoteProjectionProvider::WebDav,
             RemoteProjectionDirection::Pull,
-            |repo, repo_name, provider, direction, locator| {
+            |provider, locator| {
                 assert_eq!(provider, RemoteProjectionProvider::WebDav);
-                assert_eq!(direction, RemoteProjectionDirection::Pull);
                 assert_eq!(locator, "webdav+https://dav.example.com/notebooks/main");
-                let workspace = repo.local_repo_workspace_root(repo_name)?;
-                std::fs::write(workspace.join("remote.md"), "remote")?;
-                let sync_manager = deve_core::sync::SyncManager::new_checked(repo)?;
-                sync_manager.scan_repo(repo_name)?;
-                Ok(ProjectionRemoteExecutionSummary {
+                Ok(projection_remote::prepared_pull_for_test(
                     provider,
-                    direction,
-                    provider_io_ready: true,
-                    uploaded_files: 0,
-                    downloaded_files: 1,
-                    external_changes_scan_triggered: true,
-                })
+                    vec![RemoteProjectionFile::new("remote.md", b"remote".to_vec())?],
+                ))
             },
         )
         .await;
@@ -276,6 +302,40 @@ mod tests {
                 assert_eq!(unstaged[0].status, ChangeStatus::Added);
             }
             other => panic!("expected ChangesList, got {other:?}"),
+        }
+
+        state.set_watcher_runtime_view_for_test(WatcherRuntimeView::with_state_for_test(
+            repo_id,
+            1,
+            RepoMountState::Failed,
+        ));
+        let executor_called = Arc::new(AtomicBool::new(false));
+        let observed = executor_called.clone();
+        handle_remote_projection_transport_with_pull_preparer(
+            &state,
+            &ch,
+            &mut session,
+            RemoteProjectionProvider::WebDav,
+            RemoteProjectionDirection::Pull,
+            move |provider, _| {
+                observed.store(true, Ordering::SeqCst);
+                Ok(projection_remote::prepared_pull_for_test(
+                    provider,
+                    Vec::new(),
+                ))
+            },
+        )
+        .await;
+        assert!(!executor_called.load(Ordering::SeqCst));
+        match timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("mount blocker")
+        {
+            ServerMessage::ProtocolError { error, .. } => assert_eq!(
+                error.code,
+                ServerErrorCode::StorageWorkspaceIngestionUnavailable
+            ),
+            other => panic!("expected mount ProtocolError, got {other:?}"),
         }
         Ok(())
     }
@@ -322,22 +382,18 @@ mod tests {
             let executor_called = Arc::new(AtomicBool::new(false));
             let executor_called_for_closure = executor_called.clone();
 
-            handle_remote_projection_transport_with_executor(
+            handle_remote_projection_transport_with_pull_preparer(
                 &state,
                 &ch,
                 &mut session,
                 RemoteProjectionProvider::S3,
                 RemoteProjectionDirection::Pull,
-                move |_repo, _repo_name, provider, direction, _locator| {
+                move |provider, _locator| {
                     executor_called_for_closure.store(true, Ordering::SeqCst);
-                    Ok(ProjectionRemoteExecutionSummary {
+                    Ok(projection_remote::prepared_pull_for_test(
                         provider,
-                        direction,
-                        provider_io_ready: true,
-                        uploaded_files: 0,
-                        downloaded_files: 0,
-                        external_changes_scan_triggered: false,
-                    })
+                        Vec::new(),
+                    ))
                 },
             )
             .await;

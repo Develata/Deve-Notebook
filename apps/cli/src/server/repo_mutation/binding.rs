@@ -11,6 +11,22 @@ use anyhow::{Context, Result};
 use deve_core::models::RepoId;
 use std::sync::Arc;
 
+/// Performs the lock-free scope and projection/locator health check that must
+/// precede mounted admission. Callers still revalidate the same facts after
+/// acquiring the repository mutation permit.
+pub(crate) fn prepare_writable_local_repo(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+    expected_name: &str,
+) -> Result<String> {
+    resolve_writable_local_repo(
+        state,
+        repo_id,
+        expected_name,
+        "before mounted repository admission",
+    )
+}
+
 /// Rebinds the durable repository identity and rechecks projection writability
 /// inside the repo mutation permit. The expected name is diagnostic context,
 /// never a fallback that can select a same-name replacement repository.
@@ -19,13 +35,25 @@ pub(crate) fn revalidate_writable_local_repo(
     repo_id: RepoId,
     expected_name: &str,
 ) -> Result<String> {
+    resolve_writable_local_repo(
+        state,
+        repo_id,
+        expected_name,
+        "while waiting for mutation permit",
+    )
+}
+
+fn resolve_writable_local_repo(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+    expected_name: &str,
+    phase: &str,
+) -> Result<String> {
     let repo_name = state
         .repo
         .resolve_local_repo_name_for_execution(Some(repo_id), Some(expected_name))
         .with_context(|| {
-            format!(
-                "local repository binding changed while waiting for mutation permit: {repo_id} ({expected_name})"
-            )
+            format!("local repository binding changed {phase}: {repo_id} ({expected_name})")
         })?;
     ensure_local_repo_projection_writable(state, &repo_name).map_err(|error| {
         anyhow::anyhow!(

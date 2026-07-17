@@ -78,6 +78,49 @@ fn write_pull_files_explicit_rollback_reports_success() {
 }
 
 #[test]
+fn deferred_rollback_refuses_to_overwrite_a_newer_workspace_change() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let workspace = dir.path().join("workspace");
+    fs::create_dir(&workspace).expect("workspace");
+    fs::write(workspace.join("a.md"), "old").expect("old");
+    let files = vec![RemoteProjectionFile::new("a.md", b"remote").expect("file")];
+
+    let applied = write_pull_files(&workspace, &files)
+        .expect("write")
+        .defer_rollback();
+    fs::write(workspace.join("a.md"), "newer local write").expect("newer write");
+    let error = applied
+        .rollback_after_failed_scan_if_unchanged()
+        .expect_err("stale rollback must fail closed");
+
+    assert!(error.to_string().contains("repair required"));
+    assert_eq!(
+        fs::read_to_string(workspace.join("a.md")).expect("content"),
+        "newer local write"
+    );
+}
+
+#[test]
+fn deferred_rollback_restores_unchanged_applied_files() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let workspace = dir.path().join("workspace");
+    fs::create_dir(&workspace).expect("workspace");
+    fs::write(workspace.join("a.md"), "old").expect("old");
+    let files = vec![RemoteProjectionFile::new("a.md", b"remote").expect("file")];
+
+    write_pull_files(&workspace, &files)
+        .expect("write")
+        .defer_rollback()
+        .rollback_after_failed_scan_if_unchanged()
+        .expect("unchanged rollback");
+
+    assert_eq!(
+        fs::read_to_string(workspace.join("a.md")).expect("content"),
+        "old"
+    );
+}
+
+#[test]
 fn write_pull_files_rejects_blocked_parent_without_partial_apply() {
     let dir = tempfile::tempdir().expect("tempdir");
     let workspace = dir.path().join("workspace");

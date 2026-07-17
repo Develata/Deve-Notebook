@@ -81,7 +81,7 @@ pub(super) fn prepare_copy_paths(
         );
         return None;
     }
-    let mut src_exists = match checked_exists(&src.abs_path, "copy source projection") {
+    let src_exists = match checked_exists(&src.abs_path, "copy source projection") {
         Ok(exists) => exists,
         Err(err) => {
             errors::classified_failure_scoped(
@@ -92,30 +92,6 @@ pub(super) fn prepare_copy_paths(
             return None;
         }
     };
-    if src.kind == NodeKind::Dir && !src_exists {
-        if let Err(err) = state
-            .sync_manager
-            .rebuild_projection_local_repo(&scope.repo_name)
-        {
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to rebuild source projection: {}", err),
-                scope_nonce,
-            );
-            return None;
-        }
-        src_exists = match checked_exists(&src.abs_path, "rebuilt copy source projection") {
-            Ok(exists) => exists,
-            Err(err) => {
-                errors::classified_failure_scoped(
-                    ch,
-                    format!("Failed to recheck source projection: {}", err),
-                    scope_nonce,
-                );
-                return None;
-            }
-        };
-    }
     if src.kind == NodeKind::Dir && !src_exists {
         errors::storage_not_found_scoped(
             ch,

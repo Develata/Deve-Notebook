@@ -13,6 +13,11 @@ use thiserror::Error;
 use super::DEFAULT_DEBOUNCE;
 use super::WatcherRefreshCallback;
 
+/// Synchronous terminal-failure notification used by the host runtime to
+/// close mutation admission at the same cut where the worker observes its
+/// primary failure. Implementations must be non-blocking and must not panic.
+pub type WatcherFailureCallback = Arc<dyn Fn(WatcherFailure) + Send + Sync + 'static>;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WatcherFailurePhase {
     Prepare,
@@ -49,7 +54,7 @@ pub struct WatcherFailure {
 }
 
 impl WatcherFailure {
-    pub(crate) fn new(
+    pub fn new(
         phase: WatcherFailurePhase,
         kind: WatcherFailureKind,
         primary: impl Into<String>,
@@ -134,6 +139,7 @@ pub struct RepoWatcherStart {
     pub(crate) generation: u64,
     pub(crate) debounce: Duration,
     pub(crate) refresh: Option<WatcherRefreshCallback>,
+    pub(crate) failure: Option<WatcherFailureCallback>,
 }
 
 impl RepoWatcherStart {
@@ -150,6 +156,7 @@ impl RepoWatcherStart {
             generation,
             debounce: DEFAULT_DEBOUNCE,
             refresh: None,
+            failure: None,
         }
     }
 
@@ -183,6 +190,10 @@ impl RepoWatcherStart {
         self.repo_id
     }
 
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub fn with_debounce(mut self, debounce: Duration) -> Self {
         self.debounce = debounce;
         self
@@ -190,6 +201,11 @@ impl RepoWatcherStart {
 
     pub fn with_refresh(mut self, refresh: WatcherRefreshCallback) -> Self {
         self.refresh = Some(refresh);
+        self
+    }
+
+    pub fn with_failure_callback(mut self, failure: WatcherFailureCallback) -> Self {
+        self.failure = Some(failure);
         self
     }
 }

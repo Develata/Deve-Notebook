@@ -5,6 +5,7 @@
 
 use super::diff_projection::DiffProjectionExecutor;
 use super::repo_mutation::RepoMutationPublicationGate;
+use super::runtime::watcher_runtime::WatcherRuntimeView;
 use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
 use super::tree_state::RepoTreeRegistry;
@@ -14,6 +15,16 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+
+#[cfg(test)]
+static TEST_WATCHER_VIEWS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, WatcherRuntimeView>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(test)]
+static TEST_MUTATION_GATES: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<RepoMutationPublicationGate>>>,
+> = std::sync::OnceLock::new();
 
 pub struct AppState {
     pub repo: Arc<RepoManager>,
@@ -32,6 +43,8 @@ pub struct AppState {
     pub(crate) source_control_write_grants: Arc<SourceControlWriteGrants>,
     #[cfg(not(test))]
     pub(crate) repo_mutation_gate: Arc<RepoMutationPublicationGate>,
+    #[cfg(not(test))]
+    pub(crate) watcher_runtime: WatcherRuntimeView,
 }
 
 impl AppState {
@@ -90,24 +103,79 @@ impl AppState {
 
     #[cfg(not(test))]
     pub(crate) fn repo_mutation_gate(&self) -> Arc<RepoMutationPublicationGate> {
+        debug_assert!(
+            self.repo_mutation_gate
+                .uses_watcher_runtime(&self.watcher_runtime),
+            "AppState watcher view and mutation gate must share one runtime"
+        );
         self.repo_mutation_gate.clone()
     }
 
     #[cfg(test)]
     pub(crate) fn repo_mutation_gate(&self) -> Arc<RepoMutationPublicationGate> {
-        use std::collections::HashMap;
-        use std::sync::{Mutex, OnceLock};
-
-        static TEST_GATES: OnceLock<Mutex<HashMap<usize, Arc<RepoMutationPublicationGate>>>> =
-            OnceLock::new();
         let key = self as *const Self as usize;
-        let stores = TEST_GATES.get_or_init(|| Mutex::new(HashMap::new()));
+        let stores = TEST_MUTATION_GATES
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let Ok(mut stores) = stores.lock() else {
-            return Arc::new(RepoMutationPublicationGate::new());
+            return Arc::new(RepoMutationPublicationGate::new(
+                WatcherRuntimeView::permissive_for_tests(),
+            ));
         };
         stores
             .entry(key)
-            .or_insert_with(|| Arc::new(RepoMutationPublicationGate::new()))
+            .or_insert_with(|| {
+                Arc::new(RepoMutationPublicationGate::new(
+                    self.watcher_runtime_view(),
+                ))
+            })
             .clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn watcher_runtime_view(&self) -> WatcherRuntimeView {
+        let key = self as *const Self as usize;
+        let stores = TEST_WATCHER_VIEWS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+        let Ok(mut stores) = stores.lock() else {
+            return WatcherRuntimeView::permissive_for_tests();
+        };
+        stores
+            .entry(key)
+            .or_insert_with(WatcherRuntimeView::permissive_for_tests)
+            .clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_watcher_runtime_view_for_test(&self, view: WatcherRuntimeView) {
+        let key = self as *const Self as usize;
+        if let Ok(mut stores) = TEST_WATCHER_VIEWS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+            .lock()
+        {
+            stores.insert(key, view);
+        }
+        if let Ok(mut gates) = TEST_MUTATION_GATES
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+            .lock()
+        {
+            gates.remove(&key);
+        }
+    }
+}
+
+#[cfg(test)]
+impl Drop for AppState {
+    fn drop(&mut self) {
+        let key = self as *const Self as usize;
+        if let Some(stores) = TEST_WATCHER_VIEWS.get()
+            && let Ok(mut stores) = stores.lock()
+        {
+            stores.remove(&key);
+        }
+        if let Some(gates) = TEST_MUTATION_GATES.get()
+            && let Ok(mut gates) = gates.lock()
+        {
+            gates.remove(&key);
+        }
     }
 }

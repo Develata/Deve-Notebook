@@ -10,7 +10,7 @@ use deve_core::models::PeerId;
 use deve_core::protocol::ServerError;
 use std::sync::Arc;
 
-pub(super) fn prepare_target_repo_switch(
+pub(super) async fn prepare_target_repo_switch(
     state: &Arc<AppState>,
     target_branch: Option<&PeerId>,
     target_repo: Option<String>,
@@ -20,6 +20,7 @@ pub(super) fn prepare_target_repo_switch(
     };
     tracing::info!("Auto-switching to repo: {}", repo_name);
     prepare_repo_switch(state, target_branch, repo_name)
+        .await
         .map(Some)
         .map_err(|err| prepare_switch_error(target_branch, err))
 }

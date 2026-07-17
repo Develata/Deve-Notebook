@@ -17,8 +17,6 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-use crate::watcher_runtime::OwnedWatcherHandles;
-
 /// 按显式 runtime override 或环境变量构建 CORS 层；默认不信任任何跨站来源。
 pub(super) fn build_cors_layer(
     _port: u16,
@@ -94,10 +92,10 @@ pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Res
 }
 
 /// 启动每个本地 repo 的 watcher。
-pub(super) fn start_file_watchers(
+pub(super) fn file_watcher_starts(
     sync_manager: Arc<deve_core::sync::SyncManager>,
     tx: broadcast::Sender<ServerMessage>,
-) -> Result<OwnedWatcherHandles> {
+) -> Result<Vec<RepoWatcherStart>> {
     let mut starts = Vec::new();
     for repo_name in sync_manager.healthy_local_repo_names_for_execution()? {
         let tx_clone = tx.clone();
@@ -109,7 +107,7 @@ pub(super) fn start_file_watchers(
             RepoWatcherStart::resolve(sync_manager.clone(), repo_name, 1)?.with_refresh(callback),
         );
     }
-    Ok(OwnedWatcherHandles::start_all(starts)?)
+    Ok(starts)
 }
 
 fn watcher_refresh_message(refresh: WatcherRefresh) -> ServerMessage {

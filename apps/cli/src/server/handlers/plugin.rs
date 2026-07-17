@@ -15,6 +15,7 @@ use crate::server::plugin_response::{
     send_plugin_unknown_plugin, send_plugin_unsupported_message,
 };
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
+use deve_core::plugin::runtime::host::PluginHostServerError;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::task::block_in_place;
@@ -92,9 +93,12 @@ pub async fn handle_plugin_call_with_plugins(
                 }
                 Err(detail) => send_plugin_serialization_error(ch, &req_id, detail),
             },
-            Err(e) => {
-                send_plugin_runtime_error(ch, &req_id, format!("Plugin runtime error: {}", e));
-            }
+            Err(error) => match error.downcast_ref::<PluginHostServerError>() {
+                Some(server_error) => ch.send_protocol_error(server_error.0.clone()),
+                None => {
+                    send_plugin_runtime_error(ch, &req_id, format!("Plugin runtime error: {error}"))
+                }
+            },
         }
     } else {
         send_plugin_unknown_plugin(ch, &req_id, format!("Plugin not found: {}", plugin_id));

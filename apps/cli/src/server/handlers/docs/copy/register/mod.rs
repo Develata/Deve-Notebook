@@ -7,12 +7,15 @@
 //! is revalidated while the authority mutations are serialized.
 
 use crate::server::AppState;
-use crate::server::channel::DualChannel;
-use crate::server::handlers::docs::copy_utils::{collect_dirs, collect_md_files};
-use crate::server::handlers::docs::file_register::create_file_from_content;
+use crate::server::handlers::docs::copy_utils::{
+    PreparedAssetCopy, apply_prepared_asset_copies, collect_dirs, collect_md_files,
+    prepare_dir_asset_copies,
+};
+use crate::server::handlers::docs::file_register::create_file_from_patch;
 use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::repo_scope::{ResolvedRepo, local_repo_root};
-use deve_core::models::DocId;
+use deve_core::ledger::range;
+use deve_core::models::{DocId, Op};
 use deve_core::state;
 use std::path::Path;
 use std::sync::Arc;
@@ -24,14 +27,14 @@ use path::map_dest_rel;
 #[derive(Clone, Copy)]
 pub(super) struct CopyRegisterCtx<'a> {
     pub state: &'a Arc<AppState>,
-    pub ch: &'a DualChannel,
     pub scope: &'a ResolvedRepo,
-    pub scope_nonce: Option<u64>,
 }
 
 pub(super) struct CopyRegistrationPlan {
+    expected_ledger_head: u64,
     directories: Vec<String>,
     files: Vec<CopyFilePlan>,
+    assets: Vec<PreparedAssetCopy>,
 }
 
 struct CopyFilePlan {
@@ -39,14 +42,20 @@ struct CopyFilePlan {
     source_doc_id: DocId,
     destination_path: String,
     content: String,
+    patch: Vec<Op>,
 }
 
 pub(super) fn prepare_registration(
     ctx: CopyRegisterCtx<'_>,
     src: &Path,
+    dst: &Path,
     src_path: &str,
     destination_path: &str,
 ) -> anyhow::Result<CopyRegistrationPlan> {
+    let expected_ledger_head = ctx
+        .state
+        .repo
+        .run_on_local_repo(&ctx.scope.repo_name, range::get_max_seq)?;
     let base = local_repo_root(ctx.state, ctx.scope)?;
     let mut source_directories = collect_dirs(src, &base)?;
     source_directories.sort_by_key(|path| path.matches('/').count());
@@ -63,14 +72,23 @@ pub(super) fn prepare_registration(
             .get_tracked_docid_in_local_repo(&ctx.scope.repo_name, &source_path)?
             .ok_or_else(|| anyhow::anyhow!("Source doc not tracked: {source_path}"))?;
         let content = reconstructed_content(ctx, source_doc_id)?;
+        let patch = state::compute_diff("", &content);
         files.push(CopyFilePlan {
             destination_path: map_dest_rel(&source_path, src_path, destination_path)?,
             source_path,
             source_doc_id,
             content,
+            patch,
         });
     }
-    Ok(CopyRegistrationPlan { directories, files })
+    let assets = prepare_dir_asset_copies(src, dst)?;
+    ensure_preparation_head_unchanged(ctx, expected_ledger_head)?;
+    Ok(CopyRegistrationPlan {
+        expected_ledger_head,
+        directories,
+        files,
+        assets,
+    })
 }
 
 pub(super) fn prepare_single_file_registration(
@@ -79,15 +97,24 @@ pub(super) fn prepare_single_file_registration(
     source_doc_id: DocId,
     destination_path: String,
 ) -> anyhow::Result<CopyRegistrationPlan> {
+    let expected_ledger_head = ctx
+        .state
+        .repo
+        .run_on_local_repo(&ctx.scope.repo_name, range::get_max_seq)?;
     let content = reconstructed_content(ctx, source_doc_id)?;
+    let patch = state::compute_diff("", &content);
+    ensure_preparation_head_unchanged(ctx, expected_ledger_head)?;
     Ok(CopyRegistrationPlan {
+        expected_ledger_head,
         directories: Vec::new(),
         files: vec![CopyFilePlan {
             source_path,
             source_doc_id,
             destination_path,
             content,
+            patch,
         }],
+        assets: Vec::new(),
     })
 }
 
@@ -95,6 +122,21 @@ pub(super) fn commit_registration(
     ctx: CopyRegisterCtx<'_>,
     plan: &CopyRegistrationPlan,
 ) -> MutationExecution<Vec<DocId>, anyhow::Error> {
+    let observed_head = match ctx
+        .state
+        .repo
+        .run_on_local_repo(&ctx.scope.repo_name, range::get_max_seq)
+    {
+        Ok(head) => head,
+        Err(error) => return MutationExecution::not_committed(error),
+    };
+    if observed_head != plan.expected_ledger_head {
+        return MutationExecution::not_committed(anyhow::anyhow!(
+            "copy source changed while waiting for mutation permit: expected head {}, observed {}",
+            plan.expected_ledger_head,
+            observed_head
+        ));
+    }
     let mut committed = false;
     let mut created_docs = Vec::with_capacity(plan.files.len());
 
@@ -132,22 +174,12 @@ pub(super) fn commit_registration(
                 ctx.scope.repo_id,
             );
         }
-        let current_content = match reconstructed_content(ctx, current_doc_id) {
-            Ok(content) => content,
-            Err(error) => return failed(error, committed, ctx.scope.repo_id),
-        };
-        if current_content != file.content {
-            return failed(
-                anyhow::anyhow!("Copy source content changed: {}", file.source_path),
-                committed,
-                ctx.scope.repo_id,
-            );
-        }
-        match create_file_from_content(
+        match create_file_from_patch(
             ctx.state,
             ctx.scope,
             &file.destination_path,
             &file.content,
+            &file.patch,
             "local_copy",
         ) {
             Ok((doc_id, _ops)) => {
@@ -168,12 +200,60 @@ pub(super) fn commit_registration(
         }
     }
 
-    MutationExecution::committed(
-        created_docs,
-        MutationPublication::document_recovery(
-            ctx.scope.repo_id,
-            deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
-        ),
+    if let Err(error) = apply_prepared_asset_copies(&plan.assets) {
+        return MutationExecution::committed_partial(
+            error.into(),
+            recovery_publication(ctx.scope.repo_id),
+        );
+    }
+    let consistency = match ctx.state.repo.run_on_local_repo(
+        &ctx.scope.repo_name,
+        deve_core::ledger::node_check::check_node_consistency,
+    ) {
+        Ok(report) => report,
+        Err(error) => {
+            return MutationExecution::committed_partial(
+                error,
+                recovery_publication(ctx.scope.repo_id),
+            );
+        }
+    };
+    if !consistency.is_clean() {
+        return MutationExecution::committed_partial(
+            anyhow::anyhow!(
+                "Node consistency dirty after copy: missing={} orphan={}",
+                consistency.missing_nodes.len(),
+                consistency.orphan_nodes.len()
+            ),
+            recovery_publication(ctx.scope.repo_id),
+        );
+    }
+
+    MutationExecution::committed(created_docs, recovery_publication(ctx.scope.repo_id))
+}
+
+fn ensure_preparation_head_unchanged(
+    ctx: CopyRegisterCtx<'_>,
+    expected: u64,
+) -> anyhow::Result<()> {
+    let observed = ctx
+        .state
+        .repo
+        .run_on_local_repo(&ctx.scope.repo_name, range::get_max_seq)?;
+    if observed != expected {
+        anyhow::bail!(
+            "copy source changed during preparation: expected head {}, observed {}",
+            expected,
+            observed
+        );
+    }
+    Ok(())
+}
+
+fn recovery_publication(repo_id: deve_core::models::RepoId) -> MutationPublication {
+    MutationPublication::document_recovery(
+        repo_id,
+        deve_core::protocol::DocumentRecoveryScope::CurrentDocument,
     )
 }
 

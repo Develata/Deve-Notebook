@@ -19,6 +19,10 @@ fn send(
     ch.send_protocol_error_with_scope_nonce(ServerError::with_detail(code, detail), scope_nonce);
 }
 
+pub(super) fn server_error(ch: &DualChannel, error: ServerError, scope_nonce: Option<u64>) {
+    ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+}
+
 pub(super) fn request_failed(
     ch: &DualChannel,
     detail: impl Into<String>,

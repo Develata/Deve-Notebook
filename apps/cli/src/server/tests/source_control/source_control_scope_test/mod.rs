@@ -8,10 +8,7 @@ use deve_core::source_control::SourceControlApi;
 use tokio::sync::mpsc;
 
 use super::source_control_scope_test_support as support;
-use support::{
-    bind_browser_writer, build_state, recv_commit_diff, recv_history, seed_pending,
-    write_workspace_file,
-};
+use support::{build_state, recv_commit_diff, recv_history, seed_pending, write_workspace_file};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {

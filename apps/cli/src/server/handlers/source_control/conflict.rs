@@ -34,37 +34,35 @@ pub async fn handle_resolve_conflict(
             Ok(scope) => scope,
             Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
         };
-    let selector = super::service::selector_from_scope(&scope);
-    let pending = match super::service::list_pending(state.repo.as_ref(), &selector) {
-        Ok(entries) => entries,
-        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
-    };
-    let resolved = match super::service::resolve_target(&pending, &target) {
-        Ok(resolved) => resolved,
-        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
-    };
-    let resolved_entry = match super::service::resolved_target_entry(&pending, &resolved) {
-        Ok(entry) => entry,
-        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
-    };
-    if !resolved_entry.has_conflict {
-        return super::errors::send_ws_scoped(
-            ch,
-            deve_core::protocol::ServerError::with_detail(
-                deve_core::protocol::ServerErrorCode::ScConflictTargetMissing,
-                format!("Source control target is not a conflict: {}", resolved.path),
-            ),
-            scope_nonce,
-        );
-    }
-    let normalized = resolved.path.clone();
-    let result = match resolution {
-        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &pending, &resolved),
-        ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &resolved),
-    };
+    let requested_path = target.path.clone();
+    let result = super::mounted::execute(
+        state,
+        scope.repo_id,
+        &scope.repo_name,
+        super::errors::ScOp::DiscardPending(requested_path.clone()),
+        |selector| {
+            let pending = super::service::list_pending(state.repo.as_ref(), selector)?;
+            let resolved = super::service::resolve_target(&pending, &target)?;
+            let resolved_entry = super::service::resolved_target_entry(&pending, &resolved)?;
+            if !resolved_entry.has_conflict {
+                return Err(deve_core::protocol::ServerError::with_detail(
+                    deve_core::protocol::ServerErrorCode::ScConflictTargetMissing,
+                    format!("Source control target is not a conflict: {}", resolved.path),
+                ));
+            }
+            match resolution {
+                ConflictResolution::KeepFs => {
+                    resolve_keep_fs(state, selector, &pending, &resolved)?
+                }
+                ConflictResolution::KeepLedger => resolve_keep_ledger(state, selector, &resolved)?,
+            }
+            Ok(resolved.path)
+        },
+    )
+    .await;
 
     match result {
-        Ok(()) => {
+        Ok(normalized) => {
             let label = match resolution {
                 ConflictResolution::KeepFs => "KeepFs",
                 ConflictResolution::KeepLedger => "KeepLedger",
@@ -81,7 +79,7 @@ pub async fn handle_resolve_conflict(
             super::changes::handle_get_changes(state, ch, session, None).await;
         }
         Err(e) => {
-            tracing::error!("Failed to resolve conflict {}: {:?}", normalized, e);
+            tracing::error!("Failed to resolve conflict {}: {:?}", requested_path, e);
             super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     }

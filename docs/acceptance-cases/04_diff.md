@@ -135,7 +135,7 @@
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
     - run: cargo test -p deve_cli source_control_scope_nonce_gate -- --nocapture
-    - run: cargo test -p deve_cli commit_and_push_ws_returns_cli_only_blocker_without_commit -- --nocapture
+    - run: cargo test -p deve_web commit_and_push_callback_uses_cli_only_banner -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_uses_shadow_projection -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_missing_target -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_path_mismatch -- --nocapture
@@ -223,6 +223,9 @@
     - run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
     - run: cargo test -p deve_cli s3_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
     - run: cargo test -p deve_cli write_pull_files_overwrites_existing_file_without_temp_artifacts -- --nocapture
+    - run: cargo test -p deve_cli deferred_rollback_refuses_to_overwrite_a_newer_workspace_change -- --nocapture
+    - run: cargo test -p deve_cli deferred_rollback_restores_unchanged_applied_files -- --nocapture
+    - run: cargo test -p deve_cli admitted_continuation_cannot_cross_intervening_repo_writer -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
     - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
@@ -244,7 +247,7 @@
     - run: cargo test -p deve_cli run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
-    - run: cargo test -p deve_cli remote_projection_transport_uses_repo_url_locator -- --nocapture
+    - run: cargo test -p deve_cli workspace_ingestion_error_mapping_remote_projection_uses_protocol_error -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
     - run: cargo test -p deve_cli remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
@@ -313,7 +316,7 @@
     - cli_assert: sc_write_rejects_broken_workspace_identity true
     - plugin_assert: sc_commit_uses_ngit_authority true
     - api_assert: source_control_commit_writer_uses_ngit_authority true
-    - api_assert: commit_and_push_ws_legacy_frame_has_no_write_side_effect true
+    - api_assert: ws_v2_has_no_commit_and_push_variant true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
     - api_assert: proxy_node_role_reports_ngit_authority true

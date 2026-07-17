@@ -110,7 +110,7 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - Web Command Palette 与 Source Control UI 不展示 legacy bridge mode；Source Control header 应写成 NoteGit/ngit authority-first 文案，避免把 Git main mirror 误读成 Git authority 切换。
 - Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
   menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
-- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice；旧 WS `CommitAndPush` frame 不得等价为普通 commit，服务端必须返回结构化 blocker 且无 source-control 写副作用。
+- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice，不发送 WS writer intent；WS v2 不定义 `CommitAndPush` frame。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须走同一个 NoteGit/ngit commit path；代理模式必须展示 delegated/unknown/readonly 状态，而不能硬编码为 mirror mode。
 - 后端 commit writer API 不接收 legacy bridge policy；新增 CLI、HTTP、WS 或插件提交路径时必须复用 NoteGit/ngit source-control writer gate。
 
@@ -132,6 +132,7 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - pull adapter 必须对远端文件数、单文件字节数与总下载字节数设置硬预算；超过预算时必须在写 Projection Workspace 前 fail-closed。
 - pull adapter 必须在下载 payload 或写 Projection Workspace 前拒绝归一化后重复的远端 Markdown projection path。
 - pull 覆盖 Projection Workspace 必须避免半写入可见：目标 parent/path 安全检查、staging 与 rollback 属于 backend/core runtime 职责。
+- pull apply 后的 scan 在 repo permit 外运行；若其间已有新的受管 writer，旧 scan 失败路径只能保留 repair evidence，不能回滚覆盖新 writer。
 - pull 不直接写 ledger、不创建 commit anchor、不自动 Apply to Ledger，也不直接写 Git main mirror queue。
 - Web 只发送 typed intent；provider IO、覆盖策略、locator gate、identity gate 与 External Changes 触发均属于 backend/core runtime。
 

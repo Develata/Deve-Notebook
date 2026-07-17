@@ -3,6 +3,7 @@
 
 use super::super::super::source_control_grants::SourceControlGrantBranch;
 use super::super::support::{ProxyHarness, path_target, seed_pending};
+use crate::server::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -86,6 +87,54 @@ async fn assert_stale_grant(response: reqwest::Response) -> anyhow::Result<()> {
     let body: ServerError = response.json().await?;
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
     assert_eq!(body.code, ServerErrorCode::ScStaleScope);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn workspace_ingestion_error_mapping_returns_json_503() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo_id = harness
+        .repo
+        .get_repo_info()?
+        .expect("default repo metadata")
+        .uuid;
+    harness.grant_browser_write(1)?;
+    harness
+        .state
+        .set_watcher_runtime_view_for_test(WatcherRuntimeView::with_state_for_test(
+            repo_id,
+            1,
+            RepoMountState::Failed,
+        ));
+    seed_pending(
+        &harness.repo,
+        "notes/unavailable.md",
+        ChangeStatus::Added,
+        "pending",
+    );
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/unavailable.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        body.code,
+        ServerErrorCode::StorageWorkspaceIngestionUnavailable
+    );
+    assert_eq!(
+        body.detail.as_deref(),
+        Some("Workspace changes are temporarily unavailable; restart the service to recover.")
+    );
+    harness.shutdown().await;
     Ok(())
 }
 

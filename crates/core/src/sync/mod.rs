@@ -74,6 +74,8 @@ use crate::writeback::PersistGuard;
 #[cfg(not(target_arch = "wasm32"))]
 use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
+pub use materialize::PreparedLocalRepoMaterialization;
+#[cfg(not(target_arch = "wasm32"))]
 pub use projection_diagnostic::{
     ProjectionDiagnostic, ProjectionDiagnosticIssue, ProjectionDiagnosticStatus,
 };

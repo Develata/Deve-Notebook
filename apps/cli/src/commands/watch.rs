@@ -56,10 +56,10 @@ pub fn run(ledger_dir: &Path, snapshot_depth: usize, dry_run: bool) -> Result<()
         if !RUNNING.load(Ordering::SeqCst) {
             break None;
         }
-        if let Some(failure) = handles.terminal_failure() {
+        if let Some(failure) = handles.wait_terminal_failure(std::time::Duration::from_millis(100))
+        {
             break Some(failure);
         }
-        std::thread::sleep(std::time::Duration::from_millis(100));
     };
 
     let shutdown_result = handles.shutdown();

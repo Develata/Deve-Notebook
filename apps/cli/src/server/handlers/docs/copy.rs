@@ -7,15 +7,14 @@
 //!
 //! 复制文档处理器入口。
 
-mod dir_copy;
 mod prepare;
 mod register;
 
 #[cfg(test)]
 mod path_validation_tests;
 
-use super::copy_utils::copy_dir_assets_only;
 use super::errors;
+use super::node_target::resolve_node_target;
 use super::{normalize_repo_path_input, resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
@@ -53,6 +52,69 @@ pub async fn handle_copy_doc(
         return;
     }
 
+    let gate = state.repo_mutation_gate();
+    let mut admission = match gate.admit_mounted_repo(scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+            return;
+        }
+    };
+    let source_requires_materialization = match resolve_node_target(state, &scope, &src_path) {
+        Ok(Some(target)) if target.kind == NodeKind::Dir => {
+            match super::checked_exists(&target.abs_path, "copy source projection") {
+                Ok(exists) => !exists,
+                Err(error) => {
+                    errors::classified_failure_scoped(ch, error.to_string(), scope_nonce);
+                    return;
+                }
+            }
+        }
+        Ok(_) => false,
+        Err(error) => {
+            errors::classified_failure_scoped(ch, error.to_string(), scope_nonce);
+            return;
+        }
+    };
+    if source_requires_materialization {
+        let prepared = match state
+            .sync_manager
+            .prepare_local_repo_materialization(&scope.repo_name)
+        {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                errors::storage_persist_failed_scoped(ch, error.to_string(), scope_nonce);
+                return;
+            }
+        };
+        let materialized = gate
+            .execute_admitted_mounted_repo_unpublished(admission, || {
+                let bound_scope =
+                    crate::server::repo_mutation::revalidate_writable_resolved_repo(state, &scope)?;
+                state
+                    .sync_manager
+                    .apply_prepared_local_repo_materialization(&bound_scope.repo_name, prepared)
+            })
+            .await;
+        match materialized {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                errors::storage_persist_failed_scoped(ch, error.to_string(), scope_nonce);
+                return;
+            }
+            Err(error) => {
+                errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+                return;
+            }
+        }
+        admission = match gate.admit_mounted_repo(scope.repo_id) {
+            Ok(admission) => admission,
+            Err(error) => {
+                errors::server_error_scoped(ch, error.server_error(), scope_nonce);
+                return;
+            }
+        };
+    }
     let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path, scope_nonce) {
         Some(paths) => paths,
         None => return,
@@ -61,12 +123,10 @@ pub async fn handle_copy_doc(
 
     let ctx = CopyRegisterCtx {
         state,
-        ch,
         scope: &scope,
-        scope_nonce,
     };
-    let plan = if paths.kind == deve_core::models::NodeKind::Dir {
-        prepare_registration(ctx, &paths.src, &src_path, dst_repo_path)
+    let plan = if paths.kind == NodeKind::Dir {
+        prepare_registration(ctx, &paths.src, &paths.dst, &src_path, dst_repo_path)
     } else {
         match paths.src_doc_id {
             Some(doc_id) => prepare_single_file_registration(
@@ -89,9 +149,8 @@ pub async fn handle_copy_doc(
             return;
         }
     };
-    let execution = state
-        .repo_mutation_gate()
-        .execute_repo(scope.repo_id, &state.tx, || {
+    let execution = gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
             let bound_scope = match crate::server::repo_mutation::revalidate_writable_resolved_repo(
                 state, &scope,
             ) {
@@ -101,9 +160,7 @@ pub async fn handle_copy_doc(
             commit_registration(
                 CopyRegisterCtx {
                     state,
-                    ch,
                     scope: &bound_scope,
-                    scope_nonce,
                 },
                 &plan,
             )
@@ -129,40 +186,12 @@ pub async fn handle_copy_doc(
             return;
         }
         Err(error) => {
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to serialize copied docs: {error}"),
-                scope_nonce,
-            );
+            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
             return;
         }
     }
 
-    if paths.kind == deve_core::models::NodeKind::Dir
-        && !dir_copy::copy_dir(ctx, &paths.src, &paths.dst, &src_path, dst_repo_path)
-    {
-        return;
-    }
     tracing::info!("已复制 {} -> {}", src_path, dst_repo_path);
-}
-
-fn copy_dir_on_disk(
-    ch: &DualChannel,
-    src: &std::path::Path,
-    dst: &std::path::Path,
-    src_path: &str,
-    scope_nonce: Option<u64>,
-) -> bool {
-    if let Err(e) = copy_dir_assets_only(src, dst) {
-        tracing::error!("目录复制失败 {} -> {:?}: {:?}", src_path, dst, e);
-        errors::storage_persist_failed_scoped(
-            ch,
-            format!("Directory copy failed: {}", e),
-            scope_nonce,
-        );
-        return false;
-    }
-    true
 }
 
 pub(super) fn normalize_copy_dest_path(kind: NodeKind, dest_path: &str) -> String {

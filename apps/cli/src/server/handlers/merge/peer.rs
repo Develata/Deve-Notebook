@@ -10,7 +10,9 @@ use deve_core::models::{DocId, MergeResolution, PeerId};
 use std::sync::Arc;
 
 use super::errors;
-use super::peer_apply::{MergeConflictPayload, send_merge_conflict, write_merged_content};
+use super::peer_apply::{
+    MergeConflictPayload, MergeWriteRequest, send_merge_conflict, write_merged_content,
+};
 use super::scope::resolve_local_write_scope;
 
 /// Invariants:
@@ -26,6 +28,14 @@ pub(super) async fn handle_merge_peer(
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let Some(local_scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
+    };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(local_scope.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => {
+            errors::server_error(ch, error.server_error(), scope_nonce);
+            return;
+        }
     };
     let peer_id = PeerId::new(peer_id);
     match state.repo.merge_peer_in_local_repo(
@@ -47,11 +57,14 @@ pub(super) async fn handle_merge_peer(
             write_merged_content(
                 state,
                 ch,
-                &local_scope,
-                &preflight,
-                &content,
-                resolution,
-                scope_nonce,
+                MergeWriteRequest {
+                    scope: &local_scope,
+                    admission,
+                    preflight: &preflight,
+                    content: &content,
+                    resolution,
+                    scope_nonce,
+                },
             )
             .await;
         }

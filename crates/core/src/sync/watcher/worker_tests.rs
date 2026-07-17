@@ -142,6 +142,7 @@ fn worker_panic_becomes_typed_failure_and_stops_backend() {
     let (_stop_tx, stop_rx) = mpsc::channel();
 
     let failure = run(WorkerInput {
+        failure: None,
         sync,
         repo_name,
         repo_id,
@@ -166,13 +167,60 @@ fn worker_panic_becomes_typed_failure_and_stops_backend() {
 }
 
 #[test]
+fn failure_callback_panic_cannot_skip_state_cut_or_backend_cleanup() {
+    let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
+        super::super::dispatch_test_support::new_sync().expect("watcher fixture");
+    let stopped = Arc::new(AtomicBool::new(false));
+    let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
+    let (_stop_tx, stop_rx) = mpsc::channel();
+
+    let failure = run(WorkerInput {
+        failure: Some(Arc::new(|_| panic!("injected callback panic"))),
+        sync,
+        repo_name,
+        repo_id,
+        generation: 1,
+        repo_root,
+        backend: Box::new(PanickingBackend {
+            stopped: stopped.clone(),
+        }),
+        stop_rx,
+        refresh: None,
+        state: state.clone(),
+    })
+    .expect_err("worker and callback panic must become terminal failure");
+
+    assert_eq!(failure.kind, WatcherFailureKind::Panic);
+    assert!(failure.primary.contains("injected watcher panic"));
+    assert!(
+        failure
+            .cleanup
+            .iter()
+            .any(|cleanup| cleanup.contains("injected callback panic"))
+    );
+    assert!(stopped.load(Ordering::SeqCst));
+    assert!(matches!(
+        state.read().expect("state").snapshot(1),
+        Some(RepoWatcherWorkerState::Failed(observed)) if observed == failure
+    ));
+}
+
+#[test]
 fn consumer_failure_preserves_primary_and_cleanup() {
     let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
     let (_stop_tx, stop_rx) = mpsc::channel();
 
+    let observed = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let callback_observed = observed.clone();
     let failure = run(WorkerInput {
+        failure: Some(Arc::new(move |failure| {
+            callback_observed
+                .lock()
+                .expect("failure callback observations")
+                .push(failure);
+        })),
         sync,
         repo_name,
         repo_id,
@@ -190,6 +238,10 @@ fn consumer_failure_preserves_primary_and_cleanup() {
     assert!(failure.primary.contains("injected receive failure"));
     assert_eq!(failure.cleanup.len(), 1);
     assert!(failure.cleanup[0].contains("injected cleanup failure"));
+    let observed = observed.lock().expect("failure callback observations");
+    assert_eq!(observed.len(), 1);
+    assert_eq!(observed[0].phase, WatcherFailurePhase::Receive);
+    assert!(observed[0].cleanup.is_empty());
 }
 
 #[test]
@@ -223,6 +275,7 @@ fn cleanup_panic_becomes_typed_shutdown_failure() {
     stop_tx.send(()).expect("request stop");
 
     let failure = run(WorkerInput {
+        failure: None,
         sync,
         repo_name,
         repo_id,
@@ -249,9 +302,13 @@ fn terminal_failure_is_visible_before_cleanup_completes() {
     let (_stop_tx, stop_rx) = mpsc::channel();
     let (entered_tx, entered_rx) = mpsc::channel();
     let (release_tx, release_rx) = mpsc::channel();
+    let (failure_tx, failure_rx) = mpsc::channel();
 
     let join = std::thread::spawn(move || {
         run(WorkerInput {
+            failure: Some(Arc::new(move |failure| {
+                failure_tx.send(failure).expect("publish failure cut");
+            })),
             sync,
             repo_name,
             repo_id,
@@ -267,6 +324,9 @@ fn terminal_failure_is_visible_before_cleanup_completes() {
         })
     });
     entered_rx.recv().expect("cleanup entered");
+
+    let cut = failure_rx.recv().expect("failure cut before cleanup");
+    assert_eq!(cut.phase, WatcherFailurePhase::Receive);
 
     assert!(matches!(
         observed.read().expect("state").snapshot(1),

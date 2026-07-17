@@ -178,6 +178,10 @@ RemoteProjectionCommand
   AWS 环境密钥签给任意 custom host。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
   覆盖后由 watcher/scan 生成 External Changes。
+- pull 的 provider I/O 与 External Changes scan 必须在 repo permit 外执行。workspace apply
+  通过 Mounted admission 在 permit 内完成后，scan/finalize 使用一次性 mount + repo-lane
+  revision continuation；scan 期间若有后续受管 writer，旧失败路径不得回滚覆盖该 writer，
+  而应保留 repair evidence 并 fail-closed。
 - `webdav:pull` / `s3:pull` 远端枚举结果归一化后若出现重复 Markdown projection
   path，必须在下载任何 payload 或写 Projection Workspace 前 fail-closed。
 - pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue

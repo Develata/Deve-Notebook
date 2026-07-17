@@ -61,10 +61,6 @@ fn extracts_scope_nonce_from_source_control_messages() {
             resolution: ConflictResolution::KeepLedger,
             scope_nonce: Some(7),
         },
-        ClientMessage::CommitAndPush {
-            message: "msg".into(),
-            scope_nonce: Some(7),
-        },
         ClientMessage::RemoteProjectionTransport {
             provider: RemoteProjectionProvider::WebDav,
             direction: RemoteProjectionDirection::Pull,
@@ -254,10 +250,6 @@ fn source_control_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMes
         ClientMessage::ResolveConflict {
             target,
             resolution: ConflictResolution::KeepLedger,
-            scope_nonce,
-        },
-        ClientMessage::CommitAndPush {
-            message: "msg".into(),
             scope_nonce,
         },
         ClientMessage::RemoteProjectionTransport {

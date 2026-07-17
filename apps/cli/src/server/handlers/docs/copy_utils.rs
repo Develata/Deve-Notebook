@@ -6,37 +6,86 @@
 use deve_core::utils::path::path_to_forward_slash;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
-/// 迭代式复制目录中的非 Markdown 资产 (避免栈溢出)
-///
-/// **不变量 (Invariants)**:
-/// - 源目录必须存在且为目录
-/// - 目标目录在复制前不存在
-/// - `.md` 文件必须由 Ledger 重建，不能直接把工作区文件当真值复制
-///
-/// **实现**: 使用显式栈代替递归，O(depth) 堆内存，无栈溢出风险
-///
-/// **复杂度**: O(n) 其中 n 为文件总数，栈深度 O(max_depth)
-pub fn copy_dir_assets_only(src: &Path, dst: &Path) -> io::Result<()> {
-    let mut stack: Vec<(PathBuf, PathBuf)> = vec![(src.to_path_buf(), dst.to_path_buf())];
+pub(super) struct PreparedAssetCopy {
+    source: PathBuf,
+    destination: PathBuf,
+    len: u64,
+    modified: Option<SystemTime>,
+}
 
-    while let Some((src_dir, dst_dir)) = stack.pop() {
-        std::fs::create_dir_all(&dst_dir)?;
-
-        for entry in std::fs::read_dir(&src_dir)? {
+pub(super) fn prepare_dir_asset_copies(
+    src: &Path,
+    dst: &Path,
+) -> io::Result<Vec<PreparedAssetCopy>> {
+    let mut assets = Vec::new();
+    let mut stack = vec![src.to_path_buf()];
+    while let Some(directory) = stack.pop() {
+        for entry in std::fs::read_dir(&directory)? {
             let entry = entry?;
             let file_type = entry.file_type()?;
-            let src_path = entry.path();
-            let dst_path = dst_dir.join(entry.file_name());
-
+            let source = entry.path();
             if file_type.is_dir() {
-                stack.push((src_path, dst_path));
-            } else if file_type.is_file() && !is_markdown_path(&src_path) {
-                std::fs::copy(&src_path, &dst_path)?;
+                stack.push(source);
+                continue;
             }
+            if !file_type.is_file() || is_markdown_path(&source) {
+                continue;
+            }
+            let relative = source
+                .strip_prefix(src)
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("asset copy source escaped root: {}", source.display()),
+                    )
+                })?
+                .to_path_buf();
+            let metadata = entry.metadata()?;
+            assets.push(PreparedAssetCopy {
+                source,
+                destination: dst.join(relative),
+                len: metadata.len(),
+                modified: metadata.modified().ok(),
+            });
         }
     }
+    assets.sort_by(|left, right| left.destination.cmp(&right.destination));
+    Ok(assets)
+}
 
+pub(super) fn apply_prepared_asset_copies(assets: &[PreparedAssetCopy]) -> io::Result<()> {
+    for asset in assets {
+        let metadata = std::fs::metadata(&asset.source)?;
+        if !metadata.is_file()
+            || metadata.len() != asset.len
+            || asset
+                .modified
+                .is_some_and(|expected| metadata.modified().ok() != Some(expected))
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "asset copy source changed after preparation: {}",
+                    asset.source.display()
+                ),
+            ));
+        }
+        if asset.destination.try_exists()? {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                format!(
+                    "asset copy destination appeared after preparation: {}",
+                    asset.destination.display()
+                ),
+            ));
+        }
+        if let Some(parent) = asset.destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::copy(&asset.source, &asset.destination)?;
+    }
     Ok(())
 }
 

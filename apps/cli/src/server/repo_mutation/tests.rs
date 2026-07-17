@@ -1,13 +1,22 @@
-use super::{MutationExecution, MutationPublication, RepoMutationPublicationGate};
+mod continuation;
+
+use super::{
+    MutationExecution, MutationPublication, RepoMutationGateError, RepoMutationPublicationGate,
+};
+use crate::server::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
 use deve_core::models::RepoId;
 use deve_core::protocol::{
     DocumentRecoveryScope, ProjectionRecoveryCause, ProjectionRecoveryPlan,
-    ProjectionRecoveryRequired, ServerMessage,
+    ProjectionRecoveryRequired, ServerErrorCode, ServerMessage,
 };
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Barrier, Mutex};
 use std::time::Duration;
 use tokio::sync::{Notify, broadcast};
+
+fn gate() -> RepoMutationPublicationGate {
+    RepoMutationPublicationGate::new(WatcherRuntimeView::permissive_for_tests())
+}
 
 fn publication(repo_id: RepoId) -> MutationPublication {
     MutationPublication::ProjectionRecovery(ProjectionRecoveryRequired {
@@ -26,7 +35,7 @@ fn publication(repo_id: RepoId) -> MutationPublication {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn serializes_same_repo_and_preserves_publication_order() {
-    let gate = Arc::new(RepoMutationPublicationGate::new());
+    let gate = Arc::new(gate());
     let repo_id = RepoId::new_v4();
     let (tx, mut rx) = broadcast::channel(8);
     let entered = Arc::new(Notify::new());
@@ -38,7 +47,7 @@ async fn serializes_same_repo_and_preserves_publication_order() {
     let first_order = order.clone();
     let first = tokio::spawn(async move {
         first_gate
-            .execute_repo(repo_id, &first_tx, || {
+            .execute_mounted_repo(repo_id, &first_tx, move || {
                 first_entered.notify_one();
                 std::thread::sleep(Duration::from_millis(75));
                 first_order.lock().expect("order lock").push(1);
@@ -54,7 +63,7 @@ async fn serializes_same_repo_and_preserves_publication_order() {
     let second_order = order.clone();
     let second = tokio::spawn(async move {
         second_gate
-            .execute_repo(repo_id, &second_tx, || {
+            .execute_mounted_repo(repo_id, &second_tx, || {
                 second_order.lock().expect("order lock").push(2);
                 MutationExecution::<_, ()>::committed(2, publication(repo_id))
             })
@@ -81,7 +90,7 @@ async fn serializes_same_repo_and_preserves_publication_order() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn different_repos_can_execute_in_parallel() {
-    let gate = Arc::new(RepoMutationPublicationGate::new());
+    let gate = Arc::new(gate());
     let (tx, _) = broadcast::channel(8);
     let active = Arc::new(AtomicUsize::new(0));
     let max_active = Arc::new(AtomicUsize::new(0));
@@ -95,7 +104,7 @@ async fn different_repos_can_execute_in_parallel() {
         let max_active = max_active.clone();
         let barrier = barrier.clone();
         tasks.push(tokio::spawn(async move {
-            gate.execute_repo(repo_id, &tx, || {
+            gate.execute_mounted_repo(repo_id, &tx, || {
                 let now = active.fetch_add(1, Ordering::SeqCst) + 1;
                 max_active.fetch_max(now, Ordering::SeqCst);
                 barrier.wait();
@@ -114,9 +123,9 @@ async fn different_repos_can_execute_in_parallel() {
 
 #[tokio::test]
 async fn weak_registry_does_not_retain_repo_locks() {
-    let gate = RepoMutationPublicationGate::new();
+    let gate = gate();
     let (tx, _) = broadcast::channel(2);
-    gate.execute_repo(RepoId::new_v4(), &tx, || {
+    gate.execute_mounted_repo(RepoId::new_v4(), &tx, || {
         MutationExecution::<(), ()>::not_committed(())
     })
     .await
@@ -126,15 +135,15 @@ async fn weak_registry_does_not_retain_repo_locks() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn nested_same_repo_fails_closed() {
-    let gate = Arc::new(RepoMutationPublicationGate::new());
+    let gate = Arc::new(gate());
     let (tx, _) = broadcast::channel(2);
     let repo_id = RepoId::new_v4();
     let nested_gate = gate.clone();
     let nested_tx = tx.clone();
 
-    gate.execute_repo(repo_id, &tx, || {
+    gate.execute_mounted_repo(repo_id, &tx, || {
         let nested = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(nested_gate.execute_repo(
+            tokio::runtime::Handle::current().block_on(nested_gate.execute_mounted_repo(
                 repo_id,
                 &nested_tx,
                 || MutationExecution::<(), ()>::not_committed(()),
@@ -154,13 +163,13 @@ async fn nested_same_repo_fails_closed() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn repo_to_catalog_nesting_fails_closed() {
-    let gate = Arc::new(RepoMutationPublicationGate::new());
+    let gate = Arc::new(gate());
     let (tx, _) = broadcast::channel(2);
     let repo_id = RepoId::new_v4();
     let nested_gate = gate.clone();
     let nested_tx = tx.clone();
 
-    gate.execute_repo(repo_id, &tx, || {
+    gate.execute_mounted_repo(repo_id, &tx, || {
         let nested = tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current()
                 .block_on(nested_gate.execute_catalog(&nested_tx, || {
@@ -179,9 +188,38 @@ async fn repo_to_catalog_nesting_fails_closed() {
     .expect("outer execution");
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn repo_to_other_repo_catalog_nesting_fails_closed() {
+    let gate = Arc::new(gate());
+    let (tx, _) = broadcast::channel(2);
+    let first_repo = RepoId::new_v4();
+    let second_repo = RepoId::new_v4();
+    let nested_gate = gate.clone();
+    let nested_tx = tx.clone();
+
+    gate.execute_mounted_repo(first_repo, &tx, || {
+        let nested = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(nested_gate.execute_catalog_repo(
+                second_repo,
+                &nested_tx,
+                || MutationExecution::<(), ()>::not_committed(()),
+            ))
+        });
+        assert!(matches!(
+            nested,
+            Err(super::RepoMutationGateError::NestedLane(
+                super::gate::MutationLane::Repo(repo_id)
+            )) if repo_id == second_repo
+        ));
+        MutationExecution::<(), ()>::not_committed(())
+    })
+    .await
+    .expect("outer execution");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn catalog_repo_lane_excludes_same_repo_writer() {
-    let gate = Arc::new(RepoMutationPublicationGate::new());
+    let gate = Arc::new(gate());
     let (tx, _) = broadcast::channel(4);
     let repo_id = RepoId::new_v4();
     let entered = Arc::new(Notify::new());
@@ -212,7 +250,7 @@ async fn catalog_repo_lane_excludes_same_repo_writer() {
     let writer_order = order.clone();
     let writer = tokio::spawn(async move {
         writer_gate
-            .execute_repo(repo_id, &writer_tx, || {
+            .execute_mounted_repo(repo_id, &writer_tx, || {
                 writer_order.lock().expect("order lock").push("writer");
                 MutationExecution::<(), ()>::not_committed(())
             })
@@ -223,4 +261,55 @@ async fn catalog_repo_lane_excludes_same_repo_writer() {
     lifecycle.await.expect("lifecycle task");
     writer.await.expect("writer task");
     assert_eq!(*order.lock().expect("order lock"), ["lifecycle", "writer"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn mounted_repo_gate_revalidates_after_waiting_for_repo_permit() {
+    let repo_id = RepoId::new_v4();
+    let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
+    let gate = Arc::new(RepoMutationPublicationGate::new(view.clone()));
+    let (tx, _) = broadcast::channel(4);
+    let entered = Arc::new(Notify::new());
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+
+    let first_gate = gate.clone();
+    let first_tx = tx.clone();
+    let first_entered = entered.clone();
+    let first = tokio::spawn(async move {
+        first_gate
+            .execute_mounted_repo(repo_id, &first_tx, move || {
+                first_entered.notify_one();
+                release_rx.recv().expect("release first mutation");
+                MutationExecution::<(), ()>::not_committed(())
+            })
+            .await
+    });
+    entered.notified().await;
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let second_calls = calls.clone();
+    let second_gate = gate.clone();
+    let second_tx = tx.clone();
+    let second = tokio::spawn(async move {
+        second_gate
+            .execute_mounted_repo(repo_id, &second_tx, || {
+                second_calls.fetch_add(1, Ordering::SeqCst);
+                MutationExecution::<(), ()>::not_committed(())
+            })
+            .await
+    });
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    view.set_state_for_test(repo_id, RepoMountState::Failed);
+    release_tx.send(()).expect("release first mutation");
+
+    first.await.expect("first task").expect("first execution");
+    let error = second
+        .await
+        .expect("second task")
+        .expect_err("failed mount must close queued mutation");
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        error.server_error().code,
+        ServerErrorCode::StorageWorkspaceIngestionUnavailable
+    );
 }

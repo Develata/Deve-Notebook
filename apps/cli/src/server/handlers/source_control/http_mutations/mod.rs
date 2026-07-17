@@ -69,6 +69,151 @@ pub struct ApplyExternalPayload {
     pub repo: RepoSelector,
 }
 
+async fn stage_through_gate(
+    state: &Arc<AppState>,
+    binding: AuthorizedRepoBinding,
+    target: ScPathTarget,
+) -> axum::response::Response {
+    let pinned = binding.pinned_selector();
+    let expected_name = pinned.repo_name.as_deref().unwrap_or_default();
+    match super::mounted::execute(
+        state,
+        binding.repo_id,
+        expected_name,
+        super::errors::ScOp::StagePending(target.path.clone()),
+        |selector| service::stage_pending(state.repo.as_ref(), selector, &target),
+    )
+    .await
+    {
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(error) => super::errors::http(error),
+    }
+}
+
+async fn unstage_through_gate(
+    state: &Arc<AppState>,
+    binding: AuthorizedRepoBinding,
+    target: ScPathTarget,
+) -> axum::response::Response {
+    let pinned = binding.pinned_selector();
+    let expected_name = pinned.repo_name.as_deref().unwrap_or_default();
+    match super::mounted::execute(
+        state,
+        binding.repo_id,
+        expected_name,
+        super::errors::ScOp::Unstage(target.path.clone()),
+        |selector| service::unstage_file(state.repo.as_ref(), selector, &target),
+    )
+    .await
+    {
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(error) => super::errors::http(error),
+    }
+}
+
+async fn discard_through_gate(
+    state: &Arc<AppState>,
+    binding: AuthorizedRepoBinding,
+    target: ScPathTarget,
+) -> axum::response::Response {
+    let pinned = binding.pinned_selector();
+    let expected_name = pinned.repo_name.as_deref().unwrap_or_default();
+    match super::mounted::execute(
+        state,
+        binding.repo_id,
+        expected_name,
+        super::errors::ScOp::DiscardPending(target.path.clone()),
+        |selector| super::local_discard::discard_via_sync_manager(state, selector, &target),
+    )
+    .await
+    {
+        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(error) => super::errors::http(error),
+    }
+}
+
+async fn apply_external_changes_through_gate(
+    state: &Arc<AppState>,
+    binding: AuthorizedRepoBinding,
+) -> axum::response::Response {
+    let pinned = binding.pinned_selector();
+    let expected_name = pinned.repo_name.as_deref().unwrap_or_default();
+    let repo_name = match crate::server::repo_mutation::prepare_writable_local_repo(
+        state,
+        binding.repo_id,
+        expected_name,
+    ) {
+        Ok(name) => name,
+        Err(error) => {
+            return super::errors::http(super::errors::map_repo_error(
+                super::errors::ScOp::ApplyExternalChanges,
+                error,
+            ));
+        }
+    };
+    let gate = state.repo_mutation_gate();
+    let admission = match gate.admit_mounted_repo(binding.repo_id) {
+        Ok(admission) => admission,
+        Err(error) => return super::errors::http(error.server_error()),
+    };
+    let prepared = match state
+        .repo
+        .prepare_external_changes_in_local_repo(&repo_name)
+    {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            return super::errors::http(super::errors::map_repo_error(
+                super::errors::ScOp::ApplyExternalChanges,
+                error,
+            ));
+        }
+    };
+    match gate
+        .execute_admitted_mounted_repo(admission, &state.tx, || {
+            let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
+                state,
+                binding.repo_id,
+                &repo_name,
+            ) {
+                Ok(repo_name) => repo_name,
+                Err(error) => {
+                    return MutationExecution::not_committed(super::errors::map_repo_error(
+                        super::errors::ScOp::ApplyExternalChanges,
+                        error,
+                    ));
+                }
+            };
+            match state
+                .repo
+                .commit_prepared_external_changes_in_local_repo(&repo_name, prepared)
+                .map_err(|error| {
+                    super::errors::map_repo_error(super::errors::ScOp::ApplyExternalChanges, error)
+                }) {
+                Ok(outcome) => {
+                    let receipt = outcome.receipt;
+                    MutationExecution::committed(
+                        receipt.clone(),
+                        MutationPublication::external_apply_recovery(
+                            receipt.repo_id,
+                            receipt.affected_docs.clone(),
+                        ),
+                    )
+                }
+                Err(error) => MutationExecution::not_committed(error),
+            }
+        })
+        .await
+    {
+        Ok(MutationExecution::Committed { value: receipt, .. }) => Json(receipt).into_response(),
+        Ok(MutationExecution::NotCommitted(error)) => super::errors::http(error),
+        Ok(MutationExecution::ProjectionDegraded { value: receipt, .. }) => {
+            Json(receipt).into_response()
+        }
+        Ok(MutationExecution::CommittedPartial { error, .. }) => super::errors::http(error),
+        Err(error) => super::errors::http(error.server_error()),
+    }
+}
+
 pub(crate) async fn stage(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
@@ -78,19 +223,16 @@ pub(crate) async fn stage(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::BrowserSessionGrant(&auth_session_id),
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match service::stage_pending(state.repo.as_ref(), &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    stage_through_gate(&state, binding, payload.target()).await
 }
 
 pub async fn stage_delegated(
@@ -101,19 +243,16 @@ pub async fn stage_delegated(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::DelegatedRemoteProxy,
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match service::stage_pending(state.repo.as_ref(), &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    stage_through_gate(&state, binding, payload.target()).await
 }
 
 pub(crate) async fn discard_pending(
@@ -125,19 +264,16 @@ pub(crate) async fn discard_pending(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::BrowserSessionGrant(&auth_session_id),
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match super::local_discard::discard_via_sync_manager(&state, &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    discard_through_gate(&state, binding, payload.target()).await
 }
 
 pub async fn discard_pending_delegated(
@@ -148,19 +284,16 @@ pub async fn discard_pending_delegated(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::DelegatedRemoteProxy,
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match super::local_discard::discard_via_sync_manager(&state, &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    discard_through_gate(&state, binding, payload.target()).await
 }
 
 pub(crate) async fn unstage(
@@ -172,19 +305,16 @@ pub(crate) async fn unstage(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::BrowserSessionGrant(&auth_session_id),
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match service::unstage_file(state.repo.as_ref(), &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    unstage_through_gate(&state, binding, payload.target()).await
 }
 
 pub async fn unstage_delegated(
@@ -195,19 +325,16 @@ pub async fn unstage_delegated(
         Ok(scope_nonce) => scope_nonce,
         Err(error) => return super::errors::http(error),
     };
-    if let Err(error) = authorize_http_write(
+    let binding = match authorize_http_write(
         &state,
         &payload.repo,
         scope_nonce,
         SourceControlWriteAuthority::DelegatedRemoteProxy,
     ) {
-        return super::errors::http(error);
-    }
-    let target = payload.target();
-    match service::unstage_file(state.repo.as_ref(), &payload.repo, &target) {
-        Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => super::errors::http(e),
-    }
+        Ok(binding) => binding,
+        Err(error) => return super::errors::http(error),
+    };
+    unstage_through_gate(&state, binding, payload.target()).await
 }
 
 pub(crate) async fn apply_external_changes(
@@ -228,79 +355,7 @@ pub(crate) async fn apply_external_changes(
         Ok(binding) => binding,
         Err(error) => return super::errors::http(error),
     };
-    let pinned = binding.pinned_selector();
-    let repo_name = match state
-        .repo
-        .resolve_local_repo_name_for_execution(pinned.repo_id, pinned.repo_name.as_deref())
-    {
-        Ok(repo_name) => repo_name,
-        Err(error) => {
-            return super::errors::http(super::errors::map_repo_error(
-                super::errors::ScOp::ApplyExternalChanges,
-                error,
-            ));
-        }
-    };
-    let prepared = match state
-        .repo
-        .prepare_external_changes_in_local_repo(&repo_name)
-    {
-        Ok(prepared) => prepared,
-        Err(error) => {
-            return super::errors::http(super::errors::map_repo_error(
-                super::errors::ScOp::ApplyExternalChanges,
-                error,
-            ));
-        }
-    };
-    match state
-        .repo_mutation_gate()
-        .execute_repo(binding.repo_id, &state.tx, || {
-            let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
-                &state,
-                binding.repo_id,
-                &repo_name,
-            ) {
-                Ok(repo_name) => repo_name,
-                Err(error) => {
-                    return MutationExecution::not_committed(super::errors::map_repo_error(
-                        super::errors::ScOp::ApplyExternalChanges,
-                        error,
-                    ));
-                }
-            };
-            match state
-                .repo
-                .commit_prepared_external_changes_in_local_repo(&repo_name, prepared)
-                .map_err(|error| {
-                    super::errors::map_repo_error(super::errors::ScOp::ApplyExternalChanges, error)
-                }) {
-                Ok(outcome) => {
-                    let receipt = outcome.receipt;
-                    MutationExecution::committed(
-                        receipt.clone(),
-                        MutationPublication::external_apply_recovery(
-                            receipt.repo_id,
-                            receipt.affected_docs.clone(),
-                        ),
-                    )
-                }
-                Err(error) => MutationExecution::not_committed(error),
-            }
-        })
-        .await
-    {
-        Ok(MutationExecution::Committed { value: receipt, .. }) => Json(receipt).into_response(),
-        Ok(MutationExecution::NotCommitted(error)) => super::errors::http(error),
-        Ok(MutationExecution::ProjectionDegraded { value: receipt, .. }) => {
-            Json(receipt).into_response()
-        }
-        Ok(MutationExecution::CommittedPartial { error, .. }) => super::errors::http(error),
-        Err(error) => super::errors::http(deve_core::protocol::ServerError::with_detail(
-            deve_core::protocol::ServerErrorCode::StoragePersistFailed,
-            error.to_string(),
-        )),
-    }
+    apply_external_changes_through_gate(&state, binding).await
 }
 
 pub async fn apply_external_changes_delegated(
@@ -320,77 +375,5 @@ pub async fn apply_external_changes_delegated(
         Ok(binding) => binding,
         Err(error) => return super::errors::http(error),
     };
-    let pinned = binding.pinned_selector();
-    let repo_name = match state
-        .repo
-        .resolve_local_repo_name_for_execution(pinned.repo_id, pinned.repo_name.as_deref())
-    {
-        Ok(repo_name) => repo_name,
-        Err(error) => {
-            return super::errors::http(super::errors::map_repo_error(
-                super::errors::ScOp::ApplyExternalChanges,
-                error,
-            ));
-        }
-    };
-    let prepared = match state
-        .repo
-        .prepare_external_changes_in_local_repo(&repo_name)
-    {
-        Ok(prepared) => prepared,
-        Err(error) => {
-            return super::errors::http(super::errors::map_repo_error(
-                super::errors::ScOp::ApplyExternalChanges,
-                error,
-            ));
-        }
-    };
-    match state
-        .repo_mutation_gate()
-        .execute_repo(binding.repo_id, &state.tx, || {
-            let repo_name = match crate::server::repo_mutation::revalidate_writable_local_repo(
-                &state,
-                binding.repo_id,
-                &repo_name,
-            ) {
-                Ok(repo_name) => repo_name,
-                Err(error) => {
-                    return MutationExecution::not_committed(super::errors::map_repo_error(
-                        super::errors::ScOp::ApplyExternalChanges,
-                        error,
-                    ));
-                }
-            };
-            match state
-                .repo
-                .commit_prepared_external_changes_in_local_repo(&repo_name, prepared)
-                .map_err(|error| {
-                    super::errors::map_repo_error(super::errors::ScOp::ApplyExternalChanges, error)
-                }) {
-                Ok(outcome) => {
-                    let receipt = outcome.receipt;
-                    MutationExecution::committed(
-                        receipt.clone(),
-                        MutationPublication::external_apply_recovery(
-                            receipt.repo_id,
-                            receipt.affected_docs.clone(),
-                        ),
-                    )
-                }
-                Err(error) => MutationExecution::not_committed(error),
-            }
-        })
-        .await
-    {
-        Ok(MutationExecution::Committed { value: receipt, .. }) => Json(receipt).into_response(),
-        Ok(MutationExecution::NotCommitted(error)) => super::errors::http(error),
-        Ok(MutationExecution::ProjectionDegraded { value: receipt, .. }) => {
-            Json(receipt).into_response()
-        }
-        Ok(MutationExecution::CommittedPartial { error, .. }) => super::errors::http(error),
-        Err(error) => super::errors::http(deve_core::protocol::ServerError::with_detail(
-            deve_core::protocol::ServerErrorCode::StoragePersistFailed,
-            error.to_string(),
-        )),
-    }
+    apply_external_changes_through_gate(&state, binding).await
 }

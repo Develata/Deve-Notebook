@@ -253,8 +253,8 @@ fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> a
     Ok(())
 }
 
-#[test]
-fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
+#[tokio::test]
+async fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     init_local_repo(&dir, "test", "urn:test")?;
     let db = state.repo.open_database(None, "test")?.db;
@@ -263,7 +263,7 @@ fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Res
         .remove(&REPO_INFO_METADATA_KEY)?;
     txn.commit()?;
 
-    let err = match prepare_repo_switch(&state, None, "test".into()) {
+    let err = match prepare_repo_switch(&state, None, "test".into()).await {
         Ok(_) => anyhow::bail!("local switch must fail without repo uuid metadata"),
         Err(err) => err,
     };

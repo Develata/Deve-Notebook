@@ -8,6 +8,7 @@
 use crate::server::diff_projection::DiffProjectionExecutor;
 #[cfg(not(test))]
 use crate::server::repo_mutation::RepoMutationPublicationGate;
+use crate::server::runtime::watcher_runtime::WatcherRuntimeView;
 #[cfg(not(test))]
 use crate::server::source_control_grants::SourceControlWriteGrants;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
@@ -38,9 +39,12 @@ pub(crate) struct AppStateParts {
     #[cfg(feature = "search")]
     pub search_available: bool,
     pub identity_key: Arc<IdentityKeyPair>,
+    pub watcher_runtime: WatcherRuntimeView,
 }
 
 pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
+    #[cfg(test)]
+    let _watcher_runtime = parts.watcher_runtime;
     Arc::new(AppState {
         repo: parts.repo,
         sync_manager: parts.sync_manager,
@@ -52,10 +56,12 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         search_available: parts.search_available,
         identity_key: parts.identity_key,
         #[cfg(not(test))]
+        watcher_runtime: parts.watcher_runtime.clone(),
+        #[cfg(not(test))]
         diff_projection_executor: Arc::new(DiffProjectionExecutor::new()),
         #[cfg(not(test))]
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
         #[cfg(not(test))]
-        repo_mutation_gate: Arc::new(RepoMutationPublicationGate::new()),
+        repo_mutation_gate: Arc::new(RepoMutationPublicationGate::new(parts.watcher_runtime)),
     })
 }
