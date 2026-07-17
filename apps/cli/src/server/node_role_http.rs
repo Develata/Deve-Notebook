@@ -1,5 +1,6 @@
 // apps/cli/src/server/node_role_http.rs
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 07_network#full-peer-mesh-v1
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
@@ -12,35 +13,69 @@ use std::sync::Arc;
 use crate::server::{AppState, node_role, runtime};
 
 pub async fn role() -> impl IntoResponse {
-    Json(current_role_payload(None))
+    Json(current_role_payload(None, None))
 }
 
 pub async fn role_with_app_state(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let repo_health =
         runtime::current_repo_health(state.repo.as_ref(), state.sync_manager.as_ref());
-    Json(current_role_payload(Some(repo_health)))
+    let watcher_health = runtime::current_watcher_health(
+        state.repo.as_ref(),
+        state.sync_manager.as_ref(),
+        &state.watcher_runtime_view(),
+    );
+    Json(current_role_payload(
+        Some(repo_health),
+        Some(watcher_health),
+    ))
 }
 
-fn current_role_payload(repo_health: Option<node_role::RepoHealthSummary>) -> serde_json::Value {
+fn current_role_payload(
+    repo_health: Option<node_role::RepoHealthSummary>,
+    watcher_health: Option<node_role::WatcherHealthSummary>,
+) -> serde_json::Value {
     let role = node_role::get_node_role();
-    role_payload_with_repo_health(&role, repo_health)
+    role_payload_with_runtime_health(&role, repo_health, watcher_health)
 }
 
+#[cfg(test)]
 fn role_payload_with_repo_health(
     role: &node_role::NodeRole,
     repo_health: Option<node_role::RepoHealthSummary>,
+) -> serde_json::Value {
+    role_payload_with_runtime_health(role, repo_health, None)
+}
+
+fn role_payload_with_runtime_health(
+    role: &node_role::NodeRole,
+    repo_health: Option<node_role::RepoHealthSummary>,
+    watcher_health: Option<node_role::WatcherHealthSummary>,
 ) -> serde_json::Value {
     match repo_health {
         Some(repo_health) => {
             let mut role = role.clone();
             role.repo_health = repo_health;
-            role_payload(&role)
+            role_payload_with_watcher_health(
+                &role,
+                watcher_health.unwrap_or_else(node_role::WatcherHealthSummary::unknown),
+            )
         }
-        None => role_payload(role),
+        None => role_payload_with_watcher_health(
+            role,
+            watcher_health.unwrap_or_else(node_role::WatcherHealthSummary::unknown),
+        ),
     }
 }
 
+#[cfg(test)]
 fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
+    role_payload_with_watcher_health(r, node_role::WatcherHealthSummary::unknown())
+}
+
+fn role_payload_with_watcher_health(
+    r: &node_role::NodeRole,
+    watcher_health: node_role::WatcherHealthSummary,
+) -> serde_json::Value {
     serde_json::json!({
         "role": r.role,
         "ws_port": r.ws_port,
@@ -54,6 +89,12 @@ fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
             "local_total": r.repo_health.local_total,
             "healthy": r.repo_health.healthy,
             "degraded": r.repo_health.degraded,
+        },
+        "watcher_health": {
+            "status": watcher_health.status,
+            "expected": watcher_health.expected,
+            "running": watcher_health.running,
+            "unavailable": watcher_health.unavailable,
         },
         "source_control": {
             "authority": r.source_control.authority,
@@ -135,6 +176,10 @@ mod tests {
         assert_eq!(payload["repo_health"]["local_total"], 2);
         assert_eq!(payload["repo_health"]["healthy"], 1);
         assert_eq!(payload["repo_health"]["degraded"], 1);
+        assert_eq!(payload["watcher_health"]["status"], "unknown");
+        assert_eq!(payload["watcher_health"]["expected"], 0);
+        assert_eq!(payload["watcher_health"]["running"], 0);
+        assert_eq!(payload["watcher_health"]["unavailable"], 0);
         assert_eq!(payload["source_control"]["authority"], "ngit");
         assert_eq!(payload["source_control"]["git_main_mirror"], "main");
         assert_eq!(payload["host_file_actions"]["copy_absolute_path"], true);
@@ -164,6 +209,46 @@ mod tests {
         assert_eq!(payload["repo_health"]["local_total"], 2);
         assert_eq!(payload["repo_health"]["healthy"], 1);
         assert_eq!(payload["repo_health"]["degraded"], 1);
+    }
+
+    #[test]
+    fn node_role_watcher_health_exposes_exact_public_shape() {
+        let payload = role_payload_with_runtime_health(
+            &node_role::NodeRole {
+                role: "main".into(),
+                ws_port: 3001,
+                main_port: 3001,
+                version: "0.0.1".into(),
+                profile: "standard".into(),
+                delivery: "embedded-frontend".into(),
+                environment: "development".into(),
+                repo_health: node_role::RepoHealthSummary::from_degraded_count(3, 1),
+                source_control: node_role::SourceControlSummary::ngit_authority(),
+                p2p: node_role::P2pSummary::disabled(),
+                native_service: None,
+            },
+            None,
+            Some(node_role::WatcherHealthSummary {
+                status: "degraded".into(),
+                expected: 2,
+                running: 1,
+                unavailable: 1,
+            }),
+        );
+
+        let watcher = payload["watcher_health"]
+            .as_object()
+            .expect("watcher health object");
+        assert_eq!(watcher.len(), 4);
+        assert_eq!(watcher["status"], "degraded");
+        assert_eq!(watcher["expected"], 2);
+        assert_eq!(watcher["running"], 1);
+        assert_eq!(watcher["unavailable"], 1);
+        assert!(watcher.get("repo_id").is_none());
+        assert!(watcher.get("repo_name").is_none());
+        assert!(watcher.get("generation").is_none());
+        assert!(watcher.get("path").is_none());
+        assert!(watcher.get("failure").is_none());
     }
 
     #[test]

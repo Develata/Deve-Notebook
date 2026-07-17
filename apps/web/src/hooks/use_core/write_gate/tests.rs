@@ -26,6 +26,7 @@ fn gate_state(
         handshake_ready,
         writer_ready,
         has_repo: true,
+        workspace_ingestion_blocked: false,
         pending_branch_switch: false,
         pending_repo_switch: false,
     }
@@ -41,6 +42,7 @@ fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateS
         handshake_ready: true,
         writer_ready: true,
         has_repo: true,
+        workspace_ingestion_blocked: false,
         pending_branch_switch: false,
         pending_repo_switch: false,
     }
@@ -121,6 +123,20 @@ fn repo_write_gate_blocks_remote_branches_as_read_only() {
 #[test]
 fn repo_write_gate_allows_ready_local_repo() {
     assert_eq!(repo_write_block(gate_state(false, true, true)), None);
+}
+
+#[test]
+fn workspace_ingestion_blocker_closes_writes_but_not_source_control_reads() {
+    let state = RepoWriteGateState {
+        workspace_ingestion_blocked: true,
+        ..gate_state(false, true, true)
+    };
+
+    assert_eq!(
+        repo_write_block(state),
+        Some(RepoWriteBlock::WorkspaceIngestionUnavailable)
+    );
+    assert_eq!(repo_source_control_read_block(state), None);
 }
 
 #[test]

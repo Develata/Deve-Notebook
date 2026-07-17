@@ -38,6 +38,7 @@ pub fn Dashboard() -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let ws_status = session.connection_status;
     let runtime_summary = session.ws.node_role;
+    let watcher_health = session.ws.watcher_health;
     let repo_name = Signal::derive(move || {
         scope
             .current_repo
@@ -98,7 +99,7 @@ pub fn Dashboard() -> impl IntoView {
                     {move || match ctx.metrics.get() {
                         Some(m) => view! {
                             <div class="space-y-3">
-                                <RuntimeCard runtime_summary=runtime_summary />
+                                <RuntimeCard runtime_summary=runtime_summary watcher_health=watcher_health />
                                 <HealthCard metrics=m.clone() />
                                 <SyncCard metrics=m.clone() />
                                 <StorageCard metrics=m.clone() />
@@ -107,7 +108,7 @@ pub fn Dashboard() -> impl IntoView {
                         }.into_any(),
                         None => view! {
                             <div class="space-y-3">
-                                <RuntimeCard runtime_summary=runtime_summary />
+                                <RuntimeCard runtime_summary=runtime_summary watcher_health=watcher_health />
                                 <ActionsCard />
                             </div>
                         }.into_any(),

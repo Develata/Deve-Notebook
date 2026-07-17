@@ -47,15 +47,32 @@ pub(super) fn assemble_core_state(
     );
     let external_changes_error = {
         let set_sync_banner = runtime.set_sync_banner;
+        let ws = ws.clone();
+        let current_repo_id = sync.current_repo_id;
+        let current_scope_nonce = sync.current_scope_nonce;
         Callback::new(move |error: ExternalChangesMutationError| {
-            leptos::logging::error!("External Changes request failed: {:?}", error);
-            set_sync_banner.set(Some(external_changes_error_message(
-                locale.get_untracked(),
-                &error,
-            )));
+            let workspace_ingestion_unavailable =
+                record_external_changes_workspace_ingestion_blocker(
+                    &ws,
+                    current_repo_id.get_untracked(),
+                    current_scope_nonce.get_untracked(),
+                    &error,
+                );
+            leptos::logging::error!(
+                "External Changes request failed: status={:?} code={:?}",
+                external_changes_error_status(&error),
+                error.server_error().map(|error| error.code)
+            );
+            if !workspace_ingestion_unavailable {
+                set_sync_banner.set(Some(external_changes_error_message(
+                    locale.get_untracked(),
+                    &error,
+                )));
+            }
         })
     };
     let external_changes_scope = ExternalChangesHttpScope {
+        current_connection_epoch: ws.connection_epoch,
         current_repo_id: sync.current_repo_id,
         current_scope_nonce: sync.current_scope_nonce,
     };
@@ -279,13 +296,42 @@ fn external_changes_error_message(locale: Locale, error: &ExternalChangesMutatio
     let base = t::external_changes::request_failed(locale);
     match error {
         ExternalChangesMutationError::Rejected {
-            detail: Some(detail),
-            ..
-        } if !detail.trim().is_empty() => format!("{base}: {detail}"),
+            error: Some(error), ..
+        } => format!("{base}: {}", t::server_error::message(locale, error.code)),
         ExternalChangesMutationError::Rejected { status, .. } => format!("{base}: HTTP {status}"),
         ExternalChangesMutationError::RequestBuild
         | ExternalChangesMutationError::RequestFailed => base.to_string(),
     }
+}
+
+fn external_changes_error_status(error: &ExternalChangesMutationError) -> Option<u16> {
+    match error {
+        ExternalChangesMutationError::Rejected { status, .. } => Some(*status),
+        ExternalChangesMutationError::RequestBuild
+        | ExternalChangesMutationError::RequestFailed => None,
+    }
+}
+
+fn is_workspace_ingestion_unavailable(error: &ExternalChangesMutationError) -> bool {
+    error.server_error().is_some_and(|error| {
+        error.code == deve_core::protocol::ServerErrorCode::StorageWorkspaceIngestionUnavailable
+    })
+}
+
+fn record_external_changes_workspace_ingestion_blocker(
+    ws: &WsService,
+    repo_id: Option<String>,
+    scope_nonce: u64,
+    error: &ExternalChangesMutationError,
+) -> bool {
+    if !is_workspace_ingestion_unavailable(error) {
+        return false;
+    }
+    let Some(repo_id) = repo_id else {
+        return false;
+    };
+    ws.mark_workspace_ingestion_unavailable(repo_id, scope_nonce);
+    true
 }
 
 #[derive(Clone, Copy)]
@@ -358,26 +404,52 @@ mod tests {
     }
 
     #[test]
-    fn external_changes_error_message_preserves_backend_detail() {
+    fn external_changes_error_message_uses_typed_code_and_ignores_backend_detail() {
         assert_eq!(
             external_changes_error_message(
                 Locale::Zh,
                 &ExternalChangesMutationError::Rejected {
                     status: 409,
-                    detail: Some("pending target vanished".into()),
+                    error: Some(deve_core::protocol::ServerError::with_detail(
+                        deve_core::protocol::ServerErrorCode::ScPendingNotFound,
+                        "pending target vanished",
+                    )),
                 },
             ),
-            "外部修改请求失败: pending target vanished"
+            "外部修改请求失败: 待处理变更不存在"
         );
         assert_eq!(
             external_changes_error_message(
                 Locale::En,
                 &ExternalChangesMutationError::Rejected {
                     status: 409,
-                    detail: None,
+                    error: None,
                 },
             ),
             "External Changes request failed: HTTP 409"
         );
+    }
+
+    #[test]
+    fn external_changes_http_typed_503_binds_workspace_ingestion_blocker() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let error = ExternalChangesMutationError::Rejected {
+            status: 503,
+            error: Some(deve_core::protocol::ServerError::with_detail(
+                deve_core::protocol::ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+                "CANARY_PRIVATE_BACKEND_DETAIL",
+            )),
+        };
+
+        assert!(record_external_changes_workspace_ingestion_blocker(
+            &ws,
+            Some("repo-a".into()),
+            7,
+            &error,
+        ));
+        assert!(ws.workspace_ingestion_blocked_for_untracked(Some("repo-a"), Some(7)));
+        assert!(!ws.workspace_ingestion_blocked_for_untracked(Some("repo-b"), Some(7)));
     }
 }

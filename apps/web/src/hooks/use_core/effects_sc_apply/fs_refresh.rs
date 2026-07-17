@@ -70,6 +70,10 @@ pub(in crate::hooks::use_core) fn refresh_after_fs_change(
             handshake_ready: readiness.repo_handshake_complete,
             writer_ready: readiness.writer_ready,
             has_repo: repo_id.is_some(),
+            workspace_ingestion_blocked: ws.workspace_ingestion_blocked_for_untracked(
+                repo_id.as_deref(),
+                Some(current_scope_nonce),
+            ),
             pending_branch_switch: pending_branch_switch.is_some(),
             pending_repo_switch: pending_repo_switch.is_some(),
         },

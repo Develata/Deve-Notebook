@@ -16,11 +16,12 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
-#[cfg(test)]
-pub(crate) use slot::RepoMountState;
 pub(crate) use slot::{
-    MountAdmissionError, MountAdmissionToken, MountContinuationToken, WatcherRuntimeView,
+    MountAdmissionError, MountAdmissionToken, MountContinuationToken, WatcherRuntimeAggregate,
+    WatcherRuntimeView,
 };
+#[cfg(test)]
+pub(crate) use slot::{RepoMountState, WatcherRuntimeAggregateStatus};
 pub(crate) use supervisor::WatcherSupervisor;
 
 pub(crate) fn start_file_watchers(

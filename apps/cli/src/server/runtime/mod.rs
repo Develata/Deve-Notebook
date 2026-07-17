@@ -23,7 +23,9 @@ pub(crate) use auth_runtime::init_auth_runtime;
 pub(crate) use host_runtime::{
     install_repo_host_apis, install_sync_host_api, prepare_host_layout, refresh_host_port_hint,
 };
-pub(crate) use node_role_runtime::{current_repo_health, init_node_role, update_repo_health};
+pub(crate) use node_role_runtime::{
+    current_repo_health, current_watcher_health, init_node_role, update_repo_health,
+};
 #[cfg(feature = "search")]
 pub(crate) use peripheral_runtime::search_available;
 pub(crate) use peripheral_runtime::{

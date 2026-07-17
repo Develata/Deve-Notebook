@@ -17,6 +17,7 @@ pub enum WriteGateReason {
     ReadOnly,
     ScopeSwitching,
     NoRepo,
+    WorkspaceIngestionUnavailable,
     HandshakingRepo,
     LocalRepoScopeUnstable,
     ScopeNonceExhausted,
@@ -58,6 +59,12 @@ pub fn reason_label(locale: Locale, reason: WriteGateReason) -> &'static str {
         (Locale::Zh, WriteGateReason::ScopeSwitching) => "正在切换作用域",
         (Locale::En, WriteGateReason::NoRepo) => "no repo selected",
         (Locale::Zh, WriteGateReason::NoRepo) => "尚未选择仓库",
+        (Locale::En, WriteGateReason::WorkspaceIngestionUnavailable) => {
+            super::super::workspace_ingestion::unavailable(Locale::En)
+        }
+        (Locale::Zh, WriteGateReason::WorkspaceIngestionUnavailable) => {
+            super::super::workspace_ingestion::unavailable(Locale::Zh)
+        }
         (Locale::En, WriteGateReason::HandshakingRepo) => "repo handshaking",
         (Locale::Zh, WriteGateReason::HandshakingRepo) => "正在协商仓库写入权限",
         (Locale::En, WriteGateReason::LocalRepoScopeUnstable) => "local repo scope is not stable",

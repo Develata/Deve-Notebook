@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 08_auth#unauthorized-handling
 //!   - 08_auth#unauthorized-disconnected-ui
 //!   - 09_web_thin_client_ledger#write-readiness
@@ -9,7 +10,8 @@
 use deve_core::native_adapter::NativeRuntimeReadiness;
 use leptos::prelude::*;
 
-use super::{ConnectionStatus, WsService};
+use super::{ConnectionStatus, WorkspaceIngestionBlocker, WsService};
+use crate::api::WatcherHealthSnapshot;
 use crate::api::write_gate::WriterReadyResetSignals;
 use crate::api::writer_id::derive_writer_client_id;
 
@@ -117,6 +119,7 @@ impl WsService {
         source_control_authority: impl Into<String>,
         host_file_copy_absolute_path: bool,
         host_file_reveal_in_system_explorer: bool,
+        watcher_health: WatcherHealthSnapshot,
     ) {
         self.set_node_role.set(summary.into());
         self.set_source_control_authority
@@ -125,6 +128,7 @@ impl WsService {
             .set(host_file_copy_absolute_path);
         self.set_host_file_reveal_in_system_explorer
             .set(host_file_reveal_in_system_explorer);
+        self.set_watcher_health.set(watcher_health);
         self.set_node_role_probe_failed.set(false);
         self.set_status.set(ConnectionStatus::Connected);
     }
@@ -144,6 +148,8 @@ impl WsService {
         self.set_source_control_authority.set("unknown".to_string());
         self.set_host_file_copy_absolute_path.set(false);
         self.set_host_file_reveal_in_system_explorer.set(false);
+        self.set_watcher_health
+            .set(WatcherHealthSnapshot::default());
         self.set_node_role_probe_failed.set(probe_failed);
     }
 
@@ -152,6 +158,45 @@ impl WsService {
         writer_ready_matches(
             ready_repo_id.as_deref(),
             self.writer_ready_scope_nonce.get_untracked(),
+            repo_id,
+            scope_nonce,
+        )
+    }
+
+    pub(crate) fn mark_workspace_ingestion_unavailable(
+        &self,
+        repo_id: impl Into<String>,
+        scope_nonce: u64,
+    ) {
+        self.set_workspace_ingestion_blocker
+            .set(Some(WorkspaceIngestionBlocker {
+                connection_epoch: self.connection_epoch.get_untracked(),
+                repo_id: repo_id.into(),
+                scope_nonce,
+            }));
+    }
+
+    pub(crate) fn workspace_ingestion_blocked_for(
+        &self,
+        repo_id: Option<&str>,
+        scope_nonce: Option<u64>,
+    ) -> bool {
+        workspace_ingestion_blocker_matches(
+            self.workspace_ingestion_blocker.get(),
+            self.connection_epoch.get(),
+            repo_id,
+            scope_nonce,
+        )
+    }
+
+    pub(crate) fn workspace_ingestion_blocked_for_untracked(
+        &self,
+        repo_id: Option<&str>,
+        scope_nonce: Option<u64>,
+    ) -> bool {
+        workspace_ingestion_blocker_matches(
+            self.workspace_ingestion_blocker.get_untracked(),
+            self.connection_epoch.get_untracked(),
             repo_id,
             scope_nonce,
         )
@@ -222,5 +267,59 @@ impl WsService {
             self.set_writer_ready_scope_nonce,
             self.set_writer_client_id,
         )
+    }
+}
+
+fn workspace_ingestion_blocker_matches(
+    blocker: Option<WorkspaceIngestionBlocker>,
+    connection_epoch: u64,
+    repo_id: Option<&str>,
+    scope_nonce: Option<u64>,
+) -> bool {
+    matches!(
+        (blocker, repo_id, scope_nonce),
+        (Some(blocker), Some(repo_id), Some(scope_nonce))
+            if blocker.connection_epoch == connection_epoch
+                && blocker.repo_id == repo_id
+                && blocker.scope_nonce == scope_nonce
+    )
+}
+
+#[cfg(test)]
+mod workspace_ingestion_tests {
+    use super::*;
+
+    #[test]
+    fn workspace_ingestion_blocker_requires_exact_epoch_repo_and_scope() {
+        let blocker = WorkspaceIngestionBlocker {
+            connection_epoch: 3,
+            repo_id: "repo-a".into(),
+            scope_nonce: 7,
+        };
+
+        assert!(workspace_ingestion_blocker_matches(
+            Some(blocker.clone()),
+            3,
+            Some("repo-a"),
+            Some(7)
+        ));
+        assert!(!workspace_ingestion_blocker_matches(
+            Some(blocker.clone()),
+            4,
+            Some("repo-a"),
+            Some(7)
+        ));
+        assert!(!workspace_ingestion_blocker_matches(
+            Some(blocker.clone()),
+            3,
+            Some("repo-b"),
+            Some(7)
+        ));
+        assert!(!workspace_ingestion_blocker_matches(
+            Some(blocker),
+            3,
+            Some("repo-a"),
+            Some(8)
+        ));
     }
 }

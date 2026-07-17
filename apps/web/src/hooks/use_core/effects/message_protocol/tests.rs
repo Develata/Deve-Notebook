@@ -1,8 +1,9 @@
 mod support;
 
-use super::clear_failed_scope_switch;
 use super::record_search_notice;
 use super::record_source_control_notice;
+use super::{clear_failed_scope_switch, handle_protocol_error};
+use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::i18n::Locale;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -193,5 +194,32 @@ fn non_search_errors_do_not_clear_search_state_without_pending_search() {
     );
     assert!(!stored);
     assert!(!harness.search_results.get_untracked().is_empty());
+    assert_eq!(harness.sync_banner.get_untracked(), None);
+}
+
+#[test]
+fn workspace_ingestion_blocker_uses_typed_code_and_ignores_detail() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let harness = protocol_signal_harness(None, None, None, None);
+    harness.control().set_search_request_id.set(None);
+    harness.control().set_changes_request_id.set(None);
+    harness.control().set_commit_history_request_id.set(None);
+    harness.control().set_doc_diff_request_id.set(None);
+    harness.control().set_commit_diff_request_id.set(None);
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+
+    handle_protocol_error(
+        &ws,
+        Locale::En,
+        &ServerError::with_detail(
+            ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+            "CANARY_PRIVATE_BACKEND_DETAIL",
+        ),
+        None,
+        harness.control(),
+    );
+
+    assert!(ws.workspace_ingestion_blocked_for_untracked(Some("repo-1"), Some(7)));
     assert_eq!(harness.sync_banner.get_untracked(), None);
 }

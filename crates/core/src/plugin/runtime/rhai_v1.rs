@@ -16,7 +16,9 @@ use crate::plugin::manifest::PluginManifest;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::runtime::module_resolver::GuardedFileModuleResolver;
 use anyhow::{Result, anyhow};
-use rhai::{AST, Dynamic, Engine, EvalAltResult, Scope};
+#[cfg(not(target_arch = "wasm32"))]
+use rhai::EvalAltResult;
+use rhai::{AST, Dynamic, Engine, Scope};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -102,6 +104,7 @@ impl PluginRuntime for RhaiRuntime {
         match self.engine.call_fn(&mut scope, ast, fn_name, args) {
             Ok(result) => Ok(result),
             Err(error) => {
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(server_error) = plugin_host_server_error(&error) {
                     return Err(anyhow::Error::new(server_error.clone()));
                 }

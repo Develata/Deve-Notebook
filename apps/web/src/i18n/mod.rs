@@ -50,6 +50,7 @@ pub mod source_control_history;
 pub mod source_control_native;
 pub mod source_control_remote_projection;
 pub mod time;
+pub mod workspace_ingestion;
 pub mod write_gate;
 
 use crate::storage::prefs::{read_pref, write_pref};
@@ -163,6 +164,7 @@ pub mod t {
     pub use super::sidebar;
     pub use super::source_control;
     pub use super::time;
+    pub use super::workspace_ingestion;
     pub use super::write_gate;
 }
 

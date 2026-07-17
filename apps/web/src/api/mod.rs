@@ -37,7 +37,10 @@ pub use self::ai_backend::{
 pub(crate) use self::auth_login::{LoginAttemptError, LoginTransportError, attempt_login, logout};
 pub(crate) use self::auth_probe::probe_auth_status_with_http_base;
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
-pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_for_http_base};
+pub(crate) use self::connection_role::{
+    WatcherHealthSnapshot, WatcherHealthStatus, http_base_from_ws_url,
+    probe_node_role_for_http_base,
+};
 pub(crate) use self::external_changes::{
     ExternalChangesMutationError, ExternalChangesTargetOp, fetch_external_changes,
     mutate_external_change_target,

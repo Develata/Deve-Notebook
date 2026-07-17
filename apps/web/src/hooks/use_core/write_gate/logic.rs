@@ -20,6 +20,7 @@ pub(crate) enum RepoWriteBlock {
     ReadOnly,
     ScopeSwitching,
     NoRepo,
+    WorkspaceIngestionUnavailable,
     HandshakingRepo,
 }
 
@@ -37,6 +38,7 @@ impl RepoWriteBlock {
             RepoWriteBlock::ReadOnly => "read-only",
             RepoWriteBlock::ScopeSwitching => "scope switching",
             RepoWriteBlock::NoRepo => "no repo selected",
+            RepoWriteBlock::WorkspaceIngestionUnavailable => "workspace ingestion unavailable",
             RepoWriteBlock::HandshakingRepo => "repo handshaking",
         }
     }
@@ -52,6 +54,7 @@ pub(crate) struct RepoWriteGateState<'a> {
     pub handshake_ready: bool,
     pub writer_ready: bool,
     pub has_repo: bool,
+    pub workspace_ingestion_blocked: bool,
     pub pending_branch_switch: bool,
     pub pending_repo_switch: bool,
 }
@@ -76,6 +79,9 @@ pub(crate) fn repo_write_block(state: RepoWriteGateState<'_>) -> Option<RepoWrit
             Some(RepoWriteBlock::ScopeSwitching)
         }
         ConnectionStatus::Connected if !state.has_repo => Some(RepoWriteBlock::NoRepo),
+        ConnectionStatus::Connected if state.workspace_ingestion_blocked => {
+            Some(RepoWriteBlock::WorkspaceIngestionUnavailable)
+        }
         ConnectionStatus::Connected
             if !state.node_role_readable || !state.handshake_ready || !state.writer_ready =>
         {
@@ -115,7 +121,12 @@ pub(crate) fn repo_source_control_read_block(
         };
     }
 
-    match repo_write_block(state).filter(|block| *block != RepoWriteBlock::ReadOnly) {
+    match repo_write_block(state).filter(|block| {
+        !matches!(
+            block,
+            RepoWriteBlock::ReadOnly | RepoWriteBlock::WorkspaceIngestionUnavailable
+        )
+    }) {
         Some(RepoWriteBlock::HandshakingRepo)
             if state.node_role_readable && state.handshake_ready =>
         {

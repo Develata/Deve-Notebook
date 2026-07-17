@@ -24,6 +24,12 @@ fn non_connected_status_resets_node_role_runtime_summary() {
     let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
     let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
         signal(true);
+    let (watcher_health, set_watcher_health) = signal(WatcherHealthSnapshot {
+        status: crate::api::connection_role::WatcherHealthStatus::Degraded,
+        expected: 2,
+        running: 1,
+        unavailable: 1,
+    });
     let (node_role_probe_failed, set_node_role_probe_failed) = signal(true);
     let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(Some("repo-a".to_string()));
     let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(Some(7u64));
@@ -42,6 +48,7 @@ fn non_connected_status_resets_node_role_runtime_summary() {
         set_source_control_authority,
         set_host_file_copy_absolute_path,
         set_host_file_reveal_in_system_explorer,
+        set_watcher_health,
         set_node_role_probe_failed,
         writer_ready_reset: WriterReadyResetSignals::new(
             set_writer_ready_repo_id,
@@ -60,6 +67,10 @@ fn non_connected_status_resets_node_role_runtime_summary() {
     assert_eq!(source_control_authority.get_untracked(), "unknown");
     assert!(!host_file_copy_absolute_path.get_untracked());
     assert!(!host_file_reveal_in_system_explorer.get_untracked());
+    assert_eq!(
+        watcher_health.get_untracked(),
+        WatcherHealthSnapshot::default()
+    );
     assert!(!node_role_probe_failed.get_untracked());
     assert!(writer_ready_repo_id.get_untracked().is_none());
     assert!(writer_ready_scope_nonce.get_untracked().is_none());

@@ -71,11 +71,8 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
         (Locale::Zh, ServerErrorCode::StorageConflict) => "写入冲突",
         (Locale::En, ServerErrorCode::StoragePersistFailed) => "Failed to persist change",
         (Locale::Zh, ServerErrorCode::StoragePersistFailed) => "变更持久化失败",
-        (Locale::En, ServerErrorCode::StorageWorkspaceIngestionUnavailable) => {
-            "Workspace changes are temporarily unavailable"
-        }
-        (Locale::Zh, ServerErrorCode::StorageWorkspaceIngestionUnavailable) => {
-            "工作区变更暂时不可用"
+        (locale, ServerErrorCode::StorageWorkspaceIngestionUnavailable) => {
+            super::workspace_ingestion::unavailable(locale)
         }
         (Locale::En, ServerErrorCode::DocNotFound) => "Document not found",
         (Locale::Zh, ServerErrorCode::DocNotFound) => "文档不存在",

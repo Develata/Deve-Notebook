@@ -101,20 +101,28 @@ impl SyncManager {
     }
 
     pub fn healthy_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
+        let degraded = self
+            .projection_health
+            .degraded_snapshot()
+            .map_err(anyhow::Error::msg)?;
         Ok(self
             .repo
             .list_local_repo_names_for_execution()?
             .into_iter()
-            .filter(|repo_name| !self.is_projection_degraded(repo_name))
+            .filter(|repo_name| !degraded.contains(repo_name))
             .collect())
     }
 
     pub fn degraded_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
+        let degraded = self
+            .projection_health
+            .degraded_snapshot()
+            .map_err(anyhow::Error::msg)?;
         Ok(self
             .repo
             .list_local_repo_names_for_execution()?
             .into_iter()
-            .filter(|repo_name| self.is_projection_degraded(repo_name))
+            .filter(|repo_name| degraded.contains(repo_name))
             .collect())
     }
 

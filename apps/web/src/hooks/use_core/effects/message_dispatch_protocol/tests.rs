@@ -150,6 +150,32 @@ fn unscoped_non_auth_protocol_error_without_switch_is_ignored() {
 }
 
 #[test]
+fn scoped_workspace_ingestion_protocol_error_binds_only_current_scope() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    let ws = WsService::new_with_incoming_for_test(
+        ConnectionStatus::Connected,
+        3,
+        std::collections::VecDeque::new(),
+    );
+    let repo_id = RepoId::new_v4();
+    signals.set_current_repo_id.set(Some(repo_id.to_string()));
+    signals.set_current_scope_nonce.set(7);
+    let error = ServerError::with_detail(
+        ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+        "CANARY_PRIVATE_BACKEND_DETAIL",
+    );
+
+    handle_protocol_error_message(error.clone(), None, Some(6), &ws, Locale::En, signals);
+    assert!(!ws.workspace_ingestion_blocked_for_untracked(Some(&repo_id.to_string()), Some(7)));
+
+    handle_protocol_error_message(error, None, Some(7), &ws, Locale::En, signals);
+    assert!(ws.workspace_ingestion_blocked_for_untracked(Some(&repo_id.to_string()), Some(7)));
+}
+
+#[test]
 fn stale_edit_rejected_clears_matching_retained_pending_without_banner() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();

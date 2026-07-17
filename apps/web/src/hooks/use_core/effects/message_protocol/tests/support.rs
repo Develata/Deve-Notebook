@@ -65,6 +65,8 @@ pub fn protocol_signal_harness(
         signal(Some("commit-diff-1".to_string()));
     let (source_control_notice, set_source_control_notice) = signal(None::<SourceControlNotice>);
     let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+    let (current_scope_nonce, _) = signal(7u64);
 
     ProtocolSignalHarness {
         _runtime: runtime,
@@ -108,6 +110,8 @@ pub fn protocol_signal_harness(
             set_commit_diff_request_id,
             set_source_control_notice,
             set_sync_banner,
+            current_repo_id,
+            current_scope_nonce,
         },
     }
 }

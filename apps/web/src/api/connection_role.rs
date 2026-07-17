@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 18_release#runtime-observability
 //!
 
@@ -14,7 +15,9 @@ mod payload;
 #[cfg(test)]
 use self::payload::format_node_role_summary;
 use self::payload::node_role_url_for_http_base;
-pub(crate) use self::payload::{NodeRoleProbeResult, http_base_from_ws_url};
+pub(crate) use self::payload::{
+    NodeRoleProbeResult, WatcherHealthSnapshot, WatcherHealthStatus, http_base_from_ws_url,
+};
 
 const NODE_ROLE_PROBE_RETRIES: usize = 3;
 const NODE_ROLE_PROBE_RETRY_DELAY_MS: u32 = 150;
@@ -25,6 +28,7 @@ pub(super) struct NodeRoleProbeContext {
     pub set_source_control_authority: WriteSignal<String>,
     pub set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    pub set_watcher_health: WriteSignal<WatcherHealthSnapshot>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
     pub current_connection_epoch: ReadSignal<u64>,
     pub probe_connection_epoch: u64,
@@ -123,6 +127,7 @@ fn apply_node_role_probe_success(
             context.set_host_file_reveal_in_system_explorer,
             result.host_file_reveal_in_system_explorer,
         )
+        && lifecycle.try_set(context.set_watcher_health, result.watcher_health)
         && lifecycle.try_set(context.set_node_role_probe_failed, false)
 }
 
@@ -137,6 +142,7 @@ fn apply_node_role_probe_failure(
         && lifecycle.try_set(context.set_source_control_authority, "unknown".to_string())
         && lifecycle.try_set(context.set_host_file_copy_absolute_path, false)
         && lifecycle.try_set(context.set_host_file_reveal_in_system_explorer, false)
+        && lifecycle.try_set(context.set_watcher_health, WatcherHealthSnapshot::default())
         && lifecycle.try_set(context.set_node_role_probe_failed, true)
 }
 

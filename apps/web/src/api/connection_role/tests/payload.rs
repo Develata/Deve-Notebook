@@ -2,7 +2,9 @@
 //!   - 18_release#runtime-observability
 //!
 
-use super::super::{NodeRoleProbeResult, format_node_role_summary};
+use super::super::{
+    NodeRoleProbeResult, WatcherHealthSnapshot, WatcherHealthStatus, format_node_role_summary,
+};
 use super::complete_node_role_payload;
 use serde_json::json;
 
@@ -87,6 +89,50 @@ fn node_role_probe_result_carries_source_control_authority() {
     assert_eq!(result.source_control_authority, "ngit");
     assert!(result.host_file_copy_absolute_path);
     assert!(!result.host_file_reveal_in_system_explorer);
+    assert_eq!(
+        result.watcher_health,
+        WatcherHealthSnapshot {
+            status: WatcherHealthStatus::Healthy,
+            expected: 1,
+            running: 1,
+            unavailable: 0,
+        }
+    );
+}
+
+#[test]
+fn node_role_probe_preserves_backend_watcher_health_without_recomputing_status() {
+    for status in ["healthy", "transitioning", "degraded", "unknown"] {
+        let mut payload = complete_node_role_payload("ngit");
+        payload["watcher_health"] = json!({
+            "status": status,
+            "expected": 4,
+            "running": 4,
+            "unavailable": 0
+        });
+
+        let result = NodeRoleProbeResult::from_json(&payload).expect("valid watcher health");
+
+        assert_eq!(result.watcher_health.status.as_str(), status);
+        assert_eq!(result.watcher_health.expected, 4);
+        assert_eq!(result.watcher_health.running, 4);
+        assert_eq!(result.watcher_health.unavailable, 0);
+    }
+}
+
+#[test]
+fn node_role_probe_rejects_invalid_or_partial_watcher_health() {
+    let mut invalid_status = complete_node_role_payload("ngit");
+    invalid_status["watcher_health"]["status"] = json!("failed");
+    assert!(NodeRoleProbeResult::from_json(&invalid_status).is_none());
+
+    let mut partial = complete_node_role_payload("ngit");
+    partial["watcher_health"] = json!({
+        "status": "healthy",
+        "expected": 1,
+        "running": 1
+    });
+    assert!(NodeRoleProbeResult::from_json(&partial).is_none());
 }
 
 #[test]

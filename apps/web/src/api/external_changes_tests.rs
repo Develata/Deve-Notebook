@@ -2,9 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 12_source_control_ui#external-changes-sibling-view
 
-use super::{
-    ExternalChangesTargetOp, TargetMutationPayload, rejection_detail_from_body, sc_query_url,
-};
+use super::{ExternalChangesTargetOp, TargetMutationPayload, sc_query_url, server_error_from_body};
 use deve_core::models::DocId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
@@ -63,7 +61,7 @@ fn external_changes_query_url_preserves_repo_scope() {
 }
 
 #[test]
-fn rejected_error_detail_prefers_structured_server_detail() {
+fn rejected_error_preserves_only_structured_server_error() {
     let body = serde_json::to_string(&ServerError::with_detail(
         ServerErrorCode::ScPendingNotFound,
         "pending target vanished",
@@ -71,12 +69,12 @@ fn rejected_error_detail_prefers_structured_server_detail() {
     .expect("server error json");
 
     assert_eq!(
-        rejection_detail_from_body(&body).as_deref(),
-        Some("pending target vanished")
+        server_error_from_body(&body),
+        Some(ServerError::with_detail(
+            ServerErrorCode::ScPendingNotFound,
+            "pending target vanished"
+        ))
     );
-    assert_eq!(
-        rejection_detail_from_body("plain backend failure").as_deref(),
-        Some("plain backend failure")
-    );
-    assert_eq!(rejection_detail_from_body(""), None);
+    assert_eq!(server_error_from_body("plain backend failure"), None);
+    assert_eq!(server_error_from_body(""), None);
 }

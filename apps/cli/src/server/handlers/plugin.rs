@@ -24,17 +24,40 @@ use tokio::task::block_in_place;
 pub async fn handle_plugin_call(
     state: &Arc<AppState>,
     ch: &DualChannel,
+    scope_nonce: Option<u64>,
     req_id: String,
     plugin_id: String,
     fn_name: String,
     args: Vec<serde_json::Value>,
 ) {
-    handle_plugin_call_with_plugins(&state.plugins, ch, req_id, plugin_id, fn_name, args).await
+    handle_plugin_call_with_plugins_and_scope(
+        &state.plugins,
+        ch,
+        scope_nonce,
+        req_id,
+        plugin_id,
+        fn_name,
+        args,
+    )
+    .await
 }
 
 pub async fn handle_plugin_call_with_plugins(
     plugins: &[Box<dyn deve_core::plugin::runtime::PluginRuntime>],
     ch: &DualChannel,
+    req_id: String,
+    plugin_id: String,
+    fn_name: String,
+    args: Vec<serde_json::Value>,
+) {
+    handle_plugin_call_with_plugins_and_scope(plugins, ch, None, req_id, plugin_id, fn_name, args)
+        .await
+}
+
+async fn handle_plugin_call_with_plugins_and_scope(
+    plugins: &[Box<dyn deve_core::plugin::runtime::PluginRuntime>],
+    ch: &DualChannel,
+    scope_nonce: Option<u64>,
     req_id: String,
     plugin_id: String,
     fn_name: String,
@@ -94,7 +117,9 @@ pub async fn handle_plugin_call_with_plugins(
                 Err(detail) => send_plugin_serialization_error(ch, &req_id, detail),
             },
             Err(error) => match error.downcast_ref::<PluginHostServerError>() {
-                Some(server_error) => ch.send_protocol_error(server_error.0.clone()),
+                Some(server_error) => {
+                    ch.send_protocol_error_with_scope_nonce(server_error.0.clone(), scope_nonce)
+                }
                 None => {
                     send_plugin_runtime_error(ch, &req_id, format!("Plugin runtime error: {error}"))
                 }

@@ -44,6 +44,8 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
         set_commit_diff_request_id: signals.set_commit_diff_request_id,
         set_source_control_notice: signals.set_source_control_notice,
         set_sync_banner: signals.set_sync_banner,
+        current_repo_id: signals.current_repo_id,
+        current_scope_nonce: signals.current_scope_nonce,
     }
 }
 

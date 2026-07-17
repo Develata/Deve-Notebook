@@ -35,6 +35,14 @@ pub struct RepoHealthSummary {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WatcherHealthSummary {
+    pub status: String,
+    pub expected: usize,
+    pub running: usize,
+    pub unavailable: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeServiceSummary {
     pub state: String,
     pub endpoint: Option<NativeEndpointReady>,
@@ -93,6 +101,28 @@ impl RepoHealthSummary {
             local_total,
             healthy,
             degraded,
+        }
+    }
+}
+
+impl WatcherHealthSummary {
+    pub fn unknown() -> Self {
+        Self {
+            status: "unknown".into(),
+            expected: 0,
+            running: 0,
+            unavailable: 0,
+        }
+    }
+
+    pub(crate) fn from_aggregate(
+        aggregate: crate::server::runtime::watcher_runtime::WatcherRuntimeAggregate,
+    ) -> Self {
+        Self {
+            status: aggregate.status.as_str().into(),
+            expected: aggregate.expected,
+            running: aggregate.running,
+            unavailable: aggregate.unavailable,
         }
     }
 }
@@ -232,8 +262,8 @@ fn default_node_role() -> NodeRole {
 #[cfg(test)]
 mod tests {
     use super::{
-        NodeRole, P2pSummary, RepoHealthSummary, SourceControlSummary, host_file_actions_for,
-        runtime_environment_label,
+        NodeRole, P2pSummary, RepoHealthSummary, SourceControlSummary, WatcherHealthSummary,
+        host_file_actions_for, runtime_environment_label,
     };
 
     #[test]
@@ -245,6 +275,19 @@ mod tests {
                 local_total: 0,
                 healthy: 0,
                 degraded: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn unknown_watcher_health_uses_zero_counts() {
+        assert_eq!(
+            WatcherHealthSummary::unknown(),
+            WatcherHealthSummary {
+                status: "unknown".into(),
+                expected: 0,
+                running: 0,
+                unavailable: 0,
             }
         );
     }

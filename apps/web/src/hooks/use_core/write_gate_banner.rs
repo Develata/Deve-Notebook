@@ -19,6 +19,9 @@ pub(crate) fn reason_from_block(block: RepoWriteBlock) -> WriteGateReason {
         RepoWriteBlock::ReadOnly => WriteGateReason::ReadOnly,
         RepoWriteBlock::ScopeSwitching => WriteGateReason::ScopeSwitching,
         RepoWriteBlock::NoRepo => WriteGateReason::NoRepo,
+        RepoWriteBlock::WorkspaceIngestionUnavailable => {
+            WriteGateReason::WorkspaceIngestionUnavailable
+        }
         RepoWriteBlock::HandshakingRepo => WriteGateReason::HandshakingRepo,
     }
 }

@@ -4,6 +4,7 @@
 //!
 
 use super::super::ConnectionStatus;
+use super::super::connection_role::WatcherHealthSnapshot;
 use super::super::incoming::handle_socket_event;
 use super::super::output::{is_write_message, send_or_requeue};
 use super::super::socket::{BrowserSocket, SocketEvent};
@@ -35,6 +36,7 @@ pub(super) struct ConnectedSessionSignals {
     pub set_source_control_authority: WriteSignal<String>,
     pub set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    pub set_watcher_health: WriteSignal<WatcherHealthSnapshot>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
     pub writer_ready_reset: WriterReadyResetSignals,
     pub connection_epoch: u64,
@@ -162,6 +164,9 @@ fn reset_node_role_runtime(signals: &ConnectedSessionSignals) -> bool {
             .try_set(signals.set_host_file_reveal_in_system_explorer, false)
         && signals
             .lifecycle
+            .try_set(signals.set_watcher_health, WatcherHealthSnapshot::default())
+        && signals
+            .lifecycle
             .try_set(signals.set_node_role_probe_failed, false)
 }
 
@@ -197,6 +202,12 @@ mod tests {
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
             signal(true);
+        let (watcher_health, set_watcher_health) = signal(WatcherHealthSnapshot {
+            status: crate::api::connection_role::WatcherHealthStatus::Degraded,
+            expected: 2,
+            running: 1,
+            unavailable: 1,
+        });
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(true);
         let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(Some("repo-a".to_string()));
         let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(Some(7u64));
@@ -211,6 +222,7 @@ mod tests {
             set_source_control_authority,
             set_host_file_copy_absolute_path,
             set_host_file_reveal_in_system_explorer,
+            set_watcher_health,
             set_node_role_probe_failed,
             writer_ready_reset: WriterReadyResetSignals::new(
                 set_writer_ready_repo_id,
@@ -230,6 +242,10 @@ mod tests {
         assert_eq!(source_control_authority.get_untracked(), "unknown");
         assert!(!host_file_copy_absolute_path.get_untracked());
         assert!(!host_file_reveal_in_system_explorer.get_untracked());
+        assert_eq!(
+            watcher_health.get_untracked(),
+            WatcherHealthSnapshot::default()
+        );
         assert!(!node_role_probe_failed.get_untracked());
         assert!(writer_ready_repo_id.get_untracked().is_none());
         assert!(writer_ready_scope_nonce.get_untracked().is_none());

@@ -29,6 +29,12 @@ fn complete_node_role_payload(authority: &str) -> serde_json::Value {
         "host_file_actions": {
             "copy_absolute_path": true,
             "reveal_in_system_explorer": false
+        },
+        "watcher_health": {
+            "status": "healthy",
+            "expected": 1,
+            "running": 1,
+            "unavailable": 0
         }
     })
 }

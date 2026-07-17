@@ -1,4 +1,7 @@
-use super::{dynamic_result_to_json, handle_plugin_call_with_plugins, is_plugin_rpc_allowed};
+use super::{
+    dynamic_result_to_json, handle_plugin_call_with_plugins,
+    handle_plugin_call_with_plugins_and_scope, is_plugin_rpc_allowed,
+};
 use crate::server::channel::DualChannel;
 use anyhow::Result;
 use deve_core::plugin::manifest::PluginManifest;
@@ -296,6 +299,39 @@ async fn workspace_ingestion_error_mapping_plugin_uses_protocol_error() {
         other => panic!("unexpected message: {other:?}"),
     }
     assert!(uni_rx.try_recv().is_err(), "must emit exactly one response");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn workspace_ingestion_plugin_error_preserves_browser_scope() {
+    let plugins: Vec<Box<dyn PluginRuntime>> =
+        vec![Box::new(FailingPlugin::new(ProbeFailure::TypedIngestion))];
+    let (tx, _) = broadcast::channel(4);
+    let (uni_tx, mut uni_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(tx, uni_tx);
+
+    handle_plugin_call_with_plugins_and_scope(
+        &plugins,
+        &ch,
+        Some(7),
+        "req-ingestion".to_string(),
+        "failure-probe".to_string(),
+        "write".to_string(),
+        vec![],
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("protocol response") {
+        ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        } => {
+            assert_eq!(
+                error.code,
+                ServerErrorCode::StorageWorkspaceIngestionUnavailable
+            );
+            assert_eq!(scope_nonce, Some(7));
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

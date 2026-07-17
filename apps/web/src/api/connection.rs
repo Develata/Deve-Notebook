@@ -30,7 +30,7 @@ use super::ConnectionStatus;
 use super::auth_probe::{AuthProbe, probe_auth_status_with_http_base};
 use super::backoff::BackoffStrategy;
 use super::connection_role::{
-    NodeRoleProbeContext, fetch_node_role, fetch_node_role_for_http_base,
+    NodeRoleProbeContext, WatcherHealthSnapshot, fetch_node_role, fetch_node_role_for_http_base,
 };
 use super::connection_urls::{build_same_origin_ws_url, build_ws_urls_for_native_state};
 use super::native_bootstrap::read_native_bootstrap;
@@ -62,6 +62,7 @@ pub(super) struct ConnectionManagerSignals {
     pub set_source_control_authority: WriteSignal<String>,
     pub set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    pub set_watcher_health: WriteSignal<WatcherHealthSnapshot>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
     pub writer_ready_reset: WriterReadyResetSignals,
 }
@@ -135,6 +136,10 @@ pub fn spawn_connection_manager(
                             || !signals
                                 .lifecycle
                                 .try_set(signals.set_host_file_reveal_in_system_explorer, false)
+                            || !signals.lifecycle.try_set(
+                                signals.set_watcher_health,
+                                WatcherHealthSnapshot::default(),
+                            )
                             || !signals
                                 .lifecycle
                                 .try_set(signals.set_node_role_probe_failed, false)
@@ -153,6 +158,7 @@ pub fn spawn_connection_manager(
                                         .set_host_file_copy_absolute_path,
                                     set_host_file_reveal_in_system_explorer: signals
                                         .set_host_file_reveal_in_system_explorer,
+                                    set_watcher_health: signals.set_watcher_health,
                                     set_node_role_probe_failed: signals.set_node_role_probe_failed,
                                     current_connection_epoch: signals.current_connection_epoch,
                                     probe_connection_epoch: connection_epoch,
@@ -170,6 +176,7 @@ pub fn spawn_connection_manager(
                                         .set_host_file_copy_absolute_path,
                                     set_host_file_reveal_in_system_explorer: signals
                                         .set_host_file_reveal_in_system_explorer,
+                                    set_watcher_health: signals.set_watcher_health,
                                     set_node_role_probe_failed: signals.set_node_role_probe_failed,
                                     current_connection_epoch: signals.current_connection_epoch,
                                     probe_connection_epoch: connection_epoch,
@@ -195,6 +202,7 @@ pub fn spawn_connection_manager(
                                     .set_host_file_copy_absolute_path,
                                 set_host_file_reveal_in_system_explorer: signals
                                     .set_host_file_reveal_in_system_explorer,
+                                set_watcher_health: signals.set_watcher_health,
                                 set_node_role_probe_failed: signals.set_node_role_probe_failed,
                                 writer_ready_reset: signals.writer_ready_reset,
                                 connection_epoch,
@@ -360,6 +368,9 @@ fn reset_node_role_runtime(signals: &ConnectionManagerSignals) -> bool {
         && signals
             .lifecycle
             .try_set(signals.set_host_file_reveal_in_system_explorer, false)
+        && signals
+            .lifecycle
+            .try_set(signals.set_watcher_health, WatcherHealthSnapshot::default())
         && signals
             .lifecycle
             .try_set(signals.set_node_role_probe_failed, false)

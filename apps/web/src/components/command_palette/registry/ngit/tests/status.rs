@@ -143,7 +143,13 @@ fn ngit_status_detail_text_exposes_ngit_authority() {
     owner.with(|| {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
+        ws.complete_foreground_node_role_reprobe(
+            "main",
+            "ngit",
+            false,
+            false,
+            crate::api::WatcherHealthSnapshot::default(),
+        );
         provide_session_client(ws);
         let (show, set_show) = signal(true);
         let command = create_commands(set_show)
@@ -167,7 +173,13 @@ fn command_palette_source_control_authority_reads_session_signal() {
     owner.with(|| {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
+        ws.complete_foreground_node_role_reprobe(
+            "main",
+            "ngit",
+            false,
+            false,
+            crate::api::WatcherHealthSnapshot::default(),
+        );
         provide_session_client(ws);
         let (_, set_show) = signal(true);
 
@@ -189,7 +201,13 @@ fn command_palette_source_control_authority_updates_after_node_role_probe() {
 
         assert!(ngit_status_enabled_when(commands).contains("source_control.authority=unknown"));
 
-        ws.complete_foreground_node_role_reprobe("main", "ngit", false, false);
+        ws.complete_foreground_node_role_reprobe(
+            "main",
+            "ngit",
+            false,
+            false,
+            crate::api::WatcherHealthSnapshot::default(),
+        );
 
         assert!(ngit_status_enabled_when(commands).contains("source_control.authority=ngit"));
     });

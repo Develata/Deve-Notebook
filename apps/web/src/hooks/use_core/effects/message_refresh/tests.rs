@@ -21,6 +21,7 @@ fn gate_state(
         handshake_ready,
         writer_ready,
         has_repo: true,
+        workspace_ingestion_blocked: false,
         pending_branch_switch: false,
         pending_repo_switch: false,
     }

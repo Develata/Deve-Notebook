@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 18_release#runtime-observability
 //!
 
@@ -8,11 +9,53 @@ pub(crate) struct NodeRoleProbeResult {
     pub source_control_authority: String,
     pub host_file_copy_absolute_path: bool,
     pub host_file_reveal_in_system_explorer: bool,
+    pub watcher_health: WatcherHealthSnapshot,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum WatcherHealthStatus {
+    Healthy,
+    Transitioning,
+    Degraded,
+    #[default]
+    Unknown,
+}
+
+impl WatcherHealthStatus {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Healthy => "healthy",
+            Self::Transitioning => "transitioning",
+            Self::Degraded => "degraded",
+            Self::Unknown => "unknown",
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "healthy" => Some(Self::Healthy),
+            "transitioning" => Some(Self::Transitioning),
+            "degraded" => Some(Self::Degraded),
+            "unknown" => Some(Self::Unknown),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct WatcherHealthSnapshot {
+    pub status: WatcherHealthStatus,
+    pub expected: u64,
+    pub running: u64,
+    pub unavailable: u64,
 }
 
 impl NodeRoleProbeResult {
     pub(super) fn from_json(json: &serde_json::Value) -> Option<Self> {
-        is_node_role_payload(json).then(|| Self {
+        if !is_node_role_payload(json) {
+            return None;
+        }
+        Some(Self {
             summary: format_node_role_summary(json),
             source_control_authority: source_control_authority(json).to_string(),
             host_file_copy_absolute_path: host_file_action_bool(json, "copy_absolute_path"),
@@ -20,6 +63,7 @@ impl NodeRoleProbeResult {
                 json,
                 "reveal_in_system_explorer",
             ),
+            watcher_health: watcher_health(json)?,
         })
     }
 }
@@ -93,6 +137,19 @@ fn is_node_role_payload(json: &serde_json::Value) -> bool {
         && json
             .get("host_file_actions")
             .is_some_and(is_host_file_actions_payload)
+        && json
+            .get("watcher_health")
+            .is_some_and(is_watcher_health_payload)
+}
+
+fn watcher_health(json: &serde_json::Value) -> Option<WatcherHealthSnapshot> {
+    let health = json.get("watcher_health")?;
+    Some(WatcherHealthSnapshot {
+        status: WatcherHealthStatus::parse(health.get("status")?.as_str()?)?,
+        expected: health.get("expected")?.as_u64()?,
+        running: health.get("running")?.as_u64()?,
+        unavailable: health.get("unavailable")?.as_u64()?,
+    })
 }
 
 fn format_repo_health(json: &serde_json::Value) -> String {
@@ -145,6 +202,16 @@ fn is_repo_health_payload(json: &serde_json::Value) -> bool {
         && has_u64_field(json, "local_total")
         && has_u64_field(json, "healthy")
         && has_u64_field(json, "degraded")
+}
+
+fn is_watcher_health_payload(json: &serde_json::Value) -> bool {
+    json.get("status")
+        .and_then(serde_json::Value::as_str)
+        .and_then(WatcherHealthStatus::parse)
+        .is_some()
+        && has_u64_field(json, "expected")
+        && has_u64_field(json, "running")
+        && has_u64_field(json, "unavailable")
 }
 
 fn is_source_control_payload(json: &serde_json::Value) -> bool {

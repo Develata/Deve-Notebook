@@ -1,5 +1,6 @@
 use super::readiness::{is_current_connection_message, writer_ready_matches};
 use super::{ConnectionStatus, WsService};
+use crate::api::WatcherHealthSnapshot;
 use crate::api::connection::ConnectionControl;
 use crate::api::write_gate::{set_status_and_revoke_writer_ready, status_revokes_writer_ready};
 use deve_core::protocol::ClientMessage;
@@ -37,6 +38,23 @@ fn writer_ready_requires_matching_repo_and_scope_nonce() {
         Some("repo-a"),
         None,
     ));
+}
+
+#[test]
+fn writer_ready_cannot_clear_backend_workspace_ingestion_blocker() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_with_incoming_for_test(
+        ConnectionStatus::Connected,
+        3,
+        std::collections::VecDeque::new(),
+    );
+    ws.mark_workspace_ingestion_unavailable("repo-a", 7);
+    assert!(ws.workspace_ingestion_blocked_for_untracked(Some("repo-a"), Some(7)));
+
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(ws.workspace_ingestion_blocked_for_untracked(Some("repo-a"), Some(7)));
 }
 
 #[test]
@@ -134,6 +152,7 @@ fn mark_unauthorized_resets_stale_node_role_runtime_summary() {
         "stale-authority",
         true,
         true,
+        WatcherHealthSnapshot::default(),
     );
     ws.mark_writer_ready("repo-a", 7, "web-light-peer");
 

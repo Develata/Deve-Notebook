@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 //!   - 12_source_control_ui#external-changes-sibling-view
 //!
@@ -25,7 +26,19 @@ pub enum ExternalChangesTargetOp {
 pub enum ExternalChangesMutationError {
     RequestBuild,
     RequestFailed,
-    Rejected { status: u16, detail: Option<String> },
+    Rejected {
+        status: u16,
+        error: Option<ServerError>,
+    },
+}
+
+impl ExternalChangesMutationError {
+    pub fn server_error(&self) -> Option<&ServerError> {
+        match self {
+            Self::Rejected { error, .. } => error.as_ref(),
+            Self::RequestBuild | Self::RequestFailed => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -149,23 +162,19 @@ async fn post_json<T: Serialize>(
 
 async fn rejected_error(response: gloo_net::http::Response) -> ExternalChangesMutationError {
     let status = response.status();
-    let detail = response
+    let error = response
         .text()
         .await
         .ok()
-        .and_then(|body| rejection_detail_from_body(&body));
-    ExternalChangesMutationError::Rejected { status, detail }
+        .and_then(|body| server_error_from_body(&body));
+    ExternalChangesMutationError::Rejected { status, error }
 }
 
-fn rejection_detail_from_body(body: &str) -> Option<String> {
+fn server_error_from_body(body: &str) -> Option<ServerError> {
     if body.trim().is_empty() {
         return None;
     }
-    serde_json::from_str::<ServerError>(body)
-        .ok()
-        .and_then(|error| error.detail)
-        .filter(|detail| !detail.trim().is_empty())
-        .or_else(|| Some(body.to_string()))
+    serde_json::from_str::<ServerError>(body).ok()
 }
 
 #[cfg(test)]

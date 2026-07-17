@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use super::super::connection::ConnectionControl;
 use super::{ConnectionStatus, WsService};
+use crate::api::WatcherHealthSnapshot;
 
 impl WsService {
     pub(crate) fn new_for_test(status: ConnectionStatus) -> Self {
@@ -39,7 +40,9 @@ impl WsService {
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
             signal(false);
+        let (watcher_health, set_watcher_health) = signal(WatcherHealthSnapshot::default());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
+        let (workspace_ingestion_blocker, set_workspace_ingestion_blocker) = signal(None);
         let (tx, rx) = unbounded::<ClientMessage>();
         let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
 
@@ -61,8 +64,12 @@ impl WsService {
             set_host_file_copy_absolute_path,
             host_file_reveal_in_system_explorer,
             set_host_file_reveal_in_system_explorer,
+            watcher_health,
+            set_watcher_health,
             node_role_probe_failed,
             set_node_role_probe_failed,
+            workspace_ingestion_blocker,
+            set_workspace_ingestion_blocker,
             msg_seq,
             connection_epoch,
             reconnect_requested_epoch,

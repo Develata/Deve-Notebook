@@ -49,6 +49,11 @@ pub struct AppState {
 
 impl AppState {
     #[cfg(not(test))]
+    pub(crate) fn watcher_runtime_view(&self) -> WatcherRuntimeView {
+        self.watcher_runtime.clone()
+    }
+
+    #[cfg(not(test))]
     pub(crate) fn diff_projection_executor(&self) -> Arc<DiffProjectionExecutor> {
         self.diff_projection_executor.clone()
     }

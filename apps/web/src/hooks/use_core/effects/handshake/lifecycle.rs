@@ -154,6 +154,7 @@ fn spawn_foreground_reprobe(ws: WsService) {
                 result.source_control_authority,
                 result.host_file_copy_absolute_path,
                 result.host_file_reveal_in_system_explorer,
+                result.watcher_health,
             ),
             None => ws.fail_foreground_node_role_reprobe(),
         }

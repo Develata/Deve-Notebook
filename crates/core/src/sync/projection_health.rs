@@ -50,8 +50,40 @@ impl ProjectionHealth {
             .map(|repos| repos.contains(normalize(repo_name).as_str()))
             .unwrap_or(true)
     }
+
+    pub(super) fn degraded_snapshot(&self) -> Result<HashSet<String>, String> {
+        self.degraded_repos
+            .read()
+            .map(|repos| repos.clone())
+            .map_err(|error| error.to_string())
+    }
 }
 
 fn normalize(repo_name: &str) -> String {
     repo_name.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ProjectionHealth;
+
+    #[test]
+    fn degraded_snapshot_is_single_lock_and_reports_poison() {
+        let health = ProjectionHealth::new();
+        health.mark_degraded("repo-a");
+        assert_eq!(
+            health.degraded_snapshot().expect("health snapshot"),
+            std::collections::HashSet::from(["repo-a".to_string()])
+        );
+
+        let lock = &health.degraded_repos;
+        std::thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                let _guard = lock.write().expect("projection health test lock");
+                panic!("poison projection health test lock");
+            });
+            assert!(handle.join().is_err());
+        });
+        assert!(health.degraded_snapshot().is_err());
+    }
 }

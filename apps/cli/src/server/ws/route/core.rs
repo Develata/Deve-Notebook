@@ -33,7 +33,11 @@ async fn route_unscoped_core(
             fn_name,
             args,
         } => {
-            plugin::handle_plugin_call(state, ch, req_id, plugin_id, fn_name, args).await;
+            let scope_nonce = session
+                .is_browser_session()
+                .then_some(session.scope_nonce());
+            plugin::handle_plugin_call(state, ch, scope_nonce, req_id, plugin_id, fn_name, args)
+                .await;
         }
         ClientMessage::SwitchBranch {
             peer_id,

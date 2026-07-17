@@ -2,9 +2,10 @@
 //!   - 03_storage/authority#repo-mutation-publication-gate
 //!   - 03_storage/watcher#watcher-contract
 
-use super::{RepoMountState, WatcherRuntimeView, WatcherSupervisor};
+use super::{RepoMountState, WatcherRuntimeAggregateStatus, WatcherRuntimeView, WatcherSupervisor};
 use deve_core::models::RepoId;
 use deve_core::sync::watcher::RepoWatcherStart;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 type WatcherFixture = (
@@ -71,6 +72,68 @@ fn watcher_failure_is_repo_local_in_runtime_view() {
 
     assert!(view.admit(failed_repo).is_err());
     assert!(view.admit(mounted_repo).is_ok());
+}
+
+#[test]
+fn watcher_health_aggregate_counts_only_expected_repos() {
+    let expected_mounted = RepoId::new_v4();
+    let expected_failed = RepoId::new_v4();
+    let ignored_mounted = RepoId::new_v4();
+    let view =
+        WatcherRuntimeView::with_state_for_test(expected_mounted, 1, RepoMountState::Mounted);
+    view.insert_state_for_test(expected_failed, 1, RepoMountState::Failed);
+    view.insert_state_for_test(ignored_mounted, 1, RepoMountState::Mounted);
+
+    let aggregate = view.aggregate(&HashSet::from([expected_mounted, expected_failed]));
+
+    assert_eq!(aggregate.status, WatcherRuntimeAggregateStatus::Degraded);
+    assert_eq!(aggregate.expected, 2);
+    assert_eq!(aggregate.running, 1);
+    assert_eq!(aggregate.unavailable, 1);
+}
+
+#[test]
+fn watcher_health_aggregate_applies_status_priority() {
+    let mounted = RepoId::new_v4();
+    let transitioning = RepoId::new_v4();
+    let failed = RepoId::new_v4();
+    let view = WatcherRuntimeView::with_state_for_test(mounted, 1, RepoMountState::Mounted);
+    view.insert_state_for_test(transitioning, 1, RepoMountState::Transitioning);
+
+    let transitioning_health = view.aggregate(&HashSet::from([mounted, transitioning]));
+    assert_eq!(
+        transitioning_health.status,
+        WatcherRuntimeAggregateStatus::Transitioning
+    );
+    assert_eq!(transitioning_health.unavailable, 1);
+
+    view.insert_state_for_test(failed, 1, RepoMountState::Failed);
+    let degraded_health = view.aggregate(&HashSet::from([mounted, transitioning, failed]));
+    assert_eq!(
+        degraded_health.status,
+        WatcherRuntimeAggregateStatus::Degraded
+    );
+
+    let missing = RepoId::new_v4();
+    let missing_health = view.aggregate(&HashSet::from([mounted, missing]));
+    assert_eq!(
+        missing_health.status,
+        WatcherRuntimeAggregateStatus::Degraded
+    );
+}
+
+#[test]
+fn watcher_health_aggregate_reports_unknown_for_incomplete_view() {
+    let repo_id = RepoId::new_v4();
+    let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
+    view.poison_slots_for_test();
+
+    let aggregate = view.aggregate(&HashSet::from([repo_id]));
+
+    assert_eq!(aggregate.status, WatcherRuntimeAggregateStatus::Unknown);
+    assert_eq!(aggregate.expected, 1);
+    assert_eq!(aggregate.running, 0);
+    assert_eq!(aggregate.unavailable, 1);
 }
 
 #[test]

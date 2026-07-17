@@ -1,5 +1,7 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 08_auth#unauthorized-handling
+//!   - 18_release#runtime-observability
 //!   - 08_auth#unauthorized-disconnected-ui
 //!
 
@@ -16,6 +18,7 @@ use self::service_ping::spawn_ping_loop;
 use super::connection::{
     ConnectionControl, ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager,
 };
+use super::connection_role::WatcherHealthSnapshot;
 use super::incoming::{IncomingBatch, messages_since};
 use super::status::ConnectionStatus;
 use super::write_gate::WriterReadyResetSignals;
@@ -27,6 +30,13 @@ mod service_ping;
 mod source_control;
 #[cfg(test)]
 mod test_support;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct WorkspaceIngestionBlocker {
+    connection_epoch: u64,
+    repo_id: String,
+    scope_nonce: u64,
+}
 
 #[derive(Clone)]
 pub struct WsService {
@@ -47,8 +57,12 @@ pub struct WsService {
     set_host_file_copy_absolute_path: WriteSignal<bool>,
     pub host_file_reveal_in_system_explorer: ReadSignal<bool>,
     set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
+    pub(crate) watcher_health: ReadSignal<WatcherHealthSnapshot>,
+    set_watcher_health: WriteSignal<WatcherHealthSnapshot>,
     pub node_role_probe_failed: ReadSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
+    workspace_ingestion_blocker: ReadSignal<Option<WorkspaceIngestionBlocker>>,
+    set_workspace_ingestion_blocker: WriteSignal<Option<WorkspaceIngestionBlocker>>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
     reconnect_requested_epoch: ReadSignal<Option<u64>>,
@@ -83,7 +97,10 @@ impl WsService {
         let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
         let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
             signal(false);
+        let (watcher_health, set_watcher_health) = signal(WatcherHealthSnapshot::default());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
+        let (workspace_ingestion_blocker, set_workspace_ingestion_blocker) =
+            signal(None::<WorkspaceIngestionBlocker>);
         let (tx, rx) = unbounded::<ClientMessage>();
         let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
         let lifecycle = ConnectionLifecycle::new();
@@ -111,6 +128,7 @@ impl WsService {
                 set_source_control_authority,
                 set_host_file_copy_absolute_path,
                 set_host_file_reveal_in_system_explorer,
+                set_watcher_health,
                 set_node_role_probe_failed,
                 writer_ready_reset,
             },
@@ -136,8 +154,12 @@ impl WsService {
             set_host_file_copy_absolute_path,
             host_file_reveal_in_system_explorer,
             set_host_file_reveal_in_system_explorer,
+            watcher_health,
+            set_watcher_health,
             node_role_probe_failed,
             set_node_role_probe_failed,
+            workspace_ingestion_blocker,
+            set_workspace_ingestion_blocker,
             msg_seq,
             connection_epoch,
             reconnect_requested_epoch,

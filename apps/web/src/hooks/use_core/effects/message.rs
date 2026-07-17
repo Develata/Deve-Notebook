@@ -101,6 +101,11 @@ pub fn setup(ws: &WsService, signals: &CoreSignals, external_changes_refresh: Ca
                             handshake_ready: readiness.repo_handshake_complete,
                             writer_ready: readiness.writer_ready,
                             has_repo: repo_id.is_some(),
+                            workspace_ingestion_blocked: ws_for_timer
+                                .workspace_ingestion_blocked_for_untracked(
+                                    repo_id.as_deref(),
+                                    Some(scope_nonce),
+                                ),
                             pending_branch_switch: pending_branch.is_some(),
                             pending_repo_switch: pending_repo.is_some(),
                         },
@@ -286,6 +291,48 @@ mod tests {
         assert_eq!(metrics.uptime_secs, 20);
         assert_eq!(metrics.active_connections, 2);
         assert!(signals.system_metrics_live.get_untracked());
+    }
+
+    #[test]
+    fn workspace_ingestion_error_from_stale_connection_epoch_is_ignored() {
+        let runtime = Owner::new();
+        runtime.set();
+        let repo_id = deve_core::models::RepoId::new_v4();
+        let ws = WsService::new_with_incoming_for_test(
+            ConnectionStatus::Connected,
+            2,
+            VecDeque::from([(
+                1,
+                1,
+                ServerMessage::ProtocolError {
+                    error: deve_core::protocol::ServerError::with_detail(
+                        deve_core::protocol::ServerErrorCode::StorageWorkspaceIngestionUnavailable,
+                        "CANARY_PRIVATE_BACKEND_DETAIL",
+                    ),
+                    switch_nonce: None,
+                    scope_nonce: Some(7),
+                },
+            )]),
+        );
+        let signals = init_signals(ws.status);
+        signals.set_current_repo_id.set(Some(repo_id.to_string()));
+        signals.set_current_scope_nonce.set(7);
+        let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+
+        process_available_messages(
+            &ws,
+            MessageProcessingContext {
+                signals,
+                locale: crate::i18n::Locale::En,
+                last_msg_seq,
+                set_last_msg_seq,
+                schedule_refresh: &|| {},
+                external_changes_refresh: Callback::new(|()| {}),
+                projection_refresh: &Default::default(),
+            },
+        );
+
+        assert!(!ws.workspace_ingestion_blocked_for_untracked(Some(&repo_id.to_string()), Some(7)));
     }
 
     #[test]

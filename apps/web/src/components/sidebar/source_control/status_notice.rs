@@ -5,6 +5,7 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
+use crate::i18n::workspace_ingestion;
 use crate::i18n::{Locale, bottom_bar, source_control as sc};
 use leptos::prelude::*;
 
@@ -30,6 +31,9 @@ pub(crate) fn blocked_title(locale: Locale, block: RepoWriteBlock) -> String {
         RepoWriteBlock::HandshakingRepo => bottom_bar::handshaking_repo(locale).to_string(),
         RepoWriteBlock::ScopeSwitching => sc::scope_switching(locale).to_string(),
         RepoWriteBlock::NoRepo => sc::no_repo_selected(locale).to_string(),
+        RepoWriteBlock::WorkspaceIngestionUnavailable => {
+            workspace_ingestion::unavailable(locale).to_string()
+        }
     }
 }
 
@@ -47,6 +51,9 @@ pub(crate) fn blocked_hint(locale: Locale, block: RepoWriteBlock) -> &'static st
         RepoWriteBlock::ScopeSwitching => sc::scope_switching_hint(locale),
         RepoWriteBlock::NoRepo => sc::no_repo_hint(locale),
         RepoWriteBlock::HandshakingRepo => sc::handshaking_repo_hint(locale),
+        RepoWriteBlock::WorkspaceIngestionUnavailable => {
+            workspace_ingestion::restart_service(locale)
+        }
     }
 }
 

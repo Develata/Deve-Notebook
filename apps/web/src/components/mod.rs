@@ -37,6 +37,7 @@ pub mod merge_panel;
 pub mod pending_navigation_modal;
 pub mod search_box;
 pub mod spectator_overlay;
+pub(crate) mod workspace_ingestion_blocker;
 
 pub mod dashboard;
 pub mod desktop_chat_panel;

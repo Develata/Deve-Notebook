@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 08_auth#unauthorized-handling
 //!
 
@@ -42,6 +43,23 @@ pub struct ProtocolControlSignals {
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
     pub set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pub set_sync_banner: WriteSignal<Option<String>>,
+    pub current_repo_id: ReadSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
+}
+
+fn record_workspace_ingestion_blocker(
+    ws: &WsService,
+    error: &ServerError,
+    signals: ProtocolControlSignals,
+) -> bool {
+    if error.code != ServerErrorCode::StorageWorkspaceIngestionUnavailable {
+        return false;
+    }
+    let Some(repo_id) = signals.current_repo_id.get_untracked() else {
+        return false;
+    };
+    ws.mark_workspace_ingestion_unavailable(repo_id, signals.current_scope_nonce.get_untracked());
+    true
 }
 
 fn record_search_notice(
@@ -130,6 +148,14 @@ pub fn handle_protocol_error(
         ws.mark_unauthorized();
     }
     let message = t::server_error::message(locale, error.code);
+    let handled_in_workspace_ingestion = record_workspace_ingestion_blocker(ws, error, signals);
+    if handled_in_workspace_ingestion {
+        leptos::logging::warn!(
+            "Workspace ingestion mutation rejected: code={:?}",
+            error.code
+        );
+        return;
+    }
     let handled_in_search = record_search_notice(locale, error, signals);
     let handled_in_source_control = record_source_control_notice(error, signals);
     match (

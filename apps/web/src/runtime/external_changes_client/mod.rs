@@ -37,8 +37,16 @@ pub struct ExternalChangesClient {
 
 #[derive(Clone, Copy)]
 pub struct ExternalChangesHttpScope {
+    pub current_connection_epoch: ReadSignal<u64>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ExternalChangesRequestScope {
+    connection_epoch: u64,
+    repo_id: Option<String>,
+    scope_nonce: u64,
 }
 
 pub struct ExternalChangesMutationCallbacks {
@@ -63,16 +71,16 @@ pub fn create_external_changes_refresh_callback(
             .wrapping_add(1)
             .max(1);
         let response_generation = latest_request_generation.clone();
-        let repo_id = scope.current_repo_id.get_untracked();
-        let scope_nonce = scope.current_scope_nonce.get_untracked();
-        let request_repo_id = repo_id.clone();
+        let request_scope = capture_scope(scope);
+        let repo_id = request_scope.repo_id.clone();
+        let scope_nonce = request_scope.scope_nonce;
         spawn_local(async move {
             match fetch_external_changes(repo_id, scope_nonce).await {
                 Ok(snapshot) => {
                     if !request_is_current(
                         response_generation.load(Ordering::Relaxed),
                         request_generation,
-                    ) || !scope_is_current(scope, &request_repo_id, scope_nonce)
+                    ) || !scope_is_current(scope, &request_scope)
                     {
                         return;
                     }
@@ -83,7 +91,7 @@ pub fn create_external_changes_refresh_callback(
                     if request_is_current(
                         response_generation.load(Ordering::Relaxed),
                         request_generation,
-                    ) && scope_is_current(scope, &request_repo_id, scope_nonce)
+                    ) && scope_is_current(scope, &request_scope)
                     {
                         on_error.run(error);
                     }
@@ -141,18 +149,18 @@ fn target_callback(
     on_error: Callback<ExternalChangesMutationError>,
 ) -> Callback<ChangeEntry> {
     Callback::new(move |entry: ChangeEntry| {
-        let repo_id = scope.current_repo_id.get_untracked();
-        let scope_nonce = scope.current_scope_nonce.get_untracked();
-        let request_repo_id = repo_id.clone();
+        let request_scope = capture_scope(scope);
+        let repo_id = request_scope.repo_id.clone();
+        let scope_nonce = request_scope.scope_nonce;
         spawn_local(async move {
             match mutate_external_change_target(op, repo_id, scope_nonce, entry).await {
                 Ok(()) => {
-                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    if scope_is_current(scope, &request_scope) {
                         on_refresh.run(());
                     }
                 }
                 Err(error) => {
-                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    if scope_is_current(scope, &request_scope) {
                         on_error.run(error);
                     }
                 }
@@ -171,24 +179,24 @@ fn targets_callback(
         if entries.is_empty() {
             return;
         }
-        let repo_id = scope.current_repo_id.get_untracked();
-        let scope_nonce = scope.current_scope_nonce.get_untracked();
-        let request_repo_id = repo_id.clone();
+        let request_scope = capture_scope(scope);
+        let repo_id = request_scope.repo_id.clone();
+        let scope_nonce = request_scope.scope_nonce;
         spawn_local(async move {
             for entry in entries {
-                if !scope_is_current(scope, &request_repo_id, scope_nonce) {
+                if !scope_is_current(scope, &request_scope) {
                     return;
                 }
                 if let Err(error) =
                     mutate_external_change_target(op, repo_id.clone(), scope_nonce, entry).await
                 {
-                    if scope_is_current(scope, &request_repo_id, scope_nonce) {
+                    if scope_is_current(scope, &request_scope) {
                         on_error.run(error);
                     }
                     return;
                 }
             }
-            if scope_is_current(scope, &request_repo_id, scope_nonce) {
+            if scope_is_current(scope, &request_scope) {
                 on_refresh.run(());
             }
         });
@@ -207,9 +215,11 @@ fn apply_callback(scope: ExternalChangesHttpScope, ws: WsService) -> Callback<()
 
 fn scope_is_current(
     scope: ExternalChangesHttpScope,
-    request_repo_id: &Option<String>,
-    request_scope_nonce: u64,
+    request: &ExternalChangesRequestScope,
 ) -> bool {
+    let Some(current_connection_epoch) = scope.current_connection_epoch.try_get_untracked() else {
+        return false;
+    };
     let Some(current_repo_id) = scope.current_repo_id.try_get_untracked() else {
         return false;
     };
@@ -217,20 +227,30 @@ fn scope_is_current(
         return false;
     };
     scope_matches(
-        request_repo_id,
-        request_scope_nonce,
+        request,
+        current_connection_epoch,
         &current_repo_id,
         current_scope_nonce,
     )
 }
 
+fn capture_scope(scope: ExternalChangesHttpScope) -> ExternalChangesRequestScope {
+    ExternalChangesRequestScope {
+        connection_epoch: scope.current_connection_epoch.get_untracked(),
+        repo_id: scope.current_repo_id.get_untracked(),
+        scope_nonce: scope.current_scope_nonce.get_untracked(),
+    }
+}
+
 fn scope_matches(
-    request_repo_id: &Option<String>,
-    request_scope_nonce: u64,
+    request: &ExternalChangesRequestScope,
+    current_connection_epoch: u64,
     current_repo_id: &Option<String>,
     current_scope_nonce: u64,
 ) -> bool {
-    request_repo_id == current_repo_id && request_scope_nonce == current_scope_nonce
+    request.connection_epoch == current_connection_epoch
+        && &request.repo_id == current_repo_id
+        && request.scope_nonce == current_scope_nonce
 }
 
 fn request_is_current(latest_generation: u64, response_generation: u64) -> bool {
@@ -239,28 +259,19 @@ fn request_is_current(latest_generation: u64, response_generation: u64) -> bool 
 
 #[cfg(test)]
 mod tests {
-    use super::{request_is_current, scope_matches};
+    use super::{ExternalChangesRequestScope, request_is_current, scope_matches};
 
     #[test]
     fn external_changes_scope_guard_rejects_stale_responses() {
-        assert!(scope_matches(
-            &Some("repo-1".into()),
-            7,
-            &Some("repo-1".into()),
-            7
-        ));
-        assert!(!scope_matches(
-            &Some("repo-1".into()),
-            7,
-            &Some("repo-2".into()),
-            7
-        ));
-        assert!(!scope_matches(
-            &Some("repo-1".into()),
-            7,
-            &Some("repo-1".into()),
-            8
-        ));
+        let request = ExternalChangesRequestScope {
+            connection_epoch: 3,
+            repo_id: Some("repo-1".into()),
+            scope_nonce: 7,
+        };
+        assert!(scope_matches(&request, 3, &Some("repo-1".into()), 7));
+        assert!(!scope_matches(&request, 3, &Some("repo-2".into()), 7));
+        assert!(!scope_matches(&request, 3, &Some("repo-1".into()), 8));
+        assert!(!scope_matches(&request, 4, &Some("repo-1".into()), 7));
     }
 
     #[test]
