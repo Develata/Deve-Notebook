@@ -405,6 +405,7 @@ ReadonlyDegraded
 - ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行；完成 durable rename 后才在新 root 启动新 generation watcher。
 - 如果 ledger 已提交但 workspace realign 失败，该 repo 必须进入 `DegradedLocator` 或 `DegradedProjection`，并通过 repair runtime 暴露可恢复动作；不得把 rename 回滚为基于旧路径名的隐式绑定。
 - durable rename 已提交但新 mount 失败时不得反向 rename。repo name 与所有当前绑定同一 `RepoId` 的 session display/scope projection 必须更新到已提交的新事实（`RepoId` 本身不变），这些 session 保持 readonly 并收到 workspace ingestion unavailable partial outcome；当前绑定其它 `RepoId` 的 session 完全不得切换或改写。
+- Remote Import artifact 以 `RepoId` 为路径和身份锚点；rename 不搬迁 `ledger/.host/remote-imports/<repo_id>/`。rename 本身不使 candidate stale；只有 exact revalidation 证明 Ledger head、branch、locator 或 ignore snapshot 已改变时，session 才按 `06_backup.md#remote-import-state-machine` 转为 `Stale`。
 - old/new root、catalog、metadata、locator 或 workspace marker 出现混合事实时，必须按 `RepoId` 重新读取全部事实；只有 old 或 new 事实唯一一致时才允许启动对应 watcher，混合状态进入 repair，不得猜测删除、移动或回滚。
 
 ### 7.6 Local Repo Removal Contract
@@ -415,6 +416,7 @@ ReadonlyDegraded
 - 移除操作不得删除 ledger authority、不得删除 `.notegit`、不得删除用户 Markdown workspace；真正物理销毁必须另有显式 destroy/export-after-confirm 流程，并要求独立验收。
 - 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；恢复入口必须通过 repair/import/recover 类受控流程重新 admission。
 - remove 必须先 reserve `Transitioning(generation)` 并关闭新写门；watcher final-state reconcile 必须在 removed marker、catalog/locator cleanup 或正常 listing 隐藏之前完成。
+- active Remote Import session 或 `cleanup_pending=true` 是 durable removal blocker。remove 不得隐式 discard、裁剪或清理 session；operator 必须先执行显式 session discard 或 `remote-import repair --apply`，并让 cleanup receipt 收敛。
 - durable remove 成功后该 repo 本进程不得重新启动 watcher。失败且 durable remove 尚未提交时，coordinator 才可以补偿性启动旧 root watcher；若 remove 已提交，则即使 publication/cleanup 失败也不得恢复旧 watcher 或重新暴露为正常可写 repo。
 - durable remove 成功且最终 mount outcome 已知后，才允许把 deferred scope switch 与 repo-list publication 一次性 enqueue。deferred publication 在**应用**而非仅入队时，必须再次 exact-compare fallback 的 `CatalogMembershipToken`、mount generation 与 `Healthy + Mounted`；若 fallback 已 removed、membership generation 已改变或 watcher `Failed`，则不得绑定该 repo，也不得静默选择第三个 repo。发起 remove 且当前绑定目标 repo 的 session 必须进入 §4.2 既有 `NoScope` state，按固定顺序先发布最终 `RepoList`，再复用 `ServerMessage::ProtocolError` + `ServerErrorCode::ScRepoNotSelected`（wire `SC_REPO_NOT_SELECTED`，携带匹配的 `switch_nonce`）返回 readonly partial outcome；此路径禁止发送伪造 `RepoSwitched`。这里不新增 Rust/wire enum、watcher lifecycle WS message 或 protocol family。remove 未提交时不得发布 fallback scope，旧 watcher 补偿重启成功后原 scope 保持不变；补偿重启失败则返回显式 readonly partial outcome。
 - durable membership authority cut 必须是 O(1) 的 repo-scoped conditional-apply：在 `RepoCatalogRuntime` 的短 Catalog lane 内 exact-compare fallback token、先轮换被移除 RepoId 的 membership generation、提交 catalog membership 事实，并产出不可变 `RepoRemovalPublicationPlan`（removed RepoId/old token、initiator outcome 与 fallback token）。该临界区不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、filesystem/watcher I/O、await 或长时计算。membership mutation 必须在其新状态首次可见之前或同一 linearization point 先轮换 generation。
@@ -424,6 +426,13 @@ ReadonlyDegraded
 - 在 invalid-fallback partial 中，发起 remove 的 session 使用其已验证 `switch_nonce` 作为新的 per-connection `NoScope` epoch，并发送上述 `RepoList -> ProtocolError` 序列；fallback 有效时发起者走正常 `RepoBound(fallback)` / `RepoSwitched` 成功路径，不进入 NoScope。其它已绑定 removed RepoId 的 observer session 无论发起者成功或失败都不得复用发起者 nonce；session runtime 必须各自分配严格大于其 current scope nonce 的新 epoch，提交 `NoScope`，然后发送同序列，但 `ProtocolError.switch_nonce = None`、两帧 `scope_nonce = new_epoch`。若 nonce 无法递增，必须直接退休该连接并在 reconnect 后受控恢复，不能保留旧 writer-ready。
 - server-driven observer invalidation 不得自动切换第三个 repo，也不得清除 editor pending overlay；它只退休旧 repo/doc/writer scope 与冲突的 pending scope-switch intent。所有消息只做有界 per-connection enqueue，network delivery 不属于 Catalog critical section。
 - remove cleanup 出现 partial outcome 时必须按 `RepoId` 重新读取 catalog、metadata、locator 与 workspace marker；混合事实进入 repair，不得用路径存在性猜测 durable remove 是否成立。
+
+### 7.6.1 Remote Import Repo Lifecycle {#remote-import-repo-lifecycle}
+
+- provider task 绑定 `(RepoId, provider_generation, CatalogMembershipToken)`。task 完成时必须重新 exact-compare catalog membership、session identity 与 generation；stale completion 只能 cleanup 自己的临时 capture，不得发布 session、写 Ledger 或改变 mount slot。
+- remove 在 removed marker、locator cleanup 与 catalog authority cut 之前，必须 quiesce 对应 provider task，再执行 watcher E2 final-state reconcile。quiesce 不能持有 supervisor map mutex、catalog/repo permit、mutation lane 或 publication lane。
+- rename 不改变 provider task 的 `RepoId` 归属；若 rename 过程中关联 head/locator/ignore snapshot 发生变化，完成回调只能把既有 candidate 转为 `Stale`，不得在新名称下隐式重新 prepare。
+- create/rename/remove 的 partial outcome 必须按 `RepoId` 重读 catalog、metadata、locator、workspace marker 与 Remote Import active/cleanup 状态。只有 old/new 事实唯一一致时才能继续 mount 或 capture；混合事实进入 repair，禁止猜测删除、回滚或重绑。
 
 ### 7.7 Catalog Conflict Repair
 

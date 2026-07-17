@@ -30,7 +30,14 @@ extract_registry() {
   awk '
     $0 == start { in_block = 1; next }
     $0 == end { in_block = 0 }
-    in_block && match($0, /`([^`]+)`/, m) { print m[1] }
+    in_block {
+      first_tick = index($0, "`")
+      if (first_tick == 0) next
+      rest = substr($0, first_tick + 1)
+      second_tick = index(rest, "`")
+      if (second_tick == 0) next
+      print substr(rest, 1, second_tick - 1)
+    }
   ' start="$start" end="$end" "$DIFF_FILE"
 }
 

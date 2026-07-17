@@ -19,6 +19,7 @@
 - repo-scoped write readiness
 - browser writer identity
 - document navigation guard
+- Remote Import thin-client projection boundary
 
 本章是 `03_storage`、`07_network`、`05_diff_logic` 在 Web 写路径上的收敛说明。
 
@@ -65,6 +66,8 @@ State_auth = L_confirmed
 3. `Auth for Write` 与 `Handshake for Sync` 必须分离。
 4. 文件切换、重连、快照刷新都必须从 `confirmed + pending overlay` 重建。
 5. commit/delete/merge 的最终成立条件必须回到 ledger append / ledger anchor。
+6. Remote Import session/candidate/receipt 由后端 authority/runtime 持有；Web 只保存当前 scope 的
+   typed projection，不得把它并入 editor pending overlay、External Changes 或 Source Control state。
 
 ### 3.1 Write Serialization and Merge Boundary
 
@@ -423,6 +426,31 @@ Web incoming ring 检测到 sequence gap 后，必须停止处理缺口之后的
 - projection recovery runtime 只维护连接完整性、generation、pending overlay 与后端指定的 typed
   refresh；不得计算 ledger facts、diff、冲突、affected docs 或 authority 结果。
 
+### 11.4 Remote Import Client Contract {#remote-import-client-contract}
+
+`remote_import_client` 是与 document、Source Control、External Changes runtime 并列的 Web
+thin-client runtime。它只拥有当前页面的请求关联与展示投影，不拥有 durable session、captured blobs、
+candidate revision、blocker 计算或 Ledger Apply authority。
+
+- 所有 in-flight request 先绑定 `(request_id, repo_id, branch, scope_nonce)`；Prepare/List 不要求预先存在
+  session。`Prepared` 通过该 base gate 后才可安装 backend 返回的新 `session_id + revision`，`Listed`
+  只更新当前 scope 的 summaries。已选择的 session projection **MUST** 再精确绑定
+  `(repo_id, branch, scope_nonce, session_id, revision)`；repo/branch/scope 变化时立即退休旧 projection，
+  迟到 response 不得恢复旧 session。
+- client 只能发送 `07_network#remote-import-wire-contract` 定义的 typed intent，并渲染 backend 返回的
+  state、change kind、blocker、page 与 diff projection。
+- client **MUST NOT** 解析 `detail`、locator、path、digest 或 provider metadata来推断 stale、可写、
+  retry、cleanup 或 recovery；Apply 是否可用完全由 typed state/blocker 决定。
+- candidate row 只保留 opaque `entry_id` 与 backend-generated display label；不得缓存 blob/source
+  manifest，也不得从 label 反推出 host/provider path。
+- 首版没有 checkbox、逐文件 selection 或前端合并。Apply/Discard 只提交整个 session 的
+  `session_id + revision`；Refresh 只请求后端从已封存 snapshot 重算。
+- reconnect 后 client 必须重新 List/Show 当前 scope；不得把旧 scope session projection迁移到新
+  scope。相同 request 的 durable Apply receipt 由后端 exactly-once 语义返回，Web 不自行重放 authority write。
+
+本 runtime 在 B0 登记为 `planned/no-code-yet`，B5 才激活独立实现。当前 Remote Projection command
+打开 Source Control 并解析 notice detail 的路径属于 release-blocking drift，不是该合同的临时 adapter。
+
 ## 12. Refactor Target
 
 长期应显式形成：
@@ -430,6 +458,7 @@ Web incoming ring 检测到 sequence gap 后，必须停止处理缺口之后的
 - `browser_document_runtime`
 - `pending_overlay_runtime`
 - `write_confirmation_runtime`
+- `remote_import_client`
 
 实现必须把 editor sync、pending overlay、message dispatch 与 navigation guard 收敛到稳定 runtime 链路，不得依赖无边界 effects 协调写入确认。
 

@@ -47,24 +47,24 @@
     - watcher_health_exposes_no_repo_identity_generation_path_or_failure_detail: true
 
 - case_id: NET-004
-  goal: 协议格式区分。
+  goal: 首发 F4/v3 协议格式、version admission 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
+    - 批准目标为 F4/v3 lockstep；当前代码仍是 F4/v2，B4 前 tag blocked
   steps:
     - net_capture: true
-    - run: scripts/check-network-baseline.sh
-    - run: cargo test -p deve_core frame -- --nocapture
-    - run: cargo test -p deve_cli receive -- --nocapture
+    - gap: F4/v3 frame code and network producer are not implemented at B0
+    - current_state: network baseline may verify F4/v2 only as implementation-state evidence
   assertions:
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF4"
-    - versioned_packet_protocol_version_eq: 2
-    - min_supported_packet_protocol_version_eq: 2
-    - unpublished_protocol_v1_rejected_without_adapter: true
+    - versioned_packet_protocol_version_eq: 3
+    - min_supported_packet_protocol_version_eq: 3
+    - unpublished_protocol_v1_v2_rejected_without_adapter: true
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
-    - text_legacy_json_debug_only: true
-    - production_rejects_text_legacy_json: true
+    - explicit_versioned_json_debug_only: true
+    - legacy_json_fallback_absent: true
     - reject_binary_without_magic: true
     - unsupported_protocol_version_error_code: "SYNC_VERSION_MISMATCH"
     - malformed_versioned_payload_error_code: "SYNC_INVALID_PAYLOAD"

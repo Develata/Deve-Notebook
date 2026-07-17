@@ -385,7 +385,7 @@
     - cli_assert: nil_shadow_repo_quarantined_not_deleted true
 
 - case_id: STORE-018
-  goal: Projection Backup push 只上传 Markdown Projection Workspace files，且 provider 结果不产生 authority effect。
+  goal: Remote Projection push 只上传 Markdown Projection Workspace files，且 provider 结果不产生 authority effect。
   preconditions:
     - local Projection Workspace 已通过 Projection Locator 与 `.notegit` identity marker gate
     - workspace 中同时存在 Markdown files 与 internal/reserved paths
@@ -394,57 +394,50 @@
     - run: cargo test -p deve_cli --lib run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
   assertions:
-    - cli_assert: projection_backup_push_uploads_markdown_files_only true
-    - cli_assert: projection_backup_push_skips_internal_reserved_paths true
-    - cli_assert: projection_backup_push_writes_no_ledger_source_control_or_git_mirror true
+    - cli_assert: remote_projection_push_uploads_markdown_files_only true
+    - cli_assert: remote_projection_push_skips_internal_reserved_paths true
+    - cli_assert: remote_projection_push_writes_no_ledger_source_control_or_git_mirror true
 
 - case_id: STORE-019
-  goal: Projection Backup pull 只覆盖 Projection Workspace，并经 External Changes admission。
+  goal: Remote Import Prepare 将远端输入封存为 immutable manifest/blob/candidate，不预写 workspace 或 authority。
   preconditions:
-    - remote provider 返回 Markdown object set
-    - target local repo 是当前 writable local repo
+    - B0 已批准 durable session store 与 host-only artifact layout
+    - 当前代码尚未实现 Remote Import Prepare
   steps:
-    - run: cargo test -p deve_cli --lib run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
-    - run: cargo test -p deve_cli --lib run_s3_pull_scans_written_files_into_external_changes -- --nocapture
-    - run: cargo test -p deve_core --lib fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
+    - gap: immutable Remote Import prepare producer is not implemented at B0
   assertions:
-    - cli_assert: projection_backup_pull_overwrites_projection_workspace true
-    - cli_assert: projection_backup_pull_surfaces_external_changes true
-    - cli_assert: projection_backup_pull_does_not_stage_commit_or_write_ledger true
+    - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
+    - api_assert: remote_import_prepare_writes_no_workspace_ledger_or_external_changes true
+    - api_assert: remote_import_prepare_enforces_single_active_session_and_resource_budgets true
 
 - case_id: STORE-020
-  goal: Projection Backup provider metadata 与 unsafe remote paths 不得成为 authority。
+  goal: Remote Import Review 只投影 backend-generated change kind、typed blocker、entry_id 与 display label。
   preconditions:
-    - provider may expose ETag/mtime/object version/listing order
-    - remote may contain malformed, duplicate, non-Markdown, or unsafe paths
+    - STORE-019 已产生 immutable session candidate
+    - 当前代码尚未实现 Remote Import Review
   steps:
-    - run: cargo test -p deve_cli --lib run_rejects_provider_authority_effects_before_success_report -- --nocapture
-    - run: cargo test -p deve_cli --lib run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
-    - run: cargo test -p deve_cli --lib run_rejects_duplicate_pull_paths_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_core --lib provider_request_rejects_duplicate_paths -- --nocapture
+    - gap: typed Remote Import review and blocker producer is not implemented at B0
   assertions:
-    - cli_assert: projection_backup_provider_metadata_diagnostic_only true
-    - cli_assert: projection_backup_rejects_provider_authority_effects true
-    - cli_assert: projection_backup_rejects_duplicate_remote_paths_before_workspace_write true
-    - cli_assert: projection_backup_rejects_unsafe_or_internal_projection_paths true
+    - api_assert: remote_import_review_is_backend_owned true
+    - api_assert: remote_import_review_exposes_no_locator_blob_digest_credential_or_raw_failure_detail true
+    - api_assert: remote_import_any_blocker_disables_whole_session_apply true
 
 - case_id: STORE-021
-  goal: Projection Backup pull 必须在 workspace 写入前校验 provider contract 与 resource budget；External Changes 用户确认发生在 workspace overwrite + watcher/scan 之后。
+  goal: Remote Import Apply 以 whole-session sealed transaction exactly-once 写 Ledger，提交后才 writeback Projection。
   preconditions:
-    - provider outcome declares whether pull writes only Projection Workspace and requires later External Changes admission
-    - file count, single file size, and aggregate size budgets are configured in provider adapters
+    - Ready session 无 blocker，repo health healthy 且 watcher Mounted
+    - 当前代码尚未实现 sealed Remote Import Apply
   steps:
-    - run: cargo test -p deve_cli --lib run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli --lib run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli --lib webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli --lib s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+    - gap: whole-session Remote Import apply and browser receipt producer is not implemented at B0
   assertions:
-    - cli_assert: projection_backup_pull_declares_later_external_changes_admission true
-    - cli_assert: projection_backup_pull_requires_projection_workspace_overwrite_contract true
-    - cli_assert: projection_backup_pull_budget_failures_happen_before_workspace_write true
+    - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
+    - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
+    - api_assert: remote_import_apply_lost_response_returns_stored_receipt true
+    - api_assert: remote_import_apply_pending_projection_outcome_recovers_without_reappend true
+    - api_assert: remote_import_writeback_failure_does_not_roll_back_ledger true
 
 - case_id: STORE-022
-  goal: Projection Backup S3-compatible endpoint 只允许显式 Remote Projection profile binding；未绑定或不匹配时 fail-closed。
+  goal: Remote Projection transport 的 push/source acquisition 只允许显式 S3-compatible profile binding；未绑定或不匹配时 fail-closed。
   preconditions:
     - locator uses `s3+https://` custom endpoint
     - ADR 0008 Remote Projection profile binding is either absent, mismatched, or explicitly supplied by CLI profile handle
@@ -462,15 +455,17 @@
     - cli_assert: projection_backup_s3_custom_endpoint_explicit_profile_can_enable_cli_io true
 
 - case_id: STORE-023
-  goal: Projection Backup 首版 gate 聚合 Remote Projection transport 文档与测试证据。
+  goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
-    - STORE-018..STORE-022 已列出 Projection Backup 自动化验证命令
-    - ledger backup pack / RestoreCandidate / explicit-import / explicit-merge 不属于首版 Backup contract
+    - B0 已批准 immutable session state machine 和 dry-run repair 合同
+    - 当前代码尚未实现完整 manage lifecycle
   steps:
-    - run: cargo run -p deve_baseline -- backup
+    - gap: Remote Import manage lifecycle producer is not implemented at B0
   assertions:
-    - cli_assert: projection_backup_baseline_aggregates_remote_projection_transport_checks true
-    - cli_assert: projection_backup_baseline_excludes_ledger_pack_restore_checks true
+    - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
+    - cli_assert: remote_import_discard_and_repair_are_explicit true
+    - cli_assert: remote_import_repair_defaults_to_dry_run true
+    - api_assert: cleanup_pending_is_never_auto_pruned true
 
 - case_id: STORE-024
   goal: Projection Workspace child path 与 existing ancestor containment fail-closed。

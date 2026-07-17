@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- `Layer`: `Peripheral / Deferred`
-- `Status`: `Reference`
-- `Version`: `0.0.1`
+- `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
+- `Status`: `Current MUST`
+- `Version`: `0.1.0`
 - `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
@@ -12,11 +12,17 @@
 
 本章定义发布策略、版本规范与 CI/CD。
 
+**Authority Owns**：first-tag artifact set、版本/渠道、candidate/receipt/aggregate/tag-ready gate、发布身份与兼容性声明。
+
+**Defers To**：Ledger/Redb authority 归 `03_storage/authority`，Remote Import 格式与状态归 `06_backup`，wire epoch 归 `07_network`，安全/观测边界归 `22_reliability_observability` 与 `23_threat_model`。发布工具只能验证这些合同，不得重定义产品 authority。
+
 ## 1. Distribution Strategy (分发策略)
 
 分发渠道：
 
 ### 1.1 Support Matrix (支持矩阵)
+
+下表是长期分发方向，不是 `v0.1.0 Public Preview` 的 frozen artifact set。首发精确集合由后续 `release-freeze` registry 冻结；未列入该 registry 的长期平台不得因本表存在而进入候选集。
 | Platform    | Artifact Format             | Architecture         | Signing                  |
 | :---------- | :-------------------------- | :------------------- | :----------------------- |
 | **Windows** | `.msi`, `.nsis` (Setup)     | x64, ARM64           | EV Cert (Optional)       |
@@ -253,7 +259,7 @@ first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 `p2p-gap-recovery`、`docker-multiclient`、`desktop-local-backend`、
 `desktop-remote-browser`、`android-local-backend`、`android-remote-browser`（含 native-owned
 `Use Local Backend` 恢复、新 endpoint/session/scope 与零 RemoteBrowser IPC）、
-`release-artifacts`、`security-supply-chain`。矩阵必须为这些 journey 的适用 surface/mode
+`remote-import`、`release-artifacts`、`security-supply-chain`。矩阵必须为这些 journey 的适用 surface/mode
 登记 `tag-ready/required` 需求；macOS unsigned target-host 与 iOS Simulator target-host 仍为
 `advisory/conditional`，必须由真实 host receipt 证明已执行，同时不得伪装为 signing、notarization、
 physical-device 或 store readiness。
@@ -415,7 +421,22 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。首个公开 WS wire epoch 为 `DEVEWSF4` / v2 lockstep；v2 包含 workspace ingestion unavailable typed error。历史未发布 F2/F3 namespace 与 F4/v0、F4/v1、F4/v13 不进入兼容承诺，F4/v2 发布后只允许单调升级。v2 storage 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
+> 首个公开基线保持 `LEDGER_ENTRY_FORMAT_VERSION = 3` / `DEVELDG3`，Redb schema 冻结为 v4（含 Remote Import session/runtime tables），首个 WS epoch 为 `DEVEWSF4` / v3 lockstep。F4/v1/v2、无版本 JSON 与 Redb v3 都是未发布开发状态，不提供 adapter、dual write 或 runtime migration。Redb v2 仍只保留 `--allow-legacy-v2` 离线只读导出；v3 开发 DB 必须用旧 HEAD 导出后重建，不能借用 v2 救援入口。Remote Import manifest JSON v1 是 host-only capture contract，不是 Ledger payload 或同步事实格式。
+
+### 3.1 First-tag Format Transition {#first-tag-format-transition}
+
+| Surface | Approved target | Current implementation | Activation | Tag posture |
+|---|---|---|---|---|
+| Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
+| Redb authority schema | v4 + Remote Import tables | v3 | B1 | blocked |
+| WebSocket | `DEVEWSF4`, lockstep v3 | lockstep v2 + legacy JSON fallback | B4 | blocked |
+| Remote ingest | immutable whole-session Remote Import | pull → workspace overwrite → External Changes | B4/B5/B6 | blocked |
+
+“Approved target”不等于实现完成。release gate 必须同时读取 `docs/registry/first-tag-format-matrix.md` 的 target/current 两列；当前不一致必须阻止 candidate/tag-ready，不能因为文档出现目标字符串而通过。
+
+### 3.2 Remote Import Release Gate {#remote-import-release-gate}
+
+首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、双 repo 隔离与真实 backend browser journey。STORE-019/020/021/023 在 B0 保持真实 `gap`；旧 pull tests 不得冒充 Remote Import evidence。
 
 ## 4. Open Source License (开源协议)
 

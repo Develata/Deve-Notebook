@@ -18,14 +18,21 @@
 
 ### 2. 移动端核心面板
 
-- Outline、External Changes、Source Control、Search 等入口必须在移动端可达。
+- Outline、External Changes、Source Control、Remote Import、Search 等入口必须在移动端可达。
 - 移动端不应因为手势或边缘滑动吞掉关键按钮点击。
 - 移动端 Source Control 入口应显示同一套 Source Control 面板，不应被 `ngit: Status` 这类 Git mirror CLI-only 诊断提示替代。
 - 移动端 External Changes 入口应显示外部投影文件夹修改的最小操作集：Open Diff、Stage / Unstage、Discard、确认外部修改。
 - 顶部当前 surface 胶囊应显示当前文档或差异；点击后通过底部面板在已打开文档和差异之间切换。
 - surface 底部面板打开后焦点进入关闭按钮，Tab 不离开面板，Escape 可关闭，关闭后焦点回到触发胶囊。
 - 移动端 Source Control 必须显示与桌面相同的 Source Control read surface；只读或远端视角只禁用写动作，不得用 `ngit status 只能通过 CLI 查看` 这类 ngit CLI-only 诊断替代正常变更列表。
-- 移动端 Source Control 与 External Changes 是同级入口：Source Control 显示 ledger/version-anchor 状态、Commit、history/graph；External Changes 显示外部投影偏差，不显示 history/graph。
+- 移动端 Source Control、External Changes 与 Remote Import 是同级入口：Source Control 显示
+  ledger/version-anchor 状态、Commit、history/graph；External Changes 显示外部投影偏差；Remote
+  Import 显示 immutable session/candidate review，后二者都不显示 history/graph。
+- Remote Import candidate row 只显示 backend-generated label、Added/Modified/Unchanged 与 typed
+  blocker/diff；无 checkbox 或逐文件 Apply。Refresh/Apply/Discard 是 whole-session action，390×844
+  viewport 不得横向溢出且动作满足 44px touch target。
+- B0 时 Remote Import 移动入口仍未实现；B5 必须用真实 backend 验证。旧 command 打开 Source
+  Control 的路径不视为临时实现。
 
 ### 3. Bottom Bar 与状态折叠
 
@@ -88,13 +95,14 @@
 2. 关闭 drawer，再从屏幕右边缘向左滑，打开 Markdown 标题大纲。
 3. 从编辑器内容区的左右边缘重复上述手势，确认两侧 drawer 仍可达。
 4. 执行短拖动、纵向滚动、多指操作，并点击靠边的真实按钮。
-5. 打开左侧 drawer，切换到 External Changes、Source Control 或 Search。
+5. 打开左侧 drawer，切换到 External Changes、Source Control、Remote Import 或 Search。
 
 期望结果：
 
 - 关键入口可达、可关闭、不会卡死。
 - drawer、outline、主内容区之间的切换语义清晰。
 - 短拖动、纵向滚动、多指操作与真实按钮点击不会误开 drawer，也不会修改 Markdown 内容或 pending 状态。
+- Remote Import 可独立打开；没有 checkbox、逐文件 Apply 或横向溢出，不会显示 raw locator/path/digest/detail。
 
 ### MOBILE-UI-02: Mobile 壳层一致性
 

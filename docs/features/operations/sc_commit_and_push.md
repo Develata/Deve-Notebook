@@ -38,5 +38,5 @@
 
 ## Notes
 
-- `CommitAndPush` 不是 WS v2 wire surface；UI callback 只更新本地 notice，不调用 WebSocket client。
+- `CommitAndPush` 不是 WS v3 wire surface；UI callback 只更新本地 notice，不调用 WebSocket client。
 - 正常发布流程是先执行 Web `Commit` 或 CLI `deve sc commit`，再通过显式 CLI `deve ngit push` 发布 Git mirror。

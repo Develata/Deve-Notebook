@@ -106,6 +106,16 @@
     *   Reconstruction 只产生候选差异；它本身不得写 Ledger authority。
 *   **Reconciliation (和解/协调)**：将外部突变合并回权威 Ledger 的过程。
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
+*   **Remote Import Session (远端导入会话)**：某个 `RepoId` 对一份已封存远端来源快照的 durable review/apply lifecycle；每 repo 最多一个 active session。
+    *   它不是 Projection Workspace、External Changes、Source Control staging、remote shadow 或 provider transport state。
+    *   状态机、持久化、预算与失败恢复唯一归 `06_backup#remote-import-session-contract` 和 `03_storage/authority#remote-import-workflow-tables`。
+*   **Remote Import Source Snapshot (远端导入来源快照)**：由 deterministic manifest v1 与 content-addressed immutable blobs 构成的 host-only 捕获结果。
+    *   provider listing order、ETag、mtime、object version 与原始 host path 不参与 authority；Redb 只保存精确身份、状态与 digest。
+*   **Remote Import Candidate Revision (远端导入候选修订)**：只从同一已封存 Source Snapshot 确定性重算的 review projection。
+    *   Refresh 不重新读取 provider；需要新远端内容时必须 discard 后重新 Prepare。
+*   **Remote Import Apply Receipt (远端导入应用回执)**：whole-session Ledger transaction 的 durable exactly-once 结果。
+    *   不存在 receipt 表示事务未提交；存在 receipt 的 immutable authority core 证明 Ledger 已提交。其 projection outcome 只能从 `Pending` 单调收敛为 `Written` 或 `Degraded`，不得回到未提交或触发新的事实批次。
+    *   `Pending` 覆盖 Ledger commit 后到 writeback outcome 持久化前的崩溃窗口；启动恢复或相同 request 重试必须从 Ledger 事实幂等恢复 writeback，再 CAS 更新 outcome。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。
     *   所有 Peer 在协议层完全对等，拥有全量或子集 Ledger 副本。
     *   `PeerId` 是由宿主 identity 公钥派生的物理节点身份；UI session、browser writer、plugin、merge、repair 等 actor 标签不得充当 `PeerId`。
@@ -118,7 +128,7 @@
     *   `(RepoId, PeerId, PeerFactSeq)` 用于 P2P 因果定位、范围同步与去重；任意序号缺失必须阻塞该 peer 后续事实，不能把 vector 推过缺口。
 *   **GlobalSeq (本地落盘序列数)**：单个 repo database 内 `LEDGER_OPS` 的本地全序主键。
     *   `GlobalSeq` 只表达当前数据库的持久化顺序，不得进入 P2P vector、range 或 wire envelope 充当来源序号。
-*   **FactActor (事实执行来源)**：产生本地事实的受控执行路径诊断标签，如 `browser_edit`、`external_apply`、`local_reconcile`、`plugin`、`merge`、`repair`。
+*   **FactActor (事实执行来源)**：产生本地事实的受控执行路径诊断标签，如 `browser_edit`、`external_apply`、`remote_import_apply`、`local_reconcile`、`plugin`、`merge`、`repair`。
     *   `FactActor` 不参与身份认证、序列分配、去重、range 或 VersionVector；前端可以发送业务 intent，但不得指定物理 `origin_peer_id`。
 *   **MergeAnchor (合并锚事实)**：本机对一个只读 source peer 在指定 `DocId` 上完成 merge/baseline 决策后追加的本地 authority fact。
     *   它记录 source peer、被确认的 source waterline、本地 merge 前水位、resolution 与最终内容 hash；不直接产生文本或结构投影，但必须占用本机连续 `PeerFactSeq` 并参与完整事实同步。

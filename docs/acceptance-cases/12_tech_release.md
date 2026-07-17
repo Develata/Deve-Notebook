@@ -118,7 +118,8 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
-    - watcher W4 已完成 F4/v2 code/baseline 一次性切换，且不存在 W0-W3 protocol pending marker
+    - B0 已批准 Redb v4、F4/v3 与 immutable Remote Import；当前代码仍为 Redb v3/F4-v2，tag blocked
+    - release baseline 必须同时验证 approved target 与 current implementation，不得把 current 当作首发完成态
   steps:
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
@@ -134,9 +135,9 @@
     - run: cargo run -p deve_baseline -- release-audit-gate
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "REDB_SCHEMA_VERSION = 3" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`WS_PROTOCOL_VERSION = 2;`" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 2;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "REDB_SCHEMA_VERSION = 4|代码仍为 `REDB_SCHEMA_VERSION = 3`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "WS_PROTOCOL_VERSION = 3|代码仍为 F4/v2 lockstep" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
@@ -147,6 +148,7 @@
     - release_assert: first_tag_data_format_postcard_v3_gates_present true
     - release_assert: legacy_binary_codec_dependency_absent true
     - release_assert: first_tag_format_matrix_bound_to_plan_and_code true
+    - release_assert: first_tag_target_current_drift_blocks_tag true
     - release_assert: validation_script_ownership_policy_classified true
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true

@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
@@ -109,6 +109,28 @@ Intent -> Ledger Facts -> Projection -> Projection Workspace
 - 若计算出的 workspace root 已存在，locator 入口 **MUST** 拒绝 workspace root 自身为 symlink / junction，canonicalize 后的 root 必须仍是 canonical projection base 的直接子目录；随后从 joined target 自身向上找到最近的 existing ancestor，该 ancestor 必须可 canonicalize 且 canonical path 位于 canonical workspace root 内。existing child symlink / junction 指向 workspace root 外部、dangling symlink、stat / canonicalize 失败都必须 fail-closed，不得继续 write / remove / materialize。
 - 若 workspace root 尚不存在，locator 入口只能返回通过上述 lexical gate 的 safe join；后续创建 root 的调用方不得由 child path 创建或越出 `<projection_base>/<safe_repo_name>--<repo_id>/`。
 - 这些 path / containment gate 只约束 Projection Workspace 派生路径，不改变 Ledger authority、storage schema、RepoId 或 repo identity。
+
+### 7.1 Remote Import Projection Writeback {#remote-import-projection-writeback}
+
+- Remote Import Prepare/Show/Page/Diff/Refresh/Discard **MUST NOT** write, stage, scan,
+  or pre-project provider bytes into the Projection Workspace or External
+  Changes. Sealed manifests/blobs remain under the host-only layout in
+  `03_storage/index#remote-import-runtime-layout`.
+- Apply enters the same ordered projection persistence boundary only after its
+  whole-session Ledger transaction commits. The builder reads the newly
+  committed facts; it must not trust provider paths, candidate display labels,
+  or browser diff state as writeback input.
+- The authority transaction first stores an Applied receipt with immutable
+  commit core and projection outcome `Pending`. Writeback success monotonically
+  CASes it to `Written`; writeback failure atomically stores the normal durable
+  projection fault evidence and CASes it to `Degraded`. Crash/retry while
+  `Pending` rematerializes idempotently from Ledger and must never append facts.
+- Writeback failure cannot reverse an Applied session or Ledger facts. The
+  returned typed outcome must distinguish committed/pending recovery from
+  committed/projection-degraded and remain recoverable by Ledger rematerialization.
+- Successful writeback uses the existing locator, containment, PersistGuard,
+  watcher-suppression, and repo-scoped ordering rules; Remote Import does not
+  create a second projection writer.
 
 ## 10. Forbidden Patterns（projection）
 

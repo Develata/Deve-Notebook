@@ -4,8 +4,8 @@
 
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-08`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-07-17`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -25,7 +25,7 @@
 ## 2. Column Legend (列释义)
 
 - **Layer**（主 canonical 层）：`UO` User Operation · `II` Instruction Interface · `FC` Flow Coordination · `ED` Execution Domain。
-- **Auth**（Authority Touched）：`L` ledger · `PW` Projection Workspace · `PO` Pending Overlay · `FS` pending_fs_ops · `—` 不触达 authority（含纯配置/纯读/纯渲染）。`PW` 仅指物理 Projection Workspace（Markdown 文件）；内存 Tree State / doc-list projection 不计入本轴。`PO` 仅指 Web thin-client session 的 Pending Overlay；Source Control 的 pending/staged 归 `FS`（`pending_fs_ops` / staging side table）。
+- **Auth**（Authority Touched）：`L` Ledger · `PW` Projection Workspace · `PO` Pending Overlay · `FS` pending_fs_ops · `RI` durable Remote Import session/artifact identity · `—` 不触达 authority（含纯配置/纯读/纯渲染）。`PW` 仅指物理 Projection Workspace（Markdown 文件）；内存 Tree State / doc-list projection 不计入本轴。`PO` 仅指 Web thin-client session 的 Pending Overlay；Source Control 的 pending/staged 归 `FS`。`RI` 是 ownership axis，不是 Ledger authority 或第五调用层；其状态语义完全归 `06_backup`。
 - **WG**（Writer Gate Required）：`Y` 需通过 writer gate 方可产生权威副作用 · `N`。
 - **Failure Family**：对应 `13_i18n#i18n-error-code-catalog` 的错误码族前缀；`(all)` 指该 op 是错误码映射本身；`—` 表示无后端结构化错误码（纯客户端/构建期）。
 - **Ext**（Extension Point）：`Y` 暴露给 `19_plugins` / host function · `N`。
@@ -65,6 +65,11 @@
 | `flow.net.sync-handshake` | FC | — | N | `SYNC_*` | N | N | `07_network` | connected |
 | `flow.net.sync-transfer` | FC | L | N | `SYNC_*` | N | N | `07_network` | scope-bound |
 | `flow.plugin.runtime-boundary` | ED | — | N | `PLUGIN_*` | Y | Y | `19_plugins` | capability-granted |
+| `flow.remote-import.apply` | FC | L+PW+RI | Y | `REMOTE_IMPORT_*` / `STORAGE_*` | N | N | `03_storage/authority#sealed-ledger-change-batch` | healthy+mounted+writer-gate+exact-session/revision+no-blocker |
+| `flow.remote-import.manage` | FC | RI | N | `REMOTE_IMPORT_*` | N | N | `06_backup#remote-import-state-machine` | exact-session/revision+session-CAS+explicit-intent |
+| `flow.remote-import.prepare` | FC | RI | N | `REMOTE_PROJECTION_*` / `REMOTE_IMPORT_*` | N | N | `06_backup#remote-import-runtime-boundary` | authenticated+ledger-readable+no-active-session+provider-admitted |
+| `flow.remote-import.review` | UO | RI | N | `REMOTE_IMPORT_*` | N | N | `05_diff_logic#remote-import-diff-contract` | exact-session/revision |
+| `flow.remote-projection.push` | FC | PW | N | `REMOTE_PROJECTION_*` | N | N | `06_backup#remote-projection-transport-contract` | healthy+mounted+locator/profile |
 | `flow.release.ci` | ED | — | N | — | N | N | `18_release` | ci-trigger |
 | `flow.release.tag-dispatch` | ED | — | N | — | N | N | `18_release` | tag-push |
 | `flow.release.quality-gates` | ED | — | N | — | N | N | `18_release` | ci-stage |
@@ -139,11 +144,13 @@ feature flag 名与默认值归各原章节与 `17_tech_stack` feature matrix；
 | 全局设置 / UI 偏好 / 持久化 | `15_settings` |
 | 认证 / session / TLS | `08_auth` |
 | 网络 / relay / 协议 | `07_network` |
-| Projection Backup locator/profile | `06_backup` |
+| Remote Projection locator/profile | `06_backup` |
 | locale / 错误码文案 | `13_i18n` |
 | 技术栈 profile / feature matrix | `17_tech_stack` |
 
 本节只登记「在哪一章定义配置」，不复制配置项本身（吸收 §7 单一可信来源）。
+
+Remote Import session、candidate、receipt 与 cleanup state 是 runtime-owned durable state，不是 configuration entry。
 
 ## 7. Projection Contract (投影合同)
 

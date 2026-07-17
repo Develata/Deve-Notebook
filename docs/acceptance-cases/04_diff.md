@@ -193,11 +193,9 @@
     - run: cargo test -p deve_web command_palette_ngit_commands_do_not_read_bridge_mode -- --nocapture
     - run: cargo test -p deve_web command_palette_source_control_authority_updates_after_node_role_probe -- --nocapture
     - run: cargo test -p deve_web source_control_header_ngit_authority_badge -- --nocapture
-    - run: cargo test -p deve_web remote_projection_commands -- --nocapture
     - run: cargo test -p deve_core remote_projection_file_accepts_only_markdown_projection_paths -- --nocapture
     - run: cargo test -p deve_core provider_request_reuses_transport_admission_validator -- --nocapture
     - run: cargo test -p deve_core fake_adapter_push_stores_projection_files_without_authority_effects -- --nocapture
-    - run: cargo test -p deve_core fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
     - run: cargo test -p deve_cli collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
     - run: cargo test -p deve_cli collect_markdown_projection_files_skips_ignored_directories -- --nocapture
     - run: cargo test -p deve_cli webdav_push_puts_projection_files_without_authority_effects -- --nocapture
@@ -208,48 +206,15 @@
     - run: cargo test -p deve_cli s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
     - run: cargo test -p deve_cli s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
     - run: cargo test -p deve_cli s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
-    - run: cargo test -p deve_cli s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_matches_golden_vector -- --nocapture
     - run: cargo test -p deve_cli s3_signed_get_request_includes_canonical_query -- --nocapture
     - run: cargo test -p deve_cli s3_signed_request_changes_with_payload -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_failed_get -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_too_many_files_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_paginates_list_objects -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_decodes_xml_entities_in_keys_and_continuation_tokens -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_truncated_list_without_continuation_token -- --nocapture
-    - run: cargo test -p deve_cli s3_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
-    - run: cargo test -p deve_cli write_pull_files_overwrites_existing_file_without_temp_artifacts -- --nocapture
-    - run: cargo test -p deve_cli deferred_rollback_refuses_to_overwrite_a_newer_workspace_change -- --nocapture
-    - run: cargo test -p deve_cli deferred_rollback_restores_unchanged_applied_files -- --nocapture
-    - run: cargo test -p deve_cli admitted_continuation_cannot_cross_intervening_repo_writer -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_downloads_markdown_files_and_writes_projection_workspace_without_authority_effects -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_failed_get -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_partial_apply_without_overwriting_existing_file -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_too_many_files_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_total_download_budget_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_symlinked_parent_when_supported -- --nocapture
-    - run: cargo test -p deve_cli webdav_pull_rejects_duplicate_remote_markdown_paths_before_payload_get -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_rejects_provider_authority_effects_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_s3_push_checks_workspace_identity_before_provider_io -- --nocapture
-    - run: cargo test -p deve_cli run_s3_pull_scans_written_files_into_external_changes -- --nocapture
-    - run: cargo test -p deve_cli run_s3_pull_returns_provider_error_before_scan -- --nocapture
-    - run: cargo test -p deve_cli run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
-    - run: cargo test -p deve_cli run_webdav_pull_returns_provider_error_before_scan -- --nocapture
-    - run: cargo test -p deve_cli run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
-    - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
-    - run: cargo test -p deve_cli workspace_ingestion_error_mapping_remote_projection_uses_protocol_error -- --nocapture
-    - run: cargo test -p deve_cli remote_projection_transport_missing_transport_url_fails_closed -- --nocapture
-    - run: cargo test -p deve_cli remote_projection_transport_rejects_s3_custom_endpoint_repo_url_before_executor -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
@@ -269,7 +234,6 @@
     - ui_assert: command_palette_git_commit_absent true
     - ui_assert: command_palette_ngit_import_notice_available true
     - ui_assert: command_palette_ngit_push_notice_available true
-    - ui_assert: command_palette_remote_projection_commands_visible true
     - ui_assert: source_control_git_push_blocker_details_available true
     - api_assert: readonly_remote_source_control_writes_rejected true
     - ui_assert: readonly_remote_change_diff_uses_read_gate true
@@ -316,7 +280,6 @@
     - cli_assert: sc_write_rejects_broken_workspace_identity true
     - plugin_assert: sc_commit_uses_ngit_authority true
     - api_assert: source_control_commit_writer_uses_ngit_authority true
-    - api_assert: ws_v2_has_no_commit_and_push_variant true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
     - api_assert: proxy_node_role_reports_ngit_authority true
@@ -328,13 +291,11 @@
     - ui_assert: command_palette_source_control_authority_reactive_after_node_role_probe true
     - ui_assert: source_control_legacy_bridge_mode_absent true
     - ui_assert: source_control_ngit_authority_badge_present true
+    - ui_assert: command_palette_remote_projection_push_commands_visible true
     - api_assert: remote_projection_fake_adapter_markdown_only true
-    - api_assert: remote_projection_pull_candidate_external_changes_only true
     - api_assert: remote_projection_provider_metadata_diagnostic_only true
     - cli_assert: remote_projection_provider_authority_effects_fail_closed true
     - cli_assert: remote_projection_provider_metadata_authoritative_fails_closed true
-    - cli_assert: remote_projection_pull_requires_external_changes_confirmation true
-    - cli_assert: remote_projection_pull_requires_projection_workspace_overwrite true
     - api_assert: webdav_push_uploads_markdown_projection_only true
     - api_assert: webdav_push_skips_deveignore_directories true
     - api_assert: webdav_push_streams_projection_files true
@@ -348,36 +309,8 @@
     - api_assert: s3_push_authority_effects_absent true
     - cli_assert: s3_push_provider_io_ready true
     - cli_assert: s3_push_workspace_identity_gate_before_provider_io true
-    - api_assert: s3_pull_downloads_markdown_projection_only true
-    - api_assert: s3_pull_writes_projection_workspace_only true
-    - api_assert: s3_pull_authority_effects_absent true
-    - api_assert: s3_pull_scan_creates_external_changes true
-    - api_assert: s3_pull_partial_apply_rolls_back true
-    - api_assert: s3_pull_resource_budget_fails_before_workspace_write true
-    - api_assert: s3_pull_file_count_budget_fails_before_workspace_write true
-    - api_assert: s3_pull_total_download_budget_fails_before_workspace_write true
-    - api_assert: s3_pull_paginates_list_objects true
-    - api_assert: s3_pull_decodes_list_xml_entities true
-    - api_assert: s3_pull_truncated_list_without_token_fails_closed true
-    - api_assert: s3_pull_duplicate_remote_path_fails_before_payload_get true
-    - api_assert: s3_pull_signs_get_requests true
-    - api_assert: projection_pull_workspace_apply_uses_same_volume_staging true
-    - cli_assert: s3_pull_failure_does_not_scan_or_report_ready true
-    - cli_assert: s3_pull_provider_io_ready true
-    - api_assert: webdav_pull_downloads_markdown_projection_only true
-    - api_assert: webdav_pull_writes_projection_workspace_only true
-    - api_assert: webdav_pull_authority_effects_absent true
-    - api_assert: webdav_pull_scan_creates_external_changes true
-    - api_assert: webdav_pull_partial_apply_rolls_back true
-    - api_assert: webdav_pull_resource_budget_fails_before_workspace_write true
-    - api_assert: webdav_pull_file_count_budget_fails_before_workspace_write true
-    - api_assert: webdav_pull_total_download_budget_fails_before_workspace_write true
-    - api_assert: webdav_pull_symlink_parent_escape_rejected_when_supported true
-    - api_assert: webdav_pull_duplicate_remote_path_fails_before_payload_get true
-    - cli_assert: webdav_pull_failure_does_not_scan_or_report_ready true
-    - cli_assert: webdav_pull_provider_io_ready true
-    - api_assert: web_remote_projection_uses_repo_url_locator true
-    - api_assert: web_remote_projection_missing_transport_url_fails_closed true
+    - api_assert: web_remote_projection_push_uses_repo_url_locator true
+    - api_assert: web_remote_projection_push_missing_transport_url_fails_closed true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true
@@ -500,22 +433,21 @@
     - api_assert: diff_projection_resource_limits_fail_closed true
 
 - case_id: DIFF-013
-  goal: 首个公开 WS epoch 只传 backend typed projection，commit diff 使用 summary 加按需精确 target。
+  goal: 首个公开 WS epoch 使用 F4/v3，并让 Diff 与 Remote Import 都只传 backend typed projection。
   preconditions:
-    - 当前协议 namespace 为 F4/v2 lockstep；未发布 F4/v1 无 adapter
+    - 批准目标为 F4/v3 lockstep；当前代码仍是 F4/v2，B4 前 tag blocked
   steps:
-    - run: cargo test -p deve_cli new_revision_cancels_previous_diff_job -- --nocapture
-    - run: cargo test -p deve_core commit_file_diff_target_mismatch_fails_closed -- --nocapture
-    - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
-    - run: cargo test -p deve_core historical_development_ws_namespace_is_rejected -- --nocapture
+    - gap: F4/v3 Remote Import wire code and lockstep rejection producer are not implemented at B0
+    - current_state: F4/v2 tests are diagnostic only and cannot satisfy the first-tag target
   assertions:
-    - ws_assert: f4_v2_lockstep true
-    - ws_assert: f4_v0_f4_v1_and_f4_v13_rejected true
+    - ws_assert: f4_v3_lockstep true
+    - ws_assert: f4_v0_f4_v1_f4_v2_and_f4_v13_rejected true
     - ws_assert: historical_f3_v13_rejected true
     - api_assert: commit_diff_list_contains_no_document_body true
     - api_assert: commit_file_diff_target_mismatch_fails_closed true
     - api_assert: stale_diff_revision_not_published true
     - api_assert: scope_switch_cancels_diff_projection true
+    - api_assert: remote_import_diff_exposes_entry_id_and_display_label_only true
 
 - case_id: DIFF-014
   goal: Web 只渲染 typed projection，失败和 stale revision 不触发客户端算法 fallback。

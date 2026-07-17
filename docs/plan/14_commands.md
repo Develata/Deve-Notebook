@@ -3,7 +3,7 @@
 ## Metadata
 
 - `Layer`: `Application / UI Shell`
-- `Status`: `Planned / Optional`
+- `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
 - `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/12_commands.md`
@@ -18,7 +18,8 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 命令面分为三类：
 
 *   **Baseline CLI Contract**：与 core authority、配置读取、诊断和修复直接相关的 CLI surface；启用时 **MUST** fail-closed 并返回结构化错误。
-*   **Optional Bridge Contract**：Git main mirror、WebDAV/S3 projection transport、AI backend、Trusted CLI 等外围能力；启用时 **MUST** 服从对应章节的 authority 边界。
+*   **Optional Bridge Contract**：Git main mirror、Remote Projection push transport、Remote Import
+    acquisition、AI backend、Trusted CLI 等外围能力；启用时 **MUST** 服从对应章节的 authority 边界。
 *   **Future UI Surface**：Command Palette 中未绑定后端能力的入口 **MAY** 以 disabled/unavailable 状态出现，但 **MUST NOT** 伪装成可执行能力。
 
 ## 1. CLI Commands {#cli-commands}
@@ -55,7 +56,41 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve ngit import`: 只读规划外部 Git/worktree changes。
     *   `deve ngit import --apply`: 显式把安全 Git changes 写入 pending/import；不得直接生成 ledger facts。
     *   `deve ngit push`: 显式发布已映射 `.git` main mirror HEAD。
-    *   `deve projection-remote webdav push/pull` 与 `deve projection-remote s3 push/pull`: 通过 backend/core runtime 执行 Projection Backup / Remote Projection transport；push/pull 只传输 Markdown Projection Workspace files，pull 只覆盖 projection files 并进入 External Changes，不直接写 ledger。S3-compatible `s3+https://` custom endpoint 必须走 ADR 0008 的 host-local、secret-free profile binding；CLI 显式 profile handle 已可执行，未绑定或 locator/profile 不匹配时继续 fail-closed。
+    *   Remote Projection push 与 Remote Import 命令必须服从下节的独立命令合同；不得继续提供
+        workspace-overwrite pull、rollback continuation 或 External Changes scan bridge。
+
+### 1.1 Remote Projection Push and Remote Import Commands {#remote-import-command-contract}
+
+正式 CLI grammar：
+
+```text
+deve projection-remote <webdav|s3> push
+deve remote-import prepare <webdav|s3>
+deve remote-import list
+deve remote-import show
+deve remote-import diff
+deve remote-import refresh
+deve remote-import apply
+deve remote-import discard
+deve remote-import repair [--apply]
+```
+
+- `projection-remote ... push` 只上传当前 Markdown Projection Workspace files，不上传 Ledger、
+  `.notegit/`、`.git/`、Remote Import artifacts 或 runtime state。
+- `remote-import prepare` 通过 provider source acquisition 创建 immutable session；List/Show/Diff 只读，
+  Refresh 只从已封存 blobs 重算，Apply/Discard 作用于整个 session。
+- 所有 session 命令必须使用精确 repo selector、branch、session id 与 revision；CLI 不得以 display
+  name、路径存在性或 provider listing 猜测 active session。
+- `remote-import repair` 默认 dry-run；只有显式 `--apply` 才允许清理已证明的 orphan/
+  `cleanup_pending` artifact，且不得推断 session state、自动 append Ledger 或自动 discard active session。
+- CLI 直接打开 DB 执行 Apply 时必须启动临时 `RepoWatcherHandle`，完成后走 E2 final-state shutdown。
+  DB 已被 server 持有时只能使用 authenticated loopback `LocalCliProxyAuthority`；不得复用浏览器
+  grant，也不得绕过锁直接写库。
+- provider/profile/credential binding 继续服从 ADR 0008；credential material 不进入命令输出、
+  locator、session manifest、receipt 或日志。
+
+`deve projection-remote ... pull` 是 B0 当前代码仍存在的 release-blocking drift，B4 必须连同
+workspace overwrite/rollback implementation 一次删除。它不是 deprecated alias，也不属于兼容合同。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -74,9 +109,20 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `ngit:import`: 将外部 Git/worktree 变化转成 pending/import，再进入 External Changes / Apply to Ledger / Source Control commit；该命令不得直接生成 ledger commit。
     *   `ngit:push`: 将已映射的 `.git` main mirror HEAD 推送到远端；不得绕过 NoteGit/ngit authority。
     *   `ngit:repair`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
-    *   `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull`: 发送 remote projection transport intent；前端不得直接访问 WebDAV/S3 provider，不得收集 locator、endpoint URL 或 credential material；未来 S3-compatible profile UX 只能选择 backend-defined profile handle。
+    *   Remote Projection / Remote Import CommandId 固定为：
+        *   `remote_projection.webdav.push`
+        *   `remote_projection.s3.push`
+        *   `remote_import.webdav.prepare`
+        *   `remote_import.s3.prepare`
+        *   `remote_import.open`
+        *   `remote_import.refresh`
+        *   `remote_import.apply`
+        *   `remote_import.discard`
+    *   List/Show/Page/Diff 是 Remote Import view 内部 typed request，不再扩张全局 CommandId。
+        前端不得直接访问 WebDAV/S3 provider，不得收集 locator、endpoint URL、host path、digest 或
+        credential material；S3-compatible UX 只能选择 backend-defined profile handle。
     *   Command Palette / Source Control UI 不再展示 `source_control.git_bridge` mode；Source Control header copy **MUST** 明确 `.notegit` / NoteGit/ngit 是 authority、Git main 只是终态 mirror；Web surface **MUST NOT** 直接执行 Git writer。
-    *   Web `Commit & Push` 仅展示 CLI-only notice，**MUST NOT** 发送 writer intent；未发布的 `ClientMessage::CommitAndPush` 不属于 WS v2 合同，服务端不得保留 legacy variant 或兼容 handler。
+    *   Web `Commit & Push` 仅展示 CLI-only notice，**MUST NOT** 发送 writer intent；未发布的 `ClientMessage::CommitAndPush` 不属于 WS v3 合同，服务端不得保留 legacy variant 或兼容 handler。
     *   代理 / plugin-host 模式下，Command Palette 不得读取或展示 legacy bridge mode；delegated/readonly 状态必须来自 runtime typed state。
     *   `Git:*` 文案不再作为 v1 command surface 出现；需要 Git ecosystem mirror 诊断时使用 `ngit:*`。
 
@@ -92,6 +138,8 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   Command Palette 入口启用时 **MUST** 调用明确 backend contract；未启用时 **MUST** 显示 disabled/unavailable 状态。
     *   ngit / Git-main-mirror notice 只能作为可发现性入口或只读 review 入口，**MUST NOT** 被解释为 Web 已能直接执行 Git import/push/repair。
     *   Git mirror repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
+    *   Remote Import command 只打开独立 view 或提交 typed intent；不得打开 Source Control、写
+        `SourceControlNotice`、解析 raw detail、预写 Workspace 或构造前端 blocker。
     *   每个 Command Palette entry **MUST** 暴露稳定 `id`、本地化 `title`、用户可见 `group`、启用条件说明、可选快捷键文本，以及 unavailable reason（若不可用）。
     *   Command Palette 与 Unified Search 的 `>` 命令入口 **MUST** 使用同一 command registry metadata；不得让两个入口展示不同的可用性或 writer 边界。
     *   File tree context menu、Command Palette、shortcut 与 toolbar 共享 `ContextAction` metadata 与 resolver；surface 只能用当前 `surface + target + readonly + repo scope + write readiness` 投影 `ProjectedContextAction` 并触发 `ContextActionIntent`，不得各自发明执行语义或提交裸 `action_id`。
@@ -109,6 +157,10 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `AI: Switch Backend`: 在 Native AI Chat 与 Trusted CLI Agent（仅在显式启用且满足 trusted 条件时）之间切换。
     *   `AI: Switch to PLAN Mode`: 将原生 AI 切换到只读规划模式。
     *   `AI: Switch to BUILD Mode`: 将原生 AI 切换到执行模式。
+
+> **B0 implementation transition（非兼容承诺）**：当前 Web 仍注册 `webdav:push`、`webdav:pull`、
+> `s3:push`、`s3:pull` 并把结果投影到 Source Control。B4/B5 必须分别完成 wire/command cutover 与
+> 独立 client；首发前这些旧 id 必须删除，不得保留双轨或 alias。
 
 ## 3. Chat Slash Commands
 

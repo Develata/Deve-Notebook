@@ -22,10 +22,15 @@
 - Settings 隐藏 AI Chat 时，AI Chat 区域和它左侧的分界线应同时消失；这不同于拖拽折叠。
 - 用户设置后的布局应保持稳定，不因刷新或切换 view 而混乱。
 
-### 3. Source Control 视图
+### 3. Change Review 同级视图
 
-- staged / unstaged / history / graph 等区域应在桌面壳层内清晰可见。
-- source control 列表、菜单、颜色语义应明确。
+- Source Control 只显示 Confirmed Ledger Changes、commit、history/graph；External Changes 独立显示
+  staged/unstaged workspace drift。
+- Remote Import 是第三个同级 view，显示 immutable session、candidate rows、typed blockers 与
+  whole-session Refresh/Apply/Discard。
+- 三个 view 的列表、菜单、颜色语义应明确；可以共享 renderer/row/button primitive，不共享
+  controller、state、notice 或 authority。
+- Remote Import 不显示 checkbox、locator、host/provider/blob path、digest、credential 或 raw detail。
 
 ### 4. 命令与更多菜单
 
@@ -68,7 +73,7 @@
 步骤：
 
 1. 观察 sidebar、editor、right panel、status 区。
-2. 打开一个文档，再进入 diff 或 source control。
+2. 打开一个文档，再进入 diff、Source Control、External Changes 或 Remote Import。
 3. 观察布局是否仍然清晰稳定。
 
 期望结果：

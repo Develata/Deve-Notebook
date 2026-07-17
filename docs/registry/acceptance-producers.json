@@ -297,9 +297,6 @@
         "test.case.store-015",
         "test.case.store-017",
         "test.case.store-018",
-        "test.case.store-019",
-        "test.case.store-020",
-        "test.case.store-021",
         "test.case.store-022"
       ],
       "dependencies": [],
@@ -317,7 +314,7 @@
         {"program":"bash","args":["scripts/check-storage-repo-baseline.sh"]},
         {"program":"bash","args":["scripts/check-repo-file-ops-baseline.sh"]}
       ],
-      "note": "Execute the complete declared command groups for the first Storage and Repository evidence migration batch"
+      "note": "Execute the currently implemented Storage and Repository command groups; Remote Import gaps remain producer-free until B6"
     },
     {
       "producer_id": "desktop.macos-target-host",

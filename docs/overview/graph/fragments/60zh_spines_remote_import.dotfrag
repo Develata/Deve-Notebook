@@ -1,0 +1,22 @@
+    user_remote_projection_push_spine [label="remote projection push flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_projection_push_spine -> op_remote_push_webdav [style=dashed, color="#f59e0b"];
+    op_remote_push_webdav -> op_remote_push_s3 [style=dashed, color="#f59e0b"];
+
+    user_remote_import_prepare_spine [label="remote import prepare flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_prepare_spine -> op_remote_prepare_webdav [style=dashed, color="#f59e0b"];
+    op_remote_prepare_webdav -> op_remote_prepare_s3 [style=dashed, color="#f59e0b"];
+
+    user_remote_import_review_spine [label="remote import review flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_review_spine -> op_remote_review_list [style=dashed, color="#f59e0b"];
+    op_remote_review_list -> op_remote_review_show [style=dashed, color="#f59e0b"];
+    op_remote_review_show -> op_remote_review_page [style=dashed, color="#f59e0b"];
+    op_remote_review_page -> op_remote_review_diff [style=dashed, color="#f59e0b"];
+
+    user_remote_import_apply_spine [label="remote import apply flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_apply_spine -> op_remote_apply_session [style=dashed, color="#f59e0b"];
+
+    user_remote_import_manage_spine [label="remote import manage flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_manage_spine -> op_remote_manage_refresh [style=dashed, color="#f59e0b"];
+    op_remote_manage_refresh -> op_remote_manage_discard [style=dashed, color="#f59e0b"];
+    op_remote_manage_discard -> op_remote_manage_repair_plan [style=dashed, color="#f59e0b"];
+    op_remote_manage_repair_plan -> op_remote_manage_repair_apply [style=dashed, color="#f59e0b"];

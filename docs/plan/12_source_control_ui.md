@@ -5,24 +5,27 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-04`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`, `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/sidebar/source_control/`, `apps/web/src/hooks/use_core/`
 
-本章定义 Source Control view 的显示层合同。它以 VS Code SCM view 的信息架构和交互模型为长期参照，但不复制 VS Code implementation、DOM、CSS、图标资产或 Git authority。
+本章定义 Source Control view 及其同级 External Changes / Remote Import review surface 的显示层
+合同。Source Control 以 VS Code SCM view 的信息架构和交互模型为长期参照，但另外两个 sibling
+只复用合适的 UI primitive，不复制 VS Code implementation、DOM、CSS、图标资产或 Git authority。
 
 Reference baseline 位于 `docs/reference/source-control/vscode-scm-baseline/`。该目录只保存版本化参考笔记、截图清单与交互抽象，不是权威实现。
 
 ## 1. Scope
 
-本章只处理 Source Control view 与其同级 External Changes view 的 view contract：
+本章只处理 Source Control view 及其同级 External Changes、Remote Import view 的显示层合同：
 
 1. primary flow 的布局顺序。
 2. resource groups、row actions 与 menu placement。
 3. readonly / blocked / CLI-only notices 的可见状态。
 4. history / graph 与 primary commit flow 的优先级。
 5. 外部投影文件夹修改与 Source Control commit anchor 的显示边界。
+6. immutable Remote Import review 与另外两个 change domain 的隔离边界。
 
 非目标：
 
@@ -31,6 +34,8 @@ Reference baseline 位于 `docs/reference/source-control/vscode-scm-baseline/`�
 - 不复制 VS Code 源码、DOM、CSS、品牌图标或产品截图作为实现输入。
 - 不要求 Web 直接执行 Git import / push / repair。
 - 不把 External Changes 的 `Apply to Ledger` 解释为 Source Control commit。
+- 不把 Remote Import Prepare/Review/Apply 解释为 Remote Projection pull、External Changes stage 或
+  Source Control commit。
 
 ## 2. Reference Policy {#source-control-vscode-reference-contract}
 
@@ -129,6 +134,40 @@ ExternalResourceGroups
 - 如果 external change 与 confirmed ledger dirty 重叠，行必须显示 `与已确认账本更改重叠` / `Overlaps confirmed ledger changes`，
   禁用普通 `Stage` 与 `Apply to Ledger`，只允许 `Open Diff` 与 `Discard External Change`。
 
+## 4.2 Remote Import Sibling View {#remote-import-sibling-view}
+
+Remote Import 是 Source Control 与 External Changes 的第三个同级入口，负责审阅后端已封存的
+immutable source snapshot 与 candidate revision。它不是远端文件浏览器，也不把内容预写入
+Projection Workspace。
+
+默认顺序 **MUST** 是：
+
+```text
+Header
+RepositoryContext?
+BlockingNotice?
+SessionSummary
+SessionActions
+CandidateResourceGroup
+```
+
+规则：
+
+- `SessionSummary` 只显示 backend 返回的 session state、revision、统计与泛化来源标签；不得显示
+  locator、provider/host path、blob path、digest、credential、source manifest 或 raw failure detail。
+- Candidate row 只使用 opaque strong `entry_id` 与 backend-generated display label。change kind 只包含
+  `Added / Modified / Unchanged`；远端缺失项不显示为 Delete。
+- blocker 与 change kind 正交。任何 blocker 都禁用整个 session Apply；view 不得从 label、detail、
+  pending/staged 列表或 workspace 文件推断 blocker。
+- row 点击只请求 typed diff；不得读取 blob、拼接 provider URL 或在浏览器计算 diff。
+- `Refresh` 只请求后端从已封存 blobs 重算 candidate；`Apply` 与 `Discard` 都是 whole-session action。
+- 首版没有 checkbox、逐文件 selection、逐文件 Apply、逐文件 Discard 或用 External Changes staging
+  模拟 selection。
+- Remote Import 可共享 button、icon、row shell、section shell、typed diff renderer 与 touch primitive；
+  不得复用 Source Control/External Changes controller、state、notice/error 或 authority intent。
+- Prepare 可在 Ledger readable 但 repo 未 Mounted 时执行；Apply 的 disabled state 只消费后端 typed
+  blocker，未 Mounted 时显示 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` 的本地化能力提示。
+
 ## 5. Row Interaction
 
 每个 change row **MUST** 表达：
@@ -147,7 +186,10 @@ ExternalResourceGroups
 - Desktop row action tray 应采用 VS Code-like hover/focus affordance：row hover 或 keyboard focus 进入该行时显示 action buttons；coarse pointer / touch viewport 中 action buttons 必须保持可见且满足移动端触控尺寸。
 - status kind 字母标记必须保留在 row 右侧独立 status slot；不得与 row action tray 混合，也不得覆盖或挤压 display path。
 - External Changes section header 可提供 `Stage All` / `Unstage All` / `Discard All`；Source Control confirmed section 不提供这些动作。
-- destructive actions 必须经 source-control runtime gate；必要时需要 explicit confirmation。
+- Remote Import candidate row 只提供 `Open Diff`；Refresh/Apply/Discard 位于 session action surface，
+  不提供行级 mutation 或 checkbox。
+- destructive actions 必须经各自 domain runtime gate；Source Control、External Changes 与 Remote Import
+  不得借用彼此的 writer grant。必要时需要 explicit confirmation。
 - remote readonly branch 中，row actions 必须 disabled 或替换为 read-only explanation。
 
 ## 6. Commit Surface
@@ -193,12 +235,16 @@ NoteGit/Git main mirror diagnostic command ids 必须保持独立，不得表示
 - `ngit.push_mirror`
 - `ngit.repair_mirror`
 
-Remote Projection Transport command ids 必须保持独立：
+Remote Projection push 与 Remote Import command ids 必须保持独立：
 
-- `webdav:push`
-- `webdav:pull`
-- `s3:push`
-- `s3:pull`
+- `remote_projection.webdav.push`
+- `remote_projection.s3.push`
+- `remote_import.webdav.prepare`
+- `remote_import.s3.prepare`
+- `remote_import.open`
+- `remote_import.refresh`
+- `remote_import.apply`
+- `remote_import.discard`
 
 External Changes command ids 必须保持独立：
 
@@ -212,8 +258,12 @@ External Changes command ids 必须保持独立：
 - `external_changes.open_diff`
 
 Web ngit/Git-main-mirror diagnostic commands 当前只能打开 backend/runtime intent 或 read-only repair review；
-不得直接升级为 Git writer。WebDAV/S3 commands 只能发送 typed intent，上传、下载、覆盖 projection
-workspace 与 External Changes 触发均属于 backend/core infra。
+不得直接升级为 Git writer。Remote Projection command 只执行 push；Remote Import commands 只发送
+typed session intent。provider acquisition、immutable capture、candidate/blocker 计算与 Ledger Apply
+均属于 backend/core infra。
+
+`webdav:push`、`webdav:pull`、`s3:push`、`s3:pull` 是 B0 时仍存在的未发布实现 drift，B4 必须删除；
+它们不是 deprecated alias，也不属于首发 CommandId 合同。
 
 ## 8. Failure and Boundary States
 
@@ -240,6 +290,17 @@ External Changes view 必须显式展示以下状态：
 - external change overlaps confirmed ledger changes
 - external-change runtime error
 
+Remote Import view 必须显式展示以下状态：
+
+- no repo selected / scope transitioning
+- no active session
+- preparing / ready / stale / failed / applied / discarded
+- active-session conflict
+- typed whole-session blocker
+- provider unavailable / limit exceeded / cleanup required
+- Apply workspace ingestion unavailable
+- post-commit Projection degraded receipt
+
 状态来源必须是 runtime typed state 或 structured error code，不得由 view 层猜测。
 
 ## 9. Forbidden Patterns
@@ -250,8 +311,11 @@ External Changes view 必须显式展示以下状态：
 - 用 `git.*` command id 表示 Deve stage / commit authority。
 - 让 view 组件直接改写 pending/staged side tables。
 - 让 Source Control controller 同时管理 External Changes 业务状态。
+- 让 Source Control 或 External Changes controller 同时管理 Remote Import session。
 - 在 Source Control 中对 confirmed ledger row 暴露 Discard。
 - 将 External Changes 的 `Apply to Ledger` 文案写成普通 `Commit`。
+- 为 Remote Import 增加 checkbox、逐文件 Apply/Discard，或从 raw detail/path 推断 blocker。
+- 把 Remote Import candidate 预写入 Workspace/External Changes 再要求用户确认。
 - 复制 VS Code DOM/CSS/source files 作为 Deve UI implementation。
 - 把 reference screenshots 当作 pixel-perfect requirement。
 
@@ -293,6 +357,19 @@ External Changes view 必须显式展示以下状态：
 - detect overlap with confirmed ledger dirty and fail-closed
 - structured external-change notices
 
+### 10.5 Remote Import Client Runtime
+
+职责：
+
+- request session list/show/page/diff and whole-session refresh/apply/discard
+- bind every request to request/repo/branch/scope; install Prepared/List results by the special rules in
+  `07_network#remote-import-wire-contract`, then bind selected state to exact session/revision and discard stale response
+- render backend-owned typed blockers/change kinds/diff projections
+- surface durable Apply receipt and post-commit Projection degraded outcome
+
+它不得拥有 provider transport、captured blobs、candidate computation、blocker inference、Ledger writer
+或 cleanup authority。
+
 View layer 不得直接操作 repo state、ledger state、pending/staged side tables、Git mirror state 或 `.notegit`。
 View layer 也不得直接枚举、上传、下载或覆盖 WebDAV/S3 projection files。
 
@@ -314,6 +391,17 @@ External Changes UI 应登记为独立 `external_changes_client` / runtime facad
 - `external_changes_runtime`
 - `diff_session_runtime`
 
+Remote Import UI 应登记为独立 `remote_import_client`，归属：
+
+- `ui_shell`
+- `application_control`
+- `feature_runtime`
+- backend `remote_import_runtime` 的 typed projection facade
+- shared typed diff renderer（只读）
+
+B0 时 `remote_import_client` 仍为未启动；B5 才允许签署收敛。当前 Remote Projection command 打开
+Source Control 并使用 `SourceControlNotice` 的路径是 release-blocking drift，不得保留为 adapter。
+
 若未来新增 `source_control_view_runtime`，必须先登记到 `docs/registry/runtime-skeleton-registry.md`，并说明它只拥有 view-local state。
 
 ## 本章相关命令
@@ -323,10 +411,14 @@ External Changes UI 应登记为独立 `external_changes_client` / runtime facad
 - `Source Control: Commit`
 - `Source Control: Open History`
 - `Source Control: Open Graph`
-- `webdav:push`
-- `webdav:pull`
-- `s3:push`
-- `s3:pull`
+- `Remote Projection: WebDAV Push`
+- `Remote Projection: S3 Push`
+- `Remote Import: WebDAV Prepare`
+- `Remote Import: S3 Prepare`
+- `Remote Import: Open`
+- `Remote Import: Refresh`
+- `Remote Import: Apply`
+- `Remote Import: Discard`
 
 ## 本章相关配置
 

@@ -1,0 +1,28 @@
+            subgraph cluster_user_remote_projection_push {
+                label="remote projection push [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_push_webdav [label="Push WebDAV", fillcolor="#fde68a"];
+                op_remote_push_s3 [label="Push S3", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_prepare {
+                label="remote import prepare [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_prepare_webdav [label="Prepare WebDAV", fillcolor="#fde68a"];
+                op_remote_prepare_s3 [label="Prepare S3", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_review {
+                label="remote import review [05_diff_logic]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_review_list [label="List Sessions", fillcolor="#fef9c3"];
+                op_remote_review_show [label="Show Session", fillcolor="#fef9c3"];
+                op_remote_review_page [label="Page Candidate", fillcolor="#fef9c3"];
+                op_remote_review_diff [label="Diff Entry", fillcolor="#fef9c3"];
+            }
+            subgraph cluster_user_remote_import_apply {
+                label="remote import apply [03_storage/authority]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_apply_session [label="Apply Whole Session", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_manage {
+                label="remote import manage [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_manage_refresh [label="Refresh Sealed Candidate", fillcolor="#fde68a"];
+                op_remote_manage_discard [label="Discard Session", fillcolor="#fde68a"];
+                op_remote_manage_repair_plan [label="Repair Dry Run", fillcolor="#fef9c3"];
+                op_remote_manage_repair_apply [label="Apply Cleanup", fillcolor="#fde68a"];
+            }

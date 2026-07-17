@@ -161,6 +161,10 @@ Starting(generation)
 - 目录删除 scan **MUST NOT** 被通用目录 cooldown 丢弃；同一 debounced batch 内的多个删除目录事件 **MAY** 合并为一次 repo scan。
 - atomic temp-file replace 的 pending hash **MUST** 对应最终目标文件内容；临时文件 **MUST NOT** 单独进入 `pending_fs_ops`。
 - 成功完成目录 scan 或 full reconcile 后，watcher **MUST** 经 `WatcherRefresh` 请求至多一次 repo-scoped `dir_changed` refresh；消费端据此重新读取 External Changes 与 tree projection，该消息本身不改变 authority。server 的 generation-bound refresh routing 由 supervisor slot 承载：slot 为 `Transitioning` 时只能 coalesce/defer，不能直接 broadcast；最终 lifecycle outcome 后由 `RepoLifecycleCoordinator` 决定 enqueue 或 drop。standalone `deve watch` 可直接消费 refresh。
+- Remote Import Prepare/Show/Page/Diff/Refresh/Discard 只操作 host-only sealed
+  session state，不是 Projection Workspace input，watcher不得观察、扫描或把
+  它们投影成 External Changes。只有 Remote Import Ledger Apply 提交后的正常
+  projection writeback会沿既有 PersistGuard/WriteSuppressor 路径更新 workspace。
 
 ### 8.8 Final-State Shutdown (E2)
 

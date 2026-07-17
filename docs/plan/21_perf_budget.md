@@ -4,10 +4,10 @@
 
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-07-17`
 - `Authority Owns`: `op 维度 latency / RSS budget；CI fuse 阈值`
-- `Authority Defers To`: `17_tech_stack#performance-profiles-and-feature-matrix (profile 枚举与 feature matrix)`
+- `Authority Defers To`: `17_tech_stack#performance-profiles-and-feature-matrix (profile 枚举与 feature matrix)；06_backup#remote-import-resource-contract (Remote Import hard caps)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (perf-sensitive flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (PERF-001)`
 - `Primary Code Areas`: `scripts/plan-coverage.sh`（--check-perf-budget enforcing）；CI 性能基准入口见 18_release
@@ -55,6 +55,14 @@ Repository mutation / recovery 专项预算：
   `<1s`、远端 `<3s`。
 - gate registry 使用弱引用；External Apply 大批次只发布一条 recovery，不能把 fact 数放大为
   broadcast queue、task 或 Web incoming memory 增长。
+
+### 2.1 Remote Import Performance Boundary {#remote-import-performance-boundary}
+
+Remote Import 的 2048 文件、4 MiB 单文件、64 MiB 总量、路径预算与 100/200 page limit 由 `06_backup.md#remote-import-resource-contract` 唯一定义；它们是 admission/DoS hard caps，不是 latency benchmark 或“已达标”证据。
+
+- capture 必须逐文件 streaming；不得把完整 snapshot、全部 blobs 或 64 MiB payload 聚合进内存。
+- manifest/candidate serialization、review page 与 typed diff 都必须有界；cursor 必须绑定 revision，禁止靠无界 client cache补偿 backend pagination。
+- B0 没有 Remote Import latency/RSS benchmark evidence，因此本章不发明 P50/P99、TBD 行或 CI fuse。B6 取得同一 HEAD producer evidence 后，才能按实测决定是否把 Remote Import 加入 §2 关键路径预算。
 
 ## 3. CI Fuse Thresholds {#perf-budget-fuse}
 

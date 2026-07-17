@@ -31,6 +31,8 @@
 - 大屏 tab 的选择与关闭控件应在可访问标签中同时包含 surface 类型与当前 tab 标题，避免多个 tab 在辅助技术中重名。
 - 窄屏下应映射到 mobile-style shell。
 - URL、刷新、打开新窗口后，页面应保持可解释的工作台状态。
+- Source Control、External Changes 与 Remote Import 在大屏/窄屏下都是同级 sidebar view；切换
+  surface 不得复制或迁移彼此的业务 state。
 
 ### 4. Web 特有入口
 
@@ -39,6 +41,10 @@
 - 文件树右键菜单应由 Context Action registry 投影；触发时提交 action intent，并在 handler 中重新 resolve。
 - 当当前后端声明 host-file capability 时，文件树右键菜单应显示 `复制绝对路径` 与 `在系统资源管理器中显示`；前者复制后端返回的 canonical absolute path，后者请求后端/native adapter 在宿主系统文件管理器中 reveal 该 projection target。
 - 普通远端 Web / VPS / 不支持的 native adapter 不应显示 host-file 菜单项；即使旧客户端直接请求，后端也应 fail-closed。
+- Remote Import 入口只打开独立 typed review surface。候选行只显示 backend-generated label 与
+  Added/Modified/Unchanged；无 checkbox、逐文件 Apply 或 raw locator/path/digest/detail。
+- B0 时该独立入口仍未实现，B5 前旧 Remote Projection command 打开 Source Control 的行为属于
+  release-blocking drift。
 
 ## 非目标
 

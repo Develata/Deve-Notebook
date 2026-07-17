@@ -18,17 +18,17 @@
 | `02_positioning` | `02_positioning` | `02_positioning` | CLI + architecture boundary checks |
 | `03_storage/index` | `04_storage` | `07_storage_repo` | storage/runtime/repair automation（index + authority/projection/watcher/repair 子文件） |
 | `04_repository` | `06_repository` | `07_storage_repo` | repo/scope automation + Chrome MCP |
-| `05_diff_logic` | `07_diff_logic` | `04_diff` | diff/merge/source-control automation |
-| `06_backup` | `06_repository` | `07_storage_repo` | projection transport / External Changes boundary automation |
+| `05_diff_logic` | `07_diff_logic` | `04_diff` | diff/merge/source-control + immutable Remote Import review automation |
+| `06_backup` | `06_repository` | `07_storage_repo` | projection push / remote acquisition / immutable import automation |
 | `07_network` | `05_network` | `06_network` | protocol + reconnect automation |
 | `08_auth` | `09_auth` | `08_auth` | auth/security automation |
-| `09_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject automation + Chrome MCP |
+| `09_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject + scope-bound Remote Import client automation + Chrome MCP |
 | `10_rendering` | `03_rendering` | `03_rendering` | Chrome MCP + rendering automation |
 | `11_ui_design/index` | `08_ui_design` | `05_ui`, `13_ui_mobile_chat_regression` | Chrome MCP + UI automation |
 | `11_ui_design/01_web` | `08_ui_design_01_web` | `05_ui` | Web shell automation + Chrome MCP |
 | `11_ui_design/02_desktop` | `08_ui_design_02_desktop` | `05_ui` | desktop shell automation |
 | `11_ui_design/03_mobile` | `08_ui_design_03_mobile` | `05_ui`, `13_ui_mobile_chat_regression`, `17_mobile_surface_switcher` | mobile shell automation + Chrome MCP |
-| `12_source_control_ui` | `07_diff_logic`, `08_ui_design_02_desktop` | `04_diff`, `05_ui` | Source Control UI reference + automation |
+| `12_source_control_ui` | `07_diff_logic`, `08_ui_design_02_desktop` | `04_diff`, `05_ui` | Source Control / External Changes / Remote Import sibling-boundary automation |
 | `13_i18n` | `11_i18n` | `09_i18n` | locale/error-code automation |
 | `14_commands` | `12_commands` | `11_commands_settings` | command/control automation |
 | `15_settings` | `13_settings` | `11_commands_settings` | settings persistence automation |

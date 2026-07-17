@@ -4,10 +4,10 @@
 
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
+- `Version`: `0.1.0`
 - `Last Review`: `2026-07-17`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
-- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Projection Backup 文件传输边界)`
+- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Remote Projection / Remote Import 状态与 authority 边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (REL-013)`
 - `Primary Code Areas`: `crates/core/src/` 各 runtime 的 tracing / log / metric 实现位置；`apps/cli/src/server/` observability endpoint
@@ -57,6 +57,10 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | `watcher_phase` | string | 条件 | typed watcher failure phase；禁止由自然语言 error 解析 |
 | `watcher_failure_kind` | string | 条件 | typed repo-local/host-fatal failure kind；禁止字符串分类 host shutdown |
 | `cleanup_error` | string | 条件 | stop/final-scan/join cleanup 诊断；不得覆盖 primary error |
+| `remote_import_phase` | string | 条件 | prepare/review/apply/discard/repair phase；只取低基数 typed 值 |
+| `remote_import_state` | string | 条件 | `Preparing/Ready/Stale/Failed/Applied/Discarded` 的低基数投影 |
+| `remote_import_failure_kind` | string | 条件 | typed failure kind；禁止解析 raw detail |
+| `cleanup_pending` | bool | 条件 | Remote Import terminal record 是否仍需显式 cleanup |
 
 规则：字段名稳定、snake_case；新增字段 SHOULD 复用既有语义而非另造同义字段。
 
@@ -78,6 +82,7 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
   incoming gap。doc id、request id 与正文不得作为 metric label。
 - watcher runtime 至少观测 aggregate expected/running/unavailable gauge、startup scan pass、reconcile latch、
   terminal failure 与 shutdown cleanup failure；repo id、path 与 generation 不得作为公开或高基数 metric label。
+- Remote Import 只使用低基数 aggregate：prepare/apply/failure/cleanup counter、active/cleanup-pending gauge 与 phase latency histogram。`session_id`、revision、`entry_id`、locator、provider host/path、blob path、digest、credential 与 raw detail 禁止成为 metric label或公开 health 字段。
 - 容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域：
   memory 使用当前 cgroup usage；CPU 使用当前 cgroup usage delta，并按可见祖先中最严
   quota 与 effective cpuset 的较小 capacity 归一化到 `0..=100%`。每个 metric 应按
@@ -114,7 +119,11 @@ watcher start/worker/final-reconcile failure 映射到 `03_storage/watcher#watch
 `DurableProjectionFault`。只有独立 projection/locator evidence 同时成立时，才按上表映射
 对应 RepoHealth；不得从 watcher failure 推断 authority 或 projection 损坏。
 
-### 6.1 DurableProjectionFault Boundary
+### 6.1 Remote Import Health Mapping {#remote-import-health-mapping}
+
+`Preparing/Ready/Stale/Failed/Applied/Discarded` 是 Remote Import session state，不是 `RepoHealth`。pre-commit provider/capture/session failure 与 `cleanup_pending` 不映射 `DegradedProjection`，也不得写 projection fault journal；`cleanup_pending` 只是 remove/lifecycle blocker。只有 Ledger transaction 已提交、随后 Projection writeback 失败时，才按既有 `DurableProjectionFault` 映射为 `DegradedProjection`。
+
+### 6.2 DurableProjectionFault Boundary
 
 `DurableProjectionFault` 是 host-local recovery journal，用于记录“authority 已提交，但 projection/workspace 物理副作用尚未完成或完成状态未知”的可恢复故障。它的目标是让重启后的 repair runtime 能精确知道要重试什么，而不是从路径名、repo name 或 URL 猜测身份。
 
@@ -157,13 +166,17 @@ DurableProjectionFault = {
 
 某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 与 repo-local 可隔离的 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` 为显式例外。单 repo watcher `Failed` → `T2`；bootstrap 零 Mounted 或 typed host-fatal → `T1`。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
 
+Remote Import 映射：provider/prepare/session pre-commit failure 与 cleanup-required → `T2`；stale/blocked/not-found/invalid-state 等 4xx → `T3`；authority apply/storage transaction failure → `T1`；post-commit projection degraded 沿既有 projection fault tier。具体 HTTP 状态仍只引用 `13_i18n`。
+
 ## 8. Resilience Playbook Index {#resilience-playbook-index}
 
-可靠性手册索引。Projection Backup 只作为 Projection Workspace 文件传输合同被索引；它不是 Ledger history disaster recovery：
+可靠性手册索引。Remote Projection / Remote Import 不是 Ledger history disaster recovery：
 
-- Projection Backup 范围：`06_backup#projection-backup-scope`。
-- Projection Backup locator/profile：`06_backup#projection-backup-locator-contract`。
-- pull 后 External Changes admission：`06_backup#projection-backup-pull-state-machine-contract`。
+- Remote Projection locator/profile 与 push：`06_backup#remote-projection-transport-contract`。
+- immutable prepare/review/state：`06_backup#remote-import-session-contract`、`05_diff_logic#remote-import-diff-contract`。
+- lost-response Apply：重发同一 exact request 并读取 stored receipt；`Pending` outcome 必须从 Ledger 幂等恢复 projection writeback，再单调收敛为 `Written/Degraded`，不得重新 append 或按 UI detail 猜测。
+- stale/new remote content：显式 Discard 后重新 Prepare；Refresh 只能读 sealed blobs。
+- cleanup：先 dry-run `remote-import repair`，经人工核验后显式 `--apply`；不得自动裁剪 `cleanup_pending`。
 - repo 级 degraded/quarantine 后的恢复路径：`04_repository#repo-health-and-repair`。
 - workspace ingestion failure 首版 operator recovery：重启服务；不提供 public watcher restart endpoint，具体 failure detail 只查 structured tracing。
 

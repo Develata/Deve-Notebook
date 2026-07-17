@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-17`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_repair_runtime.rs`, `crates/core/src/ledger/manager/repair_runtime.rs`, `crates/core/src/ledger/snapshot.rs`, `apps/cli/src/commands/export/`
 
@@ -60,7 +60,23 @@
 - 兼容读取器只能打开用户明确选择的既有 v2 `.redb` 并启动 read transaction，不创建数据库、不写 metadata/table、不获取 writer authority。运行中的 server 持锁时必须拒绝。
 - JSON Lines 必须按旧 `GlobalSeq` 单调导出原始 v2 `event / peer_id / seq / client ids` 并显式标记 `legacy_schema_version=2`；不得把旧 peer/seq 投影成 v3 origin。
 - Markdown 导出只允许 fold v2 content/structure facts 生成当前可读投影；structure authority 不一致时 fail-closed，不使用 path metadata 猜测修复。
-- v2 导出后必须重建 v3 repo，并通过受控 import/reconcile 生成当前 host identity 下的新事实；不得把旧 actor 标签猜测成物理 peer 或原地伪造连续序列。
+- v2 导出后必须重建当前 schema repo，并通过受控 import/reconcile 生成当前 host identity 下的新事实；不得把旧 actor 标签猜测成物理 peer 或原地伪造连续序列。
+- B1 切换到 Redb v4 后，未发布开发期 v3 database 不进入普通 runtime 或本 repair mutation。需要保留内容时，只能在旧 HEAD 执行显式只读导出，再用当前 HEAD 重建；不得在 v4 runtime 内保留 v3 adapter、双写或推测迁移。
+
+### 9.4.1 Remote Import Cleanup Repair {#remote-import-cleanup-repair}
+
+Remote Import repair 默认 dry-run，并以 Redb session/runtime record 与精确
+manifest/blob digest 为唯一 admission evidence：
+
+- 可报告 interrupted `Preparing`、orphan temp/final artifacts、digest tamper、
+  missing candidate、terminal retention debt 与 `cleanup_pending`。
+- 实际删除必须显式 `remote-import repair --apply`，重新验证 RepoId、session
+  id、active pointer、terminal state、root containment、symlink/reparse status
+  与 digest inventory 后才可执行。
+- active session、未决 Apply、混合或无法唯一证明归属的 filesystem/Redb
+  state不得自动清理、回滚、标记 Applied/Discarded 或生成 Ledger facts。
+- `cleanup_pending=true` 不受最近 64 条 terminal retention 自动裁剪；只有
+  成功清理并原子更新对应 record 后才能解除 repo remove blocker。
 
 ### 9.5 Hard Failure vs Degraded Mode
 

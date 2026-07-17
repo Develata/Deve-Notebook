@@ -71,22 +71,14 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-017	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_cli --lib run_webdav_pull_scans_written_files_into_external_changes -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_cli --lib run_s3_pull_scans_written_files_into_external_changes -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli --lib run_rejects_provider_authority_effects_before_success_report -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli --lib run_rejects_authoritative_provider_metadata_before_success_report -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_cli --lib run_rejects_duplicate_pull_paths_before_workspace_write -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	cargo test -p deve_core --lib provider_request_rejects_duplicate_paths -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli --lib run_rejects_pull_without_external_changes_confirmation_before_workspace_write -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli --lib run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli --lib webdav_pull_rejects_oversized_file_before_workspace_write -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_cli --lib s3_pull_rejects_oversized_file_before_workspace_write -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: immutable Remote Import prepare producer is not implemented at B0
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: typed Remote Import review and blocker producer is not implemented at B0
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: whole-session Remote Import apply and browser receipt producer is not implemented at B0
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	run: cargo run -p deve_baseline -- backup
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: Remote Import manage lifecycle producer is not implemented at B0
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --test materialize_projection_test -- --nocapture
@@ -174,7 +166,7 @@ contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_partial_batch_start
 contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_shutdown_is_reverse_and_continues_after_failure()
 contains	apps/cli/src/commands/watch.rs	fn standalone_watch_terminal_failure_returns_nonzero()
 contains	apps/cli/src/server/start/tests.rs	fn server_shutdown_preserves_background_primary_and_watcher_failure()
-contains	apps/cli/src/server/start.rs	spawn_blocking(move || guard.shutdown())
+contains	apps/cli/src/server/start.rs	spawn_blocking(move || supervisor.shutdown())
 absent_tree	crates/core/src	start_repo_watcher(
 absent_tree	crates/core/src	stop_repo_watcher(
 absent_optional	crates/core/src/sync/watcher/registry.rs	WatcherSlot
@@ -210,15 +202,8 @@ contains	apps/cli/src/commands/repair/shadow.rs	fn quarantines_nil_shadow_repo_i
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()
-contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_webdav_pull_scans_written_files_into_external_changes()
-contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_s3_pull_scans_written_files_into_external_changes()
-contains	crates/core/src/remote_projection/provider/tests.rs	fn fake_adapter_pull_returns_external_changes_candidate_only()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_rejects_provider_authority_effects_before_success_report()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_rejects_authoritative_provider_metadata_before_success_report()
-contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_duplicate_pull_paths_before_workspace_write()
-contains	crates/core/src/remote_projection/provider/tests.rs	fn provider_request_rejects_duplicate_paths()
-contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_pull_without_external_changes_confirmation_before_workspace_write()
-contains	apps/cli/src/commands/projection_remote/tests/pull.rs	fn run_rejects_pull_without_projection_workspace_overwrite_before_workspace_write()
 contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
 contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
 contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test

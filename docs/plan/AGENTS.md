@@ -124,7 +124,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
-| `07_network#projection-recovery-contract` | `### 4.3.1 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
+| `07_network#projection-recovery-contract` | `### 4.3.2 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
 | `07_network#native-full-peer-runtime` | `### 12.5 Native Full Peer Runtime` | CLI/native FullPeer transport、repo-scoped admission 与宿主 runtime 边界 |
 | `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
@@ -134,7 +134,23 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `05_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
 | `05_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
-| `05_diff_logic#remote-projection-transport` | `### 2.3.2 Remote Projection Transport Lifecycle` | WebDAV/S3 Markdown Projection Workspace push/pull、External Changes admission 与非 backup 边界 |
+| `05_diff_logic#remote-projection-transport` | `### 2.3.2 Remote Projection Transport Contract` | 过渡锚点：当前 push/pull 实现与批准 Route B transport 边界；保留既有代码反向覆盖 |
+| `03_storage/index#remote-import-runtime-layout` | `index.md ### 3.1.1 Remote Import Runtime Layout` | Remote Import host-only manifest/blob/candidate 布局；planned/no-code-yet |
+| `03_storage/authority#remote-import-workflow-tables` | `authority.md ### 4.3.2 Remote Import Workflow Tables` | Redb v4 session/runtime tables、active pointer 与 terminal retention；planned/no-code-yet |
+| `03_storage/authority#sealed-ledger-change-batch` | `authority.md ### 6.3.1 Sealed Prepared Ledger Change Batch` | source-specific sealed batch 与单事务 authority apply；planned/no-code-yet |
+| `03_storage/projection#remote-import-projection-writeback` | `projection.md ### 7.1 Remote Import Projection Writeback` | Ledger commit 后的 projection writeback 与 degraded receipt；planned/no-code-yet |
+| `03_storage/repair#remote-import-cleanup-repair` | `repair.md ### 9.4.1 Remote Import Cleanup Repair` | cleanup_pending、orphan 与 dry-run/apply repair；planned/no-code-yet |
+| `04_repository#remote-import-repo-lifecycle` | `### 7.6.1 Remote Import Repo Lifecycle` | RepoId 绑定、rename/remove 与 provider generation 协调；planned/no-code-yet |
+| `05_diff_logic#remote-import-diff-contract` | `### 2.3.3 Remote Import Diff Contract` | immutable candidate、opaque entry_id 与 backend-owned diff；planned/no-code-yet |
+| `06_backup#remote-projection-transport-contract` | `## 3. Remote Projection Transport Contract` | WebDAV/S3 push 与 source acquisition transport 边界；planned/no-code-yet |
+| `06_backup#remote-import-session-contract` | `## 4. Immutable Remote Import Session` | immutable session identity、snapshot 与 receipt 合同；planned/no-code-yet |
+| `06_backup#remote-import-state-machine` | `### 4.1 State Machine` | Preparing/Ready/Stale/Failed/Applied/Discarded 迁移；planned/no-code-yet |
+| `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | 文件、字节、路径与分页预算；planned/no-code-yet |
+| `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | transport/runtime/writer/UI 依赖方向与 authority 禁区；planned/no-code-yet |
+| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v3 nested request/response、typed errors 与不泄密投影；planned/no-code-yet |
+| `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | scope/revision-bound typed client 与 stale response 丢弃；planned/no-code-yet |
+| `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | Remote Import 与 Source Control/External Changes 同级但独立的薄壳层；planned/no-code-yet |
+| `14_commands#remote-import-command-contract` | `### 1.1 Remote Projection Push and Remote Import Commands` | projection push 与 remote-import prepare/review/apply/manage 命令面；planned/no-code-yet |
 | `05_diff_logic#typed-diff-projection-contract` | `### 2.5 Typed Diff Projection Contract` | backend-owned typed diff projection、显示层消费与 authority-neutral diff 边界 |
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
@@ -175,6 +191,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `08_auth#audit` | `### 6.6 Audit` | 鉴权、安全事件与审计记录边界 |
 | `08_auth#key-and-file-permissions` | `### 6.7 Key and File Permissions` | identity key 与本地文件权限 fail-closed 合同 |
 | `08_auth#localhost-dev-policy` | `### 6.8 Localhost / Dev Policy` | localhost/dev 例外、匿名访问与 loopback 限定规则 |
+| `08_auth#local-cli-proxy-authority` | `### 6.11 Local CLI Proxy Authority` | server-held DB 的 loopback-only JWT admission 与 exact Remote Import capability；planned/no-code-yet |
 | `08_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
 | `08_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
 | `08_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
@@ -208,16 +225,16 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `09_web_thin_client_ledger#projection-recovery-coordinator` | `### 8.1.1 Projection Recovery Coordinator` | Web generation-bound projection recovery、pending 保留、gap reconnect 与显式 Retry |
 | `19_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `19_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
-| `06_backup#projection-backup-scope` | `## 1. Scope` | Projection Backup 只搬运 Markdown Projection Workspace files；Ledger history backup 属于非目标 |
-| `06_backup#projection-backup-contract` | `## 2. Product Semantics` | Upload/Pull 语义：Markdown files <-> WebDAV/S3；pull 只写 Projection Workspace 并进入 External Changes |
-| `06_backup#projection-backup-locator-contract` | `## 3. Locator and Profile Model` | Projection Backup 复用 Remote Projection locator/profile；credential material 不进入 locator |
-| `06_backup#projection-backup-remote-layout-contract` | `## 4. Remote Layout` | remote layout 是 Markdown object set，不是 ledger pack layout |
-| `06_backup#projection-backup-upload-state-machine-contract` | `## 5. Upload State Machine` | upload 只枚举并上传 Markdown projection files，不写 ledger/source-control authority |
-| `06_backup#projection-backup-pull-state-machine-contract` | `## 6. Pull / Download State Machine` | pull 经预算与 path gate 后只覆盖 Projection Workspace，再进入 External Changes |
-| `06_backup#projection-backup-command-output-contract` | `## 7. Commands / Inputs / Outputs` | Projection Backup 命令输出区分 provider IO、workspace overwrite、External Changes 与 Ledger confirmation |
-| `06_backup#projection-backup-secret-ref-contract` | `## 8. Security and Authority Contract` | credential refs 归 Remote Projection profile/runtime，provider metadata 仅 diagnostic |
-| `06_backup#projection-backup-verification-contract` | `## 8. Security and Authority Contract` | remote files 是外部输入；只有 External Changes 用户确认后才写 Ledger |
-| `06_backup#projection-backup-provider-dispatch-contract` | `## 11. Runtime Boundary` | provider dispatch 属于 Remote Projection Transport；不得直接写 Ledger/SC/Git 或确认 External Changes |
+| `06_backup#projection-backup-scope` | `## 1. Scope` | Remote Projection push 与 immutable Remote Import 属首发；Ledger history disaster recovery 属于非目标 |
+| `06_backup#projection-backup-contract` | `## 2. Product Semantics` | push 只传输 Markdown projection；Remote Import 通过 immutable capture/review/sealed Ledger Apply，不覆盖 workspace 预审 |
+| `06_backup#projection-backup-locator-contract` | `### 3.1 Locator and Profile Model` | Remote Projection locator/profile 只承载 secret-free locator 与 host-local credential binding |
+| `06_backup#projection-backup-remote-layout-contract` | `### 3.2 Remote Object Layout` | provider remote layout 是 Markdown object set；Remote Import host artifacts 另归 repo/session identity layout |
+| `06_backup#projection-backup-upload-state-machine-contract` | `### 3.3 Push State Machine` | push 只枚举并上传 Markdown projection files，不写 Ledger/Source Control authority |
+| `06_backup#projection-backup-pull-state-machine-contract` | `## 11. Current Pull Transition` | B4 前 current-code transition anchor：旧 pull→workspace→External Changes 是 release-blocking drift，B4 必须删除 |
+| `06_backup#projection-backup-command-output-contract` | `## 6. Commands / Inputs / Outputs` | 正式命令面拆分 projection push 与 remote-import prepare/review/apply/manage，不保留 pull 命令 |
+| `06_backup#projection-backup-secret-ref-contract` | `## 7. Security and Verification` | credential refs 归 host-local Remote Projection profile；不得进入 manifest/blob/wire/UI |
+| `06_backup#projection-backup-verification-contract` | `## 7. Security and Verification` | capture/apply 重验 digest；Remote Import 证据不得由旧 pull tests 冒充 |
+| `06_backup#projection-backup-provider-dispatch-contract` | `## 10. Runtime Boundary` | transport 只负责 push/source acquisition；session/review/apply 分别归 Remote Import runtime、sealed writer 与薄客户端 |
 | `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 | `12_source_control_ui#external-changes-sibling-view` | `## 4.1 External Changes Sibling View` | External Changes 同级入口、投影偏差导入 ledger 与 Source Control commit anchor 分离边界 |
 | `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）；由 deve_baseline architecture-registry 绑定 |

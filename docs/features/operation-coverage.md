@@ -39,6 +39,11 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.net.sync-handshake` | [`net_sync_handshake.md`](./operations/net_sync_handshake.md) | `NET-FEAT-01`, `NET-FEAT-02`, `NET-FEAT-03` |
 | `flow.net.sync-transfer` | [`net_sync_transfer.md`](./operations/net_sync_transfer.md) | `NET-FEAT-02`, `NET-FEAT-03`, `NET-FEAT-05` |
 | `flow.plugin.runtime-boundary` | [`plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md) | `PLUG-001`, `AI-005`, `AI-006` |
+| `flow.remote-import.apply` | [`remote_import_apply.md`](./operations/remote_import_apply.md) | `STORE-021` |
+| `flow.remote-import.manage` | [`remote_import_manage.md`](./operations/remote_import_manage.md) | `STORE-023` |
+| `flow.remote-import.prepare` | [`remote_import_prepare.md`](./operations/remote_import_prepare.md) | `STORE-019` |
+| `flow.remote-import.review` | [`remote_import_review.md`](./operations/remote_import_review.md) | `STORE-020` |
+| `flow.remote-projection.push` | [`remote_projection_push.md`](./operations/remote_projection_push.md) | `STORE-018` |
 | `flow.release.ci` | [`release_ci.md`](./operations/release_ci.md) | `REL-001`, `REL-002`, `REL-003`, `TECH-001`, `PERF-001` |
 | `flow.release.tag-dispatch` | [`release_tag_dispatch.md`](./operations/release_tag_dispatch.md) | `REL-001`, `REL-003` |
 | `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`, `REL-014` |

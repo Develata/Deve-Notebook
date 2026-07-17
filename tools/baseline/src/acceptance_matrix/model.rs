@@ -20,7 +20,7 @@ pub(super) const HEADER: [&str; 13] = [
     "note",
 ];
 
-pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 16] = [
+pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 17] = [
     ("auth-session", "web", "browser", "tag-ready", "required"),
     ("repo-lifecycle", "web", "browser", "tag-ready", "required"),
     (
@@ -38,6 +38,7 @@ pub(super) const FIRST_TAG_JOURNEYS: [(&str, &str, &str, &str, &str); 16] = [
         "tag-ready",
         "required",
     ),
+    ("remote-import", "web", "browser", "tag-ready", "required"),
     (
         "notegit",
         "desktop",

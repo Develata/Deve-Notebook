@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -48,6 +48,9 @@
 - shell state 归 UI shell runtime 所有。
 - document state 归 document runtime 所有。
 - source control state 归 source control runtime 所有。
+- external changes state 归 external changes runtime 所有。
+- remote import view state 归 `remote_import_client` 所有；durable session/candidate/receipt 仍归后端
+  `remote_import_runtime`，不归 UI。
 - repo/branch state 归 scope runtime 所有。
 
 禁止一个 view 组件同时持有多个 runtime 的私有真相副本。
@@ -62,7 +65,8 @@
 
 ### 3.1 View Entities
 
-- `ViewId`: Explorer / Search / SourceControl / Extensions / Chat / Settings / Diff / Dashboard
+- `ViewId`: Explorer / Search / SourceControl / ExternalChanges / RemoteImport / Extensions / Chat /
+  Settings / Diff / Dashboard
 - `PanelId`
 - `DrawerId`
 - `OverlayId`
@@ -89,8 +93,14 @@ application control 是连接 view 与 runtime 的稳定接口层，至少包含
 - `SwitchRepo`
 - `SwitchBranch`
 - `RequestChanges`
+- `RequestExternalChanges`
 - `StageTarget`
 - `CommitStaged`
+- `PrepareRemoteImport`
+- `OpenRemoteImport`
+- `RefreshRemoteImport`
+- `ApplyRemoteImport`
+- `DiscardRemoteImport`
 - `OpenDiff`
 - `OpenCommandPalette`
 - `ToggleSidebar`
@@ -163,6 +173,8 @@ Context action 是 command/control 体系在具体对象上的投影，不是某
   - `repo`
   - `branch`
   - `source_control`
+  - `external_changes`
+  - `remote_import`
   - `search`
   - `settings`
   - `diff`
@@ -306,6 +318,8 @@ View / Widget / Shell
 - `use_core` 中的 repo scope runtime
 - document runtime
 - source control runtime
+- external changes runtime
+- remote import client runtime
 - sync/session runtime
 
 职责：
@@ -459,6 +473,20 @@ PinnedSetChanged
 - stage / unstage / discard / commit 都必须经过 source control runtime gate。
 - remote readonly branch MUST 在 control 层就进入只读，不得等 view 层“按钮按了没反应”。
 
+### 7.3.1 External Changes Actions
+
+- refresh / stage / unstage / discard / Apply to Ledger 必须经过 external changes runtime gate。
+- view 不得把 Projection Workspace diff 自行升级为 ledger fact，也不得复用 Source Control commit
+  controller 表示 Apply to Ledger。
+
+### 7.3.2 Remote Import Actions
+
+- Prepare/Open/Refresh/Apply/Discard 必须经过独立 `remote_import_client` 与 backend typed contract。
+- UI 只展示 backend-generated label、typed change kind、typed blocker 与 typed diff；不得解析 raw
+  detail、locator、provider/host/blob path、digest 或 credential。
+- 首版 Apply 是 whole-session action；不得出现 checkbox、逐文件 selection、逐文件 Apply 或用
+  External Changes staging 模拟选择。
+
 ### 7.4 Markdown Shell Actions
 
 - outline、preview、open doc、diff navigation 都必须读取 runtime 投影，不得自己重建 authority state。
@@ -481,7 +509,8 @@ PinnedSetChanged
 
 ### 8.2 Runtime Failure Surfacing
 
-- 未认证、断网、只读、repo scope mismatch、pending write reject 都必须来自结构化 runtime 状态。
+- 未认证、断网、只读、repo scope mismatch、pending write reject、Remote Import stale/blocker 都必须
+  来自结构化 runtime 状态。
 - view 层禁止把任意 `String` 文本 error 当成稳定协议。
 
 ### 8.3 Multi-Surface Degrade
@@ -555,12 +584,14 @@ PinnedSetChanged
 
 ### 10.2 Application Control Layer
 
-- 负责 command dispatch、navigation guard、write gate、repo/document/source-control intent 编排。
+- 负责 command dispatch、navigation guard、write gate，以及 repo/document/source-control/
+  external-changes/remote-import intent 编排。
 - 不得持有 authority state 的私有副本。
 
 ### 10.3 Feature Runtime Layer
 
-- 负责 feature-specific state machine、server message dispatch、pending overlay、diff session lifecycle。
+- 负责 feature-specific state machine、server message dispatch、pending overlay、diff session lifecycle
+  与 Remote Import request/revision correlation。
 - runtime 间交互必须通过稳定 command/control surface，不得互相篡改内部状态。
 
 ### 10.4 Shared Layout Infrastructure

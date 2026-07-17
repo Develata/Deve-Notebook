@@ -43,24 +43,6 @@ digraph DeveNoteArchitecture {
             android_placeholder [label="no modeled android-only options", shape=plaintext, fontcolor="#92400e"];
         }
 
-        subgraph cluster_user_shared_wd {
-            label="shared(web,desktop)";
-            style="rounded,filled";
-            fillcolor="#fef6e7";
-            color="#c2410c";
-
-            subgraph cluster_user_login {
-                label="login [08_auth]";
-                style="rounded,filled";
-                fillcolor="#fff7d6";
-                color="#d97706";
-
-                op_login_user [label="Type Username", fillcolor="#fef9c3"];
-                op_login_pass [label="Type Password", fillcolor="#fef9c3"];
-                op_login_submit [label="Submit Login Form", fillcolor="#fde68a"];
-                op_login_result [label="Receive Login Result", fillcolor="#fef9c3"];
-            }
-
             subgraph cluster_user_auth_session {
                 label="session-expired / unauthorized [08_auth]";
                 style="rounded,filled";
@@ -111,19 +93,23 @@ digraph DeveNoteArchitecture {
                 gate_key_scope [label="Key Gates:\nconnected\nhandshake ready\nlocal repo scope", fillcolor="#fde68a", shape=note];
             }
 
-            subgraph cluster_user_palette {
-                label="command-palette [14_commands]";
+        subgraph cluster_user_shared_wd {
+            label="shared(web,desktop)";
+            style="rounded,filled";
+            fillcolor="#fef6e7";
+            color="#c2410c";
+
+            subgraph cluster_user_login {
+                label="login [08_auth]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
 
-                op_palette_open [label="Open Command Palette", fillcolor="#fef9c3"];
-                op_palette_query [label="Type Command Query", fillcolor="#fef9c3"];
-                op_palette_nav [label="Navigate Results", fillcolor="#fef9c3"];
-                op_palette_exec [label="Execute Selected Command", fillcolor="#fde68a"];
-                op_palette_close [label="Close Command Palette", fillcolor="#fef9c3"];
+                op_login_user [label="Type Username", fillcolor="#fef9c3"];
+                op_login_pass [label="Type Password", fillcolor="#fef9c3"];
+                op_login_submit [label="Submit Login Form", fillcolor="#fde68a"];
+                op_login_result [label="Receive Login Result", fillcolor="#fef9c3"];
             }
-        }
 
             subgraph cluster_user_branch_switch {
                 label="branch-switch [04_repository + 09_web_thin_client_ledger]";
@@ -257,6 +243,20 @@ digraph DeveNoteArchitecture {
                 op_sc_publish_result [label="Reject Legacy Frame", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_palette {
+                label="command-palette [14_commands]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_palette_open [label="Open Command Palette", fillcolor="#fef9c3"];
+                op_palette_query [label="Type Command Query", fillcolor="#fef9c3"];
+                op_palette_nav [label="Navigate Results", fillcolor="#fef9c3"];
+                op_palette_exec [label="Execute Selected Command", fillcolor="#fde68a"];
+                op_palette_close [label="Close Command Palette", fillcolor="#fef9c3"];
+            }
+        }
+
             subgraph cluster_user_sc_history {
                 label="history / commit diff [05_diff_logic]";
                 style="rounded,filled";
@@ -307,26 +307,6 @@ digraph DeveNoteArchitecture {
                 op_external_discard [label="Discard External Change", fillcolor="#fde68a"];
                 op_external_apply [label="Apply to Ledger", fillcolor="#fde68a"];
                 op_external_overlap [label="Overlap With Confirmed Ledger Changes", fillcolor="#fef9c3"];
-            }
-
-        subgraph cluster_user_shared_all {
-            label="shared(all)";
-            style="rounded,dashed";
-            fillcolor="#fffaf0";
-            color="#ea580c";
-
-            subgraph cluster_user_doc {
-                label="open-doc [04_repository + 09_web_thin_client_ledger]";
-                style="rounded,filled";
-                fillcolor="#fff7d6";
-                color="#d97706";
-
-                op_doc_open [label="Open Quick Open", fillcolor="#fef9c3"];
-                op_doc_query [label="Type File Query", fillcolor="#fef9c3"];
-                op_doc_choose [label="Choose Document Result", fillcolor="#fde68a"];
-                op_doc_request [label="Request OpenDoc", fillcolor="#fde68a"];
-                op_doc_receive [label="Receive Document Content", fillcolor="#fef9c3"];
-                gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
             }
 
             subgraph cluster_user_search_query {
@@ -723,6 +703,26 @@ digraph DeveNoteArchitecture {
                 op_settings_render_runtime [label="Render Runtime Setting Feedback", fillcolor="#fef9c3"];
             }
 
+        subgraph cluster_user_shared_all {
+            label="shared(all)";
+            style="rounded,dashed";
+            fillcolor="#fffaf0";
+            color="#ea580c";
+
+            subgraph cluster_user_doc {
+                label="open-doc [04_repository + 09_web_thin_client_ledger]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_doc_open [label="Open Quick Open", fillcolor="#fef9c3"];
+                op_doc_query [label="Type File Query", fillcolor="#fef9c3"];
+                op_doc_choose [label="Choose Document Result", fillcolor="#fde68a"];
+                op_doc_request [label="Request OpenDoc", fillcolor="#fde68a"];
+                op_doc_receive [label="Receive Document Content", fillcolor="#fef9c3"];
+                gate_scope [label="Scope Gates:\nrepo bound\nscope_nonce valid\nWS connected", fillcolor="#fde68a", shape=note];
+            }
+
             subgraph cluster_user_render_inline_source {
                 label="rendering inline source reveal [10_rendering]";
                 style="rounded,filled";
@@ -924,6 +924,35 @@ digraph DeveNoteArchitecture {
                 op_context_action_resolve [label="Resolve And Dispatch Context Action", fillcolor="#fde68a"];
             }
 
+            subgraph cluster_user_remote_projection_push {
+                label="remote projection push [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_push_webdav [label="Push WebDAV", fillcolor="#fde68a"];
+                op_remote_push_s3 [label="Push S3", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_prepare {
+                label="remote import prepare [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_prepare_webdav [label="Prepare WebDAV", fillcolor="#fde68a"];
+                op_remote_prepare_s3 [label="Prepare S3", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_review {
+                label="remote import review [05_diff_logic]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_review_list [label="List Sessions", fillcolor="#fef9c3"];
+                op_remote_review_show [label="Show Session", fillcolor="#fef9c3"];
+                op_remote_review_page [label="Page Candidate", fillcolor="#fef9c3"];
+                op_remote_review_diff [label="Diff Entry", fillcolor="#fef9c3"];
+            }
+            subgraph cluster_user_remote_import_apply {
+                label="remote import apply [03_storage/authority]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_apply_session [label="Apply Whole Session", fillcolor="#fde68a"];
+            }
+            subgraph cluster_user_remote_import_manage {
+                label="remote import manage [06_backup]"; style="rounded,filled"; fillcolor="#fff7d6"; color="#d97706";
+                op_remote_manage_refresh [label="Refresh Sealed Candidate", fillcolor="#fde68a"];
+                op_remote_manage_discard [label="Discard Session", fillcolor="#fde68a"];
+                op_remote_manage_repair_plan [label="Repair Dry Run", fillcolor="#fef9c3"];
+                op_remote_manage_repair_apply [label="Apply Cleanup", fillcolor="#fde68a"];
+            }
+
             shared_all_placeholder [label="current cross-platform flow bucket", shape=plaintext, fontcolor="#92400e"];
         }
 
@@ -936,17 +965,6 @@ digraph DeveNoteArchitecture {
         fillcolor="#dbeafe";
         color="#1e3a8a";
         labelfontcolor="#1e3a8a";
-
-        subgraph cluster_app_login {
-            label="login [08_auth]";
-            style="rounded,filled";
-            fillcolor="#edf5ff";
-            color="#2563eb";
-
-            app_login_form [label="login::set_username / set_password", fillcolor="#eff6ff"];
-            app_login_submit [label="login::submit", fillcolor="#bfdbfe"];
-            app_login_result [label="login::result", fillcolor="#eff6ff"];
-        }
 
         subgraph cluster_app_auth_session {
             label="session-expired / unauthorized [08_auth]";
@@ -995,15 +1013,15 @@ digraph DeveNoteArchitecture {
             app_key_denied [label="ServerMessage::KeyDenied", fillcolor="#eff6ff"];
         }
 
-        subgraph cluster_app_palette {
-            label="command-palette [14_commands]";
+        subgraph cluster_app_login {
+            label="login [08_auth]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";
 
-            app_palette_shell [label="command_palette::open / query /\nnavigate / close", fillcolor="#eff6ff"];
-            app_palette_exec [label="command_palette::execute", fillcolor="#bfdbfe"];
-            app_exec_branches [label="Representative targets:\nsc::commit / sc::push / ai::chat", fillcolor="#dbeafe"];
+            app_login_form [label="login::set_username / set_password", fillcolor="#eff6ff"];
+            app_login_submit [label="login::submit", fillcolor="#bfdbfe"];
+            app_login_result [label="login::result", fillcolor="#eff6ff"];
         }
 
         subgraph cluster_app_branch_switch {
@@ -1041,18 +1059,6 @@ digraph DeveNoteArchitecture {
             app_ai_stream [label="ai::receive_stream", fillcolor="#eff6ff"];
         }
 
-        subgraph cluster_app_repo_switch {
-            label="repo-switch [04_repository]";
-            style="rounded,filled";
-            fillcolor="#edf5ff";
-            color="#2563eb";
-
-            app_repo_menu [label="repo_switcher::menu", fillcolor="#eff6ff"];
-            app_repo_select [label="repo_switcher::select", fillcolor="#eff6ff"];
-            app_repo_request [label="repo_switch::request", fillcolor="#bfdbfe"];
-            app_repo_result [label="repo_switch::result", fillcolor="#eff6ff"];
-        }
-
         subgraph cluster_app_external_changes {
             label="external changes [05_diff_logic]";
             style="rounded,filled";
@@ -1065,6 +1071,18 @@ digraph DeveNoteArchitecture {
             app_external_discard [label="external_changes::discard", fillcolor="#bfdbfe"];
             app_external_apply [label="external_changes::apply_to_ledger", fillcolor="#bfdbfe"];
             app_external_overlap [label="external_changes::overlap_blocked", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_repo_switch {
+            label="repo-switch [04_repository]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_repo_menu [label="repo_switcher::menu", fillcolor="#eff6ff"];
+            app_repo_select [label="repo_switcher::select", fillcolor="#eff6ff"];
+            app_repo_request [label="repo_switch::request", fillcolor="#bfdbfe"];
+            app_repo_result [label="repo_switch::result", fillcolor="#eff6ff"];
         }
 
         subgraph cluster_app_sc_stage {
@@ -1145,6 +1163,17 @@ digraph DeveNoteArchitecture {
             app_sc_publish_gate [label="repo_write_block_untracked", fillcolor="#eff6ff"];
             app_sc_publish_submit [label="CLI-only notice", fillcolor="#bfdbfe"];
             app_sc_publish_result [label="SC blocker", fillcolor="#eff6ff"];
+        }
+
+        subgraph cluster_app_palette {
+            label="command-palette [14_commands]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_palette_shell [label="command_palette::open / query /\nnavigate / close", fillcolor="#eff6ff"];
+            app_palette_exec [label="command_palette::execute", fillcolor="#bfdbfe"];
+            app_exec_branches [label="Representative targets:\nsc::commit / sc::push / ai::chat", fillcolor="#dbeafe"];
         }
 
         subgraph cluster_app_sc_history {
@@ -1438,26 +1467,6 @@ digraph DeveNoteArchitecture {
             app_settings_render_runtime [label="settings::render_runtime", fillcolor="#eff6ff"];
         }
 
-        subgraph cluster_app_rendering_families {
-            label="rendering source-first detail [10_rendering]";
-            style="rounded,filled";
-            fillcolor="#eff6ff";
-            color="#2563eb";
-
-            app_render_inline_selection [label="editor::selection_update", fillcolor="#bfdbfe"];
-            app_render_inline_frontmatter [label="frontmatter::selection_update", fillcolor="#eff6ff"];
-            app_render_inline_resume [label="render_inline::resume_markup", fillcolor="#eff6ff"];
-            app_render_refresh_delta [label="editor::delta_input", fillcolor="#bfdbfe"];
-            app_render_refresh_recompute [label="render_projection::recompute", fillcolor="#bfdbfe"];
-            app_render_refresh_observe [label="render_projection::observe", fillcolor="#eff6ff"];
-            app_render_math_selection [label="math::selection_update", fillcolor="#bfdbfe"];
-            app_render_math_delta [label="math::source_delta", fillcolor="#bfdbfe"];
-            app_render_math_restore [label="math::restore_projection", fillcolor="#eff6ff"];
-            app_render_mermaid_selection [label="mermaid::selection_update", fillcolor="#bfdbfe"];
-            app_render_mermaid_delta [label="mermaid::source_delta", fillcolor="#bfdbfe"];
-            app_render_mermaid_restore [label="mermaid::restore_projection", fillcolor="#eff6ff"];
-        }
-
         subgraph cluster_app_rendering_interaction_families {
             label="rendering interaction detail [10_rendering]";
             style="rounded,filled";
@@ -1559,6 +1568,35 @@ digraph DeveNoteArchitecture {
             app_context_action_resolve [label="resolve_context_action -> dispatch", fillcolor="#bfdbfe"];
         }
 
+        subgraph cluster_app_remote_import {
+            label="Remote Projection / Import typed intents [03/05/06]"; style="rounded,filled"; fillcolor="#eff6ff"; color="#2563eb";
+            app_remote_push [label="remote projection push", fillcolor="#bfdbfe"];
+            app_remote_prepare [label="immutable source capture", fillcolor="#bfdbfe"];
+            app_remote_review [label="typed session review", fillcolor="#dbeafe"];
+            app_remote_apply [label="whole-session apply", fillcolor="#bfdbfe"];
+            app_remote_manage [label="session lifecycle", fillcolor="#bfdbfe"];
+        }
+
+        subgraph cluster_app_rendering_families {
+            label="rendering source-first detail [10_rendering]";
+            style="rounded,filled";
+            fillcolor="#eff6ff";
+            color="#2563eb";
+
+            app_render_inline_selection [label="editor::selection_update", fillcolor="#bfdbfe"];
+            app_render_inline_frontmatter [label="frontmatter::selection_update", fillcolor="#eff6ff"];
+            app_render_inline_resume [label="render_inline::resume_markup", fillcolor="#eff6ff"];
+            app_render_refresh_delta [label="editor::delta_input", fillcolor="#bfdbfe"];
+            app_render_refresh_recompute [label="render_projection::recompute", fillcolor="#bfdbfe"];
+            app_render_refresh_observe [label="render_projection::observe", fillcolor="#eff6ff"];
+            app_render_math_selection [label="math::selection_update", fillcolor="#bfdbfe"];
+            app_render_math_delta [label="math::source_delta", fillcolor="#bfdbfe"];
+            app_render_math_restore [label="math::restore_projection", fillcolor="#eff6ff"];
+            app_render_mermaid_selection [label="mermaid::selection_update", fillcolor="#bfdbfe"];
+            app_render_mermaid_delta [label="mermaid::source_delta", fillcolor="#bfdbfe"];
+            app_render_mermaid_restore [label="mermaid::restore_projection", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_doc {
             label="open-doc [04_repository + 09_web_thin_client_ledger]";
             style="rounded,filled";
@@ -1579,17 +1617,6 @@ digraph DeveNoteArchitecture {
         fillcolor="#dcfce7";
         color="#14532d";
         labelfontcolor="#14532d";
-
-        subgraph cluster_mod_login {
-            label="login [08_auth]";
-            style="rounded,filled";
-            fillcolor="#effef3";
-            color="#16a34a";
-
-            mod_sec_auth [label="security::auth", fillcolor="#f0fdf4"];
-            mod_sec_jwt [label="security::jwt", fillcolor="#f0fdf4"];
-            mod_proto_auth [label="protocol::auth", fillcolor="#f0fdf4"];
-        }
 
         subgraph cluster_mod_auth_session {
             label="session-expired / unauthorized [08_auth]";
@@ -1633,15 +1660,15 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_key [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
-        subgraph cluster_mod_doc {
-            label="open-doc [04_repository + 09_web_thin_client_ledger]";
+        subgraph cluster_mod_login {
+            label="login [08_auth]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";
 
-            mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
-            mod_tree [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
-            mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_sec_auth [label="security::auth", fillcolor="#f0fdf4"];
+            mod_sec_jwt [label="security::jwt", fillcolor="#f0fdf4"];
+            mod_proto_auth [label="protocol::auth", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_branch_switch {
@@ -1676,17 +1703,6 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_ai [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
-        subgraph cluster_mod_repo_switch {
-            label="repo-switch [04_repository]";
-            style="rounded,filled";
-            fillcolor="#effef3";
-            color="#16a34a";
-
-            mod_tree_repo [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
-            mod_ledger_repo [label="ledger::manager", fillcolor="#f0fdf4"];
-            mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
-        }
-
         subgraph cluster_mod_external_changes {
             label="external changes [05_diff_logic]";
             style="rounded,filled";
@@ -1700,6 +1716,17 @@ digraph DeveNoteArchitecture {
             mod_external_materialize [label="sync::materialize", fillcolor="#f0fdf4"];
             mod_external_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
             mod_external_proto [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_repo_switch {
+            label="repo-switch [04_repository]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_tree_repo [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
+            mod_ledger_repo [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_sc_stage {
@@ -1779,6 +1806,17 @@ digraph DeveNoteArchitecture {
             mod_sc_commit_publish [label="source_control::commits", fillcolor="#f0fdf4"];
             mod_ledger_publish [label="ledger::manager", fillcolor="#f0fdf4"];
             mod_proto_ws_publish [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_doc {
+            label="open-doc [04_repository + 09_web_thin_client_ledger]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_proto_ws [label="protocol::ws", fillcolor="#f0fdf4"];
+            mod_tree [label="tree::{manager,ops,node}", fillcolor="#f0fdf4"];
+            mod_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
         }
 
         subgraph cluster_mod_sc_history {
@@ -1993,19 +2031,6 @@ digraph DeveNoteArchitecture {
             mod_settings_state_projection [label="settings::state_projection", fillcolor="#f0fdf4"];
         }
 
-        subgraph cluster_mod_rendering_families {
-            label="rendering detailed coordination [10_rendering]";
-            style="rounded,filled";
-            fillcolor="#effef3";
-            color="#16a34a";
-
-            mod_render_hybrid [label="render::hybrid", fillcolor="#f0fdf4"];
-            mod_render_inline [label="render::inline", fillcolor="#f0fdf4"];
-            mod_render_math [label="render::math", fillcolor="#f0fdf4"];
-            mod_render_mermaid [label="render::mermaid", fillcolor="#f0fdf4"];
-            mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
-        }
-
         subgraph cluster_mod_rendering_interaction_families {
             label="rendering interaction coordination [10_rendering]";
             style="rounded,filled";
@@ -2085,6 +2110,28 @@ digraph DeveNoteArchitecture {
             mod_sidebar_context_action_handler [label="sidebar::action_handler", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_remote_import {
+            label="Remote Projection / Import runtimes [03/05/06/09]"; style="rounded,filled"; fillcolor="#effef3"; color="#16a34a";
+            mod_remote_transport [label="remote_projection_transport_runtime", fillcolor="#f0fdf4"];
+            mod_remote_import [label="remote_import_runtime\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_import_client [label="remote_import_client\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_import_writer [label="sealed source writer\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_projection_writeback [label="projection writeback", fillcolor="#f0fdf4"];
+        }
+
+        subgraph cluster_mod_rendering_families {
+            label="rendering detailed coordination [10_rendering]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_render_hybrid [label="render::hybrid", fillcolor="#f0fdf4"];
+            mod_render_inline [label="render::inline", fillcolor="#f0fdf4"];
+            mod_render_math [label="render::math", fillcolor="#f0fdf4"];
+            mod_render_mermaid [label="render::mermaid", fillcolor="#f0fdf4"];
+            mod_editor_runtime [label="editor::runtime", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_targets {
             label="command-targets [14_commands]";
             style="rounded,filled";
@@ -2103,16 +2150,6 @@ digraph DeveNoteArchitecture {
         fillcolor="#fce7f3";
         color="#831843";
         labelfontcolor="#831843";
-
-        subgraph cluster_core_login {
-            label="login [08_auth]";
-            style="rounded,filled";
-            fillcolor="#fff0f7";
-            color="#be185d";
-
-            core_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
-            core_sec [label="security\n(runtime)", fillcolor="#fdf2f8"];
-        }
 
         subgraph cluster_core_auth_session {
             label="session-expired / unauthorized [08_auth]";
@@ -2155,14 +2192,14 @@ digraph DeveNoteArchitecture {
             core_proto_key [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
-        subgraph cluster_core_doc {
-            label="open-doc [04_repository]";
+        subgraph cluster_core_login {
+            label="login [08_auth]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";
 
-            core_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
-            core_tree [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+            core_sec [label="security\n(runtime)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_branch_switch {
@@ -2196,17 +2233,6 @@ digraph DeveNoteArchitecture {
             core_proto_ai [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
-        subgraph cluster_core_repo_switch {
-            label="repo-switch [04_repository]";
-            style="rounded,filled";
-            fillcolor="#fff0f7";
-            color="#be185d";
-
-            core_tree_repo [label="tree\n(projection)", fillcolor="#fdf2f8"];
-            core_ledger_repo [label="ledger\n(authority)", fillcolor="#fdf2f8"];
-            core_proto_repo [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
-        }
-
         subgraph cluster_core_external_changes {
             label="external changes [05_diff_logic]";
             style="rounded,filled";
@@ -2217,6 +2243,17 @@ digraph DeveNoteArchitecture {
             core_external_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
             core_external_sync [label="sync\n(runtime)", fillcolor="#fdf2f8"];
             core_external_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_repo_switch {
+            label="repo-switch [04_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_tree_repo [label="tree\n(projection)", fillcolor="#fdf2f8"];
+            core_ledger_repo [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_proto_repo [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_sc_stage {
@@ -2294,6 +2331,16 @@ digraph DeveNoteArchitecture {
             core_sc_publish [label="source_control\n(workflow)", fillcolor="#fdf2f8"];
             core_ledger_publish [label="ledger\n(authority)", fillcolor="#fdf2f8"];
             core_proto_publish [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_doc {
+            label="open-doc [04_repository]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_tree [label="tree\n(projection)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_sc_history {
@@ -2383,6 +2430,14 @@ digraph DeveNoteArchitecture {
             core_rendering [label="rendering\n(projection)", fillcolor="#fdf2f8"];
             core_i18n [label="i18n\n(presentation)", fillcolor="#fdf2f8"];
             core_tech_stack [label="tech stack\n(constraint)", fillcolor="#fdf2f8"];
+        }
+
+        subgraph cluster_core_remote_import {
+            label="Remote Import authority domains [03/06]"; style="rounded,filled"; fillcolor="#fff0f7"; color="#be185d";
+            core_remote_transport [label="remote projection\n(transport)", fillcolor="#fdf2f8"];
+            core_remote_import [label="remote import\n(runtime)", fillcolor="#fdf2f8"];
+            core_remote_import_authority [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_remote_import_projection [label="projection\n(writeback)", fillcolor="#fdf2f8"];
         }
 
         subgraph cluster_core_targets {
@@ -3370,50 +3425,6 @@ digraph DeveNoteArchitecture {
     mod_settings_apply -> core_settings;
     mod_settings_state_projection -> core_settings;
 
-    op_render_inline_enter -> app_render_inline_selection;
-    op_render_inline_frontmatter -> app_render_inline_frontmatter;
-    op_render_inline_leave -> app_render_inline_resume;
-    op_render_refresh_edit -> app_render_refresh_delta;
-    op_render_refresh_leave -> app_render_refresh_recompute;
-    op_render_refresh_observe -> app_render_refresh_observe;
-    op_render_math_enter -> app_render_math_selection;
-    op_render_math_delta -> app_render_math_delta;
-    op_render_math_leave -> app_render_math_restore;
-    op_render_mermaid_enter -> app_render_mermaid_selection;
-    op_render_mermaid_delta -> app_render_mermaid_delta;
-    op_render_mermaid_leave -> app_render_mermaid_restore;
-
-    app_render_inline_selection -> mod_render_hybrid;
-    app_render_inline_selection -> mod_editor_runtime;
-    app_render_inline_frontmatter -> mod_render_hybrid;
-    app_render_inline_frontmatter -> mod_editor_runtime;
-    app_render_inline_resume -> mod_render_hybrid;
-    app_render_refresh_delta -> mod_editor_runtime;
-    app_render_refresh_delta -> mod_render_inline;
-    app_render_refresh_delta -> mod_render_hybrid;
-    app_render_refresh_recompute -> mod_render_inline;
-    app_render_refresh_recompute -> mod_render_math;
-    app_render_refresh_recompute -> mod_render_mermaid;
-    app_render_refresh_recompute -> mod_render_hybrid;
-    app_render_refresh_recompute -> mod_editor_runtime;
-    app_render_refresh_observe -> mod_render_inline;
-    app_render_refresh_observe -> mod_render_math;
-    app_render_refresh_observe -> mod_render_mermaid;
-    app_render_math_selection -> mod_render_math;
-    app_render_math_selection -> mod_editor_runtime;
-    app_render_math_delta -> mod_editor_runtime;
-    app_render_math_delta -> mod_render_math;
-    app_render_math_restore -> mod_render_math;
-    app_render_math_restore -> mod_editor_runtime;
-    app_render_mermaid_selection -> mod_render_mermaid;
-    app_render_mermaid_selection -> mod_editor_runtime;
-    app_render_mermaid_delta -> mod_editor_runtime;
-    app_render_mermaid_delta -> mod_render_mermaid;
-    app_render_mermaid_restore -> mod_render_mermaid;
-    app_render_mermaid_restore -> mod_editor_runtime;
-
-    mod_render_hybrid -> core_rendering;
-
     op_render_checkbox_click -> app_render_checkbox_dispatch;
     op_render_checkbox_widget -> app_render_checkbox_reflect;
     op_render_checkbox_source -> app_render_checkbox_writeback;
@@ -3535,6 +3546,50 @@ digraph DeveNoteArchitecture {
     mod_search_mode_router -> core_commands;
     mod_search_action_router -> core_commands;
 
+    op_render_inline_enter -> app_render_inline_selection;
+    op_render_inline_frontmatter -> app_render_inline_frontmatter;
+    op_render_inline_leave -> app_render_inline_resume;
+    op_render_refresh_edit -> app_render_refresh_delta;
+    op_render_refresh_leave -> app_render_refresh_recompute;
+    op_render_refresh_observe -> app_render_refresh_observe;
+    op_render_math_enter -> app_render_math_selection;
+    op_render_math_delta -> app_render_math_delta;
+    op_render_math_leave -> app_render_math_restore;
+    op_render_mermaid_enter -> app_render_mermaid_selection;
+    op_render_mermaid_delta -> app_render_mermaid_delta;
+    op_render_mermaid_leave -> app_render_mermaid_restore;
+
+    app_render_inline_selection -> mod_render_hybrid;
+    app_render_inline_selection -> mod_editor_runtime;
+    app_render_inline_frontmatter -> mod_render_hybrid;
+    app_render_inline_frontmatter -> mod_editor_runtime;
+    app_render_inline_resume -> mod_render_hybrid;
+    app_render_refresh_delta -> mod_editor_runtime;
+    app_render_refresh_delta -> mod_render_inline;
+    app_render_refresh_delta -> mod_render_hybrid;
+    app_render_refresh_recompute -> mod_render_inline;
+    app_render_refresh_recompute -> mod_render_math;
+    app_render_refresh_recompute -> mod_render_mermaid;
+    app_render_refresh_recompute -> mod_render_hybrid;
+    app_render_refresh_recompute -> mod_editor_runtime;
+    app_render_refresh_observe -> mod_render_inline;
+    app_render_refresh_observe -> mod_render_math;
+    app_render_refresh_observe -> mod_render_mermaid;
+    app_render_math_selection -> mod_render_math;
+    app_render_math_selection -> mod_editor_runtime;
+    app_render_math_delta -> mod_editor_runtime;
+    app_render_math_delta -> mod_render_math;
+    app_render_math_restore -> mod_render_math;
+    app_render_math_restore -> mod_editor_runtime;
+    app_render_mermaid_selection -> mod_render_mermaid;
+    app_render_mermaid_selection -> mod_editor_runtime;
+    app_render_mermaid_delta -> mod_editor_runtime;
+    app_render_mermaid_delta -> mod_render_mermaid;
+    app_render_mermaid_restore -> mod_render_mermaid;
+    app_render_mermaid_restore -> mod_editor_runtime;
+
+    mod_render_hybrid -> core_rendering;
+
     op_locale_command_toggle -> app_locale_command_toggle;
     op_locale_settings_select -> app_locale_settings_select;
     op_locale_apply -> app_locale_apply;
@@ -3593,6 +3648,38 @@ digraph DeveNoteArchitecture {
     mod_context_action_resolver -> core_commands;
     mod_sidebar_context_action_handler -> core_commands;
     mod_sidebar_context_action_handler -> core_tree;
+
+    op_remote_push_webdav -> app_remote_push;
+    op_remote_push_s3 -> app_remote_push;
+    op_remote_prepare_webdav -> app_remote_prepare;
+    op_remote_prepare_s3 -> app_remote_prepare;
+    op_remote_review_list -> app_remote_review;
+    op_remote_review_show -> app_remote_review;
+    op_remote_review_page -> app_remote_review;
+    op_remote_review_diff -> app_remote_review;
+    op_remote_apply_session -> app_remote_apply;
+    op_remote_manage_refresh -> app_remote_manage;
+    op_remote_manage_discard -> app_remote_manage;
+    op_remote_manage_repair_plan -> app_remote_manage;
+    op_remote_manage_repair_apply -> app_remote_manage;
+
+    app_remote_push -> mod_remote_transport;
+    app_remote_prepare -> mod_remote_transport;
+    app_remote_prepare -> mod_remote_import;
+    app_remote_review -> mod_remote_import;
+    app_remote_review -> mod_remote_import_client;
+    app_remote_apply -> mod_remote_import;
+    app_remote_apply -> mod_remote_import_writer;
+    app_remote_apply -> mod_remote_projection_writeback;
+    app_remote_manage -> mod_remote_import;
+
+    mod_remote_transport -> core_remote_transport;
+    mod_remote_import -> core_remote_import;
+    mod_remote_import_client -> core_remote_import;
+    mod_remote_import_writer -> core_remote_import_authority;
+    mod_remote_projection_writeback -> core_remote_import_projection;
+    core_remote_import -> core_remote_import_authority [style=dashed, color="#831843", label="sealed batch"];
+    core_remote_import_authority -> core_remote_import_projection [style=dashed, color="#831843", label="post-commit"];
 
     edge [style=dotted, color="#64748b", constraint=false, arrowhead=vee];
     core_sec -> obj_auth_session;
@@ -4175,51 +4262,6 @@ digraph DeveNoteArchitecture {
     op_settings_render_visual -> op_settings_render_disabled [style=dashed, color="#d97706", constraint=false];
     op_settings_render_disabled -> op_settings_render_runtime [style=dashed, color="#d97706", constraint=false];
 
-    user_render_inline_source_spine [label="rendering inline source reveal flow", shape=plaintext, fontcolor="#92400e"];
-    app_render_inline_source_spine [label="", shape=point, width=0.01];
-    mod_render_inline_source_spine [label="", shape=point, width=0.01];
-    core_render_inline_source_spine [label="", shape=point, width=0.01];
-    user_render_inline_source_spine -> app_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
-    app_render_inline_source_spine -> mod_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
-    mod_render_inline_source_spine -> core_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
-
-    user_render_projection_refresh_spine [label="rendering projection refresh flow", shape=plaintext, fontcolor="#92400e"];
-    app_render_projection_refresh_spine [label="", shape=point, width=0.01];
-    mod_render_projection_refresh_spine [label="", shape=point, width=0.01];
-    core_render_projection_refresh_spine [label="", shape=point, width=0.01];
-    user_render_projection_refresh_spine -> app_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
-    app_render_projection_refresh_spine -> mod_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
-    mod_render_projection_refresh_spine -> core_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
-
-    user_render_math_source_spine [label="rendering math source projection flow", shape=plaintext, fontcolor="#92400e"];
-    app_render_math_source_spine [label="", shape=point, width=0.01];
-    mod_render_math_source_spine [label="", shape=point, width=0.01];
-    core_render_math_source_spine [label="", shape=point, width=0.01];
-    user_render_math_source_spine -> app_render_math_source_spine [penwidth=2.2, color="#0f172a"];
-    app_render_math_source_spine -> mod_render_math_source_spine [penwidth=2.2, color="#0f172a"];
-    mod_render_math_source_spine -> core_render_math_source_spine [penwidth=2.2, color="#0f172a"];
-
-    user_render_mermaid_source_spine [label="rendering mermaid source projection flow", shape=plaintext, fontcolor="#92400e"];
-    app_render_mermaid_source_spine [label="", shape=point, width=0.01];
-    mod_render_mermaid_source_spine [label="", shape=point, width=0.01];
-    core_render_mermaid_source_spine [label="", shape=point, width=0.01];
-    user_render_mermaid_source_spine -> app_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
-    app_render_mermaid_source_spine -> mod_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
-    mod_render_mermaid_source_spine -> core_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
-
-    user_render_inline_source_spine -> op_render_inline_enter [style=dashed, color="#d97706", constraint=false];
-    op_render_inline_enter -> op_render_inline_frontmatter [style=dashed, color="#d97706", constraint=false];
-    op_render_inline_frontmatter -> op_render_inline_leave [style=dashed, color="#d97706", constraint=false];
-    user_render_projection_refresh_spine -> op_render_refresh_edit [style=dashed, color="#d97706", constraint=false];
-    op_render_refresh_edit -> op_render_refresh_leave [style=dashed, color="#d97706", constraint=false];
-    op_render_refresh_leave -> op_render_refresh_observe [style=dashed, color="#d97706", constraint=false];
-    user_render_math_source_spine -> op_render_math_enter [style=dashed, color="#d97706", constraint=false];
-    op_render_math_enter -> op_render_math_delta [style=dashed, color="#d97706", constraint=false];
-    op_render_math_delta -> op_render_math_leave [style=dashed, color="#d97706", constraint=false];
-    user_render_mermaid_source_spine -> op_render_mermaid_enter [style=dashed, color="#d97706", constraint=false];
-    op_render_mermaid_enter -> op_render_mermaid_delta [style=dashed, color="#d97706", constraint=false];
-    op_render_mermaid_delta -> op_render_mermaid_leave [style=dashed, color="#d97706", constraint=false];
-
     user_render_checkbox_spine [label="rendering checkbox writeback flow", shape=plaintext, fontcolor="#92400e"];
     app_render_checkbox_spine [label="", shape=point, width=0.01];
     mod_render_checkbox_spine [label="", shape=point, width=0.01];
@@ -4325,8 +4367,85 @@ digraph DeveNoteArchitecture {
     op_context_action_project -> op_context_action_choose [style=dashed, color="#f59e0b"];
     op_context_action_choose -> op_context_action_resolve [style=dashed, color="#f59e0b"];
 
+    user_remote_projection_push_spine [label="remote projection push flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_projection_push_spine -> op_remote_push_webdav [style=dashed, color="#f59e0b"];
+    op_remote_push_webdav -> op_remote_push_s3 [style=dashed, color="#f59e0b"];
+
+    user_remote_import_prepare_spine [label="remote import prepare flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_prepare_spine -> op_remote_prepare_webdav [style=dashed, color="#f59e0b"];
+    op_remote_prepare_webdav -> op_remote_prepare_s3 [style=dashed, color="#f59e0b"];
+
+    user_remote_import_review_spine [label="remote import review flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_review_spine -> op_remote_review_list [style=dashed, color="#f59e0b"];
+    op_remote_review_list -> op_remote_review_show [style=dashed, color="#f59e0b"];
+    op_remote_review_show -> op_remote_review_page [style=dashed, color="#f59e0b"];
+    op_remote_review_page -> op_remote_review_diff [style=dashed, color="#f59e0b"];
+
+    user_remote_import_apply_spine [label="remote import apply flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_apply_spine -> op_remote_apply_session [style=dashed, color="#f59e0b"];
+
+    user_remote_import_manage_spine [label="remote import manage flow", shape=plaintext, fontcolor="#92400e"];
+    user_remote_import_manage_spine -> op_remote_manage_refresh [style=dashed, color="#f59e0b"];
+    op_remote_manage_refresh -> op_remote_manage_discard [style=dashed, color="#f59e0b"];
+    op_remote_manage_discard -> op_remote_manage_repair_plan [style=dashed, color="#f59e0b"];
+    op_remote_manage_repair_plan -> op_remote_manage_repair_apply [style=dashed, color="#f59e0b"];
+
+    user_render_inline_source_spine [label="rendering inline source reveal flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_inline_source_spine [label="", shape=point, width=0.01];
+    mod_render_inline_source_spine [label="", shape=point, width=0.01];
+    core_render_inline_source_spine [label="", shape=point, width=0.01];
+    user_render_inline_source_spine -> app_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_inline_source_spine -> mod_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_inline_source_spine -> core_render_inline_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_projection_refresh_spine [label="rendering projection refresh flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    mod_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    core_render_projection_refresh_spine [label="", shape=point, width=0.01];
+    user_render_projection_refresh_spine -> app_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+    app_render_projection_refresh_spine -> mod_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_projection_refresh_spine -> core_render_projection_refresh_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_math_source_spine [label="rendering math source projection flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_math_source_spine [label="", shape=point, width=0.01];
+    mod_render_math_source_spine [label="", shape=point, width=0.01];
+    core_render_math_source_spine [label="", shape=point, width=0.01];
+    user_render_math_source_spine -> app_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_math_source_spine -> mod_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_math_source_spine -> core_render_math_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_mermaid_source_spine [label="rendering mermaid source projection flow", shape=plaintext, fontcolor="#92400e"];
+    app_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    mod_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    core_render_mermaid_source_spine [label="", shape=point, width=0.01];
+    user_render_mermaid_source_spine -> app_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+    app_render_mermaid_source_spine -> mod_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+    mod_render_mermaid_source_spine -> core_render_mermaid_source_spine [penwidth=2.2, color="#0f172a"];
+
+    user_render_inline_source_spine -> op_render_inline_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_inline_enter -> op_render_inline_frontmatter [style=dashed, color="#d97706", constraint=false];
+    op_render_inline_frontmatter -> op_render_inline_leave [style=dashed, color="#d97706", constraint=false];
+    user_render_projection_refresh_spine -> op_render_refresh_edit [style=dashed, color="#d97706", constraint=false];
+    op_render_refresh_edit -> op_render_refresh_leave [style=dashed, color="#d97706", constraint=false];
+    op_render_refresh_leave -> op_render_refresh_observe [style=dashed, color="#d97706", constraint=false];
+    user_render_math_source_spine -> op_render_math_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_math_enter -> op_render_math_delta [style=dashed, color="#d97706", constraint=false];
+    op_render_math_delta -> op_render_math_leave [style=dashed, color="#d97706", constraint=false];
+    user_render_mermaid_source_spine -> op_render_mermaid_enter [style=dashed, color="#d97706", constraint=false];
+    op_render_mermaid_enter -> op_render_mermaid_delta [style=dashed, color="#d97706", constraint=false];
+    op_render_mermaid_delta -> op_render_mermaid_leave [style=dashed, color="#d97706", constraint=false];
+
     // generated drift markers from architecture-diff.md
-    // no active drift markers
+    drift_remote_projection_push [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_remote_projection_push_spine -> drift_remote_projection_push [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
+    drift_remote_import_prepare [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_remote_import_prepare_spine -> drift_remote_import_prepare [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
+    drift_remote_import_review [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_remote_import_review_spine -> drift_remote_import_review [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
+    drift_remote_import_apply [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_remote_import_apply_spine -> drift_remote_import_apply [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
+    drift_remote_import_manage [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_remote_import_manage_spine -> drift_remote_import_manage [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
 
     subgraph cluster_legend {
         label="Legend";
@@ -4342,8 +4461,8 @@ digraph DeveNoteArchitecture {
         legend_core [label="execution domain", fillcolor="#fdf2f8"];
         legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
         legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
-        legend_note [label="clean shared baseline;
-no active drift markers", fillcolor="#e2e8f0"];
+        legend_note [label="5 active drift marker(s);
+see architecture-diff.md", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

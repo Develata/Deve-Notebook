@@ -34,6 +34,23 @@
 - active repo remove 已提交但后端证明 deferred fallback 失效时，发起 connection 消费自己的 typed partial；无论发起者 fallback 成功或失败，其它仍绑定 removed RepoId 的 connection 都消费 server-driven invalidation。两类 connection 都只处理各自 scope epoch 的 final sequence：暂存最终 `RepoList`，随后以 `ProtocolError / SC_REPO_NOT_SELECTED` 提交 `NoScope` 并关闭 writer-ready。发起者只清除 pending remove intent，observer 只退休旧 scope 的 pending switch intent；两者都不得丢弃 editor pending overlay。staged sequence 只允许一个并绑定 connection epoch，断线、乱序、缺帧或 10 秒超时必须退休连接并保持只读恢复；页面不得从列表自动选择其它 repo，也不得解析 detail 或自行决定 fallback。
 - 第一帧 final RepoList 到达即安装 staged blocker 并关闭 writer-ready，但不应用列表、不提交 NoScope、不清 editor overlay。10 秒 deadline 使用 monotonic clock；任何半序列失败都保留 editor pending overlay并退休旧 connection，旧 epoch 第二帧不能恢复写门。
 
+### 3.1 Remote Import Thin-Client State
+
+- Remote Import 是独立 review surface，不属于 editor pending、External Changes 或 Source Control。
+- 页面只显示后端返回的 immutable session state、candidate revision、backend-generated label、typed
+  change kind/blocker 与 typed diff；不会显示 locator、host/provider/blob path、digest、credential 或
+  raw failure detail。
+- Prepare/List 的 pending request 只绑定 `request_id + repo/branch/scope`；`Prepared` 通过该 gate 后才安装
+  backend 生成的 session/revision，`Listed` 的每个 summary 自带其 session/revision。Show/Page/Diff/
+  Refresh/Apply/Discard 等 session-bound response 必须再与当前 session/revision 精确匹配。
+- repo、branch、scope 或已选择的 session/revision 任一变化后，不匹配的迟到 response 都会被丢弃；
+  页面不会把旧 Remote Import state 迁移到新 scope。
+- Refresh 只重算已封存 snapshot；Apply/Discard 作用于整个 session。首版没有 checkbox 或逐文件选择。
+- Prepare 可以在当前 repo 暂时未 Mounted 时完成 review；Apply 是否可用只由后端 typed blocker
+  决定。Apply receipt 的 Projection outcome 为 Pending 时，页面显示 Ledger 已提交且恢复未完成；为
+  Degraded 时显示已提交与降级提示。两者都不会诱导重复 Apply。
+- B0 只冻结该体验；独立 client/view 在 B5 实现。当前命令打开 Source Control 的行为是首发阻塞漂移。
+
 ### 4. 离开文档保护
 
 - 如果当前文档仍有未确认本地写入，离开前必须明确提示。

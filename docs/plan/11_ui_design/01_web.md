@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/08_ui_design_01_web.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
@@ -96,6 +96,22 @@ struct SystemMetrics {
 2.  **Record**: 变更经 Debouncer 与路径归一化后写入 repo-scoped `pending_fs_ops`，**MUST NOT** 直接入 Ledger。
 3.  **Push**: 后端通过 `FsChangeDetected` 提示前端刷新当前 repo 的 Changes / Staging 视图。
 4.  **Feedback**: 若当前文档受影响，前端显示“磁盘上检测到未确认变更”的可感知提示，但 **MUST NOT** 直接用外部文件内容覆盖编辑器中的 confirmed + pending overlay。
+
+### 4.1 Remote Import Review Surface
+
+Remote Import 是 Source Control 与 External Changes 的同级 Web surface，不是 External Edit Flow
+的远端入口：
+
+- Prepare 后先显示后端持有的 immutable session/candidate；在用户执行 whole-session Apply 前，
+  Workspace、External Changes 与 Ledger 均不得出现预写结果。
+- Web 只显示 backend-generated label、`Added / Modified / Unchanged`、typed blocker 与 typed diff。
+- surface 不得暴露 locator、provider/host/blob path、digest、credential 或 raw failure detail，也不得
+  从 label/detail 推断 stale、可写或恢复步骤。
+- 首版不显示 checkbox 或逐文件选择；Refresh、Apply、Discard 都提交 typed session intent。
+- 宽屏与窄屏共享同一 `remote_import_client`；窄屏布局遵守 Mobile touch/focus contract。
+
+B0 仅冻结该目标；B5 前 Web 仍缺独立 surface/client，旧 Remote Projection command 打开 Source
+Control 的行为是 release-blocking drift。
 
 ## 5. PWA Support
 Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：

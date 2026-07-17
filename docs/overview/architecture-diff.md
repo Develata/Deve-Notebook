@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-04-18 (manual operation-first pass)
+Generated: 2026-07-17 (Route B contract-freeze pass)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -12,27 +12,39 @@ operation slice rather than the older route/CLI inventory view.
 Keep this block stable. The graph generator reads the drift registry below.
 
 <!-- modeled-slice:start -->
-- Flow count: `74`
-- Status: `aligned`
-- Active drift count: `0`
+- Flow count: `79`
+- Status: `drifted`
+- Active drift count: `5`
 <!-- modeled-slice:end -->
 
 ## Summary
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | aligned | the same 74 high-value flows exist on both sides |
-| User operations | aligned | current IDs and flow grouping match |
+| Flow set | drifted | 79 approved flow labels exist on both sides; five Remote Import flows intentionally map current substitutes/missing carriers |
+| User operations | drifted | existing 74 IDs align; Route B target IDs are registered but B1–B5 implementation is incomplete |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | aligned | release / CI separates pre-tag candidate build/smoke, receipt aggregation, reusable native execution, and tag-only sealed promotion |
+| Coordination/execution mapping | drifted | Remote Projection transport extraction, immutable session, sealed apply and independent client remain scheduled B1–B5 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
 
 Use one entry per divergent flow. Labels must match the flow registry.
 <!-- drift-registry:start -->
-- `none`
+- `remote projection push`
+- `remote import prepare`
+- `remote import review`
+- `remote import apply`
+- `remote import manage`
 <!-- drift-registry:end -->
+
+Active drift facts:
+
+1. `remote projection push`: provider/credential/HTTP transport remains inside the CLI command subtree; B2 extracts the shared host adapter without changing push semantics.
+2. `remote import prepare`: current pull overwrites Projection Workspace and has no immutable manifest/blob session; B1/B2/B4 replace it.
+3. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
+4. `remote import apply`: no source-specific sealed whole-session Ledger transaction exists; B3/B4 implement it without changing External Apply semantics.
+5. `remote import manage`: durable Refresh/Discard/repair/cleanup lifecycle is absent; B1/B4 implement it.
 
 ## Flow Registry
 
@@ -64,6 +76,11 @@ Use this registry as the stable label set for the diff and SVG marker map.
 - `native ai-chat`
 - `trusted external agent boundary`
 - `plugin-host / plugin-call boundary`
+- `remote projection push`
+- `remote import prepare`
+- `remote import review`
+- `remote import apply`
+- `remote import manage`
 - `search/query`
 - `repo file operations`
 - `document edit / confirmed op`
@@ -170,13 +187,12 @@ The degraded local projection write gate is aligned:
 
 Within the currently modeled operation slice:
 
-- flow set is aligned
-- user-operation IDs are aligned
-- instruction interfaces are aligned
-- no active coordination ownership gaps remain
-- execution-domain ownership is aligned
+- 74 pre-existing flows remain aligned
+- five approved Route B flows are represented honestly as current substitute/missing mappings
+- Redb v3 current → v4 target and WS v2 current → v3 target remain release blockers
+- no drift is hidden as compatibility support or document-only runtime evidence
 
-The slice is a practical bijective baseline with no active drift markers.
+The slice is bijective at the registry/label level and intentionally carries five active drift markers until B1–B5 close them.
 
 ## Maintenance Rules
 
@@ -186,5 +202,4 @@ The slice is a practical bijective baseline with no active drift markers.
    matching across plan and code.
 3. Regenerate the graph with `scripts/generate-architecture-dot.sh` after
    any registry change.
-4. Expand the shared slice only when the new flow can be represented on
-   both plan-side and code-side views.
+4. A planned flow may enter both views only when the code-side view names its real substitute/missing carrier and an active drift marker; never invent a future path.

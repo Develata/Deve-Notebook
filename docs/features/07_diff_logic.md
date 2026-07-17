@@ -110,31 +110,32 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - Web Command Palette 与 Source Control UI 不展示 legacy bridge mode；Source Control header 应写成 NoteGit/ngit authority-first 文案，避免把 Git main mirror 误读成 Git authority 切换。
 - Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
   menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
-- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice，不发送 WS writer intent；WS v2 不定义 `CommitAndPush` frame。
+- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice，不发送 WS writer intent；WS v3 不定义 `CommitAndPush` frame。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须走同一个 NoteGit/ngit commit path；代理模式必须展示 delegated/unknown/readonly 状态，而不能硬编码为 mirror mode。
 - 后端 commit writer API 不接收 legacy bridge policy；新增 CLI、HTTP、WS 或插件提交路径时必须复用 NoteGit/ngit source-control writer gate。
 
-### 7. WebDAV/S3 Remote Projection Transport
+### 7. Remote Projection Push and Immutable Remote Import
 
-- Command Palette 应提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
-- 未接线的 provider/direction 必须显示 `provider_io_ready=false` 并 fail-closed，不能伪装成
-  已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
-  workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
-- 当前 backend/CLI 已接线 `webdav:push`、`webdav:pull`、AWS `s3://` `s3:push`/`s3:pull`，
-  以及 CLI 显式 profile handle 下的 `s3+https://` custom endpoint；未绑定或 profile
-  与 locator 不匹配时必须继续 fail-closed。
-- Web Command Palette 只发送 provider/direction intent；backend 从当前 local repo 的 `repo_url`
-  或后续 backend-defined profile handle 解析 WebDAV/S3 locator/profile。未配置 transport URL、
-  provider 与 URL scheme 不匹配，或 profile 与 locator 不匹配时显示
-  `provider_io_ready=false`，不得在前端收集凭证、列举远端文件或覆盖本地文件。
-- push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
-- pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。
-- pull adapter 必须对远端文件数、单文件字节数与总下载字节数设置硬预算；超过预算时必须在写 Projection Workspace 前 fail-closed。
-- pull adapter 必须在下载 payload 或写 Projection Workspace 前拒绝归一化后重复的远端 Markdown projection path。
-- pull 覆盖 Projection Workspace 必须避免半写入可见：目标 parent/path 安全检查、staging 与 rollback 属于 backend/core runtime 职责。
-- pull apply 后的 scan 在 repo permit 外运行；若其间已有新的受管 writer，旧 scan 失败路径只能保留 repair evidence，不能回滚覆盖新 writer。
-- pull 不直接写 ledger、不创建 commit anchor、不自动 Apply to Ledger，也不直接写 Git main mirror queue。
-- Web 只发送 typed intent；provider IO、覆盖策略、locator gate、identity gate 与 External Changes 触发均属于 backend/core runtime。
+- Remote Projection 只保留 `remote_projection.webdav.push` 与 `remote_projection.s3.push`。push 只上传
+  当前 Markdown Projection Workspace 文件集合，不上传 Ledger、`.notegit/`、`.git/`、Remote
+  Import artifacts 或 runtime state。
+- 远端内容进入本地必须走独立 Remote Import：Prepare 先把 deterministic manifest/blob snapshot
+  封存到 host runtime，再生成 immutable candidate；Apply 前不得覆盖 Workspace、触发 External
+  Changes、写 Ledger 或创建 Source Control commit anchor。
+- Remote Import 与 Source Control、External Changes 是三个独立 review domain。可以共享 typed diff
+  renderer，但不能共享 controller、state、notice、staging 或 authority。
+- review 只显示 backend-generated label、`Added / Modified / Unchanged`、typed blocker 与 typed diff；
+  远端缺失文件不显示 Delete，首版没有 checkbox 或逐文件 selection。
+- Refresh 只从已封存 blobs 重算 candidate；它只能在 RepoId/branch/source/locator binding 不变且 digest 通过时把新 revision 重绑当前 Ledger head 与 ignore snapshot。source/locator/branch/membership/tamper drift 不可重绑；获取新的远端内容必须先 Discard 再 Prepare。
+- 任意 blocker 禁止整个 session Apply。页面不得从 raw detail、locator、path、digest、provider
+  metadata、pending/staged 列表或 workspace 文件自行推断 blocker。
+- whole-session Apply 成功后先有 projection outcome=`Pending` 的 Ledger durable receipt，再发生
+  Projection writeback。Pending recovery、Written 与 Degraded 都由 backend typed outcome 投影；writeback
+  失败显示“Ledger 已提交、Projection degraded”，崩溃/重试幂等恢复，不得回滚 Ledger 或诱导重复 Apply。
+- Web 只发送 typed intent；provider/profile admission、stream capture、预算、candidate/diff/blocker、
+  sealed writer 与 cleanup 全属于 backend/core infra。
+- B0 当前 backend/Web 仍实现 `webdav:pull` / `s3:pull`、workspace overwrite、rollback continuation 与
+  External Changes scan bridge；这些是 B4 前的 release-blocking drift，不是 Remote Import 的兼容路径。
 
 ### 7. HTTP Source Control Write Grant
 

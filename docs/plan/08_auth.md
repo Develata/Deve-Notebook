@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -18,6 +18,7 @@
 - http/ws 入口鉴权
 - unauthorized 与 disconnected 的严格分离
 - JWT、cookie、安全头、CORS、CSRF、rate limit 的工程合同
+- server-held DB 场景下 `LocalCliProxyAuthority` 的 loopback-only admission
 
 peer identity、repo-scoped sync identity 与 pending write contract 不在本章主定义；它们分别由 `07_network` 与 `09_web_thin_client_ledger` 约束。
 
@@ -323,6 +324,36 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - 服务端 CSP 不得为了 native shell 模式切换而放宽 `connect-src` 到 `ipc.localhost`；正确实现必须让
   RemoteBrowser 页面根本不发出该请求。
 
+### 6.11 Local CLI Proxy Authority {#local-cli-proxy-authority}
+
+`LocalCliProxyAuthority` 是 CLI host 的 crate-private、process-scoped admission capability，唯一 owner
+为 server `auth_gateway`。它只解决“repo DB 已由本机 server 持有时，`remote-import` CLI 如何把 typed
+request 交给该 owner process”；它不是 browser write grant、FullPeer/delegated Source Control capability、
+native IPC capability 或新的 credential authority。
+
+构造条件必须全部成立：
+
+1. TCP peer 是 loopback；转发头、Host header 或 locator 中的 localhost 文本不能替代真实 peer address。
+2. CLI 通过既有 `POST /api/auth/login` 使用显式 operator credential 建立 JWT session，并把返回的
+   HttpOnly `token` cookie 仅保留在当前 CLI process 的隔离 cookie jar；proxy 请求必须把该 JWT 作为
+   `Authorization: Bearer` 重新提交。endpoint 不接受 Cookie-only、anonymous localhost dev session、
+   browser Source Control grant、P2P inbound token 或 delegated Source Control secret。
+3. JWT 必须由当前 `AuthConfig` 验证 `sub/iat/exp/ver`，且必须含非空 per-login `sid`；本入口不接受
+   缺失 `sid` 的历史 token。CLI 不得把 password/JWT 写入 config、host runtime file、URL、日志或 receipt。
+4. admission 只生成 Remote Import operation capability，绑定
+   `(auth sid, request_id, operation, repo_id, branch, scope_nonce, session_id?, revision?, request body digest)`；
+   不授予通用 HTTP、Source Control、Ledger table、watcher lifecycle 或 filesystem capability。
+5. `auth_gateway` 维护有界、TTL 限制的 process-local request identity cache。同一
+   同一 `(sid, request_id)` 若 identity/digest 不同必须 fail-closed；完全相同的重复 Apply 只能转交
+   `remote_import_runtime` 返回 durable stored receipt，不得再次 append。server shutdown 清空 cache；
+   重启后的 exactly-once 由 Redb session/receipt CAS，而不是内存 cache 保证。
+
+handler 只能把已验证 capability 与 typed Remote Import intent 交给 coordinator。repo/branch/scope、
+session/revision、Mounted/write gate 和 sealed writer 仍由各自 owner exact revalidate；本 capability
+不能绕过 DB lock、mutation lane 或 publication。认证、loopback、replay admission 任一步失败都必须在
+provider/session/Ledger I/O 前返回既有结构化 `AUTH_*` 结果。proxy 不可用时 CLI 必须报 typed failure，
+不得退回直开被占用 DB、browser grant 或匿名 localhost。
+
 ## 7. Session Probe Policy {#session-probe-policy}
 
 - `/api/auth/status` 周期探测只应在前台活动页面进行
@@ -404,6 +435,7 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - cookies
 - brute force
 - headers
+- loopback-only `LocalCliProxyAuthority` admission；不拥有 Remote Import session 或 Ledger writer
 
 ### 11.3 Browser Auth Layer
 

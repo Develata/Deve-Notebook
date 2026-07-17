@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -330,7 +330,14 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
     *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯。
     *   行为：点击文件后自动收起。
     *   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 仅修改固定状态，不得伪装成“点击无反应”。
-    *   Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate；普通移动端 Source Control 入口不得把正常 `Staged Changes` / `Changes` / `Confirmed Ledger Changes` 视图退化成 `ngit status` CLI-only 诊断。
+    *   Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate，只显示
+        `Confirmed Ledger Changes`、commit/history/graph；External Changes 的 staged/unstaged groups
+        必须留在独立 sibling view，普通入口不得退化成 `ngit status` CLI-only 诊断。
+    *   Remote Import tab **MUST** 是 Source Control 与 External Changes 的第三个同级入口，复用共享
+        typed diff/render primitive，但拥有独立 `remote_import_client`。候选行、blocker 与
+        whole-session Apply/Refresh/Discard 在 390px 宽度下不得横向溢出，所有动作满足 44px touch target。
+    *   Remote Import 首版不得显示 checkbox 或逐文件 Apply；UI 只消费 backend label、typed state 与
+        typed blocker，不解析 raw detail、locator、provider/host/blob path 或 digest。
 *   **Outline Drawer**:
     *   内容：标题结构、大纲条目。
     *   行为：点击条目后自动收起并滚动定位。
@@ -424,7 +431,8 @@ Mobile post-gate **MUST** 服从 `./index.md#native-post-gate-common-contract`�
 
 *   移动端 **MUST NOT** 显示桌面左右拉伸手柄或外边距拖拽入口。
 *   主编辑区默认字号 **SHOULD** 不低于 `16px`，避免 iOS 输入焦点自动缩放。
-*   左右 Drawer、Top Sheet、Bottom Sheet、Outline、Search Result 与 Source Control 面板 **MUST** 遵守同一套 touch target、focus 与 selected/active 语义。
+*   左右 Drawer、Top Sheet、Bottom Sheet、Outline、Search Result、Source Control、External Changes
+    与 Remote Import 面板 **MUST** 遵守同一套 touch target、focus 与 selected/active 语义。
 *   Bottom Sheet 手势关闭 **MUST** 具备阈值、防抖与滚动冲突判定；轻微位移不得误关闭。
 *   边缘滑动 **MUST NOT** 抢占靠边真实控件点击。
 *   左边缘右滑与右边缘左滑 **MUST** 分别只产生 Sidebar / Outline typed Drawer intent；纵向滚动、多指、短拖动与取消事件不得打开 Drawer，编辑器边缘仍必须可触发。

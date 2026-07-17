@@ -1,0 +1,8 @@
+        subgraph cluster_app_remote_import {
+            label="Remote Projection / Import typed intents [03/05/06]"; style="rounded,filled"; fillcolor="#eff6ff"; color="#2563eb";
+            app_remote_push [label="remote projection push", fillcolor="#bfdbfe"];
+            app_remote_prepare [label="immutable source capture", fillcolor="#bfdbfe"];
+            app_remote_review [label="typed session review", fillcolor="#dbeafe"];
+            app_remote_apply [label="whole-session apply", fillcolor="#bfdbfe"];
+            app_remote_manage [label="session lifecycle", fillcolor="#bfdbfe"];
+        }

@@ -1,0 +1,31 @@
+    op_remote_push_webdav -> app_remote_push;
+    op_remote_push_s3 -> app_remote_push;
+    op_remote_prepare_webdav -> app_remote_prepare;
+    op_remote_prepare_s3 -> app_remote_prepare;
+    op_remote_review_list -> app_remote_review;
+    op_remote_review_show -> app_remote_review;
+    op_remote_review_page -> app_remote_review;
+    op_remote_review_diff -> app_remote_review;
+    op_remote_apply_session -> app_remote_apply;
+    op_remote_manage_refresh -> app_remote_manage;
+    op_remote_manage_discard -> app_remote_manage;
+    op_remote_manage_repair_plan -> app_remote_manage;
+    op_remote_manage_repair_apply -> app_remote_manage;
+
+    app_remote_push -> mod_remote_transport;
+    app_remote_prepare -> mod_remote_transport;
+    app_remote_prepare -> mod_remote_import;
+    app_remote_review -> mod_remote_import;
+    app_remote_review -> mod_remote_import_client;
+    app_remote_apply -> mod_remote_import;
+    app_remote_apply -> mod_remote_import_writer;
+    app_remote_apply -> mod_remote_projection_writeback;
+    app_remote_manage -> mod_remote_import;
+
+    mod_remote_transport -> core_remote_transport;
+    mod_remote_import -> core_remote_import;
+    mod_remote_import_client -> core_remote_import;
+    mod_remote_import_writer -> core_remote_import_authority;
+    mod_remote_projection_writeback -> core_remote_import_projection;
+    core_remote_import -> core_remote_import_authority [style=dashed, color="#831843", label="sealed batch"];
+    core_remote_import_authority -> core_remote_import_projection [style=dashed, color="#831843", label="post-commit"];

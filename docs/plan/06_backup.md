@@ -1,84 +1,74 @@
-# 06_backup.md - Projection Backup
+# 06_backup.md - Remote Projection 与 Remote Import
 
 ## Metadata
 
 - `Layer`: `Application / Projection Transport`
-- `Status`: `Planned Contract`
-- `Version`: `0.0.2`
-- `Last Review`: `2026-07-09`
+- `Status`: `Current MUST`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/remote_projection/`, `apps/cli/src/commands/projection_remote.rs`, `apps/web/src/components/command_palette/registry/remote_projection.rs`
+- `Primary Code Areas`: `crates/core/src/remote_projection/`, `apps/cli/src/commands/projection_remote/`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
 
-本章定义 **Projection Backup**：把 Markdown Projection Workspace 文件集合传输到
-WebDAV / S3 / S3-compatible remote，并可从 remote 拉回 Projection Workspace。
+本章冻结两个相互分离的首发能力：
 
-Projection Backup 的备份对象是：
+1. **Remote Projection push**：把当前 Markdown Projection Workspace 上传到 WebDAV / S3 / S3-compatible provider。
+2. **Remote Import**：从 provider 捕获不可变 source snapshot，经独立 review 后，以 whole-session Ledger transaction 导入。
 
-```text
-Projection Workspace 中的 Markdown 文件集合
-```
-
-它不是 Ledger history disaster recovery，不承诺恢复 ledger global sequence、writer
-causality、commit anchors、Source Control history 或 Git mirror queue。需要 history 的场景
-属于 NoteGit/ngit + Git remote workflow；Projection Backup 只负责搬运 Markdown projection
-files。
+两者可以共享 host transport adapter，但 Remote Import 不通过 workspace overwrite、External Changes 或 Source Control staging admission。
 
 ## 1. Scope {#projection-backup-scope}
 
-本章只处理四类问题：
+本章负责：
 
-1. 当前 local repo 的 Projection Workspace Markdown files 如何上传到 WebDAV/S3 remote。
-2. WebDAV/S3 remote 上的 Markdown files 如何下载并覆盖 Projection Workspace。
-3. 下载后的文件变化如何进入 External Changes，并由用户确认后写入 Ledger。
-4. Remote Projection transport、credential binding 与 provider metadata 的 authority 边界。
+- Remote Projection locator/profile、provider streaming 与 push 边界；
+- immutable manifest/blob capture、durable session、candidate/revision、retention 与 cleanup；
+- Remote Import review/apply/discard/repair 的状态和 authority 边界；
+- 资源预算、host-only layout、失败与敏感信息边界。
 
 非目标：
 
-- 不定义任何 ledger-history disaster recovery path；Ledger history 由 NoteGit / Git remote 负责。
-- 不定义独立的 backup pack、manifest、restore-candidate 或 ledger import/merge runtime。
-- 不定义实时多端同步协议。
-- 不定义 Git remote、GitHub repo、`.git` mirror 或 Git push；Git history 由
-  Source Control / NoteGit / Git remote 语义负责。
-- 不允许 WebDAV/S3 直接成为 Ledger、Source Control、Git mirror 或 workspace identity
-  authority。
-- 不传输 `.notegit/`、`.git/`、ledger、staging、snapshot、runtime state 或 secret material。
+- Ledger history disaster recovery、backup pack、同步协议或 Git remote；
+- remote Delete、逐文件选择、逐文件 Apply 或隐式 rollback；
+- WebDAV/S3 成为 Ledger、workspace identity、Source Control 或 credential authority；
+- 传输 `.notegit/`、`.git/`、Ledger DB、staging、snapshot、runtime state 或 secret material。
 
 ## 2. Product Semantics {#projection-backup-contract}
 
-Projection Backup 是 Remote Projection Transport 的 backup-oriented 产品语义。
-
 ```text
-Upload:
-  Projection Workspace Markdown files
-    -> Projection Locator / identity gate
-    -> WebDAV / S3 / S3-compatible provider
-    -> remote Markdown object set
+Push:
+  Projection Workspace -> host transport adapter -> remote Markdown object set
 
-Pull / Download:
-  remote Markdown object set
-    -> Projection Locator / identity gate
-    -> Projection Workspace overwrite
-    -> Watcher / scan
-    -> External Changes
-    -> user confirmation
-    -> Ledger facts
+Import:
+  remote provider
+    -> remote_projection_transport_runtime
+    -> immutable manifest/blob capture
+    -> remote_import_runtime
+    -> review / typed blockers
+    -> sealed source-specific writer
+    -> Ledger commit
+    -> Projection writeback
+    -> Workspace
 ```
 
-核心规则：
+- Push 只搬运 projection files，不产生 Ledger facts、commit anchor 或 Source Control state。
+- Import 在 Ledger transaction 成功前不得写 Projection Workspace、pending/staged state 或 External Changes。
+- provider listing order、ETag、mtime、object version 与 locator path 只能进入 diagnostics，不能成为 facts 或 apply authority。
+- Projection writeback 只发生在 Ledger commit 后。authority transaction 先保存 projection outcome=`Pending` 的 immutable commit receipt；后续 outcome 只可单调收敛为 `Written` 或 `Degraded`。writeback 失败产生“Ledger 已提交、Projection degraded”的 durable receipt，不回滚 Ledger。
 
-- Upload 只上传 Markdown projection files，不上传 ledger facts、commit anchors、runtime
-  metadata 或 provider-local credentials。
-- Pull / Download 只写 Projection Workspace；它不得直接 append ledger、写 Source Control
-  staging、创建 commit anchor、写 Git mirror queue 或自动确认 External Changes。
-- External Changes 是 remote files 进入 Ledger 的唯一首版 admission surface。用户确认前，remote
-  files 只是外部输入。
-- Provider object metadata 只能作为 diagnostic。ETag、mtime、object version、object key、locator
-  path 或 remote listing order 都不得成为 ledger/source-control authority。
+## 3. Remote Projection Transport Contract {#remote-projection-transport-contract}
 
-## 3. Locator and Profile Model {#projection-backup-locator-contract}
+Transport runtime 只拥有 locator/profile admission、provider adapter、确定性 listing、ordered streaming、push 和 provider diagnostics。
 
-Projection Backup 复用 Remote Projection locator / profile 模型。支持的 locator 形式至少包括：
+- push 与 source acquisition 使用语义分离的 typed interface；共享 HTTP/signing 实现不等于共享业务 authority。
+- source acquisition 只能向 project-owned bounded sink 交付 normalized path 与 payload stream；不得构造 session、写 Ledger、写 workspace 或决定 blocker/apply。
+- provider path 必须先 normalize、排序并拒绝重复，再逐文件 streaming；不得依赖 provider listing order。
+- Web/Command Palette 不携带 locator、endpoint URL 或 credential material。backend 从 repo-bound locator/profile 解析；CLI host operation 可以显式选择 locator/profile，但仍须 exact admission。
+- transport adapter 保持轻量、可审计。引入重型 provider SDK或新的 credential authority属于架构停止条件。
+
+### 3.1 Locator and Profile Model {#projection-backup-locator-contract}
+
+支持的 locator 至少包括：
 
 ```text
 webdav+https://dav.example.com/notebooks/deve/main/
@@ -86,269 +76,177 @@ s3://bucket-name/deve/main/
 s3+https://r2.example.com/bucket-name/deve/main/
 ```
 
-locator 的有效组成：
+locator 只含 provider kind、endpoint host、bucket/namespace 与 projection prefix；禁止 password、access key、secret、session token、cookie 或 encryption key。
 
-- protocol / provider kind
-- endpoint host
-- bucket / namespace
-- projection prefix
+ADR 0008 的 host-local、secret-free profile binding 继续生效：custom endpoint 必须 exact-match provider、normalized HTTPS origin、bucket、allowed root prefix、region/signing scope、addressing style 与 credential reference。任一不匹配都在 provider I/O 前 fail-closed；默认 AWS credential 不得被 ambient fallback 签给任意 custom host。
 
-locator 禁止组成：
+allowed capability 固定为 `push` 或 `source-acquisition`；不再存在批准的 `pull-to-workspace` direction。
 
-- password
-- access key / secret key
-- session token
-- encryption key material
-- auth cookie
+### 3.2 Remote Object Layout {#projection-backup-remote-layout-contract}
 
-规则：
-
-- Web / Command Palette 不接收 locator 或 credential material；backend 必须从当前 local repo
-  的 characteristic `repo_url` 或显式 Remote Projection profile 解析 locator。未来 profile UX
-  只能选择 backend-defined profile handle，不能把 endpoint URL 或 secret material 交给前端。
-- CLI 可以为 host operation 显式传入 `--locator` 或显式 Remote Projection profile；`s3+https://`
-  locator 即使来自 CLI 也必须匹配 profile。
-- `s3+https://` / S3-compatible endpoint 必须绑定显式 Remote Projection profile；未绑定时
-  fail-closed，避免默认 AWS 环境凭证被签给任意 host。长期设计采用 ADR 0008：host-local、
-  secret-free profile store + runtime credential resolver，而不是 release-driven shortcut。
-- locator/profile 只能作为 transport target 选择依据，不拥有 repo identity。执行前必须复用
-  Projection Locator、`.notegit` identity marker 与 current repo scope gate。
-
-Remote Projection profile 的最小长期字段：
-
-- `profile_id` / display name：host-local stable handle；
-- `provider = s3-compatible`；
-- normalized HTTPS endpoint origin；
-- bucket / namespace；
-- allowed root prefix；
-- region / signing scope / service (`s3`)；
-- addressing style and provider capability flags；
-- allowed directions (`push`, `pull`, or both)；
-- credential reference resolved only by runtime provider I/O。
-
-Profile matching **MUST** be exact on provider kind, endpoint origin and bucket,
-and **MUST** require the operation locator prefix to stay within the profile's
-allowed root prefix. Missing profile, endpoint mismatch, bucket mismatch, prefix
-escape, missing region/signing scope, unsupported addressing style, missing
-credential ref, or credential resolver failure all fail closed before provider
-I/O; for custom endpoints they also fail before default AWS credential fallback.
-
-## 4. Remote Layout {#projection-backup-remote-layout-contract}
-
-Projection Backup remote layout 是 Markdown object set，不是 ledger pack layout。
-
-推荐布局：
+remote 是 Markdown object set，不是 Ledger pack：
 
 ```text
-<remote-prefix>/
-  README.md
-  notes/
-    a.md
-    b.md
-  journals/
-    2026-07-08.md
+<remote-prefix>/README.md
+<remote-prefix>/notes/a.md
 ```
 
-规则：
+canonical object path 使用 `/` 和 Projection Workspace 相对路径。绝对路径、空路径、`..`、reserved/internal path、non-Markdown path 与归一化重复必须 fail-closed。
 
-- Remote object path 使用 `/` 分隔，并以 Projection Workspace 相对路径为 canonical path。
-- 只枚举和传输 `.md` Markdown projection files。
-- 归一化后为空、绝对路径、包含 `..`、指向 reserved/internal path 或重复的 remote path 必须在下载
-  payload 或写 workspace 前 fail-closed。
-- Provider metadata、remote listing order 与 object version 只进入 diagnostics，不进入 Ledger 或
-  Source Control authority。
-
-## 5. Upload State Machine {#projection-backup-upload-state-machine-contract}
+### 3.3 Push State Machine {#projection-backup-upload-state-machine-contract}
 
 ```text
-UploadRequested
-  -> ProjectionWorkspaceValidated
+PushRequested
+  -> Repo/Locator/IdentityValidated
   -> MarkdownFilesEnumerated
-  -> ProviderResolved
+  -> ProviderAdmitted
   -> FilesUploaded
-  -> UploadReported
+  -> PushReported
 ```
 
-约束：
+Push 必须读取 `Healthy + Mounted` 的 current Projection Workspace，排除 internal/ignored path。partial remote upload 只形成 provider diagnostic/retry context，不触碰本地 Ledger 或 Source Control。
 
-- `ProjectionWorkspaceValidated` 必须确认当前 local repo、Projection Locator 与 `.notegit`
-  identity marker 一致。
-- `MarkdownFilesEnumerated` 只能从 Projection Workspace 读取 Markdown files；必须排除
-  `.notegit/`、`.git/`、ledger、staging、snapshot、runtime state 与 ignored/internal paths。
-- `FilesUploaded` 只表示 provider adapter 完成 file object PUT；它不生成 ledger facts，不修改
-  Source Control state，不创建 commit anchor。
-- 上传失败不得回滚 local ledger 或 Source Control state；已上传的 remote objects 只能作为 provider
-  diagnostic / retry context。
+## 4. Immutable Remote Import Session {#remote-import-session-contract}
 
-## 6. Pull / Download State Machine {#projection-backup-pull-state-machine-contract}
+项目自有 durable 类型：
+
+- `RemoteImportSourceSnapshot`
+- `RemoteImportCandidateRevision`
+- `RemoteImportSessionRecord`
+- `RemoteImportApplyReceipt`
+- `RemoteImportState::{Preparing, Ready, Stale, Failed, Applied, Discarded}`
+- `RemoteImportChangeKind::{Added, Modified, Unchanged}`，与 typed blocker 正交
+
+每个 repo 最多一个 active session。Redb 只保存身份、状态、exact digest、receipt 与 active/cleanup metadata；manifest、candidate 与 blobs 存在 host-only artifact tree：
 
 ```text
-PullRequested
-  -> ProviderResolved
-  -> RemoteMarkdownListed
-  -> RemotePathsValidated
-  -> RemoteMarkdownDownloaded
-  -> ProjectionWorkspaceOverwritten
-  -> WatcherOrScanDetected
-  -> ExternalChanges
+ledger/.host/remote-imports/<repo_id>/<session_id>/
+  source-manifest.json
+  candidates/<revision>.json
+  blobs/<sha256>
 ```
 
-约束：
+`source-manifest.json` 是 deterministic JSON v1：字段顺序、path normalization、entry ordering 与 digest serialization 固定。wire/UI 不读取该 host layout。
 
-- `RemoteMarkdownListed` / `RemoteMarkdownDownloaded` 必须受 hard budget 约束：文件数、单文件
-  bytes、总下载 bytes 超限时必须在写 Projection Workspace 前 fail-closed。
-- `RemotePathsValidated` 必须在下载 payload 或写 workspace 前拒绝归一化后重复、越界、reserved、
-  non-Markdown 或 unsafe target path。
-- `ProjectionWorkspaceOverwritten` 必须只覆盖 Projection Workspace 中的 Markdown projection files；
-  workspace apply 应使用 staging + rollback 或等价机制，避免半写入可见。
-- `WatcherOrScanDetected` 后才能进入 External Changes。该步骤不得直接 stage、commit、Apply to
-  Ledger 或创建 Git mirror queue。
-- External Changes 由用户明确确认后，才通过 existing Ledger authority path 追加 facts。
+### 4.1 State Machine {#remote-import-state-machine}
 
-## 7. Commands / Inputs / Outputs {#projection-backup-command-output-contract}
+```text
+Prepare:  none -> Preparing -> Ready | Failed
+Refresh:  Ready | Stale -> Ready | Stale | Failed
+Apply:    Ready -> Applied
+Discard:  Ready | Stale | Failed -> Discarded
+```
 
-### 7.1 Inputs
+- 不存在 durable `Applying`。Apply 由 process single-flight + Redb CAS 与 idempotent stored receipt 保证。
+- Prepare 固定顺序：Redb reserve `Preparing` → stream/verify temp blobs → 原子发布 blobs/manifest/candidate → CAS `Ready`。
+- 启动时遗留 `Preparing` 必须转为 `Failed(Interrupted)`；不得自动重新访问 provider。
+- Refresh 只能从已封存 blobs 重算 candidate。若 `RepoId`、branch、source snapshot、locator/profile binding 与 digests 仍 exact，它可以把新 candidate revision 绑定到当前 Ledger head 和当前 ignore snapshot，使 head/ignore drift 的 session 从 `Stale` 回到 `Ready`。
+- locator/profile、branch、repo membership 或 source/manifest/blob digest drift 不可由 Refresh 重绑；session 必须保持 `Stale` 或进入 typed `Failed`。获取新远端内容必须 Discard 后重新 Prepare，不得猜测 source identity。
+- 相同 Apply 请求在响应丢失后返回并收敛已存 `RemoteImportApplyReceipt`，不得重复 append facts。若 receipt projection outcome 仍为 `Pending`，runtime 必须从 Ledger 幂等恢复 writeback；不得把它解释为未提交。
+- terminal record 只保留最近 64 条；`cleanup_pending=true` 的记录永不自动裁剪。cleanup 必须由显式 discard/repair 收敛。
 
-- `ProjectionBackupLocator` / `RemoteProjectionLocator`
-- `RemoteProjectionProfile`
-- `RepoSelector`
-- `ProviderKind`
-- `Direction` = `push | pull`
-- provider credential refs owned by Remote Projection profile/runtime
+### 4.2 Resource Contract {#remote-import-resource-contract}
 
-credential refs 是 host-local runtime config 引用，不是 locator 的一部分。
+硬 admission budget：
 
-### 7.2 Commands
+| 维度 | 上限 |
+|---|---:|
+| 文件数 | 2048 |
+| 单文件 payload | 4 MiB |
+| 全部 payload | 64 MiB |
+| 单路径 UTF-8 bytes | 1024 |
+| 全部路径 UTF-8 bytes | 2 MiB |
+| review page | 默认 100，最大 200 |
 
-Projection Backup 不引入独立 provider runtime；首版命令应收敛到 Remote Projection transport。
+任一预算超限都在 session 可 Apply 前 fail-closed。capture 必须逐文件 streaming，不得把完整 64 MiB snapshot 聚合进内存。remote 缺失文件不产生 Delete；首版无逐文件选择。
 
-- `deve projection-remote webdav push/pull`
-- `deve projection-remote s3 push/pull`
+## 5. Review and Apply Authority
 
-旧 `deve backup ...` CLI surface 不属于首版命令面；Projection Backup 的唯一 CLI surface 是
-`deve projection-remote ... push/pull`。
+- Prepare/List/Show/Page/Diff/Refresh/Discard 可以在 Ledger 可读但 repo 未 Mounted 时执行；它们不得写 Ledger facts 或 workspace。
+- review 必须绑定 exact `(repo_id, branch, scope_nonce, session_id, revision)`。Diff 只接受 opaque strong `entry_id`，返回 backend display label 与 typed diff/blocker。
+- 任一 blocker 禁用整个 session Apply。pending/staged overlap、head/branch/locator/ignore drift、tamper 与 membership mismatch 均由 backend 判定。
+- Apply 必须满足 `RepoHealth::Healthy && RepoMountState::Mounted`，并进入 `03_storage/authority.md#sealed-ledger-change-batch` 的 whole-session transaction。
+- transaction 精确复核 repo/schema/head、active session/revision、manifest/blob digests、writer identity、branch、locator/ignore snapshot、pending/staged overlap 与 RepoId membership；随后原子写全部 upsert facts/indexes、Applied receipt immutable core + projection outcome=`Pending`、clear active pointer 与 `cleanup_pending=true`。post-commit writeback 后用第二个短 Redb transaction 把 outcome CAS 为 `Written`，或与 durable projection fault evidence 一起原子 CAS 为 `Degraded`。
+- Remote Import 只产生 upsert facts。远端未出现的本地文件不删除；不得拆分 whole-session transaction。
 
-### 7.3 Outputs
+## 6. Commands / Inputs / Outputs {#projection-backup-command-output-contract}
 
-- `ProjectionBackupPlan`
-- `ProjectionBackupReport`
-- `RemoteProjectionProviderReport`
-- `ExternalChangesRequired`
-- `ProjectionBackupError`
+正式 CLI surface 由 `14_commands.md#remote-import-command-contract` 定义：Remote Projection 只保留 provider push；Remote Import 提供 prepare/list/show/diff/refresh/apply/discard/repair。`repair` 默认 dry-run，真实 cleanup 需要显式 `--apply`。
 
-输出必须区分：
+输出必须区分 provider failure、capture/session failure、blocker/stale、authority apply failure、cleanup required 与 post-commit projection degraded。产品 detail 使用泛化文案；原始失败仅进入受控 tracing。
 
-- provider IO 是否成功；
-- Projection Workspace 是否被写入；
-- External Changes 是否已被检测；
-- Ledger 是否已被用户确认写入。
+## 7. Security and Verification {#projection-backup-secret-ref-contract} {#projection-backup-verification-contract}
 
-Provider success 不等于 pull/admission success；Projection Workspace overwrite 不等于 Ledger recovery。
+- credential、token、key material 不得进入 repo catalog、locator string、manifest/blob、candidate、wire/UI、localStorage、URL query、普通日志或 crash report。
+- capture 发布前与 Apply transaction 内都重验 manifest/blob digest；provider metadata 永不替代 content digest。
+- Applied receipt 绑定 session/revision/writer/head/exact digests，但 wire/UI 只投影安全的 typed outcome。
+- CLI 直接打开 DB 执行 Apply 时必须启动临时 `RepoWatcherHandle` 并按 W6 E2 shutdown；DB 被 server 持有时只能使用 authenticated loopback `LocalCliProxyAuthority`，不得复用 browser grant 或绕锁直写。
+- session artifact 使用 repo/session identity 与 path containment；symlink/reparse/path traversal 必须 fail-closed。
 
-## 8. Security and Authority Contract {#projection-backup-secret-ref-contract} {#projection-backup-verification-contract}
+## 8. Failure Modes {#projection-backup-failure-modes}
 
-- Credentials, tokens and key material **MUST NOT** be stored in repo catalog, locator string,
-  localStorage, URL query, normal logs or crash reports。
-- Remote Projection profile 可以保存 secret-free endpoint/bucket/prefix/credential-ref binding；credential
-  value 只能由 runtime resolver 在 provider IO 时解析。
-- Process-wide `AWS_*` credentials are ambient AWS S3 inputs only. For
-  `s3+https://` custom endpoints they are invisible unless an explicit profile
-  credential ref intentionally names that secret source and the locator matches
-  the same profile.
-- Provider metadata **MUST** remain diagnostic-only。
-- Remote files are external input. They become Ledger facts only through External Changes user
-  confirmation and existing authority storage runtime。
-- Projection Backup does not encrypt or authenticate ledger history because it does not transport
-  ledger history. If durable history is required, use NoteGit/ngit + Git remote。
-- S3-compatible custom endpoint signing must be profile-bound and fail-closed on missing endpoint,
-  missing region/signing scope, missing credential ref, or provider/profile mismatch。
+- locator/profile/provider/credential unavailable or mismatch
+- unsafe、duplicate 或 budget-exceeded remote path/payload
+- temp capture、atomic publication、digest verification 或 CAS failure
+- active session、not found、stale、blocked、invalid state、cleanup required
+- exact writer/head/branch/membership/snapshot revalidation failure
+- Ledger transaction failure
+- post-commit Projection writeback failure
+- committed receipt 停留在 projection outcome `Pending`，等待启动/重试幂等恢复
 
-## 9. Failure Modes {#projection-backup-failure-modes}
+pre-commit failure 不得留下事实前缀、workspace prewrite、External Changes、Source Control staging、commit anchor 或 Git mirror queue。cleanup failure 保留 `cleanup_pending`；不得自动裁剪或伪装成功。
 
-- locator/profile missing or provider mismatch
-- credential rejected or credential resolver unavailable
-- custom S3 endpoint missing explicit profile binding
-- Projection Locator or `.notegit` identity marker broken
-- workspace cannot be canonicalized
-- remote listing unavailable or malformed
-- remote path normalization failure
-- duplicate normalized remote Markdown path
-- file count / single file bytes / total bytes budget exceeded
-- provider PUT/GET failure
-- workspace apply rollback required or failed
-- watcher/scan failed to surface External Changes
+## 9. Forbidden Patterns {#projection-backup-forbidden-patterns}
 
-所有 failure 必须结构化。失败的 upload / pull 不得留下 partial ledger writes、Source Control staging、
-commit anchors、Git mirror queue entries 或 silently confirmed External Changes。
+- provider → workspace overwrite → watcher/External Changes admission；
+- Remote Import session 直接操作 Ledger authority tables，或暴露 generic callback/batch constructor；
+- remote Delete、逐文件 Apply、checkbox/select-all、隐式 rollback 或自动 cleanup authority；
+- 前端解析 raw detail、digest/path 或自行推导 blocker/stale/readiness；
+- 把 session `Failed/Stale/cleanup_pending` 映射为 `RepoHealth` 或 projection fault；
+- 在 Ledger commit 前写 Projection Workspace；在 writeback failure 后回滚 Ledger；
+- 将 locator/provider metadata 当作 repo/fact authority。
 
-## 10. Forbidden Patterns {#projection-backup-forbidden-patterns}
+## 10. Runtime Boundary {#projection-backup-provider-dispatch-contract} {#remote-import-runtime-boundary}
 
-- 把 WebDAV/S3 当作 shared writable sync authority。
-- 把 Projection Backup 描述为 Ledger history disaster recovery。
-- 上传或下载 ledger-history artifacts、snapshot/runtime state 作为首版 Backup 合同的一部分。
-- 把 ledger import/merge runtime 当作 Projection Backup pull/admission path。
-- 把 provider metadata、locator path、ETag、mtime 或 object version 当作 ledger/source-control
-  authority。
-- 远端 pull 后自动 Apply to Ledger、自动 stage、自动 commit 或自动 Git push。
-- 在 Web / Command Palette 收集 WebDAV/S3 credentials 或直接访问 provider。
-- 复用独立 backup credential/key model；WebDAV/S3 credential binding 应归 Remote Projection profile
-  runtime 所有。
+### 10.1 `remote_projection_transport_runtime`
 
-## 11. Runtime Boundary {#projection-backup-provider-dispatch-contract}
+唯一拥有 provider/profile/HTTP/signing、push、ordered source streaming 与 diagnostics；不拥有 session、Ledger、workspace 或 apply。
 
-### 11.1 Remote Projection Transport Runtime
+### 10.2 `remote_import_runtime`
 
-职责：
+唯一拥有 session store、host artifact、candidate/revision、retention、blocker aggregation、refresh/discard/repair 与 source-specific prepared batch construction；只能通过 sealed authority API Apply。
 
-- locator/profile resolution
-- provider adapter dispatch
-- Markdown file enumeration
-- WebDAV/S3/S3-compatible upload/download
-- provider diagnostics
+### 10.3 Authority / Projection Runtime
 
-### 11.2 Projection Workspace Runtime
+authority storage runtime 唯一提交 whole-session facts/receipt；Projection runtime 只消费已提交 Ledger outcome完成 writeback。Source Control、External Changes 与 watcher 均不承载 Remote Import controller 或 authority。
 
-职责：
+### 10.4 `remote_import_client`
 
-- Projection Locator validation
-- `.notegit` identity marker validation
-- safe workspace overwrite
-- staging / rollback for pull apply
-- watcher/scan trigger
+只发送 typed intent、绑定 exact scope/session/revision、丢弃 stale response 并渲染 backend label/diff/blocker。可复用无状态 diff/render primitive，不复用 Source Control/External Changes controller、state 或 notice。
 
-### 11.3 External Changes / Ledger Runtime
+## 11. Current Pull Transition {#projection-backup-pull-state-machine-contract}
 
-职责：
-
-- external file diff detection
-- user confirmation / Apply to Ledger
-- ledger facts append through existing authority storage path
-- Source Control dirty derivation after ledger confirmation
-
-Remote Projection Transport 不得直接写 Ledger、Source Control staging、commit anchors、Git mirror queue
-或确认 External Changes。
+当前未发布代码仍实现 pull → Projection Workspace overwrite → watcher/scan → External Changes，以及 workspace rollback continuation。该 anchor 仅在 B4 前保持现有 Rust `plan_ref` 可追踪；旧路径是 release-blocking drift，不是批准能力、兼容层或 fallback。B4 必须删除 pull direction、workspace apply/rollback、scan bridge、旧 handler/message/CommandId 与双轨测试。
 
 ## 12. Deferred / Removed From First Tag {#projection-backup-deferred-ledger-backup}
 
-已从首版范围删除：独立 ledger backup pack/manifest、restore-candidate admission、ledger import/merge
-runtime，以及 WebDAV/S3 上的 ledger-history disaster recovery。
-
-S3-compatible credential profile implementation is not a rushed first-tag
-shortcut. Until the ADR 0008 profile runtime is implemented and verified,
-`s3+https://` remains fail-closed; the long-term target remains the accepted
-profile binding design, not reuse of default AWS credentials for arbitrary
-custom endpoints.
-
-若未来重新引入 ledger backup，必须作为独立 ADR 与独立 runtime proposal 重开；不得从 Projection
-Backup 语义中回填。
+独立 Ledger backup pack、history disaster recovery、remote Delete、逐文件 Apply、自动 cleanup、实时 sync、Git remote 与 provider-specific重型 SDK均不在首发范围。未来若引入，必须经独立 authority/runtime 决策；不得扩张本章现有边界。
 
 ## 本章相关命令
 
-- `Remote Projection: WebDAV Push/Pull`
-- `Remote Projection: S3 Push/Pull`
+- `remote_projection.webdav.push`
+- `remote_projection.s3.push`
+- `remote_import.webdav.prepare`
+- `remote_import.s3.prepare`
+- `remote_import.open`
+- `remote_import.refresh`
+- `remote_import.apply`
+- `remote_import.discard`
 
 ## 本章相关配置
 
 - `remote_projection.profile`
 - `remote_projection.locator`
 - `remote_projection.credential_ref`
+
+Remote Import session/state 不是配置域。

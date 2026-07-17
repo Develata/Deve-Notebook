@@ -10,6 +10,14 @@ contains	crates/core/src/security/auth/config.rs	AUTH_PASS must be a valid Argon
 contains	crates/core/src/security/auth/config.rs	AUTH_TOKEN_VERSION must be a valid u32 integer
 contains	crates/core/src/security/auth/config.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST requires explicit development mode
 contains	docs/plan/08_auth.md	DEVE_ENV=development
+contains	docs/plan/06_backup.md	credential、token、key material 不得进入 repo catalog、locator string、manifest/blob、candidate、wire/UI、localStorage、URL query、普通日志或 crash report
+contains	docs/plan/06_backup.md	authenticated loopback `LocalCliProxyAuthority`
+contains	docs/plan/06_backup.md	不得复用 browser grant 或绕锁直写
+contains	docs/plan/08_auth.md	### 6.11 Local CLI Proxy Authority {#local-cli-proxy-authority}
+contains	docs/plan/08_auth.md	endpoint 不接受 Cookie-only、anonymous localhost dev session
+contains	docs/plan/08_auth.md	同一 `(sid, request_id)` 若 identity/digest 不同必须 fail-closed
+contains	docs/features/09_auth.md	Local CLI proxy 不是 browser auth surface，也不是新的持久 credential store
+contains	docs/registry/runtime-skeleton-registry.md	B4 需新增 loopback-only `LocalCliProxyAuthority`
 contains	crates/core/src/security/auth/config/tests.rs	missing_secret_or_password_fails_closed_in_production
 contains	crates/core/src/security/auth/config/tests.rs	invalid_auth_token_version_fails_closed
 contains	crates/core/src/security/auth/config/tests.rs	anonymous_localhost_requires_development_env

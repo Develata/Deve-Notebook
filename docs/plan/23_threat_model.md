@@ -4,10 +4,10 @@
 
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-08`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-07-17`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
-- `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#projection-backup-secret-ref-contract (Remote Projection credential refs), 03_storage/authority (ledger append validation), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
+- `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#projection-backup-secret-ref-contract (Remote Projection credential refs), 06_backup#remote-import-runtime-boundary (Remote Import session/runtime), 03_storage/authority#sealed-ledger-change-batch (apply authority), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (AUTH-* / PLUG-001)`
 - `Primary Code Areas`: `crates/core/src/security/`；SECURITY.md；docs/adr/ 中安全相关 ADR（B4.3 后）
@@ -28,8 +28,22 @@
 - FullPeer mesh、server-to-server `/ws` admission、P2P token 环境变量、shadow-only apply 与显式 merge 边界：见 `07_network#full-peer-mesh-v1` 与 `07_network#full-peer-ws-admission`。
 - writer gate、Writer Identity、WebLightPeer（浏览器 repo-scoped transient writer identity）：见 `01_terminology`。
 - native `LocalBackend` / `RemoteBrowser` 双模式、Desktop child-process local service、Mobile embedded loopback service 与 shell no-direct-authority：见 `11_ui_design#native-adapter-gate-registry`、`11_ui_design#native-post-gate-common-contract` 与 `17_tech_stack#native-packaging-dependency-gate`。
+- Remote Import 信任链：见 `06_backup#remote-import-runtime-boundary` 与 `03_storage/authority#sealed-ledger-change-batch`。
 
 以上 MUST/SHOULD 约束不在本章复述或扩展。
+
+### 2.1 Remote Import Trust Boundary {#remote-import-trust-boundary}
+
+```text
+untrusted provider
+  -> transport adapter
+  -> project-owned bounded sink
+  -> immutable digest-bound manifest/blob
+  -> remote_import_runtime
+  -> sealed source-specific writer
+```
+
+provider metadata、listing order、locator 与 remote path 都不是 authority。只有通过 path/budget/digest admission 的 immutable capture 能形成 session；只有 exact session/revision/head/writer validation 后的 sealed batch 能提交 Ledger。
 
 ## 3. STRIDE Catalog {#stride-catalog}
 
@@ -42,6 +56,19 @@
 | Denial of Service | 登录爆破 / 连接洪泛 | 速率限制（`AUTH_RATE_LIMITED`，归 `13_i18n`/`08_auth`）；malicious peer 隔离（`07_network` §10.3） |
 | Elevation of Privilege | 越权写 / 越权插件能力 / native shell 越权成为 authority | writer gate（`01_terminology`）；plugin capability gate（`19_plugins`）；native shell 即使在 `LocalBackend` 模式也不得直接写 ledger/source-control/search，所有写入仍经本地 server/core writer gate（`11_ui_design#native-post-gate-common-contract`） |
 
+### 3.1 Remote Import STRIDE Contract {#remote-import-stride-contract}
+
+- **Spoofing**：RepoId、session、revision、writer identity、branch 与 CAS 必须 exact-bind；locator/profile 继续遵守 ADR 0008。
+- **Tampering**：capture publish 与 Apply transaction 都重验 manifest/blob digest；mtime、ETag、listing order 不参与 authority。
+- **Repudiation**：Applied receipt 绑定 session、revision、writer、head 与 exact digests；Ledger actor 固定为 Remote Import Apply。
+- **Information Disclosure**：wire/UI 不暴露 locator、provider/host path、blob path、digest、credential 或 raw failure detail。
+- **Denial of Service**：单 repo 单 active session、2048 文件、4 MiB 单文件、64 MiB 总量、路径预算、100/200 分页与 terminal 64 条 retention；`cleanup_pending` 永不自动裁剪。
+- **Elevation of Privilege**：`PreparedLedgerChangeBatch` 为 crate-private，只能由 source-specific constructor 构造；Prepare 无 Ledger/workspace 写权限，Apply 必须 writer gate + Healthy + Mounted；`LocalCliProxyAuthority` 不复用 browser grant。
+
+### 3.2 Remote Import DoS Boundary {#remote-import-dos-boundary}
+
+数值硬上限唯一归 `06_backup#remote-import-resource-contract`。实现必须先做有界 path/listing admission再 streaming payload；超限在 session Ready/Apply 前 fail-closed，不得先无界分配再报错。
+
 ## 4. Key Lifecycle (高层流程) {#key-lifecycle}
 
 仅登记高层生命周期；具体合同 Defers To 各章。
@@ -52,7 +79,7 @@
 | P2P admission token | server-to-server `/ws` transport admission | 只通过环境变量间接引用；token material 不写入 config、日志、bootstrap payload、browser storage 或 URL；失效与轮换策略由部署环境负责 | `07_network#full-peer-ws-admission` |
 | Password hash (Argon2) | 口令存储 | 加盐哈希、参数升级 | `08_auth` |
 | Peer keypair (Ed25519) | peer 身份与签名 | 现状：生成 / 持久化恢复 / 签名 / 验签（无轮转撤销协议）；轮转/撤销为本章高层策略，协议化 defer `07_network` | `crates/core/src/security/keypair.rs` |
-| Remote Projection credential ref | Projection Backup provider I/O credential reference | secret-free endpoint/bucket/prefix/credential-ref binding 归 `06_backup#projection-backup-secret-ref-contract`；credential value 只能由 runtime resolver 在 provider I/O 时解析 | `06_backup#projection-backup-secret-ref-contract` |
+| Remote Projection transport credential ref | push/source-acquisition provider I/O credential reference | secret-free endpoint/bucket/prefix/credential-ref binding 归 `06_backup#projection-backup-secret-ref-contract`；credential value 只能由 runtime resolver 在 provider I/O 时解析 | `06_backup#projection-backup-secret-ref-contract` |
 
 轮转与撤销的具体协议归各权威章节，本章不重定义。Projection Backup 首版不引入 ledger backup encryption key；若未来重新引入 ledger-history backup / pack encryption，必须按 `06_backup#projection-backup-deferred-ledger-backup` 另开 ADR 与 runtime proposal。
 
@@ -73,6 +100,7 @@
 - **SBOM**：发布产物 **MUST** 生成依赖清单（`cargo` 依赖树 + 锁定版本）。
 - **Reproducible Build**：发布构建 **SHOULD** 可复现；锁文件 `Cargo.lock` 纳入版本管理。
 - **Dependency Gate**：原生打包可选依赖门禁归 `17_tech_stack#native-packaging-dependency-gate`；新增依赖 SHOULD 经审查（许可证 / 维护状态 / 体积）。
+- **Provider Adapter**：Remote Projection transport 必须保持轻量、可审计；引入重型 provider SDK或新的 credential authority属于架构停止条件，不能以 B0/B2 普通依赖升级处理。
 - **Signing**：发布 artifact 的签名与校验归 `18_release`。
 
 ## 7. Coordinated Vulnerability Disclosure {#coordinated-vulnerability-disclosure}
@@ -87,5 +115,5 @@
 - 鉴权 / TLS / 速率限制配置：归 `08_auth` 与 `15_settings`。
 - P2P static peer 配置只保存 endpoint、repo/peer identity 与 token env 名称；token material 只在运行环境中提供：归 `07_network#static-peer-config`。
 - Native `LocalBackend` 只打开本地受控 service；`RemoteBrowser` 只加载远端 HTTPS origin。两者都不授予 shell 直接 authority：归 `11_ui_design#native-adapter-gate-registry` 与 `17_tech_stack#native-packaging-dependency-gate`。
-- Projection Backup provider credential refs：归 `06_backup#projection-backup-secret-ref-contract`。
+- Remote Projection transport credential refs：归 `06_backup#projection-backup-secret-ref-contract`；Remote Import 不创建新的 credential authority。
 - 本章自身无独立配置项。

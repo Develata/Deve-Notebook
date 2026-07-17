@@ -1,6 +1,6 @@
 # 0007. Projection Backup first-tag route
 
-- Status: Accepted
+- Status: Superseded by 0011
 - Date: 2026-07-08
 
 ## Context
@@ -69,6 +69,13 @@ review.
   evidence for Projection Backup.
 - S3-compatible custom endpoints remain governed by ADR 0008 and must be bound
   to explicit Remote Projection profile semantics before provider I/O.
+
+## Superseded decision
+
+ADR 0011 retains Projection Backup push but replaces pull-to-workspace,
+rollback continuation, and External Changes admission with immutable Remote
+Import capture, review, and a sealed ledger-first Apply transaction. The route
+described above was never published and creates no compatibility promise.
 
 ## References
 

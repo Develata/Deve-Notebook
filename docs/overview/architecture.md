@@ -70,7 +70,23 @@ UI / HTTP / WS handlers
 - durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
-The ownership slice, owned supervisor, exact-slot mounted admission and runtime failure cut are implemented. Convergence remains tracked as `部分承载` until dynamic lifecycle, bootstrap repo isolation, public aggregate health, E2 shutdown and Windows overflow evidence are sealed; the 74-flow modeled operation slice is not marked aligned ahead of W10 evidence.
+The ownership slice, owned supervisor, exact-slot mounted admission, runtime failure cut and public aggregate health are implemented. Convergence remains tracked as `部分承载` until E2 shutdown, dynamic lifecycle, bootstrap repo isolation and Windows overflow evidence are sealed.
+
+## Remote Import Ownership Slice
+
+```text
+Remote provider
+  -> remote_projection_transport_runtime
+  -> immutable manifest/blob capture
+  -> remote_import_runtime
+  -> typed review/blockers
+  -> sealed source-specific authority writer
+  -> Ledger commit
+  -> Projection writeback
+  -> Workspace
+```
+
+Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B0 expands the modeled slice from 74 to 79 flows and intentionally records five active drift markers until B1–B5 implement the approved target.
 
 ## Artifact Roles
 

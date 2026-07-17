@@ -26,7 +26,7 @@
 - Docker/Server 当前主通道是单个 `deve_cli` 二进制；当 CLI 在 `trunk build --release` 之后构建时，前端静态资源会被编译进二进制。
 - 首个公开 tag 只由 `release.yml` 直接监听；真正的构建与 target-host 验收由 tag 前手动 `release-candidate.yml` 完成。候选输入版本必须与 workspace、Desktop Tauri、Mobile Tauri 版本逐字节一致，所有 receipts 和制品绑定同一 HEAD。聚合器验证后封存 candidate bundle；maintainer 必须创建 annotated tag，并用唯一 `Deve-Acceptance-Aggregate-Run: <run-id>` trailer 绑定该 aggregate。tag workflow 只提升该 bundle，禁止重新 build、package、rename 或选择“最新”但未绑定的 run。Windows MSI/NSIS、macOS DMG 与已签名 Android ARM64 APK、Docker archive、SBOM、checksums 和 attestations 作为一个 allowlisted set 被复核；资产先上传到 draft，远端名称与 SHA-256 完全一致后才公开。Linux Desktop 与 iOS 不在 first-tag artifact set。
 - Docker release image 在 candidate workflow 只构建一次；runtime/login、双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须运行该 exact image。候选封存 Docker archive SHA-256 与 image ID；tag 后 load 同一 archive，成功后才 push Docker-safe version tag。stable 只有在 SemVer 与 Git ancestry 均前进时才更新 `latest`，prerelease 不更新；stable 的两个远端 tag 必须解析到同一 manifest digest并生成 registry digest attestation。
-- Windows/macOS public-preview packages 可以 unsigned；Android 只有在 signing secrets 齐全时才是可安装 signed APK，否则只能作为明确标记的 unsigned diagnostic artifact。任何这些 artifacts 都不等于 signing、notarization、store 或 physical-device readiness。
+- Windows/macOS public-preview packages 可以 unsigned；Android 缺 signing secret 时的 unsigned APK 只能作为非候选诊断产物，绝不能进入 candidate allowlist或替代 signed ARM64 APK。任何这些 artifacts 都不等于 notarization、store 或 physical-device readiness。
 - Android GitHub target-host lifecycle 运行同一 HEAD 的 x86_64 emulator package；封存的 ARM64 APK 另经严格签名与 signer 复核。前者证明功能与 WebCrypto capability，后者证明候选字节和签名身份，不能把 x86_64 receipt 写成 ARM64 逐字节安装证据。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
@@ -78,11 +78,10 @@
   0006 Route 2 重新归类为非 blocker，因为 Linux GTK3 native artifacts 不进入
   first-tag release set。
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
-  Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
+  Remote Projection / Remote Import 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
-- 当前 first-tag 精确基线为 ledger entry format v3 / `DEVELDG3`、redb schema v3、WS binary
-  namespace `DEVEWSF4` 且 protocol lockstep `2..=2`。未发布 F4/v1 不提供 adapter；历史未发布 F2/F3 namespace 与 storage
-  schema v2 只允许 fail-closed 或显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
+- first-tag 批准目标为 ledger entry format v3 / `DEVELDG3`、Redb schema v4、WS binary namespace `DEVEWSF4` 且 lockstep `3..=3`、immutable Remote Import。当前实现仍是 Redb v3、WS v2/legacy JSON 与旧 pull→workspace→External Changes，因此 tag blocked；它们不是兼容 epoch。B1/B4/B5/B6 必须关闭 transition matrix 后才能签署。
+- Redb v2 只保留 `--allow-legacy-v2` 离线只读导出；v3 开发 DB 必须用旧 HEAD 导出后重建。WS v1/v2、无版本 JSON、旧 CommandId 与旧 pull 不提供 adapter。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。
 - 矩阵允许诚实显示 PVR、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing target-host evidence 等 blocker；SBOM/checksum/provenance 只能由 exact candidate producer receipt 关闭，不能改成 source-ref。这些 gap 不阻止普通开发提交，但必须阻止正式 tag。
 - Receipt 同时绑定 evidence locator、surface/mode、target OS 与命令前后 clean HEAD；平台 producer/聚合尚未闭环时，tag workflow 必须在任何公开发布前明确失败。producer 超时清理必须只终止经隔离校验的 child process group，不能误伤 CI runner 或宿主父进程组；主动脱离该 group 的宿主资源必须预先登记 ownership 并由显式 finally step 回收，Windows tree cleanup 未验证成功时也必须 fail-closed。

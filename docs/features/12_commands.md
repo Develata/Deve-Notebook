@@ -55,20 +55,29 @@
 - `deve_cli ngit push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty NoteGit Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
 - Web Command Palette 只能显示 ngit import / push / repair 的 backend/runtime intent 或 read-only notice，不得直接触发 Git writer；不再读取 `source_control.git_bridge` mode。
 
-### 6. WebDAV/S3 Projection Commands
+### 6. Remote Projection Push and Remote Import Commands
 
-- Command Palette 提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
-- 四个命令只发送 typed intent；不得在前端直接列举、上传、下载或覆盖文件。
-- push/pull 的实际 provider IO 与 Projection Workspace 写入由 backend/core runtime 执行；未接线的 provider/direction 必须报告 `provider_io_ready=false` 并 fail-closed，已接线的 provider/direction 必须在执行成功后报告 `provider_io_ready=true`。
-- 当前 backend/CLI 已接线 WebDAV push/pull、AWS `s3://` S3 push/pull，以及 CLI 显式
-  profile handle 下的 `s3+https://` S3-compatible custom endpoint push/pull；未绑定或
-  locator/profile 不匹配时继续 fail-closed。
-- Web Command Palette 入口不接收 locator 或 credential material；backend 使用当前 local repo 的
-  `repo_url` 或后续 backend-defined profile handle 解析 Remote Projection locator/profile。若
-  `repo_url` 不是所选 provider 的 transport URL，或 profile 与 locator 不匹配，命令必须
-  fail-closed 并保留 `provider_io_ready=false`。
-- pull 完成后只能通过 watcher/scan 进入 External Changes，用户必须另行 Apply to Ledger。
-- pull 失败不得报告 `provider_io_ready=true`，并且不得留下未进入 External Changes 的半覆盖文件。
+- Command Palette 的正式 CommandId 固定为：
+  - `remote_projection.webdav.push`
+  - `remote_projection.s3.push`
+  - `remote_import.webdav.prepare`
+  - `remote_import.s3.prepare`
+  - `remote_import.open`
+  - `remote_import.refresh`
+  - `remote_import.apply`
+  - `remote_import.discard`
+- List/Show/Page/Diff 是 Remote Import view 内部 typed request，不增加全局 CommandId。
+- push 只上传 Markdown Projection Workspace files；Remote Import Prepare 只创建 immutable captured
+  session，不覆盖 Workspace、不触发 External Changes、不写 Ledger。
+- Remote Import Open/Refresh/Apply/Discard 只打开独立 view 或发送 whole-session typed intent；Command
+  Palette 不直接访问 provider、manifest/blob、Ledger writer 或 cleanup runtime。
+- Web Command Palette 不接收 locator、endpoint URL、host path、digest 或 credential material；
+  backend 从当前 repo 与 backend-defined profile handle 完成 admission。
+- CLI 对应入口为 `projection-remote <webdav|s3> push` 与
+  `remote-import prepare|list|show|diff|refresh|apply|discard|repair`；repair 默认 dry-run，只有
+  `--apply` 才清理已证明 artifact。
+- B0 当前代码仍注册旧 `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull` 并执行 workspace
+  overwrite/External Changes bridge；这是 B4/B5 前的 release-blocking drift，不是 alias 或兼容路径。
 
 ## 非目标
 
@@ -76,6 +85,7 @@
 - 当前阶段不要求把所有未来扩展命令都默认暴露给用户。
 - 当前阶段不允许 Command Palette 触发后台自动 Git repair。
 - 当前阶段不允许 Command Palette 直接访问 WebDAV/S3 provider。
+- 当前阶段不允许 Remote Import checkbox、逐文件 Apply、前端 blocker 推理或 raw detail parsing。
 
 ## Chrome MCP 验收实例
 

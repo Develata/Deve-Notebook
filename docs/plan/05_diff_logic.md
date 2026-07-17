@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -141,55 +141,33 @@ DeveStaged
 - Proxy / plugin-host node role 摘要不得展示 legacy bridge mode；如果需要描述 Source Control，
   必须展示 NoteGit/ngit authority 与 delegated/readonly 状态。
 
-### 2.3.2 Remote Projection Transport Lifecycle {#remote-projection-transport}
+### 2.3.2 Remote Projection Transport Contract {#remote-projection-transport-contract}
 
-Remote Projection Transport 是 WebDAV/S3 上的 Markdown Projection Workspace 传输层。
-`06_backup` 中的 Projection Backup 只是该 transport 的 backup-oriented 产品语义；它不再
-定义独立加密 backup pack。
+Remote Projection Transport 是 WebDAV/S3 的 host transport boundary，只提供两种语义分离的能力：
 
 ```text
-RemoteProjectionCommand
-  -> ProjectionLocatorResolved
-  -> TransportProviderResolved
-  -> PushProjection | PullProjection
-  -> ProjectionWorkspaceWritten
-  -> WatcherOrScanDetected
-  -> ExternalChanges
+Projection Workspace -> push adapter -> remote provider
+remote provider -> ordered source acquisition -> project-owned bounded sink
 ```
 
-约束：
+- push 只能上传当前 Markdown Projection Workspace 文件集合，不上传 `.notegit/`、`.git/`、Ledger、staging、snapshot、Remote Import artifact 或 runtime state。
+- source acquisition 只负责 locator/profile admission、确定性列举与逐文件 streaming；它不拥有 Remote Import session、Ledger、Projection Workspace、External Changes 或 apply 决策。
+- push 与 source acquisition 可以复用 provider、credential/profile、HTTP/signing 基础设施，但必须使用语义分离的 typed interface。locator/profile 必须继续满足 ADR 0008 的 exact host-local binding，禁止 ambient credential fallback 到任意 custom host。
+- Web surface 只发送 typed intent；provider I/O、路径归一化、预算 admission 与失败分类全部属于 backend/host infra。
 
-- 未接线的 WebDAV/S3 provider/direction 必须显式 fail-closed，并报告
-  `provider_io_ready=false`。已接线的 provider/direction 只有在 backend/core runtime
-  完成 Projection Locator、`.notegit` identity gate 与 provider adapter 调用后，才可报告
-  `provider_io_ready=true`。不得把 admission plan 输出伪装成已完成 push/pull。
-- `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
-  不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
-- Web/Command Palette 发出的 Remote Projection intent 不携带 locator。Backend MUST 从当前
-  local repo 的 characteristic `repo_url` 解析 remote projection locator；`repo_url` 缺失、
-  使用 `urn:*`/非 transport URL，或 scheme 与用户选择的 provider 不匹配时 MUST fail-closed
-  并报告 `provider_io_ready=false`。CLI 可以继续通过显式 `--locator` 覆盖该 host 操作输入。
-- 当前 `s3:push` / `s3:pull` 支持 AWS `s3://bucket/prefix` locator 通过 runtime
-  环境凭证执行，也支持 CLI 显式 Remote Projection profile handle 下的
-  S3-compatible `s3+https://` custom endpoint。custom endpoint 必须匹配 ADR 0008
-  的 host-local、secret-free profile：endpoint origin / bucket / prefix / signing
-  settings / credential ref 均由 runtime resolver admission 后使用。未绑定、profile
-  不匹配或 credential ref 解析失败时，`s3+https://` 必须 fail-closed，且不得将默认
-  AWS 环境密钥签给任意 custom host。
-- `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；
-  覆盖后由 watcher/scan 生成 External Changes。
-- pull 的 provider I/O 与 External Changes scan 必须在 repo permit 外执行。workspace apply
-  通过 Mounted admission 在 permit 内完成后，scan/finalize 使用一次性 mount + repo-lane
-  revision continuation；scan 期间若有后续受管 writer，旧失败路径不得回滚覆盖该 writer，
-  而应保留 repair evidence 并 fail-closed。
-- `webdav:pull` / `s3:pull` 远端枚举结果归一化后若出现重复 Markdown projection
-  path，必须在下载任何 payload 或写 Projection Workspace 前 fail-closed。
-- pull **MUST NOT** append ledger、创建 commit anchor、写 Source Control staging、写 Git main mirror queue
-  或直接确认 External Changes。
-- push/pull 在执行前必须复用 Projection Locator 与 `.notegit` identity gate；locator 缺失、
-  workspace 不可 canonicalize、repo scope 不匹配或 remote provider 未配置时必须 fail-closed。
-- Web surface 只发送 typed command intent；远端列举、上传、下载、覆盖与 drift 计算均属于
-  backend/core infra，不得在前端实现。
+#### Current Pull Transition Anchor {#remote-projection-transport}
+
+当前代码仍保留 `webdav:pull` / `s3:pull` 覆盖 workspace、再进入 External Changes 的未发布实现。它只是 B4 前用于保持现有代码 `plan_ref` 可追踪的 release-blocking drift；不是批准目标、兼容 epoch 或可继续扩展的路线。B4 必须连同 workspace apply/rollback continuation、External Changes scan bridge 与旧命令一次性删除。
+
+### 2.3.3 Remote Import Diff Contract {#remote-import-diff-contract}
+
+- 每个 `RemoteImportCandidateRevision` 都绑定 immutable source manifest/blobs 与生成该 revision 时的 exact Ledger head/branch/locator/ignore snapshot；初始 revision 使用 Prepare 基线，Refresh 可按下述受限规则生成新 revision。diff、label、blocker 和 `entry_id` 均由 backend 生成。
+- change kind 固定为 `Added | Modified | Unchanged`。远端缺失文件不产生 `Delete`；change kind 与 typed blocker 正交。
+- 首版为 whole-session review/apply：不提供 checkbox、逐文件选择、逐文件 apply/discard。任一 blocker 禁用整个 session Apply。
+- pending/staged overlap、head/branch/locator/ignore drift、digest mismatch、scope/session/revision mismatch 必须由 backend fail-closed；前端不得重新推导 overlap、stale 或可写性。
+- Diff 请求只接受 opaque strong `entry_id`，返回 backend-generated display label 与 typed diff；不得暴露 locator、provider/host path、blob path、digest、credential 或原始失败 detail。
+- Refresh 只能从已封存 blobs 重算 candidate。它可以在 `RepoId`、branch、source snapshot 与 locator/profile binding 均未变化且 digests 全部通过时，把新 revision 重新绑定到当前 Ledger head 与当前 ignore snapshot；这正是 head/ignore drift 后 `Stale -> Ready` 的唯一恢复路径。locator/profile、branch、RepoId membership 或 source digest 变化不可重绑，session 保持 Stale 或进入 Failed；需要新远端内容时必须先 Discard，再重新 Prepare。
+- Remote Import review/runtime 不复用 Source Control 或 External Changes controller、state、notice 或 authority；只允许复用无状态 diff/render primitive。
 
 ### 2.4 Diff Identity Model
 
@@ -696,6 +674,7 @@ Source Control grant 校验必须共同使用 JWT 派生的 `auth_session_id`；
 - scope nonce binding
 - diff session lifecycle
 - source control notices
+- independent Remote Import request/revision binding and typed diff projection
 
 ### 9.5 View Layer
 
@@ -715,13 +694,17 @@ Source Control grant 校验必须共同使用 JWT 派生的 `auth_session_id`；
 
 workspace diff 与 confirmed ledger diff 必须分离；core manager、CLI proxy 与 `use_core` 回调不得共享隐式 source-control 状态。
 
+Remote Import 必须收敛为独立 `remote_import_runtime` 与 `remote_import_client`；Source Control / External Changes 只允许复用无状态 diff primitive，不得承载 Remote Import session 或 apply authority。
+
 ## 本章相关命令
 
 - `P2P: Merge Peer`
-- `webdav:push`
-- `webdav:pull`
-- `s3:push`
-- `s3:pull`
+- `remote_projection.webdav.push`
+- `remote_projection.s3.push`
+- `remote_import.open`
+- `remote_import.refresh`
+- `remote_import.apply`
+- `remote_import.discard`
 
 ## 本章相关配置
 

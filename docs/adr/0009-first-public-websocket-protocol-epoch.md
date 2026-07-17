@@ -1,6 +1,6 @@
 # 0009. First public WebSocket protocol epoch
 
-- Status: Superseded before publication
+- Status: Superseded by 0011
 - Date: 2026-07-14
 - Superseded: 2026-07-17
 
@@ -9,6 +9,10 @@
 > authority in `docs/plan/07_network.md` freezes the first public epoch as F4/v2.
 > This ADR preserves the earlier decision history only; it is not a compatibility
 > promise and does not authorize a v1 adapter.
+
+> F4/v2 was also never published. ADR 0011 replaces it with the first-tag target
+> F4/v3 because the nested Remote Import request/response family changes the
+> postcard enum shape. No v1/v2 adapter is authorized.
 
 ## Context
 
@@ -60,6 +64,11 @@ changed the postcard enum shape. The project therefore advances directly to
 `WS_PROTOCOL_VERSION = 2` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 2`, keeps
 magic `DEVEWSF4`, rejects unpublished F4/v1, and retains the lockstep policy.
 No runtime or durable-data migration is required.
+
+ADR 0011 subsequently advances the unpublished lockstep target to
+`WS_PROTOCOL_VERSION = 3` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3`, keeps
+`DEVEWSF4`, and removes unversioned/legacy JSON fallbacks. This remains a
+pre-publication cutover, not a compatibility window.
 
 ## References
 

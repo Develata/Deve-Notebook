@@ -67,11 +67,35 @@ Workspace_r = P_r ⊕ D_r
 
 ### 3.1 Ledger Layout
 
-- `ledger/local/<repo_name>.redb`
-- `ledger/remotes/<peer_name>/<repo_name>.redb`
+- `ledger/local/<repo_id>.redb`
+- `ledger/remotes/<peer_id>/<repo_id>.redb`
 - `ledger/.host/identity.key`
 - `ledger/.host/projection-locators.toml`
-- `ledger/backups/<repo_name>-<timestamp>.redb`
+- `ledger/backups/<repo_id>-<timestamp>.redb`
+
+Physical filenames use UUID identity. `RepoNameBinding.repo_name` is a display
+alias and selector hint; it never determines a database filename.
+
+### 3.1.1 Remote Import Runtime Layout {#remote-import-runtime-layout}
+
+Remote Import capture is host-only, immutable runtime state:
+
+```text
+ledger/.host/remote-imports/<repo_id>/<session_id>/
+  source-manifest.json
+  candidates/<revision>.json
+  blobs/<sha256>
+```
+
+- `source-manifest.json` is deterministic JSON schema v1; `blobs/<sha256>` are
+  content-addressed immutable bytes and candidates are deterministic projections
+  of that sealed snapshot.
+- This directory is not a fourth authority store. It must not be synced,
+  materialized as Projection content, watched as workspace input, exposed to the
+  browser, or interpreted as Source Control/External Changes state.
+- Redb owns session identity/state and exact digests; the filesystem owns only
+  the sealed payload bytes. Neither side may infer the missing half from names
+  or timestamps.
 
 ### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
@@ -102,8 +126,10 @@ Git mirror 的生命周期、命令面与失败语义以 `05_diff_logic.md#git-m
 
 ### 3.3 Collision Rules
 
-- 同一 branch 下，同名但不同 repo identity 的 `.redb` 文件 **MUST** 自动重命名。
-- 物理文件名冲突不得改变逻辑 repo identity。
+- 同一 branch 下 `.redb` 文件名必须是 canonical `RepoId`；同名 display alias
+  不产生物理冲突。
+- 非 UUID filename、同一 `RepoId` 的重复文件或 identity mismatch 必须
+  fail-closed 并进入显式 catalog/repair；不得自动重命名后猜测归属。
 
 ### 3.4 Browser Storage Layering {#browser-storage-layering}
 

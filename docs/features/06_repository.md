@@ -54,26 +54,16 @@
 - 远端 repo 的只读限制不能影响本地 repo 的正常可写。
 - 当前 repo 损坏或失效时，系统应提示恢复或回退，而不是静默绑定到别的 repo。
 
-### 6. Projection Backup
+### 6. Remote Projection 与 Remote Import
 
-- Projection Backup 是 Remote Projection Transport 的 backup-oriented 产品语义：
-  将 Projection Workspace 中的 Markdown files 上传到 WebDAV/S3，或从 remote
-  下载 Markdown files 覆盖 Projection Workspace。
-- Projection Backup 不备份 ledger history，不传输 encrypted pack、branch manifest、
-  RestoreCandidate、snapshot/runtime state、`.git/` 或 `.notegit/`。
-- `push` 只上传 Markdown projection files；provider metadata、ETag、mtime、object
-  version 与 remote listing order 都只能作为 diagnostics。
-- `pull` 只写 Projection Workspace，并必须进入 Watcher/scan -> External Changes；
-  用户确认前不得写 ledger、Source Control staging、commit anchor 或 Git mirror queue。
-- Web / Command Palette 只提交 provider/direction typed intent；backend 负责解析当前
-  repo scope、Projection Locator、Remote Projection locator/profile 与 credential ref。未来
-  S3-compatible UX 只能选择 backend-defined profile handle，不得在前端收集 endpoint URL
-  或 secret material。
-- CLI 使用 `projection-remote webdav push/pull` 与 `projection-remote s3 push/pull`
-  执行 Projection Backup transport；旧 `backup` CLI surface 已从首版命令面删除。
-- S3-compatible `s3+https://` endpoint 走 host-local、secret-free Remote
-  Projection profile binding；CLI 已支持显式 profile handle，未绑定或未匹配 profile
-  时仍在 provider I/O 与默认 AWS credential 解析前 fail-closed。
+- Remote Projection 只负责把当前 Markdown Projection Workspace push 到 WebDAV/S3，或把远端内容 streaming 给 project-owned import sink；它不再把 remote 直接 pull/overwrite 到 workspace。
+- Remote Import 以不可变 manifest/blob snapshot 建立独立 session。Prepare 完成前不写 workspace；Review 只显示 backend label、Added/Modified/Unchanged、typed blocker 与 typed diff。
+- 用户只能整 session Apply 或 Discard；没有 checkbox、逐文件选择和 remote Delete。任一 blocker 禁用整个 Apply。
+- Apply 通过 sealed whole-session Ledger transaction提交，事务内先保存“Ledger 已提交、Projection outcome pending”的 durable receipt，随后才执行 Projection writeback。成功收敛为 Written；失败与 durable fault 一起收敛为 Degraded。崩溃/重试从 Ledger 幂等恢复，不重复导入、不回滚 Ledger。
+- Refresh 只重算已封存 snapshot：在 RepoId/branch/source/locator 仍 exact 时可把新 revision 绑定到当前 Ledger head 与 ignore snapshot；source/locator/branch/membership/tamper drift 不可重绑。要读取新的远端内容必须先 Discard 后重新 Prepare。
+- active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。rename 只改显示名，不搬 RepoId-based artifacts。
+- Web / Command Palette 只提交 typed intent；backend 解析 repo scope、locator/profile、credential ref、session/revision 与 blockers。S3-compatible UX 只能选择 backend-defined profile handle，不收集 endpoint URL 或 secret。
+- 当前旧 pull→workspace→External Changes 仍是未发布实现 drift；B4 会一次性删除，不作为兼容能力。正式命令面见 `14_commands#remote-import-command-contract`。
 
 ## 非目标
 

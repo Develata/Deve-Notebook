@@ -1,0 +1,7 @@
+        subgraph cluster_core_remote_import {
+            label="Remote Import authority domains [03/06]"; style="rounded,filled"; fillcolor="#fff0f7"; color="#be185d";
+            core_remote_transport [label="remote projection\n(transport)", fillcolor="#fdf2f8"];
+            core_remote_import [label="remote import\n(runtime)", fillcolor="#fdf2f8"];
+            core_remote_import_authority [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_remote_import_projection [label="projection\n(writeback)", fillcolor="#fdf2f8"];
+        }

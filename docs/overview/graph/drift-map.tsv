@@ -16,6 +16,11 @@ commit-and-push	sc_commit_publish
 native ai-chat	ai_chat
 trusted external agent boundary	ai_trusted
 plugin-host / plugin-call boundary	plugin_runtime
+remote projection push	remote_projection_push
+remote import prepare	remote_import_prepare
+remote import review	remote_import_review
+remote import apply	remote_import_apply
+remote import manage	remote_import_manage
 search/query	search_query
 repo file operations	repo_file_ops
 document edit / confirmed op	doc_edit

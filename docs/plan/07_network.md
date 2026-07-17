@@ -204,21 +204,27 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- 首个公开 wire epoch 固定为 `protocol_version = 2`，兼容窗口为 `2..=2`。v2 包含 workspace ingestion
-  unavailable 的 typed error variant。历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与
-  F4/v0、F4/v1、F4/v13 全部 fail-closed，不提供 adapter。F4/v2 发布后只允许
-  单调升级，不得再次重置或复用旧 `(magic, version)` identity。任何后续破坏兼容的 schema 或
-  codec 变更 **MUST** bump F4 内的版本并同步更新收发端兼容窗口。
+- 首个公开 wire epoch 固定为 `protocol_version = 3`，兼容窗口为 `3..=3`。v3 同时包含
+  workspace ingestion unavailable typed error 与 nested Remote Import request/response family。
+  历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v1、F4/v2、F4/v13
+  全部 fail-closed，不提供 adapter。F4/v3 发布后只允许单调升级，不得再次重置或复用旧
+  `(magic, version)` identity。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump F4
+  内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
 - 未来若支持滚动升级，必须为每个仍支持的旧 `protocol_version` 维护显式 decode/upgrade adapter，并在 `MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION` 区间内逐版本测试。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned postcard frame。
 - 浏览器生产客户端到服务端 **MUST** 使用 versioned postcard binary frame；收到任意 text frame、损坏
   binary frame 或不支持的 wire identity 时必须退休当前 connection epoch 并重连，不得把错误帧投影成
   普通业务消息继续消费。text-frame versioned JSON 只能由 server 的显式 development/debug 入口解析。
-- 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认运行时合同。
-- 旧式 JSON debug frame 缺少 `known_vector` / `server_vector` 时，只能按空向量兼容解析；新发送的 sync frame **MUST** 显式携带这些字段。
+- development/debug JSON **MUST** 显式携带 `protocol_version = 3` 并使用与 postcard frame 相同的
+  v3 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
+  不得解析或回退。所有 sync frame **MUST** 显式携带当前 schema 要求的 vector 字段。
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
+
+> **B0 implementation transition（非兼容承诺）**：当前代码仍是未发布的 F4/v2，且仍携带
+> legacy/unversioned JSON fallback。它们是 B4 一次性产品切换前的 release-blocking drift；B4 必须
+> 删除旧 decoder、环境开关与 v2 window。该过渡状态不得被解释为公开支持的 v2 客户端或兼容层。
 
 ### 4.3 Core Message Families
 
@@ -241,6 +247,9 @@ enabled = true
   - `GetCommitDiff` / `CommitDiffResult`
   - `GetCommitFileDiff`
   - `ComputeDiffProjection` / `DiffProjectionResult` / `DiffProjectionError`
+- remote import:
+  - `RemoteImport(RemoteImportRequest)`
+  - `RemoteImport(RemoteImportResponse)`
 - repo/runtime:
   - `RepoList`
   - `DocList`
@@ -259,7 +268,46 @@ watcher lifecycle 不新增 WS message family。workspace ingestion unavailable 
 前端只按 code/i18n 分支。产品 detail 必须是固定泛化文案，repo identity、path、generation 与
 failure 原因只进入 tracing。
 
-### 4.3.1 Projection Recovery Wire Contract {#projection-recovery-contract}
+### 4.3.1 Remote Import Wire Contract {#remote-import-wire-contract}
+
+Remote Import 使用 nested message family，不为每个动作扩张顶层 `ClientMessage` / `ServerMessage`
+variant：
+
+```text
+ClientMessage::RemoteImport(RemoteImportRequest)
+ServerMessage::RemoteImport(RemoteImportResponse)
+
+RemoteImportRequest =
+  Prepare | List | Show | Page | Diff | Refresh | Apply | Discard
+RemoteImportResponse =
+  Prepared | Listed | Shown | Paged | Diffed | Refreshed | Applied | Discarded | Error
+```
+
+所有 request **MUST** 携带 `request_id + repo_id + branch + scope_nonce`。除 Prepare/List 外，
+请求还必须按动作携带精确 `session_id + revision`；Prepare 由 backend 解析 provider/profile，List
+只查询当前 repo 可见 session。所有 response 必须先回显并精确匹配
+`request_id + repo_id + branch + scope_nonce`。`Prepared` 响应携带 backend 新生成的
+`session_id + revision`，只有通过该 request/scope gate 后才能安装为当前 session；`Listed`
+响应按 request/scope 关联，且每个 summary 自带其 session/revision。Show/Page/Diff/Refresh/Apply/Discard
+等 session-bound 响应还必须与当前 `session_id + revision` 精确匹配，否则 Web 丢弃。
+
+- Page 默认 100 entries，硬上限 200；cursor 是 opaque token，且必须绑定 candidate revision。
+- Diff 只接受 opaque strong `entry_id`；显示 label 由 backend 生成，不能由 Web 从内部路径重建。
+- wire/UI 只暴露 `entry_id`、backend-generated display label、typed change kind、typed blocker 与
+  必要的分页/状态字段；不得暴露 locator、provider/host path、blob path、digest、credential、
+  source manifest 或原始失败 detail。
+- `RemoteImportChangeKind` 首版只包含 `Added / Modified / Unchanged`；远端缺失文件不投影 Delete。
+- blocker 与 change kind 正交；任意 blocker 禁止整个 session Apply，前端不得自行合并或降级 blocker。
+- Prepare/List/Show/Page/Diff/Refresh/Discard 不以 Mounted 为前置条件；Apply 未 Mounted 时复用
+  `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE`。
+- Apply 响应携带 durable `RemoteImportApplyReceipt`，其 typed Projection outcome 为
+  `Pending / Written / Degraded`。`Pending` 明确表示 Ledger 已提交但 recovery 尚未完成；writeback
+  失败则返回 `Degraded`。两者都不得伪装成未提交或要求重试写 Ledger。
+
+本 family 在 B0 仅为 approved target；Rust message、handler 与 Web dispatch 由 B4/B5 激活，首发前
+不得以旧 `RemoteProjectionDirection::Pull` 或 Source Control notice 充当其实现。
+
+### 4.3.2 Projection Recovery Wire Contract {#projection-recovery-contract}
 
 后端统一使用以下 typed wire 表示“authority 已变化或消息完整性已无法证明，客户端必须按指定
 范围刷新 projection”：
@@ -282,8 +330,9 @@ ProjectionRecoveryPlan {
 }
 ```
 
-`ProjectionRecoveryCause` 至少区分 ExternalApply、DocumentMutation、SourceControlCommit、Merge、
-PluginMutation 与 `BroadcastGap { skipped }`。plan 是 server authority 的投影刷新决定；Web 只能
+`ProjectionRecoveryCause` 至少区分 ExternalApply、RemoteImportApply、DocumentMutation、
+SourceControlCommit、Merge、PluginMutation 与 `BroadcastGap { skipped }`。plan 是 server authority
+的投影刷新决定；Web 只能
 执行 typed refresh，不得根据 cause、路径或正文推断业务恢复范围。
 
 `ClientMessage::ApplyExternalChanges` 必须携带 `request_id`；成功返回

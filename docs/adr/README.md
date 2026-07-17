@@ -51,7 +51,8 @@ blueprint in `docs/plan/`.
 | [0004](./0004-tauri-v2-as-native-target.md) | Tauri v2 as the native packaging target | Accepted |
 | [0005](./0005-uuid-first-not-path-first.md) | UUID-first identity, not path-first | Accepted |
 | [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Accepted |
-| [0007](./0007-projection-backup-first-tag-route.md) | Projection Backup first-tag route | Accepted |
+| [0007](./0007-projection-backup-first-tag-route.md) | Projection Backup first-tag route | Superseded by 0011 |
 | [0008](./0008-s3-compatible-remote-projection-credential-binding.md) | S3-compatible Remote Projection credential binding | Accepted |
-| [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Accepted |
+| [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Superseded by 0011 |
 | [0010](./0010-sealed-pre-tag-release-candidate.md) | Sealed pre-tag release candidate promotion | Accepted |
+| [0011](./0011-immutable-ledger-first-remote-import.md) | Immutable ledger-first Remote Import | Accepted |

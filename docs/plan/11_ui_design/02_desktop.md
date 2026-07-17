@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-12`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -250,29 +250,40 @@ $$ Splitter = [Region_{sidebar}, Region_{display\_editor}, Region_{chat}] $$
         *   `File`: No Prefix (e.g., `src/main.rs`).
         *   `Branch`: Prefix `@` (e.g., `@feature/xyz`).
 
-## 4. Source Control UI
+## 4. Change Review Sibling Views
 
-Source Control view 的详细信息架构、resource group、row action、menu 与 VS Code-like reference policy 由 `12_source_control_ui.md` 定义。本节只保留 Desktop shell 下的可见性与布局约束。
+Source Control、External Changes 与 Remote Import 的详细信息架构、row action、menu 与 authority
+边界由 `12_source_control_ui.md` 定义。本节只保留 Desktop shell 下的可见性与布局约束。
 
 ### 4.1 视图结构 (View Structure)
-定义源代码管理视图 $V_{sc}$ 为三个集合的并集：
-$$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
-*   **Staged ($S_{staged}$)**: 已暂存的文件集合。支持 `Unstage All`。
-*   **Unstaged ($S_{unstaged}$)**: 工作区的脏文件集合。支持 `Stage All` / `Discard All`。
+三个入口必须保持同级且状态独立：
+
+*   **Source Control**：显示 `Confirmed Ledger Changes`、commit surface 与 history/graph；不得显示
+    External Changes 的 staged/unstaged groups。
+*   **External Changes**：显示 Projection Workspace 偏差、stage/unstage/discard 与 Apply to Ledger；
+    不显示 commit/history/graph。
+*   **Remote Import**：显示 immutable session、candidate rows、typed blockers 与 whole-session
+    Refresh/Apply/Discard；不得用 External Changes staging 或 Source Control controller 模拟该流程。
+
+Desktop row shell、diff renderer、button 与 semantic color primitive 可以共享，但三者的 controller、
+runtime state、notice/error 与 authority intent 不得共享。
 
 ### 4.2 变更状态可视化
-每个变更项 $Item \in V_{sc}$ **MUST** 使用语义化颜色标记状态：
+每个适用的变更项 **MUST** 使用语义化颜色标记状态：
 
 *   **Modified ($M$)**: Orange (`var(--color-modified)`).
 *   **Added ($A$)**: Green (`var(--color-added)`).
 *   **Deleted ($D$)**: Red (`var(--color-deleted)`).
 
+Remote Import 首版只有 Added / Modified / Unchanged，不得从远端缺失项合成 Deleted。其 row 只显示
+backend-generated label 和 typed state，不得展示 locator、host/provider/blob path 或 digest。
+
 ## 5. Related Commands
 
 *   `view.layout.toggle_sidebar`: 切换侧边栏可见性。
 *   `view.layout.toggle_diff`: 切换 Diff/Editor 模式。
-*   `source_control.stage_all`: 暂存所有更改。
+*   `remote_import.open`: 打开独立 Remote Import view。
 
 ## 6. Post-Gate Implementation Target
 

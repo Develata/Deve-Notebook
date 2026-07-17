@@ -1,5 +1,5 @@
 contains	docs/plan/22_reliability_observability.md	resilience playbook index
-contains	docs/plan/22_reliability_observability.md	Projection Backup 文件传输合同归 `06_backup`
+contains	docs/plan/22_reliability_observability.md	06_backup (Remote Projection / Remote Import 状态与 authority 边界)
 contains	docs/plan/22_reliability_observability.md	## 2. SLO / SLI Catalog
 contains	docs/plan/22_reliability_observability.md	| Edit-ack 可用性 | `ack` 成功率（非 `SYNC_EDIT_REJECTED` 协议错误占比） | ≥ 99.5% / 7d | 0.5% / 7d |
 contains	docs/plan/22_reliability_observability.md	| Edit-ack 延迟 | P99 edit→ack（对照 `21_perf_budget`） | 达标率 ≥ 99% | 1% / 7d |
@@ -37,21 +37,23 @@ contains	docs/plan/22_reliability_observability.md	## 6. Observation-to-Health M
 contains	docs/plan/22_reliability_observability.md	本节只声明「什么观测对应哪个已定义状态」，不新增状态、不定义迁移。
 contains	docs/plan/22_reliability_observability.md	| Projection Locator 缺失 / 冲突 | `DegradedLocator` |
 contains	docs/plan/22_reliability_observability.md	| 全部校验通过、authority 与 projection 一致 | `Healthy` |
-contains	docs/plan/22_reliability_observability.md	### 6.1 DurableProjectionFault Boundary
+contains	docs/plan/22_reliability_observability.md	### 6.2 DurableProjectionFault Boundary
 contains	docs/plan/22_reliability_observability.md	它 **不是** ledger authority，不能新增、撤销或改写业务事实
 contains	docs/plan/22_reliability_observability.md	## 7. Alerting Tier
 contains	docs/plan/22_reliability_observability.md	| `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`、`STORAGE_DB_LOCKED`、`SYNC_DECRYPT_FAILED`（数据完整性，显式纳入） | 立即 page + 阻断发布 |
-contains	docs/plan/22_reliability_observability.md	| `T2` 警告 | 409 冲突 / 作用域失效 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH` | 工单 + 观察 Error Budget |
+contains	docs/plan/22_reliability_observability.md	| `T2` 警告 | 409 冲突 / 作用域失效；显式列入的 repo-local 可隔离 503 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH`、`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` | 工单 + 观察 Error Budget |
 contains	docs/plan/22_reliability_observability.md	| `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
 contains	docs/plan/22_reliability_observability.md	`Quarantined` → `T1`
 contains	docs/plan/22_reliability_observability.md	其余 `Degraded*` → `T2`
 contains	docs/plan/22_reliability_observability.md	## 8. Resilience Playbook Index
-contains	docs/plan/22_reliability_observability.md	`06_backup#projection-backup-pull-state-machine-contract`
+contains	docs/plan/22_reliability_observability.md	`06_backup#remote-import-session-contract`
+contains	docs/plan/22_reliability_observability.md	### 6.1 Remote Import Health Mapping {#remote-import-health-mapping}
+contains	docs/plan/22_reliability_observability.md	`cleanup_pending` 只是 remove/lifecycle blocker
 contains	docs/plan/AGENTS.md	`22_reliability_observability#slo-sli-catalog` | `## 2. SLO / SLI Catalog` | SLO/SLI 目标与 Error Budget；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/plan/AGENTS.md	`22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/plan/AGENTS.md	`22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/plan/AGENTS.md	`22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 deve_baseline reliability-observability / REL-013 绑定
-contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 deve_baseline reliability-observability / REL-013 绑定
+contains	docs/plan/AGENTS.md	`22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 RepoHealth 映射及 watcher failure 不映射为 RepoHealth/ProjectionFault 的正交边界；状态全集 defer 04、mount state defer 03 watcher；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/plan/AGENTS.md	`22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/plan/AGENTS.md	`22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 deve_baseline reliability-observability / REL-013 绑定
 contains	docs/coverage-matrix.md	| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-013`） | `scripts/check-reliability-observability-baseline.sh` + `cargo run -p deve_baseline -- reliability-observability` |

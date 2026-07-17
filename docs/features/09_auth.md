@@ -54,12 +54,23 @@
   Android/iOS 平台原生控件交给 native coordinator 恢复，不以 Web fallback 伪装。
 - 切回 LocalBackend 后必须建立新 endpoint/session/scope；远端 auth cookie 与旧 authority 不得复用。
 
+### 6. Local CLI Proxy 隔离
+
+- repo DB 被本机 server 持有时，`remote-import` CLI 只可通过 loopback-only
+  `LocalCliProxyAuthority` 发送 typed request，不能绕锁直开 DB。
+- CLI 使用既有 operator login/JWT authority，但把 token 仅保留在当前 process；Cookie-only、anonymous
+  localhost dev session、browser Source Control grant、P2P/delegated token 都不能构造该 capability。
+- capability 只绑定一个 exact Remote Import request/scope/session/revision；server 仍负责 blocker、Mounted、
+  writer gate、transaction 与 publication 判断。CLI 不获得通用 Ledger、watcher 或 Source Control authority。
+- proxy admission 失败时 CLI 显式报认证/代理不可用，不退回匿名访问、browser grant 或直写 DB。
+
 ## 非目标
 
 - 当前阶段不把 peer identity 暴露为用户层可见登录概念。
 - 当前阶段不允许未授权状态继续假装可写。
 - anonymous localhost dev cookie 不是远程访问凭据，也不允许扩大为生产免密登录。
 - 远端 browser auth session 不是 native IPC 或本机 backend preference capability。
+- Local CLI proxy 不是 browser auth surface，也不是新的持久 credential store。
 
 ## Chrome MCP 验收实例
 

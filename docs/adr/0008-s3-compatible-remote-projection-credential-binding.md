@@ -8,17 +8,16 @@
 Remote Projection transports Markdown Projection Workspace files through
 WebDAV or S3-compatible object storage. It is the transport runtime used by
 Projection Backup, but it is not ledger backup, sync authority, Source Control
-authority, ledger authority, or Git mirror authority. `push`
-uploads only projection Markdown files. `pull` writes only Projection
-Workspace files and then relies on watcher/scan External Changes admission.
+authority, ledger authority, or Git mirror authority. `push` uploads only
+projection Markdown files. ADR 0011 replaces `pull` with immutable Remote
+Import source acquisition; that change does not alter this credential binding.
 
 The current S3 provider supports AWS `s3://bucket/prefix` with explicit runtime
 environment credentials and SigV4 object operations. It also supports a
 CLI-only explicit profile slice for `s3+https://` custom endpoints. Missing or
 mismatched custom endpoint profiles are rejected before provider I/O and before
-resolving default `AWS_*` credentials. The Web Command Palette sends only
-provider and direction typed intents; backend resolves the locator from the
-current local repo `repo_url`.
+resolving default `AWS_*` credentials. Web sends only typed provider/action
+intents; backend resolves the locator/profile from the current local repo.
 
 Allowing custom endpoints without a credential binding/profile contract would
 let any repo-local locator cause the runtime to sign arbitrary hosts with
@@ -132,10 +131,11 @@ unsafe credential path.
   reference, endpoint origin, bucket, prefix, region, signing options,
   addressing style, provider capability flags, and allowed directions, but not
   raw secret values.
-- `push` and `pull` authority rules stay unchanged: only Markdown projection
-  files are transported; `pull` writes Projection Workspace files and enters
-  External Changes; no ledger, staging, commit anchor, Git mirror queue, backup
-  state, or Source Control authority state is written by provider metadata.
+- `push` uploads only Markdown projection files. Remote Import acquisition
+  streams provider objects into immutable host-only blobs and never writes the
+  Projection Workspace or External Changes; provider metadata still creates no
+  ledger, staging, commit-anchor, Git-mirror, session-state, or Source Control
+  authority effect.
 - Frontend and Command Palette surfaces must not accept locator strings,
   endpoint URLs, access keys, secret keys, session tokens, ETags, or provider
   metadata as operation authority. They may only collect typed user intent or,
@@ -149,3 +149,4 @@ unsafe credential path.
 - docs/features/12_commands.md
 - docs/acceptance-cases/04_diff.md
 - docs/registry/runtime-skeleton-registry.md
+- docs/adr/0011-immutable-ledger-first-remote-import.md

@@ -131,15 +131,40 @@
 
 - `REPO_METADATA[0] = RepoInfo`
 - `REPO_METADATA[1] = redb_schema_version`
-- 当前 schema 为 `REDB_SCHEMA_VERSION = 3`，repo metadata 与 node metadata value 使用同一 project-owned postcard codec。
+- 首个正式 tag 目标 schema 为 `REDB_SCHEMA_VERSION = 4`，repo metadata、node metadata 与 Remote Import workflow value 使用同一 project-owned postcard codec。
 
 规则：
 
 - 新建 local repo 与 remote shadow repo **MUST** 写入当前 `REDB_SCHEMA_VERSION`。
 - 打开已有 repo 时，运行时 **MUST** 先校验 `REDB_SCHEMA_VERSION`，再读取 `RepoInfo` 或进入 ledger/query 路径。
 - 缺失 schema version 或版本不匹配 **MUST** fail-closed，并暴露“需要显式迁移、reset 或重建”的诊断。
-- v2 的 `peer_id/seq` 同时混入 actor 标签与 per-doc/per-node 计数，运行时不得推测性重写为 v3 物理 peer history。v2 只允许经 repair/export 兼容读取后显式导出，再重建 v3 repo。
+- v2 的 `peer_id/seq` 同时混入 actor 标签与 per-doc/per-node 计数，运行时不得推测性重写为当前物理 peer history。v2 只允许经 repair/export 兼容读取后显式导出，再重建当前 repo。
+- 未发布的 v3 database 不做原地 v4 migration、adapter 或双轨读取。B1 切换前代码仍是 v3；B1 必须一次性把新建/打开 gate 切到 v4，旧开发数据只能在旧 HEAD 显式导出后重建。
 - 表名后缀（如 `client_op_index_v2`）只能表达单个 side table 的内部演进，不得替代顶层 redb schema version gate。
+
+### 4.3.2 Remote Import Workflow Tables {#remote-import-workflow-tables}
+
+Redb v4 新增两个 project-owned workflow table：
+
+```rust
+REMOTE_IMPORT_SESSIONS: TableDefinition<u128, &[u8]>
+REMOTE_IMPORT_RUNTIME: TableDefinition<u8, &[u8]>
+```
+
+- `REMOTE_IMPORT_SESSIONS` 保存 session identity、repo/branch/head binding、状态、
+  manifest/candidate/blob aggregate digests、terminal receipt 与
+  `cleanup_pending`；不内嵌 provider payload 或 workspace content。
+- `REMOTE_IMPORT_RUNTIME` 保存每 repo active pointer、CAS generation 与
+  schema-owned recovery metadata。每 repo 最多一个 active session；不存在
+  durable `Applying`。Apply 的 single-flight 只存在于当前 process runtime，
+  durable 并发与重试结果由 Redb CAS 和 stored receipt 裁决。
+- `Preparing` 启动恢复必须变成 `Failed(Interrupted)`；`Ready/Stale/Failed`
+  与 terminal `Applied/Discarded` 的完整状态机归
+  `06_backup#remote-import-state-machine`。
+- terminal record 最近保留 64 个；`cleanup_pending=true` 永不自动裁剪。
+- filesystem manifest/blob names、mtime、目录存在性或 provider metadata不得
+  反推 Redb session state。digest mismatch、orphan 或 incomplete publication
+  只能进入 typed Failed/repair。
 
 ### 4.4 Snapshot Storage Contract
 
@@ -262,7 +287,7 @@ slot state，不重新获取 supervisor map mutex，从而避免 Map↔Repo 反�
 - Docs create/copy/rename/move/delete；
 - External Changes prepare/stage/unstage/discard/apply；
 - Source Control commit/push 中读取或改变 local workspace/authority 的部分；
-- local merge、projection apply 与 Remote Projection pull；
+- local merge、projection apply 与 Remote Import Apply；
 - plugin note writer 与 source-control writer。
 
 纯读、ledger inspect/export、认证 remote-shadow ingest、offline repair/export/diagnostic 不受
@@ -278,9 +303,10 @@ repo permit 的调用不得再获取 `Catalog` lane；这一反向嵌套必须 f
 
 authority mutation permit 的覆盖范围包括 Browser Edit、Docs create/copy/rename/move/delete 与 repo authority mutation、
 External Apply、Source Control commit（含 resolved-conflict 与 commit-and-push 的 authority
-部分）、merge result、plugin `note_write`，以及未来启用的 local reconcile。Watcher 只写
+部分）、Remote Import Apply、merge result、plugin `note_write`，以及未来启用的 local reconcile。Watcher 只写
 External Changes pending，不进入该 gate；认证 remote shadow ingest、离线 repair/export 与
-diagnostic 明确排除。
+diagnostic 明确排除。Remote Import Prepare/Show/Page/Diff/Refresh/Discard 走 session runtime
+自己的 repo/session CAS；它们不获得 Ledger writer authority，也不要求 Mounted。
 
 repo selector、名称或路径只用于锁外定位候选身份。每个 writer 在获得 permit 后 **MUST** 重新解析并
 exact-compare 当前 `RepoId`、名称绑定与 local-writable 状态；rename/remove 后同名新 repo 不得继承旧请求
@@ -332,6 +358,46 @@ projection 查询失败伪报为“authority 未提交”。
 - 当 staged 为空但存在 `ConfirmedLedgerChange` 时，commit **MUST** 只创建覆盖当前 ledger head 的 commit anchor，不得重复追加内容或结构 facts。
 - commit 覆盖 confirmed ledger dirty 时，全部 committed snapshot baselines 与对应 commit payload/order anchor 必须在同一个 redb write transaction 提交；任一 snapshot 或 anchor/order 写入失败都不得留下半提交。Git mirror queue 只能在该事务成功后作为可恢复 projection 操作排队，排队失败不得回滚 NoteGit commit。
 - ordinary External Changes staging **MUST NOT** 被普通 commit 消费；只有显式 resolved-conflict staging 可以按 `05_diff_logic` 的受控例外在同一 writer gate 内 apply 后创建 anchor。
+
+### 6.3.1 Sealed Prepared Ledger Change Batch {#sealed-ledger-change-batch}
+
+`PreparedLedgerChangeBatch` 是 crate-private、不可复制 authority capability。
+只有 External Apply 与 Remote Import 的 source-specific constructor 能构造；
+不得暴露 generic callback、public fact vector constructor、半事务 append 或让
+session/provider runtime直接操作 Ledger authority tables。
+
+Remote Import constructor 必须在进入同一个 Redb write transaction 前准备好
+全部 immutable inputs，并在事务内精确复核：
+
+- `RepoId`、schema v4、current ledger head 与 active session pointer；
+- session id、candidate revision、manifest digest、candidate digest 与全部 blob digest；
+- writer identity、local branch、Projection Locator 与 `.deveignore` snapshot；
+- pending/staged overlap，以及 session 仍属于当前 catalog `RepoId`。
+
+同一事务必须完成全部 upsert Content/Structure Facts、identity/index 更新、
+state=`Applied`、带 immutable authority commit core 且
+projection outcome=`Pending` 的 `RemoteImportApplyReceipt`、active pointer clear 与
+`cleanup_pending=true`。任一复核或写入失败整笔回滚，不得留下事实前缀。
+
+`Pending` 不是 durable `Applying`，也不允许第二次 append；它只表示 Ledger 已提交而 post-commit
+projection outcome 尚未持久化。事务提交后，projection runtime 从 Ledger facts 幂等 writeback：
+
+- writeback 成功后，以第二个短 Redb transaction 把 receipt outcome 从 `Pending` CAS 为 `Written`；
+- writeback 失败时，以第二个短 Redb transaction 原子写既有 durable projection fault evidence，
+  并把 outcome 从 `Pending` CAS 为 `Degraded`；
+- 进程在任一时点退出或第二个 transaction 失败时，receipt 保持 `Pending`。启动恢复或相同
+  request 重试必须识别 immutable authority core，重放幂等 projection writeback 并继续上述 CAS，
+  绝不能重新 append Ledger facts。若 filesystem writeback 已成功但 outcome 尚未更新，重复
+  materialization 也必须安全。
+
+第二个 transaction 只更新 workflow receipt outcome 与既有 projection fault journal，不包含或补写
+任何 Content/Structure Fact、identity/index 或 active-session authority；因此 whole-session Ledger
+transaction 仍是唯一且不可拆分的事实提交边界。
+
+response 只能报告已 durable 的 receipt 当前态：`Written` 返回正常 Applied；`Degraded` 返回
+“Ledger 已提交、Projection degraded”；`Pending` 必须明确返回“Ledger 已提交、Projection recovery
+pending”的 typed outcome，不能伪装未提交。相同 session/revision/request 在响应丢失后返回并收敛
+已存 receipt，不得创建新的事实批次或回滚 Ledger。
 
 ## 10. Forbidden Patterns（authority）
 
