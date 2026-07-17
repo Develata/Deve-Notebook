@@ -12,7 +12,8 @@ use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::sync::watcher::{WatcherRefresh, WatcherRefreshKind};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use std::path::Path;
 use std::sync::Arc;
 
 pub(super) fn clear(repo: &Arc<RepoManager>, repo_name: &str, path: &str) -> Result<()> {
@@ -40,13 +41,89 @@ pub(super) fn upsert(
     doc_id_hint: Option<DocId>,
     renamed_from: Option<&str>,
 ) -> Result<bool> {
-    let hash = if status == ChangeStatus::Deleted {
-        String::new()
-    } else {
-        let file_path = repo.local_repo_workspace_path(repo_name, path)?;
-        let content = std::fs::read_to_string(&file_path)?;
-        pending_fs::content_hash(&content)
-    };
+    if status == ChangeStatus::Deleted {
+        return upsert_with_hash(
+            repo,
+            repo_name,
+            path,
+            status,
+            doc_id_hint,
+            renamed_from,
+            String::new(),
+        );
+    }
+    let file_path = repo.local_repo_workspace_path(repo_name, path)?;
+    upsert_from_disk_path(
+        repo,
+        repo_name,
+        path,
+        status,
+        doc_id_hint,
+        renamed_from,
+        &file_path,
+    )
+}
+
+pub(super) fn upsert_from_disk_path(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    path: &str,
+    status: ChangeStatus,
+    doc_id_hint: Option<DocId>,
+    renamed_from: Option<&str>,
+    disk_path: &Path,
+) -> Result<bool> {
+    if status == ChangeStatus::Deleted {
+        return Err(anyhow!(
+            "deleted pending entries must not depend on a disk path"
+        ));
+    }
+    let content = std::fs::read_to_string(disk_path)?;
+    upsert_with_content(
+        repo,
+        repo_name,
+        path,
+        status,
+        doc_id_hint,
+        renamed_from,
+        &content,
+    )
+}
+
+pub(super) fn upsert_with_content(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    path: &str,
+    status: ChangeStatus,
+    doc_id_hint: Option<DocId>,
+    renamed_from: Option<&str>,
+    content: &str,
+) -> Result<bool> {
+    if status == ChangeStatus::Deleted {
+        return Err(anyhow!(
+            "deleted pending entries must not carry disk content"
+        ));
+    }
+    upsert_with_hash(
+        repo,
+        repo_name,
+        path,
+        status,
+        doc_id_hint,
+        renamed_from,
+        pending_fs::content_hash(content),
+    )
+}
+
+fn upsert_with_hash(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    path: &str,
+    status: ChangeStatus,
+    doc_id_hint: Option<DocId>,
+    renamed_from: Option<&str>,
+    hash: String,
+) -> Result<bool> {
     let doc_id = match doc_id_hint {
         Some(doc_id) => Some(doc_id),
         None => repo.get_tracked_docid_in_local_repo(repo_name, path)?,

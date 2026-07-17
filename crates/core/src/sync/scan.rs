@@ -8,7 +8,7 @@ use crate::source_control::ChangeStatus;
 use crate::utils::path::path_to_forward_slash;
 use crate::vfs::Vfs;
 use crate::watcher_ignore::IgnoreRules;
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -42,11 +42,56 @@ pub(crate) fn scan_all_local_repos_excluding(
 pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
-    let ignore_rules = Some(IgnoreRules::load(&repo_root));
+    let repo_root = std::fs::canonicalize(repo_root)?;
+    scan_local_repo_root(repo, vfs, repo_name, &repo_root)
+}
+
+pub(crate) fn scan_local_repo_at_root(
+    repo: &Arc<RepoManager>,
+    vfs: &Vfs,
+    repo_name: &str,
+    prepared_root: &std::path::Path,
+) -> Result<()> {
+    let current_root = repo.local_repo_workspace_root(repo_name)?;
+    let current_root = std::fs::canonicalize(&current_root).with_context(|| {
+        format!(
+            "Failed to revalidate Projection Workspace root during watcher startup for repo {}: {}",
+            repo_name,
+            current_root.display()
+        )
+    })?;
+    if current_root != prepared_root {
+        return Err(anyhow!(
+            "Projection Workspace root changed during watcher startup for repo {}: prepared {}, current {}",
+            repo_name,
+            prepared_root.display(),
+            current_root.display()
+        ));
+    }
+    scan_local_repo_root(repo, vfs, repo_name, prepared_root)?;
+    let final_root = std::fs::canonicalize(repo.local_repo_workspace_root(repo_name)?)?;
+    if final_root != prepared_root {
+        return Err(anyhow!(
+            "Projection Workspace root changed before watcher startup handoff for repo {}: prepared {}, current {}",
+            repo_name,
+            prepared_root.display(),
+            final_root.display()
+        ));
+    }
+    Ok(())
+}
+
+fn scan_local_repo_root(
+    repo: &Arc<RepoManager>,
+    vfs: &Vfs,
+    repo_name: &str,
+    repo_root: &std::path::Path,
+) -> Result<()> {
+    let ignore_rules = Some(IgnoreRules::load(repo_root));
     let mut on_disk = HashSet::new();
     let mut seen_docs = HashSet::<DocId>::new();
 
-    let walker = WalkDir::new(&repo_root).into_iter().filter_entry(|entry| {
+    let walker = WalkDir::new(repo_root).into_iter().filter_entry(|entry| {
         entry
             .file_name()
             .to_str()
@@ -59,7 +104,7 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         if path.extension().and_then(|ext| ext.to_str()) != Some("md") {
             continue;
         }
-        let repo_path = repo_relative_path(repo_name, &repo_root, path)?;
+        let repo_path = repo_relative_path(repo_name, repo_root, path)?;
         if crate::utils::notegit::is_internal_repo_path(&repo_path) {
             continue;
         }
@@ -74,7 +119,9 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
             ));
         }
         on_disk.insert(repo_path.clone());
-        if let Some(doc_id) = super::scan_file::scan_disk_file(repo, vfs, repo_name, &repo_path)? {
+        if let Some(doc_id) =
+            super::scan_file::scan_disk_file(repo, vfs, repo_name, &repo_path, path)?
+        {
             seen_docs.insert(doc_id);
         }
     }
@@ -149,18 +196,5 @@ fn repo_relative_path(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::repo_relative_path;
-    use std::path::Path;
-
-    #[test]
-    fn repo_relative_path_fails_closed_when_path_escapes_repo_root() {
-        let err = repo_relative_path(
-            "default",
-            Path::new("/projection/default"),
-            Path::new("/tmp/a.md"),
-        )
-        .expect_err("escaped path must fail closed");
-        assert!(err.to_string().contains("path escaped repo root"));
-    }
-}
+#[path = "scan_tests.rs"]
+mod tests;

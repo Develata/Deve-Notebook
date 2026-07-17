@@ -104,6 +104,7 @@
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_startup_scan_respects_deveignore -- --nocapture
     - run: cargo test -p deve_core --test watcher_lifecycle repo_watcher_handle -- --nocapture
     - run: cargo test -p deve_core --lib watcher_capture_first_startup -- --nocapture
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes -- --nocapture --test-threads=1
     - run: cargo test -p deve_core --lib watcher_final_state_shutdown -- --nocapture
     - run: cargo test -p deve_cli standalone_watch -- --nocapture
     - run: cargo test -p deve_cli watcher_refresh_adapter_maps_all_domain_fields -- --nocapture
@@ -123,7 +124,12 @@
     - cli_assert: ignored_markdown_not_appended_to_ledger true
     - api_assert: repo_watcher_handle_is_unique_non_clone_owner true
     - api_assert: startup_requires_clean_capture_first_scan_pass true
+    - api_assert: startup_scan_window_change_retries_and_converges_pending true
+    - api_assert: startup_churn_stops_after_three_dirty_passes true
+    - api_assert: startup_scan_failure_preserves_primary_and_cleanup true
     - api_assert: startup_terminal_backend_failure_never_becomes_churn_or_running true
+    - api_assert: startup_fixed_root_never_reresolves_locator true
+    - api_assert: startup_real_fs_preexisting_and_post_cut_changes_reach_pending true
     - api_assert: worker_failure_is_typed_and_generation_guarded true
     - api_assert: shutdown_reconciles_final_state_before_join true
     - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true

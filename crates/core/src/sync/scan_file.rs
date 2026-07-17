@@ -15,6 +15,7 @@ use crate::models::DocId;
 use crate::source_control::ChangeStatus;
 use crate::vfs::Vfs;
 use anyhow::Result;
+use std::path::Path;
 use std::sync::Arc;
 
 pub(super) fn scan_disk_file(
@@ -22,9 +23,9 @@ pub(super) fn scan_disk_file(
     vfs: &Vfs,
     repo_name: &str,
     repo_path: &str,
+    disk_path: &Path,
 ) -> Result<Option<DocId>> {
-    let disk_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    let inode = vfs.get_inode_abs(&disk_path)?;
+    let inode = vfs.get_inode_abs(disk_path)?;
     if let Some(inode) = inode
         && let Some(doc_id) = repo.get_docid_by_inode_in_local_repo(repo_name, &inode)?
     {
@@ -32,21 +33,35 @@ pub(super) fn scan_disk_file(
         if meta.as_ref().map(|item| item.path.as_str()) != Some(repo_path)
             && let Some(old_path) = meta.map(|item| item.path)
         {
-            pending_rename::upsert_external_rename(repo, repo_name, &old_path, repo_path, doc_id)?;
+            pending_rename::upsert_external_rename_at_path(
+                repo, repo_name, &old_path, repo_path, disk_path, doc_id,
+            )?;
             return Ok(Some(doc_id));
         }
         repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
-        let _ = pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
+        let _ = pending_content::sync_modified_pending_at_path(
+            repo, repo_name, repo_path, doc_id, disk_path,
+        )?;
         return Ok(Some(doc_id));
     }
 
     let Some(doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, repo_path)? else {
-        pending::upsert(repo, repo_name, repo_path, ChangeStatus::Added, None, None)?;
+        pending::upsert_from_disk_path(
+            repo,
+            repo_name,
+            repo_path,
+            ChangeStatus::Added,
+            None,
+            None,
+            disk_path,
+        )?;
         return Ok(None);
     };
     if let Some(inode) = inode {
         repo.bind_inode_in_local_repo(repo_name, &inode, doc_id)?;
     }
-    let _ = pending_content::sync_modified_pending(repo, repo_name, repo_path, doc_id)?;
+    let _ = pending_content::sync_modified_pending_at_path(
+        repo, repo_name, repo_path, doc_id, disk_path,
+    )?;
     Ok(Some(doc_id))
 }

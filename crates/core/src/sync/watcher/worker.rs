@@ -4,7 +4,7 @@
 use super::backend::{BackendSignal, FsWatcherBackend};
 use super::{
     RepoWatcherWorkerState, WatcherFailure, WatcherFailureKind, WatcherFailurePhase,
-    WatcherRefresh, WatcherRefreshCallback, dispatch,
+    WatcherRefresh, WatcherRefreshCallback, dispatch, panic_message,
 };
 use crate::models::RepoId;
 use crate::sync::SyncManager;
@@ -18,11 +18,30 @@ pub(crate) struct WorkerInput {
     pub sync: Arc<SyncManager>,
     pub repo_name: String,
     pub repo_id: RepoId,
+    pub generation: u64,
     pub repo_root: PathBuf,
     pub backend: Box<dyn FsWatcherBackend>,
     pub stop_rx: mpsc::Receiver<()>,
     pub refresh: Option<WatcherRefreshCallback>,
-    pub state: Arc<RwLock<RepoWatcherWorkerState>>,
+    pub state: Arc<RwLock<WorkerStateSlot>>,
+}
+
+pub(crate) struct WorkerStateSlot {
+    generation: u64,
+    state: RepoWatcherWorkerState,
+}
+
+impl WorkerStateSlot {
+    pub(crate) fn running(generation: u64) -> Self {
+        Self {
+            generation,
+            state: RepoWatcherWorkerState::Running,
+        }
+    }
+
+    pub(crate) fn snapshot(&self, generation: u64) -> Option<RepoWatcherWorkerState> {
+        (self.generation == generation).then(|| self.state.clone())
+    }
 }
 
 pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
@@ -30,6 +49,7 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
         sync,
         repo_name,
         repo_id,
+        generation,
         repo_root,
         mut backend,
         stop_rx,
@@ -55,7 +75,11 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
         ))
     });
     if let Err(failure) = &primary {
-        replace_state(&state, RepoWatcherWorkerState::Failed(failure.clone()));
+        replace_state(
+            &state,
+            generation,
+            RepoWatcherWorkerState::Failed(failure.clone()),
+        );
     }
     let cleanup = stop_backend(backend.as_mut());
     let result = match (primary, cleanup) {
@@ -65,7 +89,11 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
         (Ok(()), Ok(())) => Ok(()),
     };
     if let Err(failure) = &result {
-        replace_state(&state, RepoWatcherWorkerState::Failed(failure.clone()));
+        replace_state(
+            &state,
+            generation,
+            RepoWatcherWorkerState::Failed(failure.clone()),
+        );
     }
     result
 }
@@ -129,13 +157,7 @@ fn consume_loop(
                     catch_unwind(AssertUnwindSafe(|| backend.complete_reconcile(token)))
                         .map_err(|panic| panic_failure(WatcherFailurePhase::Reconcile, panic))?;
             }
-            Some(BackendSignal::Terminal) => {
-                return Err(WatcherFailure::new(
-                    WatcherFailurePhase::Receive,
-                    WatcherFailureKind::Backend,
-                    "watcher backend producer stopped",
-                ));
-            }
+            Some(BackendSignal::Terminal(failure)) => return Err(failure),
             None => {}
         }
     }
@@ -171,21 +193,20 @@ fn rescan_and_notify(
     Ok(())
 }
 
-fn replace_state(state: &RwLock<RepoWatcherWorkerState>, next: RepoWatcherWorkerState) {
-    match state.write() {
-        Ok(mut state) => *state = next,
-        Err(poisoned) => *poisoned.into_inner() = next,
+fn replace_state(
+    state: &RwLock<WorkerStateSlot>,
+    generation: u64,
+    next: RepoWatcherWorkerState,
+) -> bool {
+    let mut state = match state.write() {
+        Ok(state) => state,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if state.generation != generation {
+        return false;
     }
-}
-
-pub(crate) fn panic_message(panic: Box<dyn Any + Send>) -> String {
-    if let Some(message) = panic.downcast_ref::<&str>() {
-        (*message).to_owned()
-    } else if let Some(message) = panic.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "watcher worker panicked".to_owned()
-    }
+    state.state = next;
+    true
 }
 
 fn panic_failure(phase: WatcherFailurePhase, panic: Box<dyn Any + Send>) -> WatcherFailure {
@@ -193,242 +214,5 @@ fn panic_failure(phase: WatcherFailurePhase, panic: Box<dyn Any + Send>) -> Watc
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::sync::watcher::backend::ReconcileToken;
-    use std::sync::atomic::{AtomicBool, Ordering};
-
-    struct PanickingBackend {
-        stopped: Arc<AtomicBool>,
-    }
-
-    struct FailingBackend;
-
-    struct StopPanickingBackend;
-
-    struct BlockingCleanupBackend {
-        entered: mpsc::Sender<()>,
-        release: mpsc::Receiver<()>,
-    }
-
-    impl FsWatcherBackend for FailingBackend {
-        fn recv(
-            &self,
-            _timeout: Duration,
-        ) -> Result<Option<BackendSignal>, super::super::WatcherError> {
-            Err(super::super::WatcherError::WatcherInitFailed(
-                "injected receive failure".to_owned(),
-            ))
-        }
-
-        fn complete_reconcile(&self, _token: ReconcileToken) -> bool {
-            false
-        }
-
-        fn stop(&mut self) -> Result<(), super::super::WatcherError> {
-            Err(super::super::WatcherError::WatcherInitFailed(
-                "injected cleanup failure".to_owned(),
-            ))
-        }
-    }
-
-    impl FsWatcherBackend for StopPanickingBackend {
-        fn recv(
-            &self,
-            _timeout: Duration,
-        ) -> Result<Option<BackendSignal>, super::super::WatcherError> {
-            Ok(None)
-        }
-
-        fn complete_reconcile(&self, _token: ReconcileToken) -> bool {
-            false
-        }
-
-        fn stop(&mut self) -> Result<(), super::super::WatcherError> {
-            panic!("injected cleanup panic")
-        }
-    }
-
-    impl FsWatcherBackend for BlockingCleanupBackend {
-        fn recv(
-            &self,
-            _timeout: Duration,
-        ) -> Result<Option<BackendSignal>, super::super::WatcherError> {
-            Err(super::super::WatcherError::WatcherInitFailed(
-                "terminal receive failure".to_owned(),
-            ))
-        }
-
-        fn complete_reconcile(&self, _token: ReconcileToken) -> bool {
-            false
-        }
-
-        fn stop(&mut self) -> Result<(), super::super::WatcherError> {
-            self.entered.send(()).expect("announce cleanup");
-            self.release.recv().expect("release cleanup");
-            Ok(())
-        }
-    }
-
-    impl FsWatcherBackend for PanickingBackend {
-        fn recv(
-            &self,
-            _timeout: Duration,
-        ) -> Result<Option<BackendSignal>, super::super::WatcherError> {
-            panic!("injected watcher panic")
-        }
-
-        fn complete_reconcile(&self, _token: ReconcileToken) -> bool {
-            false
-        }
-
-        fn stop(&mut self) -> Result<(), super::super::WatcherError> {
-            self.stopped.store(true, Ordering::SeqCst);
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn worker_panic_becomes_typed_failure_and_stops_backend() {
-        let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
-            super::super::dispatch_test_support::new_sync().expect("watcher fixture");
-        let stopped = Arc::new(AtomicBool::new(false));
-        let state = Arc::new(RwLock::new(RepoWatcherWorkerState::Running));
-        let (_stop_tx, stop_rx) = mpsc::channel();
-
-        let failure = run(WorkerInput {
-            sync,
-            repo_name,
-            repo_id,
-            repo_root,
-            backend: Box::new(PanickingBackend {
-                stopped: stopped.clone(),
-            }),
-            stop_rx,
-            refresh: None,
-            state: state.clone(),
-        })
-        .expect_err("panic must become terminal failure");
-
-        assert_eq!(failure.kind, WatcherFailureKind::Panic);
-        assert!(failure.primary.contains("injected watcher panic"));
-        assert!(stopped.load(Ordering::SeqCst));
-        assert!(matches!(
-            state.read().expect("state").clone(),
-            RepoWatcherWorkerState::Failed(observed) if observed == failure
-        ));
-    }
-
-    #[test]
-    fn consumer_failure_preserves_primary_and_cleanup() {
-        let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
-            super::super::dispatch_test_support::new_sync().expect("watcher fixture");
-        let state = Arc::new(RwLock::new(RepoWatcherWorkerState::Running));
-        let (_stop_tx, stop_rx) = mpsc::channel();
-
-        let failure = run(WorkerInput {
-            sync,
-            repo_name,
-            repo_id,
-            repo_root,
-            backend: Box::new(FailingBackend),
-            stop_rx,
-            refresh: None,
-            state,
-        })
-        .expect_err("receive and cleanup failure must escape");
-
-        assert_eq!(failure.phase, WatcherFailurePhase::Receive);
-        assert_eq!(failure.kind, WatcherFailureKind::Backend);
-        assert!(failure.primary.contains("injected receive failure"));
-        assert_eq!(failure.cleanup.len(), 1);
-        assert!(failure.cleanup[0].contains("injected cleanup failure"));
-    }
-
-    #[test]
-    fn full_rescan_emits_repo_scoped_refresh() {
-        let (_dir, _repo, sync, repo_name, repo_id, _repo_root) =
-            super::super::dispatch_test_support::new_sync().expect("watcher fixture");
-        let refreshes = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let observed = refreshes.clone();
-        let callback: WatcherRefreshCallback = Arc::new(move |refresh| {
-            observed.lock().expect("refresh lock").push(refresh);
-        });
-
-        rescan_and_notify(&sync, &repo_name, repo_id, Some(&callback))
-            .expect("full watcher rescan");
-
-        let refreshes = refreshes.lock().expect("refresh lock");
-        assert_eq!(refreshes.len(), 1);
-        assert_eq!(refreshes[0].repo_id(), repo_id);
-        assert_eq!(refreshes[0].path(), "");
-        assert_eq!(
-            refreshes[0].kind(),
-            super::super::WatcherRefreshKind::DirectoryChanged
-        );
-    }
-
-    #[test]
-    fn cleanup_panic_becomes_typed_shutdown_failure() {
-        let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
-            super::super::dispatch_test_support::new_sync().expect("watcher fixture");
-        let state = Arc::new(RwLock::new(RepoWatcherWorkerState::Running));
-        let (stop_tx, stop_rx) = mpsc::channel();
-        stop_tx.send(()).expect("request stop");
-
-        let failure = run(WorkerInput {
-            sync,
-            repo_name,
-            repo_id,
-            repo_root,
-            backend: Box::new(StopPanickingBackend),
-            stop_rx,
-            refresh: None,
-            state,
-        })
-        .expect_err("cleanup panic must become typed failure");
-
-        assert_eq!(failure.phase, WatcherFailurePhase::Shutdown);
-        assert_eq!(failure.kind, WatcherFailureKind::Panic);
-        assert!(failure.primary.contains("injected cleanup panic"));
-    }
-
-    #[test]
-    fn terminal_failure_is_visible_before_cleanup_completes() {
-        let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
-            super::super::dispatch_test_support::new_sync().expect("watcher fixture");
-        let state = Arc::new(RwLock::new(RepoWatcherWorkerState::Running));
-        let observed = state.clone();
-        let (_stop_tx, stop_rx) = mpsc::channel();
-        let (entered_tx, entered_rx) = mpsc::channel();
-        let (release_tx, release_rx) = mpsc::channel();
-
-        let join = std::thread::spawn(move || {
-            run(WorkerInput {
-                sync,
-                repo_name,
-                repo_id,
-                repo_root,
-                backend: Box::new(BlockingCleanupBackend {
-                    entered: entered_tx,
-                    release: release_rx,
-                }),
-                stop_rx,
-                refresh: None,
-                state,
-            })
-        });
-        entered_rx.recv().expect("cleanup entered");
-
-        assert!(matches!(
-            observed.read().expect("state").clone(),
-            RepoWatcherWorkerState::Failed(failure)
-                if failure.phase == WatcherFailurePhase::Receive
-        ));
-
-        release_tx.send(()).expect("release cleanup");
-        join.join()
-            .expect("worker join")
-            .expect_err("receive failure remains terminal");
-    }
-}
+#[path = "worker_tests.rs"]
+mod tests;

@@ -10,7 +10,7 @@ mod watcher_test_support;
 
 use anyhow::Context;
 use deve_core::source_control::{ChangeStatus, pending_fs};
-use deve_core::sync::watcher::{self, DEFAULT_DEBOUNCE};
+use deve_core::sync::watcher::{self, DEFAULT_DEBOUNCE, RepoWatcherWorkerState};
 use std::io::Write;
 use std::time::Duration;
 use watcher_test_support::Harness;
@@ -74,6 +74,33 @@ fn watcher_stop_prevents_post_stop_delivery() -> anyhow::Result<()> {
     std::thread::sleep(DEFAULT_DEBOUNCE * 3 + Duration::from_millis(200));
 
     assert!(h.repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes()
+-> anyhow::Result<()> {
+    let h = Harness::new(None)?;
+    let repo_name = h.repo.local_repo_name().to_string();
+    let pre_start = h.workspace_path(&repo_name, "notes/pre-start.md")?;
+    std::fs::create_dir_all(pre_start.parent().context("pre-start parent")?)?;
+    std::fs::write(&pre_start, "pre-start")?;
+
+    let handle = watcher::RepoWatcherHandle::start(watcher::RepoWatcherStart::resolve(
+        h.sync.clone(),
+        &repo_name,
+        1,
+    )?)?;
+    assert!(matches!(
+        handle.snapshot().worker_state(),
+        RepoWatcherWorkerState::Running
+    ));
+    h.wait_pending(&repo_name, "notes/pre-start.md", ChangeStatus::Added)?;
+
+    let post_start = h.workspace_path(&repo_name, "notes/post-start.md")?;
+    std::fs::write(post_start, "post-start")?;
+    h.wait_pending(&repo_name, "notes/post-start.md", ChangeStatus::Added)?;
+    handle.shutdown()?;
     Ok(())
 }
 

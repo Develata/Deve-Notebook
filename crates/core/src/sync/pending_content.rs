@@ -15,6 +15,7 @@ use crate::source_control::ChangeStatus;
 use crate::source_control::conflict;
 use crate::source_control::pending_fs;
 use anyhow::Result;
+use std::path::Path;
 use std::sync::Arc;
 
 pub(super) enum PendingSyncResult {
@@ -29,7 +30,17 @@ pub(super) fn sync_modified_pending(
     doc_id: DocId,
 ) -> Result<PendingSyncResult> {
     let file_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    let disk_content = std::fs::read_to_string(&file_path)?;
+    sync_modified_pending_at_path(repo, repo_name, repo_path, doc_id, &file_path)
+}
+
+pub(super) fn sync_modified_pending_at_path(
+    repo: &Arc<RepoManager>,
+    repo_name: &str,
+    repo_path: &str,
+    doc_id: DocId,
+    file_path: &Path,
+) -> Result<PendingSyncResult> {
+    let disk_content = std::fs::read_to_string(file_path)?;
     let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
     let current = repo.run_on_local_repo(repo_name, |db| pending_fs::get(db, repo_path))?;
     if equivalent_reconciled_content(&rebuilt.content, &disk_content) {
@@ -56,13 +67,14 @@ pub(super) fn sync_modified_pending(
     if unchanged {
         return Ok(PendingSyncResult::Noop);
     }
-    pending::upsert(
+    pending::upsert_with_content(
         repo,
         repo_name,
         repo_path,
         ChangeStatus::Modified,
         Some(doc_id),
         None,
+        &disk_content,
     )?;
     Ok(PendingSyncResult::Changed)
 }
