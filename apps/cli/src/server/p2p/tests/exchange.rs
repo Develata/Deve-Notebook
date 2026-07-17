@@ -62,7 +62,7 @@ async fn p2p_exchange_responds_to_ping_without_aborting_handshake() -> anyhow::R
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn p2p_exchange_transport_ping_does_not_extend_application_idle_deadline()
 -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
@@ -108,7 +108,7 @@ async fn p2p_exchange_transport_ping_does_not_extend_application_idle_deadline()
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn p2p_exchange_transport_ping_does_not_extend_handshake_deadline() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let (_dir, state) = test_state_with_dir(identity)?;
@@ -137,7 +137,10 @@ async fn p2p_exchange_transport_ping_does_not_extend_handshake_deadline() -> any
     .await
     .expect_err("transport-only traffic must not keep a missing handshake alive");
 
-    assert!(err.to_string().contains("handshake timed out"));
+    assert!(
+        err.to_string().contains("handshake timed out"),
+        "unexpected handshake error: {err:#}"
+    );
     assert_eq!(socket.sent, vec![Message::Pong(vec![1])]);
     Ok(())
 }
