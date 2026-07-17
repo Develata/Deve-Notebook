@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 07_network#server-ws-runtime
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
@@ -94,11 +95,10 @@ impl EmbeddedServerRuntime {
 
         let sync_engine = build_sync_engine(peer_id, repo.clone(), sync_mode);
         let tree_manager = runtime::build_tree_registry();
-        let watcher_guard = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
         let app_state = runtime::build_app_state(runtime::AppStateParts {
             repo: repo.clone(),
-            sync_manager,
-            tx,
+            sync_manager: sync_manager.clone(),
+            tx: tx.clone(),
             plugins,
             sync_engine,
             tree_manager,
@@ -106,6 +106,7 @@ impl EmbeddedServerRuntime {
             search_available,
             identity_key: key_pair,
         });
+        let watcher_guard = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
         #[cfg(not(test))]
         deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
             crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
@@ -139,8 +140,29 @@ impl EmbeddedServerRuntime {
             Some(tasks) => tasks.shutdown(timeout).await,
             None => Ok(()),
         };
-        drop(self.watcher_guard.take());
-        background_result
+        let watcher_result = match self.watcher_guard.take() {
+            Some(guard) => match tokio::task::spawn_blocking(move || guard.shutdown()).await {
+                Ok(result) => result,
+                Err(error) => Err(anyhow::anyhow!(
+                    "watcher shutdown coordination task failed: {error}"
+                )),
+            },
+            None => Ok(()),
+        };
+        combine_runtime_shutdown_results(background_result, watcher_result)
+    }
+}
+
+fn combine_runtime_shutdown_results(
+    background_result: anyhow::Result<()>,
+    watcher_result: anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    match (background_result, watcher_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+        (Err(primary), Err(watcher)) => {
+            Err(primary.context(format!("watcher shutdown also failed: {watcher}")))
+        }
     }
 }
 

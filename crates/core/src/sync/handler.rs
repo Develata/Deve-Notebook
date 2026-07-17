@@ -8,8 +8,8 @@
 //! - 外部文件事件只能更新 pending side table；不得提前改写权威 Ledger / Path 映射。
 
 use crate::ledger::RepoManager;
-use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
+use crate::sync::watcher::{WatcherRefresh, WatcherRefreshKind};
 use crate::utils::fs::checked_exists;
 use crate::vfs::Vfs;
 use anyhow::Result;
@@ -40,7 +40,7 @@ impl<'a> FsEventHandler<'a> {
         }
     }
 
-    pub fn handle_event(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
+    pub fn handle_event(&self, repo_path: &str) -> Result<Vec<WatcherRefresh>> {
         let file_path = self
             .repo
             .local_repo_workspace_path(self.repo_name, repo_path)?;
@@ -91,16 +91,16 @@ impl<'a> FsEventHandler<'a> {
             return Ok(vec![]);
         }
         info!("Handler: New file detected: {}", repo_path);
-        Ok(vec![super::pending::message(
+        Ok(vec![super::pending::refresh(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
-            "added",
+            WatcherRefreshKind::Added,
         )?])
     }
 
-    fn handle_delete(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
+    fn handle_delete(&self, repo_path: &str) -> Result<Vec<WatcherRefresh>> {
         let had_pending_add =
             super::pending::has_pending_added(self.repo, self.repo_name, repo_path)?;
         let tracked_doc_id = self
@@ -131,12 +131,12 @@ impl<'a> FsEventHandler<'a> {
             "Handler: File gone: {}. Recording as pending delete.",
             repo_path
         );
-        Ok(vec![super::pending::message(
+        Ok(vec![super::pending::refresh(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
-            "deleted",
+            WatcherRefreshKind::Deleted,
         )?])
     }
 
@@ -144,7 +144,7 @@ impl<'a> FsEventHandler<'a> {
         &self,
         repo_path: &str,
         doc_id: crate::models::DocId,
-    ) -> Result<Vec<ServerMessage>> {
+    ) -> Result<Vec<WatcherRefresh>> {
         if let Some(meta) = self
             .repo
             .get_file_meta_for_doc_in_local_repo(self.repo_name, doc_id)?
@@ -167,13 +167,13 @@ impl<'a> FsEventHandler<'a> {
         }
     }
 
-    fn modified_refresh(&self, repo_path: &str) -> Result<Vec<ServerMessage>> {
-        Ok(vec![super::pending::message(
+    fn modified_refresh(&self, repo_path: &str) -> Result<Vec<WatcherRefresh>> {
+        Ok(vec![super::pending::refresh(
             self.repo,
             self.repo_name,
             self.repo_id,
             repo_path,
-            "modified",
+            WatcherRefreshKind::Modified,
         )?])
     }
 
@@ -182,7 +182,7 @@ impl<'a> FsEventHandler<'a> {
         old_path: &str,
         new_path: &str,
         doc_id: crate::models::DocId,
-    ) -> Result<Vec<ServerMessage>> {
+    ) -> Result<Vec<WatcherRefresh>> {
         let changed = super::pending_rename::upsert_external_rename(
             self.repo,
             self.repo_name,
@@ -195,8 +195,20 @@ impl<'a> FsEventHandler<'a> {
         }
         info!("Handler: Rename detected {} -> {}", old_path, new_path);
         Ok(vec![
-            super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted")?,
-            super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added")?,
+            super::pending::refresh(
+                self.repo,
+                self.repo_name,
+                self.repo_id,
+                old_path,
+                WatcherRefreshKind::Deleted,
+            )?,
+            super::pending::refresh(
+                self.repo,
+                self.repo_name,
+                self.repo_id,
+                new_path,
+                WatcherRefreshKind::Added,
+            )?,
         ])
     }
 }

@@ -4,9 +4,6 @@ use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, StructureOp};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::staging;
-use deve_core::sync::SyncManager;
-use deve_core::sync::watcher;
-use std::sync::Arc;
 use tempfile::TempDir;
 
 mod common;
@@ -153,49 +150,6 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_projection_fault() ->
 
     assert!(err.to_string().contains("projection fault"));
     assert_metadata_still_drifted(&main)?;
-    Ok(())
-}
-
-#[test]
-fn repair_local_repo_catalog_blocks_workspace_realign_with_active_watcher() -> anyhow::Result<()> {
-    struct StopWatcher(uuid::Uuid);
-    impl Drop for StopWatcher {
-        fn drop(&mut self) {
-            let _ = watcher::stop_repo_watcher(self.0);
-        }
-    }
-
-    let dir = TempDir::new()?;
-    let ledger_dir = dir.path().join("ledger");
-    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
-    let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let projection_base = dir.path().join("notes");
-    main.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    std::fs::create_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))?;
-
-    let repo = Arc::new(main);
-    let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
-    let watcher_id = watcher::start_repo_watcher(sync, "wiki", None, None)?;
-    let _stop = StopWatcher(watcher_id);
-    std::fs::remove_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))?;
-    std::fs::create_dir_all(projection_base.join("notes"))?;
-    let wiki_db = wiki_db(repo.as_ref())?;
-    common::write_repo_metadata(
-        wiki_db.as_ref(),
-        &RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "notes".into(),
-            url: wiki_info.url.clone(),
-        },
-    );
-
-    let err = repo
-        .repair_local_repo_catalog()
-        .expect_err("active watcher must block workspace root realign");
-
-    assert_eq!(watcher_id, wiki_info.uuid);
-    assert!(err.to_string().contains("active watcher"));
-    assert_metadata_still_drifted(repo.as_ref())?;
     Ok(())
 }
 

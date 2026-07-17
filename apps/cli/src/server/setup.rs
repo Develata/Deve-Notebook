@@ -10,11 +10,14 @@
 use anyhow::{Context, Result, anyhow};
 use deve_core::config::RuntimeEnvironment;
 use deve_core::protocol::ServerMessage;
+use deve_core::sync::watcher::{RepoWatcherStart, WatcherRefresh, WatcherRefreshKind};
 
 use axum::http::{Method, header};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+
+use crate::watcher_runtime::OwnedWatcherHandles;
 
 /// 按显式 runtime override 或环境变量构建 CORS 层；默认不信任任何跨站来源。
 pub(super) fn build_cors_layer(
@@ -94,28 +97,43 @@ pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Res
 pub(super) fn start_file_watchers(
     sync_manager: Arc<deve_core::sync::SyncManager>,
     tx: broadcast::Sender<ServerMessage>,
-) -> Result<Vec<deve_core::models::RepoId>> {
-    let mut ids = Vec::new();
+) -> Result<OwnedWatcherHandles> {
+    let mut starts = Vec::new();
     for repo_name in sync_manager.healthy_local_repo_names_for_execution()? {
         let tx_clone = tx.clone();
-        let callback = Arc::new(move |msg: ServerMessage| {
-            if let ServerMessage::FsChangeDetected { .. } = &msg {
-                let _ = tx_clone.send(msg);
-            }
+        let callback = Arc::new(move |refresh: WatcherRefresh| {
+            let message = watcher_refresh_message(refresh);
+            let _ = tx_clone.send(message);
         });
-        ids.push(deve_core::sync::watcher::start_repo_watcher(
-            sync_manager.clone(),
-            &repo_name,
-            None,
-            Some(callback),
-        )?);
+        starts.push(
+            RepoWatcherStart::resolve(sync_manager.clone(), repo_name, 1)?.with_refresh(callback),
+        );
     }
-    Ok(ids)
+    Ok(OwnedWatcherHandles::start_all(starts)?)
+}
+
+fn watcher_refresh_message(refresh: WatcherRefresh) -> ServerMessage {
+    ServerMessage::FsChangeDetected {
+        repo_id: Some(refresh.repo_id()),
+        branch: None,
+        scope_nonce: None,
+        path: refresh.path().to_owned(),
+        change_type: match refresh.kind() {
+            WatcherRefreshKind::Added => "added",
+            WatcherRefreshKind::Modified => "modified",
+            WatcherRefreshKind::Deleted => "deleted",
+            WatcherRefreshKind::DirectoryChanged => "dir_changed",
+        }
+        .to_owned(),
+        has_conflict: refresh.has_conflict(),
+    }
 }
 
 #[cfg(test)]
 fn validate_file_watcher_startup(workspace_root: &std::path::Path) -> Result<()> {
-    deve_core::watcher::validate_watch_root(workspace_root)
+    std::fs::canonicalize(workspace_root)
+        .map(|_| ())
+        .map_err(anyhow::Error::from)
         .with_context(|| format!("Watcher startup preflight failed for {:?}", workspace_root))
 }
 
@@ -123,12 +141,47 @@ fn validate_file_watcher_startup(workspace_root: &std::path::Path) -> Result<()>
 mod tests {
     use super::{
         allowed_origins_from_env, allowed_origins_from_values, build_cors_layer,
-        validate_file_watcher_startup, write_main_port_hint,
+        validate_file_watcher_startup, watcher_refresh_message, write_main_port_hint,
     };
     use deve_core::config::RuntimeEnvironment;
+    use deve_core::protocol::ServerMessage;
+    use deve_core::sync::watcher::{WatcherRefresh, WatcherRefreshKind};
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn watcher_refresh_adapter_maps_all_domain_fields() {
+        let repo_id = uuid::Uuid::new_v4();
+        for (kind, expected) in [
+            (WatcherRefreshKind::Added, "added"),
+            (WatcherRefreshKind::Modified, "modified"),
+            (WatcherRefreshKind::Deleted, "deleted"),
+            (WatcherRefreshKind::DirectoryChanged, "dir_changed"),
+        ] {
+            let message =
+                watcher_refresh_message(WatcherRefresh::new(repo_id, "notes/live.md", kind, true));
+
+            match message {
+                ServerMessage::FsChangeDetected {
+                    repo_id: actual_repo_id,
+                    branch,
+                    scope_nonce,
+                    path,
+                    change_type,
+                    has_conflict,
+                } => {
+                    assert_eq!(actual_repo_id, Some(repo_id));
+                    assert_eq!(branch, None);
+                    assert_eq!(scope_nonce, None);
+                    assert_eq!(path, "notes/live.md");
+                    assert_eq!(change_type, expected);
+                    assert!(has_conflict);
+                }
+                other => panic!("unexpected watcher adapter message: {other:?}"),
+            }
+        }
+    }
 
     #[test]
     fn write_main_port_hint_fails_closed_when_parent_is_not_directory() {

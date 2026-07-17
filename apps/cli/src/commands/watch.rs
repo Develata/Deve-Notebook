@@ -6,8 +6,10 @@
 //!
 //! 启动文件系统监听，将外部变更归一化为待确认文件系统 candidate。
 
+use crate::watcher_runtime::OwnedWatcherHandles;
 use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
+use deve_core::sync::watcher::{RepoWatcherStart, WatcherFailure};
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -35,34 +37,52 @@ pub fn run(ledger_dir: &Path, snapshot_depth: usize, dry_run: bool) -> Result<()
         println!("Watcher dry-run OK: repo projection workspaces resolved");
         return Ok(());
     }
+    RUNNING.store(true, Ordering::SeqCst);
     install_shutdown_handler()?;
     sync_manager.scan()?;
-    let repo_ids = sync_manager
+    let starts = sync_manager
         .healthy_local_repo_names_for_execution()?
         .into_iter()
-        .map(|repo_name| {
-            deve_core::sync::watcher::start_repo_watcher(
-                sync_manager.clone(),
-                &repo_name,
-                None,
-                None,
-            )
-        })
+        .map(|repo_name| RepoWatcherStart::resolve(sync_manager.clone(), repo_name, 1))
         .collect::<Result<Vec<_>, _>>()?;
+    let handles = OwnedWatcherHandles::start_all(starts)?;
 
     // 4. 创建并启动 Watcher
     println!("启动 Watcher: repo projection workspaces");
     println!("按 Ctrl+C 停止...");
 
     // 5. 阻塞主线程直到收到退出信号
-    while RUNNING.load(Ordering::SeqCst) {
+    let terminal_failure = loop {
+        if !RUNNING.load(Ordering::SeqCst) {
+            break None;
+        }
+        if let Some(failure) = handles.terminal_failure() {
+            break Some(failure);
+        }
         std::thread::sleep(std::time::Duration::from_millis(100));
-    }
+    };
 
-    for repo_id in repo_ids {
-        deve_core::sync::watcher::stop_repo_watcher(repo_id)?;
-    }
+    let shutdown_result = handles.shutdown();
+    finish_watch_run(terminal_failure, shutdown_result)?;
     println!("Watcher 已停止。");
+    Ok(())
+}
+
+fn finish_watch_run<E>(
+    terminal_failure: Option<WatcherFailure>,
+    shutdown_result: Result<(), E>,
+) -> Result<()>
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
+    if let Some(primary) = terminal_failure {
+        let mut error = anyhow::Error::new(primary);
+        if let Err(shutdown) = shutdown_result {
+            error = error.context(format!("watcher shutdown also failed: {shutdown}"));
+        }
+        return Err(error);
+    }
+    shutdown_result?;
     Ok(())
 }
 
@@ -79,7 +99,8 @@ fn shutdown_signal_handler() -> impl FnMut() + Send + 'static {
 
 #[cfg(test)]
 mod tests {
-    use super::{RUNNING, run, shutdown_signal_handler};
+    use super::{RUNNING, finish_watch_run, run, shutdown_signal_handler};
+    use deve_core::sync::watcher::{WatcherFailure, WatcherFailureKind, WatcherFailurePhase};
     use std::sync::atomic::Ordering;
     use tempfile::TempDir;
 
@@ -107,5 +128,25 @@ mod tests {
 
         assert!(!RUNNING.load(Ordering::SeqCst));
         RUNNING.store(true, Ordering::SeqCst);
+    }
+
+    #[test]
+    fn standalone_watch_terminal_failure_returns_nonzero() {
+        let failure = WatcherFailure {
+            phase: WatcherFailurePhase::Receive,
+            kind: WatcherFailureKind::Backend,
+            primary: "terminal backend failure".to_owned(),
+            cleanup: Vec::new(),
+        };
+
+        let result = finish_watch_run(Some(failure), Ok::<(), std::io::Error>(()));
+
+        assert!(result.is_err());
+        assert!(
+            result
+                .expect_err("terminal failure must escape")
+                .to_string()
+                .contains("terminal backend failure")
+        );
     }
 }

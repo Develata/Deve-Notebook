@@ -15,6 +15,7 @@ Root source directory for the `deve_cli` crate. Contains the shared CLI runner t
 | `admin_api.rs` | Shared API response types: `DumpResponse`, `ExportEntry`, `NodeCheckResponse` |
 | `export_entries.rs` | Builds JSONL export data from the ledger, resolving paths via node projection |
 | `dump_support.rs` | Builds debug dump of a document's ops history and reconstructed content |
+| `watcher_runtime.rs` | Host-owned collection for watcher handles, startup rollback, terminal observation, and reverse shutdown |
 
 ## Subdirectories
 | Directory | Purpose |

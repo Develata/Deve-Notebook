@@ -12,10 +12,18 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-005	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-005	cargo test -p deve_core global_seq_increases -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-006	cargo test -p deve_cli markdown_export_preserves_user_frontmatter_without_system_metadata -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core repo_watcher_handle_reports_identity_and_restarts_after_shutdown -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib dispatch_batch_rescans_removed_directory_after_path_disappears -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib full_rescan_emits_repo_scoped_dir_changed_message -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib consumer_failure_still_stops_backend -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib full_rescan_emits_repo_scoped_refresh -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib consumer_failure_preserves_primary_and_cleanup -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib worker_panic_becomes_typed_failure_and_stops_backend -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib cleanup_panic_becomes_typed_shutdown_failure -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib terminal_failure_is_visible_before_cleanup_completes -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core watcher_drop_is_a_synchronous_cleanup_safety_net -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_cli watcher_refresh_adapter_maps_all_domain_fields -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_cli server_shutdown_preserves_background_primary_and_watcher_failure -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: watcher_refresh_adapter_maps_all_domain_fields true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: server_shutdown_preserves_background_primary_and_watcher_failure true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --test watcher_platform_fs watcher_stop_prevents_post_stop_delivery -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_web fs_change_refreshes_external_changes_sibling_view -- --nocapture
@@ -108,14 +116,17 @@ contains	apps/cli/src/commands/recover.rs	fn recover_rebuilds_workspace_files_fr
 contains	apps/cli/src/commands/export/tests.rs	fn markdown_export_preserves_user_frontmatter_without_system_metadata()
 contains	crates/core/tests/local_repo_metadata_repair_test.rs	fn init_allocates_collision_safe_repo_name_for_same_name_different_url()
 contains	crates/core/tests/store_acceptance_test.rs	SNAPSHOT_DATA
-contains	crates/core/tests/watcher_lifecycle.rs	fn watcher_duplicate_start_fails_and_can_restart_after_stop()
+contains	crates/core/tests/watcher_lifecycle.rs	fn repo_watcher_handle_reports_identity_and_restarts_after_shutdown()
 contains	crates/core/tests/watcher_lifecycle.rs	fn watcher_rejects_zero_debounce_window()
 contains	crates/core/src/sync/watcher/backend/notify_impl.rs	fn notify_backend_error_requests_rescan()
 contains	crates/core/src/sync/watcher/backend/notify_impl.rs	fn notify_rescan_flag_requests_rescan()
 contains	crates/core/src/sync/watcher/dispatch_burst_test.rs	fn dispatch_batch_collapses_modified_burst_by_content_hash()
 contains	crates/core/src/sync/watcher/dispatch_test/path_filter.rs	fn dispatch_batch_rescans_removed_directory_after_path_disappears()
-contains	crates/core/src/sync/watcher/mod.rs	fn full_rescan_emits_repo_scoped_dir_changed_message()
-contains	crates/core/src/sync/watcher/mod.rs	fn consumer_failure_still_stops_backend()
+contains	crates/core/src/sync/watcher/worker.rs	fn full_rescan_emits_repo_scoped_refresh()
+contains	crates/core/src/sync/watcher/worker.rs	fn consumer_failure_preserves_primary_and_cleanup()
+contains	crates/core/src/sync/watcher/worker.rs	fn worker_panic_becomes_typed_failure_and_stops_backend()
+contains	crates/core/src/sync/watcher/worker.rs	fn cleanup_panic_becomes_typed_shutdown_failure()
+contains	crates/core/src/sync/watcher/worker.rs	fn terminal_failure_is_visible_before_cleanup_completes()
 contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_atomic_replace_records_single_final_candidate()
 contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_directory_removal_rescans_tracked_descendants()
 contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_stop_prevents_post_stop_delivery()
@@ -127,11 +138,24 @@ contains	crates/core/tests/watcher_internal_ignore.rs	fn watcher_ignores_interna
 contains	crates/core/tests/watcher_internal_ignore.rs	fn watcher_ignores_internal_git_paths()
 contains	crates/core/tests/watcher_internal_ignore.rs	fn watcher_allows_notegit_backup_sibling_path()
 contains	crates/core/src/sync/watcher/filter.rs	!is_internal_repo_path(normalized)
-contains	crates/core/src/sync/watcher/mod.rs	registry::is_running(info.uuid)
-contains	crates/core/src/sync/watcher/mod.rs	registry::begin_stop(repo_id)
-contains	crates/core/src/sync/watcher/mod.rs	registry::finish_stop(repo_id)
-contains	crates/core/src/sync/watcher/mod.rs	stop_handle(rejected)?
-contains	crates/core/src/sync/watcher/registry.rs	WatcherSlot::Stopping
+contains	crates/core/src/sync/watcher/handle.rs	pub fn start(start: RepoWatcherStart)
+contains	crates/core/src/sync/watcher/handle.rs	pub fn shutdown(mut self)
+contains	crates/core/src/sync/watcher/types.rs	Failed(WatcherFailure)
+contains	apps/cli/src/watcher_runtime.rs	handles: Vec<RepoWatcherHandle>
+contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_duplicate_batch_reservation_fails_before_backend_attach()
+contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_partial_batch_start_rolls_back_owned_handles()
+contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_shutdown_is_reverse_and_continues_after_failure()
+contains	apps/cli/src/commands/watch.rs	fn standalone_watch_terminal_failure_returns_nonzero()
+contains	apps/cli/src/server/start/tests.rs	fn server_shutdown_preserves_background_primary_and_watcher_failure()
+contains	apps/cli/src/server/start.rs	spawn_blocking(move || guard.shutdown())
+absent_tree	crates/core/src	start_repo_watcher(
+absent_tree	crates/core/src	stop_repo_watcher(
+absent_optional	crates/core/src/sync/watcher/registry.rs	WatcherSlot
+absent_tree	crates/core/src/sync/watcher	ServerMessage
+absent	crates/core/src/sync/handler.rs	ServerMessage
+absent	crates/core/src/sync/pending.rs	ServerMessage
+contains	apps/cli/src/server/setup.rs	move |refresh: WatcherRefresh|
+contains	apps/cli/src/server/setup.rs	fn watcher_refresh_adapter_maps_all_domain_fields()
 contains	crates/core/src/ledger/manager/remote_repo_select.rs	let Some(info) = entry.info.as_ref() else
 contains	apps/cli/src/export_entries.rs	fn jsonl_roundtrip_is_monotonic_and_line_stable()
 contains	apps/cli/src/export_entries.rs	fn includes_dir_structure_fact_in_export()

@@ -61,8 +61,12 @@ fn watcher_directory_removal_rescans_tracked_descendants() -> anyhow::Result<()>
 fn watcher_stop_prevents_post_stop_delivery() -> anyhow::Result<()> {
     let h = Harness::new(None)?;
     let repo_name = h.repo.local_repo_name().to_string();
-    let repo_id = watcher::start_repo_watcher(h.sync.clone(), &repo_name, None, None)?;
-    watcher::stop_repo_watcher(repo_id)?;
+    let handle = watcher::RepoWatcherHandle::start(watcher::RepoWatcherStart::resolve(
+        h.sync.clone(),
+        &repo_name,
+        1,
+    )?)?;
+    handle.shutdown()?;
 
     let path = h.workspace_path(&repo_name, "notes/after-stop.md")?;
     std::fs::create_dir_all(path.parent().context("post-stop parent")?)?;

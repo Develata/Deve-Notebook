@@ -210,15 +210,6 @@ pub(super) fn preflight_workspace_root_repair(
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        if crate::sync::watcher::is_repo_watcher_running(plan.repo_id)
-            .map_err(|err| anyhow!("Failed to inspect watcher state: {err}"))?
-        {
-            return Err(anyhow!(
-                "Workspace root realign for {} refused: active watcher is running",
-                plan.current_name
-            ));
-        }
-
         let diagnostic = crate::sync::diagnose_projection_local_repo_stem(
             manager,
             &plan.current_name,

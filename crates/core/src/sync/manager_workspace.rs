@@ -1,10 +1,12 @@
 //! plan_ref:
 //!   - 03_storage/projection#projection-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 
 use super::{SyncManager, discard_pending, handler, projection_io};
 use crate::models::{DocId, LedgerEntry, PeerId};
-use crate::protocol::{ScPathTarget, ServerMessage};
+use crate::protocol::ScPathTarget;
+use crate::sync::watcher::WatcherRefresh;
 use anyhow::Result;
 
 impl SyncManager {
@@ -105,7 +107,7 @@ impl SyncManager {
         repo_name: &str,
         repo_id: crate::models::RepoId,
         repo_path: &str,
-    ) -> Result<Vec<ServerMessage>> {
+    ) -> Result<Vec<WatcherRefresh>> {
         if self.is_projection_degraded(repo_name) {
             tracing::warn!(
                 repo_name = %repo_name,

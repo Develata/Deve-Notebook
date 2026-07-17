@@ -97,20 +97,14 @@ pub(super) fn ledger_op_count(repo: &Arc<RepoManager>, repo_name: &str) -> anyho
     })
 }
 
-pub(super) fn assert_fs_message(
-    message: &crate::protocol::ServerMessage,
-    path: &str,
-    change_type: &str,
-) {
-    match message {
-        crate::protocol::ServerMessage::FsChangeDetected {
-            path: actual_path,
-            change_type: actual_change_type,
-            ..
-        } => {
-            assert_eq!(actual_path, path);
-            assert_eq!(actual_change_type, change_type);
-        }
-        other => panic!("unexpected message: {other:?}"),
-    }
+pub(super) fn assert_fs_message(message: &super::WatcherRefresh, path: &str, change_type: &str) {
+    assert_eq!(message.path(), path);
+    let expected = match change_type {
+        "added" => super::WatcherRefreshKind::Added,
+        "modified" => super::WatcherRefreshKind::Modified,
+        "deleted" => super::WatcherRefreshKind::Deleted,
+        "dir_changed" => super::WatcherRefreshKind::DirectoryChanged,
+        other => panic!("unexpected refresh kind fixture: {other}"),
+    };
+    assert_eq!(message.kind(), expected);
 }

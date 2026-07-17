@@ -87,10 +87,14 @@
     - ${DEVE_DATA_DIR}/notes/main/.deveignore 包含: ignored/*.md
   steps:
     - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
-    - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
+    - run: cargo test -p deve_core repo_watcher_handle_reports_identity_and_restarts_after_shutdown -- --nocapture
     - run: cargo test -p deve_core --lib dispatch_batch_rescans_removed_directory_after_path_disappears -- --nocapture
-    - run: cargo test -p deve_core --lib full_rescan_emits_repo_scoped_dir_changed_message -- --nocapture
-    - run: cargo test -p deve_core --lib consumer_failure_still_stops_backend -- --nocapture
+    - run: cargo test -p deve_core --lib full_rescan_emits_repo_scoped_refresh -- --nocapture
+    - run: cargo test -p deve_core --lib consumer_failure_preserves_primary_and_cleanup -- --nocapture
+    - run: cargo test -p deve_core --lib worker_panic_becomes_typed_failure_and_stops_backend -- --nocapture
+    - run: cargo test -p deve_core --lib cleanup_panic_becomes_typed_shutdown_failure -- --nocapture
+    - run: cargo test -p deve_core --lib terminal_failure_is_visible_before_cleanup_completes -- --nocapture
+    - run: cargo test -p deve_core watcher_drop_is_a_synchronous_cleanup_safety_net -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_stop_prevents_post_stop_delivery -- --nocapture
     - run: cargo test -p deve_web fs_change_refreshes_external_changes_sibling_view -- --nocapture
@@ -98,16 +102,18 @@
     - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_respects_deveignore_for_matching_markdown -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_startup_scan_respects_deveignore -- --nocapture
-    - run: cargo test -p deve_core --lib repo_watcher_handle -- --nocapture
+    - run: cargo test -p deve_core --test watcher_lifecycle repo_watcher_handle -- --nocapture
     - run: cargo test -p deve_core --lib watcher_capture_first_startup -- --nocapture
     - run: cargo test -p deve_core --lib watcher_final_state_shutdown -- --nocapture
     - run: cargo test -p deve_cli standalone_watch -- --nocapture
+    - run: cargo test -p deve_cli watcher_refresh_adapter_maps_all_domain_fields -- --nocapture
+    - run: cargo test -p deve_cli server_shutdown_preserves_background_primary_and_watcher_failure -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
     - api_assert: removed_directory_rescans_tracked_descendants true
     - ws_assert: directory_rescan_emits_repo_scoped_dir_changed true
-    - cli_assert: duplicate_watcher_start_fails_closed true
+    - cli_assert: duplicate_watcher_batch_reservation_fails_before_attach true
     - api_assert: consumer_failure_stops_backend true
     - api_assert: watcher_stop_blocks_post_stop_delivery true
     - web_assert: fs_change_refreshes_external_changes_sibling_view true
@@ -121,6 +127,8 @@
     - api_assert: worker_failure_is_typed_and_generation_guarded true
     - api_assert: shutdown_reconciles_final_state_before_join true
     - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true
+    - api_assert: watcher_refresh_adapter_maps_all_domain_fields true
+    - api_assert: server_shutdown_preserves_background_primary_and_watcher_failure true
 
 - case_id: STORE-008
   goal: 数据恢复策略。

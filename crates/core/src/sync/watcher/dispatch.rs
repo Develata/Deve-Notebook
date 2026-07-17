@@ -2,7 +2,7 @@
 //!   - 03_storage/watcher#watcher-contract
 
 use super::backend::{FsEventHint, FsEventHintKind, FsEventPath};
-use super::{WatcherCallback, WatcherError, filter};
+use super::{WatcherCallback, WatcherError, WatcherRefreshKind, filter};
 use crate::models::RepoId;
 use crate::sync::{SyncManager, pending, pending_rename};
 use crate::watcher_ignore::IgnoreRules;
@@ -149,19 +149,19 @@ fn dispatch_rename(
             return Ok(());
         }
         if let Some(cb) = context.callback {
-            cb(pending::message(
+            cb(pending::refresh(
                 &context.sync.repo,
                 context.repo_name,
                 context.repo_id,
                 old_path,
-                "deleted",
+                WatcherRefreshKind::Deleted,
             )?);
-            cb(pending::message(
+            cb(pending::refresh(
                 &context.sync.repo,
                 context.repo_name,
                 context.repo_id,
                 new_path,
-                "added",
+                WatcherRefreshKind::Added,
             )?);
         }
     } else {
@@ -261,7 +261,7 @@ fn dispatch_dir_change(
     if let Some((refreshed_repo_id, refreshed_path)) = refreshed
         && let Some(cb) = context.callback
     {
-        cb(pending::dir_changed_message(
+        cb(pending::dir_changed_refresh(
             refreshed_repo_id,
             &refreshed_path,
         ));

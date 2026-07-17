@@ -1,4 +1,4 @@
-use super::build_sync_engine;
+use super::{build_sync_engine, combine_runtime_shutdown_results};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
@@ -16,6 +16,19 @@ fn server_sync_engine_uses_configured_sync_mode() -> anyhow::Result<()> {
 
     assert_eq!(engine.sync_mode(), SyncMode::Manual);
     Ok(())
+}
+
+#[test]
+fn server_shutdown_preserves_background_primary_and_watcher_failure() {
+    let error = combine_runtime_shutdown_results(
+        Err(anyhow::anyhow!("background primary")),
+        Err(anyhow::anyhow!("watcher cleanup")),
+    )
+    .expect_err("both shutdown failures must escape");
+
+    let detail = format!("{error:#}");
+    assert!(detail.contains("background primary"));
+    assert!(detail.contains("watcher shutdown also failed: watcher cleanup"));
 }
 use super::serve_router_until_shutdown;
 use axum::{Router, routing::get};

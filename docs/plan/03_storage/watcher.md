@@ -7,7 +7,7 @@
 - `Version`: `0.0.1`
 - `Last Review`: `2026-07-17`
 - `Parent`: `03_storage/index`
-- `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher.rs`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`
+- `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`, `apps/cli/src/watcher_runtime.rs`, `apps/cli/src/server/runtime/watcher_runtime.rs`
 
 > 本文件是 `03_storage` 章的 `watcher_runtime` 子合同：外部编辑生命周期、watcher ingestion 路径与 watcher contract。章节骨架与总览见 [index.md](./index.md)。
 

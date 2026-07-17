@@ -17,13 +17,13 @@ Root source of the core library. Declares all public modules and gates backend-o
 | `models/mod.rs` | Core data types (re-exports from models/) |
 | `state.rs` | Document state (re-exports from state/) |
 | `vfs.rs` | Virtual filesystem operations (backend-only) |
-| `watcher.rs` | Filesystem change detection (backend-only) |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
 | `remote_projection/` | Remote Projection transport model used by Projection Backup surfaces |
+| `sync/watcher/` | Owned filesystem-ingestion handles, backend adapters, normalization, and typed runtime diagnostics |
 | `context/` | Context engine (tree context) |
 | `ledger/` | Ledger storage — the heart of the system |
 | `models/` | Data model types and serialization |

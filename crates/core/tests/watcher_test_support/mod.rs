@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 use anyhow::{Result, anyhow};
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, RepoId};
+use deve_core::models::{DocId, LedgerEntry};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use deve_core::sync::{SyncManager, watcher};
 use std::path::PathBuf;
@@ -17,7 +17,7 @@ pub struct Harness {
     pub dir: TempDir,
     pub repo: Arc<RepoManager>,
     pub sync: Arc<SyncManager>,
-    watcher_ids: Vec<RepoId>,
+    watcher_handles: Vec<watcher::RepoWatcherHandle>,
 }
 
 impl Harness {
@@ -37,17 +37,14 @@ impl Harness {
             dir,
             repo,
             sync,
-            watcher_ids: Vec::new(),
+            watcher_handles: Vec::new(),
         })
     }
 
     pub fn start_watchers(&mut self) -> Result<()> {
         for repo_name in self.repo.list_local_repo_names_for_execution()? {
-            self.watcher_ids.push(watcher::start_repo_watcher(
-                self.sync.clone(),
-                &repo_name,
-                None,
-                None,
+            self.watcher_handles.push(watcher::RepoWatcherHandle::start(
+                watcher::RepoWatcherStart::resolve(self.sync.clone(), repo_name, 1)?,
             )?);
         }
         std::thread::sleep(Duration::from_millis(200));
@@ -129,8 +126,8 @@ impl Harness {
 
 impl Drop for Harness {
     fn drop(&mut self) {
-        for repo_id in self.watcher_ids.drain(..) {
-            let _ = watcher::stop_repo_watcher(repo_id);
+        while let Some(handle) = self.watcher_handles.pop() {
+            let _ = handle.shutdown();
         }
     }
 }

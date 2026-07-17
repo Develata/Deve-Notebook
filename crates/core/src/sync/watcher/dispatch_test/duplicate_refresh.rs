@@ -47,15 +47,7 @@ fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Resul
         1,
         "duplicate watcher signal should not emit a second refresh"
     );
-    match &messages[0] {
-        crate::protocol::ServerMessage::FsChangeDetected {
-            path, change_type, ..
-        } => {
-            assert_eq!(path, "notes/external.md");
-            assert_eq!(change_type, "added");
-        }
-        other => panic!("unexpected message: {other:?}"),
-    }
+    assert_fs_message(&messages[0], "notes/external.md", "added");
     Ok(())
 }
 

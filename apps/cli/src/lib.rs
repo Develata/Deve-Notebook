@@ -18,6 +18,7 @@ mod main_test;
 pub mod native_runtime;
 mod repo_init;
 pub mod server;
+mod watcher_runtime;
 
 #[cfg(test)]
 pub(crate) use cli::Args;

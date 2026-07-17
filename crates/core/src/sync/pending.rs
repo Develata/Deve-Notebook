@@ -5,13 +5,13 @@
 //!
 //! Invariants:
 //! - Watcher 只能读写 pending side table。
-//! - `FsChangeDetected` 只反映当前 pending 视图，不推导权威状态。
+//! - `WatcherRefresh` 只反映当前 pending 视图，不推导权威状态。
 
 use crate::ledger::RepoManager;
 use crate::models::DocId;
-use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
+use crate::sync::watcher::{WatcherRefresh, WatcherRefreshKind};
 use anyhow::Result;
 use std::sync::Arc;
 
@@ -71,37 +71,23 @@ pub(super) fn upsert(
     })
 }
 
-pub(super) fn message(
+pub(super) fn refresh(
     repo: &Arc<RepoManager>,
     repo_name: &str,
     repo_id: crate::models::RepoId,
     path: &str,
-    change_type: &str,
-) -> Result<ServerMessage> {
+    kind: WatcherRefreshKind,
+) -> Result<WatcherRefresh> {
     let has_conflict = repo.run_on_local_repo(repo_name, |db| {
         Ok(pending_fs::get(db, path)?
             .map(|entry| entry.has_conflict)
             .unwrap_or(false))
     })?;
-    Ok(ServerMessage::FsChangeDetected {
-        repo_id: Some(repo_id),
-        branch: None,
-        scope_nonce: None,
-        path: path.to_string(),
-        change_type: change_type.to_string(),
-        has_conflict,
-    })
+    Ok(WatcherRefresh::new(repo_id, path, kind, has_conflict))
 }
 
-pub(super) fn dir_changed_message(repo_id: crate::models::RepoId, path: &str) -> ServerMessage {
-    ServerMessage::FsChangeDetected {
-        repo_id: Some(repo_id),
-        branch: None,
-        scope_nonce: None,
-        path: path.to_string(),
-        change_type: "dir_changed".to_string(),
-        has_conflict: false,
-    }
+pub(super) fn dir_changed_refresh(repo_id: crate::models::RepoId, path: &str) -> WatcherRefresh {
+    WatcherRefresh::new(repo_id, path, WatcherRefreshKind::DirectoryChanged, false)
 }
 
 #[cfg(test)]
