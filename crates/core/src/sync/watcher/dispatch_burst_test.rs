@@ -31,7 +31,9 @@ fn dispatch_batch_collapses_modified_burst_by_content_hash() -> anyhow::Result<(
         &repo_name,
         repo_id,
         &repo_root,
-        (0..5).map(|_| event_for(file.clone())).collect(),
+        (0..5)
+            .map(|_| event_for(&repo_root, file.clone()))
+            .collect::<Vec<_>>(),
         Some(&callback),
     )?;
 
@@ -67,7 +69,9 @@ fn dispatch_batch_collapses_modified_burst_by_content_hash() -> anyhow::Result<(
         &repo_name,
         repo_id,
         &repo_root,
-        (0..5).map(|_| event_for(file.clone())).collect(),
+        (0..5)
+            .map(|_| event_for(&repo_root, file.clone()))
+            .collect::<Vec<_>>(),
         Some(&callback),
     )?;
 

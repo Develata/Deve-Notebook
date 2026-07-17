@@ -1,54 +1,10 @@
 use super::super::WatcherCallback;
 use super::super::dispatch::dispatch_batch;
 use super::super::dispatch_test_support::{
-    accessed_dir_event, assert_fs_message, commit_doc, event_for, new_sync, removed_dir_event,
-    rename_event,
+    assert_fs_message, commit_doc, event_for, new_sync, removed_dir_event, rename_event,
 };
 use crate::source_control::ChangeStatus;
 use std::sync::{Arc, Mutex};
-
-#[test]
-fn dispatch_batch_ignores_event_paths_outside_repo_root() -> anyhow::Result<()> {
-    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
-    let outside = repo_root
-        .parent()
-        .expect("projection base")
-        .join("outside.md");
-
-    dispatch_batch(
-        &sync,
-        &repo_name,
-        repo_id,
-        &repo_root,
-        vec![event_for(outside)],
-        None,
-    )?;
-
-    assert!(repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
-    Ok(())
-}
-
-#[test]
-fn dispatch_batch_ignores_rename_pairs_that_leave_repo_root() -> anyhow::Result<()> {
-    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
-    let inside = repo_root.join("notes").join("draft.md");
-    let outside = repo_root
-        .parent()
-        .expect("projection base")
-        .join("outside.md");
-
-    dispatch_batch(
-        &sync,
-        &repo_name,
-        repo_id,
-        &repo_root,
-        vec![rename_event(inside, outside)],
-        None,
-    )?;
-
-    assert!(repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
-    Ok(())
-}
 
 #[test]
 fn dispatch_batch_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
@@ -63,7 +19,7 @@ fn dispatch_batch_respects_deveignore_for_matching_markdown() -> anyhow::Result<
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(ignored)],
+        vec![event_for(&repo_root, ignored)],
         None,
     )?;
 
@@ -84,7 +40,7 @@ fn dispatch_batch_respects_deveignore_during_dir_rescan() -> anyhow::Result<()> 
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(ignored_dir)],
+        vec![event_for(&repo_root, ignored_dir)],
         None,
     )?;
 
@@ -102,7 +58,7 @@ fn dispatch_batch_scans_repo_root_directory_event() -> anyhow::Result<()> {
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(repo_root.clone())],
+        vec![event_for(&repo_root, repo_root.clone())],
         None,
     )?;
 
@@ -127,16 +83,6 @@ fn dispatch_batch_rescans_removed_directory_after_path_disappears() -> anyhow::R
             .push(message);
     });
 
-    dispatch_batch(
-        &sync,
-        &repo_name,
-        repo_id,
-        &repo_root,
-        vec![accessed_dir_event(removed.clone())],
-        Some(&callback),
-    )?;
-    assert!(messages.lock().expect("messages lock").is_empty());
-
     std::fs::remove_dir_all(&removed)?;
 
     dispatch_batch(
@@ -144,7 +90,7 @@ fn dispatch_batch_rescans_removed_directory_after_path_disappears() -> anyhow::R
         &repo_name,
         repo_id,
         &repo_root,
-        vec![removed_dir_event(removed)],
+        vec![removed_dir_event(&repo_root, removed)],
         Some(&callback),
     )?;
 
@@ -181,7 +127,10 @@ fn dispatch_batch_coalesces_removed_directories_to_one_refresh() -> anyhow::Resu
         &repo_name,
         repo_id,
         &repo_root,
-        vec![removed_dir_event(one), removed_dir_event(two)],
+        vec![
+            removed_dir_event(&repo_root, one),
+            removed_dir_event(&repo_root, two),
+        ],
         Some(&callback),
     )?;
 
@@ -205,7 +154,7 @@ fn dispatch_batch_allows_deveignore_non_matching_markdown() -> anyhow::Result<()
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(kept)],
+        vec![event_for(&repo_root, kept)],
         None,
     )?;
 
@@ -232,7 +181,7 @@ fn dispatch_batch_degrades_untracked_rename_pair_to_added_path() -> anyhow::Resu
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old, new)],
+        vec![rename_event(&repo_root, old, new)],
         None,
     )?;
 
@@ -259,7 +208,7 @@ fn dispatch_batch_suppresses_self_write_rename_pair() -> anyhow::Result<()> {
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old, new)],
+        vec![rename_event(&repo_root, old, new)],
         None,
     )?;
 
@@ -284,7 +233,7 @@ fn dispatch_batch_degrades_rename_from_non_markdown_to_markdown_as_add() -> anyh
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old, new)],
+        vec![rename_event(&repo_root, old, new)],
         None,
     )?;
 
@@ -311,7 +260,7 @@ fn dispatch_batch_degrades_rename_from_ignored_to_tracked_as_add() -> anyhow::Re
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(ignored, tracked)],
+        vec![rename_event(&repo_root, ignored, tracked)],
         None,
     )?;
 
@@ -337,7 +286,7 @@ fn dispatch_batch_degrades_rename_from_tracked_to_ignored_as_delete() -> anyhow:
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old, ignored)],
+        vec![rename_event(&repo_root, old, ignored)],
         None,
     )?;
 

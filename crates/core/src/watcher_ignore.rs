@@ -40,10 +40,6 @@ impl IgnoreRules {
             .matched_path_or_any_parents(rel_path, false)
             .is_ignore()
     }
-
-    pub fn is_ignored_workspace_path(&self, root_relative: &str, repo_path: &str) -> bool {
-        self.is_ignored(root_relative) || self.is_ignored(repo_path)
-    }
 }
 
 #[cfg(test)]
@@ -75,5 +71,14 @@ mod tests {
         let rules = IgnoreRules::load(dir.path());
         assert!(rules.is_ignored("server.log"));
         assert!(!rules.is_ignored("notes/a.md"));
+    }
+
+    #[test]
+    fn repo_name_prefixed_pattern_does_not_match_repo_relative_path() {
+        let dir = tempdir().expect("tempdir");
+        std::fs::write(dir.path().join(".deveignore"), "my-repo/secret.md\n").expect("write");
+        let rules = IgnoreRules::load(dir.path());
+        assert!(!rules.is_ignored("secret.md"));
+        assert!(rules.is_ignored("my-repo/secret.md"));
     }
 }

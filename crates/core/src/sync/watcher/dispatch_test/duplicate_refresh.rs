@@ -24,7 +24,7 @@ fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Resul
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(added.clone())],
+        vec![event_for(&repo_root, added.clone())],
         Some(&callback),
     )?;
     dispatch_batch(
@@ -32,7 +32,7 @@ fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Resul
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(added)],
+        vec![event_for(&repo_root, added)],
         Some(&callback),
     )?;
 
@@ -102,7 +102,7 @@ fn dispatch_batch_suppresses_duplicate_rename_pair_messages() -> anyhow::Result<
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old.clone(), new.clone())],
+        vec![rename_event(&repo_root, old.clone(), new.clone())],
         Some(&callback),
     )?;
     dispatch_batch(
@@ -110,7 +110,7 @@ fn dispatch_batch_suppresses_duplicate_rename_pair_messages() -> anyhow::Result<
         &repo_name,
         repo_id,
         &repo_root,
-        vec![rename_event(old, new)],
+        vec![rename_event(&repo_root, old, new)],
         Some(&callback),
     )?;
 
@@ -158,7 +158,7 @@ fn dispatch_batch_suppresses_duplicate_rename_refresh_from_plain_events() -> any
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(new.clone())],
+        vec![event_for(&repo_root, new.clone())],
         Some(&callback),
     )?;
     dispatch_batch(
@@ -166,7 +166,7 @@ fn dispatch_batch_suppresses_duplicate_rename_refresh_from_plain_events() -> any
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(new)],
+        vec![event_for(&repo_root, new)],
         Some(&callback),
     )?;
 

@@ -1,16 +1,8 @@
 use crate::ledger::RepoManager;
 use crate::models::{FactActor, Op};
 use crate::sync::SyncManager;
-use notify_debouncer_full::{
-    DebouncedEvent,
-    notify::{
-        Event, EventKind,
-        event::{AccessKind, AccessMode, ModifyKind, RemoveKind, RenameMode},
-    },
-};
 use redb::ReadableTable;
 use std::sync::Arc;
-use std::time::Instant;
 
 pub(super) type SyncFixture = (
     tempfile::TempDir,
@@ -40,48 +32,34 @@ pub(super) fn new_sync() -> anyhow::Result<SyncFixture> {
     Ok((dir, repo, sync, repo_name, repo_id, repo_root))
 }
 
-pub(super) fn event_for(path: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Any,
-            paths: vec![path],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
+pub(super) fn event_for(
+    repo_root: &std::path::Path,
+    path: std::path::PathBuf,
+) -> super::backend::FsEventHint {
+    super::backend::FsEventHint::changed(event_path(repo_root, &path))
 }
 
-pub(super) fn rename_event(old: std::path::PathBuf, new: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-            paths: vec![old, new],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
+pub(super) fn rename_event(
+    repo_root: &std::path::Path,
+    old: std::path::PathBuf,
+    new: std::path::PathBuf,
+) -> super::backend::FsEventHint {
+    super::backend::FsEventHint::rename(event_path(repo_root, &old), event_path(repo_root, &new))
 }
 
-pub(super) fn removed_dir_event(path: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Remove(RemoveKind::Folder),
-            paths: vec![path],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
+pub(super) fn removed_dir_event(
+    repo_root: &std::path::Path,
+    path: std::path::PathBuf,
+) -> super::backend::FsEventHint {
+    super::backend::FsEventHint::removed_directory(event_path(repo_root, &path))
 }
 
-pub(super) fn accessed_dir_event(path: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Access(AccessKind::Open(AccessMode::Any)),
-            paths: vec![path],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
+fn event_path(repo_root: &std::path::Path, path: &std::path::Path) -> super::backend::FsEventPath {
+    let relative = path
+        .strip_prefix(repo_root)
+        .expect("test event must remain inside the repo root");
+    super::backend::FsEventPath::new(crate::utils::path::path_to_forward_slash(relative))
+        .expect("valid repo-relative event path")
 }
 
 pub(super) fn commit_doc(

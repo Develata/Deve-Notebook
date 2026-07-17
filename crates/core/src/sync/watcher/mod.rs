@@ -2,6 +2,9 @@
 //!   - 03_storage/watcher#watcher-contract
 
 pub(crate) mod backend;
+pub use backend::{
+    BackendHintBatch, BackendSignal, FsEventHint, FsEventHintKind, FsEventPath, ReconcileToken,
+};
 mod dispatch;
 #[cfg(test)]
 mod dispatch_burst_test;
@@ -164,18 +167,24 @@ fn consume_loop(
             return Ok(());
         }
         match backend.recv(Duration::from_millis(100))? {
-            Some(backend::BackendBatch::Events(events)) => {
+            Some(BackendSignal::Hints(batch)) => {
                 dispatch::dispatch_batch(
                     &sync,
                     repo_name,
                     repo_id,
                     &repo_root,
-                    events,
+                    batch.hints(),
                     callback.as_ref(),
                 )?;
             }
-            Some(backend::BackendBatch::Rescan) => {
-                rescan_and_notify(&sync, repo_name, repo_id, callback.as_ref())?
+            Some(BackendSignal::Reconcile(token)) => {
+                rescan_and_notify(&sync, repo_name, repo_id, callback.as_ref())?;
+                let _clean = backend.complete_reconcile(token);
+            }
+            Some(BackendSignal::Terminal) => {
+                return Err(WatcherError::WatcherInitFailed(
+                    "watcher backend producer stopped".into(),
+                ));
             }
             None => {}
         }
@@ -209,10 +218,14 @@ mod lifecycle_tests {
     }
 
     impl backend::FsWatcherBackend for FailingBackend {
-        fn recv(&self, _timeout: Duration) -> Result<Option<backend::BackendBatch>, WatcherError> {
+        fn recv(&self, _timeout: Duration) -> Result<Option<BackendSignal>, WatcherError> {
             Err(WatcherError::WatcherInitFailed(
                 "injected backend failure".into(),
             ))
+        }
+
+        fn complete_reconcile(&self, _token: ReconcileToken) -> bool {
+            false
         }
 
         fn stop(&mut self) -> Result<(), WatcherError> {

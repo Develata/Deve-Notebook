@@ -63,7 +63,7 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
         if crate::utils::notegit::is_internal_repo_path(&repo_path) {
             continue;
         }
-        if ignored_by_rules(repo, repo_name, &repo_path, ignore_rules.as_ref()) {
+        if ignored_by_rules(&repo_path, ignore_rules.as_ref()) {
             continue;
         }
         if !entry.file_type().is_file() {
@@ -96,7 +96,7 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
             warn!("SyncScan: Repo {} 跳过内部路径: {}", repo_name, repo_path);
             continue;
         }
-        if ignored_by_rules(repo, repo_name, &repo_path, ignore_rules.as_ref()) {
+        if ignored_by_rules(&repo_path, ignore_rules.as_ref()) {
             continue;
         }
         if seen_docs.contains(&doc_id) || on_disk.contains(&repo_path) {
@@ -114,7 +114,7 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
     }
 
     for pending in repo.list_pending_fs_in_local_repo(repo_name)? {
-        if ignored_by_rules(repo, repo_name, &pending.path, ignore_rules.as_ref()) {
+        if ignored_by_rules(&pending.path, ignore_rules.as_ref()) {
             clear_scan_pending(repo, repo_name, &pending.path)?;
             continue;
         }
@@ -125,16 +125,8 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
     Ok(())
 }
 
-fn ignored_by_rules(
-    repo: &RepoManager,
-    repo_name: &str,
-    repo_path: &str,
-    rules: Option<&IgnoreRules>,
-) -> bool {
-    rules.is_some_and(|rules| {
-        let root_relative = repo.local_repo_workspace_relative(repo_name, repo_path);
-        rules.is_ignored_workspace_path(&root_relative, repo_path)
-    })
+fn ignored_by_rules(repo_path: &str, rules: Option<&IgnoreRules>) -> bool {
+    rules.is_some_and(|rules| rules.is_ignored(repo_path))
 }
 
 fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str) -> Result<()> {

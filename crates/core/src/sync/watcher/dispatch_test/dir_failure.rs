@@ -27,7 +27,7 @@ fn dispatch_batch_fails_closed_on_dir_change_resolution_error() -> anyhow::Resul
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(docs)],
+        vec![event_for(&repo_root, docs)],
         None,
     )
     .expect_err("dir change resolution must fail closed");
@@ -54,7 +54,7 @@ fn dispatch_batch_fails_closed_on_unstatable_dir_event() -> anyhow::Result<()> {
         &repo_name,
         repo_id,
         &repo_root,
-        vec![event_for(blocked.clone())],
+        vec![event_for(&repo_root, blocked.clone())],
         None,
     );
     std::fs::set_permissions(&blocked, original)?;

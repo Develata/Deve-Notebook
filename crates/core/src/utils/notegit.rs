@@ -36,7 +36,7 @@ pub fn is_internal_repo_path(path: &str) -> bool {
 }
 
 pub fn is_internal_repo_segment(segment: &str) -> bool {
-    matches!(segment, NOTE_GIT_DIR | GIT_DIR)
+    segment.eq_ignore_ascii_case(NOTE_GIT_DIR) || segment.eq_ignore_ascii_case(GIT_DIR)
 }
 
 pub fn repo_keys_dir(repo_root: &Path) -> PathBuf {
@@ -269,6 +269,8 @@ mod tests {
         assert!(is_internal_repo_path("notes/.notegit/state.json"));
         assert!(is_internal_repo_path(".git/config"));
         assert!(is_internal_repo_path("notes/.git/objects/x"));
+        assert!(is_internal_repo_path("notes/.NOTEGIT/state.json"));
+        assert!(is_internal_repo_path("notes/.GIT/config"));
         assert!(!is_internal_repo_path(".gitignore"));
         assert!(!is_internal_repo_path(".notegit-backup/state.json"));
         assert!(!is_internal_repo_path(".git-backup/config"));
