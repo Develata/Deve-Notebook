@@ -41,7 +41,6 @@
       "producer_id": "ci.diff-projection",
       "evidence_ids": [
         "test.core.diff-projection",
-        "test.protocol.diff-projection",
         "test.web.diff-projection"
       ],
       "dependencies": [],
@@ -296,7 +295,6 @@
         "test.case.store-012",
         "test.case.store-013",
         "test.case.store-015",
-        "test.case.store-016",
         "test.case.store-017",
         "test.case.store-018",
         "test.case.store-019",

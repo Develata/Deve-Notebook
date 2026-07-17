@@ -39,6 +39,7 @@
 - 同步状态必须与当前 repo 绑定。
 - 切换 repo 后，用户看到的文档、树、同步状态与错误提示都应随 repo 更新。
 - 一个 repo 的异常不应污染另一个 repo 的会话状态。
+- `/api/node/role` 的 workspace ingestion health 只提供 aggregate status/count；不得暴露具体 repo、路径、generation 或 watcher failure detail。
 
 ### 5. Unauthorized 与 Disconnected 分离
 
@@ -53,6 +54,7 @@
 - 多个服务端可以通过静态配置组成 P2P mesh。
 - Browser/WebLightPeer 仍然只连接当前服务端；server-to-server 同步使用 FullPeer `/ws` admission。
 - FullPeer Mesh v1 当前要求同一兼容协议窗口；在没有真实多版本 adapter 前，版本不匹配应显示为结构化协议错误，而不是伪装成普通断线。
+- 首个公开 `DEVEWSF4` wire epoch 为 protocol v2；未发布的 v1 不受支持，也不保留 adapter。这里的 “Mesh v1” 是产品能力代号，不等于 wire protocol version。
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - 重复 peer label 只影响显示，不得导致 `/api/node/role` 中不同 peer 的连接状态、attempt 或 last error 互相覆盖。

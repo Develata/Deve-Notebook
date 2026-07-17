@@ -29,6 +29,10 @@
 - 界面不应同时把所有 repo 混成一个全局工作区。
 - 仓库展开界面应提供新增、重命名与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于重命名或移除该 repo。
 - 普通移除仓库不应直接销毁 ledger 或 Projection Workspace；用户可见文案必须避免暗示已经物理擦除数据。
+- create/rename/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
+- create 已提交但 workspace ingestion mount 失败时，新 repo 保留只读可见，当前 session 不自动切换。
+- rename 已提交但新 mount 失败时，列表与所有已绑定该相同 RepoId 的 session 使用已提交的新名称并保持只读；其它 RepoId 的当前 session 不切换。系统不得反向改回旧名称。
+- remove 成功后目标 repo 不再启动 watcher；remove 尚未提交即失败时，系统才可以恢复旧 repo 的 watcher。
 
 ### 2. 本地分支
 
@@ -145,5 +149,28 @@
 期望结果：
 
 - 新增 repo 后自动切换到新 repo。
-- 重命名后列表、标题与当前 scope 显示新名称，`RepoId` 不变。
+- 上述自动切换仅在新 repo 成功 mounted 时发生；若 durable create 已提交但 mount 失败，新 repo 只读可见且当前 session 保持原 repo。
+- 重命名后列表与所有已绑定该 RepoId 的标题/scope 显示新名称，`RepoId` 不变；重命名非当前 repo 不改变当前 scope。
 - 移除后目标 repo 从普通列表消失，ledger authority 与 Projection Workspace 未被物理删除。
+
+### REPO-FEAT-05: Repo lifecycle 的 mount partial outcome
+
+前置条件：
+
+- 至少存在一个 Mounted local repo。
+- 测试入口可分别让 create 后 mount、rename 后 remount 或 remove 前 final reconcile 失败。
+
+步骤：
+
+1. 创建 repo 并让新 watcher mount 失败。
+2. 重命名另一个 repo 并让新 root mount 失败。
+3. 对第三个 repo 执行移除并让 final reconcile 失败。
+
+期望结果：
+
+- create 返回“已创建但工作区摄取不可用”，新 repo 只读可见且当前 session 未切换。
+- rename 保留新名称和相同 RepoId；仅已绑定该 RepoId 的 session 更新 display/scope projection 并只读，重命名非当前 repo 时当前 scope 完全不变，不发生反向 rename。
+- final reconcile 失败发生在 durable remove 前时，remove 不提交并可恢复旧 watcher；任何混合事实都进入 repair，不由 UI 猜测回滚。
+- durable remove 已提交但 deferred fallback 在最终 publication 前已 removed、membership generation 改变或 ingestion Failed 时，不绑定失效 repo、不静默选择第三个 repo；无关 repo 的 catalog mutation 不影响该 fallback token。发起 session 进入自己的 `NoScope` partial。无论发起者 fallback 成功或失败，所有仍绑定 removed RepoId 的 observer session 都提交各自的新 `NoScope` epoch并撤销 writer-ready，且不复用发起者 switch nonce。每个受影响 Web connection 按固定顺序暂存携带自身 scope nonce 的最终 `RepoList`，再以匹配的 `ProtocolError / SC_REPO_NOT_SELECTED` 提交结果；不得收到伪造 `RepoSwitched`，也不新增 watcher lifecycle wire message。Web 只清除对应 pending remove/scope-switch intent，不丢弃 editor pending overlay，不自动选择其它 repo。
+- membership remove 的 authority cut 只轮换该 RepoId 的 process-local generation，O(1) 完成且不在 Catalog lane 遍历 session；旧 binding 从 cut 起立即拒写。session fan-out 在 permit 外执行。Web 收到第一帧 final RepoList 时立即关闭 writer-ready，但在第二帧前不应用列表、不提交 NoScope、也不丢 editor pending overlay。
+- repo list/scope publication 只出现最终一次 typed outcome。

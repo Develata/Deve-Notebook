@@ -31,6 +31,8 @@
   检测到 incoming gap 时则撤销 repo writer-ready 并退休连接。页面保留 pending edits，以新
   generation 的 Snapshot/History 恢复；只有 fresh document projection-ready 后才重发一次。
 - recovery plan 未命中当前文档时，仅刷新后端指定的列表投影，当前编辑器不得被无谓锁住。
+- active repo remove 已提交但后端证明 deferred fallback 失效时，发起 connection 消费自己的 typed partial；无论发起者 fallback 成功或失败，其它仍绑定 removed RepoId 的 connection 都消费 server-driven invalidation。两类 connection 都只处理各自 scope epoch 的 final sequence：暂存最终 `RepoList`，随后以 `ProtocolError / SC_REPO_NOT_SELECTED` 提交 `NoScope` 并关闭 writer-ready。发起者只清除 pending remove intent，observer 只退休旧 scope 的 pending switch intent；两者都不得丢弃 editor pending overlay。staged sequence 只允许一个并绑定 connection epoch，断线、乱序、缺帧或 10 秒超时必须退休连接并保持只读恢复；页面不得从列表自动选择其它 repo，也不得解析 detail 或自行决定 fallback。
+- 第一帧 final RepoList 到达即安装 staged blocker 并关闭 writer-ready，但不应用列表、不提交 NoScope、不清 editor overlay。10 秒 deadline 使用 monotonic clock；任何半序列失败都保留 editor pending overlay并退休旧 connection，旧 epoch 第二帧不能恢复写门。
 
 ### 4. 离开文档保护
 

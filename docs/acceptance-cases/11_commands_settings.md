@@ -28,8 +28,11 @@
     - run: deve projection-remote s3 pull --help
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli main -- --nocapture
+    - run: cargo test -p deve_cli standalone_watch -- --nocapture
   assertions:
     - exit_code_all_eq: 0
+    - standalone_watch_terminal_failure_shuts_down_all_handles_and_exits_nonzero: true
+    - standalone_watch_uses_no_global_registry_or_drop_only_shutdown: true
 
 - case_id: CMD-002
   goal: Command Palette 快捷键。

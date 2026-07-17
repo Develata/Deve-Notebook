@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -154,7 +154,24 @@ enabled = true
   - `role`
   - `ws_port`
   - `main_port`
+  - `watcher_health`
 - 生产默认入口仍然是单一 origin；该接口只用于诊断、本地开发和 fallback 观测。
+
+`watcher_health` 是 workspace ingestion readiness 的 aggregate，只允许以下 shape：
+
+```json
+{
+  "status": "healthy | transitioning | degraded | unknown",
+  "expected": 0,
+  "running": 0,
+  "unavailable": 0
+}
+```
+
+- 先冻结 expected set `E`：只包含需要 watcher 的 `RepoHealth::Healthy` local repo；remote shadow、removed、quarantined、repairing 与 durable degraded repo 不计入。
+- `expected = |E|`；`running` 只统计 `E` 中处于 `RepoMountState::Mounted` 的 repo，因此必须满足 `0 <= running <= expected`；`unavailable = expected - running`，包含 transition、failed 与其它未 mounted slot。
+- `status` 按固定优先级计算，不允许重叠解释：无法取得可信且完整的 `WatcherRuntimeView` 时为 `unknown`；否则，`E` 中存在 `Failed`、非 transition 的未 mounted slot或计数/slot 不变量破坏时为 `degraded`；否则，`E` 中至少一个 slot 为 `Transitioning` 时为 `transitioning`；其余情况为 `healthy`，即 `E` 全部 Mounted（`E` 为空时聚合本身也为 healthy；server bootstrap 的“零个 Mounted 必须退出”由 host contract 单独执行）。
+- aggregate **MUST NOT** 暴露 repo 名、`RepoId`、generation、workspace path、failure phase/kind/detail 或 tracing 内容。
 
 ## 4. Transport and Message Contract
 
@@ -187,8 +204,9 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- 首个公开 wire epoch 固定为 `protocol_version = 1`，兼容窗口为 `1..=1`。历史未发布开发 namespace
-  `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v13 全部 fail-closed，不提供 adapter。F4/v1 发布后只允许
+- 首个公开 wire epoch 固定为 `protocol_version = 2`，兼容窗口为 `2..=2`。v2 包含 workspace ingestion
+  unavailable 的 typed error variant。历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与
+  F4/v0、F4/v1、F4/v13 全部 fail-closed，不提供 adapter。F4/v2 发布后只允许
   单调升级，不得再次重置或复用旧 `(magic, version)` identity。任何后续破坏兼容的 schema 或
   codec 变更 **MUST** bump F4 内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
@@ -228,6 +246,18 @@ enabled = true
   - `DocList`
   - `TreeUpdate`
   - `ProtocolError`
+
+watcher lifecycle 不新增 WS message family。workspace ingestion unavailable 复用既有 response family：
+
+- HTTP mutation：JSON `ServerError`、HTTP `503`；
+- editor WS mutation：既有 `EditRejected`；
+- 其它 WS mutation：既有 `ProtocolError`。
+
+三条路径均携带 `13_i18n#i18n-error-code-catalog` 唯一定义的
+`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE`。Rust 公开枚举 variant 为
+`ServerErrorCode::StorageWorkspaceIngestionUnavailable`，wire code 为同名 SCREAMING_SNAKE_CASE；
+前端只按 code/i18n 分支。产品 detail 必须是固定泛化文案，repo identity、path、generation 与
+failure 原因只进入 tracing。
 
 ### 4.3.1 Projection Recovery Wire Contract {#projection-recovery-contract}
 
@@ -619,6 +649,12 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `AppState` 必须持有 process-scoped `RepoMutationPublicationGate`，并把 local authority mutation 与
   对应 publication enqueue 作为同一个 repo permit 内的有序阶段；不得把 socket delivery、网络或
   Git mirror 放入临界区。
+- `AppState` 只持有 process-scoped `WatcherRuntimeView`，供 mounted mutation admission 与
+  `/api/node/role` aggregate 只读查询；不得把 `WatcherSupervisor` 或 handle 的 start/stop/restart
+  authority 暴露给 HTTP/WS handler。
+- server composition root 唯一拥有 `WatcherSupervisor` 与 `RepoLifecycleCoordinator`。普通 mutation
+  handler 进入 `execute_mounted_repo`，repo create/rename/remove handler 只提交 coordinator typed intent；
+  二者均不得依据 tracing detail、路径存在性或 UI 状态推断 watcher readiness。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 

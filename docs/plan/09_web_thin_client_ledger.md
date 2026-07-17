@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -172,7 +172,37 @@ version，不能比较不同 peer 的局部序号。
 - `scope_nonce` 是当前已确认 repo scope 的权威版本。
 - `switch_nonce` 是客户端发起 repo/branch switch 时声明的候选新版本。
 - 只有 `switch_nonce > current scope_nonce` 才允许切换成功。
+- `NoScope` 也是已确认 scope state，必须携带已提交的非回退 `scope_nonce`；它关闭 repo/doc/writer readiness，并使旧 RepoBound epoch 消息失效。
 - 延迟到达的旧 `Ack` / `NewOp` / `Snapshot` 若 scope 不匹配，必须被丢弃或走 stale-scope recovery。
+
+#### Remove Scope Finalization Projection
+
+当 active repo 的 durable remove 已提交、但 server 在 lifecycle finalization 时证明 deferred fallback 已失效，server 复用现有消息形成 typed partial outcome。发起 remove 的 connection 使用：
+
+```text
+RepoList(scope_nonce = switch_nonce, final repos without removed repo)
+  -> ProtocolError(
+       code = SC_REPO_NOT_SELECTED,
+       switch_nonce = switch_nonce,
+       scope_nonce = switch_nonce)
+```
+
+无论发起者最终成功切到 fallback，还是进入上述 invalid-fallback partial，其他已绑定同一 removed RepoId 的 connection 都必须被 server-driven invalidation。它们没有发起者的 pending nonce；server 必须为每个 connection 分配自己的 `new_scope_nonce > current_scope_nonce`，原子撤销 RepoBound/writer-ready，并发送：
+
+```text
+RepoList(scope_nonce = new_scope_nonce, final repos without removed repo)
+  -> ProtocolError(
+       code = SC_REPO_NOT_SELECTED,
+       switch_nonce = None,
+       scope_nonce = new_scope_nonce)
+```
+
+- 发起者序列只对精确匹配 `PendingRepoSwitchKind::RemoveCurrent` 与 pending `switch_nonce` 的客户端有效。observer 序列只在当前 RepoBound repo 已从 staged final RepoList 消失、`switch_nonce = None`、`scope_nonce > current_scope_nonce` 且随后 error code/nonce 精确匹配时有效；它必须覆盖并退休旧 scope 上其它 pending repo/branch switch intent。
+- Web 对两类序列都只能使用一个有界 staged slot，绑定 `(connection_epoch, stage_kind, scope_nonce, pending_remove_nonce_if_any)`，不得保存第二份 RepoList 或跨 connection 复用。第一帧必须原子安装 staged blocker 并立即清除当前 Web writer-ready，然后只暂存 final RepoList；此时尚未提交 `NoScope`、不得应用列表、不得清除任何 editor pending overlay、不得另行 bootstrap，也不得从列表自动选择第一个 repo。
+- 第二条匹配的 typed error 原子提交 `NoScope(new_scope_nonce)`、应用已暂存 RepoList、清除 current repo/doc/writer-ready 与相应 pending remove/scope-switch intent；不得合成 `RepoSwitched` 或选择第三个 repo。错误 detail 不参与判断，且该步骤**不得丢弃 editor pending overlay**。
+- staged slot 的固定 deadline 为 `10s`（`REMOVE_SCOPE_PARTIAL_STAGE_TIMEOUT_MS = 10_000`），只能使用 monotonic clock 计算，不受 wall-clock 跳变影响。连接退休/断线/认证失效、受控 scope recovery、第二个 staged sequence、乱序/不匹配帧或 deadline 到期时，必须丢弃 staged RepoList 与 pending remove/scope-switch intent、**保留全部 editor pending overlay**、保持写门关闭、退休当前 connection 并从新 connection 重建 authoritative scope；同一页面恢复期间要求用户显式选择 repo，不得自动 fallback。旧 connection epoch 的第二帧不得提交新状态。
+- nonce、stage kind、消息顺序或 error code 任一不匹配时必须走上述 fail-closed recovery；不得把普通 RepoList/ProtocolError 误解释成该 partial outcome。
+- 这只是现有 `RepoList`、`ProtocolError`、`scope_nonce/switch_nonce` 的 thin-client projection，不新增 watcher lifecycle message，也不把 fallback authority 下放到 Web。
 
 ### 4.5 Structured Error Contract
 

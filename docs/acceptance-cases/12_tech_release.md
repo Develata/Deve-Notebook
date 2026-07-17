@@ -118,6 +118,7 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
+    - watcher W4 已完成 F4/v2 code/baseline 一次性切换，且不存在 W0-W3 protocol pending marker
   steps:
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
@@ -134,8 +135,8 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 3" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`WS_PROTOCOL_VERSION = 1;`" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 1;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`WS_PROTOCOL_VERSION = 2;`" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 2;`" docs/registry/first-tag-format-matrix.md
     - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
@@ -258,11 +259,14 @@
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
     - run: cargo test -p deve_cli cgroup_ -- --nocapture
+    - run: cargo test -p deve_cli node_role_watcher_health -- --nocapture
     - chrome_mcp: open dashboard
   assertions:
     - stdout_contains: "release-baseline-check: ok"
     - json_fields_present: ["version", "profile", "delivery", "environment"]
     - json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]
+    - json_fields_present: ["watcher_health.status", "watcher_health.expected", "watcher_health.running", "watcher_health.unavailable"]
+    - json_fields_absent: ["watcher_health.repos", "watcher_health.repo_id", "watcher_health.generation", "watcher_health.path", "watcher_health.failure"]
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
     - metrics_assert: container_memory_uses_current_cgroup_usage true
     - metrics_assert: container_cpu_uses_cgroup_usage_and_effective_capacity true
@@ -406,8 +410,11 @@
     - contract_assert: high_cardinality_metric_labels_forbidden true
     - contract_assert: tracing_span_boundary_bound true
     - contract_assert: observation_health_mapping_bound true
+    - contract_assert: watcher_failure_maps_to_repo_mount_state_not_repo_health_or_projection_fault true
     - contract_assert: alerting_tier_bound true
+    - contract_assert: repo_local_ingestion_unavailable_is_t2_and_zero_mounted_or_host_fatal_is_t1 true
     - contract_assert: resilience_playbook_index_bound true
+    - contract_assert: watcher_detail_is_tracing_only_and_public_health_is_aggregate true
 
 - case_id: REL-014
   goal: 分层验收矩阵与 Rust producer runner 对 case、operation flow、first-tag journey、实际 smoke 和 evidence receipt fail-closed。

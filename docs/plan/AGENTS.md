@@ -230,7 +230,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `22_reliability_observability#telemetry-schema` | `## 3. Telemetry Schema` | 结构化日志/事件字段标准；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `22_reliability_observability#metrics-taxonomy` | `## 4. Metrics Taxonomy` | counter/gauge/histogram 命名与维度规则；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `22_reliability_observability#tracing-span-boundary` | `## 5. Tracing Span Boundary` | Flow Coordination root span 边界；由 deve_baseline reliability-observability / REL-013 绑定 |
-| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 health 状态映射（状态全集 defer 04）；由 deve_baseline reliability-observability / REL-013 绑定 |
+| `22_reliability_observability#observation-to-health-mapping` | `## 6. Observation-to-Health Mapping` | 观测信号→04 RepoHealth 映射及 watcher failure 不映射为 RepoHealth/ProjectionFault 的正交边界；状态全集 defer 04、mount state defer 03 watcher；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `22_reliability_observability#alerting-tier` | `## 7. Alerting Tier` | 错误码/health 信号→告警等级映射（错误码 defer 13）；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `22_reliability_observability#resilience-playbook-index` | `## 8. Resilience Playbook Index` | 投影传输与 repo health 修复索引（步骤 defer 06/04）；由 deve_baseline reliability-observability / REL-013 绑定 |
 | `23_threat_model#trust-boundaries` | `## 2. Trust Boundaries` | STRIDE 分析的信任边界引用（定义 defer 07）；治理策略合同，无 Rust plan_ref; no-rust-plan-ref |

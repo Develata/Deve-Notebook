@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -415,7 +415,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。首个公开 WS wire epoch 为 `DEVEWSF4` / v1 lockstep；历史未发布 F2/F3 namespace 不进入兼容承诺，F4/v1 发布后只允许单调升级。v2 storage 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
+> 首个 stable 的持久化基线包含 `LEDGER_ENTRY_FORMAT_VERSION = 3` 与 `REDB_SCHEMA_VERSION = 3`，二者均使用 project-owned postcard codec payload。首个公开 WS wire epoch 为 `DEVEWSF4` / v2 lockstep；v2 包含 workspace ingestion unavailable typed error。历史未发布 F2/F3 namespace 与 F4/v0、F4/v1、F4/v13 不进入兼容承诺，F4/v2 发布后只允许单调升级。v2 storage 仅保留显式只读导出后重建边界，不做来源推测或原地迁移。Projection Backup 不引入 ledger pack plaintext 格式；其 locator/transport 形态由 first-tag format matrix 钉住。pre-1.0 未发布开发期产生的无版本 ledger entry、旧 codec ledger entry 或旧 schema gate `.redb` 可以 fail-closed 并要求显式 reset / repair / migration，不进入 stable 兼容承诺。
 
 ## 4. Open Source License (开源协议)
 
@@ -478,6 +478,8 @@ services:
 观测面。它 **MUST** 暴露 version、profile、delivery shape、environment、ports 与聚合 repo
 health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公开 endpoint 只能返回
 聚合计数，以便运维发现 degraded startup，同时避免泄漏 repo name 或 corruption detail。
+它还必须按 `07_network` 暴露 aggregate `watcher_health { status, expected, running, unavailable }`；
+该 surface 不得包含 repo identity、workspace path、generation 或 watcher failure detail。
 
 Web dashboard 通过 `SystemMetrics` 展示的 CPU / memory gauge 必须遵循
 `22_reliability_observability#metrics-taxonomy` 定义的 runtime resource domain、cgroup

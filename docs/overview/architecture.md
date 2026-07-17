@@ -49,6 +49,29 @@ The current graph also carries three extra architecture cues:
 
 When reading the current generated SVG, treat the visible fourth layer as the current rendering of `execution domains`, not as a competing fifth call layer. The object plane is rendered as a sidecar cluster with dotted edges from execution domains; it is not part of the main downward call cascade.
 
+## Watcher Runtime Ownership Slice
+
+The approved workspace-ingestion path preserves the same four-layer direction while separating lifecycle ownership from read-only admission:
+
+```text
+UI / HTTP / WS handlers
+  -> typed intent / RepoLifecycleCoordinator
+  -> RepoMutationPublicationGate + WatcherRuntimeView
+  -> WatcherSupervisor
+  -> RepoWatcherHandle
+  -> FsWatcherBackend adapter
+  -> notify/platform backend
+```
+
+- `RepoWatcherHandle` is the non-clone single-repo execution owner in core.
+- `WatcherSupervisor` is the CLI host runtime owner of repo slots, generations and lifecycle; handlers never receive it.
+- `WatcherRuntimeView` exposes only snapshot/aggregate readiness to `AppState`, mutation admission and `/api/node/role`.
+- `RepoLifecycleCoordinator` is the only create/rename/remove flow coordinator allowed to request mount transitions.
+- durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
+- the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
+
+The doc-side ownership slice is approved, while implementation convergence remains tracked as `部分承载` in the runtime registry until owned lifecycle, mounted admission, repo isolation and Windows overflow evidence are sealed. This section does not mark the 74-flow modeled operation slice as aligned ahead of code.
+
 ## Artifact Roles
 
 - `architecture-doc.lisp`: doc-derived operation-first blueprint view, emitted from ordered doc fragments.

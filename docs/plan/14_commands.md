@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-09`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -30,8 +30,8 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
     *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。
     *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
-    *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更.
-    *   `deve serve`: 启动 WebSocket 服务端.
+    *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更；standalone command 直接拥有不可复制的 repo watcher handle 集合，必须观察 terminal worker failure，任一 handle 失败时逆序显式 shutdown 全部 handle 并以非零状态退出。正常退出也必须显式 shutdown；不得依赖全局 watcher registry、按 `RepoId` stop free function 或 `Drop` 静默清理。
+    *   `deve serve`: 启动 HTTP/WebSocket 服务端；repo-local watcher start failure 只使该 repo readonly，至少一个 repo Mounted 才允许启动成功。启动后全部 watcher 失败时服务保留 readonly/export/diagnostic，workspace-dependent mutation 返回结构化 unavailable。host-fatal 只按 typed supervisor/runtime failure 分类。
     *   `deve dump`: 调试工具 (Dump Ops).
     *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
     *   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。

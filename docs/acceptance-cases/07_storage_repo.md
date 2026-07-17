@@ -79,7 +79,7 @@
     - cli_assert: clean_markdown_has_no_system_metadata_injection true
 
 - case_id: STORE-007
-  goal: Watcher 事件映射、目录 scan 过滤与内部路径边界。
+  goal: Watcher 事件映射、owned lifecycle、目录 scan 过滤与内部路径边界。
   preconditions:
     - watch 运行中并监听 local repo: main
     - 已跟踪文件存在: ${DEVE_DATA_DIR}/notes/main/notes/live.md
@@ -98,6 +98,10 @@
     - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_respects_deveignore_for_matching_markdown -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore watcher_startup_scan_respects_deveignore -- --nocapture
+    - run: cargo test -p deve_core --lib repo_watcher_handle -- --nocapture
+    - run: cargo test -p deve_core --lib watcher_capture_first_startup -- --nocapture
+    - run: cargo test -p deve_core --lib watcher_final_state_shutdown -- --nocapture
+    - run: cargo test -p deve_cli standalone_watch -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
@@ -111,6 +115,12 @@
     - cli_assert: notegit_backup_sibling_not_rejected_by_prefix true
     - cli_assert: pending_fs_ops_ignores_deveignore true
     - cli_assert: ignored_markdown_not_appended_to_ledger true
+    - api_assert: repo_watcher_handle_is_unique_non_clone_owner true
+    - api_assert: startup_requires_clean_capture_first_scan_pass true
+    - api_assert: startup_terminal_backend_failure_never_becomes_churn_or_running true
+    - api_assert: worker_failure_is_typed_and_generation_guarded true
+    - api_assert: shutdown_reconciles_final_state_before_join true
+    - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true
 
 - case_id: STORE-008
   goal: 数据恢复策略。
@@ -185,13 +195,16 @@
     - cli_assert: repo_file_ops_baseline_bound true
 
 - case_id: STORE-013
-  goal: Degraded local projection write gate。
+  goal: Degraded projection 与 workspace ingestion readiness 统一阻断相关 local mutation。
   preconditions:
     - local repo 已被标记为 projection degraded
   steps:
     - run: cargo test -p deve_cli degraded_local -- --nocapture
     - run: cargo test -p deve_cli browser_writer_registration_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate -- --nocapture
+    - run: cargo test -p deve_cli mounted_repo_gate -- --nocapture
+    - run: cargo test -p deve_cli watcher_failure -- --nocapture
+    - run: cargo test -p deve_cli watcher_server_isolation -- --nocapture
     - run: scripts/check-repo-file-ops-baseline.sh
   assertions:
     - degraded_projection_blocks_docs_create_before_mutation: true
@@ -202,6 +215,13 @@
     - degraded_projection_blocks_http_source_control_mutations: true
     - degraded_projection_blocks_plugin_host_source_control_mutations: true
     - broken_workspace_identity_blocks_RegisterWriter: true
+    - unmounted_repo_blocks_all_workspace_dependent_writers_with_storage_ingestion_unavailable: true
+    - watcher_failure_does_not_write_projection_fault_or_degraded_projection: true
+    - readonly_ledger_export_and_remote_shadow_ingest_remain_available: true
+    - repo_local_watcher_failure_keeps_other_mounted_repo_writable: true
+    - host_fatal_watcher_failure_rolls_back_all_started_handles_and_aborts_server: true
+    - bootstrap_with_zero_mounted_repos_cleans_up_and_aborts_server: true
+    - runtime_all_watchers_failed_keeps_readonly_and_diagnostics_available_with_degraded_health: true
     - cli_assert: repo_file_ops_baseline_bound true
 
 - case_id: STORE-014
@@ -233,18 +253,23 @@
     - cli_assert: legacy_markdown_fails_closed_on_invalid_structure true
 
 - case_id: STORE-014A
-  goal: 本地 Repo 新增、重命名与安全移除。
+  goal: 本地 Repo 新增、重命名、安全移除与 watcher mount partial outcome。
   preconditions:
     - WebLightPeer 已认证并处于 local writable scope
     - 至少存在两个 local repo
   steps:
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
+    - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
+    - run: cargo test -p deve_web remove_current_fallback_failure_commits_no_scope -- --nocapture
+    - run: cargo test -p deve_cli remove_current_invalidates_all_bound_sessions -- --nocapture
+    - run: cargo test -p deve_web remove_partial_stage_is_connection_epoch_bounded -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
     - chrome_mcp: 点击 repo 行更多菜单并执行重命名
     - chrome_mcp: 点击非当前 repo 行更多菜单并执行移除
+    - chrome_mcp: 在 failure fixture 中分别执行 create/rename/remove，观察 mount partial outcome 与最终 scope/list publication
   assertions:
     - ui_assert: repo_switcher_create_button_visible true
     - ui_assert: repo_row_more_menu_contains_rename_and_remove true
@@ -252,6 +277,34 @@
     - ui_assert: removed_repo_hidden_from_normal_list true
     - cli_assert: removed_repo_authority_not_physically_deleted true
     - cli_assert: removed_repo_projection_workspace_not_physically_deleted true
+    - cli_assert: create_mount_failure_keeps_repo_readonly_and_current_scope_unchanged true
+    - cli_assert: rename_mount_failure_keeps_committed_name_and_readonly_scope true
+    - cli_assert: rename_non_active_repo_does_not_change_current_scope true
+    - cli_assert: remove_final_reconcile_precedes_removed_marker_and_locator_cleanup true
+    - cli_assert: remove_precommit_failure_keeps_current_scope_and_restarts_old_watcher true
+    - cli_assert: removed_membership_generation_changed_or_failed_fallback_is_not_bound true
+    - cli_assert: unrelated_catalog_mutation_does_not_invalidate_fallback_token true
+    - ws_assert: invalid_fallback_publishes_final_repo_list_then_protocol_error_sc_repo_not_selected_with_matching_switch_nonce true
+    - ws_assert: invalid_fallback_does_not_emit_repo_switched true
+    - ws_assert: invalid_fallback_repo_list_and_protocol_error_share_new_scope_nonce_equal_to_switch_nonce true
+    - web_assert: pending_remove_buffers_final_repo_list_then_commits_no_scope_and_clears_pending_remove_intent_on_typed_error true
+    - web_assert: invalid_fallback_partial_never_auto_selects_another_repo true
+    - web_assert: old_repo_scope_messages_are_stale_after_no_scope_epoch_commit true
+    - ws_assert: all_observer_sessions_bound_to_removed_repo_receive_distinct_per_connection_no_scope_epochs true
+    - ws_assert: invalid_fallback_initiator_and_observers_use_distinct_per_connection_no_scope_epochs true
+    - ws_assert: observer_invalidation_uses_protocol_error_without_initiator_switch_nonce true
+    - web_assert: observer_invalidation_retires_old_scope_pending_switch_but_preserves_editor_pending_overlay true
+    - web_assert: remove_partial_stage_has_one_slot_bound_to_connection_epoch_kind_and_nonce true
+    - web_assert: disconnect_mismatch_second_stage_or_10s_timeout_discards_stage_and_retires_connection true
+    - web_assert: old_connection_second_frame_cannot_commit_and_recovery_requires_explicit_repo_selection true
+    - cli_assert: membership_revocation_cut_is_o1_and_session_fanout_runs_outside_catalog_permit true
+    - cli_assert: old_binding_write_admission_fails_immediately_on_membership_generation_mismatch true
+    - web_assert: first_repo_list_frame_immediately_closes_writer_ready_without_committing_no_scope true
+    - web_assert: every_half_sequence_failure_preserves_editor_pending_overlay true
+    - web_assert: remove_partial_deadline_uses_monotonic_clock true
+    - cli_assert: mixed_lifecycle_truth_enters_repair_without_guessing_rollback true
+    - ui_assert: lifecycle_publication_waits_for_final_mount_outcome true
+    - cli_assert: final_e2_refresh_is_deferred_until_lifecycle_finalization true
 
 - case_id: STORE-015
   goal: Writeback failure 后 Ledger Ack 仍成立。
@@ -268,16 +321,21 @@
     - cli_assert: committed_client_op_index_persisted true
 
 - case_id: STORE-016
-  goal: Watcher overflow/reconcile 与 debounce 边界。
+  goal: Watcher bounded capture、level-triggered reconcile、overflow 与 debounce 边界。
   preconditions:
     - watcher backend 可返回 rescan batch
     - debounce window 可配置
+    - W9 Windows producer 可在独立进程中注入或可靠触发 kernel overflow
   steps:
     - run: cargo test -p deve_core notify_backend_error_requests_rescan -- --nocapture
     - run: cargo test -p deve_core notify_rescan_flag_requests_rescan -- --nocapture
     - run: cargo test -p deve_core watcher_rejects_zero_debounce_window -- --nocapture
     - run: cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture
+    - run: cargo test -p deve_core --lib watcher_bounded_capture -- --nocapture
+    - run: cargo test -p deve_core --lib watcher_ignore_change_sets_reconcile_before_filter -- --nocapture
+    - run: cargo test -p deve_core --lib watcher_cross_root_rename_sets_reconcile -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_atomic_replace_records_single_final_candidate -- --nocapture
+    - run: cargo run -p deve_baseline -- acceptance-run --producer storage.watcher-windows-overflow
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: watcher_backend_error_triggers_rescan true
@@ -285,6 +343,17 @@
     - cli_assert: zero_debounce_rejected true
     - cli_assert: modify_burst_collapses_to_single_pending_entry true
     - api_assert: atomic_replace_has_one_final_pending_candidate true
+    - api_assert: notify_debounced_event_does_not_cross_backend_adapter true
+    - api_assert: queue_is_16_batches_and_batch_limits_are_256_hints_256_kib_paths true
+    - api_assert: queue_full_oversized_backend_rescan_and_cross_root_rename_set_one_level_latch true
+    - api_assert: raw_events_are_not_cached_or_replayed_during_capture_or_reconcile true
+    - api_assert: reconcile_latch_clears_only_after_clean_full_reconcile true
+    - api_assert: deveignore_change_sets_dirty_before_semantic_filter true
+    - receipt_assert: windows_overflow_runs_in_three_independent_processes_with_callback_barrier_and_2048_file_burst true
+    - receipt_assert: overflow_maps_to_rescan_and_backend_delivers_normal_events_after_rearm true
+    - receipt_assert: reconciled_pending_set_matches_independent_expected_hash true
+    - receipt_assert: evidence_binds_dependency_source_revision_windows_build_filesystem_and_exact_head true
+    - receipt_assert: watcher_windows_linux_real_fs_and_chrome_lifecycle_evidence_bind_same_head true
 
 - case_id: STORE-017
   goal: Repo catalog hard fail / quarantine。

@@ -1,16 +1,31 @@
 # Watcher failure semantics decision report — 2026-07-16
 
-> 本报告是 `docs/report/` 下的时点证据，不是 live contract。下列停止点尚未获得
-> USER 批准；除“已实施的小型修复”外，本报告不授权修改 watcher authority、启动顺序、
-> 失败状态或恢复策略。
+> 本报告是 `docs/report/` 下的时点证据，不是 live contract。USER 已于 2026-07-17
+> 批准下述修订结论；规范性合同以 `docs/plan/03_storage/watcher.md`、
+> `03_storage/index.md`、`04_repository.md`、`07_network.md` 与 `13_i18n.md` 为准。
 
 ## Metadata
 
 - `Date`: 2026-07-16
-- `Status`: `USER decision required`
+- `Status`: `USER approved; implementation in progress`
+- `Decision recorded`: `2026-07-17`
 - `Authority contract`: `docs/plan/03_storage/watcher.md`
-- `Scope`: watcher startup, lifecycle, failure recovery, Windows overflow
-- `Out of scope`: ledger/write authority、wire/storage format、前端业务判断
+- `Scope`: watcher startup, lifecycle, failure recovery, Windows overflow, mounted mutation admission, public aggregate diagnostics, dynamic repo lifecycle
+- `Out of scope`: Ledger/Redb/projection durable format、同步事实语义、前端业务判断
+
+## 0. Approved resolution
+
+本报告原始选项分析保留为决策证据，但最终裁定不是原建议的简单组合：
+
+1. `A3′`：采用 capture-first、level-triggered dirty latch 与最多三次 clean-scan pass 的严格 startup cut；不缓存或 replay raw event，替代原建议 `A1`。
+2. `B1`：worker terminal failure 原子进入 typed `Failed`；首发不自动重启，operator recovery 为重启服务。
+3. `C2 -> C1`：若当前稳定官方版本已提供等价 Windows overflow/rescan 传播，直接升级 `C1`；否则仅在取得 fork/upstream 外部授权与真实 40 位 revision 后采用最小 `C2` patch，官方稳定版本可用后删除 override。
+4. `D2`：删除 global registry，改为 core-owned `RepoWatcherHandle`、host-owned `WatcherSupervisor` 与 readonly `WatcherRuntimeView`；repo-local failure 隔离，bootstrap 零 Mounted 才终止 server。
+5. `E2`：shutdown drain 定义为 stop producer 后 final-state full reconcile，不回放 raw batch；primary/cleanup 原因分别保留。
+6. 公开诊断：新增 capability-level typed unavailable code、HTTP 503 / 既有 WS reject family 与 `/api/node/role.watcher_health` aggregate；不新增 watcher lifecycle WS message，不暴露 repo identity/path/generation/failure detail。
+7. 动态 lifecycle：`RepoLifecycleCoordinator` 唯一编排 create/rename/remove 与 mount，使用 `Catalog -> Repo`、nonblocking `Transitioning(generation)` reservation、I/O 外释放 permit、exact revalidation、final outcome 后 publication。
+
+这些裁定不改变 Ledger authority、Redb schema、Projection Workspace 格式或同步事实语义；未发布 watcher API 与 WS v1 不保留兼容 adapter。
 
 ## 1. Current state and invariants
 
@@ -104,8 +119,8 @@ overflow 一定能抵达该入口。
 | A1 | initial scan -> attach backend -> second idempotent scan -> consumer | 在不缓存 raw event 的情况下覆盖窗口；复用现有 scan | 改变启动顺序；第二次 scan 增加启动 I/O；scan 失败时需关闭 backend |
 | A2 | attach backend 并缓存 event -> scan -> replay | 可严格定义 event cut | 需要队列上限、排序、overflow 和 replay 去重，复杂度最高 |
 
-**建议裁定 A1。** second scan 仍只生成 pending candidate，不改变 authority；backend 必须在
-第二次 scan 失败时同步 stop。若必须证明严格 event cut，再单独设计 A2，不在首发前引入。
+**最终未采用 A1。** USER 批准的 `A3′` 见 §0：先 attach CaptureOnly，再以 dirty latch
+驱动最多三个 full scan pass；只允许 clean pass 切换 Running，且不缓存/replay raw event。
 
 ## 4. Decision B — worker failure state and recovery owner
 
@@ -118,10 +133,10 @@ overflow 一定能抵达该入口。
 | B2 | worker 内自动重启 + backoff | 短暂错误可自愈 | 可能无限重启、丢失窗口、状态复杂，仍需 health state |
 | B3 | 任一 watcher 失败即终止 server | 最简单的 fail-closed | 多 repo 可用性差，单 repo 故障放大为全服务退出 |
 
-**建议裁定 B1。** `Failed` 只表达 watcher ingestion health，不把 repo/ledger authority 标为损坏；
-恢复由显式 stop/restart 或更高层 operator 动作触发。首发不做隐式自动重启。是否把 repo 对外
-呈现为 degraded、是否阻止其他写路径，以及是否新增 public crate API 或 wire/operator
-endpoint，需要在 plan 中明确，不能由 crate-internal typed helper 代替该裁定。
+**已裁定 B1。** `Failed` 只表达 watcher ingestion health，不把 repo/ledger authority 标为损坏；
+恢复由显式 stop/restart 或更高层 operator 动作触发。首发不做隐式自动重启。最终合同已明确：
+RepoMountState 与 RepoHealth 正交；workspace-dependent writer 必须阻断；公开 core diagnostic、
+既有 HTTP/WS response family 与 aggregate node-role health 由 live plan 定义，不新增 restart endpoint。
 
 ## 5. Decision C — Windows overflow recovery
 
@@ -135,12 +150,12 @@ endpoint，需要在 plan 中明确，不能由 crate-internal typed helper 代�
 | C3 | 周期性 full reconcile 作为安全网 | 即使 backend 静默也最终收敛 | 增加 VPS I/O；不是即时恢复；周期和并发需新合同 |
 | C4 | Windows 改用 polling backend | 语义易证明 | 延迟与 I/O 成本最高，平台行为分叉 |
 
-**建议顺序为 C1（若可证明）否则 C2；C3 仅作 defense-in-depth，不替代可观测 overflow。**
+**已裁定 C2 -> C1 路线；执行时仍先检查是否可直接采用 C1。** C3 不替代可观测 overflow。
 在依赖调查和 stress receipt 完成前，不宣称 Windows overflow gate 已满足。
 
 ## 6. Decision D — lifecycle transaction
 
-建议与 A/B 一并裁定：
+原 D 建议已由 §0 的 `D2` owned-handle/supervisor 方案取代；保留下列问题证据：
 
 1. registry 增加 `Starting` reservation，在创建 backend/thread 前原子占位；初始化失败释放；
 2. CLI/server 的多 repo start 使用局部 guard，任一失败即逆序停止本轮已启动 watcher；
@@ -159,19 +174,19 @@ endpoint，需要在 plan 中明确，不能由 crate-internal typed helper 代�
 | E1 | 停止 backend 产出后，drain 已交付 batch，再退出 consumer | 尽量保留已捕获事件 | 必须定义 drain 上限、错误处理与 shutdown latency |
 | E2 | stop 时强制 final full scan，不回放 raw batch | 最终状态导向、无需事件排序 | 增加关闭 I/O；scan 失败时需定义 repo close 结果 |
 
-**建议裁定 E2。** watcher 本来就是状态重建器而非 event log；final scan 与 side-table 幂等模型
-一致。但它改变 stop/write ordering 和失败语义，未获 USER 批准前不实施。
+**已裁定 E2。** watcher 是状态重建器而非 event log；final scan 与 side-table 幂等模型
+一致。规范 shutdown ordering 与 primary/cleanup 语义见 live watcher contract。
 
 ## 8. Impact, migration, and rollback
 
-若 USER 批准建议方案：
+批准后的实施路径：
 
 - `docs/plan/03_storage/watcher.md` 先定义 startup cut、`Starting/Running/Failed/Stopping`
   生命周期、失败可见性与恢复所有者；
 - `docs/features/04_storage.md` 与 acceptance cases 再投影 operator-visible 行为；
-- 代码影响限定在 `crates/core/src/sync/watcher/` 与 CLI/server watcher bootstrap，
-  不改变 storage format。A/D/E 预计只需 crate-internal API；B 若增加 public crate API、
-  wire message 或 operator endpoint，必须在批准后的 plan 中逐项列出；
+- 代码影响覆盖 `crates/core/src/sync/watcher/`、CLI/server watcher bootstrap、mutation gate、
+  repo lifecycle coordinator、protocol error enum 与薄 Web blocker；不改变 storage format。
+  新公开面只包括 approved typed watcher diagnostic 与 node-role aggregate，不新增 lifecycle/restart WS endpoint；
 - A、B/D、C、E 分成可独立回退的 commit；每个 commit 回退后仍回到当前已验证行为；
 - C 若涉及依赖升级或 fork，`Cargo.lock` 与依赖来源必须同 commit 回退。
 
@@ -196,14 +211,9 @@ endpoint，需要在 plan 中明确，不能由 crate-internal typed helper 代�
 这些问题不证明 Ledger authority 已损坏，也不否定本轮已修复的普通目录删除/stop 缺陷；但它们
 阻止 watcher 专项复审被签署为“全部失败路径已闭环”。
 
-## 11. Requested USER decision
+## 11. Recorded USER decision
 
-请分别裁定：
-
-1. `A1`：attach 后 second scan；
-2. `B1`：显式 `Failed`，首版不自动重启；
-3. `C1 -> C2`：优先验证上游升级，无合格版本时使用最小 pinned patch；
-4. `D`：`Starting` reservation + 批量启动 rollback；跨 root rename 只先补实证。
-5. `E2`：stop backend 后执行 final full scan，以最终状态而非 raw event queue 定义 drain。
-
-未获明确批准前，以上五项均保持未实现。
+USER 已批准 `A3′ + B1 + C2 -> C1 + D2 + E2`，以及 mounted mutation gate、
+capability-level public diagnostics、dynamic repo lifecycle 与 repo-local server isolation。
+实施必须按 W0-W10 独立 commit 推进；Windows fork/upstream PR、push、tag、GitHub Release
+仍属于未授权外部状态变更，必须另行暂停等待批准。

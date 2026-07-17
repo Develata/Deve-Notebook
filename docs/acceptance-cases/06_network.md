@@ -35,9 +35,16 @@
     - ws_connect: "relative /ws"
     - run: curl http://127.0.0.1/api/node/role
     - run: scripts/check-network-baseline.sh
+    - run: cargo test -p deve_cli node_role_watcher_health -- --nocapture
   assertions:
     - ws_connect_success: true
     - stdout_contains: "role"
+    - json_path_exists: "watcher_health.status"
+    - json_path_exists: "watcher_health.expected"
+    - json_path_exists: "watcher_health.running"
+    - json_path_exists: "watcher_health.unavailable"
+    - watcher_health_status_in: ["healthy", "transitioning", "degraded", "unknown"]
+    - watcher_health_exposes_no_repo_identity_generation_path_or_failure_detail: true
 
 - case_id: NET-004
   goal: 协议格式区分。
@@ -52,8 +59,9 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF4"
-    - versioned_packet_protocol_version_eq: 1
-    - min_supported_packet_protocol_version_eq: 1
+    - versioned_packet_protocol_version_eq: 2
+    - min_supported_packet_protocol_version_eq: 2
+    - unpublished_protocol_v1_rejected_without_adapter: true
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true

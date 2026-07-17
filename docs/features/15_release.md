@@ -43,6 +43,7 @@
 
 - 用户应能知道当前运行的大致版本或构建来源。
 - 当前 `/api/node/role` 与 Web dashboard 应暴露只读运行摘要，包括版本、profile、环境、交付形态和 repo health 聚合状态。
+- `/api/node/role.watcher_health` 只暴露 workspace ingestion 的 status/expected/running/unavailable aggregate；不得泄漏 repo identity、workspace path、generation 或 failure detail。
 - `/api/node/role` 中的 `api-only` 只能说明当前没有可服务的前端资产，不能单独证明嵌入式前端健康；发布前必须配套浏览器入口 smoke。
 - 升级后核心数据与核心工作流不应无提示地断裂。
 - 首个 stable 前产生的无版本或旧 codec 开发期 ledger / `.redb` 不属于兼容承诺；正式运行时应 fail-closed 并提示显式 reset / repair / migration。
@@ -80,7 +81,7 @@
   Projection Backup locator 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
 - 当前 first-tag 精确基线为 ledger entry format v3 / `DEVELDG3`、redb schema v3、WS binary
-  namespace `DEVEWSF4` 且 protocol lockstep `1..=1`。历史未发布 F2/F3 namespace 与 storage
+  namespace `DEVEWSF4` 且 protocol lockstep `2..=2`。未发布 F4/v1 不提供 adapter；历史未发布 F2/F3 namespace 与 storage
   schema v2 只允许 fail-closed 或显式离线只读导出后重建，不属于正常 runtime 兼容窗口。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。
 - 矩阵允许诚实显示 PVR、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing target-host evidence 等 blocker；SBOM/checksum/provenance 只能由 exact candidate producer receipt 关闭，不能改成 source-ref。这些 gap 不阻止普通开发提交，但必须阻止正式 tag。

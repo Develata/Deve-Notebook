@@ -34,14 +34,16 @@
 - `Trigger`: run `deve watch --dry-run`
 - `Preconditions`: repo Projection Locators resolve to workspace roots
 - `Immediate Result`: watcher validates planned reactions without writing changes
-- `Application Entry`: `apps/cli/src/commands/watch.rs`
+- `Runtime Variant`: without `--dry-run`, `deve watch` owns one non-Clone watcher handle per selected healthy local repo and observes typed worker state
+- `Runtime Failure Result`: any terminal worker failure closes all handles in reverse order and exits non-zero; primary failure is not hidden by cleanup errors
+- `Application Entry`: `apps/cli/src/commands/watch.rs`, `crates/core/src/sync/watcher/`
 
 ## Response Flow
 
-1. User selects an init, scan, or watch option from the CLI.
+1. User selects an init, scan, watch dry-run, or standalone watch option from the CLI.
 2. Instruction interface parses `Commands::{Init, Scan, Watch}`.
 3. Flow coordination delegates to the matching command module.
-4. Execution domains are config, Projection Locator runtime, ledger, tree projection, and filesystem watcher.
+4. Execution domains are config, Projection Locator runtime, ledger, tree projection, and owned filesystem watcher handles; the CLI owns lifecycle but not ledger authority shortcuts.
 
 ## Notes
 

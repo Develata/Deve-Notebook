@@ -36,6 +36,17 @@
 - Projection Workspace 路径若包含绝对路径、遍历段、空段、Windows 非规范尾随点/空格、内部 `.git` / `.notegit` 段，或已有符号链接 / junction 指向该 repo workspace 外部，保存、重建与 materialize 必须明确失败；系统不得在 workspace 外创建、覆盖或删除文件，Ledger 中已确认的 authority facts 保持可用于 repair。
 - 缺失 ledger entry 格式信封、缺失 redb schema version 或 schema version 不匹配时，系统应明确报告该 repo 需要 reset / repair / migration，不应猜测旧格式继续打开。
 - 对明确选择的 schema v2 开发库，用户可以在服务停止时运行 `deve export --allow-legacy-v2` 做只读 JSON/Markdown 导出；该入口不会打开正常写入、同步或 repair authority。
+- workspace ingestion failure 与 repo/projection 损坏是两类不同状态。前者只使当前进程无法可靠接收该 repo 的外部文件变化：该 repo 保持只读可见，Ledger inspect/export 与诊断仍可用，不能被显示为 `DegradedProjection`。
+- 多 repo server 中，一个 repo 的 workspace ingestion failure 不应关闭其它已 mounted repo；健康 repo 继续可写。服务启动时若没有任何 repo 成功 mounted，则明确启动失败。
+- 运行期 workspace ingestion failure 的首版恢复方式是重启服务；产品不提供 watcher restart endpoint，也不要求用户理解 backend/thread 细节。
+
+### 5. 工作区摄取健康与写入阻断
+
+- `/api/node/role` 可以公开 `healthy / transitioning / degraded / unknown` 的 aggregate workspace ingestion health，以及 expected/running/unavailable 数量。
+- aggregate 不显示 repo 名、RepoId、路径、generation 或失败原因；具体失败详情只用于 operator logs。
+- 依赖当前 workspace 状态的 editor、Docs、External Changes、Source Control、merge、Remote Projection pull 与 plugin writer，在当前 repo 未 mounted 时统一返回本地化的“工作区变更暂时不可用”。
+- 纯读、Ledger inspect/export、remote shadow ingest 与 offline repair/export/diagnostic 不受该 blocker 影响。
+- 前端只渲染后端 typed code 与 aggregate health，不解析自然语言 detail，也不自行判断何时重启或恢复写权限。
 
 ## 非目标
 
@@ -131,3 +142,45 @@
 - 目录内已跟踪 Markdown 自动显示为待确认删除，无需另一个文件事件触发刷新。
 - Ledger 在用户显式 Apply / Commit 前不增加对应删除事实。
 - 临时 access/open 目录事件不会产生虚假的 External Changes 刷新。
+
+### STORAGE-FEAT-06: Repo-local workspace ingestion 故障隔离
+
+前置条件：
+
+- server 同时管理两个健康 local repo，其中 Repo A 的 watcher 可注入 terminal failure，Repo B 保持 Mounted。
+
+步骤：
+
+1. 在 Repo A 触发 watcher failure，并尝试编辑、创建文档和执行 External Changes mutation。
+2. 在 Repo A 打开文档、读取历史或执行只读诊断。
+3. 切换到 Repo B，编辑并确认一项变更。
+
+期望结果：
+
+- Repo A 的新 workspace-dependent mutation 统一显示“工作区变更暂时不可用”，且没有副作用；只读能力仍可使用。
+- Repo B 继续正常可写，不被 Repo A 故障拖死。
+- UI 不展示 Repo A 的路径、generation 或 watcher failure detail，也不把它标成 projection 损坏。
+
+补充 host/runtime 验收：
+
+- bootstrap 完成后若零个 repo Mounted，server 必须清理已启动 handle 并非零退出；不能以“全局只读但已就绪”继续启动。
+- supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed host-fatal 必须全量回滚已启动 watcher 并终止 server；不得通过字符串匹配扩大或缩小 host-fatal 集合。
+- server 已运行后即使所有 watcher 后续均 Failed，也必须保留只读与诊断入口，并把 aggregate ingestion health 投影为 degraded；不得因 repo-local terminal failure 退出整个进程。
+
+### STORAGE-FEAT-07: Aggregate ingestion health 是薄前端投影
+
+前置条件：
+
+- `/api/node/role` 返回至少一个 unavailable repo 的 aggregate health。
+
+步骤：
+
+1. 打开应用并观察 workspace ingestion blocker/health surface。
+2. 捕获 `/api/node/role` 响应。
+3. 检查页面 console 与 network response。
+
+期望结果：
+
+- 页面按 typed status/code 显示本地化只读提示与“重启服务”恢复指引。
+- node-role 只包含 status/expected/running/unavailable aggregate，不泄漏 repo identity、路径或失败详情。
+- 前端没有解析 detail、调用 restart endpoint 或执行业务恢复判断。

@@ -5,9 +5,9 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
-- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Projection Backup 文件传输边界)`
+- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Projection Backup 文件传输边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md (REL-013)`
 - `Primary Code Areas`: `crates/core/src/` 各 runtime 的 tracing / log / metric 实现位置；`apps/cli/src/server/` observability endpoint
@@ -17,7 +17,7 @@
 本章是**可观测性契约唯一权威**：定义遥测/指标/追踪的结构标准与告警映射。
 
 - **Owns**：SLO/SLI catalog（§2）、telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、observation-to-health mapping（§6）、alerting tier 映射（§7）、resilience playbook index（§8）。
-- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack#performance-profiles-and-feature-matrix`；运维观测 endpoint 归 `18_release#runtime-observability`；Projection Backup 文件传输合同归 `06_backup`；repo degraded/quarantine 修复路径归 `04_repository#repo-health-and-repair`（§8 Resilience Playbook Index）。
+- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；process-local `RepoMountState`、watcher failure 与 cleanup 语义归 `03_storage/watcher#watcher-contract`；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack#performance-profiles-and-feature-matrix`；运维观测 endpoint 归 `18_release#runtime-observability`；Projection Backup 文件传输合同归 `06_backup`；repo degraded/quarantine 修复路径归 `04_repository#repo-health-and-repair`（§8 Resilience Playbook Index）。
 - **边界**：本章 **MUST NOT** 定义 health 状态、错误码、budget 数值或新增调用层；只承载观测/映射/边界声明。
 
 ## 2. SLO / SLI Catalog {#slo-sli-catalog}
@@ -53,6 +53,10 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | `mutation_outcome` | enum | 条件 | repo authority writer 结果：`not_committed` / `committed` / `projection_degraded` / `committed_partial` |
 | `recovery_cause` | string | 条件 | typed projection recovery 事件原因；不得携带正文 |
 | `connection_epoch` | int | 条件 | browser incoming gap / reconnect / session retirement 事件 |
+| `watcher_generation` | int | 条件 | watcher start/stop/failure 事件；只进 tracing，不进入公开 node-role response |
+| `watcher_phase` | string | 条件 | typed watcher failure phase；禁止由自然语言 error 解析 |
+| `watcher_failure_kind` | string | 条件 | typed repo-local/host-fatal failure kind；禁止字符串分类 host shutdown |
+| `cleanup_error` | string | 条件 | stop/final-scan/join cleanup 诊断；不得覆盖 primary error |
 
 规则：字段名稳定、snake_case；新增字段 SHOULD 复用既有语义而非另造同义字段。
 
@@ -72,6 +76,8 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 - repo mutation runtime 至少观测 permit wait/hold latency、committed-degraded/partial 次数、每次 mutation
   enqueue 的 recovery 数；transport 至少观测 critical queue retirement、broadcast lag 与 browser
   incoming gap。doc id、request id 与正文不得作为 metric label。
+- watcher runtime 至少观测 aggregate expected/running/unavailable gauge、startup scan pass、reconcile latch、
+  terminal failure 与 shutdown cleanup failure；repo id、path 与 generation 不得作为公开或高基数 metric label。
 - 容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域：
   memory 使用当前 cgroup usage；CPU 使用当前 cgroup usage delta，并按可见祖先中最严
   quota 与 effective cpuset 的较小 capacity 归一化到 `0..=100%`。每个 metric 应按
@@ -102,6 +108,11 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | 全部校验通过、authority 与 projection 一致 | `Healthy` |
 
 迁移条件（如何从 `Degraded*` 进入 `Repairing` 或 `Quarantined`）不在本章定义，唯一见 `04_repository#repo-health-and-repair` §4.3。
+
+watcher start/worker/final-reconcile failure 映射到 `03_storage/watcher#watcher-contract` 的
+`RepoMountState::Failed`，**不映射到任何 `RepoHealth::Degraded*`**，也不得写
+`DurableProjectionFault`。只有独立 projection/locator evidence 同时成立时，才按上表映射
+对应 RepoHealth；不得从 watcher failure 推断 authority 或 projection 损坏。
 
 ### 6.1 DurableProjectionFault Boundary
 
@@ -141,10 +152,10 @@ DurableProjectionFault = {
 | Tier | 触发类别 | 示例码（13_i18n） | 动作 |
 |---|---|---|---|
 | `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`、`STORAGE_DB_LOCKED`、`SYNC_DECRYPT_FAILED`（数据完整性，显式纳入） | 立即 page + 阻断发布 |
-| `T2` 警告 | 409 冲突 / 作用域失效 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH` | 工单 + 观察 Error Budget |
+| `T2` 警告 | 409 冲突 / 作用域失效；显式列入的 repo-local 可隔离 503 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH`、`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` | 工单 + 观察 Error Budget |
 | `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
 
-某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 为显式例外。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
+某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 与 repo-local 可隔离的 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` 为显式例外。单 repo watcher `Failed` → `T2`；bootstrap 零 Mounted 或 typed host-fatal → `T1`。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
 
 ## 8. Resilience Playbook Index {#resilience-playbook-index}
 
@@ -154,6 +165,7 @@ DurableProjectionFault = {
 - Projection Backup locator/profile：`06_backup#projection-backup-locator-contract`。
 - pull 后 External Changes admission：`06_backup#projection-backup-pull-state-machine-contract`。
 - repo 级 degraded/quarantine 后的恢复路径：`04_repository#repo-health-and-repair`。
+- workspace ingestion failure 首版 operator recovery：重启服务；不提供 public watcher restart endpoint，具体 failure detail 只查 structured tracing。
 
 本章不复制恢复步骤，只索引权威章节。
 

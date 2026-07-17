@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-17`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -219,13 +219,57 @@ process-scoped `RepoMutationPublicationGate`。该 gate 以 `RepoId` 为粒度�
 的本地写入，不同 repo 仍可并行；registry 必须使用弱引用回收闲置 repo permit，不得让
 访问过的 repo 永久累积。
 
+所有依赖 Projection Workspace 当前性的在线本地操作还 **MUST** 进入统一 typed
+`execute_mounted_repo`。该执行面组合 `RepoMutationPublicationGate` 与只读
+`WatcherRuntimeView`，并按固定顺序完成准入：
+
+```text
+repo scope / branch
+  -> projection / locator health
+  -> acquire Mounted(repo_id, generation) admission token
+  -> repo mutation permit
+  -> exact revalidation: same slot + same generation + Mounted
+  -> authority/workspace side effects
+```
+
+`WatcherRuntimeView` 的初检必须返回只读 `MountAdmissionToken`，绑定稳定 slot identity、
+`RepoId` 与 generation；初检只短时读取 supervisor map，不得持锁等待 repo permit。
+取得 repo permit 后、任何副作用前，gate 必须通过 token 对同一原子 slot state 做 exact
+revalidation。该 revalidation 是 mutation admission cut；token 指向的旧 slot 在移除或替换前
+必须先原子退出 Mounted，因此不得通过悬空 token 绕过新 generation。
+
+mount revalidation 与 watcher `Failed/Transitioning` 状态转换必须在同一个 slot 原子状态上
+线性化。failure cut 之前完成 exact revalidation 的 operation 可以完成；即使请求在 transition
+前已通过初检，只要排队取得 permit 后落在 failure/transition cut 之后，也必须在任何
+workspace/ledger/staging/Git side effect 之前返回
+`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE`。该错误码与 HTTP/WS 映射由
+`13_i18n#i18n-error-code-catalog` 和 `07_network` 唯一定义。
+
+supervisor map mutex 不得跨 repo permit 获取或等待、I/O、scan、join、await 与 publication；
+持有 map mutex 时禁止获取 Catalog/Repo permit。exact revalidation 只读 token 指向的原子
+slot state，不重新获取 supervisor map mutex，从而避免 Map↔Repo 反向嵌套。
+
+`execute_mounted_repo` 的覆盖范围包括：
+
+- editor append/writeback；
+- Docs create/copy/rename/move/delete；
+- External Changes prepare/stage/unstage/discard/apply；
+- Source Control commit/push 中读取或改变 local workspace/authority 的部分；
+- local merge、projection apply 与 Remote Projection pull；
+- plugin note writer 与 source-control writer。
+
+纯读、ledger inspect/export、认证 remote-shadow ingest、offline repair/export/diagnostic 不受
+mount gate 阻断。它们仍必须遵守各自的 scope、authority 与安全合同，不得借此进入在线
+workspace mutation。Watcher 自身只写 External Changes pending，不进入 authority mutation
+permit；其 pending/reconcile 写入由 owned watcher generation 与 lifecycle contract 串行化。
+
 Repo catalog create 使用独立的 typed `Catalog` lane；rename/remove 必须按固定
 `Catalog -> Repo(RepoId)` 顺序同时持有 catalog 与目标 repo permit。不得用 nil UUID 或字符串
 哨兵伪装 catalog identity，也不得允许 repo lifecycle 与该 repo 的 authority writer 并发。已经持有任意
 repo permit 的调用不得再获取 `Catalog` lane；这一反向嵌套必须 fail-closed，避免与
 `Catalog -> Repo(RepoId)` 形成 ABBA 死锁。
 
-覆盖范围包括 Browser Edit、Docs create/copy/rename/delete 与 repo authority mutation、
+authority mutation permit 的覆盖范围包括 Browser Edit、Docs create/copy/rename/move/delete 与 repo authority mutation、
 External Apply、Source Control commit（含 resolved-conflict 与 commit-and-push 的 authority
 部分）、merge result、plugin `note_write`，以及未来启用的 local reconcile。Watcher 只写
 External Changes pending，不进入该 gate；认证 remote shadow ingest、离线 repair/export 与

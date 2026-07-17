@@ -41,8 +41,10 @@
 - `Name`: `Start Local Hub`
 - `Surface`: `cli`
 - `Trigger`: run `deve serve`
-- `Preconditions`: ledger, Projection Locator state, and server config are valid
-- `Immediate Result`: Axum HTTP/WebSocket server starts
+- `Preconditions`: ledger, server config, and at least one healthy local repo Projection Locator/workspace are valid and mountable
+- `Immediate Result`: Axum HTTP/WebSocket server starts only after `WatcherSupervisor` reports at least one repo Mounted
+- `Partial Result`: repo-local watcher start failure leaves that repo readonly/diagnostic while other Mounted repos remain writable
+- `Failure Result`: zero Mounted at bootstrap or a typed host-fatal closes all started handles and exits non-zero
 - `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/server/`
 
 ## Response Flow
@@ -50,11 +52,12 @@
 1. User chooses server startup options.
 2. Instruction interface parses `Commands::Serve`.
 3. Flow coordination calls the serve command and server bootstrap.
-4. Execution domains are config, protocol, sync, ledger, and local hub runtime.
+4. Execution domains are config, protocol, sync, ledger, local hub runtime, and host-owned watcher supervision; handlers receive only readonly `WatcherRuntimeView`.
 
 ## Notes
 
 - `--dry-run` is modeled as a distinct operation because it changes side effects.
+- After successful bootstrap, later failure of every watcher keeps the process alive for readonly/diagnostic access and reports aggregate health as degraded; it does not reclassify repo-local failure as host-fatal.
 - Fresh UI smoke data roots must first run `deve init --path <data-root> --repo default --projection-base <projection-base>` or otherwise point `DEVE_LEDGER_DIR` at the existing ledger directory for a data root with a valid host-local Projection Locator.
 - Local UI verification can use the embedded/bundled frontend only when the CLI was built after the latest `trunk build --release`; otherwise it may serve stale WASM. Use the two-process flow as a fallback after locator prep: backend `deve serve --dev --port 3001`, then `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from `apps/web`.
 - Auth smoke must open `http://127.0.0.1:<port>/`. Do not use `0.0.0.0` as the browser origin because secure cookie behavior is origin-sensitive in local HTTP testing.

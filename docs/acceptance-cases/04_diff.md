@@ -499,15 +499,15 @@
 - case_id: DIFF-013
   goal: 首个公开 WS epoch 只传 backend typed projection，commit diff 使用 summary 加按需精确 target。
   preconditions:
-    - 当前协议 namespace 为 F4/v1 lockstep
+    - 当前协议 namespace 为 F4/v2 lockstep；未发布 F4/v1 无 adapter
   steps:
     - run: cargo test -p deve_cli new_revision_cancels_previous_diff_job -- --nocapture
     - run: cargo test -p deve_core commit_file_diff_target_mismatch_fails_closed -- --nocapture
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core historical_development_ws_namespace_is_rejected -- --nocapture
   assertions:
-    - ws_assert: f4_v1_lockstep true
-    - ws_assert: f4_v0_and_f4_v13_rejected true
+    - ws_assert: f4_v2_lockstep true
+    - ws_assert: f4_v0_f4_v1_and_f4_v13_rejected true
     - ws_assert: historical_f3_v13_rejected true
     - api_assert: commit_diff_list_contains_no_document_body true
     - api_assert: commit_file_diff_target_mismatch_fails_closed true

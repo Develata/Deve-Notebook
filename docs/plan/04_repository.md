@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -84,9 +84,17 @@ RepoNameBinding = {
 
 其中：
 
-- `Healthy` 才允许正常 mounted write path。
+- `RepoHealth` 只描述可由 repo/catalog/locator/projection/repair 证据判断的持久或可重建健康状态；它不承载当前进程 watcher thread 是否仍在运行。
+- `Healthy` 是正常 mounted write path 的必要条件，但不是充分条件；还必须同时满足 `RepoMountState::Mounted`。
 - `Degraded*` 允许受控只读或 fallback 行为，但必须显式暴露给 runtime。
 - `Quarantined` 表示该 repo 不再参与正常 scope 恢复、自动切换和默认列表绑定。
+- `RepoMountState` 是 `03_storage/watcher#watcher-contract` 定义的 process-local readiness。watcher `Failed` 不得写入 projection fault journal、不得转换为 `DegradedProjection`，也不得改变 Ledger-derived health facts。
+
+在线可写条件固定为：
+
+```text
+RepoHealth::Healthy && RepoMountState::Mounted
+```
 
 ### 2.5 Selector Inputs and Logical Identity {#repo-selector-resolution-contract}
 
@@ -193,21 +201,41 @@ Unresolved
 - `DegradedLocator` 禁止 watcher、scan、stage、commit、projection writeback。
 - `Repairing` 期间禁止把该 repo 作为默认可写 scope 暴露给 UI。
 
+与上述 `RepoHealth` 正交的 process-local mount lifecycle 为：
+
+```text
+Unmounted
+  -> Transitioning(generation)
+  -> Mounted(generation) | Failed(generation, failure)
+  -> Transitioning(next_generation)
+  -> Mounted(next_generation) | Failed(next_generation, failure) | Unmounted
+```
+
+- `Transitioning` 关闭新 workspace-dependent mutation，但不修改 durable repo health。
+- `Mounted` 只能由 watcher capture-first startup 的 clean scan pass 发布。
+- `Failed` repo 仍可出现在 repo list 中并提供受控只读、export 与 diagnostic；不得被默认 scope 或 writer registration 选择为可写 repo。
+
 ### 4.2 Scope Binding
 
 ```text
-NoScope
-  -> RepoBound(repo_id, branch, scope_nonce)
+NoScope(scope_nonce)
+  -> SwitchingRepo(switch_nonce)
+RepoBound(repo_id, branch, scope_nonce, catalog_membership_token)
   -> DocBound(doc_id)
-  -> SwitchingRepo | SwitchingBranch
-  -> RepoBound(new_repo_id, new_branch, new_scope_nonce)
+  -> SwitchingRepo(switch_nonce) | SwitchingBranch(switch_nonce)
+SwitchingRepo | SwitchingBranch
+  -> RepoBound(new_repo_id, new_branch, scope_nonce = switch_nonce)
+  -> NoScope(scope_nonce = switch_nonce)
 ```
 
 约束：
 
 - repo switch 与 branch switch 只允许在解析成功后提交到 session。
+- `NoScope` 也是带 `scope_nonce` 的已确认 scope epoch；进入它必须提升 nonce，使旧 RepoBound 的延迟消息失效，不能用 `None` 或零值绕开 scope gate。
+- 每个 process-local `RepoBound` 必须保存当次 bind 的 `CatalogMembershipToken`。writer admission、new bind 与 scope publication 应用都必须 exact-compare 当前 per-repo membership generation；token 一旦被 durable membership cut 撤销，旧 binding 即使尚未收到 UI 消息也必须立即拒写。
 - 旧 scope 的延迟消息不得继续驱动新 scope。
 - `last_local_repo` 只允许作为恢复线索，解析失败时必须 fail-closed。
+- local writable scope 只有在目标 repo 同时 `Healthy + Mounted` 时才可发布 write-ready。显式进入健康但非 Mounted repo 时只能绑定为 readonly；create 的 mount failure 不自动切换 session，rename 的 committed partial outcome 按 §7.5 更新既有 active session identity 后保持 readonly。
 
 ### 4.3 Health Recovery
 
@@ -333,6 +361,7 @@ ReadonlyDegraded
 - 如果用户提供 `RepoName`，系统 **MAY** 做别名解析。
 - 如果解析结果不唯一或不一致，系统 **MUST** fail-closed。
 - 从 `Remote -> Local` 返回时，系统 **SHOULD** 优先恢复最近一次稳定本地 repo。
+- “稳定本地 repo” 在在线 writable recovery 中固定表示 `RepoHealth::Healthy + RepoMountState::Mounted`；仅 Healthy 但非 Mounted 的 repo 只能作为显式 readonly/diagnostic target。
 - 最近本地 repo 不可解析时，必须回到严格 UUID-first 路径，而不是绑定任意本地 repo。
 
 ### 7.2 Catalog Repair {#repo-catalog-repair-contract}
@@ -359,21 +388,42 @@ ReadonlyDegraded
 - workspace root realign 前若存在 pending/staged/dirty workspace 或 projection fault，rename / display name repair **MUST** 先 fail-closed，并要求用户完成 commit、discard、repair 或显式 import。
 - locator 缺失或冲突必须保持 `DegradedLocator`，直到用户显式提供可用 base 且计算出的 workspace root 可用。
 
+### 7.4.1 Local Repo Create Contract
+
+- create 必须由 `RepoLifecycleCoordinator` 使用 `Catalog -> Repo(new_repo_id)` lane 编排；handler 只提交 typed intent，不得直接创建 watcher 或修改 supervisor slot。
+- durable repo/catalog/locator/workspace identity create 成功后，才允许在已释放 mutation permits 的情况下启动 watcher mount。
+- durable create 已提交后，无论 mount 成功或失败，都只能在 mount 最终 outcome 确定后发布一次 repo-list update；该 update 必须携带最终 `Mounted` 或 readonly/unavailable 状态，不得先广播可写 success 再补发 watcher failure。
+- mount 成功时才允许发布可写 scope，并允许当前 session 自动切换到新 repo。
+- durable create 已提交但 mount 失败时不得删除新 repo、回滚 Ledger/catalog 或猜测清理 workspace。repo 保留在列表中且只读可见，当前 session 不自动切换，并返回 typed “创建已提交但 workspace ingestion 不可用” partial outcome。
+
 ### 7.5 Repo Rename Contract
 
 - repo rename 是本地可写 repo 的 authority operation，必须通过 writer gate 与 `RepoId` admission。
 - rename intent 必须携带 `repo_id`、`old_name`、`new_name` 与 `expected_name_epoch`。
 - ledger append 前必须完成：selector -> `RepoId`、当前 `RepoNameBinding` 校验、safe name 规范化、目标 workspace root 预检、dirty/staged/pending/projection fault gate。
-- ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行。
+- rename 必须先把 mount slot 原子 reserve 为 `Transitioning(generation)` 并关闭新写门，再按 `03_storage/watcher#watcher-contract` 的 E2 顺序停止旧 watcher；final reconcile 完成前不得执行 durable rename。
+- ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行；完成 durable rename 后才在新 root 启动新 generation watcher。
 - 如果 ledger 已提交但 workspace realign 失败，该 repo 必须进入 `DegradedLocator` 或 `DegradedProjection`，并通过 repair runtime 暴露可恢复动作；不得把 rename 回滚为基于旧路径名的隐式绑定。
+- durable rename 已提交但新 mount 失败时不得反向 rename。repo name 与所有当前绑定同一 `RepoId` 的 session display/scope projection 必须更新到已提交的新事实（`RepoId` 本身不变），这些 session 保持 readonly 并收到 workspace ingestion unavailable partial outcome；当前绑定其它 `RepoId` 的 session 完全不得切换或改写。
+- old/new root、catalog、metadata、locator 或 workspace marker 出现混合事实时，必须按 `RepoId` 重新读取全部事实；只有 old 或 new 事实唯一一致时才允许启动对应 watcher，混合状态进入 repair，不得猜测删除、移动或回滚。
 
 ### 7.6 Local Repo Removal Contract
 
 - Web/CLI 的普通“删除仓库”入口在当前阶段必须实现为 `RemoveLocalRepo`：从正常 switcher/listing、last scope recovery 与自动默认绑定中移除本地 repo，但保留 `.redb` authority 与 Projection Workspace 文件。
 - `RemoveLocalRepo` 必须解析到唯一 `RepoId`，只能作用于 Local Branch，remote/spectator scope 必须 fail-closed。
-- 移除当前 active repo 前必须先解析并切换到另一个健康 local repo；不存在替代 repo 时必须拒绝，不得让 session 落入无可写 repo 的隐式状态。
+- 移除当前 active repo 前必须先解析另一个 `Healthy + Mounted` local repo，并记录其 `RepoId`、`CatalogMembershipToken` 与 mount generation 组成的 deferred fallback token；不存在替代 repo 时必须拒绝。此时不得提前发布或实际切换 scope。coordinator 在 durable remove side effect 前必须 exact revalidate fallback 仍为同一 catalog token / mount generation 的 `Healthy + Mounted`；失败则在未提交 remove 的情况下中止并保持原 scope。
 - 移除操作不得删除 ledger authority、不得删除 `.notegit`、不得删除用户 Markdown workspace；真正物理销毁必须另有显式 destroy/export-after-confirm 流程，并要求独立验收。
 - 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；恢复入口必须通过 repair/import/recover 类受控流程重新 admission。
+- remove 必须先 reserve `Transitioning(generation)` 并关闭新写门；watcher final-state reconcile 必须在 removed marker、catalog/locator cleanup 或正常 listing 隐藏之前完成。
+- durable remove 成功后该 repo 本进程不得重新启动 watcher。失败且 durable remove 尚未提交时，coordinator 才可以补偿性启动旧 root watcher；若 remove 已提交，则即使 publication/cleanup 失败也不得恢复旧 watcher 或重新暴露为正常可写 repo。
+- durable remove 成功且最终 mount outcome 已知后，才允许把 deferred scope switch 与 repo-list publication 一次性 enqueue。deferred publication 在**应用**而非仅入队时，必须再次 exact-compare fallback 的 `CatalogMembershipToken`、mount generation 与 `Healthy + Mounted`；若 fallback 已 removed、membership generation 已改变或 watcher `Failed`，则不得绑定该 repo，也不得静默选择第三个 repo。发起 remove 且当前绑定目标 repo 的 session 必须进入 §4.2 既有 `NoScope` state，按固定顺序先发布最终 `RepoList`，再复用 `ServerMessage::ProtocolError` + `ServerErrorCode::ScRepoNotSelected`（wire `SC_REPO_NOT_SELECTED`，携带匹配的 `switch_nonce`）返回 readonly partial outcome；此路径禁止发送伪造 `RepoSwitched`。这里不新增 Rust/wire enum、watcher lifecycle WS message 或 protocol family。remove 未提交时不得发布 fallback scope，旧 watcher 补偿重启成功后原 scope 保持不变；补偿重启失败则返回显式 readonly partial outcome。
+- durable membership authority cut 必须是 O(1) 的 repo-scoped conditional-apply：在 `RepoCatalogRuntime` 的短 Catalog lane 内 exact-compare fallback token、先轮换被移除 RepoId 的 membership generation、提交 catalog membership 事实，并产出不可变 `RepoRemovalPublicationPlan`（removed RepoId/old token、initiator outcome 与 fallback token）。该临界区不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、filesystem/watcher I/O、await 或长时计算。membership mutation 必须在其新状态首次可见之前或同一 linearization point 先轮换 generation。
+- 发起者的 invalid fallback partial 必须把请求的 `switch_nonce` 提交为新的 `NoScope(scope_nonce)`。先入队的最终 `RepoList` 与随后 `ProtocolError` 都携带该同一 `scope_nonce`，后者同时携带同一 `switch_nonce`；旧 repo epoch 的消息自此全部 stale。该 `RepoList` 是 pending remove 的 typed final projection，不授权自动选择列表中的其它 repo。
+- O(1) revocation cut 之后，所有保存 old token 的 RepoBound、writer admission 与 new bind 都因 generation mismatch 立即 fail-closed；这就是 authority invalidation，不等待 session fan-out。`RepoLifecycleCoordinator` 只把 `RepoRemovalPublicationPlan` 交给 session runtime，不能拥有 connection/session map。
+- session runtime 在 Catalog permit 外登记最新 repo revocation、快照受影响 session，并逐 connection 执行有界 in-memory conditional apply：重新校验 binding/fallback token，原子提交该 connection 的 `RepoBound/NoScope` epoch并 enqueue typed sequence。并发 bind 在 revocation cut 前成立则携带 old token并被该 marker/后续 admission 拒绝，cut 后发起则直接失败；不得存在未被 generation gate 覆盖的 binding 注册窗口。O(N) session snapshot/fan-out 永远不得回到 Catalog/Repo permit 内。
+- 在 invalid-fallback partial 中，发起 remove 的 session 使用其已验证 `switch_nonce` 作为新的 per-connection `NoScope` epoch，并发送上述 `RepoList -> ProtocolError` 序列；fallback 有效时发起者走正常 `RepoBound(fallback)` / `RepoSwitched` 成功路径，不进入 NoScope。其它已绑定 removed RepoId 的 observer session 无论发起者成功或失败都不得复用发起者 nonce；session runtime 必须各自分配严格大于其 current scope nonce 的新 epoch，提交 `NoScope`，然后发送同序列，但 `ProtocolError.switch_nonce = None`、两帧 `scope_nonce = new_epoch`。若 nonce 无法递增，必须直接退休该连接并在 reconnect 后受控恢复，不能保留旧 writer-ready。
+- server-driven observer invalidation 不得自动切换第三个 repo，也不得清除 editor pending overlay；它只退休旧 repo/doc/writer scope 与冲突的 pending scope-switch intent。所有消息只做有界 per-connection enqueue，network delivery 不属于 Catalog critical section。
+- remove cleanup 出现 partial outcome 时必须按 `RepoId` 重新读取 catalog、metadata、locator 与 workspace marker；混合事实进入 repair，不得用路径存在性猜测 durable remove 是否成立。
 
 ### 7.7 Catalog Conflict Repair
 
@@ -385,6 +435,34 @@ ReadonlyDegraded
 - startup materialize 遇到坏 repo 时，不得拖垮整个服务。
 - 坏 repo 必须显式标记 degraded/quarantined。
 - 被跳过的 repo 不得继续参与自动 scope 恢复。
+- watcher repo-local start failure 只记录该 repo `RepoMountState::Failed`；其它健康 repo 继续 mount。host-fatal 仅允许 supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed 分类。
+- bootstrap 完成时至少一个健康 local repo 必须处于 `Mounted`；零 Mounted 时必须逆序关闭本轮已启动 handle 并终止 server。服务已运行后全部 watcher 失败时仍保留 readonly/diagnostic 能力。
+
+### 7.9 Repo Lifecycle Coordinator
+
+`RepoLifecycleCoordinator` 是 create/rename/remove 与 watcher mount 的唯一编排者。固定 lifecycle transaction 为：
+
+```text
+Catalog -> Repo
+  -> nonblocking reserve Transitioning(generation)
+  -> release permits
+  -> watcher/filesystem I/O
+  -> reacquire Catalog -> Repo
+  -> exact revalidation / durable mutation
+  -> release permits
+  -> mount finalization
+  -> publication
+```
+
+规则：
+
+- `CatalogMembershipToken` 是 process-local readiness token，由 `RepoCatalogRuntime` 唯一维护，固定绑定 `(runtime_instance_identity, RepoId, per_repo_membership_generation)`。create/remove/recover/repair 等 typed API 只有在改变该 `RepoId` 的正常 catalog membership 时才递增对应 generation；无关 repo 的 catalog mutation 不得使 token 失效。若 catalog repair 无法可靠界定受影响 RepoId 集合，必须提升 runtime instance identity，使本进程全部旧 token fail-closed。`RepoLifecycleCoordinator` 只读取和 exact-compare token。它不得写入 Ledger、Redb schema、Projection Locator、sync facts 或 wire payload，进程重启后旧 token 自动失效。
+- `Catalog -> Repo` 锁序与 `03_storage/authority#repo-mutation-publication-gate` 一致；反向嵌套必须 fail-closed。并发 lifecycle intent 命中 `Transitioning` 时返回 typed busy，不得等待时持有 catalog/repo permit。
+- watcher/filesystem I/O、scan、join、await、mutation lane 与 publication 期间不得持有 supervisor map mutex。Catalog/Repo permit 也不得跨长时 I/O 或 await。
+- lifecycle 使用专用 deferred publication；repo list、scope switch 与 recovery signal 只有在最终 mount outcome 已知后才可 enqueue。
+- E2 或 startup/reconcile 产生的 generation-bound `WatcherRefresh` 在 slot 为 `Transitioning` 时必须进入同一 deferred publication 并 coalesce；coordinator 只在 exact revalidation 与最终 mount outcome 完成后决定 enqueue，remove success、stale generation 或进入 repair 时必须 drop。不得在 durable lifecycle outcome 前直接映射为 `FsChangeDetected` broadcast。
+- partial outcome 一律以 `RepoId` 为锚重新读取 catalog、repo metadata、Projection Locator 与 workspace `.notegit` marker。只有 old/new 事实唯一一致时才允许继续；混合事实进入 repair。
+- coordinator 不拥有 Ledger、watcher backend 或 UI state；它只编排既有 authority mutation gate、projection/locator runtime 与 `WatcherSupervisor` typed API。
 
 ## 8. Forbidden Patterns
 
@@ -423,6 +501,14 @@ ReadonlyDegraded
 - selector resolution
 - last-local recovery
 - stale scope cleanup
+
+### 9.3.1 Lifecycle Coordination
+
+职责：
+
+- `RepoLifecycleCoordinator` 接收 typed create/rename/remove intent，并编排 Catalog/Repo lane、projection/locator runtime 与 `WatcherSupervisor`。
+- handler、Web shell 与 repo scope runtime 不得直接 start/stop watcher，也不得根据 mount failure 猜测 rollback。
+- coordinator 只在最终 mount outcome 已知后发布 repo list/scope 结果；view layer 只渲染 typed committed/partial/unavailable outcome。
 
 ### 9.4 View Layer
 

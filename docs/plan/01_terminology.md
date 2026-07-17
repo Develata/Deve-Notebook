@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -68,6 +68,14 @@
 *   **Projection Locator (投影定位记录)**：host-local runtime state，描述 `RepoId -> Projection Base path` 的绑定。
     *   Projection Locator 只存在于当前宿主环境；不得写入 repo ledger facts，不得通过 P2P 同步，不得作为 logical repo identity。
     *   本地可写 repo 在 mounted write path 前 **MUST** 具备可 canonicalize 的 Projection Locator；唯一性与冲突检查作用于计算得到的 Projection Workspace root。
+*   **Repo Mount State (仓库挂载状态)**：当前进程内某个 local repo 的 workspace ingestion readiness，状态为 `Unmounted / Transitioning(generation) / Mounted(generation) / Failed(generation, failure)`。
+    *   它由 host runtime 的 watcher supervision 维护，是 process-local、可重建状态；不得写入 Ledger、repo metadata、projection fault journal 或同步协议事实。
+    *   `generation` 只用于拒绝旧 worker completion 污染新实例，不得充当 repo identity、scope nonce 或持久化 epoch。
+    *   `Failed` 仅说明当前进程不能可靠摄取该 repo 的 Projection Workspace 外部变化；它不等价于 `RepoHealth::DegradedProjection`，也不证明 Ledger 或 projection authority 已损坏。
+    *   **Authority Defers To**：状态迁移、owned handle 与 supervisor 语义归 `03_storage/watcher#watcher-contract`；repo health 正交关系归 `04_repository#repo-health-and-repair`。
+*   **Workspace Ingestion Readiness (工作区摄取就绪)**：允许依赖当前 Projection Workspace 状态的在线本地写操作进入 mutation path 的组合能力。
+    *   固定判定为 `RepoHealth::Healthy && RepoMountState::Mounted`；任一条件不成立时，相关新写意图必须 fail-closed。
+    *   在 watcher failure cut 之前已原子准入的操作可以完成；切点之后的新操作必须收到结构化 unavailable 结果。显示层只能消费后端 typed readiness / blocker，不得自行推断可写性或恢复动作。
 *   **Tree State (树状态)**:
     *   内存文件树缓存 $T_{mem}$，由 `TreeManager` 管理。
     *   用于目录树 UI、减少 IO 扫描并生成 `TreeDelta`。
@@ -123,7 +131,7 @@
 *   **switch_nonce (切换版本)**：客户端发起 repo / branch switch 时声明的候选 scope 版本。
     *   `switch_nonce` **MUST** 严格大于当前 `scope_nonce`；stale switch 必须 fail-closed。
 *   **Repo Health States (仓库健康状态)**：`Healthy` / `Degraded` / `Repairing` / `Quarantined` 的 glossary 级名称。
-    *   `Healthy`：通过完整性校验，authority 与 projection 一致，可正常读写。
+    *   `Healthy`：通过完整性校验，authority 与 projection 一致；它只是正常写入的必要条件，还必须同时满足 `RepoMountState::Mounted`。
     *   `Degraded`：检测到非致命异常，部分能力受限，但 authority 未损坏。
     *   `Repairing`：正在执行 repair 流程，写入受控。
     *   `Quarantined`：检测到完整性风险，repo 被隔离，禁止常规写入直至修复。

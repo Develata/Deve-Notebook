@@ -17,13 +17,15 @@
   preconditions:
     - 文件存在: docs/plan/01_terminology.md
   steps:
-    - run: rg -n "Ledger|Snapshot|Projection Workspace|Projection Locator|DocId|Path Mapping|Peer|Vector Clock" "docs/plan/01_terminology.md"
+    - run: rg -n "Ledger|Snapshot|Projection Workspace|Projection Locator|Repo Mount State|Workspace Ingestion Readiness|DocId|Path Mapping|Peer|Vector Clock" "docs/plan/01_terminology.md"
   assertions:
     - stdout_contains_all:
         - "Ledger"
         - "Snapshot"
         - "Projection Workspace"
         - "Projection Locator"
+        - "Repo Mount State"
+        - "Workspace Ingestion Readiness"
         - "DocId"
         - "Path Mapping"
         - "Peer"

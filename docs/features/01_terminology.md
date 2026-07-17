@@ -25,6 +25,8 @@
 
 - `Read-only` 表示当前不能写入。
 - `Spectator / Remote` 表示用户正在查看远端分支，而不是本地可写工作分支。
+- `Workspace ingestion unavailable / 工作区摄取不可用` 表示当前服务无法可靠接收该本地 repo 的外部文件变化，因此相关写操作暂时只读；它不表示 Ledger 数据已损坏。
+- 普通用户界面使用能力名与恢复提示，不暴露 watcher backend、thread、generation 或路径等实现术语。
 
 ## 非目标
 

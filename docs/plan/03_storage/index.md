@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-17`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -162,15 +162,25 @@ RepoDiscovered
   -> RuntimeTablesReady
   -> ProjectionLocated
   -> ProjectionReady
+  -> WatcherTransitioning(generation)
   -> WatcherReady
-  -> Mounted
+  -> Mounted(generation)
 ```
 
 约束：
 
 - `ProjectionLocated` 必须验证 repo-scoped Projection Locator。
-- `WatcherReady` 是打开 repo 的最后一步。
-- watcher 初始化失败 **MUST** fail-closed。
+- `WatcherReady` 是打开 repo 的最后一步；只有 owned watcher handle 已完成 capture-first clean scan cut，才允许发布 `Mounted(generation)`。
+- durable `RepoHealth` 与 process-local `RepoMountState` 正交。依赖 Projection Workspace 当前性的在线本地写路径只有在下式成立时才可准入：
+
+  ```text
+  RepoHealth::Healthy && RepoMountState::Mounted
+  ```
+
+- watcher 初始化或运行期失败必须对该 repo fail-closed 为 `RepoMountState::Failed`，不得写入 projection fault journal，也不得伪装为 `DegradedProjection`。
+- server bootstrap 对 repo-local watcher start failure 按 repo 隔离；健康且成功 mounted 的 repo 继续运行。启动完成时若零个 repo 处于 `Mounted`，host 必须回滚已启动 watcher 并终止 server。
+- server 已运行后即使全部 watcher 后续失败，仍保留纯读、ledger inspect/export 与离线 repair/diagnostic 能力；所有依赖 workspace 当前性的在线本地 mutation 保持关闭。
+- `Transitioning / Mounted / Failed` 的 generation、失败原子切点与 owned lifecycle 唯一由 [watcher contract](./watcher.md#watcher-contract) 定义；repo create/rename/remove 的 durable 与 mount 协调唯一由 `04_repository#repo-health-and-repair` 定义。
 
 > Write Lifecycle（§5.2）见 [authority.md](./authority.md)；External Edit Lifecycle（§5.3）见 [watcher.md](./watcher.md)。
 
