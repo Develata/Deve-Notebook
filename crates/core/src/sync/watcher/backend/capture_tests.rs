@@ -286,6 +286,33 @@ fn reconcile_waits_for_inflight_dispatch_before_draining() {
 }
 
 #[test]
+fn watcher_final_state_shutdown_discards_all_queued_hints() {
+    let (sender, receiver) = bounded_capture(43);
+    let token = receiver.begin_startup_scan().expect("startup token");
+    assert_eq!(
+        receiver
+            .complete_startup_scan(token)
+            .expect("running handoff"),
+        StartupHandoff::Running
+    );
+    for path in ["notes/first.md", "notes/second.md"] {
+        sender.submit(CaptureInput::Hints(vec![FsEventHint::changed(
+            FsEventPath::new(path.into()).expect("test path"),
+        )]));
+    }
+
+    receiver.discard_pending_hints();
+
+    assert!(
+        receiver
+            .recv(Duration::from_millis(1))
+            .expect("capture receive")
+            .is_none(),
+        "shutdown must discard the entire normalized hint suffix"
+    );
+}
+
+#[test]
 fn terminal_sender_drop_preempts_queued_hints() {
     let (sender, receiver) = bounded_capture(1);
     handoff_running(&receiver);

@@ -33,6 +33,11 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --test watcher_internal_ignore watcher_startup_scan_respects_deveignore -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib watcher_capture_first_startup -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --test watcher_platform_fs watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes -- --nocapture --test-threads=1
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --lib watcher_final_state_shutdown -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	cargo test -p deve_core --test watcher_platform_fs watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks -- --nocapture --test-threads=1
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: final_state_shutdown_orders_stop_discard_reconcile_refresh true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: worker_failure_primary_survives_stop_and_final_scan_cleanup true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: final_state_shutdown_revalidates_exact_repo_id_and_root true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: startup_scan_window_change_retries_and_converges_pending true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: startup_churn_stops_after_three_dirty_passes true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	api_assert: startup_scan_failure_preserves_primary_and_cleanup true
@@ -159,9 +164,18 @@ contains	crates/core/src/sync/watcher/startup_tests.rs	fn watcher_capture_first_
 contains	crates/core/src/sync/watcher/startup_tests.rs	fn watcher_capture_first_startup_scan_failure_preserves_stop_cleanup()
 contains	crates/core/src/sync/watcher/startup_tests.rs	fn watcher_capture_first_startup_terminal_handoff_preserves_first_failure()
 contains	crates/core/src/sync/watcher/worker_tests.rs	fn watcher_capture_first_startup_rejects_stale_generation_completion()
+contains	crates/core/src/sync/watcher/worker.rs	fn final_state_shutdown(
+contains	crates/core/src/sync/watcher/worker.rs	WorkerCommand::Shutdown is only a coordinator request
+contains	crates/core/src/sync/watcher/backend/mod.rs	it must not leave
+contains	crates/core/src/sync/watcher/backend/capture_tests.rs	fn watcher_final_state_shutdown_discards_all_queued_hints()
+contains	crates/core/src/sync/watcher/worker_shutdown_tests.rs	fn watcher_final_state_shutdown_stops_discards_reconciles_then_refreshes()
+contains	crates/core/src/sync/watcher/worker_shutdown_tests.rs	fn watcher_final_state_shutdown_waits_for_inflight_refresh_before_quiesced_cut()
+contains	crates/core/src/sync/watcher/worker_shutdown_tests.rs	fn watcher_final_state_shutdown_worker_failure_preserves_primary_and_appends_cleanup()
+contains	crates/core/src/sync/watcher/worker_shutdown_tests.rs	fn watcher_final_state_shutdown_revalidates_exact_repo_identity()
 contains	crates/core/src/sync/scan_tests.rs	fn watcher_startup_root_revalidation_does_not_create_changed_locator_root()
 contains	crates/core/src/sync/scan_tests.rs	fn watcher_startup_scan_file_never_reresolves_the_locator()
 contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes()
+contains	crates/core/tests/watcher_platform_fs.rs	fn watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks()
 absent	crates/core/src/sync/watcher/startup.rs	Instant
 absent	crates/core/src/sync/watcher/startup.rs	startup_deadline
 absent	crates/core/src/sync/watcher/startup.rs	startup_timeout
@@ -199,7 +213,9 @@ contains	apps/cli/src/server/tests/edit/edit_projection_ack_test.rs	assert_eq!(e
 cargo_test_lib	deve_cli	edit_acknowledges_ledger_commit_when_workspace_writeback_fails
 cargo_test_lib	deve_core	remote_import
 cargo_test_lib	deve_core	watcher_capture_first_startup
+cargo_test_lib	deve_core	watcher_final_state_shutdown
 cargo_test_integration	deve_core	watcher_platform_fs	watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes
+cargo_test_integration	deve_core	watcher_platform_fs	watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	MutationExecution::projection_degraded(
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	emit_write_confirmation(
 contains	apps/cli/src/server/handlers/document/write_confirmation.rs	Ok(MutationExecution::ProjectionDegraded {

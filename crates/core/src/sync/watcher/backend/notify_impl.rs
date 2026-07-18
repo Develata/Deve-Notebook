@@ -110,6 +110,10 @@ impl FsWatcherBackend for NotifyBackend {
         }
         Ok(())
     }
+
+    fn discard_pending_hints(&self) {
+        self.capture.discard_pending_hints();
+    }
 }
 
 fn attach_failure(primary: impl Into<String>) -> WatcherFailure {

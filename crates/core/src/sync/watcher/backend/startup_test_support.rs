@@ -49,6 +49,10 @@ impl FsWatcherBackend for StartupCaptureBackend {
         self.stopped.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
+
+    fn discard_pending_hints(&self) {
+        self.receiver.discard_pending_hints();
+    }
 }
 
 pub(crate) fn startup_capture_backend(

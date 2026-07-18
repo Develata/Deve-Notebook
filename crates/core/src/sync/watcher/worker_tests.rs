@@ -44,6 +44,8 @@ impl FsWatcherBackend for FailingBackend {
     fn stop(&mut self) -> Result<(), super::super::WatcherError> {
         Err(anyhow::anyhow!("injected cleanup failure").into())
     }
+
+    fn discard_pending_hints(&self) {}
 }
 
 impl FsWatcherBackend for StopPanickingBackend {
@@ -72,6 +74,8 @@ impl FsWatcherBackend for StopPanickingBackend {
     fn stop(&mut self) -> Result<(), super::super::WatcherError> {
         panic!("injected cleanup panic")
     }
+
+    fn discard_pending_hints(&self) {}
 }
 
 impl FsWatcherBackend for BlockingCleanupBackend {
@@ -102,6 +106,8 @@ impl FsWatcherBackend for BlockingCleanupBackend {
         self.release.recv().expect("release cleanup");
         Ok(())
     }
+
+    fn discard_pending_hints(&self) {}
 }
 
 impl FsWatcherBackend for PanickingBackend {
@@ -131,6 +137,8 @@ impl FsWatcherBackend for PanickingBackend {
         self.stopped.store(true, Ordering::SeqCst);
         Ok(())
     }
+
+    fn discard_pending_hints(&self) {}
 }
 
 #[test]
@@ -139,7 +147,7 @@ fn worker_panic_becomes_typed_failure_and_stops_backend() {
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let stopped = Arc::new(AtomicBool::new(false));
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
-    let (_stop_tx, stop_rx) = mpsc::channel();
+    let (_command_tx, command_rx) = mpsc::channel();
 
     let failure = run(WorkerInput {
         failure: None,
@@ -151,7 +159,7 @@ fn worker_panic_becomes_typed_failure_and_stops_backend() {
         backend: Box::new(PanickingBackend {
             stopped: stopped.clone(),
         }),
-        stop_rx,
+        command_rx,
         refresh: None,
         state: state.clone(),
     })
@@ -172,7 +180,7 @@ fn failure_callback_panic_cannot_skip_state_cut_or_backend_cleanup() {
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let stopped = Arc::new(AtomicBool::new(false));
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
-    let (_stop_tx, stop_rx) = mpsc::channel();
+    let (_command_tx, command_rx) = mpsc::channel();
 
     let failure = run(WorkerInput {
         failure: Some(Arc::new(|_| panic!("injected callback panic"))),
@@ -184,7 +192,7 @@ fn failure_callback_panic_cannot_skip_state_cut_or_backend_cleanup() {
         backend: Box::new(PanickingBackend {
             stopped: stopped.clone(),
         }),
-        stop_rx,
+        command_rx,
         refresh: None,
         state: state.clone(),
     })
@@ -210,7 +218,7 @@ fn consumer_failure_preserves_primary_and_cleanup() {
     let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
-    let (_stop_tx, stop_rx) = mpsc::channel();
+    let (_command_tx, command_rx) = mpsc::channel();
 
     let observed = Arc::new(std::sync::Mutex::new(Vec::new()));
     let callback_observed = observed.clone();
@@ -227,7 +235,7 @@ fn consumer_failure_preserves_primary_and_cleanup() {
         generation: 1,
         repo_root,
         backend: Box::new(FailingBackend),
-        stop_rx,
+        command_rx,
         refresh: None,
         state,
     })
@@ -246,7 +254,7 @@ fn consumer_failure_preserves_primary_and_cleanup() {
 
 #[test]
 fn full_rescan_emits_repo_scoped_refresh() {
-    let (_dir, _repo, sync, repo_name, repo_id, _repo_root) =
+    let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let refreshes = Arc::new(std::sync::Mutex::new(Vec::new()));
     let observed = refreshes.clone();
@@ -254,7 +262,8 @@ fn full_rescan_emits_repo_scoped_refresh() {
         observed.lock().expect("refresh lock").push(refresh);
     });
 
-    rescan_and_notify(&sync, &repo_name, repo_id, Some(&callback)).expect("full watcher rescan");
+    rescan_and_notify(&sync, &repo_name, repo_id, &repo_root, Some(&callback))
+        .expect("full watcher rescan");
 
     let refreshes = refreshes.lock().expect("refresh lock");
     assert_eq!(refreshes.len(), 1);
@@ -271,8 +280,10 @@ fn cleanup_panic_becomes_typed_shutdown_failure() {
     let (_dir, _repo, sync, repo_name, repo_id, repo_root) =
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
-    let (stop_tx, stop_rx) = mpsc::channel();
-    stop_tx.send(()).expect("request stop");
+    let (command_tx, command_rx) = mpsc::channel();
+    command_tx
+        .send(WorkerCommand::Shutdown)
+        .expect("request stop");
 
     let failure = run(WorkerInput {
         failure: None,
@@ -282,7 +293,7 @@ fn cleanup_panic_becomes_typed_shutdown_failure() {
         generation: 1,
         repo_root,
         backend: Box::new(StopPanickingBackend),
-        stop_rx,
+        command_rx,
         refresh: None,
         state,
     })
@@ -299,7 +310,7 @@ fn terminal_failure_is_visible_before_cleanup_completes() {
         super::super::dispatch_test_support::new_sync().expect("watcher fixture");
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(1)));
     let observed = state.clone();
-    let (_stop_tx, stop_rx) = mpsc::channel();
+    let (_command_tx, command_rx) = mpsc::channel();
     let (entered_tx, entered_rx) = mpsc::channel();
     let (release_tx, release_rx) = mpsc::channel();
     let (failure_tx, failure_rx) = mpsc::channel();
@@ -318,7 +329,7 @@ fn terminal_failure_is_visible_before_cleanup_completes() {
                 entered: entered_tx,
                 release: release_rx,
             }),
-            stop_rx,
+            command_rx,
             refresh: None,
             state,
         })

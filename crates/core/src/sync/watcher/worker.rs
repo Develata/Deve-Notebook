@@ -10,7 +10,7 @@ use crate::models::RepoId;
 use crate::sync::SyncManager;
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock, mpsc};
 use std::time::Duration;
 
@@ -21,10 +21,14 @@ pub(crate) struct WorkerInput {
     pub generation: u64,
     pub repo_root: PathBuf,
     pub backend: Box<dyn FsWatcherBackend>,
-    pub stop_rx: mpsc::Receiver<()>,
+    pub command_rx: mpsc::Receiver<WorkerCommand>,
     pub refresh: Option<WatcherRefreshCallback>,
     pub failure: Option<WatcherFailureCallback>,
     pub state: Arc<RwLock<WorkerStateSlot>>,
+}
+
+pub(crate) enum WorkerCommand {
+    Shutdown,
 }
 
 pub(crate) struct WorkerStateSlot {
@@ -53,20 +57,20 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
         generation,
         repo_root,
         mut backend,
-        stop_rx,
+        command_rx,
         refresh,
         failure: failure_callback,
         state,
     } = input;
     let primary = catch_unwind(AssertUnwindSafe(|| {
         consume_loop(
-            sync,
+            &sync,
             &repo_name,
             repo_id,
-            repo_root,
+            &repo_root,
             backend.as_mut(),
-            stop_rx,
-            refresh,
+            &command_rx,
+            refresh.as_ref(),
         )
     }))
     .unwrap_or_else(|panic| {
@@ -87,13 +91,15 @@ pub(crate) fn run(input: WorkerInput) -> Result<(), WatcherFailure> {
     } else {
         None
     };
-    let cleanup = stop_backend(backend.as_mut());
-    let mut result = match (primary, cleanup) {
-        (Err(failure), Err(cleanup)) => Err(failure.with_cleanup(cleanup.to_string())),
-        (Err(failure), Ok(())) => Err(failure),
-        (Ok(()), Err(cleanup)) => Err(cleanup),
-        (Ok(()), Ok(())) => Ok(()),
-    };
+    let shutdown = final_state_shutdown(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        backend.as_mut(),
+        refresh.as_ref(),
+    );
+    let mut result = combine_primary_and_shutdown(primary, shutdown);
     if let Some(callback_cleanup) = callback_cleanup
         && let Err(failure) = &mut result
     {
@@ -150,17 +156,18 @@ fn publish_failure_cut(
 }
 
 fn consume_loop(
-    sync: Arc<SyncManager>,
+    sync: &Arc<SyncManager>,
     repo_name: &str,
     repo_id: RepoId,
-    repo_root: PathBuf,
+    repo_root: &Path,
     backend: &mut dyn FsWatcherBackend,
-    stop_rx: mpsc::Receiver<()>,
-    refresh: Option<WatcherRefreshCallback>,
+    command_rx: &mpsc::Receiver<WorkerCommand>,
+    refresh: Option<&WatcherRefreshCallback>,
 ) -> Result<(), WatcherFailure> {
     loop {
-        if stop_rx.try_recv().is_ok() {
-            return Ok(());
+        match command_rx.try_recv() {
+            Ok(WorkerCommand::Shutdown) | Err(mpsc::TryRecvError::Disconnected) => return Ok(()),
+            Err(mpsc::TryRecvError::Empty) => {}
         }
         let signal = catch_unwind(AssertUnwindSafe(|| {
             backend.recv(Duration::from_millis(100))
@@ -176,12 +183,12 @@ fn consume_loop(
         match signal {
             Some(BackendSignal::Hints(batch)) => catch_unwind(AssertUnwindSafe(|| {
                 dispatch::dispatch_batch(
-                    &sync,
+                    sync,
                     repo_name,
                     repo_id,
-                    &repo_root,
+                    repo_root,
                     batch.hints(),
-                    refresh.as_ref(),
+                    refresh,
                 )
             }))
             .map_err(|panic| panic_failure(WatcherFailurePhase::Dispatch, panic))?
@@ -194,7 +201,7 @@ fn consume_loop(
             })?,
             Some(BackendSignal::Reconcile(token)) => {
                 catch_unwind(AssertUnwindSafe(|| {
-                    rescan_and_notify(&sync, repo_name, repo_id, refresh.as_ref())
+                    rescan_and_notify(sync, repo_name, repo_id, repo_root, refresh)
                 }))
                 .map_err(|panic| panic_failure(WatcherFailurePhase::Reconcile, panic))?
                 .map_err(|error| {
@@ -214,6 +221,80 @@ fn consume_loop(
     }
 }
 
+fn final_state_shutdown(
+    sync: &SyncManager,
+    repo_name: &str,
+    repo_id: RepoId,
+    repo_root: &Path,
+    backend: &mut dyn FsWatcherBackend,
+    refresh: Option<&WatcherRefreshCallback>,
+) -> Result<(), WatcherFailure> {
+    // WorkerCommand::Shutdown is only a coordinator request; it is not itself
+    // the consumer Stopping cut. This same thread exclusively owns recv and
+    // dispatch, so it cannot claim or dispatch another batch while first
+    // stopping/joining the producer here. Once stop_backend returns, the thread
+    // is the dispatch-quiesced barrier. Only then may the queued suffix be
+    // discarded and pending state rebuilt from the exact final filesystem view.
+    let mut result = stop_backend(backend);
+    append_shutdown_result(&mut result, discard_pending_hints(backend));
+    let final_reconcile = match catch_unwind(AssertUnwindSafe(|| {
+        rescan_and_notify(sync, repo_name, repo_id, repo_root, refresh)
+    })) {
+        Ok(result) => result.map_err(|error| {
+            WatcherFailure::new(
+                WatcherFailurePhase::Reconcile,
+                WatcherFailureKind::Scan,
+                error.to_string(),
+            )
+        }),
+        Err(panic) => Err(panic_failure(WatcherFailurePhase::Reconcile, panic)),
+    };
+    append_shutdown_result(&mut result, final_reconcile);
+    result
+}
+
+fn discard_pending_hints(backend: &dyn FsWatcherBackend) -> Result<(), WatcherFailure> {
+    catch_unwind(AssertUnwindSafe(|| backend.discard_pending_hints())).map_err(|panic| {
+        WatcherFailure::new(
+            WatcherFailurePhase::Shutdown,
+            WatcherFailureKind::Panic,
+            format!("discard watcher pending hints: {}", panic_message(panic)),
+        )
+    })
+}
+
+fn combine_primary_and_shutdown(
+    primary: Result<(), WatcherFailure>,
+    shutdown: Result<(), WatcherFailure>,
+) -> Result<(), WatcherFailure> {
+    match (primary, shutdown) {
+        (Err(mut primary), Err(cleanup)) => {
+            append_failure(&mut primary, cleanup);
+            Err(primary)
+        }
+        (Err(primary), Ok(())) => Err(primary),
+        (Ok(()), shutdown) => shutdown,
+    }
+}
+
+fn append_shutdown_result(
+    result: &mut Result<(), WatcherFailure>,
+    next: Result<(), WatcherFailure>,
+) {
+    let Err(next) = next else {
+        return;
+    };
+    match result {
+        Ok(()) => *result = Err(next),
+        Err(primary) => append_failure(primary, next),
+    }
+}
+
+fn append_failure(primary: &mut WatcherFailure, cleanup: WatcherFailure) {
+    primary.cleanup.push(cleanup.to_string());
+    primary.cleanup.extend(cleanup.cleanup);
+}
+
 pub(crate) fn stop_backend(backend: &mut dyn FsWatcherBackend) -> Result<(), WatcherFailure> {
     catch_unwind(AssertUnwindSafe(|| backend.stop()))
         .map_err(|panic| panic_failure(WatcherFailurePhase::Shutdown, panic))?
@@ -230,9 +311,11 @@ fn rescan_and_notify(
     sync: &SyncManager,
     repo_name: &str,
     repo_id: RepoId,
+    repo_root: &Path,
     callback: Option<&WatcherRefreshCallback>,
 ) -> anyhow::Result<()> {
-    let (refreshed_repo_id, refreshed_path) = sync.force_dir_refresh(repo_name, repo_id, "")?;
+    let (refreshed_repo_id, refreshed_path) =
+        sync.force_dir_refresh_at_root(repo_name, repo_id, repo_root, "")?;
     if let Some(callback) = callback {
         callback(WatcherRefresh::new(
             refreshed_repo_id,
@@ -267,3 +350,7 @@ fn panic_failure(phase: WatcherFailurePhase, panic: Box<dyn Any + Send>) -> Watc
 #[cfg(test)]
 #[path = "worker_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "worker_shutdown_tests.rs"]
+mod shutdown_tests;

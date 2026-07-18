@@ -97,6 +97,10 @@
     - run: cargo test -p deve_core watcher_drop_is_a_synchronous_cleanup_safety_net -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_stop_prevents_post_stop_delivery -- --nocapture
+    - run: cargo test -p deve_core --test watcher_platform_fs watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks -- --nocapture --test-threads=1
+    - api_assert: final_state_shutdown_orders_stop_discard_reconcile_refresh true
+    - api_assert: worker_failure_primary_survives_stop_and_final_scan_cleanup true
+    - api_assert: final_state_shutdown_revalidates_exact_repo_id_and_root true
     - run: cargo test -p deve_web fs_change_refreshes_external_changes_sibling_view -- --nocapture
     - run: cargo test -p deve_core internal_repo_path_uses_segment_semantics -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture

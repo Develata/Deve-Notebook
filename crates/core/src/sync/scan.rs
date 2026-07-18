@@ -55,14 +55,14 @@ pub(crate) fn scan_local_repo_at_root(
     let current_root = repo.local_repo_workspace_root(repo_name)?;
     let current_root = std::fs::canonicalize(&current_root).with_context(|| {
         format!(
-            "Failed to revalidate Projection Workspace root during watcher startup for repo {}: {}",
+            "Failed to revalidate Projection Workspace root during watcher root-bound scan for repo {}: {}",
             repo_name,
             current_root.display()
         )
     })?;
     if current_root != prepared_root {
         return Err(anyhow!(
-            "Projection Workspace root changed during watcher startup for repo {}: prepared {}, current {}",
+            "Projection Workspace root changed during watcher root-bound scan for repo {}: prepared {}, current {}",
             repo_name,
             prepared_root.display(),
             current_root.display()
@@ -72,7 +72,7 @@ pub(crate) fn scan_local_repo_at_root(
     let final_root = std::fs::canonicalize(repo.local_repo_workspace_root(repo_name)?)?;
     if final_root != prepared_root {
         return Err(anyhow!(
-            "Projection Workspace root changed before watcher startup handoff for repo {}: prepared {}, current {}",
+            "Projection Workspace root changed before watcher scan completion for repo {}: prepared {}, current {}",
             repo_name,
             prepared_root.display(),
             final_root.display()

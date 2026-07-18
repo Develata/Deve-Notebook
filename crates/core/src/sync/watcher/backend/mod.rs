@@ -110,6 +110,13 @@ pub enum FsEventHintKind {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ReconcileToken(u64);
 
+#[cfg(test)]
+impl ReconcileToken {
+    pub(crate) fn for_test(epoch: u64) -> Self {
+        Self(epoch)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct StartupScanToken {
     state: u64,
@@ -178,7 +185,11 @@ pub(crate) trait FsWatcherBackend: Send {
     ) -> Result<StartupHandoff, WatcherFailure>;
     fn recv(&self, timeout: Duration) -> Result<Option<BackendSignal>, WatcherError>;
     fn complete_reconcile(&self, token: ReconcileToken) -> bool;
+    /// Closes the production entrypoint and joins all producer threads before
+    /// returning. An error reports cleanup/join diagnostics; it must not leave
+    /// a producer able to enqueue another hint.
     fn stop(&mut self) -> Result<(), WatcherError>;
+    fn discard_pending_hints(&self);
 }
 
 pub(crate) fn desktop_backend(

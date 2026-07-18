@@ -36,6 +36,7 @@
 - `Immediate Result`: watcher validates planned reactions without writing changes
 - `Runtime Variant`: without `--dry-run`, `deve watch` owns one non-Clone watcher handle per selected healthy local repo and observes typed worker state
 - `Runtime Failure Result`: any terminal worker failure closes all handles in reverse order and exits non-zero; primary failure is not hidden by cleanup errors
+- `Shutdown Result`: each handle stops and joins its producer, waits for the synchronous dispatch cut, discards queued hints, performs one exact-root final reconcile and emits at most one typed refresh before the worker join returns
 - `Application Entry`: `apps/cli/src/commands/watch.rs`, `crates/core/src/sync/watcher/`
 
 ## Response Flow
@@ -48,4 +49,5 @@
 ## Notes
 
 - This flow covers Projection Workspace / locator lifecycle commands, not long-running server runtime.
+- Shutdown `drain` is final-state reconciliation, never raw-event replay; a final scan error is returned after backend/thread cleanup and never rewrites Ledger authority.
 - Main objects: `projection::locator`, `projection::workspace`, `ledger::snapshot`, `tree::projection`, `cli::option`.

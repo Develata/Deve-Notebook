@@ -35,7 +35,7 @@
 
 - CLI 命令是系统控制面的正式组成部分。
 - 它不只是调试工具，也服务于多端共享的 application/control 路径。
-- `deve watch` 是 standalone owned-watcher runtime：直接持有不可复制的 repo handle 集合；任一 worker terminal failure 都必须逆序显式 shutdown 全部 handle 并非零退出，不得依赖全局 registry 或 `Drop` 静默成功。
+- `deve watch` 是 standalone owned-watcher runtime：直接持有不可复制的 repo handle 集合；任一 worker terminal failure 都必须逆序显式 shutdown 全部 handle 并非零退出，不得依赖全局 registry 或 `Drop` 静默成功。每个 handle 的 shutdown 统一执行 producer stop/join、queued-hint discard、exact-root final reconcile 与至多一次 refresh，并保留 worker primary 与 cleanup diagnostics。
 - `deve serve` 由 host `WatcherSupervisor` 隔离 repo-local ingestion failure；至少一个 repo Mounted 才完成 bootstrap，零 Mounted 或 typed host-fatal 必须清理并非零退出。server 已运行后即使全部 watcher Failed，也继续提供 readonly/diagnostic 能力。
 - CLI 输出只消费 typed failure/mount outcome；不得按 backend 错误字符串决定 repo 隔离、host shutdown 或恢复动作。
 

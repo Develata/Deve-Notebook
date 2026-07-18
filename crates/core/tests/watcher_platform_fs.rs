@@ -10,8 +10,12 @@ mod watcher_test_support;
 
 use anyhow::Context;
 use deve_core::source_control::{ChangeStatus, pending_fs};
-use deve_core::sync::watcher::{self, DEFAULT_DEBOUNCE, RepoWatcherWorkerState};
+use deve_core::sync::watcher::{
+    self, DEFAULT_DEBOUNCE, RepoWatcherWorkerState, WatcherRefreshCallback,
+};
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use watcher_test_support::Harness;
 
@@ -74,6 +78,47 @@ fn watcher_stop_prevents_post_stop_delivery() -> anyhow::Result<()> {
     std::thread::sleep(DEFAULT_DEBOUNCE * 3 + Duration::from_millis(200));
 
     assert!(h.repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks() -> anyhow::Result<()>
+{
+    let h = Harness::new(None)?;
+    let repo_name = h.repo.local_repo_name().to_string();
+    let refreshes = Arc::new(AtomicUsize::new(0));
+    let observed_refreshes = refreshes.clone();
+    let refresh: WatcherRefreshCallback = Arc::new(move |_| {
+        observed_refreshes.fetch_add(1, Ordering::SeqCst);
+    });
+    let handle = watcher::RepoWatcherHandle::start(
+        watcher::RepoWatcherStart::resolve(h.sync.clone(), &repo_name, 1)?
+            .with_debounce(Duration::from_secs(10))
+            .with_refresh(refresh),
+    )?;
+
+    let final_path = h.workspace_path(&repo_name, "notes/final-before-stop.md")?;
+    std::fs::create_dir_all(final_path.parent().context("final-state parent")?)?;
+    std::fs::write(&final_path, "captured by final reconcile")?;
+    handle.shutdown()?;
+
+    h.wait_pending(
+        &repo_name,
+        "notes/final-before-stop.md",
+        ChangeStatus::Added,
+    )?;
+    assert_eq!(refreshes.load(Ordering::SeqCst), 1);
+
+    let after_path = h.workspace_path(&repo_name, "notes/after-final-stop.md")?;
+    std::fs::write(after_path, "must remain unseen")?;
+    std::thread::sleep(Duration::from_millis(250));
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&repo_name)?
+            .iter()
+            .all(|entry| entry.path != "notes/after-final-stop.md")
+    );
+    assert_eq!(refreshes.load(Ordering::SeqCst), 1);
     Ok(())
 }
 

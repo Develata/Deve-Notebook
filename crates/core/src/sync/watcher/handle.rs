@@ -15,7 +15,7 @@ pub struct RepoWatcherHandle {
     repo_id: RepoId,
     generation: u64,
     state: Arc<RwLock<worker::WorkerStateSlot>>,
-    stop_tx: Option<mpsc::Sender<()>>,
+    command_tx: Option<mpsc::SyncSender<worker::WorkerCommand>>,
     join: Option<JoinHandle<Result<(), WatcherFailure>>>,
 }
 
@@ -26,7 +26,7 @@ impl RepoWatcherHandle {
             repo_id: started.repo_id,
             generation: started.generation,
             state: started.state,
-            stop_tx: Some(started.stop_tx),
+            command_tx: Some(started.command_tx),
             join: Some(started.join),
         })
     }
@@ -60,9 +60,9 @@ impl RepoWatcherHandle {
 
     fn shutdown_inner(&mut self) -> Result<(), WatcherFailure> {
         let send_error = self
-            .stop_tx
+            .command_tx
             .take()
-            .and_then(|sender| sender.send(()).err())
+            .and_then(|sender| sender.send(worker::WorkerCommand::Shutdown).err())
             .map(|error| error.to_string());
         let Some(join) = self.join.take() else {
             return send_error.map_or(Ok(()), |error| {

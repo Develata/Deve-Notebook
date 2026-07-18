@@ -39,6 +39,7 @@
 - workspace ingestion failure 与 repo/projection 损坏是两类不同状态。前者只使当前进程无法可靠接收该 repo 的外部文件变化：该 repo 保持只读可见，Ledger inspect/export 与诊断仍可用，不能被显示为 `DegradedProjection`。
 - 多 repo server 中，一个 repo 的 workspace ingestion failure 不应关闭其它已 mounted repo；健康 repo 继续可写。服务启动时若没有任何 repo 成功 mounted，则明确启动失败。
 - 运行期 workspace ingestion failure 的首版恢复方式是重启服务；产品不提供 watcher restart endpoint，也不要求用户理解 backend/thread 细节。
+- owned watcher 关闭时先停止并 join backend producer；已开始的 dispatch 完成后丢弃尚未消费的 hint，再按启动时的 exact RepoId 与 canonical root 做一次 final full reconcile，并最多发送一次 typed refresh。关闭返回后不得再产生 callback 或 pending candidate；stop/final-scan 失败只作为 typed primary/cleanup 诊断，不覆盖既有 worker 首因。
 
 ### 5. 工作区摄取健康与写入阻断
 

@@ -36,5 +36,5 @@
 ## Notes
 
 - B2 已把 provider/profile/credential/HTTP/signing、push 与 ordered source acquisition 收口到共享 host transport；push flow 不再是 active drift。
-- Standalone push 的临时 watcher 只建立本次 host operation 的 ingestion readiness；W6 继续负责统一 E2 final-state shutdown，不得把 deterministic enumeration 描述成 point-in-time snapshot。
+- Standalone push 的临时 watcher 只建立本次 host operation 的 ingestion readiness；其 owned handle 已统一执行 E2 final-state shutdown，不得把 deterministic enumeration 描述成 point-in-time snapshot。
 - Push 与 Remote Import source acquisition 共享 adapter infrastructure，不共享业务 interface。

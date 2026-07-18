@@ -78,6 +78,8 @@ impl FsWatcherBackend for ScriptedBackend {
             Ok(())
         }
     }
+
+    fn discard_pending_hints(&self) {}
 }
 
 fn fixture() -> (
@@ -93,7 +95,10 @@ fn fixture() -> (
 }
 
 fn stop_started(started: StartedWatcher) {
-    started.stop_tx.send(()).expect("stop worker");
+    started
+        .command_tx
+        .send(WorkerCommand::Shutdown)
+        .expect("stop worker");
     started
         .join
         .join()

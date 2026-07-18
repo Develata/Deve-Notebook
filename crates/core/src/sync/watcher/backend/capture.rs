@@ -422,6 +422,10 @@ impl CaptureReceiver {
         self.gate.finish_reconcile(token)
     }
 
+    pub(super) fn discard_pending_hints(&self) {
+        self.discard_queued_hints();
+    }
+
     fn begin_reconcile_signal(&self) -> Option<BackendSignal> {
         if let Some(signal) = self.terminal_signal() {
             return Some(signal);

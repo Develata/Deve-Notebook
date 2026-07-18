@@ -6,7 +6,7 @@ use super::panic_message;
 use super::types::{
     RepoWatcherStart, WatcherFailure, WatcherFailureKind, WatcherFailurePhase, WatcherStartError,
 };
-use super::worker::{self, WorkerInput, WorkerStateSlot};
+use super::worker::{self, WorkerCommand, WorkerInput, WorkerStateSlot};
 use crate::models::RepoId;
 use crate::sync::SyncManager;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -21,7 +21,7 @@ pub(super) struct StartedWatcher {
     pub repo_id: RepoId,
     pub generation: u64,
     pub state: Arc<RwLock<WorkerStateSlot>>,
-    pub stop_tx: mpsc::Sender<()>,
+    pub command_tx: mpsc::SyncSender<WorkerCommand>,
     pub join: JoinHandle<Result<(), WatcherFailure>>,
 }
 
@@ -64,7 +64,7 @@ where
         attach(&repo_root, start.debounce, start.generation).map_err(WatcherStartError::new)?;
 
     let state = Arc::new(RwLock::new(WorkerStateSlot::running(start.generation)));
-    let (stop_tx, stop_rx) = mpsc::channel();
+    let (command_tx, command_rx) = mpsc::sync_channel(1);
     let worker_state = state.clone();
     let repo_id = info.uuid;
     let generation = start.generation;
@@ -109,7 +109,7 @@ where
         generation,
         repo_root,
         backend,
-        stop_rx,
+        command_rx,
         refresh: start.refresh,
         failure: start.failure,
         state: worker_state,
@@ -139,7 +139,7 @@ where
         repo_id,
         generation,
         state,
-        stop_tx,
+        command_tx,
         join,
     })
 }
