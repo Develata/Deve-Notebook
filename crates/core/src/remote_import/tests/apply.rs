@@ -42,7 +42,7 @@ fn apply_request(
 }
 
 fn current_head(fixture: &Fixture) -> anyhow::Result<u64> {
-    Ok(range::get_max_seq(fixture.db.as_ref())?)
+    range::get_max_seq(fixture.db.as_ref())
 }
 
 fn seed_local_doc(
