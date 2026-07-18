@@ -57,6 +57,10 @@
 
 ### 6. Remote Projection Push and Remote Import Commands
 
+Remote Projection Push 只有在当前 Web session、repo scope、非零 scope nonce 与 handshake 均可构造精确
+typed intent 时才显示为 available；否则显示本地化 unavailable reason。前端不据此推导 provider、Mounted
+或 writer authority，最终准入仍由 backend typed gate 决定。
+
 - Command Palette 的正式 CommandId 固定为：
   - `remote_projection.webdav.push`
   - `remote_projection.s3.push`
@@ -76,8 +80,8 @@
 - CLI 对应入口为 `projection-remote <webdav|s3> push` 与
   `remote-import prepare|list|show|diff|refresh|apply|discard|repair`；repair 默认 dry-run，只有
   `--apply` 才清理已证明 artifact。
-- B0 当前代码仍注册旧 `webdav:push` / `webdav:pull` / `s3:push` / `s3:pull` 并执行 workspace
-  overwrite/External Changes bridge；这是 B4/B5 前的 release-blocking drift，不是 alias 或兼容路径。
+- 当前 Web 只注册两个稳定 Push CommandId，并发送 exact repo/branch/scope 的 typed backend intent；
+  旧四个 id、workspace overwrite 与 External Changes bridge 已删除，不保留 alias。
 
 ## 非目标
 

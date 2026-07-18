@@ -17,7 +17,6 @@ pub use super::source_control_git::*;
 pub use super::source_control_graph::*;
 pub use super::source_control_history::*;
 pub use super::source_control_native::*;
-pub use super::source_control_remote_projection::*;
 pub use actions::*;
 pub use gate::*;
 
@@ -99,11 +98,6 @@ mod tests {
             "ngit mirror 推送只能通过 CLI 执行"
         );
         assert!(git_push_cli_only_hint(Locale::Zh).contains("deve_cli ngit push"));
-        assert_eq!(
-            remote_projection_session_unavailable_title(Locale::En),
-            "Remote projection command was not sent"
-        );
-        assert!(remote_projection_session_unavailable_hint(Locale::Zh).contains("backend session"));
         assert_eq!(refresh_change_list(Locale::Zh), "请刷新更改列表后再试。");
     }
 

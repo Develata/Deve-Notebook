@@ -134,8 +134,9 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
   失败显示“Ledger 已提交、Projection degraded”，崩溃/重试幂等恢复，不得回滚 Ledger 或诱导重复 Apply。
 - Web 只发送 typed intent；provider/profile admission、stream capture、预算、candidate/diff/blocker、
   sealed writer 与 cleanup 全属于 backend/core infra。
-- B0 当前 backend/Web 仍实现 `webdav:pull` / `s3:pull`、workspace overwrite、rollback continuation 与
-  External Changes scan bridge；这些是 B4 前的 release-blocking drift，不是 Remote Import 的兼容路径。
+- backend/Web 已删除 `webdav:pull` / `s3:pull`、workspace overwrite、rollback continuation 与
+  External Changes scan bridge。Push 使用独立 typed intent；Remote Import review 由 backend 聚合 blocker，
+  完整独立 view 由 B5 继续交付。
 
 ### 7. HTTP Source Control Write Grant
 

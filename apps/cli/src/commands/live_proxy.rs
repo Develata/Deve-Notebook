@@ -133,7 +133,7 @@ pub fn git_status(ledger_dir: &Path, repo_name: Option<&str>) -> Result<Vec<GitS
     })
 }
 
-fn main_base_url(ledger_dir: &Path) -> Result<String> {
+pub(crate) fn main_base_url(ledger_dir: &Path) -> Result<String> {
     let port = match read_main_port_hint(ledger_dir)? {
         Some(port) => port,
         None => block_on_safe(detect_main_port())?,
@@ -232,7 +232,7 @@ fn proxy_auth_config(role_environment: Option<&str>) -> Result<AuthConfig> {
     ))
 }
 
-fn local_client() -> Result<Client> {
+pub(crate) fn local_client() -> Result<Client> {
     Client::builder()
         .no_proxy()
         .build()
@@ -283,7 +283,7 @@ fn candidate_ports() -> Vec<u16> {
     ports
 }
 
-fn block_on_safe<F, T>(fut: F) -> T
+pub(crate) fn block_on_safe<F, T>(fut: F) -> T
 where
     F: Future<Output = T>,
 {

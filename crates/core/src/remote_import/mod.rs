@@ -11,26 +11,33 @@
 pub(crate) mod apply;
 mod artifact;
 mod error;
+mod facade;
 mod manifest;
 mod repair;
 mod runtime;
 mod store;
 mod types;
 
-#[allow(unused_imports)]
-// B1 defines the backend facade; B2-B4 add the first production consumers.
-pub(crate) use error::{RemoteImportError, RemoteImportResult};
+pub use error::{RemoteImportError, RemoteImportResult};
+pub use facade::{
+    REMOTE_IMPORT_DEFAULT_PAGE_SIZE, REMOTE_IMPORT_MAX_PAGE_SIZE, RemoteImportApplyView,
+    RemoteImportBinding, RemoteImportCandidatePage, RemoteImportCandidateView,
+    RemoteImportCaptureSink, RemoteImportDiffView, RemoteImportEntryId, RemoteImportPageCursor,
+    RemoteImportRepairPlan, RemoteImportService, RemoteImportSessionView,
+};
 #[allow(unused_imports)]
 pub(crate) use repair::{RemoteImportRepairFinding, RemoteImportRepairReport};
 #[allow(unused_imports)]
 pub(crate) use runtime::{RemoteImportCapture, RemoteImportRuntime, pending_projection_repo_ids};
 #[allow(unused_imports)]
 pub(crate) use types::{
-    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportBaseline, RemoteImportBlocker,
-    RemoteImportCandidateRevision, RemoteImportChangeKind, RemoteImportDigest,
-    RemoteImportPrepareRequest, RemoteImportProjectionOutcome, RemoteImportRefreshRequest,
-    RemoteImportSessionId, RemoteImportSessionRecord, RemoteImportSourceSnapshot,
-    RemoteImportState,
+    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportBaseline, RemoteImportDigest,
+    RemoteImportPrepareRequest, RemoteImportRefreshRequest, RemoteImportSessionRecord,
+    RemoteImportSourceSnapshot,
+};
+pub use types::{
+    RemoteImportBlocker, RemoteImportCandidateRevision, RemoteImportChangeKind,
+    RemoteImportProjectionOutcome, RemoteImportSessionId, RemoteImportState,
 };
 
 #[cfg(test)]

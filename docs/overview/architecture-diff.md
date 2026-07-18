@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-18 (Route B B3 sealed-writer pass)
+Generated: 2026-07-18 (Route B B4 product-cutover pass)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -21,10 +21,10 @@ Keep this block stable. The graph generator reads the drift registry below.
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | drifted | 79 approved flow labels exist on both sides; four Remote Import flows intentionally map current substitutes/missing carriers |
-| User operations | drifted | existing 74 IDs and Remote Projection push align; four Remote Import target flows remain incomplete |
+| Flow set | drifted | 79 approved flow labels exist on both sides; four Remote Import flows honestly retain the B5 client gap |
+| User operations | drifted | existing 74 IDs、Remote Projection push 与 B4 backend/CLI operations align；四个 Remote Import flow 尚缺独立 Web client |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport, immutable session and sealed core Apply are present; product Prepare/Apply/writeback and independent client remain scheduled B4–B5 |
+| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback 与 product API 已存在；independent client scheduled B5 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -39,10 +39,10 @@ Use one entry per divergent flow. Labels must match the flow registry.
 
 Active drift facts:
 
-1. `remote import prepare`: B1 immutable store and B2 ordered source acquisition exist, but the current product pull still routes through the isolated workspace/External Changes transition; B4 replaces it.
-2. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
-3. `remote import apply`: B3 source-specific sealed whole-session Ledger transaction and ADR 0012 repo-local fault/receipt settlement primitives exist and preserve External Apply semantics；startup fail-closed health now recognizes Pending receipts, while product Mounted admission, Ledger-to-Projection rematerialization orchestration and the Remote Import surface remain B4–B5 work.
-4. `remote import manage`: backend Refresh/Discard/dry-run repair/retention exist, but the product lifecycle and cleanup apply path remain B4/W7 work.
+1. `remote import prepare`: B4 provider-bound backend/CLI Prepare 已替换旧 pull carrier；B5 尚未提供 Web Prepare intent surface。
+2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
+3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
+4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；B5 尚未提供 thin Web management surface，W7 另负责 repo lifecycle coordination。
 
 ## Flow Registry
 
@@ -186,11 +186,11 @@ The degraded local projection write gate is aligned:
 Within the currently modeled operation slice:
 
 - 74 pre-existing flows remain aligned
-- Remote Projection push is aligned; four approved Remote Import flows remain honest current substitute/missing mappings
-- Redb v4 and the crate-internal B3 sealed writer are aligned; WS v2 current → v3 target and B4-B6 product/evidence gaps remain release blockers
+- Remote Projection push and B4 Remote Import backend/CLI/product wire are aligned; four approved flows retain only the honest B5 client mapping gap
+- Redb v4、sealed writer、F4/v3 lockstep、Mounted admission 与 post-commit writeback are aligned；B5/B6 product/evidence gaps remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
-The slice is bijective at the registry/label level and intentionally carries four active drift markers until B4–B5 close the product cutover and client flows.
+The slice is bijective at the registry/label level and intentionally carries four active drift markers until B5 closes the independent client flows；B6 再封存 0-drift evidence。
 
 ## Maintenance Rules
 

@@ -176,22 +176,23 @@ fn abandoned_capture_fails_immediately_and_can_be_discarded() -> anyhow::Result<
     assert_eq!(failure.phase, RemoteImportFailurePhase::Capture);
     assert_eq!(failure.kind, RemoteImportFailureKind::Interrupted);
 
-    fixture.runtime.discard(session_id)?;
+    fixture.runtime.discard(session_id, None)?;
     fixture.runtime.begin_prepare(fixture.request())?.abort()?;
     Ok(())
 }
 
 #[test]
-fn prepare_rejects_locator_mismatch_without_reserving_session() -> anyhow::Result<()> {
+fn prepare_keeps_remote_binding_distinct_from_local_projection_locator() -> anyhow::Result<()> {
     let fixture = Fixture::new()?;
     let mut request = fixture.request();
     request.baseline.locator_digest = RemoteImportDigest::of(b"other-locator");
 
-    assert!(matches!(
-        fixture.runtime.begin_prepare(request),
-        Err(RemoteImportError::ArtifactTampered(_))
-    ));
-    assert!(fixture.runtime.sessions()?.is_empty());
+    let capture = fixture.runtime.begin_prepare(request)?;
+    let record = fixture.runtime.session(capture.session_id())?;
+    assert_ne!(
+        record.locator_binding_digest,
+        RemoteImportDigest::of(b"other-locator")
+    );
     Ok(())
 }
 
@@ -245,33 +246,32 @@ fn source_read_failure_is_not_misclassified_as_artifact_io() -> anyhow::Result<(
 }
 
 #[test]
-fn locator_drift_marks_session_stale_before_returning() -> anyhow::Result<()> {
+fn refresh_rebinds_current_local_projection_locator_from_sealed_blobs() -> anyhow::Result<()> {
     let fixture = Fixture::new()?;
     let mut capture = fixture.runtime.begin_prepare(fixture.request())?;
     capture.capture_file("note.md", Cursor::new(b"alpha"))?;
     let session_id = capture.session_id();
     capture.finish()?;
 
-    let error = fixture
-        .runtime
-        .refresh_from_sealed(
-            session_id,
-            fixture.refresh_request(RemoteImportBaseline {
+    let refreshed = fixture.runtime.refresh_from_sealed(
+        session_id,
+        fixture.refresh_request(
+            RemoteImportCandidateRevision::FIRST,
+            RemoteImportBaseline {
                 ledger_head: 8.into(),
                 ignore_digest: RemoteImportDigest::of(b"ignore"),
                 locator_digest: RemoteImportDigest::of(b"different"),
                 existing: BTreeMap::new(),
-            }),
-        )
-        .expect_err("locator drift must not refresh");
+            },
+        ),
+    )?;
 
-    assert!(matches!(error, RemoteImportError::ArtifactTampered(_)));
     assert_eq!(
-        fixture.runtime.session(session_id)?.state,
-        RemoteImportState::Stale
+        refreshed.candidate.expect("candidate").locator_digest,
+        RemoteImportDigest::of(b"different")
     );
     assert!(
-        !fixture
+        fixture
             .artifact_session(session_id)
             .join(CANDIDATES_DIR)
             .join("2.json")
@@ -293,11 +293,13 @@ fn source_binding_drift_cannot_rebind_sealed_session() -> anyhow::Result<()> {
         .refresh_from_sealed(
             session_id,
             RemoteImportRefreshRequest {
+                expected_revision: RemoteImportCandidateRevision::FIRST,
                 source_binding_digest: RemoteImportDigest::of(b"different-source-profile"),
+                locator_binding_digest: RemoteImportDigest::of(b"remote-locator"),
                 baseline: RemoteImportBaseline {
                     ledger_head: 8.into(),
                     ignore_digest: RemoteImportDigest::of(b"ignore"),
-                    locator_digest: RemoteImportDigest::of(b"locator"),
+                    locator_digest: RemoteImportDigest::of(b"local-locator"),
                     existing: BTreeMap::new(),
                 },
             },
@@ -315,6 +317,40 @@ fn source_binding_drift_cannot_rebind_sealed_session() -> anyhow::Result<()> {
             .join(CANDIDATES_DIR)
             .join("2.json")
             .exists()
+    );
+    Ok(())
+}
+
+#[test]
+fn remote_locator_binding_drift_cannot_rebind_sealed_session() -> anyhow::Result<()> {
+    let fixture = Fixture::new()?;
+    let mut capture = fixture.runtime.begin_prepare(fixture.request())?;
+    capture.capture_file("note.md", Cursor::new(b"alpha"))?;
+    let session_id = capture.session_id();
+    capture.finish()?;
+
+    let error = fixture
+        .runtime
+        .refresh_from_sealed(
+            session_id,
+            RemoteImportRefreshRequest {
+                expected_revision: RemoteImportCandidateRevision::FIRST,
+                source_binding_digest: RemoteImportDigest::of(b"source"),
+                locator_binding_digest: RemoteImportDigest::of(b"different-remote-locator"),
+                baseline: RemoteImportBaseline {
+                    ledger_head: 8.into(),
+                    ignore_digest: RemoteImportDigest::of(b"ignore"),
+                    locator_digest: RemoteImportDigest::of(b"local-locator-2"),
+                    existing: BTreeMap::new(),
+                },
+            },
+        )
+        .expect_err("remote locator/profile drift must not rebind sealed blobs");
+
+    assert!(matches!(error, RemoteImportError::ArtifactTampered(_)));
+    assert_eq!(
+        fixture.runtime.session(session_id)?.state,
+        RemoteImportState::Stale
     );
     Ok(())
 }

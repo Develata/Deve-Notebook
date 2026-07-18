@@ -2,11 +2,10 @@
 //!   - 05_diff_logic#remote-projection-transport
 
 use super::super::super::webdav;
-use crate::remote_projection_legacy::LegacyProjectionPullAdapter;
-use crate::remote_projection_transport::ProjectionPushSource;
+use crate::remote_projection_transport::{ProjectionPushError, ProjectionPushSource};
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionProvider, RemoteProjectionProviderError,
-    RemoteProjectionPullOutcome, RemoteProjectionPushOutcome,
+    RemoteProjectionPushOutcome,
 };
 
 #[derive(Default)]
@@ -24,22 +23,12 @@ impl webdav::WebDavProjectionPushAdapter for FailingProvider {
         provider: RemoteProjectionProvider,
         _locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
         assert_eq!(source.file_count(), 1);
-        Err(RemoteProjectionProviderError::ProviderIo(
-            "simulated WebDAV failure".into(),
+        Err(ProjectionPushError::push_failed(
+            RemoteProjectionProviderError::ProviderIo("simulated WebDAV failure".into()),
         ))
-    }
-}
-
-impl LegacyProjectionPullAdapter for FailingProvider {
-    fn pull_projection_files(
-        &self,
-        _provider: RemoteProjectionProvider,
-        _locator: &str,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        unreachable!("push-only failing provider")
     }
 }
 
@@ -49,7 +38,7 @@ impl webdav::WebDavProjectionPushAdapter for RecordingProvider {
         provider: RemoteProjectionProvider,
         locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
         self.uploaded_paths
             .push((locator.to_string(), source_paths(source)?));
@@ -61,23 +50,13 @@ impl webdav::WebDavProjectionPushAdapter for RecordingProvider {
     }
 }
 
-impl LegacyProjectionPullAdapter for RecordingProvider {
-    fn pull_projection_files(
-        &self,
-        _provider: RemoteProjectionProvider,
-        _locator: &str,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        unreachable!("push-only recording provider")
-    }
-}
-
 impl webdav::WebDavProjectionPushAdapter for AuthorityEffectPushProvider {
     fn push_projection_files(
         &mut self,
         provider: RemoteProjectionProvider,
         _locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
         Ok(RemoteProjectionPushOutcome {
             uploaded_files: source.file_count(),
@@ -93,23 +72,13 @@ impl webdav::WebDavProjectionPushAdapter for AuthorityEffectPushProvider {
     }
 }
 
-impl LegacyProjectionPullAdapter for AuthorityEffectPushProvider {
-    fn pull_projection_files(
-        &self,
-        _provider: RemoteProjectionProvider,
-        _locator: &str,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        unreachable!("push-only authority-effect provider")
-    }
-}
-
 impl webdav::WebDavProjectionPushAdapter for AuthoritativeMetadataPushProvider {
     fn push_projection_files(
         &mut self,
         provider: RemoteProjectionProvider,
         _locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         assert_eq!(provider, RemoteProjectionProvider::WebDav);
         Ok(RemoteProjectionPushOutcome {
             uploaded_files: source.file_count(),
@@ -119,23 +88,13 @@ impl webdav::WebDavProjectionPushAdapter for AuthoritativeMetadataPushProvider {
     }
 }
 
-impl LegacyProjectionPullAdapter for AuthoritativeMetadataPushProvider {
-    fn pull_projection_files(
-        &self,
-        _provider: RemoteProjectionProvider,
-        _locator: &str,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        unreachable!("push-only authoritative-metadata provider")
-    }
-}
-
-fn source_paths(
-    source: &dyn ProjectionPushSource,
-) -> Result<Vec<String>, RemoteProjectionProviderError> {
+fn source_paths(source: &dyn ProjectionPushSource) -> Result<Vec<String>, ProjectionPushError> {
     let mut paths = Vec::new();
-    source.visit(&mut |path, _content| {
-        paths.push(path.to_string());
-        Ok(())
-    })?;
+    source
+        .visit(&mut |path, _content| {
+            paths.push(path.to_string());
+            Ok(())
+        })
+        .map_err(ProjectionPushError::push_failed)?;
     Ok(paths)
 }

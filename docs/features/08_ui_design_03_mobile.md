@@ -31,8 +31,8 @@
 - Remote Import candidate row 只显示 backend-generated label、Added/Modified/Unchanged 与 typed
   blocker/diff；无 checkbox 或逐文件 Apply。Refresh/Apply/Discard 是 whole-session action，390×844
   viewport 不得横向溢出且动作满足 44px touch target。
-- B0 时 Remote Import 移动入口仍未实现；B5 必须用真实 backend 验证。旧 command 打开 Source
-  Control 的路径不视为临时实现。
+- Remote Import 移动入口仍待 B5 用真实 backend 验证；B4 已删除旧 command 打开 Source Control
+  的路径，缺失期间不以其它 controller 代替。
 
 ### 3. Bottom Bar 与状态折叠
 

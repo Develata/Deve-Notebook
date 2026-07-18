@@ -21,5 +21,6 @@ pub mod delegated_source_control;
 pub mod dev_session;
 pub mod handlers;
 pub mod headers;
+pub(crate) mod local_cli_proxy;
 pub mod middleware;
 mod signing;

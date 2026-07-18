@@ -5,6 +5,8 @@
 //! Shared AppState and tree runtime assembly.
 
 #[cfg(not(test))]
+use crate::remote_import_runtime::RemoteImportCoordinator;
+#[cfg(not(test))]
 use crate::server::diff_projection::DiffProjectionExecutor;
 #[cfg(not(test))]
 use crate::server::repo_mutation::RepoMutationPublicationGate;
@@ -45,6 +47,11 @@ pub(crate) struct AppStateParts {
 pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
     #[cfg(test)]
     let _watcher_runtime = parts.watcher_runtime;
+    #[cfg(not(test))]
+    let remote_import = Arc::new(RemoteImportCoordinator::new(
+        parts.repo.clone(),
+        parts.sync_manager.clone(),
+    ));
     Arc::new(AppState {
         repo: parts.repo,
         sync_manager: parts.sync_manager,
@@ -63,5 +70,7 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
         #[cfg(not(test))]
         repo_mutation_gate: Arc::new(RepoMutationPublicationGate::new(parts.watcher_runtime)),
+        #[cfg(not(test))]
+        remote_import,
     })
 }

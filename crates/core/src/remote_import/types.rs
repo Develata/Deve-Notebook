@@ -41,7 +41,7 @@ impl fmt::Debug for RemoteImportDigest {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub(crate) struct RemoteImportSessionId(Uuid);
+pub struct RemoteImportSessionId(Uuid);
 
 impl RemoteImportSessionId {
     pub(crate) fn new() -> Self {
@@ -55,6 +55,14 @@ impl RemoteImportSessionId {
     pub(crate) fn as_u128(self) -> u128 {
         self.0.as_u128()
     }
+
+    pub fn from_uuid(value: Uuid) -> Self {
+        Self(value)
+    }
+
+    pub fn as_uuid(self) -> Uuid {
+        self.0
+    }
 }
 
 impl fmt::Display for RemoteImportSessionId {
@@ -64,17 +72,21 @@ impl fmt::Display for RemoteImportSessionId {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub(crate) struct RemoteImportCandidateRevision(u64);
+pub struct RemoteImportCandidateRevision(u64);
 
 impl RemoteImportCandidateRevision {
     pub(crate) const FIRST: Self = Self(1);
 
-    pub(crate) fn get(self) -> u64 {
+    pub const fn get(self) -> u64 {
         self.0
     }
 
     pub(crate) fn next(self) -> Option<Self> {
         self.0.checked_add(1).map(Self)
+    }
+
+    pub const fn from_u64(value: u64) -> Self {
+        Self(value)
     }
 
     #[cfg(test)]
@@ -89,7 +101,7 @@ pub(crate) enum RemoteImportBranch {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum RemoteImportState {
+pub enum RemoteImportState {
     Preparing,
     Ready,
     Stale,
@@ -105,14 +117,14 @@ impl RemoteImportState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum RemoteImportChangeKind {
+pub enum RemoteImportChangeKind {
     Added,
     Modified,
     Unchanged,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum RemoteImportBlocker {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum RemoteImportBlocker {
     LedgerHeadDrift,
     IgnoreSnapshotDrift,
     LocatorBindingDrift,
@@ -178,7 +190,7 @@ pub(crate) struct RemoteImportCandidateRevisionRecord {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum RemoteImportProjectionOutcome {
+pub enum RemoteImportProjectionOutcome {
     Pending,
     Written,
     Degraded,
@@ -259,7 +271,9 @@ pub(crate) struct RemoteImportPrepareRequest {
 
 #[derive(Debug, Clone)]
 pub(crate) struct RemoteImportRefreshRequest {
+    pub(crate) expected_revision: RemoteImportCandidateRevision,
     pub(crate) source_binding_digest: RemoteImportDigest,
+    pub(crate) locator_binding_digest: RemoteImportDigest,
     pub(crate) baseline: RemoteImportBaseline,
 }
 

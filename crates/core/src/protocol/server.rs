@@ -13,6 +13,7 @@ use crate::protocol::ProjectionRecoveryRequired;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
+use crate::protocol::{RemoteImportResponse, RemoteProjectionPushResponse};
 use crate::security::EncryptedOp;
 use crate::source_control::diff_projection::DiffProjection;
 use crate::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo, ExternalApplyReceipt};
@@ -33,10 +34,10 @@ pub enum ServerMessage {
     Ack { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, seq: u64, client_op_id: u64 },
     SyncHello { peer_id: PeerId, repo_id: RepoId, scope_nonce: ScopeNonce, pub_key: Vec<u8>, signature: Vec<u8>, vector: VersionVector },
     WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId> },
-    SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] known_vector: VersionVector, requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))> },
-    SyncSnapshotRequest { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, #[serde(default)] known_vector: VersionVector, #[serde(default)] reason: Option<String> },
+    SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, known_vector: VersionVector, requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))> },
+    SyncSnapshotRequest { source_peer_id: PeerId, repo_id: RepoId, known_vector: VersionVector, #[serde(default)] reason: Option<String> },
     SyncPush { source_peer_id: PeerId, repo_id: RepoId, range_start: PeerFactSeq, range_end: PeerFactSeq, header: SyncPushHeader, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, encrypted_payload: Vec<EncryptedOp> },
-    SyncPushSnapshot { source_peer_id: PeerId, repo_id: RepoId, waterline: PeerFactSeq, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(default)] source_proof: Option<SyncSourceProof>, payload: Vec<EncryptedOp> },
+    SyncPushSnapshot { source_peer_id: PeerId, repo_id: RepoId, waterline: PeerFactSeq, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(default)] source_proof: Option<SyncSourceProof>, payload: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
     ProjectionRecoveryRequired(ProjectionRecoveryRequired),
@@ -74,4 +75,6 @@ pub enum ServerMessage {
     KeyProvide { repo_id: RepoId, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, repo_key: Vec<u8> },
     KeyDenied { #[serde(default)] repo_id: Option<RepoId>, scope_nonce: ScopeNonce, #[serde(default)] branch: Option<PeerId>, error: ServerError },
     SystemMetrics { cpu_usage_percent: f32, memory_used_mb: u64, active_connections: u32, ops_processed: u64, uptime_secs: u64, db_size_bytes: u64, doc_count: u32 },
+    RemoteImport(RemoteImportResponse),
+    RemoteProjectionPush(RemoteProjectionPushResponse),
 }

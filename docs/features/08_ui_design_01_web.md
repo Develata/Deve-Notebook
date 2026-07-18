@@ -43,8 +43,8 @@
 - 普通远端 Web / VPS / 不支持的 native adapter 不应显示 host-file 菜单项；即使旧客户端直接请求，后端也应 fail-closed。
 - Remote Import 入口只打开独立 typed review surface。候选行只显示 backend-generated label 与
   Added/Modified/Unchanged；无 checkbox、逐文件 Apply 或 raw locator/path/digest/detail。
-- B0 时该独立入口仍未实现，B5 前旧 Remote Projection command 打开 Source Control 的行为属于
-  release-blocking drift。
+- B4 已删除旧 Remote Projection command 打开 Source Control 的路径；B5 继续实现独立
+  Remote Import client/view，缺失期间不以其它 controller 代替。
 
 ## 非目标
 

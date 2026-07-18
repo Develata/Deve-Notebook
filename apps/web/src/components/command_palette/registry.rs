@@ -136,12 +136,7 @@ pub fn create_static_commands(
         ngit_push_command(locale, set_show, set_source_control_notice, sidebar_control),
         ngit_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
     ]);
-    commands.extend(remote_projection_commands(
-        locale,
-        set_show,
-        set_source_control_notice,
-        sidebar_control,
-    ));
+    commands.extend(remote_projection_commands(locale, set_show));
 
     // Add AI Chat toggle command if ChatControl is available
     if let Some(chat_ctrl) = chat_control {

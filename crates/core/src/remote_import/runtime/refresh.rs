@@ -49,6 +49,16 @@ impl RemoteImportRuntime {
                 expected: "Ready or Stale",
             });
         }
+        let observed_revision = record
+            .candidate
+            .as_ref()
+            .map(|candidate| candidate.revision);
+        if observed_revision != Some(request.expected_revision) {
+            return Err(RemoteImportError::Stale {
+                session_id,
+                blockers: Vec::new(),
+            });
+        }
         after_read();
         if request.source_binding_digest != record.source_binding_digest {
             self.store.mark_stale(session_id, record.generation)?;
@@ -56,13 +66,13 @@ impl RemoteImportRuntime {
                 "refresh source/profile binding drifted from sealed session".to_string(),
             ));
         }
-        let baseline = request.baseline;
-        if baseline.locator_digest != record.locator_binding_digest {
+        if request.locator_binding_digest != record.locator_binding_digest {
             self.store.mark_stale(session_id, record.generation)?;
             return Err(RemoteImportError::ArtifactTampered(
-                "refresh locator binding drifted from sealed session".to_string(),
+                "refresh remote locator/profile binding drifted from sealed session".to_string(),
             ));
         }
+        let baseline = request.baseline;
         let manifest = match verify_published_session(&self.artifacts, &record) {
             Ok(manifest) => manifest,
             Err(error) => {

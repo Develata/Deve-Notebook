@@ -57,9 +57,10 @@ fn provider_request_reuses_transport_admission_validator() {
         )
     );
 
-    let secret_locator = RemoteProjectionPullRequest::new(
+    let secret_locator = RemoteProjectionPushRequest::new(
         RemoteProjectionProvider::S3,
         "s3://token@bucket/notebooks/main",
+        Vec::new(),
     )
     .expect_err("secret locator");
     assert_eq!(
@@ -102,35 +103,19 @@ fn fake_adapter_push_stores_projection_files_without_authority_effects() {
 }
 
 #[test]
-fn fake_adapter_pull_returns_external_changes_candidate_only() {
+fn fake_adapter_push_rejects_provider_mismatch() {
     let mut adapter = FakeRemoteProjectionProvider::new(RemoteProjectionProvider::S3);
-    adapter
-        .seed_remote(
-            "s3://bucket/notebooks/main",
-            vec![file("notes/imported.md", "imported")],
-        )
-        .expect("seed remote");
+    let request = RemoteProjectionPushRequest::new(
+        RemoteProjectionProvider::WebDav,
+        "webdav+https://dav.example.com/notebooks/main",
+        vec![file("notes/a.md", "a")],
+    )
+    .expect("request");
 
-    let outcome = adapter
-        .pull(
-            RemoteProjectionPullRequest::new(
-                RemoteProjectionProvider::S3,
-                "s3://bucket/notebooks/main",
-            )
-            .expect("request"),
-        )
-        .expect("pull");
-
-    assert_eq!(outcome.files.len(), 1);
-    assert_eq!(outcome.files[0].path(), "notes/imported.md");
-    assert!(outcome.overwrites_projection_workspace);
-    assert!(outcome.external_changes_confirmation_required);
-    assert!(!outcome.effects.writes_ledger);
-    assert!(!outcome.effects.writes_source_control_staging);
-    assert!(!outcome.effects.writes_commit_anchor);
-    assert!(!outcome.effects.writes_git_main_mirror);
-    assert!(!outcome.effects.confirms_external_changes);
-    assert!(outcome.provider_metadata_is_diagnostic_only);
+    assert_eq!(
+        adapter.push(request).expect_err("provider mismatch"),
+        RemoteProjectionProviderError::ProviderMismatch
+    );
 }
 
 #[test]

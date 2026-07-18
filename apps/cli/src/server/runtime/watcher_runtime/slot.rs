@@ -395,38 +395,6 @@ impl MountAdmissionToken {
             Err(MountAdmissionError::Unavailable)
         }
     }
-
-    pub(crate) fn continuation(&self) -> MountContinuationToken {
-        MountContinuationToken {
-            repo_id: self.repo_id,
-            generation: self.generation,
-            slot: self.slot.clone(),
-        }
-    }
-}
-
-pub(crate) struct MountContinuationToken {
-    repo_id: RepoId,
-    generation: u64,
-    slot: Arc<MountSlot>,
-}
-
-impl MountContinuationToken {
-    pub(crate) fn repo_id(&self) -> RepoId {
-        self.repo_id
-    }
-
-    pub(crate) fn revalidate(&self) -> Result<(), MountAdmissionError> {
-        let state = self.slot.state();
-        if self.slot.repo_id == self.repo_id
-            && self.slot.generation == self.generation
-            && matches!(state, RepoMountState::Mounted | RepoMountState::Failed)
-        {
-            Ok(())
-        } else {
-            Err(MountAdmissionError::Unavailable)
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

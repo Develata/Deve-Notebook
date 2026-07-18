@@ -6,8 +6,7 @@ use crate::i18n::Locale;
 use leptos::prelude::*;
 
 #[test]
-fn acc_cmd_004b_static_commands_include_ngit_and_remote_projection_notices() {
-    // CMD-004B: ngit and remote projection palette entries remain CLI-only command notices.
+fn acc_cmd_004b_static_commands_include_ngit_and_typed_remote_projection_push() {
     let owner = leptos::reactive::owner::Owner::new();
 
     owner.with(|| {
@@ -33,10 +32,9 @@ fn acc_cmd_004b_static_commands_include_ngit_and_remote_projection_notices() {
         assert!(ids.contains(&"ngit_export_mirror"));
         assert!(ids.contains(&"ngit_push_mirror"));
         assert!(ids.contains(&"ngit_repair_mirror"));
-        assert!(ids.contains(&"webdav:push"));
-        assert!(ids.contains(&"webdav:pull"));
-        assert!(ids.contains(&"s3:push"));
-        assert!(ids.contains(&"s3:pull"));
+        assert!(ids.contains(&"remote_projection.webdav.push"));
+        assert!(ids.contains(&"remote_projection.s3.push"));
+        assert!(!ids.iter().any(|id| id.contains("pull")));
     });
 }
 

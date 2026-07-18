@@ -9,6 +9,8 @@ const REMOTE_IMPORT_SESSIONS: redb::TableDefinition<u128, &[u8]> =
     redb::TableDefinition::new("remote_import_sessions");
 const REMOTE_IMPORT_RUNTIME: redb::TableDefinition<u8, &[u8]> =
     redb::TableDefinition::new("remote_import_runtime");
+const PROJECTION_FAULTS: redb::TableDefinition<[u8; 32], &[u8]> =
+    redb::TableDefinition::new("projection_faults");
 
 #[test]
 fn init_fails_closed_when_existing_local_repo_lacks_metadata_table() {
@@ -51,6 +53,9 @@ fn init_fails_closed_when_existing_local_repo_lacks_metadata_value() {
         let _ = txn
             .open_table(REMOTE_IMPORT_RUNTIME)
             .expect("remote import runtime");
+        let _ = txn
+            .open_table(PROJECTION_FAULTS)
+            .expect("projection faults");
     }
     txn.commit().expect("commit");
     drop(db);

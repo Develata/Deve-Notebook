@@ -146,6 +146,9 @@ pub async fn run(
         Some(Commands::ProjectionRemote { action }) => {
             commands::projection_remote::run(ledger_dir, action, config.snapshot_depth)?
         }
+        Some(Commands::RemoteImport { auth, action }) => {
+            commands::remote_import::run(ledger_dir, action, auth, config.snapshot_depth)?
+        }
         Some(Commands::VerifyP2P {
             live_ledger_dir,
             repo_id,

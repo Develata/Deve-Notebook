@@ -6,13 +6,12 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 
 use crate::models::{DocId, Op, PeerFactSeq, PeerId, VersionVector};
-use crate::protocol::RemoteProjectionDirection;
-use crate::protocol::RemoteProjectionProvider;
 use crate::protocol::ScPathTarget;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
+use crate::protocol::{RemoteImportRequest, RemoteProjectionPushRequest};
 use crate::security::EncryptedOp;
 use crate::source_control::CommitFileDiffTarget;
 use serde::{Deserialize, Serialize};
@@ -35,15 +34,12 @@ pub enum ClientMessage {
     },
     SyncRequest {
         repo_id: crate::models::RepoId,
-        #[serde(default)]
         known_vector: VersionVector,
         requests: Vec<(PeerId, (PeerFactSeq, PeerFactSeq))>,
     },
     SyncSnapshotRequest {
-        #[serde(alias = "peer_id")]
         source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
-        #[serde(default)]
         known_vector: VersionVector,
         #[serde(default)]
         reason: Option<String>,
@@ -60,7 +56,6 @@ pub enum ClientMessage {
         source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
         waterline: PeerFactSeq,
-        #[serde(default)]
         server_vector: VersionVector,
         #[serde(default)]
         snapshot_kind: Option<String>,
@@ -304,10 +299,6 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
-    RemoteProjectionTransport {
-        provider: RemoteProjectionProvider,
-        direction: RemoteProjectionDirection,
-        #[serde(default)]
-        scope_nonce: Option<u64>,
-    },
+    RemoteImport(RemoteImportRequest),
+    RemoteProjectionPush(RemoteProjectionPushRequest),
 }

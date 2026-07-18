@@ -21,8 +21,16 @@ fn ngit_and_remote_projection_commands_are_localized() {
     assert_eq!(ngit_push_mirror(Locale::Zh), "ngit: 推送 mirror");
     assert_eq!(ngit_repair_mirror(Locale::En), "ngit: repair mirror");
     assert_eq!(ngit_repair_mirror(Locale::Zh), "ngit: 修复 mirror");
-    assert_eq!(webdav_push(Locale::En), "webdav:push");
-    assert_eq!(s3_pull(Locale::Zh), "s3:pull");
+    assert_eq!(webdav_push(Locale::En), "Remote Projection: WebDAV Push");
+    assert_eq!(s3_push(Locale::Zh), "远程投影：S3 推送");
+    assert_eq!(
+        remote_projection_scope_unavailable(Locale::En),
+        "Unavailable: current repository scope is not ready"
+    );
+    assert_eq!(
+        remote_projection_scope_unavailable(Locale::Zh),
+        "不可用：当前仓库作用域尚未就绪"
+    );
     assert_eq!(toggle_sidebar(Locale::En), "Toggle Sidebar");
     assert_eq!(ai_switch_plan(Locale::En), "AI: Switch to PLAN Mode");
     assert!(ai_slash_mode_reason(Locale::En).contains("/plan"));

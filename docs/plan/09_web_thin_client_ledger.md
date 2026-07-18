@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -448,8 +448,8 @@ candidate revision、blocker 计算或 Ledger Apply authority。
 - reconnect 后 client 必须重新 List/Show 当前 scope；不得把旧 scope session projection迁移到新
   scope。相同 request 的 durable Apply receipt 由后端 exactly-once 语义返回，Web 不自行重放 authority write。
 
-本 runtime 在 B0 登记为 `planned/no-code-yet`，B5 才激活独立实现。当前 Remote Projection command
-打开 Source Control 并解析 notice detail 的路径属于 release-blocking drift，不是该合同的临时 adapter。
+本 runtime 继续登记为 `planned/no-code-yet`，B5 才激活独立实现。B4 已删除 Remote Projection
+command 打开 Source Control 与解析 notice detail 的路径；缺失期间不以其它 controller 作为 adapter。
 
 ## 12. Refactor Target
 

@@ -29,6 +29,7 @@ impl S3CustomEndpointUrlBinding {
     }
 }
 
+#[cfg(test)]
 pub(super) fn reject_custom_https_endpoint_without_binding(
     locator: &str,
 ) -> Result<(), RemoteProjectionProviderError> {

@@ -115,7 +115,6 @@ async fn handle_text(
 fn allow_ws_json_text_debug() -> bool {
     matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
         || env_flag("DEVE_ALLOW_WS_JSON_TEXT")
-        || env_flag("DEVE_ALLOW_LEGACY_WS_JSON")
 }
 
 fn env_flag(name: &str) -> bool {

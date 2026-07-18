@@ -91,6 +91,7 @@ fn s3_custom_https_endpoint_fails_before_workspace_file_read() {
         )
         .expect_err("custom endpoint must fail before file read");
 
+    assert!(err.is_provider_unavailable());
     assert!(err.to_string().contains("explicit credential binding"));
     assert!(err.to_string().contains("provider_io_ready=false"));
     assert_eq!(

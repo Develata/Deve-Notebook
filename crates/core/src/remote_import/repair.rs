@@ -131,11 +131,15 @@ fn inspect_record(
     {
         findings.push(RemoteImportRepairFinding::Interrupted(record.session_id));
     }
-    if record.cleanup_pending {
+    let projection_pending = record.apply_receipt.as_ref().is_some_and(|receipt| {
+        receipt.projection_outcome == RemoteImportProjectionOutcome::Pending
+    });
+    if record.cleanup_pending && !projection_pending {
         findings.push(RemoteImportRepairFinding::CleanupPending(record.session_id));
     }
     let has_artifact = artifact_sessions.contains(&record.session_id);
-    let requires_artifact = !record.state.is_terminal() && !record.cleanup_pending;
+    let requires_artifact =
+        projection_pending || (!record.state.is_terminal() && !record.cleanup_pending);
     if record.source_snapshot.is_some() && !has_artifact && requires_artifact {
         findings.push(RemoteImportRepairFinding::MissingArtifact(
             record.session_id,

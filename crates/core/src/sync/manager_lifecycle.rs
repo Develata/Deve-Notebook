@@ -24,6 +24,7 @@ impl SyncManager {
             vfs: Vfs::unrooted(),
             projection_health: ProjectionHealth::new(),
         };
+        manager.recover_pending_remote_import_projections()?;
         manager.load_durable_projection_faults()?;
         Ok(manager)
     }
@@ -104,8 +105,8 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    fn startup_marks_applied_pending_receipt_degraded_before_product_recovery() -> anyhow::Result<()>
-    {
+    fn startup_recovers_applied_pending_receipt_without_second_authority_append()
+    -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let repo_id = uuid::Uuid::new_v4();
@@ -120,14 +121,15 @@ mod tests {
         )?;
         repo.set_projection_base_for_all_local_repos_checked(dir.path().join("projection"))?;
         let runtime = RemoteImportRuntime::open(&repo, repo_id)?;
-        let locator = RemoteImportDigest::of(b"locator");
+        let remote_locator = RemoteImportDigest::of(b"remote-locator");
+        let local_locator = RemoteImportDigest::of(b"local-locator");
         let mut capture = runtime.begin_prepare(RemoteImportPrepareRequest {
             source_binding_digest: RemoteImportDigest::of(b"source"),
-            locator_binding_digest: locator,
+            locator_binding_digest: remote_locator,
             baseline: RemoteImportBaseline {
                 ledger_head: 0.into(),
                 ignore_digest: RemoteImportDigest::of(b"ignore"),
-                locator_digest: locator,
+                locator_digest: local_locator,
                 existing: BTreeMap::new(),
             },
         })?;
@@ -152,8 +154,34 @@ mod tests {
         );
 
         let repo_name = repo.local_repo_name().to_string();
-        let sync = SyncManager::new_checked(Arc::new(repo))?;
-        assert!(sync.is_projection_degraded(&repo_name));
+        let authority_head = receipt.authority_head_after;
+        let repo = Arc::new(repo);
+        let sync = SyncManager::new_checked(repo.clone())?;
+        assert!(!sync.is_projection_degraded(&repo_name));
+        assert_eq!(
+            std::fs::read_to_string(repo.local_repo_workspace_path(&repo_name, "pending.md")?)?,
+            "pending"
+        );
+        let recovered = RemoteImportRuntime::open(&repo, repo_id)?.session(ready.session_id)?;
+        assert_eq!(
+            recovered
+                .apply_receipt
+                .as_ref()
+                .expect("recovered receipt")
+                .projection_outcome,
+            RemoteImportProjectionOutcome::Written
+        );
+        assert_eq!(
+            repo.run_on_local_repo(&repo_name, crate::ledger::range::get_max_seq)?,
+            authority_head.storage_key()
+        );
+
+        let restarted = SyncManager::new_checked(repo.clone())?;
+        assert!(!restarted.is_projection_degraded(&repo_name));
+        assert_eq!(
+            repo.run_on_local_repo(&repo_name, crate::ledger::range::get_max_seq)?,
+            authority_head.storage_key()
+        );
         Ok(())
     }
 }

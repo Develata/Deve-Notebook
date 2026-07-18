@@ -49,7 +49,8 @@
 - Prepare 可以在当前 repo 暂时未 Mounted 时完成 review；Apply 是否可用只由后端 typed blocker
   决定。Apply receipt 的 Projection outcome 为 Pending 时，页面显示 Ledger 已提交且恢复未完成；为
   Degraded 时显示已提交与降级提示。两者都不会诱导重复 Apply。
-- B0 只冻结该体验；独立 client/view 在 B5 实现。当前命令打开 Source Control 的行为是首发阻塞漂移。
+- B4 已激活 backend typed family 并删除命令打开 Source Control 的路径；独立 client/view 在 B5
+  实现，期间不以 Source Control 或 External Changes controller 代替。
 
 ### 4. 离开文档保护
 

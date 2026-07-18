@@ -428,15 +428,15 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 | Surface | Approved target | Current implementation | Activation | Tag posture |
 |---|---|---|---|---|
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
-| Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；B4 Pending rematerialization 是 runtime gate，不是 schema drift | B1 + ADR 0012 | non-blocking |
-| WebSocket | `DEVEWSF4`, lockstep v3 | lockstep v2 + legacy JSON fallback | B4 | blocked |
-| Remote ingest | immutable whole-session Remote Import | pull → workspace overwrite → External Changes | B4/B5/B6 | blocked |
+| Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
+| WebSocket | `DEVEWSF4`, lockstep v3 | 已对齐；legacy/unversioned JSON 与 v1/v2 adapter 均不存在 | B4 | non-blocking |
+| Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire 已对齐；B5 typed Web client 与 B6 fresh receipts 未完成 | B4/B5/B6 | blocked |
 
 “Approved target”不等于实现完成。release gate 必须同时读取 `docs/registry/first-tag-format-matrix.md` 的 target/current 两列；当前不一致必须阻止 candidate/tag-ready，不能因为文档出现目标字符串而通过。
 
 ### 3.2 Remote Import Release Gate {#remote-import-release-gate}
 
-首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、双 repo 隔离与真实 backend browser journey。STORE-019/020/021/023 在 B0 保持真实 `gap`；旧 pull tests 不得冒充 Remote Import evidence。
+首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、双 repo 隔离与真实 backend browser journey。B4 已完成 backend/CLI/product wire 与旧 pull 删除；STORE-019/020/021/023 继续保留 B5/B6/W7 尚未产出的真实 `gap`，旧 pull tests 不得冒充 Remote Import evidence。
 
 ## 4. Open Source License (开源协议)
 

@@ -32,6 +32,7 @@ mod json_wire;
 pub mod merge_conflict;
 pub mod projection_recovery;
 pub mod relay_proxy;
+pub mod remote_import;
 pub mod remote_projection;
 pub mod sc_path_target;
 pub mod scope_nonce;
@@ -60,10 +61,15 @@ pub use relay_proxy::{
     validate_direct_sync_push_attribution, validate_direct_sync_snapshot_attribution,
     validate_sync_push_attribution, validate_sync_snapshot_attribution,
 };
-pub use remote_projection::{
-    REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, RemoteProjectionDirection,
-    RemoteProjectionProvider,
+pub use remote_import::{
+    RemoteImportApplyReceipt, RemoteImportBlocker, RemoteImportCandidatePage,
+    RemoteImportCandidateRevision, RemoteImportCandidateView, RemoteImportChangeKind,
+    RemoteImportEntryId, RemoteImportPageCursor, RemoteImportProjectionOutcome,
+    RemoteImportRequest, RemoteImportRequestContext, RemoteImportResponse,
+    RemoteImportResponseContext, RemoteImportSessionId, RemoteImportSessionView, RemoteImportState,
+    RemoteProjectionPushRequest, RemoteProjectionPushResponse,
 };
+pub use remote_projection::RemoteProjectionProvider;
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
 pub use server::{RepoListEntry, ServerMessage};

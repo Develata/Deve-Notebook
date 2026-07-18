@@ -20,9 +20,13 @@
 //! - `ngit export`: 将 queued NoteGit commits 导出到 Git main mirror
 //! - `ngit import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `ngit push`: 将 Git main mirror 发布到远端
-//! - `projection-remote webdav|s3 push|pull`: Projection Backup / Remote Projection transport，传输 Markdown projection files
+//! - `projection-remote webdav|s3 push`: upload Markdown Projection files
+//! - `remote-import`: immutable review and whole-session Ledger-first apply
 
-use crate::{ProjectionRemoteAction, ScAction, commands, dispatch, server};
+use crate::{
+    LocalCliAuthArgs, ProjectionRemoteAction, RemoteImportAction, ScAction, commands, dispatch,
+    server,
+};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -172,10 +176,17 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         action: NgitAction,
     },
-    /// Push or pull Markdown projection folders through a remote projection transport
+    /// Push Markdown projection folders through a remote projection transport
     ProjectionRemote {
         #[command(subcommand)]
         action: ProjectionRemoteAction,
+    },
+    /// Capture, review, apply, discard, or repair immutable Remote Import sessions
+    RemoteImport {
+        #[command(flatten)]
+        auth: LocalCliAuthArgs,
+        #[command(subcommand)]
+        action: RemoteImportAction,
     },
     /// Inspect or update repo Projection Locators
     Repo {

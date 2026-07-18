@@ -9,6 +9,7 @@
 mod body;
 mod contract;
 mod path_set;
+mod push_error;
 mod push_source;
 pub(crate) mod s3;
 pub(crate) mod webdav;
@@ -24,58 +25,46 @@ pub(crate) use contract::{
 pub(crate) use path_set::NormalizedRemotePath;
 #[cfg(test)]
 pub(crate) use path_set::{MAX_SOURCE_FILES, MAX_SOURCE_PATH_BYTES};
+pub(crate) use push_error::ProjectionPushError;
 pub(crate) use push_source::WorkspaceProjectionPushSource;
 #[cfg(test)]
 pub(crate) use push_source::collect_markdown_projection_files;
-
-pub(crate) fn provider_io_not_ready(error: impl std::fmt::Display) -> anyhow::Error {
-    anyhow::anyhow!(
-        "remote projection provider I/O did not complete (provider_io_ready=false): {error}"
-    )
-}
 
 /// Executes provider I/O for a previously admitted push source. Repository
 /// identity and workspace selection stay with the caller; the transport
 /// runtime owns only provider construction, upload, and outcome validation.
 pub(crate) fn push_projection_from_source(
+    ledger_dir: &std::path::Path,
     provider: deve_core::remote_projection::RemoteProjectionProvider,
     locator: &str,
     source: &dyn ProjectionPushSource,
-) -> anyhow::Result<deve_core::remote_projection::RemoteProjectionPushOutcome> {
+) -> Result<deve_core::remote_projection::RemoteProjectionPushOutcome, ProjectionPushError> {
     use s3::S3ProjectionPushAdapter as _;
     use webdav::WebDavProjectionPushAdapter as _;
 
     let outcome = match provider {
         deve_core::remote_projection::RemoteProjectionProvider::WebDav => {
-            let mut adapter = webdav::WebDavProjectionProvider::new()?;
+            let mut adapter = webdav::WebDavProjectionProvider::new()
+                .map_err(ProjectionPushError::provider_unavailable)?;
             adapter.push_projection_files(provider, locator, source)
         }
         deve_core::remote_projection::RemoteProjectionProvider::S3 => {
-            let mut adapter = s3::S3ProjectionProvider::new()?;
+            let (mut adapter, _) =
+                s3::provider_for_locator(ledger_dir, TransportCapability::Push, locator)
+                    .map_err(ProjectionPushError::provider_unavailable)?;
             adapter.push_projection_files(provider, locator, source)
         }
-    }
-    .map_err(provider_io_not_ready)?;
+    }?;
     ensure_projection_transport_push_outcome_contract(&outcome)?;
     Ok(outcome)
 }
 
-pub(crate) fn admit_repo_url_without_profile(
+pub(crate) fn admit_repo_url(
     provider: deve_core::remote_projection::RemoteProjectionProvider,
-    capability: TransportCapability,
+    _capability: TransportCapability,
     locator: &str,
 ) -> Result<String, deve_core::remote_projection::RemoteProjectionProviderError> {
-    let plan = deve_core::remote_projection::plan_remote_projection_transport(
-        deve_core::remote_projection::RemoteProjectionPlanInput {
-            provider,
-            direction: capability.admission_direction(),
-            locator: locator.to_string(),
-        },
-    )?;
-    if provider == deve_core::remote_projection::RemoteProjectionProvider::S3 {
-        s3::reject_unprofiled_custom_endpoint(&plan.locator)?;
-    }
-    Ok(plan.locator)
+    Ok(deve_core::remote_projection::validate_remote_projection_locator(provider, locator)?)
 }
 
 #[cfg(test)]

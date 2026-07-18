@@ -99,10 +99,23 @@ impl ClientMessage {
             | Self::GetCommitDiff { scope_nonce, .. }
             | Self::GetCommitFileDiff { scope_nonce, .. }
             | Self::ComputeDiffProjection { scope_nonce, .. }
-            | Self::ResolveConflict { scope_nonce, .. }
-            | Self::RemoteProjectionTransport { scope_nonce, .. } => {
+            | Self::ResolveConflict { scope_nonce, .. } => {
                 Some(ClientMessageScopeGate::new(*scope_nonce, "source control"))
             }
+            _ => None,
+        }
+    }
+
+    pub fn remote_import_scope_gate(&self) -> Option<ClientMessageScopeGate> {
+        match self {
+            Self::RemoteImport(request) => Some(ClientMessageScopeGate::new(
+                Some(request.context().scope_nonce.get()),
+                "remote import",
+            )),
+            Self::RemoteProjectionPush(request) => Some(ClientMessageScopeGate::new(
+                Some(request.scope_nonce.get()),
+                "remote projection push",
+            )),
             _ => None,
         }
     }

@@ -13,8 +13,9 @@ use super::repair::RemoteImportRepairFinding;
 use super::runtime::RemoteImportRuntime;
 use super::store::RemoteImportStore;
 use super::types::{
-    RemoteImportBaseline, RemoteImportDigest, RemoteImportFailureKind, RemoteImportPrepareRequest,
-    RemoteImportRefreshRequest, RemoteImportState,
+    RemoteImportBaseline, RemoteImportCandidateRevision, RemoteImportDigest,
+    RemoteImportFailureKind, RemoteImportPrepareRequest, RemoteImportRefreshRequest,
+    RemoteImportState,
 };
 use crate::ledger::schema::{
     PROJECTION_FAULTS, REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS,
@@ -64,11 +65,11 @@ impl Fixture {
     fn request(&self) -> RemoteImportPrepareRequest {
         RemoteImportPrepareRequest {
             source_binding_digest: RemoteImportDigest::of(b"source"),
-            locator_binding_digest: RemoteImportDigest::of(b"locator"),
+            locator_binding_digest: RemoteImportDigest::of(b"remote-locator"),
             baseline: RemoteImportBaseline {
                 ledger_head: 7.into(),
                 ignore_digest: RemoteImportDigest::of(b"ignore"),
-                locator_digest: RemoteImportDigest::of(b"locator"),
+                locator_digest: RemoteImportDigest::of(b"local-locator"),
                 existing: BTreeMap::new(),
             },
         }
@@ -81,9 +82,15 @@ impl Fixture {
             .join(session_id.to_string())
     }
 
-    fn refresh_request(&self, baseline: RemoteImportBaseline) -> RemoteImportRefreshRequest {
+    fn refresh_request(
+        &self,
+        expected_revision: super::types::RemoteImportCandidateRevision,
+        baseline: RemoteImportBaseline,
+    ) -> RemoteImportRefreshRequest {
         RemoteImportRefreshRequest {
+            expected_revision,
             source_binding_digest: RemoteImportDigest::of(b"source"),
+            locator_binding_digest: RemoteImportDigest::of(b"remote-locator"),
             baseline,
         }
     }
@@ -149,7 +156,7 @@ fn capture_rejects_unsafe_duplicate_and_oversized_inputs() -> anyhow::Result<()>
         RemoteImportFailureKind::InvalidPath
     );
 
-    fixture.runtime.discard(session_id)?;
+    fixture.runtime.discard(session_id, None)?;
     let mut capture = fixture.runtime.begin_prepare(fixture.request())?;
     let too_large = vec![0u8; super::artifact::MAX_FILE_PAYLOAD_BYTES as usize + 1];
     let error = capture
@@ -185,12 +192,15 @@ fn refresh_uses_sealed_blobs_and_tamper_is_reported() -> anyhow::Result<()> {
     let ready = capture.finish()?;
     let refreshed = fixture.runtime.refresh_from_sealed(
         session_id,
-        fixture.refresh_request(RemoteImportBaseline {
-            ledger_head: 9.into(),
-            ignore_digest: RemoteImportDigest::of(b"ignore-2"),
-            locator_digest: RemoteImportDigest::of(b"locator"),
-            existing: BTreeMap::new(),
-        }),
+        fixture.refresh_request(
+            RemoteImportCandidateRevision::FIRST,
+            RemoteImportBaseline {
+                ledger_head: 9.into(),
+                ignore_digest: RemoteImportDigest::of(b"ignore-2"),
+                locator_digest: RemoteImportDigest::of(b"local-locator-2"),
+                existing: BTreeMap::new(),
+            },
+        ),
     )?;
     assert_eq!(
         refreshed
@@ -225,7 +235,9 @@ fn discard_cleans_only_exact_session_and_clears_active_pointer() -> anyhow::Resu
     let unrelated = crate::utils::notegit::host_dir(&fixture.ledger).join("keep.txt");
     std::fs::write(&unrelated, b"keep")?;
 
-    let discarded = fixture.runtime.discard(session_id)?;
+    let discarded = fixture
+        .runtime
+        .discard(session_id, Some(RemoteImportCandidateRevision::FIRST))?;
     assert_eq!(discarded.state, RemoteImportState::Discarded);
     assert!(!discarded.cleanup_pending);
     assert!(!fixture.artifact_session(session_id).exists());
@@ -252,7 +264,7 @@ fn cleanup_pending_records_are_never_pruned() -> anyhow::Result<()> {
                 kind: RemoteImportFailureKind::SourceRead,
             },
         )?;
-        store.begin_discard(record.session_id, record.generation)?;
+        store.begin_discard(record.session_id, record.generation, None)?;
     }
     let records = store.list_sessions()?;
     assert_eq!(records.len(), 65);
@@ -269,7 +281,9 @@ fn manifest_bytes_are_deterministic_across_provider_listing_order() -> anyhow::R
     let first_id = first.session_id();
     first.finish()?;
     let first_bytes = std::fs::read(fixture.artifact_session(first_id).join(MANIFEST_FILE))?;
-    fixture.runtime.discard(first_id)?;
+    fixture
+        .runtime
+        .discard(first_id, Some(RemoteImportCandidateRevision::FIRST))?;
 
     let mut second = fixture.runtime.begin_prepare(fixture.request())?;
     second.capture_file("a.md", Cursor::new(b"alpha"))?;
@@ -312,7 +326,7 @@ fn eligible_terminal_retention_keeps_exactly_latest_64() -> anyhow::Result<()> {
                 kind: RemoteImportFailureKind::SourceRead,
             },
         )?;
-        store.begin_discard(record.session_id, record.generation)?;
+        store.begin_discard(record.session_id, record.generation, None)?;
         store.finish_cleanup(record.session_id)?;
     }
     let records = store.list_sessions()?;

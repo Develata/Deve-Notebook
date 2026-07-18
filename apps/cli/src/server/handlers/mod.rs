@@ -1,4 +1,4 @@
-﻿// apps\cli\src\server\handlers
+// apps\cli\src\server\handlers
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
 //!
@@ -10,8 +10,11 @@ pub mod docs;
 pub mod document;
 pub mod key_exchange;
 pub mod listing;
+pub(crate) mod local_writer;
 pub mod merge;
 pub mod plugin;
+pub mod remote_import;
+pub mod remote_projection;
 pub mod repo;
 pub mod repo_list;
 pub mod search;

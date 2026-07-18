@@ -6,6 +6,7 @@
 use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message,
 };
+use crate::server::ws::WS_JSON_TEXT_ENV_LOCK;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, AuthStatusResponse};
 use deve_core::protocol::frame::{
     ClientFrame, WS_PROTOCOL_VERSION, encode_client_binary_with_version,
@@ -14,8 +15,6 @@ use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
 use reqwest::header::{CONNECTION, SET_COOKIE, UPGRADE};
 use tokio_tungstenite::tungstenite::Message;
-
-static WS_JSON_TEXT_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn ws_endpoint_roundtrips_versioned_binary_ping() -> anyhow::Result<()> {
@@ -149,7 +148,6 @@ async fn ws_endpoint_rejects_versioned_json_text_by_default() -> anyhow::Result<
     let _env = EnvGuard::set_many(&[
         ("DEVE_ENV", Some("production")),
         ("DEVE_ALLOW_WS_JSON_TEXT", None),
-        ("DEVE_ALLOW_LEGACY_WS_JSON", None),
     ]);
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
@@ -163,12 +161,34 @@ async fn ws_endpoint_rejects_versioned_json_text_by_default() -> anyhow::Result<
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn ws_endpoint_rejects_legacy_json_text_by_default() -> anyhow::Result<()> {
+async fn ws_endpoint_accepts_versioned_json_text_when_debug_enabled() -> anyhow::Result<()> {
     let _lock = WS_JSON_TEXT_ENV_LOCK.lock().await;
     let _env = EnvGuard::set_many(&[
         ("DEVE_ENV", Some("production")),
-        ("DEVE_ALLOW_WS_JSON_TEXT", None),
-        ("DEVE_ALLOW_LEGACY_WS_JSON", None),
+        ("DEVE_ALLOW_WS_JSON_TEXT", Some("1")),
+    ]);
+    let harness = WsHarness::spawn().await?;
+    let mut ws = connect_harness(&harness).await?;
+    let frame = ClientFrame::current(ClientMessage::Ping);
+    assert_eq!(frame.protocol_version, 3);
+    let text = serde_json::to_string(&frame)?;
+
+    ws.send(Message::Text(text)).await?;
+
+    assert!(matches!(
+        recv_server_message(&mut ws).await?,
+        ServerMessage::Pong
+    ));
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ws_endpoint_rejects_unversioned_json_text_when_debug_enabled() -> anyhow::Result<()> {
+    let _lock = WS_JSON_TEXT_ENV_LOCK.lock().await;
+    let _env = EnvGuard::set_many(&[
+        ("DEVE_ENV", Some("production")),
+        ("DEVE_ALLOW_WS_JSON_TEXT", Some("1")),
     ]);
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
@@ -176,7 +196,13 @@ async fn ws_endpoint_rejects_legacy_json_text_by_default() -> anyhow::Result<()>
 
     ws.send(Message::Text(text)).await?;
 
-    assert_json_text_disabled(recv_server_message(&mut ws).await?);
+    match recv_server_message(&mut ws).await? {
+        ServerMessage::ProtocolError { error, .. } => {
+            assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+            assert_eq!(error.detail.as_deref(), Some("Invalid JSON client message"));
+        }
+        other => panic!("expected invalid JSON ProtocolError, got {other:?}"),
+    }
     harness.shutdown().await;
     Ok(())
 }

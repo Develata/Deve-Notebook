@@ -21,6 +21,7 @@ use std::io::Read;
 const MAX_JSON_ARTIFACT_BYTES: u64 = 8 * 1024 * 1024;
 
 pub(in crate::remote_import) struct VerifiedRemoteImportEntry {
+    pub(in crate::remote_import) entry_id: RemoteImportDigest,
     pub(in crate::remote_import) path: String,
     pub(in crate::remote_import) blob_digest: RemoteImportDigest,
     pub(in crate::remote_import) size: u64,
@@ -74,6 +75,7 @@ pub(in crate::remote_import) fn verify_apply_artifacts(
             ))
         })?;
         verified.push(VerifiedRemoteImportEntry {
+            entry_id: candidate.entry_id,
             path: manifest.path.clone(),
             blob_digest: manifest.digest,
             size: manifest.size,
@@ -84,6 +86,23 @@ pub(in crate::remote_import) fn verify_apply_artifacts(
     }
     root.verify()?;
     Ok(verified)
+}
+
+pub(in crate::remote_import) fn verify_review_artifacts(
+    root: &RemoteImportArtifactRoot,
+    record: &RemoteImportSessionRecord,
+) -> RemoteImportResult<Vec<crate::remote_import::types::RemoteImportCandidateEntry>> {
+    let metadata = read_published_metadata(root, record)?;
+    verify_exact_inventory(root, record, &metadata.manifest)?;
+    for entry in &metadata.manifest {
+        verify_blob(
+            &metadata.session.join(BLOBS_DIR).join(entry.digest.to_hex()),
+            entry.digest,
+            entry.size,
+        )?;
+    }
+    root.verify()?;
+    Ok(metadata.candidate)
 }
 
 fn read_published_metadata(

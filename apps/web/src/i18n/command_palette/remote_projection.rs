@@ -6,39 +6,37 @@ use crate::i18n::Locale;
 
 pub fn webdav_push(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "webdav:push",
-        Locale::Zh => "webdav:push",
-    }
-}
-
-pub fn webdav_pull(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "webdav:pull",
-        Locale::Zh => "webdav:pull",
+        Locale::En => "Remote Projection: WebDAV Push",
+        Locale::Zh => "远程投影：WebDAV 推送",
     }
 }
 
 pub fn s3_push(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "s3:push",
-        Locale::Zh => "s3:push",
-    }
-}
-
-pub fn s3_pull(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "s3:pull",
-        Locale::Zh => "s3:pull",
+        Locale::En => "Remote Projection: S3 Push",
+        Locale::Zh => "远程投影：S3 推送",
     }
 }
 
 pub fn remote_projection_backend_intent(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Sends a backend/core remote projection intent; the backend uses the current repo URL as locator, and pull must enter External Changes."
+            "Sends a typed backend Remote Projection push intent for the exact current repository scope."
         }
-        Locale::Zh => {
-            "发送 backend/core remote projection intent；后端使用当前 repo URL 作为 locator，pull 必须进入 External Changes。"
-        }
+        Locale::Zh => "为当前精确仓库作用域发送强类型后端 Remote Projection 推送意图。",
+    }
+}
+
+pub fn remote_projection_scope_unavailable(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unavailable: current repository scope is not ready",
+        Locale::Zh => "不可用：当前仓库作用域尚未就绪",
+    }
+}
+
+pub fn remote_projection_push_succeeded(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remote Projection push completed",
+        Locale::Zh => "远程投影推送已完成",
     }
 }

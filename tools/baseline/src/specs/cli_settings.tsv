@@ -61,7 +61,9 @@ contains	docs/acceptance-cases/11_commands_settings.md	deve ngit export --help
 contains	docs/acceptance-cases/11_commands_settings.md	deve ngit import --help
 contains	docs/acceptance-cases/11_commands_settings.md	deve ngit push --help
 contains	docs/acceptance-cases/11_commands_settings.md	deve projection-remote webdav push --help
-contains	docs/acceptance-cases/11_commands_settings.md	gap: remote-import prepare/list/show/diff/refresh/apply/discard/repair CLI is not implemented at B0
+contains	docs/acceptance-cases/11_commands_settings.md	deve remote-import prepare --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve remote-import repair --help
+absent	docs/acceptance-cases/11_commands_settings.md	projection-remote pull still exists
 contains	docs/acceptance-cases/11_commands_settings.md	deve repo projection set --help
 contains	apps/cli/src/commands/watch.rs	install_shutdown_handler()?
 contains	apps/cli/src/commands/watch.rs	Failed to set Ctrl-C handler

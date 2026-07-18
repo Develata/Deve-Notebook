@@ -4,7 +4,7 @@
 use super::provider::WebDavProjectionProvider;
 use super::transport::WebDavTransport;
 use super::url::{webdav_collection_url, webdav_file_url, webdav_locator_to_https_url};
-use crate::remote_projection_transport::ProjectionPushSource;
+use crate::remote_projection_transport::{ProjectionPushError, ProjectionPushSource};
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionProvider, RemoteProjectionProviderError,
     RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
@@ -18,7 +18,7 @@ pub(crate) trait WebDavProjectionPushAdapter {
         provider: RemoteProjectionProvider,
         locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError>;
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError>;
 }
 
 impl<T: WebDavTransport> WebDavProjectionPushAdapter for WebDavProjectionProvider<T> {
@@ -27,23 +27,30 @@ impl<T: WebDavTransport> WebDavProjectionPushAdapter for WebDavProjectionProvide
         provider: RemoteProjectionProvider,
         locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         if provider != RemoteProjectionProvider::WebDav {
-            return Err(RemoteProjectionProviderError::ProviderMismatch);
+            return Err(ProjectionPushError::push_failed(
+                RemoteProjectionProviderError::ProviderMismatch,
+            ));
         }
-        let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())?;
-        let base = webdav_locator_to_https_url(request.locator())?;
+        let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())
+            .map_err(ProjectionPushError::push_failed)?;
+        let base = webdav_locator_to_https_url(request.locator())
+            .map_err(ProjectionPushError::push_failed)?;
         let mut ensured_collections = BTreeSet::new();
-        ensure_collection(&self.transport, &base, &mut ensured_collections)?;
-        source.visit(&mut |path, content| {
-            push_payload(
-                &self.transport,
-                &base,
-                &mut ensured_collections,
-                path,
-                content,
-            )
-        })?;
+        ensure_collection(&self.transport, &base, &mut ensured_collections)
+            .map_err(ProjectionPushError::push_failed)?;
+        source
+            .visit(&mut |path, content| {
+                push_payload(
+                    &self.transport,
+                    &base,
+                    &mut ensured_collections,
+                    path,
+                    content,
+                )
+            })
+            .map_err(ProjectionPushError::push_failed)?;
         Ok(RemoteProjectionPushOutcome {
             uploaded_files: source.file_count(),
             effects: RemoteProjectionAuthorityEffects::projection_transport(),

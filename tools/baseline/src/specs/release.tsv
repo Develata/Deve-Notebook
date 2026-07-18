@@ -433,14 +433,14 @@ contains	docs/registry/first-tag-format-matrix.md	repo-local `PROJECTION_FAULTS`
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 3;`
 contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3;`
 contains	docs/registry/first-tag-format-matrix.md	Redb schema v4
-contains	docs/registry/first-tag-format-matrix.md	代码仍为 F4/v2 lockstep
+contains	docs/registry/first-tag-format-matrix.md	已对齐：代码为 F4/v3 lockstep
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection transport / Remote Import
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 4;
 contains	crates/core/src/ledger/schema.rs	pub(crate) const PROJECTION_FAULTS
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 2;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 3;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	DEVEWSF4
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	F4/v2 was also never published
 contains	docs/adr/0011-immutable-ledger-first-remote-import.md	Immutable ledger-first Remote Import

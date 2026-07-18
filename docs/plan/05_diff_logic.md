@@ -155,9 +155,12 @@ remote provider -> ordered source acquisition -> project-owned bounded sink
 - push 与 source acquisition 可以复用 provider、credential/profile、HTTP/signing 基础设施，但必须使用语义分离的 typed interface。locator/profile 必须继续满足 ADR 0008 的 exact host-local binding，禁止 ambient credential fallback 到任意 custom host。
 - Web surface 只发送 typed intent；provider I/O、路径归一化、预算 admission 与失败分类全部属于 backend/host infra。
 
-#### Current Pull Transition Anchor {#remote-projection-transport}
+#### Push-only Implementation Anchor {#remote-projection-transport}
 
-当前代码仍保留 `webdav:pull` / `s3:pull` 覆盖 workspace、再进入 External Changes 的未发布实现。它只是 B4 前用于保持现有代码 `plan_ref` 可追踪的 release-blocking drift；不是批准目标、兼容 epoch 或可继续扩展的路线。B4 必须连同 workspace apply/rollback continuation、External Changes scan bridge 与旧命令一次性删除。
+当前实现只保留 `remote_projection.webdav.push` / `remote_projection.s3.push` 与 capability-neutral
+source acquisition。旧 `webdav:pull` / `s3:pull`、workspace overwrite、rollback continuation、
+External Changes scan bridge 与 Source Control notice 路由已经一次性删除；不得恢复为 alias、fallback
+或 Remote Import 的内部实现。
 
 ### 2.3.3 Remote Import Diff Contract {#remote-import-diff-contract}
 

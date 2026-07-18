@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#remote-projection-transport-contract
 //!
 //! Provider adapter boundary for Markdown projection transport.
 
@@ -8,10 +9,7 @@ mod tests;
 
 use crate::utils::path::to_forward_slash;
 
-use super::{
-    RemoteProjectionDirection, RemoteProjectionPlanInput, RemoteProjectionProvider,
-    plan_remote_projection_transport,
-};
+use super::{RemoteProjectionProvider, validate_remote_projection_locator};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemoteProjectionFile {
@@ -53,15 +51,12 @@ impl RemoteProjectionPushRequest {
         locator: impl Into<String>,
         files: Vec<RemoteProjectionFile>,
     ) -> Result<Self, RemoteProjectionProviderError> {
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider,
-            direction: RemoteProjectionDirection::Push,
-            locator: locator.into(),
-        })?;
+        let locator = locator.into();
+        let locator = validate_remote_projection_locator(provider, &locator)?;
         validate_unique_paths(&files)?;
         Ok(Self {
-            provider: plan.provider,
-            locator: plan.locator,
+            provider,
+            locator,
             files,
         })
     }
@@ -76,37 +71,6 @@ impl RemoteProjectionPushRequest {
 
     pub fn files(&self) -> &[RemoteProjectionFile] {
         &self.files
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RemoteProjectionPullRequest {
-    provider: RemoteProjectionProvider,
-    locator: String,
-}
-
-impl RemoteProjectionPullRequest {
-    pub fn new(
-        provider: RemoteProjectionProvider,
-        locator: impl Into<String>,
-    ) -> Result<Self, RemoteProjectionProviderError> {
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider,
-            direction: RemoteProjectionDirection::Pull,
-            locator: locator.into(),
-        })?;
-        Ok(Self {
-            provider: plan.provider,
-            locator: plan.locator,
-        })
-    }
-
-    pub fn provider(&self) -> RemoteProjectionProvider {
-        self.provider
-    }
-
-    pub fn locator(&self) -> &str {
-        &self.locator
     }
 }
 
@@ -138,15 +102,6 @@ pub struct RemoteProjectionPushOutcome {
     pub provider_metadata_is_diagnostic_only: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RemoteProjectionPullOutcome {
-    pub files: Vec<RemoteProjectionFile>,
-    pub effects: RemoteProjectionAuthorityEffects,
-    pub overwrites_projection_workspace: bool,
-    pub external_changes_confirmation_required: bool,
-    pub provider_metadata_is_diagnostic_only: bool,
-}
-
 pub trait RemoteProjectionProviderAdapter {
     fn provider(&self) -> RemoteProjectionProvider;
 
@@ -154,11 +109,6 @@ pub trait RemoteProjectionProviderAdapter {
         &mut self,
         request: RemoteProjectionPushRequest,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError>;
-
-    fn pull(
-        &self,
-        request: RemoteProjectionPullRequest,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -173,8 +123,6 @@ pub enum RemoteProjectionProviderError {
     InternalStatePath,
     #[error("remote projection file path is duplicated")]
     DuplicateProjectionPath,
-    #[error("remote projection locator has no fake remote content")]
-    MissingFakeRemote,
     #[error("remote projection provider I/O failed: {0}")]
     ProviderIo(String),
 }

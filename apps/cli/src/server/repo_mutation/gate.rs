@@ -5,13 +5,12 @@
 
 use super::MutationExecution;
 use crate::server::runtime::watcher_runtime::{
-    MountAdmissionError, MountAdmissionToken, MountContinuationToken, WatcherRuntimeView,
+    MountAdmissionError, MountAdmissionToken, WatcherRuntimeView,
 };
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use tokio::sync::{Mutex as AsyncMutex, broadcast};
 
@@ -61,7 +60,6 @@ pub(crate) enum RepoMutationGateError {
     RegistryPoisoned,
     NestedLane(MutationLane),
     WorkspaceIngestionUnavailable,
-    ContinuationSuperseded,
     BlockingExecutionFailed,
 }
 
@@ -77,9 +75,6 @@ impl fmt::Display for RepoMutationGateError {
             }
             Self::WorkspaceIngestionUnavailable => {
                 write!(f, "workspace ingestion is unavailable")
-            }
-            Self::ContinuationSuperseded => {
-                write!(f, "repository mutation continuation was superseded")
             }
             Self::BlockingExecutionFailed => {
                 write!(f, "mounted repository blocking execution failed")
@@ -97,23 +92,13 @@ pub(crate) struct RepoMutationPublicationGate {
 
 struct MutationLaneState {
     permit: Arc<AsyncMutex<()>>,
-    revision: AtomicU64,
 }
 
 impl MutationLaneState {
     fn new() -> Self {
         Self {
             permit: Arc::new(AsyncMutex::new(())),
-            revision: AtomicU64::new(0),
         }
-    }
-
-    fn begin(&self) -> u64 {
-        self.revision.fetch_add(1, Ordering::AcqRel) + 1
-    }
-
-    fn revision(&self) -> u64 {
-        self.revision.load(Ordering::Acquire)
     }
 }
 
@@ -122,15 +107,6 @@ impl MutationLaneState {
 /// are revalidated only after the repository mutation permit is acquired.
 pub(crate) struct MountedRepoAdmission {
     token: MountAdmissionToken,
-}
-
-/// Completion authority for one operation that already crossed the Mounted
-/// cut. It may finish cleanup after a repo-local watcher failure, but never
-/// across lifecycle transition or slot replacement.
-pub(crate) struct MountedRepoContinuation {
-    token: MountContinuationToken,
-    lane: Arc<MutationLaneState>,
-    revision: u64,
 }
 
 impl MountedRepoAdmission {
@@ -217,26 +193,26 @@ impl RepoMutationPublicationGate {
             .token
             .revalidate()
             .map_err(RepoMutationGateError::from)?;
-        lane_state.begin();
         let outcome = HELD_MUTATION_LANES
             .scope(HeldMutationLanes::single(lane), async move { operation() })
             .await;
         Ok(outcome)
     }
 
-    /// Runs the local apply on Tokio's blocking pool and returns completion
-    /// authority for a scan/finalize continuation. The blocking task owns the
-    /// permit, so caller cancellation cannot release serialization early.
-    pub(crate) async fn execute_admitted_mounted_repo_unpublished_blocking_with_continuation<T, E>(
+    /// Runs one complete mounted repository mutation on the blocking pool.
+    /// The permit remains owned by the task through authority commit,
+    /// projection writeback and receipt settlement.
+    pub(crate) async fn execute_mounted_repo_unpublished_blocking<T, E>(
         &self,
-        admission: MountedRepoAdmission,
+        repo_id: RepoId,
         operation: impl FnOnce() -> Result<T, E> + Send + 'static,
-    ) -> Result<(Result<T, E>, MountedRepoContinuation), RepoMutationGateError>
+    ) -> Result<Result<T, E>, RepoMutationGateError>
     where
         T: Send + 'static,
         E: Send + 'static,
     {
-        let lane = MutationLane::Repo(admission.repo_id());
+        let admission = self.admit_mounted_repo(repo_id)?;
+        let lane = MutationLane::Repo(repo_id);
         if HELD_MUTATION_LANES
             .try_with(|held| held.conflicts(lane))
             .unwrap_or(false)
@@ -249,51 +225,6 @@ impl RepoMutationPublicationGate {
             .token
             .revalidate()
             .map_err(RepoMutationGateError::from)?;
-        let revision = lane_state.begin();
-        let continuation = MountedRepoContinuation {
-            token: admission.token.continuation(),
-            lane: lane_state.clone(),
-            revision,
-        };
-        let outcome = tokio::task::spawn_blocking(move || {
-            let _lane_state = lane_state;
-            let _permit = permit;
-            HELD_MUTATION_LANES.sync_scope(HeldMutationLanes::single(lane), operation)
-        })
-        .await
-        .map_err(|error| {
-            tracing::error!(%error, "mounted repository blocking execution failed");
-            RepoMutationGateError::BlockingExecutionFailed
-        })?;
-        Ok((outcome, continuation))
-    }
-
-    pub(crate) async fn execute_mounted_repo_continuation_unpublished_blocking<T, E>(
-        &self,
-        continuation: MountedRepoContinuation,
-        operation: impl FnOnce() -> Result<T, E> + Send + 'static,
-    ) -> Result<Result<T, E>, RepoMutationGateError>
-    where
-        T: Send + 'static,
-        E: Send + 'static,
-    {
-        let lane = MutationLane::Repo(continuation.token.repo_id());
-        if HELD_MUTATION_LANES
-            .try_with(|held| held.conflicts(lane))
-            .unwrap_or(false)
-        {
-            return Err(RepoMutationGateError::NestedLane(lane));
-        }
-        let permit = continuation.lane.permit.clone().lock_owned().await;
-        continuation
-            .token
-            .revalidate()
-            .map_err(RepoMutationGateError::from)?;
-        if continuation.lane.revision() != continuation.revision {
-            return Err(RepoMutationGateError::ContinuationSuperseded);
-        }
-        continuation.lane.begin();
-        let lane_state = continuation.lane;
         tokio::task::spawn_blocking(move || {
             let _lane_state = lane_state;
             let _permit = permit;
@@ -301,7 +232,7 @@ impl RepoMutationPublicationGate {
         })
         .await
         .map_err(|error| {
-            tracing::error!(%error, "mounted repository continuation failed");
+            tracing::error!(%error, "mounted repository blocking execution failed");
             RepoMutationGateError::BlockingExecutionFailed
         })
     }
@@ -335,8 +266,6 @@ impl RepoMutationPublicationGate {
         let repo_lane_state = self.lane_state(repo_lane)?;
         let _catalog_permit = catalog_lane.permit.lock().await;
         let _repo_permit = repo_lane_state.permit.lock().await;
-        catalog_lane.begin();
-        repo_lane_state.begin();
         let execution = HELD_MUTATION_LANES
             .scope(
                 HeldMutationLanes {
@@ -373,7 +302,6 @@ impl RepoMutationPublicationGate {
                 .revalidate()
                 .map_err(RepoMutationGateError::from)?;
         }
-        lane_state.begin();
         let execution = HELD_MUTATION_LANES
             .scope(HeldMutationLanes::single(lane), async move { operation() })
             .await;

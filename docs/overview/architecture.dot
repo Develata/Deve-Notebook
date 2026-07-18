@@ -2113,9 +2113,9 @@ digraph DeveNoteArchitecture {
         subgraph cluster_mod_remote_import {
             label="Remote Projection / Import runtimes [03/05/06/09]"; style="rounded,filled"; fillcolor="#effef3"; color="#16a34a";
             mod_remote_transport [label="remote_projection_transport_runtime", fillcolor="#f0fdf4"];
-            mod_remote_import [label="remote_import_runtime\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
-            mod_remote_import_client [label="remote_import_client\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
-            mod_remote_import_writer [label="sealed source writer\n(planned / current drift)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_import [label="remote_import_runtime\n(B4 backend active)", fillcolor="#f0fdf4"];
+            mod_remote_import_client [label="remote_import_client\n(B5 pending)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_import_writer [label="sealed source writer", fillcolor="#f0fdf4"];
             mod_remote_projection_writeback [label="projection writeback", fillcolor="#f0fdf4"];
         }
 

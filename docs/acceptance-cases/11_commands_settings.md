@@ -24,8 +24,14 @@
     - run: deve ngit push --help
     - run: deve projection-remote webdav push --help
     - run: deve projection-remote s3 push --help
-    - current_state: projection-remote pull still exists but is approved for deletion at B4
-    - gap: remote-import prepare/list/show/diff/refresh/apply/discard/repair CLI is not implemented at B0
+    - run: deve remote-import prepare --help
+    - run: deve remote-import list --help
+    - run: deve remote-import show --help
+    - run: deve remote-import diff --help
+    - run: deve remote-import refresh --help
+    - run: deve remote-import apply --help
+    - run: deve remote-import discard --help
+    - run: deve remote-import repair --help
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli main -- --nocapture
     - run: cargo test -p deve_cli standalone_watch -- --nocapture
@@ -33,6 +39,7 @@
     - exit_code_all_eq: 0
     - standalone_watch_terminal_failure_shuts_down_all_handles_and_exits_nonzero: true
     - standalone_watch_uses_no_global_registry_or_drop_only_shutdown: true
+    - projection_remote_pull_is_absent: true
 
 - case_id: CMD-002
   goal: Command Palette 快捷键。

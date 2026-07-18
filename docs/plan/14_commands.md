@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -82,15 +82,16 @@ deve remote-import repair [--apply]
 - 所有 session 命令必须使用精确 repo selector、branch、session id 与 revision；CLI 不得以 display
   name、路径存在性或 provider listing 猜测 active session。
 - `remote-import repair` 默认 dry-run；只有显式 `--apply` 才允许清理已证明的 orphan/
-  `cleanup_pending` artifact，且不得推断 session state、自动 append Ledger 或自动 discard active session。
+  `cleanup_pending` artifact，且不得推断 session state、自动 append Ledger 或自动 discard active session；
+  projection outcome=`Pending` 的 Applied artifact 不可清理，必须先完成幂等 writeback recovery。
 - CLI 直接打开 DB 执行 Apply 时必须启动临时 `RepoWatcherHandle`，完成后走 E2 final-state shutdown。
   DB 已被 server 持有时只能使用 authenticated loopback `LocalCliProxyAuthority`；不得复用浏览器
   grant，也不得绕过锁直接写库。
 - provider/profile/credential binding 继续服从 ADR 0008；credential material 不进入命令输出、
   locator、session manifest、receipt 或日志。
 
-`deve projection-remote ... pull` 是 B0 当前代码仍存在的 release-blocking drift，B4 必须连同
-workspace overwrite/rollback implementation 一次删除。它不是 deprecated alias，也不属于兼容合同。
+`deve projection-remote ... pull`、workspace overwrite/rollback implementation 与 External Changes
+scan bridge 已由 B4 一次删除。它们不是 deprecated alias，也不属于兼容合同。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -121,6 +122,10 @@ workspace overwrite/rollback implementation 一次删除。它不是 deprecated 
     *   List/Show/Page/Diff 是 Remote Import view 内部 typed request，不再扩张全局 CommandId。
         前端不得直接访问 WebDAV/S3 provider，不得收集 locator、endpoint URL、host path、digest 或
         credential material；S3-compatible UX 只能选择 backend-defined profile handle。
+    *   Remote Projection Push entry 只有在 Web 已持有 current `SessionClient`、current repo scope、
+        非零 `scope_nonce` 且 handshake-ready 时才可标为 available；无法构造精确 typed intent 时必须
+        显示本地化 unavailable reason，不得静默 no-op。是否允许实际 push 仍由 backend typed gate 裁决，
+        前端不得推导 provider、Mounted 或 writer authority。
     *   Command Palette / Source Control UI 不再展示 `source_control.git_bridge` mode；Source Control header copy **MUST** 明确 `.notegit` / NoteGit/ngit 是 authority、Git main 只是终态 mirror；Web surface **MUST NOT** 直接执行 Git writer。
     *   Web `Commit & Push` 仅展示 CLI-only notice，**MUST NOT** 发送 writer intent；未发布的 `ClientMessage::CommitAndPush` 不属于 WS v3 合同，服务端不得保留 legacy variant 或兼容 handler。
     *   代理 / plugin-host 模式下，Command Palette 不得读取或展示 legacy bridge mode；delegated/readonly 状态必须来自 runtime typed state。
@@ -158,9 +163,9 @@ workspace overwrite/rollback implementation 一次删除。它不是 deprecated 
     *   `AI: Switch to PLAN Mode`: 将原生 AI 切换到只读规划模式。
     *   `AI: Switch to BUILD Mode`: 将原生 AI 切换到执行模式。
 
-> **B0 implementation transition（非兼容承诺）**：当前 Web 仍注册 `webdav:push`、`webdav:pull`、
-> `s3:push`、`s3:pull` 并把结果投影到 Source Control。B4/B5 必须分别完成 wire/command cutover 与
-> 独立 client；首发前这些旧 id 必须删除，不得保留双轨或 alias。
+Web 已切换到 `remote_projection.webdav.push` 与 `remote_projection.s3.push` typed intent，并删除旧
+四个 id 与 Source Control notice 投影。B5 继续交付独立 Remote Import client/view；不得为此恢复旧
+command id、双轨或 alias。
 
 ## 3. Chat Slash Commands
 

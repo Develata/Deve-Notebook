@@ -19,7 +19,7 @@ fn prepublished_exact_refresh_revision_is_retryable_and_repair_visible() -> anyh
     let baseline = RemoteImportBaseline {
         ledger_head: 9.into(),
         ignore_digest: RemoteImportDigest::of(b"ignore-2"),
-        locator_digest: RemoteImportDigest::of(b"locator"),
+        locator_digest: RemoteImportDigest::of(b"local-locator-2"),
         existing: BTreeMap::new(),
     };
     let candidate = encode_candidate(
@@ -41,9 +41,10 @@ fn prepublished_exact_refresh_revision_is_retryable_and_repair_visible() -> anyh
             })
     );
 
-    let refreshed = fixture
-        .runtime
-        .refresh_from_sealed(session_id, fixture.refresh_request(baseline))?;
+    let refreshed = fixture.runtime.refresh_from_sealed(
+        session_id,
+        fixture.refresh_request(RemoteImportCandidateRevision::FIRST, baseline),
+    )?;
     assert_eq!(refreshed.candidate.expect("candidate").revision.get(), 2);
     assert!(!fixture.repair()?.findings.iter().any(|finding| {
         matches!(finding, RemoteImportRepairFinding::ExtraCandidate { session_id: id, .. } if *id == session_id)
@@ -76,7 +77,9 @@ fn concurrent_refreshes_share_one_exact_revision() -> anyhow::Result<()> {
             runtime.refresh_with_after_read_test(
                 session_id,
                 RemoteImportRefreshRequest {
+                    expected_revision: RemoteImportCandidateRevision::FIRST,
                     source_binding_digest: RemoteImportDigest::of(b"source"),
+                    locator_binding_digest: RemoteImportDigest::of(b"remote-locator"),
                     baseline,
                 },
                 || {
@@ -115,13 +118,13 @@ fn concurrent_refreshes_with_different_baselines_preserve_ready_winner() -> anyh
         RemoteImportBaseline {
             ledger_head: 21.into(),
             ignore_digest: RemoteImportDigest::of(b"ignore-a"),
-            locator_digest: RemoteImportDigest::of(b"locator"),
+            locator_digest: RemoteImportDigest::of(b"local-locator-a"),
             existing: BTreeMap::new(),
         },
         RemoteImportBaseline {
             ledger_head: 22.into(),
             ignore_digest: RemoteImportDigest::of(b"ignore-b"),
-            locator_digest: RemoteImportDigest::of(b"locator"),
+            locator_digest: RemoteImportDigest::of(b"local-locator-b"),
             existing: BTreeMap::from([(
                 "note.md".to_string(),
                 RemoteImportDigest::of(b"different-local-content"),
@@ -136,7 +139,9 @@ fn concurrent_refreshes_with_different_baselines_preserve_ready_winner() -> anyh
             let result = runtime.refresh_with_after_read_test(
                 session_id,
                 RemoteImportRefreshRequest {
+                    expected_revision: RemoteImportCandidateRevision::FIRST,
                     source_binding_digest: RemoteImportDigest::of(b"source"),
+                    locator_binding_digest: RemoteImportDigest::of(b"remote-locator"),
                     baseline: baseline.clone(),
                 },
                 || {
@@ -168,7 +173,10 @@ fn concurrent_refreshes_with_different_baselines_preserve_ready_winner() -> anyh
 
     let retried = runtime.refresh_from_sealed(
         session_id,
-        fixture.refresh_request(loser_baseline.expect("one refresh must conflict")),
+        fixture.refresh_request(
+            RemoteImportCandidateRevision::from_u64_for_test(2),
+            loser_baseline.expect("one refresh must conflict"),
+        ),
     )?;
     assert_eq!(retried.state, RemoteImportState::Ready);
     assert_eq!(

@@ -3,7 +3,7 @@
 
 use super::credentials::S3Credentials;
 use super::list::discover_remote_markdown_files;
-use super::provider::{FailClosedS3ProjectionProvider, S3ProjectionProvider};
+use super::provider::S3ProjectionProvider;
 use super::signing::signed_get_request;
 use super::transport::S3Transport;
 use super::url::{S3CustomEndpointUrlBinding, s3_file_url_with_binding};
@@ -19,10 +19,6 @@ pub(super) const MAX_SOURCE_FILE_BYTES: usize = 4 * 1024 * 1024;
 pub(super) const MAX_SOURCE_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 
 impl<T: S3Transport> RemoteSourceAcquisition for S3ProjectionProvider<T> {
-    fn provider(&self) -> RemoteProjectionProvider {
-        RemoteProjectionProvider::S3
-    }
-
     fn acquire<S: RemoteSourceSink>(
         &self,
         request: SourceAcquisitionRequest,
@@ -42,23 +38,6 @@ impl<T: S3Transport> RemoteSourceAcquisition for S3ProjectionProvider<T> {
             request,
             sink,
         )
-    }
-}
-
-impl RemoteSourceAcquisition for FailClosedS3ProjectionProvider {
-    fn provider(&self) -> RemoteProjectionProvider {
-        RemoteProjectionProvider::S3
-    }
-
-    fn acquire<S: RemoteSourceSink>(
-        &self,
-        _request: SourceAcquisitionRequest,
-        _sink: &mut S,
-    ) -> Result<SourceAcquisitionOutcome, SourceAcquisitionError<S::Error>> {
-        Err(SourceAcquisitionError::Transport(RemoteProjectionProviderError::ProviderIo(
-            "S3 source acquisition provider is unavailable in this execution path (provider_io_ready=false)"
-                .into(),
-        )))
     }
 }
 

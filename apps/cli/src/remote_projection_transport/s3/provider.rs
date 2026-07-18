@@ -107,5 +107,3 @@ impl<T> S3ProjectionProvider<T> {
         }
     }
 }
-
-pub(crate) struct FailClosedS3ProjectionProvider;

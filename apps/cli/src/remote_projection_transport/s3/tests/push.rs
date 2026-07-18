@@ -1,10 +1,12 @@
 use super::super::provider::S3ProjectionProvider;
-use super::super::push::push_request;
+use super::super::push::{S3ProjectionPushAdapter, push_request};
 use super::support::{RecordingS3Transport, header, now, test_credentials};
+use crate::remote_projection_transport::WorkspaceProjectionPushSource;
 use deve_core::remote_projection::{
     RemoteProjectionFile, RemoteProjectionProvider, RemoteProjectionPushRequest,
 };
 use reqwest::StatusCode;
+use std::fs;
 
 #[test]
 fn s3_push_puts_projection_files_without_authority_effects() {
@@ -91,4 +93,25 @@ fn s3_push_rejects_failed_put() {
     .expect_err("put failure");
 
     assert!(err.to_string().contains("S3 PUT a.md failed"));
+}
+
+#[test]
+fn s3_streaming_put_failure_is_not_provider_unavailable() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    fs::write(dir.path().join("a.md"), "a").expect("a");
+    let source = WorkspaceProjectionPushSource::collect(dir.path()).expect("source");
+    let transport = RecordingS3Transport::new(StatusCode::INTERNAL_SERVER_ERROR);
+    let mut provider =
+        S3ProjectionProvider::new_for_test(transport, test_credentials(), "us-east-1", now);
+
+    let error = provider
+        .push_projection_files(
+            RemoteProjectionProvider::S3,
+            "s3://bucket/notebooks/main",
+            &source,
+        )
+        .expect_err("put failure");
+
+    assert!(!error.is_provider_unavailable());
+    assert!(error.to_string().contains("S3 PUT a.md failed"));
 }

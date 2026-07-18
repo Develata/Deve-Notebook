@@ -167,11 +167,15 @@ fn json_frame_reports_versioned_text_format() {
 }
 
 #[test]
-fn legacy_json_text_remains_debug_compatible() {
-    let decoded = decode_client_json_with_format(r#""Ping""#).unwrap();
-
-    assert_eq!(decoded.format, WsFrameFormat::LegacyJsonText);
-    assert!(matches!(decoded.message, ClientMessage::Ping));
+fn unversioned_json_text_is_rejected() {
+    assert!(matches!(
+        decode_client_json_with_format(r#""Ping""#),
+        Err(ProtocolFrameError::Decode(_))
+    ));
+    assert!(matches!(
+        decode_server_json(r#""Pong""#),
+        Err(ProtocolFrameError::Decode(_))
+    ));
 }
 
 #[test]
@@ -305,54 +309,47 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
 }
 
 #[test]
-fn sync_vector_fields_default_for_legacy_json_debug_frames() {
+fn strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias() {
     let repo_id = uuid::Uuid::new_v4();
-    let client_request = format!(r#"{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}"#);
-    match serde_json::from_str::<ClientMessage>(&client_request).unwrap() {
-        ClientMessage::SyncRequest { known_vector, .. } => {
-            assert_eq!(known_vector, VersionVector::new());
-        }
-        other => panic!("expected SyncRequest, got {other:?}"),
-    }
+    let client_request = format!(
+        r#"{{"protocol_version":3,"message":{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}}}"#
+    );
+    assert!(matches!(
+        decode_client_json(&client_request),
+        Err(ProtocolFrameError::Decode(_))
+    ));
 
     let peer = PeerId::new("peer-a");
     let client_snapshot_request = serde_json::json!({
-        "SyncSnapshotRequest": {
-            "peer_id": peer,
-            "repo_id": repo_id
+        "protocol_version": 3,
+        "message": {
+            "SyncSnapshotRequest": {
+                "peer_id": peer,
+                "repo_id": repo_id,
+                "known_vector": {}
+            }
         }
     });
-    match serde_json::from_value::<ClientMessage>(client_snapshot_request).unwrap() {
-        ClientMessage::SyncSnapshotRequest {
-            known_vector,
-            reason,
-            ..
-        } => {
-            assert_eq!(known_vector, VersionVector::new());
-            assert_eq!(reason, None);
-        }
-        other => panic!("expected SyncSnapshotRequest, got {other:?}"),
-    }
+    assert!(matches!(
+        decode_client_json(&client_snapshot_request.to_string()),
+        Err(ProtocolFrameError::Decode(_))
+    ));
 
     let server_snapshot = serde_json::json!({
-        "SyncPushSnapshot": {
-            "source_peer_id": peer,
-            "repo_id": repo_id,
-            "waterline": 0,
-            "scope_nonce": 9,
-            "branch": null,
-            "payload": []
+        "protocol_version": 3,
+        "message": {
+            "SyncPushSnapshot": {
+                "source_peer_id": peer,
+                "repo_id": repo_id,
+                "waterline": 0,
+                "scope_nonce": 9,
+                "branch": null,
+                "payload": []
+            }
         }
     });
-    match serde_json::from_value::<ServerMessage>(server_snapshot).unwrap() {
-        ServerMessage::SyncPushSnapshot {
-            server_vector,
-            snapshot_kind,
-            ..
-        } => {
-            assert_eq!(server_vector, VersionVector::new());
-            assert_eq!(snapshot_kind, None);
-        }
-        other => panic!("expected SyncPushSnapshot, got {other:?}"),
-    }
+    assert!(matches!(
+        decode_server_json(&server_snapshot.to_string()),
+        Err(ProtocolFrameError::Decode(_))
+    ));
 }

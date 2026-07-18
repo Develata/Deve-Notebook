@@ -306,12 +306,20 @@ cargo run -p deve_cli --bin deve_cli -- projection-remote s3 push --locator s3:/
 cargo run -p deve_cli --bin deve_cli -- projection-remote s3 push --profile minio --locator s3+https://minio.example.com/bucket-name/notebooks/main
 ```
 
-Pull examples:
+Immutable Remote Import examples (replace the IDs with values returned by the
+preceding command):
 
 ```bash
-cargo run -p deve_cli --bin deve_cli -- projection-remote webdav pull --locator webdav+https://dav.example.com/notebooks/main
-cargo run -p deve_cli --bin deve_cli -- projection-remote s3 pull --locator s3://bucket-name/notebooks/main
-cargo run -p deve_cli --bin deve_cli -- projection-remote s3 pull --profile minio --locator s3+https://minio.example.com/bucket-name/notebooks/main
+cargo run -p deve_cli --bin deve_cli -- remote-import prepare webdav --repo <repo-uuid>
+cargo run -p deve_cli --bin deve_cli -- remote-import prepare s3 --repo <repo-uuid>
+cargo run -p deve_cli --bin deve_cli -- remote-import list --repo <repo-uuid>
+cargo run -p deve_cli --bin deve_cli -- remote-import show --repo <repo-uuid> --session <session-uuid> --revision <revision>
+cargo run -p deve_cli --bin deve_cli -- remote-import diff --repo <repo-uuid> --session <session-uuid> --revision <revision> --entry <opaque-entry-id>
+cargo run -p deve_cli --bin deve_cli -- remote-import refresh --repo <repo-uuid> --session <session-uuid> --revision <revision>
+cargo run -p deve_cli --bin deve_cli -- remote-import apply --repo <repo-uuid> --session <session-uuid> --revision <revision> --request-id <request-uuid>
+cargo run -p deve_cli --bin deve_cli -- remote-import discard --repo <repo-uuid> --session <session-uuid> --revision <revision>
+cargo run -p deve_cli --bin deve_cli -- remote-import repair --repo <repo-uuid>
+cargo run -p deve_cli --bin deve_cli -- remote-import repair --repo <repo-uuid> --apply
 ```
 
 S3-compatible custom endpoints require a host-local secret-free profile before
@@ -337,10 +345,14 @@ The profile store lives under `ledger/.host/remote-projection-s3-profiles.toml`
 and stores only endpoint/bucket/prefix/signing metadata plus the credential env
 prefix, never raw key material.
 
-`pull` overwrites only Markdown files in the Projection Workspace, then relies on
-watcher/scan to surface External Changes. The user must still confirm External
-Changes before any ledger facts are appended. Provider metadata, ETags, mtimes,
-object versions, and remote listing order remain diagnostics only.
+`remote-import prepare` captures an immutable manifest/blob snapshot without
+writing the Projection Workspace, Ledger, External Changes, or Source Control.
+Review is backend-owned and Apply commits the whole session through the sealed
+Ledger writer; Projection writeback happens only after that commit. `repair` is
+dry-run by default and requires explicit `--apply` for proven cleanup debt.
+Provider metadata, ETags, mtimes, object versions, and remote listing order
+remain diagnostics only. The removed `projection-remote ... pull` command has no
+compatibility alias or fallback.
 
 S3-compatible custom endpoints (`s3+https://...`) run only through an explicit
 profile handle. Missing profile, endpoint/bucket/prefix mismatch, unsupported

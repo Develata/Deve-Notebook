@@ -2,13 +2,13 @@
 //!   - 06_backup#remote-projection-transport-contract
 
 use super::credentials::S3Credentials;
-use super::provider::FailClosedS3ProjectionProvider;
 use super::provider::S3ProjectionProvider;
 use super::signing::signed_put_request;
 use super::transport::S3Transport;
 use super::url::{S3CustomEndpointUrlBinding, s3_file_url_with_binding};
-use crate::remote_projection_transport::ProjectionPushSource;
-use crate::remote_projection_transport::TransportCapability;
+use crate::remote_projection_transport::{
+    ProjectionPushError, ProjectionPushSource, TransportCapability,
+};
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionProvider, RemoteProjectionProviderError,
@@ -21,7 +21,7 @@ pub(crate) trait S3ProjectionPushAdapter {
         provider: RemoteProjectionProvider,
         locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError>;
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError>;
 }
 
 impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
@@ -30,12 +30,17 @@ impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
         provider: RemoteProjectionProvider,
         locator: &str,
         source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
+    ) -> Result<RemoteProjectionPushOutcome, ProjectionPushError> {
         if provider != RemoteProjectionProvider::S3 {
-            return Err(RemoteProjectionProviderError::ProviderMismatch);
+            return Err(ProjectionPushError::push_failed(
+                RemoteProjectionProviderError::ProviderMismatch,
+            ));
         }
-        let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())?;
-        let binding = self.request_binding(TransportCapability::Push, request.locator())?;
+        let request = RemoteProjectionPushRequest::new(provider, locator, Vec::new())
+            .map_err(ProjectionPushError::push_failed)?;
+        let binding = self
+            .request_binding(TransportCapability::Push, request.locator())
+            .map_err(ProjectionPushError::provider_unavailable)?;
         let push_context = S3PushContext {
             transport: &self.transport,
             credentials: &binding.credentials,
@@ -43,24 +48,12 @@ impl<T: S3Transport> S3ProjectionPushAdapter for S3ProjectionProvider<T> {
             custom_url_binding: binding.custom_url_binding.as_ref(),
             now: self.now,
         };
-        source.visit(&mut |path, content| {
-            push_payload(&push_context, request.locator(), path, content)
-        })?;
+        source
+            .visit(&mut |path, content| {
+                push_payload(&push_context, request.locator(), path, content)
+            })
+            .map_err(ProjectionPushError::push_failed)?;
         Ok(push_outcome(source.file_count()))
-    }
-}
-
-impl S3ProjectionPushAdapter for FailClosedS3ProjectionProvider {
-    fn push_projection_files(
-        &mut self,
-        _provider: RemoteProjectionProvider,
-        _locator: &str,
-        _source: &dyn ProjectionPushSource,
-    ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
-        Err(RemoteProjectionProviderError::ProviderIo(
-            "S3 push provider is unavailable in this execution path (provider_io_ready=false)"
-                .into(),
-        ))
     }
 }
 

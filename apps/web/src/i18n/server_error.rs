@@ -100,11 +100,114 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
         (Locale::Zh, ServerErrorCode::DiffResourceLimit) => "差异超过支持的资源限制",
         (Locale::En, ServerErrorCode::DiffComputeFailed) => "Diff projection could not be computed",
         (Locale::Zh, ServerErrorCode::DiffComputeFailed) => "无法计算差异投影",
+        (Locale::En, ServerErrorCode::RemoteProjectionLocatorInvalid) => {
+            "Remote projection location is invalid"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteProjectionLocatorInvalid) => "远程投影位置无效",
+        (Locale::En, ServerErrorCode::RemoteProjectionProviderUnavailable) => {
+            "Remote projection provider is unavailable"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteProjectionProviderUnavailable) => {
+            "远程投影服务暂不可用"
+        }
+        (Locale::En, ServerErrorCode::RemoteProjectionPushFailed) => {
+            "Remote projection push failed"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteProjectionPushFailed) => "远程投影推送失败",
+        (Locale::En, ServerErrorCode::RemoteImportActiveSession) => {
+            "A remote import is already active"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteImportActiveSession) => "已存在活动的远程导入",
+        (Locale::En, ServerErrorCode::RemoteImportNotFound) => "Remote import was not found",
+        (Locale::Zh, ServerErrorCode::RemoteImportNotFound) => "未找到远程导入",
+        (Locale::En, ServerErrorCode::RemoteImportStale) => "Remote import is stale",
+        (Locale::Zh, ServerErrorCode::RemoteImportStale) => "远程导入已过期",
+        (Locale::En, ServerErrorCode::RemoteImportBlocked) => "Remote import is blocked",
+        (Locale::Zh, ServerErrorCode::RemoteImportBlocked) => "远程导入被阻塞",
+        (Locale::En, ServerErrorCode::RemoteImportInvalidState) => {
+            "Remote import state does not allow this action"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteImportInvalidState) => "当前远程导入状态不允许此操作",
+        (Locale::En, ServerErrorCode::RemoteImportLimitExceeded) => {
+            "Remote import exceeds the supported limit"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteImportLimitExceeded) => "远程导入超过支持限制",
+        (Locale::En, ServerErrorCode::RemoteImportPrepareFailed) => {
+            "Remote import preparation failed"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteImportPrepareFailed) => "远程导入准备失败",
+        (Locale::En, ServerErrorCode::RemoteImportApplyFailed) => "Remote import apply failed",
+        (Locale::Zh, ServerErrorCode::RemoteImportApplyFailed) => "远程导入应用失败",
+        (Locale::En, ServerErrorCode::RemoteImportCleanupRequired) => {
+            "Remote import cleanup is required"
+        }
+        (Locale::Zh, ServerErrorCode::RemoteImportCleanupRequired) => "远程导入需要清理",
         (Locale::En, ServerErrorCode::GraphDegradedProjectionRequired) => {
             "Graph projection requires explicit degraded export"
         }
         (Locale::Zh, ServerErrorCode::GraphDegradedProjectionRequired) => {
             "图谱投影需要显式降级导出"
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Locale, ServerErrorCode, message};
+
+    #[test]
+    fn remote_import_messages_match_authoritative_bilingual_catalog() {
+        let cases = [
+            (
+                ServerErrorCode::RemoteImportActiveSession,
+                "A remote import is already active",
+                "已存在活动的远程导入",
+            ),
+            (
+                ServerErrorCode::RemoteImportNotFound,
+                "Remote import was not found",
+                "未找到远程导入",
+            ),
+            (
+                ServerErrorCode::RemoteImportStale,
+                "Remote import is stale",
+                "远程导入已过期",
+            ),
+            (
+                ServerErrorCode::RemoteImportBlocked,
+                "Remote import is blocked",
+                "远程导入被阻塞",
+            ),
+            (
+                ServerErrorCode::RemoteImportInvalidState,
+                "Remote import state does not allow this action",
+                "当前远程导入状态不允许此操作",
+            ),
+            (
+                ServerErrorCode::RemoteImportLimitExceeded,
+                "Remote import exceeds the supported limit",
+                "远程导入超过支持限制",
+            ),
+            (
+                ServerErrorCode::RemoteImportPrepareFailed,
+                "Remote import preparation failed",
+                "远程导入准备失败",
+            ),
+            (
+                ServerErrorCode::RemoteImportApplyFailed,
+                "Remote import apply failed",
+                "远程导入应用失败",
+            ),
+            (
+                ServerErrorCode::RemoteImportCleanupRequired,
+                "Remote import cleanup is required",
+                "远程导入需要清理",
+            ),
+        ];
+
+        for (code, english, chinese) in cases {
+            assert_eq!(message(Locale::En, code), english, "English {code:?}");
+            assert_eq!(message(Locale::Zh, code), chinese, "Chinese {code:?}");
         }
     }
 }

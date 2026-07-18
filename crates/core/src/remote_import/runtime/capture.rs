@@ -152,11 +152,24 @@ impl RemoteImportCapture {
         error
     }
 
+    #[cfg(test)]
     pub(crate) fn abort(mut self) -> RemoteImportResult<RemoteImportSessionRecord> {
         let failure = self.pending_failure.clone().unwrap_or(RemoteImportFailure {
             phase: RemoteImportFailurePhase::Capture,
             kind: RemoteImportFailureKind::Interrupted,
         });
+        let failed = self.store.fail(&self.record, failure)?;
+        self.settled = true;
+        Ok(failed)
+    }
+
+    pub(in crate::remote_import) fn abort_source(
+        mut self,
+    ) -> RemoteImportResult<RemoteImportSessionRecord> {
+        let failure = RemoteImportFailure {
+            phase: RemoteImportFailurePhase::Capture,
+            kind: RemoteImportFailureKind::SourceRead,
+        };
         let failed = self.store.fail(&self.record, failure)?;
         self.settled = true;
         Ok(failed)

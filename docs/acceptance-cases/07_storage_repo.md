@@ -409,11 +409,11 @@
   goal: Remote Import Prepare 将远端输入封存为 immutable manifest/blob/candidate，不预写 workspace 或 authority。
   preconditions:
     - B1 已实现 durable session store 与 host-only artifact publication
-    - B2 已实现 provider-bound ordered source acquisition 与 bounded sink contract；产品 Prepare 入口仍待 B4 接入
+    - B4 已接入 provider-bound product Prepare 与 bounded sink contract
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
     - run: cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
-    - gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
+    - gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
   assertions:
     - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
     - api_assert: remote_import_prepare_writes_no_workspace_ledger_or_external_changes true
@@ -423,9 +423,10 @@
   goal: Remote Import Review 只投影 backend-generated change kind、typed blocker、entry_id 与 display label。
   preconditions:
     - STORE-019 已产生 immutable session candidate
-    - 当前代码尚未实现 Remote Import Review
+    - B4 backend review/blocker/diff 与 CLI/WS product API 已实现
   steps:
-    - gap: typed Remote Import review and blocker producer is not implemented yet
+    - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
+    - gap: B5 thin client and B6 fresh Remote Import review receipt are not sealed yet
   assertions:
     - api_assert: remote_import_review_is_backend_owned true
     - api_assert: remote_import_review_exposes_no_locator_blob_digest_credential_or_raw_failure_detail true
@@ -435,10 +436,11 @@
   goal: Remote Import Apply 以 whole-session sealed transaction exactly-once 写 Ledger，提交后才 writeback Projection。
   preconditions:
     - Ready session 无 blocker，repo health healthy 且 watcher Mounted
-    - B3 crate-internal sealed writer 与 ADR 0012 core settlement 已存在；B4 尚未接入 Mounted product gate、current locator/ignore producer、post-commit materialization/startup recovery orchestration
+    - B4 已接入 Mounted product gate、current locator/ignore producer 与 post-commit materialization/startup recovery orchestration
   steps:
     - run: cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
-    - gap: Mounted product admission, post-commit materialization/startup recovery orchestration, and browser receipt producer are not implemented yet
+    - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
+    - gap: B5 browser journey and B6 fresh Remote Import apply receipt are not sealed yet
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
@@ -474,10 +476,10 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - 产品 Refresh/Discard/Repair 入口和 fresh cross-platform evidence 仍待 B4/B6
+    - B4 已接入产品 Refresh/Discard/Repair；fresh cross-platform evidence 仍待 W7/B6
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
-    - gap: product-bound Remote Import manage lifecycle producer remains pending until B4/B6
+    - gap: W7 repo lifecycle coordination and B6 fresh Remote Import manage receipt are not sealed yet
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

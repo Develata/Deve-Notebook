@@ -16,6 +16,8 @@ const REMOTE_IMPORT_SESSIONS: redb::TableDefinition<u128, &[u8]> =
     redb::TableDefinition::new("remote_import_sessions");
 const REMOTE_IMPORT_RUNTIME: redb::TableDefinition<u8, &[u8]> =
     redb::TableDefinition::new("remote_import_runtime");
+const PROJECTION_FAULTS: redb::TableDefinition<[u8; 32], &[u8]> =
+    redb::TableDefinition::new("projection_faults");
 
 pub fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
     create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
@@ -134,6 +136,9 @@ pub fn seed_metadata_less_local_repo(ledger_dir: &Path, stem: &str) {
         let _ = txn
             .open_table(REMOTE_IMPORT_RUNTIME)
             .expect("remote import runtime");
+        let _ = txn
+            .open_table(PROJECTION_FAULTS)
+            .expect("projection faults");
     }
     txn.commit().expect("commit metadata-less db");
     drop(db);
@@ -176,6 +181,9 @@ fn init_core_repo_tables(db: &redb::Database) {
     let _ = txn
         .open_table(REMOTE_IMPORT_RUNTIME)
         .expect("remote import runtime");
+    let _ = txn
+        .open_table(PROJECTION_FAULTS)
+        .expect("projection faults");
     txn.commit().expect("commit core repo tables");
 }
 

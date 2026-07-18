@@ -94,6 +94,21 @@ impl RemoteProjectionS3Profile {
         capability: TransportCapability,
         locator: &str,
     ) -> Result<S3ProfileRuntimeBinding, RemoteProjectionProviderError> {
+        self.ensure_locator_binding(capability, locator)?;
+        let endpoint_origin = Url::parse(&normalize_endpoint_origin(&self.endpoint_origin)?)
+            .map_err(|err| profile_error(format!("invalid endpoint origin: {err}")))?;
+        Ok(S3ProfileRuntimeBinding {
+            credentials: self.credentials_from_env_prefix()?,
+            region: self.region.trim().to_string(),
+            url_binding: S3CustomEndpointUrlBinding::new(endpoint_origin, self.bucket.trim())?,
+        })
+    }
+
+    pub(super) fn ensure_locator_binding(
+        &self,
+        capability: TransportCapability,
+        locator: &str,
+    ) -> Result<(), RemoteProjectionProviderError> {
         self.validate()?;
         self.ensure_capability_allowed(capability)?;
         let (locator_origin, locator_bucket, locator_prefix) =
@@ -117,13 +132,7 @@ impl RemoteProjectionS3Profile {
                 self.profile_id
             )));
         }
-        let endpoint_origin = Url::parse(&normalize_endpoint_origin(&self.endpoint_origin)?)
-            .map_err(|err| profile_error(format!("invalid endpoint origin: {err}")))?;
-        Ok(S3ProfileRuntimeBinding {
-            credentials: self.credentials_from_env_prefix()?,
-            region: self.region.trim().to_string(),
-            url_binding: S3CustomEndpointUrlBinding::new(endpoint_origin, self.bucket.trim())?,
-        })
+        Ok(())
     }
 
     pub(crate) fn validate(&self) -> Result<(), RemoteProjectionProviderError> {

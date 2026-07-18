@@ -16,7 +16,7 @@
 - `Trigger`: 用户点击 Refresh
 - `Preconditions`: exact session/revision；sealed blobs 可验证；RepoId/branch/source/locator binding 未变化
 - `Immediate Result`: backend 只从 sealed blobs 重算新 candidate revision，并绑定当前 Ledger head 与 ignore snapshot
-- `Application Entry`: planned/no-code-yet `remote_import_runtime`
+- `Application Entry`: typed WS / `apps/cli/src/commands/remote_import/` → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.manage.discard`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 用户确认 Discard
 - `Preconditions`: exact active/terminal session；session CAS 成功
 - `Immediate Result`: session 转为 Discarded，并显式进入/完成 cleanup lifecycle
-- `Application Entry`: planned/no-code-yet `remote_import_runtime`
+- `Application Entry`: typed WS / `apps/cli/src/commands/remote_import/` → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.manage.repair-dry-run`
 
@@ -34,7 +34,7 @@
 - `Trigger`: operator 运行 remote-import repair
 - `Preconditions`: repo/session store 与 host artifact root 可读
 - `Immediate Result`: 只输出 typed cleanup plan，不删除 artifact 或改变 authority
-- `Application Entry`: planned/no-code-yet `remote_import_runtime`
+- `Application Entry`: `apps/cli/src/commands/remote_import/` → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.manage.repair-apply`
 
@@ -43,14 +43,15 @@
 - `Trigger`: operator 显式运行 remote-import repair --apply
 - `Preconditions`: dry-run plan 仍 exact、目标 path containment 重验、显式 destructive intent
 - `Immediate Result`: 只清理已证明属于 terminal/cleanup_pending record 的 host artifact，并持久化 cleanup outcome
-- `Application Entry`: planned/no-code-yet `remote_import_runtime`
+- `Application Entry`: `apps/cli/src/commands/remote_import/` → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ## Response Flow
 
 1. exact revalidate session/revision 与 artifact identity。
 2. Refresh 只允许 head/ignore 基线重绑；source/locator/branch/membership/tamper drift 不可重绑。Refresh/Discard/repair 各自通过 typed CAS 收敛；新 remote content 必须 Discard 后重新 Prepare。
-3. cleanup failure 保留 cleanup_pending，不自动裁剪。
+3. cleanup failure 保留 cleanup_pending，不自动裁剪；Applied receipt 仍为 projection outcome=`Pending`
+   时 repair 只报告不可执行 debt，保留 sealed recovery artifacts，不能删除。
 
 ## Notes
 
-- B0 为 `planned/no-code-yet`；STORE-023 保持真实 gap。
+- B4 产品 Refresh/Discard/Repair 已激活；STORE-023 继续保留 W7 lifecycle coordination 与 B6 fresh receipt 的真实 gap。

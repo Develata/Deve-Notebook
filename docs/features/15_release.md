@@ -80,7 +80,9 @@
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
   Remote Projection / Remote Import 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
-- first-tag 批准目标为 ledger entry format v3 / `DEVELDG3`、Redb schema v4、WS binary namespace `DEVEWSF4` 且 lockstep `3..=3`、immutable Remote Import。当前实现仍是 Redb v3、WS v2/legacy JSON 与旧 pull→workspace→External Changes，因此 tag blocked；它们不是兼容 epoch。B1/B4/B5/B6 必须关闭 transition matrix 后才能签署。
+- first-tag 批准目标为 ledger entry format v3 / `DEVELDG3`、Redb schema v4、WS binary namespace
+  `DEVEWSF4` 且 lockstep `3..=3`、immutable Remote Import。Redb v4 与 B4 wire/product cutover 已对齐；
+  B5 typed review UI、B6 fresh receipts 及后续 watcher/release gates 仍阻塞 tag，不存在旧格式兼容 epoch。
 - Redb v2 只保留 `--allow-legacy-v2` 离线只读导出；v3 开发 DB 必须用旧 HEAD 导出后重建。WS v1/v2、无版本 JSON、旧 CommandId 与旧 pull 不提供 adapter。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。
 - 矩阵允许诚实显示 PVR、候选交付面 receipts、版本/CHANGELOG/release-set freeze 与 Android signing target-host evidence 等 blocker；SBOM/checksum/provenance 只能由 exact candidate producer receipt 关闭，不能改成 source-ref。这些 gap 不阻止普通开发提交，但必须阻止正式 tag。

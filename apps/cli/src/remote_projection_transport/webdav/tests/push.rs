@@ -95,3 +95,26 @@ fn webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects() {
         ]
     );
 }
+
+#[test]
+fn webdav_streaming_put_failure_is_not_provider_unavailable() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    fs::write(dir.path().join("a.md"), "a").expect("a");
+    let source = WorkspaceProjectionPushSource::collect(dir.path()).expect("source");
+    let transport = RecordingTransport::new(
+        StatusCode::METHOD_NOT_ALLOWED,
+        StatusCode::INTERNAL_SERVER_ERROR,
+    );
+    let mut provider = WebDavProjectionProvider::new_for_test(transport);
+
+    let error = provider
+        .push_projection_files(
+            RemoteProjectionProvider::WebDav,
+            "webdav+https://dav.example.com/notebooks/main",
+            &source,
+        )
+        .expect_err("put failure");
+
+    assert!(!error.is_provider_unavailable());
+    assert!(error.to_string().contains("WebDAV PUT a.md failed"));
+}

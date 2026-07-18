@@ -10,9 +10,9 @@ use crate::ledger::schema::{REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS};
 use crate::models::GlobalSeq;
 use crate::remote_import::error::{RemoteImportError, RemoteImportResult};
 use crate::remote_import::types::{
-    REMOTE_IMPORT_VALUE_VERSION, RemoteImportBranch, RemoteImportCandidateRevisionRecord,
-    RemoteImportFailure, RemoteImportSessionId, RemoteImportSessionRecord,
-    RemoteImportSourceSnapshot, RemoteImportState,
+    REMOTE_IMPORT_VALUE_VERSION, RemoteImportBranch, RemoteImportCandidateRevision,
+    RemoteImportCandidateRevisionRecord, RemoteImportFailure, RemoteImportSessionId,
+    RemoteImportSessionRecord, RemoteImportSourceSnapshot, RemoteImportState,
 };
 use redb::ReadableTable;
 
@@ -98,8 +98,7 @@ impl RemoteImportStore {
             if record.state != RemoteImportState::Preparing {
                 return Err(invalid_state(record, "Preparing"));
             }
-            if candidate.locator_digest != record.locator_binding_digest
-                || candidate.ledger_head != record.baseline_head
+            if candidate.ledger_head != record.baseline_head
                 || candidate.ignore_digest != record.ignore_digest
             {
                 return Err(RemoteImportError::ArtifactTampered(
@@ -157,11 +156,6 @@ impl RemoteImportStore {
             ) {
                 return Err(invalid_state(record, "Ready or Stale"));
             }
-            if candidate.locator_digest != record.locator_binding_digest {
-                return Err(RemoteImportError::ArtifactTampered(
-                    "refresh locator binding does not match sealed session".to_string(),
-                ));
-            }
             if record.candidate.as_ref() != Some(expected) {
                 return Err(RemoteImportError::StaleGeneration(session_id));
             }
@@ -196,6 +190,7 @@ impl RemoteImportStore {
         &self,
         session_id: RemoteImportSessionId,
         generation: u64,
+        expected_revision: Option<RemoteImportCandidateRevision>,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
         let write = self
             .db()
@@ -214,6 +209,16 @@ impl RemoteImportStore {
             drop(guard);
             if current.generation != generation {
                 return Err(RemoteImportError::StaleGeneration(session_id));
+            }
+            let observed_revision = current
+                .candidate
+                .as_ref()
+                .map(|candidate| candidate.revision);
+            if observed_revision != expected_revision {
+                return Err(RemoteImportError::Stale {
+                    session_id,
+                    blockers: Vec::new(),
+                });
             }
             if !matches!(
                 current.state,

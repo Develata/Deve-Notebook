@@ -8,7 +8,7 @@
 - `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_projection_legacy/`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
+- `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_import_runtime.rs`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/commands/remote_import/`, `apps/cli/src/server/handlers/remote_import/`
 
 本章冻结两个相互分离的首发能力：
 
@@ -141,10 +141,10 @@ Discard:  Ready | Stale | Failed -> Discarded
 - Prepare 固定顺序：Redb reserve `Preparing` → stream/verify temp blobs → 原子发布 blobs/manifest/candidate → CAS `Ready`。
 - 上述原子发布的 durability cut 固定为：同步文件内容 → 同步 child directory → no-replace publication → 同步 parent directory → Redb CAS。Windows publication 必须使用 project-owned write-through move；任一步同步失败都不得进入 `Ready` 或推进 candidate revision，残留 artifact 只由显式 repair 收敛。
 - 启动时遗留 `Preparing` 必须转为 `Failed(Interrupted)`；不得自动重新访问 provider。
-- Refresh 只能从已封存 blobs 重算 candidate。若 `RepoId`、branch、source snapshot、locator/profile binding 与 digests 仍 exact，它可以把新 candidate revision 绑定到当前 Ledger head 和当前 ignore snapshot，使 head/ignore drift 的 session 从 `Stale` 回到 `Ready`。
-- locator/profile、branch、repo membership 或 source/manifest/blob digest drift 不可由 Refresh 重绑；session 必须保持 `Stale` 或进入 typed `Failed`。获取新远端内容必须 Discard 后重新 Prepare，不得猜测 source identity。
-- 相同 Apply 请求在响应丢失后返回并收敛已存 `RemoteImportApplyReceipt`，不得重复 append facts。若 receipt projection outcome 仍为 `Pending`，runtime 必须从 Ledger 幂等恢复 writeback；不得把它解释为未提交。
-- terminal record 只保留最近 64 条；`cleanup_pending=true` 的记录永不自动裁剪。cleanup 必须由显式 discard/repair 收敛。
+- Refresh 只能从已封存 blobs 重算 candidate。若 `RepoId`、branch、source snapshot、远端 source locator/profile binding 与 digests 仍 exact，它可以把新 candidate revision 绑定到当前 Ledger head、当前 host-local Projection Locator 与当前 ignore snapshot，使这些本地 baseline drift 的 session 从 `Stale` 回到 `Ready`。
+- 远端 source locator/profile、branch、repo membership 或 source/manifest/blob digest drift 不可由 Refresh 重绑；session 必须保持 `Stale` 或进入 typed `Failed`。获取新远端内容必须 Discard 后重新 Prepare，不得猜测 source identity。
+- 相同 Apply 请求在响应丢失后返回并收敛已存 `RemoteImportApplyReceipt`，不得重复 append facts。该 exact replay 仍需通过 repo/scope/writer identity 与 Mounted gate，但不得被当前 Projection health 或已变化的远端 provider/locator admission 挡住，因为它不再执行新 authority mutation；若 receipt projection outcome 仍为 `Pending`，runtime 必须从 Ledger 幂等恢复 writeback，不得把它解释为未提交。启动期 recovery 只从 durable receipt + sealed artifacts 恢复，不依赖 Mounted gate 或远端 provider。
+- terminal record 只保留最近 64 条；`cleanup_pending=true` 的记录永不自动裁剪。cleanup 必须由显式 discard/repair 收敛，但 Applied receipt 的 projection outcome 仍为 `Pending` 时，sealed candidate/blobs 是幂等 writeback 的必要输入，repair 必须把该 cleanup 标为不可执行并保留全部 artifact；只有 outcome 已为 `Written / Degraded` 后才可完成 artifact cleanup。
 
 ### 4.2 Resource Contract {#remote-import-resource-contract}
 
@@ -166,13 +166,13 @@ Discard:  Ready | Stale | Failed -> Discarded
 - Prepare/List/Show/Page/Diff/Refresh/Discard 可以在 Ledger 可读但 repo 未 Mounted 时执行；它们不得写 Ledger facts 或 workspace。
 - review 必须绑定 exact `(repo_id, branch, scope_nonce, session_id, revision)`。Diff 只接受 opaque strong `entry_id`，返回 backend display label 与 typed diff/blocker。
 - 任一 blocker 禁用整个 session Apply。pending/staged overlap、head/branch/locator/ignore drift、tamper 与 membership mismatch 均由 backend 判定。
-- Apply 必须满足 `RepoHealth::Healthy && RepoMountState::Mounted`，并进入 `03_storage/authority.md#sealed-ledger-change-batch` 的 whole-session transaction。
+- fresh Apply 必须满足 `RepoHealth::Healthy && RepoMountState::Mounted`，并进入 `03_storage/authority.md#sealed-ledger-change-batch` 的 whole-session transaction；已提交 receipt 的 exact replay 遵循上节的无二次 append 恢复例外。
 - transaction 精确复核 repo/schema/head、active session/revision、manifest/blob digests、writer identity、branch、locator/ignore snapshot、pending/staged overlap 与 RepoId membership；随后原子写全部 upsert facts/indexes、Applied receipt immutable core + projection outcome=`Pending`、clear active pointer 与 `cleanup_pending=true`。post-commit writeback 后用第二个短 Redb transaction 把 outcome CAS 为 `Written`，或通过 `03_storage/projection#durable-projection-fault-contract` 与 repo-local `PROJECTION_FAULTS` evidence 一起原子 CAS 为 `Degraded`。
 - Remote Import 只产生 upsert facts。远端未出现的本地文件不删除；不得拆分 whole-session transaction。
 
 ## 6. Commands / Inputs / Outputs {#projection-backup-command-output-contract}
 
-正式 CLI surface 由 `14_commands.md#remote-import-command-contract` 定义：Remote Projection 只保留 provider push；Remote Import 提供 prepare/list/show/diff/refresh/apply/discard/repair。`repair` 默认 dry-run，真实 cleanup 需要显式 `--apply`。
+正式 CLI surface 由 `14_commands.md#remote-import-command-contract` 定义：Remote Projection 只保留 provider push；Remote Import 提供 prepare/list/show/diff/refresh/apply/discard/repair。`repair` 默认 dry-run，真实 cleanup 需要显式 `--apply`；Applied receipt 仍为 projection outcome=`Pending` 时 cleanup 必须报告为不可 repairable 并保留 manifest/candidate/blobs，先由启动恢复或相同 request replay 单调收敛 outcome 后才能清理。
 
 输出必须区分 provider failure、capture/session failure、blocker/stale、authority apply failure、cleanup required 与 post-commit projection degraded。产品 detail 使用泛化文案；原始失败仅进入受控 tracing。
 
@@ -225,9 +225,12 @@ authority storage runtime 唯一提交 whole-session facts/receipt；Projection 
 
 只发送 typed intent、绑定 exact scope/session/revision、丢弃 stale response 并渲染 backend label/diff/blocker。可复用无状态 diff/render primitive，不复用 Source Control/External Changes controller、state 或 notice。
 
-## 11. Current Pull Transition {#projection-backup-pull-state-machine-contract}
+## 11. Removed Pull Transition {#projection-backup-pull-state-machine-contract}
 
-当前未发布代码仍实现 pull → Projection Workspace overwrite → watcher/scan → External Changes，以及 workspace rollback continuation。该 anchor 仅在 B4 前保持现有 Rust `plan_ref` 可追踪；旧路径是 release-blocking drift，不是批准能力、兼容层或 fallback。B4 必须删除 pull direction、workspace apply/rollback、scan bridge、旧 handler/message/CommandId 与双轨测试。
+B4 已删除未发布的 pull → Projection Workspace overwrite → watcher/scan → External Changes 路径，
+以及 workspace rollback continuation、旧 handler/message/CommandId 与双轨测试。本 anchor 继续作为
+负面合同：Remote Import 只能从 immutable capture 进入 sealed Ledger Apply，旧 pull 路径不得以兼容、
+诊断或 fallback 名义恢复。
 
 ## 12. Deferred / Removed From First Tag {#projection-backup-deferred-ledger-backup}
 

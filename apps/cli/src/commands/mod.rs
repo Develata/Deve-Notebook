@@ -20,6 +20,7 @@ pub mod ngit;
 pub mod node_check;
 pub mod projection_remote;
 pub mod recover;
+pub mod remote_import;
 pub mod repair;
 mod repo_arg;
 pub mod repo_projection;

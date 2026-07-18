@@ -63,7 +63,7 @@
 - Refresh 只重算已封存 snapshot：在 RepoId/branch/source/locator 仍 exact 时可把新 revision 绑定到当前 Ledger head 与 ignore snapshot；source/locator/branch/membership/tamper drift 不可重绑。要读取新的远端内容必须先 Discard 后重新 Prepare。
 - active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。rename 只改显示名，不搬 RepoId-based artifacts。
 - Web / Command Palette 只提交 typed intent；backend 解析 repo scope、locator/profile、credential ref、session/revision 与 blockers。S3-compatible UX 只能选择 backend-defined profile handle，不收集 endpoint URL 或 secret。
-- 当前旧 pull→workspace→External Changes 仍是未发布实现 drift；B4 会一次性删除，不作为兼容能力。正式命令面见 `14_commands#remote-import-command-contract`。
+- 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，独立 Web review surface 由 B5 交付。正式命令面见 `14_commands#remote-import-command-contract`。
 
 ## 非目标
 

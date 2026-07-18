@@ -222,9 +222,9 @@ enabled = true
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-> **B0 implementation transition（非兼容承诺）**：当前代码仍是未发布的 F4/v2，且仍携带
-> legacy/unversioned JSON fallback。它们是 B4 一次性产品切换前的 release-blocking drift；B4 必须
-> 删除旧 decoder、环境开关与 v2 window。该过渡状态不得被解释为公开支持的 v2 客户端或兼容层。
+当前实现已完成 F4/v3 lockstep 切换：主 `/ws` 不再包含 legacy/unversioned JSON fallback、旧环境
+开关或 v2 window；显式 development/debug JSON 也必须携带 v3 envelope。plugin-host 的 loopback
+外围消息通道属于 `19_plugins#plugin-runtime-boundary`，不进入主 `/ws` F4 编解码合同。
 
 ### 4.3 Core Message Families
 
@@ -284,12 +284,14 @@ RemoteImportResponse =
 ```
 
 所有 request **MUST** 携带 `request_id + repo_id + branch + scope_nonce`。除 Prepare/List 外，
-请求还必须按动作携带精确 `session_id + revision`；Prepare 由 backend 解析 provider/profile，List
+请求还必须按动作携带精确 `session_id + revision`；唯一例外是从未发布 candidate 的
+pre-candidate `Failed` record：Show/Discard 使用 `revision=None` 表示对“candidate revision 精确缺失”的
+匹配，backend 必须拒绝把 `None` 用于任何已有 candidate 的 record。Prepare 由 backend 解析 provider/profile，List
 只查询当前 repo 可见 session。所有 response 必须先回显并精确匹配
 `request_id + repo_id + branch + scope_nonce`。`Prepared` 响应携带 backend 新生成的
 `session_id + revision`，只有通过该 request/scope gate 后才能安装为当前 session；`Listed`
 响应按 request/scope 关联，且每个 summary 自带其 session/revision。Show/Page/Diff/Refresh/Apply/Discard
-等 session-bound 响应还必须与当前 `session_id + revision` 精确匹配，否则 Web 丢弃。
+等 session-bound 响应还必须与当前 `session_id + revision`（含上述 exact absence）精确匹配，否则 Web 丢弃。
 
 - Page 默认 100 entries，硬上限 200；cursor 是 opaque token，且必须绑定 candidate revision。
 - Diff 只接受 opaque strong `entry_id`；显示 label 由 backend 生成，不能由 Web 从内部路径重建。
@@ -304,8 +306,8 @@ RemoteImportResponse =
   `Pending / Written / Degraded`。`Pending` 明确表示 Ledger 已提交但 recovery 尚未完成；writeback
   失败则返回 `Degraded`。两者都不得伪装成未提交或要求重试写 Ledger。
 
-本 family 在 B0 仅为 approved target；Rust message、handler 与 Web dispatch 由 B4/B5 激活，首发前
-不得以旧 `RemoteProjectionDirection::Pull` 或 Source Control notice 充当其实现。
+本 family 的 Rust message、server handler 与 CLI proxy 已由 B4 激活；B5 负责独立
+`remote_import_client` 与完整 review UI。首发前不得以旧 Pull 或 Source Control notice 充当其实现。
 
 ### 4.3.2 Projection Recovery Wire Contract {#projection-recovery-contract}
 

@@ -5,19 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL: &str =
-    "remote-projection-provider-io-ready-false; provider_io_ready=false";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RemoteProjectionProvider {
     WebDav,
     S3,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum RemoteProjectionDirection {
-    Push,
-    Pull,
 }
 
 impl RemoteProjectionProvider {
@@ -25,15 +16,6 @@ impl RemoteProjectionProvider {
         match self {
             RemoteProjectionProvider::WebDav => "webdav",
             RemoteProjectionProvider::S3 => "s3",
-        }
-    }
-}
-
-impl RemoteProjectionDirection {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            RemoteProjectionDirection::Push => "push",
-            RemoteProjectionDirection::Pull => "pull",
         }
     }
 }

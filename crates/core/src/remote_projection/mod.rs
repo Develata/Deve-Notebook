@@ -1,48 +1,23 @@
 //! plan_ref:
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#remote-projection-transport-contract
 //!
-//! Admission planning for Markdown projection remote transports.
+//! Admission and push contracts for Markdown projection remote transports.
 //!
-//! WebDAV/S3 projection sync is intentionally separate from encrypted backup
-//! packs. This module validates transport intent and records the authority
-//! boundary: push/pull acts only on the projection workspace, and pull must
-//! enter ledger authority later through External Changes.
+//! Locator validation is capability-neutral. Host transport adapters decide
+//! whether an admitted locator is used for Projection push or immutable source
+//! acquisition; neither capability gains Ledger or Source Control authority.
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-pub use crate::protocol::{
-    REMOTE_PROJECTION_PROVIDER_IO_PENDING_DETAIL, RemoteProjectionDirection,
-    RemoteProjectionProvider,
-};
+pub use crate::protocol::RemoteProjectionProvider;
 
 mod provider;
 
 pub use provider::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProviderAdapter,
-    RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
-    RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
+    RemoteProjectionProviderError, RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
 };
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RemoteProjectionPlanInput {
-    pub provider: RemoteProjectionProvider,
-    pub direction: RemoteProjectionDirection,
-    pub locator: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RemoteProjectionTransportPlan {
-    pub provider: RemoteProjectionProvider,
-    pub direction: RemoteProjectionDirection,
-    pub locator: String,
-    pub projection_scope: String,
-    pub writes_ledger: bool,
-    pub writes_git_main_mirror: bool,
-    pub overwrites_projection_on_pull: bool,
-    pub external_changes_confirmation_required: bool,
-    pub provider_io_ready: bool,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum RemoteProjectionError {
@@ -52,31 +27,23 @@ pub enum RemoteProjectionError {
     ProviderSchemeMismatch,
     #[error("remote projection locator must not contain credentials, query, or fragment data")]
     SecretMaterialForbidden,
+    #[error(
+        "remote projection locator is missing a provider host, namespace, or projection prefix"
+    )]
+    IncompleteLocator,
     #[error("remote projection locator contains an unsafe path segment")]
     UnsafeRemotePath,
 }
 
-pub fn plan_remote_projection_transport(
-    input: RemoteProjectionPlanInput,
-) -> Result<RemoteProjectionTransportPlan, RemoteProjectionError> {
-    let locator = validate_locator(input.provider, &input.locator)?.to_string();
-    Ok(RemoteProjectionTransportPlan {
-        provider: input.provider,
-        direction: input.direction,
-        locator,
-        projection_scope: "markdown".into(),
-        writes_ledger: false,
-        writes_git_main_mirror: false,
-        overwrites_projection_on_pull: input.direction == RemoteProjectionDirection::Pull,
-        external_changes_confirmation_required: input.direction == RemoteProjectionDirection::Pull,
-        provider_io_ready: false,
-    })
-}
-
-fn validate_locator(
+/// Validates and normalizes a provider-bound Remote Projection locator.
+///
+/// This API deliberately carries no push/import direction. Capability and
+/// credential admission remain host-runtime concerns after this structural
+/// locator check succeeds.
+pub fn validate_remote_projection_locator(
     provider: RemoteProjectionProvider,
     locator: &str,
-) -> Result<&str, RemoteProjectionError> {
+) -> Result<String, RemoteProjectionError> {
     let locator = locator.trim();
     if locator.is_empty() {
         return Err(RemoteProjectionError::EmptyLocator);
@@ -90,10 +57,49 @@ fn validate_locator(
     if !locator_scheme_matches(provider, locator) {
         return Err(RemoteProjectionError::ProviderSchemeMismatch);
     }
+    validate_locator_shape(provider, locator)?;
     if locator_has_unsafe_path_segment(locator) {
         return Err(RemoteProjectionError::UnsafeRemotePath);
     }
-    Ok(locator)
+    Ok(locator.to_string())
+}
+
+fn validate_locator_shape(
+    provider: RemoteProjectionProvider,
+    locator: &str,
+) -> Result<(), RemoteProjectionError> {
+    let Some((_, after_scheme)) = locator.split_once("://") else {
+        return Err(RemoteProjectionError::IncompleteLocator);
+    };
+    let (authority, path) = after_scheme.split_once('/').unwrap_or((after_scheme, ""));
+    if authority.is_empty()
+        || authority.starts_with(':')
+        || authority.contains(['\\', ' ', '\t', '\r', '\n'])
+    {
+        return Err(RemoteProjectionError::IncompleteLocator);
+    }
+
+    let path = path.trim_end_matches('/');
+    let segment_count = if path.is_empty() {
+        0
+    } else {
+        path.split('/').count()
+    };
+    let required_segments = match provider {
+        RemoteProjectionProvider::WebDav => 1,
+        RemoteProjectionProvider::S3 if locator_starts_with_scheme(locator, "s3+https://") => 2,
+        RemoteProjectionProvider::S3 => 1,
+    };
+    if segment_count < required_segments {
+        return Err(RemoteProjectionError::IncompleteLocator);
+    }
+    if provider == RemoteProjectionProvider::S3
+        && locator_starts_with_scheme(locator, "s3://")
+        && authority.contains(':')
+    {
+        return Err(RemoteProjectionError::IncompleteLocator);
+    }
+    Ok(())
 }
 
 fn locator_scheme_matches(provider: RemoteProjectionProvider, locator: &str) -> bool {
@@ -128,9 +134,11 @@ fn locator_has_unsafe_path_segment(locator: &str) -> bool {
     if parts.last() == Some(&"") {
         parts.pop();
     }
-    parts
-        .into_iter()
-        .any(|segment| matches!(segment, "" | "." | ".."))
+    parts.into_iter().any(|segment| {
+        matches!(segment, "" | "." | "..")
+            || segment.contains(['\\', '%'])
+            || segment.chars().any(char::is_whitespace)
+    })
 }
 
 #[cfg(test)]
@@ -138,20 +146,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn push_plan_never_writes_ledger_or_git_mirror() {
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::WebDav,
-            direction: RemoteProjectionDirection::Push,
-            locator: "webdav+https://dav.example.com/notebooks/main".into(),
-        })
-        .expect("plan");
+    fn validator_returns_trimmed_locator_without_capability_semantics() {
+        let locator = validate_remote_projection_locator(
+            RemoteProjectionProvider::WebDav,
+            "  webdav+https://dav.example.com/notebooks/main\n",
+        )
+        .expect("valid locator");
 
-        assert_eq!(plan.projection_scope, "markdown");
-        assert!(!plan.writes_ledger);
-        assert!(!plan.writes_git_main_mirror);
-        assert!(!plan.overwrites_projection_on_pull);
-        assert!(!plan.external_changes_confirmation_required);
-        assert!(!plan.provider_io_ready);
+        assert_eq!(locator, "webdav+https://dav.example.com/notebooks/main");
     }
 
     #[test]
@@ -165,12 +167,7 @@ mod tests {
             } else {
                 RemoteProjectionProvider::WebDav
             };
-            plan_remote_projection_transport(RemoteProjectionPlanInput {
-                provider,
-                direction: RemoteProjectionDirection::Push,
-                locator: locator.into(),
-            })
-            .expect("one trailing slash");
+            validate_remote_projection_locator(provider, locator).expect("one trailing slash");
         }
 
         for locator in [
@@ -183,96 +180,117 @@ mod tests {
                 RemoteProjectionProvider::WebDav
             };
             assert!(
-                plan_remote_projection_transport(RemoteProjectionPlanInput {
-                    provider,
-                    direction: RemoteProjectionDirection::Push,
-                    locator: locator.into(),
-                })
-                .is_err(),
+                validate_remote_projection_locator(provider, locator).is_err(),
                 "{locator}"
             );
         }
     }
 
     #[test]
-    fn pull_plan_requires_external_changes_confirmation() {
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::S3,
-            direction: RemoteProjectionDirection::Pull,
-            locator: "s3://bucket/notebooks/main".into(),
-        })
-        .expect("plan");
-
-        assert!(plan.overwrites_projection_on_pull);
-        assert!(plan.external_changes_confirmation_required);
-        assert!(!plan.writes_ledger);
-        assert!(!plan.provider_io_ready);
-    }
-
-    #[test]
-    fn normalizes_locator_before_returning_plan() {
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::S3,
-            direction: RemoteProjectionDirection::Push,
-            locator: "  s3://bucket/notebooks/main\n".into(),
-        })
-        .expect("plan");
-
-        assert_eq!(plan.locator, "s3://bucket/notebooks/main");
-    }
-
-    #[test]
     fn transport_locator_scheme_matching_is_case_insensitive() {
-        let s3 = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::S3,
-            direction: RemoteProjectionDirection::Push,
-            locator: "S3://bucket/notebooks/main".into(),
-        })
+        let s3 = validate_remote_projection_locator(
+            RemoteProjectionProvider::S3,
+            "S3://bucket/notebooks/main",
+        )
         .expect("uppercase s3 scheme");
-        assert_eq!(s3.locator, "S3://bucket/notebooks/main");
+        assert_eq!(s3, "S3://bucket/notebooks/main");
 
-        let s3_custom = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::S3,
-            direction: RemoteProjectionDirection::Pull,
-            locator: "S3+HTTPS://minio.example.com/bucket/notebooks/main".into(),
-        })
+        let s3_custom = validate_remote_projection_locator(
+            RemoteProjectionProvider::S3,
+            "S3+HTTPS://minio.example.com/bucket/notebooks/main",
+        )
         .expect("uppercase s3 custom endpoint scheme");
         assert_eq!(
-            s3_custom.locator,
+            s3_custom,
             "S3+HTTPS://minio.example.com/bucket/notebooks/main"
         );
 
-        let webdav = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider: RemoteProjectionProvider::WebDav,
-            direction: RemoteProjectionDirection::Pull,
-            locator: "WEBDAV+HTTPS://dav.example.com/notebooks/main".into(),
-        })
+        let webdav = validate_remote_projection_locator(
+            RemoteProjectionProvider::WebDav,
+            "WEBDAV+HTTPS://dav.example.com/notebooks/main",
+        )
         .expect("uppercase webdav scheme");
-        assert_eq!(
-            webdav.locator,
-            "WEBDAV+HTTPS://dav.example.com/notebooks/main"
-        );
+        assert_eq!(webdav, "WEBDAV+HTTPS://dav.example.com/notebooks/main");
     }
 
     #[test]
     fn rejects_wrong_scheme_or_secret_material() {
         assert_eq!(
-            plan_remote_projection_transport(RemoteProjectionPlanInput {
-                provider: RemoteProjectionProvider::WebDav,
-                direction: RemoteProjectionDirection::Push,
-                locator: "s3://bucket/notebooks".into(),
-            })
+            validate_remote_projection_locator(RemoteProjectionProvider::S3, "  ")
+                .expect_err("empty locator"),
+            RemoteProjectionError::EmptyLocator
+        );
+        assert_eq!(
+            validate_remote_projection_locator(
+                RemoteProjectionProvider::WebDav,
+                "s3://bucket/notebooks",
+            )
             .expect_err("scheme"),
             RemoteProjectionError::ProviderSchemeMismatch
         );
         assert_eq!(
-            plan_remote_projection_transport(RemoteProjectionPlanInput {
-                provider: RemoteProjectionProvider::S3,
-                direction: RemoteProjectionDirection::Push,
-                locator: "s3://token@bucket/notebooks".into(),
-            })
+            validate_remote_projection_locator(
+                RemoteProjectionProvider::S3,
+                "s3://token@bucket/notebooks",
+            )
             .expect_err("secret"),
             RemoteProjectionError::SecretMaterialForbidden
         );
+        assert_eq!(
+            validate_remote_projection_locator(
+                RemoteProjectionProvider::S3,
+                "s3://bucket/notebooks/../secrets",
+            )
+            .expect_err("unsafe path"),
+            RemoteProjectionError::UnsafeRemotePath
+        );
+    }
+
+    #[test]
+    fn rejects_missing_provider_authority_namespace_or_prefix() {
+        for (provider, locator) in [
+            (
+                RemoteProjectionProvider::WebDav,
+                "webdav+https:///notebooks",
+            ),
+            (
+                RemoteProjectionProvider::WebDav,
+                "webdav+https://dav.example.com/",
+            ),
+            (RemoteProjectionProvider::S3, "s3:///notebooks"),
+            (RemoteProjectionProvider::S3, "s3://bucket/"),
+            (RemoteProjectionProvider::S3, "s3+https:///bucket/notebooks"),
+            (
+                RemoteProjectionProvider::S3,
+                "s3+https://r2.example.com/bucket",
+            ),
+        ] {
+            assert_eq!(
+                validate_remote_projection_locator(provider, locator)
+                    .expect_err("incomplete locator"),
+                RemoteProjectionError::IncompleteLocator,
+                "{locator}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_encoded_or_backslash_path_segments() {
+        for locator in [
+            "webdav+https://dav.example.com/notebooks/%2e%2e/secrets",
+            "s3://bucket/notebooks\\secrets",
+        ] {
+            let provider = if locator.starts_with("s3://") {
+                RemoteProjectionProvider::S3
+            } else {
+                RemoteProjectionProvider::WebDav
+            };
+            assert_eq!(
+                validate_remote_projection_locator(provider, locator)
+                    .expect_err("unsafe encoded path"),
+                RemoteProjectionError::UnsafeRemotePath,
+                "{locator}"
+            );
+        }
     }
 }

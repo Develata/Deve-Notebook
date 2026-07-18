@@ -24,6 +24,9 @@ mod route;
 pub(crate) mod send;
 pub(crate) mod transport;
 
+#[cfg(test)]
+pub(crate) static WS_JSON_TEXT_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 #[derive(Debug, Clone)]
 pub struct WsAdmissionConfig {
     pub p2p_inbound_token_env: Option<String>,

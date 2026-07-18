@@ -14,6 +14,7 @@
 use anyhow::Result;
 use axum::{
     Extension, Router,
+    extract::DefaultBodyLimit,
     routing::{get, post},
 };
 use std::sync::Arc;
@@ -216,6 +217,18 @@ pub fn build_app_with_native_session_and_p2p(
             auth::middleware::login_rate_limit_middleware,
         ));
 
+    let local_cli_proxy = Router::new()
+        .route(
+            "/api/local-cli/remote-import",
+            post(handlers::remote_import::http::local_cli_proxy),
+        )
+        .layer(DefaultBodyLimit::max(
+            auth::local_cli_proxy::LOCAL_CLI_PROXY_MAX_REQUEST_BODY_BYTES,
+        ))
+        .layer(Extension(Arc::new(
+            auth::local_cli_proxy::LocalCliProxyGateway::default(),
+        )));
+
     let native_session_route = match native_session_bridge {
         Some(bridge) => Router::new()
             .route(
@@ -240,6 +253,7 @@ pub fn build_app_with_native_session_and_p2p(
         .merge(delegated)
         .merge(public)
         .merge(login_route)
+        .merge(local_cli_proxy)
         .merge(native_session_route)
         .merge(static_files::static_fallback())
         .with_state(app_state)

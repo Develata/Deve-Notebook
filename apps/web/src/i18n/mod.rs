@@ -48,7 +48,6 @@ pub mod source_control_git;
 pub mod source_control_graph;
 pub mod source_control_history;
 pub mod source_control_native;
-pub mod source_control_remote_projection;
 pub mod time;
 pub mod workspace_ingestion;
 pub mod write_gate;

@@ -27,10 +27,6 @@ pub(super) const MAX_SOURCE_COLLECTIONS: usize = 2_048;
 const MAX_PROPFIND_BODY_BYTES: usize = 4 * 1024 * 1024;
 
 impl<T: WebDavTransport> RemoteSourceAcquisition for WebDavProjectionProvider<T> {
-    fn provider(&self) -> RemoteProjectionProvider {
-        RemoteProjectionProvider::WebDav
-    }
-
     fn acquire<S: RemoteSourceSink>(
         &self,
         request: SourceAcquisitionRequest,

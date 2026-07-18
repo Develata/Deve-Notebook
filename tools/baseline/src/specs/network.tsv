@@ -20,15 +20,24 @@ contains	apps/cli/src/server/router.rs	public = Router::new()
 contains	apps/cli/src/server/node_role_http.rs	"role": r.role
 contains	apps/cli/src/server/node_role_http.rs	"ws_port": r.ws_port
 contains	apps/cli/src/server/node_role_http.rs	"main_port": r.main_port
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 2;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 3;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
 contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 3`
 contains	docs/plan/07_network.md	无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 3;`; `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3;`
-contains	docs/registry/first-tag-format-matrix.md	代码仍为 F4/v2 lockstep
-case_contains	docs/acceptance-cases/06_network.md	NET-004	gap: F4/v3 frame code and network producer are not implemented at B0
+contains	docs/registry/first-tag-format-matrix.md	已对齐：代码为 F4/v3 lockstep
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli --lib remote_import_route -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli ws_endpoint_rejects_unversioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
 case_contains	docs/acceptance-cases/06_network.md	NET-004	versioned_packet_protocol_version_eq: 3
 case_contains	docs/acceptance-cases/06_network.md	NET-004	legacy_json_fallback_absent: true
+case_contains	docs/acceptance-cases/06_network.md	NET-004	remote_import_response_echoes_exact_repo_branch_scope_session_and_revision: true
+case_contains	docs/acceptance-cases/06_network.md	NET-004	remote_import_show_discard_none_revision_is_precandidate_only: true
+contains	crates/core/src/protocol/remote_import/tests.rs	remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json
+contains	crates/core/src/remote_import/facade/tests.rs	optional_revision_none_is_exact_for_precandidate_failure_only
+contains	apps/cli/src/server/ws/route/remote_import/tests.rs	remote_import_route_preserves_session_revision_on_typed_not_found
 contains	crates/core/src/sync/protocol.rs	Wire range is closed
 contains	docs/acceptance-cases/06_network.md	case_id: NET-019
 contains	apps/cli/src/server/p2p/fault_injection.rs	DEVE_P2P_FAULT_INJECT_SEQUENCE_GAP
@@ -68,7 +77,7 @@ contains	apps/cli/src/server/ws/receive/mod.rs	allow_ws_json_text_debug
 contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncVersionMismatch
 contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncInvalidPayload
 contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_WS_JSON_TEXT
-contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_LEGACY_WS_JSON
+absent	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_LEGACY_WS_JSON
 contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ENV
 contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	unsupported_versioned_json_reports_version_mismatch
 contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	malformed_versioned_binary_reports_invalid_payload

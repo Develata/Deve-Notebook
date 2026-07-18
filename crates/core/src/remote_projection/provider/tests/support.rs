@@ -4,8 +4,8 @@ use crate::remote_projection::RemoteProjectionProvider;
 
 use super::super::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProviderAdapter,
-    RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
-    RemoteProjectionPushOutcome, RemoteProjectionPushRequest, validate_unique_paths,
+    RemoteProjectionProviderError, RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
+    validate_unique_paths,
 };
 
 #[derive(Debug, Clone)]
@@ -20,17 +20,6 @@ impl FakeRemoteProjectionProvider {
             provider,
             remotes: BTreeMap::new(),
         }
-    }
-
-    pub(super) fn seed_remote(
-        &mut self,
-        locator: impl Into<String>,
-        files: Vec<RemoteProjectionFile>,
-    ) -> Result<(), RemoteProjectionProviderError> {
-        let request = RemoteProjectionPullRequest::new(self.provider, locator)?;
-        validate_unique_paths(&files)?;
-        self.remotes.insert(request.locator, files);
-        Ok(())
     }
 
     pub(super) fn remote_files(&self, locator: &str) -> Option<&[RemoteProjectionFile]> {
@@ -54,25 +43,6 @@ impl RemoteProjectionProviderAdapter for FakeRemoteProjectionProvider {
         Ok(RemoteProjectionPushOutcome {
             uploaded_files,
             effects: RemoteProjectionAuthorityEffects::projection_transport(),
-            provider_metadata_is_diagnostic_only: true,
-        })
-    }
-
-    fn pull(
-        &self,
-        request: RemoteProjectionPullRequest,
-    ) -> Result<RemoteProjectionPullOutcome, RemoteProjectionProviderError> {
-        validate_provider(self.provider, request.provider)?;
-        let files = self
-            .remotes
-            .get(&request.locator)
-            .ok_or(RemoteProjectionProviderError::MissingFakeRemote)?
-            .clone();
-        Ok(RemoteProjectionPullOutcome {
-            files,
-            effects: RemoteProjectionAuthorityEffects::projection_transport(),
-            overwrites_projection_workspace: true,
-            external_changes_confirmation_required: true,
             provider_metadata_is_diagnostic_only: true,
         })
     }

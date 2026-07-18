@@ -15,10 +15,7 @@ pub(crate) use binding::{
     prepare_writable_local_repo, revalidate_writable_local_repo, revalidate_writable_resolved_repo,
 };
 pub(crate) use execution::MutationExecution;
-pub(crate) use gate::{
-    MountedRepoAdmission, MountedRepoContinuation, RepoMutationGateError,
-    RepoMutationPublicationGate,
-};
+pub(crate) use gate::{MountedRepoAdmission, RepoMutationGateError, RepoMutationPublicationGate};
 #[cfg(not(test))]
 pub(crate) use plugin::{CliManagedNoteMutationHost, CliManagedSourceControlMutationHost};
 pub(crate) use publication::MutationPublication;

@@ -52,6 +52,8 @@ mod rebuild_projection_state;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod reconcile;
 #[cfg(not(target_arch = "wasm32"))]
+mod remote_import_projection;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod repo_scoped;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scan;

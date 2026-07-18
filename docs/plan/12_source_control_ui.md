@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`, `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/sidebar/source_control/`, `apps/web/src/hooks/use_core/`
@@ -262,8 +262,8 @@ Web ngit/Git-main-mirror diagnostic commands 当前只能打开 backend/runtime 
 typed session intent。provider acquisition、immutable capture、candidate/blocker 计算与 Ledger Apply
 均属于 backend/core infra。
 
-`webdav:push`、`webdav:pull`、`s3:push`、`s3:pull` 是 B0 时仍存在的未发布实现 drift，B4 必须删除；
-它们不是 deprecated alias，也不属于首发 CommandId 合同。
+旧 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull` 已由 B4 删除；它们不是 deprecated alias，
+不得重新进入 Source Control registry。现有 Push 使用上列稳定 capability ids，Remote Import 使用独立 client。
 
 ## 8. Failure and Boundary States
 
@@ -399,8 +399,8 @@ Remote Import UI 应登记为独立 `remote_import_client`，归属：
 - backend `remote_import_runtime` 的 typed projection facade
 - shared typed diff renderer（只读）
 
-B0 时 `remote_import_client` 仍为未启动；B5 才允许签署收敛。当前 Remote Projection command 打开
-Source Control 并使用 `SourceControlNotice` 的路径是 release-blocking drift，不得保留为 adapter。
+`remote_import_client` 仍为未启动，B5 才允许签署收敛。B4 已删除 Remote Projection command 打开
+Source Control 与使用 `SourceControlNotice` 的路径；缺失期间不得恢复为 adapter。
 
 若未来新增 `source_control_view_runtime`，必须先登记到 `docs/registry/runtime-skeleton-registry.md`，并说明它只拥有 view-local state。
 

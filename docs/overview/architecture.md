@@ -86,7 +86,7 @@ Remote provider
   -> Workspace
 ```
 
-Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B0 expands the modeled slice from 74 to 79 flows and intentionally records five active drift markers until B1–B5 implement the approved target.
+Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B4 已激活 backend/CLI/product wire 并删除旧 pull substitute；79-flow modeled slice 仍保留四个 client-facing drift marker，直到 B5 交付独立 `remote_import_client`。
 
 Post-commit Projection outcome uses one repo-local Redb v4 settlement boundary:
 `Pending -> Written` updates only the stored receipt, while `Pending -> Degraded`

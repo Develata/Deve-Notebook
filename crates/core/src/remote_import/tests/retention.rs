@@ -55,7 +55,7 @@ fn pending_projection_receipt_is_never_pruned() -> anyhow::Result<()> {
                 kind: RemoteImportFailureKind::SourceRead,
             },
         )?;
-        store.begin_discard(record.session_id, record.generation)?;
+        store.begin_discard(record.session_id, record.generation, None)?;
         store.finish_cleanup(record.session_id)?;
     }
 

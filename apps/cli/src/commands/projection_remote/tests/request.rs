@@ -5,7 +5,7 @@ use super::super::{
     ProjectionRemoteAction, ProjectionRemoteDirectionAction, S3ProjectionProfileAction,
     S3ProjectionRemoteAction, request_from_action, run_s3_profile_action,
 };
-use deve_core::remote_projection::{RemoteProjectionDirection, RemoteProjectionProvider};
+use deve_core::remote_projection::RemoteProjectionProvider;
 
 #[test]
 fn webdav_push_builds_provider_request() {
@@ -17,14 +17,13 @@ fn webdav_push_builds_provider_request() {
     });
 
     assert_eq!(request.provider, RemoteProjectionProvider::WebDav);
-    assert_eq!(request.direction, RemoteProjectionDirection::Push);
     assert_eq!(request.repo.as_deref(), Some("default"));
 }
 
 #[test]
-fn s3_pull_builds_provider_request() {
+fn s3_push_builds_provider_request() {
     let request = request_from_action(ProjectionRemoteAction::S3 {
-        action: S3ProjectionRemoteAction::Pull {
+        action: S3ProjectionRemoteAction::Push {
             repo: None,
             locator: "s3://bucket/notebooks/main".into(),
             profile: None,
@@ -32,7 +31,6 @@ fn s3_pull_builds_provider_request() {
     });
 
     assert_eq!(request.provider, RemoteProjectionProvider::S3);
-    assert_eq!(request.direction, RemoteProjectionDirection::Pull);
     assert_eq!(request.locator, "s3://bucket/notebooks/main");
 }
 

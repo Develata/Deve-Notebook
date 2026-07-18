@@ -139,21 +139,21 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `03_storage/authority#remote-import-workflow-tables` | `authority.md ### 4.3.2 Remote Import Workflow Tables` | Redb v4 session/runtime tables、active pointer 与 terminal retention；B1 durable store 已落地 |
 | `03_storage/authority#projection-fault-recovery-table` | `authority.md ### 4.3.3 Projection Fault Recovery Table` | Redb v4 local-authority profile 的 repo-local、host-only Projection Fault side table |
 | `03_storage/authority#sealed-ledger-change-batch` | `authority.md ### 6.3.1 Sealed Prepared Ledger Change Batch` | source-specific sealed batch 与单事务 authority apply |
-| `03_storage/projection#remote-import-projection-writeback` | `projection.md ### 7.1 Remote Import Projection Writeback` | Ledger commit 后的 projection writeback 与 degraded receipt；planned/no-code-yet |
+| `03_storage/projection#remote-import-projection-writeback` | `projection.md ### 7.1 Remote Import Projection Writeback` | Ledger commit 后的 projection writeback 与 degraded receipt |
 | `03_storage/projection#durable-projection-fault-contract` | `projection.md ### 7.2 Durable Projection Fault Store` | repo-local Redb v4 Projection Fault recovery evidence、typed origin 与 Remote Import receipt 原子收敛 |
 | `03_storage/repair#remote-import-cleanup-repair` | `repair.md ### 9.4.1 Remote Import Cleanup Repair` | cleanup_pending、orphan 与 repair；B1 dry-run inventory 已落地，B3 已持久化 Applied cleanup debt，产品 repair/收敛待 B4 |
 | `04_repository#remote-import-repo-lifecycle` | `### 7.6.1 Remote Import Repo Lifecycle` | RepoId 绑定、rename/remove 与 provider generation 协调；planned/no-code-yet |
-| `05_diff_logic#remote-import-diff-contract` | `### 2.3.3 Remote Import Diff Contract` | immutable candidate、opaque entry_id 与 backend-owned diff；planned/no-code-yet |
+| `05_diff_logic#remote-import-diff-contract` | `### 2.3.3 Remote Import Diff Contract` | immutable candidate、opaque entry_id 与 backend-owned diff |
 | `06_backup#remote-projection-transport-contract` | `## 3. Remote Projection Transport Contract` | B2 已落地 WebDAV/S3 push、profile/credential/HTTP/signing 与 ordered source acquisition 的共享 host transport；产品 Prepare 接线待 B4 |
 | `06_backup#remote-import-session-contract` | `## 4. Immutable Remote Import Session` | B1 已落地 immutable session identity/snapshot；B3 已落地内部 Applied Pending receipt 与 exactly-once replay，产品接线/Projection outcome 收敛待 B4 |
 | `06_backup#remote-import-state-machine` | `### 4.1 State Machine` | B1 已落地 Preparing/Ready/Stale/Failed/Discarded；B3 已落地内部 Applied transition 与 cleanup debt，产品恢复路径待 B4 |
 | `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | B1 已落地 capture 文件、字节与路径预算；wire 分页预算待 B4 |
 | `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | B1 已落地 store/capture，B2 已落地 transport 依赖边界，B3 已落地 sealed authority writer；产品接线待 B4，UI 待 B5 |
 | `06_backup#projection-backup-failure-modes` | `## 8. Failure Modes` | Remote Projection transport 与 Remote Import capture/session/apply 的 typed failure、fail-closed 与 cleanup 边界 |
-| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v3 nested request/response、typed errors 与不泄密投影；planned/no-code-yet |
+| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v3 nested request/response、typed errors 与不泄密投影 |
 | `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | scope/revision-bound typed client 与 stale response 丢弃；planned/no-code-yet |
 | `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | Remote Import 与 Source Control/External Changes 同级但独立的薄壳层；planned/no-code-yet |
-| `14_commands#remote-import-command-contract` | `### 1.1 Remote Projection Push and Remote Import Commands` | projection push 与 remote-import prepare/review/apply/manage 命令面；planned/no-code-yet |
+| `14_commands#remote-import-command-contract` | `### 1.1 Remote Projection Push and Remote Import Commands` | projection push 与 remote-import prepare/review/apply/manage 命令面 |
 | `05_diff_logic#typed-diff-projection-contract` | `### 2.5 Typed Diff Projection Contract` | backend-owned typed diff projection、显示层消费与 authority-neutral diff 边界 |
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
@@ -194,7 +194,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `08_auth#audit` | `### 6.6 Audit` | 鉴权、安全事件与审计记录边界 |
 | `08_auth#key-and-file-permissions` | `### 6.7 Key and File Permissions` | identity key 与本地文件权限 fail-closed 合同 |
 | `08_auth#localhost-dev-policy` | `### 6.8 Localhost / Dev Policy` | localhost/dev 例外、匿名访问与 loopback 限定规则 |
-| `08_auth#local-cli-proxy-authority` | `### 6.11 Local CLI Proxy Authority` | server-held DB 的 loopback-only JWT admission 与 exact Remote Import capability；planned/no-code-yet |
+| `08_auth#local-cli-proxy-authority` | `### 6.11 Local CLI Proxy Authority` | server-held DB 的 loopback-only JWT admission 与 exact Remote Import capability |
 | `08_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
 | `08_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
 | `08_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
@@ -233,7 +233,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#projection-backup-locator-contract` | `### 3.1 Locator and Profile Model` | Remote Projection locator/profile 只承载 secret-free locator 与 host-local credential binding |
 | `06_backup#projection-backup-remote-layout-contract` | `### 3.2 Remote Object Layout` | provider remote layout 是 Markdown object set；Remote Import host artifacts 另归 repo/session identity layout |
 | `06_backup#projection-backup-upload-state-machine-contract` | `### 3.3 Push State Machine` | push 只枚举并上传 Markdown projection files，不写 Ledger/Source Control authority |
-| `06_backup#projection-backup-pull-state-machine-contract` | `## 11. Current Pull Transition` | B4 前 current-code transition anchor：旧 pull→workspace→External Changes 是 release-blocking drift，B4 必须删除 |
+| `06_backup#projection-backup-pull-state-machine-contract` | `## 11. Removed Pull Transition` | 负面合同：旧 pull→workspace→External Changes 已删除且不得恢复 |
 | `06_backup#projection-backup-command-output-contract` | `## 6. Commands / Inputs / Outputs` | 正式命令面拆分 projection push 与 remote-import prepare/review/apply/manage，不保留 pull 命令 |
 | `06_backup#projection-backup-secret-ref-contract` | `## 7. Security and Verification` | credential refs 归 host-local Remote Projection profile；不得进入 manifest/blob/wire/UI |
 | `06_backup#projection-backup-verification-contract` | `## 7. Security and Verification` | capture/apply 重验 digest；Remote Import 证据不得由旧 pull tests 冒充 |

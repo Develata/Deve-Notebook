@@ -62,7 +62,7 @@ pub(super) async fn route_merge(
         } => {
             merge::handle_merge_peer(state, ch, session, peer_id, doc_id).await;
         }
-        other => super::source_control::route_source_control(state, ch, session, other).await,
+        other => super::remote_import::route_remote_import(state, ch, session, other).await,
     }
 }
 

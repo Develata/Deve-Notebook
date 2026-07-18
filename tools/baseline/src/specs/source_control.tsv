@@ -2,7 +2,7 @@ contains	docs/plan/12_source_control_ui.md	## 4.2 Remote Import Sibling View {#r
 contains	docs/plan/12_source_control_ui.md	Remote Import 是 Source Control 与 External Changes 的第三个同级入口
 contains	docs/plan/12_source_control_ui.md	不得直接升级为 Git writer。Remote Projection command 只执行 push
 contains	docs/plan/06_backup.md	Remote Import 不通过 workspace overwrite、External Changes 或 Source Control staging admission
-contains	docs/registry/runtime-skeleton-registry.md	当前 Remote Projection pull 仍经 External Changes/Source Control foreign routing
+contains	docs/registry/runtime-skeleton-registry.md	B4 已删除 Remote Projection pull 的 External Changes/Source Control foreign routing
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `未启动` | `未启动`
 contains	docs/plan/14_commands.md	Source Control / NoteGit-like Workflow
 contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
@@ -30,7 +30,7 @@ contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web es
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004B
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web ngit_commands -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web remote_projection_commands -- --nocapture
-contains	apps/web/src/components/command_palette/registry/remote_projection/tests.rs	fn remote_projection_commands_are_backend_intent_entries()
+contains	apps/web/src/components/command_palette/registry/remote_projection/tests.rs	fn remote_projection_commands_expose_only_stable_push_ids()
 contains	docs/acceptance-cases/04_diff.md	case_id: DIFF-009
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_core remote_projection_file_accepts_only_markdown_projection_paths -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	run: cargo test -p deve_core provider_request_reuses_transport_admission_validator -- --nocapture
@@ -101,7 +101,7 @@ contains	apps/cli/src/commands/projection_remote/tests/identity.rs	fn run_s3_pus
 contains	crates/core/src/remote_projection/mod.rs	fn transport_locator_scheme_matching_is_case_insensitive()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	provider_io_ready=false
 contains	apps/cli/src/remote_projection_transport/contract.rs	ensure_projection_transport_push_outcome_contract
-contains	apps/cli/src/commands/projection_remote.rs	provider_direction_wired=true provider_io_state=pending
+contains	apps/cli/src/commands/projection_remote.rs	direction=push scope=markdown workspace={} writes_ledger=false provider_io_ready=true
 absent	apps/web/src/components/command_palette/registry.rs	P2P: Establish Branch (Placeholder)
 absent	docs/acceptance-cases/04_diff.md	deve merge --peer
 absent	docs/acceptance-cases/04_diff.md	deve dump --doc

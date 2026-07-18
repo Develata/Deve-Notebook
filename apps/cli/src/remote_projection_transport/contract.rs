@@ -8,14 +8,15 @@ use super::path_set::NormalizedRemotePath;
 #[cfg(test)]
 use deve_core::remote_projection::RemoteProjectionFile;
 use deve_core::remote_projection::{
-    RemoteProjectionAuthorityEffects, RemoteProjectionDirection, RemoteProjectionPlanInput,
-    RemoteProjectionProvider, RemoteProjectionProviderError, RemoteProjectionPushOutcome,
-    plan_remote_projection_transport,
+    RemoteProjectionAuthorityEffects, RemoteProjectionProvider, RemoteProjectionProviderError,
+    RemoteProjectionPushOutcome, validate_remote_projection_locator,
 };
 use std::fmt;
 #[cfg(test)]
 use std::io;
 use std::io::Read;
+
+use super::ProjectionPushError;
 
 pub(crate) type ProjectionPushVisitor<'a> =
     dyn FnMut(&str, Vec<u8>) -> Result<(), RemoteProjectionProviderError> + 'a;
@@ -36,13 +37,6 @@ pub(crate) enum TransportCapability {
 }
 
 impl TransportCapability {
-    pub(super) fn admission_direction(self) -> RemoteProjectionDirection {
-        match self {
-            Self::Push => RemoteProjectionDirection::Push,
-            Self::SourceAcquisition => RemoteProjectionDirection::Pull,
-        }
-    }
-
     pub(super) fn profile_name(self) -> &'static str {
         match self {
             Self::Push => "push",
@@ -62,18 +56,9 @@ impl SourceAcquisitionRequest {
         provider: RemoteProjectionProvider,
         locator: impl Into<String>,
     ) -> Result<Self, RemoteProjectionProviderError> {
-        // The public protocol keeps `Pull` until the B4 cutover. Inside the
-        // host runtime it is only an admission selector; no pull/workspace
-        // semantics cross this source-acquisition contract.
-        let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
-            provider,
-            direction: TransportCapability::SourceAcquisition.admission_direction(),
-            locator: locator.into(),
-        })?;
-        Ok(Self {
-            provider: plan.provider,
-            locator: plan.locator,
-        })
+        let locator = locator.into();
+        let locator = validate_remote_projection_locator(provider, &locator)?;
+        Ok(Self { provider, locator })
     }
 
     pub(crate) fn provider(&self) -> RemoteProjectionProvider {
@@ -131,8 +116,6 @@ impl<E> From<RemoteProjectionProviderError> for SourceAcquisitionError<E> {
 }
 
 pub(crate) trait RemoteSourceAcquisition {
-    fn provider(&self) -> RemoteProjectionProvider;
-
     fn acquire<S: RemoteSourceSink>(
         &self,
         request: SourceAcquisitionRequest,
@@ -142,27 +125,27 @@ pub(crate) trait RemoteSourceAcquisition {
 
 pub(crate) fn ensure_projection_transport_push_outcome_contract(
     outcome: &RemoteProjectionPushOutcome,
-) -> anyhow::Result<()> {
+) -> Result<(), ProjectionPushError> {
     ensure_projection_transport_effects_absent(&outcome.effects)?;
     if outcome.provider_metadata_is_diagnostic_only {
         Ok(())
     } else {
-        Err(super::provider_io_not_ready(
-            "provider outcome violates remote projection transport contract: provider metadata must be diagnostic-only",
-        ))
+        Err(ProjectionPushError::push_failed(anyhow::anyhow!(
+            "provider outcome violates remote projection transport contract: provider metadata must be diagnostic-only"
+        )))
     }
 }
 
 fn ensure_projection_transport_effects_absent(
     effects: &RemoteProjectionAuthorityEffects,
-) -> anyhow::Result<()> {
+) -> Result<(), ProjectionPushError> {
     if effects.writes_ledger
         || effects.writes_source_control_staging
         || effects.writes_commit_anchor
         || effects.writes_git_main_mirror
         || effects.confirms_external_changes
     {
-        return Err(super::provider_io_not_ready(format!(
+        return Err(ProjectionPushError::push_failed(anyhow::anyhow!(
             "provider outcome violates remote projection transport contract: authority effects must be absent \
              (writes_ledger={}, writes_source_control_staging={}, writes_commit_anchor={}, writes_git_main_mirror={}, confirms_external_changes={})",
             effects.writes_ledger,

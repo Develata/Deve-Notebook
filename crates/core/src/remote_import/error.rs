@@ -7,7 +7,7 @@ use super::types::{
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub(crate) enum RemoteImportError {
+pub enum RemoteImportError {
     #[error("Remote Import storage failure: {0}")]
     Storage(String),
     #[error("Remote Import codec failure: {0}")]
@@ -62,6 +62,8 @@ pub(crate) enum RemoteImportError {
     },
     #[error("Remote Import authority apply failed: {0}")]
     ApplyFailed(String),
+    #[error("Remote Import repair inventory changed after dry-run")]
+    RepairPlanChanged,
 }
 
 impl RemoteImportError {
@@ -86,4 +88,4 @@ impl RemoteImportError {
     }
 }
 
-pub(crate) type RemoteImportResult<T> = Result<T, RemoteImportError>;
+pub type RemoteImportResult<T> = Result<T, RemoteImportError>;

@@ -9,8 +9,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 2;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
+pub const WS_PROTOCOL_VERSION: u16 = 3;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 /// Bound fact-count allocation before a transfer payload is materialized.
 pub const MAX_SYNC_FACTS_PER_PAYLOAD: u64 = 16 * 1024;
@@ -23,7 +23,6 @@ pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
 pub enum WsFrameFormat {
     VersionedBinary,
     VersionedJsonText,
-    LegacyJsonText,
 }
 
 #[derive(Debug, Clone)]
@@ -154,29 +153,21 @@ pub fn decode_client_json(text: &str) -> Result<ClientMessage, ProtocolFrameErro
 pub fn decode_client_json_with_format(
     text: &str,
 ) -> Result<DecodedClientMessage, ProtocolFrameError> {
-    if let Ok(envelope) = serde_json::from_str::<VersionEnvelope>(text) {
-        ensure_supported(envelope.protocol_version)?;
-    }
-    if let Ok(frame) = serde_json::from_str::<ClientFrame>(text) {
-        return Ok(DecodedClientMessage {
-            message: frame.message,
-            format: WsFrameFormat::VersionedJsonText,
-        });
-    }
+    let envelope = serde_json::from_str::<VersionEnvelope>(text).map_err(json_decode_error)?;
+    ensure_supported(envelope.protocol_version)?;
+    let frame = serde_json::from_str::<ClientFrame>(text).map_err(json_decode_error)?;
     Ok(DecodedClientMessage {
-        message: serde_json::from_str::<ClientMessage>(text).map_err(json_decode_error)?,
-        format: WsFrameFormat::LegacyJsonText,
+        message: frame.message,
+        format: WsFrameFormat::VersionedJsonText,
     })
 }
 
 pub fn decode_server_json(text: &str) -> Result<ServerMessage, ProtocolFrameError> {
-    if let Ok(envelope) = serde_json::from_str::<VersionEnvelope>(text) {
-        ensure_supported(envelope.protocol_version)?;
-    }
-    if let Ok(frame) = serde_json::from_str::<ServerFrame>(text) {
-        return Ok(frame.message);
-    }
-    serde_json::from_str::<ServerMessage>(text).map_err(json_decode_error)
+    let envelope = serde_json::from_str::<VersionEnvelope>(text).map_err(json_decode_error)?;
+    ensure_supported(envelope.protocol_version)?;
+    serde_json::from_str::<ServerFrame>(text)
+        .map(|frame| frame.message)
+        .map_err(json_decode_error)
 }
 
 fn encode_binary_frame<T: Serialize>(frame: &T) -> Result<Vec<u8>, ProtocolFrameError> {

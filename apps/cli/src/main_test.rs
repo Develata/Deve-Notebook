@@ -1,9 +1,7 @@
 use super::{
     Args, Commands, ConfigAction, NgitAction, ProjectionRemoteAction, run_pre_config_command,
 };
-use crate::commands::projection_remote::{
-    ProjectionRemoteDirectionAction, S3ProjectionProfileAction, S3ProjectionRemoteAction,
-};
+use crate::commands::projection_remote::{S3ProjectionProfileAction, S3ProjectionRemoteAction};
 use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
@@ -225,8 +223,8 @@ fn ngit_push_accepts_repo_remote_and_branch() {
 }
 
 #[test]
-fn projection_remote_webdav_pull_accepts_locator() {
-    let args = Args::try_parse_from([
+fn projection_remote_webdav_pull_is_rejected() {
+    let error = Args::try_parse_from([
         "deve",
         "projection-remote",
         "webdav",
@@ -236,20 +234,9 @@ fn projection_remote_webdav_pull_accepts_locator() {
         "--locator",
         "webdav+https://dav.example.com/notebooks/main",
     ])
-    .expect("parse args");
+    .expect_err("unpublished pull command must be removed");
 
-    match args.command {
-        Some(Commands::ProjectionRemote {
-            action:
-                ProjectionRemoteAction::Webdav {
-                    action: ProjectionRemoteDirectionAction::Pull { repo, locator },
-                },
-        }) => {
-            assert_eq!(repo.as_deref(), Some("default"));
-            assert_eq!(locator, "webdav+https://dav.example.com/notebooks/main");
-        }
-        other => panic!("unexpected command: {other:?}"),
-    }
+    assert!(error.to_string().contains("unrecognized subcommand 'pull'"));
 }
 
 #[test]

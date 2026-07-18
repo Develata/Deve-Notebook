@@ -1,62 +1,45 @@
 //! plan_ref:
 //!   - 14_commands#command-palette-shortcuts
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-//! Web command entries for remote projection transport intents.
+//! Thin command entries for typed Remote Projection push intents.
 
-use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::types::Command;
-use crate::components::main_layout::SidebarControl;
-use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
+use crate::runtime::scope_client::ScopeClient;
 use crate::runtime::session_client::SessionClient;
-use deve_core::protocol::{ClientMessage, RemoteProjectionDirection, RemoteProjectionProvider};
+use deve_core::protocol::{
+    ClientMessage, RemoteProjectionProvider, RemoteProjectionPushRequest, ScopeNonce,
+};
 use leptos::prelude::*;
+use uuid::Uuid;
 
 pub(super) fn remote_projection_commands(
     locale: Locale,
     set_show: WriteSignal<bool>,
-    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
-    sidebar_control: Option<SidebarControl>,
 ) -> Vec<Command> {
     let enabled_when = (t::command_palette::remote_projection_backend_intent)(locale);
+    let unavailable_reason = (t::command_palette::remote_projection_scope_unavailable)(locale);
     let group = (t::command_palette::group_remote_projection)(locale);
-    let session = use_context::<SessionClient>();
     let context = RemoteProjectionCommandContext {
         enabled_when,
+        unavailable_reason,
         group,
         set_show,
-        set_notice,
-        sidebar_control,
-        session,
+        intent: RemoteProjectionPushIntent::capture(),
     };
     vec![
         remote_projection_command(
-            "webdav:push",
+            "remote_projection.webdav.push",
             (t::command_palette::webdav_push)(locale),
             RemoteProjectionProvider::WebDav,
-            RemoteProjectionDirection::Push,
             context.clone(),
         ),
         remote_projection_command(
-            "webdav:pull",
-            (t::command_palette::webdav_pull)(locale),
-            RemoteProjectionProvider::WebDav,
-            RemoteProjectionDirection::Pull,
-            context.clone(),
-        ),
-        remote_projection_command(
-            "s3:push",
+            "remote_projection.s3.push",
             (t::command_palette::s3_push)(locale),
             RemoteProjectionProvider::S3,
-            RemoteProjectionDirection::Push,
-            context.clone(),
-        ),
-        remote_projection_command(
-            "s3:pull",
-            (t::command_palette::s3_pull)(locale),
-            RemoteProjectionProvider::S3,
-            RemoteProjectionDirection::Pull,
             context,
         ),
     ]
@@ -65,64 +48,106 @@ pub(super) fn remote_projection_commands(
 #[derive(Clone)]
 struct RemoteProjectionCommandContext {
     enabled_when: &'static str,
+    unavailable_reason: &'static str,
     group: &'static str,
     set_show: WriteSignal<bool>,
-    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
-    sidebar_control: Option<SidebarControl>,
-    session: Option<SessionClient>,
+    intent: Option<RemoteProjectionPushIntent>,
+}
+
+#[derive(Clone)]
+struct RemoteProjectionPushIntent {
+    session: SessionClient,
+    repo_id: deve_core::models::RepoId,
+    branch: Option<deve_core::models::PeerId>,
+    scope_nonce: u64,
+}
+
+impl RemoteProjectionPushIntent {
+    fn capture() -> Option<Self> {
+        let session = use_context::<SessionClient>()?;
+        let scope = use_context::<ScopeClient>()?;
+        Self::admit(
+            session.clone(),
+            scope.current_repo_id.get(),
+            scope.active_branch.get(),
+            scope.current_scope_nonce.get(),
+            session.handshake_ready.get(),
+            session.handshake_scope_nonce.get(),
+        )
+    }
+
+    fn admit(
+        session: SessionClient,
+        current_repo_id: Option<String>,
+        branch: Option<deve_core::models::PeerId>,
+        scope_nonce: u64,
+        handshake_ready: bool,
+        handshake_scope_nonce: Option<u64>,
+    ) -> Option<Self> {
+        if !handshake_ready || scope_nonce == 0 || handshake_scope_nonce != Some(scope_nonce) {
+            return None;
+        }
+        let repo_id = current_repo_id?.parse().ok()?;
+        Some(Self {
+            session,
+            repo_id,
+            branch,
+            scope_nonce,
+        })
+    }
+
+    fn send(&self, provider: RemoteProjectionProvider) {
+        send_remote_projection_push_for_scope(
+            &self.session,
+            self.repo_id,
+            self.branch.clone(),
+            self.scope_nonce,
+            provider,
+        );
+    }
 }
 
 fn remote_projection_command(
     id: &'static str,
     title: &'static str,
     provider: RemoteProjectionProvider,
-    direction: RemoteProjectionDirection,
     context: RemoteProjectionCommandContext,
 ) -> Command {
-    let group = context.group;
-    let enabled_when = context.enabled_when;
-    Command::available(id, title, move || {
-        send_remote_projection_transport_intent(
-            context.session.as_ref(),
-            context.set_notice,
-            provider,
-            direction,
-        );
-        show_source_control_surface(context.sidebar_control, context.set_show);
-    })
-    .with_group(group)
-    .with_enabled_when(enabled_when)
-}
-
-fn send_remote_projection_transport_intent(
-    session: Option<&SessionClient>,
-    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
-    provider: RemoteProjectionProvider,
-    direction: RemoteProjectionDirection,
-) {
-    let Some(session) = session else {
-        if let Some(set_notice) = set_notice {
-            set_notice.set(Some(
-                SourceControlNotice::remote_projection_session_unavailable(),
-            ));
-        }
-        return;
+    let RemoteProjectionCommandContext {
+        enabled_when,
+        unavailable_reason,
+        group,
+        set_show,
+        intent,
+    } = context;
+    let command = match intent {
+        Some(intent) => Command::available(id, title, move || {
+            intent.send(provider);
+            set_show.set(false);
+        }),
+        None => Command::unavailable(id, title, unavailable_reason, move || {
+            set_show.set(false);
+        }),
     };
-    session.ws.send(ClientMessage::RemoteProjectionTransport {
-        provider,
-        direction,
-        scope_nonce: session.handshake_scope_nonce.get_untracked(),
-    });
+    command.with_group(group).with_enabled_when(enabled_when)
 }
 
-fn show_source_control_surface(
-    sidebar_control: Option<SidebarControl>,
-    set_show: WriteSignal<bool>,
+fn send_remote_projection_push_for_scope(
+    session: &SessionClient,
+    repo_id: deve_core::models::RepoId,
+    branch: Option<deve_core::models::PeerId>,
+    scope_nonce: u64,
+    provider: RemoteProjectionProvider,
 ) {
-    if let Some(sidebar_control) = sidebar_control {
-        sidebar_control.show_view(SidebarView::SourceControl);
-    }
-    set_show.set(false);
+    session.ws.send(ClientMessage::RemoteProjectionPush(
+        RemoteProjectionPushRequest {
+            request_id: Uuid::new_v4(),
+            repo_id,
+            branch,
+            scope_nonce: ScopeNonce::new(scope_nonce),
+            provider,
+        },
+    ));
 }
 
 #[cfg(test)]

@@ -17,9 +17,10 @@ use super::error::{RemoteImportError, RemoteImportResult};
 use super::repair::{RemoteImportRepairReport, dry_run_repair};
 use super::store::RemoteImportStore;
 use super::types::{
-    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportFailure,
-    RemoteImportFailurePhase, RemoteImportPrepareRequest, RemoteImportProjectionOutcome,
-    RemoteImportSessionId, RemoteImportSessionRecord, RemoteImportState,
+    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportCandidateRevision,
+    RemoteImportFailure, RemoteImportFailurePhase, RemoteImportPrepareRequest,
+    RemoteImportProjectionOutcome, RemoteImportSessionId, RemoteImportSessionRecord,
+    RemoteImportState,
 };
 use crate::{ledger::RepoManager, models::RepoId};
 use authority::bound_local_authority_db;
@@ -30,8 +31,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) struct RemoteImportRuntime {
-    store: RemoteImportStore,
-    artifacts: RemoteImportArtifactRoot,
+    pub(super) store: RemoteImportStore,
+    pub(super) artifacts: RemoteImportArtifactRoot,
 }
 
 impl RemoteImportRuntime {
@@ -87,11 +88,6 @@ impl RemoteImportRuntime {
         &self,
         request: RemoteImportPrepareRequest,
     ) -> RemoteImportResult<RemoteImportCapture> {
-        if request.locator_binding_digest != request.baseline.locator_digest {
-            return Err(RemoteImportError::ArtifactTampered(
-                "prepare locator binding does not match captured baseline".to_string(),
-            ));
-        }
         let record = self.store.reserve(
             request.source_binding_digest,
             request.locator_binding_digest,
@@ -220,9 +216,12 @@ impl RemoteImportRuntime {
     pub(crate) fn discard(
         &self,
         session_id: RemoteImportSessionId,
+        expected_revision: Option<RemoteImportCandidateRevision>,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
         let current = self.store.read_session(session_id)?;
-        let discarded = self.store.begin_discard(session_id, current.generation)?;
+        let discarded =
+            self.store
+                .begin_discard(session_id, current.generation, expected_revision)?;
         if discarded.source_snapshot.is_some() {
             verify_exact_published_session(&self.artifacts, &discarded)?;
         }

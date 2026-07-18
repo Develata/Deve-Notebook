@@ -2,6 +2,7 @@ use super::super::{JSON_TEXT_DISABLED_ERROR, SocketFlow, handle_incoming_message
 use super::build_state;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
+use crate::server::ws::WS_JSON_TEXT_ENV_LOCK;
 use crate::server::ws::filter::BroadcastFilter;
 use axum::extract::ws::Message;
 use deve_core::protocol::frame::{
@@ -48,7 +49,8 @@ async fn browser_invalid_binary_uses_current_scope_nonce_when_sync_scope_is_stal
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn legacy_json_text_is_debug_gated_with_structured_error() -> anyhow::Result<()> {
+async fn versioned_json_text_is_debug_gated_with_structured_error() -> anyhow::Result<()> {
+    let _lock = WS_JSON_TEXT_ENV_LOCK.lock().await;
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -56,7 +58,10 @@ async fn legacy_json_text_is_debug_gated_with_structured_error() -> anyhow::Resu
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(41));
-    let text = serde_json::to_string(&ClientMessage::Ping)?;
+    let text = serde_json::to_string(&ClientFrame {
+        protocol_version: WS_PROTOCOL_VERSION,
+        message: ClientMessage::Ping,
+    })?;
 
     let flow = handle_incoming_message(
         &state,
@@ -77,7 +82,7 @@ async fn legacy_json_text_is_debug_gated_with_structured_error() -> anyhow::Resu
             assert_eq!(error.detail.as_deref(), Some(JSON_TEXT_DISABLED_ERROR));
             assert_eq!(scope_nonce, Some(41));
         }
-        other => panic!("expected legacy text ProtocolError, got {:?}", other),
+        other => panic!("expected debug text ProtocolError, got {:?}", other),
     }
     Ok(())
 }

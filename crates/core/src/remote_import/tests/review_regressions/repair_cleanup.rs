@@ -137,7 +137,7 @@ fn discard_rejects_dangling_session_symlink_and_keeps_cleanup_pending() -> anyho
 
     let error = fixture
         .runtime
-        .discard(session_id)
+        .discard(session_id, Some(RemoteImportCandidateRevision::FIRST))
         .expect_err("dangling symlink must not be treated as absent");
 
     assert!(matches!(error, RemoteImportError::UnsafeArtifactRoot(_)));
@@ -193,7 +193,7 @@ fn discard_preserves_cleanup_debt_when_ready_blob_is_tampered_same_length() -> a
 
     let error = fixture
         .runtime
-        .discard(session_id)
+        .discard(session_id, Some(RemoteImportCandidateRevision::FIRST))
         .expect_err("tampered Ready artifacts must remain repair-visible");
 
     assert!(matches!(error, RemoteImportError::ArtifactTampered(_)));

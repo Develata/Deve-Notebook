@@ -7,10 +7,10 @@ use std::sync::Arc;
 #[test]
 fn first_public_ws_epoch_is_lockstep() {
     assert_eq!(WS_FRAME_MAGIC, b"DEVEWSF4");
-    assert_eq!(WS_PROTOCOL_VERSION, 2);
-    assert_eq!(MIN_SUPPORTED_WS_PROTOCOL_VERSION, 2);
+    assert_eq!(WS_PROTOCOL_VERSION, 3);
+    assert_eq!(MIN_SUPPORTED_WS_PROTOCOL_VERSION, 3);
 
-    for unsupported in [0, 1, 13] {
+    for unsupported in [0, 1, 2, 13] {
         let frame = ClientFrame {
             protocol_version: unsupported,
             message: ClientMessage::Ping,

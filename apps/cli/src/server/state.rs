@@ -9,6 +9,7 @@ use super::runtime::watcher_runtime::WatcherRuntimeView;
 use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
 use super::tree_state::RepoTreeRegistry;
+use crate::remote_import_runtime::RemoteImportCoordinator;
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
@@ -45,9 +46,42 @@ pub struct AppState {
     pub(crate) repo_mutation_gate: Arc<RepoMutationPublicationGate>,
     #[cfg(not(test))]
     pub(crate) watcher_runtime: WatcherRuntimeView,
+    #[cfg(not(test))]
+    pub(crate) remote_import: Arc<RemoteImportCoordinator>,
 }
 
 impl AppState {
+    #[cfg(not(test))]
+    pub(crate) fn remote_import_coordinator(&self) -> Arc<RemoteImportCoordinator> {
+        self.remote_import.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn remote_import_coordinator(&self) -> Arc<RemoteImportCoordinator> {
+        use std::collections::HashMap;
+        use std::sync::{Mutex, OnceLock};
+
+        static TEST_COORDINATORS: OnceLock<Mutex<HashMap<usize, Arc<RemoteImportCoordinator>>>> =
+            OnceLock::new();
+        let key = self as *const Self as usize;
+        let stores = TEST_COORDINATORS.get_or_init(|| Mutex::new(HashMap::new()));
+        let Ok(mut stores) = stores.lock() else {
+            return Arc::new(RemoteImportCoordinator::new(
+                self.repo.clone(),
+                self.sync_manager.clone(),
+            ));
+        };
+        stores
+            .entry(key)
+            .or_insert_with(|| {
+                Arc::new(RemoteImportCoordinator::new(
+                    self.repo.clone(),
+                    self.sync_manager.clone(),
+                ))
+            })
+            .clone()
+    }
+
     #[cfg(not(test))]
     pub(crate) fn watcher_runtime_view(&self) -> WatcherRuntimeView {
         self.watcher_runtime.clone()

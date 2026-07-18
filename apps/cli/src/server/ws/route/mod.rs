@@ -13,6 +13,7 @@ mod core;
 mod core_scoped;
 mod docs;
 mod merge;
+mod remote_import;
 mod scope_guard;
 mod source_control;
 

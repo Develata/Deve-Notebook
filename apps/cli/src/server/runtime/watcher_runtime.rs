@@ -17,8 +17,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 
 pub(crate) use slot::{
-    MountAdmissionError, MountAdmissionToken, MountContinuationToken, WatcherRuntimeAggregate,
-    WatcherRuntimeView,
+    MountAdmissionError, MountAdmissionToken, WatcherRuntimeAggregate, WatcherRuntimeView,
 };
 #[cfg(test)]
 pub(crate) use slot::{RepoMountState, WatcherRuntimeAggregateStatus};
