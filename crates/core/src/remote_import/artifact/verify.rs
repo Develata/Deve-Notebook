@@ -4,23 +4,92 @@
 
 use super::{
     BLOBS_DIR, CANDIDATES_DIR, MANIFEST_FILE, RemoteImportArtifactRoot, candidate_file,
-    capture::{verify_blob, write_new_synced},
+    capture::{read_verified_blob, verify_blob, write_new_synced},
     durability::{publish_file_no_replace, sync_parent},
 };
 use crate::remote_import::error::{RemoteImportError, RemoteImportResult};
 use crate::remote_import::manifest::{
-    EncodedCandidate, ManifestEntry, decode_manifest, digest_entry_set, verify_candidate,
+    EncodedCandidate, ManifestEntry, decode_candidate, decode_manifest, digest_entry_set,
+    verify_candidate,
 };
-use crate::remote_import::types::RemoteImportSessionRecord;
+use crate::remote_import::types::{
+    RemoteImportBlocker, RemoteImportChangeKind, RemoteImportDigest, RemoteImportSessionRecord,
+};
 use std::collections::BTreeSet;
 use std::io::Read;
 
 const MAX_JSON_ARTIFACT_BYTES: u64 = 8 * 1024 * 1024;
 
+pub(in crate::remote_import) struct VerifiedRemoteImportEntry {
+    pub(in crate::remote_import) path: String,
+    pub(in crate::remote_import) blob_digest: RemoteImportDigest,
+    pub(in crate::remote_import) size: u64,
+    pub(in crate::remote_import) change_kind: RemoteImportChangeKind,
+    pub(in crate::remote_import) blockers: Vec<RemoteImportBlocker>,
+    pub(in crate::remote_import) content: String,
+}
+
+struct PublishedMetadata {
+    session: std::path::PathBuf,
+    manifest: Vec<ManifestEntry>,
+    candidate: Vec<crate::remote_import::types::RemoteImportCandidateEntry>,
+}
+
 pub(in crate::remote_import) fn verify_published_session(
     root: &RemoteImportArtifactRoot,
     record: &RemoteImportSessionRecord,
 ) -> RemoteImportResult<Vec<ManifestEntry>> {
+    let metadata = read_published_metadata(root, record)?;
+    for entry in &metadata.manifest {
+        verify_blob(
+            &metadata.session.join(BLOBS_DIR).join(entry.digest.to_hex()),
+            entry.digest,
+            entry.size,
+        )?;
+    }
+    root.verify()?;
+    Ok(metadata.manifest)
+}
+
+pub(in crate::remote_import) fn verify_apply_artifacts(
+    root: &RemoteImportArtifactRoot,
+    record: &RemoteImportSessionRecord,
+) -> RemoteImportResult<Vec<VerifiedRemoteImportEntry>> {
+    let metadata = read_published_metadata(root, record)?;
+    verify_exact_inventory(root, record, &metadata.manifest)?;
+    let mut verified = Vec::with_capacity(metadata.manifest.len());
+    for (manifest, candidate) in metadata.manifest.iter().zip(metadata.candidate) {
+        let bytes = read_verified_blob(
+            &metadata
+                .session
+                .join(BLOBS_DIR)
+                .join(manifest.digest.to_hex()),
+            manifest.digest,
+            manifest.size,
+        )?;
+        let content = String::from_utf8(bytes).map_err(|_| {
+            RemoteImportError::ArtifactTampered(format!(
+                "blob for {:?} is not valid UTF-8 Markdown",
+                manifest.path
+            ))
+        })?;
+        verified.push(VerifiedRemoteImportEntry {
+            path: manifest.path.clone(),
+            blob_digest: manifest.digest,
+            size: manifest.size,
+            change_kind: candidate.change_kind,
+            blockers: candidate.blockers,
+            content,
+        });
+    }
+    root.verify()?;
+    Ok(verified)
+}
+
+fn read_published_metadata(
+    root: &RemoteImportArtifactRoot,
+    record: &RemoteImportSessionRecord,
+) -> RemoteImportResult<PublishedMetadata> {
     let source = record.source_snapshot.as_ref().ok_or_else(|| {
         RemoteImportError::ArtifactTampered("session source snapshot is missing".to_string())
     })?;
@@ -50,21 +119,31 @@ pub(in crate::remote_import) fn verify_published_session(
             "source snapshot aggregate mismatch".to_string(),
         ));
     }
-    for entry in &entries {
-        verify_blob(
-            &session.join(BLOBS_DIR).join(entry.digest.to_hex()),
-            entry.digest,
-            entry.size,
-        )?;
-    }
     let candidate_bytes = read_bounded_json(
         &session
             .join(CANDIDATES_DIR)
             .join(candidate_file(candidate.revision.get())),
     )?;
-    verify_candidate(&candidate_bytes, candidate)?;
-    root.verify()?;
-    Ok(entries)
+    let candidate_entries = decode_candidate(&candidate_bytes, candidate)?;
+    if entries.len() != candidate_entries.len()
+        || entries
+            .iter()
+            .zip(&candidate_entries)
+            .any(|(manifest, candidate)| {
+                manifest.path != candidate.path
+                    || manifest.digest != candidate.blob_digest
+                    || manifest.size != candidate.size
+            })
+    {
+        return Err(RemoteImportError::ArtifactTampered(
+            "candidate entries do not exactly match source manifest".to_string(),
+        ));
+    }
+    Ok(PublishedMetadata {
+        session,
+        manifest: entries,
+        candidate: candidate_entries,
+    })
 }
 
 pub(in crate::remote_import) fn verify_exact_published_session(
@@ -72,6 +151,14 @@ pub(in crate::remote_import) fn verify_exact_published_session(
     record: &RemoteImportSessionRecord,
 ) -> RemoteImportResult<()> {
     let manifest = verify_published_session(root, record)?;
+    verify_exact_inventory(root, record, &manifest)
+}
+
+fn verify_exact_inventory(
+    root: &RemoteImportArtifactRoot,
+    record: &RemoteImportSessionRecord,
+    manifest: &[ManifestEntry],
+) -> RemoteImportResult<()> {
     let inventory = root.inventory_session_layout(record.session_id)?;
     if !inventory.unknown_entries.is_empty() {
         return Err(RemoteImportError::ArtifactTampered(format!(
@@ -80,7 +167,7 @@ pub(in crate::remote_import) fn verify_exact_published_session(
         )));
     }
     let expected = manifest
-        .into_iter()
+        .iter()
         .map(|entry| entry.digest.to_hex())
         .collect::<BTreeSet<_>>();
     let actual = inventory.blob_names.into_iter().collect::<BTreeSet<_>>();

@@ -428,13 +428,16 @@
   goal: Remote Import Apply 以 whole-session sealed transaction exactly-once 写 Ledger，提交后才 writeback Projection。
   preconditions:
     - Ready session 无 blocker，repo health healthy 且 watcher Mounted
-    - 当前代码尚未实现 sealed Remote Import Apply
+    - B3 crate-internal sealed writer 已存在；B4 尚未接入 Mounted product gate、current locator/ignore producer 与 post-commit writeback
   steps:
-    - gap: whole-session Remote Import apply and browser receipt producer is not implemented yet
+    - run: cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
+    - gap: Mounted product admission, post-commit Projection outcome CAS, and browser receipt producer are not implemented yet
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
     - api_assert: remote_import_apply_lost_response_returns_stored_receipt true
+    - api_assert: remote_import_apply_replay_survives_cleanup_and_new_active_session true
+    - api_assert: remote_import_apply_tamper_transitions_to_failed_repair true
     - api_assert: remote_import_apply_pending_projection_outcome_recovers_without_reappend true
     - api_assert: remote_import_writeback_failure_does_not_roll_back_ledger true
 

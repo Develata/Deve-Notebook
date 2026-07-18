@@ -6,7 +6,7 @@
 (module :id mod_remote_projection_transport :label "remote_projection_transport_runtime" :parent core.remote_projection :code-area "apps/cli/src/remote_projection_transport/")
 (module :id mod_remote_import_runtime :label "remote import runtime partial/substituted" :parent core.remote_import :code-area "crates/core/src/remote_import/ | apps/cli/src/remote_projection_legacy/")
 (module :id mod_remote_import_client :label "remote import client missing/substituted" :parent core.remote_import :code-area "apps/web/src/runtime/external_changes_client/")
-(module :id mod_remote_import_writer :label "sealed writer missing/substituted" :parent core.ledger :code-area "crates/core/src/source_control/external_apply.rs")
+(module :id mod_remote_import_writer :label "sealed remote import writer" :parent core.ledger :code-area "crates/core/src/ledger/manager/prepared_change_batch.rs; crates/core/src/ledger/manager/prepared_change_batch/remote_import.rs")
 (module :id mod_projection_runtime :label "projection writeback runtime" :parent core.projection :code-area "crates/core/src/ledger/manager/")
 (group :id grp.core.remote-projection-push :layer core :label "remote projection push" :members (core.remote_projection core.projection))
 (group :id grp.core.remote-import-prepare :layer core :label "remote import prepare" :members (core.remote_projection core.remote_import))

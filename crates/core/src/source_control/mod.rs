@@ -58,8 +58,6 @@ pub use external_apply::ExternalApplyOutcome;
 pub use external_apply::ExternalApplyReceipt;
 #[cfg(not(target_arch = "wasm32"))]
 pub use external_apply::PreparedExternalApply;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) use external_apply::{PreparedExternalTarget, PreparedUpsert};
 pub use line_diff::ChangeRange;
 pub use types::{
     ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitFileDiffSummary,

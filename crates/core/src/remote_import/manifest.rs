@@ -267,6 +267,13 @@ pub(super) fn verify_candidate(
     bytes: &[u8],
     expected: &RemoteImportCandidateRevisionRecord,
 ) -> RemoteImportResult<()> {
+    decode_candidate(bytes, expected).map(|_| ())
+}
+
+pub(super) fn decode_candidate(
+    bytes: &[u8],
+    expected: &RemoteImportCandidateRevisionRecord,
+) -> RemoteImportResult<Vec<RemoteImportCandidateEntry>> {
     if RemoteImportDigest::of(bytes) != expected.candidate_digest {
         return Err(RemoteImportError::ArtifactTampered(
             "candidate digest mismatch".to_string(),
@@ -298,18 +305,39 @@ pub(super) fn verify_candidate(
             "candidate paths are not strictly sorted".to_string(),
         ));
     }
+    let mut path_bytes = 0usize;
+    let mut entries = Vec::with_capacity(candidate.entries.len());
     for entry in candidate.entries {
         super::artifact::validate_remote_path(&entry.path).map_err(|error| {
             RemoteImportError::ArtifactTampered(format!("candidate contains invalid path: {error}"))
         })?;
+        path_bytes = path_bytes.checked_add(entry.path.len()).ok_or_else(|| {
+            RemoteImportError::ArtifactTampered("candidate path-byte total overflow".to_string())
+        })?;
+        if path_bytes > super::artifact::MAX_TOTAL_PATH_BYTES
+            || entry.size > super::artifact::MAX_FILE_PAYLOAD_BYTES
+        {
+            return Err(RemoteImportError::ArtifactTampered(
+                "candidate exceeds path or file-size budget".to_string(),
+            ));
+        }
         let digest = parse_digest(&entry.blob_sha256)?;
-        if parse_digest(&entry.entry_id)? != entry_id(&entry.path, digest) {
+        let parsed_entry_id = parse_digest(&entry.entry_id)?;
+        if parsed_entry_id != entry_id(&entry.path, digest) {
             return Err(RemoteImportError::ArtifactTampered(
                 "candidate entry_id mismatch".to_string(),
             ));
         }
+        entries.push(RemoteImportCandidateEntry {
+            entry_id: parsed_entry_id,
+            path: entry.path,
+            blob_digest: digest,
+            size: entry.size,
+            change_kind: entry.change_kind,
+            blockers: entry.blockers,
+        });
     }
-    Ok(())
+    Ok(entries)
 }
 
 pub(super) fn digest_entry_set(entries: &[ManifestEntry]) -> RemoteImportDigest {

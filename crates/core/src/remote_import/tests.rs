@@ -3,6 +3,7 @@
 //!   - 06_backup#remote-import-state-machine
 //!   - 03_storage/repair#remote-import-cleanup-repair
 
+mod apply;
 mod review_regressions;
 
 use super::artifact::{ArtifactCapture, MANIFEST_FILE, RemoteImportArtifactRoot};

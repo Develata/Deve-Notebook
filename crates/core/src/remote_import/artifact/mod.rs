@@ -11,7 +11,8 @@ mod verify;
 pub(super) use capture::{ArtifactCapture, validate_remote_path};
 pub(super) use root::{ArtifactEntry, CandidateArtifactEntry, RemoteImportArtifactRoot};
 pub(super) use verify::{
-    publish_candidate_revision, verify_exact_published_session, verify_published_session,
+    VerifiedRemoteImportEntry, publish_candidate_revision, verify_apply_artifacts,
+    verify_exact_published_session, verify_published_session,
 };
 
 pub(super) const MAX_FILE_COUNT: usize = 2_048;

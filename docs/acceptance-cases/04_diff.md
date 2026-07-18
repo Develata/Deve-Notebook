@@ -369,7 +369,7 @@
     - run: cargo test -p deve_core --lib unstage_second_step_failure_rolls_back_staged_remove_and_indexes -- --nocapture
     - run: cargo test -p deve_core --lib unstage_rejects_concurrently_replaced_staged_entry -- --nocapture
     - run: cargo test -p deve_core --lib unstage_rejects_newer_pending_without_overwriting_evidence -- --nocapture
-    - run: cargo test -p deve_core --lib atomic_apply_rejects_ledger_head_changed_after_preflight -- --nocapture
+    - run: cargo test -p deve_core --lib external_apply_rejects_ledger_head_changed_after_preflight -- --nocapture
     - run: cargo test -p deve_core --lib commit_state_second_step_failure_rolls_back_snapshots -- --nocapture
     - run: cargo test -p deve_core --lib commit_state_multi_doc_snapshot_failure_rolls_back_entire_transaction -- --nocapture
     - run: cargo test -p deve_core --lib commit_state_success_commits_snapshots_and_anchor_atomically -- --nocapture

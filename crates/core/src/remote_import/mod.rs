@@ -5,8 +5,10 @@
 //! Backend-only immutable Remote Import session runtime.
 //!
 //! This module owns host artifacts and workflow state only. It deliberately has no provider,
-//! protocol, workspace, External Changes, Source Control, or Ledger authority dependency.
+//! protocol, workspace, External Changes, or Source Control dependency. It does not own or
+//! directly access Ledger fact tables; Apply crosses only the sealed authority writer API.
 
+pub(crate) mod apply;
 mod artifact;
 mod error;
 mod manifest;
@@ -24,7 +26,7 @@ pub(crate) use repair::{RemoteImportRepairFinding, RemoteImportRepairReport};
 pub(crate) use runtime::{RemoteImportCapture, RemoteImportRuntime};
 #[allow(unused_imports)]
 pub(crate) use types::{
-    RemoteImportApplyReceipt, RemoteImportBaseline, RemoteImportBlocker,
+    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportBaseline, RemoteImportBlocker,
     RemoteImportCandidateRevision, RemoteImportChangeKind, RemoteImportDigest,
     RemoteImportPrepareRequest, RemoteImportProjectionOutcome, RemoteImportRefreshRequest,
     RemoteImportSessionId, RemoteImportSessionRecord, RemoteImportSourceSnapshot,

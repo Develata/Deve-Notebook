@@ -4,25 +4,27 @@
 //!   - 03_storage/repair#remote-import-cleanup-repair
 
 mod authority;
+mod capture;
+mod refresh;
 
+use super::apply::PreparedRemoteImportApply;
 use super::artifact::{
-    ArtifactCapture, RemoteImportArtifactRoot, publish_candidate_revision,
-    verify_exact_published_session, verify_published_session,
+    ArtifactCapture, RemoteImportArtifactRoot, verify_apply_artifacts,
+    verify_exact_published_session,
 };
 use super::error::{RemoteImportError, RemoteImportResult};
-use super::manifest::encode_candidate;
 use super::repair::{RemoteImportRepairReport, dry_run_repair};
 use super::store::RemoteImportStore;
 use super::types::{
-    RemoteImportBaseline, RemoteImportCandidateRevision, RemoteImportFailure,
-    RemoteImportFailureKind, RemoteImportFailurePhase, RemoteImportPrepareRequest,
-    RemoteImportRefreshRequest, RemoteImportSessionId, RemoteImportSessionRecord,
-    RemoteImportState,
+    RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportFailure,
+    RemoteImportFailurePhase, RemoteImportPrepareRequest, RemoteImportSessionId,
+    RemoteImportSessionRecord, RemoteImportState,
 };
 use crate::{ledger::RepoManager, models::RepoId};
 use authority::bound_local_authority_db;
+pub(crate) use capture::RemoteImportCapture;
+use capture::{classify_failure, fail_with_primary};
 use redb::Database;
-use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -136,129 +138,67 @@ impl RemoteImportRuntime {
         self.store.list_sessions()
     }
 
-    pub(crate) fn refresh_from_sealed(
+    pub(crate) fn prepare_apply(
         &self,
-        session_id: RemoteImportSessionId,
-        request: RemoteImportRefreshRequest,
-    ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        self.refresh_from_sealed_inner(session_id, request, || {})
+        repo: &RepoManager,
+        repo_name: &str,
+        request: RemoteImportApplyRequest,
+    ) -> RemoteImportResult<crate::ledger::manager::prepared_change_batch::PreparedLedgerChangeBatch>
+    {
+        let record = self.store.read_session(request.session_id)?;
+        let prepared = match record.state {
+            RemoteImportState::Ready => {
+                let entries = match verify_apply_artifacts(&self.artifacts, &record) {
+                    Ok(entries) => entries,
+                    Err(error) => {
+                        return Err(fail_with_primary(
+                            &self.store,
+                            &record,
+                            RemoteImportFailure {
+                                phase: RemoteImportFailurePhase::Verify,
+                                kind: classify_failure(&error),
+                            },
+                            error,
+                        )
+                        .0);
+                    }
+                };
+                PreparedRemoteImportApply::fresh(
+                    record,
+                    request,
+                    repo.local_peer_id().clone(),
+                    entries,
+                )?
+            }
+            RemoteImportState::Applied => {
+                PreparedRemoteImportApply::replay(record, request, repo.local_peer_id().clone())?
+            }
+            _ => {
+                return Err(RemoteImportError::InvalidState {
+                    session_id: record.session_id,
+                    state: record.state,
+                    expected: "Ready or same stored Applied request",
+                });
+            }
+        };
+        repo.prepare_remote_import_apply_in_local_repo(repo_name, prepared)
+    }
+
+    pub(crate) fn commit_apply(
+        &self,
+        repo: &RepoManager,
+        repo_name: &str,
+        prepared: crate::ledger::manager::prepared_change_batch::PreparedLedgerChangeBatch,
+    ) -> RemoteImportResult<RemoteImportApplyReceipt> {
+        repo.commit_prepared_remote_import_apply_in_local_repo(repo_name, prepared)
     }
 
     #[cfg(test)]
-    pub(crate) fn refresh_with_after_read_test(
+    pub(crate) fn finish_cleanup_for_test(
         &self,
         session_id: RemoteImportSessionId,
-        request: RemoteImportRefreshRequest,
-        after_read: impl FnOnce(),
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        self.refresh_from_sealed_inner(session_id, request, after_read)
-    }
-
-    fn refresh_from_sealed_inner(
-        &self,
-        session_id: RemoteImportSessionId,
-        request: RemoteImportRefreshRequest,
-        after_read: impl FnOnce(),
-    ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let record = self.store.read_session(session_id)?;
-        if !matches!(
-            record.state,
-            RemoteImportState::Ready | RemoteImportState::Stale
-        ) {
-            return Err(RemoteImportError::InvalidState {
-                session_id,
-                state: record.state,
-                expected: "Ready or Stale",
-            });
-        }
-        after_read();
-        if request.source_binding_digest != record.source_binding_digest {
-            self.store.mark_stale(session_id, record.generation)?;
-            return Err(RemoteImportError::ArtifactTampered(
-                "refresh source/profile binding drifted from sealed session".to_string(),
-            ));
-        }
-        let baseline = request.baseline;
-        if baseline.locator_digest != record.locator_binding_digest {
-            self.store.mark_stale(session_id, record.generation)?;
-            return Err(RemoteImportError::ArtifactTampered(
-                "refresh locator binding drifted from sealed session".to_string(),
-            ));
-        }
-        let manifest = match verify_published_session(&self.artifacts, &record) {
-            Ok(manifest) => manifest,
-            Err(error) => {
-                return Err(fail_with_primary(
-                    &self.store,
-                    &record,
-                    RemoteImportFailure {
-                        phase: RemoteImportFailurePhase::Verify,
-                        kind: RemoteImportFailureKind::DigestMismatch,
-                    },
-                    error,
-                )
-                .0);
-            }
-        };
-        let current = record.candidate.as_ref().ok_or_else(|| {
-            RemoteImportError::ArtifactTampered("session candidate is missing".to_string())
-        })?;
-        let revision = current
-            .revision
-            .next()
-            .ok_or(RemoteImportError::RevisionOverflow)?;
-        let candidate = encode_candidate(&manifest, &baseline, revision)?;
-        if let Err(error) = publish_candidate_revision(&self.artifacts, &record, &candidate) {
-            if matches!(error, RemoteImportError::CandidateRevisionConflict { .. }) {
-                return Err(error);
-            }
-            return Err(fail_with_primary(
-                &self.store,
-                &record,
-                RemoteImportFailure {
-                    phase: RemoteImportFailurePhase::Publish,
-                    kind: classify_failure(&error),
-                },
-                error,
-            )
-            .0);
-        }
-        let mut prospective = record.clone();
-        prospective.state = RemoteImportState::Ready;
-        prospective.baseline_head = candidate.record.ledger_head;
-        prospective.ignore_digest = candidate.record.ignore_digest;
-        prospective.candidate = Some(candidate.record.clone());
-        prospective.failure = None;
-        if let Err(error) = verify_published_session(&self.artifacts, &prospective) {
-            return Err(fail_with_primary(
-                &self.store,
-                &record,
-                RemoteImportFailure {
-                    phase: RemoteImportFailurePhase::Verify,
-                    kind: RemoteImportFailureKind::DigestMismatch,
-                },
-                error,
-            )
-            .0);
-        }
-        match self.store.update_candidate(
-            record.session_id,
-            record.generation,
-            current,
-            candidate.record.clone(),
-        ) {
-            Ok(updated) => Ok(updated),
-            Err(primary) => {
-                let observed = self.store.read_session(session_id);
-                if let Ok(observed) = observed
-                    && observed.state == RemoteImportState::Ready
-                    && observed.candidate.as_ref() == Some(&candidate.record)
-                {
-                    return Ok(observed);
-                }
-                Err(primary)
-            }
-        }
+        self.store.finish_cleanup(session_id)
     }
 
     pub(crate) fn discard(
@@ -274,213 +214,3 @@ impl RemoteImportRuntime {
         self.store.finish_cleanup(discarded.session_id)
     }
 }
-
-pub(crate) struct RemoteImportCapture {
-    store: RemoteImportStore,
-    record: RemoteImportSessionRecord,
-    baseline: RemoteImportBaseline,
-    capture: Option<ArtifactCapture>,
-    pending_failure: Option<RemoteImportFailure>,
-    settled: bool,
-}
-
-impl RemoteImportCapture {
-    pub(crate) fn session_id(&self) -> RemoteImportSessionId {
-        self.record.session_id
-    }
-
-    pub(crate) fn capture_file(&mut self, path: &str, reader: impl Read) -> RemoteImportResult<()> {
-        if self.pending_failure.is_some() {
-            return Err(RemoteImportError::InvalidState {
-                session_id: self.record.session_id,
-                state: super::types::RemoteImportState::Failed,
-                expected: "Preparing",
-            });
-        }
-        let capture = self
-            .capture
-            .as_mut()
-            .ok_or(RemoteImportError::InvalidState {
-                session_id: self.record.session_id,
-                state: self.record.state,
-                expected: "Preparing",
-            })?;
-        if let Err(error) = capture.capture_file(path, reader) {
-            return Err(self.persist_failure(
-                RemoteImportFailurePhase::Capture,
-                classify_failure(&error),
-                error,
-            ));
-        }
-        Ok(())
-    }
-
-    pub(crate) fn finish(mut self) -> RemoteImportResult<RemoteImportSessionRecord> {
-        self.finish_inner(|_| Ok(()))
-    }
-
-    #[cfg(test)]
-    pub(crate) fn finish_with_before_ready_test(
-        mut self,
-        before_ready: impl FnOnce(&Path) -> RemoteImportResult<()>,
-    ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        self.finish_inner(before_ready)
-    }
-
-    fn finish_inner(
-        &mut self,
-        before_ready: impl FnOnce(&Path) -> RemoteImportResult<()>,
-    ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        if self.pending_failure.is_some() {
-            return Err(RemoteImportError::InvalidState {
-                session_id: self.record.session_id,
-                state: super::types::RemoteImportState::Failed,
-                expected: "Preparing",
-            });
-        }
-        let capture = self.capture.take().ok_or(RemoteImportError::InvalidState {
-            session_id: self.record.session_id,
-            state: self.record.state,
-            expected: "Preparing",
-        })?;
-        let published = match capture.finish(&self.baseline) {
-            Ok(published) => published,
-            Err(error) => {
-                return Err(self.persist_failure(
-                    RemoteImportFailurePhase::Publish,
-                    classify_failure(&error),
-                    error,
-                ));
-            }
-        };
-        debug_assert!(published.session_path.is_dir());
-        if let Err(error) = before_ready(&published.session_path) {
-            return Err(self.persist_failure(
-                RemoteImportFailurePhase::Verify,
-                classify_failure(&error),
-                error,
-            ));
-        }
-        let mut prospective = self.record.clone();
-        prospective.state = RemoteImportState::Ready;
-        prospective.source_snapshot = Some(published.source_snapshot.clone());
-        prospective.candidate = Some(published.candidate.record.clone());
-        if let Err(error) = verify_published_session(&published.root, &prospective) {
-            return Err(self.persist_failure(
-                RemoteImportFailurePhase::Verify,
-                RemoteImportFailureKind::DigestMismatch,
-                error,
-            ));
-        }
-        let result = self.store.complete_ready(
-            self.record.session_id,
-            self.record.generation,
-            published.source_snapshot,
-            published.candidate.record,
-        );
-        match result {
-            Ok(ready) => {
-                self.settled = true;
-                Ok(ready)
-            }
-            Err(primary) => {
-                if let Ok(observed) = self.store.read_session(self.record.session_id)
-                    && observed.state == RemoteImportState::Ready
-                    && observed.source_snapshot == prospective.source_snapshot
-                    && observed.candidate == prospective.candidate
-                {
-                    self.settled = true;
-                    return Ok(observed);
-                }
-                let error = self.persist_failure(
-                    RemoteImportFailurePhase::Publish,
-                    RemoteImportFailureKind::InvalidState,
-                    primary,
-                );
-                Err(error)
-            }
-        }
-    }
-
-    fn persist_failure(
-        &mut self,
-        phase: RemoteImportFailurePhase,
-        kind: RemoteImportFailureKind,
-        primary: RemoteImportError,
-    ) -> RemoteImportError {
-        let failure = RemoteImportFailure { phase, kind };
-        self.pending_failure = Some(failure.clone());
-        let (error, settled) = fail_with_primary(&self.store, &self.record, failure, primary);
-        self.settled = settled;
-        error
-    }
-
-    pub(crate) fn abort(mut self) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let failure = self.pending_failure.clone().unwrap_or(RemoteImportFailure {
-            phase: RemoteImportFailurePhase::Capture,
-            kind: RemoteImportFailureKind::Interrupted,
-        });
-        let failed = self.store.fail(&self.record, failure)?;
-        self.settled = true;
-        Ok(failed)
-    }
-}
-
-impl Drop for RemoteImportCapture {
-    fn drop(&mut self) {
-        if self.settled {
-            return;
-        }
-        let failure = self.pending_failure.clone().unwrap_or(RemoteImportFailure {
-            phase: RemoteImportFailurePhase::Capture,
-            kind: RemoteImportFailureKind::Interrupted,
-        });
-        if self.store.fail(&self.record, failure).is_ok() {
-            self.settled = true;
-        }
-    }
-}
-
-fn fail_with_primary(
-    store: &RemoteImportStore,
-    record: &RemoteImportSessionRecord,
-    failure: RemoteImportFailure,
-    primary: RemoteImportError,
-) -> (RemoteImportError, bool) {
-    match store.fail(record, failure) {
-        Ok(_) => (primary, true),
-        Err(state_error) => {
-            let retryable = matches!(
-                state_error,
-                RemoteImportError::Storage(_) | RemoteImportError::Codec(_)
-            );
-            (
-                RemoteImportError::Storage(format!(
-                    "primary failure: {primary}; failed to persist session failure: {state_error}"
-                )),
-                !retryable,
-            )
-        }
-    }
-}
-
-fn classify_failure(error: &RemoteImportError) -> RemoteImportFailureKind {
-    match error {
-        RemoteImportError::InvalidPath { .. } | RemoteImportError::DuplicatePath(_) => {
-            RemoteImportFailureKind::InvalidPath
-        }
-        RemoteImportError::LimitExceeded { .. } => RemoteImportFailureKind::LimitExceeded,
-        RemoteImportError::ArtifactTampered(_) => RemoteImportFailureKind::DigestMismatch,
-        RemoteImportError::InvalidState { .. } | RemoteImportError::StaleGeneration(_) => {
-            RemoteImportFailureKind::InvalidState
-        }
-        RemoteImportError::CandidateRevisionConflict { .. } => {
-            RemoteImportFailureKind::InvalidState
-        }
-        RemoteImportError::SourceRead(_) => RemoteImportFailureKind::SourceRead,
-        _ => RemoteImportFailureKind::ArtifactIo,
-    }
-}
-
-#[allow(dead_code)]
-fn _assert_revision_type_is_owned(_: RemoteImportCandidateRevision) {}

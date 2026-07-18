@@ -262,3 +262,12 @@ pub(crate) struct RemoteImportRefreshRequest {
     pub(crate) source_binding_digest: RemoteImportDigest,
     pub(crate) baseline: RemoteImportBaseline,
 }
+
+#[derive(Debug, Clone)]
+pub(crate) struct RemoteImportApplyRequest {
+    pub(crate) request_id: Uuid,
+    pub(crate) session_id: RemoteImportSessionId,
+    pub(crate) revision: RemoteImportCandidateRevision,
+    pub(crate) locator_digest: RemoteImportDigest,
+    pub(crate) ignore_digest: RemoteImportDigest,
+}

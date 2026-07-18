@@ -1,7 +1,9 @@
 //! plan_ref:
 //!   - 06_backup#projection-backup-failure-modes
 
-use super::types::{RemoteImportCandidateRevision, RemoteImportSessionId, RemoteImportState};
+use super::types::{
+    RemoteImportBlocker, RemoteImportCandidateRevision, RemoteImportSessionId, RemoteImportState,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -48,10 +50,22 @@ pub(crate) enum RemoteImportError {
     CandidateRevisionConflict {
         revision: RemoteImportCandidateRevision,
     },
+    #[error("Remote Import session {session_id} is stale: {blockers:?}")]
+    Stale {
+        session_id: RemoteImportSessionId,
+        blockers: Vec<RemoteImportBlocker>,
+    },
+    #[error("Remote Import session {session_id} is blocked: {blockers:?}")]
+    Blocked {
+        session_id: RemoteImportSessionId,
+        blockers: Vec<RemoteImportBlocker>,
+    },
+    #[error("Remote Import authority apply failed: {0}")]
+    ApplyFailed(String),
 }
 
 impl RemoteImportError {
-    pub(super) fn storage(error: impl std::fmt::Display) -> Self {
+    pub(crate) fn storage(error: impl std::fmt::Display) -> Self {
         Self::Storage(error.to_string())
     }
 
@@ -59,12 +73,16 @@ impl RemoteImportError {
         Self::Codec(error.to_string())
     }
 
-    pub(super) fn json(error: impl std::fmt::Display) -> Self {
+    pub(crate) fn json(error: impl std::fmt::Display) -> Self {
         Self::Json(error.to_string())
     }
 
     pub(super) fn source_read(error: impl std::fmt::Display) -> Self {
         Self::SourceRead(error.to_string())
+    }
+
+    pub(crate) fn apply_failed(error: impl std::fmt::Display) -> Self {
+        Self::ApplyFailed(error.to_string())
     }
 }
 

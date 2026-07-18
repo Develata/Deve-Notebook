@@ -74,7 +74,14 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib remote_import -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: typed Remote Import review and blocker producer is not implemented yet
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: whole-session Remote Import apply and browser receipt producer is not implemented yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: Mounted product admission, post-commit Projection outcome CAS, and browser receipt producer are not implemented yet
+contains	crates/core/src/ledger/manager/prepared_change_batch/remote_import.rs	fn commit_remote_import(
+contains	crates/core/src/remote_import/tests/apply.rs	fn whole_session_failure_rolls_back_an_already_appended_prefix()
+contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_cleanup_completion()
+contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_a_new_active_session()
+contains	crates/core/src/remote_import/tests/apply/admission.rs	fn locator_and_ignore_admission_drift_persist_stale_without_facts()
+contains	crates/core/src/remote_import/tests/apply/admission.rs	fn candidate_tamper_fails_session_before_authority_write()
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture

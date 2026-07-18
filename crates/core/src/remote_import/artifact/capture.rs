@@ -275,6 +275,14 @@ pub(super) fn verify_blob(
     expected_digest: RemoteImportDigest,
     expected_size: u64,
 ) -> RemoteImportResult<()> {
+    read_verified_blob(path, expected_digest, expected_size).map(|_| ())
+}
+
+pub(super) fn read_verified_blob(
+    path: &Path,
+    expected_digest: RemoteImportDigest,
+    expected_size: u64,
+) -> RemoteImportResult<Vec<u8>> {
     let before = std::fs::symlink_metadata(path)?;
     if !before.is_file() || before.file_type().is_symlink() || before.len() != expected_size {
         return Err(RemoteImportError::ArtifactTampered(format!(
@@ -298,6 +306,10 @@ pub(super) fn verify_blob(
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 64 * 1024];
     let mut observed_size = 0u64;
+    let capacity = usize::try_from(expected_size).map_err(|_| {
+        RemoteImportError::ArtifactTampered(format!("blob size does not fit memory at {:?}", path))
+    })?;
+    let mut bytes = Vec::with_capacity(capacity);
     loop {
         let read = file.read(&mut buffer)?;
         if read == 0 {
@@ -313,6 +325,7 @@ pub(super) fn verify_blob(
             )));
         }
         hasher.update(&buffer[..read]);
+        bytes.extend_from_slice(&buffer[..read]);
     }
     let after = std::fs::symlink_metadata(path)?;
     let after_identity = file_id::get_file_id(path).map_err(|error| {
@@ -339,7 +352,7 @@ pub(super) fn verify_blob(
             path
         )));
     }
-    Ok(())
+    Ok(bytes)
 }
 
 pub(super) fn write_new_synced(path: &Path, bytes: &[u8]) -> RemoteImportResult<()> {

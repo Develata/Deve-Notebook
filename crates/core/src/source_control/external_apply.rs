@@ -8,9 +8,7 @@ use crate::models::{DocId, GlobalSeq, RepoId};
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::models::{FileNodeId, Op};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::source_control::staging::StagedEntry;
+use crate::ledger::manager::prepared_change_batch::PreparedLedgerChangeBatch;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExternalApplyReceipt {
@@ -32,23 +30,16 @@ pub struct ExternalApplyOutcome {
 /// repository mutation permit; the commit phase exact-compares this snapshot.
 #[cfg(not(target_arch = "wasm32"))]
 pub struct PreparedExternalApply {
-    pub(crate) repo_id: RepoId,
-    pub(crate) expected_ledger_head: u64,
-    pub(crate) staged_snapshot: Vec<(String, StagedEntry)>,
-    pub(crate) targets: Vec<PreparedExternalTarget>,
-    pub(crate) changed_paths: Vec<String>,
+    batch: PreparedLedgerChangeBatch,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) struct PreparedUpsert {
-    pub(crate) path: String,
-    pub(crate) doc_id: DocId,
-    pub(crate) content_ops: Vec<Op>,
-    pub(crate) inode: Option<FileNodeId>,
-}
+impl PreparedExternalApply {
+    pub(crate) fn from_batch(batch: PreparedLedgerChangeBatch) -> Self {
+        Self { batch }
+    }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) enum PreparedExternalTarget {
-    Upsert(PreparedUpsert),
-    Delete { path: String, doc_id: Option<DocId> },
+    pub(crate) fn into_batch(self) -> PreparedLedgerChangeBatch {
+        self.batch
+    }
 }

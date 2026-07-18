@@ -18,7 +18,7 @@ use redb::{Database, ReadableTable};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-const RUNTIME_KEY: u8 = 0;
+pub(super) const RUNTIME_KEY: u8 = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StoreOpenState {
@@ -283,11 +283,11 @@ fn validate_record_shapes(
     Ok(())
 }
 
-fn encode<T: serde::Serialize + ?Sized>(value: &T) -> RemoteImportResult<Vec<u8>> {
+pub(super) fn encode<T: serde::Serialize + ?Sized>(value: &T) -> RemoteImportResult<Vec<u8>> {
     crate::codec::encode(value).map_err(RemoteImportError::codec)
 }
 
-fn decode_runtime(bytes: &[u8]) -> RemoteImportResult<RemoteImportRuntimeRecord> {
+pub(super) fn decode_runtime(bytes: &[u8]) -> RemoteImportResult<RemoteImportRuntimeRecord> {
     let value: RemoteImportRuntimeRecord =
         crate::codec::decode(bytes).map_err(RemoteImportError::codec)?;
     if value.value_version != REMOTE_IMPORT_VALUE_VERSION {
@@ -299,7 +299,7 @@ fn decode_runtime(bytes: &[u8]) -> RemoteImportResult<RemoteImportRuntimeRecord>
     Ok(value)
 }
 
-fn decode_session(
+pub(super) fn decode_session(
     key: u128,
     bytes: &[u8],
     repo_id: RepoId,

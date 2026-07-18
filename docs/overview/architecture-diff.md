@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-17 (Route B contract-freeze pass)
+Generated: 2026-07-18 (Route B B3 sealed-writer pass)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -24,7 +24,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Flow set | drifted | 79 approved flow labels exist on both sides; four Remote Import flows intentionally map current substitutes/missing carriers |
 | User operations | drifted | existing 74 IDs and Remote Projection push align; four Remote Import target flows remain incomplete |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport and immutable session are present; product Prepare, sealed apply and independent client remain scheduled B3–B5 |
+| Coordination/execution mapping | drifted | Shared transport, immutable session and sealed core Apply are present; product Prepare/Apply/writeback and independent client remain scheduled B4–B5 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -41,7 +41,7 @@ Active drift facts:
 
 1. `remote import prepare`: B1 immutable store and B2 ordered source acquisition exist, but the current product pull still routes through the isolated workspace/External Changes transition; B4 replaces it.
 2. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
-3. `remote import apply`: no source-specific sealed whole-session Ledger transaction exists; B3/B4 implement it without changing External Apply semantics.
+3. `remote import apply`: B3 source-specific sealed whole-session Ledger transaction exists and preserves External Apply semantics; no product Mounted admission, post-commit writeback or Remote Import surface exists until B4/B5.
 4. `remote import manage`: backend Refresh/Discard/dry-run repair/retention exist, but the product lifecycle and cleanup apply path remain B4/W7 work.
 
 ## Flow Registry
@@ -187,10 +187,10 @@ Within the currently modeled operation slice:
 
 - 74 pre-existing flows remain aligned
 - Remote Projection push is aligned; four approved Remote Import flows remain honest current substitute/missing mappings
-- Redb v4 is aligned; WS v2 current → v3 target and B3-B6 product/runtime gaps remain release blockers
+- Redb v4 and the crate-internal B3 sealed writer are aligned; WS v2 current → v3 target and B4-B6 product/evidence gaps remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
-The slice is bijective at the registry/label level and intentionally carries four active drift markers until B3–B5 close them.
+The slice is bijective at the registry/label level and intentionally carries four active drift markers until B4–B5 close the product cutover and client flows.
 
 ## Maintenance Rules
 
