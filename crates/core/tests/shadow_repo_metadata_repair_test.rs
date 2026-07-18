@@ -113,15 +113,6 @@ fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
 
     common::seed_shadow_without_metadata_row(&main, &peer_id, wiki_info.uuid);
 
-    let main_info = main.get_repo_info().expect("main info").expect("present");
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-    let bad = deve_core::ledger::RepoInfo {
-        uuid: main_info.uuid,
-        name: "main".into(),
-        url: Some(format!("urn:uuid:{}", main_info.uuid)),
-    };
-    common::write_repo_metadata(wiki_db.as_ref(), &bad);
-
     main.repair_local_repo_catalog()
         .expect("repair local catalog");
 

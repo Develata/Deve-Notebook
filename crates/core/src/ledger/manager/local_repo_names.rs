@@ -19,7 +19,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn execution_repo_names_fail_closed_on_duplicate_main_metadata_drift() {
+    fn execution_repo_names_fail_closed_on_physical_repo_id_drift() {
         let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
@@ -40,7 +40,10 @@ mod tests {
         let err = main
             .list_local_repo_names_for_execution()
             .expect_err("duplicate main metadata drift must fail closed");
-        assert!(err.to_string().contains("metadata name drifted to main"));
+        assert!(
+            err.to_string()
+                .contains("physical RepoId does not match metadata RepoId")
+        );
     }
 
     #[test]

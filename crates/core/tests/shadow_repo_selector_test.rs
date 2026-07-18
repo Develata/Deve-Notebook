@@ -12,13 +12,15 @@ fn new_repo() -> (TempDir, RepoManager) {
 }
 
 #[test]
-fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
+fn remote_repo_listing_uses_uuid_execution_names_for_duplicate_display_names() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
+    let first_id = Uuid::new_v4();
+    let second_id = Uuid::new_v4();
     repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
-            uuid: Uuid::new_v4(),
+            uuid: first_id,
             name: "wiki".into(),
             url: Some("urn:test:wiki-a".into()),
         },
@@ -27,7 +29,7 @@ fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
     repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
-            uuid: Uuid::new_v4(),
+            uuid: second_id,
             name: "wiki".into(),
             url: Some("urn:test:wiki-b".into()),
         },
@@ -35,13 +37,9 @@ fn remote_repo_listing_uses_collision_safe_labels_for_duplicate_names() {
     .expect("prepare second wiki shadow");
 
     let repos = repo.list_repos(Some(&peer_id)).expect("list remote repos");
-    assert_eq!(repos.len(), 2);
-    assert!(repos.iter().any(|name| name == "wiki"));
-    assert!(
-        repos
-            .iter()
-            .any(|name| name != "wiki" && name.starts_with("wiki-"))
-    );
+    let mut expected = vec![first_id.to_string(), second_id.to_string()];
+    expected.sort();
+    assert_eq!(repos, expected);
 }
 
 #[test]

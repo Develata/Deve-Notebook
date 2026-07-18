@@ -336,16 +336,15 @@ fn projection_locator_preserves_redb_suffix_in_repo_name_segment() -> anyhow::Re
     let base = dir.path().join("notes");
     let repo = RepoManager::init(&ledger, 8, Some("paper.redb"), Some("urn:paper"))?;
 
-    assert_eq!(repo.local_repo_name(), "paper.redb");
+    let info = repo.get_repo_info()?.expect("repo info");
+    assert_eq!(repo.local_repo_name(), info.uuid.to_string());
+    assert_eq!(info.name, "paper.redb");
 
     repo.set_projection_base_for_local_repo("paper.redb", &base)?;
 
     assert_eq!(
         repo.local_repo_workspace_root("paper.redb")?,
-        std::fs::canonicalize(&base)?.join(repo_workspace_segment(
-            "paper.redb",
-            repo.get_repo_info()?.expect("repo info").uuid
-        )?)
+        std::fs::canonicalize(&base)?.join(repo_workspace_segment("paper.redb", info.uuid)?)
     );
     assert_eq!(
         repo.projection_locator_for_local_repo("paper.redb")?

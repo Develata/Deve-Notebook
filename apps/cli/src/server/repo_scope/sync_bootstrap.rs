@@ -37,7 +37,7 @@ fn bootstrap_and_bind_local_repo(
     session: &mut WsSession,
 ) -> Result<ResolvedRepo> {
     let scope = bootstrap_local_repo(state, session)?;
-    session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+    session.switch_repo(scope.session_name.clone(), Some(scope.repo_id));
     Ok(scope)
 }
 

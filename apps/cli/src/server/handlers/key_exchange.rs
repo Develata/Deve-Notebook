@@ -147,10 +147,10 @@ fn resolve_key_request_scope(
 ) -> anyhow::Result<ResolvedRepo> {
     let resolved = resolve_session_repo_or_bootstrap_local(state, session)?;
     if resolved.branch.is_none()
-        && (session.active_repo.as_deref() != Some(resolved.repo_name.as_str())
+        && (session.active_repo.as_deref() != Some(resolved.session_name.as_str())
             || session.active_repo_id != Some(resolved.repo_id))
     {
-        session.switch_repo(resolved.repo_name.clone(), Some(resolved.repo_id));
+        session.switch_repo(resolved.session_name.clone(), Some(resolved.repo_id));
     }
     Ok(resolved)
 }
@@ -165,9 +165,13 @@ fn resolve_key_scope(
     let Some(repo_name) = state.repo.find_local_repo_name_by_id(scope.repo_id)? else {
         return Ok(None);
     };
+    let Some(info) = state.repo.get_repo_info_for(None, Some(&repo_name))? else {
+        return Ok(None);
+    };
     Ok(Some(ResolvedRepo {
         repo_id: scope.repo_id,
         repo_name,
+        session_name: info.name,
         branch: None,
     }))
 }

@@ -56,6 +56,7 @@ impl RepoManager {
         repo_name: &str,
         db: &Arc<Database>,
     ) -> Result<()> {
+        Self::validate_local_repo_schema(db.as_ref())?;
         if repo_name == self.local_repo_name {
             return Ok(());
         }
@@ -105,6 +106,7 @@ impl RepoManager {
 
         // 1. 检查全局缓存
         if let Some(db) = reusable_cached_database(cache_key.as_path())? {
+            Self::validate_local_repo_schema(db.as_ref())?;
             self.repair_secondary_local_runtime_tables(name, &db)?;
             return Ok(db);
         }
@@ -126,6 +128,7 @@ impl RepoManager {
             .join(format!("{}.redb", self.local_repo_name));
 
         if cache_key == main_db_path {
+            Self::validate_local_repo_schema(self.local_db.as_ref())?;
             return Ok(self.local_db.clone());
         }
 
@@ -137,6 +140,7 @@ impl RepoManager {
         // 4. 打开新数据库并缓存
         let db = Database::create(&cache_key)?;
         let arc_db = Arc::new(db);
+        Self::validate_local_repo_schema(arc_db.as_ref())?;
         self.repair_secondary_local_runtime_tables(name, &arc_db)?;
 
         {

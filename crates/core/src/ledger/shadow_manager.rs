@@ -20,12 +20,10 @@ use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use super::RepoInfo;
 use super::RepoManager;
-use super::database::relocate_database_path;
 use super::ops;
 use super::shadow;
 use crate::ledger::source_control;
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
-use crate::utils::fs::checked_exists;
 use redb::Database;
 
 type ShadowRepoMap = HashMap<PeerId, HashMap<RepoId, Arc<Database>>>;
@@ -64,32 +62,7 @@ impl RepoManager {
     }
 
     pub fn ensure_shadow_repo_info(&self, peer_id: &PeerId, info: &RepoInfo) -> Result<()> {
-        let desired = self.allocate_remote_repo_path(peer_id, info)?;
-        let legacy = self
-            .remotes_dir()
-            .join(peer_id.to_filename())
-            .join(format!("{}.redb", info.uuid));
-        let db_path = match if checked_exists(&desired, "shadow repo destination")? {
-            Some(desired.clone())
-        } else if checked_exists(&legacy, "shadow repo legacy path")? {
-            match Self::read_repo_info_from_path(&legacy)? {
-                Some(current) if current.uuid == info.uuid => Some(legacy),
-                Some(_) => None,
-                None => Some(legacy),
-            }
-        } else {
-            self.resolve_remote_repo_entry_by_id(peer_id, info.uuid)?
-                .map(|entry| entry.path)
-        } {
-            Some(path) if path == desired => path,
-            Some(path) => {
-                relocate_database_path(&path, &desired)?;
-                std::fs::rename(&path, &desired)?;
-                self.detach_shadow_repo(peer_id, &info.uuid)?;
-                desired
-            }
-            None => desired,
-        };
+        let db_path = self.allocate_remote_repo_path(peer_id, info)?;
         shadow::load_shadow_db(
             &self.remotes_dir(),
             &self.shadow_dbs,
@@ -113,17 +86,6 @@ impl RepoManager {
     /// 当前已加载的所有 PeerId 列表
     pub fn list_loaded_shadows(&self) -> Result<Vec<PeerId>> {
         Ok(self.read_shadow_dbs()?.keys().cloned().collect())
-    }
-
-    fn detach_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
-        let mut dbs = self.write_shadow_dbs()?;
-        if let Some(repos) = dbs.get_mut(peer_id) {
-            repos.remove(repo_id);
-            if repos.is_empty() {
-                dbs.remove(peer_id);
-            }
-        }
-        Ok(())
     }
 
     // Method moved to listing trait

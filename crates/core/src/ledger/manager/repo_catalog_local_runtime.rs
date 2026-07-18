@@ -24,7 +24,7 @@ impl<'a> RepoCatalogRuntime<'a> {
                     )
                 })?
             } else {
-                RepoManager::read_required_repo_info_from_path(&path, &stem, "listing repos")
+                RepoManager::read_required_local_repo_info_from_path(&path, &stem, "listing repos")
                     .map_err(|err| {
                         anyhow!("Broken local repo {} while listing repos: {}", stem, err)
                     })?
@@ -92,7 +92,7 @@ impl<'a> RepoCatalogRuntime<'a> {
                 repos.push((stem, info));
                 continue;
             }
-            let info = RepoManager::read_required_repo_info_from_path(&path, &stem, context)
+            let info = RepoManager::read_required_local_repo_info_from_path(&path, &stem, context)
                 .map_err(|err| anyhow!("Broken local repo {} while {}: {}", stem, context, err))?;
             if self.manager.is_local_repo_removed(info.uuid)? {
                 continue;

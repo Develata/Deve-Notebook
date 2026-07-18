@@ -22,9 +22,9 @@ fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
         .expect_err("broken local repo must fail execution listing");
     assert!(exec_err.to_string().contains("Broken local repo broken"));
     assert_eq!(
-        repo.resolve_local_repo_name(None, Some("main"))
-            .expect("exact main selector remains valid"),
-        "main"
+        repo.resolve_local_repo_name(None, Some(repo.local_repo_name()))
+            .expect("exact RepoId execution selector remains valid"),
+        repo.local_repo_name()
     );
     let resolve_err = repo
         .resolve_local_repo_name(None, Some("broken"))
@@ -121,7 +121,7 @@ fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
 }
 
 #[test]
-fn runtime_listing_fails_closed_on_duplicate_secondary_uuid_until_explicit_repair() {
+fn runtime_and_explicit_repair_fail_closed_on_secondary_repo_id_mismatch() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
@@ -140,33 +140,42 @@ fn runtime_listing_fails_closed_on_duplicate_secondary_uuid_until_explicit_repai
     let err = main
         .list_repos(None)
         .expect_err("runtime listing must fail closed on duplicate UUID");
-    assert!(err.to_string().contains("duplicate local repository UUID"));
+    assert!(err.to_string().contains("physical RepoId does not match"));
 
-    main.repair_local_repo_catalog()
-        .expect("explicit repair may rewrite duplicate UUID");
+    let repair_err = main
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must not rewrite duplicate UUID");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("physical RepoId does not match")
+    );
     assert_eq!(
-        main.list_repos(None).expect("listing after repair"),
-        vec!["main".to_string(), "wiki".to_string()]
+        common::read_repo_metadata(wiki_db.db.as_ref()).uuid,
+        main_info.uuid
     );
 }
 
 #[test]
-fn runtime_listing_fails_closed_on_missing_secondary_metadata_until_explicit_repair() {
+fn runtime_and_explicit_repair_fail_closed_on_missing_secondary_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    common::seed_metadata_less_local_repo(&ledger_dir, "legacy");
+    let missing_id = uuid::Uuid::new_v4();
+    common::seed_metadata_less_local_repo(&ledger_dir, &missing_id.to_string());
 
     let err = repo
         .list_repos(None)
         .expect_err("runtime listing must fail closed on missing metadata");
     assert!(err.to_string().contains("repository metadata missing"));
 
-    repo.repair_local_repo_catalog()
-        .expect("explicit repair may bootstrap missing metadata");
-    assert_eq!(
-        repo.list_repos(None).expect("listing after repair"),
-        vec!["legacy".to_string(), "main".to_string()]
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must not invent repository identity");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("repository metadata missing")
     );
 }
 

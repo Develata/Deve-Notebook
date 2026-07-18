@@ -20,6 +20,7 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
     let scope = ResolvedRepo {
         repo_id,
         repo_name: "notes".into(),
+        session_name: "notes".into(),
         branch: Some(PeerId::new("remote-a")),
     };
     let hunk = ConflictHunk {
@@ -102,6 +103,7 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
     let scope = ResolvedRepo {
         repo_id,
         repo_name: "default".into(),
+        session_name: "default".into(),
         branch: None,
     };
     let preflight =
@@ -164,7 +166,7 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
         )?;
     let repo = Arc::new(repo);
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
-    sync_manager.mark_projection_writeback_fault("default");
+    sync_manager.mark_projection_writeback_fault(repo.local_repo_name());
     Ok((
         dir,
         Arc::new(AppState {

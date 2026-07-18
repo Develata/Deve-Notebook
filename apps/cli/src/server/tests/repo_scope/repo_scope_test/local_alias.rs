@@ -95,7 +95,9 @@ fn resolve_session_repo_preserves_local_catalog_corruption_for_exact_selector() 
         resolve_session_repo_and_sync(&state, &mut session).expect_err("corrupted repo must fail");
     assert!(
         err.to_string()
-            .contains("Broken local repo test while validating catalog: repository URL missing")
+            .contains(&format!(
+                "Broken local repo {test_id} while validating catalog: repository URL missing"
+            ))
     );
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
     assert_eq!(mapped.code, ServerErrorCode::StoragePersistFailed);

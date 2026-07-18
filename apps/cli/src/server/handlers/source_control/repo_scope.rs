@@ -51,7 +51,7 @@ pub fn resolve_current_repo_scope(
         }
         let scope =
             bootstrap_local_repo(state, session).map_err(super::errors::map_repo_scope_error)?;
-        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        session.switch_repo(scope.session_name.clone(), Some(scope.repo_id));
         return Ok(scope);
     }
     resolve_session_repo_and_sync(state, session).map_err(super::errors::map_repo_scope_error)
@@ -65,7 +65,7 @@ pub fn resolve_current_local_repo(
     if scope.branch.is_some() {
         return Err(ServerError::with_detail(
             ServerErrorCode::ScRemoteBranchReadonly,
-            scope.repo_name,
+            scope.session_name,
         ));
     }
     Ok(scope)

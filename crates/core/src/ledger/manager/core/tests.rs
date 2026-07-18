@@ -24,7 +24,7 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
+    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
     let wiki_info = RepoInfo {
         uuid: crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki")
             .uuid,
@@ -32,6 +32,7 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
         url: Some("urn:wiki".into()),
     };
     let wiki_db = main.open_database(None, "wiki")?.db;
+    main.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
 
     crate::test_support::write_repo_metadata(
         wiki_db.as_ref(),
@@ -57,9 +58,10 @@ fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Re
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
+    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
     let info = main.get_repo_info()?.expect("main info");
     let main_db = main.open_database(None, "main")?.db;
+    main.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
 
     crate::test_support::write_repo_metadata(
         main_db.as_ref(),

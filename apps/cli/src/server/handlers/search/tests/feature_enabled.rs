@@ -43,6 +43,7 @@ fn scope_search_scans_current_repo_documents() -> anyhow::Result<()> {
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
+        session_name: "default".into(),
         branch: None,
     };
 
@@ -62,6 +63,7 @@ fn scope_search_honors_limit_and_blank_query() -> anyhow::Result<()> {
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
+        session_name: "default".into(),
         branch: None,
     };
 
@@ -88,6 +90,7 @@ fn scope_search_scans_remote_branch_documents() -> anyhow::Result<()> {
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "shadow-notes".into(),
+        session_name: "shadow-notes".into(),
         branch: Some(peer_id),
     };
 
@@ -108,6 +111,7 @@ fn scope_search_orders_by_score_then_path_before_limit() -> anyhow::Result<()> {
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
+        session_name: "default".into(),
         branch: None,
     };
 

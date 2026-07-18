@@ -112,12 +112,7 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
 
     let err = select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)
         .expect_err("local uuid string without repo_id must fail closed");
-    assert!(
-        err.to_string().contains("Local repo not found for name")
-            || err
-                .to_string()
-                .contains("Local repository selector not resolved")
-    );
+    assert!(err.to_string().contains("Repository UUID not resolved"));
     Ok(())
 }
 

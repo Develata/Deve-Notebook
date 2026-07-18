@@ -31,18 +31,24 @@ fn seed_metadata_only_doc(repo: &RepoManager, path: &str) -> Result<DocId> {
 ///
 /// 验证:
 /// - 账本目录正确创建
-/// - 本地数据库文件存在 (`local/default.redb`)
+/// - 本地数据库文件使用 UUID-first stem
 /// - 远端目录存在 (`remotes/`)
 #[test]
 fn test_repo_manager_init() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
 
-    let _repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
 
     // 验证目录结构
     assert!(ledger_dir.exists());
-    assert!(ledger_dir.join("local").join("default.redb").exists());
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    assert!(
+        ledger_dir
+            .join("local")
+            .join(format!("{repo_id}.redb"))
+            .exists()
+    );
     assert!(ledger_dir.join("remotes").exists());
 
     Ok(())
@@ -55,10 +61,17 @@ fn test_repo_manager_init_custom_name() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
 
     // Initialize with custom name "my_wiki"
-    let _repo = RepoManager::init(&ledger_dir, 10, Some("my_wiki"), None)?;
+    let repo = RepoManager::init(&ledger_dir, 10, Some("my_wiki"), None)?;
 
     // Verify file creation
-    assert!(ledger_dir.join("local").join("my_wiki.redb").exists());
+    let info = repo.get_repo_info()?.expect("repo info");
+    assert_eq!(info.name, "my_wiki");
+    assert!(
+        ledger_dir
+            .join("local")
+            .join(format!("{}.redb", info.uuid))
+            .exists()
+    );
 
     Ok(())
 }

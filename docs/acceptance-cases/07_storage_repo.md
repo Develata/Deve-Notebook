@@ -20,7 +20,7 @@
   preconditions:
     - 两个 Repo 同名不同 URL
   steps:
-    - run: cargo test -p deve_core init_allocates_collision_safe_repo_name_for_same_name_different_url -- --nocapture
+    - run: cargo test -p deve_core init_keeps_duplicate_display_name_for_same_name_different_url -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: collision_safe_local_repo_name true
@@ -401,10 +401,11 @@
 - case_id: STORE-019
   goal: Remote Import Prepare 将远端输入封存为 immutable manifest/blob/candidate，不预写 workspace 或 authority。
   preconditions:
-    - B0 已批准 durable session store 与 host-only artifact layout
-    - 当前代码尚未实现 Remote Import Prepare
+    - B1 已实现 durable session store 与 host-only artifact publication
+    - provider acquisition 与产品 Prepare 入口仍待 B2/B4 接入
   steps:
-    - gap: immutable Remote Import prepare producer is not implemented at B0
+    - run: cargo test -p deve_core --lib remote_import -- --nocapture
+    - gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
   assertions:
     - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
     - api_assert: remote_import_prepare_writes_no_workspace_ledger_or_external_changes true
@@ -416,7 +417,7 @@
     - STORE-019 已产生 immutable session candidate
     - 当前代码尚未实现 Remote Import Review
   steps:
-    - gap: typed Remote Import review and blocker producer is not implemented at B0
+    - gap: typed Remote Import review and blocker producer is not implemented yet
   assertions:
     - api_assert: remote_import_review_is_backend_owned true
     - api_assert: remote_import_review_exposes_no_locator_blob_digest_credential_or_raw_failure_detail true
@@ -428,7 +429,7 @@
     - Ready session 无 blocker，repo health healthy 且 watcher Mounted
     - 当前代码尚未实现 sealed Remote Import Apply
   steps:
-    - gap: whole-session Remote Import apply and browser receipt producer is not implemented at B0
+    - gap: whole-session Remote Import apply and browser receipt producer is not implemented yet
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
@@ -457,10 +458,11 @@
 - case_id: STORE-023
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
-    - B0 已批准 immutable session state machine 和 dry-run repair 合同
-    - 当前代码尚未实现完整 manage lifecycle
+    - B1 已实现 durable recovery、retention 与 dry-run repair inventory
+    - 产品 Refresh/Discard/Repair 入口和 fresh cross-platform evidence 仍待 B4/B6
   steps:
-    - gap: Remote Import manage lifecycle producer is not implemented at B0
+    - run: cargo test -p deve_core --lib remote_import -- --nocapture
+    - gap: product-bound Remote Import manage lifecycle producer remains pending until B4/B6
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

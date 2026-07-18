@@ -68,6 +68,12 @@ fn inject_broken_structure(repo: &RepoManager) {
 #[test]
 fn startup_scan_skips_repo_with_broken_structure_projection() {
     let (_dir, repo) = setup_repos();
+    let main_execution_name = repo
+        .resolve_local_repo_name_for_execution(None, Some("main"))
+        .expect("resolve main execution name");
+    let wiki_execution_name = repo
+        .resolve_local_repo_name_for_execution(None, Some("wiki"))
+        .expect("resolve wiki execution name");
     seed_main_file(repo.as_ref());
     inject_broken_structure(repo.as_ref());
     let wiki_root = repo.local_repo_workspace_root("wiki").expect("wiki root");
@@ -91,17 +97,17 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .expect("wiki orphan path")
             .exists()
     );
-    assert!(sync.is_projection_degraded("wiki"));
-    assert!(!sync.is_projection_degraded("main"));
+    assert!(sync.is_projection_degraded(&wiki_execution_name));
+    assert!(!sync.is_projection_degraded(&main_execution_name));
     assert_eq!(
         sync.healthy_local_repo_names_for_execution()
             .expect("healthy repos"),
-        vec![String::from("main")]
+        vec![main_execution_name]
     );
     assert_eq!(
         sync.degraded_local_repo_names_for_execution()
             .expect("degraded repos"),
-        vec![String::from("wiki")]
+        vec![wiki_execution_name.clone()]
     );
     assert!(
         repo.list_pending_fs_in_local_repo("wiki")
@@ -110,7 +116,7 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
     );
     assert!(
         sync.handle_fs_event(
-            "wiki",
+            &wiki_execution_name,
             repo.get_repo_info_for(None, Some("wiki"))
                 .expect("wiki info lookup")
                 .expect("wiki info")

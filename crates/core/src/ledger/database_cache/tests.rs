@@ -99,7 +99,9 @@ fn local_catalog_validation_reuses_open_main_database() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
-    let path = ledger_dir.join("local").join("main.redb");
+    let path = ledger_dir
+        .join("local")
+        .join(format!("{}.redb", repo.local_repo_name()));
 
     let stamp = {
         let cache = OPENED_DBS.read().expect("cache");

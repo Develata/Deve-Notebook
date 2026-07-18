@@ -100,7 +100,7 @@ fn write_repo_id_rejects_degraded_local_projection() -> anyhow::Result<()> {
     let (_dir, state, default_id) = build_state()?;
     state
         .sync_manager
-        .mark_projection_writeback_fault("default");
+        .mark_projection_writeback_fault(state.repo.local_repo_name());
     let (uni_tx, mut uni_rx) = mpsc::channel(4);
     let ch = DualChannel::new(broadcast::channel(4).0, uni_tx);
     let mut session = WsSession::new();

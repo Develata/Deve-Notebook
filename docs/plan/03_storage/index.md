@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -74,7 +74,13 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/backups/<repo_id>-<timestamp>.redb`
 
 Physical filenames use UUID identity. `RepoNameBinding.repo_name` is a display
-alias and selector hint; it never determines a database filename.
+alias and selector hint; it never determines a database filename. The canonical
+execution stem is the matching lowercase `<repo_id>` string. Before a Projection
+Locator exists, v4 bootstrap may read the display alias from `RepoInfo.name`;
+after a locator exists, its `repo_name_hint` must match that alias as a
+consistency witness. A mismatch fails closed as metadata/locator drift and must
+not rename the DB, rewrite either side heuristically, or turn the hint into
+authority.
 
 ### 3.1.1 Remote Import Runtime Layout {#remote-import-runtime-layout}
 

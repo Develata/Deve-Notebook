@@ -5,10 +5,10 @@
 - `Layer`: `Application / Projection Transport`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/remote_projection/`, `apps/cli/src/commands/projection_remote/`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
+- `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/commands/projection_remote/`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
 
 本章冻结两个相互分离的首发能力：
 
@@ -139,6 +139,7 @@ Discard:  Ready | Stale | Failed -> Discarded
 
 - 不存在 durable `Applying`。Apply 由 process single-flight + Redb CAS 与 idempotent stored receipt 保证。
 - Prepare 固定顺序：Redb reserve `Preparing` → stream/verify temp blobs → 原子发布 blobs/manifest/candidate → CAS `Ready`。
+- 上述原子发布的 durability cut 固定为：同步文件内容 → 同步 child directory → no-replace publication → 同步 parent directory → Redb CAS。Windows publication 必须使用 project-owned write-through move；任一步同步失败都不得进入 `Ready` 或推进 candidate revision，残留 artifact 只由显式 repair 收敛。
 - 启动时遗留 `Preparing` 必须转为 `Failed(Interrupted)`；不得自动重新访问 provider。
 - Refresh 只能从已封存 blobs 重算 candidate。若 `RepoId`、branch、source snapshot、locator/profile binding 与 digests 仍 exact，它可以把新 candidate revision 绑定到当前 Ledger head 和当前 ignore snapshot，使 head/ignore drift 的 session 从 `Stale` 回到 `Ready`。
 - locator/profile、branch、repo membership 或 source/manifest/blob digest drift 不可由 Refresh 重绑；session 必须保持 `Stale` 或进入 typed `Failed`。获取新远端内容必须 Discard 后重新 Prepare，不得猜测 source identity。

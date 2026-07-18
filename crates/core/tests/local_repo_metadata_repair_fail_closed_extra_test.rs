@@ -19,17 +19,7 @@ fn prepare_workspace_realign_case() -> anyhow::Result<(TempDir, RepoManager, Rep
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("notes");
     main.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    std::fs::create_dir_all(projection_base.join("notes"))?;
-
-    let wiki_db = main.open_database(None, "wiki")?.db;
-    common::write_repo_metadata(
-        wiki_db.as_ref(),
-        &RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "notes".into(),
-            url: wiki_info.url.clone(),
-        },
-    );
+    std::fs::create_dir_all(projection_base.join("wiki"))?;
     Ok((dir, main, wiki_info))
 }
 
@@ -49,11 +39,11 @@ fn pending_entry(path: &str) -> PendingFsEntry {
     }
 }
 
-fn assert_metadata_still_drifted(repo: &RepoManager) -> anyhow::Result<()> {
+fn assert_metadata_unchanged(repo: &RepoManager) -> anyhow::Result<()> {
     let info = repo
         .get_repo_info_for(None, Some("wiki"))?
         .expect("wiki metadata");
-    assert_eq!(info.name, "notes");
+    assert_eq!(info.name, "wiki");
     Ok(())
 }
 
@@ -87,7 +77,7 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_pending_changes() -> 
         .expect_err("pending changes must block workspace root realign");
 
     assert!(err.to_string().contains("pending workspace change"));
-    assert_metadata_still_drifted(&main)?;
+    assert_metadata_unchanged(&main)?;
     Ok(())
 }
 
@@ -102,14 +92,14 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_staged_changes() -> a
         .expect_err("staged changes must block workspace root realign");
 
     assert!(err.to_string().contains("staged source-control change"));
-    assert_metadata_still_drifted(&main)?;
+    assert_metadata_unchanged(&main)?;
     Ok(())
 }
 
 #[test]
 fn repair_local_repo_catalog_blocks_workspace_realign_with_dirty_workspace() -> anyhow::Result<()> {
     let (dir, main, _wiki_info) = prepare_workspace_realign_case()?;
-    std::fs::write(dir.path().join("notes/notes/orphan.md"), "orphan")?;
+    std::fs::write(dir.path().join("notes/wiki/orphan.md"), "orphan")?;
 
     let err = main
         .repair_local_repo_catalog()
@@ -119,7 +109,7 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_dirty_workspace() -> 
         err.to_string().contains("dirty workspace"),
         "unexpected error: {err:#}"
     );
-    assert_metadata_still_drifted(&main)?;
+    assert_metadata_unchanged(&main)?;
     Ok(())
 }
 
@@ -149,7 +139,7 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_projection_fault() ->
         .expect_err("projection fault must block workspace root realign");
 
     assert!(err.to_string().contains("projection fault"));
-    assert_metadata_still_drifted(&main)?;
+    assert_metadata_unchanged(&main)?;
     Ok(())
 }
 
@@ -160,22 +150,11 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("projection-base");
-    std::fs::create_dir_all(projection_base.join(workspace_segment("main", wiki_info.uuid)))
-        .expect("old root");
+    std::fs::create_dir_all(projection_base.join("wiki")).expect("old root");
     std::fs::create_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))
         .expect("new root");
     main.set_projection_base_for_all_local_repos_checked(&projection_base)
         .expect("mount projection base");
-
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-    common::write_repo_metadata(
-        wiki_db.as_ref(),
-        &RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "main".into(),
-            url: wiki_info.url.clone(),
-        },
-    );
 
     let err = main
         .repair_local_repo_catalog()

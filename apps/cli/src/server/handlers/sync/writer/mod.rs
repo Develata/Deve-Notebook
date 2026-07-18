@@ -6,7 +6,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::ensure_local_repo_projection_writable;
+use crate::server::repo_scope::{
+    ensure_resolved_local_repo_writable, map_repo_scope_error, resolve_session_repo,
+};
 use crate::server::session::WsSession;
 use crate::server::source_control_grants::SourceControlGrantBranch;
 use deve_core::models::{PeerId, RepoId};
@@ -152,10 +154,14 @@ fn validate_local_projection_writable(
     if session.active_repo_id != Some(repo_id) {
         return Ok(());
     }
-    let Some(repo_name) = session.active_repo.as_deref() else {
-        return Ok(());
-    };
-    ensure_local_repo_projection_writable(state, repo_name)
+    let resolved = resolve_session_repo(state, session).map_err(map_repo_scope_error)?;
+    if resolved.repo_id != repo_id || resolved.branch.is_some() {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "writer scope does not match resolved local repo",
+        ));
+    }
+    ensure_resolved_local_repo_writable(state, &resolved)
 }
 
 #[cfg(test)]

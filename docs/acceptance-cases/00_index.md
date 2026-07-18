@@ -13,8 +13,8 @@
 first-tag 另以 current-HEAD/target-host receipts 校验证据，不再使用“case ID 在代码或文档
 中出现过”作为充分条件。
 
-首发 journey 当前共 17 个；`remote-import` 在 B0 以 required/tag-ready gap 登记，只有
-B6 的真实 browser/runtime receipt 才能替换该 gap。
+首发 journey 当前共 17 个；`remote-import` 的 B1 backend/store 已落地，但仍以
+required/tag-ready gap 登记，只有 B6 的真实 browser/runtime receipt 才能替换该 gap。
 
 自动化验收的优先原则：
 

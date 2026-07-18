@@ -43,10 +43,8 @@ fn local_repo_info_lookup_without_repair_fails_closed_on_broken_main_metadata() 
         .repo_scope_runtime()
         .get_local_repo_info_by_id_without_repair(main_info.uuid)
         .expect_err("broken main metadata must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Broken local repo main while resolving UUID")
-    );
+    assert!(err.to_string().contains("while resolving UUID"));
+    assert!(err.to_string().contains(main.local_repo_name()));
 }
 
 #[test]

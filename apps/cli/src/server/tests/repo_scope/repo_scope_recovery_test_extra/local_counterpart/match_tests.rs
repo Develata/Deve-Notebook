@@ -19,7 +19,8 @@ fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow
     .expect("local counterpart");
 
     assert!(local.branch.is_none());
-    assert_eq!(local.repo_name, "test");
+    assert_eq!(local.repo_name, remote_repo_id.to_string());
+    assert_eq!(local.session_name, "test");
     assert_eq!(local.repo_id, remote_repo_id);
     Ok(())
 }

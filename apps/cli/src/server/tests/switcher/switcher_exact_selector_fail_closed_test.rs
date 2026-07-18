@@ -49,7 +49,7 @@ async fn switch_repo_exact_fails_closed_when_remote_repo_id_is_stale() -> anyhow
             ..
         }) if error.code == ServerErrorCode::ScRepoContextInvalid
             && error.detail.as_deref().is_some_and(|detail| {
-                detail.contains("Repository UUID not resolved for exact repository selector wiki")
+                detail.contains("Repository UUID not resolved for repository selector wiki")
             })
     ));
     assert!(session.active_repo.is_none());

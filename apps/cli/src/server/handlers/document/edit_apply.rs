@@ -56,6 +56,7 @@ pub(super) async fn append_client_edit(input: ClientEditAppend<'_>) {
             let bound_scope = ResolvedRepo {
                 repo_id,
                 repo_name: repo_name.clone(),
+                session_name: scope.session_name.clone(),
                 branch: None,
             };
             if let Err(error) = reject_missing_doc(state, &repo_name, doc_id) {

@@ -50,11 +50,17 @@ pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("sna
 // Metadata Key (u8) -> Metadata Value (Bytes - JSON/Postcard)
 pub const REPO_INFO_METADATA_KEY: u8 = 0;
 pub const REPO_SCHEMA_VERSION_METADATA_KEY: u8 = 1;
-pub const REDB_SCHEMA_VERSION: u16 = 3;
+pub const REDB_SCHEMA_VERSION: u16 = 4;
 
 // Key 0: RepoInfo (UUID, Name, URL)
 // Key 1: REDB_SCHEMA_VERSION
 pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo_metadata");
+
+// Local-authority Remote Import workflow. Shadow databases deliberately do not own these tables.
+pub(crate) const REMOTE_IMPORT_SESSIONS: TableDefinition<u128, &[u8]> =
+    TableDefinition::new("remote_import_sessions");
+pub(crate) const REMOTE_IMPORT_RUNTIME: TableDefinition<u8, &[u8]> =
+    TableDefinition::new("remote_import_runtime");
 
 // Physical PeerId (&str) -> repo-scoped max PeerFactSeq (u64).
 pub const PEER_FACT_SEQ: TableDefinition<&str, u64> = TableDefinition::new("peer_fact_seq_v3");

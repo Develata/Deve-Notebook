@@ -18,7 +18,11 @@ use std::sync::Arc;
 #[derive(Clone, Debug)]
 pub struct ResolvedRepo {
     pub repo_id: RepoId,
+    /// Canonical execution selector used for database, workspace, and mutation paths.
     pub repo_name: String,
+    /// Session-facing selector. Local scopes retain the metadata display alias; remote scopes
+    /// retain the exact branch selector. It is never used as storage authority.
+    pub session_name: String,
     pub branch: Option<PeerId>,
 }
 

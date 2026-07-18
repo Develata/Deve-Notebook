@@ -107,7 +107,7 @@ fn open_remote_database_fails_closed_when_selector_metadata_is_missing() {
         Err(err) => err,
     };
     assert!(
-        err.to_string().contains("wiki")
+        err.to_string().contains(&repo_id.to_string())
             && err.to_string().contains("peer-a")
             && (err.to_string().contains("metadata missing")
                 || err.to_string().contains("scanning catalog")),

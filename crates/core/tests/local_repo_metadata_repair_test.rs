@@ -5,7 +5,7 @@ use tempfile::TempDir;
 mod common;
 
 #[test]
-fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
+fn repair_fails_closed_on_repo_id_mismatch_without_rewriting_identity() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
@@ -19,64 +19,35 @@ fn init_repairs_duplicate_local_repo_uuid_and_name_drift() {
         url: Some(format!("urn:uuid:{}", main_info.uuid)),
     };
     common::write_repo_metadata(wiki_db.as_ref(), &bad);
-    main.repair_local_repo_catalog().expect("repair catalog");
-
-    let repaired_main = main
-        .get_repo_info()
-        .expect("repaired main info")
-        .expect("main present");
-    let repaired_wiki = main
-        .get_repo_info_for(None, Some("wiki"))
-        .expect("wiki lookup")
-        .expect("wiki present");
-
-    assert_eq!(repaired_main.name, "main");
-    assert_eq!(repaired_wiki.name, "wiki");
-    assert_ne!(repaired_wiki.uuid, repaired_main.uuid);
-    assert_eq!(
-        repaired_wiki.url.as_deref(),
-        Some(format!("urn:uuid:{}", repaired_wiki.uuid).as_str())
-    );
-    assert_eq!(
-        main.list_repos(None).expect("list local repos"),
-        vec!["main".to_string(), "wiki".to_string()]
-    );
+    let err = main
+        .repair_local_repo_catalog()
+        .expect_err("repair must not rewrite RepoId identity");
+    assert!(err.to_string().contains("physical RepoId does not match"));
+    assert_eq!(common::read_repo_metadata(wiki_db.as_ref()), bad);
 }
 
 #[test]
-fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
+fn local_repo_catalog_allows_duplicate_display_names_but_selector_is_ambiguous() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main =
         RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:test:wiki-a")).expect("main");
-    let second_info =
-        common::create_initialized_local_repo(&ledger_dir, "wiki-1", "urn:test:wiki-b");
-    let second_db = main.open_database(None, "wiki-1").expect("wiki-1 db").db;
-    common::write_repo_metadata(
-        second_db.as_ref(),
-        &RepoInfo {
-            uuid: second_info.uuid,
-            name: "wiki".into(),
-            url: Some("urn:test:wiki-b".into()),
-        },
-    );
-    drop(second_db);
+    let second_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:test:wiki-b");
+    let first_info = main.get_repo_info().expect("main info").expect("present");
 
-    let err = main
+    let repos = main
         .list_repos(None)
-        .expect_err("duplicate local name drift must fail closed");
+        .expect("duplicate display names are valid");
+    assert_eq!(repos.len(), 2);
+    assert!(repos.contains(&first_info.uuid.to_string()));
+    assert!(repos.contains(&second_info.uuid.to_string()));
+    let err = main
+        .resolve_local_repo_name_for_execution(None, Some("wiki"))
+        .expect_err("duplicate display selector must fail closed");
     assert!(
         err.to_string()
-            .contains("duplicate local repository display name wiki")
+            .contains("Ambiguous local repository selector")
     );
-
-    main.repair_local_repo_catalog()
-        .expect("repair local catalog");
-
-    let repos = main.list_repos(None).expect("list repos after repair");
-    assert_eq!(repos.len(), 2);
-    assert!(repos.contains(&"wiki".to_string()));
-    assert!(repos.contains(&"wiki-1".to_string()));
 }
 
 #[test]
@@ -94,7 +65,7 @@ fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
 }
 
 #[test]
-fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
+fn repair_fails_closed_on_duplicate_local_repo_url_without_rewriting_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
@@ -108,17 +79,13 @@ fn repair_rewrites_duplicate_local_repo_url_to_repo_urn() {
             url: Some("urn:main".into()),
         },
     );
-    drop(other_db);
-
-    main.repair_local_repo_catalog().expect("repair catalog");
-
-    let repaired = main
-        .get_repo_info_for(None, Some("notes"))
-        .expect("lookup notes")
-        .expect("notes present");
+    let err = main
+        .repair_local_repo_catalog()
+        .expect_err("repair must not rewrite duplicate URL identity");
+    assert!(err.to_string().contains("duplicate local repository URL"));
     assert_eq!(
-        repaired.url.as_deref(),
-        Some(format!("urn:uuid:{}", repaired.uuid).as_str())
+        common::read_repo_metadata(other_db.as_ref()).url.as_deref(),
+        Some("urn:main")
     );
 }
 
@@ -141,12 +108,12 @@ fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
         .expect("second info")
         .expect("present");
     assert_eq!(first_info.name, "wiki");
-    assert_eq!(second_info.name, "wiki-1");
+    assert_eq!(second_info.name, "wiki");
     assert_ne!(first_info.uuid, second_info.uuid);
 }
 
 #[test]
-fn init_allocates_collision_safe_repo_name_for_same_name_different_url() {
+fn init_keeps_duplicate_display_name_for_same_name_different_url() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let first = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("https://a.example"))
@@ -160,28 +127,36 @@ fn init_allocates_collision_safe_repo_name_for_same_name_different_url() {
         .expect("second info")
         .expect("present");
     assert_eq!(first_info.name, "wiki");
-    assert_eq!(second_info.name, "wiki-1");
+    assert_eq!(second_info.name, "wiki");
     assert_eq!(first_info.url.as_deref(), Some("https://a.example"));
     assert_eq!(second_info.url.as_deref(), Some("https://b.example"));
     assert_ne!(first_info.uuid, second_info.uuid);
-    assert!(ledger_dir.join("local/wiki.redb").exists());
-    assert!(ledger_dir.join("local/wiki-1.redb").exists());
+    assert!(
+        ledger_dir
+            .join("local")
+            .join(format!("{}.redb", first_info.uuid))
+            .exists()
+    );
+    assert!(
+        ledger_dir
+            .join("local")
+            .join(format!("{}.redb", second_info.uuid))
+            .exists()
+    );
 }
 
 #[test]
 fn init_fails_closed_on_existing_local_repo_without_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    common::seed_metadata_less_local_repo(&ledger_dir, "legacy");
+    let repo_id = uuid::Uuid::new_v4();
+    common::seed_metadata_less_local_repo(&ledger_dir, &repo_id.to_string());
 
     let err = match RepoManager::init(&ledger_dir, 8, Some("legacy"), None) {
         Ok(_) => panic!("missing repo metadata must fail closed"),
         Err(err) => err,
     };
-    assert!(
-        err.to_string()
-            .contains("repository metadata missing in existing database")
-    );
+    assert!(err.to_string().contains("repository metadata missing"));
 }
 
 #[test]
@@ -195,11 +170,11 @@ fn local_execution_resolution_ignores_broken_remote_catalogs() {
     assert_eq!(
         repo.resolve_local_repo_name_for_execution(None, Some("main"))
             .expect("local execution selector"),
-        "main"
+        repo.local_repo_name()
     );
     assert_eq!(
         repo.list_local_repo_names_for_execution()
             .expect("local repo names"),
-        vec!["main".to_string()]
+        vec![repo.local_repo_name().to_string()]
     );
 }

@@ -14,74 +14,34 @@ impl RepoManager {
     ) -> Result<PathBuf> {
         let peer_dir = self.remotes_dir().join(peer_id.to_filename());
         std::fs::create_dir_all(&peer_dir)?;
-        let base = normalized_repo_stem(&info.name, &info.uuid.to_string());
-        for suffix in 0.. {
-            let stem = if suffix == 0 {
-                base.clone()
-            } else {
-                format!("{}-{}", base, suffix)
-            };
-            let path = peer_dir.join(format!("{}.redb", stem));
-            if !path
-                .try_exists()
-                .with_context(|| format!("Failed to stat remote repo path candidate: {:?}", path))?
-            {
-                return Ok(path);
-            }
-            match Self::read_repo_info_from_path(&path)? {
-                Some(current) if current.uuid == info.uuid => {
-                    if stem_matches_base(&stem, &base) {
-                        return Ok(path);
-                    }
-                    continue;
-                }
-                Some(_) => {}
-                None if stem == info.uuid.to_string() => return Ok(path),
-                None => {
-                    anyhow::bail!(
-                        "Broken shadow repo {:?} while allocating remote repo path: repository metadata missing",
-                        path
-                    );
-                }
-            }
+        let path = peer_dir.join(format!("{}.redb", info.uuid));
+        if !path
+            .try_exists()
+            .with_context(|| format!("Failed to stat remote repo path candidate: {:?}", path))?
+        {
+            return Ok(path);
         }
-        unreachable!("remote repo path allocator must terminate")
+        match Self::read_repo_info_from_path(&path)? {
+            Some(current) if current.uuid == info.uuid => Ok(path),
+            Some(current) => anyhow::bail!(
+                "Shadow authority path collision for RepoId {}: metadata belongs to {}",
+                info.uuid,
+                current.uuid
+            ),
+            // A UUID-named shadow may be created before authenticated remote metadata arrives.
+            // The caller-supplied `info` is the only value admitted here; local catalog metadata
+            // is never borrowed to infer the shadow display identity.
+            None => Ok(path),
+        }
     }
-}
-
-fn normalized_repo_stem(name: &str, fallback: &str) -> String {
-    let trimmed = name.trim();
-    if trimmed.is_empty() {
-        return fallback.to_string();
-    }
-    trimmed.replace(['/', '\\'], "_")
-}
-
-fn stem_matches_base(stem: &str, base: &str) -> bool {
-    stem == base
-        || stem
-            .strip_prefix(base)
-            .and_then(|suffix| suffix.strip_prefix('-'))
-            .map(|suffix| suffix.chars().all(|ch| ch.is_ascii_digit()))
-            .unwrap_or(false)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::stem_matches_base;
     use crate::ledger::{RepoInfo, RepoManager};
     use crate::models::PeerId;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
-
-    #[test]
-    fn collision_suffix_is_treated_as_same_selector_family() {
-        assert!(stem_matches_base("wiki", "wiki"));
-        assert!(stem_matches_base("wiki-1", "wiki"));
-        assert!(stem_matches_base("wiki-23", "wiki"));
-        assert!(!stem_matches_base("legacy", "wiki"));
-        assert!(!stem_matches_base("wiki-copy", "wiki"));
-    }
 
     #[cfg(unix)]
     #[test]
@@ -119,26 +79,29 @@ mod tests {
     }
 
     #[test]
-    fn allocate_remote_repo_path_fails_closed_on_named_path_missing_metadata() {
+    fn allocate_remote_repo_path_accepts_exact_uuid_shadow_awaiting_metadata() {
         let dir = tempfile::tempdir().expect("tempdir");
         let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))
             .expect("repo");
         let peer = PeerId::new("peer-a");
         let peer_dir = repo.remotes_dir().join(peer.to_filename());
         std::fs::create_dir_all(&peer_dir).expect("peer dir");
-        crate::test_support::create_repo_db_missing_metadata(peer_dir.join("notes.redb"));
+        let repo_id = uuid::Uuid::new_v4();
+        crate::test_support::create_repo_db_missing_metadata(
+            peer_dir.join(format!("{}.redb", repo_id)),
+        );
 
-        let err = repo
+        let path = repo
             .allocate_remote_repo_path(
                 &peer,
                 &RepoInfo {
-                    uuid: uuid::Uuid::new_v4(),
+                    uuid: repo_id,
                     name: "notes".into(),
                     url: Some("urn:test:notes".into()),
                 },
             )
-            .expect_err("named shadow path missing metadata must fail closed");
+            .expect("exact UUID shadow may await authenticated metadata");
 
-        assert!(err.to_string().contains("repository metadata missing"));
+        assert_eq!(path, peer_dir.join(format!("{}.redb", repo_id)));
     }
 }

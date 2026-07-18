@@ -45,6 +45,7 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result
 #[test]
 fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo()?;
+    let execution_name = repo.local_repo_name().to_owned();
     let doc_id = DocId::new();
     append_unvalidated(
         repo.as_ref(),
@@ -74,7 +75,10 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
         err.to_string()
             .contains("projection check failed closed: Structure Facts authority corrupt")
     );
-    assert!(err.to_string().contains("default:missing_parent"));
+    assert!(
+        err.to_string()
+            .contains(&format!("{execution_name}:missing_parent"))
+    );
     Ok(())
 }
 

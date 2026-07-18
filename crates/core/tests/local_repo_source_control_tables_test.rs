@@ -15,11 +15,12 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let legacy_path = ledger_dir.join("local").join("legacy.redb");
+    let legacy_id = uuid::Uuid::new_v4();
+    let legacy_path = ledger_dir.join("local").join(format!("{legacy_id}.redb"));
     seed_legacy_local_repo(
         &legacy_path,
         &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
+            uuid: legacy_id,
             name: "legacy".into(),
             url: Some("urn:legacy".into()),
         },
@@ -68,19 +69,31 @@ fn main_local_repo_fails_closed_on_missing_source_control_tables_until_repair() 
     let staged_err = repo
         .list_staged()
         .expect_err("missing source control tables must fail staged listing");
-    assert!(staged_err.to_string().contains("Broken local repo main"));
+    assert!(
+        staged_err
+            .to_string()
+            .contains(&format!("Broken local repo {}", repo.local_repo_name()))
+    );
     assert!(staged_err.to_string().contains("source control tables"));
 
     let commits_err = repo
         .list_commits(10)
         .expect_err("missing source control tables must fail commit listing");
-    assert!(commits_err.to_string().contains("Broken local repo main"));
+    assert!(
+        commits_err
+            .to_string()
+            .contains(&format!("Broken local repo {}", repo.local_repo_name()))
+    );
     assert!(commits_err.to_string().contains("source control tables"));
 
     let content_err = repo
         .get_committed_content(DocId::new())
         .expect_err("missing source control tables must fail committed content lookup");
-    assert!(content_err.to_string().contains("Broken local repo main"));
+    assert!(
+        content_err
+            .to_string()
+            .contains(&format!("Broken local repo {}", repo.local_repo_name()))
+    );
     assert!(content_err.to_string().contains("source control tables"));
 
     repo.repair_local_repo_catalog()

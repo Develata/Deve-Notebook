@@ -26,9 +26,11 @@ pub(super) fn remote_scope(
     repo_name: impl Into<String>,
     peer_id: PeerId,
 ) -> ResolvedRepo {
+    let repo_name = repo_name.into();
     ResolvedRepo {
         repo_id,
-        repo_name: repo_name.into(),
+        session_name: repo_name.clone(),
+        repo_name,
         branch: Some(peer_id),
     }
 }

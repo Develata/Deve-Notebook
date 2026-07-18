@@ -77,6 +77,7 @@ mod tests {
         let scope = ResolvedRepo {
             repo_id: RepoId::new_v4(),
             repo_name: "notes".into(),
+            session_name: "notes".into(),
             branch: None,
         };
         let doc_id = DocId::new();

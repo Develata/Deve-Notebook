@@ -13,18 +13,12 @@
 //! ```text
 //! {ledger_dir}/
 //! ├── local/              # 本地权威库 (Store B)
-//! │   └── repo_name_1.redb   # legacy: DB stem still follows local execution stem
-//! │   └── repo_name_3.redb
-//! │   └── repo_name_4.redb
+//! │   └── <repo_id>.redb
 //! └── remotes/            # 影子库目录 (Store C)
 //!     ├── peer_a_name/
-//!     │   └── repo_name_1.redb
-//!     │   └── repo_name_2.redb
-//!     │   └── repo_name_5.redb
+//!     │   └── <repo_id>.redb
 //!     └── peer_b_name/
-//!         └── repo_name_1.redb
-//!         └── repo_name_2.redb
-//!         └── repo_name_3.redb
+//!         └── <repo_id>.redb
 //! ```
 
 use anyhow::{Context, Result};
@@ -34,9 +28,10 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
-use super::database::{cached_or_create_database, register_database};
+use super::database::{cached_database, cached_or_create_database, register_database};
 use super::init_reuse::should_reuse_existing_repo;
 use super::manager::repair_local_repo_metadata;
+use super::manager::repo_catalog_entries::redb_repo_entries;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
@@ -106,69 +101,41 @@ pub fn init_with_options(
     let local_peer_id =
         crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
 
-    // 3. 碰撞检测与处理 (Collision Handling)
-    // 策略: 检查文件是否存在 -> 若存在，检查 URL 是否匹配 -> 若不匹配，重命名尝试 (name-1)
-    let mut final_name = base_name.clone();
-    let mut counter = 0;
-    let local_db;
-    let mut is_new_repo = false;
-
-    loop {
-        if counter > 0 {
-            final_name = format!("{}-{}", base_name, counter);
+    // 3. Resolve display identity from metadata, then use RepoId as the only physical stem.
+    let existing = scan_local_repo_catalog(&local_dir)?;
+    let selection = select_existing_local_repo(&existing, &base_name, repo_url, options.repo_id)?;
+    let (final_name, repo_uuid, local_db, is_new_repo) = if let Some(selected) = selection {
+        let db = cached_database(&selected.path)
+            .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", selected.path))?;
+        (selected.info.name.clone(), selected.info.uuid, db, false)
+    } else {
+        let display_name = base_name.clone();
+        let repo_uuid = options.repo_id.unwrap_or_else(uuid::Uuid::new_v4);
+        let db_path = local_dir.join(format!("{}.redb", repo_uuid));
+        if checked_exists(&db_path, "UUID-first local database path during init")? {
+            anyhow::bail!(
+                "Local authority path collision for RepoId {} at {:?}",
+                repo_uuid,
+                db_path
+            );
         }
-        let db_path = local_dir.join(format!("{}.redb", final_name));
-
-        if checked_exists(&db_path, "local database path during init")? {
-            // 尝试打开现有库检查 Metadata
-            let db = cached_or_create_database(&db_path)
-                .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
-
-            let Some(info) = super::RepoManager::read_repo_info_from_db(db.as_ref())? else {
-                anyhow::bail!(
-                    "Broken local repo {} during init: repository metadata missing in existing database {:?}",
-                    final_name,
-                    db_path
-                );
-            };
-            if let Some(requested_repo_id) = options.repo_id
-                && info.uuid != requested_repo_id
-            {
-                anyhow::bail!(
-                    "Existing local repo {} has RepoId {}, expected {}; explicit repo-id init fails closed",
-                    final_name,
-                    info.uuid,
-                    requested_repo_id
-                );
-            }
-            if should_reuse_existing_repo(repo_url, &info) {
-                local_db = db;
-                break;
-            } else if options.repo_id.is_some() {
-                anyhow::bail!(
-                    "Existing local repo {} metadata does not match explicit init request",
-                    final_name
-                );
-            } else {
-                counter += 1;
-                continue;
-            }
-        } else {
-            // 文件不存在，创建新库
-            local_db = cached_or_create_database(&db_path)
-                .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
-            is_new_repo = true;
-            break;
-        }
-    }
+        let db = cached_or_create_database(&db_path)
+            .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
+        (display_name, repo_uuid, db, true)
+    };
+    let execution_name = repo_uuid.to_string();
     register_database(
-        &local_dir.join(format!("{}.redb", final_name)),
+        &local_dir.join(format!("{}.redb", execution_name)),
         local_db.clone(),
     )?;
 
     // 4. 初始化核心表
-    init_core_tables(local_db.as_ref())?;
-    super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
+    if is_new_repo {
+        init_core_tables(local_db.as_ref())?;
+    } else {
+        super::RepoManager::validate_local_repo_schema(local_db.as_ref())?;
+        super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
+    }
 
     // 5. 初始化 Source Control 表
     source_control::init_tables(local_db.as_ref())?;
@@ -184,8 +151,7 @@ pub fn init_with_options(
     }
 
     // 7. 写入 Metadata (如果是新库，或者旧库缺失)
-    if is_new_repo || super::RepoManager::read_repo_info_from_db(local_db.as_ref())?.is_none() {
-        let repo_uuid = options.repo_id.unwrap_or_else(uuid::Uuid::new_v4);
+    if is_new_repo {
         let info = super::RepoInfo {
             uuid: repo_uuid,
             name: final_name.clone(),
@@ -194,16 +160,16 @@ pub fn init_with_options(
                 .clone()
                 .or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
         };
-        super::RepoManager::write_repo_info_to_db(local_db.as_ref(), &info)?;
+        super::RepoManager::initialize_repo_info_in_new_db(local_db.as_ref(), &info)?;
     }
 
-    repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref(), false, None)?;
+    repair_local_repo_metadata(&ledger_dir, &execution_name, local_db.as_ref(), false, None)?;
 
     let repo = RepoManager {
         ledger_dir,
         local_peer_id,
         local_db,
-        local_repo_name: final_name,
+        local_repo_name: execution_name,
         extra_local_dbs: RwLock::new(HashMap::new()),
         repaired_local_runtime_tables: RwLock::new(HashSet::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
@@ -248,7 +214,111 @@ fn init_core_tables(db: &Database) -> Result<()> {
         let _ = write_txn.open_table(MERGE_BASE_CHECKPOINT)?;
         let _ = write_txn.open_multimap_table(SNAPSHOT_INDEX)?;
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
+        let _ = write_txn.open_table(REMOTE_IMPORT_SESSIONS)?;
+        let _ = write_txn.open_table(REMOTE_IMPORT_RUNTIME)?;
     }
     write_txn.commit()?;
     Ok(())
+}
+
+struct ExistingLocalRepo {
+    path: std::path::PathBuf,
+    info: super::RepoInfo,
+}
+
+fn scan_local_repo_catalog(local_dir: &Path) -> Result<Vec<ExistingLocalRepo>> {
+    let mut repos = Vec::new();
+    let mut ids = HashMap::new();
+    let mut urls = HashMap::new();
+    for (path, stem) in redb_repo_entries(local_dir, "initializing local repo")? {
+        let info = super::RepoManager::read_required_local_repo_info_from_path(
+            &path,
+            &stem,
+            "initializing local repo",
+        )
+        .map_err(|err| {
+            anyhow::anyhow!(
+                "Broken local repo {} while initializing catalog: {}",
+                stem,
+                err
+            )
+        })?;
+        let expected_stem = info.uuid.to_string();
+        if stem != expected_stem {
+            anyhow::bail!(
+                "Broken v4 local repo {} while initializing catalog: physical stem must equal RepoId {}",
+                stem,
+                info.uuid
+            );
+        }
+        if let Some(owner) = ids.insert(info.uuid, stem.clone()) {
+            anyhow::bail!(
+                "Broken local catalog: duplicate RepoId {} at {} and {}",
+                info.uuid,
+                owner,
+                stem
+            );
+        }
+        if let Some(url) = &info.url
+            && let Some(owner) = urls.insert(url.clone(), stem.clone())
+        {
+            anyhow::bail!(
+                "Broken local catalog: duplicate repository URL {} at {} and {}",
+                url,
+                owner,
+                stem
+            );
+        }
+        repos.push(ExistingLocalRepo { path, info });
+    }
+    Ok(repos)
+}
+
+fn select_existing_local_repo<'a>(
+    repos: &'a [ExistingLocalRepo],
+    requested_name: &str,
+    requested_url: Option<&str>,
+    requested_id: Option<uuid::Uuid>,
+) -> Result<Option<&'a ExistingLocalRepo>> {
+    if let Some(repo_id) = requested_id {
+        if let Some(repo) = repos.iter().find(|repo| repo.info.uuid == repo_id) {
+            if repo.info.name != requested_name
+                || !should_reuse_existing_repo(requested_url, &repo.info)
+            {
+                anyhow::bail!(
+                    "Existing local RepoId {} metadata does not match explicit init request",
+                    repo_id
+                );
+            }
+            return Ok(Some(repo));
+        }
+        if let Some(repo) = repos.iter().find(|repo| {
+            repo.info.name == requested_name
+                && should_reuse_existing_repo(requested_url, &repo.info)
+        }) {
+            anyhow::bail!(
+                "explicit repo-id init fails closed: repository selector {} resolves to existing RepoId {}, not requested RepoId {}",
+                requested_name,
+                repo.info.uuid,
+                repo_id
+            );
+        }
+        return Ok(None);
+    }
+    let matches = repos
+        .iter()
+        .filter(|repo| {
+            repo.info.name == requested_name
+                && should_reuse_existing_repo(requested_url, &repo.info)
+        })
+        .collect::<Vec<_>>();
+    match matches.as_slice() {
+        [] => Ok(None),
+        [repo] => Ok(Some(*repo)),
+        _ => anyhow::bail!(
+            "Ambiguous local repository init selector {} matched {} RepoIds; pass an explicit RepoId or unique URL",
+            requested_name,
+            matches.len()
+        ),
+    }
 }

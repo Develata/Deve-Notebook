@@ -178,23 +178,21 @@ fn projection_base_for_new_repo(
     state: &Arc<AppState>,
     session: &WsSession,
 ) -> anyhow::Result<PathBuf> {
-    let mut candidates = Vec::new();
-    if let Some(repo) = session.active_repo.as_deref() {
-        candidates.push(repo);
-    }
-    if let Some(repo) = session.last_local_repo.as_deref() {
-        candidates.push(repo);
-    }
-    candidates.push(state.repo.local_repo_name());
-
-    for repo_name in candidates {
-        if let Ok(locator) = state.repo.projection_locator_for_local_repo(repo_name) {
-            return Ok(locator.projection_base_abs);
-        }
-    }
-    Err(anyhow::anyhow!(
-        "Projection Locator missing for current local repository"
-    ))
+    let selected_id = session.active_repo_id.or(session.last_local_repo_id);
+    let execution_name = if let Some(repo_id) = selected_id {
+        state
+            .repo
+            .find_local_repo_name_by_id(repo_id)?
+            .ok_or_else(|| {
+                anyhow::anyhow!("Projection base source repo is missing for bound RepoId {repo_id}")
+            })?
+    } else {
+        state.repo.local_repo_name().to_string()
+    };
+    Ok(state
+        .repo
+        .projection_locator_for_local_repo(&execution_name)?
+        .projection_base_abs)
 }
 
 fn invalid_repo_context(detail: impl Into<String>) -> ServerError {
@@ -203,8 +201,9 @@ fn invalid_repo_context(detail: impl Into<String>) -> ServerError {
 
 #[cfg(test)]
 mod tests {
-    use super::handle_create_repo;
+    use super::{handle_create_repo, projection_base_for_new_repo};
     use crate::server::switcher_test_support::{browser_session, build_state, unicast_channel};
+    use deve_core::ledger::{RepoManager, init::RepoInitOptions};
     use deve_core::protocol::{ServerErrorCode, ServerMessage};
     use tokio::sync::mpsc;
     use tokio::time::{Duration, timeout};
@@ -282,6 +281,34 @@ mod tests {
         }
         assert!(session.active_repo.is_none());
         assert_eq!(session.scope_nonce(), 9);
+        Ok(())
+    }
+
+    #[test]
+    fn projection_base_uses_bound_repo_id_when_display_names_collide() -> anyhow::Result<()> {
+        let (dir, state) = build_state()?;
+        let extra_id = uuid::Uuid::new_v4();
+        RepoManager::init_with_options(
+            dir.path().join("ledger"),
+            10,
+            Some("default"),
+            RepoInitOptions {
+                repo_id: Some(extra_id),
+                repo_url: Some("urn:duplicate-display".into()),
+            },
+        )?;
+        let extra_base = dir.path().join("extra-notes");
+        std::fs::create_dir(&extra_base)?;
+        state
+            .repo
+            .set_projection_base_for_repo_id(extra_id, "default", &extra_base)?;
+        let mut session = browser_session(13);
+        session.switch_repo("default".into(), Some(extra_id));
+
+        assert_eq!(
+            projection_base_for_new_repo(&state, &session)?,
+            std::fs::canonicalize(extra_base)?
+        );
         Ok(())
     }
 

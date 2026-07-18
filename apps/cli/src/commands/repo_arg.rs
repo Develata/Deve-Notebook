@@ -41,7 +41,7 @@ mod tests {
 
         assert_eq!(
             resolve_local_repo_arg(&repo, Some(&repo_id.to_string())).expect("resolve uuid"),
-            "default"
+            repo_id.to_string()
         );
     }
 }

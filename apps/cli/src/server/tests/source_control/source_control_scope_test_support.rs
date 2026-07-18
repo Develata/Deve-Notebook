@@ -108,7 +108,7 @@ pub(super) fn bind_browser_writer(
     Ok(())
 }
 
-fn workspace_root(dir: &TempDir, repo_name: &str) -> std::path::PathBuf {
+fn workspace_root(dir: &TempDir, repo_selector: &str) -> std::path::PathBuf {
     let base = dir.path().join("notes");
     let locator_path = dir.path().join("ledger/.host/projection-locators.toml");
     let content = std::fs::read_to_string(&locator_path).expect("projection locator file");
@@ -116,10 +116,18 @@ fn workspace_root(dir: &TempDir, repo_name: &str) -> std::path::PathBuf {
     let locators = value["locators"].as_array().expect("projection locators");
     let locator = locators
         .iter()
-        .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_name))
+        .find(|locator| locator["repo_id"].as_str() == Some(repo_selector))
+        .or_else(|| {
+            locators
+                .iter()
+                .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_selector))
+        })
         .expect("repo locator");
     let repo_id = locator["repo_id"].as_str().expect("repo id");
-    base.join(format!("{repo_name}--{repo_id}"))
+    let repo_name_hint = locator["repo_name_hint"]
+        .as_str()
+        .expect("repo name hint");
+    base.join(format!("{repo_name_hint}--{repo_id}"))
 }
 
 pub(super) async fn recv_history(

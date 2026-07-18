@@ -2,7 +2,7 @@ use super::{RepoInfo, build_state, resolve_requested_repo_name, write_repo_metad
 use deve_core::models::PeerId;
 
 #[test]
-fn resolve_requested_repo_name_fails_closed_when_remote_display_name_is_ambiguous_even_with_uuid()
+fn resolve_requested_repo_name_fails_closed_when_remote_display_name_is_ambiguous_without_uuid()
 -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let peer_id = PeerId::new("peer-remote");
@@ -18,13 +18,13 @@ fn resolve_requested_repo_name_fails_closed_when_remote_display_name_is_ambiguou
         name: "wiki".into(),
         url: Some("urn:test:wiki-b".into()),
     };
-    for (stem, info) in [("wiki-a", &first), ("wiki-b", &second)] {
-        let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))?;
+    for info in [&first, &second] {
+        let db = redb::Database::create(peer_dir.join(format!("{}.redb", info.uuid)))?;
         write_repo_metadata(&db, info)?;
     }
 
-    let err = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second.uuid))
-        .expect_err("ambiguous remote display name must not fall back to repo id");
+    let err = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", None)
+        .expect_err("ambiguous remote display name without RepoId must fail closed");
     assert!(
         err.to_string()
             .contains("ambiguous remote repository selector")

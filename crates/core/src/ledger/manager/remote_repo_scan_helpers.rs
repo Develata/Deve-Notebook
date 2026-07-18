@@ -130,20 +130,35 @@ pub(super) fn validate_scanned_remote_entries(
         ));
     }
     let duplicate_ids = duplicate_entry_ids(entries);
-    if duplicate_ids.is_empty() {
-        return Ok(());
+    if !duplicate_ids.is_empty() {
+        let mut duplicate_ids = duplicate_ids
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>();
+        duplicate_ids.sort();
+        return Err(anyhow!(
+            "Broken shadow peer {} while {}: duplicate remote repository UUIDs: {}",
+            peer_id,
+            action,
+            duplicate_ids.join(", ")
+        ));
     }
-    let mut duplicate_ids = duplicate_ids
-        .into_iter()
-        .map(|id| id.to_string())
-        .collect::<Vec<_>>();
-    duplicate_ids.sort();
-    Err(anyhow!(
-        "Broken shadow peer {} while {}: duplicate remote repository UUIDs: {}",
-        peer_id,
-        action,
-        duplicate_ids.join(", ")
-    ))
+    if let Some((entry, info)) = entries.iter().find_map(|entry| {
+        entry
+            .info
+            .as_ref()
+            .filter(|info| entry.stem != info.uuid.to_string())
+            .map(|info| (entry, info))
+    }) {
+        return Err(anyhow!(
+            "Broken shadow repo {} for peer {} while {}: physical stem must equal RepoId {}",
+            entry.stem,
+            peer_id,
+            action,
+            info.uuid
+        ));
+    }
+    Ok(())
 }
 
 pub(super) fn reject_duplicate_remote_matches(

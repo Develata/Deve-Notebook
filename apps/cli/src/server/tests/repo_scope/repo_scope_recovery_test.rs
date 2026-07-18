@@ -16,7 +16,8 @@ fn resolve_session_repo_recovers_remote_repo_name_from_uuid() -> anyhow::Result<
 
     assert_eq!(resolved.branch, Some(peer_id));
     assert_eq!(resolved.repo_id, remote_repo_id);
-    assert_eq!(resolved.repo_name, "shadow-notes");
+    assert_eq!(resolved.repo_name, remote_repo_id.to_string());
+    assert_eq!(resolved.session_name, "shadow-notes");
     assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
     Ok(())
 }
@@ -36,6 +37,23 @@ fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() ->
     );
     assert_eq!(session.active_repo, None);
     assert_eq!(session.active_repo_id, None);
+    Ok(())
+}
+
+#[test]
+fn resolve_session_repo_accepts_bound_canonical_local_uuid() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let execution_name = test_id.to_string();
+    let mut session = WsSession::new();
+    session.switch_repo(execution_name.clone(), Some(test_id));
+
+    let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
+
+    assert_eq!(resolved.repo_id, test_id);
+    assert_eq!(resolved.repo_name, execution_name);
+    assert_eq!(resolved.session_name, "test");
+    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }
 

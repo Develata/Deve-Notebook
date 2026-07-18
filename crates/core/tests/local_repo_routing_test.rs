@@ -120,7 +120,9 @@ fn sync_snapshot_uses_requested_local_repo_id() {
 
 #[test]
 fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
-    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let (dir, mut repo, extra_id, extra_name) = new_local_repos();
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locators");
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
     common::write_repo_metadata(
         extra_db.db.as_ref(),
@@ -149,8 +151,10 @@ fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
 }
 
 #[test]
-fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
-    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+fn workspace_resolution_fails_closed_after_locator_alias_drift() {
+    let (dir, mut repo, extra_id, extra_name) = new_local_repos();
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locators");
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
     common::write_repo_metadata(
         extra_db.db.as_ref(),
@@ -161,35 +165,39 @@ fn workspace_resolution_keeps_execution_repo_stem_after_metadata_drift() {
         },
     );
 
-    let (repo_name, repo_id, repo_path) = repo
+    let err = repo
         .resolve_local_workspace_path("wiki/notes/extra.md")
-        .expect("resolve workspace path")
-        .expect("resolved repo scope");
-    assert_eq!(repo_name, "wiki");
-    assert_eq!(repo_id, extra_id);
-    assert_eq!(repo_path, "notes/extra.md");
+        .expect_err("locator alias drift must fail closed");
+    assert!(
+        err.to_string()
+            .contains("metadata name drifted to legacy-wiki")
+    );
 }
 
 #[test]
-fn execution_resolution_rejects_uuid_string_in_repo_name_slot() {
+fn execution_resolution_accepts_repo_id_physical_stem() {
     let (_dir, repo, extra_id, _extra_name) = new_local_repos();
     let uuid_selector = extra_id.to_string();
 
-    let err = repo
-        .resolve_local_repo_name_for_execution(None, Some(&uuid_selector))
-        .expect_err("uuid-shaped repo_name must fail closed");
-    assert!(err.to_string().contains(&uuid_selector));
+    assert_eq!(
+        repo.resolve_local_repo_name_for_execution(None, Some(&uuid_selector))
+            .expect("RepoId execution selector"),
+        uuid_selector
+    );
 
-    assert!(
+    assert_eq!(
         repo.get_repo_info_for(None, Some(&uuid_selector))
             .expect("lookup repo info")
-            .is_none()
+            .expect("repo info")
+            .uuid,
+        extra_id
     );
-    assert!(
-        repo.resolve_local_workspace_path(&format!("{uuid_selector}/notes/extra.md"))
-            .expect("resolve workspace path")
-            .is_none()
-    );
+    let (_, repo_id, repo_path) = repo
+        .resolve_local_workspace_path(&format!("{uuid_selector}/notes/extra.md"))
+        .expect("resolve workspace path")
+        .expect("resolved RepoId execution prefix");
+    assert_eq!(repo_id, extra_id);
+    assert_eq!(repo_path, "notes/extra.md");
 }
 
 #[test]
@@ -212,15 +220,51 @@ fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
 
 #[test]
 fn workspace_resolution_fails_closed_when_secondary_repo_info_is_missing() {
-    let (_dir, repo, _extra_id, extra_name) = new_local_repos();
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
     let extra_db = repo.open_database(None, &extra_name).expect("extra db");
     common::delete_repo_metadata(extra_db.db.as_ref());
 
     let err = repo
         .resolve_local_workspace_path("wiki/notes/extra.md")
         .expect_err("missing repo info must fail closed");
+    assert!(err.to_string().contains("while resolving workspace path"));
+    assert!(err.to_string().contains(&extra_id.to_string()));
+}
+
+#[test]
+fn exact_repo_id_execution_fails_closed_when_metadata_is_missing() {
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    common::delete_repo_metadata(extra_db.db.as_ref());
+
+    let err = repo
+        .run_on_local_repo(&extra_id.to_string(), |_db| Ok::<_, anyhow::Error>(()))
+        .expect_err("exact RepoId must not bypass missing RepoInfo");
+
+    assert!(err.to_string().contains("repository metadata missing"));
+}
+
+#[test]
+fn exact_repo_id_execution_fails_closed_when_metadata_repo_id_drifts() {
+    let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let drifted_id = uuid::Uuid::new_v4();
+    common::write_repo_metadata(
+        extra_db.db.as_ref(),
+        &RepoInfo {
+            uuid: drifted_id,
+            name: extra_name,
+            url: Some("urn:wiki".into()),
+        },
+    );
+
+    let err = repo
+        .run_on_local_repo(&extra_id.to_string(), |_db| Ok::<_, anyhow::Error>(()))
+        .expect_err("exact RepoId must match durable RepoInfo");
+
     assert!(
         err.to_string()
-            .contains("Broken local repo wiki while resolving workspace path")
+            .contains("physical RepoId does not match metadata RepoId")
     );
+    assert!(err.to_string().contains(&drifted_id.to_string()));
 }

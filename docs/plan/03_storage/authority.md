@@ -5,9 +5,9 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Parent`: `03_storage/index`
-- `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
+- `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
 > 本文件是 `03_storage` 章的 `authority_storage_runtime` 子合同：facts 分区、存储表与索引、write lifecycle 与 ledger-first 受控写路径。章节骨架与总览见 [index.md](./index.md)。
 

@@ -39,7 +39,10 @@ pub(super) fn build_branch_switch_selector_input(
         had_current_repo_hint: current.scope.is_some()
             || (raw_current_repo_hint && target_branch.is_some()),
         current_repo_id: current.scope.as_ref().map(|scope| scope.repo_id),
-        current_repo_name: current.scope.as_ref().map(|scope| scope.repo_name.clone()),
+        current_repo_name: current
+            .scope
+            .as_ref()
+            .map(|scope| scope.session_name.clone()),
         current_repo_url: current.repo_url.clone(),
     }
 }

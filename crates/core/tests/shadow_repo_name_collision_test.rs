@@ -15,26 +15,18 @@ fn new_repo() -> (TempDir, RepoManager) {
 fn remote_repo_selector_by_name_fails_closed_on_name_collision() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
-    common::seed_shadow_repo_info(
-        &repo,
-        &peer_id,
-        "shadow-a",
-        &RepoInfo {
-            uuid: Uuid::new_v4(),
-            name: "wiki/raw".into(),
-            url: Some("urn:test:wiki-a".into()),
-        },
-    );
-    common::seed_shadow_repo_info(
-        &repo,
-        &peer_id,
-        "shadow-b",
-        &RepoInfo {
-            uuid: Uuid::new_v4(),
-            name: "wiki/raw".into(),
-            url: Some("urn:test:wiki-b".into()),
-        },
-    );
+    let first = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki/raw".into(),
+        url: Some("urn:test:wiki-a".into()),
+    };
+    let second = RepoInfo {
+        uuid: Uuid::new_v4(),
+        name: "wiki/raw".into(),
+        url: Some("urn:test:wiki-b".into()),
+    };
+    common::seed_shadow_repo_info(&repo, &peer_id, &first.uuid.to_string(), &first);
+    common::seed_shadow_repo_info(&repo, &peer_id, &second.uuid.to_string(), &second);
 
     let err = repo
         .find_remote_repo_selector(&peer_id, "wiki/raw")

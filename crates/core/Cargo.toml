@@ -51,6 +51,9 @@ crossbeam-channel = "0.5.15"
 notify-debouncer-mini = "0.7.0"
 tempfile = "3.10"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
+
 [features]
 default = []
 search = ["tantivy"]

@@ -33,6 +33,9 @@ pub mod native_adapter;
 pub mod plugin;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)] // B1 is sealed backend infra; B2/B4 connect transport and product entrypoints.
+pub(crate) mod remote_import;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod remote_projection;
 pub mod security;
 pub mod skill;

@@ -139,7 +139,7 @@ fn custom_projection_workspace_note_target_resolves_repo_scope() -> anyhow::Resu
 
     assert_eq!(
         note_target_parts_for(&repo, &workspace.join("notes/a.md"))?,
-        Some(("default".into(), "notes/a.md".into()))
+        Some((repo.local_repo_name().into(), "notes/a.md".into()))
     );
     assert_eq!(
         note_target_parts_for(&repo, &projection_base.join("a.md"))?,

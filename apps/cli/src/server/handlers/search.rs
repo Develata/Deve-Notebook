@@ -54,10 +54,10 @@ pub async fn handle_search(
         }
     };
     if scope.branch.is_none()
-        && (session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+        && (session.active_repo.as_deref() != Some(scope.session_name.as_str())
             || session.active_repo_id != Some(scope.repo_id))
     {
-        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        session.switch_repo(scope.session_name.clone(), Some(scope.repo_id));
     }
 
     match search_scope_documents(state, &scope, &query, limit as usize) {

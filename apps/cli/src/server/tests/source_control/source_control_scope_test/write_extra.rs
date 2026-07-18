@@ -99,7 +99,12 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
     state
         .repo
         .stage_pending_in_local_repo("test", "notes/staged.md")?;
-    state.sync_manager.mark_projection_writeback_fault("test");
+    let test_execution_name = state
+        .repo
+        .resolve_local_repo_name_for_execution(Some(test_id), Some("test"))?;
+    state
+        .sync_manager
+        .mark_projection_writeback_fault(&test_execution_name);
     let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(16);

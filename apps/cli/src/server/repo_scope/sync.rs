@@ -76,10 +76,10 @@ fn sync_runtime_binding(state: &Arc<AppState>, session: &mut WsSession, scope: &
     if runtime_binding_mismatch(session, scope) {
         clear_runtime_binding_and_revoke(state, session);
     }
-    if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
+    if session.active_repo.as_deref() != Some(scope.session_name.as_str())
         || session.active_repo_id != Some(scope.repo_id)
     {
-        session.switch_repo(scope.repo_name.clone(), Some(scope.repo_id));
+        session.switch_repo(scope.session_name.clone(), Some(scope.repo_id));
     }
 }
 

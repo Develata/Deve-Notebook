@@ -31,8 +31,8 @@ pub async fn handle_list_docs(
         return;
     }
     let resolved = resolve_session_repo_or_bootstrap_local(state, session);
-    let (repo_name, repo_id) = match resolved {
-        Ok(scope) => (scope.repo_name, scope.repo_id),
+    let (repo_name, session_name, repo_id) = match resolved {
+        Ok(scope) => (scope.repo_name, scope.session_name, scope.repo_id),
         Err(err) => {
             return ch.send_protocol_error_with_scope_and_switch_nonce(
                 map_listing_repo_scope_error(err),
@@ -80,7 +80,7 @@ pub async fn handle_list_docs(
         switch_scope_nonce(session, switch_nonce),
         switch_nonce,
         Some(RepoViewPayload {
-            repo_name: repo_name.clone(),
+            repo_name: session_name.clone(),
             repo_id,
             docs,
             nodes,
@@ -100,10 +100,10 @@ pub async fn handle_list_docs(
         }
     };
     if session.active_branch.is_none()
-        && (session.active_repo.as_deref() != Some(repo_name.as_str())
+        && (session.active_repo.as_deref() != Some(session_name.as_str())
             || session.active_repo_id != Some(repo_id))
     {
-        session.switch_repo(repo_name, Some(repo_id));
+        session.switch_repo(session_name, Some(repo_id));
     }
     emit_repo_view(ch, repo_view);
 }

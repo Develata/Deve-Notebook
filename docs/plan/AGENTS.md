@@ -135,18 +135,19 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `05_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
 | `05_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
 | `05_diff_logic#remote-projection-transport` | `### 2.3.2 Remote Projection Transport Contract` | 过渡锚点：当前 push/pull 实现与批准 Route B transport 边界；保留既有代码反向覆盖 |
-| `03_storage/index#remote-import-runtime-layout` | `index.md ### 3.1.1 Remote Import Runtime Layout` | Remote Import host-only manifest/blob/candidate 布局；planned/no-code-yet |
-| `03_storage/authority#remote-import-workflow-tables` | `authority.md ### 4.3.2 Remote Import Workflow Tables` | Redb v4 session/runtime tables、active pointer 与 terminal retention；planned/no-code-yet |
+| `03_storage/index#remote-import-runtime-layout` | `index.md ### 3.1.1 Remote Import Runtime Layout` | Remote Import host-only manifest/blob/candidate 布局；B1 artifact runtime 已落地 |
+| `03_storage/authority#remote-import-workflow-tables` | `authority.md ### 4.3.2 Remote Import Workflow Tables` | Redb v4 session/runtime tables、active pointer 与 terminal retention；B1 durable store 已落地 |
 | `03_storage/authority#sealed-ledger-change-batch` | `authority.md ### 6.3.1 Sealed Prepared Ledger Change Batch` | source-specific sealed batch 与单事务 authority apply；planned/no-code-yet |
 | `03_storage/projection#remote-import-projection-writeback` | `projection.md ### 7.1 Remote Import Projection Writeback` | Ledger commit 后的 projection writeback 与 degraded receipt；planned/no-code-yet |
-| `03_storage/repair#remote-import-cleanup-repair` | `repair.md ### 9.4.1 Remote Import Cleanup Repair` | cleanup_pending、orphan 与 dry-run/apply repair；planned/no-code-yet |
+| `03_storage/repair#remote-import-cleanup-repair` | `repair.md ### 9.4.1 Remote Import Cleanup Repair` | cleanup_pending、orphan 与 repair；B1 dry-run inventory 已落地，apply repair 待后续切换 |
 | `04_repository#remote-import-repo-lifecycle` | `### 7.6.1 Remote Import Repo Lifecycle` | RepoId 绑定、rename/remove 与 provider generation 协调；planned/no-code-yet |
 | `05_diff_logic#remote-import-diff-contract` | `### 2.3.3 Remote Import Diff Contract` | immutable candidate、opaque entry_id 与 backend-owned diff；planned/no-code-yet |
 | `06_backup#remote-projection-transport-contract` | `## 3. Remote Projection Transport Contract` | WebDAV/S3 push 与 source acquisition transport 边界；planned/no-code-yet |
-| `06_backup#remote-import-session-contract` | `## 4. Immutable Remote Import Session` | immutable session identity、snapshot 与 receipt 合同；planned/no-code-yet |
-| `06_backup#remote-import-state-machine` | `### 4.1 State Machine` | Preparing/Ready/Stale/Failed/Applied/Discarded 迁移；planned/no-code-yet |
-| `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | 文件、字节、路径与分页预算；planned/no-code-yet |
-| `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | transport/runtime/writer/UI 依赖方向与 authority 禁区；planned/no-code-yet |
+| `06_backup#remote-import-session-contract` | `## 4. Immutable Remote Import Session` | immutable session identity 与 snapshot 已由 B1 落地；apply receipt 待 B3/B4 |
+| `06_backup#remote-import-state-machine` | `### 4.1 State Machine` | B1 已落地 Preparing/Ready/Stale/Failed/Discarded；Applied 待 B3/B4 authority writer |
+| `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | B1 已落地 capture 文件、字节与路径预算；wire 分页预算待 B4 |
+| `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | B1 已落地 store/capture 边界；transport/writer/UI 依赖边界待 B2-B5 |
+| `06_backup#projection-backup-failure-modes` | `## 8. Failure Modes` | Remote Projection transport 与 Remote Import capture/session/apply 的 typed failure、fail-closed 与 cleanup 边界 |
 | `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v3 nested request/response、typed errors 与不泄密投影；planned/no-code-yet |
 | `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | scope/revision-bound typed client 与 stale response 丢弃；planned/no-code-yet |
 | `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | Remote Import 与 Source Control/External Changes 同级但独立的薄壳层；planned/no-code-yet |

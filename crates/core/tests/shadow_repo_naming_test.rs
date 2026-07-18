@@ -12,7 +12,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 }
 
 #[test]
-fn ensure_shadow_repo_info_renames_uuid_file() {
+fn ensure_shadow_repo_info_keeps_uuid_execution_file() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
@@ -23,13 +23,13 @@ fn ensure_shadow_repo_info_renames_uuid_file() {
     };
 
     repo.ensure_shadow_db(&peer_id, &repo_id)
-        .expect("create legacy shadow");
+        .expect("create UUID-first shadow");
     repo.ensure_shadow_repo_info(&peer_id, &info)
         .expect("write shadow repo info");
 
     let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    assert!(peer_dir.join("notes.redb").exists());
-    assert!(!peer_dir.join(format!("{}.redb", repo_id)).exists());
+    assert!(!peer_dir.join("notes.redb").exists());
+    assert!(peer_dir.join(format!("{}.redb", repo_id)).exists());
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn remote_repo_listing_prefers_metadata_name() {
 
     assert_eq!(
         repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        vec!["wiki".to_string()]
+        vec![repo_id.to_string()]
     );
     let remote_info = repo
         .get_repo_info_for(Some(&peer_id), Some("wiki"))
@@ -59,7 +59,7 @@ fn remote_repo_listing_prefers_metadata_name() {
     let handle = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("open remote shadow by name");
-    assert_eq!(handle.repo_name, "wiki");
+    assert_eq!(handle.repo_name, repo_id.to_string());
 }
 
 #[test]
@@ -78,10 +78,10 @@ fn remote_repo_listing_reuses_open_remote_database() {
     let handle = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("open remote shadow first");
-    assert_eq!(handle.repo_name, "wiki");
+    assert_eq!(handle.repo_name, repo_id.to_string());
     assert_eq!(
         repo.list_repos(Some(&peer_id)).expect("list remote repos"),
-        vec!["wiki".to_string()]
+        vec![repo_id.to_string()]
     );
 }
 
@@ -112,7 +112,8 @@ fn ensure_shadow_repo_info_realigns_name_for_same_uuid() {
     .expect("realign shadow name");
 
     let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    assert!(peer_dir.join("wiki.redb").exists());
+    assert!(peer_dir.join(format!("{}.redb", repo_id)).exists());
+    assert!(!peer_dir.join("wiki.redb").exists());
     assert!(!peer_dir.join("legacy.redb").exists());
     let info = repo
         .get_repo_info_for(Some(&peer_id), Some("wiki"))

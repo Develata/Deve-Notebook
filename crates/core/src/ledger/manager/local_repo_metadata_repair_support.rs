@@ -12,7 +12,34 @@ pub(crate) fn ensure_local_repo_metadata_name_authorized(
     stem: &str,
     info: &RepoInfo,
 ) -> Result<()> {
-    if info.name == stem {
+    let physical_repo_id = uuid::Uuid::parse_str(stem).map_err(|_| {
+        anyhow!(
+            "Broken local repo {}: physical database stem must be a RepoId",
+            stem
+        )
+    })?;
+    if physical_repo_id != info.uuid {
+        return Err(anyhow!(
+            "Broken local repo {}: physical RepoId does not match metadata RepoId {}",
+            stem,
+            info.uuid
+        ));
+    }
+    crate::ledger::manager::projection_locator::safe_repo_path_segment(&info.name).map_err(
+        |err| {
+            anyhow!(
+                "Broken local repo {} metadata display name {} is invalid: {}",
+                stem,
+                info.name,
+                err
+            )
+        },
+    )?;
+    if crate::ledger::manager::projection_locator::projection_locator_record_for_repo_id(
+        ledger_dir, info.uuid,
+    )?
+    .is_none()
+    {
         return Ok(());
     }
     if crate::ledger::manager::projection_locator::locator_authorizes_repo_name(
@@ -29,11 +56,9 @@ pub(crate) fn ensure_local_repo_metadata_name_authorized(
 
 pub(super) fn validate_local_repo_info(
     stem: &str,
-    _expected_name: &str,
     info: Option<RepoInfo>,
     seen: &mut HashMap<uuid::Uuid, String>,
     seen_urls: &mut HashMap<String, String>,
-    seen_names: &mut HashMap<String, String>,
 ) -> Result<()> {
     let info = info.ok_or_else(|| {
         anyhow!(
@@ -64,16 +89,6 @@ pub(super) fn validate_local_repo_info(
             "Broken local repo {} while validating catalog: duplicate local repository URL {} also used by {}",
             stem,
             url,
-            owner
-        ));
-    }
-    if let Some(owner) = seen_names.insert(info.name.clone(), stem.to_string())
-        && owner != stem
-    {
-        return Err(anyhow!(
-            "Broken local repo {} while validating catalog: duplicate local repository display name {} also used by {}",
-            stem,
-            info.name,
             owner
         ));
     }

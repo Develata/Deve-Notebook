@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -153,6 +153,7 @@ RepoHealth::Healthy && RepoMountState::Mounted
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
 - local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base、当前 safe repo name 与完整 `RepoId` 计算。
 - Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。Catalog repair / selector resolution 只允许用它判断 `metadata.name != execution_stem` 是否来自受控 rename / workspace realign；它不得让漂移出的 display alias 获得新的 authority，也不得替代 exact execution stem 或 `RepoId`。
+- Redb v4 的 exact execution stem 固定为 canonical `<repo_id>`，`RepoInfo.name` 只承载 display alias。locator 尚不存在的首次 bootstrap 可以接受该 metadata alias；locator 一旦存在，`repo_name_hint` 只能作为两者一致性的 witness，mismatch 必须 fail closed，repair 不得据此猜测 rename、改写 RepoId 或重命名物理 DB。
 - workspace admission 必须读取 `.notegit` identity marker 并验证其 `repo_id == resolved RepoId`；路径名匹配但 marker 缺失或不一致时不得进入 mounted write path。
 
 ### 3.4 Tree State Storage Model

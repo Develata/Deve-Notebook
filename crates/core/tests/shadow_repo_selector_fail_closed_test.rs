@@ -54,7 +54,7 @@ fn broken_shadow_file_fails_closed_even_if_metadata_was_previously_loaded() {
         url: Some("urn:test:wiki-a".into()),
     };
     let peer_dir = repo.remotes_dir().join(peer_id.to_filename());
-    let path = peer_dir.join("wiki.redb");
+    let path = peer_dir.join(format!("{}.redb", info.uuid));
 
     repo.ensure_shadow_repo_info(&peer_id, &info)
         .expect("prepare shadow repo");

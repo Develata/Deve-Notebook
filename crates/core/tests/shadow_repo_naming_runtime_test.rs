@@ -14,7 +14,7 @@ fn new_repo() -> (TempDir, RepoManager) {
 }
 
 #[test]
-fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
+fn runtime_remote_repo_listing_fails_closed_without_repairing_legacy_remote_filename() {
     let (_dir, repo) = new_repo();
     let peer_id = PeerId::new("peer-remote");
     let repo_id = Uuid::new_v4();
@@ -33,14 +33,15 @@ fn runtime_remote_repo_listing_does_not_repair_legacy_remote_filename() {
         );
     }
 
-    let repos = repo.list_repos(Some(&peer_id)).expect("list remote repos");
-    assert_eq!(repos, vec!["legacy".to_string()]);
-    let handle = repo
-        .open_database(Some(&peer_id), &repos[0])
-        .expect("open remote shadow by exact selector");
-    assert_eq!(handle.repo_name, "legacy");
-    assert_eq!(handle.repo_id, Some(repo_id));
-    assert!(!peer_dir.join("wiki.redb").exists());
+    let error = repo
+        .list_repos(Some(&peer_id))
+        .expect_err("legacy physical stem must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("physical stem must equal RepoId")
+    );
+    assert!(!peer_dir.join(format!("{}.redb", repo_id)).exists());
     assert!(peer_dir.join("legacy.redb").exists());
 }
 
@@ -64,16 +65,19 @@ fn runtime_remote_display_name_selector_fails_closed_when_stem_drifted() {
         );
     }
 
-    assert_eq!(
-        repo.find_remote_repo_selector(&peer_id, "wiki")
-            .expect("resolve legacy display name"),
-        None
+    let selector_error = repo
+        .find_remote_repo_selector(&peer_id, "wiki")
+        .expect_err("legacy physical stem must fail before display selection");
+    assert!(
+        selector_error
+            .to_string()
+            .contains("physical stem must equal RepoId")
     );
     let err = match repo.open_database(Some(&peer_id), "wiki") {
         Ok(_) => panic!("display-only selector must fail closed"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("Repository not found: wiki"));
+    assert!(err.to_string().contains("physical stem must equal RepoId"));
 }
 
 #[test]
@@ -98,7 +102,7 @@ fn explicit_remote_catalog_repair_repairs_legacy_remote_filename() {
 
     repo.repair_remote_repo_catalogs()
         .expect("repair remote catalogs");
-    assert!(peer_dir.join("wiki.redb").exists());
+    assert!(peer_dir.join(format!("{}.redb", repo_id)).exists());
     assert!(!peer_dir.join("legacy.redb").exists());
 }
 

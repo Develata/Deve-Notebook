@@ -5,11 +5,11 @@ use crate::server::handlers::switcher::handle_switch_repo;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::ServerMessage;
 use tempfile::tempdir;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_repo_fails_closed_when_exact_remote_selector_conflicts_with_repo_id()
+async fn switch_repo_disambiguates_duplicate_remote_display_name_by_repo_id()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
@@ -33,9 +33,6 @@ async fn switch_repo_fails_closed_when_exact_remote_selector_conflicts_with_repo
     };
     repo.ensure_shadow_repo_info(&peer_id, &first)?;
     repo.ensure_shadow_repo_info(&peer_id, &second)?;
-    let selector = repo
-        .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
-        .expect("collision-safe selector");
     let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(4);
@@ -51,19 +48,21 @@ async fn switch_repo_fails_closed_when_exact_remote_selector_conflicts_with_repo
     )
     .await;
 
-    assert_eq!(session.active_repo, None);
-    assert_eq!(session.active_repo_id, None);
-    assert!(matches!(
-        uni_rx.recv().await,
-        Some(ServerMessage::ProtocolError {
-            error,
-            switch_nonce: Some(5),
-            ..
-        }) if error.code == ServerErrorCode::ScRepoContextInvalid
-            && error.detail.as_deref().is_some_and(|detail| {
-                detail.contains("Session repo mismatch:")
-                    && detail.contains(selector.as_str())
-            })
-    ));
+    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
+    assert_eq!(session.active_repo_id, Some(second.uuid));
+    match uni_rx.recv().await {
+        Some(ServerMessage::RepoSwitched {
+            branch,
+            name,
+            uuid,
+            switch_nonce,
+        }) => {
+            assert_eq!(branch.as_deref(), Some(peer_id.as_str()));
+            assert_eq!(name, "wiki");
+            assert_eq!(uuid, second.uuid.to_string());
+            assert_eq!(switch_nonce, Some(5));
+        }
+        other => panic!("expected RepoSwitched, got {other:?}"),
+    }
     Ok(())
 }

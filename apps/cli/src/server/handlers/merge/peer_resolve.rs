@@ -141,6 +141,7 @@ mod tests {
         let scope = ResolvedRepo {
             repo_id: pending.repo_id,
             repo_name: "notes".into(),
+            session_name: "notes".into(),
             branch: pending.branch.clone(),
         };
         assert!(matches_pending_conflict(
@@ -166,6 +167,7 @@ mod tests {
             &ResolvedRepo {
                 repo_id: uuid::Uuid::new_v4(),
                 repo_name: "notes".into(),
+                session_name: "notes".into(),
                 branch: pending.branch.clone(),
             },
             pending.doc_id,

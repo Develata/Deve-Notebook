@@ -78,6 +78,7 @@ pub(crate) fn revalidate_writable_resolved_repo(
     Ok(ResolvedRepo {
         repo_id: expected.repo_id,
         repo_name: revalidate_writable_local_repo(state, expected.repo_id, &expected.repo_name)?,
+        session_name: expected.session_name.clone(),
         branch: None,
     })
 }

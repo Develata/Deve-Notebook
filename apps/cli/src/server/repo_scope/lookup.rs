@@ -78,9 +78,11 @@ pub(super) fn resolve_repo_by_name(
         }
         None => repo_name,
     };
+    let session_name = info.name;
     Ok(ResolvedRepo {
         repo_id: info.uuid,
         repo_name,
+        session_name,
         branch,
     })
 }

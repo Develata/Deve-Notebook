@@ -54,7 +54,8 @@ fn resolve_session_repo_and_sync_clears_stale_runtime_binding_after_selector_rep
     session.set_writer_identity(default_id, PeerId::new("stale-writer"), 17);
 
     let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
-    assert_eq!(resolved.repo_name, "test");
+    assert_eq!(resolved.repo_name, test_id.to_string());
+    assert_eq!(resolved.session_name, "test");
     assert_eq!(resolved.repo_id, test_id);
     assert_eq!(session.active_repo.as_deref(), Some("test"));
     assert_eq!(session.active_repo_id, Some(test_id));

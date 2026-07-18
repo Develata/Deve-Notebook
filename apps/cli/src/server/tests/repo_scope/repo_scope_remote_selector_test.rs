@@ -43,7 +43,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
 }
 
 #[test]
-fn resolve_session_repo_keeps_exact_remote_selector_without_uuid() -> anyhow::Result<()> {
+fn resolve_session_repo_keeps_exact_remote_selector_with_uuid() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let repo_id = uuid::Uuid::new_v4();
@@ -62,16 +62,14 @@ fn resolve_session_repo_keeps_exact_remote_selector_without_uuid() -> anyhow::Re
         .expect("remote selector");
     let mut session = WsSession::new();
     session.switch_branch(Some(peer_id.to_string()));
-    session.switch_repo(exact_selector.clone(), None);
+    session.switch_repo(exact_selector.clone(), Some(repo_id));
 
     let resolved = resolve_session_repo_and_sync(&state, &mut session)?;
 
     assert_eq!(resolved.branch, Some(peer_id));
     assert_eq!(resolved.repo_id, repo_id);
     assert_eq!(resolved.repo_name, exact_selector);
-    assert_eq!(
-        session.active_repo.as_deref(),
-        Some(resolved.repo_name.as_str())
-    );
+    assert_eq!(resolved.session_name, "shadow-notes");
+    assert_eq!(session.active_repo.as_deref(), Some("shadow-notes"));
     Ok(())
 }

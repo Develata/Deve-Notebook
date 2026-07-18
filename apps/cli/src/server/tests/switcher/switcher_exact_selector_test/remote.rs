@@ -8,7 +8,7 @@ use deve_core::models::PeerId;
 use tempfile::tempdir;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow::Result<()> {
+async fn switch_branch_keeps_exact_remote_selector_with_repo_uuid() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(
@@ -38,7 +38,7 @@ async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow
     let (ch, _uni_rx) = unicast_channel(&state);
     let mut session = browser_session(0);
     session.switch_branch(Some(peer_id.to_string()));
-    session.switch_repo(selector.clone(), None);
+    session.switch_repo(selector, Some(second.uuid));
 
     handle_switch_branch(
         &state,
@@ -50,7 +50,7 @@ async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow
     .await;
 
     assert_eq!(session.active_branch, Some(peer_id));
-    assert_eq!(session.active_repo.as_deref(), Some(selector.as_str()));
+    assert_eq!(session.active_repo.as_deref(), Some("wiki"));
     assert_eq!(session.active_repo_id, Some(second.uuid));
     Ok(())
 }

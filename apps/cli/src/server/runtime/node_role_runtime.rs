@@ -115,7 +115,7 @@ mod tests {
         assert_eq!(healthy.running, 1);
         assert_eq!(healthy.unavailable, 0);
 
-        sync.mark_projection_writeback_fault("main");
+        sync.mark_projection_writeback_fault(repo.local_repo_name());
         view.set_state_for_test(repo_id, RepoMountState::Failed);
         let degraded_projection = current_watcher_health(repo.as_ref(), sync.as_ref(), &view);
         assert_eq!(degraded_projection.status, "healthy");

@@ -12,6 +12,11 @@ use deve_core::models::{LedgerEntry, PeerId, serialize_ledger_entry};
 use redb::ReadableTable;
 use std::path::{Path, PathBuf};
 
+const REMOTE_IMPORT_SESSIONS: redb::TableDefinition<u128, &[u8]> =
+    redb::TableDefinition::new("remote_import_sessions");
+const REMOTE_IMPORT_RUNTIME: redb::TableDefinition<u8, &[u8]> =
+    redb::TableDefinition::new("remote_import_runtime");
+
 pub fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
     create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
 }
@@ -57,6 +62,16 @@ pub fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) {
             .expect("write metadata");
     }
     txn.commit().expect("commit metadata");
+}
+
+pub fn read_repo_metadata(db: &redb::Database) -> RepoInfo {
+    let txn = db.begin_read().expect("read txn");
+    let table = txn.open_table(REPO_METADATA).expect("repo metadata");
+    let bytes = table
+        .get(&REPO_INFO_METADATA_KEY)
+        .expect("read repo metadata")
+        .expect("repo metadata row");
+    codec::decode(bytes.value()).expect("decode repo metadata")
 }
 
 pub fn delete_repo_metadata(db: &redb::Database) {
@@ -113,6 +128,12 @@ pub fn seed_metadata_less_local_repo(ledger_dir: &Path, stem: &str) {
                     .as_slice(),
             )
             .expect("write schema version");
+        let _ = txn
+            .open_table(REMOTE_IMPORT_SESSIONS)
+            .expect("remote import sessions");
+        let _ = txn
+            .open_table(REMOTE_IMPORT_RUNTIME)
+            .expect("remote import runtime");
     }
     txn.commit().expect("commit metadata-less db");
     drop(db);
@@ -149,6 +170,12 @@ fn init_core_repo_tables(db: &redb::Database) {
         .open_multimap_table(SNAPSHOT_INDEX)
         .expect("snapshot_index");
     let _ = txn.open_table(SNAPSHOT_DATA).expect("snapshot_data");
+    let _ = txn
+        .open_table(REMOTE_IMPORT_SESSIONS)
+        .expect("remote import sessions");
+    let _ = txn
+        .open_table(REMOTE_IMPORT_RUNTIME)
+        .expect("remote import runtime");
     txn.commit().expect("commit core repo tables");
 }
 

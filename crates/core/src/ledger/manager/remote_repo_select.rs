@@ -53,7 +53,10 @@ impl<'a> RepoCatalogRuntime<'a> {
         }
         reject_duplicate_remote_matches(selector, &by_id, &duplicate_ids)?;
         reject_duplicate_remote_matches(selector, &by_name, &duplicate_ids)?;
-        Ok(single_remote_entry(by_id))
+        if let Some(entry) = single_remote_entry(by_id) {
+            return Ok(Some(entry));
+        }
+        Ok(single_remote_entry(by_name))
     }
 
     pub(crate) fn find_remote_repo_selector_by_id(

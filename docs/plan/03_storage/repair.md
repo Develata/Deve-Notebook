@@ -5,9 +5,9 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Parent`: `03_storage/index`
-- `Primary Code Areas`: `crates/core/src/sync/projection_repair_runtime.rs`, `crates/core/src/ledger/manager/repair_runtime.rs`, `crates/core/src/ledger/snapshot.rs`, `apps/cli/src/commands/export/`
+- `Primary Code Areas`: `crates/core/src/sync/projection_repair_runtime.rs`, `crates/core/src/ledger/manager/repair_runtime.rs`, `crates/core/src/remote_import/repair.rs`, `crates/core/src/ledger/snapshot.rs`, `apps/cli/src/commands/export/`
 
 > 本文件是 `03_storage` 章的 `repair_runtime` 子合同：browser recovery semantics、workspace/ledger/catalog repair、backup/export 与 degraded mode 边界。章节骨架与总览见 [index.md](./index.md)。
 
@@ -70,6 +70,7 @@ manifest/blob digest 为唯一 admission evidence：
 
 - 可报告 interrupted `Preparing`、orphan temp/final artifacts、digest tamper、
   missing candidate、terminal retention debt 与 `cleanup_pending`。
+- dry-run 必须走只读 store/artifact preflight：不得初始化 runtime row、执行 startup recovery、创建 host artifact directory 或改变任何 session state。
 - 实际删除必须显式 `remote-import repair --apply`，重新验证 RepoId、session
   id、active pointer、terminal state、root containment、symlink/reparse status
   与 digest inventory 后才可执行。

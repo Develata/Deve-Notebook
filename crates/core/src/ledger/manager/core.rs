@@ -49,16 +49,16 @@ impl RepoManager {
         let ledger_dir = ledger_dir.as_ref();
         let local_dir =
             Self::checked_local_dir_for(ledger_dir, "opening existing local repo by RepoId")?;
-        for (path, stem) in redb_repo_entries(&local_dir, "opening existing local repo by RepoId")?
+        for (path, _stem) in redb_repo_entries(&local_dir, "opening existing local repo by RepoId")?
         {
-            let Some(info) = Self::read_repo_info_from_path(&path)? else {
+            let Some(info) = Self::read_local_repo_info_from_path(&path)? else {
                 continue;
             };
             if info.uuid == repo_id {
                 return init::init_with_options(
                     ledger_dir,
                     snapshot_depth,
-                    Some(&stem),
+                    Some(&info.name),
                     init::RepoInitOptions {
                         repo_id: Some(repo_id),
                         repo_url: info.url,
@@ -88,7 +88,7 @@ impl RepoManager {
         Err(anyhow!("Repository not found: {}", selector))
     }
 
-    /// 获取主仓库名称
+    /// 获取主本地仓库的规范执行 selector（物理 RepoId stem）。
     pub fn local_repo_name(&self) -> &str {
         &self.local_repo_name
     }
@@ -128,6 +128,7 @@ impl RepoManager {
 
     /// 获取本地数据库的只读事务 (用于高级查询)
     pub fn local_db_read_txn(&self) -> Result<redb::ReadTransaction> {
+        Self::validate_local_repo_schema(self.local_db.as_ref())?;
         Ok(self.local_db.begin_read()?)
     }
 

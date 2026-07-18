@@ -14,7 +14,10 @@ mod branch;
 mod recovery;
 
 pub(super) struct PreparedRepoSwitch {
+    /// Canonical execution selector used for storage/runtime operations.
     pub repo_name: String,
+    /// Backend-verified display label used for session and wire payloads.
+    pub session_name: String,
     pub repo_id: Option<RepoId>,
     pub db: Option<DatabaseHandle>,
     pub degraded_docs_only: bool,
@@ -36,16 +39,17 @@ pub(super) async fn prepare_repo_switch(
         ));
     };
     let repo_id = Some(repo_info.uuid);
+    let session_name = repo_info.name.clone();
     if branch.is_some() {
         let handle = state.repo.open_database(branch, &repo_name)?;
         return Ok(PreparedRepoSwitch {
             repo_name,
+            session_name,
             repo_id,
             db: Some(handle),
             degraded_docs_only: false,
         });
     }
-    let display_name = repo_info.name;
     let prepared = state
         .sync_manager
         .prepare_local_repo_materialization(&repo_name)?;
@@ -85,7 +89,8 @@ pub(super) async fn prepare_repo_switch(
         Err(error) => return Err(anyhow::Error::new(error)),
     };
     Ok(PreparedRepoSwitch {
-        repo_name: display_name,
+        repo_name,
+        session_name,
         repo_id,
         db: None,
         degraded_docs_only,
@@ -103,7 +108,7 @@ pub(super) fn commit_session_switch(
     session.switch_branch(branch);
     match prepared {
         Some(prepared) => {
-            session.switch_repo(prepared.repo_name, prepared.repo_id);
+            session.switch_repo(prepared.session_name, prepared.repo_id);
             if let Some(handle) = prepared.db {
                 session.set_active_db(handle);
                 return;

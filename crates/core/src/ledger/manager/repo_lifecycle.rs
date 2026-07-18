@@ -33,9 +33,9 @@ impl RepoManager {
         for (path, execution_name) in redb_repo_entries(&local_dir, "listing local repo summaries")?
         {
             let info = if execution_name == self.local_repo_name {
-                Self::read_repo_info_from_db(&self.local_db)?
+                Self::read_local_repo_info_from_db(&self.local_db)?
             } else {
-                Self::read_repo_info_from_path(&path)?
+                Self::read_local_repo_info_from_path(&path)?
             }
             .ok_or_else(|| {
                 anyhow!(

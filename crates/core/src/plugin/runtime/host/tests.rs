@@ -30,7 +30,7 @@ fn source_control_write_gate_rejects_degraded_local_projection() -> anyhow::Resu
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let sync = SyncManager::new_checked(repo.clone())?;
-    sync.mark_projection_writeback_fault("default");
+    sync.mark_projection_writeback_fault(repo.local_repo_name());
 
     let error =
         ensure_source_control_write_allowed_for(repo.as_ref(), &sync, &RepoSelector::default())

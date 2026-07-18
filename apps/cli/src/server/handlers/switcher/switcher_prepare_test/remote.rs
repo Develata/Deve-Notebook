@@ -69,12 +69,13 @@ fn resolve_requested_repo_name_rejects_remote_uuid_string_without_repo_id() -> a
 }
 
 #[test]
-fn resolve_requested_repo_name_accepts_exact_remote_selector_without_uuid() -> anyhow::Result<()> {
+fn resolve_requested_repo_name_accepts_exact_remote_selector_with_uuid() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let selected = resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, None)?
-        .expect("exact remote selector");
+    let selected =
+        resolve_requested_repo_name(&state, Some(&peer_id), &second_selector, Some(second_id))?
+            .expect("exact remote selector");
     assert_eq!(selected, second_selector);
     Ok(())
 }
@@ -92,15 +93,13 @@ fn resolve_requested_repo_name_prefers_exact_remote_selector_over_stale_uuid() -
 }
 
 #[test]
-fn resolve_requested_repo_name_fails_closed_when_exact_selector_conflicts_with_repo_id()
--> anyhow::Result<()> {
+fn resolve_requested_repo_name_uses_repo_id_for_duplicate_display_alias() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let err = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))
-        .expect_err("exact remote selector must beat stale repo id");
-    assert!(err.to_string().contains("Session repo mismatch:"));
-    assert!(err.to_string().contains(&second_selector));
+    let selected = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second_id))?
+        .expect("RepoId must disambiguate duplicate display aliases");
+    assert_eq!(selected, second_selector);
     Ok(())
 }
 
@@ -113,11 +112,11 @@ fn resolve_requested_repo_name_rejects_uuid_shaped_remote_display_name_with_stal
     let stale_uuid = uuid::Uuid::new_v4();
     let peer_dir = state.repo.remotes_dir().join(peer_id.to_filename());
     std::fs::create_dir_all(&peer_dir)?;
-    for (stem, uuid, name) in [
-        ("shadow-display", display_uuid, display_uuid.to_string()),
-        ("shadow-notes", stale_uuid, "shadow-notes".into()),
+    for (uuid, name) in [
+        (display_uuid, display_uuid.to_string()),
+        (stale_uuid, "shadow-notes".into()),
     ] {
-        let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))?;
+        let db = redb::Database::create(peer_dir.join(format!("{uuid}.redb")))?;
         write_repo_metadata(
             &db,
             &RepoInfo {
@@ -201,25 +200,25 @@ fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Resu
         Some(&peer_id),
     )?
     .expect("canonical URL match");
-    assert_eq!(selected, "wiki");
+    assert_eq!(selected, first.uuid.to_string());
     Ok(())
 }
 
 #[test]
-fn select_target_repo_fails_closed_when_exact_current_remote_name_conflicts_with_repo_id()
--> anyhow::Result<()> {
+fn select_target_repo_uses_repo_id_for_duplicate_current_remote_display_alias() -> anyhow::Result<()>
+{
     let (_dir, state) = build_state()?;
-    let (peer_id, _first_id, second_id, _second_selector) = seed_duplicate_remote(&state)?;
+    let (peer_id, _first_id, second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let err = select_target_repo(
+    let selected = select_target_repo(
         &state,
         true,
         Some(second_id),
         Some("wiki"),
         None,
         Some(&peer_id),
-    )
-    .expect_err("exact current remote selector must beat stale repo id");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    )?
+    .expect("RepoId must disambiguate duplicate remote display aliases");
+    assert_eq!(selected, second_selector);
     Ok(())
 }

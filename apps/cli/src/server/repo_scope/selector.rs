@@ -4,7 +4,9 @@
 //! 会话级 repo selector 解析。
 //!
 //! Invariants:
-//! - 本地分支不得接受 UUID 形态的 `active_repo` 作为可执行 selector。
+//! - 本地 `active_repo_id` 存在时必须先按 RepoId 解析 canonical execution stem，再复核
+//!   `active_repo` 等于该 stem 或 metadata display alias；stale pair 必须 fail-closed。
+//! - 无 `active_repo_id` 的 UUID-shaped local selector 必须 fail-closed。
 //! - 远端分支只有在 selector 可由当前 branch 唯一恢复时才允许继续执行。
 //! - 本模块只负责把 session hint 收敛成可执行 selector；不负责最终 `RepoUUID` 解析。
 
@@ -32,11 +34,20 @@ fn resolve_local_repo_name_from_session(
     session: &WsSession,
 ) -> Result<Option<String>> {
     if let Some(repo_name) = session.active_repo.clone() {
+        if let Some(bound_id) = session.active_repo_id {
+            let Some(resolved) = state.repo.find_local_repo_name_by_id(bound_id)? else {
+                return Err(local_selector_not_resolved(&repo_name));
+            };
+            let Some(info) = state.repo.get_repo_info_for(None, Some(&resolved))? else {
+                return Err(local_selector_not_resolved(&repo_name));
+            };
+            if repo_name != resolved && repo_name != info.name {
+                return Err(local_selector_not_resolved(&repo_name));
+            }
+            return Ok(Some(resolved));
+        }
         if uuid::Uuid::parse_str(&repo_name).is_ok() {
-            return Err(anyhow!(
-                "Local repository selector not resolved for {}",
-                repo_name
-            ));
+            return Err(local_selector_not_resolved(&repo_name));
         }
         let resolved = match state
             .repo
@@ -47,20 +58,9 @@ fn resolve_local_repo_name_from_session(
                 return Err(err);
             }
             Err(_) => {
-                return Err(anyhow!(
-                    "Local repository selector not resolved for {}",
-                    repo_name
-                ));
+                return Err(local_selector_not_resolved(&repo_name));
             }
         };
-        if let Some(repo_id) = session.active_repo_id
-            && state.repo.find_local_repo_name_by_id(repo_id)?.as_deref() != Some(resolved.as_str())
-        {
-            return Err(anyhow!(
-                "Local repository selector not resolved for {}",
-                repo_name
-            ));
-        }
         return Ok(Some(resolved));
     }
     if let Some(repo_id) = session.active_repo_id {
@@ -70,6 +70,10 @@ fn resolve_local_repo_name_from_session(
         ));
     }
     Ok(None)
+}
+
+fn local_selector_not_resolved(selector: &str) -> anyhow::Error {
+    anyhow!("Local repository selector not resolved for {}", selector)
 }
 
 fn resolve_remote_repo_name_from_session(

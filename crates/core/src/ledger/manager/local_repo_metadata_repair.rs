@@ -3,11 +3,8 @@
 //!   - 04_repository#repo-catalog-repair-contract
 
 use crate::ledger::database::cached_or_create_database;
-use crate::ledger::manager::projection_locator::{
-    locator_authorizes_repo_name, safe_repo_path_segment,
-};
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
-use crate::ledger::manager::types::{RepoInfo, RepoManager};
+use crate::ledger::manager::types::RepoManager;
 use anyhow::{Context, Result, anyhow};
 use redb::Database;
 use std::collections::HashMap;
@@ -27,19 +24,11 @@ pub(super) fn validate_local_repo_metadata(
 
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
-    let mut seen_names = HashMap::new();
-    let main_info = RepoManager::read_repo_info_from_db(main_db)?;
+    let main_info = RepoManager::read_local_repo_info_from_db(main_db)?;
     if let Some(info) = main_info.as_ref() {
         ensure_local_repo_metadata_name_authorized(ledger_dir, main_repo_name, info)?;
     }
-    validate_local_repo_info(
-        main_repo_name,
-        main_repo_name,
-        main_info,
-        &mut seen,
-        &mut seen_urls,
-        &mut seen_names,
-    )?;
+    validate_local_repo_info(main_repo_name, main_info, &mut seen, &mut seen_urls)?;
 
     let mut entries = redb_repo_entries(&local_dir, "validating local catalog")?;
     entries.sort_by(|(_, left_stem), (_, right_stem)| left_stem.cmp(right_stem));
@@ -55,48 +44,19 @@ pub(super) fn validate_local_repo_metadata(
                 err
             )
         })?;
-        let info = RepoManager::read_repo_info_from_db(db.as_ref()).map_err(|err| {
+        let info = RepoManager::read_local_repo_info_from_db(db.as_ref()).map_err(|err| {
             anyhow!(
                 "Broken local repo {} while validating metadata: {}",
                 stem,
                 err
             )
         })?;
-        let report_duplicate_name_first = info.as_ref().is_some_and(|info| {
-            should_report_duplicate_display_name_first(&stem, info, &seen, &seen_urls, &seen_names)
-        });
-        if let Some(info) = info.as_ref()
-            && !report_duplicate_name_first
-        {
+        if let Some(info) = info.as_ref() {
             ensure_local_repo_metadata_name_authorized(ledger_dir, &stem, info)?;
         }
-        validate_local_repo_info(
-            &stem,
-            &stem,
-            info,
-            &mut seen,
-            &mut seen_urls,
-            &mut seen_names,
-        )?;
+        validate_local_repo_info(&stem, info, &mut seen, &mut seen_urls)?;
     }
     Ok(())
-}
-
-fn should_report_duplicate_display_name_first(
-    stem: &str,
-    info: &RepoInfo,
-    seen: &HashMap<uuid::Uuid, String>,
-    seen_urls: &HashMap<String, String>,
-    seen_names: &HashMap<String, String>,
-) -> bool {
-    if info.name == stem || !seen_names.contains_key(&info.name) {
-        return false;
-    }
-    let url_conflict = info
-        .url
-        .as_ref()
-        .is_some_and(|url| seen_urls.contains_key(url));
-    !seen.contains_key(&info.uuid) && !url_conflict
 }
 
 pub(crate) fn repair_local_repo_metadata(
@@ -143,7 +103,6 @@ pub(crate) fn repair_local_repo_metadata(
 
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
-    let mut seen_names = HashMap::new();
     for (path, stem) in entries {
         let db = if stem == main_repo_name {
             None
@@ -160,7 +119,7 @@ pub(crate) fn repair_local_repo_metadata(
             }
         };
         let db = db.as_deref().unwrap_or(main_db);
-        let read_info = RepoManager::read_repo_info_from_db(db);
+        let read_info = RepoManager::read_local_repo_info_from_db(db);
         let mut info = match read_info {
             Ok(info) => info,
             Err(err) if stem != main_repo_name => {
@@ -172,31 +131,23 @@ pub(crate) fn repair_local_repo_metadata(
             }
             Err(err) => return Err(err),
         }
-        .unwrap_or_else(|| RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
-            name: stem.clone(),
-            url: None,
-        });
+        .ok_or_else(|| {
+            anyhow!(
+                "Broken local repo {} while repairing catalog: repository metadata missing",
+                stem
+            )
+        })?;
         let original = info.clone();
-        let previous_name = info.name.clone();
-        let display_name_owner = seen_names.get(&info.name).cloned();
-        let unauthorized_name_drift = info.name != stem
-            && (safe_repo_path_segment(&info.name).is_err()
-                || !locator_authorizes_repo_name(ledger_dir, info.uuid, &info.name)?);
-        if info.name.trim().is_empty()
-            || display_name_owner.is_some_and(|owner| owner != stem)
-            || unauthorized_name_drift
+        ensure_local_repo_metadata_name_authorized(ledger_dir, &stem, &info)?;
+        if let Some(existing_owner) = seen.insert(info.uuid, stem.clone())
+            && existing_owner != stem
         {
-            info.name = stem.clone();
-        }
-        seen_names.insert(info.name.clone(), stem.clone());
-        if seen.insert(info.uuid, stem.clone()).is_some() {
-            let old_uuid = info.uuid;
-            info.uuid = uuid::Uuid::new_v4();
-            let old_urn = format!("urn:uuid:{old_uuid}");
-            if info.url.as_deref().is_none() || info.url.as_deref() == Some(old_urn.as_str()) {
-                info.url = Some(format!("urn:uuid:{}", info.uuid));
-            }
+            return Err(anyhow!(
+                "Broken local repo {} while repairing catalog: duplicate local repository UUID {} also used by {}",
+                stem,
+                info.uuid,
+                existing_owner
+            ));
         }
         if info.url.is_none() {
             info.url = Some(format!("urn:uuid:{}", info.uuid));
@@ -205,16 +156,15 @@ pub(crate) fn repair_local_repo_metadata(
             && let Some(existing_owner) = seen_urls.insert(url.clone(), stem.clone())
             && existing_owner != stem
         {
-            tracing::warn!(
-                "Repairing duplicate local repo URL: {} conflicts with {} on {}",
+            return Err(anyhow!(
+                "Broken local repo {} while repairing catalog: duplicate local repository URL {} also used by {}",
                 stem,
-                existing_owner,
-                url
-            );
-            info.url = Some(format!("urn:uuid:{}", info.uuid));
+                url,
+                existing_owner
+            ));
         }
         let workspace_repair = if allow_workspace_root_rewrite {
-            prepare_workspace_root_repair(ledger_dir, &stem, info.uuid, &previous_name, &info.name)?
+            prepare_workspace_root_repair(ledger_dir, &stem, info.uuid, &info.name, &info.name)?
         } else {
             None
         };
@@ -228,7 +178,7 @@ pub(crate) fn repair_local_repo_metadata(
             preflight_workspace_root_repair(manager, plan)?;
         }
         if info != original {
-            RepoManager::write_repo_info_to_db(db, &info)?;
+            RepoManager::write_local_repo_info_to_db(db, &info)?;
             tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
         }
         if let Some(plan) = workspace_repair {

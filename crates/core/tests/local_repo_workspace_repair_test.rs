@@ -15,7 +15,6 @@ fn repair_rejects_conflicting_locator_map_before_workspace_move() {
     let projection_base = dir.path().join("projection-base");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let main_db = repo.open_database(None, "main").expect("main db").db;
     let main_id = repo
         .get_repo_info()
         .expect("main info")
@@ -24,15 +23,7 @@ fn repair_rejects_conflicting_locator_map_before_workspace_move() {
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)
         .expect("projection locators");
 
-    common::write_repo_metadata(
-        main_db.as_ref(),
-        &RepoInfo {
-            uuid: main_id,
-            name: "legacy".into(),
-            url: Some("urn:main".into()),
-        },
-    );
-    let old_root = projection_base.join(workspace_segment("legacy", main_id));
+    let old_root = projection_base.join("main");
     std::fs::create_dir_all(old_root.join(".notegit")).expect("legacy workspace");
     let canonical_base = std::fs::canonicalize(&projection_base).expect("canonical base");
     let canonical_old_root = std::fs::canonicalize(&old_root).expect("canonical legacy root");
@@ -65,7 +56,7 @@ fn repair_rejects_conflicting_locator_map_before_workspace_move() {
 }
 
 #[test]
-fn repair_realigns_workspace_root_to_repaired_repo_name() {
+fn repair_fails_closed_on_locator_alias_mismatch_without_moving_workspace() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("projection-base");
@@ -94,25 +85,26 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
         },
     );
 
-    repo.repair_local_repo_catalog()
-        .expect("repair local catalog realigns workspace");
+    let err = repo
+        .repair_local_repo_catalog()
+        .expect_err("repair must not rewrite locator/metadata identity");
+    assert!(
+        err.to_string().contains("metadata name drifted to legacy"),
+        "unexpected error: {err:#}"
+    );
 
     assert!(
         projection_base
-            .join(workspace_segment("main", repo_id))
+            .join(workspace_segment("legacy", repo_id))
             .join(".notegit")
             .exists()
     );
-    deve_core::utils::notegit::validate_repo_identity_marker(
-        &projection_base.join(workspace_segment("main", repo_id)),
-        repo_id,
-    )
-    .expect("identity marker");
     assert!(
         !projection_base
-            .join(workspace_segment("legacy", repo_id))
+            .join(workspace_segment("main", repo_id))
             .exists()
     );
+    assert_eq!(common::read_repo_metadata(main_db.as_ref()).name, "legacy");
 }
 
 #[test]

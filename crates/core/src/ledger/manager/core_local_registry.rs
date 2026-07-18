@@ -8,15 +8,34 @@ use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::ledger::manager::local_repo_metadata_repair_support::ensure_local_repo_metadata_name_authorized;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
-use crate::ledger::manager::types::RepoManager;
+use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::ledger::source_control;
 
 impl RepoManager {
+    fn validate_local_repo_execution_identity(db: &Database, stem: &str) -> Result<RepoInfo> {
+        let info = Self::read_local_repo_info_from_db(db)?.ok_or_else(|| {
+            anyhow!(
+                "Broken local repo {} while validating execution identity: repository metadata missing",
+                stem
+            )
+        })?;
+        let expected_stem = info.uuid.to_string();
+        if expected_stem != stem {
+            return Err(anyhow!(
+                "Broken local repo {} while validating execution identity: physical RepoId does not match metadata RepoId {}",
+                stem,
+                info.uuid
+            ));
+        }
+        Ok(info)
+    }
+
     pub(crate) fn run_on_local_repo_stem<F, R>(&self, stem: &str, f: F) -> Result<R>
     where
         F: FnOnce(&redb::Database) -> Result<R>,
     {
         if stem == self.local_repo_name {
+            Self::validate_local_repo_execution_identity(self.local_db.as_ref(), stem)?;
             source_control::validate_tables(self.local_db.as_ref()).map_err(|err| {
                 anyhow!(
                     "Broken local repo {} while validating source control tables: {}",
@@ -29,6 +48,7 @@ impl RepoManager {
         {
             let guard = self.read_extra_local_dbs()?;
             if let Some(db) = guard.get(stem) {
+                Self::validate_local_repo_execution_identity(db.as_ref(), stem)?;
                 source_control::validate_tables(db.as_ref()).map_err(|err| {
                     anyhow!(
                         "Broken local repo {} while validating source control tables: {}",
@@ -42,6 +62,7 @@ impl RepoManager {
         let db = self
             .get_or_open_local_db(stem)
             .map_err(|err| anyhow!("Broken local repo {} while opening database: {}", stem, err))?;
+        Self::validate_local_repo_execution_identity(db.as_ref(), stem)?;
         source_control::validate_tables(db.as_ref()).map_err(|err| {
             anyhow!(
                 "Broken local repo {} while validating source control tables: {}",
@@ -65,15 +86,16 @@ impl RepoManager {
     pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
         let mut display_matches = Vec::new();
         if selector == self.local_repo_name {
-            let Some(info) = Self::read_repo_info_from_db(&self.local_db)? else {
-                return Ok(Some(self.local_repo_name.clone()));
-            };
+            let info = Self::validate_local_repo_execution_identity(
+                self.local_db.as_ref(),
+                &self.local_repo_name,
+            )?;
             if self.is_local_repo_removed(info.uuid)? {
                 return Ok(None);
             }
             return Ok(Some(self.local_repo_name.clone()));
         }
-        if let Some(info) = Self::read_repo_info_from_db(&self.local_db)?
+        if let Some(info) = Self::read_local_repo_info_from_db(&self.local_db)?
             && !self.is_local_repo_removed(info.uuid)?
         {
             ensure_local_repo_metadata_name_authorized(
@@ -90,20 +112,31 @@ impl RepoManager {
             if stem == self.local_repo_name {
                 continue;
             }
-            let info =
-                Self::read_required_repo_info_from_path(&path, &stem, "resolving local selector")
-                    .map_err(|err| {
-                    anyhow!(
-                        "Broken local repo {} while resolving selector {}: {}",
-                        stem,
-                        selector,
-                        err
-                    )
-                })?;
+            let info = Self::read_required_local_repo_info_from_path(
+                &path,
+                &stem,
+                "resolving local selector",
+            )
+            .map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while resolving selector {}: {}",
+                    stem,
+                    selector,
+                    err
+                )
+            })?;
             if self.is_local_repo_removed(info.uuid)? {
                 continue;
             }
             if stem == selector {
+                if info.uuid.to_string() != stem {
+                    return Err(anyhow!(
+                        "Broken local repo {} while resolving selector {}: physical RepoId does not match metadata RepoId {}",
+                        stem,
+                        selector,
+                        info.uuid
+                    ));
+                }
                 return Ok(Some(stem));
             }
             ensure_local_repo_metadata_name_authorized(&self.ledger_dir, &stem, &info)?;

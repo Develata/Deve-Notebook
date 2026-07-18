@@ -38,6 +38,7 @@ mod tests {
         let selector = selector_from_scope(&ResolvedRepo {
             repo_id,
             repo_name: "test".into(),
+            session_name: "test".into(),
             branch: None,
         });
         assert_eq!(selector.repo_id, Some(repo_id));

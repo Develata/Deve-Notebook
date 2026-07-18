@@ -27,8 +27,8 @@ impl<'a> RepoScopeLookupRuntime<'a> {
         &self,
         target_id: RepoId,
     ) -> Result<Option<String>> {
-        if let Some(info) =
-            RepoManager::read_repo_info_from_db(&self.manager.local_db).map_err(|err| {
+        if let Some(info) = RepoManager::read_local_repo_info_from_db(&self.manager.local_db)
+            .map_err(|err| {
                 anyhow::anyhow!(
                     "Broken local repo {} while resolving UUID {} without repair: {}",
                     self.manager.local_repo_name,
@@ -53,7 +53,7 @@ impl<'a> RepoScopeLookupRuntime<'a> {
             if file_stem == self.manager.local_repo_name {
                 continue;
             }
-            let info = RepoManager::read_required_repo_info_from_path(
+            let info = RepoManager::read_required_local_repo_info_from_path(
                 &path,
                 &file_stem,
                 "resolving UUID without repair",
@@ -131,7 +131,7 @@ impl<'a> RepoScopeLookupRuntime<'a> {
         stem: &str,
     ) -> Result<Option<RepoInfo>> {
         if stem == self.manager.local_repo_name {
-            return RepoManager::read_repo_info_from_db(&self.manager.local_db);
+            return RepoManager::read_local_repo_info_from_db(&self.manager.local_db);
         }
         self.manager
             .run_on_local_repo_stem(stem, RepoManager::read_repo_info_from_db)

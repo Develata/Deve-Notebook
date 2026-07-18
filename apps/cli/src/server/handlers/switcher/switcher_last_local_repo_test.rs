@@ -28,10 +28,11 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let test_info = test.get_repo_info()?.expect("test repo info");
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
+    let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
-            uuid: uuid::Uuid::new_v4(),
+            uuid: remote_repo_id,
             name: "default".into(),
             url: Some("urn:remote:default".into()),
         },

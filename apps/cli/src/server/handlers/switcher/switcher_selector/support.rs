@@ -24,7 +24,26 @@ pub(super) fn select_target_repo_by_url(
     }
     let repos = state.repo.list_repos(target_branch)?;
     let mut matches = Vec::new();
+    let mut current_label_matches_target = false;
     for repo_name in &repos {
+        let Some(repo_info) = state
+            .repo
+            .get_repo_info_for(target_branch, Some(repo_name))?
+        else {
+            let scope = if target_branch.is_some() {
+                "remote"
+            } else {
+                "local"
+            };
+            return Err(anyhow!(
+                "Broken {scope} repo {} while resolving target repository by URL {}: repository metadata not resolved",
+                repo_name,
+                url
+            ));
+        };
+        current_label_matches_target |= current_repo_name.is_some_and(|current_name| {
+            current_name == repo_name || current_name == repo_info.name
+        });
         let Some(repo_url) = state.repo.get_repo_url(target_branch, repo_name)? else {
             let scope = if target_branch.is_some() {
                 "remote"
@@ -55,9 +74,7 @@ pub(super) fn select_target_repo_by_url(
     if matches.len() == 1 {
         return Ok(Some(matches.remove(0)));
     }
-    if target_branch.is_some()
-        && current_repo_name.is_some_and(|name| repos.iter().any(|repo| repo == name))
-    {
+    if target_branch.is_some() && current_label_matches_target {
         return Err(unresolved_target_repo_error(
             target_branch,
             current_repo_name,
@@ -104,25 +121,4 @@ pub(super) fn recover_selector_from_raw_name(
         .repo
         .find_remote_repo_selector(branch, raw_repo_name)?
         .filter(|selector| selector == raw_repo_name))
-}
-pub(super) fn can_defer_to_repo_id_for_display_collision(
-    state: &Arc<AppState>,
-    branch: Option<&PeerId>,
-    raw_repo_name: &str,
-) -> Result<bool> {
-    if uuid::Uuid::parse_str(raw_repo_name).is_ok() {
-        return Ok(false);
-    }
-    let Some(peer_id) = branch else {
-        return Ok(false);
-    };
-    if state
-        .repo
-        .find_remote_repo_selector(peer_id, raw_repo_name)?
-        .as_deref()
-        == Some(raw_repo_name)
-    {
-        return Ok(false);
-    }
-    state.repo.has_remote_display_name(peer_id, raw_repo_name)
 }

@@ -88,7 +88,7 @@ fn repair_node_check_accepts_exact_repo_selector() -> anyhow::Result<()> {
         },
         true,
     )?;
-    assert_eq!(repos, vec!["notes".to_string()]);
+    assert_eq!(repos, vec![notes_id.to_string()]);
     Ok(())
 }
 

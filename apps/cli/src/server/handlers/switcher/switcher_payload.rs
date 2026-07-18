@@ -96,7 +96,7 @@ fn load_repo_view(
         local::load_local_repo_view(state, prepared)?
     };
     Ok(RepoViewPayload {
-        repo_name: prepared.repo_name.clone(),
+        repo_name: prepared.session_name.clone(),
         repo_id,
         docs,
         nodes,
