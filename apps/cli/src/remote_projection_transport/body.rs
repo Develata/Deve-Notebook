@@ -65,48 +65,6 @@ pub(super) fn capture_bounded_body<S: RemoteSourceSink>(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::remote_projection_transport::RemoteSourceSink;
-
-    struct SwallowingSink;
-
-    impl RemoteSourceSink for SwallowingSink {
-        type Error = std::convert::Infallible;
-
-        fn capture(
-            &mut self,
-            _path: &NormalizedRemotePath,
-            body: &mut dyn Read,
-        ) -> Result<(), Self::Error> {
-            let mut content = Vec::new();
-            let _ignored = body.read_to_end(&mut content);
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn swallowed_reader_overflow_still_returns_transport_error() {
-        let path = NormalizedRemotePath::new("a.md").expect("path");
-        let mut body = io::Cursor::new(b"ab".to_vec());
-        let error = capture_bounded_body(
-            "test",
-            &path,
-            &mut body,
-            BodyCaptureBudget {
-                max_file_bytes: 1,
-                remaining_total_bytes: 8,
-                max_total_bytes: 8,
-            },
-            &mut SwallowingSink,
-        )
-        .expect_err("swallowed overflow");
-        assert!(matches!(error, SourceAcquisitionError::Transport(_)));
-        assert!(error.to_string().contains("source payload exceeds 1 bytes"));
-    }
-}
-
 struct BoundedBodyReader<'a> {
     inner: &'a mut dyn Read,
     limit: usize,
@@ -169,5 +127,47 @@ impl Read for BoundedBodyReader<'_> {
             }
             Err(error) => Err(self.record_io_error(error)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::remote_projection_transport::RemoteSourceSink;
+
+    struct SwallowingSink;
+
+    impl RemoteSourceSink for SwallowingSink {
+        type Error = std::convert::Infallible;
+
+        fn capture(
+            &mut self,
+            _path: &NormalizedRemotePath,
+            body: &mut dyn Read,
+        ) -> Result<(), Self::Error> {
+            let mut content = Vec::new();
+            let _ignored = body.read_to_end(&mut content);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn swallowed_reader_overflow_still_returns_transport_error() {
+        let path = NormalizedRemotePath::new("a.md").expect("path");
+        let mut body = io::Cursor::new(b"ab".to_vec());
+        let error = capture_bounded_body(
+            "test",
+            &path,
+            &mut body,
+            BodyCaptureBudget {
+                max_file_bytes: 1,
+                remaining_total_bytes: 8,
+                max_total_bytes: 8,
+            },
+            &mut SwallowingSink,
+        )
+        .expect_err("swallowed overflow");
+        assert!(matches!(error, SourceAcquisitionError::Transport(_)));
+        assert!(error.to_string().contains("source payload exceeds 1 bytes"));
     }
 }

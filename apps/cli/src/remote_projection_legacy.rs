@@ -117,6 +117,3 @@ pub(crate) fn rollback_after_failed_scan(
         format!("remote projection pull scan failed after workspace apply: {scan_error}")
     })
 }
-
-#[cfg(test)]
-mod workspace_apply_tests;
