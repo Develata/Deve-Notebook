@@ -26,6 +26,9 @@ repo file operations	repo_file_ops
 document edit / confirmed op	doc_edit
 leave document / pending edit guard	pending_navigation
 repo-switch	repo_switch
+repo alias set	repo_switch
+repo alias transfer	repo_switch
+repo lifecycle	repo_switch
 stage / unstage	sc_stage
 discard file	sc_discard_file
 discard pending	sc_discard

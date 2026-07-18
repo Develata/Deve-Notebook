@@ -60,6 +60,14 @@ Git remains a mirror/import/export/publish bridge around Deve's own
 source-control authority. The ledger and `.notegit/` remain Deve-owned runtime
 state.
 
+As a design preference, cross-host machine state and host-local human
+interaction are kept maximally independent. Peers preserve immutable identity,
+Ledger facts and Markdown fidelity; labels and visual preferences stay local
+unless they are required for correctness. Repo aliases are the concrete case:
+peers share `RepoId` and never synchronize aliases. The approved first-release
+target lets users explicitly move their local alias map with deterministic JSON;
+that target remains blocked until the C1′ runtime and acceptance evidence land.
+
 ## Authority Model
 
 ```text
@@ -68,9 +76,12 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 
 - `ledger/` stores authoritative repo facts.
 - `ledger/.host/projection-locators.toml` stores host-local
-  `RepoId -> projection_base` bindings.
-- `<projection_base>/<safe_repo_name>--<repo_id>/` stores the user-visible
+  `RepoId -> (projection_base, immutable workspace_segment)` bindings.
+- `<projection_base>/<workspace_segment>/` stores the user-visible
   Markdown projection for one local repo.
+- The approved repo-alias contract keeps display state host-local. Once the
+  C1′ runtime lands, changing or importing an alias will never move the
+  workspace or change peer identity.
 - File-system changes enter `pending_fs_ops` first. They do not mutate
   authority until an explicit stage/commit path appends ledger facts.
 - `.notegit/` is Deve-owned repo runtime state.

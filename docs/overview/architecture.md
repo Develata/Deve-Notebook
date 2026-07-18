@@ -55,7 +55,8 @@ The approved workspace-ingestion path preserves the same four-layer direction wh
 
 ```text
 UI / HTTP / WS handlers
-  -> typed intent / RepoLifecycleCoordinator
+  -> typed intent / RepoLifecycleJobRuntime
+  -> RepoLifecycleCoordinator
   -> RepoMutationPublicationGate + WatcherRuntimeView
   -> WatcherSupervisor
   -> RepoWatcherHandle
@@ -66,11 +67,27 @@ UI / HTTP / WS handlers
 - `RepoWatcherHandle` is the non-clone single-repo execution owner in core.
 - `WatcherSupervisor` is the CLI host runtime owner of repo slots, generations and lifecycle; handlers never receive it.
 - `WatcherRuntimeView` exposes only snapshot/aggregate readiness to `AppState`, mutation admission and `/api/node/role`.
-- `RepoLifecycleCoordinator` is the only create/rename/remove flow coordinator allowed to request mount transitions.
+- `RepoLifecycleJobRuntime` is the transport-independent owner of accepted create/remove jobs; handlers may stop waiting but cannot cancel durable convergence.
+- `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice.
 - durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
-The ownership slice, owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health and E2 final-state shutdown are implemented. Convergence remains tracked as `部分承载` until dynamic lifecycle, bootstrap repo isolation and Windows overflow evidence are sealed.
+The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health and E2 final-state shutdown are implemented. W7 create/remove convergence remains active drift until host-owned jobs, prepare/cut/settle boundaries, immutable publication plans and cancellation/concurrency evidence are complete. It must not be represented as implemented merely because handlers can call lifecycle helpers.
+
+## Cross-host Data and Host-local Interaction
+
+As a soft design principle, Deve keeps the machine-facing cross-host data plane and the
+human-facing local interaction plane maximally independent. Cross-host state prioritizes
+precise identity, complete Markdown/Ledger facts, deterministic replay and authenticated
+admission. Local labels and visual preferences remain local unless transferring them is
+necessary for those guarantees.
+
+Repo naming is the reference case: peers share an immutable RepoId and never exchange the
+host's alias. `host_repo_alias_runtime` owns the local display mapping; Projection Locator
+owns an immutable physical `workspace_segment`. A user may export/import the small JSON
+mapping explicitly, but alias changes never become Ledger/sync facts and never move the
+workspace. This is a preference for low coupling, not a license to discard mechanisms that
+materially improve correctness, safety or usability.
 
 ## Remote Import Ownership Slice
 
@@ -86,7 +103,7 @@ Remote provider
   -> Workspace
 ```
 
-Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B4 已激活 backend/CLI/product wire 并删除旧 pull substitute；79-flow modeled slice 仍保留四个 client-facing drift marker，直到 B5 交付独立 `remote_import_client`。
+Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B4 已激活 backend/CLI/product wire并删除旧 pull substitute；82-flow modeled slice 同时诚实登记 Remote Import client、C1′ repo control 与 A1/B1 lifecycle drift。
 
 Post-commit Projection outcome uses one repo-local Redb v4 settlement boundary:
 `Pending -> Written` updates only the stored receipt, while `Pending -> Degraded`

@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.cli.help-surface`
 - `Domain`: `commands`
 - `Related Feature Chapters`: `docs/features/12_commands.md`
-- `Related Acceptance Cases`: `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009`
+- `Related Acceptance Cases`: `CMD-001`, `CMD-006`, `CMD-007`, `CMD-009`
 
 ## Operations
 

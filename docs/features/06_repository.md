@@ -27,11 +27,13 @@
 - 用户可以切换当前激活 repo。
 - Source Control、Explorer、当前文档作用域应随 repo 切换而同步变化。
 - 界面不应同时把所有 repo 混成一个全局工作区。
-- 仓库展开界面应提供新增、重命名与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于重命名或移除该 repo。
+- 仓库展开界面应提供新增、设置本地 alias 与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于修改当前 host 的显示 alias 或移除该 repo。
 - 普通移除仓库不应直接销毁 ledger 或 Projection Workspace；用户可见文案必须避免暗示已经物理擦除数据。
-- create/rename/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
+- create/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
 - create 已提交但 workspace ingestion mount 失败时，新 repo 保留只读可见，当前 session 不自动切换。
-- rename 已提交但新 mount 失败时，列表与所有已绑定该相同 RepoId 的 session 使用已提交的新名称并保持只读；其它 RepoId 的当前 session 不切换。系统不得反向改回旧名称。
+- alias 修改只更新当前 host 的列表/标题显示；不停止 watcher、不移动 workspace、不改变可写状态、scope 或其它 peer 的名称。
+- alias 缺失时显示完整 RepoId。不同 repo 可以使用相同 alias，但此时按 alias 选择必须要求用户明确 RepoId。
+- CLI 支持 deterministic JSON 导出/导入 alias。导入遇到本机不存在的 RepoId、非法 alias、重复 RepoId 或单项失败时 warning + skip，最终完整列出跳过项与原因；其它有效项仍作为一个原子 accepted batch 应用。
 - remove 成功后目标 repo 不再启动 watcher；remove 尚未提交即失败时，系统才可以恢复旧 repo 的 watcher。
 
 ### 2. 本地分支
@@ -61,9 +63,9 @@
 - 用户只能整 session Apply 或 Discard；没有 checkbox、逐文件选择和 remote Delete。任一 blocker 禁用整个 Apply。
 - Apply 通过 sealed whole-session Ledger transaction提交，事务内先保存“Ledger 已提交、Projection outcome pending”的 durable receipt，随后才执行 Projection writeback。成功收敛为 Written；失败与 durable fault 一起收敛为 Degraded。崩溃/重试从 Ledger 幂等恢复，不重复导入、不回滚 Ledger。
 - Refresh 只重算已封存 snapshot：在 RepoId/branch/source/locator 仍 exact 时可把新 revision 绑定到当前 Ledger head 与 ignore snapshot；source/locator/branch/membership/tamper drift 不可重绑。要读取新的远端内容必须先 Discard 后重新 Prepare。
-- active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。rename 只改显示名，不搬 RepoId-based artifacts。
+- active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。alias 修改不搬 RepoId-based artifacts，也不使 session stale。
 - Web / Command Palette 只提交 typed intent；backend 解析 repo scope、locator/profile、credential ref、session/revision 与 blockers。S3-compatible UX 只能选择 backend-defined profile handle，不收集 endpoint URL 或 secret。
-- 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，独立 Web review surface 由 B5 交付。正式命令面见 `14_commands#remote-import-command-contract`。
+- 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，W7 RepoId/provider lifecycle coordination仍待 A1/B1 收敛，独立 Web review surface 由 B5 交付。正式命令面见 `14_commands#remote-import-command-contract`。
 
 ## 非目标
 
@@ -133,14 +135,14 @@
 
 1. 展开仓库切换界面。
 2. 点击顶部新增按钮，创建一个新 repo。
-3. 点击某个 repo 行右侧更多菜单，执行重命名。
+3. 点击某个 repo 行右侧更多菜单，修改本机 alias。
 4. 点击非当前 repo 行右侧更多菜单，执行移除。
 
 期望结果：
 
 - 新增 repo 后自动切换到新 repo。
 - 上述自动切换仅在新 repo 成功 mounted 时发生；若 durable create 已提交但 mount 失败，新 repo 只读可见且当前 session 保持原 repo。
-- 重命名后列表与所有已绑定该 RepoId 的标题/scope 显示新名称，`RepoId` 不变；重命名非当前 repo 不改变当前 scope。
+- alias 修改后列表与标题显示新名称，`RepoId`、scope、writer readiness 与 workspace path 不变；修改非当前 repo 不改变当前 scope。
 - 移除后目标 repo 从普通列表消失，ledger authority 与 Projection Workspace 未被物理删除。
 
 ### REPO-FEAT-05: Repo lifecycle 的 mount partial outcome
@@ -148,19 +150,19 @@
 前置条件：
 
 - 至少存在一个 Mounted local repo。
-- 测试入口可分别让 create 后 mount、rename 后 remount 或 remove 前 final reconcile 失败。
+- 测试入口可分别让 create 后 mount 或 remove 前 final reconcile 失败，并可验证 alias store failure。
 
 步骤：
 
 1. 创建 repo 并让新 watcher mount 失败。
-2. 重命名另一个 repo 并让新 root mount 失败。
+2. 修改另一个 repo alias，并注入 alias store write failure。
 3. 对第三个 repo 执行移除并让 final reconcile 失败。
 
 期望结果：
 
 - create 返回“已创建但工作区摄取不可用”，新 repo 只读可见且当前 session 未切换。
-- rename 保留新名称和相同 RepoId；仅已绑定该 RepoId 的 session 更新 display/scope projection 并只读，重命名非当前 repo 时当前 scope 完全不变，不发生反向 rename。
+- alias store failure 不改变旧 alias；成功 alias set 只更新 display，不发生 remount、scope 切换、Projection Fault 或 Remote Import stale。
 - final reconcile 失败发生在 durable remove 前时，remove 不提交并可恢复旧 watcher；任何混合事实都进入 repair，不由 UI 猜测回滚。
 - durable remove 已提交但 deferred fallback 在最终 publication 前已 removed、membership generation 改变或 ingestion Failed 时，不绑定失效 repo、不静默选择第三个 repo；无关 repo 的 catalog mutation 不影响该 fallback token。发起 session 进入自己的 `NoScope` partial。无论发起者 fallback 成功或失败，所有仍绑定 removed RepoId 的 observer session 都提交各自的新 `NoScope` epoch并撤销 writer-ready，且不复用发起者 switch nonce。每个受影响 Web connection 按固定顺序暂存携带自身 scope nonce 的最终 `RepoList`，再以匹配的 `ProtocolError / SC_REPO_NOT_SELECTED` 提交结果；不得收到伪造 `RepoSwitched`，也不新增 watcher lifecycle wire message。Web 只清除对应 pending remove/scope-switch intent，不丢弃 editor pending overlay，不自动选择其它 repo。
-- membership remove 的 authority cut 只轮换该 RepoId 的 process-local generation，O(1) 完成且不在 Catalog lane 遍历 session；旧 binding 从 cut 起立即拒写。session fan-out 在 permit 外执行。Web 收到第一帧 final RepoList 时立即关闭 writer-ready，但在第二帧前不应用列表、不提交 NoScope、也不丢 editor pending overlay。
+- membership remove 的 authority cut 在短 `Catalog -> Repo(target)` lane 内原子替换该 RepoId 的 bounded catalog record 并轮换 process-local generation，且不遍历 session；旧 binding 从 cut 起立即拒写。session fan-out 在 permit 外执行。Web 收到第一帧 final RepoList 时立即关闭 writer-ready，但在第二帧前不应用列表、不提交 NoScope、也不丢 editor pending overlay。
 - repo list/scope publication 只出现最终一次 typed outcome。

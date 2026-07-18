@@ -431,6 +431,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 | Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
 | WebSocket | `DEVEWSF4`, lockstep v3 | 已对齐；legacy/unversioned JSON 与 v1/v2 adapter 均不存在 | B4 | non-blocking |
 | Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire 已对齐；B5 typed Web client 与 B6 fresh receipts 未完成 | B4/B5/B6 | blocked |
+| Projection Locator / repo alias | immutable `workspace_segment` + host-local alias JSON v1；peer payload no alias | code仍含 `repo_name_hint`、alias-derived workspace 与 lifecycle rename | C1′ | blocked |
 
 “Approved target”不等于实现完成。release gate 必须同时读取 `docs/registry/first-tag-format-matrix.md` 的 target/current 两列；当前不一致必须阻止 candidate/tag-ready，不能因为文档出现目标字符串而通过。
 
@@ -483,8 +484,9 @@ services:
 
 容器部署 **MUST NOT** 假设 `/data/vault` 是全局投影根。每个本地 repo 的 projection base 必须先通过
 `deve init --path <data-root> --repo <name> --projection-base <projection-base>` 或 `deve repo projection set --repo <selector> --base <projection-base>`
-写入 host-local Projection Locator；实际 workspace root 为 `<projection-base>/<safe_repo_name>--<repo_id>/`。
-例如 `--projection-base /notes --repo default` 对应 `/notes/default--<repo_id>/`。
+写入 host-local Projection Locator；实际 workspace root 为 `<projection-base>/<workspace_segment>/`。
+本机 create 时 `--repo default` 可以一次生成 immutable `default--<repo_id>` segment；之后修改
+host-local alias 不移动该目录。其它 host 不从 peer 接收这个 alias。
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).

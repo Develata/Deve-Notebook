@@ -32,8 +32,8 @@
 ### 2.1 Core Stores
 
 - `Store A: Projection Workspaces`
-  - `ProjectionLocator(RepoId) -> projection_base`
-  - `ProjectionWorkspaceRoot(RepoId) = projection_base/<safe_repo_name>--<repo_id>/`
+  - `ProjectionLocator(RepoId) -> (projection_base, workspace_segment)`
+  - `ProjectionWorkspaceRoot(RepoId) = projection_base/workspace_segment`
   - 是 repo-scoped workspace projection 的物理容器，不是 authority。
   - 系统不再定义总 `vault` 根目录；每个本地可写 repo 必须显式绑定 projection base，再计算 repo workspace root。
 - `Store B: Local Branch Ledger`
@@ -71,6 +71,9 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/remotes/<peer_id>/<repo_id>.redb`
 - `ledger/.host/identity.key`
 - `ledger/.host/projection-locators.toml`
+- `ledger/.host/repo-aliases.json`
+- `ledger/.host/repo-catalog/<repo_id>.json`
+- `ledger/.host/repo-lifecycle-jobs/<request_id>.json`
 - `ledger/backups/<repo_id>-<timestamp>.redb`
 
 每个 local-authority Redb v4 database 内还包含 host-local、非同步的
@@ -79,14 +82,38 @@ repo database 只是为了获得短事务原子性，不把 Projection Fault 升
 authority store；唯一 mutation contract 见
 [projection.md#durable-projection-fault-contract](./projection.md#durable-projection-fault-contract)。
 
-Physical filenames use UUID identity. `RepoNameBinding.repo_name` is a display
-alias and selector hint; it never determines a database filename. The canonical
-execution stem is the matching lowercase `<repo_id>` string. Before a Projection
-Locator exists, v4 bootstrap may read the display alias from `RepoInfo.name`;
-after a locator exists, its `repo_name_hint` must match that alias as a
-consistency witness. A mismatch fails closed as metadata/locator drift and must
-not rename the DB, rewrite either side heuristically, or turn the hint into
-authority.
+Physical database filenames use UUID identity. The canonical execution stem is
+the matching lowercase `<repo_id>` string. The current schema-shaped
+`RepoInfo.name` also contains that same canonical machine string; it must never
+store a human creation label or current alias. The current human-facing alias
+belongs to the host-local `HostRepoAliasBinding` store and never determines a
+database filename. Projection Locator persists an immutable `workspace_segment`; once
+created it is independent from the current alias and cannot be rewritten by an
+alias import or rename. A marker, locator or metadata `RepoId` mismatch fails
+closed and must not rename the DB, rewrite either side heuristically, or turn a
+display string into authority.
+
+`repo-aliases.json` 是 host-local runtime store，不是 user export 文件。写入必须使用
+same-directory temp file + flush + atomic replace，读取必须执行 bounded JSON/version/duplicate
+校验。其 normalized durable rows 还包含 `alias_revision`；用户导出的 deterministic JSON v1
+只投影 `repo_id + alias`，不能反向覆盖 revision 或创建 repo。唯一 mutation/API contract 归
+`04_repository#host-repo-alias-contract`。
+
+`repo-catalog/<repo_id>.json` 是 `RepoCatalogRuntime` 独占的 host-local normal-membership
+authority record，不是 Ledger fact，也不进入 sync。create/remove 只在短 `Catalog -> Repo`
+authority cut 内原子发布单个 bounded record；DB、locator 或 workspace artifact 的存在不能替代
+该 record，目录扫描也不得把未登记 artifact 自动 admission 为 normal repo。唯一 lifecycle 合同见
+`04_repository#repo-lifecycle-coordinator`。
+
+每个 catalog record 的 deterministic JSON v1 至少包含
+`format="deve.host-repo-membership"`、`version=1`、exact `repo_id`、
+`state="normal|removed"`、单调 `membership_revision`、prepared identity digest 与最近一次
+`lifecycle_request_id`；文件名、payload RepoId 与 DB identity 任一不一致必须 fail-closed。
+`repo-lifecycle-jobs/<request_id>.json` 是 `RepoLifecycleJobRuntime` 的 host-local admission/completion
+receipt，记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome；
+它不授予 repo membership，也不得进入 Ledger/sync。active receipt 永不裁剪；normal repo 的 create
+receipt 至少由 catalog record 可追溯，terminal receipt 的 bounded retention 归
+`04_repository#repo-lifecycle-coordinator`。
 
 ### 3.1.1 Remote Import Runtime Layout {#remote-import-runtime-layout}
 
@@ -111,7 +138,7 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
 
 ### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
-- `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/`
+- `<projection_base>/<workspace_segment>/.notegit/`
   - repo keys
   - pending/staged side tables
   - commit/runtime metadata
@@ -218,7 +245,7 @@ RepoDiscovered
 - watcher 初始化或运行期失败必须对该 repo fail-closed 为 `RepoMountState::Failed`，不得写入 projection fault journal，也不得伪装为 `DegradedProjection`。
 - server bootstrap 对 repo-local watcher start failure 按 repo 隔离；健康且成功 mounted 的 repo 继续运行。启动完成时若零个 repo 处于 `Mounted`，host 必须回滚已启动 watcher 并终止 server。
 - server 已运行后即使全部 watcher 后续失败，仍保留纯读、ledger inspect/export 与离线 repair/diagnostic 能力；所有依赖 workspace 当前性的在线本地 mutation 保持关闭。
-- `Transitioning / Mounted / Failed` 的 generation、失败原子切点与 owned lifecycle 唯一由 [watcher contract](./watcher.md#watcher-contract) 定义；repo create/rename/remove 的 durable 与 mount 协调唯一由 `04_repository#repo-health-and-repair` 定义。
+- `Transitioning / Mounted / Failed` 的 generation、失败原子切点与 owned lifecycle 唯一由 [watcher contract](./watcher.md#watcher-contract) 定义；repo create/remove 的 durable 与 mount 协调唯一由 `04_repository#repo-lifecycle-coordinator` 定义。host-local alias不参与 mount lifecycle。
 
 > Write Lifecycle（§5.2）见 [authority.md](./authority.md)；External Edit Lifecycle（§5.3）见 [watcher.md](./watcher.md)。
 

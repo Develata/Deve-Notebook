@@ -20,7 +20,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.cli.control-commands` | [`cli_control_commands.md`](./operations/cli_control_commands.md) | `CMD-001`, `CMD-002`, `CMD-003`, `CMD-004` |
 | `flow.cli.empty-command-guidance` | [`cli_empty_command_guidance.md`](./operations/cli_empty_command_guidance.md) | `CMD-001` |
 | `flow.cli.export-inspect` | [`cli_export_inspect.md`](./operations/cli_export_inspect.md) | `CMD-001`, `CMD-008`, `TECH-002` |
-| `flow.cli.help-surface` | [`cli_help_surface.md`](./operations/cli_help_surface.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
+| `flow.cli.help-surface` | [`cli_help_surface.md`](./operations/cli_help_surface.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-009` |
 | `flow.cli.parse-command` | [`cli_parse_command.md`](./operations/cli_parse_command.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
 | `flow.cli.repair-admin` | [`cli_repair_admin.md`](./operations/cli_repair_admin.md) | `CMD-001`, `CMD-009`, `REPO-FEAT-03` |
 | `flow.cli.runtime-handoff` | [`cli_runtime_handoff.md`](./operations/cli_runtime_handoff.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
@@ -63,8 +63,11 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.repo.branch-switch` | [`repo_branch_switch.md`](./operations/repo_branch_switch.md) | `CMD-004`, `REPO-FEAT-02`, `REPO-FEAT-03` |
 | `flow.repo.file-op-shell-routing` | [`repo_file_op_shell_routing.md`](./operations/repo_file_op_shell_routing.md) | `REPO-FEAT-01`, `UI-DESK-003` |
 | `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012`, `STORE-013` |
+| `flow.repo.alias-set` | [`repo_alias_set.md`](./operations/repo_alias_set.md) | `STORE-014A` |
+| `flow.repo.alias-transfer` | [`repo_alias_transfer.md`](./operations/repo_alias_transfer.md) | `CMD-008` |
+| `flow.repo.lifecycle` | [`repo_lifecycle.md`](./operations/repo_lifecycle.md) | `REPO-FEAT-03` |
 | `flow.repo.open-doc` | [`repo_open_doc.md`](./operations/repo_open_doc.md) | `CMD-003`, `REPO-FEAT-01`, `STORE-009` |
-| `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01`, `REPO-FEAT-03` |
+| `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01` |
 | `flow.sc.commit` | [`sc_commit.md`](./operations/sc_commit.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03`, `DIFF-009`, `AI-007` |
 | `flow.sc.commit-and-push` | [`sc_commit_and_push.md`](./operations/sc_commit_and_push.md) | `DIFF-FEAT-02` |
 | `flow.sc.discard-file` | [`sc_discard_file.md`](./operations/sc_discard_file.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |

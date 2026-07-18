@@ -124,12 +124,15 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
-| `07_network#projection-recovery-contract` | `### 4.3.2 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
+| `07_network#projection-recovery-contract` | `### 4.3.3 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
+| `07_network#repo-control-wire-contract` | `### 4.3.2 Repo Control Wire Contract` | F4/v4 nested host-local alias/lifecycle request、completion 与 exact RepoId projection；planned/no-code-yet |
 | `07_network#native-full-peer-runtime` | `### 12.5 Native Full Peer Runtime` | CLI/native FullPeer transport、repo-scoped admission 与宿主 runtime 边界 |
 | `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
 | `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
 | `04_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
+| `04_repository#host-repo-alias-contract` | `### 2.1.1 Host-local Repo Alias Contract` | host-local alias ownership、CAS、JSON import/export 与跨宿主禁止边界；planned/no-code-yet |
+| `04_repository#repo-lifecycle-coordinator` | `### 7.9 Repo Lifecycle Coordinator` | host-owned lifecycle job、prepare/cut/settle 与 immutable committed/settled plans；planned/no-code-yet |
 | `04_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `04_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `05_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
@@ -150,8 +153,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | B1 已落地 capture 文件、字节与路径预算；wire 分页预算待 B4 |
 | `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | B1 已落地 store/capture，B2 已落地 transport 依赖边界，B3 已落地 sealed authority writer；产品接线待 B4，UI 待 B5 |
 | `06_backup#projection-backup-failure-modes` | `## 8. Failure Modes` | Remote Projection transport 与 Remote Import capture/session/apply 的 typed failure、fail-closed 与 cleanup 边界 |
-| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v3 nested request/response、typed errors 与不泄密投影 |
+| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v4 nested request/response、typed errors 与不泄密投影 |
 | `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | scope/revision-bound typed client 与 stale response 丢弃；planned/no-code-yet |
+| `09_web_thin_client_ledger#repo-control-client-contract` | `### 11.5 Repo Control Client Contract` | exact RepoId/alias revision/job status thin client；planned/no-code-yet |
 | `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | Remote Import 与 Source Control/External Changes 同级但独立的薄壳层；planned/no-code-yet |
 | `14_commands#remote-import-command-contract` | `### 1.1 Remote Projection Push and Remote Import Commands` | projection push 与 remote-import prepare/review/apply/manage 命令面 |
 | `05_diff_logic#typed-diff-projection-contract` | `### 2.5 Typed Diff Projection Contract` | backend-owned typed diff projection、显示层消费与 authority-neutral diff 边界 |
@@ -206,6 +210,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `13_i18n#i18n-keys-reference` | `## 5. I18n Keys Reference` | i18n key namespace 与引用表 |
 | `13_i18n#i18n-error-code-catalog` | `## 6. Error Code Catalog` | 后端结构化错误码到前端文案的唯一权威目录 |
 | `14_commands#cli-commands` | `## 1. CLI Commands` | CLI 命令集合、帮助面与配置命令入口 |
+| `14_commands#repo-alias-command-contract` | `### 1.0.1 Repo Alias Command Contract` | host-local alias JSON CLI、dry-run、warning summary 与 atomic accepted batch；planned/no-code-yet |
 | `14_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
 | `15_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
 | `15_settings#native-host-local-backend-preference` | `### 2.2.2 Native Host-local Backend Preference` | Desktop/Mobile native backend preference 的 host-local JSON 持久化、local/remote 模式与敏感数据禁止边界 |

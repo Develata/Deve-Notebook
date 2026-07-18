@@ -1,0 +1,6 @@
+(group :id grp.app.repo-alias-set :layer application :label "repo alias set" :members (app.repo.alias-set))
+(group :id grp.app.repo-alias-transfer :layer application :label "repo alias transfer" :members (app.repo.alias-transfer))
+(group :id grp.app.repo-lifecycle :layer application :label "repo lifecycle" :members (app.repo.lifecycle))
+(application :id app.repo.alias-set :label "host-local alias CAS intent" :kind host-control :chapter 04_repository :calls (mod_proto_ws mod_ledger_manager))
+(application :id app.repo.alias-transfer :label "host-local alias JSON transfer" :kind host-control :chapter 14_commands :calls (mod_ledger_manager))
+(application :id app.repo.lifecycle :label "host-owned repo lifecycle job" :kind coordination :chapter 04_repository :calls (mod_proto_ws mod_ledger_manager mod_remote_import_runtime))

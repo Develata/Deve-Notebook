@@ -306,8 +306,14 @@ mount gate 阻断。它们仍必须遵守各自的 scope、authority 与安全�
 workspace mutation。Watcher 自身只写 External Changes pending，不进入 authority mutation
 permit；其 pending/reconcile 写入由 owned watcher generation 与 lifecycle contract 串行化。
 
-Repo catalog create 使用独立的 typed `Catalog` lane；rename/remove 必须按固定
-`Catalog -> Repo(RepoId)` 顺序同时持有 catalog 与目标 repo permit。不得用 nil UUID 或字符串
+Repo catalog create 使用独立的 typed `Catalog -> Repo(new RepoId)` lane；RemoveLocalRepo 的短
+authority cut 必须按固定 `Catalog -> Repo(RepoId)` 顺序同时持有 catalog 与目标 repo permit。
+两者的唯一 durable normal-membership linearization fact 是
+`ledger/.host/repo-catalog/<repo_id>.json` 的单记录原子发布/替换；cut 内允许这一项 bounded
+temp+flush+replace，不允许 scan、目录遍历、watcher/provider I/O、session fan-out 或 await。
+DB、locator、workspace marker 只能作为 prepared/settlement truth，不能单独授权正常 listing 或 writer admission。
+Host-local alias set/import 不是 repo authority mutation，不获取 watcher lifecycle reservation，
+只进入 alias runtime 的短 CAS。不得用 nil UUID 或字符串
 哨兵伪装 catalog identity，也不得允许 repo lifecycle 与该 repo 的 authority writer 并发。已经持有任意
 repo permit 的调用不得再获取 `Catalog` lane；这一反向嵌套必须 fail-closed，避免与
 `Catalog -> Repo(RepoId)` 形成 ABBA 死锁。
@@ -319,8 +325,8 @@ External Changes pending，不进入该 gate；认证 remote shadow ingest、离
 diagnostic 明确排除。Remote Import Prepare/Show/Page/Diff/Refresh/Discard 走 session runtime
 自己的 repo/session CAS；它们不获得 Ledger writer authority，也不要求 Mounted。
 
-repo selector、名称或路径只用于锁外定位候选身份。每个 writer 在获得 permit 后 **MUST** 重新解析并
-exact-compare 当前 `RepoId`、名称绑定与 local-writable 状态；rename/remove 后同名新 repo 不得继承旧请求
+repo selector、alias 或路径只用于锁外定位候选身份。每个 writer 在获得 permit 后 **MUST** 重新解析并
+exact-compare 当前 `RepoId`、CatalogMembershipToken 与 local-writable 状态；remove 后同 alias 新 repo 不得继承旧请求
 的写权限。Git mirror queue 等延后投影操作必须携带提交时的 expected `RepoId`，执行时再次验证，不能只按
 可复用的 repo 名称回查。
 

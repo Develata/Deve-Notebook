@@ -57,3 +57,4 @@ blueprint in `docs/plan/`.
 | [0010](./0010-sealed-pre-tag-release-candidate.md) | Sealed pre-tag release candidate promotion | Accepted |
 | [0011](./0011-immutable-ledger-first-remote-import.md) | Immutable ledger-first Remote Import | Accepted |
 | [0012](./0012-repo-local-redb-projection-fault-store.md) | Repo-local Redb Projection Fault store | Accepted |
+| [0013](./0013-immutable-repo-id-host-local-alias.md) | Immutable RepoId and host-local repo alias | Accepted |

@@ -102,8 +102,8 @@ Calculation Runtime 仍然是长期能力，但本章**不要求代码实现**�
 
 *   **Capabilities Default Deny**
 *   **Ledger-Managed Boundary**：
-    - `<projection_base>/<safe_repo_name>--<repo_id>/**/*.md`
-    - `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/**`
+    - `<projection_base>/<workspace_segment>/**/*.md`
+    - `<projection_base>/<workspace_segment>/.notegit/**`
     - `ledger/**`
     这些对象不得通过原始文件写入直接修改。
 *   若未来需要写托管笔记，**MUST** 走 ledger-aware host functions，而不是裸 `fs_write`。

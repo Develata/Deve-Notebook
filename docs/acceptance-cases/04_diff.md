@@ -433,9 +433,9 @@
     - api_assert: diff_projection_resource_limits_fail_closed true
 
 - case_id: DIFF-013
-  goal: 首个公开 WS epoch 使用 F4/v3，并让 Diff 与 Remote Import 都只传 backend typed projection。
+  goal: 首个公开 WS epoch 使用 F4/v4，并让 Diff、Remote Import 与 Repo Control 都只传 backend typed projection。
   preconditions:
-    - 当前代码与批准目标均为 F4/v3 lockstep
+    - 当前代码为未发布 F4/v3；批准目标为 F4/v4 lockstep，C1′ 完成前保持 gap
   steps:
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias -- --nocapture

@@ -52,6 +52,11 @@ Deve Notebook 是一个 Rust workspace，用于构建自托管的协作型 Markd
 Git 只是 Deve 自身 source-control authority 外侧的 mirror/import/export/publish
 bridge。ledger 和 `.notegit/` 仍是 Deve 拥有的 runtime state。
 
+设计上倾向最大限度分离跨宿主机器数据面与 host-local 人类交互面：跨端保留不可变
+identity、Ledger facts 与 Markdown 信息完整性；与正确性无关的名称和视觉偏好留在本机。
+Repo alias 是这一原则的直接实例：peer 只共享 `RepoId`，永不同步 alias。首发已批准目标允许
+用户显式导入/导出 deterministic JSON 映射；在 C1′ runtime 与验收证据落地前，该能力仍处于 blocked。
+
 ## 权威模型
 
 ```text
@@ -60,9 +65,11 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 
 - `ledger/` 保存权威 repo facts。
 - `ledger/.host/projection-locators.toml` 保存 host-local
-  `RepoId -> projection_base` 绑定。
-- `<projection_base>/<safe_repo_name>--<repo_id>/` 保存单个本地 repo 的用户可见
+  `RepoId -> (projection_base, immutable workspace_segment)` 绑定。
+- `<projection_base>/<workspace_segment>/` 保存单个本地 repo 的用户可见
   Markdown projection。
+- 已批准的 repo alias 合同把 display state 保持在 host-local；C1′ runtime 落地后，修改或
+  导入 alias 不移动 workspace，也不改变 peer identity。
 - 文件系统变化先进入 `pending_fs_ops`；只有显式 stage/commit 才会追加 ledger facts。
 - `.notegit/` 是 Deve 拥有的 repo runtime state。
 - `.git/` 只是 Git ecosystem bridge。

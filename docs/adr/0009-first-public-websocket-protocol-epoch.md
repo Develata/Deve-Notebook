@@ -1,6 +1,6 @@
 # 0009. First public WebSocket protocol epoch
 
-- Status: Superseded by 0011
+- Status: Superseded by 0011, then 0013
 - Date: 2026-07-14
 - Superseded: 2026-07-17
 
@@ -13,6 +13,10 @@
 > F4/v2 was also never published. ADR 0011 replaces it with the first-tag target
 > F4/v3 because the nested Remote Import request/response family changes the
 > postcard enum shape. No v1/v2 adapter is authorized.
+
+> F4/v3 was likewise never published. ADR 0013 adds the typed Repo Control
+> family and exact RepoId-only selectors, so the first public target is F4/v4.
+> No v1/v2/v3 adapter is authorized.
 
 ## Context
 
@@ -69,6 +73,10 @@ ADR 0011 subsequently advances the unpublished lockstep target to
 `WS_PROTOCOL_VERSION = 3` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3`, keeps
 `DEVEWSF4`, and removes unversioned/legacy JSON fallbacks. This remains a
 pre-publication cutover, not a compatibility window.
+
+ADR 0013 subsequently advances the still-unpublished target to
+`WS_PROTOCOL_VERSION = 4` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 4`, adds
+nested Repo Control, and removes name-based/legacy repo lifecycle variants.
 
 ## References
 

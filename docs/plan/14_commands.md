@@ -25,9 +25,12 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 ## 1. CLI Commands {#cli-commands}
 
 *   **Baseline CLI Contract**:
-    *   `deve init --path <data-root> --repo <name> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`: 初始化 `<data-root>` 下的 config / ledger 与首个本地 repo，并注册该 repo 的 host-local Projection Locator；`--path` 选择 CLI 数据/配置根，不是 Projection Workspace authority；最终 workspace root 为 `<projection-base>/<safe_repo_name>--<repo_id>/`。`--repo-id` 只允许在创建新 repo 时写入；若既有 repo metadata 与传入 `RepoId` 不一致，必须 fail-closed。
+    *   `deve init --path <data-root> --repo <alias> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`: 初始化 `<data-root>` 下的 config / ledger 与首个本地 repo，并注册该 repo 的 host-local alias 与 Projection Locator；`--path` 选择 CLI 数据/配置根，不是 Projection Workspace authority。create 可以把初始 alias 规范化为 immutable `<safe_initial_alias>--<repo_id>` workspace segment；之后 alias 变化不得移动 workspace。`--repo-id` 只允许在创建新 repo 时写入；若既有 repo metadata 与传入 `RepoId` 不一致，必须 fail-closed。
     *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
     *   `deve repo projection list`: 列出本机 host-local Projection Locator。
+    *   `deve repo alias set --repo-id <uuid> --alias <text> --expected-revision <u64>`: CAS 更新当前 host 的 repo display alias；不得改变 Ledger、locator、workspace、watcher 或 sync state。
+    *   `deve repo alias export --output <file>`: 输出 deterministic JSON v1，按完整 RepoId 排序；只含 `format/version/aliases[{repo_id,alias}]`。
+    *   `deve repo alias import --input <file> [--apply]`: 默认 dry-run。unknown local RepoId、invalid alias、duplicate RepoId 或 per-entry admission failure 必须 warning + skip，并在结尾逐项汇总；通过校验的 entry 以单个原子 accepted batch 写入。store-wide commit failure 是全局错误。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
     *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。
     *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
@@ -47,6 +50,16 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
+
+### 1.0.1 Repo Alias Command Contract {#repo-alias-command-contract}
+
+- JSON import/export 与 alias validation 的唯一 authority 归
+  `04_repository#host-repo-alias-contract`；CLI 只负责 bounded file I/O、typed command dispatch 与
+  rendering typed summary。
+- import summary 必须同时给出 accepted 数量、skipped 数量以及每个 skip 的 index/RepoId/reason；
+  warning 文案不得被调用方解析为控制信号。
+- JSON 不能创建 repo 或携带路径、locator、peer/provider、credential、revision。format/version
+  不支持、顶层 JSON malformed 或超过预算时整个命令 fail-closed，不进入 per-entry apply。
 *   **Optional Bridge Contract**:
     *   Git main mirror lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
     *   Git main mirror 不再有 `source_control.git_bridge` 配置；NoteGit/ngit commit 成功后始终尝试排队 mirror record。
@@ -127,7 +140,7 @@ scan bridge 已由 B4 一次删除。它们不是 deprecated alias，也不属�
         显示本地化 unavailable reason，不得静默 no-op。是否允许实际 push 仍由 backend typed gate 裁决，
         前端不得推导 provider、Mounted 或 writer authority。
     *   Command Palette / Source Control UI 不再展示 `source_control.git_bridge` mode；Source Control header copy **MUST** 明确 `.notegit` / NoteGit/ngit 是 authority、Git main 只是终态 mirror；Web surface **MUST NOT** 直接执行 Git writer。
-    *   Web `Commit & Push` 仅展示 CLI-only notice，**MUST NOT** 发送 writer intent；未发布的 `ClientMessage::CommitAndPush` 不属于 WS v3 合同，服务端不得保留 legacy variant 或兼容 handler。
+    *   Web `Commit & Push` 仅展示 CLI-only notice，**MUST NOT** 发送 writer intent；未发布的 `ClientMessage::CommitAndPush` 不属于 WS v4 合同，服务端不得保留 legacy variant 或兼容 handler。
     *   代理 / plugin-host 模式下，Command Palette 不得读取或展示 legacy bridge mode；delegated/readonly 状态必须来自 runtime typed state。
     *   `Git:*` 文案不再作为 v1 command surface 出现；需要 Git ecosystem mirror 诊断时使用 `ngit:*`。
 

@@ -1,0 +1,6 @@
+(group :id grp.app.repo-alias-set :layer application :label "repo alias set" :members (app.repo.alias-set))
+(group :id grp.app.repo-alias-transfer :layer application :label "repo alias transfer" :members (app.repo.alias-transfer))
+(group :id grp.app.repo-lifecycle :layer application :label "repo lifecycle" :members (app.repo.lifecycle))
+(application :id app.repo.alias-set :label "host-local alias CAS intent missing" :kind drift-missing :code "planned/no-code-yet" :calls (mod_proto_ws mod_ledger_manager))
+(application :id app.repo.alias-transfer :label "host-local alias JSON transfer missing" :kind drift-missing :code "planned/no-code-yet" :calls (mod_ledger_manager))
+(application :id app.repo.lifecycle :label "handler-owned lifecycle partially implemented" :kind drift-partial :code "apps/cli/src/server/runtime/repo_lifecycle_runtime.rs" :calls (mod_proto_ws mod_ledger_manager mod_remote_import_runtime))

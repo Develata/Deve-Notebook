@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.repo.switch`
 - `Domain`: `repository`
 - `Related Feature Chapters`: `docs/features/06_repository.md`
-- `Related Acceptance Cases`: `REPO-FEAT-01`, `REPO-FEAT-03`
+- `Related Acceptance Cases`: `REPO-FEAT-01`
 
 ## Operations
 
@@ -47,5 +47,5 @@
 
 ## Notes
 
-- repo switch 的关键不是菜单本身，而是 `RepoName -> RepoId` 解析、`switch_nonce`、以及整套 repo view preload。
+- repo switch 的关键不是菜单 alias，而是 backend `RepoListEntry` 提供的 exact `RepoId`、`switch_nonce` 与整套 repo view preload。Web 发送 exact RepoId；alias 仅显示，不能成为协议 selector。
 - 这条 flow 与 `branch-switch` 共享 switcher 家族，但 authority 目标不同：这里重绑的是 repo scope 本身。

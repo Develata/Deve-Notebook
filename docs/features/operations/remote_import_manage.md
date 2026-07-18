@@ -54,4 +54,4 @@
 
 ## Notes
 
-- B4 产品 Refresh/Discard/Repair 已激活；STORE-023 继续保留 W7 lifecycle coordination 与 B6 fresh receipt 的真实 gap。
+- B4 产品 Refresh/Discard/Repair 已激活；W7 RepoId/provider lifecycle coordination 仍待 A1/B1 收敛，STORE-023 继续保留 B6 fresh receipt 的真实 gap。

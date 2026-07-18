@@ -110,7 +110,7 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - Web Command Palette 与 Source Control UI 不展示 legacy bridge mode；Source Control header 应写成 NoteGit/ngit authority-first 文案，避免把 Git main mirror 误读成 Git authority 切换。
 - Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
   menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
-- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice，不发送 WS writer intent；WS v3 不定义 `CommitAndPush` frame。
+- Web `Commit & Push` 入口只展示 Git push unsupported/read-only notice，不发送 WS writer intent；WS v4 不定义 `CommitAndPush` frame。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须走同一个 NoteGit/ngit commit path；代理模式必须展示 delegated/unknown/readonly 状态，而不能硬编码为 mirror mode。
 - 后端 commit writer API 不接收 legacy bridge policy；新增 CLI、HTTP、WS 或插件提交路径时必须复用 NoteGit/ngit source-control writer gate。
 

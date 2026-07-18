@@ -47,10 +47,10 @@
     - watcher_health_exposes_no_repo_identity_generation_path_or_failure_detail: true
 
 - case_id: NET-004
-  goal: 首发 F4/v3 协议格式、version admission 与 debug JSON 边界可证明。
+  goal: 首发 F4/v4 协议格式、version admission、Repo Control 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
-    - 当前代码与批准目标均为 F4/v3 lockstep
+    - 当前代码为未发布 F4/v3；批准目标为 F4/v4 lockstep，C1′ 完成前保持 gap
   steps:
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture

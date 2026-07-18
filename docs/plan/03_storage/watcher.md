@@ -203,13 +203,13 @@ Stopping
 
 ### 8.11 Dynamic Repo Lifecycle Deferral
 
-- create/rename/remove 与 watcher mount 的 transaction、partial outcome、锁序和 publication 唯一由 [`04_repository#repo-health-and-repair`](../04_repository.md#repo-health-and-repair) 定义。
-- watcher layer 只提供 generation-bound start/shutdown/snapshot；不得自行修改 catalog、locator、repo name binding、removed marker 或 active session。
+- create/remove 与 watcher mount 的 transaction、partial outcome、锁序和 publication 唯一由 [`04_repository#repo-lifecycle-coordinator`](../04_repository.md#repo-lifecycle-coordinator) 定义。
+- host-local alias 修改永不进入 watcher lifecycle。watcher layer 只提供 generation-bound start/shutdown/snapshot；不得自行修改 catalog membership、locator、alias 或 active session。
 
 ### 8.12 Watcher Convergence Seal (W10)
 
-- W10 必须在同一精确 HEAD 封存 capture-first startup cut、typed Failed、E2 final-state shutdown、dynamic create/rename/remove、server repo isolation、standalone fail-all 与 Windows overflow producer 证据。
-- Windows/Linux real-filesystem receipts 与 create/rename/remove、repo-isolation Chrome receipts 必须绑定该同一 HEAD；旧 HEAD、source-only、手工叙述或不同 artifact set 的结果不得拼接签署。
+- W10 必须在同一精确 HEAD 封存 capture-first startup cut、typed Failed、E2 final-state shutdown、dynamic create/remove、server repo isolation、standalone fail-all 与 Windows overflow producer 证据。
+- Windows/Linux real-filesystem receipts 与 create/remove、repo-isolation Chrome receipts 必须绑定该同一 HEAD；alias independence 由独立 host-local runtime producer证明，不能冒充 watcher evidence。旧 HEAD、source-only、手工叙述或不同 artifact set 的结果不得拼接签署。
 - 只有 W9 overflow producer 和全部 watcher 合同检查通过后，runtime registry 的 `watcher_runtime` 才可改为 `已收敛`。否则必须保持 `部分承载`，`STORE-016` gap 与 tag-ready blocker 不得关闭。
 
 ## 10. Forbidden Patterns（watcher）
@@ -227,7 +227,8 @@ Stopping
 
 ```text
 UI / HTTP / WS handlers
-  -> typed intent / RepoLifecycleCoordinator
+  -> typed intent / RepoLifecycleJobRuntime
+  -> RepoLifecycleCoordinator
   -> RepoMutationPublicationGate + WatcherRuntimeView
   -> WatcherSupervisor
   -> RepoWatcherHandle

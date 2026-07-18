@@ -58,7 +58,7 @@
   adapter。这里的 “Mesh v1” 是产品能力代号，不等于 wire protocol version。
 - Remote Import 在 v3 中使用独立 nested typed request/response；用户切换 repo、branch 或重连后，
   旧 session/revision 的迟到结果不得重新出现在当前界面。
-- 当前主 `/ws` 已切换为 F4/v3 lockstep，并删除 legacy/unversioned JSON fallback；显式 debug JSON
+- 当前代码仍为未发布 F4/v3；C1′ product cutover 的批准目标是 F4/v4 lockstep，并继续删除 legacy/unversioned JSON fallback；显式 debug JSON
   也必须带 v3 envelope。历史 v1/v2 客户端会被结构化拒绝，不存在 adapter。
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。

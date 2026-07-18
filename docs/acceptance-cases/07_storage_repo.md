@@ -23,7 +23,7 @@
     - run: cargo test -p deve_core init_keeps_duplicate_display_name_for_same_name_different_url -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - cli_assert: collision_safe_local_repo_name true
+    - cli_assert: collision_safe_workspace_segment true
     - cli_assert: repo_identity_not_changed_by_physical_suffix true
 
 - case_id: STORE-003
@@ -195,7 +195,7 @@
     - WebCrypto_Ed25519_missing_has_typed_blocker: true
     - capability_probe_failure_is_not_UI_parsed_authority: true
     - ui_prefs_use_fallback_layer_only: true
-    - ui_prefs_last_scope_stores_repo_name_alias_only: true
+    - ui_prefs_last_scope_stores_repo_id_recovery_hint_without_alias_or_writer_grant: true
     - shortcut_prefs_new_writes_use_structured_json: true
     - degraded_mode_blocks_RegisterWriter_and_SyncPush: true
     - degraded_mode_allows_read_and_snapshot_pull: true
@@ -271,7 +271,7 @@
     - cli_assert: legacy_markdown_fails_closed_on_invalid_structure true
 
 - case_id: STORE-014A
-  goal: 本地 Repo 新增、重命名、安全移除与 watcher mount partial outcome。
+  goal: 本地 Repo 新增、host-local alias、安全移除与 watcher mount partial outcome。
   preconditions:
     - WebLightPeer 已认证并处于 local writable scope
     - 至少存在两个 local repo
@@ -279,25 +279,31 @@
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
+    - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
+    - run: cargo test -p deve_cli removed_membership_generation_changed_or_failed_fallback_is_not_bound -- --nocapture
+    - gap: C1′ host-local alias store/JSON CLI/product evidence and A1/B1 host-owned lifecycle convergence are not implemented yet
     - run: cargo test -p deve_web remove_current_fallback_failure_commits_no_scope -- --nocapture
     - run: cargo test -p deve_cli remove_current_invalidates_all_bound_sessions -- --nocapture
     - run: cargo test -p deve_web remove_partial_stage_is_connection_epoch_bounded -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
-    - chrome_mcp: 点击 repo 行更多菜单并执行重命名
+    - chrome_mcp: 点击 repo 行更多菜单并修改本机 alias
     - chrome_mcp: 点击非当前 repo 行更多菜单并执行移除
-    - chrome_mcp: 在 failure fixture 中分别执行 create/rename/remove，观察 mount partial outcome 与最终 scope/list publication
+    - chrome_mcp: 在 failure fixture 中分别执行 create/remove 与 alias store failure，观察最终 scope/list/display publication
   assertions:
     - ui_assert: repo_switcher_create_button_visible true
-    - ui_assert: repo_row_more_menu_contains_rename_and_remove true
-    - ui_assert: renamed_repo_visible_and_bound true
+    - ui_assert: repo_row_more_menu_contains_alias_and_remove true
+    - ui_assert: alias_change_preserves_repo_id_scope_and_workspace true
     - ui_assert: removed_repo_hidden_from_normal_list true
     - cli_assert: removed_repo_authority_not_physically_deleted true
     - cli_assert: removed_repo_projection_workspace_not_physically_deleted true
     - cli_assert: create_mount_failure_keeps_repo_readonly_and_current_scope_unchanged true
-    - cli_assert: rename_mount_failure_keeps_committed_name_and_readonly_scope true
-    - cli_assert: rename_non_active_repo_does_not_change_current_scope true
+    - cli_assert: alias_set_never_stops_watcher_or_moves_workspace true
+    - cli_assert: alias_import_unknown_invalid_duplicate_entries_warn_skip_and_summarize true
+    - cli_assert: alias_import_valid_entries_commit_as_one_atomic_batch true
+    - cli_assert: alias_store_commit_failure_is_global_error true
+    - cli_assert: peer_sync_and_remote_import_never_transmit_alias true
     - cli_assert: remove_final_reconcile_precedes_removed_marker_and_locator_cleanup true
     - cli_assert: remove_precommit_failure_keeps_current_scope_and_restarts_old_watcher true
     - cli_assert: removed_membership_generation_changed_or_failed_fallback_is_not_bound true
@@ -476,10 +482,10 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - B4 已接入产品 Refresh/Discard/Repair；fresh cross-platform evidence 仍待 W7/B6
+    - B4 已接入产品 Refresh/Discard/Repair；W7 repo lifecycle coordination 与 fresh cross-platform evidence 仍待 A1/B1/B6
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
-    - gap: W7 repo lifecycle coordination and B6 fresh Remote Import manage receipt are not sealed yet
+    - gap: B6 fresh Remote Import manage receipt is not sealed yet
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

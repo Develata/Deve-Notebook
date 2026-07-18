@@ -25,30 +25,52 @@
 
 ### 2.1 Repo Identity
 
-- `RepoId` 是仓库权威身份，UUID-first。
-- `RepoName` 是绑定到 `RepoId` 的可变显示名 / workspace alias，不是身份。
+- `RepoId` 是仓库不可变的跨宿主权威身份，UUID-first。
+- full peer 互认 logical repo 时只交换并核对 `RepoId` 与既有 genesis / ledger identity；不得同步 repo alias。RepoId 相同仍必须验证 authenticated source，不得把碰撞概率低误当作授权。
+- `HostRepoAlias` 是绑定到 `RepoId` 的可变 host-local 显示别名，不是身份、同步事实或 workspace authority。
 - `URL`、`Selector` 只允许作为输入别名或恢复线索。
 - 任何进入业务算子的 repo 输入，在执行前 **MUST** 解析为 `RepoId`。
 - 所有 repo instance admission 都必须反向验证 `ledger.repo_id == resolved RepoId`；任何 name/path/url 与 ledger identity 不一致的情况都必须 fail-closed。
 
-`RepoName` 与 `RepoId` 的绑定必须显式建模：
+### 2.1.1 Host-local Repo Alias Contract {#host-repo-alias-contract}
+
+`HostRepoAlias` 与 `RepoId` 的绑定必须显式建模：
 
 ```text
-RepoNameBinding = {
+HostRepoAliasBinding = {
   repo_id,
-  repo_name,
-  name_epoch,
-  changed_at_seq,
+  alias,
+  alias_revision,
 }
 ```
 
 约束：
 
-- `RepoNameBinding.repo_id` 必须等于 repo ledger header / genesis metadata 中的 `RepoId`。
-- `repo_name -> RepoId` 只能是 catalog index，不是 authority。
-- repo rename 必须是显式 authority write：`RenameRepo { repo_id, old_name, new_name, expected_name_epoch }`。
-- `expected_name_epoch` 校验失败表示 stale rename intent，必须 reject，不得以路径名或 URL 重试绑定。
-- repo rename 只改变 `RepoNameBinding` 与由其派生的 display/workspace segment；不得改变 `RepoId`、branch identity、shadow identity 或 remote attribution。
+- `host_repo_alias_runtime` 唯一拥有 host-local alias store；Ledger、sync、Remote Import、provider transport、Projection Locator 与 repo catalog 不得保存“当前 alias”的第二份可写副本。
+- alias 缺失时 display fallback 是完整 canonical `RepoId`，其 CAS revision 固定为 `0`；首次成功写入产生 revision `1`，后续内容变化逐一递增，同值写入是保留原 revision 的幂等成功。alias 可以重复，按 alias 选择命中多个 RepoId 时必须 fail-closed。
+- backend repo list/show projection 必须同时返回 `repo_id + display_alias + alias_revision`；Web/CLI 只能回送该 opaque revision，不能自行递增或从 alias 内容推导 revision。
+- alias 修改是 host-local CAS：`SetHostRepoAlias { repo_id, alias, expected_alias_revision }`。它不得 append Ledger、改变 repo metadata/genesis、停止 watcher、移动 workspace、更新 locator、使 Remote Import stale 或制造 Projection Fault。
+- alias 校验只服务人类显示：trim 后非空、UTF-8 最多 256 bytes、不得含 control character 或 NUL。`/`、`\\`、标点与 emoji 可以存在，因为 alias 永不进入物理路径。
+- inter-peer sync、Remote Projection transport 与 Remote Import manifest/receipt **MUST NOT** 传输 alias。浏览器控制协议可以接收当前 host 生成的 display alias，但不得把它回写为跨宿主事实。
+
+JSON import/export schema 固定为：
+
+```json
+{
+  "format": "deve.host-repo-aliases",
+  "version": 1,
+  "aliases": [
+    { "repo_id": "550e8400-e29b-41d4-a716-446655440000", "alias": "math" }
+  ]
+}
+```
+
+- export 必须按完整 RepoId 排序并使用 deterministic JSON；禁止输出路径、locator、credential、provider、peer、remote label、revision 或 secret。
+- import 默认 dry-run，只有显式 `--apply` 才写入。预算固定为文件最多 1 MiB、最多 4096 个 entry、单个原始 `repo_id` 字符串最多 64 bytes、单个规范化 alias 最多 256 UTF-8 bytes、全体 alias 最多 512 KiB；超出任一整体预算属于全文件错误。顶层不是合法 JSON、`format/version` 不匹配或 `aliases` 不是数组也属于全文件错误。
+- 在合法顶层容器内，parse/validate 必须覆盖全部 entry。entry 缺字段、字段类型错误、非法 UUID、unknown local RepoId、invalid alias、重复 RepoId 或单项 admission failure 必须 warning + skip，并在最终 typed summary 中逐项列出 index、可解析时的 RepoId 与原因；不得因一个坏 entry 丢弃其它有效 entry。重复 RepoId 的**全部 occurrence**都必须跳过，不能保留 first/last winner。
+- alias 以 trim 后的规范值落盘。dry-run 只给出当时的 projected summary；`--apply` 必须在 alias mutation runtime 的单一 exclusive lock 内重新读取 local membership 与 alias store，和并发 alias set 线性排序，并重新计算完整 summary。
+- 所有通过 apply-time 校验的 entry 作为一个原子 accepted batch 更新 alias store；changed row 的 revision 在该批次中基于最新 store 单调递增，新 binding 从 `1` 开始，同值 row 是幂等 accepted/no-change。store-wide commit failure 是全局错误，不得伪装成 per-entry skip 或 partial success。
+- import 不得创建 repo、改变 RepoId、locator、workspace、sync、Remote Import 或 credential state。
 
 ### 2.2 Branch Identity
 
@@ -138,16 +160,16 @@ RepoHealth::Healthy && RepoMountState::Mounted
 - `ledger/local/<repo_id>.redb`
 - `ledger/remotes/<peer_name>/<repo_id>.redb`
 - `ledger/.host/projection-locators.toml`
-- `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/`
+- `<projection_base>/<workspace_segment>/.notegit/`
 
 `projection_base` 与计算出的 workspace root 由 `03_storage/projection.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
 
-其中 `<safe_repo_name>` 只是由当前 `RepoNameBinding.repo_name` 派生的人类可读路径段；完整 `<repo_id>` 必须参与物理路径命名，保证同名 repo 不发生路径碰撞。
+`workspace_segment` 在 locator 创建时确定并保持独立于当前 alias；本机 create 可以使用 `<safe_initial_alias>--<repo_id>`，无本地 alias 的首次绑定使用 `<repo_id>`。
 
 ### 3.2 Collision Rule
 
-- 同一 branch 下，`RepoName` 相同但 `RepoId/URL` 不同的实例 **MAY** 共存；它们的物理 repo DB 与 workspace root 必须因完整 `RepoId` 后缀而不同。
-- `RepoName` selector 命中多个 `RepoId` 时必须 fail-closed，并要求用户选择明确 `RepoId`。
+- 同一 branch 下，alias 相同但 `RepoId/URL` 不同的实例 **MAY** 共存；它们的物理 repo DB 与 workspace root 必须按 exact RepoId / locator identity 区分。
+- alias selector 命中多个 `RepoId` 时必须 fail-closed，并要求用户选择明确 `RepoId`。
 - 物理文件名或 workspace segment 冲突的处理不得改变逻辑 repo identity；如果同一个 `<repo_id>` 同时指向多个不一致文件，必须进入 repair / quarantine。
 
 ### 3.3 Catalog Rule {#repo-catalog-contract}
@@ -155,11 +177,10 @@ RepoHealth::Healthy && RepoMountState::Mounted
 - local repo catalog 与 remote repo catalog 是 selector / listing / switcher 的输入层，不是业务真值层。
 - catalog 损坏时 **MUST** 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
 - catalog entry 必须是可读 repo DB 文件，且文件名、repo header、repo metadata 中的 `RepoId` 必须一致。
-- catalog 中的 `RepoName` 只缓存当前 `RepoNameBinding`；缓存漂移时只能从 ledger authority 修复，不得反向改写 authority。
+- catalog/`RepoInfo.name` 不得保存人类 creation label；在当前 schema 中它固定等于 lowercase canonical `RepoId`，仅作为 legacy-shaped machine identity field。当前 alias 只能从 host-local alias runtime 读取，后续 schema 可以在不影响 repo identity 的情况下删除该冗余字段。
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
-- local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base、当前 safe repo name 与完整 `RepoId` 计算。
-- Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。Catalog repair / selector resolution 只允许用它判断 `metadata.name != execution_stem` 是否来自受控 rename / workspace realign；它不得让漂移出的 display alias 获得新的 authority，也不得替代 exact execution stem 或 `RepoId`。
-- Redb v4 的 exact execution stem 固定为 canonical `<repo_id>`，`RepoInfo.name` 只承载 display alias。locator 尚不存在的首次 bootstrap 可以接受该 metadata alias；locator 一旦存在，`repo_name_hint` 只能作为两者一致性的 witness，mismatch 必须 fail closed，repair 不得据此猜测 rename、改写 RepoId 或重命名物理 DB。
+- local repo catalog 不得承载 projection base 或 workspace root；Projection Locator 以 `projection_base + workspace_segment` 解析 workspace root。
+- Redb v4 的 exact execution stem 固定为 canonical `<repo_id>`。repair 不得从 `RepoInfo.name`、alias 或路径猜测 rename、改写 RepoId、重命名物理 DB 或 workspace。
 - workspace admission 必须读取 `.notegit` identity marker 并验证其 `repo_id == resolved RepoId`；路径名匹配但 marker 缺失或不一致时不得进入 mounted write path。
 
 ### 3.4 Tree State Storage Model
@@ -204,7 +225,7 @@ Unresolved
 
 - `ResolvingSelector` 必须先完成 selector -> `RepoId` 解析。
 - `OpeningInstance` 必须验证 runtime tables、catalog、projection 依赖。
-- `ProjectionLocated` 必须完成 `RepoId -> projection_base -> <projection_base>/<safe_repo_name>--<repo_id>/` 解析、canonicalize、`.notegit` identity 校验与冲突检查。
+- `ProjectionLocated` 必须完成 `RepoId -> (projection_base, workspace_segment) -> <projection_base>/<workspace_segment>/` 解析、canonicalize、`.notegit` identity 校验与冲突检查。
 - `DegradedLocator` 禁止 watcher、scan、stage、commit、projection writeback。
 - `Repairing` 期间禁止把该 repo 作为默认可写 scope 暴露给 UI。
 
@@ -242,7 +263,7 @@ SwitchingRepo | SwitchingBranch
 - 每个 process-local `RepoBound` 必须保存当次 bind 的 `CatalogMembershipToken`。writer admission、new bind 与 scope publication 应用都必须 exact-compare 当前 per-repo membership generation；token 一旦被 durable membership cut 撤销，旧 binding 即使尚未收到 UI 消息也必须立即拒写。
 - 旧 scope 的延迟消息不得继续驱动新 scope。
 - `last_local_repo` 只允许作为恢复线索，解析失败时必须 fail-closed。
-- local writable scope 只有在目标 repo 同时 `Healthy + Mounted` 时才可发布 write-ready。显式进入健康但非 Mounted repo 时只能绑定为 readonly；create 的 mount failure 不自动切换 session，rename 的 committed partial outcome 按 §7.5 更新既有 active session identity 后保持 readonly。
+- local writable scope 只有在目标 repo 同时 `Healthy + Mounted` 时才可发布 write-ready。显式进入健康但非 Mounted repo 时只能绑定为 readonly；create 的 mount failure 不自动切换 session。host-local alias set 不改变 session identity/readiness，remove committed partial 按 §7.6 退休旧 scope并保持 fail-closed。
 
 ### 4.3 Health Recovery
 
@@ -335,7 +356,9 @@ ReadonlyDegraded
 - `SwitchBranch`
 - `ListRepos`
 - `CreateRepo`
-- `RenameRepo`
+- `SetHostRepoAlias`
+- `ExportHostRepoAliases`
+- `ImportHostRepoAliases`
 - `RemoveLocalRepo`
 - `ListShadows`
 - `ResolveCurrentScope`
@@ -373,9 +396,9 @@ ReadonlyDegraded
 
 ### 7.2 Catalog Repair {#repo-catalog-repair-contract}
 
-- local / remote repo catalog repair 只能修复 catalog、name hint drift、blank selector、duplicate metadata。
+- local / remote repo catalog repair 只能修复 catalog、blank selector、duplicate metadata 与 canonical RepoId machine-field diagnostics；不得从任何历史人类名称恢复 alias。
 - repair 不得修改 ledger authority 本身。
-- repair 可以补全缺失 URL、把 catalog display hint 纠正为 ledger 中的当前 `RepoNameBinding`、分配安全物理文件名；但如果会合并两个 logical repo，必须 fail-closed。
+- repair 可以补全缺失 URL、分配安全物理文件名；但如果会合并两个 logical repo，必须 fail-closed。host-local alias store 只能由 alias runtime 的显式 set/import/repair command 变更。
 - repair 后仍无法形成唯一 `RepoId / URL / filename` 映射时，repo 必须保持 degraded 或 quarantined。
 
 ### 7.3 Projection Repair
@@ -388,32 +411,29 @@ ReadonlyDegraded
 ### 7.4 Projection Locator Repair
 
 - locator repair 只能创建、替换、删除或校验 host-local Projection Locator。
-- locator repair 不得修改 repo ledger facts、repo URL、repo display name 或 shadow branch identity。
+- locator repair 不得修改 repo ledger facts、repo URL、host-local alias 或 shadow branch identity。
 - projection base 变更后，系统 **MUST** 先停止该 repo watcher，再执行 locator 更新、projection materialize / rebuild、watcher restart。
 - projection base 变更不需要移动旧 workspace；旧目录只能作为外部数据源，经显式 import / repair 流程进入 pending 或 rebuild。
-- repo rename / display name repair 不改变 projection base；但 workspace root 必须从 `<base>/<old_safe_repo_name>--<repo_id>/` realign / move 到 `<base>/<new_safe_repo_name>--<repo_id>/`。目标已存在、跨设备 move 不可安全完成、`.notegit` identity 不一致或目录冲突时必须 fail-closed。
-- workspace root realign 前若存在 pending/staged/dirty workspace 或 projection fault，rename / display name repair **MUST** 先 fail-closed，并要求用户完成 commit、discard、repair 或显式 import。
+- host-local alias set/import 不改变 projection base 或 `workspace_segment`，也不触发 workspace realign。`workspace_segment` 在 RepoId 生命周期内永久不变；显式 workspace relocation 只能替换 projection base 并复用同一 segment，同时轮换 locator binding generation 使旧 watcher/admission token 失效。目标已存在、`.notegit` RepoId 不一致或目录冲突时必须 fail-closed。
 - locator 缺失或冲突必须保持 `DegradedLocator`，直到用户显式提供可用 base 且计算出的 workspace root 可用。
 
 ### 7.4.1 Local Repo Create Contract
 
 - create 必须由 `RepoLifecycleCoordinator` 使用 `Catalog -> Repo(new_repo_id)` lane 编排；handler 只提交 typed intent，不得直接创建 watcher 或修改 supervisor slot。
-- durable repo/catalog/locator/workspace identity create 成功后，才允许在已释放 mutation permits 的情况下启动 watcher mount。
+- create 的唯一 committed/linearization fact 是 `RepoCatalogRuntime` 在短 `Catalog -> Repo(new_id)` lane 内，原子发布 `ledger/.host/repo-catalog/<repo_id>.json` 的 `Normal` membership record 并轮换对应 process-local membership generation。该 per-repo record 是 project-owned bounded JSON v1；写入只允许 same-directory temp + flush + atomic replace。此前创建的 canonical `<repo_id>.redb`、locator、workspace marker 与初始 projection 都是不可被正常 listing/admission 观察的 `PreparedRepoCreation`；cut 前失败可以按 prepared manifest 精确清理，不能把 artifact 存在误判为已创建 repo。
+- membership cut 必须 exact-compare `PreparedRepoCreation` 的 RepoId、DB identity digest、locator binding generation 与 workspace marker identity，并产出 immutable `RepoCreationCommittedCutPlan`。cut 内唯一允许的 filesystem I/O 是上述单个 bounded membership record 原子发布；不得 scan、join、遍历目录或发送消息。cut 后 alias settlement 与 watcher mount 位于 permits 外；即使 settlement 失败也不得删除 repo 或撤销 membership。
 - durable create 已提交后，无论 mount 成功或失败，都只能在 mount 最终 outcome 确定后发布一次 repo-list update；该 update 必须携带最终 `Mounted` 或 readonly/unavailable 状态，不得先广播可写 success 再补发 watcher failure。
 - mount 成功时才允许发布可写 scope，并允许当前 session 自动切换到新 repo。
 - durable create 已提交但 mount 失败时不得删除新 repo、回滚 Ledger/catalog 或猜测清理 workspace。repo 保留在列表中且只读可见，当前 session 不自动切换，并返回 typed “创建已提交但 workspace ingestion 不可用” partial outcome。
 
-### 7.5 Repo Rename Contract
+### 7.5 Host-local Repo Alias Contract
 
-- repo rename 是本地可写 repo 的 authority operation，必须通过 writer gate 与 `RepoId` admission。
-- rename intent 必须携带 `repo_id`、`old_name`、`new_name` 与 `expected_name_epoch`。
-- ledger append 前必须完成：selector -> `RepoId`、当前 `RepoNameBinding` 校验、safe name 规范化、目标 workspace root 预检、dirty/staged/pending/projection fault gate。
-- rename 必须先把 mount slot 原子 reserve 为 `Transitioning(generation)` 并关闭新写门，再按 `03_storage/watcher#watcher-contract` 的 E2 顺序停止旧 watcher；final reconcile 完成前不得执行 durable rename。
-- ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行；完成 durable rename 后才在新 root 启动新 generation watcher。
-- 如果 ledger 已提交但 workspace realign 失败，该 repo 必须进入 `DegradedLocator` 或 `DegradedProjection`，并通过 repair runtime 暴露可恢复动作；不得把 rename 回滚为基于旧路径名的隐式绑定。
-- durable rename 已提交但新 mount 失败时不得反向 rename。repo name 与所有当前绑定同一 `RepoId` 的 session display/scope projection 必须更新到已提交的新事实（`RepoId` 本身不变），这些 session 保持 readonly 并收到 workspace ingestion unavailable partial outcome；当前绑定其它 `RepoId` 的 session 完全不得切换或改写。
-- Remote Import artifact 以 `RepoId` 为路径和身份锚点；rename 不搬迁 `ledger/.host/remote-imports/<repo_id>/`。rename 本身不使 candidate stale；只有 exact revalidation 证明 Ledger head、branch、locator 或 ignore snapshot 已改变时，session 才按 `06_backup.md#remote-import-state-machine` 转为 `Stale`。
-- old/new root、catalog、metadata、locator 或 workspace marker 出现混合事实时，必须按 `RepoId` 重新读取全部事实；只有 old 或 new 事实唯一一致时才允许启动对应 watcher，混合状态进入 repair，不得猜测删除、移动或回滚。
+- 普通产品 “Rename repo” 只表示 `SetHostRepoAlias`，唯一 target 是当前 host 的 alias store；它不是 repo authority mutation。
+- intent 必须携带 exact `repo_id`、`alias` 与 `expected_alias_revision`；stale revision 必须 typed reject，不得 last-write-wins。
+- alias runtime 必须先 exact-validate local catalog membership，再执行短 CAS。它不得要求 `Mounted`、不得进入 watcher E2、不得检查 workspace dirty/staged/pending/Projection Fault，也不得写 Ledger/locator/catalog/Remote Import。
+- 成功后只发布 backend-produced repo-list/display projection；所有已绑定同一 RepoId 的 session identity、branch、scope nonce 与 writer gate 保持不变。
+- alias store 持久化成功而某个连接 publication 失败时，重连后的 list 必须从 runtime 读取新 alias；不得反向回滚 alias。
+- alias import/export 的 schema、warning/skip 与 accepted-batch atomicity 唯一归 §2.1.1；Web 只发送 typed set intent，不解析 JSON 或自行决定 skip 原因。
 
 ### 7.6 Local Repo Removal Contract
 
@@ -422,13 +442,13 @@ ReadonlyDegraded
 - 移除当前 active repo 前必须先解析另一个 `Healthy + Mounted` local repo，并记录其 `RepoId`、`CatalogMembershipToken` 与 mount generation 组成的 deferred fallback token；不存在替代 repo 时必须拒绝。此时不得提前发布或实际切换 scope。coordinator 在 durable remove side effect 前必须 exact revalidate fallback 仍为同一 catalog token / mount generation 的 `Healthy + Mounted`；失败则在未提交 remove 的情况下中止并保持原 scope。
 - 移除操作不得删除 ledger authority、不得删除 `.notegit`、不得删除用户 Markdown workspace；真正物理销毁必须另有显式 destroy/export-after-confirm 流程，并要求独立验收。
 - 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；恢复入口必须通过 repair/import/recover 类受控流程重新 admission。
-- remove 必须先 reserve `Transitioning(generation)` 并关闭新写门；watcher final-state reconcile 必须在 removed marker、catalog/locator cleanup 或正常 listing 隐藏之前完成。
+- remove 必须先 reserve `Transitioning(generation)` 并关闭新写门；watcher final-state reconcile 必须在 per-RepoId catalog record 切换为 `Removed`、locator cleanup 或正常 listing 隐藏之前完成。
 - active Remote Import session 或 `cleanup_pending=true` 是 durable removal blocker。remove 不得隐式 discard、裁剪或清理 session；operator 必须先执行显式 session discard 或 `remote-import repair --apply`，并让 cleanup receipt 收敛。
 - durable remove 成功后该 repo 本进程不得重新启动 watcher。失败且 durable remove 尚未提交时，coordinator 才可以补偿性启动旧 root watcher；若 remove 已提交，则即使 publication/cleanup 失败也不得恢复旧 watcher 或重新暴露为正常可写 repo。
 - durable remove 成功且最终 mount outcome 已知后，才允许把 deferred scope switch 与 repo-list publication 一次性 enqueue。deferred publication 在**应用**而非仅入队时，必须再次 exact-compare fallback 的 `CatalogMembershipToken`、mount generation 与 `Healthy + Mounted`；若 fallback 已 removed、membership generation 已改变或 watcher `Failed`，则不得绑定该 repo，也不得静默选择第三个 repo。发起 remove 且当前绑定目标 repo 的 session 必须进入 §4.2 既有 `NoScope` state，按固定顺序先发布最终 `RepoList`，再复用 `ServerMessage::ProtocolError` + `ServerErrorCode::ScRepoNotSelected`（wire `SC_REPO_NOT_SELECTED`，携带匹配的 `switch_nonce`）返回 readonly partial outcome；此路径禁止发送伪造 `RepoSwitched`。这里不新增 Rust/wire enum、watcher lifecycle WS message 或 protocol family。remove 未提交时不得发布 fallback scope，旧 watcher 补偿重启成功后原 scope 保持不变；补偿重启失败则返回显式 readonly partial outcome。
-- durable membership authority cut 必须是 O(1) 的 repo-scoped conditional-apply：在 `RepoCatalogRuntime` 的短 Catalog lane 内 exact-compare fallback token、先轮换被移除 RepoId 的 membership generation、提交 catalog membership 事实，并产出不可变 `RepoRemovalPublicationPlan`（removed RepoId/old token、initiator outcome 与 fallback token）。该临界区不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、filesystem/watcher I/O、await 或长时计算。membership mutation 必须在其新状态首次可见之前或同一 linearization point 先轮换 generation。
+- durable membership authority cut 必须是 repo-scoped conditional-apply：在 `RepoCatalogRuntime` 的短 `Catalog -> Repo(target)` lane 内 exact-compare fallback token，以 same-directory temp + flush + atomic replace 把该 RepoId 的 bounded catalog record 从 `Normal` 改为 `Removed`，并在新状态首次可见之前或同一 linearization point 轮换被移除 RepoId 的 process-local membership generation。该 cut 产出不可变 `RepoRemovalCommittedCutPlan`（removed RepoId/old token、initiator outcome 与 fallback token）。临界区唯一允许的 filesystem I/O 是该单个 per-repo membership record 的原子发布；不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、scan、watcher I/O、await 或长时计算。
 - 发起者的 invalid fallback partial 必须把请求的 `switch_nonce` 提交为新的 `NoScope(scope_nonce)`。先入队的最终 `RepoList` 与随后 `ProtocolError` 都携带该同一 `scope_nonce`，后者同时携带同一 `switch_nonce`；旧 repo epoch 的消息自此全部 stale。该 `RepoList` 是 pending remove 的 typed final projection，不授权自动选择列表中的其它 repo。
-- O(1) revocation cut 之后，所有保存 old token 的 RepoBound、writer admission 与 new bind 都因 generation mismatch 立即 fail-closed；这就是 authority invalidation，不等待 session fan-out。`RepoLifecycleCoordinator` 只把 `RepoRemovalPublicationPlan` 交给 session runtime，不能拥有 connection/session map。
+- revocation cut 之后，所有保存 old token 的 RepoBound、writer admission 与 new bind 都因 generation mismatch 立即 fail-closed；这就是 authority invalidation，不等待 session fan-out。`RepoLifecycleCoordinator` 只把 `RepoRemovalSettledPublication` 交给 publication sink/session runtime，不能拥有 connection/session map。
 - session runtime 在 Catalog permit 外登记最新 repo revocation、快照受影响 session，并逐 connection 执行有界 in-memory conditional apply：重新校验 binding/fallback token，原子提交该 connection 的 `RepoBound/NoScope` epoch并 enqueue typed sequence。并发 bind 在 revocation cut 前成立则携带 old token并被该 marker/后续 admission 拒绝，cut 后发起则直接失败；不得存在未被 generation gate 覆盖的 binding 注册窗口。O(N) session snapshot/fan-out 永远不得回到 Catalog/Repo permit 内。
 - 在 invalid-fallback partial 中，发起 remove 的 session 使用其已验证 `switch_nonce` 作为新的 per-connection `NoScope` epoch，并发送上述 `RepoList -> ProtocolError` 序列；fallback 有效时发起者走正常 `RepoBound(fallback)` / `RepoSwitched` 成功路径，不进入 NoScope。其它已绑定 removed RepoId 的 observer session 无论发起者成功或失败都不得复用发起者 nonce；session runtime 必须各自分配严格大于其 current scope nonce 的新 epoch，提交 `NoScope`，然后发送同序列，但 `ProtocolError.switch_nonce = None`、两帧 `scope_nonce = new_epoch`。若 nonce 无法递增，必须直接退休该连接并在 reconnect 后受控恢复，不能保留旧 writer-ready。
 - server-driven observer invalidation 不得自动切换第三个 repo，也不得清除 editor pending overlay；它只退休旧 repo/doc/writer scope 与冲突的 pending scope-switch intent。所有消息只做有界 per-connection enqueue，network delivery 不属于 Catalog critical section。
@@ -436,10 +456,10 @@ ReadonlyDegraded
 
 ### 7.6.1 Remote Import Repo Lifecycle {#remote-import-repo-lifecycle}
 
-- provider task 绑定 `(RepoId, provider_generation, CatalogMembershipToken)`。task 完成时必须重新 exact-compare catalog membership、session identity 与 generation；stale completion 只能 cleanup 自己的临时 capture，不得发布 session、写 Ledger 或改变 mount slot。
-- remove 在 removed marker、locator cleanup 与 catalog authority cut 之前，必须 quiesce 对应 provider task，再执行 watcher E2 final-state reconcile。quiesce 不能持有 supervisor map mutex、catalog/repo permit、mutation lane 或 publication lane。
-- rename 不改变 provider task 的 `RepoId` 归属；若 rename 过程中关联 head/locator/ignore snapshot 发生变化，完成回调只能把既有 candidate 转为 `Stale`，不得在新名称下隐式重新 prepare。
-- create/rename/remove 的 partial outcome 必须按 `RepoId` 重读 catalog、metadata、locator、workspace marker 与 Remote Import active/cleanup 状态。只有 old/new 事实唯一一致时才能继续 mount 或 capture；混合事实进入 repair，禁止猜测删除、回滚或重绑。
+- provider task 绑定 `(RepoId, provider_generation, CatalogMembershipToken)`。acquire 必须在 provider slot mutex 内 exact-compare caller 提供的 membership token，并把 token 固化进 task slot；completion 必须再次 exact-compare catalog membership、session identity 与 generation。stale acquire/completion 只能 fail-closed 或 cleanup 自己的临时 capture，不得发布 session、写 Ledger 或改变 mount slot。
+- remove 在 catalog authority cut 与 locator cleanup 之前，必须 quiesce 对应 provider task，再执行 watcher E2 final-state reconcile。quiesce 不能持有 supervisor map mutex、catalog/repo permit、mutation lane 或 publication lane。
+- host-local alias 修改不参与 provider generation，也不改变 head/locator/ignore snapshot；它不得把 candidate 转为 `Stale`。
+- create/remove 的 partial outcome 必须按 `RepoId` 重读 catalog、metadata、locator、workspace marker 与 Remote Import active/cleanup 状态。只有 pre/post truth 唯一一致时才能继续 mount 或 capture；混合事实进入 repair，禁止猜测删除、回滚或重绑。
 
 ### 7.7 Catalog Conflict Repair
 
@@ -454,31 +474,82 @@ ReadonlyDegraded
 - watcher repo-local start failure 只记录该 repo `RepoMountState::Failed`；其它健康 repo 继续 mount。host-fatal 仅允许 supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed 分类。
 - bootstrap 完成时至少一个健康 local repo 必须处于 `Mounted`；零 Mounted 时必须逆序关闭本轮已启动 handle 并终止 server。服务已运行后全部 watcher 失败时仍保留 readonly/diagnostic 能力。
 
-### 7.9 Repo Lifecycle Coordinator
+### 7.9 Repo Lifecycle Coordinator {#repo-lifecycle-coordinator}
 
-`RepoLifecycleCoordinator` 是 create/rename/remove 与 watcher mount 的唯一编排者。固定 lifecycle transaction 为：
+`RepoLifecycleCoordinator` 是 create/remove 与 watcher mount 的唯一业务编排者。host-local alias
+不进入该 runtime。transport handler 只能向 host-owned `RepoLifecycleJobRuntime` 提交 typed
+intent；job 一经 admission，不得因 WS/HTTP/CLI transport cancellation 丢失 owner。
+
+固定 lifecycle transaction 为：
 
 ```text
-Catalog -> Repo
-  -> nonblocking reserve Transitioning(generation)
+typed intent -> host-owned lifecycle job
+  -> admit + nonblocking reserve Transitioning(generation)
   -> release permits
-  -> watcher/filesystem I/O
+  -> provider quiesce / watcher E2 / bounded filesystem prepare
   -> reacquire Catalog -> Repo
-  -> exact revalidation / durable mutation
+  -> exact revalidation + minimal durable authority cut
+  -> immutable committed-cut plan
   -> release permits
-  -> mount finalization
-  -> publication
+  -> filesystem settlement / mount finalization
+  -> immutable settled publication
+  -> RepoLifecyclePublicationSink / RepoSessionRuntime conditional publication
 ```
 
 规则：
 
+- `RepoLifecycleJobRuntime` 只拥有 bounded single-flight jobs、completion、shutdown/join 与
+  transport-independent convergence；它不拥有 Ledger/Redb facts、watcher backend、connection
+  map 或 network fan-out。handler drop 只能停止等待，不能取消已接收 job。
+- 每个 intent 必须携带 caller-generated opaque UUID `request_id`。runtime admission 原子分配
+  `job_id`；create 同时分配 immutable target `RepoId`。同一 request_id 只能绑定同一 operation
+  与规范化参数，参数不一致必须 typed reject；相同 retry 返回既有 job/terminal result，不能重复
+  create/remove。active job 永不被 retention 裁剪；terminal completion 至少保留 24 小时且最多
+  1024 条，仍处于 normal catalog 的 create receipt 不得裁剪。重连方使用 request_id 查询结果。
+- lifecycle receipt 是 host-local control-plane state，不进入 Ledger/sync/provider/Remote Import。
+  restart 不继续执行中断的 job；它只用 receipt 中的 request_id/target RepoId 与
+  catalog/locator/marker truth 将结果收敛为 NotCommitted、CommittedPartial 或 RepairRequired，
+  因而进程重启后的相同 request_id 也不得创建第二个 RepoId。
+- `RepoLifecyclePublicationSink` 是 host-owned narrow consumer；job runtime 在 transport waiter
+  之外把 settled publication 交给它。shutdown 必须先停止 admission，再等待所有已接收 job
+  达到 terminal/repair outcome 并把可发布结果交给 sink。transport handler 只是可丢弃 observer，
+  不能成为 committed plan 的唯一消费者。
+- create/remove 必须具有 project-owned `Prepared*Lifecycle`。长时 scan/join/filesystem I/O
+  全部位于 permits 外；authority cut 内只允许 exact revalidation 与最小 durable mutation。
+- durable cut 必须立即产生 immutable `RepoCreationCommittedCutPlan` 或
+  `RepoRemovalCommittedCutPlan`；该对象只描述已经线性化的 authority truth，不伪造未来 mount
+  outcome。settlement 完成后再组合为 immutable `RepoCreationSettledPublication` 或
+  `RepoRemovalSettledPublication`，其中携带最终 Mounted/readonly、cleanup debt 与 initiator
+  outcome。cut 后任意 settlement failure 都是
+  `CommittedPartial/RepairRequired`，不得重新返回普通 pre-commit failure或恢复旧 membership。
+- 只有能证明未进入 cut 的失败才可以补偿，结果必须保留 `primary + cleanup[]`。cut 内或 cut
+  边界发生的 `spawn_blocking` panic/JoinError 一律是 outcome unknown：必须先读取 operation-specific
+  完整 truth，只有唯一 pre-cut truth 才能归还 reservation/恢复旧 watcher；post-cut truth 继续
+  settlement，mixed truth 进入 repair。transport disconnect 不影响 job owner。进程崩溃不继续
+  执行 job，而从 durable receipt 与 RepoId-scoped truth 收敛 completion。
+- publication delivery failure 只形成 `publication_pending` control-plane debt，由 sink 有界重试并
+  可在重连时从 settled publication 重放；它不得被误标为 repo durable repair。DB/locator/marker/
+  watcher settlement failure 才形成 repo-scoped cleanup/repair debt。
 - `CatalogMembershipToken` 是 process-local readiness token，由 `RepoCatalogRuntime` 唯一维护，固定绑定 `(runtime_instance_identity, RepoId, per_repo_membership_generation)`。create/remove/recover/repair 等 typed API 只有在改变该 `RepoId` 的正常 catalog membership 时才递增对应 generation；无关 repo 的 catalog mutation 不得使 token 失效。若 catalog repair 无法可靠界定受影响 RepoId 集合，必须提升 runtime instance identity，使本进程全部旧 token fail-closed。`RepoLifecycleCoordinator` 只读取和 exact-compare token。它不得写入 Ledger、Redb schema、Projection Locator、sync facts 或 wire payload，进程重启后旧 token 自动失效。
 - `Catalog -> Repo` 锁序与 `03_storage/authority#repo-mutation-publication-gate` 一致；反向嵌套必须 fail-closed。并发 lifecycle intent 命中 `Transitioning` 时返回 typed busy，不得等待时持有 catalog/repo permit。
 - watcher/filesystem I/O、scan、join、await、mutation lane 与 publication 期间不得持有 supervisor map mutex。Catalog/Repo permit 也不得跨长时 I/O 或 await。
 - lifecycle 使用专用 deferred publication；repo list、scope switch 与 recovery signal 只有在最终 mount outcome 已知后才可 enqueue。
 - E2 或 startup/reconcile 产生的 generation-bound `WatcherRefresh` 在 slot 为 `Transitioning` 时必须进入同一 deferred publication 并 coalesce；coordinator 只在 exact revalidation 与最终 mount outcome 完成后决定 enqueue，remove success、stale generation 或进入 repair 时必须 drop。不得在 durable lifecycle outcome 前直接映射为 `FsChangeDetected` broadcast。
-- partial outcome 一律以 `RepoId` 为锚重新读取 catalog、repo metadata、Projection Locator 与 workspace `.notegit` marker。只有 old/new 事实唯一一致时才允许继续；混合事实进入 repair。
+- partial outcome 一律以 `RepoId` 为锚重新读取 catalog、repo metadata、Projection Locator 与 workspace `.notegit` marker。只有 pre/post 事实唯一一致时才允许继续；混合事实进入 repair。
 - coordinator 不拥有 Ledger、watcher backend 或 UI state；它只编排既有 authority mutation gate、projection/locator runtime 与 `WatcherSupervisor` typed API。
+
+Create/remove 的事实矩阵固定如下；catalog membership record 是唯一 normal listing/admission authority，目录扫描不得替代它：
+
+| Operation phase | Allowed durable/process facts | Recovery rule |
+|---|---|---|
+| create prepare | job receipt=`Preparing`；unlisted canonical DB/genesis；validated locator；workspace marker/projection；prepared manifest/digests | catalog record absent 必须按 exact prepared manifest 清理或标记 cleanup debt；不得正常 listing/mount |
+| create cut | atomic publish per-RepoId catalog record=`Normal`；rotate membership generation；`RepoCreationCommittedCutPlan` | record=`Normal` 即 committed；继续 alias/mount settlement，不能删除 repo |
+| create settle | alias best-effort CAS、watcher mount、settled publication/completion | alias 失败回退 display RepoId；mount 失败 readonly；两者都不撤销 catalog membership |
+| remove prepare | active catalog record；Transitioning reservation；provider quiesced；watcher E2 complete；Remote Import/fallback exact snapshot | catalog record=`Normal` 且全部 snapshot 仍 exact 才能进入 cut；否则仅唯一 pre-truth 可补偿 restart |
+| remove cut | atomic replace same record=`Removed`；rotate membership generation；`RepoRemovalCommittedCutPlan` | record=`Removed` 即 committed；旧 token 永久 fail-closed，禁止重启 removed watcher |
+| remove settle | locator/alias/display cleanup、settled publication/completion | cleanup failure 保持 removed + repair debt；不得恢复 normal membership |
+
+所有 recovery 必须至少比较 catalog membership record、canonical DB identity、locator binding、workspace marker、Remote Import active/cleanup state 与 lifecycle receipt。事实不能唯一归入表中的一行时必须 `RepairRequired`，不得凭路径存在性猜测。
 
 ## 8. Forbidden Patterns
 
@@ -488,7 +559,9 @@ Catalog -> Repo
 - 让 metadata/path table 成为 rename/move/delete 的主写路径。
 - 让 UI 直接根据名字推断 repo identity。
 - 把 remote readonly repo 误暴露为可写 source。
-- 让 repo name、URL、全局 vault root 或 `ledger_dir` 推断 projection base；repo name 只能作为 `RepoNameBinding` 的显示属性参与 `<safe_repo_name>--<repo_id>` workspace segment 派生。
+- 让 alias、URL、全局 vault root 或 `ledger_dir` 推断 projection base、workspace segment 或跨宿主 repo identity。
+- 在 peer sync、Remote Projection transport 或 Remote Import manifest 中传输 host-local alias。
+- 让 alias set/import 停止 watcher、移动 workspace、写 Ledger 或改变 Remote Import state。
 
 ## 9. Runtime Boundary
 
@@ -522,9 +595,18 @@ Catalog -> Repo
 
 职责：
 
-- `RepoLifecycleCoordinator` 接收 typed create/rename/remove intent，并编排 Catalog/Repo lane、projection/locator runtime 与 `WatcherSupervisor`。
+- `RepoLifecycleJobRuntime` 从 transport 接收 typed create/remove intent并稳定拥有其完成生命周期。
+- `RepoLifecycleCoordinator` 编排 prepared lifecycle、Catalog/Repo authority cut、projection/locator runtime 与 `WatcherSupervisor`。
 - handler、Web shell 与 repo scope runtime 不得直接 start/stop watcher，也不得根据 mount failure 猜测 rollback。
-- coordinator 只在最终 mount outcome 已知后发布 repo list/scope 结果；view layer 只渲染 typed committed/partial/unavailable outcome。
+- coordinator 返回 immutable publication plan；`RepoSessionRuntime` 只在最终 mount outcome 已知后 conditional-apply repo list/scope 结果。view layer 只渲染 typed committed/partial/unavailable outcome。
+
+### 9.3.2 Host-local Alias Runtime
+
+职责：
+
+- `host_repo_alias_runtime` 唯一拥有 alias store、CAS、JSON import/export 与 typed warning report。
+- repo catalog、projection locator、sync、Remote Import、watcher 与 view 不得复制 alias mutation authority。
+- browser/CLI 只发送 typed intent或读取 deterministic export；前端不得校验 alias、解析失败 detail 或推断 skipped entry。
 
 ### 9.4 View Layer
 
@@ -535,7 +617,7 @@ Catalog -> Repo
 
 ## 10. Refactor Target
 
-长期应将 repo 逻辑显式收敛成四个独立 runtime：
+长期 repo 逻辑保留四个 repository core runtime：
 
 - `repo_catalog_runtime`
 - `projection_locator_runtime`
@@ -547,7 +629,10 @@ locator ownership，但在 storage 顶层分层中归属于
 `projection_persistence_runtime` 子 runtime；该父子关系不得把 locator 提升为 ledger、
 projection 内容或 writeback authority。
 
-未来重构 **MUST** 收敛到这四个 runtime；`RepoManager`、CLI switcher handlers 与 `use_core` effects 不得共享隐式 repo scope 状态。
+host composition 另有两个正交 runtime：`host_repo_alias_runtime` 只拥有本地 display mapping，
+`repo_lifecycle_job_runtime` 只拥有 create/remove job convergence；二者不增加 storage authority
+层，也不合并进上述四个 core runtime。`RepoManager`、CLI switcher handlers 与 `use_core`
+effects 不得共享隐式 repo scope、alias mutation 或 lifecycle ownership。
 
 ## 本章相关命令
 

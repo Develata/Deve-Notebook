@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -89,6 +89,9 @@
 | `flow.repo.branch-switch` | UO | — | N | `SC_*` | N | N | `04_repository` | switch_nonce>scope_nonce |
 | `flow.repo.file-op-shell-routing` | II | — | N | `SC_*` | N | N | `04_repository` | repo-selected |
 | `flow.repo.file-operations` | UO | L+PW | Y | `SC_*` | N | N | `04_repository` | writer-gate+repo-scope |
+| `flow.repo.alias-set` | UO | — | N | `REPO_ALIAS_*` / `SC_*` | N | N | `04_repository#host-repo-alias-contract` | authenticated+exact-repo-id+alias-CAS |
+| `flow.repo.alias-transfer` | FC | — | N | `REPO_ALIAS_*` | N | N | `14_commands#repo-alias-command-contract` | local-catalog-readable+bounded-json |
+| `flow.repo.lifecycle` | FC | L+PW | N | `REPO_LIFECYCLE_*` / `STORAGE_*` | N | N | `04_repository#repo-lifecycle-coordinator` | authenticated+job-admission+catalog-revalidation |
 | `flow.repo.open-doc` | UO | PW | N | `DOC_*` | N | N | `04_repository` | repo-selected |
 | `flow.repo.switch` | UO | — | N | `SC_*` | N | N | `04_repository` | repo-available |
 | `flow.sc.commit` | UO | L | Y | `SC_*` | N | N | `05_diff_logic` | staged-nonempty OR confirmed-ledger-dirty + writer-gate |
@@ -160,17 +163,17 @@ Remote Import session、candidate、receipt 与 cleanup state 是 runtime-owned 
 
 ## 8. Operational Action Matrix
 
-本节登记 repo rename / projection repair 的运维动作，不新增 operation-flow ID；若这些动作暴露为产品级 UI/CLI flow，必须先在 §3 登记新的 `flow.*` 并同步更新 `docs/features/operation-coverage.md`。
+本节补充 host-local repo alias / projection repair 的 operator action projection；alias 产品/CLI flow 已在 §3 登记，不能只靠本表替代 operation-flow 双射。
 
 | Action | Owning Boundary | Preconditions | Operator-visible Result |
 |---|---|---|---|
-| repo rename preflight | `04_repository#repo-health-and-repair` | `RepoId` 已解析；`expected_name_epoch` 匹配；目标 `<safe_repo_name>--<repo_id>` 可用；无 pending/staged/dirty/projection fault | 返回 rename plan 或结构化 reject |
-| repo rename realign | `03_storage/projection#projection-locator-contract` | rename fact 已提交；watcher 已停止；`.notegit` identity marker 匹配同一 `RepoId` | workspace root 从旧 segment 移到新 segment，locator/catalog hint 更新 |
-| projection degraded inspect | `22_reliability_observability#observation-to-health-mapping` | repo 处于 `DegradedProjection` 或 `DegradedLocator` | 输出 `repo_id`、当前 `RepoNameBinding`、workspace root、fault kind、可执行 repair action |
+| repo alias set | `04_repository#host-repo-alias-contract` | exact local `RepoId` 存在；alias 合法；`expected_alias_revision` 匹配 | 仅更新 host-local alias 并发布 display projection |
+| repo alias import | `14_commands#repo-alias-command-contract` | JSON v1 合法且在预算内 | valid entries 原子 accepted；unknown/invalid/duplicate entry warning + skip并汇总 |
+| projection degraded inspect | `22_reliability_observability#observation-to-health-mapping` | repo 处于 `DegradedProjection` 或 `DegradedLocator` | 输出 `repo_id`、当前 host alias（若有）、workspace root、fault kind、可执行 repair action |
 | projection rebuild / rematerialize | `03_storage/projection#projection-contract` | repo 未处于 dirty/staged/pending gate；ledger authority 可读 | 从 ledger 重建 projection/workspace，成功后回到 `Healthy` |
-| failed realign recovery | `04_repository#repo-health-and-repair` | rename fact 已提交但 workspace realign 未完成 | 以 `RepoId` 为锚点重试 realign；不得用旧 repo name 或 URL 重新绑定身份 |
+| explicit workspace relocation | `03_storage/projection#projection-locator-contract` | watcher 已停止；目标 base 下同一 immutable segment 的 `.notegit` identity marker 匹配同一 `RepoId` | 仅更新 locator-owned projection base、轮换 binding generation并 rematerialize；与 alias 修改无关 |
 
-运维输出的所有 repo 字段都必须同时包含 `repo_id` 与当前 `repo_name`；机器可判定字段以 `repo_id` 为准，`repo_name` 只供人工识别。
+运维输出的 repo 机器字段必须包含 `repo_id`；可选 alias 只供当前 host 的人工识别，缺失时回退完整 RepoId，绝不能成为判定或跨宿主 payload。
 
 ## 9. Related Configuration (本章相关配置)
 

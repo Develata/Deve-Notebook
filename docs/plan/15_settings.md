@@ -123,7 +123,7 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 规则：
 
 *   系统 **MUST NOT** 支持 `vault_path` / `DEVE_VAULT_PATH` 作为全局投影根。
-*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<safe_repo_name>--<repo_id>/`。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
+*   每个本地可写 repo 的 projection base 与 immutable `workspace_segment` 必须通过 host-local Projection Locator 绑定；最终 workspace root 为 `<projection_base>/<workspace_segment>/`。当前 alias 不参与路径计算。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
 *   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
 *   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。
 *   locator 变更属于 repo runtime 操作，不是用户 UI 偏好，也不是 ledger authority。
@@ -198,9 +198,8 @@ Settings v1 最小 UI surface：
 所有前端 UI 偏好必须通过 browser storage prefs facade 进入浏览器存储 fallback 层。
 除该 facade 本身与底层能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
-无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
+无害 UI prefs；sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。最近 scope 可以保存 RepoId 作为恢复提示，但它不是 authority，server 必须重新 admission。
 快捷键覆盖这类结构化 UI prefs 的新写入必须使用 JSON 序列化/反序列化 API；不得用手写字符串拼接或分隔符协议保存结构化偏好。旧版分隔符格式只能作为读取迁移兼容。
-`deve.ui.last_scope` 只允许保存最后打开的 `repo_name` 显示别名，用于请求 server 重新解析；不得保存
-`repo_id`、remote branch / peer id、`scope_nonce` 或任何可被当作 repo authority 的身份字段。
+`deve.ui.last_scope` 只允许保存最后打开的 canonical `repo_id` 与 local branch kind，用于请求 server 重新解析；不得保存 alias、remote peer id、`scope_nonce` 或任何 writer grant。alias 由 server 的 host-local runtime 每次投影，浏览器不得把旧 alias 回写为选择 authority。
 AI Chat 面板可见性属于 browser-local UI pref（当前 key 为 `deve.ui.ai_chat_visible`）；Settings 隐藏 AI Chat 时只影响 Chat surface 与分界线是否渲染，
 不得关闭 Native AI provider、修改 `ai.mode`、清空聊天历史或改变 repo/document/source-control authority。

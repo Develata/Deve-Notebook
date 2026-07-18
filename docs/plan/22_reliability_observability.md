@@ -46,8 +46,8 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | `flow_id` | string | SHOULD | 对应 `20_operations_catalog` 的 operation-flow（如 `flow.doc.edit-confirmed-op`） |
 | `repo_scope` | string | SHOULD | 当前 repo scope（脱敏后） |
 | `scope_nonce` | int | SHOULD | 当前 `scope_nonce`（写路径事件 MUST） |
-| `repo_id` | string | SHOULD | repo 机器身份；repo 相关 degraded / repair / rename 事件 MUST |
-| `repo_name` | string | SHOULD | 当前 `RepoNameBinding.repo_name`；仅用于人工识别，不得作为机器身份 |
+| `repo_id` | string | SHOULD | repo 机器身份；repo 相关 degraded / repair / lifecycle 事件 MUST |
+| `repo_alias` | string | MAY | 当前 host-local alias；仅用于人工识别，不得作为机器身份、metric label 或跨宿主字段 |
 | `error_code` | string | 条件 | 失败事件 MUST；取值唯一引用 `13_i18n#i18n-error-code-catalog`，本章不定义 |
 | `span_id` / `trace_id` | string | SHOULD | 关联 §4 tracing span |
 | `mutation_outcome` | enum | 条件 | repo authority writer 结果：`not_committed` / `committed` / `projection_degraded` / `committed_partial` |
@@ -108,8 +108,8 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | structure projection 缺 parent / 断链 / 脏 path cache | `DegradedProjection` |
 | Structure Facts authority 引用缺失 / cycle / identity mismatch | `DegradedProjection`（是否升级 `Quarantined` 由 04 repair/quarantine gate 决定） |
 | Projection Locator 缺失 / 冲突 | `DegradedLocator` |
-| catalog / name drift / duplicate metadata / blank selector | `DegradedCatalog` |
-| durable projection fault pending（writeback / workspace realign / rebuild interrupted） | `DegradedProjection` 或 `DegradedLocator`，按 fault kind 映射 |
+| catalog / identity drift / duplicate metadata / blank selector | `DegradedCatalog` |
+| durable projection fault pending（writeback / explicit workspace relocation / rebuild interrupted） | `DegradedProjection` 或 `DegradedLocator`，按 fault kind 映射 |
 | 全部校验通过、authority 与 projection 一致 | `Healthy` |
 
 迁移条件（如何从 `Degraded*` 进入 `Repairing` 或 `Quarantined`）不在本章定义，唯一见 `04_repository#repo-health-and-repair` §4.3。
@@ -127,11 +127,11 @@ watcher start/worker/final-reconcile failure 映射到 `03_storage/watcher#watch
 
 `DurableProjectionFault` 是 repo-local Redb v4 中的 host-local recovery evidence，用于记录“authority 已提交，但 projection/workspace 物理副作用尚未完成或完成状态未知”的可恢复故障。它的唯一表/API/原子性合同归 `03_storage/projection#durable-projection-fault-contract`；本节只定义观测映射。它的目标是让重启后的 repair runtime 能精确知道要重试什么，而不是从路径名、repo name 或 URL 猜测身份。
 
-它 **不是** ledger authority，不能新增、撤销或改写业务事实；所有重放动作都必须先重新验证 `RepoId`、当前 `RepoNameBinding` 与 `.notegit` identity marker。字段、key、codec、typed origin 与 transaction schema 只由 `03_storage/projection#durable-projection-fault-contract` 定义，本章不得复制第二份 schema。
+它 **不是** ledger authority，不能新增、撤销或改写业务事实；所有重放动作都必须先重新验证 `RepoId`、当前 Projection Locator 与 `.notegit` identity marker。host-local alias 不参与 replay admission。字段、key、codec、typed origin 与 transaction schema 只由 `03_storage/projection#durable-projection-fault-contract` 定义，本章不得复制第二份 schema。
 
 要求：
 
-- `ProjectionWritebackFailed`、`WorkspaceRealignFailed`、`ProjectionRebuildInterrupted` 这类 ledger-committed 后的物理故障 **MUST** 写入 repo-local durable fault store；Remote Import origin 还必须绑定 exact session/revision/request identity。
+- `ProjectionWritebackFailed`、`WorkspaceRelocationFailed`、`ProjectionRebuildInterrupted` 这类 ledger-committed 后的物理故障 **MUST** 写入 repo-local durable fault store；Remote Import origin 还必须绑定 exact session/revision/request identity。普通 alias set/import 绝不能创建 fault。
 - 进程启动顺序固定为：验证 Redb v4 required tables → 逐 repo 加载
   `PROJECTION_FAULTS` 与 Applied/Pending receipt → 幂等恢复 Pending receipt →
   materialize/scan → 发布 `RepoHealth`。坏 value、RepoId mismatch、required table

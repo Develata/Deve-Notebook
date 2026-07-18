@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -49,7 +49,11 @@
 
 补充：
 
-- `repo_name` 只能作为兼容提示或 selector 输入，进入同步链后必须解析成 `repo_id`。
+- full-peer sync、Remote Projection transport 与 Remote Import source/manifest **MUST NOT** 传输
+  host-local repo alias。跨宿主 logical identity 只使用 exact `RepoId`，并继续验证 genesis / ledger
+  identity 与 authenticated source；相同 UUID 本身不构成授权。
+- 浏览器控制协议可以返回当前 server host 生成的 display alias，但 alias 只供当前人类界面显示，
+  不得进入 sync fact、remote shadow、provider object identity 或 Remote Import receipt。
 - relay / proxy / browser runtime 不得依赖“隐式默认 repo”这样的全局状态。
 
 ## 3. Topology Contract
@@ -68,6 +72,7 @@ Full Peer Mesh v1 是当前多服务端拓扑的最小可运行合同：
 - 传输：full peer 之间复用同一 `/ws` endpoint 与 versioned postcard frame，不新增独立 mesh 端口或 wire format。
 - 拓扑：v1 仅支持静态配置 peer endpoint；不做自动发现、NAT 穿透、DHT、公共 relay marketplace 或 gossip peer discovery。
 - Repo identity：同一逻辑 repo 的 full peer **MUST** 共享同一 `RepoId`；不同 `RepoId` 不得被自动合并为同一 mesh repo。
+- Repo display：full peer 不发送 repo alias；每个 host 独立维护自己的 `HostRepoAliasBinding`，缺失时显示完整 RepoId。
 - 写入语义：每个 full peer 只对自己的 local branch 拥有 writer authority；入站远端 facts 只能进入对应 `ledger/remotes/<peer>/<repo>` shadow repo。
 - 合并语义：remote shadow merge 到 local branch 必须通过显式 source-control merge flow；mesh 同步成功不得自动污染 local branch。
 - 资源策略：low-spec / 服务器环境中 connector 必须可关闭、可限频、可 backoff；不得要求常驻大内存索引或后台全量 replay。
@@ -204,10 +209,11 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- 首个公开 wire epoch 固定为 `protocol_version = 3`，兼容窗口为 `3..=3`。v3 同时包含
-  workspace ingestion unavailable typed error 与 nested Remote Import request/response family。
+- 首个公开 wire epoch 固定为 `protocol_version = 4`，兼容窗口为 `4..=4`。v4 同时包含
+  workspace ingestion unavailable、nested Remote Import family，以及 nested Repo Control
+  alias/lifecycle family。
   历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v1、F4/v2、F4/v13
-  全部 fail-closed，不提供 adapter。F4/v3 发布后只允许单调升级，不得再次重置或复用旧
+  和未发布的 F4/v3 全部 fail-closed，不提供 adapter。F4/v4 发布后只允许单调升级，不得再次重置或复用旧
   `(magic, version)` identity。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump F4
   内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
@@ -216,14 +222,15 @@ enabled = true
 - 浏览器生产客户端到服务端 **MUST** 使用 versioned postcard binary frame；收到任意 text frame、损坏
   binary frame 或不支持的 wire identity 时必须退休当前 connection epoch 并重连，不得把错误帧投影成
   普通业务消息继续消费。text-frame versioned JSON 只能由 server 的显式 development/debug 入口解析。
-- development/debug JSON **MUST** 显式携带 `protocol_version = 3` 并使用与 postcard frame 相同的
-  v3 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
+- development/debug JSON **MUST** 显式携带 `protocol_version = 4` 并使用与 postcard frame 相同的
+  v4 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
   不得解析或回退。所有 sync frame **MUST** 显式携带当前 schema 要求的 vector 字段。
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-当前实现已完成 F4/v3 lockstep 切换：主 `/ws` 不再包含 legacy/unversioned JSON fallback、旧环境
-开关或 v2 window；显式 development/debug JSON 也必须携带 v3 envelope。plugin-host 的 loopback
+当前实现仍是未发布 F4/v3；C1′ 产品切换必须一次升级为 F4/v4 lockstep。主 `/ws` 不得恢复
+legacy/unversioned JSON fallback、旧环境开关或旧 version window；显式 development/debug JSON
+也必须携带 v4 envelope。plugin-host 的 loopback
 外围消息通道属于 `19_plugins#plugin-runtime-boundary`，不进入主 `/ws` F4 编解码合同。
 
 ### 4.3 Core Message Families
@@ -252,11 +259,13 @@ enabled = true
   - `RemoteImport(RemoteImportResponse)`
 - repo/runtime:
   - `RepoList`
+  - `RepoControl(RepoControlRequest / RepoControlResponse)`
   - `DocList`
   - `TreeUpdate`
   - `ProtocolError`
 
-watcher lifecycle 不新增 WS message family。workspace ingestion unavailable 复用既有 response family：
+watcher lifecycle 不新增独立 WS message family；repo create/remove 的 host-owned job 归 nested
+Repo Control family。workspace ingestion unavailable 复用既有 response family：
 
 - HTTP mutation：JSON `ServerError`、HTTP `503`；
 - editor WS mutation：既有 `EditRejected`；
@@ -309,7 +318,49 @@ pre-candidate `Failed` record：Show/Discard 使用 `revision=None` 表示对“
 本 family 的 Rust message、server handler 与 CLI proxy 已由 B4 激活；B5 负责独立
 `remote_import_client` 与完整 review UI。首发前不得以旧 Pull 或 Source Control notice 充当其实现。
 
-### 4.3.2 Projection Recovery Wire Contract {#projection-recovery-contract}
+### 4.3.2 Repo Control Wire Contract {#repo-control-wire-contract}
+
+F4/v4 删除旧 `SwitchRepo` name selector、`CreateRepo`、`RenameRepo` 与 `RemoveRepo` 顶层 variants，
+不保留 adapter。repo scope switch 只保留 exact `SwitchRepoExact { repo_id, switch_nonce }`；display
+alias 不回传为 selector。host-local alias 与 A1 lifecycle 使用单个 nested family：
+
+```text
+ClientMessage::RepoControl(RepoControlRequest)
+ServerMessage::RepoControl(RepoControlResponse)
+
+RepoControlRequest =
+  SetAlias { request_id, repo_id, alias, expected_alias_revision }
+  | SubmitLifecycle { request_id, lifecycle_intent }
+  | GetLifecycle { request_id }
+
+RepoLifecycleIntent =
+  Create { initial_alias, current_scope_nonce, switch_nonce }
+  | Remove { repo_id, current_scope_nonce, switch_nonce }
+
+RepoControlResponse =
+  AliasSet { request_id, binding }
+  | LifecycleAccepted { request_id, job_id, target_repo_id }
+  | LifecycleStatus { request_id, job_id, state, outcome }
+  | Error { request_id, error }
+```
+
+- `request_id` / `job_id` 是 UUID。alias request 是 authenticated host control operation，精确按
+  RepoId/CAS revision 线性化但不绑定 branch/scope；stale editor scope 不能阻止合法 alias 修改。
+- lifecycle submit 的 session observer 绑定当前 connection epoch 与
+  `(current_scope_nonce, switch_nonce)`；job ownership 不绑定 connection。observer 消失只取消该
+  connection 的可选 auto-switch，不取消 job、settlement、repo-list publication 或 completion。
+- Create 的 target RepoId 由 backend admission 生成并在 `LifecycleAccepted` 返回；同一 request_id
+  retry 必须返回同一 job/target。Remove 始终携带 exact RepoId，不能按 alias 查找。
+- `GetLifecycle` 允许重连后按 request_id 取得既有 Accepted/Running/terminal/repair outcome；前端不得
+  通过自然语言 detail 或 repo-list 差分猜测 job 是否提交。
+- `RepoListEntry` 只暴露 `repo_id + display_alias + alias_revision + readiness`；不得暴露
+  execution filename、workspace segment/path、locator generation 或历史 creation label。
+- `RepoSwitched` 只回显 exact `repo_id + display_alias + branch + switch_nonce/scope_nonce`。alias
+  变化不产生 `RepoSwitched`，只产生 `AliasSet` ack 与 backend-produced `RepoList` projection。
+- alias/lifecycle failures 使用 `13_i18n#i18n-error-code-catalog` 的 `REPO_ALIAS_*` /
+  `REPO_LIFECYCLE_*`；Web 只按 typed code/state/outcome 渲染，不解析 detail。
+
+### 4.3.3 Projection Recovery Wire Contract {#projection-recovery-contract}
 
 后端统一使用以下 typed wire 表示“authority 已变化或消息完整性已无法证明，客户端必须按指定
 范围刷新 projection”：
@@ -704,7 +755,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
   `/api/node/role` aggregate 只读查询；不得把 `WatcherSupervisor` 或 handle 的 start/stop/restart
   authority 暴露给 HTTP/WS handler。
 - server composition root 唯一拥有 `WatcherSupervisor` 与 `RepoLifecycleCoordinator`。普通 mutation
-  handler 进入 `execute_mounted_repo`，repo create/rename/remove handler 只提交 coordinator typed intent；
+  handler 进入 `execute_mounted_repo`，repo create/remove handler 只提交 host-owned lifecycle job typed intent；host-local alias handler 只调用 alias runtime，不获得 watcher/lifecycle authority；
   二者均不得依据 tracing detail、路径存在性或 UI 状态推断 watcher readiness。
 
 ### 12.4 Web Runtime {#web-ws-runtime}

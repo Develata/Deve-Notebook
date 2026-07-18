@@ -68,6 +68,8 @@ State_auth = L_confirmed
 5. commit/delete/merge 的最终成立条件必须回到 ledger append / ledger anchor。
 6. Remote Import session/candidate/receipt 由后端 authority/runtime 持有；Web 只保存当前 scope 的
    typed projection，不得把它并入 editor pending overlay、External Changes 或 Source Control state。
+7. Repo alias revision、lifecycle job/completion 与 catalog membership 都由 backend runtime 持有；
+   Web 只保存 request correlation 与 backend-produced list/status projection。
 
 ### 3.1 Write Serialization and Merge Boundary
 
@@ -451,6 +453,28 @@ candidate revision、blocker 计算或 Ledger Apply authority。
 本 runtime 继续登记为 `planned/no-code-yet`，B5 才激活独立实现。B4 已删除 Remote Projection
 command 打开 Source Control 与解析 notice detail 的路径；缺失期间不以其它 controller 作为 adapter。
 
+### 11.5 Repo Control Client Contract {#repo-control-client-contract}
+
+`repo_control_client` 是 repo switcher 的薄前端 runtime，只消费
+`07_network#repo-control-wire-contract`：
+
+- repo row identity 固定为 exact `RepoId`；`display_alias + alias_revision + readiness` 只来自当前
+  backend `RepoListEntry`。alias 相同不能合并 row，alias 改变不能改变 active repo/scope/doc identity。
+- Set Alias 发送 `request_id + repo_id + alias + expected_alias_revision`；收到 stale revision 时只
+  展示 typed error 并刷新 RepoList，不做前端 last-write-wins、revision 自增或 detail parsing。
+- Create/Remove 只提交 lifecycle intent，并按 request_id/job_id 渲染 Accepted/Running/terminal 状态。
+  transport disconnect 后重连使用 GetLifecycle；不得重发一个新 request_id 来猜测前次是否成功。
+- `RepoCreationSettledPublication` / `RepoRemovalSettledPublication` 的 mount、readonly、partial、repair
+  分类完全由 backend outcome 决定。Web 不读取路径、marker、locator、watcher generation 或 raw error
+  推断 cleanup、重启、fallback 或 rollback。
+- alias JSON import/export 只属于 CLI/operator surface；Web 不读取本地 JSON、不实现 warning/skip
+  规则，也不拥有 alias store cache。
+- lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发
+  status refresh，不能在新 scope 自动切换 repo。editor pending overlay 与 repo-control state 分离。
+
+该 runtime 在 C1′/A1/B1 code 与 browser evidence 完成前登记为 `planned/no-code-yet`，不得复用旧
+rename controller 或把 Source Control/External Changes state 当作 adapter。
+
 ## 12. Refactor Target
 
 长期应显式形成：
@@ -459,6 +483,7 @@ command 打开 Source Control 与解析 notice detail 的路径；缺失期间�
 - `pending_overlay_runtime`
 - `write_confirmation_runtime`
 - `remote_import_client`
+- `repo_control_client`
 
 实现必须把 editor sync、pending overlay、message dispatch 与 navigation guard 收敛到稳定 runtime 链路，不得依赖无边界 effects 协调写入确认。
 

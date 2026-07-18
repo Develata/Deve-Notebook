@@ -156,7 +156,7 @@ Web 端除 Dashboard 指标外，还必须明确呈现 WebLightPeer 的同步能
 *   **Repo Switch Flow**:
     *   用户切换 repo 时，旧 repo 的同步状态立即清空，新 repo 进入握手态。
     *   若新 repo 无法恢复 IndexedDB identity，则 UI 显示“临时只读 peer”并阻止写入，直到注册成功。
-    *   浏览器刷新后 **SHOULD** 恢复最近一次稳定的 `repo_name + repo_id + active_branch` 组合，但实际绑定 **MUST** 以 `repo_id` 为准，名称仅作展示或辅助恢复。
+    *   浏览器刷新后 **SHOULD** 以 `repo_id + active_branch` 请求恢复最近一次稳定 scope；server 返回当前 host alias 仅供展示。alias 缺失、改变或重复不得改变绑定结果。
     *   `SwitchRepo / SwitchBranch` 发出的 `switch_nonce` **MUST** 严格大于当前 `scope_nonce`，避免旧 scope 的迟到消息污染新 scope。
 
 ### 6.2 Web Shell Interaction Rules
