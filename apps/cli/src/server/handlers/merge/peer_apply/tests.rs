@@ -166,7 +166,7 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
         )?;
     let repo = Arc::new(repo);
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
-    sync_manager.mark_projection_writeback_fault(repo.local_repo_name());
+    sync_manager.mark_projection_writeback_fault(repo.local_repo_name())?;
     Ok((
         dir,
         Arc::new(AppState {

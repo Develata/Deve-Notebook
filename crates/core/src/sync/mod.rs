@@ -33,8 +33,6 @@ mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_diagnostic;
 #[cfg(not(target_arch = "wasm32"))]
-mod projection_fault_journal;
-#[cfg(not(target_arch = "wasm32"))]
 mod projection_health;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;

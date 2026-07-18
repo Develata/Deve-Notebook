@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
 - `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#projection-backup-secret-ref-contract (Remote Projection credential refs), 06_backup#remote-import-runtime-boundary (Remote Import session/runtime), 03_storage/authority#sealed-ledger-change-batch (apply authority), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`
@@ -29,6 +29,9 @@
 - writer gate、Writer Identity、WebLightPeer（浏览器 repo-scoped transient writer identity）：见 `01_terminology`。
 - native `LocalBackend` / `RemoteBrowser` 双模式、Desktop child-process local service、Mobile embedded loopback service 与 shell no-direct-authority：见 `11_ui_design#native-adapter-gate-registry`、`11_ui_design#native-post-gate-common-contract` 与 `17_tech_stack#native-packaging-dependency-gate`。
 - Remote Import 信任链：见 `06_backup#remote-import-runtime-boundary` 与 `03_storage/authority#sealed-ledger-change-batch`。
+- `PROJECTION_FAULTS` 只保存 repo-local host diagnostics/recovery evidence，不进入
+  sync、wire、export 或 Ledger payload；路径与 raw error detail 不得暴露给 Web/remote
+  client，Remote Import receipt CAS 仍归 Remote Import authority。
 
 以上 MUST/SHOULD 约束不在本章复述或扩展。
 

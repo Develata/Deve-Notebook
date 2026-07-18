@@ -41,7 +41,7 @@ Active drift facts:
 
 1. `remote import prepare`: B1 immutable store and B2 ordered source acquisition exist, but the current product pull still routes through the isolated workspace/External Changes transition; B4 replaces it.
 2. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
-3. `remote import apply`: B3 source-specific sealed whole-session Ledger transaction exists and preserves External Apply semantics; no product Mounted admission, post-commit writeback or Remote Import surface exists until B4/B5.
+3. `remote import apply`: B3 source-specific sealed whole-session Ledger transaction and ADR 0012 repo-local fault/receipt settlement primitives exist and preserve External Apply semantics；startup fail-closed health now recognizes Pending receipts, while product Mounted admission, Ledger-to-Projection rematerialization orchestration and the Remote Import surface remain B4–B5 work.
 4. `remote import manage`: backend Refresh/Discard/dry-run repair/retention exist, but the product lifecycle and cleanup apply path remain B4/W7 work.
 
 ## Flow Registry

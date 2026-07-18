@@ -3,6 +3,9 @@
 - Status: Accepted
 - Date: 2026-07-17
 
+> The post-commit Projection Fault store and atomic receipt-settlement boundary
+> are refined by ADR 0012; this ADR remains Accepted.
+
 ## Context
 
 ADR 0007 chose a Projection Backup pull path that downloaded Markdown directly

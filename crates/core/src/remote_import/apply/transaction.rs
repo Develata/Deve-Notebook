@@ -147,7 +147,7 @@ pub(crate) fn mark_applied_in_txn(
     Ok(())
 }
 
-fn verify_repo_schema_and_identity(
+pub(super) fn verify_repo_schema_and_identity(
     write_txn: &redb::WriteTransaction,
     expected_repo_id: RepoId,
     session_id: crate::remote_import::types::RemoteImportSessionId,

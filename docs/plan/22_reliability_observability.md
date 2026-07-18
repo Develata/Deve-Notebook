@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Remote Projection / Remote Import 状态与 authority 边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -125,34 +125,20 @@ watcher start/worker/final-reconcile failure 映射到 `03_storage/watcher#watch
 
 ### 6.2 DurableProjectionFault Boundary
 
-`DurableProjectionFault` 是 host-local recovery journal，用于记录“authority 已提交，但 projection/workspace 物理副作用尚未完成或完成状态未知”的可恢复故障。它的目标是让重启后的 repair runtime 能精确知道要重试什么，而不是从路径名、repo name 或 URL 猜测身份。
+`DurableProjectionFault` 是 repo-local Redb v4 中的 host-local recovery evidence，用于记录“authority 已提交，但 projection/workspace 物理副作用尚未完成或完成状态未知”的可恢复故障。它的唯一表/API/原子性合同归 `03_storage/projection#durable-projection-fault-contract`；本节只定义观测映射。它的目标是让重启后的 repair runtime 能精确知道要重试什么，而不是从路径名、repo name 或 URL 猜测身份。
 
-它 **不是** ledger authority，不能新增、撤销或改写业务事实；所有重放动作都必须先重新验证 `RepoId`、当前 `RepoNameBinding` 与 `.notegit` identity marker。
-
-最小字段：
-
-```text
-DurableProjectionFault = {
-  repo_id,
-  repo_name_at_fault,
-  name_epoch,
-  fault_kind,
-  target_path,
-  source_path?,
-  ledger_seq_or_head,
-  first_seen_at,
-  last_error,
-  retry_count,
-  status,
-}
-```
+它 **不是** ledger authority，不能新增、撤销或改写业务事实；所有重放动作都必须先重新验证 `RepoId`、当前 `RepoNameBinding` 与 `.notegit` identity marker。字段、key、codec、typed origin 与 transaction schema 只由 `03_storage/projection#durable-projection-fault-contract` 定义，本章不得复制第二份 schema。
 
 要求：
 
-- `ProjectionWritebackFailed`、`WorkspaceRealignFailed`、`ProjectionRebuildInterrupted` 这类 ledger-committed 后的物理故障 **SHOULD** 写入 durable fault journal。
-- 已实现 durable fault journal 的运行时，进程启动时必须先加载 durable fault journal，再执行 scan/materialize；两者不一致时以 `RepoId` admission 与 ledger authority 为准，保持 fail-closed。
-- repair 成功后必须把对应 fault 标记为 resolved 或删除；不得仅清内存 degraded gate。
-- 如果当前实现暂未持久化该 journal，启动 scan/materialize 必须能重新发现 drift，并且不得把未知完成状态暴露为 `Healthy`。
+- `ProjectionWritebackFailed`、`WorkspaceRealignFailed`、`ProjectionRebuildInterrupted` 这类 ledger-committed 后的物理故障 **MUST** 写入 repo-local durable fault store；Remote Import origin 还必须绑定 exact session/revision/request identity。
+- 进程启动顺序固定为：验证 Redb v4 required tables → 逐 repo 加载
+  `PROJECTION_FAULTS` 与 Applied/Pending receipt → 幂等恢复 Pending receipt →
+  materialize/scan → 发布 `RepoHealth`。坏 value、RepoId mismatch、required table
+  缺失或 settlement 失败必须 fail-closed；无 fault 但仍有 Pending receipt 时不得发布
+  `Healthy`。
+- repair 成功后必须删除对应 pending fault；不得仅清内存 degraded gate，也不得把历史 Remote Import `Degraded` receipt 改写为 `Written`。
+- `ledger/.host/projection-faults.toml` 不再是 live contract；禁止双写、fallback 读取或把一个 host-wide 文件恢复为第二 authority。
 
 ## 7. Alerting Tier {#alerting-tier}
 

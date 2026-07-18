@@ -5,9 +5,9 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Parent`: `03_storage/index`
-- `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
+- `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/projection_fault/`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
 > 本文件是 `03_storage` 章的 `projection_persistence_runtime` 子合同：projection locator layout 与 projection / persistence contract。`projection_locator_runtime` 在该顶层 storage infra 内作为独立命名的 host-local 子 runtime，拥有 locator 状态与文件边界，但不增加第五个顶层 storage runtime。章节骨架与总览见 [index.md](./index.md)。
 
@@ -90,7 +90,7 @@ Intent -> Ledger Facts -> Projection -> Projection Workspace
 
 - `metadata`、`path mapping`、`tree cache`、`NodeMeta` 只能由 projection builder 写入。
 - handler、component、source control action 不得把这些表当成主写路径。
-- ledger append 成功而 projection 失败时，系统 **MUST** 标记 recoverable fault，并支持从 ledger 重建；对 writeback / realign / rebuild interrupted 这类重启后仍需精确重放的故障，durable fault journal 语义见 `22_reliability_observability.md#observation-to-health-mapping`。
+- ledger append 成功而 projection 失败时，系统 **MUST** 标记 recoverable fault，并支持从 ledger 重建；对 writeback / realign / rebuild interrupted 这类重启后仍需精确重放的故障，唯一 durable mutation contract 见本章 §7.2，观测到 RepoHealth 的映射见 `22_reliability_observability.md#observation-to-health-mapping`。
 
 具体要求：
 
@@ -131,6 +131,70 @@ Intent -> Ledger Facts -> Projection -> Projection Workspace
 - Successful writeback uses the existing locator, containment, PersistGuard,
   watcher-suppression, and repo-scoped ordering rules; Remote Import does not
   create a second projection writer.
+
+### 7.2 Durable Projection Fault Store {#durable-projection-fault-contract}
+
+`projection_persistence_runtime` 唯一拥有 repo-local Redb v4
+`PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]>` 的 typed query / mutation API。
+该表记录 host-local recovery evidence；它不是 Ledger Fact、不同步、不参与
+`GlobalSeq` / `PeerFactSeq`、不改变 Projection format，也不成为 RepoHealth 或
+workspace 的第二真源。
+
+每条 project-owned postcard value 必须携带显式 value version，并至少包含：
+
+```text
+DurableProjectionFault = {
+  repo_id,
+  repo_name_at_fault,
+  name_epoch?,
+  fault_kind,
+  typed_origin,
+  target_path?,
+  source_path?,
+  doc_id?,
+  ledger_seq_or_head?,
+  first_seen_at,
+  last_seen_at,
+  last_error_bounded,
+  retry_count,
+  status=Pending,
+}
+```
+
+`deterministic_fault_key` 是 Redb table key，不冗余写入 postcard value；读取时必须由
+value 的 identity fields 重算并与 table key exact-compare。
+
+`typed_origin` 至少区分普通 projection persistence、projection repair 与
+`RemoteImport { session_id, revision, request_id }`。路径只作诊断/精确重放输入，必须
+forward-slash 规范化；repair 仍须按当前 `RepoId`、RepoNameBinding、locator 与 workspace
+identity marker 重新 admission，不能信任记录中的旧名称或路径。
+
+key 必须使用 project-owned domain-separated SHA-256 构造，输入为 `RepoId + fault_kind +
+typed_origin + normalized semantic target`，字符串使用显式长度前缀、整数使用固定大端编码；
+不得直接 hash Rust enum/postcard bytes。读取时必须从 value 重算 key 并 exact-compare。
+unsupported value version、RepoId mismatch、malformed/trailing payload 或 key/value mismatch
+必须 fail-closed。
+
+Mutation rules：
+
+- ordinary writeback/rebuild failure 必须在 transaction 外完成 locator/path normalization、
+  timestamp 与 bounded diagnostic 准备，再通过短 repo-local Redb transaction 幂等 upsert；同一
+  typed origin / kind / target identity 的重复故障只更新 last-seen、bounded error 与 retry count。
+- Remote Import writeback failure 必须在**同一个**第二短 Redb transaction 中 upsert exact
+  typed fault，并 CAS matching stored receipt `Pending -> Degraded`。任一 table open、decode、
+  exact compare、insert 或 commit 失败都使整笔回滚，receipt 保持 `Pending`。
+- Remote Import writeback success 只在第二短 transaction CAS `Pending -> Written`。`Written`
+  与 `Degraded` 均为终态；不得互相改写。相同 exact settlement 可幂等返回既有 receipt。
+- 启动 health scan 必须逐个 local repo 读取该表；missing required table、unsupported value
+  version、RepoId mismatch 或坏 payload 必须 fail-closed，不能降级为“无故障”。
+- repair/rebuild 只有在 exact revalidation 与 materialization 成功后才能删除对应 pending fault。
+  历史 Remote Import receipt 已为 `Degraded` 时保持不变；清除 active fault 表示当前 projection
+  已修复，不改写历史提交结果。
+- watcher start/worker/overflow/final-reconcile failure、Remote Import pre-commit failure、session
+  `Stale/Failed` 与 `cleanup_pending` 都不得写入本表。
+
+`ledger/.host/projection-faults.toml`、host-wide journal mutex、dual write 与旧读取 adapter 均
+不属于批准实现。未发布 v4 database 缺少该 required table 时按 incomplete schema fail-closed。
 
 ## 10. Forbidden Patterns（projection）
 

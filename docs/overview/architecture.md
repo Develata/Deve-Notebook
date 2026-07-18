@@ -88,6 +88,12 @@ Remote provider
 
 Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B0 expands the modeled slice from 74 to 79 flows and intentionally records five active drift markers until B1–B5 implement the approved target.
 
+Post-commit Projection outcome uses one repo-local Redb v4 settlement boundary:
+`Pending -> Written` updates only the stored receipt, while `Pending -> Degraded`
+atomically writes typed `PROJECTION_FAULTS` recovery evidence and the receipt CAS.
+The side table is owned by projection persistence, is not a Ledger Fact, and is
+never synchronized; the retired host-wide TOML journal is not a fallback.
+
 ## Artifact Roles
 
 - `architecture-doc.lisp`: doc-derived operation-first blueprint view, emitted from ordered doc fragments.

@@ -149,7 +149,7 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
     );
     harness
         .sync_manager
-        .mark_projection_writeback_fault(repo_name);
+        .mark_projection_writeback_fault(repo_name)?;
     harness.grant_browser_write(1)?;
 
     let response = harness

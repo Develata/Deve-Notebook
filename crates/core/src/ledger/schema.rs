@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 03_storage/authority#facts-partition
 //!   - 03_storage/authority#redb-schema-version-contract
+//!   - 03_storage/authority#projection-fault-recovery-table
 //!   - 03_storage/index#repo-runtime-layout
 
 use redb::{MultimapTableDefinition, TableDefinition};
@@ -61,6 +62,11 @@ pub(crate) const REMOTE_IMPORT_SESSIONS: TableDefinition<u128, &[u8]> =
     TableDefinition::new("remote_import_sessions");
 pub(crate) const REMOTE_IMPORT_RUNTIME: TableDefinition<u8, &[u8]> =
     TableDefinition::new("remote_import_runtime");
+
+// Repo-local, host-only recovery evidence. This is not a Ledger Fact table and is absent from
+// remote shadows. The fixed key is a domain-separated project-owned SHA-256 identity.
+pub(crate) const PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]> =
+    TableDefinition::new("projection_faults");
 
 // Physical PeerId (&str) -> repo-scoped max PeerFactSeq (u64).
 pub const PEER_FACT_SEQ: TableDefinition<&str, u64> = TableDefinition::new("peer_fact_seq_v3");

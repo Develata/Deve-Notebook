@@ -77,7 +77,7 @@ async fn edit_rejects_degraded_local_projection_before_append() -> anyhow::Resul
     let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
     h.state
         .sync_manager
-        .mark_projection_writeback_fault(h.state.repo.local_repo_name());
+        .mark_projection_writeback_fault(h.state.repo.local_repo_name())?;
     let (ch, mut uni_rx) = unicast_channel(&h.state);
     let mut session = writer_browser_session("default", h.default_repo_id, 31);
 

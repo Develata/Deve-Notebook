@@ -423,11 +423,13 @@ contains	docs/plan/18_release.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/18_release.md	Redb schema 冻结为 v4
 contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 4
+contains	docs/plan/03_storage/authority.md	PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]>
 contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 3`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
 contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/registry/first-tag-format-matrix.md	`REDB_SCHEMA_VERSION = 4`
+contains	docs/registry/first-tag-format-matrix.md	repo-local `PROJECTION_FAULTS`
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 3;`
 contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3;`
 contains	docs/registry/first-tag-format-matrix.md	Redb schema v4
@@ -436,6 +438,7 @@ contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locato
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection transport / Remote Import
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 4;
+contains	crates/core/src/ledger/schema.rs	pub(crate) const PROJECTION_FAULTS
 contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 2;
 contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 2;
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	DEVEWSF4

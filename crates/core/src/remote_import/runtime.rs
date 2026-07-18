@@ -8,6 +8,7 @@ mod capture;
 mod refresh;
 
 use super::apply::PreparedRemoteImportApply;
+use super::apply::{settle_projection_degraded, settle_projection_written};
 use super::artifact::{
     ArtifactCapture, RemoteImportArtifactRoot, verify_apply_artifacts,
     verify_exact_published_session,
@@ -17,8 +18,8 @@ use super::repair::{RemoteImportRepairReport, dry_run_repair};
 use super::store::RemoteImportStore;
 use super::types::{
     RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportFailure,
-    RemoteImportFailurePhase, RemoteImportPrepareRequest, RemoteImportSessionId,
-    RemoteImportSessionRecord, RemoteImportState,
+    RemoteImportFailurePhase, RemoteImportPrepareRequest, RemoteImportProjectionOutcome,
+    RemoteImportSessionId, RemoteImportSessionRecord, RemoteImportState,
 };
 use crate::{ledger::RepoManager, models::RepoId};
 use authority::bound_local_authority_db;
@@ -193,6 +194,21 @@ impl RemoteImportRuntime {
         repo.commit_prepared_remote_import_apply_in_local_repo(repo_name, prepared)
     }
 
+    pub(crate) fn settle_projection_written(
+        &self,
+        receipt: &RemoteImportApplyReceipt,
+    ) -> RemoteImportResult<RemoteImportApplyReceipt> {
+        settle_projection_written(&self.store, receipt)
+    }
+
+    pub(crate) fn settle_projection_degraded(
+        &self,
+        receipt: &RemoteImportApplyReceipt,
+        last_error: &str,
+    ) -> RemoteImportResult<RemoteImportApplyReceipt> {
+        settle_projection_degraded(&self.store, receipt, last_error)
+    }
+
     #[cfg(test)]
     pub(crate) fn finish_cleanup_for_test(
         &self,
@@ -213,4 +229,38 @@ impl RemoteImportRuntime {
         self.artifacts.remove_session_after_inventory(session_id)?;
         self.store.finish_cleanup(discarded.session_id)
     }
+}
+
+pub(crate) fn pending_projection_repo_ids(repo: &RepoManager) -> RemoteImportResult<Vec<RepoId>> {
+    let mut pending = Vec::new();
+    for execution_name in repo
+        .list_local_repo_names_for_execution()
+        .map_err(RemoteImportError::storage)?
+    {
+        let handle = repo
+            .open_database(None, &execution_name)
+            .map_err(RemoteImportError::storage)?;
+        let repo_id = handle.repo_id.ok_or_else(|| {
+            RemoteImportError::Storage(format!(
+                "Remote Import local repo {execution_name} has no RepoId"
+            ))
+        })?;
+        if handle.readonly {
+            return Err(RemoteImportError::Storage(format!(
+                "Remote Import projection recovery opened local repo {execution_name} read-only"
+            )));
+        }
+        let store = RemoteImportStore::open_read_only(handle.db, repo_id)?;
+        if store.list_sessions()?.iter().any(|record| {
+            record.state == RemoteImportState::Applied
+                && record.apply_receipt.as_ref().is_some_and(|receipt| {
+                    receipt.projection_outcome == RemoteImportProjectionOutcome::Pending
+                })
+        }) {
+            pending.push(repo_id);
+        }
+    }
+    pending.sort();
+    pending.dedup();
+    Ok(pending)
 }

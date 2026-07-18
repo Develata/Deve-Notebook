@@ -23,7 +23,7 @@ pub(crate) use error::{RemoteImportError, RemoteImportResult};
 #[allow(unused_imports)]
 pub(crate) use repair::{RemoteImportRepairFinding, RemoteImportRepairReport};
 #[allow(unused_imports)]
-pub(crate) use runtime::{RemoteImportCapture, RemoteImportRuntime};
+pub(crate) use runtime::{RemoteImportCapture, RemoteImportRuntime, pending_projection_repo_ids};
 #[allow(unused_imports)]
 pub(crate) use types::{
     RemoteImportApplyReceipt, RemoteImportApplyRequest, RemoteImportBaseline, RemoteImportBlocker,

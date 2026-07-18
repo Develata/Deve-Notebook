@@ -1,7 +1,7 @@
 use crate::codec;
 use crate::ledger::schema::{
-    REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS, REPO_INFO_METADATA_KEY,
-    REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    PROJECTION_FAULTS, REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS,
+    REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
 use crate::ledger::{RepoInfo, RepoManager};
 use tempfile::TempDir;
@@ -21,6 +21,7 @@ fn redb_schema_version_written_on_repo_init() -> anyhow::Result<()> {
 
     assert_eq!(version, REDB_SCHEMA_VERSION);
     assert_eq!(version, 4);
+    read.open_table(PROJECTION_FAULTS)?;
     Ok(())
 }
 
@@ -71,6 +72,10 @@ fn redb_v3_repo_fails_closed_without_rewriting_or_creating_v4_tables() -> anyhow
         read.open_table(REMOTE_IMPORT_RUNTIME),
         Err(redb::TableError::TableDoesNotExist(_))
     ));
+    assert!(matches!(
+        read.open_table(PROJECTION_FAULTS),
+        Err(redb::TableError::TableDoesNotExist(_))
+    ));
     Ok(())
 }
 
@@ -101,6 +106,31 @@ fn shadow_v4_uses_uuid_stem_without_local_remote_import_tables() -> anyhow::Resu
     ));
     assert!(matches!(
         read.open_table(REMOTE_IMPORT_RUNTIME),
+        Err(redb::TableError::TableDoesNotExist(_))
+    ));
+    assert!(matches!(
+        read.open_table(PROJECTION_FAULTS),
+        Err(redb::TableError::TableDoesNotExist(_))
+    ));
+    Ok(())
+}
+
+#[test]
+fn local_v4_missing_projection_fault_table_fails_closed_without_repair() -> anyhow::Result<()> {
+    let dir = TempDir::new()?;
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
+    let handle = repo.open_database(None, repo.local_repo_name())?;
+    let write = handle.db.begin_write()?;
+    write.delete_table(PROJECTION_FAULTS)?;
+    write.commit()?;
+
+    let error = RepoManager::validate_local_repo_schema(handle.db.as_ref())
+        .expect_err("incomplete v4 local profile must fail closed");
+    assert!(error.to_string().contains("projection_faults"));
+    let read = handle.db.begin_read()?;
+    assert!(matches!(
+        read.open_table(PROJECTION_FAULTS),
         Err(redb::TableError::TableDoesNotExist(_))
     ));
     Ok(())

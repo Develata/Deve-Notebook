@@ -5,6 +5,7 @@
 use super::decode_session;
 use crate::models::RepoId;
 use crate::remote_import::error::{RemoteImportError, RemoteImportResult};
+use crate::remote_import::types::RemoteImportProjectionOutcome;
 use redb::ReadableTable;
 
 pub(in crate::remote_import) const TERMINAL_RETENTION: usize = 64;
@@ -22,7 +23,13 @@ pub(super) fn prune_terminal_records(
         })
         .collect::<RemoteImportResult<Vec<_>>>()?
         .into_iter()
-        .filter(|record| record.state.is_terminal() && !record.cleanup_pending)
+        .filter(|record| {
+            record.state.is_terminal()
+                && !record.cleanup_pending
+                && record.apply_receipt.as_ref().is_none_or(|receipt| {
+                    receipt.projection_outcome != RemoteImportProjectionOutcome::Pending
+                })
+        })
         .collect::<Vec<_>>();
     eligible.sort_by_key(|record| std::cmp::Reverse(record.order));
     for record in eligible.into_iter().skip(TERMINAL_RETENTION) {

@@ -149,6 +149,7 @@
     - release_assert: legacy_binary_codec_dependency_absent true
     - release_assert: first_tag_format_matrix_bound_to_plan_and_code true
     - release_assert: first_tag_target_current_drift_blocks_tag true
+    - release_assert: redb_v4_local_profile_includes_projection_faults true
     - release_assert: validation_script_ownership_policy_classified true
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true

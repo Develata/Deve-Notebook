@@ -50,6 +50,9 @@
 ### 9.3 Catalog / Runtime Repair
 
 - 允许修复 local/remote repo catalog、runtime tables、source control side tables。
+- Projection repair/rebuild 成功后只能通过
+  `03_storage/projection#durable-projection-fault-contract` 的 typed store API 清除对应
+  repo-local pending fault；不得删除 host-wide 文件、直接改 Remote Import receipt 或从路径猜测归属。
 - repair 不得伪造 authority history。
 
 ### 9.4 Backup / Export {#backup-export}

@@ -46,6 +46,9 @@
 - `/api/node/role` 可以公开 `healthy / transitioning / degraded / unknown` 的 aggregate workspace ingestion health，以及 expected/running/unavailable 数量。
 - aggregate 不显示 repo 名、RepoId、路径、generation 或失败原因；具体失败详情只用于 operator logs。
 - 依赖当前 workspace 状态的 editor、Docs、External Changes、Source Control、merge、Remote Import Apply 与 plugin writer，在当前 repo 未 mounted 时统一返回本地化的“工作区变更暂时不可用”；Remote Import Prepare/Review 不写 workspace，不受 mount gate 阻断。
+- Ledger 已提交但 Projection/workspace writeback 失败时，该 repo 跨重启保持
+  `DegradedProjection`；只有后端完成精确 repair 并清除 active fault 后才恢复。
+  历史 Remote Import `Degraded` receipt 不会因后续 repair 被改写为 `Written`。
 - 纯读、Ledger inspect/export、remote shadow ingest 与 offline repair/export/diagnostic 不受该 blocker 影响。
 - 前端只渲染后端 typed code 与 aggregate health，不解析自然语言 detail，也不自行判断何时重启或恢复写权限。
 

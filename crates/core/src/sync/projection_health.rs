@@ -6,8 +6,10 @@
 use std::collections::HashSet;
 use std::sync::RwLock;
 
+use crate::models::RepoId;
+
 pub(super) struct ProjectionHealth {
-    degraded_repos: RwLock<HashSet<String>>,
+    degraded_repos: RwLock<HashSet<RepoId>>,
 }
 
 impl ProjectionHealth {
@@ -17,50 +19,46 @@ impl ProjectionHealth {
         }
     }
 
-    pub(super) fn replace_degraded(&self, repo_names: &[String]) {
+    pub(super) fn replace_degraded(&self, repo_ids: &[RepoId]) {
         match self.degraded_repos.write() {
             Ok(mut repos) => {
-                *repos = repo_names.iter().map(|name| normalize(name)).collect();
+                *repos = repo_ids.iter().copied().collect();
             }
             Err(err) => tracing::error!("Failed to update degraded repo set: {}", err),
         }
     }
 
-    pub(super) fn mark_degraded(&self, repo_name: &str) {
+    pub(super) fn mark_degraded(&self, repo_id: RepoId) {
         match self.degraded_repos.write() {
             Ok(mut repos) => {
-                repos.insert(normalize(repo_name));
+                repos.insert(repo_id);
             }
             Err(err) => tracing::error!("Failed to mark degraded repo: {}", err),
         }
     }
 
-    pub(super) fn clear_degraded(&self, repo_name: &str) {
+    pub(super) fn clear_degraded(&self, repo_id: RepoId) {
         match self.degraded_repos.write() {
             Ok(mut repos) => {
-                repos.remove(normalize(repo_name).as_str());
+                repos.remove(&repo_id);
             }
             Err(err) => tracing::error!("Failed to clear degraded repo: {}", err),
         }
     }
 
-    pub(super) fn is_degraded(&self, repo_name: &str) -> bool {
+    pub(super) fn is_degraded(&self, repo_id: RepoId) -> bool {
         self.degraded_repos
             .read()
-            .map(|repos| repos.contains(normalize(repo_name).as_str()))
+            .map(|repos| repos.contains(&repo_id))
             .unwrap_or(true)
     }
 
-    pub(super) fn degraded_snapshot(&self) -> Result<HashSet<String>, String> {
+    pub(super) fn degraded_snapshot(&self) -> Result<HashSet<RepoId>, String> {
         self.degraded_repos
             .read()
             .map(|repos| repos.clone())
             .map_err(|error| error.to_string())
     }
-}
-
-fn normalize(repo_name: &str) -> String {
-    repo_name.to_string()
 }
 
 #[cfg(test)]
@@ -70,10 +68,11 @@ mod tests {
     #[test]
     fn degraded_snapshot_is_single_lock_and_reports_poison() {
         let health = ProjectionHealth::new();
-        health.mark_degraded("repo-a");
+        let repo_id = uuid::Uuid::new_v4();
+        health.mark_degraded(repo_id);
         assert_eq!(
             health.degraded_snapshot().expect("health snapshot"),
-            std::collections::HashSet::from(["repo-a".to_string()])
+            std::collections::HashSet::from([repo_id])
         );
 
         let lock = &health.degraded_repos;

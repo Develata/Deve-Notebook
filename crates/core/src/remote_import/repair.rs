@@ -7,7 +7,10 @@ use super::artifact::{
 };
 use super::error::RemoteImportResult;
 use super::store::{RemoteImportStore, retention::TERMINAL_RETENTION};
-use super::types::{RemoteImportFailureKind, RemoteImportSessionId, RemoteImportSessionRecord};
+use super::types::{
+    RemoteImportFailureKind, RemoteImportProjectionOutcome, RemoteImportSessionId,
+    RemoteImportSessionRecord,
+};
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,7 +99,13 @@ pub(super) fn dry_run_repair(
     }
     let eligible = records
         .iter()
-        .filter(|record| record.state.is_terminal() && !record.cleanup_pending)
+        .filter(|record| {
+            record.state.is_terminal()
+                && !record.cleanup_pending
+                && record.apply_receipt.as_ref().is_none_or(|receipt| {
+                    receipt.projection_outcome != RemoteImportProjectionOutcome::Pending
+                })
+        })
         .count();
     if eligible > TERMINAL_RETENTION {
         findings.push(RemoteImportRepairFinding::RetentionDebt {

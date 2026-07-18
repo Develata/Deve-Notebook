@@ -80,7 +80,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: typed Remote Import review and blocker producer is not implemented yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: Mounted product admission, post-commit Projection outcome CAS, and browser receipt producer are not implemented yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: Mounted product admission, post-commit materialization/startup recovery orchestration, and browser receipt producer are not implemented yet
 contains	crates/core/src/ledger/manager/prepared_change_batch/remote_import.rs	fn commit_remote_import(
 contains	crates/core/src/remote_import/tests/apply.rs	fn whole_session_failure_rolls_back_an_already_appended_prefix()
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_cleanup_completion()
@@ -220,8 +220,14 @@ contains	apps/cli/src/server/handlers/document/edit_apply.rs	MutationExecution::
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	emit_write_confirmation(
 contains	apps/cli/src/server/handlers/document/write_confirmation.rs	Ok(MutationExecution::ProjectionDegraded {
 contains	apps/cli/src/server/handlers/document/write_confirmation.rs	ch.send_protocol_error_with_scope_nonce(error, Some(scope_nonce));
-contains	crates/core/src/sync/projection_fault_journal.rs	struct DurableProjectionFault
+contains	crates/core/src/projection_fault/types.rs	struct DurableProjectionFault
+contains	crates/core/src/ledger/schema.rs	PROJECTION_FAULTS
+absent	crates/core/src/projection_fault/mod.rs	projection-faults.toml
 contains	crates/core/tests/durable_projection_fault_test.rs	fn durable_projection_fault_survives_sync_manager_restart()
+contains	docs/plan/03_storage/authority.md	### 4.3.3 Projection Fault Recovery Table {#projection-fault-recovery-table}
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-015	durable_projection_fault_survives_restart_and_clears_only_after_repair true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	remote_import_fault_and_degraded_receipt_share_one_transaction true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	failed_projection_settlement_keeps_pending_without_fault true
 contains	crates/core/tests/remote_repo_catalog_missing_test.rs	fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()
 contains	crates/core/tests/repo_catalog_entry_fail_closed_test.rs	fn remote_repo_listing_fails_closed_on_unexpected_non_redb_entry()
 contains	apps/cli/src/commands/repair/shadow.rs	fn quarantines_nil_shadow_repo_into_invalid_peer_dir()

@@ -137,8 +137,10 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `05_diff_logic#remote-projection-transport` | `### 2.3.2 Remote Projection Transport Contract` | 过渡锚点：当前 push/pull 实现与批准 Route B transport 边界；保留既有代码反向覆盖 |
 | `03_storage/index#remote-import-runtime-layout` | `index.md ### 3.1.1 Remote Import Runtime Layout` | Remote Import host-only manifest/blob/candidate 布局；B1 artifact runtime 已落地 |
 | `03_storage/authority#remote-import-workflow-tables` | `authority.md ### 4.3.2 Remote Import Workflow Tables` | Redb v4 session/runtime tables、active pointer 与 terminal retention；B1 durable store 已落地 |
+| `03_storage/authority#projection-fault-recovery-table` | `authority.md ### 4.3.3 Projection Fault Recovery Table` | Redb v4 local-authority profile 的 repo-local、host-only Projection Fault side table |
 | `03_storage/authority#sealed-ledger-change-batch` | `authority.md ### 6.3.1 Sealed Prepared Ledger Change Batch` | source-specific sealed batch 与单事务 authority apply |
 | `03_storage/projection#remote-import-projection-writeback` | `projection.md ### 7.1 Remote Import Projection Writeback` | Ledger commit 后的 projection writeback 与 degraded receipt；planned/no-code-yet |
+| `03_storage/projection#durable-projection-fault-contract` | `projection.md ### 7.2 Durable Projection Fault Store` | repo-local Redb v4 Projection Fault recovery evidence、typed origin 与 Remote Import receipt 原子收敛 |
 | `03_storage/repair#remote-import-cleanup-repair` | `repair.md ### 9.4.1 Remote Import Cleanup Repair` | cleanup_pending、orphan 与 repair；B1 dry-run inventory 已落地，B3 已持久化 Applied cleanup debt，产品 repair/收敛待 B4 |
 | `04_repository#remote-import-repo-lifecycle` | `### 7.6.1 Remote Import Repo Lifecycle` | RepoId 绑定、rename/remove 与 provider generation 协调；planned/no-code-yet |
 | `05_diff_logic#remote-import-diff-contract` | `### 2.3.3 Remote Import Diff Contract` | immutable candidate、opaque entry_id 与 backend-owned diff；planned/no-code-yet |

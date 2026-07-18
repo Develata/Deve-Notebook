@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -421,14 +421,14 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个公开基线保持 `LEDGER_ENTRY_FORMAT_VERSION = 3` / `DEVELDG3`，Redb schema 冻结为 v4（含 Remote Import session/runtime tables），首个 WS epoch 为 `DEVEWSF4` / v3 lockstep。F4/v1/v2、无版本 JSON 与 Redb v3 都是未发布开发状态，不提供 adapter、dual write 或 runtime migration。Redb v2 仍只保留 `--allow-legacy-v2` 离线只读导出；v3 开发 DB 必须用旧 HEAD 导出后重建，不能借用 v2 救援入口。Remote Import manifest JSON v1 是 host-only capture contract，不是 Ledger payload 或同步事实格式。
+> 首个公开基线保持 `LEDGER_ENTRY_FORMAT_VERSION = 3` / `DEVELDG3`，Redb schema 冻结为 v4（local-authority profile 含 Remote Import session/runtime tables 与 repo-local `PROJECTION_FAULTS`；remote shadow 不含这些 host-only tables），首个 WS epoch 为 `DEVEWSF4` / v3 lockstep。F4/v1/v2、无版本 JSON、Redb v3 与缺 required table 的未发布 v4 开发 DB 都不提供 adapter、dual write 或 runtime migration。Redb v2 仍只保留 `--allow-legacy-v2` 离线只读导出；旧开发 DB 必须用对应旧 HEAD 导出后重建，不能借用 v2 救援入口。Remote Import manifest JSON v1 是 host-only capture contract，不是 Ledger payload 或同步事实格式。
 
 ### 3.1 First-tag Format Transition {#first-tag-format-transition}
 
 | Surface | Approved target | Current implementation | Activation | Tag posture |
 |---|---|---|---|---|
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
-| Redb authority schema | v4 + Remote Import tables | v3 | B1 | blocked |
+| Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；B4 Pending rematerialization 是 runtime gate，不是 schema drift | B1 + ADR 0012 | non-blocking |
 | WebSocket | `DEVEWSF4`, lockstep v3 | lockstep v2 + legacy JSON fallback | B4 | blocked |
 | Remote ingest | immutable whole-session Remote Import | pull → workspace overwrite → External Changes | B4/B5/B6 | blocked |
 

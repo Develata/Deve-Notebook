@@ -3,6 +3,7 @@
 //!   - 06_backup#remote-import-session-contract
 
 mod admission;
+mod projection_outcome;
 mod replay;
 
 use super::Fixture;

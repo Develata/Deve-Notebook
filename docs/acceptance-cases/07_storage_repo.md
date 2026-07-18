@@ -337,6 +337,9 @@
     - cli_assert: ack_sent_for_committed_ledger_edit true
     - cli_assert: writeback_failure_reported_as_protocol_error true
     - cli_assert: committed_client_op_index_persisted true
+    - core_assert: durable_projection_fault_is_repo_local_redb_v4_side_table true
+    - core_assert: host_wide_projection_fault_toml_is_absent true
+    - core_assert: durable_projection_fault_survives_restart_and_clears_only_after_repair true
 
 - case_id: STORE-016
   goal: Watcher bounded capture、level-triggered reconcile、overflow 与 debounce 边界。
@@ -432,10 +435,10 @@
   goal: Remote Import Apply 以 whole-session sealed transaction exactly-once 写 Ledger，提交后才 writeback Projection。
   preconditions:
     - Ready session 无 blocker，repo health healthy 且 watcher Mounted
-    - B3 crate-internal sealed writer 已存在；B4 尚未接入 Mounted product gate、current locator/ignore producer 与 post-commit writeback
+    - B3 crate-internal sealed writer 与 ADR 0012 core settlement 已存在；B4 尚未接入 Mounted product gate、current locator/ignore producer、post-commit materialization/startup recovery orchestration
   steps:
     - run: cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
-    - gap: Mounted product admission, post-commit Projection outcome CAS, and browser receipt producer are not implemented yet
+    - gap: Mounted product admission, post-commit materialization/startup recovery orchestration, and browser receipt producer are not implemented yet
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
@@ -444,6 +447,10 @@
     - api_assert: remote_import_apply_tamper_transitions_to_failed_repair true
     - api_assert: remote_import_apply_pending_projection_outcome_recovers_without_reappend true
     - api_assert: remote_import_writeback_failure_does_not_roll_back_ledger true
+    - api_assert: remote_import_fault_origin_binds_session_revision_and_request true
+    - api_assert: remote_import_fault_and_degraded_receipt_share_one_transaction true
+    - api_assert: failed_projection_settlement_keeps_pending_without_fault true
+    - api_assert: projection_settlement_retry_does_not_reappend_ledger true
 
 - case_id: STORE-022
   goal: Remote Projection transport 的 push/source acquisition 只允许显式 S3-compatible profile binding；未绑定或不匹配时 fail-closed。

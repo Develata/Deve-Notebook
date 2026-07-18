@@ -22,10 +22,10 @@
 
 1. Server exact revalidate session、head、digests、writer、locator/ignore 与 overlap。
 2. 一个 transaction提交全部 facts/indexes、Applied receipt immutable core + projection outcome Pending、clear active 与 cleanup_pending。
-3. transaction 后幂等执行 Projection writeback；第二个短 Redb transaction 把 outcome CAS 为 Written，或与 durable projection fault 一起 CAS 为 Degraded。崩溃/重试从 Pending 恢复，不再 append。
+3. transaction 后幂等执行 Projection writeback；第二个短 Redb transaction 把 outcome CAS 为 Written，或与同 repo Redb v4 `PROJECTION_FAULTS` typed evidence 一起 CAS 为 Degraded。崩溃/重试从 Pending 恢复，不再 append。
 
 ## Notes
 
-- B3 已实现 source-specific sealed constructor、whole-session Redb transaction、stored Pending receipt，以及不受 cleanup debt、后续 active session或 Projection outcome CAS 影响的 exactly-once replay；尚未接入 Mounted product gate、current locator/ignore producer、post-commit Projection writeback 和 browser producer，因此 STORE-021 仍是 first-tag `remote-import` journey 的真实 gap。
+- B3 已实现 source-specific sealed constructor、whole-session Redb transaction、stored Pending receipt，以及不受 cleanup debt、后续 active session或 Projection outcome CAS 影响的 exactly-once replay；ADR 0012 的 repo-local fault + receipt 原子 settlement primitive 与 startup Pending health gate 已落地。尚未接入 Mounted product gate、current locator/ignore producer、Ledger-to-Projection rematerialization/startup recovery orchestration和 browser producer，因此 STORE-021 仍是 first-tag `remote-import` journey 的真实 gap。
 - 响应丢失后，相同请求返回 stored receipt，不重复 append。
 - Pending response 必须明确表示 Ledger 已提交且 Projection recovery 未完成，不能伪装成未提交。

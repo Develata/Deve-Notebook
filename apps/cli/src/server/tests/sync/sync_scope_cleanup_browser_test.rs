@@ -117,7 +117,7 @@ fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Re
     let (_dir, state, repo_id) = build_state()?;
     state
         .sync_manager
-        .mark_projection_writeback_fault(state.repo.local_repo_name());
+        .mark_projection_writeback_fault(state.repo.local_repo_name())?;
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = browser_session_without_sync_scope(&state, repo_id, 37)?;
     let auth_session_id = AuthSessionId::for_test("degraded-writer-registration");

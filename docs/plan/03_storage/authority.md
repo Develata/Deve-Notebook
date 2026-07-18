@@ -119,6 +119,9 @@
     - value: ledger head, commit meta, affected docs/nodes
   - `projection_runtime`
     - value: last_projection_seq, last_projection_hash, degraded flag, repair marker
+  - `projection_faults`
+    - key: project-owned fault id
+    - value: versioned repo-local recovery evidence、typed origin、Ledger head/range 与 retry state
   - `watcher_runtime`
     - value: suppressor fingerprints, overflow marker, last_full_scan_at
 - 这些 side tables **MUST** 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
@@ -165,6 +168,14 @@ REMOTE_IMPORT_RUNTIME: TableDefinition<u8, &[u8]>
 - filesystem manifest/blob names、mtime、目录存在性或 provider metadata不得
   反推 Redb session state。digest mismatch、orphan 或 incomplete publication
   只能进入 typed Failed/repair。
+
+### 4.3.3 Projection Fault Recovery Table {#projection-fault-recovery-table}
+
+Redb v4 local-authority profile 还必须包含
+`PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]>`。该表不是 Remote Import
+workflow table，也不是 Ledger authority；它只保存 repo-local、host-only 的
+Projection recovery evidence，唯一 mutation contract 归
+`03_storage/projection#durable-projection-fault-contract`。Remote shadow 不创建或消费该表。
 
 ### 4.4 Snapshot Storage Contract
 
@@ -383,14 +394,16 @@ projection outcome=`Pending` 的 `RemoteImportApplyReceipt`、active pointer cle
 projection outcome 尚未持久化。事务提交后，projection runtime 从 Ledger facts 幂等 writeback：
 
 - writeback 成功后，以第二个短 Redb transaction 把 receipt outcome 从 `Pending` CAS 为 `Written`；
-- writeback 失败时，以第二个短 Redb transaction 原子写既有 durable projection fault evidence，
-  并把 outcome 从 `Pending` CAS 为 `Degraded`；
+- writeback 失败时，由 Remote Import post-commit coordinator 开启第二个短 Redb
+  transaction，通过 projection runtime 的窄化 typed API 写入 repo-local
+  `PROJECTION_FAULTS` evidence，并由 Remote Import 自有 store API 把 outcome 从
+  `Pending` CAS 为 `Degraded`；
 - 进程在任一时点退出或第二个 transaction 失败时，receipt 保持 `Pending`。启动恢复或相同
   request 重试必须识别 immutable authority core，重放幂等 projection writeback 并继续上述 CAS，
   绝不能重新 append Ledger facts。若 filesystem writeback 已成功但 outcome 尚未更新，重复
   materialization 也必须安全。
 
-第二个 transaction 只更新 workflow receipt outcome 与既有 projection fault journal，不包含或补写
+第二个 transaction 只更新 workflow receipt outcome 与 repo-local `PROJECTION_FAULTS` side table，不包含或补写
 任何 Content/Structure Fact、identity/index 或 active-session authority；因此 whole-session Ledger
 transaction 仍是唯一且不可拆分的事实提交边界。
 

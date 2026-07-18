@@ -6,6 +6,7 @@
 //! Source-specific immutable input and workflow-table half of Remote Import Apply.
 //! Ledger facts remain exclusively owned by the sealed writer.
 
+mod projection_outcome;
 mod transaction;
 
 use super::artifact::VerifiedRemoteImportEntry;
@@ -16,6 +17,11 @@ use super::types::{
 };
 use crate::models::{GlobalSeq, PeerId, RepoId};
 
+#[cfg(test)]
+pub(in crate::remote_import) use projection_outcome::settle_degraded_without_commit_for_test;
+pub(in crate::remote_import) use projection_outcome::{
+    settle_projection_degraded, settle_projection_written,
+};
 pub(crate) use transaction::{RemoteImportTxnAdmission, admit_in_txn, mark_applied_in_txn};
 
 pub(crate) struct PreparedRemoteImportApply {

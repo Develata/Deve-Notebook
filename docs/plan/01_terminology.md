@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -116,6 +116,9 @@
 *   **Remote Import Apply Receipt (远端导入应用回执)**：whole-session Ledger transaction 的 durable exactly-once 结果。
     *   不存在 receipt 表示事务未提交；存在 receipt 的 immutable authority core 证明 Ledger 已提交。其 projection outcome 只能从 `Pending` 单调收敛为 `Written` 或 `Degraded`，不得回到未提交或触发新的事实批次。
     *   `Pending` 覆盖 Ledger commit 后到 writeback outcome 持久化前的崩溃窗口；启动恢复或相同 request 重试必须从 Ledger 事实幂等恢复 writeback，再 CAS 更新 outcome。
+*   **Durable Projection Fault (持久投影故障)**：repo-local Redb v4 side table 中的 host-local recovery evidence，记录 authority 已提交但 projection/workspace 物理副作用未完成或完成状态未知。
+    *   它不是 Ledger Fact、不得同步，也不允许新增、撤销或改写业务事实；唯一 mutation boundary 归 `03_storage/projection#durable-projection-fault-contract`。
+    *   Remote Import writeback failure 的 typed fault 与对应 receipt `Pending -> Degraded` 必须在同一个短 Redb transaction 提交；watcher failure 与 Remote Import pre-commit/session/cleanup 状态不得写入该表。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。
     *   所有 Peer 在协议层完全对等，拥有全量或子集 Ledger 副本。
     *   `PeerId` 是由宿主 identity 公钥派生的物理节点身份；UI session、browser writer、plugin、merge、repair 等 actor 标签不得充当 `PeerId`。

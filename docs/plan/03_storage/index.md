@@ -73,6 +73,12 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/.host/projection-locators.toml`
 - `ledger/backups/<repo_id>-<timestamp>.redb`
 
+每个 local-authority Redb v4 database 内还包含 host-local、非同步的
+`projection_faults` recovery side table。它与 Remote Import workflow rows 共处同一
+repo database 只是为了获得短事务原子性，不把 Projection Fault 升格为 Ledger Fact 或第四个
+authority store；唯一 mutation contract 见
+[projection.md#durable-projection-fault-contract](./projection.md#durable-projection-fault-contract)。
+
 Physical filenames use UUID identity. `RepoNameBinding.repo_name` is a display
 alias and selector hint; it never determines a database filename. The canonical
 execution stem is the matching lowercase `<repo_id>` string. Before a Projection

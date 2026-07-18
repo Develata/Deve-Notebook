@@ -216,6 +216,7 @@ fn init_core_tables(db: &Database) -> Result<()> {
         let _ = write_txn.open_table(SNAPSHOT_DATA)?;
         let _ = write_txn.open_table(REMOTE_IMPORT_SESSIONS)?;
         let _ = write_txn.open_table(REMOTE_IMPORT_RUNTIME)?;
+        let _ = write_txn.open_table(PROJECTION_FAULTS)?;
     }
     write_txn.commit()?;
     Ok(())

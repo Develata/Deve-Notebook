@@ -56,3 +56,4 @@ blueprint in `docs/plan/`.
 | [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Superseded by 0011 |
 | [0010](./0010-sealed-pre-tag-release-candidate.md) | Sealed pre-tag release candidate promotion | Accepted |
 | [0011](./0011-immutable-ledger-first-remote-import.md) | Immutable ledger-first Remote Import | Accepted |
+| [0012](./0012-repo-local-redb-projection-fault-store.md) | Repo-local Redb Projection Fault store | Accepted |

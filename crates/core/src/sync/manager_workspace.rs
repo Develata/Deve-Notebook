@@ -36,12 +36,16 @@ impl SyncManager {
         match projection_io::persist_doc(self, repo_name, doc_id) {
             Ok(()) => Ok(()),
             Err(err) => {
-                self.mark_projection_writeback_fault_for_doc(
+                if let Err(fault_error) = self.mark_projection_writeback_fault_for_doc(
                     repo_name,
                     doc_id,
                     target_path.as_deref(),
                     &err,
-                );
+                ) {
+                    return Err(err.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
+                }
                 Err(err)
             }
         }
@@ -75,12 +79,16 @@ impl SyncManager {
         ) {
             Ok(()) => Ok(()),
             Err(error) => {
-                self.mark_projection_writeback_fault_for_doc(
+                if let Err(fault_error) = self.mark_projection_writeback_fault_for_doc(
                     repo_name,
                     doc_id,
                     Some(&target_path),
                     &error,
-                );
+                ) {
+                    return Err(error.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
+                }
                 Err(error)
             }
         }
@@ -90,7 +98,13 @@ impl SyncManager {
         match projection_io::remove_projection_path(self, repo_name, path) {
             Ok(()) => Ok(()),
             Err(err) => {
-                self.mark_projection_writeback_fault_for_path(repo_name, path, &err);
+                if let Err(fault_error) =
+                    self.mark_projection_writeback_fault_for_path(repo_name, path, &err)
+                {
+                    return Err(err.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
+                }
                 Err(err)
             }
         }

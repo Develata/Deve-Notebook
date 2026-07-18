@@ -88,7 +88,13 @@ RepoNameBinding = {
 - `Healthy` 是正常 mounted write path 的必要条件，但不是充分条件；还必须同时满足 `RepoMountState::Mounted`。
 - `Degraded*` 允许受控只读或 fallback 行为，但必须显式暴露给 runtime。
 - `Quarantined` 表示该 repo 不再参与正常 scope 恢复、自动切换和默认列表绑定。
-- `RepoMountState` 是 `03_storage/watcher#watcher-contract` 定义的 process-local readiness。watcher `Failed` 不得写入 projection fault journal、不得转换为 `DegradedProjection`，也不得改变 Ledger-derived health facts。
+- `RepoMountState` 是 `03_storage/watcher#watcher-contract` 定义的 process-local readiness。watcher `Failed` 不得写入 repo-local Projection Fault store、不得转换为 `DegradedProjection`，也不得改变 Ledger-derived health facts。
+- 任一 active repo-local `PROJECTION_FAULTS` row，或仍需幂等收敛的 Remote Import
+  Applied/Pending receipt，都使该 repo 进入 `DegradedProjection`；缺 fault 但存在
+  Pending receipt 时不得误报 `Healthy`。
+- repair/rebuild 必须先进入 `Repairing`，按 exact `RepoId`/locator/workspace marker
+  重新验证并完成 materialization，再清除对应 active fault，最后才能回到 `Healthy`。
+  单 repo 的 fault、Pending recovery 或 repair 失败不得改变其它 repo 的 health。
 
 在线可写条件固定为：
 

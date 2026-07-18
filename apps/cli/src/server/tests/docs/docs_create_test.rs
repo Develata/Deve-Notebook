@@ -48,7 +48,7 @@ async fn create_doc_rejects_degraded_local_projection_before_mutation() -> anyho
     let h = docs_harness()?;
     h.state
         .sync_manager
-        .mark_projection_writeback_fault(h.state.repo.local_repo_name());
+        .mark_projection_writeback_fault(h.state.repo.local_repo_name())?;
     let (ch, mut rx) = channel(&h.state);
     let mut session = browser_session(&h.state, h.repo_id, 29);
 

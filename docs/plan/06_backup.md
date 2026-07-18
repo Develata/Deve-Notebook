@@ -167,7 +167,7 @@ Discard:  Ready | Stale | Failed -> Discarded
 - review 必须绑定 exact `(repo_id, branch, scope_nonce, session_id, revision)`。Diff 只接受 opaque strong `entry_id`，返回 backend display label 与 typed diff/blocker。
 - 任一 blocker 禁用整个 session Apply。pending/staged overlap、head/branch/locator/ignore drift、tamper 与 membership mismatch 均由 backend 判定。
 - Apply 必须满足 `RepoHealth::Healthy && RepoMountState::Mounted`，并进入 `03_storage/authority.md#sealed-ledger-change-batch` 的 whole-session transaction。
-- transaction 精确复核 repo/schema/head、active session/revision、manifest/blob digests、writer identity、branch、locator/ignore snapshot、pending/staged overlap 与 RepoId membership；随后原子写全部 upsert facts/indexes、Applied receipt immutable core + projection outcome=`Pending`、clear active pointer 与 `cleanup_pending=true`。post-commit writeback 后用第二个短 Redb transaction 把 outcome CAS 为 `Written`，或与 durable projection fault evidence 一起原子 CAS 为 `Degraded`。
+- transaction 精确复核 repo/schema/head、active session/revision、manifest/blob digests、writer identity、branch、locator/ignore snapshot、pending/staged overlap 与 RepoId membership；随后原子写全部 upsert facts/indexes、Applied receipt immutable core + projection outcome=`Pending`、clear active pointer 与 `cleanup_pending=true`。post-commit writeback 后用第二个短 Redb transaction 把 outcome CAS 为 `Written`，或通过 `03_storage/projection#durable-projection-fault-contract` 与 repo-local `PROJECTION_FAULTS` evidence 一起原子 CAS 为 `Degraded`。
 - Remote Import 只产生 upsert facts。远端未出现的本地文件不删除；不得拆分 whole-session transaction。
 
 ## 6. Commands / Inputs / Outputs {#projection-backup-command-output-contract}

@@ -1,24 +1,29 @@
 //! plan_ref:
 //!   - 03_storage/projection#projection-contract
+//!   - 03_storage/projection#durable-projection-fault-contract
 //!   - 04_repository#tree-projection-contract
 
-use super::{PreparedLocalRepoMaterialization, SyncManager, materialize, projection_fault_journal};
+use super::{PreparedLocalRepoMaterialization, SyncManager, materialize};
 use anyhow::Result;
 
 impl SyncManager {
     /// Pre-condition: `repo_name` 必须已解析为真实本地 repo 名称。
     pub fn materialize_local_repo(&self, repo_name: &str) -> Result<()> {
         match materialize::materialize_local_repo(&self.repo, &self.persist_guard, repo_name) {
-            Ok(()) => {
-                projection_fault_journal::clear_faults_for_repo(&self.repo, repo_name)?;
-                self.clear_projection_degraded(repo_name);
-                Ok(())
-            }
+            Ok(()) => Ok(()),
             Err(err) => {
                 if materialize::is_broken_structure_projection_error(&err) {
-                    self.mark_projection_degraded(repo_name);
-                } else {
-                    self.mark_projection_writeback_fault_for_path(repo_name, "", &err);
+                    if let Err(fault_error) = self.mark_projection_rebuild_fault(repo_name, &err) {
+                        return Err(err.context(format!(
+                            "failed to persist Projection Fault evidence: {fault_error}"
+                        )));
+                    }
+                } else if let Err(fault_error) =
+                    self.mark_projection_writeback_fault_for_path(repo_name, "", &err)
+                {
+                    return Err(err.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
                 }
                 Err(err)
             }
@@ -33,7 +38,11 @@ impl SyncManager {
         match materialize::prepare_local_repo_materialization(&self.repo, repo_name) {
             Ok(prepared) => Ok(prepared),
             Err(error) => {
-                self.record_materialization_error(repo_name, &error);
+                if let Err(fault_error) = self.record_materialization_error(repo_name, &error) {
+                    return Err(error.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
+                }
                 Err(error)
             }
         }
@@ -51,23 +60,23 @@ impl SyncManager {
             &self.persist_guard,
             prepared,
         ) {
-            Ok(()) => {
-                projection_fault_journal::clear_faults_for_repo(&self.repo, repo_name)?;
-                self.clear_projection_degraded(repo_name);
-                Ok(())
-            }
+            Ok(()) => Ok(()),
             Err(error) => {
-                self.record_materialization_error(repo_name, &error);
+                if let Err(fault_error) = self.record_materialization_error(repo_name, &error) {
+                    return Err(error.context(format!(
+                        "failed to persist Projection Fault evidence: {fault_error}"
+                    )));
+                }
                 Err(error)
             }
         }
     }
 
-    fn record_materialization_error(&self, repo_name: &str, error: &anyhow::Error) {
+    fn record_materialization_error(&self, repo_name: &str, error: &anyhow::Error) -> Result<()> {
         if materialize::is_broken_structure_projection_error(error) {
-            self.mark_projection_degraded(repo_name);
+            self.mark_projection_rebuild_fault(repo_name, error)
         } else {
-            self.mark_projection_writeback_fault_for_path(repo_name, "", error);
+            self.mark_projection_writeback_fault_for_path(repo_name, "", error)
         }
     }
 }

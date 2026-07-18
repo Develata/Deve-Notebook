@@ -6,8 +6,8 @@ use crate::ledger::RepoManager;
 use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::{
-    REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS, REPO_INFO_METADATA_KEY,
-    REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    PROJECTION_FAULTS, REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS,
+    REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable};
@@ -71,6 +71,7 @@ impl RepoManager {
             read_txn.open_table(REMOTE_IMPORT_RUNTIME),
             "remote_import_runtime",
         )?;
+        require_local_table(read_txn.open_table(PROJECTION_FAULTS), "projection_faults")?;
         Ok(())
     }
 
@@ -164,6 +165,7 @@ fn validate_local_workflow_tables(db: &Database) -> Result<()> {
         read_txn.open_table(REMOTE_IMPORT_RUNTIME),
         "remote_import_runtime",
     )?;
+    require_local_table(read_txn.open_table(PROJECTION_FAULTS), "projection_faults")?;
     Ok(())
 }
 

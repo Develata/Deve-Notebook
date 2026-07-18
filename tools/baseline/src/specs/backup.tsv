@@ -5,6 +5,8 @@ contains	docs/plan/06_backup.md	### 4.1 State Machine {#remote-import-state-mach
 contains	docs/plan/06_backup.md	### 4.2 Resource Contract {#remote-import-resource-contract}
 contains	docs/plan/06_backup.md	## 10. Runtime Boundary {#projection-backup-provider-dispatch-contract} {#remote-import-runtime-boundary}
 contains	docs/plan/06_backup.md	Remote Import 不通过 workspace overwrite、External Changes 或 Source Control staging admission
+contains	docs/plan/06_backup.md	PROJECTION_FAULTS
+contains	docs/adr/0012-repo-local-redb-projection-fault-store.md	Remote Import post-commit coordinator owns the dedicated short Redb
 contains	docs/registry/runtime-skeleton-registry.md	`remote_projection_transport_runtime` | `部分承载`
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_runtime` | `部分承载` | `crates/core/src/remote_import/`
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `未启动` | `未启动`
@@ -20,7 +22,8 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: typed Remote Import review and blocker producer is not implemented yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: Mounted product admission, post-commit Projection outcome CAS, and browser receipt producer are not implemented yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	remote_import_fault_and_degraded_receipt_share_one_transaction true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: Mounted product admission, post-commit materialization/startup recovery orchestration, and browser receipt producer are not implemented yet
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_cleanup_completion()
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn replay_rejects_corrupt_stored_receipt_core()
 contains	crates/core/src/remote_import/tests/apply/admission.rs	fn active_session_pointer_drift_rejects_without_facts()

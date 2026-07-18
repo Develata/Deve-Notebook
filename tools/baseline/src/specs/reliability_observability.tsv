@@ -39,6 +39,9 @@ contains	docs/plan/22_reliability_observability.md	| Projection Locator 缺失 /
 contains	docs/plan/22_reliability_observability.md	| 全部校验通过、authority 与 projection 一致 | `Healthy` |
 contains	docs/plan/22_reliability_observability.md	### 6.2 DurableProjectionFault Boundary
 contains	docs/plan/22_reliability_observability.md	它 **不是** ledger authority，不能新增、撤销或改写业务事实
+contains	docs/plan/22_reliability_observability.md	字段、key、codec、typed origin 与 transaction schema 只由 `03_storage/projection#durable-projection-fault-contract` 定义
+contains	docs/plan/22_reliability_observability.md	验证 Redb v4 required tables
+contains	docs/plan/22_reliability_observability.md	无 fault 但仍有 Pending receipt 时不得发布
 contains	docs/plan/22_reliability_observability.md	## 7. Alerting Tier
 contains	docs/plan/22_reliability_observability.md	| `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`、`STORAGE_DB_LOCKED`、`SYNC_DECRYPT_FAILED`（数据完整性，显式纳入） | 立即 page + 阻断发布 |
 contains	docs/plan/22_reliability_observability.md	| `T2` 警告 | 409 冲突 / 作用域失效；显式列入的 repo-local 可隔离 503 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH`、`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` | 工单 + 观察 Error Budget |

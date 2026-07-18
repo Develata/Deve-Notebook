@@ -4,6 +4,7 @@
 //!   - 03_storage/repair#remote-import-cleanup-repair
 
 mod apply;
+mod retention;
 mod review_regressions;
 
 use super::artifact::{ArtifactCapture, MANIFEST_FILE, RemoteImportArtifactRoot};
@@ -15,7 +16,9 @@ use super::types::{
     RemoteImportBaseline, RemoteImportDigest, RemoteImportFailureKind, RemoteImportPrepareRequest,
     RemoteImportRefreshRequest, RemoteImportState,
 };
-use crate::ledger::schema::{REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS};
+use crate::ledger::schema::{
+    PROJECTION_FAULTS, REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS,
+};
 use crate::ledger::{RepoManager, init::RepoInitOptions};
 use std::collections::BTreeMap;
 use std::io::Cursor;
@@ -104,6 +107,7 @@ fn redb_v4_local_repo_uses_uuid_stem_and_remote_import_tables() -> anyhow::Resul
     let read = fixture.db.begin_read()?;
     read.open_table(REMOTE_IMPORT_SESSIONS)?;
     read.open_table(REMOTE_IMPORT_RUNTIME)?;
+    read.open_table(PROJECTION_FAULTS)?;
     Ok(())
 }
 
