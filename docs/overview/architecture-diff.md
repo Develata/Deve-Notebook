@@ -14,24 +14,23 @@ Keep this block stable. The graph generator reads the drift registry below.
 <!-- modeled-slice:start -->
 - Flow count: `79`
 - Status: `drifted`
-- Active drift count: `5`
+- Active drift count: `4`
 <!-- modeled-slice:end -->
 
 ## Summary
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | drifted | 79 approved flow labels exist on both sides; five Remote Import flows intentionally map current substitutes/missing carriers |
-| User operations | drifted | existing 74 IDs align; Route B target IDs are registered but B1–B5 implementation is incomplete |
+| Flow set | drifted | 79 approved flow labels exist on both sides; four Remote Import flows intentionally map current substitutes/missing carriers |
+| User operations | drifted | existing 74 IDs and Remote Projection push align; four Remote Import target flows remain incomplete |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Remote Projection transport extraction, immutable session, sealed apply and independent client remain scheduled B1–B5 |
+| Coordination/execution mapping | drifted | Shared transport and immutable session are present; product Prepare, sealed apply and independent client remain scheduled B3–B5 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
 
 Use one entry per divergent flow. Labels must match the flow registry.
 <!-- drift-registry:start -->
-- `remote projection push`
 - `remote import prepare`
 - `remote import review`
 - `remote import apply`
@@ -40,11 +39,10 @@ Use one entry per divergent flow. Labels must match the flow registry.
 
 Active drift facts:
 
-1. `remote projection push`: provider/credential/HTTP transport remains inside the CLI command subtree; B2 extracts the shared host adapter without changing push semantics.
-2. `remote import prepare`: current pull overwrites Projection Workspace and has no immutable manifest/blob session; B1/B2/B4 replace it.
-3. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
-4. `remote import apply`: no source-specific sealed whole-session Ledger transaction exists; B3/B4 implement it without changing External Apply semantics.
-5. `remote import manage`: durable Refresh/Discard/repair/cleanup lifecycle is absent; B1/B4 implement it.
+1. `remote import prepare`: B1 immutable store and B2 ordered source acquisition exist, but the current product pull still routes through the isolated workspace/External Changes transition; B4 replaces it.
+2. `remote import review`: current Source Control/External Changes surfaces substitute for a missing independent runtime/client; B4/B5 remove that routing.
+3. `remote import apply`: no source-specific sealed whole-session Ledger transaction exists; B3/B4 implement it without changing External Apply semantics.
+4. `remote import manage`: backend Refresh/Discard/dry-run repair/retention exist, but the product lifecycle and cleanup apply path remain B4/W7 work.
 
 ## Flow Registry
 
@@ -188,11 +186,11 @@ The degraded local projection write gate is aligned:
 Within the currently modeled operation slice:
 
 - 74 pre-existing flows remain aligned
-- five approved Route B flows are represented honestly as current substitute/missing mappings
-- Redb v3 current → v4 target and WS v2 current → v3 target remain release blockers
+- Remote Projection push is aligned; four approved Remote Import flows remain honest current substitute/missing mappings
+- Redb v4 is aligned; WS v2 current → v3 target and B3-B6 product/runtime gaps remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
-The slice is bijective at the registry/label level and intentionally carries five active drift markers until B1–B5 close them.
+The slice is bijective at the registry/label level and intentionally carries four active drift markers until B3–B5 close them.
 
 ## Maintenance Rules
 

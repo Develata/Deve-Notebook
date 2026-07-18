@@ -328,7 +328,7 @@ fn projection_remote_s3_profile_put_accepts_secret_free_fields() {
                                     allowed_prefix,
                                     region,
                                     credential_env_prefix,
-                                    allowed_directions,
+                                    allowed_capabilities,
                                 },
                         },
                 },
@@ -339,7 +339,7 @@ fn projection_remote_s3_profile_put_accepts_secret_free_fields() {
             assert_eq!(allowed_prefix, "notebooks/main");
             assert_eq!(region, "us-east-1");
             assert_eq!(credential_env_prefix, "MINIO");
-            assert_eq!(allowed_directions, vec!["push", "pull"]);
+            assert_eq!(allowed_capabilities, vec!["push", "source-acquisition"]);
         }
         other => panic!("unexpected command: {other:?}"),
     }

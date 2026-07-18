@@ -8,7 +8,7 @@
 - `Last Review`: `2026-07-18`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/commands/projection_remote/`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
+- `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_projection_legacy/`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/server/handlers/source_control/remote_projection.rs`
 
 本章冻结两个相互分离的首发能力：
 

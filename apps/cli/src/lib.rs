@@ -16,9 +16,12 @@ mod graph_projection;
 #[cfg(test)]
 mod main_test;
 pub mod native_runtime;
+mod remote_projection_legacy;
+mod remote_projection_transport;
 mod repo_init;
 pub mod server;
 mod watcher_runtime;
+mod workspace_identity_gate;
 
 #[cfg(test)]
 pub(crate) use cli::Args;

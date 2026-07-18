@@ -49,7 +49,7 @@ fn s3_profile_put_writes_host_local_secret_free_profile_store() {
             allowed_prefix: "notebooks/main".into(),
             region: "us-east-1".into(),
             credential_env_prefix: "MINIO".into(),
-            allowed_directions: vec!["push".into(), "pull".into()],
+            allowed_capabilities: vec!["push".into(), "source-acquisition".into()],
         },
     )
     .expect("profile put");
@@ -63,7 +63,10 @@ fn s3_profile_put_writes_host_local_secret_free_profile_store() {
         .expect("load profile");
     assert_eq!(profile.profile_id, "minio");
     assert_eq!(profile.credential_ref.env_prefix, "MINIO");
-    assert_eq!(profile.allowed_directions, vec!["push", "pull"]);
+    assert_eq!(
+        profile.allowed_capabilities,
+        vec!["push", "source-acquisition"]
+    );
     assert!(!content.contains("MINIO_SECRET_ACCESS_KEY"));
     assert!(!content.contains("secret_access_key"));
 }

@@ -2,6 +2,8 @@
 //!   - 05_diff_logic#remote-projection-transport
 
 use super::super::super::webdav;
+use crate::remote_projection_legacy::LegacyProjectionPullAdapter;
+use crate::remote_projection_transport::ProjectionPushSource;
 use deve_core::remote_projection::{
     RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProvider,
     RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPushOutcome,
@@ -18,13 +20,13 @@ impl webdav::WebDavProjectionPushAdapter for PullWritingProvider {
         &mut self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _files: &[webdav::MarkdownProjectionFileRef],
+        _source: &dyn ProjectionPushSource,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
         unreachable!("pull-only writing provider")
     }
 }
 
-impl webdav::WebDavProjectionPullAdapter for PullWritingProvider {
+impl LegacyProjectionPullAdapter for PullWritingProvider {
     fn pull_projection_files(
         &self,
         provider: RemoteProjectionProvider,
@@ -46,13 +48,13 @@ impl webdav::WebDavProjectionPushAdapter for PullWithoutWorkspaceOverwriteProvid
         &mut self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _files: &[webdav::MarkdownProjectionFileRef],
+        _source: &dyn ProjectionPushSource,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
         unreachable!("pull-only workspace-overwrite-contract provider")
     }
 }
 
-impl webdav::WebDavProjectionPullAdapter for PullWithoutWorkspaceOverwriteProvider {
+impl LegacyProjectionPullAdapter for PullWithoutWorkspaceOverwriteProvider {
     fn pull_projection_files(
         &self,
         provider: RemoteProjectionProvider,
@@ -76,13 +78,13 @@ impl webdav::WebDavProjectionPushAdapter for PullDuplicatePathProvider {
         &mut self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _files: &[webdav::MarkdownProjectionFileRef],
+        _source: &dyn ProjectionPushSource,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
         unreachable!("pull-only duplicate-path-contract provider")
     }
 }
 
-impl webdav::WebDavProjectionPullAdapter for PullDuplicatePathProvider {
+impl LegacyProjectionPullAdapter for PullDuplicatePathProvider {
     fn pull_projection_files(
         &self,
         provider: RemoteProjectionProvider,
@@ -107,13 +109,13 @@ impl webdav::WebDavProjectionPushAdapter for PullWithoutExternalChangesProvider 
         &mut self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _files: &[webdav::MarkdownProjectionFileRef],
+        _source: &dyn ProjectionPushSource,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
         unreachable!("pull-only external-changes-contract provider")
     }
 }
 
-impl webdav::WebDavProjectionPullAdapter for PullWithoutExternalChangesProvider {
+impl LegacyProjectionPullAdapter for PullWithoutExternalChangesProvider {
     fn pull_projection_files(
         &self,
         provider: RemoteProjectionProvider,
@@ -137,13 +139,13 @@ impl webdav::WebDavProjectionPushAdapter for PullFailingProvider {
         &mut self,
         _provider: RemoteProjectionProvider,
         _locator: &str,
-        _files: &[webdav::MarkdownProjectionFileRef],
+        _source: &dyn ProjectionPushSource,
     ) -> Result<RemoteProjectionPushOutcome, RemoteProjectionProviderError> {
         unreachable!("pull-only failing provider")
     }
 }
 
-impl webdav::WebDavProjectionPullAdapter for PullFailingProvider {
+impl LegacyProjectionPullAdapter for PullFailingProvider {
     fn pull_projection_files(
         &self,
         provider: RemoteProjectionProvider,

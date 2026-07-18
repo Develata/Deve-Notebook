@@ -16,7 +16,7 @@
 - `Trigger`: 用户选择 WebDAV Prepare
 - `Preconditions`: authenticated、Ledger 可读、无 active session、provider/profile admitted
 - `Immediate Result`: backend 捕获 bounded immutable manifest/blobs 并发布 Ready session；不写 workspace 或 Ledger facts
-- `Application Entry`: target 为逻辑 `remote_projection_transport_runtime -> remote_import_runtime`；当前 `apps/cli/src/commands/projection_remote/` 的 pull 只是 B4 前 drift carrier
+- `Application Entry`: B2 已落地 `apps/cli/src/remote_projection_transport/` 的 ordered source-acquisition adapter；接入 `remote_import_runtime` 的产品 Prepare 仍待 B4，旧 pull 仅是隔离在 `remote_projection_legacy` 的过渡 carrier
 
 ### `op.remote-import.prepare.s3`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 用户选择 S3 Prepare
 - `Preconditions`: authenticated、Ledger 可读、无 active session、S3/S3-compatible profile exact admission 通过
 - `Immediate Result`: backend 捕获 bounded immutable manifest/blobs 并发布 Ready session；不写 workspace 或 Ledger facts
-- `Application Entry`: target 为逻辑 `remote_projection_transport_runtime -> remote_import_runtime`；当前 `apps/cli/src/commands/projection_remote/` 的 pull 只是 B4 前 drift carrier
+- `Application Entry`: B2 已落地 `apps/cli/src/remote_projection_transport/` 的 ordered source-acquisition adapter；接入 `remote_import_runtime` 的产品 Prepare 仍待 B4，旧 pull 仅是隔离在 `remote_projection_legacy` 的过渡 carrier
 
 ## Response Flow
 
@@ -35,4 +35,4 @@
 
 ## Notes
 
-- B0 为 `planned/no-code-yet`；STORE-019 必须保持真实 gap，旧 pull test 不是证据。
+- B2 source acquisition 已有 transport-level producer；STORE-019 仍保持产品 Prepare 与 B6 fresh receipt 的真实 gap，旧 pull test 不是目标证据。

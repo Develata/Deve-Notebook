@@ -9,9 +9,9 @@ use super::git_output::{
     print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,
     print_push_report, print_status,
 };
-use super::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
 use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_args;
+use crate::workspace_identity_gate::ensure_local_repo_workspace_identity_for_write;
 use anyhow::Result;
 use deve_core::git_bridge::GitMirrorRunOptions;
 use deve_core::ledger::RepoManager;

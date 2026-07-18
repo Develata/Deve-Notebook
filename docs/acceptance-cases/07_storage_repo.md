@@ -402,9 +402,10 @@
   goal: Remote Import Prepare 将远端输入封存为 immutable manifest/blob/candidate，不预写 workspace 或 authority。
   preconditions:
     - B1 已实现 durable session store 与 host-only artifact publication
-    - provider acquisition 与产品 Prepare 入口仍待 B2/B4 接入
+    - B2 已实现 provider-bound ordered source acquisition 与 bounded sink contract；产品 Prepare 入口仍待 B4 接入
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
+    - run: cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
     - gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
   assertions:
     - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
@@ -446,7 +447,7 @@
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
-    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
+    - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_push_uses_explicit_profile_binding -- --nocapture
     - run: cargo test -p deve_cli --lib s3_custom_https_endpoint_profile_env_ref_is_not_default_aws_fallback -- --nocapture
   assertions:

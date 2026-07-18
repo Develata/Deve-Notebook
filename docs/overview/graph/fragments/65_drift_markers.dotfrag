@@ -1,6 +1,4 @@
     // generated drift markers from architecture-diff.md
-    drift_remote_projection_push [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
-    user_remote_projection_push_spine -> drift_remote_projection_push [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
     drift_remote_import_prepare [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
     user_remote_import_prepare_spine -> drift_remote_import_prepare [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
     drift_remote_import_review [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];

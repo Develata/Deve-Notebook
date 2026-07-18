@@ -6,7 +6,7 @@
 //! and External Changes scan stay outside the repo permit; apply and guarded
 //! finalization each use one serialized repo-lane cut.
 
-use crate::commands::projection_remote::{self, PreparedProjectionRemotePull};
+use crate::remote_projection_legacy::{self, PreparedProjectionRemotePull};
 use crate::server::AppState;
 use crate::server::repo_mutation::{
     MountedRepoAdmission, MountedRepoContinuation, RepoMutationPublicationGate,
@@ -29,7 +29,7 @@ pub(super) struct PullExecutionInput {
 pub(super) async fn execute<F>(
     input: PullExecutionInput,
     pull_preparer: F,
-) -> Result<projection_remote::ProjectionRemoteExecutionSummary, ServerError>
+) -> Result<super::remote_projection::RemoteProjectionExecutionSummary, ServerError>
 where
     F: FnOnce(RemoteProjectionProvider, &str) -> Result<PreparedProjectionRemotePull>
         + Send
@@ -62,8 +62,12 @@ where
                         repo_id,
                         &repo_name_for_apply,
                     )?;
-                    projection_remote::apply_prepared_pull(repo_for_apply, &bound_name, prepared)
-                        .map(|applied| (bound_name, applied.defer_rollback()))
+                    remote_projection_legacy::apply_prepared_pull(
+                        repo_for_apply,
+                        &bound_name,
+                        prepared,
+                    )
+                    .map(|applied| (bound_name, applied.defer_rollback()))
                 },
             )
             .await
@@ -72,7 +76,7 @@ where
         let repo_for_scan = repo.clone();
         let scan_name = bound_name.clone();
         let scan_result = match tokio::task::spawn_blocking(move || {
-            projection_remote::scan_prepared_pull(repo_for_scan, &scan_name)
+            remote_projection_legacy::scan_prepared_pull(repo_for_scan, &scan_name)
         })
         .await
         {
@@ -82,13 +86,16 @@ where
             )),
         };
         gate.execute_mounted_repo_continuation_unpublished_blocking(continuation, move || {
-            projection_remote::finalize_prepared_pull_after_scan(applied, scan_result)
+            remote_projection_legacy::finalize_prepared_pull_after_scan(applied, scan_result)
         })
         .await
         .map_err(provider_error)?
         .map_err(provider_error)
     });
-    coordinator.await.map_err(provider_error)?
+    coordinator
+        .await
+        .map_err(provider_error)?
+        .map(super::remote_projection::RemoteProjectionExecutionSummary::from_legacy_pull)
 }
 
 fn provider_error(error: impl std::fmt::Display) -> ServerError {

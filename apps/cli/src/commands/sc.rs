@@ -5,7 +5,7 @@
 //! Minimal Deve Source Control CLI surface.
 
 use crate::commands::repo_arg::resolve_local_repo_args;
-use crate::commands::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
+use crate::workspace_identity_gate::ensure_local_repo_workspace_identity_for_write;
 use anyhow::{Result, bail};
 use clap::Subcommand;
 use deve_core::ledger::RepoManager;

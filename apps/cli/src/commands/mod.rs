@@ -28,6 +28,5 @@ pub mod sc_status;
 pub mod scan;
 pub mod seed;
 pub mod serve;
-mod source_control_workspace_gate;
 pub mod verify_p2p;
 pub mod watch;

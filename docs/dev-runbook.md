@@ -325,7 +325,7 @@ cargo run -p deve_cli --bin deve_cli -- projection-remote s3 profile put \
   --allowed-prefix notebooks/main \
   --region us-east-1 \
   --credential-env-prefix MINIO \
-  --allowed-directions push,pull
+  --allowed-capabilities push,source-acquisition
 
 export MINIO_ACCESS_KEY_ID=...
 export MINIO_SECRET_ACCESS_KEY=...

@@ -8,7 +8,7 @@ contains	docs/plan/06_backup.md	Remote Import 不通过 workspace overwrite、Ex
 contains	docs/registry/runtime-skeleton-registry.md	`remote_projection_transport_runtime` | `部分承载`
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_runtime` | `部分承载` | `crates/core/src/remote_import/`
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `未启动` | `未启动`
-contains	docs/registry/first-tag-format-matrix.md	B1 durable immutable session/artifact/candidate/recovery/repair store 已实现
+contains	docs/registry/first-tag-format-matrix.md	B1 durable immutable store 与 B2 shared host transport/source acquisition 已实现
 absent	docs/registry/runtime-skeleton-registry.md	backup_locator_runtime
 absent	docs/registry/runtime-skeleton-registry.md	backup_pack_runtime
 absent	docs/registry/runtime-skeleton-registry.md	backup_restore_runtime
@@ -16,20 +16,26 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib remote_import -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: end-to-end provider-bound Remote Import prepare producer remains pending until B4/B6
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: typed Remote Import review and blocker producer is not implemented yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: whole-session Remote Import apply and browser receipt producer is not implemented yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: product-bound Remote Import manage lifecycle producer remains pending until B4/B6
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
-contains	apps/cli/src/commands/projection_remote/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()
-contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
-contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_fails_before_workspace_file_read()
-contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve()
+contains	apps/cli/src/remote_projection_transport/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()
+contains	apps/cli/src/remote_projection_transport/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
+contains	apps/cli/src/remote_projection_transport/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_fails_before_workspace_file_read()
+contains	apps/cli/src/remote_projection_transport/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve()
+contains	apps/cli/src/remote_projection_transport/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve()
+contains	apps/cli/src/remote_projection_transport/webdav/tests/source.rs	fn webdav_source_acquisition_delivers_normalized_paths_in_order()
+contains	apps/cli/src/remote_projection_transport/s3/tests/source.rs	fn s3_source_acquisition_delivers_normalized_paths_in_order()
+absent_tree	apps/cli/src/server	commands::projection_remote
 absent_tree	apps/cli/src	Commands::Backup
 absent_tree	apps/cli/src	BackupAction
 absent_tree	apps/cli/src	commands::backup
@@ -38,7 +44,7 @@ absent_tree	crates/core/src	backup_restore_import_runtime
 absent_tree	crates/core/src	BACKUP_PACK_PLAINTEXT_FORMAT_VERSION
 absent_tree	crates/core/src	DEVEBKP2
 absent_tree	crates/core/src	RestoreCandidate
-# B1 executes backend/store tests plus already-implemented push/profile evidence. Required Remote Import rows remain explicit gaps until B6 seals product-bound receipts.
+# B2 executes backend/store plus shared push/source/profile evidence. Required Remote Import product rows remain explicit gaps until B4/B6 seal product-bound receipts.
 cargo_test_lib	deve_core	remote_import
 cargo_test_lib	deve_cli	run_webdav_push_uses_webdav_provider_after_workspace_gate
 cargo_test_lib	deve_cli	run_s3_push_uses_s3_provider_after_workspace_gate
@@ -46,3 +52,5 @@ cargo_test_lib	deve_cli	collect_markdown_projection_files_uploads_only_markdown_
 cargo_test_lib	deve_cli	s3_custom_https_endpoint_requires_explicit_credential_binding
 cargo_test_lib	deve_cli	s3_custom_https_endpoint_fails_before_workspace_file_read
 cargo_test_lib	deve_cli	s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve
+cargo_test_lib	deve_cli	s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve
+cargo_test_lib	deve_cli	source_acquisition_delivers_normalized_paths_in_order

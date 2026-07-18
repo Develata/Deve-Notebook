@@ -49,7 +49,7 @@ The accepted model is:
    Locator, Source Control, Git mirror, sync, and any future ledger-backup
    binding. It stores only binding metadata: stable profile handle, provider
    kind `s3-compatible`, HTTPS endpoint origin, bucket, allowed root prefix,
-   region/signing scope, addressing-style/capability flags, allowed directions,
+   region/signing scope, addressing style, and allowed transport capabilities,
    and a credential reference.
 2. **Runtime credential resolver.** The credential reference points to a runtime
    secret source such as an explicitly named environment-variable set, OS/keyring
@@ -79,7 +79,7 @@ S3-compatible endpoints remains safe as current behavior, but it is no longer
 the architectural target.
 
 With the CLI-only profile slice, `s3+https://` custom endpoint I/O is allowed
-only when an explicit profile handle matches endpoint origin, bucket, direction,
+only when an explicit profile handle matches endpoint origin, bucket, capability,
 and allowed prefix, and the runtime credential resolver succeeds. Otherwise it
 remains fail-closed before provider I/O and before default AWS credential
 resolution.
@@ -89,7 +89,7 @@ resolution.
 The accepted route is the cleanest long-term boundary. It keeps endpoint admission,
 credential selection, and provider I/O in backend/runtime infrastructure while
 preserving the frontend thin-shell rule. It also gives Web, CLI, and future
-mobile shells the same security model: user intent selects provider/direction,
+mobile shells the same security model: user intent selects provider/capability,
 runtime authority resolves locator/profile and performs transport.
 
 The CLI-only slice lowers implementation risk by avoiding immediate browser-visible
@@ -129,7 +129,7 @@ unsafe credential path.
   artifact metadata, or provider adapters as sync/source-control authority.
 - Profile data must be host-local and secret-free. It may identify a credential
   reference, endpoint origin, bucket, prefix, region, signing options,
-  addressing style, provider capability flags, and allowed directions, but not
+  addressing style and allowed transport capabilities, but not
   raw secret values.
 - `push` uploads only Markdown projection files. Remote Import acquisition
   streams provider objects into immutable host-only blobs and never writes the

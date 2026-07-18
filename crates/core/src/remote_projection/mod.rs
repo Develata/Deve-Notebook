@@ -124,8 +124,13 @@ fn locator_has_unsafe_path_segment(locator: &str) -> bool {
     let Some(after_scheme) = locator.split_once("://").map(|(_, rest)| rest) else {
         return true;
     };
-    let mut parts = after_scheme.split('/').skip(1);
-    parts.any(|segment| matches!(segment, "" | "." | ".."))
+    let mut parts = after_scheme.split('/').skip(1).collect::<Vec<_>>();
+    if parts.last() == Some(&"") {
+        parts.pop();
+    }
+    parts
+        .into_iter()
+        .any(|segment| matches!(segment, "" | "." | ".."))
 }
 
 #[cfg(test)]
@@ -147,6 +152,46 @@ mod tests {
         assert!(!plan.overwrites_projection_on_pull);
         assert!(!plan.external_changes_confirmation_required);
         assert!(!plan.provider_io_ready);
+    }
+
+    #[test]
+    fn locator_allows_one_optional_trailing_slash_but_not_empty_inner_segments() {
+        for locator in [
+            "webdav+https://dav.example.com/notebooks/main/",
+            "s3://bucket/notebooks/main/",
+        ] {
+            let provider = if locator.starts_with("s3://") {
+                RemoteProjectionProvider::S3
+            } else {
+                RemoteProjectionProvider::WebDav
+            };
+            plan_remote_projection_transport(RemoteProjectionPlanInput {
+                provider,
+                direction: RemoteProjectionDirection::Push,
+                locator: locator.into(),
+            })
+            .expect("one trailing slash");
+        }
+
+        for locator in [
+            "webdav+https://dav.example.com/notebooks//main",
+            "s3://bucket/notebooks/main//",
+        ] {
+            let provider = if locator.starts_with("s3://") {
+                RemoteProjectionProvider::S3
+            } else {
+                RemoteProjectionProvider::WebDav
+            };
+            assert!(
+                plan_remote_projection_transport(RemoteProjectionPlanInput {
+                    provider,
+                    direction: RemoteProjectionDirection::Push,
+                    locator: locator.into(),
+                })
+                .is_err(),
+                "{locator}"
+            );
+        }
     }
 
     #[test]

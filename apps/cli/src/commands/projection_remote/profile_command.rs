@@ -6,7 +6,8 @@
 //!
 //! CLI management commands for host-local Remote Projection profiles.
 
-use super::{S3ProjectionProfileAction, s3};
+use super::S3ProjectionProfileAction;
+use crate::remote_projection_transport::s3;
 use anyhow::Result;
 use std::path::Path;
 
@@ -22,7 +23,7 @@ pub(crate) fn run_s3_profile_action(
             allowed_prefix,
             region,
             credential_env_prefix,
-            allowed_directions,
+            allowed_capabilities,
         } => {
             let profile = s3::RemoteProjectionS3Profile::env_profile(
                 profile,
@@ -31,7 +32,7 @@ pub(crate) fn run_s3_profile_action(
                 allowed_prefix,
                 region,
                 credential_env_prefix,
-                allowed_directions.clone(),
+                allowed_capabilities.clone(),
             );
             let path = s3::write_remote_projection_s3_profile(ledger_dir, profile)?;
             println!(
@@ -43,14 +44,14 @@ pub(crate) fn run_s3_profile_action(
         S3ProjectionProfileAction::List => {
             for profile in s3::load_remote_projection_s3_profiles(ledger_dir)? {
                 println!(
-                    "projection_remote: s3 profile={} endpoint_origin={} bucket={} allowed_prefix={} region={} credential_ref=env_prefix:{} allowed_directions={}",
+                    "projection_remote: s3 profile={} endpoint_origin={} bucket={} allowed_prefix={} region={} credential_ref=env_prefix:{} allowed_capabilities={}",
                     profile.profile_id,
                     profile.endpoint_origin,
                     profile.bucket,
                     profile.allowed_prefix,
                     profile.region,
                     profile.credential_ref.env_prefix,
-                    profile.allowed_directions.join(","),
+                    profile.allowed_capabilities.join(","),
                 );
             }
             Ok(())

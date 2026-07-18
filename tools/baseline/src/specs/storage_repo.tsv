@@ -78,7 +78,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: whole-sess
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_requires_explicit_credential_binding -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_fails_before_workspace_file_read -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_pull_fails_before_credentials_resolve -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: product-bound Remote Import manage lifecycle producer remains pending until B4/B6
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
@@ -204,10 +204,10 @@ contains	crates/core/tests/repo_catalog_entry_fail_closed_test.rs	fn remote_repo
 contains	apps/cli/src/commands/repair/shadow.rs	fn quarantines_nil_shadow_repo_into_invalid_peer_dir()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
-contains	apps/cli/src/commands/projection_remote/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()
+contains	apps/cli/src/remote_projection_transport/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_rejects_provider_authority_effects_before_success_report()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_rejects_authoritative_provider_metadata_before_success_report()
-contains	apps/cli/src/commands/projection_remote/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
+contains	apps/cli/src/remote_projection_transport/s3/tests/endpoint.rs	fn s3_custom_https_endpoint_requires_explicit_credential_binding()
 contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
 contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test
 contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_web

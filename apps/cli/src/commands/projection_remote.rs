@@ -1,37 +1,32 @@
 //! plan_ref:
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#remote-projection-transport
+//!   - 06_backup#projection-backup-upload-state-machine-contract
 //!   - 14_commands#cli-commands
 //!
 //! CLI shell for remote Markdown projection transport intents.
 
-mod collect;
-mod outcome_contract;
 mod profile_command;
-mod resolved;
-mod s3;
-mod webdav;
-mod workspace_apply;
 
 use crate::commands::repo_arg::resolve_local_repo_args;
-use crate::commands::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
-use anyhow::{Context, Result, bail};
+use crate::remote_projection_legacy;
+use crate::remote_projection_transport::{self, ProjectionPushSource};
+use crate::remote_projection_transport::{s3, webdav};
+use crate::workspace_identity_gate::ensure_local_repo_workspace_identity_for_write;
+use anyhow::{Result, bail};
 use clap::Subcommand;
 use deve_core::ledger::RepoManager;
 use deve_core::remote_projection::{
     RemoteProjectionDirection, RemoteProjectionPlanInput, RemoteProjectionProvider,
     plan_remote_projection_transport,
 };
+use deve_core::sync::watcher::{
+    RepoWatcherHandle, RepoWatcherStart, RepoWatcherWorkerState, WatcherFailure,
+};
 use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) use profile_command::run_s3_profile_action;
-#[cfg(test)]
-pub(crate) use resolved::prepared_pull_for_test;
-pub(crate) use resolved::{
-    PreparedProjectionRemotePull, ProjectionRemoteExecutionSummary, apply_prepared_pull,
-    finalize_prepared_pull_after_scan, prepare_pull_for_resolved_repo, run_for_resolved_repo,
-    scan_prepared_pull,
-};
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum ProjectionRemoteAction {
@@ -108,8 +103,8 @@ pub(crate) enum S3ProjectionProfileAction {
         region: String,
         #[arg(long)]
         credential_env_prefix: String,
-        #[arg(long, value_delimiter = ',', default_value = "push,pull")]
-        allowed_directions: Vec<String>,
+        #[arg(long, value_delimiter = ',', default_value = "push,source-acquisition")]
+        allowed_capabilities: Vec<String>,
     },
     /// List host-local S3-compatible Remote Projection profile handles
     List,
@@ -157,7 +152,7 @@ fn run_with_provider(
     ledger_dir: &Path,
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
-    webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
+    webdav_provider: &mut dyn remote_projection_legacy::LegacyWebDavProjectionAdapter,
 ) -> Result<()> {
     let mut s3_provider = s3::FailClosedS3ProjectionProvider;
     run_with_providers(
@@ -173,8 +168,8 @@ fn run_with_providers(
     ledger_dir: &Path,
     action: ProjectionRemoteAction,
     snapshot_depth: usize,
-    webdav_provider: &mut dyn webdav::WebDavProjectionAdapter,
-    s3_provider: &mut dyn s3::S3ProjectionAdapter,
+    webdav_provider: &mut dyn remote_projection_legacy::LegacyWebDavProjectionAdapter,
+    s3_provider: &mut dyn remote_projection_legacy::LegacyS3ProjectionAdapter,
 ) -> Result<()> {
     let request = request_from_action(action);
     let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
@@ -201,43 +196,52 @@ fn run_with_providers(
         if provider_direction_wired {
             match request.direction {
                 RemoteProjectionDirection::Push => {
-                    let files = collect::collect_markdown_projection_files(&workspace)?;
-                    println!(
-                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_state=pending planned_files={}",
-                        plan.provider.as_str(),
-                        plan.direction.as_str(),
-                        plan.projection_scope,
-                        workspace.display(),
-                        plan.writes_ledger,
-                        plan.external_changes_confirmation_required,
-                        files.len(),
-                    );
-                    let outcome =
-                        match request.provider {
+                    let watcher = start_direct_push_watcher(repo.clone(), &repo_name)?;
+                    let push_result = (|| {
+                        let source =
+                            remote_projection_transport::WorkspaceProjectionPushSource::collect(
+                                &workspace,
+                            )?;
+                        println!(
+                            "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_state=pending planned_files={}",
+                            plan.provider.as_str(),
+                            plan.direction.as_str(),
+                            plan.projection_scope,
+                            workspace.display(),
+                            plan.writes_ledger,
+                            plan.external_changes_confirmation_required,
+                            source.file_count(),
+                        );
+                        let outcome = match request.provider {
                             RemoteProjectionProvider::WebDav => webdav_provider
-                                .push_projection_files(request.provider, &plan.locator, &files),
+                                .push_projection_files(request.provider, &plan.locator, &source),
                             RemoteProjectionProvider::S3 => s3_provider.push_projection_files(
                                 request.provider,
                                 &plan.locator,
-                                &files,
+                                &source,
                             ),
                         }
-                        .map_err(provider_io_not_ready)?;
-                    outcome_contract::ensure_projection_transport_push_outcome_contract(&outcome)?;
-                    println!(
-                        "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
-                        plan.provider.as_str(),
-                        plan.direction.as_str(),
-                        plan.projection_scope,
-                        workspace.display(),
-                        plan.writes_ledger,
-                        plan.external_changes_confirmation_required,
-                        outcome.uploaded_files,
-                        outcome.effects.writes_source_control_staging,
-                        outcome.effects.writes_commit_anchor,
-                        outcome.effects.writes_git_main_mirror,
-                        outcome.provider_metadata_is_diagnostic_only,
-                    );
+                        .map_err(remote_projection_transport::provider_io_not_ready)?;
+                        remote_projection_transport::ensure_projection_transport_push_outcome_contract(
+                            &outcome,
+                        )?;
+                        println!(
+                            "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
+                            plan.provider.as_str(),
+                            plan.direction.as_str(),
+                            plan.projection_scope,
+                            workspace.display(),
+                            plan.writes_ledger,
+                            plan.external_changes_confirmation_required,
+                            outcome.uploaded_files,
+                            outcome.effects.writes_source_control_staging,
+                            outcome.effects.writes_commit_anchor,
+                            outcome.effects.writes_git_main_mirror,
+                            outcome.provider_metadata_is_diagnostic_only,
+                        );
+                        Ok(())
+                    })();
+                    finish_direct_push(push_result, watcher.shutdown())?;
                 }
                 RemoteProjectionDirection::Pull => {
                     println!(
@@ -257,19 +261,22 @@ fn run_with_providers(
                             s3_provider.pull_projection_files(request.provider, &plan.locator)
                         }
                     }
-                    .map_err(provider_io_not_ready)?;
-                    outcome_contract::ensure_projection_transport_pull_outcome_contract(&outcome)?;
-                    let applied = workspace_apply::write_pull_files(&workspace, &outcome.files)?;
+                    .map_err(remote_projection_transport::provider_io_not_ready)?;
+                    remote_projection_legacy::ensure_projection_transport_pull_outcome_contract(
+                        &outcome,
+                    )?;
+                    let applied =
+                        remote_projection_legacy::write_pull_files(&workspace, &outcome.files)?;
                     let sync_manager = match deve_core::sync::SyncManager::new_checked(repo.clone())
                     {
                         Ok(sync_manager) => sync_manager,
                         Err(err) => {
-                            rollback_after_failed_scan(applied, &err)?;
+                            remote_projection_legacy::rollback_after_failed_scan(applied, &err)?;
                             return Err(err);
                         }
                     };
                     if let Err(err) = sync_manager.scan_repo(&repo_name) {
-                        rollback_after_failed_scan(applied, &err)?;
+                        remote_projection_legacy::rollback_after_failed_scan(applied, &err)?;
                         return Err(err);
                     }
                     applied.commit();
@@ -310,19 +317,39 @@ fn run_with_providers(
     );
 }
 
-fn rollback_after_failed_scan(
-    applied: workspace_apply::AppliedPullFiles,
-    scan_error: &anyhow::Error,
-) -> Result<()> {
-    applied.rollback_after_failed_scan().with_context(|| {
-        format!("remote projection pull scan failed after workspace apply: {scan_error}")
-    })
+fn start_direct_push_watcher(repo: Arc<RepoManager>, repo_name: &str) -> Result<RepoWatcherHandle> {
+    let sync = Arc::new(deve_core::sync::SyncManager::new_checked(repo)?);
+    if !sync
+        .healthy_local_repo_names_for_execution()?
+        .iter()
+        .any(|healthy| healthy == repo_name)
+    {
+        bail!("remote projection push requires a Healthy local repository");
+    }
+    let handle = RepoWatcherHandle::start(RepoWatcherStart::resolve(sync, repo_name, 1)?)?;
+    let failure = match handle.snapshot().worker_state() {
+        RepoWatcherWorkerState::Running => return Ok(handle),
+        RepoWatcherWorkerState::Failed(failure) => failure.clone(),
+    };
+    match handle.shutdown() {
+        Ok(()) => Err(anyhow::Error::new(failure)),
+        Err(cleanup) => Err(anyhow::Error::new(failure)
+            .context(format!("temporary watcher shutdown also failed: {cleanup}"))),
+    }
 }
 
-fn provider_io_not_ready(error: impl std::fmt::Display) -> anyhow::Error {
-    anyhow::anyhow!(
-        "remote projection provider I/O did not complete (provider_io_ready=false): {error}"
-    )
+fn finish_direct_push(
+    push_result: Result<()>,
+    shutdown_result: Result<(), WatcherFailure>,
+) -> Result<()> {
+    match (push_result, shutdown_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(primary), Ok(())) => Err(primary),
+        (Ok(()), Err(shutdown)) => Err(anyhow::Error::new(shutdown)),
+        (Err(primary), Err(shutdown)) => Err(primary.context(format!(
+            "temporary watcher shutdown also failed: {shutdown}"
+        ))),
+    }
 }
 
 struct ProjectionRemoteRequest {
