@@ -225,10 +225,40 @@ pub(crate) enum ConfigAction {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum RepoAction {
+    /// Inspect or update host-local repo display aliases
+    Alias {
+        #[command(subcommand)]
+        action: RepoAliasAction,
+    },
     /// Inspect or update repo Projection Locator state
     Projection {
         #[command(subcommand)]
         action: RepoProjectionAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum RepoAliasAction {
+    /// Set one host-local display alias with compare-and-swap revision
+    Set {
+        #[arg(long = "repo-id")]
+        repo_id: uuid::Uuid,
+        #[arg(long)]
+        alias: String,
+        #[arg(long = "expected-revision")]
+        expected_revision: u64,
+    },
+    /// Export deterministic host-local alias JSON
+    Export {
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Preview or atomically apply host-local alias JSON
+    Import {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        apply: bool,
     },
 }
 

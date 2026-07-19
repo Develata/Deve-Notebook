@@ -25,6 +25,12 @@ mod commit_structure_plan;
 mod dir_structure_plan;
 mod dir_structure_support;
 mod git_mirror_queue_runtime;
+mod host_repo_alias;
+pub use host_repo_alias::{
+    HOST_REPO_ALIAS_IMPORT_MAX_BYTES, HostRepoAliasBinding, HostRepoAliasError,
+    HostRepoAliasImportSummary, HostRepoAliasImportWarning, HostRepoAliasImportWarningReason,
+    HostRepoAliasRuntime, HostRepoAliasSetResult, HostRepoAliasValidationError,
+};
 mod local_repo_metadata_repair;
 mod local_repo_metadata_repair_support;
 pub(crate) use local_repo_metadata_repair::repair_local_repo_metadata;

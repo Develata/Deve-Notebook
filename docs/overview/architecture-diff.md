@@ -47,7 +47,7 @@ Active drift facts:
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
 4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 仍是 active drift，B5 尚未提供 thin Web management surface。
 5. `repo alias set`: C1′ typed WS CAS、backend list projection 与 thin Web client 尚未实现；旧 RenameRepo 仍在 code side。
-6. `repo alias transfer`: deterministic JSON v1 export/import、apply-time revalidation 与 typed warning summary 尚未实现。
+6. `repo alias transfer`: deterministic JSON v1 core/CLI path 已实现，但 pre-B1 membership admission 仍需短暂读取各 repo authority DB；server-held DB 场景会 fail closed，tag-ready producer receipt 也尚未封存。B1 catalog cut 完成前保持 drift，不新增临时 proxy 或兼容路径。
 7. `repo lifecycle`: 当前 W7 handler-owned create/remove 尚未切到 A1 host-owned job、B1 per-RepoId catalog cut 与 committed-cut/settled publication split。
 
 ## Flow Registry

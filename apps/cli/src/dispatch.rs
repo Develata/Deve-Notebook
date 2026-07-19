@@ -2,7 +2,9 @@
 //!   - 14_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction, NgitAction, RepoAction, RepoProjectionAction, ScAction};
+use crate::{
+    Commands, ConfigAction, NgitAction, RepoAction, RepoAliasAction, RepoProjectionAction, ScAction,
+};
 use std::path::PathBuf;
 
 pub async fn run(
@@ -219,6 +221,19 @@ pub async fn run(
             },
         )?,
         Some(Commands::Repo { action }) => match action {
+            RepoAction::Alias { action } => match action {
+                RepoAliasAction::Set {
+                    repo_id,
+                    alias,
+                    expected_revision,
+                } => commands::repo_alias::set(ledger_dir, repo_id, &alias, expected_revision)?,
+                RepoAliasAction::Export { output } => {
+                    commands::repo_alias::export(ledger_dir, &output)?
+                }
+                RepoAliasAction::Import { input, apply } => {
+                    commands::repo_alias::import_aliases(ledger_dir, &input, apply)?
+                }
+            },
             RepoAction::Projection { action } => match action {
                 RepoProjectionAction::Set { repo, base } => {
                     commands::repo_projection::set(ledger_dir, &repo, &base, config.snapshot_depth)?

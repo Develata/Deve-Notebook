@@ -1311,6 +1311,7 @@ dependencies = [
  "hex",
  "ignore",
  "jsonwebtoken",
+ "libc",
  "notify",
  "notify-debouncer-full",
  "notify-debouncer-mini",

@@ -1,11 +1,72 @@
 use super::{
-    Args, Commands, ConfigAction, NgitAction, ProjectionRemoteAction, run_pre_config_command,
+    Args, Commands, ConfigAction, NgitAction, ProjectionRemoteAction, RepoAction, RepoAliasAction,
+    run_pre_config_command,
 };
 use crate::commands::projection_remote::{S3ProjectionProfileAction, S3ProjectionRemoteAction};
 use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
 static CWD_LOCK: Mutex<()> = Mutex::new(());
+
+#[test]
+fn repo_alias_commands_expose_set_export_and_dry_run_import() {
+    let repo_id = uuid::Uuid::new_v4();
+    let set = Args::try_parse_from([
+        "deve",
+        "repo",
+        "alias",
+        "set",
+        "--repo-id",
+        &repo_id.to_string(),
+        "--alias",
+        "math",
+        "--expected-revision",
+        "3",
+    ])
+    .expect("parse alias set");
+    assert!(matches!(
+        set.command,
+        Some(Commands::Repo {
+            action: RepoAction::Alias {
+                action: RepoAliasAction::Set {
+                    repo_id: parsed,
+                    expected_revision: 3,
+                    ..
+                }
+            }
+        }) if parsed == repo_id
+    ));
+
+    let export = Args::try_parse_from([
+        "deve",
+        "repo",
+        "alias",
+        "export",
+        "--output",
+        "aliases.json",
+    ])
+    .expect("parse alias export");
+    assert!(matches!(
+        export.command,
+        Some(Commands::Repo {
+            action: RepoAction::Alias {
+                action: RepoAliasAction::Export { .. }
+            }
+        })
+    ));
+
+    let import =
+        Args::try_parse_from(["deve", "repo", "alias", "import", "--input", "aliases.json"])
+            .expect("parse alias import");
+    assert!(matches!(
+        import.command,
+        Some(Commands::Repo {
+            action: RepoAction::Alias {
+                action: RepoAliasAction::Import { apply: false, .. }
+            }
+        })
+    ));
+}
 
 #[test]
 fn export_accepts_out_alias_for_output() {

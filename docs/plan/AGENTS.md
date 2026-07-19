@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-22 | Updated: 2026-07-18 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-07-19 -->
 
 # deve-note plan
 
@@ -131,7 +131,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
 | `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
 | `04_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
-| `04_repository#host-repo-alias-contract` | `### 2.1.1 Host-local Repo Alias Contract` | host-local alias ownership、CAS、JSON import/export 与跨宿主禁止边界；planned/no-code-yet |
+| `04_repository#host-repo-alias-contract` | `### 2.1.1 Host-local Repo Alias Contract` | host-local alias ownership、CAS、JSON import/export 与跨宿主禁止边界；core/CLI path 已部分承载，F4/v4/Web/B1 catalog 待收敛 |
 | `04_repository#repo-lifecycle-coordinator` | `### 7.9 Repo Lifecycle Coordinator` | host-owned lifecycle job、prepare/cut/settle 与 immutable committed/settled plans；planned/no-code-yet |
 | `04_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `04_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |

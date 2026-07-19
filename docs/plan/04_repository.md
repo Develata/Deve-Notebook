@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-19`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -65,7 +65,7 @@ JSON import/export schema 固定为：
 }
 ```
 
-- export 必须按完整 RepoId 排序并使用 deterministic JSON；禁止输出路径、locator、credential、provider、peer、remote label、revision 或 secret。
+- export 只输出 alias store 中的 explicit binding；revision `0` 的 canonical RepoId fallback 不写入 JSON。结果必须按完整 RepoId 排序并使用 deterministic JSON；禁止输出路径、locator、credential、provider、peer、remote label、revision 或 secret。
 - import 默认 dry-run，只有显式 `--apply` 才写入。预算固定为文件最多 1 MiB、最多 4096 个 entry、单个原始 `repo_id` 字符串最多 64 bytes、单个规范化 alias 最多 256 UTF-8 bytes、全体 alias 最多 512 KiB；超出任一整体预算属于全文件错误。顶层不是合法 JSON、`format/version` 不匹配或 `aliases` 不是数组也属于全文件错误。
 - 在合法顶层容器内，parse/validate 必须覆盖全部 entry。entry 缺字段、字段类型错误、非法 UUID、unknown local RepoId、invalid alias、重复 RepoId 或单项 admission failure 必须 warning + skip，并在最终 typed summary 中逐项列出 index、可解析时的 RepoId 与原因；不得因一个坏 entry 丢弃其它有效 entry。重复 RepoId 的**全部 occurrence**都必须跳过，不能保留 first/last winner。
 - alias 以 trim 后的规范值落盘。dry-run 只给出当时的 projected summary；`--apply` 必须在 alias mutation runtime 的单一 exclusive lock 内重新读取 local membership 与 alias store，和并发 alias set 线性排序，并重新计算完整 summary。

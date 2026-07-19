@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-19`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -29,7 +29,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
     *   `deve repo projection list`: 列出本机 host-local Projection Locator。
     *   `deve repo alias set --repo-id <uuid> --alias <text> --expected-revision <u64>`: CAS 更新当前 host 的 repo display alias；不得改变 Ledger、locator、workspace、watcher 或 sync state。
-    *   `deve repo alias export --output <file>`: 输出 deterministic JSON v1，按完整 RepoId 排序；只含 `format/version/aliases[{repo_id,alias}]`。
+    *   `deve repo alias export --output <file>`: 输出 deterministic JSON v1，按完整 RepoId 排序；只含 `format/version/aliases[{repo_id,alias}]`。输出采用同目录完整临时文件 + atomic no-clobber publish；拒绝覆盖既有路径或写入 Ledger authority tree。
     *   `deve repo alias import --input <file> [--apply]`: 默认 dry-run。unknown local RepoId、invalid alias、duplicate RepoId 或 per-entry admission failure 必须 warning + skip，并在结尾逐项汇总；通过校验的 entry 以单个原子 accepted batch 写入。store-wide commit failure 是全局错误。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
     *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。

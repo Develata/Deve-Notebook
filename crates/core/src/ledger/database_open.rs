@@ -18,7 +18,27 @@ pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
     if !checked_exists(db_path, "database path")? {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
     }
-    cached_or_create_database(db_path)
+    if let Some(db) = reusable_cached_database(db_path)? {
+        return Ok(db);
+    }
+    OPENED_DBS
+        .write()
+        .map_err(|_| anyhow::anyhow!("Database cache lock poisoned while opening {:?}", db_path))?
+        .remove(db_path);
+    let db = Database::open(db_path)?;
+    let arc_db = Arc::new(db);
+    OPENED_DBS
+        .write()
+        .map_err(|_| anyhow::anyhow!("Database cache lock poisoned while storing {:?}", db_path))?
+        .insert(
+            db_path.to_path_buf(),
+            CachedDatabaseEntry {
+                db: arc_db.clone(),
+                stamp: current_file_stamp(db_path)?,
+            },
+        );
+    tracing::info!("Opened and cached existing database: {:?}", db_path);
+    Ok(arc_db)
 }
 
 pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {

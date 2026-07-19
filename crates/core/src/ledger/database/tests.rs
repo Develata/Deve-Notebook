@@ -1,6 +1,4 @@
-use super::RepoManager;
-#[cfg(unix)]
-use super::cached_database;
+use super::{RepoManager, cached_database};
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -25,6 +23,19 @@ fn cached_database_fails_closed_when_path_is_unstatable() {
         err.to_string().contains("Failed to stat database path")
             || err.to_string().contains("Permission denied")
     );
+}
+
+#[test]
+fn cached_database_never_initializes_an_empty_existing_file() {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("empty.redb");
+    std::fs::File::create(&path).expect("empty file");
+
+    let error = cached_database(&path).expect_err("existing opener must not initialize a DB");
+
+    assert!(!error.to_string().is_empty());
+    assert_eq!(std::fs::metadata(&path).expect("metadata").len(), 0);
 }
 
 #[cfg(unix)]

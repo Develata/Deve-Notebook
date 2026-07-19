@@ -22,6 +22,7 @@ pub mod projection_remote;
 pub mod recover;
 pub mod remote_import;
 pub mod repair;
+pub mod repo_alias;
 mod repo_arg;
 pub mod repo_projection;
 pub mod sc;
