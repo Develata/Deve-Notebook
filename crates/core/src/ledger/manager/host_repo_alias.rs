@@ -32,6 +32,14 @@ pub struct HostRepoAliasRuntime {
 }
 
 impl HostRepoAliasRuntime {
+    /// Normalize one display alias without opening or mutating host state.
+    ///
+    /// Lifecycle admission uses this typed boundary so alias validation remains
+    /// owned by the alias runtime instead of being copied into transport code.
+    pub fn normalize_alias(alias: &str) -> Result<String, HostRepoAliasValidationError> {
+        model::normalize_alias(alias)
+    }
+
     pub fn open_existing(ledger_dir: impl AsRef<Path>) -> Result<Self, HostRepoAliasError> {
         let ledger_dir = ledger_dir.as_ref().to_path_buf();
         checked_local_dir(&ledger_dir, "opening host repo alias runtime")?;

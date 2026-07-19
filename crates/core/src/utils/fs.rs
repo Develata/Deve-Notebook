@@ -4,6 +4,62 @@ use anyhow::{Context, Result};
 use std::fs::{File, Metadata, OpenOptions};
 use std::path::Path;
 
+/// Atomically replace one file within a pre-validated host-runtime directory.
+///
+/// The source must already be fully written and synced. Callers remain
+/// responsible for syncing the containing directory after this returns.
+#[cfg(not(windows))]
+pub fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Result<()> {
+    std::fs::rename(source, destination)
+}
+
+/// Windows equivalent of [`replace_file_atomically`].
+#[cfg(windows)]
+pub fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Result<()> {
+    use std::iter::once;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
+    };
+
+    let source = std::fs::canonicalize(source)?;
+    let parent = destination.parent().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "atomic replacement destination has no parent",
+        )
+    })?;
+    let name = destination.file_name().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "atomic replacement destination has no file name",
+        )
+    })?;
+    let destination = std::fs::canonicalize(parent)?.join(name);
+    let source = source
+        .as_os_str()
+        .encode_wide()
+        .chain(once(0))
+        .collect::<Vec<_>>();
+    let destination = destination
+        .as_os_str()
+        .encode_wide()
+        .chain(once(0))
+        .collect::<Vec<_>>();
+    // SAFETY: both owned buffers are NUL-terminated UTF-16 paths.
+    let moved = unsafe {
+        MoveFileExW(
+            source.as_ptr(),
+            destination.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+    if moved == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 pub fn checked_exists(path: &Path, context: &str) -> Result<bool> {
     path.try_exists()
         .with_context(|| format!("Failed to stat {}: {:?}", context, path))

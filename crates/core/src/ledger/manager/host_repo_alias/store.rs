@@ -6,7 +6,8 @@ use super::model::{
 };
 use crate::models::RepoId;
 use crate::utils::fs::{
-    ensure_open_file_matches_path, open_regular_file_lock, open_regular_file_read, sync_directory,
+    ensure_open_file_matches_path, open_regular_file_lock, open_regular_file_read,
+    replace_file_atomically, sync_directory,
 };
 use crate::utils::notegit;
 use serde::{Deserialize, Serialize};
@@ -176,7 +177,7 @@ impl AliasStore {
                 .open(&temp)?;
             file.write_all(&bytes)?;
             file.sync_all()?;
-            replace_file(&temp, &path)?;
+            replace_file_atomically(&temp, &path)?;
             sync_directory(&host_dir)?;
             Ok(())
         })();
@@ -218,57 +219,6 @@ fn checked_host_dir(ledger_dir: &Path) -> Result<PathBuf, HostRepoAliasError> {
         )));
     }
     Ok(host_dir)
-}
-
-#[cfg(not(windows))]
-fn replace_file(source: &Path, destination: &Path) -> std::io::Result<()> {
-    std::fs::rename(source, destination)
-}
-
-#[cfg(windows)]
-fn replace_file(source: &Path, destination: &Path) -> std::io::Result<()> {
-    use std::iter::once;
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
-    };
-
-    let source = std::fs::canonicalize(source)?;
-    let parent = destination.parent().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "alias store destination has no parent",
-        )
-    })?;
-    let name = destination.file_name().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "alias store destination has no file name",
-        )
-    })?;
-    let destination = std::fs::canonicalize(parent)?.join(name);
-    let source = source
-        .as_os_str()
-        .encode_wide()
-        .chain(once(0))
-        .collect::<Vec<_>>();
-    let destination = destination
-        .as_os_str()
-        .encode_wide()
-        .chain(once(0))
-        .collect::<Vec<_>>();
-    // SAFETY: both buffers are owned NUL-terminated UTF-16 paths valid for this call.
-    let moved = unsafe {
-        MoveFileExW(
-            source.as_ptr(),
-            destination.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if moved == 0 {
-        return Err(std::io::Error::last_os_error());
-    }
-    Ok(())
 }
 
 #[cfg(windows)]
