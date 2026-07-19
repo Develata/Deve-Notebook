@@ -1,6 +1,25 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#repo-lifecycle-coordinator
+
+mod cut;
+mod error;
+mod membership;
+mod model;
+mod prepared_identity;
+mod store;
+
+pub use error::RepoCatalogError;
+pub use membership::{
+    CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipRuntime,
+    CatalogMembershipToken, RepoCatalogCutPermit,
+};
+pub use model::{
+    PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval, RepoCatalogCreationCommit,
+    RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
+    RevalidatedRepoCreation, RevalidatedRepoRemoval,
+};
 
 use crate::ledger::manager::local_repo_metadata_repair::validate_local_repo_metadata;
 use crate::ledger::manager::types::RepoManager;
@@ -21,6 +40,9 @@ impl RepoManager {
         )
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 pub(crate) struct RepoCatalogRuntime<'a> {
     pub(super) manager: &'a RepoManager,
@@ -46,5 +68,14 @@ impl<'a> RepoCatalogRuntime<'a> {
 impl RepoManager {
     pub(crate) fn repo_catalog_runtime(&self) -> RepoCatalogRuntime<'_> {
         RepoCatalogRuntime::new(self)
+    }
+
+    /// Returns the process-local catalog membership authority capability.
+    ///
+    /// Tokens issued by this runtime are readiness evidence only. They do not
+    /// mutate durable catalog state and cannot outlive or impersonate another
+    /// `RepoManager` composition runtime.
+    pub fn catalog_membership_runtime(&self) -> CatalogMembershipRuntime {
+        self.catalog_membership.clone()
     }
 }

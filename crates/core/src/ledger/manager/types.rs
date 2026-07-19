@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 03_storage/index#repo-runtime-layout
 //!
+use super::repo_catalog_runtime::CatalogMembershipRuntime;
 use crate::models::{PeerId, RepoId};
 use crate::writeback::PersistGuard;
 use redb::Database;
@@ -54,4 +55,6 @@ pub struct RepoManager {
     pub snapshot_depth: usize,
     /// 受控 Projection 写回的 watcher 忽略表。
     pub(crate) persist_guard: Arc<PersistGuard>,
+    /// Process-local catalog membership readiness authority.
+    pub(crate) catalog_membership: CatalogMembershipRuntime,
 }

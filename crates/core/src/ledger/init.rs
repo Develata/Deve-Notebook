@@ -164,6 +164,7 @@ pub fn init_with_options(
     }
 
     repair_local_repo_metadata(&ledger_dir, &execution_name, local_db.as_ref(), false, None)?;
+    let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
 
     let repo = RepoManager {
         ledger_dir,
@@ -176,6 +177,7 @@ pub fn init_with_options(
         shadow_merge_guard: std::sync::Mutex::new(()),
         snapshot_depth,
         persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
+        catalog_membership,
     };
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;

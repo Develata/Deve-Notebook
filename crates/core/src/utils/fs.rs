@@ -4,26 +4,58 @@ use anyhow::{Context, Result};
 use std::fs::{File, Metadata, OpenOptions};
 use std::path::Path;
 
+/// Creates one same-directory temporary file suitable for
+/// [`replace_file_atomically`].
+///
+/// Windows handle-based rename requires `DELETE` access on the original
+/// handle. Keeping that exact handle alive also prevents a pathname swap from
+/// changing which file is published.
+pub fn create_atomic_replace_temp(path: &Path) -> std::io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    apply_atomic_temp_options(&mut options);
+    let file = options.open(path)?;
+    validate_regular_handle(&file, path, "atomic replacement temp")?;
+    Ok(file)
+}
+
 /// Atomically replace one file within a pre-validated host-runtime directory.
 ///
 /// The source must already be fully written and synced. Callers remain
 /// responsible for syncing the containing directory after this returns.
 #[cfg(not(windows))]
-pub fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Result<()> {
+pub fn replace_file_atomically(
+    source_file: &File,
+    source: &Path,
+    destination: &Path,
+) -> std::io::Result<()> {
+    ensure_open_file_matches_path(source_file, source, "atomic replacement temp")?;
     std::fs::rename(source, destination)
 }
 
 /// Windows equivalent of [`replace_file_atomically`].
 #[cfg(windows)]
-pub fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Result<()> {
-    use std::iter::once;
+pub fn replace_file_atomically(
+    source_file: &File,
+    source: &Path,
+    destination: &Path,
+) -> std::io::Result<()> {
+    use std::mem::{offset_of, size_of};
     use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
-        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
+        FILE_RENAME_INFO, FileRenameInfo, SetFileInformationByHandle,
     };
 
-    let source = std::fs::canonicalize(source)?;
-    let parent = destination.parent().ok_or_else(|| {
+    validate_regular_handle(source_file, source, "atomic replacement temp")?;
+    ensure_open_file_matches_path(source_file, source, "atomic replacement temp")?;
+    let source_parent = source.parent().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "atomic replacement source has no parent",
+        )
+    })?;
+    let destination_parent = destination.parent().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "atomic replacement destination has no parent",
@@ -35,26 +67,61 @@ pub fn replace_file_atomically(source: &Path, destination: &Path) -> std::io::Re
             "atomic replacement destination has no file name",
         )
     })?;
-    let destination = std::fs::canonicalize(parent)?.join(name);
-    let source = source
-        .as_os_str()
-        .encode_wide()
-        .chain(once(0))
-        .collect::<Vec<_>>();
-    let destination = destination
-        .as_os_str()
-        .encode_wide()
-        .chain(once(0))
-        .collect::<Vec<_>>();
-    // SAFETY: both owned buffers are NUL-terminated UTF-16 paths.
-    let moved = unsafe {
-        MoveFileExW(
-            source.as_ptr(),
+    let source_parent = std::fs::canonicalize(source_parent)?;
+    let destination_parent = std::fs::canonicalize(destination_parent)?;
+    if source_parent != destination_parent {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "atomic replacement must remain within one canonical directory",
+        ));
+    }
+    let destination = destination_parent.join(name);
+    let destination = destination.as_os_str().encode_wide().collect::<Vec<_>>();
+    let name_bytes = destination
+        .len()
+        .checked_mul(size_of::<u16>())
+        .ok_or_else(|| std::io::Error::other("atomic replacement path is too long"))?;
+    let header_bytes = offset_of!(FILE_RENAME_INFO, FileName);
+    let buffer_bytes = header_bytes
+        .checked_add(name_bytes)
+        .ok_or_else(|| std::io::Error::other("atomic replacement buffer overflow"))?;
+    let buffer_words = buffer_bytes.div_ceil(size_of::<usize>());
+    let mut buffer = vec![0_usize; buffer_words];
+    let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
+    // SAFETY: `Vec<usize>` provides sufficient alignment and capacity for the
+    // fixed header plus the exact UTF-16 payload. The source handle remains
+    // alive and names the already-validated temp file throughout the call.
+    unsafe {
+        (*info).Anonymous.ReplaceIfExists = true;
+        (*info).RootDirectory = std::ptr::null_mut();
+        (*info).FileNameLength = u32::try_from(name_bytes).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "atomic replacement path exceeds Win32 length budget",
+            )
+        })?;
+        std::ptr::copy_nonoverlapping(
             destination.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+            (*info).FileName.as_mut_ptr(),
+            destination.len(),
+        );
+    }
+    // SAFETY: the handle is valid, owns DELETE access, and `buffer` contains a
+    // correctly sized FILE_RENAME_INFO followed by its UTF-16 file name.
+    let renamed = unsafe {
+        SetFileInformationByHandle(
+            source_file.as_raw_handle(),
+            FileRenameInfo,
+            info.cast(),
+            u32::try_from(buffer_bytes).map_err(|_| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "atomic replacement buffer exceeds Win32 size budget",
+                )
+            })?,
         )
     };
-    if moved == 0 {
+    if renamed == 0 {
         return Err(std::io::Error::last_os_error());
     }
     Ok(())
@@ -162,6 +229,24 @@ fn apply_no_follow(options: &mut OpenOptions) {
 }
 
 #[cfg(windows)]
+fn apply_atomic_temp_options(options: &mut OpenOptions) {
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Foundation::GENERIC_WRITE;
+    use windows_sys::Win32::Storage::FileSystem::{
+        DELETE, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+    };
+    options
+        .access_mode(GENERIC_WRITE | DELETE)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+}
+
+#[cfg(not(windows))]
+fn apply_atomic_temp_options(options: &mut OpenOptions) {
+    apply_no_follow(options);
+}
+
+#[cfg(windows)]
 fn apply_no_follow(options: &mut OpenOptions) {
     use std::os::windows::fs::OpenOptionsExt;
     use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OPEN_REPARSE_POINT;
@@ -219,4 +304,49 @@ fn is_reparse(metadata: &Metadata) -> bool {
 #[cfg(not(windows))]
 fn is_reparse(_metadata: &Metadata) -> bool {
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn atomic_replace_publishes_the_exact_open_temp_handle() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let temp = dir.path().join("record.tmp");
+        let destination = dir.path().join("record.json");
+        std::fs::write(&destination, b"old")?;
+        let mut file = create_atomic_replace_temp(&temp)?;
+        file.write_all(b"new")?;
+        file.sync_all()?;
+
+        replace_file_atomically(&file, &temp, &destination)?;
+
+        assert_eq!(std::fs::read(destination)?, b"new");
+        assert!(!temp.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn atomic_replace_rejects_a_swapped_source_path() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let temp = dir.path().join("record.tmp");
+        let displaced = dir.path().join("displaced.tmp");
+        let destination = dir.path().join("record.json");
+        std::fs::write(&destination, b"old")?;
+        let mut original = create_atomic_replace_temp(&temp)?;
+        original.write_all(b"expected")?;
+        original.sync_all()?;
+        std::fs::rename(&temp, &displaced)?;
+        std::fs::write(&temp, b"swapped")?;
+
+        let error = replace_file_atomically(&original, &temp, &destination)
+            .expect_err("swapped pathname must fail closed");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(std::fs::read(destination)?, b"old");
+        assert_eq!(std::fs::read(displaced)?, b"expected");
+        Ok(())
+    }
 }

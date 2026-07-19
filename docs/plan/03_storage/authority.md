@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-19`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
@@ -309,9 +309,10 @@ permit；其 pending/reconcile 写入由 owned watcher generation 与 lifecycle 
 Repo catalog create 使用独立的 typed `Catalog -> Repo(new RepoId)` lane；RemoveLocalRepo 的短
 authority cut 必须按固定 `Catalog -> Repo(RepoId)` 顺序同时持有 catalog 与目标 repo permit。
 两者的唯一 durable normal-membership linearization fact 是
-`ledger/.host/repo-catalog/<repo_id>.json` 的单记录原子发布/替换；cut 内允许这一项 bounded
-temp+flush+replace，不允许 scan、目录遍历、watcher/provider I/O、session fan-out 或 await。
-DB、locator、workspace marker 只能作为 prepared/settlement truth，不能单独授权正常 listing 或 writer admission。
+`ledger/.host/repo-catalog/<repo_id>.json` 的单记录原子发布/替换；cut 内只允许对该单记录执行
+bounded exact read + temp/flush/replace/directory-sync，不允许其它 filesystem I/O、scan、目录遍历、
+watcher/provider I/O、session fan-out 或 await。DB、locator、workspace marker 的 revalidation token
+必须在 permits 外形成，且不能单独授权正常 listing 或 writer admission。
 Host-local alias set/import 不是 repo authority mutation，不获取 watcher lifecycle reservation，
 只进入 alias runtime 的短 CAS。不得用 nil UUID 或字符串
 哨兵伪装 catalog identity，也不得允许 repo lifecycle 与该 repo 的 authority writer 并发。已经持有任意

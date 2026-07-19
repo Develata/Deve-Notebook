@@ -13,6 +13,7 @@ mod core_docs_fallback;
 mod core_local_registry;
 pub mod locator;
 pub mod projection_locator;
+pub use projection_locator::ProjectionLocatorRecord;
 pub mod types;
 mod workspace;
 
@@ -56,6 +57,13 @@ mod repair_runtime;
 pub(crate) mod repo_catalog_entries;
 mod repo_catalog_local_runtime;
 mod repo_catalog_runtime;
+pub use repo_catalog_runtime::{
+    CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipRuntime,
+    CatalogMembershipToken, PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval,
+    RepoCatalogCreationCommit, RepoCatalogCutPermit, RepoCatalogError, RepoCatalogMembershipRecord,
+    RepoCatalogMembershipState, RepoCatalogRemovalCommit, RevalidatedRepoCreation,
+    RevalidatedRepoRemoval,
+};
 mod repo_catalog_shadow_runtime;
 mod repo_db;
 mod repo_info;

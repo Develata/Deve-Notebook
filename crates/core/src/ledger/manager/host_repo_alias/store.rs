@@ -6,8 +6,8 @@ use super::model::{
 };
 use crate::models::RepoId;
 use crate::utils::fs::{
-    ensure_open_file_matches_path, open_regular_file_lock, open_regular_file_read,
-    replace_file_atomically, sync_directory,
+    create_atomic_replace_temp, ensure_open_file_matches_path, open_regular_file_lock,
+    open_regular_file_read, replace_file_atomically, sync_directory,
 };
 use crate::utils::notegit;
 use serde::{Deserialize, Serialize};
@@ -171,13 +171,10 @@ impl AliasStore {
         }
 
         let write_result = (|| -> Result<(), HostRepoAliasError> {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)?;
+            let mut file = create_atomic_replace_temp(&temp)?;
             file.write_all(&bytes)?;
             file.sync_all()?;
-            replace_file_atomically(&temp, &path)?;
+            replace_file_atomically(&file, &temp, &path)?;
             sync_directory(&host_dir)?;
             Ok(())
         })();

@@ -137,6 +137,16 @@ impl RepoManager {
         self.validated_projection_locator_for_repo_id(repo_id)
     }
 
+    /// Reads the independent locator truth for lifecycle partial-outcome
+    /// classification. Missing is represented as `None`; malformed or
+    /// non-canonical locator evidence remains a fail-closed error.
+    pub fn query_projection_locator_record_for_repo_id(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<Option<ProjectionLocatorRecord>> {
+        projection_locator_record_for_repo_id(&self.ledger_dir, repo_id)
+    }
+
     pub fn validated_projection_locator_for_repo_id(
         &self,
         repo_id: RepoId,

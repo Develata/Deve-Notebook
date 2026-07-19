@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-19`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -72,6 +72,7 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/.host/identity.key`
 - `ledger/.host/projection-locators.toml`
 - `ledger/.host/repo-aliases.json`
+- `ledger/.host/repo-catalog.lock`
 - `ledger/.host/repo-catalog/<repo_id>.json`
 - `ledger/.host/repo-lifecycle-jobs/<request_id>.json`
 - `ledger/backups/<repo_id>-<timestamp>.redb`
@@ -104,6 +105,11 @@ authority record，不是 Ledger fact，也不进入 sync。create/remove 只在
 authority cut 内原子发布单个 bounded record；DB、locator 或 workspace artifact 的存在不能替代
 该 record，目录扫描也不得把未登记 artifact 自动 admission 为 normal repo。唯一 lifecycle 合同见
 `04_repository#repo-lifecycle-coordinator`。
+
+`repo-catalog.lock` 是同一 host ledger 下所有 `RepoManager`/进程共享的 project-owned advisory
+authority lock。它必须以 no-follow regular handle 打开并在加锁后复核 pathname identity；同进程
+runtime mutex 与该 file lock 的固定顺序是 process mutex -> file lock。未取得 file lock 的调用不得
+读取 conditional cut truth、清理 crash temp、发布 catalog record 或完成 bootstrap seed。
 
 每个 catalog record 的 deterministic JSON v1 至少包含
 `format="deve.host-repo-membership"`、`version=1`、exact `repo_id`、

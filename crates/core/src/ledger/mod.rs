@@ -68,9 +68,14 @@ pub use crate::models::GlobalSeq;
 pub use manager::local_fact_writer::LocalFactWriter;
 pub use manager::types::*;
 pub use manager::{
-    HOST_REPO_ALIAS_IMPORT_MAX_BYTES, HostRepoAliasBinding, HostRepoAliasError,
-    HostRepoAliasImportSummary, HostRepoAliasImportWarning, HostRepoAliasImportWarningReason,
-    HostRepoAliasRuntime, HostRepoAliasSetResult, HostRepoAliasValidationError,
+    CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipRuntime,
+    CatalogMembershipToken, HOST_REPO_ALIAS_IMPORT_MAX_BYTES, HostRepoAliasBinding,
+    HostRepoAliasError, HostRepoAliasImportSummary, HostRepoAliasImportWarning,
+    HostRepoAliasImportWarningReason, HostRepoAliasRuntime, HostRepoAliasSetResult,
+    HostRepoAliasValidationError, PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval,
+    ProjectionLocatorRecord, RepoCatalogCreationCommit, RepoCatalogCutPermit, RepoCatalogError,
+    RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
+    RevalidatedRepoCreation, RevalidatedRepoRemoval,
 };
 pub(crate) use shadow_transfer::ShadowPayload; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
 // We don't need to export manager::core because impl blocks are attached to the struct.
