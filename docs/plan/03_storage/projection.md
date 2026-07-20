@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-19`
+- `Last Review`: `2026-07-20`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/projection_fault/`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
@@ -82,6 +82,10 @@ Runtime ownership：
 - workspace root 是派生值。实现可以缓存 `workspace_root_abs`，但缓存 **MUST** 可由 `projection_base_abs + workspace_segment` 重建，且不得成为独立 authority。
 - workspace admission **MUST** 校验 `.notegit` identity marker 中的 `repo_id` 等于当前 `RepoId`；路径名匹配但 marker 缺失或不一致时必须 fail-closed。
 - host-local alias 修改不得触发 workspace realign、watcher lifecycle、Projection Fault 或 Remote Import stale。
+- ownership-aware `RemoveLocalRepo` 在 watcher E2 与 catalog revocation cut 之后删除 locator row和
+  exact `.notegit/` runtime tree，但不得删除或移动 workspace root及其余 child。locator 删除后，残留
+  workspace 只是用户文件集合，不能被路径名或旧 marker 自动 re-admit；重新纳入必须创建/导入新的
+  repo 并走正常 identity/reconciliation 合同。
 - 两个本地 repo **MUST NOT** 解析到同一 workspace root。
 - 任意两个 workspace root **MUST NOT** 互为父子目录。
 - workspace root **MUST NOT** 位于 `ledger/`、`ledger/.host/`、`.notegit/` 或 `.git/` 内部。

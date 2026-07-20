@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-19 (A1/B1/C1′ repo identity and lifecycle convergence; Remote Import B5 drift remains)
+Generated: 2026-07-20 (ownership-aware RemoveLocalRepo target registered; implementation remains drifted)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -14,17 +14,17 @@ Keep this block stable. The graph generator reads the drift registry below.
 <!-- modeled-slice:start -->
 - Flow count: `82`
 - Status: `drifted`
-- Active drift count: `4`
+- Active drift count: `5`
 <!-- modeled-slice:end -->
 
 ## Summary
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 client gap，repo alias set/transfer 与 A1/B1 lifecycle 已对齐 |
-| User operations | drifted | existing 74 IDs、Remote Projection push、F4/v4 Repo Control与host-owned lifecycle align；Remote Import client尚未收敛 |
+| Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 client gap，`repo lifecycle` 保留 ownership-aware removal gap |
+| User operations | drifted | existing Repo Control/A1/B1 jobs and catalog cuts exist；destructive settlement/repair 与 Remote Import client 尚未收敛 |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、catalog cut与lifecycle settlement已存在；Remote Import independent client scheduled B5 |
+| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback与repo catalog cut已存在；per-RepoId DB retirement、owned-state settlement/repair 与 Remote Import independent client 尚未收敛 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -35,6 +35,7 @@ Use one entry per divergent flow. Labels must match the flow registry.
 - `remote import review`
 - `remote import apply`
 - `remote import manage`
+- `repo lifecycle`
 <!-- drift-registry:end -->
 
 Active drift facts:
@@ -43,6 +44,7 @@ Active drift facts:
 2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
 4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 已接入 host lifecycle，B5 尚未提供 thin Web management surface。
+5. `repo lifecycle`: A1/B1 host-owned jobs、prepare/cut/settle 骨架与 session-scoped publication 已存在；ownership-aware `RemoveLocalRepo` 仍缺 per-RepoId authority retirement、manifest-bound owned-state cleanup、exact repair 与 destructive UI evidence。
 
 ## Flow Registry
 
@@ -188,12 +190,12 @@ The degraded local projection write gate is aligned:
 
 Within the currently modeled operation slice:
 
-- 74 pre-existing flows remain aligned
+- 73 pre-existing flows remain aligned; `repo lifecycle` is explicitly drifted
 - Remote Projection push and B4 Remote Import backend/CLI/product wire are aligned; four approved flows retain only the honest B5 client mapping gap
-- Redb v4、sealed writer、Mounted admission、post-commit writeback、F4/v4 Repo Control、immutable locator 与 A1/B1 lifecycle are aligned；B5/B6 与 first-tag freshness evidence remain release blockers
+- Redb v4、sealed writer、Mounted admission、post-commit writeback、F4/v4 Repo Control 与 immutable locator are aligned；ownership-aware lifecycle settlement、B5/B6 与 first-tag freshness evidence remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
-The slice is bijective at the registry/label level and intentionally carries four active drift markers until B5 closes the independent client flows；B6 再封存 0-drift evidence。
+The slice is bijective at the registry/label level and intentionally carries five active drift markers. B5 closes four independent client gaps; ownership-aware lifecycle requires its own implementation and evidence before B6 can seal 0-drift evidence.
 
 ## Maintenance Rules
 

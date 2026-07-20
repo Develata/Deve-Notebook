@@ -7,3 +7,5 @@
     user_remote_import_apply_spine -> drift_remote_import_apply [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
     drift_remote_import_manage [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
     user_remote_import_manage_spine -> drift_remote_import_manage [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
+    drift_repo_switch [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
+    user_repo_switch_spine -> drift_repo_switch [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];

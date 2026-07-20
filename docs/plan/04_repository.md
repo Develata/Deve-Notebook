@@ -444,22 +444,28 @@ ReadonlyDegraded
 
 ### 7.6 Local Repo Removal Contract
 
-- Web/CLI 的普通“删除仓库”入口在当前阶段必须实现为 `RemoveLocalRepo`：从正常 switcher/listing、last scope recovery 与自动默认绑定中移除本地 repo，但保留 `.redb` authority 与 Projection Workspace 文件。
+- Web 的 typed Repo Control “移除仓库”入口必须实现为 ownership-aware `RemoveLocalRepo`：删除该 host 上属于 Deve 且仅属于目标 local repo membership 的 authority/runtime 对象，同时保留 Projection Workspace 容器及其中除精确 `.notegit/` 外的全部用户或外部对象。它不是 secure erase，也不是删除 workspace 的 `DestroyLocalRepo`；当前不声明独立 CLI remove surface。
 - `RemoveLocalRepo` 必须解析到唯一 `RepoId`，只能作用于 Local Branch，remote/spectator scope 必须 fail-closed。
 - 移除当前 active repo 前必须先解析另一个 `Healthy + Mounted` local repo，并记录其 `RepoId`、`CatalogMembershipToken` 与 mount generation 组成的 deferred fallback token；不存在替代 repo 时必须拒绝。此时不得提前发布或实际切换 scope。coordinator 在 durable remove side effect 前必须 exact revalidate fallback 仍为同一 catalog token / mount generation 的 `Healthy + Mounted`；失败则在未提交 remove 的情况下中止并保持原 scope。
-- 移除操作不得删除 ledger authority、不得删除 `.notegit`、不得删除用户 Markdown workspace；真正物理销毁必须另有显式 destroy/export-after-confirm 流程，并要求独立验收。
-- 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；恢复入口必须通过 repair/import/recover 类受控流程重新 admission。
+- 删除集合必须由 project-owned tagged manifest 以 exact `RepoId` 固定：canonical local DB 与 workspace `.notegit/` 记录已解析绝对路径、父目录 identity、canonical containment 与 FileId/inode 等平台 fingerprint；Projection Locator、host-local alias 与 catalog tombstone 记录各 owner 签发的 row key + revision/token。DB 必须是 regular、non-symlink/non-reparse file；顶层 `.notegit/` 必须是 real directory 且不是 symlink/junction/reparse point。不得从 alias、workspace 目录名、glob、目录扫描或 stale path cache 推导目标，也不得让 coordinator 直接解析或改写共享 store 文件。
+- 明确保留集合包括：workspace root 本身、Markdown、附件及其它非 `.notegit` workspace child、`.git/`、`.gitignore`、`.deveignore`、remote shadow branch、显式 backup/export、全局 peer identity/config 与其它 RepoId 的任何对象。实现不得递归删除 workspace root。no-follow walker 对 `.notegit/` 子项可删除 link/reparse entry 本身，但绝不进入 target；顶层 `.notegit/` 身份不匹配则整个目标 fail-closed。identity marker/root 必须最后删除，或由等价的稳定 handle 始终证明 ownership。
+- remove 是明确丢弃本机 Ledger history 与 Deve workflow state 的 destructive intent，不可撤销，首发也没有受支持的 Ledger history restore。产品确认文案必须明确“Ledger/runtime 会删除，workspace 文件与 `.git` 会保留”，不得把归档 export 或现有 backup 描述为可验证的自动恢复保证。remove 不得偷偷创建长期 backup 或把 backup 当作 cleanup 成功。
+- 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；成功 cleanup 后不存在可直接 re-admit 的本地 authority。若要继续使用保留的 Markdown，必须创建/导入新的 repo 并经过正常 reconciliation/Remote Import 路径，不得从残留 workspace 猜测原 RepoId。
 - remove 必须先 reserve `Transitioning(generation)` 并关闭新写门；watcher final-state reconcile 必须在 per-RepoId catalog record 切换为 `Removed`、locator cleanup 或正常 listing 隐藏之前完成。
-- active Remote Import session 或 `cleanup_pending=true` 是 durable removal blocker。remove 不得隐式 discard、裁剪或清理 session；operator 必须先执行显式 session discard 或 `remote-import repair --apply`，并让 cleanup receipt 收敛。
+- active Remote Import session、`cleanup_pending=true` 或 repo-scoped artifact debt 是 durable removal blocker。remove 不得隐式 discard、裁剪或清理 session/artifact；operator 必须先通过 `remote_import_runtime` 的显式 session discard 或 `remote-import repair --apply` 让其 owner 报告 clean/absent。lifecycle coordinator 只消费 typed admission/revalidation，不获得 Remote Import artifact 删除权限。
 - durable remove 成功后该 repo 本进程不得重新启动 watcher。失败且 durable remove 尚未提交时，coordinator 才可以补偿性启动旧 root watcher；若 remove 已提交，则即使 publication/cleanup 失败也不得恢复旧 watcher 或重新暴露为正常可写 repo。
 - durable remove 成功且最终 mount outcome 已知后，才允许把 deferred scope switch 与 repo-list publication 一次性 enqueue。deferred publication 在**应用**而非仅入队时，必须再次 exact-compare fallback 的 `CatalogMembershipToken`、mount generation 与 `Healthy + Mounted`；若 fallback 已 removed、membership generation 已改变或 watcher `Failed`，则不得绑定该 repo，也不得静默选择第三个 repo。发起 remove 且当前绑定目标 repo 的 session 必须进入 §4.2 既有 `NoScope` state，按固定顺序先发布最终 `RepoList`，再复用 `ServerMessage::ProtocolError` + `ServerErrorCode::ScRepoNotSelected`（wire `SC_REPO_NOT_SELECTED`，携带匹配的 `switch_nonce`）返回 readonly partial outcome；此路径禁止发送伪造 `RepoSwitched`。这里不新增 Rust/wire enum、watcher lifecycle WS message 或 protocol family。remove 未提交时不得发布 fallback scope，旧 watcher 补偿重启成功后原 scope 保持不变；补偿重启失败则返回显式 readonly partial outcome。
-- durable membership authority cut 必须是 repo-scoped conditional-apply：当前 DB/locator/marker truth 先在 permits 外形成 `RevalidatedRepoRemoval`；随后在 `RepoCatalogRuntime` 的短 `Catalog -> Repo(target)` lane 内 exact-compare 该 token、fallback token 与 typed permit，以 bounded exact read + same-directory temp + flush + atomic replace + directory sync 把该 RepoId catalog record 从 `Normal` 改为 `Removed`，并在新状态首次可见之前轮换被移除 RepoId 的 process-local membership generation。该 cut 产出不可变 `RepoRemovalCommittedCutPlan`（removed RepoId/old token、initiator outcome 与 fallback token）。临界区除该单个 per-repo membership record 的 exact read / atomic publish 外不得执行其它 filesystem I/O；不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、scan、watcher I/O、await 或长时计算。
+- durable membership authority cut 必须是 repo-scoped conditional-apply：当前 DB/locator/marker truth 与 exact ownership manifest 先在 permits 外形成 `RevalidatedRepoRemoval`，并以 same-directory temp + flush + atomic replace + directory sync 将 manifest/receipt 发布为 `ManifestPrepared`。随后在 `RepoCatalogRuntime` 的短 `Catalog -> Repo(target)` lane 内 exact-compare 该 token、fallback token 与 typed permit，把该 RepoId catalog record 从 `Normal` 改为 transient `Removed` tombstone；tombstone 必须引用 exact `request_id + manifest_digest`，并在新状态首次可见之前轮换被移除 RepoId 的 process-local membership generation。该 cut 产出不可变 `RepoRemovalCommittedCutPlan`。临界区除该单个 per-repo membership record 的 exact read / atomic publish 外不得执行其它 filesystem I/O；不得读取或遍历 session map，不得 enqueue per-session message，也不得跨 network send、scan、watcher I/O、await 或长时计算。
+- `Removed` tombstone 是 cleanup crash recovery 的线性化证据，不是长期软删除状态。cut 后 settlement 必须先从 `authority_storage_runtime` 取得 exact RepoId 的 retirement proof：阻止新 authority admission、等待已准入使用者退出、清除全局 cache/宿主持有并证明没有其它进程仍能打开/写入该 DB，然后才可删除 canonical `.redb`。实现不得依赖 Windows delete failure 或 Unix unlink semantics 充当排他证明。随后逐项调用 `.notegit` remover、`projection_locator_runtime`、`host_repo_alias_runtime` 与 `repo_catalog_runtime` 的 typed conditional command；coordinator 不得直接修改 owner store。
+- 持久化顺序固定为 `ManifestPrepared + fsync -> Removed(request_id, manifest_digest) + fsync -> per-item cleanup receipt + fsync -> CleanupComplete + fsync -> exact tombstone delete -> terminal/publication`。tombstone delete 必须 exact-compare `RepoId/state/membership_revision/request_id/manifest_digest`。在 tombstone 删除前 crash 必须依 receipt + manifest 归类 remaining targets；删除后 crash 只能依 durable `CleanupComplete` 完成 terminal/publication，不得仅凭路径缺失推断成功。
+- settlement 是跨文件系统对象的可恢复 saga，不伪装成单事务。任一步失败必须停止后续不安全删除，记录每项 `deleted / already_absent / blocked / failed` receipt 并返回 `CommittedPartial` 或 `RepairRequired`；recovery 只能按同一 immutable manifest 重验 remaining targets，禁止扩大候选集。identity/fingerprint/containment 任一变化必须 fail-closed 为 typed `RepairRequired`，不得自动重新授权删除。cut 后无论 cleanup 成败都不得恢复 membership、DB handle 或 watcher。
+- active 与 cleanup/repair debt receipt 永不裁剪。cleanup 成功后也必须保证旧 `request_id` 不能在同一 `RepoId` 后续重新 admission 后被视为新 remove；具体是保留最小 replay fence、绑定不可复用 membership incarnation，还是绑定 prepare confirmation token，属于实现前必须独立裁定的 protocol/control-plane 选择。
 - 发起者的 invalid fallback partial 必须把请求的 `switch_nonce` 提交为新的 `NoScope(scope_nonce)`。先入队的最终 `RepoList` 与随后 `ProtocolError` 都携带该同一 `scope_nonce`，后者同时携带同一 `switch_nonce`；旧 repo epoch 的消息自此全部 stale。该 `RepoList` 是 pending remove 的 typed final projection，不授权自动选择列表中的其它 repo。
 - revocation cut 之后，所有保存 old token 的 RepoBound、writer admission 与 new bind 都因 generation mismatch 立即 fail-closed；这就是 authority invalidation，不等待 session fan-out。`RepoLifecycleCoordinator` 只把 `RepoRemovalSettledPublication` 交给 publication sink/session runtime，不能拥有 connection/session map。
 - session runtime 在 Catalog permit 外登记最新 repo revocation、快照受影响 session，并逐 connection 执行有界 in-memory conditional apply：重新校验 binding/fallback token，原子提交该 connection 的 `RepoBound/NoScope` epoch并 enqueue typed sequence。并发 bind 在 revocation cut 前成立则携带 old token并被该 marker/后续 admission 拒绝，cut 后发起则直接失败；不得存在未被 generation gate 覆盖的 binding 注册窗口。O(N) session snapshot/fan-out 永远不得回到 Catalog/Repo permit 内。
 - 在 invalid-fallback partial 中，发起 remove 的 session 使用其已验证 `switch_nonce` 作为新的 per-connection `NoScope` epoch，并发送上述 `RepoList -> ProtocolError` 序列；fallback 有效时发起者走正常 `RepoBound(fallback)` / `RepoSwitched` 成功路径，不进入 NoScope。其它已绑定 removed RepoId 的 observer session 无论发起者成功或失败都不得复用发起者 nonce；session runtime 必须各自分配严格大于其 current scope nonce 的新 epoch，提交 `NoScope`，然后发送同序列，但 `ProtocolError.switch_nonce = None`、两帧 `scope_nonce = new_epoch`。若 nonce 无法递增，必须直接退休该连接并在 reconnect 后受控恢复，不能保留旧 writer-ready。
 - server-driven observer invalidation 不得自动切换第三个 repo，也不得清除 editor pending overlay；它只退休旧 repo/doc/writer scope 与冲突的 pending scope-switch intent。所有消息只做有界 per-connection enqueue，network delivery 不属于 Catalog critical section。
-- remove cleanup 出现 partial outcome 时必须按 `RepoId` 重新读取 catalog、metadata、locator 与 workspace marker；混合事实进入 repair，不得用路径存在性猜测 durable remove 是否成立。
+- remove cleanup 出现 partial outcome 时必须按 lifecycle receipt 与 `RepoId` 重新读取 transient catalog tombstone、DB identity、locator、alias、workspace marker/`.notegit`，并向 Remote Import owner 查询 typed clean/absent state；混合事实进入 exact-manifest repair，不得用单一路径存在性猜测 durable remove 是否成立。workspace root及其保留 child 不参与“是否已移除”的判断。
 
 ### 7.6.1 Remote Import Repo Lifecycle {#remote-import-repo-lifecycle}
 
@@ -511,12 +517,15 @@ typed intent -> host-owned lifecycle job
 - 每个 intent 必须携带 caller-generated opaque UUID `request_id`。runtime admission 原子分配
   `job_id`；create 同时分配 immutable target `RepoId`。同一 request_id 只能绑定同一 operation
   与规范化参数，参数不一致必须 typed reject；相同 retry 返回既有 job/terminal result，不能重复
-  create/remove。active job 永不被 retention 裁剪；terminal completion 至少保留 24 小时且最多
-  1024 条，仍处于 normal catalog 的 create receipt 不得裁剪。重连方使用 request_id 查询结果。
+  create/remove。active job、cleanup/repair debt 与仍处于 normal catalog 的 create receipt 不得裁剪。普通
+  terminal completion 至少保留 24 小时且最多 1024 条；destructive remove 另外必须满足 §7.6
+  的 old-request replay safety，不能因普通 retention 使旧 intent 作用于后续 membership incarnation。重连方使用 request_id 查询结果。
 - lifecycle receipt 是 host-local control-plane state，不进入 Ledger/sync/provider/Remote Import。
-  restart 不继续执行中断的 job；它只用 receipt 中的 request_id/target RepoId 与
-  catalog/locator/marker truth 将结果收敛为 NotCommitted、CommittedPartial 或 RepairRequired，
-  因而进程重启后的相同 request_id 也不得创建第二个 RepoId。
+  restart 不复活原 worker 或重跑未进入 cut 的中断 job；它先用 receipt 中的 request_id/target RepoId 与
+  catalog/locator/marker truth 将结果分类为 NotCommitted、CommittedPartial 或 RepairRequired。只有已进入
+  remove cut、manifest 与所有 remaining target fingerprint 完全匹配的 settlement 才可由后续受控 recovery
+  收敛；任一身份漂移都只能保留 `RepairRequired`，不自动扩大删除权。进程重启后的相同
+  request_id 不得创建第二个 RepoId 或作用于新 membership incarnation。
 - `RepoLifecyclePublicationSink` 是 host-owned narrow consumer；job runtime 在 transport waiter
   之外把 settled publication 交给它。shutdown 必须先停止 admission，再等待所有已接收 job
   达到 terminal/repair outcome 并把可发布结果交给 sink。transport handler 只是可丢弃 observer，
@@ -552,9 +561,9 @@ Create/remove 的事实矩阵固定如下；catalog membership record 是唯一 
 | create prepare | job receipt=`Preparing`；unlisted canonical DB/genesis；validated locator；workspace marker/projection；prepared manifest/digests | catalog record absent 必须按 exact prepared manifest 清理或标记 cleanup debt；不得正常 listing/mount |
 | create cut | atomic publish per-RepoId catalog record=`Normal`；rotate membership generation；`RepoCreationCommittedCutPlan` | record=`Normal` 即 committed；继续 alias/mount settlement，不能删除 repo |
 | create settle | alias best-effort CAS、watcher mount、settled publication/completion | alias 失败回退 display RepoId；mount 失败 readonly；两者都不撤销 catalog membership |
-| remove prepare | active catalog record；Transitioning reservation；provider quiesced；watcher E2 complete；Remote Import/fallback exact snapshot | catalog record=`Normal` 且全部 snapshot 仍 exact 才能进入 cut；否则仅唯一 pre-truth 可补偿 restart |
-| remove cut | atomic replace same record=`Removed`；rotate membership generation；`RepoRemovalCommittedCutPlan` | record=`Removed` 即 committed；旧 token 永久 fail-closed，禁止重启 removed watcher |
-| remove settle | locator/alias/display cleanup、settled publication/completion | cleanup failure 保持 removed + repair debt；不得恢复 normal membership |
+| remove prepare | active catalog record；Transitioning reservation；provider quiesced；watcher E2 complete；Remote Import/fallback exact snapshot；exact ownership manifest/fingerprint | catalog record=`Normal` 且全部 snapshot 仍 exact 才能进入 cut；否则仅唯一 pre-truth 可补偿 restart且不得删除对象 |
+| remove cut | atomic replace same record=`Removed` transient tombstone；rotate membership generation；`RepoRemovalCommittedCutPlan` | tombstone=`Removed` 即 committed；旧 token 永久 fail-closed，禁止重启 removed watcher |
+| remove settle | authority runtime retire exact DB leases；各 owner 按 manifest 删除 local `.redb`、`.notegit`、locator 与 alias；Remote Import 必须已由显式 discard/repair 收敛为 clean；最后删除 tombstone；settled publication/completion | cleanup failure 保持 tombstone + exact repair debt；保留 workspace/.git/remote shadow/backups；不得恢复 normal membership |
 
 所有 recovery 必须至少比较 catalog membership record、canonical DB identity、locator binding、workspace marker、Remote Import active/cleanup state 与 lifecycle receipt。事实不能唯一归入表中的一行时必须 `RepairRequired`，不得凭路径存在性猜测。
 
@@ -604,6 +613,7 @@ Create/remove 的事实矩阵固定如下；catalog membership record 是唯一 
 
 - `RepoLifecycleJobRuntime` 从 transport 接收 typed create/remove intent并稳定拥有其完成生命周期。
 - `RepoLifecycleCoordinator` 编排 prepared lifecycle、Catalog/Repo authority cut、projection/locator runtime 与 `WatcherSupervisor`。
+- cleanup settlement 只能调用 authority storage、locator、alias、catalog 与 Remote Import owner 的 typed prepare/revalidate/conditional command；coordinator 不拥有这些 store 的路径解析或删除权限。
 - handler、Web shell 与 repo scope runtime 不得直接 start/stop watcher，也不得根据 mount failure 猜测 rollback。
 - coordinator 返回 immutable publication plan；`RepoSessionRuntime` 只在最终 mount outcome 已知后 conditional-apply repo list/scope 结果。view layer 只渲染 typed committed/partial/unavailable outcome。
 

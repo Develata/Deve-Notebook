@@ -68,11 +68,15 @@ UI / HTTP / WS handlers
 - `WatcherSupervisor` is the CLI host runtime owner of repo slots, generations and lifecycle; handlers never receive it.
 - `WatcherRuntimeView` exposes only snapshot/aggregate readiness to `AppState`, mutation admission and `/api/node/role`.
 - `RepoLifecycleJobRuntime` is the transport-independent owner of accepted create/remove jobs; handlers may stop waiting but cannot cancel durable convergence.
-- `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice.
+- `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice. `RemoveLocalRepo` uses a typed ownership manifest: it deletes local Redb and Deve-owned repo runtime state after revocation, while preserving the workspace root, Markdown/attachments, `.git`, remote shadows and explicit backups/exports.
 - durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
-The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health and E2 final-state shutdown are implemented. W7 create/remove convergence remains active drift until host-owned jobs, prepare/cut/settle boundaries, immutable publication plans and cancellation/concurrency evidence are complete. It must not be represented as implemented merely because handlers can call lifecycle helpers.
+The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health,
+E2 final-state shutdown, host-owned lifecycle jobs and the A1/B1 prepare/cut/settle skeleton are
+implemented. `flow.repo.lifecycle` remains active drift because ownership-aware removal still lacks
+safe per-RepoId authority retirement, manifest-bound owned-state settlement, exact repair and
+destructive UI evidence. A catalog tombstone alone is not evidence of physical cleanup.
 
 ## Cross-host Data and Host-local Interaction
 

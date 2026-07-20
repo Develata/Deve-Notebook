@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-19`
+- `Last Review`: `2026-07-20`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
@@ -431,4 +431,10 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
 ### 11.1 Authority Layer
 
 - 负责 ledger append validation、runtime side table 归类、authority table 读写边界。
+- 必须为 exact `RepoId` 提供 typed authority-use admission 与 retirement proof。ownership-aware
+  `RemoveLocalRepo` 在 membership revocation 后必须阻止新 authority use、等待已准入使用者退出、
+  从进程/全局 cache 移除该 RepoId 的 handle，并获得跨进程 exclusive removal proof，然后才允许
+  删除 canonical `.redb`。唯一 handle owner、revocable lease 或等价 composition 的具体骨架属于
+  实现前的 architecture decision。Unix unlink 后仍存活的旧 handle 与 Windows 打开文件删除失败
+  都是 invariant violation，不得降级为隐藏 authority 或用下次重启掩盖。
 - 不得读取 UI 状态、watcher 原始事件或未归一化路径作为业务真相。

@@ -283,11 +283,19 @@
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_cli removed_membership_generation_changed_or_failed_fallback_is_not_bound -- --nocapture
-    - gap: C1′ host-local alias store/JSON CLI/product evidence and A1/B1 host-owned lifecycle convergence are not implemented yet
     - run: cargo test -p deve_web remove_current_fallback_failure_commits_no_scope -- --nocapture
     - run: cargo test -p deve_cli remove_current_invalidates_all_bound_sessions -- --nocapture
     - run: cargo test -p deve_web remove_partial_stage_is_connection_epoch_bounded -- --nocapture
-    - run: cargo test -p deve_core --lib remove_local_repo_hides_it_without_deleting_authority_and_projection_workspace -- --nocapture
+    - gap: ownership-aware RemoveLocalRepo exact manifest, handle retirement, owned-state cleanup, and repair producer are not implemented yet
+    - run: cargo test -p deve_core --lib remove_local_repo_deletes_owned_state_and_preserves_workspace_content -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_local_repo_cleanup_failure_is_exactly_repairable -- --nocapture
+    - run: cargo test -p deve_core --lib remove_local_repo_retires_bootstrap_and_secondary_db_leases -- --nocapture
+    - run: cargo test -p deve_core --lib remove_local_repo_fails_closed_while_another_process_holds_authority -- --nocapture
+    - run: cargo test -p deve_core --lib remove_local_repo_rejects_notegit_symlink_and_reparse_escape -- --nocapture
+    - run: cargo test -p deve_core --lib remove_local_repo_no_follow_walker_never_enters_child_link_targets -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_local_repo_restart_classifies_each_durable_cut_from_exact_manifest -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_local_repo_manifest_precedes_tombstone_and_cleanup_complete_precedes_retirement -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_local_repo_old_request_cannot_remove_readmitted_membership -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
     - chrome_mcp: 点击 repo 行更多菜单并修改本机 alias
@@ -298,8 +306,23 @@
     - ui_assert: repo_row_more_menu_contains_alias_and_remove true
     - ui_assert: alias_change_preserves_repo_id_scope_and_workspace true
     - ui_assert: removed_repo_hidden_from_normal_list true
-    - cli_assert: removed_repo_authority_not_physically_deleted true
-    - cli_assert: removed_repo_projection_workspace_not_physically_deleted true
+    - cli_assert: removed_repo_local_redb_not_present true
+    - cli_assert: removed_repo_notegit_not_present true
+    - cli_assert: remove_requires_remote_import_owner_to_report_clean_and_artifacts_absent true
+    - cli_assert: removed_repo_locator_and_alias_not_present true
+    - cli_assert: removed_repo_workspace_markdown_attachments_and_git_preserved true
+    - cli_assert: removed_repo_remote_shadows_backups_and_exports_preserved true
+    - cli_assert: removed_repo_catalog_tombstone_absent_after_successful_cleanup true
+    - cli_assert: cleanup_failure_retains_exact_manifest_tombstone_and_repair_debt true
+    - cli_assert: cleanup_debt_receipt_is_not_pruned_before_tombstone_retirement true
+    - cli_assert: alias_locator_and_catalog_conditional_delete_preserve_other_repo_rows true
+    - cli_assert: bootstrap_and_secondary_repo_handle_retirement_have_identical_semantics true
+    - cli_assert: external_process_authority_holder_blocks_redb_delete_on_windows_and_unix true
+    - cli_assert: notegit_symlink_junction_and_child_reparse_points_fail_closed_without_escape true
+    - cli_assert: manifest_parent_identity_and_containment_drift_fail_closed true
+    - cli_assert: remote_import_pending_and_cleanup_artifacts_are_never_removed_by_lifecycle_owner true
+    - cli_assert: old_remove_request_cannot_affect_readmitted_same_repo_id true
+    - ui_assert: remove_confirmation_states_irreversible_no_ledger_restore_and_workspace_git_preserved true
     - cli_assert: create_mount_failure_keeps_repo_readonly_and_current_scope_unchanged true
     - cli_assert: alias_set_never_stops_watcher_or_moves_workspace true
     - cli_assert: alias_import_unknown_invalid_duplicate_entries_warn_skip_and_summarize true

@@ -43,8 +43,8 @@
 
 ## Pending Decisions
 
-- `watcher-failure-semantics-decision-2026-07-16.md`：startup cut、worker failure state、
-  Windows overflow recovery 与 lifecycle transaction；等待 USER 裁定，未构成 live contract。
+- `ownership-aware-repo-removal-architecture-stop-2026-07-20.md`：RemoveLocalRepo 的
+  per-RepoId DB authority retirement、committed cleanup repair 与 old-request replay protection；等待 USER 裁定，未构成 live contract。
 
 ## Retired Cleanup Policy
 

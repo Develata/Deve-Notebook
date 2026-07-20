@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.repo.lifecycle`
 - `Domain`: `repository`
 - `Related Feature Chapters`: `docs/features/06_repository.md`
-- `Related Acceptance Cases`: `REPO-FEAT-03`
+- `Related Acceptance Cases`: `STORE-014A`
 
 ## Operations
 
@@ -43,5 +43,5 @@
 
 ## Notes
 
-- create/remove 使用 prepare → short authority cut → settle；唯一 committed fact 是 per-RepoId catalog record。
+- create/remove 使用 prepare → short authority cut → settle。create 的长期 membership authority 是 per-RepoId catalog record；remove 先把它原子切为 transient `Removed` tombstone，再按 immutable ownership manifest 清理 Deve-owned repo state，全部收敛后删除 tombstone。remove 永不删除 workspace root、Markdown/附件、`.git`、remote shadows 或显式 backup/export。
 - alias set 不属于 lifecycle；handler/connection drop 不取消已 admission job。

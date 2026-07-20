@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-19`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -115,9 +115,13 @@ runtime mutex 与该 file lock 的固定顺序是 process mutex -> file lock。�
 `format="deve.host-repo-membership"`、`version=1`、exact `repo_id`、
 `state="normal|removed"`、单调 `membership_revision`、prepared identity digest 与最近一次
 `lifecycle_request_id`；文件名、payload RepoId 与 DB identity 任一不一致必须 fail-closed。
+`removed` 只是在 ownership-aware `RemoveLocalRepo` 已线性化但 cleanup 尚未全部收敛期间的
+transient tombstone；Remote Import 已由其 owner 显式收敛为 clean/absent，且成功删除 exact local
+DB、workspace `.notegit`、locator 与 alias 后，必须由 catalog owner 删除该 record。它不是可恢复的长期软删除状态。
 `repo-lifecycle-jobs/<request_id>.json` 是 `RepoLifecycleJobRuntime` 的 host-local admission/completion
 receipt，记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome；
-它不授予 repo membership，也不得进入 Ledger/sync。active receipt 永不裁剪；normal repo 的 create
+remove receipt 还必须固定 exact ownership manifest、fingerprint/token 与逐 owner cleanup outcome；它不授予
+repo membership，也不得进入 Ledger/sync。active/cleanup-debt receipt 永不裁剪；normal repo 的 create
 receipt 至少由 catalog record 可追溯，terminal receipt 的 bounded retention 归
 `04_repository#repo-lifecycle-coordinator`。
 
@@ -155,6 +159,9 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
 - `.notegit/` **MUST** 被 watcher 忽略。
 - `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
+- ownership-aware `RemoveLocalRepo` 只能删除 workspace root 下 exact、identity-matched 且自身非
+  symlink/junction 的 `.notegit/` 树；workspace root 与其它 child（包括 Markdown、附件、`.git/`、
+  `.gitignore`、`.deveignore`）全部保留。递归删除不得跟随任何 child symlink/reparse point。
 
 > Projection Locator Layout（projection-locator-contract）见 [projection.md#projection-locator-contract](./projection.md#projection-locator-contract)（§3.2.1）。
 

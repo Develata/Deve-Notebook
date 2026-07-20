@@ -65,7 +65,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012`, `STORE-013` |
 | `flow.repo.alias-set` | [`repo_alias_set.md`](./operations/repo_alias_set.md) | `STORE-014A` |
 | `flow.repo.alias-transfer` | [`repo_alias_transfer.md`](./operations/repo_alias_transfer.md) | `CMD-008` |
-| `flow.repo.lifecycle` | [`repo_lifecycle.md`](./operations/repo_lifecycle.md) | `REPO-FEAT-03` |
+| `flow.repo.lifecycle` | [`repo_lifecycle.md`](./operations/repo_lifecycle.md) | `STORE-014A` |
 | `flow.repo.open-doc` | [`repo_open_doc.md`](./operations/repo_open_doc.md) | `CMD-003`, `REPO-FEAT-01`, `STORE-009` |
 | `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01` |
 | `flow.sc.commit` | [`sc_commit.md`](./operations/sc_commit.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03`, `DIFF-009`, `AI-007` |

@@ -28,7 +28,7 @@
 - Source Control、Explorer、当前文档作用域应随 repo 切换而同步变化。
 - 界面不应同时把所有 repo 混成一个全局工作区。
 - 仓库展开界面应提供新增、设置本地 alias 与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于修改当前 host 的显示 alias 或移除该 repo。
-- 普通移除仓库不应直接销毁 ledger 或 Projection Workspace；用户可见文案必须避免暗示已经物理擦除数据。
+- 普通移除仓库会删除本机该 repo 的 Ledger history 与 Deve-owned runtime state，但保留 Projection Workspace 容器、Markdown/附件、`.git` 与其它非 `.notegit` 文件。确认文案必须准确说明两类结果，不能写成“所有数据已删除”或“仅从列表隐藏”。
 - create/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
 - create 已提交但 workspace ingestion mount 失败时，新 repo 保留只读可见，当前 session 不自动切换。
 - alias 修改只更新当前 host 的列表/标题显示；不停止 watcher、不移动 workspace、不改变可写状态、scope 或其它 peer 的名称。
@@ -143,7 +143,7 @@
 - 新增 repo 后自动切换到新 repo。
 - 上述自动切换仅在新 repo 成功 mounted 时发生；若 durable create 已提交但 mount 失败，新 repo 只读可见且当前 session 保持原 repo。
 - alias 修改后列表与标题显示新名称，`RepoId`、scope、writer readiness 与 workspace path 不变；修改非当前 repo 不改变当前 scope。
-- 移除后目标 repo 从普通列表消失，ledger authority 与 Projection Workspace 未被物理删除。
+- 移除前必须先通过显式 Remote Import Discard/Repair 清空该 repo 的 session/artifact debt。移除后目标 repo 从普通列表消失，本机 canonical `.redb`、workspace `.notegit`、locator 与 alias 均已删除；workspace root、Markdown/附件、`.git`、remote shadow 与显式 backup/export 保留。
 
 ### REPO-FEAT-05: Repo lifecycle 的 mount partial outcome
 
