@@ -16,9 +16,9 @@ pub(super) fn validate_projection_locator_file_shape(
                 record.repo_id
             ));
         }
-        safe_repo_path_segment(&record.repo_name_hint).with_context(|| {
+        safe_repo_path_segment(&record.workspace_segment).with_context(|| {
             format!(
-                "Projection Locator for repo {} contains an invalid repo_name_hint",
+                "Projection Locator for repo {} contains an invalid workspace_segment",
                 record.repo_id
             )
         })?;

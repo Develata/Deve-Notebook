@@ -173,6 +173,32 @@ fn rejects_peer_deleted_for_non_browser_unbound_sessions() {
 }
 
 #[test]
+fn rejects_host_local_repo_projections_for_full_peer() {
+    let session = WsSession::new();
+    let filter = BroadcastFilter::for_session(&session);
+    let repo_id = uuid::Uuid::new_v4();
+
+    assert!(!filter.should_forward(&ServerMessage::RepoList {
+        request_id: None,
+        branch: None,
+        scope_nonce: None,
+        repo_entries: vec![deve_core::protocol::RepoListEntry {
+            repo_id,
+            display_alias: "HOST_SECRET_ALIAS".into(),
+            alias_revision: 1,
+            readiness: deve_core::protocol::RepoReadiness::Mounted,
+        }],
+    }));
+    assert!(!filter.should_forward(&ServerMessage::RepoSwitched {
+        branch: None,
+        repo_id,
+        display_alias: "HOST_SECRET_ALIAS".into(),
+        switch_nonce: Some(1),
+        scope_nonce: deve_core::protocol::ScopeNonce::new(1),
+    }));
+}
+
+#[test]
 fn projection_recovery_requires_exact_repo_branch_and_scope_nonce() {
     let repo_id = uuid::Uuid::new_v4();
     let mut session = WsSession::new();

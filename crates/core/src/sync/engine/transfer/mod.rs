@@ -55,7 +55,6 @@ impl SyncEngine {
 mod tests {
     use super::*;
     use crate::config::SyncMode;
-    use crate::ledger::RepoManager;
     use crate::models::{DocId, LedgerEntry, Op};
     use crate::security::RepoKey;
     use std::sync::Arc;
@@ -63,13 +62,12 @@ mod tests {
     #[test]
     fn get_ops_for_sync_envelope_uses_payload_peer_seq_not_storage_seq() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
-        let repo = Arc::new(RepoManager::init(
-            dir.path().join("ledger"),
-            8,
-            Some("default"),
-            Some("urn:default"),
-        )?);
-        let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+        let (repo, repo_id) = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+        )?;
+        let repo = Arc::new(repo);
+        let repo_name = repo.local_repo_name().to_string();
         let peer_id = repo.local_peer_id().clone();
         let repo_key = RepoKey::generate();
         let engine = SyncEngine::new(
@@ -81,7 +79,7 @@ mod tests {
         let doc_id = DocId::new();
         let peer_for_entry = peer_id.clone();
         let (_storage_seq, peer_seq) = repo.append_generated_op_in_local_repo(
-            "default",
+            &repo_name,
             doc_id,
             peer_id.clone(),
             move |seq| {

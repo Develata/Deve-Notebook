@@ -6,10 +6,10 @@ use crate::server::{
     channel::DualChannel, handlers::source_control::handle_commit, session::WsSession,
 };
 use deve_core::protocol::ServerMessage;
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use tokio::sync::mpsc;
-use tokio::time::{Duration, timeout};
+use tokio::time::{timeout, Duration};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
@@ -30,7 +30,8 @@ async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,                },
+                    has_conflict: false,
+                },
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;

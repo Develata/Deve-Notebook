@@ -5,6 +5,7 @@
 use super::{
     channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
+use crate::repo_init::{initialize_initial_local_repo_workspace, prepare_local_repo_workspace};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, FactActor, Op, PeerId};
@@ -18,27 +19,46 @@ pub(crate) struct EditHarness {
     pub(crate) dir: TempDir,
     pub(crate) state: Arc<AppState>,
     pub(crate) default_repo_id: uuid::Uuid,
+    pub(crate) default_repo_name: String,
     pub(crate) test_repo_id: Option<uuid::Uuid>,
+    pub(crate) test_repo_name: Option<String>,
 }
 
 pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    // Mirror production init order: establish the workspace identity marker before any
-    // edit drives projection writeback, so edits exercise the real authority path
-    // instead of failing closed on a missing identity gate.
-    repo.ensure_local_repo_workspace_identity("default")?;
-    let default_repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-    let test_repo_id = if with_test_repo {
-        let mut test_repo = RepoManager::init(&ledger, 10, Some("test"), Some("urn:test"))?;
-        test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        test_repo.ensure_local_repo_workspace_identity("test")?;
-        Some(test_repo.get_repo_info()?.expect("test info").uuid)
+    let default_repo_id = uuid::Uuid::new_v4();
+    initialize_initial_local_repo_workspace(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some(default_repo_id),
+        Some("urn:default".to_string()),
+    )?;
+    let repo = RepoManager::init_existing_for_repo_id(&ledger, 10, default_repo_id)?;
+    repo.seed_catalog_membership_from_records()?;
+    let default_repo_name = default_repo_id.to_string();
+    let (test_repo_id, test_repo_name) = if with_test_repo {
+        let test_repo_id = uuid::Uuid::new_v4();
+        prepare_local_repo_workspace(
+            &ledger,
+            test_repo_id,
+            &projection_base,
+            10,
+            Some("urn:test".to_string()),
+        )?;
+        let authority = repo.claim_repo_catalog_cut_authority()?;
+        let prepared = repo.prepare_repo_creation_membership(test_repo_id, uuid::Uuid::new_v4())?;
+        let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+        let permit = authority.permit(test_repo_id)?;
+        repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+        repo.host_repo_alias_runtime()
+            .set_alias(test_repo_id, "test", 0)?;
+        (Some(test_repo_id), Some(test_repo_id.to_string()))
     } else {
-        None
+        (None, None)
     };
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(8);
@@ -46,7 +66,9 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
     Ok(EditHarness {
         dir,
         default_repo_id,
+        default_repo_name,
         test_repo_id,
+        test_repo_name,
         state: Arc::new(AppState {
             repo: repo.clone(),
             sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),

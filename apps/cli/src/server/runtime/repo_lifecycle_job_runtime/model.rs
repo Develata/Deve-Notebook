@@ -62,6 +62,23 @@ impl RepoLifecycleJobIntent {
         }
     }
 
+    pub(crate) fn create_parts(&self) -> Option<(&str, &Path)> {
+        match &self.inner {
+            RepoLifecycleJobIntentKind::Create {
+                initial_alias,
+                projection_base,
+            } => Some((initial_alias, projection_base.as_path())),
+            RepoLifecycleJobIntentKind::Remove { .. } => None,
+        }
+    }
+
+    pub(crate) const fn remove_repo_id(&self) -> Option<RepoId> {
+        match &self.inner {
+            RepoLifecycleJobIntentKind::Create { .. } => None,
+            RepoLifecycleJobIntentKind::Remove { repo_id } => Some(*repo_id),
+        }
+    }
+
     pub(super) const fn requested_repo_id(&self) -> Option<RepoId> {
         match &self.inner {
             RepoLifecycleJobIntentKind::Create { .. } => None,
@@ -161,8 +178,16 @@ impl RepoLifecycleJobCompletion {
         Self::failed(RepoLifecycleJobOutcome::NotCommitted, primary)
     }
 
-    pub(crate) fn committed_partial(primary: impl Into<String>) -> Self {
-        Self::failed(RepoLifecycleJobOutcome::CommittedPartial, primary)
+    pub(crate) fn committed_partial_with_publication(
+        primary: impl Into<String>,
+        publication: RepoLifecycleSettledPublication,
+    ) -> Self {
+        Self {
+            outcome: RepoLifecycleJobOutcome::CommittedPartial,
+            publication: Some(publication),
+            primary: Some(primary.into()),
+            cleanup: Vec::new(),
+        }
     }
 
     pub(crate) fn repair_required(primary: impl Into<String>) -> Self {
@@ -178,6 +203,7 @@ impl RepoLifecycleJobCompletion {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn with_cleanup(mut self, cleanup: impl Into<String>) -> Self {
         self.cleanup.push(cleanup.into());
         self
@@ -200,6 +226,7 @@ pub(crate) struct RepoLifecycleJobStatus {
     pub(crate) phase: RepoLifecycleJobPhase,
     pub(crate) outcome: Option<RepoLifecycleJobOutcome>,
     pub(crate) publication_pending: bool,
+    pub(crate) publication: Option<RepoLifecycleSettledPublication>,
 }
 
 pub(crate) trait RepoLifecycleJobExecutor: Send + Sync + 'static {

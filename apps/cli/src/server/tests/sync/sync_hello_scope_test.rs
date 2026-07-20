@@ -50,7 +50,10 @@ async fn sync_hello_rejects_non_browser_stale_sync_scope_nonce_rebind() -> anyho
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
-    assert_stale_scope_error(recv_protocol_error(&mut rx).await, "current_sync_scope_nonce");
+    assert_stale_scope_error(
+        recv_protocol_error(&mut rx).await,
+        "current_sync_scope_nonce",
+    );
     assert_repo_selector_preserved_without_runtime(&session, &repo_name, repo_id);
     Ok(())
 }

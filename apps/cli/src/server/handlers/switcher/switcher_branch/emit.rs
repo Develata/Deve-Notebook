@@ -12,7 +12,6 @@ pub(super) fn emit_branch_switch_messages(
     final_branch: Option<String>,
     scope_nonce: Option<u64>,
     switch_nonce: Option<u64>,
-    repos: Vec<String>,
     repo_entries: Vec<RepoListEntry>,
     repo_view: Option<RepoViewMessages>,
 ) {
@@ -25,7 +24,6 @@ pub(super) fn emit_branch_switch_messages(
         request_id: None,
         branch: final_branch,
         scope_nonce,
-        repos,
         repo_entries,
     });
     emit_repo_view(ch, repo_view);

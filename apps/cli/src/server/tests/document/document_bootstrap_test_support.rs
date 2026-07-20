@@ -62,7 +62,10 @@ pub(super) async fn assert_history(
 }
 
 pub(super) fn assert_bootstrapped_session(session: &WsSession, repo_id: RepoId) {
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(repo_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(repo_id));
 }
 

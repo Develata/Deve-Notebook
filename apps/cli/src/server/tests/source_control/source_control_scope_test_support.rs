@@ -1,8 +1,9 @@
 use crate::server::{
-    AppState, security,
+    security,
     session::WsSession,
     source_control_grants::{AuthSessionId, SourceControlGrantBranch},
     tree_state::RepoTreeRegistry,
+    AppState,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
@@ -12,19 +13,28 @@ use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeStatus, CommitFileDiffSummary, CommitInfo};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let default_id = repo.get_repo_info()?.expect("default info").uuid;
-    let mut test_repo = RepoManager::init(&ledger_dir, 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
+    let (repo, default_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
+        &ledger_dir,
+        "test",
+        &projection_base,
+        10,
+        Some("urn:test"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -61,7 +71,8 @@ pub(super) fn seed_pending(repo: &RepoManager, repo_name: &str, path: &str, cont
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(content),
                 detected_at: 1,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )
     })
     .expect("seed pending");
@@ -85,7 +96,8 @@ pub(super) fn bind_browser_writer(
         .active_repo
         .clone()
         .ok_or_else(|| anyhow::anyhow!("browser writer fixture requires an active repo"))?;
-    let auth_session_id = AuthSessionId::for_test(&format!("source-control:{repo_id}:{scope_nonce}"));
+    let auth_session_id =
+        AuthSessionId::for_test(&format!("source-control:{repo_id}:{scope_nonce}"));
     session.mark_browser_session();
     session.bind_auth_session(auth_session_id.clone());
     session.switch_repo(repo_name, Some(repo_id));
@@ -117,17 +129,12 @@ fn workspace_root(dir: &TempDir, repo_selector: &str) -> std::path::PathBuf {
     let locator = locators
         .iter()
         .find(|locator| locator["repo_id"].as_str() == Some(repo_selector))
-        .or_else(|| {
-            locators
-                .iter()
-                .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_selector))
-        })
+        .or_else(|| (locators.len() == 1).then(|| &locators[0]))
         .expect("repo locator");
-    let repo_id = locator["repo_id"].as_str().expect("repo id");
-    let repo_name_hint = locator["repo_name_hint"]
+    let workspace_segment = locator["workspace_segment"]
         .as_str()
-        .expect("repo name hint");
-    base.join(format!("{repo_name_hint}--{repo_id}"))
+        .expect("workspace segment");
+    base.join(workspace_segment)
 }
 
 pub(super) async fn recv_history(

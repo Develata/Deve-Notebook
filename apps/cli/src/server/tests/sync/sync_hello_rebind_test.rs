@@ -38,8 +38,12 @@ async fn sync_hello_rejects_non_browser_repo_rebinding() -> anyhow::Result<()> {
     let hello = signed_hello_for_repo(&remote, uuid::Uuid::new_v4());
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = empty_session();
-    session.switch_repo("notes".into(), Some(repo_id));
-    session.set_active_db(state.repo.open_database(None, "notes")?);
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
+    session.set_active_db(
+        state
+            .repo
+            .open_database(None, state.repo.local_repo_name())?,
+    );
     session.set_authenticated(remote.peer_id());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(3);

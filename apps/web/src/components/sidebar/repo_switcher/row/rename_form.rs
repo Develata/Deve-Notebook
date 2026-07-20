@@ -17,8 +17,9 @@ use super::super::logic::{
 
 #[component]
 pub(super) fn RepoSwitcherRenameForm(
-    repo_id: Option<RepoId>,
+    repo_id: RepoId,
     current_name: String,
+    expected_alias_revision: u64,
     rename_name: ReadSignal<String>,
     set_rename_name: WriteSignal<String>,
     set_renaming_repo: WriteSignal<Option<RepoId>>,
@@ -35,15 +36,13 @@ pub(super) fn RepoSwitcherRenameForm(
             class="px-2 py-1.5 flex items-center gap-1 bg-accent-subtle"
             on:submit=move |ev: SubmitEvent| {
                 ev.prevent_default();
-                let Some(repo_id) = repo_id else {
-                    return;
-                };
                 let new_name = rename_name.get_untracked();
                 if repo_switcher_can_submit_rename_repo(&current_name_for_submit, &new_name) {
                     on_rename_repo.run(RepoRenameRequest {
                         repo_id,
                         current_name: current_name_for_submit.clone(),
                         new_name: new_name.trim().to_string(),
+                        expected_alias_revision,
                     });
                     set_rename_name.set(String::new());
                     set_renaming_repo.set(None);

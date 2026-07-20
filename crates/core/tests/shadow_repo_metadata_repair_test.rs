@@ -130,20 +130,28 @@ fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
 fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
-    let wiki_info =
-        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
+    let (main, _main_id) =
+        common::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes")).expect("main");
+    let (_wiki, wiki_id) = common::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &dir.path().join("wiki-notes"),
+        "urn:wiki",
+    )
+    .expect("wiki");
     let peer_id = PeerId::new("peer-remote");
 
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+    let wiki_db = main
+        .open_database(None, &wiki_id.to_string())
+        .expect("wiki db")
+        .db;
     let poisoned = deve_core::ledger::RepoInfo {
-        uuid: wiki_info.uuid,
+        uuid: wiki_id,
         name: String::new(),
-        url: wiki_info.url.clone(),
+        url: Some("urn:wiki".to_string()),
     };
     common::write_repo_metadata(wiki_db.as_ref(), &poisoned);
 
-    common::seed_shadow_without_metadata_row(&main, &peer_id, wiki_info.uuid);
+    common::seed_shadow_without_metadata_row(&main, &peer_id, wiki_id);
     main.repair_remote_repo_catalogs()
         .expect("repair remote catalogs");
 
@@ -155,7 +163,7 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     assert!(
         main.remotes_dir()
             .join(peer_id.to_filename())
-            .join(format!("{}.redb", wiki_info.uuid))
+            .join(format!("{}.redb", wiki_id))
             .exists()
     );
 }

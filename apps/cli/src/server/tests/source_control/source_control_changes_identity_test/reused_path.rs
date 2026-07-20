@@ -8,7 +8,7 @@ use crate::server::{
 use deve_core::models::DocId;
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::source_control::{ChangeStatus, staging};
+use deve_core::source_control::{staging, ChangeStatus};
 use tokio::sync::mpsc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -16,7 +16,7 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
     let (_dir, state) = build_state()?;
     let deleted_doc = DocId::new();
     let added_doc = DocId::new();
-    state.repo.run_on_local_repo("default", |db| {
+    state.repo.run_on_local_repo(state.repo.local_repo_name(), |db| {
         staging::stage_pending_entry(
             db,
             &PendingFsEntry {
@@ -26,7 +26,8 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
                 change_type: ChangeStatus::Deleted,
                 content_hash: String::new(),
                 detected_at: 1,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )?;
         pending_fs::upsert(
             db,
@@ -37,7 +38,8 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("new"),
                 detected_at: 2,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )
     })?;
 
@@ -46,7 +48,7 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(23));
-    session.switch_repo("default".into(), None);
+    session.switch_repo(state.repo.local_repo_name().to_string(), state.repo.get_repo_info()?.map(|info| info.uuid));
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
 
     match uni_rx.recv().await {

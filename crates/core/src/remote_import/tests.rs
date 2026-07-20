@@ -4,10 +4,11 @@
 //!   - 03_storage/repair#remote-import-cleanup-repair
 
 mod apply;
+mod repair_observation;
 mod retention;
 mod review_regressions;
 
-use super::artifact::{ArtifactCapture, MANIFEST_FILE, RemoteImportArtifactRoot};
+use super::artifact::{MANIFEST_FILE, RemoteImportArtifactRoot};
 use super::error::RemoteImportError;
 use super::repair::RemoteImportRepairFinding;
 use super::runtime::RemoteImportRuntime;
@@ -40,15 +41,28 @@ impl Fixture {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let repo_id = uuid::Uuid::new_v4();
+        let execution_name = repo_id.to_string();
         let repo = RepoManager::init_with_options(
             &ledger,
             8,
-            Some("notes"),
+            Some(&execution_name),
             RepoInitOptions {
                 repo_id: Some(repo_id),
-                repo_url: Some("urn:test:notes".to_string()),
+                repo_url: None,
             },
         )?;
+        let projection_base = dir.path().join("projection");
+        let locator =
+            repo.prepare_projection_locator_for_repo_creation(repo_id, &projection_base)?;
+        let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+        std::fs::create_dir_all(&workspace)?;
+        crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+        repo.seed_catalog_membership_from_records()?;
+        let authority = repo.claim_repo_catalog_cut_authority()?;
+        let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
+        let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+        let permit = authority.permit(repo_id)?;
+        repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
         let handle = repo.open_database(None, repo.local_repo_name())?;
         let db = handle.db;
         let runtime = RemoteImportRuntime::open(&repo, repo_id)?;
@@ -173,6 +187,7 @@ fn startup_recovers_preparing_as_failed_without_source_replay() -> anyhow::Resul
     let session_id = capture.session_id();
     std::mem::forget(capture);
 
+    RemoteImportRuntime::recover_startup(&fixture.repo, fixture.repo_id)?;
     let reopened = RemoteImportRuntime::open(&fixture.repo, fixture.repo_id)?;
     let record = reopened.session(session_id)?;
     assert_eq!(record.state, RemoteImportState::Failed);
@@ -180,6 +195,21 @@ fn startup_recovers_preparing_as_failed_without_source_replay() -> anyhow::Resul
         record.failure.expect("failure").kind,
         RemoteImportFailureKind::Interrupted
     );
+    Ok(())
+}
+
+#[test]
+fn ordinary_open_does_not_recover_current_process_capture() -> anyhow::Result<()> {
+    let fixture = Fixture::new()?;
+    let capture = fixture.runtime.begin_prepare(fixture.request())?;
+    let session_id = capture.session_id();
+
+    let reopened = RemoteImportRuntime::open(&fixture.repo, fixture.repo_id)?;
+    assert_eq!(
+        reopened.session(session_id)?.state,
+        RemoteImportState::Preparing
+    );
+    capture.abort()?;
     Ok(())
 }
 
@@ -333,73 +363,6 @@ fn eligible_terminal_retention_keeps_exactly_latest_64() -> anyhow::Result<()> {
     assert_eq!(records.len(), super::store::retention::TERMINAL_RETENTION);
     assert_eq!(records.first().expect("oldest retained").order, 2);
     assert_eq!(records.last().expect("newest retained").order, 65);
-    Ok(())
-}
-
-#[test]
-fn dry_run_repair_is_observational_only() -> anyhow::Result<()> {
-    let fixture = Fixture::new()?;
-    let mut capture = fixture.runtime.begin_prepare(fixture.request())?;
-    capture.capture_file("note.md", Cursor::new(b"alpha"))?;
-    let session_id = capture.session_id();
-    capture.finish()?;
-
-    let durable_before = durable_bytes(&fixture.db, session_id)?;
-    let artifacts_before = artifact_tree_bytes(&fixture.artifact_session(session_id))?;
-    let first = fixture.repair()?;
-    let second = fixture.repair()?;
-
-    assert_eq!(first, second);
-    assert_eq!(durable_before, durable_bytes(&fixture.db, session_id)?);
-    assert_eq!(
-        artifacts_before,
-        artifact_tree_bytes(&fixture.artifact_session(session_id))?
-    );
-    Ok(())
-}
-
-#[test]
-fn repair_reports_orphan_staging_without_cleanup() -> anyhow::Result<()> {
-    let fixture = Fixture::new()?;
-    let capture = fixture.runtime.begin_prepare(fixture.request())?;
-    let session_id = capture.session_id();
-    drop(capture);
-
-    let report = fixture.repair()?;
-    assert!(report.findings.iter().any(|finding| {
-        matches!(
-            finding,
-            RemoteImportRepairFinding::OrphanPreparingArtifact(name)
-                if name.starts_with(&format!(".{session_id}.preparing-"))
-        )
-    }));
-    Ok(())
-}
-
-#[test]
-fn repair_reports_final_artifact_published_before_ready_cas() -> anyhow::Result<()> {
-    let fixture = Fixture::new()?;
-    let store = RemoteImportStore::open(fixture.db.clone(), fixture.repo_id)?;
-    let request = fixture.request();
-    let record = store.reserve(
-        request.source_binding_digest,
-        request.locator_binding_digest,
-        request.baseline.ledger_head,
-        request.baseline.ignore_digest,
-    )?;
-    let root = RemoteImportArtifactRoot::open(&fixture.ledger, fixture.repo_id)?;
-    let mut capture = ArtifactCapture::start(root, record.session_id, record.generation)?;
-    capture.capture_file("note.md", Cursor::new(b"alpha"))?;
-    capture.finish(&request.baseline)?;
-
-    let report = fixture.repair()?;
-    assert!(
-        report
-            .findings
-            .contains(&RemoteImportRepairFinding::IncompletePublication(
-                record.session_id
-            ))
-    );
     Ok(())
 }
 

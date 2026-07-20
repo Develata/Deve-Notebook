@@ -19,8 +19,11 @@ pub fn handle_repo_switched(
         .as_ref()
         .map(|pending| pending.switch_nonce);
     let current_scope_nonce = signals.current_scope_nonce.get_untracked();
+    let returned_repo_id = uuid.parse().ok();
     match pending_repo_switch {
-        Some(pending) if pending.expected_name() == name => {
+        Some(pending)
+            if returned_repo_id.is_some_and(|repo_id| pending.accepts_repo_switched(repo_id)) =>
+        {
             if Some(pending.switch_nonce) != switch_nonce {
                 leptos::logging::warn!("忽略过期 RepoSwitched: {}", name);
                 return ignored_repo_switch();
@@ -38,12 +41,17 @@ pub fn handle_repo_switched(
             let rebinding_after_branch_switch = current_repo.is_none()
                 && current_repo_id.is_none()
                 && switch_nonce == Some(current_scope_nonce);
-            let same_repo = current_repo.as_deref() == Some(name.as_str())
-                && current_repo_id.as_deref() == Some(uuid.as_str());
+            let same_identity =
+                !uuid.is_empty() && current_repo_id.as_deref() == Some(uuid.as_str());
+            let same_repo = current_repo.as_deref() == Some(name.as_str()) && same_identity;
             let newer_same_repo_scope =
                 same_repo && switch_nonce.is_some_and(|nonce| nonce >= current_scope_nonce);
+            let renamed_same_scope = same_identity
+                && current_repo.as_deref() != Some(name.as_str())
+                && switch_nonce == Some(current_scope_nonce);
             if !rebinding_after_branch_switch
                 && !newer_same_repo_scope
+                && !renamed_same_scope
                 && (pending_nonce != switch_nonce || !same_repo)
             {
                 leptos::logging::warn!("忽略无 pending 的 RepoSwitched: {}", name);

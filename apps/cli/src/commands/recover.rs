@@ -59,7 +59,6 @@ pub fn run(ledger_dir: &PathBuf, repo_name: Option<String>, snapshot_depth: usiz
 #[cfg(test)]
 mod tests {
     use super::run;
-    use deve_core::ledger::RepoManager;
     use deve_core::models::{FactActor, Op};
 
     #[test]
@@ -67,16 +66,17 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
-        let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))
+        let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 8)
             .expect("init repo");
-        repo.set_projection_base_for_local_repo("default", &projection_base)
-            .expect("locator");
+        let repo_id = cataloged.repo_id;
+        let repo = cataloged.repo;
+        let repo_name = repo.local_repo_name().to_string();
         let (doc_id, _) = repo
-            .apply_file_structure_in_local_repo("default", "notes/recovered.md", None, "test")
+            .apply_file_structure_in_local_repo(&repo_name, "notes/recovered.md", None, "test")
             .expect("create doc");
         repo.local_fact_writer(FactActor::new("test").expect("actor"))
             .append_content_in_local_repo(
-                "default",
+                &repo_name,
                 doc_id,
                 Op::Insert {
                     pos: 0,
@@ -86,19 +86,14 @@ mod tests {
             )
             .expect("append content");
 
-        run(&ledger_dir, Some("default".into()), 8).expect("recover");
+        run(&ledger_dir, Some(repo_name.clone()), 8).expect("recover");
 
         let workspace_path = repo
-            .local_repo_workspace_path("default", "notes/recovered.md")
+            .local_repo_workspace_path(&repo_name, "notes/recovered.md")
             .expect("workspace path");
-        let repo_id = repo
-            .get_repo_info()
-            .expect("repo info")
-            .expect("repo present")
-            .uuid;
         deve_core::utils::notegit::validate_repo_identity_marker(
             &repo
-                .local_repo_workspace_root("default")
+                .local_repo_workspace_root(&repo_name)
                 .expect("workspace root"),
             repo_id,
         )

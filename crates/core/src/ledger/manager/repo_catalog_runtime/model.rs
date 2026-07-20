@@ -50,6 +50,21 @@ impl RepoCatalogMembershipRecord {
         self.lifecycle_request_id
     }
 
+    /// Whether this durable record proves the given lifecycle request
+    /// committed the repo as a live catalog member. Create, failure
+    /// classification, and restart recovery must share this predicate so the
+    /// three decisions can never diverge.
+    pub fn confirms_created(&self, lifecycle_request_id: Uuid) -> bool {
+        self.state == RepoCatalogMembershipState::Normal
+            && self.lifecycle_request_id == lifecycle_request_id
+    }
+
+    /// Removal counterpart of [`Self::confirms_created`].
+    pub fn confirms_removed(&self, lifecycle_request_id: Uuid) -> bool {
+        self.state == RepoCatalogMembershipState::Removed
+            && self.lifecycle_request_id == lifecycle_request_id
+    }
+
     pub fn prepared_identity_digest(&self) -> &str {
         &self.prepared_identity_digest
     }

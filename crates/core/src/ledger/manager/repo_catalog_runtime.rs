@@ -13,7 +13,7 @@ mod store;
 pub use error::RepoCatalogError;
 pub use membership::{
     CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipRuntime,
-    CatalogMembershipToken, RepoCatalogCutPermit,
+    CatalogMembershipToken, RepoCatalogCutAuthority, RepoCatalogCutPermit,
 };
 pub use model::{
     PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval, RepoCatalogCreationCommit,
@@ -24,7 +24,9 @@ pub use model::{
 use crate::ledger::manager::local_repo_metadata_repair::validate_local_repo_metadata;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
+use crate::models::RepoId;
 use anyhow::Result;
+use std::path::Path;
 
 impl RepoManager {
     pub(crate) fn refresh_local_repo_catalog(&self) -> Result<()> {
@@ -39,6 +41,22 @@ impl RepoManager {
             self.local_db.as_ref(),
         )
     }
+}
+
+/// Lists the RepoIds with a durable `Normal` catalog membership record,
+/// without constructing a `RepoManager`. Hosts use this to decide bootstrap
+/// ("zero live repos") before any repo database is created or opened.
+pub fn normal_catalog_ids_for_ledger(ledger_dir: &Path) -> Result<Vec<RepoId>, RepoCatalogError> {
+    let store = store::RepoCatalogStore::open(ledger_dir)?;
+    let mut ids = store
+        .list()?
+        .into_iter()
+        .filter_map(|record| {
+            (record.state() == RepoCatalogMembershipState::Normal).then_some(record.repo_id())
+        })
+        .collect::<Vec<_>>();
+    ids.sort_unstable();
+    Ok(ids)
 }
 
 #[cfg(test)]
@@ -77,5 +95,13 @@ impl RepoManager {
     /// `RepoManager` composition runtime.
     pub fn catalog_membership_runtime(&self) -> CatalogMembershipRuntime {
         self.catalog_membership.clone()
+    }
+
+    /// Claims the unique host mutation capability for the catalog cut lane.
+    /// A second concurrent composition root for the same ledger fails closed.
+    pub fn claim_repo_catalog_cut_authority(
+        &self,
+    ) -> Result<RepoCatalogCutAuthority, CatalogMembershipError> {
+        self.catalog_membership.claim_cut_authority()
     }
 }

@@ -128,7 +128,13 @@ mod tests {
     #[test]
     fn shared_graph_projection_resolves_repo_links_read_only() {
         let dir = TempDir::new().expect("tempdir");
-        let repo = RepoManager::init(dir.path().join("ledger"), 8, None, None).expect("init repo");
+        let repo = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            8,
+        )
+        .expect("init repo")
+        .repo;
         let target = seed_doc(&repo, "notes/target.md", "");
         seed_doc(&repo, "notes/source.md", "[[target]]");
 

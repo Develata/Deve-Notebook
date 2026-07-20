@@ -15,7 +15,7 @@ impl RepoManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::ledger::{RepoInfo, RepoManager};
+    use crate::ledger::RepoInfo;
     use tempfile::TempDir;
 
     #[test]
@@ -23,16 +23,24 @@ mod tests {
         let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
-        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-        let main_info = main.get_repo_info().expect("main info").expect("present");
-        let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+        let (main, main_id) =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
+                .expect("main");
+        let (_wiki, wiki_id) =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
+                .expect("wiki");
+        // Drift the secondary's physical RepoId so its stem no longer matches
+        // its metadata RepoId.
+        let wiki_db = main
+            .open_database(None, &wiki_id.to_string())
+            .expect("wiki db")
+            .db;
         crate::test_support::write_repo_metadata(
             wiki_db.as_ref(),
             &RepoInfo {
-                uuid: main_info.uuid,
-                name: "main".into(),
-                url: Some(format!("urn:uuid:{}", main_info.uuid)),
+                uuid: main_id,
+                name: main_id.to_string(),
+                url: Some(format!("urn:uuid:{}", main_id)),
             },
         )
         .expect("write metadata");
@@ -51,8 +59,13 @@ mod tests {
         let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
-        let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-        let main_db = main.open_database(None, "main").expect("main db").db;
+        let (main, main_id) =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))
+                .expect("main");
+        let main_db = main
+            .open_database(None, &main_id.to_string())
+            .expect("main db")
+            .db;
         crate::test_support::delete_repo_metadata(main_db.as_ref()).expect("delete metadata");
 
         let err = main

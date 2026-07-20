@@ -21,12 +21,10 @@ async fn list_docs_on_unbound_shadow_branch_returns_repo_unbound() -> anyhow::Re
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Remote branch not available:")));
         }
         other => panic!("expected stale shadow ProtocolError, got {:?}", other),
     }

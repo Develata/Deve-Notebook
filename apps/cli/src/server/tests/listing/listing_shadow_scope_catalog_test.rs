@@ -1,9 +1,8 @@
 use super::handlers::listing::handle_list_shadows;
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -14,8 +13,13 @@ fn build_state() -> anyhow::Result<(tempfile::TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let (repo, _repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(8);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -59,12 +63,10 @@ async fn list_shadows_on_missing_remote_catalog_reports_storage_corruption() -> 
         }) => {
             assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
             assert_eq!(scope_nonce, Some(77));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Broken remote repo catalog"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Broken remote repo catalog")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

@@ -2,7 +2,6 @@ use super::{
     move_pending, path_exists_for_repair, prune_empty_parents, rename_workspace_file,
     validate_workspace_rename_target,
 };
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use deve_core::source_control::ChangeStatus;
@@ -34,16 +33,17 @@ fn assert_permission_denied_by_workspace_ancestor(err: &anyhow::Error) {
 #[test]
 fn path_exists_for_repair_prefers_tracked_lookup() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
+    )?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
     let doc_id = DocId::new();
     assert!(!path_exists_for_repair(
         &repo,
-        "default",
+        &repo_name,
         "notes/a.md",
         doc_id
     )?);
@@ -53,14 +53,15 @@ fn path_exists_for_repair_prefers_tracked_lookup() -> anyhow::Result<()> {
 #[test]
 fn path_exists_for_repair_returns_false_for_legacy_only_path_mapping() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
+    )?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
     let doc_id = DocId::new();
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(&repo_name, |db| {
         let write = db.begin_write()?;
         {
             let mut p2d = write.open_table(PATH_TO_DOCID)?;
@@ -73,7 +74,7 @@ fn path_exists_for_repair_returns_false_for_legacy_only_path_mapping() -> anyhow
     })?;
 
     assert!(
-        !path_exists_for_repair(&repo, "default", "notes/legacy.md", DocId::new())?,
+        !path_exists_for_repair(&repo, &repo_name, "notes/legacy.md", DocId::new())?,
         "legacy-only path must not be treated as existing tracked doc"
     );
     Ok(())
@@ -82,18 +83,19 @@ fn path_exists_for_repair_returns_false_for_legacy_only_path_mapping() -> anyhow
 #[test]
 fn path_exists_for_repair_rejects_other_tracked_doc() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
+    )?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
     let live = DocId::new();
-    repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(live), "test")?;
+    repo.apply_file_structure_in_local_repo(&repo_name, "notes/live.md", Some(live), "test")?;
 
     assert!(path_exists_for_repair(
         &repo,
-        "default",
+        &repo_name,
         "notes/live.md",
         DocId::new()
     )?);
@@ -103,13 +105,14 @@ fn path_exists_for_repair_rejects_other_tracked_doc() -> anyhow::Result<()> {
 #[test]
 fn move_pending_ignores_entries_without_matching_doc_id() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
-    repo.run_on_local_repo("default", |db| {
+    )?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
+    repo.run_on_local_repo(&repo_name, |db| {
         pending_fs::upsert(
             db,
             &PendingFsEntry {
@@ -126,12 +129,12 @@ fn move_pending_ignores_entries_without_matching_doc_id() -> anyhow::Result<()> 
 
     move_pending(
         &repo,
-        "default",
+        &repo_name,
         DocId::new(),
         "default/notes/live.md",
         "notes/live.md",
     )?;
-    let old_exists = repo.run_on_local_repo("default", |db| {
+    let old_exists = repo.run_on_local_repo(&repo_name, |db| {
         Ok(pending_fs::get(db, "default/notes/live.md")?.is_some())
     })?;
     assert!(old_exists);
@@ -158,16 +161,15 @@ fn prune_empty_parents_stops_when_start_dir_is_missing() -> anyhow::Result<()> {
 #[test]
 fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
-    let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = cataloged.repo;
+    let old_abs = repo.local_repo_workspace_path(&repo_name, "default/notes/live.md")?;
+    let new_abs = repo.local_repo_workspace_path(&repo_name, "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
     std::fs::create_dir_all(new_abs.parent().expect("new parent"))?;
     std::fs::write(&old_abs, "old")?;
@@ -175,7 +177,7 @@ fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow:
 
     let err = validate_workspace_rename_target(
         &repo,
-        "default",
+        &repo_name,
         "default/notes/live.md",
         "notes/live.md",
     )
@@ -190,22 +192,21 @@ fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow:
 #[test]
 fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
-    let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = cataloged.repo;
+    let old_abs = repo.local_repo_workspace_path(&repo_name, "default/notes/live.md")?;
+    let new_abs = repo.local_repo_workspace_path(&repo_name, "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
     std::fs::create_dir_all(new_abs.parent().expect("new parent"))?;
     std::fs::write(&old_abs, "old")?;
     std::fs::write(&new_abs, "new")?;
 
-    let err = rename_workspace_file(&repo, "default", "default/notes/live.md", "notes/live.md")
+    let err = rename_workspace_file(&repo, &repo_name, "default/notes/live.md", "notes/live.md")
         .expect_err("conflicting workspace target must fail closed");
     assert!(
         err.to_string()
@@ -218,16 +219,15 @@ fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()>
 #[test]
 fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
-    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = cataloged.repo;
+    let notes_dir = repo.local_repo_workspace_path(&repo_name, "default/notes")?;
+    let old_abs = repo.local_repo_workspace_path(&repo_name, "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;
     std::fs::write(&old_abs, "old")?;
     let original = std::fs::metadata(&notes_dir)?.permissions();
@@ -237,7 +237,7 @@ fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> 
 
     let err = validate_workspace_rename_target(
         &repo,
-        "default",
+        &repo_name,
         "default/notes/live.md",
         "notes/live.md",
     )
@@ -252,16 +252,15 @@ fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> 
 #[test]
 fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
-    let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = cataloged.repo;
+    let notes_dir = repo.local_repo_workspace_path(&repo_name, "default/notes")?;
+    let old_abs = repo.local_repo_workspace_path(&repo_name, "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;
     std::fs::write(&old_abs, "old")?;
     let original = std::fs::metadata(&notes_dir)?.permissions();
@@ -269,7 +268,7 @@ fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Res
     blocked.set_mode(0o000);
     std::fs::set_permissions(&notes_dir, blocked)?;
 
-    let err = rename_workspace_file(&repo, "default", "default/notes/live.md", "notes/live.md")
+    let err = rename_workspace_file(&repo, &repo_name, "default/notes/live.md", "notes/live.md")
         .expect_err("unstatable source must fail closed");
 
     std::fs::set_permissions(&notes_dir, original)?;

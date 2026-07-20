@@ -120,6 +120,27 @@ impl<'a> RepoCatalogRuntime<'a> {
         repos.sort();
         Ok(repos)
     }
+
+    pub(crate) fn list_remote_repo_ids(&self, peer_id: &PeerId) -> Result<Vec<uuid::Uuid>> {
+        let entries = self.scan_remote_repo_entries(peer_id)?;
+        if let Some(entry) = entries.iter().find(|entry| !entry.is_readable()) {
+            return Err(anyhow!(
+                "Broken shadow repo {} for peer {} while listing remote repo identities",
+                entry.stem,
+                peer_id
+            ));
+        }
+        let duplicate_ids = duplicate_entry_ids(&entries);
+        let mut repo_ids = entries
+            .into_iter()
+            .filter_map(|entry| {
+                let info = entry.info.as_ref()?;
+                (entry.is_switchable() && !duplicate_ids.contains(&info.uuid)).then_some(info.uuid)
+            })
+            .collect::<Vec<_>>();
+        repo_ids.sort_unstable();
+        Ok(repo_ids)
+    }
 }
 
 impl RepoManager {
@@ -153,5 +174,9 @@ impl RepoManager {
     pub fn has_remote_display_name(&self, peer_id: &PeerId, raw_name: &str) -> Result<bool> {
         self.repo_catalog_runtime()
             .has_remote_display_name(peer_id, raw_name)
+    }
+
+    pub fn list_remote_repo_ids(&self, peer_id: &PeerId) -> Result<Vec<uuid::Uuid>> {
+        self.repo_catalog_runtime().list_remote_repo_ids(peer_id)
     }
 }

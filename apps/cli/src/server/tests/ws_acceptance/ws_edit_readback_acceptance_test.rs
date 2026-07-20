@@ -3,9 +3,9 @@
 //!   - 07_network#server-ws-runtime
 
 use super::ws_edit_flow_acceptance_support::{
-    ExpectedEdit, TestWs, create_doc, expect_edit_committed, ready_writer_ws,
+    create_doc, expect_edit_committed, ready_writer_ws, ExpectedEdit, TestWs,
 };
-use super::ws_protocol_acceptance_support::{WsHarness, recv_server_message, send_client_message};
+use super::ws_protocol_acceptance_support::{recv_server_message, send_client_message, WsHarness};
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ConfirmedOp, ServerMessage};
 use deve_core::security::IdentityKeyPair;
@@ -93,7 +93,12 @@ async fn ws_open_doc_and_history_read_back_registered_edit() -> anyhow::Result<(
     Ok(())
 }
 
-async fn send_edit(ws: &mut TestWs, doc_id: DocId, op: Op, client_op_id: u64) -> anyhow::Result<()> {
+async fn send_edit(
+    ws: &mut TestWs,
+    doc_id: DocId,
+    op: Op,
+    client_op_id: u64,
+) -> anyhow::Result<()> {
     send_client_message(
         ws,
         ClientMessage::Edit {
@@ -159,7 +164,10 @@ fn assert_snapshot(
             assert_eq!((actual, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
             assert_eq!((actual_doc, request_id), (doc_id, expected.request_id));
             assert!(version >= expected.min_version);
-            assert_eq!(reconstruct_snapshot_content(content, &delta_ops), expected.content);
+            assert_eq!(
+                reconstruct_snapshot_content(content, &delta_ops),
+                expected.content
+            );
             assert!(base_seq <= version);
             match expected.delta {
                 Some((op, client_op_id)) => assert_delta_origin(&delta_ops, op, client_op_id),
@@ -170,7 +178,13 @@ fn assert_snapshot(
     }
 }
 
-fn assert_history(message: ServerMessage, repo_id: uuid::Uuid, doc_id: DocId, op: &Op, client_op_id: u64) {
+fn assert_history(
+    message: ServerMessage,
+    repo_id: uuid::Uuid,
+    doc_id: DocId,
+    op: &Op,
+    client_op_id: u64,
+) {
     match message {
         ServerMessage::History {
             repo_id: actual,
@@ -193,12 +207,20 @@ fn assert_history(message: ServerMessage, repo_id: uuid::Uuid, doc_id: DocId, op
 
 fn assert_delta_origin(delta_ops: &[ConfirmedOp], op: &Op, client_op_id: u64) {
     let matches = matching_origin_ops(delta_ops, op, client_op_id);
-    assert_eq!(matches.len(), 1, "snapshot delta must include one matching edit");
+    assert_eq!(
+        matches.len(),
+        1,
+        "snapshot delta must include one matching edit"
+    );
     assert!(matches[0].seq > 0);
     assert_origin(matches[0], client_op_id);
 }
 
-fn matching_origin_ops<'a>(ops: &'a [ConfirmedOp], op: &Op, client_op_id: u64) -> Vec<&'a ConfirmedOp> {
+fn matching_origin_ops<'a>(
+    ops: &'a [ConfirmedOp],
+    op: &Op,
+    client_op_id: u64,
+) -> Vec<&'a ConfirmedOp> {
     ops.iter()
         .filter(|entry| &entry.op == op && has_client_origin(entry, client_op_id))
         .collect()
@@ -224,7 +246,10 @@ fn apply_op(text: &mut String, op: &Op) {
 
 fn assert_origin(entry: &ConfirmedOp, client_op_id: u64) {
     let origin = entry.origin.expect("entry must preserve client origin");
-    assert_eq!((origin.client_id, origin.client_op_id), (CLIENT_ID, client_op_id));
+    assert_eq!(
+        (origin.client_id, origin.client_op_id),
+        (CLIENT_ID, client_op_id)
+    );
 }
 
 fn has_client_origin(entry: &ConfirmedOp, client_op_id: u64) -> bool {

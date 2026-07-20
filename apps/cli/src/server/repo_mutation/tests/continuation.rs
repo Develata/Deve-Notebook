@@ -9,7 +9,7 @@ use super::*;
 async fn aborted_caller_cannot_release_blocking_repo_side_effect_permit() {
     let repo_id = RepoId::new_v4();
     let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
-    let gate = Arc::new(RepoMutationPublicationGate::new(view));
+    let gate = Arc::new(RepoMutationPublicationGate::without_catalog_authority_for_test(view));
     let (entered_tx, entered_rx) = std::sync::mpsc::channel();
     let (release_tx, release_rx) = std::sync::mpsc::channel();
 
@@ -60,7 +60,7 @@ async fn aborted_caller_cannot_release_blocking_repo_side_effect_permit() {
 async fn blocking_repo_side_effect_restores_nested_lane_guard() {
     let repo_id = RepoId::new_v4();
     let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
-    let gate = Arc::new(RepoMutationPublicationGate::new(view));
+    let gate = Arc::new(RepoMutationPublicationGate::without_catalog_authority_for_test(view));
     let nested_gate = gate.clone();
     let (tx, _) = broadcast::channel(2);
 
@@ -88,7 +88,7 @@ async fn blocking_repo_side_effect_restores_nested_lane_guard() {
 async fn mounted_repo_gate_allows_only_operations_admitted_before_failure_cut() {
     let repo_id = RepoId::new_v4();
     let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
-    let gate = RepoMutationPublicationGate::new(view.clone());
+    let gate = RepoMutationPublicationGate::without_catalog_authority_for_test(view.clone());
     let (tx, mut rx) = broadcast::channel(4);
 
     let execution = gate

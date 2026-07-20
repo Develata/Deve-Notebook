@@ -17,8 +17,6 @@ pub use model::{
 };
 
 use self::import::{ParsedImport, evaluate_import};
-#[cfg(test)]
-use self::membership::{LEGACY_REMOVED_REPOS_FILE, LEGACY_REMOVED_REPOS_MAX_BYTES};
 use self::membership::{LocalRepoAdmission, LocalRepoMembershipSnapshot, checked_local_dir};
 use self::store::{AliasStore, AliasStoreGuard};
 use crate::ledger::manager::types::RepoManager;
@@ -88,12 +86,6 @@ impl HostRepoAliasRuntime {
                     alias: binding.alias.clone(),
                 }),
                 LocalRepoAdmission::Unknown => {}
-                LocalRepoAdmission::Failed => {
-                    return Err(HostRepoAliasError::Runtime(anyhow::anyhow!(
-                        "local repository admission failed while exporting alias for {}",
-                        binding.repo_id
-                    )));
-                }
             }
         }
         aliases.sort_by_key(|entry| entry.repo_id);
@@ -144,9 +136,6 @@ impl HostRepoAliasRuntime {
         match membership.admit(repo_id)? {
             LocalRepoAdmission::Active => Ok(()),
             LocalRepoAdmission::Unknown => Err(HostRepoAliasError::UnknownLocalRepo(repo_id)),
-            LocalRepoAdmission::Failed => Err(HostRepoAliasError::Runtime(anyhow::anyhow!(
-                "local repository admission failed for {repo_id}"
-            ))),
         }
     }
 }

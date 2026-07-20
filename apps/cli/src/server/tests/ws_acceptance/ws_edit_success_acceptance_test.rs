@@ -3,9 +3,9 @@
 //!   - 07_network#server-ws-runtime
 
 use super::ws_edit_flow_acceptance_support::{
-    ExpectedEdit, create_doc, expect_edit_committed, ready_writer_ws,
+    create_doc, expect_edit_committed, ready_writer_ws, ExpectedEdit,
 };
-use super::ws_protocol_acceptance_support::{WsHarness, send_client_message};
+use super::ws_protocol_acceptance_support::{send_client_message, WsHarness};
 use deve_core::models::Op;
 use deve_core::protocol::ClientMessage;
 use deve_core::security::IdentityKeyPair;

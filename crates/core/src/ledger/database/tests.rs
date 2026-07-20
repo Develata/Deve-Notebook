@@ -44,8 +44,13 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
-    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
+    let (repo, _main_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
+            .expect("main");
+    let (_wiki, wiki_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
+            .expect("wiki");
+    let wiki_name = wiki_id.to_string();
     let local_dir = dir.path().join("ledger/local");
     let original = std::fs::metadata(&local_dir)
         .expect("metadata")
@@ -54,7 +59,7 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
     perms.set_mode(0o000);
     std::fs::set_permissions(&local_dir, perms).expect("chmod 000");
 
-    let err = match repo.open_database(None, "wiki") {
+    let err = match repo.open_database(None, &wiki_name) {
         Ok(_) => panic!("unstatable local db path must fail closed"),
         Err(err) => err,
     };
@@ -75,18 +80,23 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
-    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let wiki_db = repo.open_database(None, "wiki").expect("wiki db");
+    let (repo, _main_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
+            .expect("main");
+    let (_wiki, wiki_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
+            .expect("wiki");
+    let wiki_name = wiki_id.to_string();
+    let wiki_db = repo.open_database(None, &wiki_name).expect("wiki db");
     crate::test_support::delete_repo_metadata(wiki_db.db.as_ref()).expect("delete metadata");
 
-    let err = match repo.open_database(None, "wiki") {
+    let err = match repo.open_database(None, &wiki_name) {
         Ok(_) => panic!("missing local metadata must fail closed"),
         Err(err) => err,
     };
     let message = err.to_string();
     assert!(
-        message.contains("wiki") && message.contains("metadata missing"),
+        message.contains(&wiki_name) && message.contains("metadata missing"),
         "unexpected error: {err}"
     );
 }

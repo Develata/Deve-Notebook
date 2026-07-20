@@ -14,7 +14,6 @@ use deve_core::sync::watcher::{RepoWatcherStart, WatcherRefresh, WatcherRefreshK
 
 use axum::http::{Method, header};
 use std::sync::Arc;
-use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 /// 按显式 runtime override 或环境变量构建 CORS 层；默认不信任任何跨站来源。
@@ -94,23 +93,29 @@ pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Res
 /// 启动每个本地 repo 的 watcher。
 pub(super) fn file_watcher_starts(
     sync_manager: Arc<deve_core::sync::SyncManager>,
-    tx: broadcast::Sender<ServerMessage>,
 ) -> Result<Vec<RepoWatcherStart>> {
     let mut starts = Vec::new();
     for repo_name in sync_manager.healthy_local_repo_names_for_execution()? {
-        let tx_clone = tx.clone();
-        let callback = Arc::new(move |refresh: WatcherRefresh| {
-            let message = watcher_refresh_message(refresh);
-            let _ = tx_clone.send(message);
-        });
-        starts.push(
-            RepoWatcherStart::resolve(sync_manager.clone(), repo_name, 1)?.with_refresh(callback),
-        );
+        starts.push(file_watcher_start(sync_manager.clone(), repo_name, 1)?);
     }
     Ok(starts)
 }
 
-fn watcher_refresh_message(refresh: WatcherRefresh) -> ServerMessage {
+/// Build one generation-bound repo start. Refresh/failure callbacks are
+/// deliberately attached by `WatcherSupervisor`, which owns slot routing.
+pub(super) fn file_watcher_start(
+    sync_manager: Arc<deve_core::sync::SyncManager>,
+    repo_name: impl Into<String>,
+    generation: u64,
+) -> Result<RepoWatcherStart> {
+    Ok(RepoWatcherStart::resolve(
+        sync_manager,
+        repo_name,
+        generation,
+    )?)
+}
+
+pub(super) fn watcher_refresh_message(refresh: WatcherRefresh) -> ServerMessage {
     ServerMessage::FsChangeDetected {
         repo_id: Some(refresh.repo_id()),
         branch: None,

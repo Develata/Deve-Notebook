@@ -95,7 +95,6 @@ fn projection_recovery_repo_ids(repo: &RepoManager) -> Result<Vec<RepoId>> {
 #[cfg(test)]
 mod tests {
     use super::SyncManager;
-    use crate::ledger::{RepoManager, init::RepoInitOptions};
     use crate::remote_import::{
         RemoteImportApplyRequest, RemoteImportBaseline, RemoteImportDigest,
         RemoteImportPrepareRequest, RemoteImportProjectionOutcome, RemoteImportRuntime,
@@ -109,17 +108,8 @@ mod tests {
     -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
-        let repo_id = uuid::Uuid::new_v4();
-        let mut repo = RepoManager::init_with_options(
-            &ledger,
-            8,
-            Some("notes"),
-            RepoInitOptions {
-                repo_id: Some(repo_id),
-                repo_url: None,
-            },
-        )?;
-        repo.set_projection_base_for_all_local_repos_checked(dir.path().join("projection"))?;
+        let (repo, repo_id) =
+            crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("projection"))?;
         let runtime = RemoteImportRuntime::open(&repo, repo_id)?;
         let remote_locator = RemoteImportDigest::of(b"remote-locator");
         let local_locator = RemoteImportDigest::of(b"local-locator");

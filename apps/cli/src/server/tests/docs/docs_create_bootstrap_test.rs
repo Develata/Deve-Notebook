@@ -7,8 +7,8 @@ use super::{handlers::docs::handle_create_doc, session::WsSession};
 use deve_core::models::PeerId;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery()
--> anyhow::Result<()> {
+async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery(
+) -> anyhow::Result<()> {
     let h = docs_harness()?;
     let (ch, _rx) = channel(&h.state);
     let mut session = browser_session(&h.state, h.repo_id, 31);
@@ -35,7 +35,10 @@ async fn create_doc_without_repo_selection_bootstraps_single_repo() -> anyhow::R
 
     handle_create_doc(&h.state, &ch, &mut session, "notes/bootstrapped.md".into()).await;
 
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(h.state.repo.local_repo_name())
+    );
     assert_eq!(session.active_repo_id, Some(h.repo_id));
     assert!(h.state.repo.get_docid("notes/bootstrapped.md")?.is_some());
     assert!(h.workspace_path("notes/bootstrapped.md").exists());
@@ -59,7 +62,10 @@ async fn create_doc_with_stale_local_binding_bootstraps_single_repo() -> anyhow:
 
     handle_create_doc(&h.state, &ch, &mut session, "notes/local-stale.md".into()).await;
 
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(h.state.repo.local_repo_name())
+    );
     assert_eq!(session.active_repo_id, Some(h.repo_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());

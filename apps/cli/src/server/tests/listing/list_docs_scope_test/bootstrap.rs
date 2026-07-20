@@ -15,10 +15,12 @@ use tokio::sync::mpsc;
 async fn list_docs_with_stale_local_binding_bootstraps_single_repo() -> anyhow::Result<()> {
     let (dir, state, default_id) = build_single_repo_state()?;
     let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
-    let doc_id = seed_doc(&state, "default", "notes/a.md", "hello")?;
+    let doc_id = seed_doc(&state, state.repo.local_repo_name(), "notes/a.md", "hello")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(17));
     session.set_active_db(DatabaseHandle {
         db: stale_db,
         readonly: false,
@@ -40,8 +42,8 @@ async fn list_docs_with_stale_local_binding_bootstraps_single_repo() -> anyhow::
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::RepoSwitched { uuid, .. }) => {
-            assert_eq!(uuid, default_id.to_string());
+        Some(ServerMessage::RepoSwitched { repo_id, .. }) => {
+            assert_eq!(repo_id, default_id);
         }
         other => panic!("expected RepoSwitched, got {:?}", other),
     }
@@ -52,7 +54,10 @@ async fn list_docs_with_stale_local_binding_bootstraps_single_repo() -> anyhow::
         }
         other => panic!("expected DocList, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(state.repo.local_repo_name())
+    );
     assert_eq!(session.active_repo_id, Some(default_id));
     assert!(session.get_active_db().is_none());
     assert!(session.authenticated_peer_id.is_none());

@@ -18,15 +18,10 @@ pub(super) fn new_sync() -> anyhow::Result<SyncFixture> {
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
     std::fs::create_dir_all(&projection_base)?;
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
     let repo = Arc::new(repo);
     let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
     let repo_name = repo.local_repo_name().to_string();
-    let repo_id = repo
-        .get_repo_info_for(None, Some(&repo_name))?
-        .expect("repo info")
-        .uuid;
     let repo_root = repo.local_repo_workspace_root(&repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
     Ok((dir, repo, sync, repo_name, repo_id, repo_root))

@@ -55,11 +55,10 @@ fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)
+        .expect("init cataloged repo");
     let repo_root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
@@ -67,7 +66,7 @@ fn new_repo() -> (TempDir, RepoManager, PathBuf) {
 
 fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
     let abs = repo
-        .local_repo_workspace_path("default", path)
+        .local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
@@ -255,11 +254,10 @@ fn push_mirror_refuses_git_head_without_deve_mapping() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)
+        .expect("init cataloged repo");
     let repo_root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     init_git_repo(&repo_root);
     git(&repo_root, &["add", ".gitignore"]);

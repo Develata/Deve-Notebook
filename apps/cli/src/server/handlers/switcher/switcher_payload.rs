@@ -15,7 +15,6 @@ mod emit;
 mod local;
 
 pub(crate) struct RepoViewPayload {
-    pub repo_name: String,
     pub repo_id: RepoId,
     pub docs: Vec<(DocId, String)>,
     pub nodes: Vec<(NodeId, NodeMeta)>,
@@ -28,7 +27,6 @@ pub(crate) struct RepoViewMessages {
 }
 
 pub(super) struct SwitchPayload {
-    pub repo_list: Vec<String>,
     pub repo_entries: Vec<RepoListEntry>,
     pub repo_view: Option<RepoViewPayload>,
 }
@@ -38,26 +36,16 @@ pub(super) fn preload_branch_switch(
     branch: Option<&PeerId>,
     prepared: Option<&PreparedRepoSwitch>,
 ) -> anyhow::Result<SwitchPayload> {
-    let repo_list = state.repo.list_repos(branch)?;
-    let repo_entries = if branch.is_none() {
-        state
-            .repo
-            .list_local_repo_summaries()?
-            .into_iter()
-            .map(|summary| RepoListEntry {
-                repo_id: summary.repo_id,
-                name: summary.name,
-                execution_name: summary.execution_name,
-            })
-            .collect()
-    } else {
-        Vec::new()
+    let repo_entries = match branch {
+        None => crate::server::handlers::repo_list::local_repo_list_entries(state)?,
+        Some(branch) => {
+            crate::server::handlers::repo_list::remote_repo_list_entries(state, branch)?
+        }
     };
     let repo_view = prepared
         .map(|prepared| load_repo_view(state, branch, prepared))
         .transpose()?;
     Ok(SwitchPayload {
-        repo_list,
         repo_entries,
         repo_view,
     })
@@ -96,7 +84,6 @@ fn load_repo_view(
         local::load_local_repo_view(state, prepared)?
     };
     Ok(RepoViewPayload {
-        repo_name: prepared.session_name.clone(),
         repo_id,
         docs,
         nodes,

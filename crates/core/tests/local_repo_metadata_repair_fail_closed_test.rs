@@ -10,7 +10,9 @@ mod common;
 fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
 
     let list_err = repo
@@ -124,15 +126,20 @@ fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
 fn runtime_and_explicit_repair_fail_closed_on_secondary_repo_id_mismatch() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let main_info = main.get_repo_info().expect("main info").expect("present");
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db");
+    let (main, main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
+            .expect("main");
+    let (_wiki, wiki_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
+            .expect("wiki");
+    let wiki_db = main
+        .open_database(None, &wiki_id.to_string())
+        .expect("wiki db");
     common::write_repo_metadata(
         wiki_db.db.as_ref(),
         &RepoInfo {
-            uuid: main_info.uuid,
-            name: "wiki".into(),
+            uuid: main_id,
+            name: main_id.to_string(),
             url: Some("urn:wiki".into()),
         },
     );
@@ -152,7 +159,7 @@ fn runtime_and_explicit_repair_fail_closed_on_secondary_repo_id_mismatch() {
     );
     assert_eq!(
         common::read_repo_metadata(wiki_db.db.as_ref()).uuid,
-        main_info.uuid
+        main_id
     );
 }
 

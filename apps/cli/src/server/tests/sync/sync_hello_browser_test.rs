@@ -13,7 +13,7 @@ use deve_core::security::IdentityKeyPair;
 fn browser_session(repo_id: uuid::Uuid) -> super::session::WsSession {
     let mut session = empty_session();
     session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
     session.set_scope_nonce(Some(1));
     session
 }
@@ -36,7 +36,10 @@ async fn browser_sync_hello_does_not_create_shadow_repo() -> anyhow::Result<()> 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
     let _ = rx.recv().await;
 
-    let shadow_dir = state.repo.remotes_dir().join(remote.peer_id().to_filename());
+    let shadow_dir = state
+        .repo
+        .remotes_dir()
+        .join(remote.peer_id().to_filename());
     assert!(!shadow_dir.try_exists()?);
     Ok(())
 }
@@ -91,7 +94,11 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = browser_session(repo_id);
     session.set_scope_nonce(Some(9));
-    session.set_active_db(state.repo.open_database(None, "notes")?);
+    session.set_active_db(
+        state
+            .repo
+            .open_database(None, state.repo.local_repo_name())?,
+    );
     session.set_authenticated(remote.peer_id());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(5);

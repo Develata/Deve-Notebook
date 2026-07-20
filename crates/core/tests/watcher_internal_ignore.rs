@@ -22,7 +22,11 @@ fn watcher_ignores_internal_notegit_paths() -> anyhow::Result<()> {
     std::fs::write(&internal, "tmp")?;
 
     wait_no_pending(&h, ".notegit/x.md")?;
-    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("main"))?
+            .is_empty()
+    );
     Ok(())
 }
 
@@ -37,7 +41,11 @@ fn watcher_ignores_internal_git_paths() -> anyhow::Result<()> {
     std::fs::write(&internal, "tmp")?;
 
     wait_no_pending(&h, ".git/objects/x.md")?;
-    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("main"))?
+            .is_empty()
+    );
     Ok(())
 }
 
@@ -67,7 +75,11 @@ fn watcher_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
     std::fs::write(&ignored, "ignored")?;
 
     wait_no_pending(&h, "ignored/scratch.md")?;
-    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("main"))?
+            .is_empty()
+    );
     Ok(())
 }
 
@@ -98,7 +110,11 @@ fn watcher_startup_scan_respects_deveignore() -> anyhow::Result<()> {
     h.start_watchers()?;
 
     wait_no_pending(&h, "ignored/preexisting.md")?;
-    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("main"))?
+            .is_empty()
+    );
     Ok(())
 }
 
@@ -111,7 +127,7 @@ fn ensure_workspace_root(h: &Harness) -> anyhow::Result<PathBuf> {
 fn wait_no_pending(h: &Harness, path: &str) -> anyhow::Result<()> {
     std::thread::sleep(std::time::Duration::from_millis(700));
     if h.repo
-        .list_pending_fs_in_local_repo("main")?
+        .list_pending_fs_in_local_repo(&h.repo_name("main"))?
         .iter()
         .all(|entry| entry.path != path)
     {

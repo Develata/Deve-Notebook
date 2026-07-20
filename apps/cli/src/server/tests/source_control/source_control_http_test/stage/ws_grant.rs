@@ -5,7 +5,7 @@ use super::super::super::sync_hello_test_support::signed_hello_for_scope;
 use super::super::super::ws_protocol_acceptance_support::{
     recv_server_message, send_client_message,
 };
-use super::super::support::{ProxyHarness, seed_pending};
+use super::super::support::{seed_pending, ProxyHarness};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::security::IdentityKeyPair;
@@ -14,13 +14,13 @@ use reqwest::header::{COOKIE as HTTP_COOKIE, SET_COOKIE};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::header::COOKIE as WS_COOKIE;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
 type TestWs = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn anonymous_localhost_source_control_write_grant_roundtrips_status_ws_and_http()
--> anyhow::Result<()> {
+async fn anonymous_localhost_source_control_write_grant_roundtrips_status_ws_and_http(
+) -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
     let repo = harness.repo.clone();
     let selector = RepoSelector::default();
@@ -114,7 +114,6 @@ async fn register_writer_over_ws(
     send_client_message(
         ws,
         ClientMessage::SwitchRepoExact {
-            name: repo_name.to_string(),
             repo_id,
             switch_nonce: Some(scope_nonce),
         },

@@ -29,8 +29,7 @@ mod tests {
         let dir = tempdir()?;
         let ledger = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
-        let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
         Ok((dir, repo))
     }
 
@@ -38,7 +37,7 @@ mod tests {
     fn resolve_local_sc_target_returns_none_for_legacy_only_path_mapping() -> anyhow::Result<()> {
         let (_dir, repo) = new_repo()?;
         let doc_id = DocId::new();
-        repo.run_on_local_repo("default", |db| {
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
             let write = db.begin_write()?;
             {
                 let mut p2d = write.open_table(PATH_TO_DOCID)?;
@@ -65,7 +64,7 @@ mod tests {
     fn resolve_local_sc_target_fills_doc_id_from_tracked_projection() -> anyhow::Result<()> {
         let (_dir, repo) = new_repo()?;
         let doc_id = DocId::new();
-        repo.run_on_local_repo("default", |db| {
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
             node_meta::ensure_file_node(db, "notes/a.md", doc_id)?;
             pending_fs::upsert(
                 db,

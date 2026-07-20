@@ -1,13 +1,13 @@
 //! Shared Git import source-control test fixtures.
 
-use crate::server::{AppState, session::WsSession};
+use crate::server::{session::WsSession, AppState};
 use deve_core::git_bridge::{
-    GitMirrorCommitState, GitMirrorRunOptions, apply_import, export_mirror, get_record,
+    apply_import, export_mirror, get_record, GitMirrorCommitState, GitMirrorRunOptions,
 };
 use deve_core::models::DocId;
 use deve_core::models::{FactActor, Op};
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
@@ -69,7 +69,9 @@ pub(super) fn init_git_repo(path: &Path) {
 pub(super) fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
+    let repo_root = state
+        .repo
+        .ensure_local_repo_workspace_identity(&repo_name)?;
     init_git_repo(&repo_root);
     seed_note_baseline(&dir, &state, &repo_name, "hello\n")?;
     git(&repo_root, &["add", "."]);
@@ -81,7 +83,9 @@ pub(super) fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConfl
 pub(super) fn create_mapped_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
+    let repo_root = state
+        .repo
+        .ensure_local_repo_workspace_identity(&repo_name)?;
     init_git_repo(&repo_root);
     let baseline_commit = seed_note_baseline(&dir, &state, &repo_name, "hello\n")?;
     let baseline_report = state.repo.run_on_local_repo(&repo_name, |db| {
@@ -122,7 +126,8 @@ fn seed_note_baseline(
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(content),
                 detected_at: 1,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )
     })?;
     state
@@ -131,10 +136,7 @@ fn seed_note_baseline(
     state.repo.apply_external_changes_in_local_repo(repo_name)?;
     Ok(state
         .repo
-        .commit_source_control_changes_in_local_repo(
-            repo_name,
-            "baseline",
-        )?
+        .commit_source_control_changes_in_local_repo(repo_name, "baseline")?
         .id)
 }
 

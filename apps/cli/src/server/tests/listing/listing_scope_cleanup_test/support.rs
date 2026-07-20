@@ -1,21 +1,26 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 
-use crate::server::{AppState, security, session::WsSession, tree_state::RepoTreeRegistry};
+use crate::server::{security, session::WsSession, tree_state::RepoTreeRegistry, AppState};
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let (repo, _repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -45,6 +50,8 @@ pub(super) fn bind_stale_shadow_scope(
     repo_id: uuid::Uuid,
     nonce: u64,
 ) -> anyhow::Result<()> {
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(nonce));
     session.switch_branch(Some("missing-shadow".into()));
     session.switch_repo("ghost".into(), Some(repo_id));
     session.set_active_db(

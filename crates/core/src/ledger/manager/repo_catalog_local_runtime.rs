@@ -63,17 +63,6 @@ impl<'a> RepoCatalogRuntime<'a> {
             .collect())
     }
 
-    /// Returns a typed catalog snapshot for locator repair preflight only.
-    ///
-    /// This deliberately does not refresh or authorize the normal execution catalog: repair must
-    /// validate a proposed display-name correction before committing metadata or moving workspace
-    /// files.
-    pub(crate) fn local_repo_infos_for_locator_repair_validation(
-        &self,
-    ) -> Result<Vec<(String, RepoInfo)>> {
-        self.local_repo_info_snapshot("validating Projection Locator repair")
-    }
-
     fn local_repo_info_snapshot(&self, context: &str) -> Result<Vec<(String, RepoInfo)>> {
         let local_dir = RepoManager::checked_local_dir_for(&self.manager.ledger_dir, context)?;
         let mut repos = Vec::new();

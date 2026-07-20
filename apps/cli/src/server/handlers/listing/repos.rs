@@ -7,6 +7,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::repo_list::repo_list_message;
 use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 use super::scope::{
@@ -21,7 +22,14 @@ pub async fn handle_list_repos(
     session: &mut WsSession,
     request_id: Option<String>,
 ) {
-    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    if !session.is_browser_session() {
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::new(ServerErrorCode::ScRepoContextInvalid),
+            None,
+        );
+        return;
+    }
+    let scope_nonce = Some(session.scope_nonce());
     clear_local_unbound_runtime_binding(state, session);
     if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
         return;

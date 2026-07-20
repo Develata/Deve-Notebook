@@ -3,7 +3,9 @@
 
 use super::support::build_state;
 use crate::server::{
-    channel::DualChannel, handlers::source_control::handle_get_changes, session::WsSession,
+    channel::DualChannel,
+    handlers::source_control::handle_get_changes,
+    session::WsSession,
     source_control_grants::{AuthSessionId, SourceControlGrantBranch},
 };
 use deve_core::ledger::RepoInfo;
@@ -41,12 +43,10 @@ async fn remote_changes_without_repo_selection_report_stale_remote_scope() -> an
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScStaleScope);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.starts_with("stale remote scope:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -88,28 +88,22 @@ async fn source_control_scope_cleanup_revokes_write_grant() -> anyhow::Result<()
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(13);
-    state.source_control_write_grants().grant(
-        auth_session_id.clone(),
-        repo_id,
-        SourceControlGrantBranch::Local,
-        PeerId::new("writer"),
-        13,
-    )
-    .expect("source-control write grant");
-    assert!(
-        state
-            .source_control_write_grants()
-            .authorize_browser_local(&auth_session_id, repo_id, 13)
-            .is_ok()
-    );
+    state
+        .source_control_write_grants()
+        .grant(
+            auth_session_id.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            PeerId::new("writer"),
+            13,
+        )
+        .expect("source-control write grant");
+    assert!(state
+        .source_control_write_grants()
+        .authorize_browser_local(&auth_session_id, repo_id, 13)
+        .is_ok());
 
-    handle_get_changes(
-        &state,
-        &ch,
-        &mut session,
-        Some("req-remote-miss".into()),
-    )
-    .await;
+    handle_get_changes(&state, &ch, &mut session, Some("req-remote-miss".into())).await;
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
@@ -148,12 +142,10 @@ async fn remote_changes_on_missing_branch_clears_stale_scope() -> anyhow::Result
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScStaleScope);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|d| d.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|d| d.contains("Remote branch not available:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

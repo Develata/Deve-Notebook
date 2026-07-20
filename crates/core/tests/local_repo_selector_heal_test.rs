@@ -1,4 +1,3 @@
-use deve_core::ledger::RepoManager;
 use tempfile::TempDir;
 
 mod common;
@@ -7,18 +6,15 @@ mod common;
 fn resolve_local_repo_name_rejects_selector_mismatch_after_repair() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))
-        .expect("init default");
-    common::create_initialized_local_repo(&ledger_dir, "test", "urn:test");
-
-    let default_id = repo
-        .get_repo_info()
-        .expect("default info")
-        .expect("default present")
-        .uuid;
+    let (repo, default_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("default-notes"), 8)
+            .expect("init default");
+    let (_test, test_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("test-notes"), 8)
+            .expect("init test");
 
     let err = repo
-        .resolve_local_repo_name(Some(default_id), Some("test"))
+        .resolve_local_repo_name(Some(default_id), Some(&test_id.to_string()))
         .expect_err("mismatched selector must fail");
     assert!(err.to_string().contains("Repo selector mismatch"));
 }
@@ -27,18 +23,15 @@ fn resolve_local_repo_name_rejects_selector_mismatch_after_repair() {
 fn resolve_local_repo_name_for_execution_rejects_selector_mismatch() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))
-        .expect("init default");
-    common::create_initialized_local_repo(&ledger_dir, "test", "urn:test");
-
-    let default_id = repo
-        .get_repo_info()
-        .expect("default info")
-        .expect("default present")
-        .uuid;
+    let (repo, default_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("default-notes"), 8)
+            .expect("init default");
+    let (_test, test_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("test-notes"), 8)
+            .expect("init test");
 
     let err = repo
-        .resolve_local_repo_name_for_execution(Some(default_id), Some("test"))
+        .resolve_local_repo_name_for_execution(Some(default_id), Some(&test_id.to_string()))
         .expect_err("mismatched execution selector must fail");
     assert!(err.to_string().contains("Repo selector mismatch"));
 }

@@ -9,9 +9,38 @@ use serde_json::json;
 
 mod security;
 
+fn init_alias_repo(ledger: &std::path::Path) -> anyhow::Result<RepoManager> {
+    let repo_id = RepoId::new_v4();
+    let execution_name = repo_id.to_string();
+    let repo = RepoManager::init_with_options(
+        ledger,
+        8,
+        Some(&execution_name),
+        crate::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: None,
+        },
+    )?;
+    let projection = ledger
+        .parent()
+        .expect("test ledger has parent")
+        .join("alias-test-projections");
+    let locator = repo.prepare_projection_locator_for_repo_creation(repo_id, &projection)?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    repo.seed_catalog_membership_from_records()?;
+    let authority = repo.claim_repo_catalog_cut_authority()?;
+    let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
+    let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+    let permit = authority.permit(repo_id)?;
+    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    Ok(repo)
+}
+
 fn repo_ids(repo: &RepoManager) -> anyhow::Result<Vec<RepoId>> {
     Ok(repo
-        .list_local_repo_summaries()?
+        .list_cataloged_local_repo_summaries()?
         .into_iter()
         .map(|summary| summary.repo_id)
         .collect())
@@ -30,7 +59,7 @@ fn import_document(entries: Vec<serde_json::Value>) -> Vec<u8> {
 fn missing_alias_falls_back_to_full_repo_id_and_set_is_cas() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("default"), None)?;
+    let repo = init_alias_repo(&dir.path().join("ledger"))?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let runtime = repo.host_repo_alias_runtime();
 
@@ -66,7 +95,7 @@ fn missing_alias_falls_back_to_full_repo_id_and_set_is_cas() -> anyhow::Result<(
 fn alias_validation_is_display_only_but_rejects_empty_control_and_oversize() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("default"), None)?;
+    let repo = init_alias_repo(&dir.path().join("ledger"))?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let runtime = repo.host_repo_alias_runtime();
 
@@ -97,8 +126,8 @@ fn export_is_deterministic_and_contains_only_explicit_active_aliases() -> anyhow
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    RepoManager::init(&ledger, 8, Some("research"), None)?;
+    let repo = init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
     let mut ids = repo_ids(&repo)?;
     ids.sort();
     let runtime = repo.host_repo_alias_runtime();
@@ -124,10 +153,10 @@ fn import_reports_every_bad_entry_skips_all_duplicates_and_commits_good_batch() 
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    RepoManager::init(&ledger, 8, Some("research"), None)?;
-    RepoManager::init(&ledger, 8, Some("notes"), None)?;
-    RepoManager::init(&ledger, 8, Some("drafts"), None)?;
+    let repo = init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
     let ids = repo_ids(&repo)?;
     let good = ids[0];
     let duplicate = ids[1];
@@ -180,7 +209,7 @@ fn import_reports_every_bad_entry_skips_all_duplicates_and_commits_good_batch() 
 fn apply_revalidates_against_latest_store_after_preview() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("default"), None)?;
+    let repo = init_alias_repo(&dir.path().join("ledger"))?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let input = import_document(vec![json!({"repo_id": repo_id, "alias": "imported"})]);
     let runtime = repo.host_repo_alias_runtime();
@@ -202,19 +231,25 @@ fn apply_revalidates_membership_after_preview() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    RepoManager::init(&ledger, 8, Some("removed-next"), None)?;
+    let repo = init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
+    let primary = repo.get_repo_info()?.expect("primary").uuid;
     let target = repo
-        .list_local_repo_summaries()?
+        .list_cataloged_local_repo_summaries()?
         .into_iter()
-        .find(|summary| summary.name == "removed-next")
+        .find(|summary| summary.repo_id != primary)
         .expect("secondary repo")
         .repo_id;
     let input = import_document(vec![json!({"repo_id": target, "alias": "temporary"})]);
     let runtime = repo.host_repo_alias_runtime();
     assert_eq!(runtime.preview_import_json(&input)?.accepted, 1);
 
-    repo.remove_local_repo(target)?;
+    repo.seed_catalog_membership_from_records()?;
+    let authority = repo.claim_repo_catalog_cut_authority()?;
+    let prepared = repo.prepare_repo_removal_membership(target, uuid::Uuid::new_v4())?;
+    let revalidated = repo.revalidate_repo_removal_membership(&prepared)?;
+    let permit = authority.permit(target)?;
+    repo.commit_repo_removal_membership(&prepared, &revalidated, &permit)?;
     let applied = runtime.apply_import_json(&input)?;
 
     assert_eq!(applied.accepted, 0);
@@ -231,7 +266,7 @@ fn concurrent_cas_across_runtime_instances_has_one_winner() -> anyhow::Result<()
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
     let mut workers = Vec::new();
@@ -266,7 +301,7 @@ fn standalone_membership_checks_do_not_retain_repo_database_handles() -> anyhow:
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     drop(repo);
     crate::ledger::database_cache::evict_database_paths_under(&ledger)?;

@@ -24,16 +24,6 @@ pub fn enumerate_projection(
     })
 }
 
-pub(super) fn enumerate_projection_stem(
-    repo: &RepoManager,
-    repo_stem: &str,
-) -> Result<BTreeMap<String, ProjectedEntry>> {
-    let plan = projection_plan::build_stem(repo, repo_stem)?;
-    enumerate_projection_from_plan(plan, |doc_id| {
-        rebuild::rebuild_local_doc_in_repo_stem(repo, repo_stem, doc_id)
-    })
-}
-
 fn enumerate_projection_from_plan(
     plan: projection_plan::ProjectionPlan,
     mut rebuild_doc: impl FnMut(crate::models::DocId) -> Result<rebuild::RebuildResult>,

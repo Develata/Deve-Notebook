@@ -28,6 +28,7 @@ mod message_projection;
 mod message_projection_recovery;
 mod message_protocol;
 mod message_refresh;
+mod message_remove_scope;
 mod message_repo_bootstrap;
 mod message_repo_scope;
 mod message_runtime;
@@ -39,6 +40,7 @@ mod message_sync;
 mod message_sync_dispatch;
 
 use crate::api::WsService;
+use crate::runtime::repo_control_client::RepoControlClient;
 
 use super::state::CoreSignals;
 use super::types::HandshakeSignals;
@@ -53,6 +55,7 @@ pub fn setup_message_effect(
     ws: &WsService,
     signals: &CoreSignals,
     external_changes_refresh: leptos::prelude::Callback<()>,
+    repo_control: RepoControlClient,
 ) {
-    message::setup(ws, signals, external_changes_refresh);
+    message::setup(ws, signals, external_changes_refresh, repo_control);
 }

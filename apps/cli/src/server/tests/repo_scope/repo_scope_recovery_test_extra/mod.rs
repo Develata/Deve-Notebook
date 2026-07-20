@@ -87,8 +87,8 @@ fn resolve_session_repo_uses_uuid_to_disambiguate_remote_display_pair() -> anyho
 }
 
 #[test]
-fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_with_uuid()
--> anyhow::Result<()> {
+fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_with_uuid(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let first = uuid::Uuid::new_v4();
@@ -121,8 +121,8 @@ fn resolve_session_repo_accepts_exact_collision_safe_remote_selector_with_uuid()
 }
 
 #[test]
-fn resolve_session_repo_rejects_uuid_shaped_remote_display_name_with_stale_uuid()
--> anyhow::Result<()> {
+fn resolve_session_repo_rejects_uuid_shaped_remote_display_name_with_stale_uuid(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let display_uuid = uuid::Uuid::new_v4();

@@ -15,9 +15,9 @@ use deve_core::protocol::ServerErrorCode;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow::Result<()> {
     let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "hello")?;
+    let doc_id = seed_doc(&state, state.repo.local_repo_name(), "hello")?;
     let (ch, mut uni_rx) = unicast_channel(&state);
-    let mut session = browser_repo_session("test", test_repo_id, 7);
+    let mut session = browser_repo_session(&test_repo_id.to_string(), test_repo_id, 7);
 
     handle_open_doc(&state, &ch, &mut session, doc_id, 7).await;
 
@@ -28,10 +28,10 @@ async fn open_doc_on_wrong_repo_returns_error_without_empty_snapshot() -> anyhow
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "hello")?;
+    let doc_id = seed_doc(&state, state.repo.local_repo_name(), "hello")?;
     let default_id = delete_doc(&state, doc_id)?;
     let (ch, mut uni_rx) = unicast_channel(&state);
-    let mut session = repo_session("default", default_id);
+    let mut session = repo_session(&default_id.to_string(), default_id);
 
     handle_open_doc(&state, &ch, &mut session, doc_id, 8).await;
 
@@ -48,9 +48,9 @@ async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()>
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow::Result<()> {
     let (_dir, state, test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "hello")?;
+    let doc_id = seed_doc(&state, state.repo.local_repo_name(), "hello")?;
     let (ch, mut uni_rx) = unicast_channel(&state);
-    let mut session = browser_repo_session("test", test_repo_id, 9);
+    let mut session = browser_repo_session(&test_repo_id.to_string(), test_repo_id, 9);
 
     handle_request_history(&state, &ch, &mut session, doc_id, 9).await;
 
@@ -61,10 +61,10 @@ async fn request_history_on_wrong_repo_returns_error_without_history() -> anyhow
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_history_on_deleted_doc_returns_error_without_history() -> anyhow::Result<()> {
     let (_dir, state, _test_repo_id) = build_state()?;
-    let doc_id = seed_doc(&state, "default", "hello")?;
+    let doc_id = seed_doc(&state, state.repo.local_repo_name(), "hello")?;
     let default_id = delete_doc(&state, doc_id)?;
     let (ch, mut uni_rx) = unicast_channel(&state);
-    let mut session = repo_session("default", default_id);
+    let mut session = repo_session(&default_id.to_string(), default_id);
 
     handle_request_history(&state, &ch, &mut session, doc_id, 10).await;
 

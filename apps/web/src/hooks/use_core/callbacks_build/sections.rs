@@ -4,6 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::i18n::Locale;
+use crate::runtime::repo_control_client::RepoControlClient;
 use leptos::prelude::RwSignal;
 
 use super::super::callbacks::{
@@ -98,11 +99,13 @@ pub(super) fn build_switch_callbacks(
     ws: &WsService,
     signals: &CoreSignals,
     locale: RwSignal<Locale>,
+    repo_control: RepoControlClient,
 ) -> SwitchCallbacks {
     create_switch_callbacks(
         ws,
         locale,
         scope::switch_scope(signals),
         signals.set_sync_banner,
+        repo_control,
     )
 }

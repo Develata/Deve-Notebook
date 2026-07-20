@@ -4,11 +4,16 @@ use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -65,10 +70,11 @@ fn materialize_projection_creates_empty_directories_from_structure_facts() {
     .expect("create dir structure");
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.materialize_local_repo("default").expect("materialize");
+    sync.materialize_local_repo(repo.local_repo_name())
+        .expect("materialize");
 
     let root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     assert!(root.join("notes").is_dir());
     assert!(root.join("notes/archive").is_dir());
@@ -86,10 +92,11 @@ fn materialize_projection_prefers_node_path_over_legacy_doc_mapping() {
     inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.materialize_local_repo("default").expect("materialize");
+    sync.materialize_local_repo(repo.local_repo_name())
+        .expect("materialize");
 
     let root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     assert_eq!(
         std::fs::read_to_string(root.join("notes/a.md")).expect("read canonical doc"),
@@ -103,14 +110,14 @@ fn explicit_materialize_restores_missing_bound_workspace_file() {
     let (_dir, repo) = new_repo();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.materialize_local_repo("default")
+    sync.materialize_local_repo(repo.local_repo_name())
         .expect("initial materialize");
     let path = repo
-        .local_repo_workspace_path("default", "notes/a.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
         .expect("workspace path");
     std::fs::remove_file(&path).expect("remove materialized file");
 
-    sync.materialize_local_repo("default")
+    sync.materialize_local_repo(repo.local_repo_name())
         .expect("explicit rematerialize");
 
     assert_eq!(

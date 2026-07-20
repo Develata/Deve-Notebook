@@ -5,16 +5,17 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
     let dir = tempdir().expect("create tempdir");
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&ledger, &projection_base).expect("init cataloged repo");
     let repo = Arc::new(repo);
     let workspace_root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     (dir, repo, workspace_root)
 }
@@ -64,11 +65,11 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     std::fs::rename(workspace_root.join("notes"), workspace_root.join("docs")).expect("rename dir");
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
-        .get_repo_info_for(None, Some("default"))
+        .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
-    sync.handle_dir_change("default", repo_id, "docs")
+    sync.handle_dir_change(repo.local_repo_name(), repo_id, "docs")
         .expect("handle dir change")
         .expect("repo-scoped result");
     repo.stage_pending("notes/a.md").expect("stage delete");

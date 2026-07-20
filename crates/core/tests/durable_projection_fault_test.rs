@@ -1,13 +1,13 @@
-use deve_core::ledger::RepoManager;
 use deve_core::sync::SyncManager;
 use std::sync::Arc;
+
+mod common;
 
 #[test]
 fn durable_projection_fault_survives_sync_manager_restart() -> anyhow::Result<()> {
     let tmp = tempfile::tempdir()?;
     let ledger_dir = tmp.path().join("ledger");
-    let mut repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(tmp.path().join("notes"))?;
+    let (repo, _repo_id) = common::init_cataloged_repo(&ledger_dir, &tmp.path().join("notes"))?;
     let repo_stem = repo.local_repo_name().to_string();
     let repo = Arc::new(repo);
     let sync = SyncManager::new_checked(repo.clone())?;
@@ -32,8 +32,7 @@ fn durable_projection_fault_survives_sync_manager_restart() -> anyhow::Result<()
 fn rebuild_projection_clears_durable_projection_fault() -> anyhow::Result<()> {
     let tmp = tempfile::tempdir()?;
     let ledger_dir = tmp.path().join("ledger");
-    let mut repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(tmp.path().join("notes"))?;
+    let (repo, _repo_id) = common::init_cataloged_repo(&ledger_dir, &tmp.path().join("notes"))?;
     let repo_stem = repo.local_repo_name().to_string();
     let repo = Arc::new(repo);
     let sync = SyncManager::new_checked(repo.clone())?;

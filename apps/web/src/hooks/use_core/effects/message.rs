@@ -15,9 +15,16 @@ use super::super::write_gate::RepoWriteGateState;
 use super::message_dispatch;
 use super::message_projection_recovery;
 use super::message_refresh::{capture_refresh_scope, should_send_refresh_through_read_gate};
+use super::message_remove_scope;
+use crate::runtime::repo_control_client::RepoControlClient;
 
 /// 设置消息处理 Effect。
-pub fn setup(ws: &WsService, signals: &CoreSignals, external_changes_refresh: Callback<()>) {
+pub fn setup(
+    ws: &WsService,
+    signals: &CoreSignals,
+    external_changes_refresh: Callback<()>,
+    repo_control: RepoControlClient,
+) {
     let ws_rx = ws.clone();
     let signals = *signals;
     let degraded_sync_mode = signals.degraded_sync_mode;
@@ -134,6 +141,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals, external_changes_refresh: Ca
                 schedule_refresh: &schedule_refresh,
                 external_changes_refresh,
                 projection_refresh: &projection_refresh,
+                repo_control: &repo_control,
             },
         );
     });
@@ -147,6 +155,7 @@ struct MessageProcessingContext<'a> {
     schedule_refresh: &'a dyn Fn(),
     external_changes_refresh: Callback<()>,
     projection_refresh: &'a ProjectionRefreshCoordinator,
+    repo_control: &'a RepoControlClient,
 }
 
 fn process_available_messages(ws_rx: &WsService, context: MessageProcessingContext<'_>) {
@@ -158,8 +167,10 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
         schedule_refresh,
         external_changes_refresh,
         projection_refresh,
+        repo_control,
     } = context;
     let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
+    message_remove_scope::retire_stale_or_expired(ws_rx, signals);
     projection_refresh.enter_scope(ProjectionRefreshScope {
         connection_epoch: current_connection_epoch,
         repo_id: signals
@@ -214,6 +225,7 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
                 locale,
                 schedule_refresh,
                 external_changes_refresh,
+                repo_control,
             );
             if let Some((response, request_id)) = refresh_response {
                 message_projection_recovery::response_completed(
@@ -280,6 +292,7 @@ mod tests {
                 schedule_refresh: &|| {},
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
+                repo_control: &Default::default(),
             },
         );
 
@@ -329,6 +342,7 @@ mod tests {
                 schedule_refresh: &|| {},
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
+                repo_control: &Default::default(),
             },
         );
 
@@ -361,6 +375,7 @@ mod tests {
                 schedule_refresh: &|| {},
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
+                repo_control: &Default::default(),
             },
         );
 
@@ -415,6 +430,7 @@ mod tests {
                     refresh_counter.fetch_add(1, Ordering::Relaxed);
                 }),
                 projection_refresh: &Default::default(),
+                repo_control: &Default::default(),
             },
         );
 

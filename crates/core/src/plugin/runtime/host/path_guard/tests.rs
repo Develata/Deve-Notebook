@@ -86,10 +86,8 @@ fn custom_projection_workspace_paths_are_protected_plugin_targets() -> anyhow::R
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("my-notebooks");
-    let repo =
-        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    let workspace = repo.local_repo_workspace_root("default")?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base)?;
+    let workspace = repo.local_repo_workspace_root(repo.local_repo_name())?;
     std::fs::create_dir_all(workspace.join("notes"))?;
     std::fs::create_dir_all(workspace.join(".notegit"))?;
     std::fs::create_dir_all(workspace.join(".git/objects"))?;
@@ -113,10 +111,8 @@ fn projection_base_sibling_markdown_is_not_a_plugin_managed_target() -> anyhow::
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("my-notebooks");
-    let repo =
-        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    std::fs::create_dir_all(repo.local_repo_workspace_root("default")?)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base)?;
+    std::fs::create_dir_all(repo.local_repo_workspace_root(repo.local_repo_name())?)?;
     std::fs::write(projection_base.join("a.md"), "sibling")?;
 
     assert!(!is_managed_for(&repo, &projection_base.join("a.md"))?);
@@ -129,10 +125,8 @@ fn custom_projection_workspace_note_target_resolves_repo_scope() -> anyhow::Resu
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("my-notebooks");
-    let repo =
-        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    let workspace = repo.local_repo_workspace_root("default")?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base)?;
+    let workspace = repo.local_repo_workspace_root(repo.local_repo_name())?;
     std::fs::create_dir_all(workspace.join("notes"))?;
     std::fs::write(workspace.join("notes/a.md"), "note")?;
     std::fs::write(projection_base.join("a.md"), "sibling")?;

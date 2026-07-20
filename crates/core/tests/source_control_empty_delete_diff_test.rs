@@ -1,16 +1,21 @@
 use deve_core::ledger::RepoManager;
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 
 fn workspace_file(repo: &RepoManager, path: &str) -> std::path::PathBuf {
-    repo.local_repo_workspace_path("default", path)
+    repo.local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path")
 }
 

@@ -1,20 +1,21 @@
 use super::*;
 
 #[test]
-fn clears_doc_when_repo_uuid_changes_even_if_name_matches() {
+fn exact_repo_id_accepts_alias_change_during_switch() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
 
     let (current_repo, set_current_repo) = signal(Some("default".to_string()));
     let (current_repo_id, set_current_repo_id) = signal(Some(Uuid::new_v4().to_string()));
+    let next_repo_id = Uuid::new_v4();
     let (pending_repo_switch, set_pending_repo_switch) =
-        signal(Some(PendingRepoSwitch::switch("default", 7)));
+        signal(Some(PendingRepoSwitch::switch("default", next_repo_id, 7)));
     let (current_scope_nonce, set_current_scope_nonce) = signal(1u64);
     let (current_doc, set_current_doc) = signal(Some(DocId::new()));
-    let next_repo_id = Uuid::new_v4().to_string();
+    let next_repo_id = next_repo_id.to_string();
 
     let outcome = handle_repo_switched(
-        "default".to_string(),
+        "renamed".to_string(),
         next_repo_id.clone(),
         Some(7),
         RepoSwitchSignals {
@@ -36,6 +37,7 @@ fn clears_doc_when_repo_uuid_changes_even_if_name_matches() {
     assert_eq!(current_doc.get_untracked(), None);
     assert_eq!(pending_repo_switch.get_untracked(), None);
     assert_eq!(current_scope_nonce.get_untracked(), 7);
+    assert_eq!(current_repo.get_untracked().as_deref(), Some("renamed"));
 }
 
 #[test]
@@ -108,5 +110,39 @@ fn same_repo_rebind_with_new_scope_nonce_requests_refresh() {
     assert!(outcome.accepted);
     assert!(outcome.should_refresh);
     assert_eq!(current_doc.get_untracked(), original_doc);
+    assert_eq!(current_scope_nonce.get_untracked(), 7);
+}
+
+#[test]
+fn same_repo_rename_projection_updates_alias_without_refreshing_scope() {
+    let (current_repo, set_current_repo) = signal(Some("old".to_string()));
+    let (current_repo_id, set_current_repo_id) = signal(Some("repo-id".to_string()));
+    let doc_id = DocId::new();
+    let (current_doc, set_current_doc) = signal(Some(doc_id));
+    let (pending_repo_switch, set_pending_repo_switch) = signal(None);
+    let (current_scope_nonce, set_current_scope_nonce) = signal(7);
+
+    let outcome = handle_repo_switched(
+        "renamed".to_string(),
+        "repo-id".to_string(),
+        Some(7),
+        RepoSwitchSignals {
+            current_repo,
+            set_current_repo,
+            current_repo_id,
+            set_current_repo_id,
+            set_current_doc,
+            pending_repo_switch,
+            set_pending_repo_switch,
+            current_scope_nonce,
+            set_current_scope_nonce,
+        },
+    );
+
+    assert!(outcome.accepted);
+    assert!(!outcome.should_refresh);
+    assert_eq!(current_repo.get_untracked().as_deref(), Some("renamed"));
+    assert_eq!(current_repo_id.get_untracked().as_deref(), Some("repo-id"));
+    assert_eq!(current_doc.get_untracked(), Some(doc_id));
     assert_eq!(current_scope_nonce.get_untracked(), 7);
 }

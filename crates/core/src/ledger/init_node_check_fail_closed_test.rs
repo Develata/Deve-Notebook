@@ -23,9 +23,14 @@ fn seed_metadata_only_doc(repo: &RepoManager, path: &str) -> anyhow::Result<DocI
 
 #[test]
 fn init_fails_closed_on_missing_nodes() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
     let tmp = TempDir::new()?;
     let ledger_dir = tmp.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp.path().join("notes"),
+        2,
+    )?;
     let path = "notes/init-drift.md";
     let doc_id = seed_metadata_only_doc(&repo, path)?;
 
@@ -38,7 +43,7 @@ fn init_fails_closed_on_missing_nodes() -> anyhow::Result<()> {
     drop(repo);
     evict_database_paths_under(&ledger_dir.join("local"))?;
 
-    let err = match RepoManager::init(&ledger_dir, 2, None, None) {
+    let err = match RepoManager::init_existing_for_repo_id(&ledger_dir, 2, repo_id) {
         Ok(_) => panic!("node drift must fail init closed"),
         Err(err) => err,
     };

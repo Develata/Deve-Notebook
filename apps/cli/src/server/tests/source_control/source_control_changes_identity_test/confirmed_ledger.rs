@@ -3,9 +3,10 @@
 
 use super::support::build_state;
 use crate::server::{
-    AppState, channel::DualChannel,
+    channel::DualChannel,
     handlers::source_control::{handle_get_changes, handle_get_doc_diff},
     session::WsSession,
+    AppState,
 };
 use deve_core::models::{DocId, FactActor, Op};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
@@ -16,13 +17,13 @@ use tokio::sync::mpsc;
 
 fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(String, DocId)> {
     let path = "notes/a.md".to_string();
-    let abs = state.repo.local_repo_workspace_path("default", &path)?;
+    let abs = state.repo.local_repo_workspace_path(state.repo.local_repo_name(), &path)?;
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(&abs, "hello")?;
 
-    state.repo.run_on_local_repo("default", |db| {
+    state.repo.run_on_local_repo(state.repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
             &PendingFsEntry {
@@ -38,19 +39,17 @@ fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(Stri
     })?;
     state.repo.stage_pending(&path)?;
     state.repo.apply_external_changes()?;
-    state
-        .repo
-        .commit_source_control_changes("initial")?;
+    state.repo.commit_source_control_changes("initial")?;
 
     let doc_id = state
         .repo
-        .get_tracked_docid_in_local_repo("default", &path)?
+        .get_tracked_docid_in_local_repo(state.repo.local_repo_name(), &path)?
         .expect("tracked doc id after initial commit");
     state
         .repo
         .local_fact_writer(FactActor::new("editor")?)
         .append_content_in_local_repo(
-            "default",
+            state.repo.local_repo_name(),
             doc_id,
             Op::Insert {
                 pos: 5,
@@ -71,7 +70,7 @@ async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyho
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(31));
-    session.switch_repo("default".into(), None);
+    session.switch_repo(state.repo.local_repo_name().to_string(), state.repo.get_repo_info()?.map(|info| info.uuid));
     handle_get_changes(&state, &ch, &mut session, Some("req-confirmed".into())).await;
 
     match uni_rx.recv().await {
@@ -108,7 +107,7 @@ async fn confirmed_ledger_doc_diff_uses_commit_anchor_as_left_side() -> anyhow::
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(41));
-    session.switch_repo("default".into(), None);
+    session.switch_repo(state.repo.local_repo_name().to_string(), state.repo.get_repo_info()?.map(|info| info.uuid));
 
     handle_get_doc_diff(
         &state,

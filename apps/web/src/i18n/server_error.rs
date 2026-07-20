@@ -142,6 +142,38 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Remote import cleanup is required"
         }
         (Locale::Zh, ServerErrorCode::RemoteImportCleanupRequired) => "远程导入需要清理",
+        (Locale::En, ServerErrorCode::RepoAliasInvalid) => "Repository alias is invalid",
+        (Locale::Zh, ServerErrorCode::RepoAliasInvalid) => "仓库别名无效",
+        (Locale::En, ServerErrorCode::RepoAliasStale) => {
+            "Repository alias changed; refresh and retry"
+        }
+        (Locale::Zh, ServerErrorCode::RepoAliasStale) => "仓库别名已变化，请刷新后重试",
+        (Locale::En, ServerErrorCode::RepoAliasStoreFailed) => "Failed to save repository alias",
+        (Locale::Zh, ServerErrorCode::RepoAliasStoreFailed) => "仓库别名保存失败",
+        (Locale::En, ServerErrorCode::RepoLifecycleBusy) => "Repository lifecycle is busy",
+        (Locale::Zh, ServerErrorCode::RepoLifecycleBusy) => "仓库生命周期正忙",
+        (Locale::En, ServerErrorCode::RepoLifecycleNotFound) => {
+            "Repository lifecycle request was not found"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleNotFound) => "未找到仓库生命周期请求",
+        (Locale::En, ServerErrorCode::RepoLifecycleInvalidRequest) => {
+            "Repository lifecycle request is invalid"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleInvalidRequest) => "仓库生命周期请求无效",
+        (Locale::En, ServerErrorCode::RepoLifecycleCommittedPartial) => {
+            "Repository change committed with limited availability"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleCommittedPartial) => {
+            "仓库变更已提交，但当前可用性受限"
+        }
+        (Locale::En, ServerErrorCode::RepoLifecycleRepairRequired) => {
+            "Repository lifecycle requires repair"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleRepairRequired) => "仓库生命周期需要修复",
+        (Locale::En, ServerErrorCode::RepoLifecyclePublicationPending) => {
+            "Repository update publication is pending"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecyclePublicationPending) => "仓库更新仍待发布",
         (Locale::En, ServerErrorCode::GraphDegradedProjectionRequired) => {
             "Graph projection requires explicit degraded export"
         }

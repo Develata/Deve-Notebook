@@ -3,7 +3,7 @@
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, recv_server_message, send_client_message,
+    connect_harness, recv_server_message, send_client_message, WsHarness,
 };
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
@@ -114,7 +114,6 @@ async fn switch_repo(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<()>
     send_client_message(
         ws,
         ClientMessage::SwitchRepoExact {
-            name: "notes".into(),
             repo_id,
             switch_nonce: Some(SWITCH_NONCE),
         },
@@ -122,8 +121,13 @@ async fn switch_repo(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<()>
     .await?;
     match recv_server_message(ws).await? {
         ServerMessage::RepoSwitched {
-            uuid, switch_nonce, ..
-        } => assert_eq!((uuid, switch_nonce), (repo_id.to_string(), Some(SWITCH_NONCE))),
+            repo_id: actual_repo_id,
+            switch_nonce,
+            ..
+        } => assert_eq!(
+            (actual_repo_id, switch_nonce),
+            (repo_id, Some(SWITCH_NONCE))
+        ),
         other => panic!("expected RepoSwitched, got {other:?}"),
     }
     let _ = recv_server_message(ws).await?;
@@ -144,7 +148,10 @@ fn assert_protocol_error(
             assert_eq!(error.code, expected_code);
             assert_eq!(scope_nonce, Some(expected_scope));
             assert!(
-                error.detail.as_deref().is_some_and(|got| got.contains(detail)),
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|got| got.contains(detail)),
                 "detail {:?} should contain {detail}",
                 error.detail
             );

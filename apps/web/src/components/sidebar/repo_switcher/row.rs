@@ -12,7 +12,6 @@ mod rename_form;
 use crate::i18n::Locale;
 use crate::runtime::domain::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use deve_core::models::RepoId;
-use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
 
 use self::actions::RepoSwitcherRowActions;
@@ -23,9 +22,7 @@ use super::logic::{RepoSwitcherRow, repo_switcher_row_is_renaming};
 #[component]
 pub(super) fn RepoSwitcherRowView(
     row: RepoSwitcherRow,
-    current_repo: ReadSignal<Option<String>>,
     current_repo_id: ReadSignal<Option<String>>,
-    repo_entries: ReadSignal<Vec<RepoListEntry>>,
     on_switch_repo: Callback<RepoSwitchRequest>,
     on_rename_repo: Callback<RepoRenameRequest>,
     on_remove_repo: Callback<RepoRemoveRequest>,
@@ -41,6 +38,7 @@ pub(super) fn RepoSwitcherRowView(
 ) -> impl IntoView {
     let row_id = row.repo_id;
     let rename_current_name = row.name.clone();
+    let rename_alias_revision = row.alias_revision;
     let remove_current_name = row.name.clone();
     let action_title_name = row.name.clone();
     let rename_value_name = row.name.clone();
@@ -52,6 +50,7 @@ pub(super) fn RepoSwitcherRowView(
                     <RepoSwitcherRenameForm
                         repo_id=row_id
                         current_name=rename_current_name.clone()
+                        expected_alias_revision=rename_alias_revision
                         rename_name=rename_name
                         set_rename_name=set_rename_name
                         set_renaming_repo=set_renaming_repo
@@ -65,7 +64,6 @@ pub(super) fn RepoSwitcherRowView(
                 view! {
                     <RepoSwitcherDisplayRow
                         row=row.clone()
-                        current_repo=current_repo
                         current_repo_id=current_repo_id
                         on_switch_repo=on_switch_repo.clone()
                         set_show_menu=set_show_menu
@@ -78,7 +76,6 @@ pub(super) fn RepoSwitcherRowView(
             }}
             <RepoSwitcherRowActions
                 repo_id=row_id
-                repo_entries=repo_entries
                 action_repo=action_repo
                 set_action_repo=set_action_repo
                 set_renaming_repo=set_renaming_repo

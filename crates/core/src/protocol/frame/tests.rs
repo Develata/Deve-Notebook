@@ -309,10 +309,10 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
 }
 
 #[test]
-fn strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias() {
+fn strict_v4_json_rejects_missing_vectors_and_legacy_peer_alias() {
     let repo_id = uuid::Uuid::new_v4();
     let client_request = format!(
-        r#"{{"protocol_version":3,"message":{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}}}"#
+        r#"{{"protocol_version":{WS_PROTOCOL_VERSION},"message":{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}}}"#
     );
     assert!(matches!(
         decode_client_json(&client_request),
@@ -321,7 +321,7 @@ fn strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias() {
 
     let peer = PeerId::new("peer-a");
     let client_snapshot_request = serde_json::json!({
-        "protocol_version": 3,
+        "protocol_version": WS_PROTOCOL_VERSION,
         "message": {
             "SyncSnapshotRequest": {
                 "peer_id": peer,
@@ -336,7 +336,7 @@ fn strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias() {
     ));
 
     let server_snapshot = serde_json::json!({
-        "protocol_version": 3,
+        "protocol_version": WS_PROTOCOL_VERSION,
         "message": {
             "SyncPushSnapshot": {
                 "source_peer_id": peer,
@@ -350,6 +350,27 @@ fn strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias() {
     });
     assert!(matches!(
         decode_server_json(&server_snapshot.to_string()),
+        Err(ProtocolFrameError::Decode(_))
+    ));
+}
+
+#[test]
+fn strict_v4_json_rejects_alias_only_repo_list_shape() {
+    let legacy = serde_json::json!({
+        "protocol_version": WS_PROTOCOL_VERSION,
+        "message": {
+            "RepoList": {
+                "request_id": null,
+                "branch": null,
+                "scope_nonce": null,
+                "repos": ["host-alias"],
+                "repo_entries": []
+            }
+        }
+    });
+
+    assert!(matches!(
+        decode_server_json(&legacy.to_string()),
         Err(ProtocolFrameError::Decode(_))
     ));
 }

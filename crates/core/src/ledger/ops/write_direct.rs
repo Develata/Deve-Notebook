@@ -81,13 +81,15 @@ pub(crate) fn next_peer_fact_seq(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::RepoManager;
     use crate::models::{DocId, LedgerEntry, Op};
 
     #[test]
     fn rolled_back_write_transaction_does_not_leave_peer_fact_seq_gap() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
-        let repo = RepoManager::init(dir.path().join("ledger"), 8, None, None)?;
+        let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+        )?;
         let repo_name = repo.local_repo_name().to_string();
         let peer = repo.local_peer_id().clone();
         let doc_id = DocId::new();

@@ -11,14 +11,17 @@ use deve_core::protocol::ServerErrorCode;
 async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<()> {
     let h = edit_harness(true)?;
     let test_repo_id = h.test_repo_id.expect("test repo id");
-    let doc_id = seed_doc_with_content(&h.state, "default", "notes/a.md", "hello")?;
+    let doc_id = seed_doc_with_content(&h.state, &h.default_repo_name, "notes/a.md", "hello")?;
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("test", test_repo_id, 19);
+    let mut session = writer_browser_session(
+        h.test_repo_name.as_deref().expect("test repo name"),
+        test_repo_id,
+        19,
+    );
 
     send_insert(&h.state, &ch, &mut session, doc_id, 5).await;
 
-    let (scope_nonce, rejected_doc_id, client_op_id, error) =
-        recv_edit_rejected(&mut uni_rx).await;
+    let (scope_nonce, rejected_doc_id, client_op_id, error) = recv_edit_rejected(&mut uni_rx).await;
     assert_eq!(scope_nonce, 19);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
@@ -26,7 +29,11 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     assert!(
         h.state
             .repo
-            .find_client_op_in_local_repo("test", 7, 9)?
+            .find_client_op_in_local_repo(
+                h.test_repo_name.as_deref().expect("test repo name"),
+                7,
+                9,
+            )?
             .is_none(),
         "must not append orphan op into active repo"
     );
@@ -36,9 +43,9 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
     let h = edit_harness(true)?;
-    let doc_id = seed_doc_with_content(&h.state, "default", "notes/a.md", "hello")?;
+    let doc_id = seed_doc_with_content(&h.state, &h.default_repo_name, "notes/a.md", "hello")?;
     let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
-    h.state.repo.run_on_local_repo("default", |db| {
+    h.state.repo.run_on_local_repo(&h.default_repo_name, |db| {
         let write = db.begin_write()?;
         {
             let mut client_ops = write.open_table(CLIENT_OP_INDEX)?;
@@ -49,11 +56,10 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
     })?;
 
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("default", h.default_repo_id, 23);
+    let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 23);
     send_insert(&h.state, &ch, &mut session, doc_id, 5).await;
 
-    let (scope_nonce, rejected_doc_id, client_op_id, error) =
-        recv_edit_rejected(&mut uni_rx).await;
+    let (scope_nonce, rejected_doc_id, client_op_id, error) = recv_edit_rejected(&mut uni_rx).await;
     assert_eq!(scope_nonce, 23);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
@@ -73,18 +79,17 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn edit_rejects_degraded_local_projection_before_append() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let doc_id = seed_doc_with_content(&h.state, "default", "notes/a.md", "hello")?;
+    let doc_id = seed_doc_with_content(&h.state, &h.default_repo_name, "notes/a.md", "hello")?;
     let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
     h.state
         .sync_manager
         .mark_projection_writeback_fault(h.state.repo.local_repo_name())?;
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("default", h.default_repo_id, 31);
+    let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 31);
 
     send_insert(&h.state, &ch, &mut session, doc_id, 5).await;
 
-    let (scope_nonce, rejected_doc_id, client_op_id, error) =
-        recv_edit_rejected(&mut uni_rx).await;
+    let (scope_nonce, rejected_doc_id, client_op_id, error) = recv_edit_rejected(&mut uni_rx).await;
     assert_eq!(scope_nonce, 31);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);

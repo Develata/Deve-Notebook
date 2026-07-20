@@ -2,24 +2,25 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use crate::server::{
-    AppState, security,
+    security,
     session::WsSession,
     source_control_grants::{AuthSessionId, SourceControlGrantBranch},
     tree_state::RepoTreeRegistry,
+    AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let repo =
+        crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base, 10)?
+            .repo;
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok((
@@ -60,12 +61,10 @@ pub(super) fn bind_default_browser_writer(
         .get_repo_info()?
         .ok_or_else(|| anyhow::anyhow!("missing default repo info"))?
         .uuid;
-    let auth_session_id = AuthSessionId::for_test(&format!(
-        "local-commit:{repo_id}:{scope_nonce}"
-    ));
+    let auth_session_id = AuthSessionId::for_test(&format!("local-commit:{repo_id}:{scope_nonce}"));
     session.mark_browser_session();
     session.bind_auth_session(auth_session_id.clone());
-    session.switch_repo("default".into(), Some(repo_id));
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
     session.set_sync_scope_nonce(scope_nonce);
     session.set_authenticated(PeerId::new("test-peer"));
@@ -93,11 +92,11 @@ fn default_workspace_root(dir: &TempDir) -> std::path::PathBuf {
     let locator = value["locators"]
         .as_array()
         .expect("projection locators")
-        .iter()
-        .find(|locator| locator["repo_name_hint"].as_str() == Some("default"))
+        .first()
         .expect("default repo locator");
-    base.join(format!(
-        "default--{}",
-        locator["repo_id"].as_str().expect("repo id")
-    ))
+    base.join(
+        locator["workspace_segment"]
+            .as_str()
+            .expect("workspace segment"),
+    )
 }

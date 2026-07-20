@@ -22,8 +22,6 @@ impl<'a> RepairRuntime<'a> {
             &self.manager.ledger_dir,
             &self.manager.local_repo_name,
             self.manager.local_db.as_ref(),
-            true,
-            Some(self.manager),
         )?;
         RepoManager::repair_local_repo_source_control_tables(
             &self.manager.ledger_dir,

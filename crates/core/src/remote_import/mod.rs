@@ -23,7 +23,9 @@ pub use facade::{
     REMOTE_IMPORT_DEFAULT_PAGE_SIZE, REMOTE_IMPORT_MAX_PAGE_SIZE, RemoteImportApplyView,
     RemoteImportBinding, RemoteImportCandidatePage, RemoteImportCandidateView,
     RemoteImportCaptureSink, RemoteImportDiffView, RemoteImportEntryId, RemoteImportPageCursor,
-    RemoteImportRepairPlan, RemoteImportService, RemoteImportSessionView,
+    RemoteImportRepairPlan, RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalBlocked,
+    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalRevalidation,
+    RemoteImportRepoRemovalSnapshot, RemoteImportService, RemoteImportSessionView,
 };
 #[allow(unused_imports)]
 pub(crate) use repair::{RemoteImportRepairFinding, RemoteImportRepairReport};

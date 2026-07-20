@@ -99,10 +99,24 @@ pub(super) fn commit_deve_file(
     Ok(())
 }
 
-pub(super) fn open_repo(ledger_dir: &Path, projection_base: &Path) -> Result<RepoManager> {
-    let mut repo = RepoManager::init(ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(projection_base)?;
-    Ok(repo)
+/// Resolve the single cataloged local repo id. The catalog is the only source
+/// of local repo membership now; machine names are canonical RepoId strings.
+fn only_local_repo_id(ledger_dir: &Path) -> Result<deve_core::models::RepoId> {
+    let repo = RepoManager::init(ledger_dir, 10, None, None)?;
+    let mut summaries = repo.list_cataloged_local_repo_summaries()?;
+    anyhow::ensure!(
+        summaries.len() == 1,
+        "expected exactly one cataloged local repo, found {}",
+        summaries.len()
+    );
+    Ok(summaries.remove(0).repo_id)
+}
+
+pub(super) fn open_repo(ledger_dir: &Path, _projection_base: &Path) -> Result<RepoManager> {
+    // Bind the single cataloged repo by its canonical RepoId so the machine name
+    // resolves; the projection locator was set at creation and stays authoritative.
+    let repo_id = only_local_repo_id(ledger_dir)?;
+    RepoManager::init_existing_for_repo_id(ledger_dir, 10, repo_id)
 }
 
 pub(super) fn prepare_exported_baseline(
@@ -110,12 +124,13 @@ pub(super) fn prepare_exported_baseline(
     projection_base: &Path,
     repo_root: &Path,
 ) -> Result<()> {
-    {
+    let repo_name = {
         let repo = open_repo(ledger_dir, projection_base)?;
         init_git_repo(repo_root);
         commit_deve_file(repo_root, &repo, "note.md", "hello\n")?;
-    }
-    ngit::export(ledger_dir, Some("default"), false, 10)?;
+        repo.local_repo_name().to_string()
+    };
+    ngit::export(ledger_dir, Some(&repo_name), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
     Ok(())
@@ -127,12 +142,13 @@ pub(super) fn resolve_imported_change_to_queued_commit(
 ) -> Result<String> {
     let doc_id = {
         let repo = open_repo(ledger_dir, projection_base)?;
+        let repo_name = repo.local_repo_name().to_string();
         let doc_id = repo
-            .get_tracked_docid_in_local_repo("default", "note.md")?
+            .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
             .expect("doc id");
         repo.local_fact_writer(FactActor::new("test")?)
             .append_content_in_local_repo(
-                "default",
+                &repo_name,
                 doc_id,
                 Op::Insert {
                     pos: 6,
@@ -143,32 +159,34 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         doc_id
     };
     let repo = open_repo(ledger_dir, projection_base)?;
-    let repo_root = repo.local_repo_workspace_root("default")?;
+    let repo_name = repo.local_repo_name().to_string();
+    let repo_root = repo.local_repo_workspace_root(&repo_name)?;
     write_workspace_file(&repo_root, "note.md", "git import\n");
-    ngit::import(ledger_dir, Some("default"), true, 10)?;
+    ngit::import(ledger_dir, Some(&repo_name), true, 10)?;
 
     let repo = open_repo(ledger_dir, projection_base)?;
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    let repo_name = repo.local_repo_name().to_string();
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
     assert_eq!(pending.len(), 1, "{pending:?}");
     assert_eq!(pending[0].path, "note.md");
     assert!(pending[0].has_conflict, "{pending:?}");
     repo.stage_resolved_pending_target_in_local_repo(
-        "default",
+        &repo_name,
         &ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(doc_id),
             domain: None,
         },
     )?;
-    let staged = repo.list_staged_in_local_repo("default")?;
+    let staged = repo.list_staged_in_local_repo(&repo_name)?;
     assert_eq!(staged.len(), 1, "{staged:?}");
     assert_eq!(staged[0].path, "note.md");
     assert!(!staged[0].has_conflict, "{staged:?}");
-    let commit =
-        repo.commit_source_control_changes_in_local_repo("default", "accept imported git content")?;
-    assert!(repo.list_pending_fs_in_local_repo("default")?.is_empty());
-    assert!(repo.list_staged_in_local_repo("default")?.is_empty());
-    repo.run_on_local_repo("default", |db| {
+    let commit = repo
+        .commit_source_control_changes_in_local_repo(&repo_name, "accept imported git content")?;
+    assert!(repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
+    assert!(repo.list_staged_in_local_repo(&repo_name)?.is_empty());
+    repo.run_on_local_repo(&repo_name, |db| {
         let record = get_record(db, &commit.id)?.expect("queued imported commit");
         assert_eq!(record.state, GitMirrorCommitState::Queued);
         Ok::<_, anyhow::Error>(())
@@ -182,7 +200,8 @@ pub(super) fn exported_git_commit_id(
     deve_commit_id: &str,
 ) -> Result<String> {
     let repo = open_repo(ledger_dir, projection_base)?;
-    repo.run_on_local_repo("default", |db| {
+    let repo_name = repo.local_repo_name().to_string();
+    repo.run_on_local_repo(&repo_name, |db| {
         let record = get_record(db, deve_commit_id)?.expect("committed imported commit");
         assert_eq!(record.state, GitMirrorCommitState::Committed);
         record
@@ -199,8 +218,9 @@ pub(super) fn assert_clean_resolved_import_export(
 ) -> Result<String> {
     let git_commit_id = exported_git_commit_id(ledger_dir, projection_base, deve_commit_id)?;
     let repo = open_repo(ledger_dir, projection_base)?;
-    assert!(repo.list_pending_fs_in_local_repo("default")?.is_empty());
-    assert!(repo.list_staged_in_local_repo("default")?.is_empty());
+    let repo_name = repo.local_repo_name().to_string();
+    assert!(repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty());
+    assert!(repo.list_staged_in_local_repo(&repo_name)?.is_empty());
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
     assert_eq!(
         git_cmd(repo_root, &["show", "HEAD:note.md"]),
@@ -219,7 +239,8 @@ pub(super) fn push_report(
     branch: &str,
 ) -> Result<GitMirrorPushReport> {
     let repo = open_repo(ledger_dir, projection_base)?;
-    repo.run_on_local_repo("default", |db| {
+    let repo_name = repo.local_repo_name().to_string();
+    repo.run_on_local_repo(&repo_name, |db| {
         Ok(push_mirror(
             db,
             repo_root,

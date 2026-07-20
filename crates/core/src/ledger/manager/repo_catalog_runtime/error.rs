@@ -53,6 +53,23 @@ pub enum RepoCatalogError {
     Poisoned,
 }
 
+impl RepoCatalogError {
+    /// Whether the durable single-record replace may already be visible.
+    /// Callers must never compensate by reopening writer admission when this
+    /// returns true; they may only retry the exact idempotent cut or enter
+    /// repair.
+    ///
+    /// `PublishFailed` is by construction pre-replace only: an ambiguous
+    /// post-replace outcome must map to `CutOutcomeUnknown` (see
+    /// `publish_error_with_abort` in `cut.rs`), never to `PublishFailed`.
+    pub fn cut_may_be_committed(&self) -> bool {
+        matches!(
+            self,
+            Self::DurableCutProcessStateFailed { .. } | Self::CutOutcomeUnknown { .. }
+        )
+    }
+}
+
 pub(super) fn state_name(state: super::RepoCatalogMembershipState) -> &'static str {
     match state {
         super::RepoCatalogMembershipState::Normal => "normal",

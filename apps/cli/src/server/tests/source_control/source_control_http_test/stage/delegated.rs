@@ -2,7 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use super::super::super::auth::delegated_source_control::DELEGATED_SC_HEADER;
-use super::super::support::{ProxyHarness, path_target, seed_pending};
+use super::super::support::{path_target, seed_pending, ProxyHarness};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};

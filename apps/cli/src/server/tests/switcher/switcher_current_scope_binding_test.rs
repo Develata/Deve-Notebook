@@ -4,23 +4,22 @@
 use super::handlers::switcher::handle_switch_branch;
 use super::source_control_grants::{AuthSessionId, SourceControlGrantBranch};
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
-use super::{AppState, session::WsSession};
-use deve_core::ledger::RepoManager;
+use super::{session::WsSession, AppState};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let (repo, _local_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &dir.path().join("ledger"),
+        "default",
+        &projection_base,
         10,
-        Some("default"),
         Some("urn:default"),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
@@ -83,20 +82,20 @@ async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::R
     let auth_session_id = AuthSessionId::for_test("switch-branch-failure");
     session.bind_auth_session(auth_session_id.clone());
     seed_stale_runtime_binding(&mut session, &state, repo_id);
-    state.source_control_write_grants().grant(
-        auth_session_id.clone(),
-        repo_id,
-        SourceControlGrantBranch::Local,
-        PeerId::new("writer"),
-        80,
-    )
-    .expect("source-control write grant");
-    assert!(
-        state
-            .source_control_write_grants()
-            .authorize_browser_local(&auth_session_id, repo_id, 80)
-            .is_ok()
-    );
+    state
+        .source_control_write_grants()
+        .grant(
+            auth_session_id.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            PeerId::new("writer"),
+            80,
+        )
+        .expect("source-control write grant");
+    assert!(state
+        .source_control_write_grants()
+        .authorize_browser_local(&auth_session_id, repo_id, 80)
+        .is_ok());
 
     handle_switch_branch(
         &state,
@@ -128,8 +127,8 @@ async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::R
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding()
--> anyhow::Result<()> {
+async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding(
+) -> anyhow::Result<()> {
     let (_dir, state, repo_id, peer_id) = build_state()?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(81);
@@ -145,12 +144,10 @@ async fn switch_branch_rejects_unbound_remote_scope_with_stale_runtime_binding()
             ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.starts_with("stale remote scope:")));
             assert_eq!(switch_nonce, Some(82));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

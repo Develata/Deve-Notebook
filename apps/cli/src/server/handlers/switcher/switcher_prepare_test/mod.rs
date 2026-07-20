@@ -43,14 +43,13 @@ fn write_invalid_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
+        Some("urn:default".to_string()),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    let repo = Arc::new(repo);
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let state = Arc::new(AppState {
@@ -71,10 +70,14 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     Ok((dir, state))
 }
 
-fn init_local_repo(dir: &TempDir, name: &str, url: &str) -> anyhow::Result<RepoManager> {
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some(name), Some(url))?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    Ok(repo)
+fn init_local_repo(dir: &TempDir, url: &str) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    let cataloged = crate::test_support::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+        Some(url.to_string()),
+    )?;
+    Ok((cataloged.repo, cataloged.repo_id))
 }
 
 pub(super) fn seed_duplicate_remote(
@@ -103,12 +106,7 @@ pub(super) fn seed_duplicate_remote(
 #[test]
 fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    init_local_repo(&dir, "test", "urn:test")?;
-    let test_id = state
-        .repo
-        .get_repo_info_for(None, Some("test"))?
-        .expect("test repo info")
-        .uuid;
+    let (_test_repo, test_id) = init_local_repo(&dir, "urn:test")?;
 
     let err = select_target_repo(&state, false, None, Some(&test_id.to_string()), None, None)
         .expect_err("local uuid string without repo_id must fail closed");
@@ -119,15 +117,18 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
 #[test]
 fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    init_local_repo(&dir, "test", "urn:test")?;
-    let default_id = state
-        .repo
-        .get_repo_info_for(None, Some("default"))?
-        .expect("default repo info")
-        .uuid;
+    let (_test_repo, test_id) = init_local_repo(&dir, "urn:test")?;
+    let default_id = state.repo.get_repo_info()?.expect("default repo info").uuid;
 
-    let err = select_target_repo(&state, false, Some(default_id), Some("test"), None, None)
-        .expect_err("stale uuid must not override exact local stem");
+    let err = select_target_repo(
+        &state,
+        false,
+        Some(default_id),
+        Some(&test_id.to_string()),
+        None,
+        None,
+    )
+    .expect_err("stale uuid must not override exact local stem");
     assert!(err.to_string().contains("Session repo mismatch:"));
     Ok(())
 }
@@ -136,9 +137,9 @@ fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Resu
 fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_drift()
 -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
+    let (wiki, wiki_id) = init_local_repo(&dir, "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = state.repo.open_database(None, "wiki")?.db;
+    let wiki_db = state.repo.open_database(None, &wiki_id.to_string())?.db;
     write_repo_metadata(
         &wiki_db,
         &RepoInfo {
@@ -161,9 +162,9 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
 fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -> anyhow::Result<()>
 {
     let (dir, state) = build_state()?;
-    let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
+    let (wiki, wiki_id) = init_local_repo(&dir, "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = state.repo.open_database(None, "wiki")?.db;
+    let wiki_db = state.repo.open_database(None, &wiki_id.to_string())?.db;
     write_repo_metadata(
         &wiki_db,
         &RepoInfo {
@@ -185,14 +186,10 @@ fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -
 #[test]
 fn resolve_requested_repo_name_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    init_local_repo(&dir, "test", "urn:test")?;
-    let default_id = state
-        .repo
-        .get_repo_info_for(None, Some("default"))?
-        .expect("default repo info")
-        .uuid;
+    let (_test_repo, test_id) = init_local_repo(&dir, "urn:test")?;
+    let default_id = state.repo.get_repo_info()?.expect("default repo info").uuid;
 
-    let err = resolve_requested_repo_name(&state, None, "test", Some(default_id))
+    let err = resolve_requested_repo_name(&state, None, &test_id.to_string(), Some(default_id))
         .expect_err("stale uuid must not override exact local stem");
     assert!(err.to_string().contains("Session repo mismatch:"));
     Ok(())
@@ -201,25 +198,20 @@ fn resolve_requested_repo_name_prefers_exact_local_stem_over_stale_uuid() -> any
 #[test]
 fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    init_local_repo(&dir, "notes-a", "urn:notes-a")?;
-    init_local_repo(&dir, "notes-b", "urn:notes-b")?;
+    let (_notes_a, notes_a_id) = init_local_repo(&dir, "urn:notes-a")?;
+    let (_notes_b, notes_b_id) = init_local_repo(&dir, "urn:notes-b")?;
     let mut targets = Vec::new();
-    for repo_name in ["notes-a", "notes-b"] {
-        let repo_uuid = state
-            .repo
-            .get_repo_info_for(None, Some(repo_name))?
-            .expect("repo info")
-            .uuid;
-        let db = state.repo.open_database(None, repo_name)?.db;
-        targets.push((repo_name, repo_uuid, db));
+    for (repo_uuid, url) in [(notes_a_id, "urn:notes-a"), (notes_b_id, "urn:notes-b")] {
+        let db = state.repo.open_database(None, &repo_uuid.to_string())?.db;
+        targets.push((repo_uuid, url, db));
     }
-    for (repo_name, repo_uuid, db) in targets {
+    for (repo_uuid, url, db) in targets {
         write_repo_metadata(
             &db,
             &RepoInfo {
                 uuid: repo_uuid,
                 name: "wiki".into(),
-                url: Some(format!("urn:{repo_name}")),
+                url: Some(url.to_string()),
             },
         )?;
     }
@@ -233,7 +225,8 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
 #[test]
 fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
-    let db = state.repo.open_database(None, "default")?.db;
+    let default_id = state.repo.get_repo_info()?.expect("default repo info").uuid;
+    let db = state.repo.open_database(None, &default_id.to_string())?.db;
     write_invalid_repo_metadata(&db)?;
 
     let err = select_target_repo(&state, false, None, None, Some("urn:default".into()), None)
@@ -251,22 +244,22 @@ fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> a
 #[tokio::test]
 async fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    init_local_repo(&dir, "test", "urn:test")?;
-    let db = state.repo.open_database(None, "test")?.db;
+    let (_test_repo, test_id) = init_local_repo(&dir, "urn:test")?;
+    let db = state.repo.open_database(None, &test_id.to_string())?.db;
     let txn = db.begin_write()?;
     txn.open_table(REPO_METADATA)?
         .remove(&REPO_INFO_METADATA_KEY)?;
     txn.commit()?;
 
-    let err = match prepare_repo_switch(&state, None, "test".into()).await {
+    let err = match prepare_repo_switch(&state, None, test_id.to_string()).await {
         Ok(_) => anyhow::bail!("local switch must fail without repo uuid metadata"),
         Err(err) => err,
     };
     assert!(
         err.to_string().contains("repository metadata missing")
-            || err
-                .to_string()
-                .contains("Local repository UUID not resolved for selector: test")
+            || err.to_string().contains(&format!(
+                "Local repository UUID not resolved for selector: {test_id}"
+            ))
     );
     Ok(())
 }

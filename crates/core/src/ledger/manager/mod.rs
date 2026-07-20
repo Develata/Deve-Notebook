@@ -60,9 +60,9 @@ mod repo_catalog_runtime;
 pub use repo_catalog_runtime::{
     CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipRuntime,
     CatalogMembershipToken, PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval,
-    RepoCatalogCreationCommit, RepoCatalogCutPermit, RepoCatalogError, RepoCatalogMembershipRecord,
-    RepoCatalogMembershipState, RepoCatalogRemovalCommit, RevalidatedRepoCreation,
-    RevalidatedRepoRemoval,
+    RepoCatalogCreationCommit, RepoCatalogCutAuthority, RepoCatalogCutPermit, RepoCatalogError,
+    RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
+    RevalidatedRepoCreation, RevalidatedRepoRemoval, normal_catalog_ids_for_ledger,
 };
 mod repo_catalog_shadow_runtime;
 mod repo_db;

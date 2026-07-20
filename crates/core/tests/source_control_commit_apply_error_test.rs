@@ -1,3 +1,5 @@
+mod common;
+
 #[path = "source_control_commit_apply_error_test/identity_preflight.rs"]
 mod identity_preflight;
 #[path = "source_control_commit_apply_error_test/legacy_structure.rs"]

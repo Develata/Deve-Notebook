@@ -7,6 +7,7 @@ use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason, cannot_action};
 use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use crate::i18n::Locale;
+use crate::runtime::repo_control_client::RepoControlClient;
 use leptos::prelude::*;
 
 mod branch;
@@ -39,17 +40,33 @@ pub fn create_switch_callbacks(
     locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
+    repo_control: RepoControlClient,
 ) -> SwitchCallbacks {
     let on_switch_branch =
         branch::build_switch_branch_callback(ws.clone(), locale, signals, set_sync_banner);
     let on_switch_repo =
         repo::build_switch_repo_callback(ws.clone(), locale, signals, set_sync_banner);
-    let on_create_repo =
-        repo::build_create_repo_callback(ws.clone(), locale, signals, set_sync_banner);
-    let on_rename_repo =
-        repo::build_rename_repo_callback(ws.clone(), locale, signals, set_sync_banner);
-    let on_remove_repo =
-        repo::build_remove_repo_callback(ws.clone(), locale, signals, set_sync_banner);
+    let on_create_repo = repo::build_create_repo_callback(
+        ws.clone(),
+        locale,
+        signals,
+        set_sync_banner,
+        repo_control.clone(),
+    );
+    let on_rename_repo = repo::build_rename_repo_callback(
+        ws.clone(),
+        locale,
+        signals,
+        set_sync_banner,
+        repo_control.clone(),
+    );
+    let on_remove_repo = repo::build_remove_repo_callback(
+        ws.clone(),
+        locale,
+        signals,
+        set_sync_banner,
+        repo_control,
+    );
 
     SwitchCallbacks {
         on_switch_branch,

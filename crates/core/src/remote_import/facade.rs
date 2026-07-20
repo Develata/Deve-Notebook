@@ -8,10 +8,16 @@
 
 mod baseline;
 mod projection;
+mod removal;
 mod repair_helpers;
 mod review;
 mod types;
 
+pub use removal::{
+    RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalBlocked,
+    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalRevalidation,
+    RemoteImportRepoRemovalSnapshot,
+};
 pub use types::{
     REMOTE_IMPORT_DEFAULT_PAGE_SIZE, REMOTE_IMPORT_MAX_PAGE_SIZE, RemoteImportApplyView,
     RemoteImportBinding, RemoteImportCandidatePage, RemoteImportCandidateView,
@@ -50,6 +56,12 @@ pub struct RemoteImportService {
 }
 
 impl RemoteImportService {
+    /// Settles only process-startup leftovers. Ordinary `open` calls never
+    /// reinterpret an in-flight capture owned by the current process.
+    pub fn recover_startup(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<()> {
+        RemoteImportRuntime::recover_startup(repo, repo_id)
+    }
+
     pub fn open(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<Self> {
         Ok(Self {
             repo_id,

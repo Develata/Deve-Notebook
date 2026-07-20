@@ -6,6 +6,7 @@
 //!
 //! 管理单个 WebSocket 连接的 repo-scoped 会话状态。
 
+use deve_core::ledger::CatalogMembershipToken;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::ledger::merge::MergePreflight;
 use deve_core::models::{DocId, PeerId, RepoId};
@@ -34,30 +35,36 @@ pub(crate) fn test_merge_preflight(
     _local_content: &str,
     _incoming_content: &str,
 ) -> MergePreflight {
-    use deve_core::ledger::{RepoInfo, RepoManager};
+    use deve_core::ledger::RepoInfo;
     use deve_core::models::{FactActor, LedgerEntry, Op};
 
     let dir = tempfile::tempdir().expect("test merge ledger dir");
-    let repo = RepoManager::init(dir.path(), 4, Some("default"), None)
-        .expect("initialize test merge ledger");
+    let repo = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        4,
+    )
+    .expect("initialize test merge ledger")
+    .repo;
     let actual_repo_id = repo
         .get_repo_info()
         .expect("read test repo info")
         .expect("test repo info")
         .uuid;
+    let repo_name = actual_repo_id.to_string();
     let peer = PeerId::new("test-remote-peer");
     repo.ensure_shadow_repo_info(
         &peer,
         &RepoInfo {
             uuid: actual_repo_id,
-            name: "default".into(),
+            name: repo_name.clone(),
             url: None,
         },
     )
     .expect("initialize test shadow");
     repo.local_fact_writer(FactActor::new("test").expect("test actor"))
         .append_content_in_local_repo(
-            "default",
+            &repo_name,
             doc_id,
             Op::Insert {
                 pos: 0,
@@ -83,7 +90,7 @@ pub(crate) fn test_merge_preflight(
         ),
     )
     .expect("append remote test fact");
-    repo.merge_peer_in_local_repo("default", &peer, &actual_repo_id, doc_id)
+    repo.merge_peer_in_local_repo(&repo_name, &peer, &actual_repo_id, doc_id)
         .expect("evaluate test merge")
         .preflight
 }
@@ -155,6 +162,15 @@ pub struct WsSession {
     /// 当前活动仓库 ID（UUID-first）
     pub active_repo_id: Option<RepoId>,
 
+    /// Exact process-local catalog membership captured for the current local
+    /// RepoBound epoch. It is never serialized and must be revalidated by the
+    /// catalog membership runtime before writer admission or publication.
+    pub(crate) catalog_membership: Option<CatalogMembershipToken>,
+
+    /// Process-local WS session registry identity. This is coordination state,
+    /// not a wire/session identifier and is never exposed to clients.
+    pub(crate) repo_session_runtime_id: Option<u64>,
+
     /// 最近一次稳定绑定的本地仓库 hint。
     ///
     /// Invariant:
@@ -201,6 +217,8 @@ impl Default for WsSession {
             active_branch: None,
             active_repo: None,
             active_repo_id: None,
+            catalog_membership: None,
+            repo_session_runtime_id: None,
             last_local_repo: None,
             last_local_repo_id: None,
             active_db: None,

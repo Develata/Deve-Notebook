@@ -3,9 +3,13 @@ use deve_core::models::{LedgerEntry, NodeId, PeerId, RepoType, StructureOp};
 use tempfile::TempDir;
 use uuid::Uuid;
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, repo)
 }
 

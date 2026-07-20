@@ -7,7 +7,7 @@ use super::ws_protocol_acceptance_support::{
     expect_sync_hello_and_shadow_list, recv_server_message, send_client_message,
     switch_to_notes_repo,
 };
-use super::ws_source_control_acceptance_support::{SourceControlWsHarness, TestWs, send_scoped};
+use super::ws_source_control_acceptance_support::{send_scoped, SourceControlWsHarness, TestWs};
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::ChangeEntry;

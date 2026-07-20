@@ -118,6 +118,24 @@ pub enum ServerErrorCode {
     RemoteImportApplyFailed,
     #[serde(rename = "REMOTE_IMPORT_CLEANUP_REQUIRED")]
     RemoteImportCleanupRequired,
+    #[serde(rename = "REPO_ALIAS_INVALID")]
+    RepoAliasInvalid,
+    #[serde(rename = "REPO_ALIAS_STALE")]
+    RepoAliasStale,
+    #[serde(rename = "REPO_ALIAS_STORE_FAILED")]
+    RepoAliasStoreFailed,
+    #[serde(rename = "REPO_LIFECYCLE_BUSY")]
+    RepoLifecycleBusy,
+    #[serde(rename = "REPO_LIFECYCLE_NOT_FOUND")]
+    RepoLifecycleNotFound,
+    #[serde(rename = "REPO_LIFECYCLE_INVALID_REQUEST")]
+    RepoLifecycleInvalidRequest,
+    #[serde(rename = "REPO_LIFECYCLE_COMMITTED_PARTIAL")]
+    RepoLifecycleCommittedPartial,
+    #[serde(rename = "REPO_LIFECYCLE_REPAIR_REQUIRED")]
+    RepoLifecycleRepairRequired,
+    #[serde(rename = "REPO_LIFECYCLE_PUBLICATION_PENDING")]
+    RepoLifecyclePublicationPending,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

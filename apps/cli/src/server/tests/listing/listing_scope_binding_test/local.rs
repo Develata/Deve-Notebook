@@ -25,12 +25,18 @@ async fn list_docs_bootstrap_single_repo_after_clearing_stale_runtime_binding() 
     .await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::RepoSwitched { uuid, .. }) => {
-            assert_eq!(uuid, repo_id.to_string());
+        Some(ServerMessage::RepoSwitched {
+            repo_id: actual_repo_id,
+            ..
+        }) => {
+            assert_eq!(actual_repo_id, repo_id);
         }
         other => panic!("expected RepoSwitched, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(state.repo.local_repo_name())
+    );
     assert_eq!(session.active_repo_id, Some(repo_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());
@@ -50,8 +56,9 @@ async fn list_repos_clear_unbound_local_scope_with_stale_runtime_binding() -> an
     listing::handle_list_repos(&state, &ch, &mut session, Some("req-local-repos".into())).await;
 
     match uni_rx.recv().await {
-        Some(ServerMessage::RepoList { repos, .. }) => {
-            assert_eq!(repos, vec!["default".to_string()]);
+        Some(ServerMessage::RepoList { repo_entries, .. }) => {
+            assert_eq!(repo_entries.len(), 1);
+            assert_eq!(repo_entries[0].display_alias, "default");
         }
         other => panic!("expected RepoList, got {:?}", other),
     }

@@ -6,30 +6,32 @@ use tempfile::TempDir;
 
 mod common;
 
-fn setup_repos() -> (TempDir, Arc<RepoManager>) {
+/// Returns the primary manager plus both repos' canonical execution names
+/// (their RepoId strings). `init_cataloged_repo` already establishes each
+/// workspace identity marker during the production creation choreography, so the
+/// scan's identity gate is exercised against legitimately-owned workspaces.
+fn setup_repos() -> (TempDir, Arc<RepoManager>, String, String) {
     let dir = TempDir::new().expect("tempdir");
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("main");
-    common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
-    // Mirror production init order: establish workspace identity markers before any
-    // projection content exists, so the scan's identity gate is exercised against
-    // legitimately-owned workspaces rather than tripping on missing markers.
-    repo.ensure_local_repo_workspace_identity("main")
-        .expect("main workspace identity");
-    repo.ensure_local_repo_workspace_identity("wiki")
-        .expect("wiki workspace identity");
-    (dir, Arc::new(repo))
+    let (main, main_id) =
+        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:main").expect("main");
+    let (_wiki, wiki_id) =
+        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:wiki").expect("wiki");
+    (
+        dir,
+        Arc::new(main),
+        main_id.to_string(),
+        wiki_id.to_string(),
+    )
 }
 
-fn seed_main_file(repo: &RepoManager) {
+fn seed_main_file(repo: &RepoManager, repo_name: &str) {
     let (doc_id, _ops) = repo
-        .apply_file_structure_in_local_repo("main", "notes/live.md", None, "test")
+        .apply_file_structure_in_local_repo(repo_name, "notes/live.md", None, "test")
         .expect("create main doc");
     let peer = repo.local_peer_id().clone();
-    repo.append_generated_op_in_local_repo("main", doc_id, peer.clone(), |seq| {
+    repo.append_generated_op_in_local_repo(repo_name, doc_id, peer.clone(), |seq| {
         LedgerEntry::new_content(
             doc_id,
             Op::Insert {
@@ -46,11 +48,11 @@ fn seed_main_file(repo: &RepoManager) {
     .expect("append main content");
 }
 
-fn inject_broken_structure(repo: &RepoManager) {
+fn inject_broken_structure(repo: &RepoManager, repo_name: &str) {
     let doc_id = DocId::new();
     common::append_unvalidated_local_op(
         repo,
-        "wiki",
+        repo_name,
         &LedgerEntry::new_structure(
             StructureOp::CreateFile {
                 node_id: NodeId::from_doc_id(doc_id),
@@ -67,16 +69,12 @@ fn inject_broken_structure(repo: &RepoManager) {
 
 #[test]
 fn startup_scan_skips_repo_with_broken_structure_projection() {
-    let (_dir, repo) = setup_repos();
-    let main_execution_name = repo
-        .resolve_local_repo_name_for_execution(None, Some("main"))
-        .expect("resolve main execution name");
-    let wiki_execution_name = repo
-        .resolve_local_repo_name_for_execution(None, Some("wiki"))
-        .expect("resolve wiki execution name");
-    seed_main_file(repo.as_ref());
-    inject_broken_structure(repo.as_ref());
-    let wiki_root = repo.local_repo_workspace_root("wiki").expect("wiki root");
+    let (_dir, repo, main_execution_name, wiki_execution_name) = setup_repos();
+    seed_main_file(repo.as_ref(), &main_execution_name);
+    inject_broken_structure(repo.as_ref(), &wiki_execution_name);
+    let wiki_root = repo
+        .local_repo_workspace_root(&wiki_execution_name)
+        .expect("wiki root");
     std::fs::create_dir_all(&wiki_root).expect("wiki root");
     std::fs::write(wiki_root.join("untracked.md"), "must stay unscanned").expect("wiki file");
 
@@ -85,7 +83,7 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
 
     assert_eq!(
         std::fs::read_to_string(
-            repo.local_repo_workspace_path("main", "notes/live.md")
+            repo.local_repo_workspace_path(&main_execution_name, "notes/live.md")
                 .expect("main doc path")
         )
         .expect("main doc"),
@@ -93,7 +91,7 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
     );
     assert!(
         !repo
-            .local_repo_workspace_path("wiki", "orphan.md")
+            .local_repo_workspace_path(&wiki_execution_name, "orphan.md")
             .expect("wiki orphan path")
             .exists()
     );
@@ -110,14 +108,14 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         vec![wiki_execution_name.clone()]
     );
     assert!(
-        repo.list_pending_fs_in_local_repo("wiki")
+        repo.list_pending_fs_in_local_repo(&wiki_execution_name)
             .unwrap()
             .is_empty()
     );
     assert!(
         sync.handle_fs_event(
             &wiki_execution_name,
-            repo.get_repo_info_for(None, Some("wiki"))
+            repo.get_repo_info_for(None, Some(&wiki_execution_name))
                 .expect("wiki info lookup")
                 .expect("wiki info")
                 .uuid,
@@ -127,7 +125,7 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         .is_empty()
     );
     assert!(
-        repo.list_pending_fs_in_local_repo("wiki")
+        repo.list_pending_fs_in_local_repo(&wiki_execution_name)
             .unwrap()
             .is_empty()
     );

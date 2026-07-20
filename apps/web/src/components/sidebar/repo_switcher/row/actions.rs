@@ -9,7 +9,6 @@ use crate::components::icons::{Pencil, Trash2};
 use crate::i18n::{Locale, t};
 use crate::runtime::domain::RepoRemoveRequest;
 use deve_core::models::RepoId;
-use deve_core::protocol::RepoListEntry;
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
@@ -20,8 +19,7 @@ use super::super::logic::{
 
 #[component]
 pub(super) fn RepoSwitcherRowActions(
-    repo_id: Option<RepoId>,
-    repo_entries: ReadSignal<Vec<RepoListEntry>>,
+    repo_id: RepoId,
     action_repo: ReadSignal<Option<RepoId>>,
     set_action_repo: WriteSignal<Option<RepoId>>,
     set_renaming_repo: WriteSignal<Option<RepoId>>,
@@ -35,21 +33,12 @@ pub(super) fn RepoSwitcherRowActions(
 ) -> impl IntoView {
     view! {
         {move || {
-            let Some(repo_id) = repo_id else {
-                return view! {}.into_any();
-            };
             if action_repo.get() != Some(repo_id) {
                 return view! {}.into_any();
             }
-            let fallback_name = repo_entries
-                .get()
-                .into_iter()
-                .find(|entry| entry.repo_id != repo_id)
-                .map(|entry| entry.name);
             let rename_value_name = rename_value_name.clone();
             let action_title_name = action_title_name.clone();
             let remove_current_name = remove_current_name.clone();
-            let fallback_name_for_remove = fallback_name.clone();
             view! {
                 <div class="absolute right-2 top-8 z-[calc(var(--z-floating)_+_2)] w-36 bg-panel border border-default shadow-lg rounded-md py-1 text-xs">
                     <button
@@ -76,7 +65,6 @@ pub(super) fn RepoSwitcherRowActions(
                                 on_remove_repo.run(RepoRemoveRequest {
                                     repo_id,
                                     current_name: remove_current_name.clone(),
-                                    fallback_name: fallback_name_for_remove.clone(),
                                 });
                                 set_action_repo.set(None);
                                 set_renaming_repo.set(None);

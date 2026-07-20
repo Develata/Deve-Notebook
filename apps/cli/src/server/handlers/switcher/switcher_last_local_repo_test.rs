@@ -3,7 +3,7 @@ use crate::server::{
     AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -23,10 +23,20 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    let test = RepoManager::init(&ledger_dir, 10, Some("test"), Some("urn:test"))?;
-    let test_info = test.get_repo_info()?.expect("test repo info");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let repo = crate::test_support::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &projection_base,
+        10,
+        Some("urn:default".to_string()),
+    )?
+    .repo;
+    let test_id = crate::test_support::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &projection_base,
+        10,
+        Some("urn:test".to_string()),
+    )?
+    .repo_id;
     let peer_id = PeerId::new("peer-remote");
     let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
@@ -59,7 +69,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let (uni_tx, mut uni_rx) = mpsc::channel(32);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = browser_session(0);
-    session.switch_repo("test".into(), Some(test_info.uuid));
+    session.switch_repo(test_id.to_string(), Some(test_id));
 
     handle_switch_branch(
         &state,
@@ -75,13 +85,19 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
         Some(peer_id.as_str())
     );
     assert_eq!(session.active_repo.as_deref(), Some("default"));
-    assert_eq!(session.last_local_repo.as_deref(), Some("test"));
-    assert_eq!(session.last_local_repo_id, Some(test_info.uuid));
+    assert_eq!(
+        session.last_local_repo.as_deref(),
+        Some(test_id.to_string().as_str())
+    );
+    assert_eq!(session.last_local_repo_id, Some(test_id));
 
     handle_switch_branch(&state, &ch, &mut session, None, Some(2)).await;
     while uni_rx.try_recv().is_ok() {}
     assert_eq!(session.active_branch, None);
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
-    assert_eq!(session.active_repo_id, Some(test_info.uuid));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(test_id.to_string().as_str())
+    );
+    assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }

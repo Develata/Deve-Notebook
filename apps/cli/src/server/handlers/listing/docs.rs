@@ -80,7 +80,6 @@ pub async fn handle_list_docs(
         switch_scope_nonce(session, switch_nonce),
         switch_nonce,
         Some(RepoViewPayload {
-            repo_name: session_name.clone(),
             repo_id,
             docs,
             nodes,

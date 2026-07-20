@@ -11,12 +11,13 @@ mod common;
 fn two_local_repos() -> (TempDir, RepoManager, Uuid, Uuid) {
     let dir = TempDir::new().expect("create tempdir");
     let ledger = dir.path().join("ledger");
-    let main =
-        RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("init main repo");
-    let wiki_info =
-        common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
-    let main_id = main.get_repo_info().unwrap().unwrap().uuid;
-    let wiki_id = wiki_info.uuid;
+    let projection_base = dir.path().join("notes");
+    let (main, main_id) =
+        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:main")
+            .expect("init main repo");
+    let (_wiki, wiki_id) =
+        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:wiki")
+            .expect("init wiki repo");
     (dir, main, main_id, wiki_id)
 }
 
@@ -25,10 +26,10 @@ fn docs_in_one_local_repo_are_invisible_to_another() {
     let (_dir, repo, main_id, wiki_id) = two_local_repos();
 
     let (doc_a, _) = repo
-        .apply_file_structure_in_local_repo("main", "notes/a.md", None, "test")
+        .apply_file_structure_in_local_repo(&main_id.to_string(), "notes/a.md", None, "test")
         .expect("create in main");
     let (doc_b, _) = repo
-        .apply_file_structure_in_local_repo("wiki", "notes/b.md", None, "test")
+        .apply_file_structure_in_local_repo(&wiki_id.to_string(), "notes/b.md", None, "test")
         .expect("create in wiki");
 
     let main_docs = repo
@@ -53,14 +54,19 @@ fn docs_in_one_local_repo_are_invisible_to_another() {
 
 #[test]
 fn tracked_docid_is_isolated_across_local_repos() {
-    let (_dir, repo, _, _) = two_local_repos();
+    let (_dir, repo, main_id, wiki_id) = two_local_repos();
 
     let (doc_a, _) = repo
-        .apply_file_structure_in_local_repo("main", "notes/shared-name.md", None, "test")
+        .apply_file_structure_in_local_repo(
+            &main_id.to_string(),
+            "notes/shared-name.md",
+            None,
+            "test",
+        )
         .expect("create in main");
 
     let wiki_result = repo
-        .get_tracked_docid_in_local_repo("wiki", "notes/shared-name.md")
+        .get_tracked_docid_in_local_repo(&wiki_id.to_string(), "notes/shared-name.md")
         .expect("query wiki");
     assert_eq!(
         wiki_result, None,
@@ -68,7 +74,7 @@ fn tracked_docid_is_isolated_across_local_repos() {
     );
 
     let main_result = repo
-        .get_tracked_docid_in_local_repo("main", "notes/shared-name.md")
+        .get_tracked_docid_in_local_repo(&main_id.to_string(), "notes/shared-name.md")
         .expect("query main");
     assert_eq!(main_result, Some(doc_a));
 }

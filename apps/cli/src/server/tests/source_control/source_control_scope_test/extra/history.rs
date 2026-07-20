@@ -195,8 +195,8 @@ async fn readonly_remote_changes_are_allowed_without_locked_db() -> anyhow::Resu
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding()
--> anyhow::Result<()> {
+async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding(
+) -> anyhow::Result<()> {
     let (_dir, state, default_id, _test_id) = build_state()?;
     let local_handle = state
         .repo
@@ -217,12 +217,10 @@ async fn remote_changes_without_repo_selection_clear_stale_db_and_sync_binding()
                 error.code,
                 deve_core::protocol::ServerErrorCode::ScRepoContextInvalid
             );
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Remote branch not available:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

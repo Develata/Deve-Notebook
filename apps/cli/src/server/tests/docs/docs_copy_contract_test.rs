@@ -1,24 +1,22 @@
 use super::handlers::docs::handle_copy_doc;
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::{FactActor, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(32);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
@@ -118,11 +116,9 @@ async fn copy_trims_source_and_destination_paths() -> anyhow::Result<()> {
     .await;
 
     assert!(state.repo.get_docid("notes/b.md")?.is_some());
-    assert!(
-        state
-            .repo
-            .local_repo_workspace_path("default", "notes/b.md")?
-            .exists()
-    );
+    assert!(state
+        .repo
+        .local_repo_workspace_path(state.repo.local_repo_name(), "notes/b.md")?
+        .exists());
     Ok(())
 }

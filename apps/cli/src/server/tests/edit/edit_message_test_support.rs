@@ -3,10 +3,10 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState,
     channel::DualChannel,
-    handlers::document::{EditRequest, handle_edit},
+    handlers::document::{handle_edit, EditRequest},
     session::WsSession,
+    AppState,
 };
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ServerError, ServerMessage};
@@ -64,9 +64,7 @@ pub(crate) async fn recv_edit_rejected(
     }
 }
 
-pub(crate) async fn recv_ack(
-    rx: &mut mpsc::Receiver<ServerMessage>,
-) -> (Option<u64>, DocId, u64) {
+pub(crate) async fn recv_ack(rx: &mut mpsc::Receiver<ServerMessage>) -> (Option<u64>, DocId, u64) {
     match rx.recv().await {
         Some(ServerMessage::Ack {
             scope_nonce,

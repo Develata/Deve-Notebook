@@ -15,7 +15,9 @@ use std::time::Duration;
 use tokio::sync::{Notify, broadcast};
 
 fn gate() -> RepoMutationPublicationGate {
-    RepoMutationPublicationGate::new(WatcherRuntimeView::permissive_for_tests())
+    RepoMutationPublicationGate::without_catalog_authority_for_test(
+        WatcherRuntimeView::permissive_for_tests(),
+    )
 }
 
 fn publication(repo_id: RepoId) -> MutationPublication {
@@ -264,10 +266,44 @@ async fn catalog_repo_lane_excludes_same_repo_writer() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn unpublished_catalog_repo_phase_releases_both_permits_before_io() {
+    let gate = Arc::new(gate());
+    let repo_id = RepoId::new_v4();
+    let entered = Arc::new(Notify::new());
+    let released = Arc::new(Notify::new());
+
+    let lifecycle_gate = gate.clone();
+    let lifecycle_entered = entered.clone();
+    let lifecycle_released = released.clone();
+    let lifecycle = tokio::spawn(async move {
+        lifecycle_gate
+            .execute_catalog_repo_unpublished(repo_id, || {
+                lifecycle_entered.notify_one();
+                Ok::<_, ()>(())
+            })
+            .await
+            .expect("lifecycle gate")
+            .expect("reservation");
+        lifecycle_released.notified().await;
+    });
+
+    entered.notified().await;
+    let (tx, _) = broadcast::channel(2);
+    gate.execute_mounted_repo(repo_id, &tx, || {
+        MutationExecution::<(), ()>::not_committed(())
+    })
+    .await
+    .expect("writer runs after the short lifecycle phase");
+    released.notify_one();
+    lifecycle.await.expect("lifecycle task");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn mounted_repo_gate_revalidates_after_waiting_for_repo_permit() {
     let repo_id = RepoId::new_v4();
     let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
-    let gate = Arc::new(RepoMutationPublicationGate::new(view.clone()));
+    let gate =
+        Arc::new(RepoMutationPublicationGate::without_catalog_authority_for_test(view.clone()));
     let (tx, _) = broadcast::channel(4);
     let entered = Arc::new(Notify::new());
     let (release_tx, release_rx) = std::sync::mpsc::channel();

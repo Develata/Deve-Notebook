@@ -61,7 +61,11 @@ mod tests {
         }));
 
         set_pending_branch_switch.set(None);
-        set_pending_repo_switch.set(Some(PendingRepoSwitch::switch("repo-2", 9)));
+        set_pending_repo_switch.set(Some(PendingRepoSwitch::switch(
+            "repo-2",
+            uuid::Uuid::nil(),
+            9,
+        )));
 
         assert!(!can_start_scope_switch(SwitchScopeSignals {
             current_doc,

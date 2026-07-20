@@ -2,7 +2,7 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#repo-scope-runtime
 
-use super::{AppState, session::WsSession};
+use super::{session::WsSession, AppState};
 use deve_core::models::{DocId, FactActor, Op, RepoId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -15,10 +15,9 @@ pub(super) fn seed_doc(
     repo_name: &str,
     content: &str,
 ) -> anyhow::Result<DocId> {
-    let (doc_id, _ops) =
-        state
-            .repo
-            .apply_file_structure_in_local_repo(repo_name, DOC_PATH, None, "test")?;
+    let (doc_id, _ops) = state
+        .repo
+        .apply_file_structure_in_local_repo(repo_name, DOC_PATH, None, "test")?;
     state
         .repo
         .local_fact_writer(FactActor::new("test")?)
@@ -45,7 +44,11 @@ pub(super) fn delete_doc(state: &Arc<AppState>, doc_id: DocId) -> anyhow::Result
     Ok(repo_id)
 }
 
-pub(super) fn browser_repo_session(repo_name: &str, repo_id: RepoId, scope_nonce: u64) -> WsSession {
+pub(super) fn browser_repo_session(
+    repo_name: &str,
+    repo_id: RepoId,
+    scope_nonce: u64,
+) -> WsSession {
     let mut session = repo_session(repo_name, repo_id);
     session.mark_browser_session();
     session.set_scope_nonce(Some(scope_nonce));

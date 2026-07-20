@@ -1,26 +1,26 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{ProxyHarness, seed_pending};
+use super::support::{seed_pending, ProxyHarness};
 use deve_core::git_bridge::{
-    GitMirrorRepairReview, init_table, mark_out_of_sync, queue_deve_commit,
+    init_table, mark_out_of_sync, queue_deve_commit, GitMirrorRepairReview,
 };
 use deve_core::ledger::traits::{RepoSelector, Repository};
-use deve_core::ledger::RepoManager;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::source_control::{ChangeStatus, CommitInfo, SourceControlApi};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist()
--> anyhow::Result<()> {
+async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist(
+) -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
-    let mut test_repo = RepoManager::init(
-        harness.dir.path().join("ledger"),
+    crate::server::catalog_repo_support::catalog_additional_repo(
+        &harness.repo,
+        &harness.dir.path().join("ledger"),
+        "test",
+        &harness.dir.path().join("notes"),
         10,
-        Some("test"),
         Some("urn:test"),
     )?;
-    test_repo.set_projection_base_for_all_local_repos_checked(harness.dir.path().join("notes"))?;
 
     let response = harness
         .client
@@ -45,13 +45,14 @@ async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
         .get_repo_info()?
         .expect("default repo info")
         .uuid;
-    let mut test_repo = RepoManager::init(
-        harness.dir.path().join("ledger"),
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &harness.repo,
+        &harness.dir.path().join("ledger"),
+        "test",
+        &harness.dir.path().join("notes"),
         10,
-        Some("test"),
         Some("urn:test"),
     )?;
-    test_repo.set_projection_base_for_all_local_repos_checked(harness.dir.path().join("notes"))?;
 
     let response = harness
         .client
@@ -59,7 +60,7 @@ async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
         .query(&[
             ("scope_nonce", "1".to_string()),
             ("repo_id", default_id.to_string()),
-            ("repo_name", "test".to_string()),
+            ("repo_name", test_id.to_string()),
         ])
         .send()
         .await?;
@@ -68,11 +69,10 @@ async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
     assert_eq!(body.code, ServerErrorCode::ScRepoContextInvalid);
-    assert!(
-        body.detail
-            .as_deref()
-            .is_some_and(|detail| detail.contains("Repo selector mismatch"))
-    );
+    assert!(body
+        .detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains("Repo selector mismatch")));
     harness.shutdown().await;
     Ok(())
 }
@@ -136,9 +136,7 @@ async fn test_git_mirror_repair_review_is_readonly_record_source() -> anyhow::Re
     assert_eq!(body.records[0].subject, "docs/example.md");
     assert_eq!(
         body.records[0].retry_command.as_deref(),
-        Some(
-            format!("deve_cli ngit export --repo {repo_id} --retry-out-of-sync").as_str()
-        )
+        Some(format!("deve_cli ngit export --repo {repo_id} --retry-out-of-sync").as_str())
     );
     harness.shutdown().await;
     Ok(())

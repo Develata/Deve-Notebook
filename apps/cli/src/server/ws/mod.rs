@@ -140,6 +140,25 @@ pub(crate) async fn handle_socket(
         diff_unicast_tx,
         retire_session_tx,
     );
+    let repo_session_runtime = state.repo_session_runtime();
+    let (repo_session_permit, mut repo_session_commands) =
+        match repo_session_runtime.register(ch.clone()) {
+            Ok(registration) => registration,
+            Err(error) => {
+                tracing::error!(%error, "failed to register repo-scoped WS session");
+                ch.retire_session();
+                broadcast_task.abort();
+                let _ = broadcast_task.await;
+                unicast_task.abort();
+                let _ = unicast_task.await;
+                return;
+            }
+        };
+    session.bind_repo_session_runtime(repo_session_permit.id());
+    if let Err(error) = repo_session_permit.update(&session) {
+        tracing::error!(%error, "failed to initialize repo-scoped WS session binding");
+        ch.retire_session();
+    }
 
     tracing::info!("Client connected: {}", peer_id);
 
@@ -160,6 +179,35 @@ pub(crate) async fn handle_socket(
                 }
                 continue;
             }
+            command = repo_session_commands.recv() => {
+                let Some(command) = command else { break; };
+                let applied = match command {
+                    crate::server::runtime::repo_session_runtime::RepoSessionCommand::LifecycleSettled {
+                        request_id,
+                        expected_scope_nonce,
+                        switch_nonce,
+                        publication,
+                        final_list,
+                    } => crate::server::handlers::repo_control::apply_lifecycle_settlement(
+                        &state,
+                        &ch,
+                        &mut session,
+                        request_id,
+                        expected_scope_nonce,
+                        switch_nonce,
+                        publication,
+                        final_list,
+                    ).await,
+                    command => command.apply(&state, &mut session, &ch),
+                };
+                if !applied {
+                    break;
+                }
+                if repo_session_permit.update(&session).is_err() {
+                    break;
+                }
+                continue;
+            }
             msg = &mut next_message => {
                 let Some(msg) = msg else { break; };
                 msg
@@ -173,31 +221,38 @@ pub(crate) async fn handle_socket(
             }
         };
 
-        let handle_incoming = receive::handle_incoming_message(
-            &state,
-            &ch,
-            &mut session,
-            msg,
-            &broadcast_filter,
-            &peer_id,
-        );
-        tokio::pin!(handle_incoming);
-        let flow = tokio::select! {
-            changed = retire_session_rx.changed() => {
-                if changed.is_err() || *retire_session_rx.borrow() {
-                    break;
+        let flow = {
+            let handle_incoming = receive::handle_incoming_message(
+                &state,
+                &ch,
+                &mut session,
+                msg,
+                &broadcast_filter,
+                &peer_id,
+            );
+            tokio::pin!(handle_incoming);
+            tokio::select! {
+                changed = retire_session_rx.changed() => {
+                    if changed.is_err() || *retire_session_rx.borrow() {
+                        break;
+                    }
+                    continue;
                 }
-                continue;
-            }
-            changed = transport_shutdown.changed() => {
-                if changed.is_err() || *transport_shutdown.borrow() {
-                    break;
+                changed = transport_shutdown.changed() => {
+                    if changed.is_err() || *transport_shutdown.borrow() {
+                        break;
+                    }
+                    continue;
                 }
-                continue;
+                flow = &mut handle_incoming => flow,
             }
-            flow = &mut handle_incoming => flow,
         };
         if matches!(flow, receive::SocketFlow::Break) {
+            break;
+        }
+        if let Err(error) = repo_session_permit.update(&session) {
+            tracing::warn!(%error, "repo-scoped WS session binding became invalid");
+            ch.retire_session();
             break;
         }
     }

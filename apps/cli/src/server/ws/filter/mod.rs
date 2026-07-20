@@ -18,7 +18,8 @@ use scope::{SessionBroadcastScope, matches_runtime_scope_nonce, matches_scope};
 /// Invariants:
 /// - `FsChangeDetected` 只应投递到本地分支会话。
 /// - 若会话已锁定 `active_repo_id`，则只接收同仓库事件。
-/// - `PeerDeleted` 属于浏览器控制面事件，只投递给 browser session。
+/// - `PeerDeleted`、`RepoList` 与 Repo Control 投影属于 host-local 浏览器
+///   控制面，绝不投递给 FullPeer。
 #[derive(Clone, Default)]
 pub(crate) struct BroadcastFilter {
     scope: Option<Arc<RwLock<SessionBroadcastScope>>>,
@@ -108,9 +109,13 @@ impl BroadcastFilter {
                     recovery.branch.is_none(),
                 ) && matches_runtime_scope_nonce(scope.scope_nonce, recovery.scope_nonce)
             }
-            ServerMessage::PeerDeleted { scope_nonce, .. } => {
+            ServerMessage::PeerDeleted { scope_nonce, .. }
+            | ServerMessage::RepoList { scope_nonce, .. } => {
                 scope.browser_session
                     && matches_runtime_scope_nonce(scope.scope_nonce, *scope_nonce)
+            }
+            ServerMessage::RepoControl(_) | ServerMessage::RepoSwitched { .. } => {
+                scope.browser_session
             }
             _ => true,
         }

@@ -8,15 +8,19 @@ mod common;
 
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection base");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
 #[test]
 fn projection_diagnostic_reports_missing_parent_as_authority_corrupt() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = DocId::new();
     common::append_unvalidated_local_op(
         repo.as_ref(),
@@ -36,7 +40,7 @@ fn projection_diagnostic_reports_missing_parent_as_authority_corrupt() {
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
     let diagnostic = sync
-        .diagnose_projection_local_repo("default")
+        .diagnose_projection_local_repo(&repo_name)
         .expect("diagnose projection");
 
     assert_eq!(

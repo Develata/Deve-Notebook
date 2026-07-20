@@ -4,6 +4,8 @@ use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::{DocId, FactActor, LedgerEntry, MergeResolution, Op, PeerId};
 use tempfile::tempdir;
 
+mod common;
+
 struct Fixture {
     _dir: tempfile::TempDir,
     repo: RepoManager,
@@ -15,8 +17,11 @@ struct Fixture {
 impl Fixture {
     fn new(local: &str, remote: &str) -> anyhow::Result<Self> {
         let dir = tempdir()?;
-        let repo = RepoManager::init(dir.path(), 10, Some("default"), None)?;
-        let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+        let (repo, repo_id) = common::init_cataloged_repo_with_depth(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            10,
+        )?;
         let peer = PeerId::new("remote-physical-peer");
         repo.ensure_shadow_repo_info(
             &peer,
@@ -108,8 +113,12 @@ fn first_divergent_merge_requires_an_explicit_base() -> anyhow::Result<()> {
 #[test]
 fn merge_rejects_missing_target_doc_on_either_side() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = RepoManager::init(dir.path(), 10, Some("default"), None)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    let repo_name = repo.local_repo_name().to_string();
     let peer = PeerId::new("remote-physical-peer");
     repo.ensure_shadow_repo_info(
         &peer,
@@ -146,7 +155,7 @@ fn merge_rejects_missing_target_doc_on_either_side() -> anyhow::Result<()> {
         ),
     )?;
     let error = repo
-        .merge_peer_in_local_repo("default", &peer, &repo_id, target)
+        .merge_peer_in_local_repo(&repo_name, &peer, &repo_id, target)
         .expect_err("source target doc must exist");
     assert!(error.to_string().contains("merge_source_doc_missing"));
 
@@ -168,7 +177,7 @@ fn merge_rejects_missing_target_doc_on_either_side() -> anyhow::Result<()> {
         ),
     )?;
     let error = repo
-        .merge_peer_in_local_repo("default", &peer, &repo_id, missing_local)
+        .merge_peer_in_local_repo(&repo_name, &peer, &repo_id, missing_local)
         .expect_err("local target doc must exist");
     assert!(error.to_string().contains("merge_local_doc_missing"));
     Ok(())
@@ -300,12 +309,13 @@ fn checkpoint_survives_reopen_and_anchor_is_in_peer_range() -> anyhow::Result<()
         doc_id,
     } = fixture;
     drop(repo);
-    let reopened = RepoManager::init(dir.path(), 10, Some("default"), None)?;
+    let reopened = RepoManager::init_existing_for_repo_id(dir.path().join("ledger"), 10, repo_id)?;
     let checkpoint = reopened
-        .get_merge_base_checkpoint_in_local_repo("default", &peer, doc_id)?
+        .get_merge_base_checkpoint_in_local_repo(reopened.local_repo_name(), &peer, doc_id)?
         .expect("checkpoint after reopen");
     assert_eq!(checkpoint.source_peer_seq, 1_u64);
-    let evaluation = reopened.merge_peer_in_local_repo("default", &peer, &repo_id, doc_id)?;
+    let evaluation =
+        reopened.merge_peer_in_local_repo(reopened.local_repo_name(), &peer, &repo_id, doc_id)?;
     assert!(!evaluation.preflight.establishes_equal_baseline());
     assert!(matches!(evaluation.result, MergeResult::Success(ref value) if value == "base"));
     Ok(())

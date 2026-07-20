@@ -4,7 +4,9 @@ use super::*;
 async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow::Result<()> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
+    let repo_root = state
+        .repo
+        .ensure_local_repo_workspace_identity(&repo_name)?;
     init_git_repo(&repo_root);
     let baseline = "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\n";
     write_workspace_file(&dir, &repo_name, "note.md", baseline);
@@ -18,19 +20,19 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(baseline),
                 detected_at: 1,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )
     })?;
     state
         .repo
         .stage_pending_in_local_repo(&repo_name, "note.md")?;
-    state.repo.apply_external_changes_in_local_repo(&repo_name)?;
     state
         .repo
-        .commit_source_control_changes_in_local_repo(
-            &repo_name,
-            "baseline",
-        )?;
+        .apply_external_changes_in_local_repo(&repo_name)?;
+    state
+        .repo
+        .commit_source_control_changes_in_local_repo(&repo_name, "baseline")?;
     git(&repo_root, &["add", "."]);
     git(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
     let doc_id = state
@@ -78,7 +80,7 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
         ScPathTarget {
             path: "renamed.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
         ConflictResolution::KeepFs,
     )
@@ -116,7 +118,9 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
 async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow::Result<()> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
+    state
+        .repo
+        .ensure_local_repo_workspace_identity(&repo_name)?;
     write_workspace_file(&dir, &repo_name, "notes/a.md", "hello\n");
     state.repo.run_on_local_repo(&repo_name, |db| {
         pending_fs::upsert(
@@ -128,19 +132,19 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("hello\n"),
                 detected_at: 1,
-                has_conflict: false,            },
+                has_conflict: false,
+            },
         )
     })?;
     state
         .repo
         .stage_pending_in_local_repo(&repo_name, "notes/a.md")?;
-    state.repo.apply_external_changes_in_local_repo(&repo_name)?;
     state
         .repo
-        .commit_source_control_changes_in_local_repo(
-            &repo_name,
-            "baseline",
-        )?;
+        .apply_external_changes_in_local_repo(&repo_name)?;
+    state
+        .repo
+        .commit_source_control_changes_in_local_repo(&repo_name, "baseline")?;
     let doc_id = state
         .repo
         .get_tracked_docid_in_local_repo(&repo_name, "notes/a.md")?
@@ -189,7 +193,7 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
         ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
         ConflictResolution::KeepFs,
     )

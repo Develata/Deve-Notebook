@@ -1,5 +1,4 @@
 use super::{ensure_source_control_write_allowed, ensure_source_control_write_allowed_for};
-use crate::ledger::RepoManager;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ServerErrorCode;
 use crate::sync::SyncManager;
@@ -26,8 +25,7 @@ fn source_control_write_gate_rejects_degraded_local_projection() -> anyhow::Resu
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
     let repo = Arc::new(repo);
     let sync = SyncManager::new_checked(repo.clone())?;
     sync.mark_projection_writeback_fault(repo.local_repo_name())?;
@@ -51,9 +49,8 @@ fn source_control_write_gate_accepts_healthy_local_projection() -> anyhow::Resul
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    repo.ensure_local_repo_workspace_identity("default")?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
+    repo.ensure_local_repo_workspace_identity(repo.local_repo_name())?;
     let repo = Arc::new(repo);
     let sync = SyncManager::new_checked(repo.clone())?;
 
@@ -67,14 +64,14 @@ fn source_control_write_gate_rejects_broken_workspace_identity() -> anyhow::Resu
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let workspace = repo.ensure_local_repo_workspace_identity("default")?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
+    let workspace = repo.ensure_local_repo_workspace_identity(repo.local_repo_name())?;
     std::fs::write(
         repo_identity_path(&workspace),
         format!(
-            "version = 1\nrepo_id = \"{}\"\nrepo_name = \"default\"\n",
-            uuid::Uuid::new_v4()
+            "version = 1\nrepo_id = \"{}\"\nrepo_name = \"{}\"\n",
+            uuid::Uuid::new_v4(),
+            repo.local_repo_name(),
         ),
     )?;
     let repo = Arc::new(repo);

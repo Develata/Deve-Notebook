@@ -31,10 +31,9 @@ fn resolve_session_repo_rejects_local_uuid_string_selector_without_bound_id() ->
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("local uuid-string selector must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Local repository selector not resolved")
-    );
+    assert!(err
+        .to_string()
+        .contains("Local repository selector not resolved"));
     assert_eq!(session.active_repo, None);
     assert_eq!(session.active_repo_id, None);
     Ok(())
@@ -51,15 +50,18 @@ fn resolve_session_repo_accepts_bound_canonical_local_uuid() -> anyhow::Result<(
 
     assert_eq!(resolved.repo_id, test_id);
     assert_eq!(resolved.repo_name, execution_name);
-    assert_eq!(resolved.session_name, "test");
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(resolved.session_name, execution_name);
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(execution_name.as_str())
+    );
     assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }
 
 #[test]
-fn resolve_session_repo_fails_closed_when_remote_name_is_stale_even_with_bound_uuid()
--> anyhow::Result<()> {
+fn resolve_session_repo_fails_closed_when_remote_name_is_stale_even_with_bound_uuid(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
@@ -69,16 +71,15 @@ fn resolve_session_repo_fails_closed_when_remote_name_is_stale_even_with_bound_u
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("remote stale selector with bound uuid must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Remote repository selector not resolved")
-    );
+    assert!(err
+        .to_string()
+        .contains("Remote repository selector not resolved"));
     Ok(())
 }
 
 #[test]
-fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unrecoverable()
--> anyhow::Result<()> {
+fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unrecoverable(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, remote_repo_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     seed_remote_shadow(&state, &peer_id, remote_repo_id, "shadow-notes")?;
@@ -88,10 +89,9 @@ fn resolve_session_repo_rejects_remote_selector_without_uuid_when_name_is_unreco
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("remote stale selector without uuid must fail");
-    assert!(
-        err.to_string()
-            .contains("Remote repository selector not resolved")
-    );
+    assert!(err
+        .to_string()
+        .contains("Remote repository selector not resolved"));
     Ok(())
 }
 
@@ -106,9 +106,8 @@ fn resolve_session_repo_rejects_remote_uuid_string_without_bound_id() -> anyhow:
 
     let err = resolve_session_repo_and_sync(&state, &mut session)
         .expect_err("remote uuid-shaped repo_name without repo_id must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Remote repository selector not resolved")
-    );
+    assert!(err
+        .to_string()
+        .contains("Remote repository selector not resolved"));
     Ok(())
 }

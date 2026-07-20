@@ -1,4 +1,3 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::range;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -8,9 +7,12 @@ use tempfile::tempdir;
 #[test]
 fn apply_external_changes_fails_when_workspace_file_is_missing() {
     let dir = tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = crate::common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
@@ -39,11 +41,14 @@ fn apply_external_changes_fails_when_workspace_file_is_missing() {
 #[test]
 fn apply_external_changes_preflights_all_workspace_files_before_ledger_append() {
     let dir = tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = crate::common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     let existing_path = repo
-        .local_repo_workspace_path("default", "notes/a.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
         .expect("workspace path");
     std::fs::create_dir_all(existing_path.parent().expect("parent")).expect("create parent");
     std::fs::write(&existing_path, "ok").expect("write existing");

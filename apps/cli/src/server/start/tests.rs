@@ -22,6 +22,7 @@ fn server_sync_engine_uses_configured_sync_mode() -> anyhow::Result<()> {
 fn server_shutdown_preserves_background_primary_and_watcher_failure() {
     let error = combine_runtime_shutdown_results(
         Err(anyhow::anyhow!("background primary")),
+        Ok(()),
         Err(anyhow::anyhow!("watcher cleanup")),
     )
     .expect_err("both shutdown failures must escape");

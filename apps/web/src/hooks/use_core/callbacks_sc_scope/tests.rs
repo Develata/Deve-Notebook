@@ -40,7 +40,11 @@ fn source_control_scope_requires_bound_repo_and_no_pending_switch() {
         None
     );
     let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
-    let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch("repo-b", 7)));
+    let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch(
+        "repo-b",
+        uuid::Uuid::nil(),
+        7,
+    )));
     assert_eq!(
         source_control_scope_nonce(SourceControlScopeSignals {
             current_repo_id,

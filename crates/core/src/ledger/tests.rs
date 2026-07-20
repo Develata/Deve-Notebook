@@ -229,7 +229,11 @@ fn snapshot_rejects_middle_content_mismatch() -> Result<()> {
 fn test_node_migration_and_consistency() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
 
     let path = "notes/alpha.md";
     let doc_id = seed_metadata_only_doc(&repo, path)?;
@@ -251,7 +255,11 @@ fn test_node_migration_and_consistency() -> Result<()> {
 fn test_dir_node_creation() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let dir_id = node_meta::create_dir_node(db, "projects/math")?;
@@ -268,7 +276,11 @@ fn test_dir_node_creation() -> Result<()> {
 fn test_node_repair_missing() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
 
     let path = "notes/repair.md";
     let doc_id = seed_metadata_only_doc(&repo, path)?;

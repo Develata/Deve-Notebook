@@ -1,14 +1,17 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::node_meta::{ensure_file_node, remove_node_by_path};
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use tempfile::TempDir;
 
+mod common;
+
 #[test]
 fn repo_doc_content_rejects_deleted_docs_even_if_ops_remain() {
     let dir = TempDir::new().expect("tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     let doc_id = DocId::new();
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

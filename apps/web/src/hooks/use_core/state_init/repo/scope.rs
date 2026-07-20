@@ -2,6 +2,7 @@
 //!   - 03_storage/index#browser-storage-layering
 //!   - 04_repository#repo-scope-runtime
 //!
+use crate::runtime::remove_scope_partial::RemoveScopePartialStage;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
@@ -22,6 +23,10 @@ pub(super) struct RepoScopeSignals {
     pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub set_current_scope_nonce: WriteSignal<u64>,
+    pub remove_scope_partial_stage: ReadSignal<Option<RemoveScopePartialStage>>,
+    pub set_remove_scope_partial_stage: WriteSignal<Option<RemoveScopePartialStage>>,
+    pub explicit_repo_selection_required: ReadSignal<bool>,
+    pub set_explicit_repo_selection_required: WriteSignal<bool>,
     pub degraded_sync_mode: ReadSignal<Option<DegradedSyncMode>>,
     pub set_degraded_sync_mode: WriteSignal<Option<DegradedSyncMode>>,
     pub sync_banner: ReadSignal<Option<String>>,
@@ -35,6 +40,9 @@ pub(super) fn init_repo_scope_signals() -> RepoScopeSignals {
     let (current_repo_id, set_current_repo_id) = signal(None::<String>);
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
     let (current_scope_nonce, set_current_scope_nonce) = signal(0u64);
+    let (remove_scope_partial_stage, set_remove_scope_partial_stage) =
+        signal(None::<RemoveScopePartialStage>);
+    let (explicit_repo_selection_required, set_explicit_repo_selection_required) = signal(false);
     let (degraded_sync_mode, set_degraded_sync_mode) = signal(None::<DegradedSyncMode>);
     let (sync_banner, set_sync_banner) = signal(None::<String>);
 
@@ -51,6 +59,10 @@ pub(super) fn init_repo_scope_signals() -> RepoScopeSignals {
         set_pending_repo_switch,
         current_scope_nonce,
         set_current_scope_nonce,
+        remove_scope_partial_stage,
+        set_remove_scope_partial_stage,
+        explicit_repo_selection_required,
+        set_explicit_repo_selection_required,
         degraded_sync_mode,
         set_degraded_sync_mode,
         sync_banner,

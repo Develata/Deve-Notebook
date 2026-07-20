@@ -62,9 +62,12 @@ async fn resolve_merge_conflict_routes_accept_current_to_merge_complete() -> any
     seed_shared_base(&state, &peer_id, repo_id, doc_id, "base")?;
     seed_local_replace(&state, doc_id, "base", "local")?;
     seed_remote_replace(&state, &peer_id, repo_id, doc_id, "base", "incoming")?;
-    let evaluation = state
-        .repo
-        .merge_peer_in_local_repo("notes", &peer_id, &repo_id, doc_id)?;
+    let evaluation = state.repo.merge_peer_in_local_repo(
+        state.repo.local_repo_name(),
+        &peer_id,
+        &repo_id,
+        doc_id,
+    )?;
     let mut session = browser_writer_ready_session(repo_id, 17);
     session.pending_merge_conflict = Some(PendingMergeConflict {
         repo_id,
@@ -203,7 +206,7 @@ fn browser_session_with_pending_conflict(
     scope_nonce: u64,
 ) -> crate::server::session::WsSession {
     let mut session = browser_session(scope_nonce);
-    session.switch_repo("notes".into(), Some(repo_id));
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
     session.set_writer_identity(repo_id, PeerId::new("browser-peer"), scope_nonce);
     session.pending_merge_conflict = Some(PendingMergeConflict {
         repo_id,

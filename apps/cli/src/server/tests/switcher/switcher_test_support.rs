@@ -2,7 +2,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
@@ -10,7 +10,7 @@ use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(crate) fn browser_session(scope_nonce: u64) -> WsSession {
@@ -62,13 +62,13 @@ pub(crate) fn app_state_with_tree(
 pub(crate) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let (repo, _repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &dir.path().join("ledger"),
+        "default",
+        &projection_base,
         10,
-        Some("default"),
         Some("urn:default"),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let state = app_state(repo, projection_base, dir.path().join("host"))?;
     Ok((dir, state))
 }

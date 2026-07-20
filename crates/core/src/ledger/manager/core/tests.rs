@@ -1,19 +1,19 @@
-use super::RepoManager;
 use crate::ledger::RepoInfo;
+use crate::test_support::init_cataloged_repo;
 
 #[test]
 fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
-    crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let wiki_db = main.open_database(None, "wiki")?.db;
+    let (main, _main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
+    let (_wiki, wiki_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))?;
+    let wiki_db = main.open_database(None, &wiki_id.to_string())?.db;
 
     crate::test_support::delete_repo_metadata(wiki_db.as_ref())?;
 
     let err = main
-        .resolve_local_repo_stem("wiki")
+        .resolve_local_repo_stem(&wiki_id.to_string())
         .expect_err("missing secondary metadata must fail selector resolution");
     assert!(err.to_string().contains("repository metadata missing"));
     Ok(())
@@ -24,20 +24,15 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
-    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
-    let wiki_info = RepoInfo {
-        uuid: crate::test_support::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki")
-            .uuid,
-        name: "wiki".into(),
-        url: Some("urn:wiki".into()),
-    };
-    let wiki_db = main.open_database(None, "wiki")?.db;
-    main.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
+    let (main, _main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
+    let (wiki, wiki_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))?;
+    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
+    let wiki_db = main.open_database(None, &wiki_id.to_string())?.db;
 
     crate::test_support::write_repo_metadata(
         wiki_db.as_ref(),
-        &crate::ledger::RepoInfo {
-            uuid: wiki_info.uuid,
+        &RepoInfo {
+            uuid: wiki_id,
             name: "legacy-wiki".into(),
             url: wiki_info.url.clone(),
         },
@@ -58,15 +53,14 @@ fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Re
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
-    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))?;
+    let (main, main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
     let info = main.get_repo_info()?.expect("main info");
-    let main_db = main.open_database(None, "main")?.db;
-    main.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
+    let main_db = main.open_database(None, &main_id.to_string())?.db;
 
     crate::test_support::write_repo_metadata(
         main_db.as_ref(),
-        &crate::ledger::RepoInfo {
-            uuid: info.uuid,
+        &RepoInfo {
+            uuid: main_id,
             name: "legacy-main".into(),
             url: info.url.clone(),
         },

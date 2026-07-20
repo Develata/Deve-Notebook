@@ -4,11 +4,14 @@ use deve_core::ledger::{RepoManager, node_meta};
 use deve_core::models::DocId;
 use tempfile::TempDir;
 
+mod common;
+
 #[test]
 fn node_check_detects_missing_nodes() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let ledger_dir = tmp.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &tmp.path().join("notes"), 2)?;
     let path = "notes/init-drift.md";
     let doc_id = seed_metadata_only_doc(&repo, path)?;
 

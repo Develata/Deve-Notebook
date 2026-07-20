@@ -9,107 +9,15 @@ use crate::models::RepoId;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
-use thiserror::Error;
 use uuid::Uuid;
 
+mod capability;
 mod registry;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CatalogMembershipGeneration(u64);
-
-impl CatalogMembershipGeneration {
-    const INITIAL: Self = Self(1);
-
-    pub const fn get(self) -> u64 {
-        self.0
-    }
-
-    fn next(self, repo_id: RepoId) -> Result<Self, CatalogMembershipError> {
-        self.0
-            .checked_add(1)
-            .map(Self)
-            .ok_or(CatalogMembershipError::GenerationExhausted(repo_id))
-    }
-}
-
-/// Opaque process-local evidence that one repo was a normal catalog member at
-/// one exact per-repo generation. The token owns no mutation authority.
-#[derive(Clone, PartialEq, Eq)]
-pub struct CatalogMembershipToken {
-    runtime_instance: Uuid,
-    repo_id: RepoId,
-    generation: CatalogMembershipGeneration,
-}
-
-/// Unforgeable evidence that the host owns the short `Catalog -> Repo` cut
-/// lane for one exact process runtime and RepoId.
-///
-/// B1 intentionally exposes no public constructor. C1' transfers the sole
-/// owner capability into `RepoMutationPublicationGate`, which will mint this
-/// borrowed proof only while both ordered permits are held.
-pub struct RepoCatalogCutPermit {
-    runtime_instance: Uuid,
-    repo_id: RepoId,
-}
-
-impl fmt::Debug for RepoCatalogCutPermit {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RepoCatalogCutPermit")
-            .field("repo_id", &self.repo_id)
-            .finish_non_exhaustive()
-    }
-}
-
-impl CatalogMembershipToken {
-    pub const fn repo_id(&self) -> RepoId {
-        self.repo_id
-    }
-
-    pub const fn generation(&self) -> CatalogMembershipGeneration {
-        self.generation
-    }
-}
-
-impl fmt::Debug for CatalogMembershipToken {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CatalogMembershipToken")
-            .field("repo_id", &self.repo_id)
-            .field("generation", &self.generation)
-            .finish_non_exhaustive()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum CatalogMembershipError {
-    #[error("catalog membership runtime has not been seeded")]
-    NotSeeded,
-    #[error("catalog membership bootstrap seed differs from current runtime membership")]
-    SeedDrift,
-    #[error("catalog membership seed contains duplicate RepoId {0}")]
-    DuplicateSeed(RepoId),
-    #[error("repo {0} is not a current catalog member")]
-    NotMember(RepoId),
-    #[error("repo {0} is already a current catalog member")]
-    AlreadyMember(RepoId),
-    #[error("catalog membership token for repo {0} belongs to another runtime instance")]
-    RuntimeMismatch(RepoId),
-    #[error(
-        "catalog membership token for repo {repo_id} is stale: expected generation {expected:?}, current generation {current:?}"
-    )]
-    Stale {
-        repo_id: RepoId,
-        expected: CatalogMembershipGeneration,
-        current: CatalogMembershipGeneration,
-    },
-    #[error("catalog membership generation exhausted for repo {0}")]
-    GenerationExhausted(RepoId),
-    #[error("catalog membership runtime lock is poisoned")]
-    Poisoned,
-    #[error("catalog membership ledger identity is invalid: {0}")]
-    InvalidLedgerIdentity(String),
-    #[error("repo catalog cut permit does not belong to current runtime/repo {0}")]
-    CutPermitMismatch(RepoId),
-}
+pub use capability::{
+    CatalogMembershipError, CatalogMembershipGeneration, CatalogMembershipToken,
+    RepoCatalogCutAuthority, RepoCatalogCutPermit,
+};
 
 /// Cloneable capability for the single process-local catalog membership
 /// authority owned by a `RepoManager` composition root.
@@ -121,6 +29,7 @@ pub struct CatalogMembershipRuntime {
 struct CatalogMembershipInner {
     runtime_instance: Uuid,
     cut: Mutex<()>,
+    cut_authority: Mutex<Option<Uuid>>,
     state: RwLock<CatalogMembershipState>,
 }
 
@@ -166,6 +75,7 @@ impl CatalogMembershipRuntime {
             inner: Arc::new(CatalogMembershipInner {
                 runtime_instance: Uuid::new_v4(),
                 cut: Mutex::new(()),
+                cut_authority: Mutex::new(None),
                 state: RwLock::new(CatalogMembershipState::default()),
             }),
         }
@@ -247,7 +157,15 @@ impl CatalogMembershipRuntime {
         permit: &RepoCatalogCutPermit,
         repo_id: RepoId,
     ) -> Result<(), CatalogMembershipError> {
-        if permit.runtime_instance == self.inner.runtime_instance && permit.repo_id == repo_id {
+        let active_authority = self
+            .inner
+            .cut_authority
+            .lock()
+            .map_err(|_| CatalogMembershipError::Poisoned)?;
+        if permit.runtime_instance == self.inner.runtime_instance
+            && active_authority.as_ref() == Some(&permit.authority_instance)
+            && permit.repo_id == repo_id
+        {
             Ok(())
         } else {
             Err(CatalogMembershipError::CutPermitMismatch(repo_id))
@@ -256,10 +174,43 @@ impl CatalogMembershipRuntime {
 
     #[cfg(test)]
     pub(super) fn cut_permit_for_test(&self, repo_id: RepoId) -> RepoCatalogCutPermit {
+        let mut owner = self
+            .inner
+            .cut_authority
+            .lock()
+            .expect("test cut authority lock");
+        let authority_instance = match *owner {
+            Some(authority) => authority,
+            None => {
+                let authority = Uuid::new_v4();
+                *owner = Some(authority);
+                authority
+            }
+        };
         RepoCatalogCutPermit {
             runtime_instance: self.inner.runtime_instance,
+            authority_instance,
             repo_id,
         }
+    }
+
+    pub(super) fn claim_cut_authority(
+        &self,
+    ) -> Result<RepoCatalogCutAuthority, CatalogMembershipError> {
+        let authority_instance = Uuid::new_v4();
+        let mut owner = self
+            .inner
+            .cut_authority
+            .lock()
+            .map_err(|_| CatalogMembershipError::Poisoned)?;
+        if owner.is_some() {
+            return Err(CatalogMembershipError::CutAuthorityAlreadyClaimed);
+        }
+        *owner = Some(authority_instance);
+        Ok(RepoCatalogCutAuthority {
+            runtime: self.clone(),
+            authority_instance,
+        })
     }
 
     /// Admits one newly-created or explicitly recovered repo after its durable

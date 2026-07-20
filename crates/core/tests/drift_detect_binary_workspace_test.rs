@@ -8,11 +8,16 @@ use deve_core::sync::drift_detect::{DriftKind, detect_repo_drift};
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
@@ -49,16 +54,16 @@ fn binary_workspace_file_is_reported_as_unexpected_not_fatal() {
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     SyncManager::new_checked(repo.clone())
         .expect("sync manager")
-        .materialize_local_repo("default")
+        .materialize_local_repo(repo.local_repo_name())
         .expect("materialize");
 
     let rogue = repo
-        .local_repo_workspace_path("default", "notes/blob.bin")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/blob.bin")
         .expect("workspace path");
     std::fs::create_dir_all(rogue.parent().expect("parent")).expect("dirs");
     std::fs::write(&rogue, [0xff, 0xfe, 0x00, 0x01]).expect("write binary");
 
-    let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
+    let report = detect_repo_drift(repo.as_ref(), repo.local_repo_name()).expect("detect");
     assert_eq!(report.unexplained.len(), 1);
     assert_eq!(report.unexplained[0].path, "notes/blob.bin");
     assert_eq!(report.unexplained[0].kind, DriftKind::UnexpectedOnDisk);

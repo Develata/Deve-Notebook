@@ -1,5 +1,4 @@
 use super::quarantine_md_dirs;
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::PENDING_FS_OPS;
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -7,21 +6,19 @@ use tempfile::tempdir;
 #[test]
 fn quarantine_md_dirs_rolls_back_workspace_on_pending_cleanup_failure() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
 
-    let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");
+    let md_dir = repo.local_repo_workspace_root(&repo_name)?.join("bad.md");
     std::fs::create_dir_all(&md_dir)?;
     std::fs::write(md_dir.join("note.txt"), "broken")?;
 
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(&repo_name, |db| {
         let write = db.begin_write()?;
         {
             let mut table = write.open_table(PENDING_FS_OPS)?;
@@ -31,12 +28,12 @@ fn quarantine_md_dirs_rolls_back_workspace_on_pending_cleanup_failure() -> anyho
         Ok(())
     })?;
 
-    let err = quarantine_md_dirs(&repo, &[String::from("default")])
+    let err = quarantine_md_dirs(&repo, std::slice::from_ref(&repo_name))
         .expect_err("corrupt pending subtree must fail closed");
     assert!(md_dir.exists());
     assert!(
         !repo
-            .local_repo_notegit_root("default")?
+            .local_repo_notegit_root(&repo_name)?
             .join("legacy-md-dir")
             .join("bad.md")
             .exists()
@@ -51,22 +48,20 @@ fn quarantine_md_dirs_fails_closed_on_unreadable_quarantine_target() -> anyhow::
     use std::os::unix::fs::PermissionsExt;
 
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        Some("default"),
-        Some("urn:default"),
     )?;
-    let projection_base = dir.path().join("notes");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo = Arc::new(cataloged.repo);
 
-    let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");
+    let md_dir = repo.local_repo_workspace_root(&repo_name)?.join("bad.md");
     std::fs::create_dir_all(&md_dir)?;
     std::fs::write(md_dir.join("note.txt"), "broken")?;
 
     let quarantine_root = repo
-        .local_repo_notegit_root("default")?
+        .local_repo_notegit_root(&repo_name)?
         .join("legacy-md-dir");
     std::fs::create_dir_all(&quarantine_root)?;
     let original = std::fs::metadata(&quarantine_root)?.permissions();
@@ -74,7 +69,7 @@ fn quarantine_md_dirs_fails_closed_on_unreadable_quarantine_target() -> anyhow::
     blocked.set_mode(0o000);
     std::fs::set_permissions(&quarantine_root, blocked)?;
 
-    let err = quarantine_md_dirs(&repo, &[String::from("default")])
+    let err = quarantine_md_dirs(&repo, std::slice::from_ref(&repo_name))
         .expect_err("unreadable quarantine target must fail closed");
 
     std::fs::set_permissions(&quarantine_root, original)?;

@@ -1,37 +1,40 @@
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::DocId;
 use deve_core::source_control::staging;
 use tempfile::TempDir;
 
 mod common;
 
-fn seed_legacy_local_repo(path: &std::path::Path, info: &RepoInfo) {
-    common::seed_local_repo_missing_source_control_tables(path, info);
-}
-
 #[test]
 fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_repair() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let legacy_id = uuid::Uuid::new_v4();
-    let legacy_path = ledger_dir.join("local").join(format!("{legacy_id}.redb"));
-    seed_legacy_local_repo(
-        &legacy_path,
-        &RepoInfo {
-            uuid: legacy_id,
-            name: "legacy".into(),
-            url: Some("urn:legacy".into()),
-        },
-    );
+    let (repo, main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
+            .expect("main");
+    let (_legacy, legacy_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("legacy-notes"), 8)
+            .expect("legacy");
+    // Drop the secondary repo's source-control tables to simulate a legacy repo
+    // created before those tables existed. The repo keeps its Normal catalog
+    // membership, so it stays visible to resolution but fails closed on any
+    // source-control access until an explicit repair.
+    let legacy_db = repo
+        .open_database(None, &legacy_id.to_string())
+        .expect("legacy db");
+    let write = legacy_db.db.begin_write().expect("write txn");
+    let _ = write
+        .delete_table(staging::STAGED_TABLE)
+        .expect("delete staged table");
+    write.commit().expect("commit table delete");
+    let legacy_selector = legacy_id.to_string();
 
     let list_err = repo
         .list_repos(None)
         .expect_err("missing source control tables must fail local listing");
     assert!(list_err.to_string().contains("source control tables"));
     let pending_err = repo
-        .list_pending_fs_in_local_repo("legacy")
+        .list_pending_fs_in_local_repo(&legacy_selector)
         .expect_err("missing source control tables must fail local pending listing");
     let pending_detail = pending_err.to_string();
     assert!(
@@ -41,13 +44,15 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
 
     repo.repair_local_repo_catalog()
         .expect("repair local repo catalog");
+    let mut expected = vec![legacy_id.to_string(), main_id.to_string()];
+    expected.sort();
     assert_eq!(
         repo.list_repos(None)
             .expect("list local repos after repair"),
-        vec!["legacy".to_string(), "main".to_string()]
+        expected
     );
     assert!(
-        repo.list_pending_fs_in_local_repo("legacy")
+        repo.list_pending_fs_in_local_repo(&legacy_selector)
             .expect("list pending after repair")
             .is_empty()
     );
@@ -57,9 +62,13 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
 fn main_local_repo_fails_closed_on_missing_source_control_tables_until_repair() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
 
-    let handle = repo.open_database(None, "main").expect("open main db");
+    let handle = repo
+        .open_database(None, &main_id.to_string())
+        .expect("open main db");
     let write = handle.db.begin_write().expect("write txn");
     let _ = write
         .delete_table(staging::STAGED_TABLE)

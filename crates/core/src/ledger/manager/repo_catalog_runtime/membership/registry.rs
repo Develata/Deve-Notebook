@@ -21,6 +21,7 @@ impl CatalogMembershipRuntime {
         let inner = Arc::new(CatalogMembershipInner {
             runtime_instance: Uuid::new_v4(),
             cut: Mutex::new(()),
+            cut_authority: Mutex::new(None),
             state: RwLock::new(CatalogMembershipState::default()),
         });
         registry.insert(identity, Arc::downgrade(&inner));

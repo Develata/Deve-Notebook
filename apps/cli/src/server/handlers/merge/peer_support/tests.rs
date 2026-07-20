@@ -38,26 +38,22 @@ fn app_state(repo: Arc<RepoManager>) -> Arc<AppState> {
 fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
     let dir = tempdir().expect("tempdir");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
-        10,
-        Some("default"),
-        Some("urn:default"),
-    )
-    .expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("locator");
+    let repo =
+        crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base, 10)
+            .expect("init repo")
+            .repo;
     let info = repo.get_repo_info().expect("repo info").expect("present");
+    let repo_name = info.uuid.to_string();
     let doc_id = DocId(uuid::Uuid::new_v4());
 
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(&repo_name, |db| {
         let write = db.begin_write()?;
         write.open_table(REPO_METADATA)?.insert(
             &REPO_INFO_METADATA_KEY,
             codec::encode(&RepoInfo {
                 uuid: info.uuid,
-                name: "default".into(),
-                url: Some("urn:default".into()),
+                name: repo_name.clone(),
+                url: info.url.clone(),
             })?
             .as_slice(),
         )?;
@@ -74,7 +70,7 @@ fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
     let ch = DualChannel::new(broadcast::channel(8).0, unicast_tx);
     let state = app_state(repo);
 
-    assert!(resolve_doc_path(&state, &ch, "default", doc_id, Some(7)).is_none());
+    assert!(resolve_doc_path(&state, &ch, &repo_name, doc_id, Some(7)).is_none());
 
     match unicast_rx.blocking_recv() {
         Some(ServerMessage::ProtocolError {

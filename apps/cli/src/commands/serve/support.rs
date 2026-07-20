@@ -29,13 +29,17 @@ pub(super) fn ensure_native_loopback_default_workspace(
     ledger_dir: &Path,
     snapshot_depth: usize,
 ) -> anyhow::Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(NATIVE_DEFAULT_REPO), None)?;
-    if repo.validate_projection_locator_map().is_ok() {
-        return Ok(());
-    }
-
-    let locators = repo.list_projection_locators()?;
-    if !locators.is_empty() {
+    // "No cataloged repos" means "needs bootstrap": an empty locator map is
+    // vacuously valid, so locator-map validity cannot drive this decision.
+    // The probe reads durable catalog records without creating any repo; a
+    // missing ledger root is a first boot with zero cataloged repos.
+    let existing = if ledger_dir.exists() {
+        deve_core::ledger::normal_catalog_ids_for_ledger(ledger_dir)?
+    } else {
+        Vec::new()
+    };
+    if let Some(repo_id) = existing.first() {
+        let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, *repo_id)?;
         repo.validate_projection_locator_map()?;
         return Ok(());
     }

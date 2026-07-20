@@ -8,18 +8,21 @@ use tempfile::{TempDir, tempdir};
 const BROKEN_GIT_MIRROR_TABLE: TableDefinition<u64, &str> =
     TableDefinition::new("git_mirror_commits");
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let ledger = dir.path().join("ledger");
-    let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 
 fn repo_root(repo: &RepoManager) -> std::path::PathBuf {
-    repo.local_repo_workspace_root("default")
+    repo.local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root")
 }
 
@@ -94,7 +97,7 @@ fn authority_only_commit_defers_git_mirror_projection() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_source_control_authority_in_local_repo("default", "authority only")
+        .commit_source_control_authority_in_local_repo(repo.local_repo_name(), "authority only")
         .expect("authority commit");
     let before_projection = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
@@ -104,11 +107,11 @@ fn authority_only_commit_defers_git_mirror_projection() {
     assert!(before_projection.is_none());
 
     let repo_id = repo
-        .get_repo_info_for(None, Some("default"))
+        .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info")
         .expect("default repo")
         .uuid;
-    repo.enqueue_git_mirror_projection_in_local_repo("default", repo_id, &commit);
+    repo.enqueue_git_mirror_projection_in_local_repo(repo.local_repo_name(), repo_id, &commit);
     let after_projection = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
             Ok(git_bridge::get_record(db, &commit.id)?)
@@ -130,10 +133,10 @@ fn deferred_git_mirror_projection_rejects_rebound_repo_name() {
         .expect("apply external change");
 
     let commit = repo
-        .commit_source_control_authority_in_local_repo("default", "authority only")
+        .commit_source_control_authority_in_local_repo(repo.local_repo_name(), "authority only")
         .expect("authority commit");
     repo.enqueue_git_mirror_projection_in_local_repo(
-        "default",
+        repo.local_repo_name(),
         deve_core::models::RepoId::new_v4(),
         &commit,
     );

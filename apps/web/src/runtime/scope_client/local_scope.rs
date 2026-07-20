@@ -70,7 +70,10 @@ mod tests {
                 Some(PendingBranchSwitch::new(PendingBranchTarget::Local, 1)),
                 None,
             ),
-            (None, Some(PendingRepoSwitch::switch("repo-2", 1))),
+            (
+                None,
+                Some(PendingRepoSwitch::switch("repo-2", uuid::Uuid::nil(), 1)),
+            ),
         ] {
             let (pending_branch_switch, _) = signal(pending_branch_switch.clone());
             let (pending_repo_switch, _) = signal(pending_repo_switch.clone());
@@ -144,7 +147,11 @@ mod tests {
             Some(9)
         );
 
-        let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch("repo-2", 1)));
+        let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch(
+            "repo-2",
+            uuid::Uuid::nil(),
+            1,
+        )));
         assert_eq!(
             stable_local_scope_nonce(LocalScopeSignals {
                 current_repo_id,

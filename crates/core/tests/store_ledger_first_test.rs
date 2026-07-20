@@ -5,9 +5,13 @@ use deve_core::models::{LedgerEntry, Op};
 use deve_core::state;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, repo)
 }
 

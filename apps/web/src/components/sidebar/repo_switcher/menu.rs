@@ -85,16 +85,14 @@ pub(super) fn RepoSwitcherMenu(
             <div class="max-h-64 overflow-y-auto py-1">
                 <For
                     each=move || {
-                        repo_switcher_rows(row_source.repo_list.get(), row_source.repo_entries.get())
+                        repo_switcher_rows(row_source.repo_entries.get())
                     }
                     key=|row| row.key()
                     children=move |row| {
                         view! {
                             <RepoSwitcherRowView
                                 row=row
-                                current_repo=core.current_repo
                                 current_repo_id=core.current_repo_id
-                                repo_entries=core.repo_entries
                                 on_switch_repo=core.on_switch_repo.clone()
                                 on_rename_repo=core.on_rename_repo.clone()
                                 on_remove_repo=core.on_remove_repo.clone()

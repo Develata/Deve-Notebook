@@ -12,32 +12,20 @@ use std::path::{Component, Path, PathBuf};
 
 mod file_validation;
 mod map_validation;
+mod store;
 
-const LOCATOR_VERSION: u32 = 1;
-const LOCATOR_FILE: &str = "projection-locators.toml";
+pub(crate) use store::projection_locator_record_for_repo_id;
+use store::{
+    ProjectionLocatorFile, ProjectionLocatorMapGuard, projection_locator_path_for,
+    read_projection_locator_file, write_projection_locator_file,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectionLocatorRecord {
     pub repo_id: RepoId,
-    pub repo_name_hint: String,
+    pub workspace_segment: String,
     pub projection_base_abs: PathBuf,
     pub canonicalized_at_unix_ms: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ProjectionLocatorFile {
-    pub(crate) version: u32,
-    #[serde(default)]
-    pub(crate) locators: Vec<ProjectionLocatorRecord>,
-}
-
-impl Default for ProjectionLocatorFile {
-    fn default() -> Self {
-        Self {
-            version: LOCATOR_VERSION,
-            locators: Vec::new(),
-        }
-    }
 }
 
 impl RepoManager {
@@ -51,7 +39,7 @@ impl RepoManager {
         projection_base: impl AsRef<Path>,
     ) -> Result<ProjectionLocatorRecord> {
         let info = self.local_repo_info_for_locator(repo_name)?;
-        self.set_projection_base_for_repo_id(info.uuid, &info.name, projection_base)
+        self.set_projection_base_for_repo_id(info.uuid, projection_base)
     }
 
     /// 为所有当前本地 repo 设置同一个 Projection Locator base。
@@ -64,6 +52,7 @@ impl RepoManager {
         &mut self,
         root: impl AsRef<Path>,
     ) -> Result<()> {
+        let _map_guard = ProjectionLocatorMapGuard::acquire(&self.ledger_dir)?;
         self.refresh_local_repo_catalog()?;
         let projection_base_abs = canonicalize_projection_base(root.as_ref())?;
         let timestamp = chrono::Utc::now().timestamp_millis();
@@ -81,18 +70,26 @@ impl RepoManager {
             .collect::<HashSet<_>>();
 
         let mut file = self.read_projection_locator_file()?;
+        let existing_segments = file
+            .locators
+            .iter()
+            .map(|record| (record.repo_id, record.workspace_segment.clone()))
+            .collect::<std::collections::HashMap<_, _>>();
         file.locators
             .retain(|record| !local_ids.contains(&record.repo_id));
         for info in local_infos {
             file.locators.push(ProjectionLocatorRecord {
                 repo_id: info.uuid,
-                repo_name_hint: safe_repo_path_segment(&info.name)?,
+                workspace_segment: existing_segments
+                    .get(&info.uuid)
+                    .cloned()
+                    .unwrap_or_else(|| info.uuid.to_string()),
                 projection_base_abs: projection_base_abs.clone(),
                 canonicalized_at_unix_ms: timestamp,
             });
         }
         file.locators
-            .sort_by_key(|item| (item.repo_name_hint.clone(), item.repo_id));
+            .sort_by_key(|item| (item.workspace_segment.clone(), item.repo_id));
         self.validate_projection_locator_records(&file.locators, true)?;
         self.write_projection_locator_file(&file)
     }
@@ -100,23 +97,96 @@ impl RepoManager {
     pub fn set_projection_base_for_repo_id(
         &self,
         repo_id: RepoId,
-        repo_name_hint: &str,
         projection_base: impl AsRef<Path>,
     ) -> Result<ProjectionLocatorRecord> {
-        let repo_name_hint = safe_repo_path_segment(repo_name_hint)?;
+        let _map_guard = ProjectionLocatorMapGuard::acquire(&self.ledger_dir)?;
+        // Normal locator set requires Normal catalog membership; only the
+        // prepared-creation command may bind a not-yet-cataloged RepoId
+        // (03_storage/projection: no generic allow-unknown bypass).
+        let is_member = self
+            .repo_catalog_membership_record(repo_id)?
+            .is_some_and(|record| {
+                record.state() == crate::ledger::RepoCatalogMembershipState::Normal
+            });
+        if !is_member {
+            return Err(anyhow!(
+                "Projection Locator set rejects unknown local repo {repo_id}: normal catalog membership required"
+            ));
+        }
+        let projection_base_abs = canonicalize_projection_base(projection_base.as_ref())?;
+        let mut file = self.read_projection_locator_file()?;
+        let workspace_segment = file
+            .locators
+            .iter()
+            .find(|item| item.repo_id == repo_id)
+            .map(|item| item.workspace_segment.clone())
+            .unwrap_or_else(|| repo_id.to_string());
+        let record = ProjectionLocatorRecord {
+            repo_id,
+            workspace_segment,
+            projection_base_abs,
+            canonicalized_at_unix_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        file.locators.retain(|item| item.repo_id != repo_id);
+        file.locators.push(record.clone());
+        file.locators
+            .sort_by_key(|item| (item.workspace_segment.clone(), item.repo_id));
+        self.validate_projection_locator_records(&file.locators, false)?;
+        self.write_projection_locator_file(&file)?;
+        Ok(record)
+    }
+
+    /// Publishes the locator half of one prepared repo creation without making
+    /// the repo visible to normal catalog-backed locator queries.
+    pub fn prepare_projection_locator_for_repo_creation(
+        &self,
+        repo_id: RepoId,
+        projection_base: impl AsRef<Path>,
+    ) -> Result<ProjectionLocatorRecord> {
+        let _map_guard = ProjectionLocatorMapGuard::acquire(&self.ledger_dir)?;
+        if self.repo_catalog_membership_record(repo_id)?.is_some() {
+            return Err(anyhow!(
+                "Prepared Projection Locator target already has catalog state: {repo_id}"
+            ));
+        }
+        let execution_name = repo_id.to_string();
+        let info = self
+            .repo_scope_runtime()
+            .read_local_repo_info_by_stem_without_repair(&execution_name)?
+            .ok_or_else(|| {
+                anyhow!("Prepared Projection Locator target metadata is missing: {repo_id}")
+            })?;
+        if info.uuid != repo_id || info.name != execution_name {
+            return Err(anyhow!(
+                "Prepared Projection Locator target must use canonical RepoId identity: expected {repo_id}, metadata uuid={}, name={:?}",
+                info.uuid,
+                info.name
+            ));
+        }
         let projection_base_abs = canonicalize_projection_base(projection_base.as_ref())?;
         let record = ProjectionLocatorRecord {
             repo_id,
-            repo_name_hint,
+            workspace_segment: execution_name,
             projection_base_abs,
             canonicalized_at_unix_ms: chrono::Utc::now().timestamp_millis(),
         };
         let mut file = self.read_projection_locator_file()?;
+        if let Some(existing) = file.locators.iter().find(|item| item.repo_id == repo_id)
+            && existing.workspace_segment != record.workspace_segment
+        {
+            return Err(anyhow!(
+                "Prepared Projection Locator target has a conflicting immutable workspace segment"
+            ));
+        }
         file.locators.retain(|item| item.repo_id != repo_id);
         file.locators.push(record.clone());
         file.locators
-            .sort_by_key(|item| (item.repo_name_hint.clone(), item.repo_id));
-        self.validate_projection_locator_records(&file.locators, false)?;
+            .sort_by_key(|item| (item.workspace_segment.clone(), item.repo_id));
+        map_validation::validate_projection_locator_records_for_prepared_creation(
+            self,
+            &file.locators,
+            repo_id,
+        )?;
         self.write_projection_locator_file(&file)?;
         Ok(record)
     }
@@ -151,6 +221,11 @@ impl RepoManager {
         &self,
         repo_id: RepoId,
     ) -> Result<ProjectionLocatorRecord> {
+        if self.find_local_repo_name_by_id(repo_id)?.is_none() {
+            return Err(anyhow!(
+                "Projection Locator target is not a cataloged local repo: {repo_id}"
+            ));
+        }
         let file = self.read_projection_locator_file()?;
         self.validate_projection_locator_records(&file.locators, true)?;
         let mut locator = file
@@ -171,6 +246,12 @@ impl RepoManager {
     pub fn list_projection_locators(&self) -> Result<Vec<ProjectionLocatorRecord>> {
         let mut locators = self.read_projection_locator_file()?.locators;
         self.validate_projection_locator_records(&locators, false)?;
+        let cataloged = self
+            .list_cataloged_local_repo_summaries()?
+            .into_iter()
+            .map(|summary| summary.repo_id)
+            .collect::<HashSet<_>>();
+        locators.retain(|locator| cataloged.contains(&locator.repo_id));
         for locator in &mut locators {
             locator.projection_base_abs = std::fs::canonicalize(&locator.projection_base_abs)
                 .with_context(|| {
@@ -180,11 +261,12 @@ impl RepoManager {
                     )
                 })?;
         }
-        locators.sort_by_key(|item| (item.repo_name_hint.clone(), item.repo_id));
+        locators.sort_by_key(|item| (item.workspace_segment.clone(), item.repo_id));
         Ok(locators)
     }
 
     pub fn remove_projection_locator_for_repo_id(&self, repo_id: RepoId) -> Result<()> {
+        let _map_guard = ProjectionLocatorMapGuard::acquire(&self.ledger_dir)?;
         let mut file = self.read_projection_locator_file()?;
         file.locators.retain(|item| item.repo_id != repo_id);
         self.validate_projection_locator_records(&file.locators, false)?;
@@ -196,30 +278,10 @@ impl RepoManager {
         self.validate_projection_locator_records(&file.locators, true)
     }
 
-    pub(crate) fn validate_projection_locator_map_for_workspace_repair(
-        &self,
-        repo_id: RepoId,
-        proposed_name: &str,
-        old_root: &Path,
-        new_root: &Path,
-    ) -> Result<()> {
-        let file = self.read_projection_locator_file()?;
-        map_validation::validate_projection_locator_records_for_workspace_repair(
-            self,
-            &file.locators,
-            repo_id,
-            proposed_name,
-            old_root,
-            new_root,
-        )
-    }
-
     pub fn check_projection_locator_for_local_repo(&self, repo_name: &str) -> Result<PathBuf> {
         let info = self.local_repo_info_for_locator(repo_name)?;
         let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
-        let workspace_root = locator
-            .projection_base_abs
-            .join(repo_workspace_segment(&info.name, info.uuid)?);
+        let workspace_root = locator.projection_base_abs.join(&locator.workspace_segment);
         let workspace_root = std::fs::canonicalize(&workspace_root).with_context(|| {
             format!(
                 "Failed to canonicalize Projection workspace root for local repo {}: {:?}",
@@ -257,75 +319,6 @@ impl RepoManager {
             require_all_local_locators,
         )
     }
-}
-
-fn projection_locator_path_for(ledger_dir: &Path) -> PathBuf {
-    notegit::host_dir(ledger_dir).join(LOCATOR_FILE)
-}
-
-fn read_projection_locator_file(path: &Path) -> Result<ProjectionLocatorFile> {
-    if !path
-        .try_exists()
-        .with_context(|| format!("Failed to stat Projection Locator file: {:?}", path))?
-    {
-        return Ok(ProjectionLocatorFile::default());
-    }
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read Projection Locator file: {:?}", path))?;
-    let file: ProjectionLocatorFile = toml::from_str(&content)
-        .with_context(|| format!("Failed to parse Projection Locator file: {:?}", path))?;
-    if file.version != LOCATOR_VERSION {
-        return Err(anyhow!(
-            "Unsupported Projection Locator version {} in {:?}",
-            file.version,
-            path
-        ));
-    }
-    file_validation::validate_projection_locator_file_shape(&file.locators)?;
-    Ok(file)
-}
-
-pub(crate) fn projection_locator_record_for_repo_id(
-    ledger_dir: &Path,
-    repo_id: RepoId,
-) -> Result<Option<ProjectionLocatorRecord>> {
-    let file = read_projection_locator_file(&projection_locator_path_for(ledger_dir))?;
-    let Some(mut record) = file
-        .locators
-        .into_iter()
-        .find(|record| record.repo_id == repo_id)
-    else {
-        return Ok(None);
-    };
-    record.projection_base_abs =
-        std::fs::canonicalize(&record.projection_base_abs).with_context(|| {
-            format!(
-                "Failed to canonicalize Projection Locator base for repo {}: {:?}",
-                repo_id, record.projection_base_abs
-            )
-        })?;
-    Ok(Some(record))
-}
-
-pub(crate) fn locator_authorizes_repo_name(
-    ledger_dir: &Path,
-    repo_id: RepoId,
-    repo_name: &str,
-) -> Result<bool> {
-    let repo_name_hint = safe_repo_path_segment(repo_name)?;
-    Ok(projection_locator_record_for_repo_id(ledger_dir, repo_id)?
-        .is_some_and(|record| record.repo_name_hint == repo_name_hint))
-}
-
-fn write_projection_locator_file(path: &Path, file: &ProjectionLocatorFile) -> Result<()> {
-    let Some(parent) = path.parent() else {
-        return Err(anyhow!("Projection Locator path has no parent: {:?}", path));
-    };
-    std::fs::create_dir_all(parent)
-        .with_context(|| format!("Failed to create Projection Locator parent: {:?}", parent))?;
-    let content = toml::to_string_pretty(file).context("Failed to serialize Projection Locator")?;
-    std::fs::write(path, content)
-        .with_context(|| format!("Failed to write Projection Locator file: {:?}", path))
 }
 
 fn canonicalize_projection_base(base: &Path) -> Result<PathBuf> {
@@ -374,14 +367,6 @@ pub(crate) fn safe_repo_path_segment(repo_name: &str) -> Result<String> {
         return Err(anyhow!("repo_name uses a reserved Windows device name"));
     }
     Ok(segment.to_string())
-}
-
-pub(crate) fn repo_workspace_segment(repo_name: &str, repo_id: RepoId) -> Result<String> {
-    Ok(format!(
-        "{}--{}",
-        safe_repo_path_segment(repo_name)?,
-        repo_id
-    ))
 }
 
 fn is_windows_reserved_device_name(segment: &str) -> bool {

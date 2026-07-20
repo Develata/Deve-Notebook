@@ -66,7 +66,7 @@ pub(crate) fn current_watcher_health(
     sync_manager: &deve_core::sync::SyncManager,
     watcher_runtime: &WatcherRuntimeView,
 ) -> node_role::WatcherHealthSummary {
-    let summaries = match repo.list_local_repo_summaries() {
+    let summaries = match repo.list_cataloged_local_repo_summaries() {
         Ok(summaries) => summaries,
         Err(error) => {
             tracing::warn!(%error, "Failed to list expected repos for watcher health");
@@ -99,14 +99,15 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let projection_base = dir.path().join("notes");
         std::fs::create_dir_all(&projection_base)?;
-        let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))?;
-        repo.set_projection_base_for_local_repo("main", &projection_base)?;
-        let repo = Arc::new(repo);
+        let cataloged = crate::test_support::init_cataloged_repo_with_url(
+            &dir.path().join("ledger"),
+            &projection_base,
+            8,
+            Some("urn:main".to_string()),
+        )?;
+        let repo = Arc::new(cataloged.repo);
         let sync = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
-        let repo_id = repo
-            .get_repo_info_for(None, Some("main"))?
-            .expect("main repo")
-            .uuid;
+        let repo_id = cataloged.repo_id;
         let view = WatcherRuntimeView::with_state_for_test(repo_id, 1, RepoMountState::Mounted);
 
         let healthy = current_watcher_health(repo.as_ref(), sync.as_ref(), &view);

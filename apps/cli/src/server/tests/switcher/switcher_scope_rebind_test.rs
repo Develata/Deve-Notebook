@@ -1,6 +1,6 @@
 use super::handlers::switcher::handle_switch_branch;
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
@@ -18,8 +18,8 @@ fn browser_session(scope_nonce: u64) -> WsSession {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale()
--> anyhow::Result<()> {
+async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
+) -> anyhow::Result<()> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(

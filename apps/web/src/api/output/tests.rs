@@ -2,8 +2,10 @@ use super::enqueue_with_limit;
 use super::is_write_message;
 use super::prepare_queue_for_new_connection;
 use deve_core::models::{DocId, PeerId, VersionVector};
-use deve_core::protocol::ClientMessage;
 use deve_core::protocol::ScPathTarget;
+use deve_core::protocol::{
+    ClientMessage, RepoControlRequest, RepoLifecycleIntent, ScopeNonce, SwitchNonce,
+};
 use std::collections::VecDeque;
 
 #[test]
@@ -86,10 +88,16 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         doc_id: DocId::from_u128(7),
         scope_nonce: Some(1),
     }));
-    assert!(is_write_message(&ClientMessage::CreateRepo {
-        name: "new-repo".into(),
-        switch_nonce: Some(2),
-    }));
+    assert!(is_write_message(&ClientMessage::RepoControl(
+        RepoControlRequest::SubmitLifecycle {
+            request_id: uuid::Uuid::new_v4(),
+            lifecycle_intent: RepoLifecycleIntent::Create {
+                initial_alias: "new-repo".into(),
+                current_scope_nonce: ScopeNonce::new(1),
+                switch_nonce: SwitchNonce::new(2),
+            },
+        }
+    )));
     assert!(!is_write_message(&ClientMessage::Ping));
     assert!(!is_write_message(&ClientMessage::SyncRequest {
         repo_id: uuid::Uuid::nil(),

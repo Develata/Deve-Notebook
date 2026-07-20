@@ -7,20 +7,21 @@ use redb::ReadableTable;
 use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection base");
-    // Mirror production init order: establish the workspace identity marker before
-    // any projection content exists, so later rebuilds pass the identity gate.
-    repo.ensure_local_repo_workspace_identity("default")
-        .expect("establish workspace identity");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, std::sync::Arc::new(repo))
 }
 
 fn workspace_root(repo: &RepoManager) -> std::path::PathBuf {
-    repo.local_repo_workspace_root("default")
+    repo.local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root")
 }
 
@@ -108,6 +109,7 @@ fn wipe_node_projection(repo: &RepoManager) {
 #[test]
 fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/empty", "test")
         .expect("create dir");
     seed_file(&repo, "notes/a.md", "ledger");
@@ -122,7 +124,7 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     std::fs::write(root.join(".git/objects/loose.md"), "git object").expect("write git state");
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild");
 
     assert_eq!(
@@ -144,6 +146,7 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
 #[test]
 fn rebuild_projection_prefers_node_path_over_legacy_doc_mapping() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -156,7 +159,7 @@ fn rebuild_projection_prefers_node_path_over_legacy_doc_mapping() {
     std::fs::write(root.join("stale/a.md"), "legacy").expect("write stale");
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild");
 
     assert_eq!(
@@ -169,6 +172,7 @@ fn rebuild_projection_prefers_node_path_over_legacy_doc_mapping() {
 #[test]
 fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = deve_core::models::DocId::new();
     repo.append_generated_op_in_local_repo(
         repo.local_repo_name(),
@@ -197,16 +201,17 @@ fn rebuild_projection_ignores_metadata_only_legacy_mapping() {
     std::fs::write(root.join("legacy/orphan.md"), "stale").expect("write stale");
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild");
 
     assert!(!root.join("legacy/orphan.md").exists());
-    assert!(sync.should_ignore_fs_event("default", "legacy/orphan.md"));
+    assert!(sync.should_ignore_fs_event(&repo_name, "legacy/orphan.md"));
 }
 
 #[test]
 fn rebuild_projection_recovers_when_node_projection_is_missing() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir");
     seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
@@ -214,7 +219,7 @@ fn rebuild_projection_recovers_when_node_projection_is_missing() {
 
     let root = workspace_root(&repo);
     let sync = SyncManager::new_checked(repo).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild from ledger facts");
 
     assert!(root.join("notes/sub").is_dir());
@@ -227,17 +232,18 @@ fn rebuild_projection_recovers_when_node_projection_is_missing() {
 #[test]
 fn rebuild_projection_removes_deleted_dir_subtree_from_plan() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
 
     let root = workspace_root(&repo);
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("initial rebuild");
     assert!(root.join("notes/sub/a.md").exists());
 
     repo.apply_dir_delete_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("delete subtree");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild after subtree delete");
 
     assert!(!root.join("notes/sub/a.md").exists());
@@ -248,6 +254,7 @@ fn rebuild_projection_removes_deleted_dir_subtree_from_plan() {
 #[test]
 fn rebuild_projection_fails_closed_on_unreadable_stale_directory() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let root = workspace_root(&repo);
     let stale = root.join("notes/private");
     std::fs::create_dir_all(&stale).expect("mkdir stale");
@@ -259,7 +266,7 @@ fn rebuild_projection_fails_closed_on_unreadable_stale_directory() {
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
-        .rebuild_projection_local_repo("default")
+        .rebuild_projection_local_repo(&repo_name)
         .expect_err("unreadable stale directory must fail closed");
 
     std::fs::set_permissions(&stale, original).expect("restore perms");

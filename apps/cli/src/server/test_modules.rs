@@ -2,6 +2,8 @@
 // Declarations stay flat children of `server` via #[path], so every test
 // body keeps reaching the code under test through `super::` unchanged;
 // only the file layout is organized by feature family.
+#[path = "tests/catalog_repo_support.rs"]
+mod catalog_repo_support;
 #[path = "tests/docs/docs_copy_contract_test.rs"]
 mod docs_copy_contract_test;
 #[path = "tests/docs/docs_create_bootstrap_test.rs"]
@@ -18,24 +20,24 @@ mod docs_seed_test_support;
 mod docs_test_support;
 #[path = "tests/document/document_bootstrap_test_support.rs"]
 mod document_bootstrap_test_support;
-#[path = "tests/document/document_remote_scope_test.rs"]
-mod document_remote_scope_test;
+#[path = "tests/document/document_local_scope_test_support.rs"]
+mod document_local_scope_test_support;
 #[path = "tests/document/document_remote_scope_state_test_support.rs"]
 mod document_remote_scope_state_test_support;
+#[path = "tests/document/document_remote_scope_test.rs"]
+mod document_remote_scope_test;
 #[path = "tests/document/document_remote_scope_test_support.rs"]
 mod document_remote_scope_test_support;
 #[path = "tests/document/document_scope_bootstrap_test.rs"]
 mod document_scope_bootstrap_test;
-#[path = "tests/document/document_local_scope_test_support.rs"]
-mod document_local_scope_test_support;
 #[path = "tests/edit/edit_idempotency_test.rs"]
 mod edit_idempotency_test;
+#[path = "tests/edit/edit_message_test_support.rs"]
+mod edit_message_test_support;
 #[path = "tests/edit/edit_projection_ack_test.rs"]
 mod edit_projection_ack_test;
 #[path = "tests/edit/edit_runtime_repair_test.rs"]
 mod edit_runtime_repair_test;
-#[path = "tests/edit/edit_message_test_support.rs"]
-mod edit_message_test_support;
 #[path = "tests/edit/edit_scope_binding_test.rs"]
 mod edit_scope_binding_test;
 #[path = "tests/edit/edit_scope_test.rs"]
@@ -88,14 +90,14 @@ mod repo_scope_test;
 mod source_control_changes_identity_test;
 #[path = "tests/source_control/source_control_commit_diff_test.rs"]
 mod source_control_commit_diff_test;
-#[path = "tests/source_control/source_control_http_test/mod.rs"]
-mod source_control_http_test;
-#[path = "tests/source_control/source_control_git_import_test_support.rs"]
-mod source_control_git_import_test_support;
 #[path = "tests/source_control/source_control_git_import_conflict_test/mod.rs"]
 mod source_control_git_import_conflict_test;
 #[path = "tests/source_control/source_control_git_import_roundtrip_test.rs"]
 mod source_control_git_import_roundtrip_test;
+#[path = "tests/source_control/source_control_git_import_test_support.rs"]
+mod source_control_git_import_test_support;
+#[path = "tests/source_control/source_control_http_test/mod.rs"]
+mod source_control_http_test;
 #[path = "tests/source_control/source_control_local_commit_scope_test/mod.rs"]
 mod source_control_local_commit_scope_test;
 #[path = "tests/source_control/source_control_local_scope_test/mod.rs"]
@@ -106,10 +108,10 @@ mod source_control_remote_scope_test;
 mod source_control_remote_selector_test;
 #[path = "tests/source_control/source_control_scope_binding_test/mod.rs"]
 mod source_control_scope_binding_test;
-#[path = "tests/source_control/source_control_scope_test_support.rs"]
-mod source_control_scope_test_support;
 #[path = "tests/source_control/source_control_scope_test/mod.rs"]
 mod source_control_scope_test;
+#[path = "tests/source_control/source_control_scope_test_support.rs"]
+mod source_control_scope_test_support;
 #[path = "tests/source_control/source_control_test_support.rs"]
 mod source_control_test_support;
 #[path = "tests/switcher/switcher_branch_scope_test/mod.rs"]
@@ -120,8 +122,6 @@ mod switcher_branch_scope_test_extra;
 mod switcher_branch_scope_test_fail_closed;
 #[path = "tests/switcher/switcher_branch_test/mod.rs"]
 mod switcher_branch_test;
-#[path = "tests/switcher/switcher_test_support.rs"]
-mod switcher_test_support;
 #[path = "tests/switcher/switcher_current_scope_binding_test.rs"]
 mod switcher_current_scope_binding_test;
 #[path = "tests/switcher/switcher_current_scope_remote_missing_test.rs"]
@@ -136,6 +136,8 @@ mod switcher_exact_selector_fail_closed_test;
 mod switcher_exact_selector_test;
 #[path = "tests/switcher/switcher_scope_rebind_test.rs"]
 mod switcher_scope_rebind_test;
+#[path = "tests/switcher/switcher_test_support.rs"]
+mod switcher_test_support;
 #[path = "tests/sync/sync_delete_peer_test_support.rs"]
 mod sync_delete_peer_test_support;
 #[path = "tests/sync/sync_hello_browser_scope_test.rs"]

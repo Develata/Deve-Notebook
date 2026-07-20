@@ -43,7 +43,10 @@ async fn request_key_without_repo_selection_bootstraps_single_repo() -> anyhow::
     handle_request_key(&state, &ch, &mut session).await;
 
     assert_key_provide(&mut uni_rx, repo_id, 61, None).await;
-    assert_eq!(session.active_repo.as_deref(), Some("notes"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(repo_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(repo_id));
     Ok(())
 }
@@ -68,7 +71,10 @@ async fn request_key_with_stale_local_binding_bootstraps_single_repo() -> anyhow
     handle_request_key(&state, &ch, &mut session).await;
 
     assert_key_provide(&mut uni_rx, repo_id, 71, None).await;
-    assert_eq!(session.active_repo.as_deref(), Some("notes"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(repo_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(repo_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());

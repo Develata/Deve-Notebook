@@ -101,10 +101,10 @@ pub(super) fn projection_locator_digest(
     let base = path_to_forward_slash(&locator.projection_base_abs);
     let root = path_to_forward_slash(&workspace_root);
     let mut material =
-        Vec::with_capacity(base.len() + root.len() + locator.repo_name_hint.len() + 96);
+        Vec::with_capacity(base.len() + root.len() + locator.workspace_segment.len() + 96);
     material.extend_from_slice(b"deve-remote-import-projection-locator-v1\0");
     material.extend_from_slice(expected_repo_id.as_bytes());
-    append_digest_field(&mut material, locator.repo_name_hint.as_bytes());
+    append_digest_field(&mut material, locator.workspace_segment.as_bytes());
     append_digest_field(&mut material, base.as_bytes());
     append_digest_field(&mut material, root.as_bytes());
     Ok(RemoteImportDigest::of(&material))

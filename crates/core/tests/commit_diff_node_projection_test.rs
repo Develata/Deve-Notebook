@@ -9,15 +9,18 @@ mod common;
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 
 fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
     let abs = repo
-        .local_repo_workspace_path("default", path)
+        .local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
@@ -344,7 +347,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
 
     write_workspace_file(&repo, "notes/b.md", "v1");
     std::fs::remove_file(
-        repo.local_repo_workspace_path("default", "notes/a.md")
+        repo.local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
             .expect("workspace path"),
     )
     .expect("remove old path");

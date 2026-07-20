@@ -12,6 +12,7 @@ use crate::runtime::{
         create_external_changes_mutation_callbacks, create_external_changes_refresh_callback,
     },
     rendering_client::RenderingClient,
+    repo_control_client::RepoControlClient,
     scope_client::ScopeClient,
     session_client::SessionClient,
     source_control_client::SourceControlClient,
@@ -25,6 +26,7 @@ use super::runtime::RuntimeStateSection;
 use super::source_control::SourceControlStateSection;
 use super::sync::SyncStateSection;
 
+#[allow(clippy::too_many_arguments)] // One state section per runtime domain stays explicit.
 pub(super) fn assemble_core_state(
     ws: WsService,
     doc: DocStateSection,
@@ -33,6 +35,7 @@ pub(super) fn assemble_core_state(
     sc: SourceControlStateSection,
     switch: SwitchCallbacks,
     locale: RwSignal<Locale>,
+    repo_control: RepoControlClient,
 ) -> CoreState {
     let on_retry_peer_registration = build_retry_peer_registration_callback(
         ws.clone(),
@@ -186,6 +189,7 @@ pub(super) fn assemble_core_state(
             load_eta_ms: runtime.load_eta_ms,
             set_load_eta_ms: runtime.set_load_eta_ms,
         },
+        repo_control,
     };
 
     CoreState {

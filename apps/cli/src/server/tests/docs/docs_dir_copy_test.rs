@@ -1,23 +1,21 @@
 use super::handlers::docs::handle_copy_doc;
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::{FactActor, Op, PeerId};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(32);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
@@ -76,14 +74,18 @@ async fn copy_dir_recovers_from_missing_source_projection() -> anyhow::Result<()
     session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
     handle_copy_doc(&state, &ch, &mut session, "notes".into(), "mirror".into()).await;
     assert_eq!(
-        std::fs::read_to_string(state.repo.local_repo_workspace_path("default", "mirror/a.md")?)?,
+        std::fs::read_to_string(
+            state
+                .repo
+                .local_repo_workspace_path(state.repo.local_repo_name(), "mirror/a.md")?
+        )?,
         "hello"
     );
     assert_eq!(
         std::fs::read_to_string(
             state
                 .repo
-                .local_repo_workspace_path("default", "mirror/sub/b.md")?
+                .local_repo_workspace_path(state.repo.local_repo_name(), "mirror/sub/b.md")?
         )?,
         "world"
     );
@@ -96,17 +98,20 @@ async fn copy_dir_recovers_from_missing_source_projection() -> anyhow::Result<()
 async fn copy_dir_uses_ledger_for_markdown_and_disk_for_assets() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     seed_file(&state, "notes/a.md", "ledger hello")?;
-    state
-        .sync_manager
-        .persist_doc_in_local_repo("default", state.repo.get_docid("notes/a.md")?.unwrap())?;
+    state.sync_manager.persist_doc_in_local_repo(
+        state.repo.local_repo_name(),
+        state.repo.get_docid("notes/a.md")?.unwrap(),
+    )?;
     std::fs::write(
-        state.repo.local_repo_workspace_path("default", "notes/a.md")?,
+        state
+            .repo
+            .local_repo_workspace_path(state.repo.local_repo_name(), "notes/a.md")?,
         "workspace stale",
     )?;
     std::fs::write(
         state
             .repo
-            .local_repo_workspace_path("default", "notes/logo.txt")?,
+            .local_repo_workspace_path(state.repo.local_repo_name(), "notes/logo.txt")?,
         "asset",
     )?;
     let (uni_tx, _uni_rx) = mpsc::channel(32);
@@ -115,14 +120,18 @@ async fn copy_dir_uses_ledger_for_markdown_and_disk_for_assets() -> anyhow::Resu
     session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
     handle_copy_doc(&state, &ch, &mut session, "notes".into(), "mirror".into()).await;
     assert_eq!(
-        std::fs::read_to_string(state.repo.local_repo_workspace_path("default", "mirror/a.md")?)?,
+        std::fs::read_to_string(
+            state
+                .repo
+                .local_repo_workspace_path(state.repo.local_repo_name(), "mirror/a.md")?
+        )?,
         "ledger hello"
     );
     assert_eq!(
         std::fs::read_to_string(
             state
                 .repo
-                .local_repo_workspace_path("default", "mirror/logo.txt")?
+                .local_repo_workspace_path(state.repo.local_repo_name(), "mirror/logo.txt")?
         )?,
         "asset"
     );

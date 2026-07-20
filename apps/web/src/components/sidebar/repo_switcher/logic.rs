@@ -11,23 +11,20 @@ use deve_core::protocol::RepoListEntry;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct RepoSwitcherRow {
-    pub repo_id: Option<RepoId>,
+    pub repo_id: RepoId,
     pub name: String,
-    pub execution_name: String,
+    pub alias_revision: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct RepoSwitcherSwitchTarget {
-    pub selector_name: String,
     pub expected_name: String,
-    pub repo_id: Option<RepoId>,
+    pub repo_id: RepoId,
 }
 
 impl RepoSwitcherRow {
     pub(super) fn key(&self) -> String {
-        self.repo_id
-            .map(|repo_id| repo_id.to_string())
-            .unwrap_or_else(|| format!("legacy:{}", self.name))
+        self.repo_id.to_string()
     }
 }
 
@@ -94,52 +91,31 @@ pub(super) fn repo_switcher_can_submit_rename_repo(current_name: &str, next_name
 
 pub(super) fn repo_switcher_row_is_renaming(
     renaming_repo: Option<RepoId>,
-    row_repo_id: Option<RepoId>,
+    row_repo_id: RepoId,
 ) -> bool {
-    row_repo_id.is_some() && renaming_repo == row_repo_id
+    renaming_repo == Some(row_repo_id)
 }
 
-pub(super) fn repo_switcher_rows(
-    repos: Vec<String>,
-    entries: Vec<RepoListEntry>,
-) -> Vec<RepoSwitcherRow> {
-    if !entries.is_empty() {
-        return entries
-            .into_iter()
-            .map(|entry| RepoSwitcherRow {
-                repo_id: Some(entry.repo_id),
-                name: entry.name,
-                execution_name: entry.execution_name,
-            })
-            .collect();
-    }
-
-    repos
+pub(super) fn repo_switcher_rows(entries: Vec<RepoListEntry>) -> Vec<RepoSwitcherRow> {
+    entries
         .into_iter()
-        .map(|name| RepoSwitcherRow {
-            repo_id: None,
-            execution_name: name.clone(),
-            name,
+        .map(|entry| RepoSwitcherRow {
+            repo_id: entry.repo_id,
+            name: entry.display_alias,
+            alias_revision: entry.alias_revision,
         })
         .collect()
 }
 
 pub(super) fn repo_switcher_row_is_active(
-    current_repo: Option<String>,
     current_repo_id: Option<String>,
     row: &RepoSwitcherRow,
 ) -> bool {
-    if let Some(repo_id) = row.repo_id
-        && let Some(current_repo_id) = current_repo_id
-    {
-        return current_repo_id == repo_id.to_string();
-    }
-    current_repo.as_deref() == Some(row.name.as_str())
+    current_repo_id.as_deref() == Some(row.repo_id.to_string().as_str())
 }
 
 pub(super) fn repo_switcher_switch_target(row: &RepoSwitcherRow) -> RepoSwitcherSwitchTarget {
     RepoSwitcherSwitchTarget {
-        selector_name: row.execution_name.clone(),
         expected_name: row.name.clone(),
         repo_id: row.repo_id,
     }

@@ -53,9 +53,10 @@ pub(crate) fn host_error_code(
         RemoteImportHostError::Provider(_) | RemoteImportHostError::ProviderCleanup { .. } => {
             ServerErrorCode::RemoteProjectionProviderUnavailable
         }
-        RemoteImportHostError::ApplyBusy | RemoteImportHostError::Coordination => {
-            phase_failure_code(phase)
-        }
+        RemoteImportHostError::ProviderBusy
+        | RemoteImportHostError::RepoMembership(_)
+        | RemoteImportHostError::ApplyBusy
+        | RemoteImportHostError::Coordination => phase_failure_code(phase),
         RemoteImportHostError::Core(error) => map_core_error(error, phase),
     }
 }

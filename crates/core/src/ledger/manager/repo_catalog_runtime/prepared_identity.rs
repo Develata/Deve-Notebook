@@ -4,7 +4,6 @@
 //!   - 03_storage/projection#projection-locator-contract
 
 use super::{PreparedRepoIdentity, RepoCatalogError};
-use crate::ledger::manager::projection_locator::repo_workspace_segment;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 use crate::utils::notegit;
@@ -66,7 +65,7 @@ fn snapshot_inner(manager: &RepoManager, repo_id: RepoId) -> anyhow::Result<Prep
     let locator = manager
         .query_projection_locator_record_for_repo_id(repo_id)?
         .ok_or_else(|| anyhow::anyhow!("Projection Locator is missing for {repo_id}"))?;
-    let workspace_segment = repo_workspace_segment(&locator.repo_name_hint, repo_id)?;
+    let workspace_segment = locator.workspace_segment.clone();
     let workspace_root =
         std::fs::canonicalize(locator.projection_base_abs.join(&workspace_segment))?;
     notegit::validate_repo_identity_marker(&workspace_root, repo_id)?;

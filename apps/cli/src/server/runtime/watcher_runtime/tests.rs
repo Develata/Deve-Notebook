@@ -2,11 +2,17 @@
 //!   - 03_storage/authority#repo-mutation-publication-gate
 //!   - 03_storage/watcher#watcher-contract
 
-use super::{RepoMountState, WatcherRuntimeAggregateStatus, WatcherRuntimeView, WatcherSupervisor};
+use super::{
+    RepoMountState, WatcherLifecycleError, WatcherRuntimeAggregateStatus, WatcherRuntimeView,
+    WatcherSupervisor,
+};
 use deve_core::models::RepoId;
-use deve_core::sync::watcher::RepoWatcherStart;
+use deve_core::sync::watcher::{
+    RepoWatcherStart, WatcherFailure, WatcherFailureKind, WatcherFailurePhase, WatcherRefresh,
+    WatcherRefreshCallback, WatcherRefreshKind,
+};
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 type WatcherFixture = (
     tempfile::TempDir,
@@ -20,19 +26,31 @@ fn fixture() -> anyhow::Result<WatcherFixture> {
     let dir = tempfile::tempdir()?;
     let projection_base = dir.path().join("notes");
     std::fs::create_dir_all(&projection_base)?;
-    let repo = deve_core::ledger::RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        &projection_base,
         8,
-        Some("main"),
-        Some("urn:main"),
+        Some("urn:main".to_string()),
     )?;
-    repo.set_projection_base_for_local_repo("main", &projection_base)?;
-    let repo = Arc::new(repo);
+    let repo = Arc::new(cataloged.repo);
     let sync = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
     let info = repo
-        .get_repo_info_for(None, Some("main"))?
+        .get_repo_info_for(None, Some(&cataloged.repo_id.to_string()))?
         .expect("main repo");
     Ok((dir, repo, sync, info.name, info.uuid))
+}
+
+fn no_op_publisher() -> WatcherRefreshCallback {
+    Arc::new(|_| {})
+}
+
+fn recording_publisher() -> (WatcherRefreshCallback, Arc<Mutex<Vec<WatcherRefresh>>>) {
+    let refreshes = Arc::new(Mutex::new(Vec::new()));
+    let output = refreshes.clone();
+    (
+        Arc::new(move |refresh| output.lock().expect("refresh output").push(refresh)),
+        refreshes,
+    )
 }
 
 #[test]
@@ -139,8 +157,10 @@ fn watcher_health_aggregate_reports_unknown_for_incomplete_view() {
 #[test]
 fn supervisor_owns_mount_until_explicit_shutdown() -> anyhow::Result<()> {
     let (_dir, _repo, sync, repo_name, repo_id) = fixture()?;
-    let supervisor =
-        WatcherSupervisor::start_all(vec![RepoWatcherStart::resolve(sync, &repo_name, 1)?])?;
+    let supervisor = WatcherSupervisor::start_all(
+        vec![RepoWatcherStart::resolve(sync, &repo_name, 1)?],
+        no_op_publisher(),
+    )?;
     let view = supervisor.view();
     assert!(view.admit(repo_id).is_ok());
 
@@ -160,14 +180,157 @@ fn supervisor_duplicate_reservation_fails_before_attach() -> anyhow::Result<()> 
         std::fs::remove_dir_all(root)?;
     }
 
-    let error = match WatcherSupervisor::start_all(vec![first, second]) {
+    let error = match WatcherSupervisor::start_all(vec![first, second], no_op_publisher()) {
         Ok(_) => panic!("duplicate reservation must fail"),
         Err(error) => error,
     };
 
     assert!(matches!(
         error,
-        super::supervisor::WatcherSupervisorStartError::DuplicateRepo(id) if id == repo_id
+        super::error::WatcherSupervisorStartError::DuplicateRepo(id) if id == repo_id
     ));
+    Ok(())
+}
+
+#[test]
+fn concurrent_transition_reservation_fails_with_typed_busy() -> anyhow::Result<()> {
+    let (_dir, _repo, sync, repo_name, repo_id) = fixture()?;
+    let supervisor = WatcherSupervisor::start_all(
+        vec![RepoWatcherStart::resolve(sync, &repo_name, 1)?],
+        no_op_publisher(),
+    )?;
+
+    let reservation = supervisor.reserve_existing(repo_id)?;
+    let error = match supervisor.reserve_existing(repo_id) {
+        Ok(_) => panic!("second lifecycle intent must not wait"),
+        Err(error) => error,
+    };
+
+    assert!(matches!(
+        error,
+        WatcherLifecycleError::Busy {
+            repo_id: busy_repo,
+            generation: 2,
+            state: RepoMountState::Transitioning,
+        } if busy_repo == repo_id
+    ));
+    supervisor.shutdown_reserved(&reservation)?;
+    supervisor.finalize_removed(reservation)?;
+    supervisor.shutdown()?;
+    Ok(())
+}
+
+#[test]
+fn remount_generation_invalidates_old_admission_and_flushes_one_refresh() -> anyhow::Result<()> {
+    let (_dir, _repo, sync, repo_name, repo_id) = fixture()?;
+    let (publisher, refreshes) = recording_publisher();
+    let supervisor = WatcherSupervisor::start_all(
+        vec![RepoWatcherStart::resolve(sync.clone(), &repo_name, 1)?],
+        publisher,
+    )?;
+    refreshes.lock().expect("refreshes").clear();
+    let view = supervisor.view();
+    let old_admission = view.admit(repo_id)?;
+
+    let reservation = supervisor.reserve_existing(repo_id)?;
+    assert_eq!(reservation.previous_generation(), Some(1));
+    assert_eq!(reservation.generation(), 2);
+    assert!(old_admission.revalidate().is_err());
+    supervisor.shutdown_reserved(&reservation)?;
+    supervisor.route_refresh_for_test(
+        repo_id,
+        reservation.generation(),
+        WatcherRefresh::new(repo_id, "a.md", WatcherRefreshKind::Added, false),
+    )?;
+    supervisor.route_refresh_for_test(
+        repo_id,
+        reservation.generation(),
+        WatcherRefresh::new(repo_id, "b.md", WatcherRefreshKind::Modified, true),
+    )?;
+    assert!(refreshes.lock().expect("refreshes").is_empty());
+
+    supervisor.start_reserved(
+        &reservation,
+        crate::server::setup::file_watcher_start(sync, &repo_name, reservation.generation())?,
+    )?;
+    let snapshot = supervisor.finalize_mounted(&reservation)?;
+    assert_eq!(snapshot.repo_id(), repo_id);
+    assert_eq!(snapshot.generation(), 2);
+    assert_eq!(snapshot.state(), RepoMountState::Mounted);
+    assert_eq!(supervisor.mounted_generation(repo_id)?, 2);
+    let refreshes_guard = refreshes.lock().expect("refreshes");
+    assert_eq!(refreshes_guard.len(), 1);
+    assert_eq!(
+        refreshes_guard[0].kind(),
+        WatcherRefreshKind::DirectoryChanged
+    );
+    assert!(refreshes_guard[0].has_conflict());
+    drop(refreshes_guard);
+
+    supervisor.route_refresh_for_test(
+        repo_id,
+        2,
+        WatcherRefresh::new(repo_id, "live.md", WatcherRefreshKind::Added, false),
+    )?;
+    assert_eq!(refreshes.lock().expect("refreshes").len(), 2);
+    supervisor.shutdown()?;
+    Ok(())
+}
+
+#[test]
+fn removed_and_failed_slots_drop_generation_bound_refresh() -> anyhow::Result<()> {
+    let (_dir, _repo, sync, repo_name, repo_id) = fixture()?;
+    let (publisher, refreshes) = recording_publisher();
+    let supervisor = WatcherSupervisor::start_all(
+        vec![RepoWatcherStart::resolve(sync, &repo_name, 1)?],
+        publisher,
+    )?;
+    refreshes.lock().expect("refreshes").clear();
+    let reservation = supervisor.reserve_existing(repo_id)?;
+    supervisor.shutdown_reserved(&reservation)?;
+    supervisor.route_refresh_for_test(
+        repo_id,
+        reservation.generation(),
+        WatcherRefresh::new(repo_id, "late.md", WatcherRefreshKind::Modified, false),
+    )?;
+    supervisor.discard_deferred(&reservation)?;
+    supervisor.finalize_removed(reservation)?;
+    assert!(refreshes.lock().expect("refreshes").is_empty());
+    assert!(matches!(
+        supervisor.snapshot(repo_id),
+        Err(WatcherLifecycleError::Missing(id)) if id == repo_id
+    ));
+
+    let new_repo = RepoId::new_v4();
+    let failed = supervisor.reserve_new(new_repo)?;
+    supervisor.fail_for_test(
+        new_repo,
+        failed.generation(),
+        WatcherFailure::new(
+            WatcherFailurePhase::Worker,
+            WatcherFailureKind::Backend,
+            "injected terminal failure",
+        ),
+    )?;
+    let snapshot = supervisor.snapshot(new_repo)?;
+    assert_eq!(snapshot.state(), RepoMountState::Failed);
+    assert!(snapshot.failure().is_some());
+    supervisor.finalize_removed(failed)?;
+    supervisor.shutdown()?;
+    Ok(())
+}
+
+#[test]
+fn supervisor_can_be_arc_shared_without_cloning_handle_ownership() -> anyhow::Result<()> {
+    let (_dir, _repo, sync, repo_name, repo_id) = fixture()?;
+    let supervisor = Arc::new(WatcherSupervisor::start_all(
+        vec![RepoWatcherStart::resolve(sync, &repo_name, 1)?],
+        no_op_publisher(),
+    )?);
+    let observer = supervisor.clone();
+
+    assert_eq!(observer.snapshot(repo_id)?.generation(), 1);
+    supervisor.shutdown()?;
+    assert!(observer.view().admit(repo_id).is_err());
     Ok(())
 }

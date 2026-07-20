@@ -1,20 +1,20 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use crate::server::{security, tree_state::RepoTreeRegistry, AppState};
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let repo =
+        crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base, 10)?
+            .repo;
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok((
@@ -53,11 +53,11 @@ pub(super) fn default_workspace_root(dir: &TempDir) -> std::path::PathBuf {
     let locator = value["locators"]
         .as_array()
         .expect("projection locators")
-        .iter()
-        .find(|locator| locator["repo_name_hint"].as_str() == Some("default"))
+        .first()
         .expect("default repo locator");
-    base.join(format!(
-        "default--{}",
-        locator["repo_id"].as_str().expect("repo id")
-    ))
+    base.join(
+        locator["workspace_segment"]
+            .as_str()
+            .expect("workspace segment"),
+    )
 }

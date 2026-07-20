@@ -9,7 +9,11 @@ use tempfile::TempDir;
 #[test]
 fn append_local_structure_batch_rolls_back_prefix_on_failure() -> Result<()> {
     let tmp_dir = TempDir::new()?;
-    let repo = RepoManager::init(tmp_dir.path().join("ledger"), 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &tmp_dir.path().join("ledger"),
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     let ops = vec![
         StructureOp::CreateDir {
             node_id: NodeId::new(),
@@ -42,7 +46,11 @@ fn append_local_structure_batch_rolls_back_prefix_on_failure() -> Result<()> {
 #[test]
 fn append_local_structure_batch_rolls_back_on_projection_failure() -> Result<()> {
     let tmp_dir = TempDir::new()?;
-    let repo = RepoManager::init(tmp_dir.path().join("ledger"), 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &tmp_dir.path().join("ledger"),
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     let (doc_id, _) =
         repo.apply_file_structure_in_local_repo(repo.local_repo_name(), "old.md", None, "test")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

@@ -14,9 +14,9 @@ use tokio::sync::mpsc;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let doc_id = seed_doc(&h.state, "default", "notes/idempotent.md")?;
+    let doc_id = seed_doc(&h.state, &h.default_repo_name, "notes/idempotent.md")?;
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("default", h.default_repo_id, 43);
+    let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 43);
 
     send_insert(&h.state, &ch, &mut session, doc_id, 0).await;
     let first_ack = recv_ack_with_seq(&mut uni_rx).await;
@@ -27,7 +27,7 @@ async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Re
     let found = h
         .state
         .repo
-        .find_client_op_in_local_repo("default", 7, 9)?
+        .find_client_op_in_local_repo(&h.default_repo_name, 7, 9)?
         .expect("client op index entry");
     assert_eq!(found.1.origin_peer_id, *h.state.repo.local_peer_id());
     assert!(found.1.peer_seq.get() > 0);
@@ -38,15 +38,15 @@ async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Re
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicate_client_op_across_docs_returns_original_ack() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let first_doc = seed_doc(&h.state, "default", "notes/first.md")?;
-    let second_doc = seed_doc(&h.state, "default", "notes/second.md")?;
+    let first_doc = seed_doc(&h.state, &h.default_repo_name, "notes/first.md")?;
+    let second_doc = seed_doc(&h.state, &h.default_repo_name, "notes/second.md")?;
     let second_doc_ops_before = h
         .state
         .repo
-        .get_local_ops_in_local_repo("default", second_doc)?
+        .get_local_ops_in_local_repo(&h.default_repo_name, second_doc)?
         .len();
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("default", h.default_repo_id, 45);
+    let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 45);
 
     send_insert(&h.state, &ch, &mut session, first_doc, 0).await;
     let first_ack = recv_ack_with_seq(&mut uni_rx).await;
@@ -58,7 +58,7 @@ async fn duplicate_client_op_across_docs_returns_original_ack() -> anyhow::Resul
     assert_eq!(
         h.state
             .repo
-            .get_local_ops_in_local_repo("default", second_doc)?
+            .get_local_ops_in_local_repo(&h.default_repo_name, second_doc)?
             .len(),
         second_doc_ops_before,
         "second document must not receive another op for a reused client op id"
@@ -69,15 +69,14 @@ async fn duplicate_client_op_across_docs_returns_original_ack() -> anyhow::Resul
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicate_client_op_with_different_op_is_rejected() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let doc_id = seed_doc(&h.state, "default", "notes/conflict.md")?;
+    let doc_id = seed_doc(&h.state, &h.default_repo_name, "notes/conflict.md")?;
     let (ch, mut uni_rx) = unicast_channel(&h.state);
-    let mut session = writer_browser_session("default", h.default_repo_id, 47);
+    let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 47);
 
     send_insert(&h.state, &ch, &mut session, doc_id, 0).await;
     let first_ack = recv_ack_with_seq(&mut uni_rx).await;
     send_insert(&h.state, &ch, &mut session, doc_id, 1).await;
-    let (scope_nonce, rejected_doc_id, client_op_id, error) =
-        recv_edit_rejected(&mut uni_rx).await;
+    let (scope_nonce, rejected_doc_id, client_op_id, error) = recv_edit_rejected(&mut uni_rx).await;
 
     assert_eq!(scope_nonce, 47);
     assert_eq!(rejected_doc_id, doc_id);
@@ -94,7 +93,7 @@ async fn duplicate_client_op_with_different_op_is_rejected() -> anyhow::Result<(
     let found = h
         .state
         .repo
-        .find_client_op_in_local_repo("default", 7, 9)?
+        .find_client_op_in_local_repo(&h.default_repo_name, 7, 9)?
         .expect("client op index entry");
     assert_eq!(found.0, first_ack.seq);
     Ok(())

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::super::support::{ProxyHarness, seed_pending};
+use super::super::support::{seed_pending, ProxyHarness};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};

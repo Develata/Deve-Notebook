@@ -8,9 +8,8 @@ fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)
+        .expect("init cataloged repo");
     (dir, repo)
 }
 

@@ -15,11 +15,12 @@ fn ngit_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo_root = cataloged.workspace_root.clone();
     {
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
+        let repo = cataloged.repo;
         init_git_repo(&repo_root);
         commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -29,18 +30,16 @@ fn ngit_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result
     write_workspace_file(&repo_root, "note.md", "hello import\n");
     write_workspace_file(&repo_root, "new.md", "new file\n");
 
-    ngit::import(&ledger_dir, Some("default"), false, 10)?;
+    ngit::import(&ledger_dir, Some(&repo_name), false, 10)?;
     {
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let pending = repo.list_pending_fs_in_local_repo("default")?;
+        let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
+        let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
         assert!(pending.is_empty(), "{pending:?}");
     }
 
-    ngit::import(&ledger_dir, Some("default"), true, 10)?;
-    let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    ngit::import(&ledger_dir, Some(&repo_name), true, 10)?;
+    let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
     assert_eq!(pending.len(), 2, "{pending:?}");
     assert!(
         pending
@@ -62,11 +61,12 @@ fn ngit_import_command_apply_blocker_prevents_partial_pending_writes() -> Result
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo_root = cataloged.workspace_root.clone();
     {
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
+        let repo = cataloged.repo;
         init_git_repo(&repo_root);
         commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -76,10 +76,9 @@ fn ngit_import_command_apply_blocker_prevents_partial_pending_writes() -> Result
     write_workspace_file(&repo_root, "note.md", "hello import\n");
     write_workspace_file(&repo_root, "new.md", "new file\n");
     {
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
         let doc_id = repo.get_docid("note.md")?;
-        repo.run_on_local_repo("default", |db| {
+        repo.run_on_local_repo(&repo_name, |db| {
             pending_fs::upsert(
                 db,
                 &PendingFsEntry {
@@ -95,11 +94,10 @@ fn ngit_import_command_apply_blocker_prevents_partial_pending_writes() -> Result
         })?;
     }
 
-    ngit::import(&ledger_dir, Some("default"), true, 10)?;
+    ngit::import(&ledger_dir, Some(&repo_name), true, 10)?;
 
-    let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
     assert_eq!(pending.len(), 1, "{pending:?}");
     assert_eq!(pending[0].path, "note.md");
     assert!(!pending.iter().any(|entry| entry.path == "new.md"));
@@ -111,11 +109,12 @@ fn ngit_import_apply_rejects_broken_workspace_identity() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo_root = cataloged.workspace_root.clone();
     {
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
+        let repo = cataloged.repo;
         init_git_repo(&repo_root);
         commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -125,13 +124,12 @@ fn ngit_import_apply_rejects_broken_workspace_identity() -> Result<()> {
     write_workspace_file(&repo_root, "note.md", "hello import\n");
     corrupt_workspace_identity(&repo_root)?;
 
-    let err = ngit::import(&ledger_dir, Some("default"), true, 10)
+    let err = ngit::import(&ledger_dir, Some(&repo_name), true, 10)
         .expect_err("git import --apply must reject a broken workspace identity");
 
     assert_identity_gate_error(&err);
-    let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
     assert!(pending.is_empty(), "{pending:?}");
     Ok(())
 }
@@ -141,17 +139,15 @@ fn ngit_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    let repo_root = {
-        let mut repo = repo;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo.ensure_local_repo_workspace_identity("default")?
-    };
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo_root = cataloged.workspace_root.clone();
+    drop(cataloged);
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let imported_commit_id =
         resolve_imported_change_to_queued_commit(&ledger_dir, &projection_base)?;
 
-    ngit::export(&ledger_dir, Some("default"), false, 10)?;
+    ngit::export(&ledger_dir, Some(&repo_name), false, 10)?;
     assert_clean_resolved_import_export(
         &ledger_dir,
         &projection_base,
@@ -186,12 +182,10 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    let repo_root = {
-        let mut repo = repo;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo.ensure_local_repo_workspace_identity("default")?
-    };
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    let repo_root = cataloged.workspace_root.clone();
+    drop(cataloged);
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let remote = dir.path().join("remote.git");
     init_bare_remote(&remote);
@@ -206,7 +200,7 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         resolve_imported_change_to_queued_commit(&ledger_dir, &projection_base)?;
     ngit::push(
         &ledger_dir,
-        Some("default"),
+        Some(&repo_name),
         Some("origin"),
         Some(&branch),
         10,
@@ -220,7 +214,7 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         &["rev-parse", "--verify", &branch_ref]
     ));
 
-    ngit::export(&ledger_dir, Some("default"), false, 10)?;
+    ngit::export(&ledger_dir, Some(&repo_name), false, 10)?;
     let git_commit_id = assert_clean_resolved_import_export(
         &ledger_dir,
         &projection_base,
@@ -231,7 +225,7 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     write_workspace_file(&repo_root, "dirty.md", "dirty\n");
     ngit::push(
         &ledger_dir,
-        Some("default"),
+        Some(&repo_name),
         Some("origin"),
         Some(&branch),
         10,
@@ -247,7 +241,7 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     std::fs::remove_file(repo_root.join("dirty.md"))?;
     ngit::push(
         &ledger_dir,
-        Some("default"),
+        Some(&repo_name),
         Some("origin"),
         Some(&branch),
         10,

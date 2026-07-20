@@ -15,13 +15,13 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
     write_workspace_file(&dir, "notes/a.md", "hello");
     state
         .repo
-        .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
+        .apply_file_structure_in_local_repo(state.repo.local_repo_name(), "notes/a.md", None, "test")?;
     let tracked_doc_id = state.repo.get_docid("notes/a.md")?.expect("tracked doc id");
     state
         .repo
         .local_fact_writer(FactActor::new("test")?)
         .append_content_in_local_repo(
-            "default",
+            state.repo.local_repo_name(),
             tracked_doc_id,
             Op::Insert {
                 pos: 0,
@@ -30,13 +30,13 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
             1,
         )?;
     state.repo.apply_file_delete_structure_in_local_repo(
-        "default",
+        state.repo.local_repo_name(),
         "notes/a.md",
         Some(tracked_doc_id),
         "test",
     )?;
     let (reused_doc_id, _ops) = state.repo.apply_file_structure_in_local_repo(
-        "default",
+        state.repo.local_repo_name(),
         "notes/reused.md",
         None,
         "test",
@@ -45,7 +45,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         .repo
         .local_fact_writer(FactActor::new("test")?)
         .append_content_in_local_repo(
-            "default",
+            state.repo.local_repo_name(),
             reused_doc_id,
             Op::Insert {
                 pos: 0,
@@ -60,7 +60,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(19));
-    session.switch_repo("default".into(), None);
+    session.switch_repo(state.repo.local_repo_name().to_string(), state.repo.get_repo_info()?.map(|info| info.uuid));
 
     handle_get_doc_diff(
         &state,
@@ -70,7 +70,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(tracked_doc_id),
-        domain: None,
+            domain: None,
         },
     )
     .await;

@@ -5,8 +5,8 @@ pub(super) use super::super::source_control_test_support::ProxyHarness;
 use deve_core::ledger::RepoManager;
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use tempfile::TempDir;
 
 pub(super) fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &str) {
@@ -19,7 +19,8 @@ pub(super) fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus,
             change_type: status,
             content_hash: pending_fs::content_hash(content),
             detected_at: 1,
-            has_conflict: false,        },
+            has_conflict: false,
+        },
     );
 }
 
@@ -40,7 +41,8 @@ pub(super) fn seed_tracked_rename(
             change_type: ChangeStatus::Added,
             content_hash: pending_fs::content_hash(content),
             detected_at: 1,
-            has_conflict: false,        },
+            has_conflict: false,
+        },
     );
 }
 
@@ -68,13 +70,14 @@ fn workspace_root(dir: &TempDir, repo_name: &str) -> std::path::PathBuf {
     let locator = value["locators"]
         .as_array()
         .expect("projection locators")
-        .iter()
-        .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_name))
+        .first()
         .expect("repo locator");
-    base.join(format!(
-        "{repo_name}--{}",
-        locator["repo_id"].as_str().expect("repo id")
-    ))
+    let _ = repo_name;
+    base.join(
+        locator["workspace_segment"]
+            .as_str()
+            .expect("workspace segment"),
+    )
 }
 
 fn seed_pending_entry(repo: &RepoManager, entry: PendingFsEntry) {
@@ -90,5 +93,6 @@ fn rename_deleted_entry(doc_id: DocId, path: &str) -> PendingFsEntry {
         change_type: ChangeStatus::Deleted,
         content_hash: String::new(),
         detected_at: 1,
-        has_conflict: false,    }
+        has_conflict: false,
+    }
 }

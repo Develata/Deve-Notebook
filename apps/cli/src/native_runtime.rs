@@ -12,7 +12,6 @@ use crate::server::{
 use anyhow::Context;
 use deve_core::config::{AppProfile, P2pConfig, SyncMode};
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::init::RepoInitOptions;
 use deve_core::plugin::loader::PluginLoader;
 use deve_core::plugin::runtime::PluginRuntime;
 use std::net::TcpListener;
@@ -140,20 +139,44 @@ pub fn init_default_native_backend(
     std::fs::create_dir_all(&projection_base)
         .with_context(|| format!("Failed to create native projection base {projection_base:?}"))?;
 
-    let repo = RepoManager::init_with_options(
-        &ledger_dir,
-        snapshot_depth,
-        Some(NATIVE_DEFAULT_REPO_NAME),
-        RepoInitOptions {
-            repo_id: None,
-            repo_url: None,
-        },
-    )?;
-    repo.set_projection_base_for_local_repo(NATIVE_DEFAULT_REPO_NAME, &projection_base)?;
-    let workspace_root = repo.local_repo_workspace_root(NATIVE_DEFAULT_REPO_NAME)?;
-    std::fs::create_dir_all(&workspace_root)
-        .with_context(|| format!("Failed to create native workspace root {workspace_root:?}"))?;
-    let workspace_root = repo.ensure_local_repo_workspace_identity(NATIVE_DEFAULT_REPO_NAME)?;
+    // Bootstrap decision comes from durable catalog membership, probed without
+    // creating any repo database. A bare `RepoManager::init` repo would stay
+    // uncataloged and therefore invisible to catalog-backed resolution. A
+    // missing ledger root is a first boot: zero cataloged repos.
+    let existing = if ledger_dir.exists() {
+        deve_core::ledger::normal_catalog_ids_for_ledger(&ledger_dir)?
+    } else {
+        Vec::new()
+    };
+    let (repo, workspace_root) = match existing.as_slice() {
+        [] => {
+            let report = crate::repo_init::initialize_initial_local_repo_workspace(
+                &ledger_dir,
+                NATIVE_DEFAULT_REPO_NAME,
+                &projection_base,
+                snapshot_depth,
+                None,
+                None,
+            )?;
+            let repo = RepoManager::init_existing_for_repo_id(
+                &ledger_dir,
+                snapshot_depth,
+                report.repo_id,
+            )?;
+            (repo, report.workspace_root)
+        }
+        [repo_id] => {
+            let repo =
+                RepoManager::init_existing_for_repo_id(&ledger_dir, snapshot_depth, *repo_id)?;
+            let workspace_root =
+                repo.check_projection_locator_for_local_repo(&repo_id.to_string())?;
+            (repo, workspace_root)
+        }
+        _ => anyhow::bail!(
+            "native default backend requires exactly one cataloged local repo, found {}",
+            existing.len()
+        ),
+    };
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(&ledger_dir))
         .with_context(|| format!("Failed to create native host key dir under {ledger_dir:?}"))?;
@@ -385,10 +408,29 @@ mod tests {
         let gitignore =
             std::fs::read_to_string(layout.workspace_root.join(".gitignore")).expect("gitignore");
         assert!(gitignore.lines().any(|line| line.trim() == ".notegit/"));
-        assert!(
-            repo.get_repo_info_for(None, Some(NATIVE_DEFAULT_REPO_NAME))
-                .expect("repo lookup")
-                .is_some()
+        let summaries = repo
+            .list_cataloged_local_repo_summaries()
+            .expect("catalog listing");
+        assert_eq!(summaries.len(), 1, "native backend catalogs one repo");
+        let alias = repo
+            .host_repo_alias_runtime()
+            .binding(summaries[0].repo_id)
+            .expect("alias lookup");
+        assert_eq!(
+            alias.alias, NATIVE_DEFAULT_REPO_NAME,
+            "initial alias binds the native default display name"
+        );
+
+        // Reopen must reuse the cataloged repo instead of creating another.
+        drop(repo);
+        let (repo, second_layout) =
+            init_default_native_backend(dir.path(), 8).expect("reopen native backend");
+        assert_eq!(second_layout.workspace_root, layout.workspace_root);
+        assert_eq!(
+            repo.list_cataloged_local_repo_summaries()
+                .expect("catalog listing after reopen")
+                .len(),
+            1
         );
     }
 

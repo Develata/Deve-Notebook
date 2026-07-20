@@ -13,7 +13,9 @@ use crate::protocol::ProjectionRecoveryRequired;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
-use crate::protocol::{RemoteImportResponse, RemoteProjectionPushResponse};
+use crate::protocol::{
+    RemoteImportResponse, RemoteProjectionPushResponse, RepoControlResponse, RepoReadiness,
+};
 use crate::security::EncryptedOp;
 use crate::source_control::diff_projection::DiffProjection;
 use crate::source_control::{ChangeEntry, CommitFileDiffSummary, CommitInfo, ExternalApplyReceipt};
@@ -23,11 +25,13 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RepoListEntry {
     pub repo_id: RepoId,
-    pub name: String,
-    pub execution_name: String,
+    pub display_alias: String,
+    pub alias_revision: u64,
+    pub readiness: RepoReadiness,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[rustfmt::skip]
 pub enum ServerMessage {
     Pong,
@@ -51,9 +55,9 @@ pub enum ServerMessage {
     MergeComplete { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, merged_count: u32 },
     PendingDiscarded { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64> },
     ShadowList { #[serde(default)] request_id: Option<String>, #[serde(default)] scope_nonce: Option<u64>, shadows: Vec<String> },
-    RepoList { #[serde(default)] request_id: Option<String>, #[serde(default)] branch: Option<String>, #[serde(default)] scope_nonce: Option<u64>, repos: Vec<String>, #[serde(default)] repo_entries: Vec<RepoListEntry> },
+    RepoList { #[serde(default)] request_id: Option<String>, #[serde(default)] branch: Option<String>, #[serde(default)] scope_nonce: Option<u64>, repo_entries: Vec<RepoListEntry> },
     BranchSwitched { peer_id: Option<String>, success: bool, #[serde(default)] switch_nonce: Option<u64> },
-    RepoSwitched { #[serde(default)] branch: Option<String>, name: String, uuid: String, #[serde(default)] switch_nonce: Option<u64> },
+    RepoSwitched { #[serde(default)] branch: Option<String>, repo_id: RepoId, display_alias: String, #[serde(default)] switch_nonce: Option<u64>, scope_nonce: ScopeNonce },
     PeerDeleted { peer_id: String, #[serde(default)] scope_nonce: Option<u64> },
     EditRejected { scope_nonce: ScopeNonce, doc_id: DocId, client_op_id: u64, error: ServerError },
     ChangesList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, staged: Vec<ChangeEntry>, unstaged: Vec<ChangeEntry>, #[serde(default)] confirmed: Vec<ChangeEntry> },
@@ -77,4 +81,5 @@ pub enum ServerMessage {
     SystemMetrics { cpu_usage_percent: f32, memory_used_mb: u64, active_connections: u32, ops_processed: u64, uptime_secs: u64, db_size_bytes: u64, doc_count: u32 },
     RemoteImport(RemoteImportResponse),
     RemoteProjectionPush(RemoteProjectionPushResponse),
+    RepoControl(RepoControlResponse),
 }

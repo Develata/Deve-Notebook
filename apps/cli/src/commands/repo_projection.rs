@@ -32,7 +32,7 @@ pub fn list(ledger_dir: &Path, snapshot_depth: usize) -> Result<()> {
     for locator in repo.list_projection_locators()? {
         println!(
             "{} {} {:?}",
-            locator.repo_id, locator.repo_name_hint, locator.projection_base_abs
+            locator.repo_id, locator.workspace_segment, locator.projection_base_abs
         );
     }
     Ok(())
@@ -130,11 +130,15 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()?;
         workspaces.sort();
         assert_eq!(workspaces.len(), 1);
+        // Workspace segment is the bare canonical RepoId (no "default--" alias
+        // prefix); "default" is only a host-local display alias now.
+        let segment = workspaces[0]
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("workspace segment name");
         assert!(
-            workspaces[0]
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with("default--"))
+            uuid::Uuid::parse_str(segment).is_ok(),
+            "workspace segment must be a bare RepoId: {segment}"
         );
         assert!(workspaces[0].join(".notegit").is_dir());
         Ok(())
@@ -146,21 +150,21 @@ mod tests {
         let ledger = dir.path().join("ledger");
         let first = dir.path().join("first");
         let second = dir.path().join("second");
-        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-        repo.set_projection_base_for_local_repo("default", &first)?;
+        let cataloged = crate::test_support::init_cataloged_repo(&ledger, &first, 8)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
+        let repo_id = cataloged.repo_id;
+        drop(cataloged);
 
-        set(&ledger, "default", &second, 8)?;
+        set(&ledger, &repo_name, &second, 8)?;
         list(&ledger, 8)?;
-        check(&ledger, "default", 8)?;
+        check(&ledger, &repo_name, 8)?;
 
         let reopened = RepoManager::init(&ledger, 8, None, None)?;
-        let workspace = reopened.local_repo_workspace_root("default")?;
+        let workspace = reopened.local_repo_workspace_root(&repo_name)?;
+        // Workspace segment is the bare RepoId.
         assert_eq!(
             workspace,
-            std::fs::canonicalize(&second)?.join(format!(
-                "default--{}",
-                reopened.get_repo_info()?.expect("default repo").uuid
-            ))
+            std::fs::canonicalize(&second)?.join(repo_id.to_string())
         );
         assert!(workspace.join(".notegit").is_dir());
         assert!(workspace.join(".gitignore").is_file());
@@ -172,10 +176,15 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let base = dir.path().join("notes");
-        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-        repo.set_projection_base_for_local_repo("default", &base)?;
+        // Catalog the repo, then remove exactly the workspace root so the
+        // projection check fails closed on the missing directory.
+        let cataloged = crate::test_support::init_cataloged_repo(&ledger, &base, 8)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
+        let workspace_root = cataloged.workspace_root.clone();
+        drop(cataloged);
+        std::fs::remove_dir_all(&workspace_root)?;
 
-        let err = check(&ledger, "default", 8)
+        let err = check(&ledger, &repo_name, 8)
             .expect_err("projection check must verify workspace root exists");
         assert!(
             err.to_string()
@@ -190,26 +199,22 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let base = dir.path().join("notes");
-        let repo = Arc::new(RepoManager::init(
-            &ledger,
-            8,
-            Some("default"),
-            Some("urn:default"),
-        )?);
-        repo.set_projection_base_for_local_repo("default", &base)?;
-        SyncManager::new_checked(repo.clone())?.materialize_local_repo("default")?;
-        let root = repo.local_repo_workspace_root("default")?;
+        let cataloged = crate::test_support::init_cataloged_repo(&ledger, &base, 8)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
+        let repo = Arc::new(cataloged.repo);
+        SyncManager::new_checked(repo.clone())?.materialize_local_repo(&repo_name)?;
+        let root = repo.local_repo_workspace_root(&repo_name)?;
         std::fs::write(root.join("extra.md"), "extra\n")?;
 
         let report = deve_core::sync::drift_detect::detect_repo_drift_at_workspace_root(
             repo.as_ref(),
-            "default",
+            &repo_name,
             &root,
         )?;
         assert_eq!(report.unexplained.len(), 1);
         assert_eq!(report.unexplained[0].path, "extra.md");
 
-        drift(&ledger, "default", Some(&root), 8)?;
+        drift(&ledger, &repo_name, Some(&root), 8)?;
         Ok(())
     }
 }

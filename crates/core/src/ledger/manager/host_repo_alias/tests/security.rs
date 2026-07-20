@@ -7,7 +7,7 @@ use super::*;
 fn malformed_container_and_global_budgets_fail_the_whole_import() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("default"), None)?;
+    let repo = init_alias_repo(&dir.path().join("ledger"))?;
     let runtime = repo.host_repo_alias_runtime();
 
     assert!(runtime.preview_import_json(b"not-json").is_err());
@@ -33,7 +33,7 @@ fn corrupt_store_fails_closed_without_overwriting_it() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let store_path = crate::utils::notegit::host_dir(&ledger).join("repo-aliases.json");
     std::fs::write(&store_path, b"{broken")?;
@@ -48,20 +48,22 @@ fn corrupt_store_fails_closed_without_overwriting_it() -> anyhow::Result<()> {
 }
 
 #[test]
-fn corrupt_removed_registry_is_a_global_failure_and_preserves_alias_store() -> anyhow::Result<()> {
+fn corrupt_catalog_record_is_a_global_failure_and_preserves_alias_store() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    RepoManager::init(&ledger, 8, Some("research"), None)?;
+    let repo = init_alias_repo(&ledger)?;
+    init_alias_repo(&ledger)?;
     let ids = repo_ids(&repo)?;
     let runtime = repo.host_repo_alias_runtime();
     runtime.set_alias(ids[0], "before", 0)?;
     let store_path = crate::utils::notegit::host_dir(&ledger).join("repo-aliases.json");
     let before = std::fs::read(&store_path)?;
     std::fs::write(
-        crate::utils::notegit::host_dir(&ledger).join(LEGACY_REMOVED_REPOS_FILE),
-        b"not valid toml = [",
+        crate::utils::notegit::host_dir(&ledger)
+            .join("repo-catalog")
+            .join(format!("{}.json", ids[1])),
+        b"not-json",
     )?;
     let input = import_document(vec![
         json!({"repo_id": ids[0], "alias": "after"}),
@@ -77,20 +79,21 @@ fn corrupt_removed_registry_is_a_global_failure_and_preserves_alias_store() -> a
 }
 
 #[test]
-fn oversized_removed_registry_is_a_global_failure_and_preserves_alias_store() -> anyhow::Result<()>
-{
+fn oversized_catalog_record_is_a_global_failure_and_preserves_alias_store() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let runtime = repo.host_repo_alias_runtime();
     runtime.set_alias(repo_id, "before", 0)?;
     let store_path = crate::utils::notegit::host_dir(&ledger).join("repo-aliases.json");
     let before = std::fs::read(&store_path)?;
     std::fs::write(
-        crate::utils::notegit::host_dir(&ledger).join(LEGACY_REMOVED_REPOS_FILE),
-        vec![b'x'; LEGACY_REMOVED_REPOS_MAX_BYTES as usize + 1],
+        crate::utils::notegit::host_dir(&ledger)
+            .join("repo-catalog")
+            .join(format!("{repo_id}.json")),
+        vec![b'x'; 16 * 1024 + 1],
     )?;
     let input = import_document(vec![json!({"repo_id": repo_id, "alias": "after"})]);
 
@@ -103,11 +106,12 @@ fn oversized_removed_registry_is_a_global_failure_and_preserves_alias_store() ->
 }
 
 #[test]
-fn one_broken_repo_is_an_admission_warning_not_a_whole_import_failure() -> anyhow::Result<()> {
+fn unregistered_repo_file_is_an_unknown_repo_warning_not_a_whole_import_failure()
+-> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let good = repo.get_repo_info()?.expect("repo info").uuid;
     let broken = RepoId::new_v4();
     std::fs::write(
@@ -125,18 +129,18 @@ fn one_broken_repo_is_an_admission_warning_not_a_whole_import_failure() -> anyho
     assert_eq!(summary.warnings[0].repo_id, Some(broken));
     assert_eq!(
         summary.warnings[0].reason,
-        HostRepoAliasImportWarningReason::AdmissionFailed
+        HostRepoAliasImportWarningReason::UnknownLocalRepo
     );
     assert_eq!(repo.host_repo_alias_runtime().binding(good)?.alias, "good");
     Ok(())
 }
 
 #[test]
-fn one_cached_repo_with_invalid_schema_is_still_an_admission_warning() -> anyhow::Result<()> {
+fn unregistered_cached_repo_is_still_an_unknown_repo_warning() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+    let repo = init_alias_repo(&ledger)?;
     let good = repo.get_repo_info()?.expect("repo info").uuid;
     let broken = RepoId::new_v4();
     let broken_path = ledger.join("local").join(format!("{broken}.redb"));
@@ -152,7 +156,7 @@ fn one_cached_repo_with_invalid_schema_is_still_an_admission_warning() -> anyhow
     assert_eq!(summary.skipped, 1);
     assert_eq!(
         summary.warnings[0].reason,
-        HostRepoAliasImportWarningReason::AdmissionFailed
+        HostRepoAliasImportWarningReason::UnknownLocalRepo
     );
     assert_eq!(repo.host_repo_alias_runtime().binding(good)?.alias, "good");
     crate::ledger::database_cache::evict_database_paths_under(&ledger)?;
@@ -168,7 +172,7 @@ fn alias_store_and_lock_symlinks_are_rejected_without_touching_targets() -> anyh
         let _guard = crate::test_support::local_repo_catalog_test_guard();
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
-        let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
+        let repo = init_alias_repo(&ledger)?;
         let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
         let victim = dir.path().join(victim_name);
         std::fs::write(&victim, b"do-not-touch")?;
@@ -190,7 +194,7 @@ fn alias_store_and_lock_symlinks_are_rejected_without_touching_targets() -> anyh
 fn all_import_budget_dimensions_fail_closed() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("default"), None)?;
+    let repo = init_alias_repo(&dir.path().join("ledger"))?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let runtime = repo.host_repo_alias_runtime();
     let too_many = import_document(

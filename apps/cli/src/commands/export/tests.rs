@@ -59,7 +59,9 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) {
 fn markdown_export_supports_single_doc_output() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let repo = crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"), 8)
+        .expect("init repo")
+        .repo;
     let doc_id = seed_doc(&repo, "notes/a.md", "hello export");
     let output = dir.path().join("single.md");
 
@@ -85,7 +87,9 @@ fn markdown_export_supports_single_doc_output() {
 fn markdown_export_preserves_user_frontmatter_without_system_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let repo = crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"), 8)
+        .expect("init repo")
+        .repo;
     let content = "---\ntitle: User Note\n---\nbody";
     let doc_id = seed_doc(&repo, "notes/frontmatter.md", content);
     let output = dir.path().join("frontmatter.md");
@@ -137,7 +141,9 @@ fn json_export_rejects_single_doc_selector() {
 fn markdown_export_requires_explicit_degraded_projection_flag() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let repo = crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"), 8)
+        .expect("init repo")
+        .repo;
     seed_doc(&repo, "notes/a.md", "safe content");
     let orphan_doc = DocId::new();
     append_unvalidated(

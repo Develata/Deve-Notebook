@@ -135,7 +135,12 @@ fn append_generated_op_rejects_structure_entries() -> Result<()> {
 }
 
 fn init_repo(root: &std::path::Path) -> Result<RepoManager> {
-    RepoManager::init(root.join("ledger"), 2, None, None)
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &root.join("ledger"),
+        &root.join("notes"),
+        2,
+    )?;
+    Ok(repo)
 }
 
 fn append_client_op(

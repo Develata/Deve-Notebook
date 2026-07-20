@@ -8,11 +8,11 @@ use crate::server::{
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tokio::time::{Duration, timeout};
+use tokio::time::{timeout, Duration};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyhow::Result<()> {
@@ -33,7 +33,8 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,                },
+                    has_conflict: false,
+                },
             )
         })?;
     state.repo.stage_pending("notes/stale.md")?;
@@ -64,24 +65,20 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
         .expect("stale scope error")
     {
         ServerMessage::ProtocolError {
-            error,
-            scope_nonce,
-            ..
+            error, scope_nonce, ..
         } => {
             assert_eq!(error.code, ServerErrorCode::ScStaleScope);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("source control live writer binding"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("source control live writer binding")));
             assert_eq!(scope_nonce, Some(29));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
     assert_eq!(state.repo.list_commits(10)?.len(), before_commits);
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo.as_deref(), Some(state.repo.local_repo_name()));
     assert_eq!(session.active_repo_id, Some(default_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());

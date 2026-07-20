@@ -25,13 +25,11 @@ async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Res
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
-    assert!(
-        !state
-            .repo
-            .remotes_dir()
-            .join(remote.peer_id().to_filename())
-            .try_exists()?
-    );
+    assert!(!state
+        .repo
+        .remotes_dir()
+        .join(remote.peer_id().to_filename())
+        .try_exists()?);
     Ok(())
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -50,13 +48,11 @@ async fn sync_hello_rejects_invalid_session_proof_before_binding_session() -> an
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
-    assert!(
-        !state
-            .repo
-            .remotes_dir()
-            .join(remote.peer_id().to_filename())
-            .try_exists()?
-    );
+    assert!(!state
+        .repo
+        .remotes_dir()
+        .join(remote.peer_id().to_filename())
+        .try_exists()?);
     Ok(())
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -76,13 +72,11 @@ async fn sync_hello_rejects_peer_pubkey_mismatch_before_binding_session() -> any
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
-    assert!(
-        !state
-            .repo
-            .remotes_dir()
-            .join(remote.peer_id().to_filename())
-            .try_exists()?
-    );
+    assert!(!state
+        .repo
+        .remotes_dir()
+        .join(remote.peer_id().to_filename())
+        .try_exists()?);
     Ok(())
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

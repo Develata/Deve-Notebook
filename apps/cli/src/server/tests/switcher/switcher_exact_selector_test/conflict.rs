@@ -3,23 +3,23 @@
 
 use crate::server::handlers::switcher::handle_switch_repo;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
 use tempfile::tempdir;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_repo_disambiguates_duplicate_remote_display_name_by_repo_id()
--> anyhow::Result<()> {
+async fn switch_repo_disambiguates_duplicate_remote_display_name_by_repo_id() -> anyhow::Result<()>
+{
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let (repo, _default_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &dir.path().join("ledger"),
+        "default",
+        &projection_base,
         10,
-        Some("default"),
         Some("urn:default"),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let first = RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -53,13 +53,16 @@ async fn switch_repo_disambiguates_duplicate_remote_display_name_by_repo_id()
     match uni_rx.recv().await {
         Some(ServerMessage::RepoSwitched {
             branch,
-            name,
-            uuid,
+            repo_id,
+            display_alias,
             switch_nonce,
+            ..
         }) => {
             assert_eq!(branch.as_deref(), Some(peer_id.as_str()));
-            assert_eq!(name, "wiki");
-            assert_eq!(uuid, second.uuid.to_string());
+            // Remote switches surface the canonical repo UUID as display alias
+            // (host-local display aliases are never synchronized between peers).
+            assert_eq!(display_alias, second.uuid.to_string());
+            assert_eq!(repo_id, second.uuid);
             assert_eq!(switch_nonce, Some(5));
         }
         other => panic!("expected RepoSwitched, got {other:?}"),

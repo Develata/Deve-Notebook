@@ -3,11 +3,11 @@
 //!
 use super::{router, sync_hello_test_support::build_state};
 use deve_core::models::PeerId;
-use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::protocol::frame::{
-    WS_FRAME_MAGIC, WS_PROTOCOL_VERSION, decode_client_binary_frame, decode_server_binary_frame,
-    encode_client_binary,
+    decode_client_binary_frame, decode_server_binary_frame, encode_client_binary, WS_FRAME_MAGIC,
+    WS_PROTOCOL_VERSION,
 };
+use deve_core::protocol::{ClientMessage, ServerMessage};
 use deve_core::security::{AuthConfig, IdentityKeyPair};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use std::net::SocketAddr;
@@ -16,9 +16,9 @@ use tempfile::TempDir;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
-use tokio::time::{Duration, timeout};
+use tokio::time::{timeout, Duration};
 use tokio_tungstenite::tungstenite::{Error as WsError, Message};
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
 pub(super) struct WsHarness {
     _dir: TempDir,
@@ -34,7 +34,9 @@ impl WsHarness {
         Self::spawn_with_anonymous_localhost(true).await
     }
 
-    pub(super) async fn spawn_with_anonymous_localhost(allow_anonymous_localhost: bool) -> anyhow::Result<Self> {
+    pub(super) async fn spawn_with_anonymous_localhost(
+        allow_anonymous_localhost: bool,
+    ) -> anyhow::Result<Self> {
         let (dir, state, repo_id) = build_state()?;
         let local_peer_id = state.identity_key.peer_id();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
@@ -46,7 +48,9 @@ impl WsHarness {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let task = tokio::spawn(async move {
             axum::serve(listener, app)
-                .with_graceful_shutdown(async { let _ = shutdown_rx.await; })
+                .with_graceful_shutdown(async {
+                    let _ = shutdown_rx.await;
+                })
                 .await
                 .expect("serve ws protocol harness");
         });
@@ -86,7 +90,6 @@ where
     send_client_message(
         ws,
         ClientMessage::SwitchRepoExact {
-            name: "notes".into(),
             repo_id,
             switch_nonce: Some(scope_nonce),
         },
@@ -108,7 +111,12 @@ pub(super) async fn expect_sync_hello_and_shadow_list<S>(
 where
     S: Stream<Item = Result<Message, WsError>> + Unpin,
 {
-    assert_sync_hello(recv_server_message(ws).await?, repo_id, scope_nonce, local_peer);
+    assert_sync_hello(
+        recv_server_message(ws).await?,
+        repo_id,
+        scope_nonce,
+        local_peer,
+    );
     assert_shadow_list(recv_server_message(ws).await?, scope_nonce, remote);
     Ok(())
 }
@@ -164,14 +172,16 @@ fn assert_repo_switched(message: ServerMessage, repo_id: uuid::Uuid, scope_nonce
     match message {
         ServerMessage::RepoSwitched {
             branch,
-            name,
-            uuid,
+            repo_id: actual_repo_id,
+            display_alias,
             switch_nonce,
+            scope_nonce: actual_scope_nonce,
         } => {
             assert_eq!(branch, None);
-            assert_eq!(name, "notes");
-            assert_eq!(uuid, repo_id.to_string());
+            assert_eq!(display_alias, "notes");
+            assert_eq!(actual_repo_id, repo_id);
             assert_eq!(switch_nonce, Some(scope_nonce));
+            assert_eq!(actual_scope_nonce.get(), scope_nonce);
         }
         other => panic!("expected RepoSwitched, got {other:?}"),
     }

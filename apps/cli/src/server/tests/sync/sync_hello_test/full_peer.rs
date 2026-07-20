@@ -164,12 +164,10 @@ async fn sync_hello_rejects_duplicate_fullpeer_hello_preserving_sources() -> any
 
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
-    assert!(
-        error
-            .detail
-            .as_deref()
-            .is_some_and(|detail| detail.contains("duplicate SyncHello"))
-    );
+    assert!(error
+        .detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains("duplicate SyncHello")));
     assert_eq!(
         session.authenticated_peer_id.as_ref(),
         Some(&remote.peer_id())

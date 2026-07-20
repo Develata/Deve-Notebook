@@ -2,8 +2,8 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use super::super::support::{
-    ProxyHarness, default_workspace_root, path_target, seed_pending, seed_tracked_rename,
-    write_workspace_file,
+    default_workspace_root, path_target, seed_pending, seed_tracked_rename, write_workspace_file,
+    ProxyHarness,
 };
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
@@ -42,10 +42,7 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     proxy.apply_external_changes_in_repo(&selector)?;
-    proxy.commit_source_control_changes_in_repo(
-        &selector,
-        "initial",
-    )?;
+    proxy.commit_source_control_changes_in_repo(&selector, "initial")?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
@@ -62,7 +59,7 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
     )?;
     assert!(proxy.list_pending_fs_in_repo(&selector)?.is_empty());
@@ -80,10 +77,7 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     repo.apply_external_changes_in_repo(&selector)?;
-    repo.commit_source_control_changes_in_repo(
-        &selector,
-        "initial",
-    )?;
+    repo.commit_source_control_changes_in_repo(&selector, "initial")?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "world");

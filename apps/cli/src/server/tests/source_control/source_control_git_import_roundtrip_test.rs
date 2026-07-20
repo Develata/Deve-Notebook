@@ -8,7 +8,7 @@ use crate::server::{
     handlers::source_control::{handle_commit, handle_resolve_conflict},
     session::WsSession,
 };
-use deve_core::git_bridge::{GitMirrorCommitState, GitMirrorRunOptions, export_mirror, get_record};
+use deve_core::git_bridge::{export_mirror, get_record, GitMirrorCommitState, GitMirrorRunOptions};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::ConflictResolution;
 use tokio::sync::mpsc;
@@ -33,7 +33,7 @@ async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<
         ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(fixture.doc_id),
-        domain: None,
+            domain: None,
         },
         ConflictResolution::KeepFs,
     )
@@ -88,20 +88,16 @@ async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<
             .len(),
         fixture.before_commit_count + 1
     );
-    assert!(
-        fixture
-            .state
-            .repo
-            .list_pending_fs_in_local_repo(&fixture.repo_name)?
-            .is_empty()
-    );
-    assert!(
-        fixture
-            .state
-            .repo
-            .list_staged_in_local_repo(&fixture.repo_name)?
-            .is_empty()
-    );
+    assert!(fixture
+        .state
+        .repo
+        .list_pending_fs_in_local_repo(&fixture.repo_name)?
+        .is_empty());
+    assert!(fixture
+        .state
+        .repo
+        .list_staged_in_local_repo(&fixture.repo_name)?
+        .is_empty());
     fixture
         .state
         .repo

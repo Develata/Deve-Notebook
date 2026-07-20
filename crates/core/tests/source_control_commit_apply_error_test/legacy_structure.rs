@@ -1,4 +1,3 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use tempfile::tempdir;
@@ -6,9 +5,12 @@ use tempfile::tempdir;
 #[test]
 fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
     let dir = tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = crate::common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     let doc_id = DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
@@ -24,7 +26,7 @@ fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
     .expect("seed legacy path mapping");
 
     let err = repo
-        .apply_file_structure_in_local_repo("default", "notes/legacy.md", None, "test")
+        .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/legacy.md", None, "test")
         .expect_err("legacy path binding conflict must fail closed");
     assert!(
         err.to_string().contains("already bound"),
@@ -36,9 +38,12 @@ fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
 #[test]
 fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists() {
     let dir = tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = crate::common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     let doc_id = DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
@@ -55,7 +60,7 @@ fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists
 
     let result = repo
         .apply_file_delete_structure_in_local_repo(
-            "default",
+            repo.local_repo_name(),
             "notes/legacy-delete.md",
             None,
             "test",

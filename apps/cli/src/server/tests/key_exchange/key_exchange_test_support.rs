@@ -3,15 +3,15 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(super) use super::key_exchange_message_test_support::{
@@ -23,9 +23,13 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
     let host_dir = dir.path().join("host");
-    let mut repo = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "notes",
+        &projection_base,
+        10,
+        Some("urn:test:notes"),
+    )?;
     let repo = Arc::new(repo);
     Ok((
         dir,
@@ -64,7 +68,7 @@ pub(super) fn browser_session(scope_nonce: u64) -> WsSession {
 
 pub(super) fn bound_browser_session(repo_id: RepoId, scope_nonce: u64) -> WsSession {
     let mut session = browser_session(scope_nonce);
-    session.switch_repo("notes".into(), Some(repo_id));
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
     session.bind_repo(repo_id);
     session
 }

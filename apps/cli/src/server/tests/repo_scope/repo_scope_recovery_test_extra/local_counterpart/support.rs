@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 
-use crate::server::{AppState, repo_scope::ResolvedRepo};
+use crate::server::{repo_scope::ResolvedRepo, AppState};
 use deve_core::models::PeerId;
 use std::sync::Arc;
 use tempfile::TempDir;

@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::manifest::{Capability, PluginManifest};
 use deve_core::plugin::runtime::host;
@@ -9,6 +8,8 @@ use deve_core::source_control::{
     ChangeEntry, CommitFileDiff, CommitInfo, ExternalApplyReceipt, SourceControlApi,
 };
 use deve_core::sync::SyncManager;
+
+mod common;
 
 #[derive(Default)]
 struct RecordingSourceControlApi;
@@ -150,11 +151,9 @@ fn plugin_sc_commit_uses_ngit_authority_api() {
     let dir = tempfile::tempdir().expect("temp dir");
     let ledger = dir.path().join("ledger");
     let projection = dir.path().join("notes");
-    let mut repo =
-        RepoManager::init(&ledger, 10, Some("default"), Some("urn:default")).expect("repo init");
-    repo.set_projection_base_for_all_local_repos_checked(&projection)
-        .expect("projection base");
-    repo.ensure_local_repo_workspace_identity("default")
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger, &projection, 10).expect("repo init");
+    repo.ensure_local_repo_workspace_identity(repo.local_repo_name())
         .expect("workspace identity");
     let repo = Arc::new(repo);
     let sync = Arc::new(SyncManager::new_checked(repo.clone()).expect("sync manager"));

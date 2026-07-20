@@ -7,11 +7,16 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
@@ -47,9 +52,10 @@ fn seed_ledger_doc(repo: &RepoManager) -> anyhow::Result<DocId> {
 #[test]
 fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = seed_ledger_doc(&repo)?;
-    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
-    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
+    let old_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path(&repo_name, "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -68,7 +74,7 @@ fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
     })?;
 
     let sync = SyncManager::new_checked(repo)?;
-    sync.discard_pending_in_local_repo("default", "notes/b.md")?;
+    sync.discard_pending_in_local_repo(&repo_name, "notes/b.md")?;
 
     assert_eq!(std::fs::read_to_string(old_path)?, "ledger");
     assert!(!new_path.exists());
@@ -78,9 +84,10 @@ fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
 #[test]
 fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = seed_ledger_doc(&repo)?;
-    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
-    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
+    let old_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path(&repo_name, "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -98,7 +105,7 @@ fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> 
         )
     })?;
 
-    repo.discard_pending_in_local_repo("default", "notes/b.md")?;
+    repo.discard_pending_in_local_repo(&repo_name, "notes/b.md")?;
 
     assert_eq!(std::fs::read_to_string(old_path)?, "ledger");
     assert!(!new_path.exists());
@@ -108,14 +115,15 @@ fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> 
 #[test]
 fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,
         "test",
     )?;
-    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
-    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
+    let old_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path(&repo_name, "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -135,7 +143,7 @@ fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
 
     let sync = SyncManager::new_checked(repo)?;
     let resolved = sync.discard_pending_target_in_local_repo(
-        "default",
+        &repo_name,
         &ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),

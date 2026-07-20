@@ -5,8 +5,8 @@ use super::support::{build_state, remote_scope};
 use crate::server::repo_scope::resolve_local_counterpart_repo;
 use deve_core::codec;
 use deve_core::ledger::{
-    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
-    RepoInfo, RepoManager,
+    RepoInfo, REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA,
+    REPO_SCHEMA_VERSION_METADATA_KEY,
 };
 use deve_core::models::PeerId;
 
@@ -14,23 +14,23 @@ use deve_core::models::PeerId;
 fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() -> anyhow::Result<()>
 {
     let (dir, state, _default_id, _test_id) = build_state()?;
-    let mut mirror = RepoManager::init(
-        dir.path().join("ledger"),
+    let mirror_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &state.repo,
+        &dir.path().join("ledger"),
+        "mirror",
+        &dir.path().join("notes"),
         10,
-        Some("mirror"),
         Some("urn:mirror"),
     )?;
-    mirror.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    let mirror_db = mirror.open_database(None, "mirror")?.db;
-    let mirror_info = mirror
-        .get_repo_info_for(None, Some("mirror"))?
-        .expect("mirror info");
+    // Drift the mirror's URL to collide with the "test" repo so the counterpart
+    // scan sees duplicate local owners for `urn:test`.
+    let mirror_db = state.repo.open_database(None, &mirror_id.to_string())?.db;
     let txn = mirror_db.begin_write()?;
     txn.open_table(REPO_METADATA)?.insert(
         &REPO_INFO_METADATA_KEY,
         codec::encode(&RepoInfo {
-            uuid: mirror_info.uuid,
-            name: "mirror".into(),
+            uuid: mirror_id,
+            name: mirror_id.to_string(),
             url: Some("urn:test".into()),
         })?
         .as_slice(),
@@ -53,18 +53,17 @@ fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() 
         &remote_scope(remote_repo_id, "shadow-test", peer_id),
     )
     .expect_err("duplicate local URL owners must fail closed");
-    assert!(
-        err.to_string()
-            .contains("duplicate local repository URL urn:test")
-    );
+    assert!(err
+        .to_string()
+        .contains("duplicate local repository URL urn:test"));
     Ok(())
 }
 
 #[test]
-fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadable()
--> anyhow::Result<()> {
-    let (_dir, state, _default_id, _test_id) = build_state()?;
-    let db = state.repo.open_database(None, "default")?.db;
+fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadable(
+) -> anyhow::Result<()> {
+    let (_dir, state, default_id, _test_id) = build_state()?;
+    let db = state.repo.open_database(None, &default_id.to_string())?.db;
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;

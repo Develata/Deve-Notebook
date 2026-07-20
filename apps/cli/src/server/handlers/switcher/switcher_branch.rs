@@ -121,13 +121,17 @@ pub(super) async fn handle_switch_branch(
             .source_control_write_grants()
             .revoke_session(auth_session_id);
     }
-    commit_session_switch(session, final_branch.clone(), prepared, switch_nonce);
+    if let Err(error) =
+        commit_session_switch(state, session, final_branch.clone(), prepared, switch_nonce)
+    {
+        ch.send_protocol_error_with_switch_nonce(map_repo_scope_error(error), switch_nonce);
+        return;
+    }
     emit::emit_branch_switch_messages(
         ch,
         final_branch,
         scope_nonce,
         switch_nonce,
-        payload.repo_list,
         payload.repo_entries,
         repo_view,
     );

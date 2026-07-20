@@ -10,7 +10,15 @@ use crate::remote_import_runtime::RemoteImportCoordinator;
 use crate::server::diff_projection::DiffProjectionExecutor;
 #[cfg(not(test))]
 use crate::server::repo_mutation::RepoMutationPublicationGate;
-use crate::server::runtime::watcher_runtime::WatcherRuntimeView;
+#[cfg(not(test))]
+use crate::server::runtime::repo_lifecycle_job_runtime::{
+    RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink, RepoLifecycleJobRuntime,
+};
+#[cfg(not(test))]
+use crate::server::runtime::repo_lifecycle_runtime::RepoLifecycleCoordinator;
+#[cfg(not(test))]
+use crate::server::runtime::repo_session_runtime::RepoSessionRuntime;
+use crate::server::runtime::watcher_runtime::{WatcherRuntimeView, WatcherSupervisor};
 #[cfg(not(test))]
 use crate::server::source_control_grants::SourceControlWriteGrants;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
@@ -42,17 +50,54 @@ pub(crate) struct AppStateParts {
     pub search_available: bool,
     pub identity_key: Arc<IdentityKeyPair>,
     pub watcher_runtime: WatcherRuntimeView,
+    pub watcher_supervisor: Arc<WatcherSupervisor>,
 }
 
-pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
+pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppState>> {
     #[cfg(test)]
     let _watcher_runtime = parts.watcher_runtime;
+    #[cfg(test)]
+    let _watcher_supervisor = parts.watcher_supervisor;
+    #[cfg(not(test))]
+    let catalog_membership = parts.repo.catalog_membership_runtime();
     #[cfg(not(test))]
     let remote_import = Arc::new(RemoteImportCoordinator::new(
         parts.repo.clone(),
         parts.sync_manager.clone(),
+        catalog_membership.clone(),
     ));
-    Arc::new(AppState {
+    #[cfg(not(test))]
+    let repo_sessions = RepoSessionRuntime::new(catalog_membership);
+    #[cfg(not(test))]
+    let repo_mutation_gate = Arc::new(RepoMutationPublicationGate::new(
+        parts.watcher_runtime.clone(),
+        parts.repo.claim_repo_catalog_cut_authority()?,
+    ));
+    #[cfg(not(test))]
+    let repo_lifecycle = RepoLifecycleCoordinator::new(
+        parts.repo.clone(),
+        parts.sync_manager.clone(),
+        repo_mutation_gate.clone(),
+        parts.watcher_supervisor.clone(),
+        remote_import.clone(),
+        parts.repo.catalog_membership_runtime(),
+    );
+    #[cfg(not(test))]
+    let repo_lifecycle_jobs = RepoLifecycleJobRuntime::start(
+        parts.repo.ledger_dir(),
+        Arc::new(RepoLifecycleHostExecutor::new(
+            repo_lifecycle.clone(),
+            parts.repo.clone(),
+            parts.watcher_runtime.clone(),
+        )),
+        Arc::new(RepoLifecycleHostPublicationSink::new(
+            parts.repo.clone(),
+            parts.watcher_runtime.clone(),
+            repo_sessions.clone(),
+            parts.tx.clone(),
+        )),
+    )?;
+    Ok(Arc::new(AppState {
         repo: parts.repo,
         sync_manager: parts.sync_manager,
         tx: parts.tx,
@@ -69,8 +114,12 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
         #[cfg(not(test))]
         source_control_write_grants: Arc::new(SourceControlWriteGrants::new()),
         #[cfg(not(test))]
-        repo_mutation_gate: Arc::new(RepoMutationPublicationGate::new(parts.watcher_runtime)),
+        repo_mutation_gate,
         #[cfg(not(test))]
         remote_import,
-    })
+        #[cfg(not(test))]
+        repo_sessions,
+        #[cfg(not(test))]
+        repo_lifecycle_jobs,
+    }))
 }

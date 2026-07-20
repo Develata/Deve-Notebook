@@ -3,7 +3,7 @@
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, recv_server_message, send_client_message,
+    connect_harness, recv_server_message, send_client_message, WsHarness,
 };
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
@@ -70,7 +70,6 @@ async fn ready_ws(harness: &WsHarness, remote: &IdentityKeyPair) -> anyhow::Resu
     send_client_message(
         &mut ws,
         ClientMessage::SwitchRepoExact {
-            name: "notes".into(),
             repo_id: harness.repo_id,
             switch_nonce: Some(SCOPE),
         },

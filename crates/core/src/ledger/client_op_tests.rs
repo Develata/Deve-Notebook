@@ -2,7 +2,6 @@
 //!   - 03_storage/authority#facts-partition
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use super::*;
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
 use crate::models::{DocId, LedgerEntry};
 use anyhow::Result;
@@ -12,7 +11,8 @@ use tempfile::TempDir;
 fn test_find_client_op_in_local_repo() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
     let doc_id = DocId::new();
     let peer_id = repo.local_peer_id().clone();
 
@@ -59,7 +59,8 @@ fn test_find_client_op_in_local_repo() -> Result<()> {
 fn test_client_op_index_is_global_for_client_writer() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
     let first_doc = DocId::new();
     let second_doc = DocId::new();
     let peer_id = repo.local_peer_id().clone();
@@ -122,19 +123,18 @@ fn test_client_op_index_is_global_for_client_writer() -> Result<()> {
 fn test_client_op_index_is_repo_scoped() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
-    crate::test_support::create_initialized_local_repo_with_depth(
-        &ledger_dir,
-        2,
-        "wiki",
-        "urn:wiki",
-    );
+    let (repo, main_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("main-notes"))?;
+    let (_wiki, wiki_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("wiki-notes"))?;
+    let main_name = main_id.to_string();
+    let wiki_name = wiki_id.to_string();
     let main_doc = DocId::new();
     let wiki_doc = DocId::new();
     let peer_id = repo.local_peer_id().clone();
 
     repo.append_generated_client_op_in_local_repo(
-        "main",
+        &main_name,
         main_doc,
         peer_id.clone(),
         42,
@@ -155,7 +155,7 @@ fn test_client_op_index_is_repo_scoped() -> Result<()> {
         },
     )?;
     repo.append_generated_client_op_in_local_repo(
-        "wiki",
+        &wiki_name,
         wiki_doc,
         peer_id.clone(),
         42,
@@ -177,10 +177,10 @@ fn test_client_op_index_is_repo_scoped() -> Result<()> {
     )?;
 
     let main_found = repo
-        .find_client_op_in_local_repo("main", 42, 9)?
+        .find_client_op_in_local_repo(&main_name, 42, 9)?
         .expect("main client op should be indexed");
     let wiki_found = repo
-        .find_client_op_in_local_repo("wiki", 42, 9)?
+        .find_client_op_in_local_repo(&wiki_name, 42, 9)?
         .expect("wiki client op should be indexed");
     assert_eq!(main_found.1.doc_id, Some(main_doc));
     assert_eq!(wiki_found.1.doc_id, Some(wiki_doc));
@@ -191,7 +191,8 @@ fn test_client_op_index_is_repo_scoped() -> Result<()> {
 fn test_find_client_op_fails_closed_when_index_table_is_missing() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
@@ -211,7 +212,8 @@ fn test_find_client_op_fails_closed_when_index_table_is_missing() -> Result<()> 
 fn test_find_client_op_fails_closed_on_metadata_mismatch() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
     let doc_id = DocId::new();
     let peer_id = repo.local_peer_id().clone();
 
@@ -258,7 +260,8 @@ fn test_find_client_op_fails_closed_on_metadata_mismatch() -> Result<()> {
 fn test_find_client_op_fails_closed_on_dangling_index() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
     let doc_id = DocId::new();
     let peer_id = repo.local_peer_id().clone();
 

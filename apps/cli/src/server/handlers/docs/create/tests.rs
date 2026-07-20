@@ -3,7 +3,6 @@ use crate::server::tree_state::RepoTreeRegistry;
 use crate::server::{AppState, security};
 use crate::server::{channel::DualChannel, session::WsSession};
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -15,10 +14,9 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
@@ -79,7 +77,7 @@ async fn create_trims_outer_whitespace_before_appending_md() -> anyhow::Result<(
     assert!(
         state
             .repo
-            .local_repo_workspace_path("default", "notes/trimmed.md")?
+            .local_repo_workspace_path(state.repo.local_repo_name(), "notes/trimmed.md")?
             .exists()
     );
     Ok(())
@@ -99,7 +97,7 @@ async fn create_normalizes_backslash_path_before_storage() -> anyhow::Result<()>
     assert!(
         state
             .repo
-            .local_repo_workspace_path("default", "notes/win.md")?
+            .local_repo_workspace_path(state.repo.local_repo_name(), "notes/win.md")?
             .exists()
     );
     Ok(())
@@ -129,7 +127,7 @@ async fn create_rejects_backslash_internal_segment_before_ledger() -> anyhow::Re
     assert!(
         !state
             .repo
-            .local_repo_workspace_root("default")?
+            .local_repo_workspace_root(state.repo.local_repo_name())?
             .join("notes/.notegit/hidden.md")
             .exists()
     );

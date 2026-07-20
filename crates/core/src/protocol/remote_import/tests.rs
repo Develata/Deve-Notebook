@@ -45,7 +45,7 @@ fn remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json() {
             .expect("encode versioned debug client JSON");
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&json).expect("parse client JSON")["protocol_version"],
-            serde_json::json!(3)
+            serde_json::json!(WS_PROTOCOL_VERSION)
         );
         assert_eq!(
             serde_json::to_value(decode_client_json(&json).expect("decode client debug JSON"))
@@ -70,7 +70,7 @@ fn remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json() {
             .expect("encode versioned debug server JSON");
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&json).expect("parse server JSON")["protocol_version"],
-            serde_json::json!(3)
+            serde_json::json!(WS_PROTOCOL_VERSION)
         );
         assert_eq!(
             serde_json::to_value(decode_server_json(&json).expect("decode server debug JSON"))

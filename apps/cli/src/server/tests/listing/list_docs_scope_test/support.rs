@@ -1,24 +1,34 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 
-use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use crate::server::{security, tree_state::RepoTreeRegistry, AppState};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, FactActor, Op, PeerId};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let mut test_repo = RepoManager::init(&ledger, 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
+    let (repo, _default_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
+        &ledger,
+        "test",
+        &projection_base,
+        10,
+        Some("urn:test"),
+    )?;
     let state = app_state(Arc::new(repo), dir.path().join("host"))?;
     Ok((dir, state, test_id))
 }
@@ -27,9 +37,13 @@ pub(super) fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let default_id = repo.get_repo_info()?.expect("default info").uuid;
+    let (repo, default_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let state = app_state(Arc::new(repo), dir.path().join("host"))?;
     Ok((dir, state, default_id))
 }
@@ -58,10 +72,7 @@ pub(super) fn seed_doc(
     Ok(doc_id)
 }
 
-fn app_state(
-    repo: Arc<RepoManager>,
-    host: std::path::PathBuf,
-) -> anyhow::Result<Arc<AppState>> {
+fn app_state(repo: Arc<RepoManager>, host: std::path::PathBuf) -> anyhow::Result<Arc<AppState>> {
     let identity_key = security::load_or_generate_identity_key(&host)?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),

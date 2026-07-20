@@ -1,4 +1,3 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use tempfile::TempDir;
 
@@ -8,8 +7,12 @@ mod common;
 fn local_repo_listing_fails_closed_on_missing_main_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let main_db = repo.open_database(None, "main").expect("main db");
+    let (repo, main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
+    let main_db = repo
+        .open_database(None, &main_id.to_string())
+        .expect("main db");
 
     common::delete_repo_metadata(main_db.db.as_ref());
 

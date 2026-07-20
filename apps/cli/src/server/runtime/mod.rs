@@ -12,8 +12,9 @@ pub(crate) mod auth_runtime;
 pub(crate) mod host_runtime;
 pub(crate) mod node_role_runtime;
 pub(crate) mod peripheral_runtime;
-#[allow(dead_code)] // A1 foundation; C1' activates the F4/v4 RepoControl transport surface.
 pub(crate) mod repo_lifecycle_job_runtime;
+pub(crate) mod repo_lifecycle_runtime;
+pub(crate) mod repo_session_runtime;
 pub(crate) mod router_runtime;
 pub(crate) mod sync_runtime;
 pub(crate) mod watcher_runtime;

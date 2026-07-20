@@ -12,9 +12,10 @@ use serde_json::json;
 fn export_and_import_commands_roundtrip_alias_json() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-    drop(repo);
+    let cataloged =
+        crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"), 8)?;
+    let repo_id = cataloged.repo_id;
+    drop(cataloged);
 
     set(&ledger, repo_id, "math", 0)?;
     let output = dir.path().join("aliases.json");
@@ -89,9 +90,10 @@ fn alias_commands_never_create_an_empty_ledger() -> anyhow::Result<()> {
 fn alias_commands_open_a_non_default_repo_without_creating_another_repo() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("research"), None)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-    drop(repo);
+    let cataloged =
+        crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"), 8)?;
+    let repo_id = cataloged.repo_id;
+    drop(cataloged);
     set(&ledger, repo_id, "math", 0)?;
     let entries = std::fs::read_dir(ledger.join("local"))?.collect::<Result<Vec<_>, _>>()?;
     assert_eq!(entries.len(), 1);
@@ -108,11 +110,14 @@ fn alias_commands_open_a_non_default_repo_without_creating_another_repo() -> any
 fn export_is_no_clobber_and_rejects_the_ledger_tree() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), None)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-    repo.host_repo_alias_runtime()
+    let cataloged =
+        crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"), 8)?;
+    let repo_id = cataloged.repo_id;
+    cataloged
+        .repo
+        .host_repo_alias_runtime()
         .set_alias(repo_id, "math", 0)?;
-    drop(repo);
+    drop(cataloged);
     let output = dir.path().join("aliases.json");
     std::fs::write(&output, b"keep")?;
     assert!(export(&ledger, &output).is_err());

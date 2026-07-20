@@ -6,20 +6,25 @@
 //! Host coordinator for provider acquisition and the narrow `deve_core`
 //! Remote Import facade. It owns no Ledger tables or workspace decisions.
 
+mod provider_tasks;
+
 use crate::remote_projection_transport::{
     NormalizedRemotePath, RemoteSourceAcquisition, RemoteSourceSink, SourceAcquisitionError,
     SourceAcquisitionRequest,
 };
-use deve_core::ledger::RepoManager;
+use deve_core::ledger::{CatalogMembershipError, CatalogMembershipRuntime, RepoManager};
 use deve_core::models::RepoId;
 use deve_core::protocol::RemoteProjectionProvider;
 use deve_core::remote_import::{
     RemoteImportApplyView, RemoteImportBinding, RemoteImportCandidatePage,
     RemoteImportCandidateRevision, RemoteImportDiffView, RemoteImportEntryId,
-    RemoteImportPageCursor, RemoteImportRepairPlan, RemoteImportResult, RemoteImportService,
-    RemoteImportSessionId, RemoteImportSessionView,
+    RemoteImportPageCursor, RemoteImportRepairPlan, RemoteImportRepoRemovalAdmission,
+    RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot, RemoteImportResult,
+    RemoteImportService, RemoteImportSessionId, RemoteImportSessionView,
 };
 use deve_core::sync::SyncManager;
+pub(crate) use provider_tasks::ProviderQuiesceToken;
+use provider_tasks::{ProviderTaskError, ProviderTaskLease, ProviderTaskRuntime};
 use std::collections::HashSet;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
@@ -31,6 +36,8 @@ pub(crate) enum RemoteImportHostError {
     Locator(String),
     Provider(String),
     ProviderCleanup { primary: String, cleanup: String },
+    ProviderBusy,
+    RepoMembership(CatalogMembershipError),
     ApplyBusy,
     Coordination,
 }
@@ -38,6 +45,16 @@ pub(crate) enum RemoteImportHostError {
 impl From<deve_core::remote_import::RemoteImportError> for RemoteImportHostError {
     fn from(error: deve_core::remote_import::RemoteImportError) -> Self {
         Self::Core(error)
+    }
+}
+
+impl From<ProviderTaskError> for RemoteImportHostError {
+    fn from(error: ProviderTaskError) -> Self {
+        match error {
+            ProviderTaskError::Busy => Self::ProviderBusy,
+            ProviderTaskError::Membership(error) => Self::RepoMembership(error),
+            ProviderTaskError::Coordination => Self::Coordination,
+        }
     }
 }
 
@@ -55,6 +72,13 @@ impl std::fmt::Display for RemoteImportHostError {
                 formatter,
                 "Remote Import provider failed and session cleanup also failed: primary={primary}; cleanup={cleanup}"
             ),
+            Self::ProviderBusy => write!(
+                formatter,
+                "Remote Import provider task is busy or quiescing for this repo"
+            ),
+            Self::RepoMembership(error) => {
+                write!(formatter, "Remote Import repo membership is stale: {error}")
+            }
             Self::ApplyBusy => write!(
                 formatter,
                 "Remote Import apply is already running for this repo"
@@ -71,15 +95,23 @@ impl std::error::Error for RemoteImportHostError {}
 pub(crate) struct RemoteImportCoordinator {
     repo: Arc<RepoManager>,
     sync: Arc<SyncManager>,
+    membership: CatalogMembershipRuntime,
     applying: Mutex<HashSet<RepoId>>,
+    providers: ProviderTaskRuntime,
 }
 
 impl RemoteImportCoordinator {
-    pub(crate) fn new(repo: Arc<RepoManager>, sync: Arc<SyncManager>) -> Self {
+    pub(crate) fn new(
+        repo: Arc<RepoManager>,
+        sync: Arc<SyncManager>,
+        membership: CatalogMembershipRuntime,
+    ) -> Self {
         Self {
             repo,
             sync,
+            membership,
             applying: Mutex::new(HashSet::new()),
+            providers: ProviderTaskRuntime::default(),
         }
     }
 
@@ -89,6 +121,11 @@ impl RemoteImportCoordinator {
         repo_id: RepoId,
         provider: RemoteProjectionProvider,
     ) -> Result<RemoteImportSessionView, RemoteImportHostError> {
+        let membership = self
+            .membership
+            .issue(repo_id)
+            .map_err(RemoteImportHostError::RepoMembership)?;
+        let mut provider_lease = self.acquire_provider(repo_id)?;
         let source = self.resolve_source(repo_name, Some(provider))?;
         let service = RemoteImportService::open(&self.repo, repo_id)?;
         let mut capture = service.begin_prepare(
@@ -97,6 +134,8 @@ impl RemoteImportCoordinator {
             &source.source_binding,
             &source.locator_binding,
         )?;
+        let session_id = capture.session_id();
+        provider_lease.bind_session(session_id)?;
         let request = SourceAcquisitionRequest::new(source.provider, source.locator.clone())
             .map_err(|error| RemoteImportHostError::Locator(error.to_string()))?;
         let acquisition = match source.provider {
@@ -119,6 +158,18 @@ impl RemoteImportCoordinator {
                     bytes = outcome.bytes,
                     "Remote Import immutable source capture completed"
                 );
+                if let Err(error) =
+                    provider_lease.revalidate_completion(&self.membership, &membership, session_id)
+                {
+                    let error = RemoteImportHostError::from(error);
+                    return match capture.abort_source() {
+                        Ok(_) => Err(error),
+                        Err(cleanup) => Err(RemoteImportHostError::ProviderCleanup {
+                            primary: error.to_string(),
+                            cleanup: cleanup.to_string(),
+                        }),
+                    };
+                }
                 capture.finish().map_err(Into::into)
             }
             Err(SourceAcquisitionError::Sink(error)) => Err(error.into()),
@@ -271,6 +322,45 @@ impl RemoteImportCoordinator {
         Ok(RemoteImportService::open(&self.repo, repo_id)?.apply_repair(expected_token)?)
     }
 
+    pub(crate) fn repo_removal_admission(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<RemoteImportRepoRemovalAdmission, RemoteImportHostError> {
+        Ok(RemoteImportService::open(&self.repo, repo_id)?.repo_removal_admission()?)
+    }
+
+    pub(crate) fn revalidate_repo_removal(
+        &self,
+        repo_id: RepoId,
+        expected: &RemoteImportRepoRemovalSnapshot,
+    ) -> Result<RemoteImportRepoRemovalRevalidation, RemoteImportHostError> {
+        Ok(RemoteImportService::open(&self.repo, repo_id)?.revalidate_repo_removal(expected)?)
+    }
+
+    /// Closes provider admission for one repo and waits until an in-flight
+    /// immutable capture has either sealed or aborted. The returned token is
+    /// exact process-local evidence for the remove commit phase.
+    pub(crate) fn quiesce_provider_for_remove(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<ProviderQuiesceToken, RemoteImportHostError> {
+        self.providers.quiesce(repo_id).map_err(Into::into)
+    }
+
+    pub(crate) fn resume_provider_after_failed_remove(
+        &self,
+        token: &ProviderQuiesceToken,
+    ) -> Result<(), RemoteImportHostError> {
+        self.providers.resume(token).map_err(Into::into)
+    }
+
+    pub(crate) fn finish_provider_after_remove(
+        &self,
+        token: ProviderQuiesceToken,
+    ) -> Result<(), RemoteImportHostError> {
+        self.providers.finish(token).map_err(Into::into)
+    }
+
     fn resolve_source(
         &self,
         repo_name: &str,
@@ -333,6 +423,13 @@ impl RemoteImportCoordinator {
             applying: &self.applying,
             repo_id,
         })
+    }
+
+    fn acquire_provider(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<ProviderTaskLease<'_>, RemoteImportHostError> {
+        self.providers.acquire(repo_id).map_err(Into::into)
     }
 }
 

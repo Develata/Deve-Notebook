@@ -2,7 +2,7 @@
 //!   - 03_storage/projection#projection-contract
 
 use crate::ledger::RepoManager;
-use crate::ledger::{ops, snapshot};
+use crate::ledger::ops;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};
 use anyhow::Result;
 
@@ -36,23 +36,6 @@ pub fn rebuild_local_doc_in_repo(
         };
 
     let delta_entries = repo.run_on_local_repo(repo_name, |db| {
-        ops::get_ops_from_db_after(db, doc_id, base_seq)
-    })?;
-    rebuild_from_snapshot_and_delta(doc_id, base_seq, base_content, delta_entries)
-}
-
-pub(crate) fn rebuild_local_doc_in_repo_stem(
-    repo: &RepoManager,
-    repo_stem: &str,
-    doc_id: DocId,
-) -> Result<RebuildResult> {
-    let (base_seq, base_content) = match repo
-        .run_on_local_repo_stem(repo_stem, |db| snapshot::load_latest_snapshot(db, doc_id))?
-    {
-        Some((seq, content)) => (seq, content),
-        None => (0, String::new()),
-    };
-    let delta_entries = repo.run_on_local_repo_stem(repo_stem, |db| {
         ops::get_ops_from_db_after(db, doc_id, base_seq)
     })?;
     rebuild_from_snapshot_and_delta(doc_id, base_seq, base_content, delta_entries)

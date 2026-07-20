@@ -26,7 +26,6 @@ fn switch_repo_exact_sends_repo_id_even_when_display_name_matches_current() {
         let callback = build_switch_repo_callback(ws.clone(), locale, signals, set_sync_banner);
 
         callback.run(RepoSwitchRequest::exact(
-            "display--id".to_string(),
             "display".to_string(),
             target_repo_id,
         ));
@@ -41,44 +40,14 @@ fn switch_repo_exact_sends_repo_id_even_when_display_name_matches_current() {
         match ws.drain_sent_for_test().as_slice() {
             [
                 ClientMessage::SwitchRepoExact {
-                    name,
                     repo_id,
                     switch_nonce,
                 },
             ] => {
-                assert_eq!(name, "display--id");
                 assert_eq!(*repo_id, target_repo_id);
                 assert_eq!(*switch_nonce, Some(pending.switch_nonce));
             }
             other => panic!("expected one SwitchRepoExact message, got {other:?}"),
-        }
-    });
-}
-
-#[test]
-fn switch_repo_by_name_keeps_legacy_switch_repo_message() {
-    let owner = leptos::reactive::owner::Owner::new();
-    owner.with(|| {
-        let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        let (_, set_sync_banner) = signal(None::<String>);
-        let locale = RwSignal::new(Locale::Zh);
-        let signals = switch_signals(Some("default".to_string()), None, 3);
-        let callback = build_switch_repo_callback(ws.clone(), locale, signals, set_sync_banner);
-
-        callback.run(RepoSwitchRequest::by_name("legacy".to_string()));
-
-        let pending = signals
-            .pending_repo_switch
-            .get_untracked()
-            .expect("pending repo switch");
-        assert_eq!(pending.expected_name(), "legacy");
-        assert!(pending.switch_nonce > 3);
-        match ws.drain_sent_for_test().as_slice() {
-            [ClientMessage::SwitchRepo { name, switch_nonce }] => {
-                assert_eq!(name, "legacy");
-                assert_eq!(*switch_nonce, Some(pending.switch_nonce));
-            }
-            other => panic!("expected one SwitchRepo message, got {other:?}"),
         }
     });
 }

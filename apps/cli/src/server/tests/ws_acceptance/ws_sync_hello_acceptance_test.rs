@@ -3,7 +3,7 @@
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, recv_server_message, send_client_message,
+    connect_harness, recv_server_message, send_client_message, WsHarness,
 };
 use deve_core::models::PeerId;
 use deve_core::protocol::{ClientMessage, ServerMessage};
@@ -20,7 +20,6 @@ async fn ws_endpoint_sync_hello_uses_switched_repo_scope() -> anyhow::Result<()>
     send_client_message(
         &mut ws,
         ClientMessage::SwitchRepoExact {
-            name: "notes".into(),
             repo_id,
             switch_nonce: Some(SWITCH_NONCE),
         },
@@ -57,14 +56,16 @@ fn assert_repo_switched(message: ServerMessage, repo_id: uuid::Uuid) {
     match message {
         ServerMessage::RepoSwitched {
             branch,
-            name,
-            uuid,
+            repo_id: actual_repo_id,
+            display_alias,
             switch_nonce,
+            scope_nonce,
         } => {
             assert_eq!(branch, None);
-            assert_eq!(name, "notes");
-            assert_eq!(uuid, repo_id.to_string());
+            assert_eq!(display_alias, "notes");
+            assert_eq!(actual_repo_id, repo_id);
             assert_eq!(switch_nonce, Some(SWITCH_NONCE));
+            assert_eq!(scope_nonce.get(), SWITCH_NONCE);
         }
         other => panic!("expected RepoSwitched, got {other:?}"),
     }
@@ -86,12 +87,22 @@ fn assert_repo_view_messages(first: ServerMessage, second: ServerMessage, repo_i
                     scope_nonce: tree_nonce,
                     ..
                 },
-            ) => (doc_repo, doc_branch, doc_nonce, tree_repo, tree_branch, tree_nonce),
+            ) => (
+                doc_repo,
+                doc_branch,
+                doc_nonce,
+                tree_repo,
+                tree_branch,
+                tree_nonce,
+            ),
             other => panic!("expected DocList then TreeUpdate, got {other:?}"),
         };
     assert_eq!((doc_repo, tree_repo), (repo_id, repo_id));
     assert_eq!((doc_branch, tree_branch), (None, None));
-    assert_eq!((doc_nonce, tree_nonce), (Some(SWITCH_NONCE), Some(SWITCH_NONCE)));
+    assert_eq!(
+        (doc_nonce, tree_nonce),
+        (Some(SWITCH_NONCE), Some(SWITCH_NONCE))
+    );
 }
 
 fn assert_sync_hello(message: ServerMessage, repo_id: uuid::Uuid, peer_id: &PeerId) {

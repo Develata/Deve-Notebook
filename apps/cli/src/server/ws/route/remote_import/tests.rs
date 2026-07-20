@@ -7,7 +7,6 @@
 use super::route_remote_import;
 use crate::server::{AppState, channel::DualChannel, security, session::WsSession};
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoManager, init::RepoInitOptions};
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{
     ClientMessage, RemoteImportCandidateRevision, RemoteImportRequest, RemoteImportRequestContext,
@@ -117,18 +116,14 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_id = RepoId::new_v4();
-    let mut repo = RepoManager::init_with_options(
+    let cataloged = crate::test_support::init_cataloged_repo_with_url(
         &ledger,
+        &projection_base,
         10,
-        Some("notes"),
-        RepoInitOptions {
-            repo_id: Some(repo_id),
-            repo_url: Some("webdav+https://dav.example.com/notebooks/main".to_string()),
-        },
+        Some("webdav+https://dav.example.com/notebooks/main".to_string()),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(
         &deve_core::utils::notegit::host_keys_dir(repo.ledger_dir()),
@@ -157,7 +152,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> {
 fn browser_session(repo_id: RepoId, scope_nonce: u64) -> WsSession {
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("notes".to_string(), Some(repo_id));
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
     session
 }

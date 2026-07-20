@@ -164,12 +164,15 @@ pub fn get_peer_ops_in_range(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::RepoManager;
 
     #[test]
     fn untrusted_huge_range_fails_before_capacity_allocation() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
-        let repo = RepoManager::init(dir.path(), 10, Some("default"), None)?;
+        let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            10,
+        )?;
         let error = repo.run_on_local_repo(repo.local_repo_name(), |db| {
             get_peer_ops_in_range(
                 db,

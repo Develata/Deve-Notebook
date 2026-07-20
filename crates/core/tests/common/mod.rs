@@ -19,6 +19,94 @@ const REMOTE_IMPORT_RUNTIME: redb::TableDefinition<u8, &[u8]> =
 const PROJECTION_FAULTS: redb::TableDefinition<[u8; 32], &[u8]> =
     redb::TableDefinition::new("projection_faults");
 
+/// Full production creation choreography for a catalog-backed local repo,
+/// mirroring `deve_core`'s internal `test_support::init_cataloged_repo` via the
+/// public API: UUID-canonical machine name, prepared locator + workspace
+/// identity marker, and a committed `Normal` catalog membership record. Bare
+/// `RepoManager::init` repos are invisible to catalog-backed resolution/listing.
+pub fn init_cataloged_repo(
+    ledger_dir: &Path,
+    projection_base: &Path,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    init_cataloged_repo_with(ledger_dir, projection_base, 8, uuid::Uuid::new_v4(), None)
+}
+
+/// Variant of [`init_cataloged_repo`] that records a repo URL in metadata.
+pub fn init_cataloged_repo_with_url(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    repo_url: &str,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    init_cataloged_repo_with(
+        ledger_dir,
+        projection_base,
+        8,
+        uuid::Uuid::new_v4(),
+        Some(repo_url),
+    )
+}
+
+/// Variant of [`init_cataloged_repo`] that preserves a specific snapshot depth.
+pub fn init_cataloged_repo_with_depth(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    snapshot_depth: usize,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    init_cataloged_repo_with(
+        ledger_dir,
+        projection_base,
+        snapshot_depth,
+        uuid::Uuid::new_v4(),
+        None,
+    )
+}
+
+/// Variant of [`init_cataloged_repo`] that binds an explicit `repo_id`, so
+/// separate ledgers (e.g. a sync source and receiver) can catalog repos that
+/// share the same RepoId.
+pub fn init_cataloged_repo_with_id(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    repo_id: uuid::Uuid,
+    repo_url: &str,
+) -> anyhow::Result<RepoManager> {
+    let (repo, _repo_id) =
+        init_cataloged_repo_with(ledger_dir, projection_base, 8, repo_id, Some(repo_url))?;
+    Ok(repo)
+}
+
+fn init_cataloged_repo_with(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    snapshot_depth: usize,
+    repo_id: uuid::Uuid,
+    repo_url: Option<&str>,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    use deve_core::ledger::init::RepoInitOptions;
+
+    let execution_name = repo_id.to_string();
+    let repo = RepoManager::init_with_options(
+        ledger_dir,
+        snapshot_depth,
+        Some(&execution_name),
+        RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: repo_url.map(str::to_string),
+        },
+    )?;
+    let locator = repo.prepare_projection_locator_for_repo_creation(repo_id, projection_base)?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    deve_core::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    repo.seed_catalog_membership_from_records()?;
+    let authority = repo.claim_repo_catalog_cut_authority()?;
+    let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
+    let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+    let permit = authority.permit(repo_id)?;
+    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    Ok((repo, repo_id))
+}
+
 pub fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
     create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
 }

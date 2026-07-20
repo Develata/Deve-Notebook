@@ -199,7 +199,7 @@ async fn dropping_transport_observation_does_not_cancel_accepted_job() {
         .submit(request_id, create_intent(&projection, "Detached observer"))
         .await
         .expect("admitted");
-    drop(observer);
+    let _ = observer;
     executor.release(1);
 
     let status = terminal_status(&runtime, request_id).await;

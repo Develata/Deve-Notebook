@@ -6,6 +6,7 @@
 use crate::server::AppState;
 use crate::server::repo_mutation::RepoMutationGateError;
 use crate::server::session::WsSession;
+use deve_core::ledger::CatalogMembershipToken;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::RepoId;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub(super) struct PreparedRepoSwitch {
     pub repo_id: Option<RepoId>,
     pub db: Option<DatabaseHandle>,
     pub degraded_docs_only: bool,
+    pub catalog_membership: Option<CatalogMembershipToken>,
 }
 
 pub(crate) use branch::validate_branch_target;
@@ -48,6 +50,7 @@ pub(super) async fn prepare_repo_switch(
             repo_id,
             db: Some(handle),
             degraded_docs_only: false,
+            catalog_membership: None,
         });
     }
     let prepared = state
@@ -88,30 +91,45 @@ pub(super) async fn prepare_repo_switch(
         }
         Err(error) => return Err(anyhow::Error::new(error)),
     };
+    let catalog_membership = state.catalog_membership_runtime().issue(repo_info.uuid)?;
     Ok(PreparedRepoSwitch {
         repo_name,
         session_name,
         repo_id,
         db: None,
         degraded_docs_only,
+        catalog_membership: Some(catalog_membership),
     })
 }
 
 pub(super) fn commit_session_switch(
+    state: &Arc<AppState>,
     session: &mut WsSession,
     branch: Option<String>,
     prepared: Option<PreparedRepoSwitch>,
     scope_nonce: Option<u64>,
-) {
+) -> anyhow::Result<()> {
+    if let Some(prepared) = prepared.as_ref()
+        && prepared.db.is_none()
+    {
+        let membership = prepared
+            .catalog_membership
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("local repo switch is missing catalog membership"))?;
+        state.catalog_membership_runtime().revalidate(membership)?;
+    }
     session.set_scope_nonce(scope_nonce);
     session.clear_sync_binding();
     session.switch_branch(branch);
     match prepared {
         Some(prepared) => {
             session.switch_repo(prepared.session_name, prepared.repo_id);
+            if let Some(membership) = prepared.catalog_membership {
+                session.bind_catalog_membership(membership);
+            }
             if let Some(handle) = prepared.db {
                 session.set_active_db(handle);
-                return;
+                return Ok(());
             }
             session.clear_active_db();
         }
@@ -120,4 +138,5 @@ pub(super) fn commit_session_switch(
             session.clear_active_db();
         }
     }
+    Ok(())
 }

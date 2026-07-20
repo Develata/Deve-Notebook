@@ -21,7 +21,11 @@ fn rejects_unscoped_updates_while_repo_switch_pending() {
     let signals = init_signals(connection_status);
     signals
         .set_pending_repo_switch
-        .set(Some(PendingRepoSwitch::switch("test", 1)));
+        .set(Some(PendingRepoSwitch::switch(
+            "test",
+            uuid::Uuid::nil(),
+            1,
+        )));
     assert!(!accepts_unscoped_update(signals));
 }
 
@@ -108,7 +112,11 @@ fn rejects_search_results_while_scope_switch_is_pending() {
 
     signals
         .set_pending_repo_switch
-        .set(Some(PendingRepoSwitch::switch("other", 1)));
+        .set(Some(PendingRepoSwitch::switch(
+            "other",
+            uuid::Uuid::nil(),
+            1,
+        )));
     assert!(!accepts_search_results(
         "fresh",
         Some(repo_id),

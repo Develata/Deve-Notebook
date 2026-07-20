@@ -168,12 +168,14 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
+        let cataloged =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
         let doc_id = {
-            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+            let repo = cataloged.repo;
             let (doc_id, _ops) =
-                repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
-            repo.run_on_local_repo("default", |db| {
+                repo.apply_file_structure_in_local_repo(&repo_name, "notes/a.md", None, "test")?;
+            repo.run_on_local_repo(&repo_name, |db| {
                 pending_fs::upsert(
                     db,
                     &PendingFsEntry {
@@ -190,7 +192,7 @@ mod tests {
             doc_id
         };
 
-        let err = stage(&ledger_dir, Some("default"), true, 10)
+        let err = stage(&ledger_dir, Some(&repo_name), true, 10)
             .expect_err("stage --all must reject unresolved conflicts");
 
         assert!(
@@ -199,10 +201,9 @@ mod tests {
             "unexpected error: {}",
             err
         );
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let pending = repo.run_on_local_repo("default", pending_fs::list_all)?;
-        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
+        let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        let pending = repo.run_on_local_repo(&repo_name, pending_fs::list_all)?;
+        let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
         assert_eq!(pending.len(), 1);
         assert_eq!(pending[0].doc_id, Some(doc_id));
         assert!(pending[0].has_conflict);
@@ -215,14 +216,15 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
+        let cataloged =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
         {
-            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-            repo.ensure_local_repo_workspace_identity("default")?;
-            let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
+            let repo = cataloged.repo;
+            let file = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
             std::fs::create_dir_all(file.parent().expect("workspace file parent"))?;
             std::fs::write(&file, "external")?;
-            repo.run_on_local_repo("default", |db| {
+            repo.run_on_local_repo(&repo_name, |db| {
                 pending_fs::upsert(
                     db,
                     &PendingFsEntry {
@@ -238,11 +240,10 @@ mod tests {
             })?;
         }
 
-        stage(&ledger_dir, Some("default"), true, 10)?;
+        stage(&ledger_dir, Some(&repo_name), true, 10)?;
 
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
+        let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
         assert_eq!(staged.len(), 1);
         assert!(!staged[0].1.resolved_conflict);
         Ok(())
@@ -254,14 +255,15 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
+        let cataloged =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
         {
-            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-            repo.ensure_local_repo_workspace_identity("default")?;
-            let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
+            let repo = cataloged.repo;
+            let file = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
             std::fs::create_dir_all(file.parent().expect("workspace file parent"))?;
             std::fs::write(&file, "external")?;
-            repo.run_on_local_repo("default", |db| {
+            repo.run_on_local_repo(&repo_name, |db| {
                 pending_fs::upsert(
                     db,
                     &PendingFsEntry {
@@ -277,21 +279,20 @@ mod tests {
             })?;
         }
 
-        stage(&ledger_dir, Some("default"), true, 10)?;
-        apply(&ledger_dir, Some("default"), 10)?;
+        stage(&ledger_dir, Some(&repo_name), true, 10)?;
+        apply(&ledger_dir, Some(&repo_name), 10)?;
 
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         assert!(
-            repo.run_on_local_repo("default", staging::list_staged_entries)?
+            repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?
                 .is_empty()
         );
         assert_eq!(
-            repo.list_confirmed_ledger_changes_in_local_repo("default")?
+            repo.list_confirmed_ledger_changes_in_local_repo(&repo_name)?
                 .len(),
             1
         );
-        assert!(repo.list_commits_in_local_repo("default", 10)?.is_empty());
+        assert!(repo.list_commits_in_local_repo(&repo_name, 10)?.is_empty());
         Ok(())
     }
 
@@ -300,11 +301,13 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
+        let cataloged =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
         let workspace = {
-            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-            let workspace = repo.ensure_local_repo_workspace_identity("default")?;
-            repo.run_on_local_repo("default", |db| {
+            let repo = cataloged.repo;
+            let workspace = repo.ensure_local_repo_workspace_identity(&repo_name)?;
+            repo.run_on_local_repo(&repo_name, |db| {
                 pending_fs::upsert(
                     db,
                     &PendingFsEntry {
@@ -322,14 +325,13 @@ mod tests {
         };
         corrupt_workspace_identity(&workspace)?;
 
-        let err = stage(&ledger_dir, Some("default"), true, 10)
+        let err = stage(&ledger_dir, Some(&repo_name), true, 10)
             .expect_err("stage --all must reject a broken workspace identity");
 
         assert_identity_gate_error(&err);
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let pending = repo.run_on_local_repo("default", pending_fs::list_all)?;
-        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
+        let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        let pending = repo.run_on_local_repo(&repo_name, pending_fs::list_all)?;
+        let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
         assert_eq!(pending.len(), 1);
         assert!(staged.is_empty());
         Ok(())
@@ -340,14 +342,16 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
+        let cataloged =
+            crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 10)?;
+        let repo_name = cataloged.repo.local_repo_name().to_string();
         let workspace = {
-            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-            let workspace = repo.ensure_local_repo_workspace_identity("default")?;
-            let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
+            let repo = cataloged.repo;
+            let workspace = repo.ensure_local_repo_workspace_identity(&repo_name)?;
+            let file = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
             std::fs::create_dir_all(file.parent().expect("workspace file must have a parent"))?;
             std::fs::write(&file, "dirty")?;
-            repo.run_on_local_repo("default", |db| {
+            repo.run_on_local_repo(&repo_name, |db| {
                 pending_fs::upsert(
                     db,
                     &PendingFsEntry {
@@ -361,19 +365,18 @@ mod tests {
                     },
                 )
             })?;
-            repo.stage_pending_in_local_repo("default", "notes/a.md")?;
+            repo.stage_pending_in_local_repo(&repo_name, "notes/a.md")?;
             workspace
         };
         corrupt_workspace_identity(&workspace)?;
 
-        let err = commit(&ledger_dir, Some("default"), "commit broken identity", 10)
+        let err = commit(&ledger_dir, Some(&repo_name), "commit broken identity", 10)
             .expect_err("commit must reject a broken workspace identity");
 
         assert_identity_gate_error(&err);
-        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
-        let commits = repo.list_commits_in_local_repo("default", 10)?;
+        let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
+        let commits = repo.list_commits_in_local_repo(&repo_name, 10)?;
         assert_eq!(staged.len(), 1);
         assert!(commits.is_empty());
         Ok(())

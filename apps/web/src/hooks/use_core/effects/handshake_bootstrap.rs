@@ -40,12 +40,18 @@ pub(super) fn restore_session_scope(
             switch_nonce: Some(switch_nonce),
         });
         if let Some(repo_name) = current_repo
-            && let Some(msg) =
-                build_switch_repo(repo_name.clone(), current_repo_id.clone(), switch_nonce)
+            && let Some(repo_id) = current_repo_id
+                .as_deref()
+                .and_then(|value| value.parse().ok())
+            && let Some(msg) = build_switch_repo(current_repo_id.clone(), switch_nonce)
         {
             signals
                 .set_pending_repo_switch
-                .set(Some(PendingRepoSwitch::switch(repo_name, switch_nonce)));
+                .set(Some(PendingRepoSwitch::switch(
+                    repo_name,
+                    repo_id,
+                    switch_nonce,
+                )));
             ws.send(msg);
         }
         return;
@@ -58,11 +64,16 @@ pub(super) fn restore_session_scope(
             request_repo_list(ws, signals);
             return;
         };
-        if let Some(msg) = build_switch_repo(repo_name.clone(), current_repo_id, switch_nonce) {
+        if let Some(repo_id) = current_repo_id
+            .as_deref()
+            .and_then(|value| value.parse().ok())
+            && let Some(msg) = build_switch_repo(current_repo_id, switch_nonce)
+        {
             signals
                 .set_pending_repo_switch
                 .set(Some(PendingRepoSwitch::restore_session(
                     repo_name,
+                    repo_id,
                     switch_nonce,
                 )));
             ws.send(msg);

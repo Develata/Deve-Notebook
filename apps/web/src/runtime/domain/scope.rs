@@ -10,25 +10,15 @@ use std::ops::Deref;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RepoSwitchRequest {
-    pub selector_name: String,
     pub expected_name: String,
-    pub repo_id: Option<RepoId>,
+    pub repo_id: RepoId,
 }
 
 impl RepoSwitchRequest {
-    pub fn by_name(name: String) -> Self {
+    pub fn exact(expected_name: String, repo_id: RepoId) -> Self {
         Self {
-            selector_name: name.clone(),
-            expected_name: name,
-            repo_id: None,
-        }
-    }
-
-    pub fn exact(selector_name: String, expected_name: String, repo_id: RepoId) -> Self {
-        Self {
-            selector_name,
             expected_name,
-            repo_id: Some(repo_id),
+            repo_id,
         }
     }
 }
@@ -38,13 +28,13 @@ pub struct RepoRenameRequest {
     pub repo_id: RepoId,
     pub current_name: String,
     pub new_name: String,
+    pub expected_alias_revision: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RepoRemoveRequest {
     pub repo_id: RepoId,
     pub current_name: String,
-    pub fallback_name: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,13 +79,13 @@ enum PendingRepoSwitchKind {
     Switch,
     RestoreSession,
     Create,
-    RenameCurrent,
     RemoveCurrent,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PendingRepoSwitch {
     pub expected_name: String,
+    pub expected_repo_id: Option<RepoId>,
     pub switch_nonce: u64,
     kind: PendingRepoSwitchKind,
 }
@@ -103,43 +93,57 @@ pub struct PendingRepoSwitch {
 impl PendingRepoSwitch {
     fn new(
         expected_name: impl Into<String>,
+        expected_repo_id: Option<RepoId>,
         switch_nonce: u64,
         kind: PendingRepoSwitchKind,
     ) -> Self {
         Self {
             expected_name: expected_name.into(),
+            expected_repo_id,
             switch_nonce,
             kind,
         }
     }
 
-    pub fn switch(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
-        Self::new(expected_name, switch_nonce, PendingRepoSwitchKind::Switch)
-    }
-
-    pub fn restore_session(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
+    pub fn switch(
+        expected_name: impl Into<String>,
+        expected_repo_id: RepoId,
+        switch_nonce: u64,
+    ) -> Self {
         Self::new(
             expected_name,
+            Some(expected_repo_id),
+            switch_nonce,
+            PendingRepoSwitchKind::Switch,
+        )
+    }
+
+    pub fn restore_session(
+        expected_name: impl Into<String>,
+        expected_repo_id: RepoId,
+        switch_nonce: u64,
+    ) -> Self {
+        Self::new(
+            expected_name,
+            Some(expected_repo_id),
             switch_nonce,
             PendingRepoSwitchKind::RestoreSession,
         )
     }
 
     pub fn create(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
-        Self::new(expected_name, switch_nonce, PendingRepoSwitchKind::Create)
-    }
-
-    pub fn rename_current(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
         Self::new(
             expected_name,
+            None,
             switch_nonce,
-            PendingRepoSwitchKind::RenameCurrent,
+            PendingRepoSwitchKind::Create,
         )
     }
 
-    pub fn remove_current(expected_name: impl Into<String>, switch_nonce: u64) -> Self {
+    pub fn remove_current(current_name: impl Into<String>, switch_nonce: u64) -> Self {
         Self::new(
-            expected_name,
+            current_name,
+            None,
             switch_nonce,
             PendingRepoSwitchKind::RemoveCurrent,
         )
@@ -151,6 +155,37 @@ impl PendingRepoSwitch {
 
     pub fn restores_session_scope(&self) -> bool {
         self.kind == PendingRepoSwitchKind::RestoreSession
+    }
+
+    pub fn is_remove_current(&self) -> bool {
+        self.kind == PendingRepoSwitchKind::RemoveCurrent
+    }
+
+    pub fn is_explicit_switch(&self) -> bool {
+        self.kind == PendingRepoSwitchKind::Switch
+    }
+
+    pub fn bind_created_repo(&mut self, repo_id: RepoId) -> bool {
+        if self.kind != PendingRepoSwitchKind::Create {
+            return false;
+        }
+        match self.expected_repo_id {
+            Some(expected) => expected == repo_id,
+            None => {
+                self.expected_repo_id = Some(repo_id);
+                true
+            }
+        }
+    }
+
+    pub fn accepts_repo_switched(&self, repo_id: RepoId) -> bool {
+        match self.kind {
+            PendingRepoSwitchKind::Switch | PendingRepoSwitchKind::RestoreSession => {
+                self.expected_repo_id == Some(repo_id)
+            }
+            PendingRepoSwitchKind::Create => self.expected_repo_id == Some(repo_id),
+            PendingRepoSwitchKind::RemoveCurrent => true,
+        }
     }
 }
 

@@ -55,6 +55,7 @@ use self::state_build::build_core_state;
 use self::status_text::build_status_text;
 use self::storage_runtime::init_storage_runtime;
 use crate::i18n::Locale;
+use crate::runtime::repo_control_client::RepoControlClient;
 
 /// 初始化核心状态钩子。
 pub fn use_core() -> CoreState {
@@ -96,8 +97,16 @@ pub fn use_core() -> CoreState {
             set_handshake_ready: signals.set_handshake_ready,
         },
     );
-    let callbacks = build_callbacks(&ws, &signals);
-    let state = build_core_state(ws, &signals, status_text, callbacks, locale);
+    let repo_control = RepoControlClient::default();
+    let callbacks = build_callbacks(&ws, &signals, repo_control.clone());
+    let state = build_core_state(
+        ws,
+        &signals,
+        status_text,
+        callbacks,
+        locale,
+        repo_control.clone(),
+    );
     effects::setup_message_effect(
         &state.ws,
         &signals,
@@ -106,6 +115,7 @@ pub fn use_core() -> CoreState {
             .external_changes
             .on_get_changes
             .clone(),
+        state.runtime_clients.repo_control.clone(),
     );
 
     provide_context(state.clone());

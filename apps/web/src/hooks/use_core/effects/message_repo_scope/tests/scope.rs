@@ -42,7 +42,11 @@ fn projection_messages_accept_exact_current_repo_during_repo_switch_settle() {
     signals.set_current_repo_id.set(Some(repo_id.to_string()));
     signals
         .set_pending_repo_switch
-        .set(Some(PendingRepoSwitch::switch("default", 7)));
+        .set(Some(PendingRepoSwitch::switch(
+            "default",
+            uuid::Uuid::nil(),
+            7,
+        )));
 
     assert!(matches_projection_message_scope(
         &Some(repo_id),

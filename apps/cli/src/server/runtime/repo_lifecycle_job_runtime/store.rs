@@ -93,6 +93,7 @@ impl LifecycleReceipt {
             phase: self.phase,
             outcome: self.outcome,
             publication_pending: self.publication_pending,
+            publication: self.publication.clone(),
         }
     }
 
@@ -334,13 +335,10 @@ impl ReceiptStore {
             return Err(store_invalid("serialized receipt exceeds size budget"));
         }
         let result = (|| -> Result<(), RepoLifecycleJobError> {
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)?;
+            let mut file = safe_fs::create_atomic_replace_temp(&temp)?;
             file.write_all(&bytes)?;
             file.sync_all()?;
-            safe_fs::replace_file_atomically(&temp, &path)?;
+            safe_fs::replace_file_atomically(&file, &temp, &path)?;
             #[cfg(test)]
             if self.dir.join(POST_REPLACE_FAILURE_MARKER).try_exists()? {
                 return Err(store_invalid("injected post-replace sync failure"));

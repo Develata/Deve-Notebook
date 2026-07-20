@@ -21,8 +21,9 @@ use tokio::sync::broadcast;
 pub(super) fn new_repo() -> anyhow::Result<(TempDir, RepoManager)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let repo =
+        crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base, 10)?
+            .repo;
     Ok((dir, repo))
 }
 
@@ -62,13 +63,13 @@ pub(super) fn default_workspace_root(dir: &TempDir) -> std::path::PathBuf {
     let locator = value["locators"]
         .as_array()
         .expect("projection locators")
-        .iter()
-        .find(|locator| locator["repo_name_hint"].as_str() == Some("default"))
+        .first()
         .expect("default repo locator");
-    base.join(format!(
-        "default--{}",
-        locator["repo_id"].as_str().expect("repo id")
-    ))
+    base.join(
+        locator["workspace_segment"]
+            .as_str()
+            .expect("workspace segment"),
+    )
 }
 
 pub(super) fn seed_pending_entry(repo: &RepoManager, entry: PendingFsEntry) {

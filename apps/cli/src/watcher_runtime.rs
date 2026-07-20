@@ -189,15 +189,16 @@ mod tests {
     fn fixture() -> anyhow::Result<WatcherFixture> {
         let dir = tempfile::tempdir()?;
         let projection_base = dir.path().join("notes");
-        std::fs::create_dir_all(&projection_base)?;
-        let repo = RepoManager::init(dir.path().join("ledger"), 8, Some("main"), Some("urn:main"))?;
-        repo.set_projection_base_for_local_repo("main", &projection_base)?;
-        let repo = Arc::new(repo);
+        let cataloged = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &projection_base,
+            8,
+        )?;
+        let repo_id = cataloged.repo_id;
+        let repo = Arc::new(cataloged.repo);
         let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
-        let info = repo
-            .get_repo_info_for(None, Some("main"))?
-            .expect("main repo");
-        Ok((dir, repo, sync, info.name, info.uuid))
+        let repo_name = repo.local_repo_name().to_string();
+        Ok((dir, repo, sync, repo_name, repo_id))
     }
 
     #[test]

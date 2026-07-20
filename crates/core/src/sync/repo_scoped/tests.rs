@@ -9,9 +9,7 @@ fn build_repo() -> anyhow::Result<(tempfile::TempDir, RepoManager, RepoId)> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo(&ledger, &projection_base)?;
     Ok((dir, repo, repo_id))
 }
 
@@ -158,7 +156,7 @@ fn clear_fails_closed_when_lock_is_poisoned() -> anyhow::Result<()> {
 #[test]
 fn strict_engine_load_fails_closed_when_repo_key_is_corrupt() -> anyhow::Result<()> {
     let (_dir, repo, repo_id) = build_repo()?;
-    let key_dir = repo.local_repo_notegit_keys_root("notes")?;
+    let key_dir = repo.local_repo_notegit_keys_root(repo.local_repo_name())?;
     fs::create_dir_all(&key_dir)?;
     fs::write(key_dir.join("repo.key"), [1, 2, 3, 4])?;
 

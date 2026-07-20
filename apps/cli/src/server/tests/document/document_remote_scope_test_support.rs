@@ -2,9 +2,12 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#repo-scope-runtime
 
-use super::{AppState, session::WsSession};
-use deve_core::ledger::{RepoInfo, schema::{DOC_OPS, LEDGER_OPS}};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId, serialize_ledger_entry};
+use super::{session::WsSession, AppState};
+use deve_core::ledger::{
+    schema::{DOC_OPS, LEDGER_OPS},
+    RepoInfo,
+};
+use deve_core::models::{serialize_ledger_entry, DocId, LedgerEntry, Op, PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -26,27 +29,33 @@ pub(super) fn seed_shadow_doc(
         },
     )?;
     let doc_id = DocId::new();
-    state.repo.run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
-        let _ = deve_core::ledger::node_meta::ensure_file_node(db, DOC_PATH, doc_id)?;
-        let entry = LedgerEntry::new_content(
-            doc_id,
-            Op::Insert {
-                pos: 0,
-                content: "hello remote".into(),
-            },
-            1,
-            peer_id.clone(),
-            1,
-            None,
-            None,
-        );
-        let bytes = serialize_ledger_entry(&entry)?;
-        let write = db.begin_write()?;
-        write.open_table(LEDGER_OPS)?.insert(1u64, bytes.as_slice())?;
-        write.open_multimap_table(DOC_OPS)?.insert(doc_id.as_u128(), 1u64)?;
-        write.commit()?;
-        Ok(())
-    })?;
+    state
+        .repo
+        .run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
+            let _ = deve_core::ledger::node_meta::ensure_file_node(db, DOC_PATH, doc_id)?;
+            let entry = LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "hello remote".into(),
+                },
+                1,
+                peer_id.clone(),
+                1,
+                None,
+                None,
+            );
+            let bytes = serialize_ledger_entry(&entry)?;
+            let write = db.begin_write()?;
+            write
+                .open_table(LEDGER_OPS)?
+                .insert(1u64, bytes.as_slice())?;
+            write
+                .open_multimap_table(DOC_OPS)?
+                .insert(doc_id.as_u128(), 1u64)?;
+            write.commit()?;
+            Ok(())
+        })?;
     Ok(doc_id)
 }
 

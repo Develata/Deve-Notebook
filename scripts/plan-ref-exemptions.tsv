@@ -422,7 +422,6 @@ crates/core/tests/local_repo_metadata_repair_test.rs	test	-	Test-only module; pr
 crates/core/tests/local_repo_routing_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 crates/core/tests/local_repo_selector_heal_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 crates/core/tests/local_repo_source_control_tables_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
-crates/core/tests/local_repo_workspace_repair_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 crates/core/tests/materialize_projection_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 crates/core/tests/merge_checkpoint_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.
 crates/core/tests/merge_fail_closed_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.

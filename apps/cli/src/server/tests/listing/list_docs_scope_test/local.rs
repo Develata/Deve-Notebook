@@ -10,15 +10,15 @@ use tokio::sync::mpsc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_docs_rejects_stale_local_selector() -> anyhow::Result<()> {
-    let (_dir, state, _test_repo_id) = build_state()?;
-    let _ = seed_doc(&state, "test", "notes/b.md", "from test")?;
+    let (_dir, state, test_repo_id) = build_state()?;
+    let _ = seed_doc(&state, &test_repo_id.to_string(), "notes/b.md", "from test")?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(13));
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
-    session.switch_repo("test".into(), Some(default_id));
+    session.switch_repo(test_repo_id.to_string(), Some(default_id));
 
     handle_list_docs(&state, &ch, &mut session, Some("req-1".into()), None).await;
 

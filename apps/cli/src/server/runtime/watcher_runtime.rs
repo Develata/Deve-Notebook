@@ -6,8 +6,13 @@
 //! Server watcher composition adapter. Lifecycle ownership stays in the
 //! supervisor; AppState receives only its read-only runtime view.
 
+mod error;
+mod lifecycle;
+mod mount;
+mod refresh_route;
 mod slot;
 mod supervisor;
+mod view;
 
 use crate::server::setup;
 use anyhow::Result;
@@ -16,19 +21,26 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
-pub(crate) use slot::{
+pub(crate) use error::WatcherLifecycleError;
+pub(crate) use lifecycle::WatcherMountReservation;
+#[cfg(test)]
+pub(crate) use slot::RepoMountState;
+pub(crate) use supervisor::WatcherSupervisor;
+#[cfg(test)]
+pub(crate) use view::WatcherRuntimeAggregateStatus;
+pub(crate) use view::{
     MountAdmissionError, MountAdmissionToken, WatcherRuntimeAggregate, WatcherRuntimeView,
 };
-#[cfg(test)]
-pub(crate) use slot::{RepoMountState, WatcherRuntimeAggregateStatus};
-pub(crate) use supervisor::WatcherSupervisor;
 
 pub(crate) fn start_file_watchers(
     sync_manager: Arc<SyncManager>,
     tx: broadcast::Sender<ServerMessage>,
 ) -> Result<WatcherSupervisor> {
-    let starts = setup::file_watcher_starts(sync_manager, tx)?;
-    Ok(WatcherSupervisor::start_all(starts)?)
+    let starts = setup::file_watcher_starts(sync_manager)?;
+    let publisher = Arc::new(move |refresh| {
+        let _ = tx.send(setup::watcher_refresh_message(refresh));
+    });
+    Ok(WatcherSupervisor::start_all(starts, publisher)?)
 }
 
 #[cfg(test)]

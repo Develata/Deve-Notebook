@@ -2,6 +2,8 @@ use deve_core::source_control::{ChangeDomain, ChangeStatus};
 use deve_core::sync::SyncManager;
 use std::sync::Arc;
 
+mod common;
+
 #[path = "source_control_external_changes_test/commit_anchor.rs"]
 mod commit_anchor;
 #[path = "source_control_external_changes_test/discard.rs"]

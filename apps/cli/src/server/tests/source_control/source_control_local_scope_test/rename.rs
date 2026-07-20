@@ -6,8 +6,8 @@ use crate::server::{
     channel::DualChannel, handlers::source_control::handle_get_doc_diff, session::WsSession,
 };
 use deve_core::protocol::{ScPathTarget, ServerMessage};
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use tokio::sync::mpsc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -26,7 +26,8 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,                },
+                    has_conflict: false,
+                },
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;
@@ -51,7 +52,8 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Deleted,
                     content_hash: String::new(),
                     detected_at: 2,
-                    has_conflict: false,                },
+                    has_conflict: false,
+                },
             )?;
             pending_fs::upsert(
                 db,
@@ -62,7 +64,8 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello renamed"),
                     detected_at: 2,
-                    has_conflict: false,                },
+                    has_conflict: false,
+                },
             )
         })?;
 
@@ -71,7 +74,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(19));
-    session.switch_repo("default".into(), None);
+    session.switch_repo(state.repo.local_repo_name().to_string(), state.repo.get_repo_info()?.map(|info| info.uuid));
 
     handle_get_doc_diff(
         &state,
@@ -81,7 +84,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
     )
     .await;

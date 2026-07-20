@@ -26,12 +26,10 @@ async fn list_repos_rejects_unbound_remote_scope_with_stale_runtime_binding() ->
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.starts_with("stale remote scope:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

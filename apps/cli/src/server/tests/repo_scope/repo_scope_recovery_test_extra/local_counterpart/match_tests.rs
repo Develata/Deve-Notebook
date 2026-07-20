@@ -20,7 +20,7 @@ fn resolve_local_counterpart_repo_prefers_repo_uuid_for_remote_scope() -> anyhow
 
     assert!(local.branch.is_none());
     assert_eq!(local.repo_name, remote_repo_id.to_string());
-    assert_eq!(local.session_name, "test");
+    assert_eq!(local.session_name, remote_repo_id.to_string());
     assert_eq!(local.repo_id, remote_repo_id);
     Ok(())
 }
@@ -39,17 +39,15 @@ fn resolve_local_counterpart_repo_requires_uuid_or_url_match() -> anyhow::Result
         },
     )?;
 
-    let local = resolve_local_counterpart_repo(
-        &state,
-        &remote_scope(remote_repo_id, "test", peer_id),
-    )?;
+    let local =
+        resolve_local_counterpart_repo(&state, &remote_scope(remote_repo_id, "test", peer_id))?;
     assert!(local.is_none());
     Ok(())
 }
 
 #[test]
-fn resolve_local_counterpart_repo_fails_closed_when_resolved_remote_scope_has_no_url()
--> anyhow::Result<()> {
+fn resolve_local_counterpart_repo_fails_closed_when_resolved_remote_scope_has_no_url(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let peer_id = PeerId::new("peer-a");
     let remote_repo_id = uuid::Uuid::new_v4();

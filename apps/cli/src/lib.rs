@@ -22,6 +22,8 @@ mod remote_import_wire;
 mod remote_projection_transport;
 mod repo_init;
 pub mod server;
+#[cfg(test)]
+pub(crate) mod test_support;
 mod watcher_runtime;
 mod workspace_identity_gate;
 

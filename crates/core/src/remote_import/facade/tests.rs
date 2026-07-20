@@ -3,7 +3,6 @@
 //!   - 05_diff_logic#remote-import-diff-contract
 
 use super::*;
-use crate::ledger::init::RepoInitOptions;
 use crate::remote_import::RemoteImportBlocker;
 use crate::remote_import::RemoteImportState;
 use crate::remote_import::types::{RemoteImportApplyReceipt, RemoteImportProjectionOutcome};
@@ -24,20 +23,13 @@ struct Fixture {
 impl Fixture {
     fn new() -> anyhow::Result<Self> {
         let dir = tempfile::tempdir()?;
-        let repo_id = RepoId::new_v4();
         let projection_base = dir.path().join("notes");
-        std::fs::create_dir_all(&projection_base)?;
-        let repo = Arc::new(RepoManager::init_with_options(
-            dir.path().join("ledger"),
-            8,
-            Some("notes"),
-            RepoInitOptions {
-                repo_id: Some(repo_id),
-                repo_url: Some("webdav+https://dav.example.com/notebooks/main".to_string()),
-            },
-        )?);
-        repo.set_projection_base_for_local_repo("notes", &projection_base)?;
-        repo.ensure_local_repo_workspace_identity("notes")?;
+        let (repo, repo_id) = crate::test_support::init_cataloged_repo_with_url(
+            &dir.path().join("ledger"),
+            &projection_base,
+            "webdav+https://dav.example.com/notebooks/main",
+        )?;
+        let repo = Arc::new(repo);
         Ok(Self {
             _dir: dir,
             repo,
@@ -371,5 +363,95 @@ fn optional_revision_none_is_exact_for_precandidate_failure_only() -> anyhow::Re
         service.discard(ready.session_id, Some(revision))?.state,
         RemoteImportState::Discarded
     );
+    Ok(())
+}
+
+#[test]
+fn repo_removal_admission_classifies_preparing_ready_and_failed_as_active() -> anyhow::Result<()> {
+    let fixture = Fixture::new()?;
+    let service = RemoteImportService::open(fixture.repo.as_ref(), fixture.repo_id)?;
+    let admitted = match service.repo_removal_admission()? {
+        RemoteImportRepoRemovalAdmission::Admitted(snapshot) => snapshot,
+        other => panic!("empty runtime must admit removal: {other:?}"),
+    };
+    assert_eq!(
+        service.revalidate_repo_removal(&admitted)?,
+        RemoteImportRepoRemovalRevalidation::Exact
+    );
+
+    let mut preparing = service.begin_prepare(
+        fixture.repo.as_ref(),
+        fixture.repo.local_repo_name(),
+        &fixture.source,
+        &fixture.locator,
+    )?;
+    assert_removal_active(&service, RemoteImportState::Preparing)?;
+    assert!(matches!(
+        service.revalidate_repo_removal(&admitted)?,
+        RemoteImportRepoRemovalRevalidation::Changed(RemoteImportRepoRemovalAdmission::Blocked(_))
+    ));
+    assert!(
+        preparing
+            .capture_file("../unsafe.md", Cursor::new(b"unsafe"))
+            .is_err()
+    );
+    assert_removal_active(&service, RemoteImportState::Failed)?;
+    let failed_id = preparing.session_id();
+    drop(preparing);
+    service.discard(failed_id, None)?;
+
+    let ready = fixture.ready_session()?;
+    assert_removal_active(&service, RemoteImportState::Ready)?;
+    service.discard(ready.session_id, ready.revision)?;
+    assert!(matches!(
+        service.repo_removal_admission()?,
+        RemoteImportRepoRemovalAdmission::Admitted(_)
+    ));
+    Ok(())
+}
+
+#[test]
+fn repo_removal_admission_blocks_cleanup_debt_without_cli_state_inference() -> anyhow::Result<()> {
+    let fixture = Fixture::new()?;
+    let ready = fixture.ready_session()?;
+    let service = RemoteImportService::open(fixture.repo.as_ref(), fixture.repo_id)?;
+    let record = service.inner.session(ready.session_id)?;
+    service.inner.store.begin_discard(
+        record.session_id,
+        record.generation,
+        record
+            .candidate
+            .as_ref()
+            .map(|candidate| candidate.revision),
+    )?;
+
+    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+    else {
+        panic!("cleanup debt must block repo removal");
+    };
+    assert_eq!(blocked.repo_id(), fixture.repo_id);
+    assert_eq!(
+        blocked.blockers(),
+        &[RemoteImportRepoRemovalBlocker::CleanupPending {
+            session_id: ready.session_id,
+            state: RemoteImportState::Discarded,
+        }]
+    );
+    Ok(())
+}
+
+fn assert_removal_active(
+    service: &RemoteImportService,
+    expected_state: RemoteImportState,
+) -> anyhow::Result<()> {
+    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+    else {
+        panic!("active session must block repo removal");
+    };
+    assert!(matches!(
+        blocked.blockers(),
+        [RemoteImportRepoRemovalBlocker::ActiveSession { state, .. }]
+            if *state == expected_state
+    ));
     Ok(())
 }

@@ -38,14 +38,15 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::RemoteProjectionPush(_)
             | ClientMessage::DeletePeer { .. }
             | ClientMessage::SwitchBranch { .. }
-            | ClientMessage::SwitchRepo { .. }
             | ClientMessage::SwitchRepoExact { .. }
-            | ClientMessage::CreateRepo { .. }
-            | ClientMessage::RenameRepo { .. }
-            | ClientMessage::RemoveRepo { .. }
             | ClientMessage::ConfirmMerge { .. }
             | ClientMessage::DiscardPending { .. }
             | ClientMessage::SetSyncMode { .. }
             | ClientMessage::PluginCall { .. }
     ) || matches!(msg, ClientMessage::RemoteImport(request) if request.is_write())
+        || matches!(
+            msg,
+            ClientMessage::RepoControl(request)
+                if !matches!(request, deve_core::protocol::RepoControlRequest::GetLifecycle { .. })
+        )
 }

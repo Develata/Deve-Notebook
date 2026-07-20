@@ -1,24 +1,24 @@
 use super::repo_scope::resolve_session_repo_and_sync;
-use super::{AppState, session::WsSession, tree_state::RepoTreeRegistry};
+use super::{session::WsSession, tree_state::RepoTreeRegistry, AppState};
 use crate::server::security;
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(
-        dir.path().join("ledger"),
+    let (repo, _repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &dir.path().join("ledger"),
+        "default",
+        &projection_base,
         10,
-        Some("default"),
         Some("urn:default"),
     )?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(32);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;

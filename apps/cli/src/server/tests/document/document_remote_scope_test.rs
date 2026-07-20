@@ -5,11 +5,11 @@
 use super::handlers::document::{handle_open_doc, handle_request_history};
 use super::handlers::listing::handle_list_docs;
 use super::{
+    docs_test_support::channel as unicast_channel,
+    document_remote_scope_state_test_support::build_state,
     document_remote_scope_test_support::{
         assert_doc_list, assert_history, assert_snapshot, remote_browser_session, seed_shadow_doc,
     },
-    document_remote_scope_state_test_support::build_state,
-    docs_test_support::channel as unicast_channel,
 };
 use deve_core::models::PeerId;
 

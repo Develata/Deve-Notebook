@@ -9,7 +9,7 @@ use crate::hooks::use_core::switch_nonce::next_switch_nonce_after;
 use crate::hooks::use_core::types::{PendingRepoSwitch, SwitchScopeSignals};
 use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason};
 use crate::i18n::Locale;
-use deve_core::protocol::ClientMessage;
+use crate::runtime::repo_control_client::RepoControlClient;
 use leptos::prelude::*;
 
 use super::super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
@@ -19,6 +19,7 @@ pub(in crate::hooks::use_core::callbacks_switch) fn build_create_repo_callback(
     locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
+    repo_control: RepoControlClient,
 ) -> Callback<String> {
     Callback::new(move |name: String| {
         let target_repo = name.trim().to_string();
@@ -51,6 +52,7 @@ pub(in crate::hooks::use_core::callbacks_switch) fn build_create_repo_callback(
         }
 
         let ws_repo_action = ws.clone();
+        let repo_control = repo_control.clone();
         let action = Callback::new(move |_: ()| {
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
@@ -70,10 +72,12 @@ pub(in crate::hooks::use_core::callbacks_switch) fn build_create_repo_callback(
                     target_repo.clone(),
                     switch_nonce,
                 )));
-            ws_repo_action.send(ClientMessage::CreateRepo {
-                name: target_repo.clone(),
-                switch_nonce: Some(switch_nonce),
-            });
+            repo_control.create_repo(
+                &ws_repo_action,
+                super::repo_control_scope(&ws_repo_action, signals),
+                target_repo.clone(),
+                switch_nonce,
+            );
         });
         let _ = guard_navigation(
             signals.current_doc.get_untracked(),

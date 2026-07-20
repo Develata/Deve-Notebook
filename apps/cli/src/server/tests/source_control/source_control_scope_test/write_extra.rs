@@ -30,15 +30,16 @@ fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<Pee
 async fn readonly_remote_source_control_writes_are_rejected_before_mutation() -> anyhow::Result<()>
 {
     let (dir, state, _default_id, test_id) = build_state()?;
+    let test = test_id.to_string();
     let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
-    write_workspace_file(&dir, "test", "notes/pending.md", "pending");
-    write_workspace_file(&dir, "test", "notes/staged.md", "staged");
-    seed_pending(state.repo.as_ref(), "test", "notes/pending.md", "pending");
-    seed_pending(state.repo.as_ref(), "test", "notes/staged.md", "staged");
+    write_workspace_file(&dir, test.as_str(), "notes/pending.md", "pending");
+    write_workspace_file(&dir, test.as_str(), "notes/staged.md", "staged");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/pending.md", "pending");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/staged.md", "staged");
     state
         .repo
-        .stage_pending_in_local_repo("test", "notes/staged.md")?;
-    let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
+        .stage_pending_in_local_repo(test.as_str(), "notes/staged.md")?;
+    let expected_local_state = local_source_control_counts(state.repo.as_ref(), test.as_str())?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -52,23 +53,23 @@ async fn readonly_remote_source_control_writes_are_rejected_before_mutation() ->
 
     handle_stage_file(&state, &ch, &mut session, pending_target()).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_stage_files(&state, &ch, &mut session, vec![pending_target()]).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_file(&state, &ch, &mut session, staged_target()).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_files(&state, &ch, &mut session, vec![staged_target()]).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_discard_file(&state, &ch, &mut session, pending_target()).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_resolve_conflict(
         &state,
@@ -79,62 +80,62 @@ async fn readonly_remote_source_control_writes_are_rejected_before_mutation() ->
     )
     .await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_commit(&state, &ch, &mut session, "remote write".into()).await;
     expect_remote_readonly_error(&mut uni_rx, 41).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> anyhow::Result<()>
-{
+async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> anyhow::Result<()> {
     let (dir, state, _default_id, test_id) = build_state()?;
-    write_workspace_file(&dir, "test", "notes/pending.md", "pending");
-    write_workspace_file(&dir, "test", "notes/staged.md", "staged");
-    seed_pending(state.repo.as_ref(), "test", "notes/pending.md", "pending");
-    seed_pending(state.repo.as_ref(), "test", "notes/staged.md", "staged");
+    let test = test_id.to_string();
+    write_workspace_file(&dir, test.as_str(), "notes/pending.md", "pending");
+    write_workspace_file(&dir, test.as_str(), "notes/staged.md", "staged");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/pending.md", "pending");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/staged.md", "staged");
     state
         .repo
-        .stage_pending_in_local_repo("test", "notes/staged.md")?;
+        .stage_pending_in_local_repo(test.as_str(), "notes/staged.md")?;
     let test_execution_name = state
         .repo
-        .resolve_local_repo_name_for_execution(Some(test_id), Some("test"))?;
+        .resolve_local_repo_name_for_execution(Some(test_id), Some(test.as_str()))?;
     state
         .sync_manager
         .mark_projection_writeback_fault(&test_execution_name)?;
-    let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
+    let expected_local_state = local_source_control_counts(state.repo.as_ref(), test.as_str())?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("test".into(), Some(test_id));
+    session.switch_repo(test.clone(), Some(test_id));
     session.set_scope_nonce(Some(43));
     let pending_target = || ScPathTarget::from_path("notes/pending.md");
     let staged_target = || ScPathTarget::from_path("notes/staged.md");
 
     handle_stage_file(&state, &ch, &mut session, pending_target()).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_stage_files(&state, &ch, &mut session, vec![pending_target()]).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_file(&state, &ch, &mut session, staged_target()).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_files(&state, &ch, &mut session, vec![staged_target()]).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_discard_file(&state, &ch, &mut session, pending_target()).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_resolve_conflict(
         &state,
@@ -145,11 +146,11 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
     )
     .await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_commit(&state, &ch, &mut session, "degraded write".into()).await;
     expect_degraded_projection_error(&mut uni_rx, 43).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     Ok(())
 }
@@ -157,44 +158,45 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_browser_source_control_writes_require_live_writer_binding() -> anyhow::Result<()> {
     let (dir, state, _default_id, test_id) = build_state()?;
-    state.repo.ensure_local_repo_workspace_identity("test")?;
-    write_workspace_file(&dir, "test", "notes/pending.md", "pending");
-    write_workspace_file(&dir, "test", "notes/staged.md", "staged");
-    seed_pending(state.repo.as_ref(), "test", "notes/pending.md", "pending");
-    seed_pending(state.repo.as_ref(), "test", "notes/staged.md", "staged");
+    let test = test_id.to_string();
+    state.repo.ensure_local_repo_workspace_identity(test.as_str())?;
+    write_workspace_file(&dir, test.as_str(), "notes/pending.md", "pending");
+    write_workspace_file(&dir, test.as_str(), "notes/staged.md", "staged");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/pending.md", "pending");
+    seed_pending(state.repo.as_ref(), test.as_str(), "notes/staged.md", "staged");
     state
         .repo
-        .stage_pending_in_local_repo("test", "notes/staged.md")?;
-    let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
+        .stage_pending_in_local_repo(test.as_str(), "notes/staged.md")?;
+    let expected_local_state = local_source_control_counts(state.repo.as_ref(), test.as_str())?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(16);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("test".into(), Some(test_id));
+    session.switch_repo(test.clone(), Some(test_id));
     session.set_scope_nonce(Some(45));
     let pending_target = || ScPathTarget::from_path("notes/pending.md");
     let staged_target = || ScPathTarget::from_path("notes/staged.md");
 
     handle_stage_file(&state, &ch, &mut session, pending_target()).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_stage_files(&state, &ch, &mut session, vec![pending_target()]).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_file(&state, &ch, &mut session, staged_target()).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_unstage_files(&state, &ch, &mut session, vec![staged_target()]).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_discard_file(&state, &ch, &mut session, pending_target()).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_resolve_conflict(
         &state,
@@ -205,11 +207,11 @@ async fn local_browser_source_control_writes_require_live_writer_binding() -> an
     )
     .await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     handle_commit(&state, &ch, &mut session, "unauthorized write".into()).await;
     expect_stale_grant_error(&mut uni_rx, 45).await;
-    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    assert_local_source_control_counts(state.repo.as_ref(), test.as_str(), expected_local_state);
 
     Ok(())
 }
@@ -233,15 +235,16 @@ async fn expect_degraded_projection_error(rx: &mut mpsc::Receiver<ServerMessage>
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("projection is degraded"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("projection is degraded")));
             assert_eq!(scope_nonce, Some(nonce));
         }
-        other => panic!("expected degraded projection ProtocolError, got {:?}", other),
+        other => panic!(
+            "expected degraded projection ProtocolError, got {:?}",
+            other
+        ),
     }
 }
 
@@ -251,12 +254,10 @@ async fn expect_stale_grant_error(rx: &mut mpsc::Receiver<ServerMessage>, nonce:
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScStaleScope);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("source control live writer binding"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("source control live writer binding")));
             assert_eq!(scope_nonce, Some(nonce));
         }
         other => panic!("expected stale grant ProtocolError, got {:?}", other),

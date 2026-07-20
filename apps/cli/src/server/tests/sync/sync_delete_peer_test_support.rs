@@ -3,8 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, session::WsSession,
-    sync_scope_cleanup_test_support::assert_runtime_binding_cleared,
+    session::WsSession, sync_scope_cleanup_test_support::assert_runtime_binding_cleared, AppState,
 };
 use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;

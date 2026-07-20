@@ -4,8 +4,8 @@
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, expect_sync_hello_and_shadow_list, recv_server_message,
-    send_client_message, switch_to_notes_repo,
+    connect_harness, expect_sync_hello_and_shadow_list, recv_server_message, send_client_message,
+    switch_to_notes_repo, WsHarness,
 };
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ServerMessage};
@@ -67,11 +67,7 @@ pub(super) async fn create_doc(
         },
     )
     .await?;
-    let doc_id = assert_create_recovery(
-        recv_server_message(ws).await?,
-        repo_id,
-        scope_nonce,
-    );
+    let doc_id = assert_create_recovery(recv_server_message(ws).await?, repo_id, scope_nonce);
     send_client_message(
         ws,
         ClientMessage::ListDocs {
@@ -85,8 +81,12 @@ pub(super) async fn create_doc(
     let mut saw_scope = false;
     for _ in 0..3 {
         match recv_server_message(ws).await? {
-            ServerMessage::RepoSwitched { uuid, branch, .. } => {
-                assert_eq!(uuid, repo_id.to_string());
+            ServerMessage::RepoSwitched {
+                repo_id: actual_repo_id,
+                branch,
+                ..
+            } => {
+                assert_eq!(actual_repo_id, repo_id);
                 assert_eq!(branch, None);
                 saw_scope = true;
             }
@@ -97,9 +97,14 @@ pub(super) async fn create_doc(
                 scope_nonce: actual_scope,
                 docs,
             } => {
-                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
+                assert_eq!(
+                    (actual, branch, actual_scope),
+                    (repo_id, None, Some(scope_nonce))
+                );
                 assert_eq!(request_id.as_deref(), Some("create-recovery"));
-                assert!(docs.iter().any(|(id, candidate)| *id == doc_id && candidate == path));
+                assert!(docs
+                    .iter()
+                    .any(|(id, candidate)| *id == doc_id && candidate == path));
                 saw_doc_list = true;
             }
             ServerMessage::TreeUpdate {
@@ -109,14 +114,20 @@ pub(super) async fn create_doc(
                 scope_nonce: actual_scope,
                 ..
             } => {
-                assert_eq!((actual, branch, actual_scope), (repo_id, None, Some(scope_nonce)));
+                assert_eq!(
+                    (actual, branch, actual_scope),
+                    (repo_id, None, Some(scope_nonce))
+                );
                 assert_eq!(request_id.as_deref(), Some("create-recovery"));
                 saw_tree = true;
             }
             other => anyhow::bail!("expected create recovery projection, got {other:?}"),
         }
     }
-    anyhow::ensure!(saw_scope && saw_doc_list && saw_tree, "created doc recovery did not settle");
+    anyhow::ensure!(
+        saw_scope && saw_doc_list && saw_tree,
+        "created doc recovery did not settle"
+    );
     Ok(doc_id)
 }
 
@@ -151,7 +162,10 @@ pub(super) async fn expect_edit_committed(
                 ..
             } => {
                 assert_eq!((repo_id, branch, scope_nonce), expected.scope_tuple());
-                assert_eq!((doc_id, client_op_id), (expected.doc_id, expected.client_op_id));
+                assert_eq!(
+                    (doc_id, client_op_id),
+                    (expected.doc_id, expected.client_op_id)
+                );
                 assert_eq!(ack_seq.replace(seq), None);
             }
             ServerMessage::EditRejected { error, .. } => {
@@ -224,14 +238,13 @@ fn assert_origin(
     client_op_id: u64,
 ) {
     let origin = origin.expect("NewOp must preserve client origin");
-    assert_eq!((origin.client_id, origin.client_op_id), (client_id, client_op_id));
+    assert_eq!(
+        (origin.client_id, origin.client_op_id),
+        (client_id, client_op_id)
+    );
 }
 
-fn assert_create_recovery(
-    message: ServerMessage,
-    repo_id: uuid::Uuid,
-    scope_nonce: u64,
-) -> DocId {
+fn assert_create_recovery(message: ServerMessage, repo_id: uuid::Uuid, scope_nonce: u64) -> DocId {
     match message {
         ServerMessage::ProjectionRecoveryRequired(required) => {
             assert_eq!(

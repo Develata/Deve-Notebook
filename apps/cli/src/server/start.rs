@@ -64,7 +64,8 @@ impl std::error::Error for ServerTransportServeError {}
 pub(crate) struct EmbeddedServerRuntime {
     transport: ServerTransportRuntime,
     background_tasks: Option<runtime::BackgroundRuntimeTasks>,
-    watcher_supervisor: Option<runtime::watcher_runtime::WatcherSupervisor>,
+    watcher_supervisor: Option<Arc<runtime::watcher_runtime::WatcherSupervisor>>,
+    repo_lifecycle_jobs: Option<Arc<runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>>,
 }
 
 impl EmbeddedServerRuntime {
@@ -85,6 +86,11 @@ impl EmbeddedServerRuntime {
 
         let sync_manager = runtime::init_sync_manager(repo.clone())?;
         runtime::install_sync_host_api(sync_manager.clone())?;
+        let local_repos = repo.list_cataloged_local_repo_summaries()?;
+        repo.seed_catalog_membership_from_records()?;
+        for summary in &local_repos {
+            deve_core::remote_import::RemoteImportService::recover_startup(&repo, summary.repo_id)?;
+        }
 
         #[cfg(feature = "search")]
         let search_available = runtime::search_available(profile);
@@ -95,7 +101,10 @@ impl EmbeddedServerRuntime {
 
         let sync_engine = build_sync_engine(peer_id, repo.clone(), sync_mode);
         let tree_manager = runtime::build_tree_registry();
-        let watcher_supervisor = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
+        let watcher_supervisor = Arc::new(runtime::start_file_watchers(
+            sync_manager.clone(),
+            tx.clone(),
+        )?);
         let watcher_runtime = watcher_supervisor.view();
         let app_state = runtime::build_app_state(runtime::AppStateParts {
             repo: repo.clone(),
@@ -108,7 +117,8 @@ impl EmbeddedServerRuntime {
             search_available,
             identity_key: key_pair,
             watcher_runtime,
-        });
+            watcher_supervisor: watcher_supervisor.clone(),
+        })?;
         #[cfg(not(test))]
         deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
             crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
@@ -121,6 +131,7 @@ impl EmbeddedServerRuntime {
         let background_tasks =
             runtime::spawn_background_runtime_tasks(p2p, app_state.clone(), repo, prewarm_enabled);
 
+        let repo_lifecycle_jobs = app_state.repo_lifecycle_jobs();
         Ok(Self {
             transport: ServerTransportRuntime {
                 app_state,
@@ -130,6 +141,7 @@ impl EmbeddedServerRuntime {
             },
             background_tasks: Some(background_tasks),
             watcher_supervisor: Some(watcher_supervisor),
+            repo_lifecycle_jobs: Some(repo_lifecycle_jobs),
         })
     }
 
@@ -140,6 +152,10 @@ impl EmbeddedServerRuntime {
     pub(crate) async fn shutdown(mut self, timeout: Duration) -> anyhow::Result<()> {
         let background_result = match self.background_tasks.take() {
             Some(tasks) => tasks.shutdown(timeout).await,
+            None => Ok(()),
+        };
+        let lifecycle_result = match self.repo_lifecycle_jobs.take() {
+            Some(runtime) => runtime.shutdown().await.map_err(anyhow::Error::from),
             None => Ok(()),
         };
         let watcher_result = match self.watcher_supervisor.take() {
@@ -153,21 +169,29 @@ impl EmbeddedServerRuntime {
             }
             None => Ok(()),
         };
-        combine_runtime_shutdown_results(background_result, watcher_result)
+        combine_runtime_shutdown_results(background_result, lifecycle_result, watcher_result)
     }
 }
 
 fn combine_runtime_shutdown_results(
     background_result: anyhow::Result<()>,
+    lifecycle_result: anyhow::Result<()>,
     watcher_result: anyhow::Result<()>,
 ) -> anyhow::Result<()> {
-    match (background_result, watcher_result) {
-        (Ok(()), Ok(())) => Ok(()),
-        (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
-        (Err(primary), Err(watcher)) => {
-            Err(primary.context(format!("watcher shutdown also failed: {watcher}")))
-        }
+    let mut primary = background_result.err();
+    if let Err(lifecycle) = lifecycle_result {
+        primary = Some(match primary {
+            Some(error) => error.context(format!("lifecycle shutdown also failed: {lifecycle}")),
+            None => lifecycle,
+        });
     }
+    if let Err(watcher) = watcher_result {
+        primary = Some(match primary {
+            Some(error) => error.context(format!("watcher shutdown also failed: {watcher}")),
+            None => watcher,
+        });
+    }
+    primary.map_or(Ok(()), Err)
 }
 
 impl ServerTransportRuntime {

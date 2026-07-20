@@ -5,6 +5,34 @@ use std::sync::Arc;
 
 mod validation;
 
+fn init_cataloged_repo(
+    ledger: &Path,
+    projection_base: &Path,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    let repo_id = uuid::Uuid::new_v4();
+    let execution_name = repo_id.to_string();
+    let repo = RepoManager::init_with_options(
+        ledger,
+        8,
+        Some(&execution_name),
+        crate::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: None,
+        },
+    )?;
+    let locator = repo.prepare_projection_locator_for_repo_creation(repo_id, projection_base)?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    repo.seed_catalog_membership_from_records()?;
+    let authority = repo.claim_repo_catalog_cut_authority()?;
+    let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
+    let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+    let permit = authority.permit(repo_id)?;
+    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    Ok((repo, repo_id))
+}
+
 fn locator_base_from_file(path: &Path) -> anyhow::Result<String> {
     let content = std::fs::read_to_string(path)?;
     let value: toml::Value = toml::from_str(&content)?;
@@ -20,16 +48,11 @@ fn set_projection_base_for_all_local_repos_checked_restores_previous_root_when_c
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
     let first_projection_base = dir.path().join("notes-a");
-    std::fs::create_dir_all(&first_projection_base)?;
-    repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)?;
+    let (mut repo, repo_id) = init_cataloged_repo(&ledger, &first_projection_base)?;
     assert_eq!(
-        repo.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&first_projection_base)?.join(repo_workspace_segment(
-            "default",
-            repo.get_repo_info()?.expect("default repo").uuid,
-        )?)
+        repo.local_repo_workspace_root(&repo_id.to_string())?,
+        std::fs::canonicalize(&first_projection_base)?.join(repo_id.to_string())
     );
 
     std::fs::remove_dir_all(ledger.join("local"))?;
@@ -54,22 +77,19 @@ fn projection_locator_toml_roundtrip() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
-
-    repo.set_projection_base_for_local_repo("default", &base)?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
 
     let locators = repo.list_projection_locators()?;
     assert_eq!(locators.len(), 1);
     assert_eq!(locators[0].repo_id, repo_id);
-    assert_eq!(locators[0].repo_name_hint, "default");
+    assert_eq!(locators[0].workspace_segment, repo_id.to_string());
     assert_eq!(
         locators[0].projection_base_abs,
         std::fs::canonicalize(&base)?
     );
 
     let reopened = read_projection_locator_file(&repo.projection_locator_path())?;
-    assert_eq!(reopened.version, 1);
+    assert_eq!(reopened.version, 2);
     assert_eq!(reopened.locators, locators);
     assert_eq!(
         projection_locator_record_for_repo_id(&ledger, repo_id)?,
@@ -82,10 +102,12 @@ fn projection_locator_toml_roundtrip() -> anyhow::Result<()> {
 fn projection_locator_missing_fails_closed() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+    let base = dir.path().join("notes");
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    repo.remove_projection_locator_for_repo_id(repo_id)?;
 
     let err = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(&repo_id.to_string())
         .expect_err("missing locator must fail closed");
 
     assert!(err.to_string().contains("Projection Locator missing"));
@@ -111,18 +133,12 @@ fn projection_locator_custom_base_creates_repo_workspace_notegit() -> anyhow::Re
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("my-notebooks");
-    let repo = Arc::new(RepoManager::init(
-        &ledger,
-        8,
-        Some("default"),
-        Some("urn:default"),
-    )?);
-    repo.set_projection_base_for_local_repo("default", &base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    let repo = Arc::new(repo);
 
     SyncManager::new_checked(repo.clone())?.scan()?;
 
-    let workspace = repo.local_repo_workspace_root("default")?;
+    let workspace = repo.local_repo_workspace_root(&repo_id.to_string())?;
     assert!(workspace.join(".notegit").is_dir());
     crate::utils::notegit::validate_repo_identity_marker(&workspace, repo_id)?;
     assert!(workspace.join(".gitignore").is_file());
@@ -134,21 +150,16 @@ fn projection_locator_scan_uses_computed_workspace_only() -> anyhow::Result<()> 
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("my-notebooks");
-    let repo = Arc::new(RepoManager::init(
-        &ledger,
-        8,
-        Some("default"),
-        Some("urn:default"),
-    )?);
-    repo.set_projection_base_for_local_repo("default", &base)?;
-    let workspace = repo.ensure_local_repo_workspace_identity("default")?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    let repo = Arc::new(repo);
+    let workspace = repo.ensure_local_repo_workspace_identity(&repo_id.to_string())?;
     std::fs::create_dir_all(&workspace)?;
     std::fs::write(base.join("a.md"), "base sibling")?;
     std::fs::write(workspace.join("a.md"), "workspace doc")?;
 
     SyncManager::new_checked(repo.clone())?.scan()?;
 
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    let pending = repo.list_pending_fs_in_local_repo(&repo_id.to_string())?;
     let mut paths = pending
         .into_iter()
         .map(|entry| entry.path)
@@ -163,10 +174,9 @@ fn projection_locator_check_rejects_identity_marker_mismatch() -> anyhow::Result
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_local_repo("default", &base)?;
-    let workspace = repo.local_repo_workspace_root("default")?;
-    std::fs::create_dir_all(crate::utils::notegit::repo_dir(&workspace))?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    let workspace = repo.local_repo_workspace_root(&repo_id.to_string())?;
+    std::fs::remove_dir_all(crate::utils::notegit::repo_dir(&workspace))?;
     crate::utils::notegit::ensure_repo_identity_marker(
         &workspace,
         uuid::Uuid::from_u128(99),
@@ -174,7 +184,7 @@ fn projection_locator_check_rejects_identity_marker_mismatch() -> anyhow::Result
     )?;
 
     let err = repo
-        .check_projection_locator_for_local_repo("default")
+        .check_projection_locator_for_local_repo(&repo_id.to_string())
         .expect_err("mismatched identity marker must fail closed");
 
     assert!(err.to_string().contains("identity marker repo_id mismatch"));
@@ -187,15 +197,10 @@ fn projection_materialize_rejects_nonempty_workspace_missing_identity_marker() -
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let repo = Arc::new(RepoManager::init(
-        &ledger,
-        8,
-        Some("default"),
-        Some("urn:default"),
-    )?);
-    repo.set_projection_base_for_local_repo("default", &base)?;
-    let workspace = repo.local_repo_workspace_root("default")?;
-    std::fs::create_dir_all(&workspace)?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    let repo = Arc::new(repo);
+    let workspace = repo.local_repo_workspace_root(&repo_id.to_string())?;
+    std::fs::remove_dir_all(crate::utils::notegit::repo_dir(&workspace))?;
     std::fs::write(workspace.join("foreign.md"), "foreign")?;
 
     let err = SyncManager::new_checked(repo.clone())?
@@ -212,24 +217,16 @@ fn projection_locator_shared_base_allows_distinct_repo_roots() -> anyhow::Result
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-    crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
-
-    main.set_projection_base_for_local_repo("default", &base)?;
-    main.set_projection_base_for_local_repo("wiki", &base)?;
-    let default_id = main.get_repo_info()?.expect("default repo").uuid;
-    let wiki_id = main
-        .get_repo_info_for(None, Some("wiki"))?
-        .expect("wiki repo")
-        .uuid;
+    let (main, default_id) = init_cataloged_repo(&ledger, &base)?;
+    let (_, wiki_id) = init_cataloged_repo(&ledger, &base)?;
 
     assert_eq!(
-        main.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&base)?.join(repo_workspace_segment("default", default_id)?)
+        main.local_repo_workspace_root(&default_id.to_string())?,
+        std::fs::canonicalize(&base)?.join(default_id.to_string())
     );
     assert_eq!(
-        main.local_repo_workspace_root("wiki")?,
-        std::fs::canonicalize(&base)?.join(repo_workspace_segment("wiki", wiki_id)?)
+        main.local_repo_workspace_root(&wiki_id.to_string())?,
+        std::fs::canonicalize(&base)?.join(wiki_id.to_string())
     );
     Ok(())
 }
@@ -241,25 +238,18 @@ fn projection_locator_set_all_validates_final_map_not_intermediate_mix() -> anyh
     let ledger = dir.path().join("ledger");
     let old_base = dir.path().join("notes");
     let new_base = old_base.join("wiki");
-    let mut main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-    crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
-    let default_id = main.get_repo_info()?.expect("default repo").uuid;
-    let wiki_id = main
-        .get_repo_info_for(None, Some("wiki"))?
-        .expect("wiki repo")
-        .uuid;
-
-    main.set_projection_base_for_all_local_repos_checked(&old_base)?;
+    let (mut main, default_id) = init_cataloged_repo(&ledger, &old_base)?;
+    let (_, wiki_id) = init_cataloged_repo(&ledger, &old_base)?;
     main.set_projection_base_for_all_local_repos_checked(&new_base)?;
 
     let new_base = std::fs::canonicalize(&new_base)?;
     assert_eq!(
-        main.local_repo_workspace_root("default")?,
-        new_base.join(repo_workspace_segment("default", default_id)?)
+        main.local_repo_workspace_root(&default_id.to_string())?,
+        new_base.join(default_id.to_string())
     );
     assert_eq!(
-        main.local_repo_workspace_root("wiki")?,
-        new_base.join(repo_workspace_segment("wiki", wiki_id)?)
+        main.local_repo_workspace_root(&wiki_id.to_string())?,
+        new_base.join(wiki_id.to_string())
     );
     Ok(())
 }
@@ -270,16 +260,11 @@ fn projection_locator_nested_workspace_roots_fail_closed() -> anyhow::Result<()>
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
-    crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
-    let default_id = main.get_repo_info()?.expect("default repo").uuid;
-
-    main.set_projection_base_for_local_repo("default", &base)?;
+    let (main, default_id) = init_cataloged_repo(&ledger, &base)?;
+    let wiki_base = dir.path().join("wiki-notes");
+    let (_, wiki_id) = init_cataloged_repo(&ledger, &wiki_base)?;
     let err = main
-        .set_projection_base_for_local_repo(
-            "wiki",
-            base.join(repo_workspace_segment("default", default_id)?),
-        )
+        .set_projection_base_for_repo_id(wiki_id, base.join(default_id.to_string()))
         .expect_err("nested workspace roots must fail closed");
 
     assert!(
@@ -290,7 +275,7 @@ fn projection_locator_nested_workspace_roots_fail_closed() -> anyhow::Result<()>
 }
 
 #[test]
-fn projection_locator_invalid_repo_name_fails_closed() -> anyhow::Result<()> {
+fn projection_locator_normal_set_rejects_unknown_repo() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
@@ -298,10 +283,10 @@ fn projection_locator_invalid_repo_name_fails_closed() -> anyhow::Result<()> {
     let repo_id = uuid::Uuid::new_v4();
 
     let err = repo
-        .set_projection_base_for_repo_id(repo_id, "bad/name", &base)
-        .expect_err("invalid repo path segment must fail closed");
+        .set_projection_base_for_repo_id(repo_id, &base)
+        .expect_err("unknown repo must fail closed");
 
-    assert!(err.to_string().contains("single safe path segment"));
+    assert!(err.to_string().contains("unknown local repo"));
     Ok(())
 }
 
@@ -330,26 +315,22 @@ fn projection_locator_rejects_reserved_repo_path_segments() {
 }
 
 #[test]
-fn projection_locator_preserves_redb_suffix_in_repo_name_segment() -> anyhow::Result<()> {
+fn projection_locator_segment_is_immutable_and_independent_of_host_alias() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger, 8, Some("paper.redb"), Some("urn:paper"))?;
-
-    let info = repo.get_repo_info()?.expect("repo info");
-    assert_eq!(repo.local_repo_name(), info.uuid.to_string());
-    assert_eq!(info.name, "paper.redb");
-
-    repo.set_projection_base_for_local_repo("paper.redb", &base)?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    repo.host_repo_alias_runtime()
+        .set_alias(repo_id, "paper.redb", 0)?;
 
     assert_eq!(
-        repo.local_repo_workspace_root("paper.redb")?,
-        std::fs::canonicalize(&base)?.join(repo_workspace_segment("paper.redb", info.uuid)?)
+        repo.local_repo_workspace_root(&repo_id.to_string())?,
+        std::fs::canonicalize(&base)?.join(repo_id.to_string())
     );
     assert_eq!(
-        repo.projection_locator_for_local_repo("paper.redb")?
-            .repo_name_hint,
-        "paper.redb"
+        repo.projection_locator_for_local_repo(&repo_id.to_string())?
+            .workspace_segment,
+        repo_id.to_string()
     );
     Ok(())
 }
@@ -360,19 +341,16 @@ fn projection_locator_normalized_workspace_key_detects_case_and_unicode_conflict
     let id = uuid::Uuid::from_u128(1);
 
     assert_eq!(
-        normalized_workspace_key(&base, &repo_workspace_segment("Default", id).unwrap()),
-        normalized_workspace_key(&base, &repo_workspace_segment("default", id).unwrap())
+        normalized_workspace_key(&base, "Default"),
+        normalized_workspace_key(&base, "default")
     );
     assert_eq!(
-        normalized_workspace_key(&base, &repo_workspace_segment("\u{00e9}", id).unwrap()),
-        normalized_workspace_key(&base, &repo_workspace_segment("e\u{0301}", id).unwrap())
+        normalized_workspace_key(&base, "\u{00e9}"),
+        normalized_workspace_key(&base, "e\u{0301}")
     );
     assert_ne!(
-        normalized_workspace_key(&base, &repo_workspace_segment("default", id).unwrap()),
-        normalized_workspace_key(
-            &base,
-            &repo_workspace_segment("default", uuid::Uuid::from_u128(2)).unwrap()
-        )
+        normalized_workspace_key(&base, &id.to_string()),
+        normalized_workspace_key(&base, &uuid::Uuid::from_u128(2).to_string())
     );
 }
 
@@ -381,11 +359,12 @@ fn projection_locator_rejects_protected_workspace_roots() -> anyhow::Result<()> 
     for protected_base in ["ledger/.host", ".git", ".notegit"] {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
-        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+        let initial_base = dir.path().join("initial-notes");
+        let (repo, repo_id) = init_cataloged_repo(&ledger, &initial_base)?;
         let base = dir.path().join(protected_base);
 
         let err = repo
-            .set_projection_base_for_local_repo("default", &base)
+            .set_projection_base_for_repo_id(repo_id, &base)
             .expect_err("protected workspace root must fail closed");
         let message = err.to_string();
         assert!(
@@ -403,14 +382,9 @@ fn projection_locator_workspace_deveignore_filters_startup_scan() -> anyhow::Res
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let repo = Arc::new(RepoManager::init(
-        &ledger,
-        8,
-        Some("default"),
-        Some("urn:default"),
-    )?);
-    repo.set_projection_base_for_local_repo("default", &base)?;
-    let workspace = repo.ensure_local_repo_workspace_identity("default")?;
+    let (repo, repo_id) = init_cataloged_repo(&ledger, &base)?;
+    let repo = Arc::new(repo);
+    let workspace = repo.ensure_local_repo_workspace_identity(&repo_id.to_string())?;
     std::fs::create_dir_all(&workspace)?;
     std::fs::write(workspace.join(".deveignore"), "ignored.md\n")?;
     std::fs::write(workspace.join("ignored.md"), "ignored")?;
@@ -418,7 +392,7 @@ fn projection_locator_workspace_deveignore_filters_startup_scan() -> anyhow::Res
 
     SyncManager::new_checked(repo.clone())?.scan()?;
 
-    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    let pending = repo.list_pending_fs_in_local_repo(&repo_id.to_string())?;
     let mut paths = pending
         .into_iter()
         .map(|entry| entry.path)

@@ -11,7 +11,7 @@ use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
-use crate::protocol::{RemoteImportRequest, RemoteProjectionPushRequest};
+use crate::protocol::{RemoteImportRequest, RemoteProjectionPushRequest, RepoControlRequest};
 use crate::security::EncryptedOp;
 use crate::source_control::CommitFileDiffTarget;
 use serde::{Deserialize, Serialize};
@@ -176,33 +176,12 @@ pub enum ClientMessage {
         #[serde(default)]
         switch_nonce: Option<u64>,
     },
-    SwitchRepo {
-        name: String,
-        #[serde(default)]
-        switch_nonce: Option<u64>,
-    },
     SwitchRepoExact {
-        name: String,
         repo_id: crate::models::RepoId,
         #[serde(default)]
         switch_nonce: Option<u64>,
     },
-    CreateRepo {
-        name: String,
-        #[serde(default)]
-        switch_nonce: Option<u64>,
-    },
-    RenameRepo {
-        repo_id: crate::models::RepoId,
-        name: String,
-        #[serde(default)]
-        switch_nonce: Option<u64>,
-    },
-    RemoveRepo {
-        repo_id: crate::models::RepoId,
-        #[serde(default)]
-        switch_nonce: Option<u64>,
-    },
+    RepoControl(RepoControlRequest),
     DeletePeer {
         peer_id: String,
         #[serde(default)]

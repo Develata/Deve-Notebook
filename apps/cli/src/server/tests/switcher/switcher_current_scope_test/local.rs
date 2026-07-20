@@ -1,15 +1,15 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 
-use crate::server::AppState;
 use crate::server::handlers::switcher::handle_switch_branch;
 use crate::server::session::WsSession;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
+use crate::server::AppState;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 
 type Harness = (TempDir, Arc<AppState>, RepoInfo, PeerId);
 
@@ -65,8 +65,8 @@ async fn assert_switch_rejects(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale()
--> anyhow::Result<()> {
+async fn switch_branch_fails_closed_when_current_local_scope_selector_is_stale(
+) -> anyhow::Result<()> {
     let (_dir, state, default_info, peer_id) = state_with_shadow(true)?;
     let mut session = browser_session(54);
     session.switch_repo("notes".into(), Some(default_info.uuid));
@@ -85,8 +85,8 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid() 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_current_local_scope_hint_is_stale_name()
--> anyhow::Result<()> {
+async fn switch_branch_fails_closed_when_current_local_scope_hint_is_stale_name(
+) -> anyhow::Result<()> {
     let (_dir, state, _default_info, peer_id) = state_with_shadow(false)?;
     let mut session = browser_session(57);
     session.switch_repo("stale-default".into(), None);

@@ -3,12 +3,13 @@ use deve_core::models::{LedgerEntry, NodeId, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
-        .expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection base");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -57,7 +58,7 @@ fn persist_doc_prefers_node_projection_path() {
     sync.persist_doc(doc_id).expect("persist doc");
 
     let canonical = repo
-        .local_repo_workspace_path("default", "notes/a.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
         .expect("canonical path");
     assert_eq!(
         std::fs::read_to_string(canonical).expect("read canonical"),
@@ -65,7 +66,7 @@ fn persist_doc_prefers_node_projection_path() {
     );
     assert!(
         !repo
-            .local_repo_workspace_path("default", "stale/a.md")
+            .local_repo_workspace_path(repo.local_repo_name(), "stale/a.md")
             .expect("stale path")
             .exists()
     );

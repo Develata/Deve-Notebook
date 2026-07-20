@@ -10,8 +10,8 @@ use deve_core::protocol::ServerMessage;
 use tokio::sync::mpsc;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn local_changes_without_repo_selection_bootstrap_after_clearing_stale_runtime_binding()
--> anyhow::Result<()> {
+async fn local_changes_without_repo_selection_bootstrap_after_clearing_stale_runtime_binding(
+) -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     let local_handle = state
@@ -33,7 +33,7 @@ async fn local_changes_without_repo_selection_bootstrap_after_clearing_stale_run
         }
         other => panic!("expected ChangesList, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo.as_deref(), Some(state.repo.local_repo_name()));
     assert_eq!(session.active_repo_id, Some(default_id));
     assert!(session.get_active_db().is_none());
     assert!(session.bound_repo_id.is_none());
@@ -64,7 +64,7 @@ async fn local_changes_without_repo_selection_bootstrap_single_repo() -> anyhow:
         }
         other => panic!("expected ChangesList, got {:?}", other),
     }
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(session.active_repo.as_deref(), Some(state.repo.local_repo_name()));
     assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }

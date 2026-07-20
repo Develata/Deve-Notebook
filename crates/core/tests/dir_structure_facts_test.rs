@@ -2,13 +2,16 @@ use deve_core::ledger::{RepoManager, ops};
 use deve_core::models::{LedgerEvent, NodeId, StructureOp};
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let ledger = dir.path().join("ledger");
-    let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 

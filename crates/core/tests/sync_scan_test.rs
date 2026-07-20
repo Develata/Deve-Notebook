@@ -5,13 +5,13 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn init_repo(dir: &TempDir) -> Arc<RepoManager> {
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo =
-        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("projection base");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&ledger_dir, &projection_base).expect("init cataloged repo");
     Arc::new(repo)
 }
 
@@ -49,7 +49,7 @@ fn scan_fails_closed_on_unreadable_repo_dir() {
     sync.scan().expect("bootstrap workspace identity");
 
     let unreadable = repo
-        .local_repo_workspace_path("default", "private")
+        .local_repo_workspace_path(repo.local_repo_name(), "private")
         .expect("workspace path");
     std::fs::create_dir_all(&unreadable).expect("create unreadable dir");
     std::fs::write(unreadable.join("hidden.md"), "# hidden").expect("write hidden doc");
@@ -60,10 +60,7 @@ fn scan_fails_closed_on_unreadable_repo_dir() {
     std::fs::set_permissions(&unreadable, perms).expect("chmod 000");
 
     let err = sync.scan().expect_err("scan must fail closed");
-    assert!(
-        err.to_string()
-            .contains("Failed to walk local repo default")
-    );
+    assert!(err.to_string().contains("Failed to walk local repo"));
 
     let mut restore = std::fs::metadata(&unreadable)
         .expect("metadata")
@@ -80,7 +77,7 @@ fn scan_fails_closed_on_markdown_path_that_is_not_a_file() {
     sync.scan().expect("bootstrap workspace identity");
 
     std::fs::create_dir_all(
-        repo.local_repo_workspace_path("default", "broken.md")
+        repo.local_repo_workspace_path(repo.local_repo_name(), "broken.md")
             .expect("workspace path"),
     )
     .expect("create invalid markdown directory");
@@ -98,7 +95,7 @@ fn scan_ignores_git_mirror_markdown_paths() {
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
     let internal = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root")
         .join(".git/objects/x.md");
     std::fs::create_dir_all(internal.parent().expect("parent")).expect("mkdir");
@@ -107,7 +104,7 @@ fn scan_ignores_git_mirror_markdown_paths() {
     sync.scan().expect("scan");
 
     assert!(
-        repo.list_pending_fs_in_local_repo("default")
+        repo.list_pending_fs_in_local_repo(repo.local_repo_name())
             .unwrap()
             .is_empty()
     );
@@ -118,24 +115,29 @@ fn scan_clears_pending_when_tracked_path_becomes_deveignored() -> anyhow::Result
     let dir = TempDir::new().expect("create tempdir");
     let repo = init_repo(&dir);
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    seed_tracked_doc(repo.as_ref(), "default", "ignored/live.md", "baseline");
+    seed_tracked_doc(
+        repo.as_ref(),
+        repo.local_repo_name(),
+        "ignored/live.md",
+        "baseline",
+    );
     sync.scan()?;
 
-    let file = repo.local_repo_workspace_path("default", "ignored/live.md")?;
+    let file = repo.local_repo_workspace_path(repo.local_repo_name(), "ignored/live.md")?;
     std::fs::write(&file, "dirty")?;
     sync.scan()?;
     assert!(
-        repo.list_pending_fs_in_local_repo("default")?
+        repo.list_pending_fs_in_local_repo(repo.local_repo_name())?
             .iter()
             .any(|entry| entry.path == "ignored/live.md" && entry.status == ChangeStatus::Modified)
     );
 
-    let root = repo.local_repo_workspace_root("default")?;
+    let root = repo.local_repo_workspace_root(repo.local_repo_name())?;
     std::fs::write(root.join(".deveignore"), "ignored/*.md\n")?;
     sync.scan()?;
 
     assert!(
-        repo.list_pending_fs_in_local_repo("default")?
+        repo.list_pending_fs_in_local_repo(repo.local_repo_name())?
             .iter()
             .all(|entry| entry.path != "ignored/live.md")
     );

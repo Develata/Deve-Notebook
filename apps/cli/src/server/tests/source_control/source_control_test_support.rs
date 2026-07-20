@@ -1,17 +1,16 @@
 use super::source_control_proxy::RemoteSourceControlApi;
 use super::{
-    AppState, auth, router, security, source_control_grants::AuthSessionId,
-    source_control_grants::SourceControlGrantBranch,
-    tree_state::RepoTreeRegistry,
+    auth, router, security, source_control_grants::AuthSessionId,
+    source_control_grants::SourceControlGrantBranch, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
-use deve_core::security::AuthConfig;
 use deve_core::security::auth::jwt;
+use deve_core::security::AuthConfig;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
@@ -44,8 +43,12 @@ impl ProxyHarness {
     async fn spawn_with_options(allow_anonymous_localhost: bool) -> anyhow::Result<Self> {
         let dir = tempdir()?;
         let projection_base = dir.path().join("notes");
-        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let repo = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &projection_base,
+            10,
+        )?
+        .repo;
         let repo = Arc::new(repo);
         let (tx, _rx) = broadcast::channel(16);
         let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
@@ -70,8 +73,10 @@ impl ProxyHarness {
         let dev_session_secret = auth_config.secret.clone();
         let auth_username = auth_config.username.clone();
         let auth_token_version = auth_config.token_version;
-        let dev_session_cookie_header =
-            auth::dev_session::cookie_header_for_test(&dev_session_secret, "source-control-harness");
+        let dev_session_cookie_header = auth::dev_session::cookie_header_for_test(
+            &dev_session_secret,
+            "source-control-harness",
+        );
         let auth_session_id = AuthSessionId::from_dev_session_cookie(
             &auth_config.username,
             auth_config.token_version,
@@ -132,14 +137,16 @@ impl ProxyHarness {
             .get_repo_info_for(None, Some(repo_name))?
             .ok_or_else(|| anyhow::anyhow!("missing local repo info"))?
             .uuid;
-        self.state.source_control_write_grants().grant(
-            auth_session_id,
-            repo_id,
-            SourceControlGrantBranch::Local,
-            PeerId::new("test-peer"),
-            scope_nonce,
-        )
-        .map_err(|err| anyhow::anyhow!("source-control write grant failed: {err:?}"))?;
+        self.state
+            .source_control_write_grants()
+            .grant(
+                auth_session_id,
+                repo_id,
+                SourceControlGrantBranch::Local,
+                PeerId::new("test-peer"),
+                scope_nonce,
+            )
+            .map_err(|err| anyhow::anyhow!("source-control write grant failed: {err:?}"))?;
         Ok(())
     }
 

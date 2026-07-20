@@ -1,7 +1,6 @@
 use crate::server::p2p::ExchangeStats;
 use crate::server::{AppState, tree_state::RepoTreeRegistry};
 use deve_core::config::{P2pPeerConfig, SyncMode};
-use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, FactActor, LedgerEntry, Op, PeerId, VersionVector};
 use deve_core::protocol::{ScopeNonce, ServerMessage};
 use deve_core::security::{EncryptedOp, IdentityKeyPair};
@@ -26,8 +25,13 @@ pub(crate) fn test_state_with_dir(
     let host_keys_dir = deve_core::utils::notegit::host_keys_dir(&ledger_dir);
     std::fs::create_dir_all(&host_keys_dir)?;
     std::fs::write(host_keys_dir.join("identity.key"), identity.to_bytes())?;
-    let mut repo = RepoManager::init(ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
+    let (repo, _repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &dir.path().join("vault"),
+        10,
+        Some("urn:default"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = tokio::sync::broadcast::channel(8);
     let sync_manager = Arc::new(SyncManager::new_checked(repo.clone())?);

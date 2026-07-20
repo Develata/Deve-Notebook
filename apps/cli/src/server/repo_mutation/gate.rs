@@ -7,6 +7,7 @@ use super::MutationExecution;
 use crate::server::runtime::watcher_runtime::{
     MountAdmissionError, MountAdmissionToken, WatcherRuntimeView,
 };
+use deve_core::ledger::{RepoCatalogCutAuthority, RepoCatalogCutPermit};
 use deve_core::models::RepoId;
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::collections::HashMap;
@@ -61,6 +62,7 @@ pub(crate) enum RepoMutationGateError {
     NestedLane(MutationLane),
     WorkspaceIngestionUnavailable,
     BlockingExecutionFailed,
+    CatalogAuthorityUnavailable,
 }
 
 impl fmt::Display for RepoMutationGateError {
@@ -79,6 +81,9 @@ impl fmt::Display for RepoMutationGateError {
             Self::BlockingExecutionFailed => {
                 write!(f, "mounted repository blocking execution failed")
             }
+            Self::CatalogAuthorityUnavailable => {
+                write!(f, "repo catalog cut authority is unavailable")
+            }
         }
     }
 }
@@ -88,6 +93,7 @@ impl std::error::Error for RepoMutationGateError {}
 pub(crate) struct RepoMutationPublicationGate {
     locks: Mutex<HashMap<MutationLane, Weak<MutationLaneState>>>,
     watcher_runtime: WatcherRuntimeView,
+    catalog_cut_authority: Option<RepoCatalogCutAuthority>,
 }
 
 struct MutationLaneState {
@@ -110,16 +116,33 @@ pub(crate) struct MountedRepoAdmission {
 }
 
 impl MountedRepoAdmission {
-    fn repo_id(&self) -> RepoId {
+    pub(crate) fn repo_id(&self) -> RepoId {
         self.token.repo_id()
+    }
+
+    pub(crate) fn revalidate(&self) -> Result<(), RepoMutationGateError> {
+        self.token.revalidate().map_err(RepoMutationGateError::from)
     }
 }
 
 impl RepoMutationPublicationGate {
-    pub(crate) fn new(watcher_runtime: WatcherRuntimeView) -> Self {
+    pub(crate) fn new(
+        watcher_runtime: WatcherRuntimeView,
+        catalog_cut_authority: RepoCatalogCutAuthority,
+    ) -> Self {
         Self {
             locks: Mutex::new(HashMap::new()),
             watcher_runtime,
+            catalog_cut_authority: Some(catalog_cut_authority),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn without_catalog_authority_for_test(watcher_runtime: WatcherRuntimeView) -> Self {
+        Self {
+            locks: Mutex::new(HashMap::new()),
+            watcher_runtime,
+            catalog_cut_authority: None,
         }
     }
 
@@ -237,6 +260,7 @@ impl RepoMutationPublicationGate {
         })
     }
 
+    #[cfg(test)]
     pub(crate) async fn execute_catalog<T, E>(
         &self,
         tx: &broadcast::Sender<ServerMessage>,
@@ -249,6 +273,7 @@ impl RepoMutationPublicationGate {
     /// Catalog identity mutations for an existing repo acquire the global
     /// catalog lane first and then the repo lane. This prevents create/name
     /// races while preserving a single lock order against document writers.
+    #[cfg(test)]
     pub(crate) async fn execute_catalog_repo<T, E>(
         &self,
         repo_id: RepoId,
@@ -279,6 +304,74 @@ impl RepoMutationPublicationGate {
             publication.enqueue(tx);
         }
         Ok(execution)
+    }
+
+    /// Runs one short `Catalog -> Repo` lifecycle phase without publishing.
+    /// Watcher stop/start, filesystem scans, joins and final publication must
+    /// happen after this method has returned and released both permits.
+    pub(crate) async fn execute_catalog_repo_unpublished<T, E>(
+        &self,
+        repo_id: RepoId,
+        operation: impl FnOnce() -> Result<T, E>,
+    ) -> Result<Result<T, E>, RepoMutationGateError> {
+        let repo_lane = MutationLane::Repo(repo_id);
+        if HELD_MUTATION_LANES
+            .try_with(|held| held.catalog || held.repo.is_some())
+            .unwrap_or(false)
+        {
+            return Err(RepoMutationGateError::NestedLane(repo_lane));
+        }
+        let catalog_lane = self.lane_state(MutationLane::Catalog)?;
+        let repo_lane_state = self.lane_state(repo_lane)?;
+        let _catalog_permit = catalog_lane.permit.lock().await;
+        let _repo_permit = repo_lane_state.permit.lock().await;
+        let outcome = HELD_MUTATION_LANES
+            .scope(
+                HeldMutationLanes {
+                    catalog: true,
+                    repo: Some(repo_id),
+                },
+                async move { operation() },
+            )
+            .await;
+        Ok(outcome)
+    }
+
+    /// Runs the minimal durable catalog cut while both ordered permits are
+    /// held. The unforgeable proof never escapes the synchronous closure.
+    pub(crate) async fn execute_catalog_repo_cut<T, E>(
+        &self,
+        repo_id: RepoId,
+        operation: impl FnOnce(&RepoCatalogCutPermit) -> Result<T, E>,
+    ) -> Result<Result<T, E>, RepoMutationGateError> {
+        let repo_lane = MutationLane::Repo(repo_id);
+        if HELD_MUTATION_LANES
+            .try_with(|held| held.catalog || held.repo.is_some())
+            .unwrap_or(false)
+        {
+            return Err(RepoMutationGateError::NestedLane(repo_lane));
+        }
+        let catalog_lane = self.lane_state(MutationLane::Catalog)?;
+        let repo_lane_state = self.lane_state(repo_lane)?;
+        let _catalog_permit = catalog_lane.permit.lock().await;
+        let _repo_permit = repo_lane_state.permit.lock().await;
+        let cut_authority = self
+            .catalog_cut_authority
+            .as_ref()
+            .ok_or(RepoMutationGateError::CatalogAuthorityUnavailable)?;
+        let cut_permit = cut_authority
+            .permit(repo_id)
+            .map_err(|_| RepoMutationGateError::CatalogAuthorityUnavailable)?;
+        let outcome = HELD_MUTATION_LANES
+            .scope(
+                HeldMutationLanes {
+                    catalog: true,
+                    repo: Some(repo_id),
+                },
+                async move { operation(&cut_permit) },
+            )
+            .await;
+        Ok(outcome)
     }
 
     async fn execute_lane<T, E>(

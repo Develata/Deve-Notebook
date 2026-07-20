@@ -8,15 +8,21 @@ mod common;
 fn repair_fails_closed_on_repo_id_mismatch_without_rewriting_identity() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let main_info = main.get_repo_info().expect("main info").expect("present");
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
+    let (main, main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
+            .expect("main");
+    let (_wiki, wiki_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
+            .expect("wiki");
+    let wiki_db = main
+        .open_database(None, &wiki_id.to_string())
+        .expect("wiki db")
+        .db;
 
     let bad = RepoInfo {
-        uuid: main_info.uuid,
-        name: "main".into(),
-        url: Some(format!("urn:uuid:{}", main_info.uuid)),
+        uuid: main_id,
+        name: main_id.to_string(),
+        url: Some(format!("urn:uuid:{}", main_id)),
     };
     common::write_repo_metadata(wiki_db.as_ref(), &bad);
     let err = main
@@ -27,26 +33,44 @@ fn repair_fails_closed_on_repo_id_mismatch_without_rewriting_identity() {
 }
 
 #[test]
-fn local_repo_catalog_allows_duplicate_display_names_but_selector_is_ambiguous() {
+fn local_repo_duplicate_display_aliases_are_valid_and_never_resolve_selectors() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main =
-        RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("urn:test:wiki-a")).expect("main");
-    let second_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:test:wiki-b");
-    let first_info = main.get_repo_info().expect("main info").expect("present");
+    let (main, main_id) = common::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &dir.path().join("main-notes"),
+        "urn:test:wiki-a",
+    )
+    .expect("main");
+    let (_second, second_id) = common::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &dir.path().join("second-notes"),
+        "urn:test:wiki-b",
+    )
+    .expect("second");
+    main.host_repo_alias_runtime()
+        .set_alias(main_id, "wiki", 0)
+        .expect("alias main");
+    main.host_repo_alias_runtime()
+        .set_alias(second_id, "wiki", 0)
+        .expect("duplicate display aliases are valid");
 
     let repos = main
         .list_repos(None)
-        .expect("duplicate display names are valid");
+        .expect("duplicate display aliases keep both repos listed");
     assert_eq!(repos.len(), 2);
-    assert!(repos.contains(&first_info.uuid.to_string()));
-    assert!(repos.contains(&second_info.uuid.to_string()));
+    assert!(repos.contains(&main_id.to_string()));
+    assert!(repos.contains(&second_id.to_string()));
+    // Display aliases are host-local UI state and are never consulted by
+    // resolution — a shared alias is legal precisely because it can never make
+    // a machine selector ambiguous. Resolution by the alias string fails
+    // closed as not-found; canonical machine names are RepoId strings.
     let err = main
         .resolve_local_repo_name_for_execution(None, Some("wiki"))
-        .expect_err("duplicate display selector must fail closed");
+        .expect_err("display alias must not resolve as machine selector");
     assert!(
         err.to_string()
-            .contains("Ambiguous local repository selector")
+            .contains("Local repo not found for name wiki")
     );
 }
 
@@ -54,8 +78,12 @@ fn local_repo_catalog_allows_duplicate_display_names_but_selector_is_ambiguous()
 fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
+    let (main, _main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
+            .expect("main");
+    let (_wiki, _wiki_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
+            .expect("wiki");
 
     let err = main
         .resolve_local_repo_name_for_execution(None, None)
@@ -68,14 +96,24 @@ fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
 fn repair_fails_closed_on_duplicate_local_repo_url_without_rewriting_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let notes_info = common::create_initialized_local_repo(&ledger_dir, "notes", "urn:notes");
-    let other_db = main.open_database(None, "notes").expect("notes db").db;
+    let (main, _main_id) = common::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &dir.path().join("main-notes"),
+        "urn:main",
+    )
+    .expect("main");
+    let (_notes, notes_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes-notes"), 8)
+            .expect("notes");
+    let other_db = main
+        .open_database(None, &notes_id.to_string())
+        .expect("notes db")
+        .db;
     common::write_repo_metadata(
         other_db.as_ref(),
         &RepoInfo {
-            uuid: notes_info.uuid,
-            name: "notes".into(),
+            uuid: notes_id,
+            name: notes_id.to_string(),
             url: Some("urn:main".into()),
         },
     );
@@ -163,12 +201,14 @@ fn init_fails_closed_on_existing_local_repo_without_metadata() {
 fn local_execution_resolution_ignores_broken_remote_catalogs() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     let peer_id = deve_core::models::PeerId::new("peer-a");
     common::seed_broken_remote_shadow_repo(&ledger_dir, &peer_id, "broken");
 
     assert_eq!(
-        repo.resolve_local_repo_name_for_execution(None, Some("main"))
+        repo.resolve_local_repo_name_for_execution(None, Some(repo.local_repo_name()))
             .expect("local execution selector"),
         repo.local_repo_name()
     );

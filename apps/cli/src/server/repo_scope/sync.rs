@@ -23,7 +23,7 @@ pub fn resolve_session_repo_and_sync(
         Ok(scope) => scope,
         Err(err) => return handle_resolution_error(state, session, err),
     };
-    sync_runtime_binding(state, session, &scope);
+    sync_runtime_binding(state, session, &scope)?;
     Ok(scope)
 }
 
@@ -72,7 +72,11 @@ fn should_clear_stale_scope(
         || (mapped.code == ServerErrorCode::SyncRepoUnbound && session.has_runtime_scope_binding())
 }
 
-fn sync_runtime_binding(state: &Arc<AppState>, session: &mut WsSession, scope: &ResolvedRepo) {
+fn sync_runtime_binding(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+    scope: &ResolvedRepo,
+) -> Result<()> {
     if runtime_binding_mismatch(session, scope) {
         clear_runtime_binding_and_revoke(state, session);
     }
@@ -81,6 +85,23 @@ fn sync_runtime_binding(state: &Arc<AppState>, session: &mut WsSession, scope: &
     {
         session.switch_repo(scope.session_name.clone(), Some(scope.repo_id));
     }
+    if scope.branch.is_none() {
+        let membership_valid = session
+            .catalog_membership_token()
+            .filter(|token| token.repo_id() == scope.repo_id)
+            .is_some_and(|token| state.catalog_membership_runtime().revalidate(token).is_ok());
+        if !membership_valid {
+            let token = state
+                .catalog_membership_runtime()
+                .issue(scope.repo_id)
+                .map_err(|error| {
+                    tracing::warn!(repo_id = %scope.repo_id, %error, "repo catalog membership unavailable during scope synchronization");
+                    anyhow::Error::new(error)
+                })?;
+            session.bind_catalog_membership(token);
+        }
+    }
+    Ok(())
 }
 
 fn runtime_binding_mismatch(session: &WsSession, scope: &ResolvedRepo) -> bool {

@@ -19,6 +19,10 @@ fn watcher_events_stay_repo_scoped() -> anyhow::Result<()> {
     std::fs::write(&file, "main")?;
 
     h.wait_pending("main", "notes/only-main.md", ChangeStatus::Added)?;
-    assert!(h.repo.list_pending_fs_in_local_repo("wiki")?.is_empty());
+    assert!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("wiki"))?
+            .is_empty()
+    );
     Ok(())
 }

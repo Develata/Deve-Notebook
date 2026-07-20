@@ -4,7 +4,7 @@
 //!   - 14_commands#cli-commands
 //!   - 15_settings#configuration-settings
 
-use crate::repo_init::initialize_local_repo_workspace;
+use crate::repo_init::initialize_initial_local_repo_workspace;
 use deve_core::utils::fs::checked_exists;
 use std::path::{Path, PathBuf};
 
@@ -32,7 +32,7 @@ pub fn run(
 ) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
     std::fs::create_dir_all(&path)?;
-    let report = initialize_local_repo_workspace(
+    let report = initialize_initial_local_repo_workspace(
         ledger_dir,
         repo_name,
         projection_base,
@@ -196,15 +196,21 @@ mod tests {
         let mut workspaces = std::fs::read_dir(root.join("notes"))
             .expect("notes dir")
             .map(|entry| entry.expect("workspace entry").path())
-            .filter(|path| {
-                path.file_name()
-                    .and_then(|name| name.to_str())
-                    .is_some_and(|name| name.starts_with("default--"))
-            })
+            .filter(|path| path.is_dir())
             .collect::<Vec<_>>();
         workspaces.sort();
         assert_eq!(workspaces.len(), 1);
         let workspace = &workspaces[0];
+        // Workspace segment is the bare canonical RepoId (no "default--" alias
+        // prefix); the "default" name only becomes a host-local display alias.
+        let segment = workspace
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("workspace segment name");
+        assert!(
+            uuid::Uuid::parse_str(segment).is_ok(),
+            "workspace segment must be a bare RepoId: {segment}"
+        );
         assert!(workspace.is_dir());
         assert!(workspace.join(".notegit").is_dir());
         assert!(workspace.join(".notegit/identity.toml").is_file());
@@ -231,10 +237,12 @@ mod tests {
         )
         .expect("init");
 
+        // Machine names are canonical RepoId strings; reopen the repo by its
+        // UUID selector ("default" is only a host-local alias now).
         let repo = RepoManager::init(
             root.join("ledger"),
             8,
-            Some("default"),
+            Some(&repo_id.to_string()),
             Some("urn:test:default"),
         )
         .expect("reopen");
@@ -244,32 +252,45 @@ mod tests {
         );
     }
 
+    // Under UUID-first identity the machine-name selector equals the RepoId, so
+    // `commands::init::run` can no longer collide two RepoIds on one selector
+    // (each explicit RepoId is a distinct repo). The fail-closed guard itself
+    // still lives in `RepoManager::init_with_options`: a display-name selector
+    // that already resolves to a different RepoId must reject a mismatched
+    // explicit RepoId rather than silently reuse or fork it.
     #[test]
     fn init_repo_id_mismatch_fails_closed_for_existing_repo() {
+        use deve_core::ledger::init::RepoInitOptions;
+
         let dir = tempfile::tempdir().expect("tempdir");
-        let root = dir.path();
+        let ledger_dir = dir.path().join("ledger");
+        let existing_id =
+            uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").expect("uuid");
+        let mismatched_id =
+            uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").expect("uuid");
 
-        run(
-            &root.join("ledger"),
-            "default",
-            &root.join("notes"),
-            root.to_path_buf(),
+        RepoManager::init_with_options(
+            &ledger_dir,
             8,
-            Some(uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").expect("uuid")),
-            Some("urn:test:default".to_string()),
+            Some("default"),
+            RepoInitOptions {
+                repo_id: Some(existing_id),
+                repo_url: Some("urn:test:default".to_string()),
+            },
         )
-        .expect("init");
+        .expect("init existing repo");
 
-        let err = run(
-            &root.join("ledger"),
-            "default",
-            &root.join("notes"),
-            root.to_path_buf(),
+        let err = RepoManager::init_with_options(
+            &ledger_dir,
             8,
-            Some(uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").expect("uuid")),
-            Some("urn:test:default".to_string()),
+            Some("default"),
+            RepoInitOptions {
+                repo_id: Some(mismatched_id),
+                repo_url: Some("urn:test:default".to_string()),
+            },
         )
-        .expect_err("repo id mismatch must fail closed");
+        .err()
+        .expect("repo id mismatch must fail closed");
 
         assert!(
             err.to_string()

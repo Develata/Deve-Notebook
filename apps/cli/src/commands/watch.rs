@@ -109,12 +109,8 @@ mod tests {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
-        std::fs::create_dir_all(&projection_base).expect("create projection base");
-
-        let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
-            .expect("init");
-        repo.set_projection_base_for_local_repo("default", &projection_base)
-            .expect("locator");
+        crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 8)
+            .expect("init repo");
 
         run(&ledger_dir, 8, true).expect("watch dry-run");
     }

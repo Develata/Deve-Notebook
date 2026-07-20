@@ -8,13 +8,17 @@
 //! This module deliberately has no transport dependency. A caller may stop
 //! waiting after admission, while the owned worker continues to convergence.
 
+mod host;
 mod model;
 mod store;
 mod worker;
 
+pub(crate) use host::{RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink};
 pub(crate) use model::{
     RepoLifecycleJobAccepted, RepoLifecycleJobError, RepoLifecycleJobExecutor,
-    RepoLifecycleJobIntent, RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
+    RepoLifecycleJobIntent, RepoLifecycleJobOperation, RepoLifecycleJobOutcome,
+    RepoLifecycleJobPhase, RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
+    RepoLifecycleSettledPublication,
 };
 
 use std::path::Path;

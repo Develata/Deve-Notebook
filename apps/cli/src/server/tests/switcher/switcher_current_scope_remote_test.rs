@@ -3,12 +3,12 @@
 
 use super::handlers::switcher::handle_switch_branch;
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
+use super::AppState;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
-use super::AppState;
+use tempfile::{tempdir, TempDir};
 
 fn state_with_remote(url: Option<&str>) -> anyhow::Result<(TempDir, Arc<AppState>, PeerId)> {
     let dir = tempdir()?;
@@ -34,8 +34,8 @@ fn state_with_remote(url: Option<&str>) -> anyhow::Result<(TempDir, Arc<AppState
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale()
--> anyhow::Result<()> {
+async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
+) -> anyhow::Result<()> {
     let (_dir, state, peer_id) = state_with_remote(Some("urn:wiki-a"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(72);
@@ -51,12 +51,10 @@ async fn switch_branch_fails_closed_when_current_remote_scope_selector_is_stale(
             ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.starts_with("stale remote scope:")));
             assert_eq!(switch_nonce, Some(73));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
@@ -86,12 +84,10 @@ async fn switch_branch_fails_closed_when_current_remote_scope_has_no_url() -> an
             ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.starts_with("stale remote scope:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.starts_with("stale remote scope:")));
             assert_eq!(switch_nonce, Some(74));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

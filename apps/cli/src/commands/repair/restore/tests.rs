@@ -11,21 +11,23 @@ use std::sync::Arc;
 use tempfile::tempdir;
 
 fn init_repo(dir: &tempfile::TempDir) -> anyhow::Result<RepoManager> {
-    let ledger = dir.path().join("ledger");
-    let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    Ok(repo)
+    Ok(crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?
+    .repo)
 }
 
 #[test]
 fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(init_repo(&dir)?);
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = DocId::new();
-    repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
+    repo.apply_file_structure_in_local_repo(&repo_name, "notes/live.md", Some(doc_id), "test")?;
     assert_eq!(
-        resolve_repair_docid(&repo, "default", "notes/live.md")?,
+        resolve_repair_docid(&repo, &repo_name, "notes/live.md")?,
         Some(doc_id)
     );
     Ok(())
@@ -35,8 +37,9 @@ fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
 fn resolve_repair_docid_returns_none_for_legacy_only_path_mapping() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(init_repo(&dir)?);
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = DocId::new();
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(&repo_name, |db| {
         let write = db.begin_write()?;
         {
             let mut p2d = write.open_table(PATH_TO_DOCID)?;
@@ -48,7 +51,7 @@ fn resolve_repair_docid_returns_none_for_legacy_only_path_mapping() -> anyhow::R
         Ok(())
     })?;
 
-    let result = resolve_repair_docid(&repo, "default", "notes/legacy.md")?;
+    let result = resolve_repair_docid(&repo, &repo_name, "notes/legacy.md")?;
     assert_eq!(result, None, "legacy-only path must not resolve to doc_id");
     Ok(())
 }
@@ -105,21 +108,22 @@ fn normalize_restore_path_strips_repo_prefix() {
 fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(init_repo(&dir)?);
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = DocId::new();
-    repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
-    let live = repo.local_repo_workspace_path("default", "notes/live.md")?;
-    let stale = repo.local_repo_workspace_path("default", "notes/stale.md")?;
+    repo.apply_file_structure_in_local_repo(&repo_name, "notes/live.md", Some(doc_id), "test")?;
+    let live = repo.local_repo_workspace_path(&repo_name, "notes/live.md")?;
+    let stale = repo.local_repo_workspace_path(&repo_name, "notes/stale.md")?;
     std::fs::create_dir_all(live.parent().expect("live parent"))?;
     std::fs::create_dir_all(stale.parent().expect("stale parent"))?;
     std::fs::write(&live, "# Loading...\n")?;
     std::fs::write(&stale, "# Loading...\n")?;
 
-    let mut targets = find_loading_corruption(&repo, "default")?;
+    let mut targets = find_loading_corruption(&repo, &repo_name)?;
     targets.sort();
     assert_eq!(targets, vec!["notes/live.md".to_string()]);
     assert!(workspace_starts_with_loading(
         &repo,
-        "default",
+        &repo_name,
         "notes/live.md"
     )?);
     Ok(())
@@ -129,12 +133,13 @@ fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
 fn find_loading_corruption_fails_closed_on_unreadable_workspace_target() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let repo = Arc::new(init_repo(&dir)?);
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = DocId::new();
-    repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
-    let live = repo.local_repo_workspace_path("default", "notes/live.md")?;
+    repo.apply_file_structure_in_local_repo(&repo_name, "notes/live.md", Some(doc_id), "test")?;
+    let live = repo.local_repo_workspace_path(&repo_name, "notes/live.md")?;
     std::fs::create_dir_all(&live)?;
 
-    let err = find_loading_corruption(&repo, "default")
+    let err = find_loading_corruption(&repo, &repo_name)
         .expect_err("directory-backed workspace target must fail closed");
     assert!(err.to_string().contains("Is a directory") || err.to_string().contains("directory"));
     Ok(())

@@ -10,9 +10,12 @@ mod common;
 
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection base");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -100,6 +103,7 @@ fn wipe_node_projection(repo: &RepoManager) {
 #[test]
 fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir");
     seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
@@ -111,7 +115,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
     wipe_node_projection(repo.as_ref());
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.rebuild_projection_local_repo("default")
+    sync.rebuild_projection_local_repo(&repo_name)
         .expect("rebuild projection tables");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -143,6 +147,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_targets() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     common::append_unvalidated_local_op(
         repo.as_ref(),
         repo.local_repo_name(),
@@ -160,7 +165,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
-        .rebuild_projection_local_repo("default")
+        .rebuild_projection_local_repo(&repo_name)
         .expect_err("malformed structure facts must fail closed");
     assert!(err.to_string().contains("missing node"));
 }
@@ -168,6 +173,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_parent() {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let doc_id = deve_core::models::DocId::new();
     common::append_unvalidated_local_op(
         repo.as_ref(),
@@ -187,7 +193,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_parent() {
 
     let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
-        .rebuild_projection_local_repo("default")
+        .rebuild_projection_local_repo(&repo_name)
         .expect_err("missing structure parent must fail closed");
     assert!(err.to_string().contains("missing parent"));
 }

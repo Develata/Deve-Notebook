@@ -7,11 +7,13 @@ use deve_core::vfs::Vfs;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
@@ -19,7 +21,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>) {
 fn watcher_treats_legacy_only_path_as_new_file() {
     let (_dir, repo) = new_repo();
     let path = repo
-        .local_repo_workspace_path("default", "notes/legacy.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/legacy.md")
         .expect("workspace path");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&path, "legacy content").expect("write file");
@@ -40,12 +42,12 @@ fn watcher_treats_legacy_only_path_as_new_file() {
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
-        .get_repo_info_for(None, Some("default"))
+        .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
     let messages = sync
-        .handle_fs_event("default", repo_id, "notes/legacy.md")
+        .handle_fs_event(repo.local_repo_name(), repo_id, "notes/legacy.md")
         .expect("legacy-only path treated as new file");
 
     assert!(
@@ -58,7 +60,7 @@ fn watcher_treats_legacy_only_path_as_new_file() {
 fn full_scan_treats_legacy_only_path_as_new_file() {
     let (_dir, repo) = new_repo();
     let path = repo
-        .local_repo_workspace_path("default", "notes/legacy.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/legacy.md")
         .expect("workspace path");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&path, "legacy content").expect("write file");
@@ -78,7 +80,7 @@ fn full_scan_treats_legacy_only_path_as_new_file() {
     .expect("seed legacy mapping");
 
     let vfs = Vfs::new(
-        repo.local_repo_workspace_root("default")
+        repo.local_repo_workspace_root(repo.local_repo_name())
             .expect("workspace root"),
     );
     scan_projection_workspaces(&repo, &vfs)

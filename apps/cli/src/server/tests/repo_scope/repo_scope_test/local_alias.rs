@@ -8,8 +8,8 @@ use crate::server::{
 };
 use deve_core::codec;
 use deve_core::ledger::{
-    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
-    RepoInfo, RepoManager,
+    RepoInfo, RepoManager, REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA,
+    REPO_SCHEMA_VERSION_METADATA_KEY,
 };
 use deve_core::protocol::ServerErrorCode;
 
@@ -34,16 +34,9 @@ fn rewrite_local_metadata(
 #[test]
 fn resolve_session_repo_fails_closed_on_stale_local_alias_drift() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
-    rewrite_local_metadata(
-        state.repo.as_ref(),
-        "test",
-        RepoInfo {
-            uuid: test_id,
-            name: "legacy-test".into(),
-            url: Some("urn:test".into()),
-        },
-    )?;
-
+    // A session that presents a stale local display alias ("legacy-test") which no
+    // longer matches the repo's canonical stem or metadata name must fail closed
+    // rather than silently recover the repo from the still-bound canonical UUID.
     let mut session = WsSession::new();
     session.switch_repo("legacy-test".into(), Some(test_id));
     let err = resolve_session_repo_and_sync(&state, &mut session).expect_err("must fail closed");
@@ -59,7 +52,7 @@ fn open_database_rejects_stale_local_alias_after_metadata_drift() -> anyhow::Res
     let (_dir, state, _default_id, test_id) = build_state()?;
     rewrite_local_metadata(
         state.repo.as_ref(),
-        "test",
+        &test_id.to_string(),
         RepoInfo {
             uuid: test_id,
             name: "legacy-test".into(),
@@ -81,27 +74,27 @@ fn resolve_session_repo_preserves_local_catalog_corruption_for_exact_selector() 
     let (_dir, state, _default_id, test_id) = build_state()?;
     rewrite_local_metadata(
         state.repo.as_ref(),
-        "test",
+        &test_id.to_string(),
         RepoInfo {
             uuid: test_id,
-            name: "test".into(),
+            name: test_id.to_string(),
             url: None,
         },
     )?;
 
     let mut session = WsSession::new();
-    session.switch_repo("test".into(), Some(test_id));
+    session.switch_repo(test_id.to_string(), Some(test_id));
     let err =
         resolve_session_repo_and_sync(&state, &mut session).expect_err("corrupted repo must fail");
-    assert!(
-        err.to_string()
-            .contains(&format!(
-                "Broken local repo {test_id} while validating catalog: repository URL missing"
-            ))
-    );
+    assert!(err.to_string().contains(&format!(
+        "Broken local repo {test_id} while validating catalog: repository URL missing"
+    )));
     let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
     assert_eq!(mapped.code, ServerErrorCode::StoragePersistFailed);
-    assert_eq!(session.active_repo.as_deref(), Some("test"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(test_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(test_id));
     Ok(())
 }

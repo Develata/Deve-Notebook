@@ -28,7 +28,7 @@ async fn readonly_remote_diff_is_allowed_without_locked_db() -> anyhow::Result<(
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
     )
     .await;

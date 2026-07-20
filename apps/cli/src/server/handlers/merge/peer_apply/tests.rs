@@ -1,7 +1,6 @@
 use super::*;
 use crate::server::{AppState, channel::DualChannel, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::{FactActor, Op, PeerId};
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -93,17 +92,18 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
 #[tokio::test]
 async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> anyhow::Result<()> {
     let (_dir, state, doc_id, repo_id) = degraded_app_state()?;
+    let repo_name = repo_id.to_string();
     let before = state
         .repo
-        .get_local_ops_in_local_repo("default", doc_id)?
+        .get_local_ops_in_local_repo(&repo_name, doc_id)?
         .len();
     let (broadcast_tx, _) = broadcast::channel(4);
     let (unicast_tx, mut unicast_rx) = mpsc::channel(4);
     let ch = DualChannel::new(broadcast_tx, unicast_tx);
     let scope = ResolvedRepo {
         repo_id,
-        repo_name: "default".into(),
-        session_name: "default".into(),
+        repo_name: repo_name.clone(),
+        session_name: repo_name.clone(),
         branch: None,
     };
     let preflight =
@@ -139,7 +139,7 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
     assert_eq!(
         state
             .repo
-            .get_local_ops_in_local_repo("default", doc_id)?
+            .get_local_ops_in_local_repo(&repo_name, doc_id)?
             .len(),
         before
     );
@@ -149,14 +149,16 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
 fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::Uuid)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some("default"), None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let cataloged =
+        crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base, 10)?;
+    let repo = cataloged.repo;
+    let repo_id = cataloged.repo_id;
+    let repo_name = repo.local_repo_name().to_string();
     let (doc_id, _) =
-        repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
+        repo.apply_file_structure_in_local_repo(&repo_name, "notes/a.md", None, "test")?;
     repo.local_fact_writer(FactActor::new("test")?)
         .append_content_in_local_repo(
-            "default",
+            &repo_name,
             doc_id,
             Op::Insert {
                 pos: 0,

@@ -31,8 +31,9 @@ fn search_harness(
     let (current_scope_nonce, _) = signal(37u64);
     let (pending_branch_switch, _) =
         signal(pending_branch_value.map(|target| PendingBranchSwitch::new(target, 1)));
-    let (pending_repo_switch, _) =
-        signal(pending_repo_value.map(|name| PendingRepoSwitch::switch(name, 1)));
+    let (pending_repo_switch, _) = signal(
+        pending_repo_value.map(|name| PendingRepoSwitch::switch(name, uuid::Uuid::nil(), 1)),
+    );
     let (search_request_id, set_search_request_id) = signal(Some("previous-search".to_string()));
     let (search_results, set_search_results) = signal(vec![SearchHit::new(
         "doc.md".to_string(),

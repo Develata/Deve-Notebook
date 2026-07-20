@@ -51,12 +51,18 @@ async fn request_key_on_remote_branch_uses_local_counterpart_keys_root() -> anyh
     handle_request_key(&state, &ch, &mut session).await;
 
     assert_key_provide(&mut uni_rx, repo_id, 21, Some(peer_id.clone())).await;
-    assert!(state.repo.local_repo_notegit_keys_root("notes")?.exists());
-    let notes_root = state.repo.local_repo_workspace_root("notes")?;
-    let projection_base = notes_root.parent().expect("repo root must have projection base");
-    let shadow_keys = deve_core::utils::notegit::repo_keys_dir(
-        &projection_base.join("shadow-notes"),
-    );
+    assert!(state
+        .repo
+        .local_repo_notegit_keys_root(state.repo.local_repo_name())?
+        .exists());
+    let notes_root = state
+        .repo
+        .local_repo_workspace_root(state.repo.local_repo_name())?;
+    let projection_base = notes_root
+        .parent()
+        .expect("repo root must have projection base");
+    let shadow_keys =
+        deve_core::utils::notegit::repo_keys_dir(&projection_base.join("shadow-notes"));
     assert!(!shadow_keys.exists());
     Ok(())
 }
@@ -66,7 +72,7 @@ async fn request_key_denies_corrupt_repo_key() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let key_path = state
         .repo
-        .local_repo_notegit_keys_root("notes")?
+        .local_repo_notegit_keys_root(state.repo.local_repo_name())?
         .join("repo.key");
     std::fs::create_dir_all(
         key_path

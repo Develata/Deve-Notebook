@@ -34,6 +34,7 @@ pub mod projection_recovery;
 pub mod relay_proxy;
 pub mod remote_import;
 pub mod remote_projection;
+pub mod repo_control;
 pub mod sc_path_target;
 pub mod scope_nonce;
 pub mod server;
@@ -70,6 +71,10 @@ pub use remote_import::{
     RemoteProjectionPushRequest, RemoteProjectionPushResponse,
 };
 pub use remote_projection::RemoteProjectionProvider;
+pub use repo_control::{
+    RepoAliasBinding, RepoControlRequest, RepoControlResponse, RepoLifecycleIntent,
+    RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, RepoReadiness,
+};
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
 pub use server::{RepoListEntry, ServerMessage};

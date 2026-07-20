@@ -3,7 +3,7 @@
 //!
 //! Core WebSocket message routing.
 
-use crate::server::handlers::{plugin, switcher, sync};
+use crate::server::handlers::{plugin, repo_control, switcher, sync};
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::protocol::{ClientMessage, ServerMessage};
 use std::sync::Arc;
@@ -45,32 +45,22 @@ async fn route_unscoped_core(
         } => {
             switcher::handle_switch_branch(state, ch, session, peer_id, switch_nonce).await;
         }
-        ClientMessage::SwitchRepo { name, switch_nonce } => {
-            switcher::handle_switch_repo(state, ch, session, name, None, switch_nonce).await;
-        }
         ClientMessage::SwitchRepoExact {
-            name,
             repo_id,
             switch_nonce,
         } => {
-            switcher::handle_switch_repo(state, ch, session, name, Some(repo_id), switch_nonce)
-                .await;
+            switcher::handle_switch_repo(
+                state,
+                ch,
+                session,
+                repo_id.to_string(),
+                Some(repo_id),
+                switch_nonce,
+            )
+            .await;
         }
-        ClientMessage::CreateRepo { name, switch_nonce } => {
-            switcher::handle_create_repo(state, ch, session, name, switch_nonce).await;
-        }
-        ClientMessage::RenameRepo {
-            repo_id,
-            name,
-            switch_nonce,
-        } => {
-            switcher::handle_rename_repo(state, ch, session, repo_id, name, switch_nonce).await;
-        }
-        ClientMessage::RemoveRepo {
-            repo_id,
-            switch_nonce,
-        } => {
-            switcher::handle_remove_repo(state, ch, session, repo_id, switch_nonce).await;
+        ClientMessage::RepoControl(request) => {
+            repo_control::handle_repo_control(state, ch, session, request).await;
         }
         ClientMessage::SyncSnapshotRequest {
             source_peer_id,

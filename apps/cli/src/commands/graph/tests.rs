@@ -60,7 +60,9 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) {
 fn graph_command_writes_read_only_projection_json() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let repo = crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"), 8)
+        .expect("init repo")
+        .repo;
     let b = seed_doc(&repo, "notes/b.md", "");
     seed_doc(&repo, "notes/a.md", "[[b]] and [B](b.md)");
     let output = dir.path().join("graph.json");
@@ -87,7 +89,9 @@ fn graph_command_writes_read_only_projection_json() {
 fn graph_command_fails_closed_on_corrupt_structure_projection() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let repo = crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"), 8)
+        .expect("init repo")
+        .repo;
     seed_doc(&repo, "notes/a.md", "safe");
     let orphan_doc = DocId::new();
     append_unvalidated(

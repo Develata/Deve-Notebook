@@ -20,7 +20,6 @@ use super::super::logic::{
 #[component]
 pub(super) fn RepoSwitcherDisplayRow(
     row: RepoSwitcherRow,
-    current_repo: ReadSignal<Option<String>>,
     current_repo_id: ReadSignal<Option<String>>,
     on_switch_repo: Callback<RepoSwitchRequest>,
     set_show_menu: WriteSignal<bool>,
@@ -41,11 +40,10 @@ pub(super) fn RepoSwitcherDisplayRow(
         <div
             class="group flex items-center hover:bg-accent-subtle"
             class:bg-accent-subtle=move || {
-                repo_switcher_row_is_active(current_repo.get(), current_repo_id.get(), &active_bg_row)
+                repo_switcher_row_is_active(current_repo_id.get(), &active_bg_row)
             }
             class:text-accent=move || {
                 repo_switcher_row_is_active(
-                    current_repo.get(),
                     current_repo_id.get(),
                     &active_text_row,
                 )
@@ -58,14 +56,10 @@ pub(super) fn RepoSwitcherDisplayRow(
                 class="min-w-0 flex-1 px-3 py-2 cursor-pointer text-xs flex items-center justify-between gap-2"
                 role="menuitem"
                 on:click=move |_| {
-                    let request = match switch_target.repo_id {
-                        Some(repo_id) => RepoSwitchRequest::exact(
-                            switch_target.selector_name.clone(),
-                            switch_target.expected_name.clone(),
-                            repo_id,
-                        ),
-                        None => RepoSwitchRequest::by_name(switch_target.selector_name.clone()),
-                    };
+                    let request = RepoSwitchRequest::exact(
+                        switch_target.expected_name.clone(),
+                        switch_target.repo_id,
+                    );
                     let cb = on_switch_repo.clone();
                     let set_menu = set_show_menu;
                     request_animation_frame(move || {
@@ -77,7 +71,6 @@ pub(super) fn RepoSwitcherDisplayRow(
             >
                 <span class="truncate text-left">{label_name.clone()}</span>
                 {move || if repo_switcher_row_is_active(
-                    current_repo.get(),
                     current_repo_id.get(),
                     &active_badge_row,
                 ) {
@@ -86,33 +79,27 @@ pub(super) fn RepoSwitcherDisplayRow(
                     view! {}.into_any()
                 }}
             </button>
-            {move || if let Some(repo_id) = row_id {
-                view! {
-                    <button
-                        type="button"
-                        class="mr-1 p-1 rounded text-secondary hover:text-primary hover:bg-hover opacity-80 group-hover:opacity-100"
-                        data-deve-repo-switcher-actions=repo_switcher_action_button_marker()
-                        title=move || t::sidebar::repository_actions(locale.get())
-                        aria-label=move || t::sidebar::repository_actions(locale.get())
-                        on:click=move |e: MouseEvent| {
-                            e.stop_propagation();
-                            set_show_create.set(false);
-                            set_renaming_repo.set(None);
-                            set_action_repo.update(|open| {
-                                *open = if *open == Some(repo_id) {
-                                    None
-                                } else {
-                                    Some(repo_id)
-                                };
-                            });
-                        }
-                    >
-                        <EllipsisVertical class="w-3.5 h-3.5" />
-                    </button>
-                }.into_any()
-            } else {
-                view! {}.into_any()
-            }}
+            <button
+                type="button"
+                class="mr-1 p-1 rounded text-secondary hover:text-primary hover:bg-hover opacity-80 group-hover:opacity-100"
+                data-deve-repo-switcher-actions=repo_switcher_action_button_marker()
+                title=move || t::sidebar::repository_actions(locale.get())
+                aria-label=move || t::sidebar::repository_actions(locale.get())
+                on:click=move |e: MouseEvent| {
+                    e.stop_propagation();
+                    set_show_create.set(false);
+                    set_renaming_repo.set(None);
+                    set_action_repo.update(|open| {
+                        *open = if *open == Some(row_id) {
+                            None
+                        } else {
+                            Some(row_id)
+                        };
+                    });
+                }
+            >
+                <EllipsisVertical class="w-3.5 h-3.5" />
+            </button>
         </div>
     }
 }

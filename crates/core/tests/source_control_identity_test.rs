@@ -4,17 +4,22 @@ use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 
 fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
     let abs = repo
-        .local_repo_workspace_path("default", path)
+        .local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
@@ -62,7 +67,7 @@ fn diff_uses_pending_doc_identity_for_renamed_file() {
 
     write_workspace_file(&repo, "notes/b.md", "hello renamed");
     std::fs::remove_file(
-        repo.local_repo_workspace_path("default", "notes/a.md")
+        repo.local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
             .expect("workspace path"),
     )
     .expect("remove old path");
@@ -112,7 +117,7 @@ fn commit_preserves_doc_id_for_rename_candidate() {
 
     write_workspace_file(&repo, "notes/b.md", "hello");
     std::fs::remove_file(
-        repo.local_repo_workspace_path("default", "notes/a.md")
+        repo.local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
             .expect("workspace path"),
     )
     .expect("remove old path");

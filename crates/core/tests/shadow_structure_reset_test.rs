@@ -124,26 +124,24 @@ fn remote_repo_info_fails_closed_when_metadata_missing() {
 
 #[test]
 fn apply_remote_snapshot_extends_a_matching_confirmed_prefix() {
-    let dir = tempfile::tempdir().expect("tempdir");
+    // Source and receiver live in isolated ledgers (production names the ledger
+    // dir "ledger"); they intentionally share one RepoId so the receiver can
+    // store the source's snapshot under its own shadow scope.
+    let source_dir = tempfile::tempdir().expect("source tempdir");
+    let receiver_dir = tempfile::tempdir().expect("receiver tempdir");
     let repo_id = uuid::Uuid::new_v4();
-    let source_repo = RepoManager::init_with_options(
-        dir.path().join("source-ledger"),
-        10,
-        Some("default"),
-        deve_core::ledger::init::RepoInitOptions {
-            repo_id: Some(repo_id),
-            repo_url: Some("urn:source".into()),
-        },
+    let source_repo = common::init_cataloged_repo_with_id(
+        &source_dir.path().join("ledger"),
+        &source_dir.path().join("notes"),
+        repo_id,
+        "urn:source",
     )
     .expect("source repo");
-    let receiver_repo = RepoManager::init_with_options(
-        dir.path().join("receiver-ledger"),
-        10,
-        Some("default"),
-        deve_core::ledger::init::RepoInitOptions {
-            repo_id: Some(repo_id),
-            repo_url: Some("urn:receiver".into()),
-        },
+    let receiver_repo = common::init_cataloged_repo_with_id(
+        &receiver_dir.path().join("ledger"),
+        &receiver_dir.path().join("notes"),
+        repo_id,
+        "urn:receiver",
     )
     .expect("receiver repo");
     let repo_key = RepoKey::generate();

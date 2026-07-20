@@ -4,31 +4,25 @@
 //! Source Control smoke fixture that never depends on checked-in dev ledger
 //! state.
 
-use super::support::{ProxyHarness, seed_pending, write_workspace_file};
+use super::support::{seed_pending, write_workspace_file, ProxyHarness};
 use deve_core::git_bridge::get_record;
 use deve_core::protocol::{
     DocumentRecoveryScope, ProjectionRecoveryCause, ServerError, ServerErrorCode, ServerMessage,
 };
-use deve_core::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, ExternalApplyReceipt,
-};
+use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitInfo, ExternalApplyReceipt};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
     let repo_name = harness.repo.local_repo_name();
-    assert!(
-        harness
-            .repo
-            .list_pending_fs_in_local_repo(repo_name)?
-            .is_empty()
-    );
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_pending_fs_in_local_repo(repo_name)?
+        .is_empty());
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
 
     write_workspace_file(&harness.dir, "smoke/a.md", "hello");
     seed_pending(&harness.repo, "smoke/a.md", ChangeStatus::Added, "hello");
@@ -37,12 +31,10 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
     assert_eq!(initial[0].path, "smoke/a.md");
 
     post_path(&harness, "/api/sc/stage-pending", "smoke/a.md").await?;
-    assert!(
-        harness
-            .repo
-            .list_pending_fs_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_pending_fs_in_local_repo(repo_name)?
+        .is_empty());
     assert_eq!(harness.repo.list_staged_in_local_repo(repo_name)?.len(), 1);
 
     post_path(&harness, "/api/sc/unstage", "smoke/a.md").await?;
@@ -50,24 +42,20 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
         harness.repo.list_pending_fs_in_local_repo(repo_name)?.len(),
         1
     );
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
 
     post_path(&harness, "/api/sc/stage-pending", "smoke/a.md").await?;
     let applied = post_apply_external_changes(&harness).await?;
     assert_eq!(applied.applied_target_count, 1);
     assert_eq!(applied.affected_docs.len(), 1);
     assert!(applied.authority_head.storage_key() > 0);
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
     assert_eq!(
         harness
             .repo
@@ -78,25 +66,19 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
     let commit = post_commit(&harness, "clean smoke fixture").await?;
     assert_eq!(commit.doc_count, 1);
     assert_eq!(commit.message, "clean smoke fixture");
-    assert!(
-        harness
-            .repo
-            .list_confirmed_ledger_changes_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_confirmed_ledger_changes_in_local_repo(repo_name)?
+        .is_empty());
     assert!(http_status(&harness).await?.is_empty());
-    assert!(
-        harness
-            .repo
-            .list_pending_fs_in_local_repo(repo_name)?
-            .is_empty()
-    );
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_pending_fs_in_local_repo(repo_name)?
+        .is_empty());
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
 
     harness.shutdown().await;
     Ok(())
@@ -170,12 +152,10 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
         harness.repo.list_pending_fs_in_local_repo(repo_name)?.len(),
         1
     );
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
     harness.shutdown().await;
     Ok(())
 }
@@ -204,12 +184,10 @@ async fn http_source_control_commit_always_queues_git_main_mirror() -> anyhow::R
         .run_on_local_repo(repo_name, |db| Ok(get_record(db, &commit.id)?))?;
 
     assert!(record.is_some());
-    assert!(
-        harness
-            .repo
-            .list_staged_in_local_repo(repo_name)?
-            .is_empty()
-    );
+    assert!(harness
+        .repo
+        .list_staged_in_local_repo(repo_name)?
+        .is_empty());
     harness.shutdown().await;
     Ok(())
 }
@@ -240,7 +218,9 @@ async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow
     Ok(())
 }
 
-async fn post_apply_external_changes(harness: &ProxyHarness) -> anyhow::Result<ExternalApplyReceipt> {
+async fn post_apply_external_changes(
+    harness: &ProxyHarness,
+) -> anyhow::Result<ExternalApplyReceipt> {
     harness.grant_browser_write(1)?;
     let response = harness
         .client

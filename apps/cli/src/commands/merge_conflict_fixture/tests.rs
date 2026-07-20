@@ -8,15 +8,16 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo = RepoManager::init(&ledger, 10, Some("default"), None)?;
-    repo.set_projection_base_for_local_repo("default", &projection_base)?;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger, &projection_base, 10)?;
+    let repo_name = cataloged.repo.local_repo_name().to_string();
+    drop(cataloged);
 
     run(
         &ledger,
         10,
         MergeConflictFixtureOptions {
             peer: "peer-a".into(),
-            repo: None,
+            repo: Some(repo_name.clone()),
             path: "notes/conflict.md".into(),
             base: "base".into(),
             local: "local".into(),
@@ -25,15 +26,17 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     )?;
 
     let repo = RepoManager::init(&ledger, 10, None, None)?;
-    let info = repo.get_repo_info()?.expect("repo info");
-    let docs = repo.list_local_docs(Some("default"))?;
+    let info = repo
+        .get_repo_info_for(None, Some(&repo_name))?
+        .expect("repo info");
+    let docs = repo.list_local_docs(Some(&repo_name))?;
     let (doc_id, path) = docs.first().expect("seeded doc");
     assert_eq!(path, "notes/conflict.md");
     deve_core::utils::notegit::validate_repo_identity_marker(
-        &repo.local_repo_workspace_root("default")?,
+        &repo.local_repo_workspace_root(&repo_name)?,
         info.uuid,
     )?;
-    let workspace_path = repo.local_repo_workspace_path("default", path)?;
+    let workspace_path = repo.local_repo_workspace_path(&repo_name, path)?;
     assert_eq!(std::fs::read_to_string(workspace_path)?, "local");
     assert_eq!(
         repo.list_docs(&RepoType::Remote(PeerId::new("peer-a"), info.uuid))?,

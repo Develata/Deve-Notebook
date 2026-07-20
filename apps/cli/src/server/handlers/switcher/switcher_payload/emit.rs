@@ -25,6 +25,18 @@ pub(crate) fn prepare_repo_view_messages(
     let Some(repo_view) = repo_view else {
         return Ok(None);
     };
+    let scope_nonce = scope_nonce
+        .map(deve_core::protocol::ScopeNonce::new)
+        .ok_or_else(|| anyhow::anyhow!("repo switch publication requires scope_nonce"))?;
+    let display_alias = if branch.is_none() {
+        state
+            .repo
+            .host_repo_alias_runtime()
+            .binding(repo_view.repo_id)?
+            .alias
+    } else {
+        repo_view.repo_id.to_string()
+    };
     let tree_branch = branch.clone().map(deve_core::models::PeerId::new);
     let delta = state.tree_manager.reset_from_nodes(
         repo_view.repo_id,
@@ -34,22 +46,23 @@ pub(crate) fn prepare_repo_view_messages(
     Ok(Some(RepoViewMessages {
         repo_switched: deve_core::protocol::ServerMessage::RepoSwitched {
             branch: branch.clone(),
-            name: repo_view.repo_name,
-            uuid: repo_view.repo_id.to_string(),
+            repo_id: repo_view.repo_id,
+            display_alias,
             switch_nonce,
+            scope_nonce,
         },
         doc_list: deve_core::protocol::ServerMessage::DocList {
             request_id: request_id.clone(),
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch.clone(),
-            scope_nonce,
+            scope_nonce: Some(scope_nonce.get()),
             docs: repo_view.docs,
         },
         tree_update: deve_core::protocol::ServerMessage::TreeUpdate {
             request_id,
             repo_id: Some(repo_view.repo_id),
             branch: tree_branch,
-            scope_nonce,
+            scope_nonce: Some(scope_nonce.get()),
             delta,
         },
     }))

@@ -9,7 +9,10 @@ use tempfile::TempDir;
 #[test]
 fn redb_schema_version_written_on_repo_init() -> anyhow::Result<()> {
     let dir = TempDir::new()?;
-    let repo = RepoManager::init(dir.path().join("ledger"), 8, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+    )?;
     let handle = repo.open_database(None, repo.local_repo_name())?;
 
     let read = handle.db.begin_read()?;
@@ -119,7 +122,8 @@ fn shadow_v4_uses_uuid_stem_without_local_remote_import_tables() -> anyhow::Resu
 fn local_v4_missing_projection_fault_table_fails_closed_without_repair() -> anyhow::Result<()> {
     let dir = TempDir::new()?;
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
     let handle = repo.open_database(None, repo.local_repo_name())?;
     let write = handle.db.begin_write()?;
     write.delete_table(PROJECTION_FAULTS)?;

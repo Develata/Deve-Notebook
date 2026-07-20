@@ -42,7 +42,7 @@ pub fn protocol_signal_harness(
     let (pending_repo_switch, set_pending_repo_switch) = signal(
         pending_repo
             .zip(pending_repo_nonce)
-            .map(|(name, nonce)| PendingRepoSwitch::switch(name, nonce)),
+            .map(|(name, nonce)| PendingRepoSwitch::switch(name, uuid::Uuid::nil(), nonce)),
     );
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(Some("shadow-1".to_string()));
     let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));

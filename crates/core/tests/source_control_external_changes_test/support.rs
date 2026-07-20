@@ -6,15 +6,18 @@ use tempfile::{TempDir, tempdir};
 
 pub(crate) fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = crate::common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 
 pub(crate) fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
     let abs = repo
-        .local_repo_workspace_path("default", path)
+        .local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
@@ -23,7 +26,7 @@ pub(crate) fn write_workspace_file(repo: &RepoManager, path: &str, content: &str
 }
 
 pub(crate) fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
-    repo.local_repo_workspace_path("default", path)
+    repo.local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path")
 }
 

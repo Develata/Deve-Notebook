@@ -16,6 +16,7 @@ pub mod plugin;
 pub mod remote_import;
 pub mod remote_projection;
 pub mod repo;
+pub mod repo_control;
 pub mod repo_list;
 pub mod search;
 pub mod source_control;

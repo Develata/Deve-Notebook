@@ -6,11 +6,12 @@ use crate::api::WsService;
 use crate::runtime::document::pending;
 use crate::runtime::domain::PendingRepoSwitch;
 use deve_core::models::{PeerId, RepoId};
-use leptos::prelude::{GetUntracked, Update};
+use leptos::prelude::{GetUntracked, Set, Update};
 
 use super::super::effects_switch;
 use super::super::state::CoreSignals;
 use super::message_control_runtime::{refresh_after_branch_switch, refresh_after_repo_switch};
+use super::message_remove_scope;
 use super::message_scope::string_branch_matches_scope;
 
 pub fn handle_branch_switched(
@@ -53,9 +54,20 @@ pub fn handle_repo_switched(
         leptos::logging::warn!("忽略 RepoSwitched: branch 与当前 scope 不匹配");
         return;
     }
+    let staged_repo_switch =
+        message_remove_scope::admit_repo_switched(&name, &uuid, switch_nonce, ws, signals);
+    if matches!(
+        staged_repo_switch,
+        message_remove_scope::RepoSwitchedStageAdmission::Rejected
+    ) {
+        return;
+    }
     let active_branch = signals.active_branch.get_untracked();
     let current_repo_uuid = signals.current_repo_id.get_untracked();
     let pending_repo_switch = signals.pending_repo_switch.get_untracked();
+    let explicit_repo_selection = pending_repo_switch
+        .as_ref()
+        .is_some_and(PendingRepoSwitch::is_explicit_switch);
     let session_restore_rebind = session_restore_rebind_target(SessionRestoreScopeInput {
         message_branch: branch.as_deref(),
         active_branch: active_branch.as_ref(),
@@ -100,9 +112,13 @@ pub fn handle_repo_switched(
             );
         }
     }
+    if outcome.accepted && explicit_repo_selection {
+        signals.set_explicit_repo_selection_required.set(false);
+    }
     if outcome.should_refresh {
         refresh_after_repo_switch(ws, signals);
     }
+    message_remove_scope::settle_repo_switched(staged_repo_switch, outcome.accepted, ws, signals);
 }
 
 struct SessionRestoreScopeInput<'a> {
@@ -155,7 +171,7 @@ mod tests {
     fn exact_local_session_restore_can_rebind_pending_scope() {
         let repo_id = RepoId::new_v4();
         let repo_uuid = repo_id.to_string();
-        let pending = PendingRepoSwitch::restore_session("default", 8);
+        let pending = PendingRepoSwitch::restore_session("default", repo_id, 8);
 
         assert_eq!(
             session_restore_rebind_target(SessionRestoreScopeInput {
@@ -176,8 +192,8 @@ mod tests {
     fn user_switch_or_nonlocal_scope_cannot_rebind_pending() {
         let repo_id = RepoId::new_v4();
         let repo_uuid = repo_id.to_string();
-        let user_switch = PendingRepoSwitch::switch("default", 8);
-        let restore = PendingRepoSwitch::restore_session("default", 8);
+        let user_switch = PendingRepoSwitch::switch("default", repo_id, 8);
+        let restore = PendingRepoSwitch::restore_session("default", repo_id, 8);
         let branch = PeerId::random();
 
         assert!(
@@ -211,9 +227,10 @@ mod tests {
 
     #[test]
     fn uuid_or_nonce_mismatch_cannot_rebind_pending() {
-        let repo_uuid = RepoId::new_v4().to_string();
+        let repo_id = RepoId::new_v4();
+        let repo_uuid = repo_id.to_string();
         let other_uuid = RepoId::new_v4().to_string();
-        let pending = PendingRepoSwitch::restore_session("default", 8);
+        let pending = PendingRepoSwitch::restore_session("default", repo_id, 8);
 
         for (returned_uuid, nonce) in [(&other_uuid, Some(8)), (&repo_uuid, Some(9))] {
             assert!(
@@ -247,7 +264,9 @@ mod tests {
         signals.set_current_doc.set(Some(doc_id));
         signals
             .set_pending_repo_switch
-            .set(Some(PendingRepoSwitch::restore_session("default", 8)));
+            .set(Some(PendingRepoSwitch::restore_session(
+                "default", repo_id, 8,
+            )));
         signals.set_pending_local_edits.update(|pending| {
             push_pending_edit(
                 pending,

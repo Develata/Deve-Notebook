@@ -8,7 +8,7 @@ use super::logic::{
     repo_switcher_rename_input_marker, repo_switcher_row_is_active, repo_switcher_row_is_renaming,
     repo_switcher_rows, repo_switcher_switch_target, repo_switcher_trigger_marker,
 };
-use deve_core::protocol::RepoListEntry;
+use deve_core::protocol::{RepoListEntry, RepoReadiness};
 
 #[test]
 fn repo_switcher_trigger_marker_is_stable() {
@@ -89,72 +89,50 @@ fn repo_switcher_rename_submit_requires_non_empty_changed_name() {
 fn repo_switcher_rename_state_requires_row_repo_id() {
     let repo_id = uuid::Uuid::new_v4();
 
-    assert!(repo_switcher_row_is_renaming(Some(repo_id), Some(repo_id)));
-    assert!(!repo_switcher_row_is_renaming(None, Some(repo_id)));
-    assert!(!repo_switcher_row_is_renaming(None, None));
-    assert!(!repo_switcher_row_is_renaming(Some(repo_id), None));
+    assert!(repo_switcher_row_is_renaming(Some(repo_id), repo_id));
+    assert!(!repo_switcher_row_is_renaming(None, repo_id));
+    assert!(!repo_switcher_row_is_renaming(
+        Some(uuid::Uuid::new_v4()),
+        repo_id
+    ));
 }
 
 #[test]
-fn repo_switcher_rows_prefer_protocol_entries() {
+fn repo_switcher_rows_require_protocol_entries() {
     let repo_id = uuid::Uuid::new_v4();
-    let rows = repo_switcher_rows(
-        vec!["legacy".to_string()],
-        vec![RepoListEntry {
+    let rows = repo_switcher_rows(vec![RepoListEntry {
+        repo_id,
+        display_alias: "display".to_string(),
+        alias_revision: 3,
+        readiness: RepoReadiness::Mounted,
+    }]);
+
+    assert_eq!(
+        rows,
+        vec![RepoSwitcherRow {
             repo_id,
             name: "display".to_string(),
-            execution_name: "display--id".to_string(),
-        }],
-    );
-
-    assert_eq!(
-        rows,
-        vec![RepoSwitcherRow {
-            repo_id: Some(repo_id),
-            name: "display".to_string(),
-            execution_name: "display--id".to_string(),
+            alias_revision: 3,
         }]
     );
 }
 
 #[test]
-fn repo_switcher_rows_keep_legacy_names_without_entries() {
-    let rows = repo_switcher_rows(vec!["default".to_string()], Vec::new());
-
-    assert_eq!(
-        rows,
-        vec![RepoSwitcherRow {
-            repo_id: None,
-            name: "default".to_string(),
-            execution_name: "default".to_string(),
-        }]
-    );
+fn repo_switcher_rows_do_not_invent_name_only_identity() {
+    assert!(repo_switcher_rows(Vec::new()).is_empty());
 }
 
 #[test]
-fn repo_switcher_active_state_accepts_repo_id_or_display_name() {
+fn repo_switcher_active_state_requires_repo_id() {
     let repo_id = uuid::Uuid::new_v4();
     let row = RepoSwitcherRow {
-        repo_id: Some(repo_id),
+        repo_id,
         name: "default".to_string(),
-        execution_name: "default--id".to_string(),
+        alias_revision: 0,
     };
 
-    assert!(repo_switcher_row_is_active(
-        Some("other".to_string()),
-        Some(repo_id.to_string()),
-        &row
-    ));
-    assert!(repo_switcher_row_is_active(
-        Some("default".to_string()),
-        None,
-        &row
-    ));
-    assert!(!repo_switcher_row_is_active(
-        Some("other".to_string()),
-        None,
-        &row
-    ));
+    assert!(repo_switcher_row_is_active(Some(repo_id.to_string()), &row));
+    assert!(!repo_switcher_row_is_active(None, &row));
 }
 
 #[test]
@@ -162,45 +140,28 @@ fn repo_switcher_active_state_does_not_fallback_to_display_when_ids_differ() {
     let active_repo_id = uuid::Uuid::new_v4();
     let inactive_repo_id = uuid::Uuid::new_v4();
     let row = RepoSwitcherRow {
-        repo_id: Some(inactive_repo_id),
+        repo_id: inactive_repo_id,
         name: "shared".to_string(),
-        execution_name: "shared--inactive".to_string(),
+        alias_revision: 0,
     };
 
     assert!(!repo_switcher_row_is_active(
-        Some("shared".to_string()),
         Some(active_repo_id.to_string()),
         &row
     ));
 }
 
 #[test]
-fn repo_switcher_switch_target_uses_execution_selector_with_repo_id() {
+fn repo_switcher_switch_target_is_exact_repo_id() {
     let repo_id = uuid::Uuid::new_v4();
     let row = RepoSwitcherRow {
-        repo_id: Some(repo_id),
+        repo_id,
         name: "display".to_string(),
-        execution_name: "display--id".to_string(),
+        alias_revision: 4,
     };
 
     let target = repo_switcher_switch_target(&row);
 
-    assert_eq!(target.selector_name, "display--id");
     assert_eq!(target.expected_name, "display");
-    assert_eq!(target.repo_id, Some(repo_id));
-}
-
-#[test]
-fn repo_switcher_switch_target_keeps_legacy_name_selector() {
-    let row = RepoSwitcherRow {
-        repo_id: None,
-        name: "legacy".to_string(),
-        execution_name: "legacy".to_string(),
-    };
-
-    let target = repo_switcher_switch_target(&row);
-
-    assert_eq!(target.selector_name, "legacy");
-    assert_eq!(target.expected_name, "legacy");
-    assert_eq!(target.repo_id, None);
+    assert_eq!(target.repo_id, repo_id);
 }

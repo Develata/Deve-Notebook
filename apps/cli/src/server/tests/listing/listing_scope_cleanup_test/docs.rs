@@ -53,12 +53,10 @@ async fn list_docs_on_unbound_shadow_branch_preserves_switch_nonce() -> anyhow::
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(17));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Remote branch not available:")));
         }
         other => panic!("expected ProtocolError with switch nonce, got {:?}", other),
     }
@@ -78,6 +76,8 @@ async fn list_docs_does_not_emit_partial_repo_view_when_tree_reset_fails() -> an
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(41));
 
     handle_list_docs(&state, &ch, &mut session, Some("req-tree".into()), Some(41)).await;
 

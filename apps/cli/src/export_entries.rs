@@ -54,7 +54,13 @@ mod tests {
     #[test]
     fn jsonl_roundtrip_is_monotonic_and_line_stable() {
         let dir = TempDir::new().expect("create tempdir");
-        let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+        let repo = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            10,
+        )
+        .expect("init repo")
+        .repo;
         for name in ["a.md", "b.md", "c.md"] {
             repo.apply_file_structure_in_local_repo(repo.local_repo_name(), name, None, "test")
                 .expect("create file");
@@ -80,7 +86,13 @@ mod tests {
     #[test]
     fn includes_dir_structure_fact_in_export() {
         let dir = TempDir::new().expect("create tempdir");
-        let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+        let repo = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            10,
+        )
+        .expect("init repo")
+        .repo;
         repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes", "test")
             .expect("create dir");
 
@@ -93,7 +105,13 @@ mod tests {
     #[test]
     fn file_entry_prefers_node_projection_path() {
         let dir = TempDir::new().expect("create tempdir");
-        let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+        let repo = crate::test_support::init_cataloged_repo(
+            &dir.path().join("ledger"),
+            &dir.path().join("notes"),
+            10,
+        )
+        .expect("init repo")
+        .repo;
         let (doc_id, _ops) = repo
             .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
             .expect("create file");

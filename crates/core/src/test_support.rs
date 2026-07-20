@@ -13,24 +13,106 @@ pub(crate) static CWD_LOCK: Mutex<()> = Mutex::new(());
 pub(crate) fn local_repo_catalog_test_guard() -> MutexGuard<'static, ()> {
     LOCAL_REPO_CATALOG_TEST_MUTEX
         .lock()
-        .expect("local repo catalog test mutex")
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-pub(crate) fn create_initialized_local_repo(ledger_dir: &Path, name: &str, url: &str) -> RepoInfo {
-    create_initialized_local_repo_with_depth(ledger_dir, 8, name, url)
+/// A prepared (not-yet-committed) catalog-backed local repo produced by the
+/// shared creation choreography: UUID-canonical machine name, prepared locator,
+/// created workspace, workspace identity marker, and process membership seeded
+/// from durable records (empty until a membership record is committed).
+pub(crate) struct PreparedCatalogRepo {
+    pub repo: RepoManager,
+    pub repo_id: uuid::Uuid,
+    /// `<projection_base>/<workspace_segment>/` created on disk.
+    pub workspace: std::path::PathBuf,
 }
 
-pub(crate) fn create_initialized_local_repo_with_depth(
+/// Shared prepare half of the production repo-creation choreography. Callers
+/// either commit membership (`commit_cataloged_repo_membership` /
+/// `init_cataloged_repo`) or drive the catalog cut themselves. No membership
+/// record is committed here, so the repo is not yet visible to catalog-backed
+/// resolution/listing.
+pub(crate) fn prepare_cataloged_repo(
     ledger_dir: &Path,
+    projection_base: &Path,
     snapshot_depth: usize,
-    name: &str,
-    url: &str,
-) -> RepoInfo {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(name), Some(url))
-        .expect("initialized local repo");
-    repo.get_repo_info()
-        .expect("local repo info")
-        .expect("local repo metadata")
+    repo_url: Option<&str>,
+) -> anyhow::Result<PreparedCatalogRepo> {
+    let repo_id = uuid::Uuid::new_v4();
+    let execution_name = repo_id.to_string();
+    let repo = RepoManager::init_with_options(
+        ledger_dir,
+        snapshot_depth,
+        Some(&execution_name),
+        crate::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: repo_url.map(str::to_string),
+        },
+    )?;
+    let locator = repo.prepare_projection_locator_for_repo_creation(repo_id, projection_base)?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    repo.seed_catalog_membership_from_records()?;
+    Ok(PreparedCatalogRepo {
+        repo,
+        repo_id,
+        workspace,
+    })
+}
+
+/// Commits a `Normal` catalog membership record for a prepared repo, using the
+/// production cut authority + permit path.
+pub(crate) fn commit_cataloged_repo_membership(
+    prepared: &PreparedCatalogRepo,
+) -> anyhow::Result<()> {
+    let authority = prepared.repo.claim_repo_catalog_cut_authority()?;
+    let creation = prepared
+        .repo
+        .prepare_repo_creation_membership(prepared.repo_id, uuid::Uuid::new_v4())?;
+    let revalidated = prepared
+        .repo
+        .revalidate_repo_creation_membership(&creation)?;
+    let permit = authority.permit(prepared.repo_id)?;
+    prepared
+        .repo
+        .commit_repo_creation_membership(&creation, &revalidated, &permit)?;
+    Ok(())
+}
+
+/// Full production creation choreography for a catalog-backed local repo:
+/// UUID-canonical machine name, prepared locator + workspace identity marker,
+/// and a committed `Normal` catalog membership record. Bare `RepoManager::init`
+/// repos are invisible to catalog-backed resolution and listing.
+pub(crate) fn init_cataloged_repo(
+    ledger_dir: &Path,
+    projection_base: &Path,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    let prepared = prepare_cataloged_repo(ledger_dir, projection_base, 8, None)?;
+    commit_cataloged_repo_membership(&prepared)?;
+    Ok((prepared.repo, prepared.repo_id))
+}
+
+/// Variant of [`init_cataloged_repo`] that records a repo URL in metadata.
+pub(crate) fn init_cataloged_repo_with_url(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    repo_url: &str,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    let prepared = prepare_cataloged_repo(ledger_dir, projection_base, 8, Some(repo_url))?;
+    commit_cataloged_repo_membership(&prepared)?;
+    Ok((prepared.repo, prepared.repo_id))
+}
+
+/// Variant of [`init_cataloged_repo`] that preserves a specific snapshot depth.
+pub(crate) fn init_cataloged_repo_with_depth(
+    ledger_dir: &Path,
+    projection_base: &Path,
+    snapshot_depth: usize,
+) -> anyhow::Result<(RepoManager, uuid::Uuid)> {
+    let prepared = prepare_cataloged_repo(ledger_dir, projection_base, snapshot_depth, None)?;
+    commit_cataloged_repo_membership(&prepared)?;
+    Ok((prepared.repo, prepared.repo_id))
 }
 
 pub(crate) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyhow::Result<()> {

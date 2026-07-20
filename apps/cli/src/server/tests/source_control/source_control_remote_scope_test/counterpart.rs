@@ -35,7 +35,7 @@ async fn remote_diff_fails_closed_when_no_local_counterpart_repo_exists() -> any
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
-        domain: None,
+            domain: None,
         },
     )
     .await;
@@ -43,12 +43,10 @@ async fn remote_diff_fails_closed_when_no_local_counterpart_repo_exists() -> any
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
             assert_eq!(error.code, ServerErrorCode::StorageNotFound);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("No local repository matched"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("No local repository matched")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

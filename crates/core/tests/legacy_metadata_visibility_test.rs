@@ -3,9 +3,16 @@ use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 

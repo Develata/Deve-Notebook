@@ -73,12 +73,10 @@ async fn browser_sync_hello_failure_revokes_source_control_write_grant() -> anyh
             9,
         )
         .expect("grant setup");
-    assert!(
-        state
-            .source_control_write_grants()
-            .authorize_browser_local(&auth_session, repo_id, 9)
-            .is_ok()
-    );
+    assert!(state
+        .source_control_write_grants()
+        .authorize_browser_local(&auth_session, repo_id, 9)
+        .is_ok());
 
     let stale_hello = signed_hello_for_scope(&remote, repo_id, 8);
     let (ch, mut rx) = unicast_channel(&state);
@@ -97,10 +95,7 @@ async fn browser_sync_hello_failure_revokes_source_control_write_grant() -> anyh
     Ok(())
 }
 
-fn browser_session(
-    repo_id: uuid::Uuid,
-    remote: &IdentityKeyPair,
-) -> super::session::WsSession {
+fn browser_session(repo_id: uuid::Uuid, remote: &IdentityKeyPair) -> super::session::WsSession {
     let mut session = empty_session();
     session.mark_browser_session();
     session.switch_repo("notes".into(), Some(repo_id));
@@ -111,9 +106,7 @@ fn browser_session(
     session
 }
 
-async fn recv_protocol_error(
-    rx: &mut mpsc::Receiver<ServerMessage>,
-) -> (ServerError, Option<u64>) {
+async fn recv_protocol_error(rx: &mut mpsc::Receiver<ServerMessage>) -> (ServerError, Option<u64>) {
     match rx.recv().await {
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
@@ -125,12 +118,10 @@ async fn recv_protocol_error(
 fn assert_runtime_mismatch((error, scope_nonce): (ServerError, Option<u64>)) {
     assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
     assert_eq!(scope_nonce, Some(9));
-    assert!(
-        error
-            .detail
-            .as_deref()
-            .is_some_and(|detail| detail.contains("runtime binding mismatch"))
-    );
+    assert!(error
+        .detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains("runtime binding mismatch")));
 }
 
 fn assert_browser_sync_binding_cleared(session: &super::session::WsSession) {

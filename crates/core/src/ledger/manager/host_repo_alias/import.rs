@@ -233,14 +233,6 @@ where
                 ));
                 continue;
             }
-            LocalRepoAdmission::Failed => {
-                warnings.push(warning(
-                    index,
-                    Some(repo_id),
-                    HostRepoAliasImportWarningReason::AdmissionFailed,
-                ));
-                continue;
-            }
         }
         let current = store.binding_or_fallback(repo_id);
         if current.alias_revision != 0 && current.alias == alias {

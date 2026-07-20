@@ -9,11 +9,10 @@ use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
 use std::path::Path;
 use std::sync::Arc;
 
-pub(crate) fn reopen_state(root: &Path) -> anyhow::Result<Arc<AppState>> {
+pub(crate) fn reopen_state(root: &Path, repo_id: uuid::Uuid) -> anyhow::Result<Arc<AppState>> {
     let ledger = root.join("ledger");
-    let projection_base = root.join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let repo = RepoManager::init_existing_for_repo_id(&ledger, 10, repo_id)?;
+    repo.seed_catalog_membership_from_records()?;
     let repo = Arc::new(repo);
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(
@@ -74,7 +73,9 @@ pub(crate) fn ensure_remote_repo(
 }
 
 pub(crate) fn ensure_local_projection_ready(state: &Arc<AppState>) -> anyhow::Result<()> {
-    state.repo.ensure_local_repo_workspace_identity("notes")?;
+    state
+        .repo
+        .ensure_local_repo_workspace_identity(state.repo.local_repo_name())?;
     Ok(())
 }
 
@@ -94,7 +95,7 @@ pub(crate) fn browser_remote_session(
 pub(crate) fn browser_local_session(repo_id: uuid::Uuid, scope_nonce: u64) -> WsSession {
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("notes".into(), Some(repo_id));
+    session.switch_repo(repo_id.to_string(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
     session
 }

@@ -18,7 +18,9 @@ pub mod document_client;
 pub mod domain;
 pub mod external_changes_client;
 pub mod projection_recovery;
+pub(crate) mod remove_scope_partial;
 pub mod rendering_client;
+pub mod repo_control_client;
 pub mod scope_client;
 pub mod session_client;
 pub mod source_control_client;
@@ -31,6 +33,7 @@ pub struct CoreRuntimeClients {
     pub source_control: source_control_client::SourceControlClient,
     pub external_changes: external_changes_client::ExternalChangesClient,
     pub rendering: rendering_client::RenderingClient,
+    pub repo_control: repo_control_client::RepoControlClient,
 }
 
 #[cfg(test)]

@@ -4,8 +4,8 @@
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, expect_sync_hello_and_shadow_list, recv_optional_server_message,
-    recv_server_message, send_client_message, switch_to_notes_repo,
+    connect_harness, expect_sync_hello_and_shadow_list, recv_optional_server_message,
+    recv_server_message, send_client_message, switch_to_notes_repo, WsHarness,
 };
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
@@ -97,19 +97,27 @@ async fn create_doc(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<DocI
     let mut saw_scope = false;
     for _ in 0..3 {
         match recv_server_message(ws).await? {
-            ServerMessage::RepoSwitched { uuid, .. } => {
-                assert_eq!(uuid, repo_id.to_string());
+            ServerMessage::RepoSwitched {
+                repo_id: actual_repo_id,
+                ..
+            } => {
+                assert_eq!(actual_repo_id, repo_id);
                 saw_scope = true;
             }
             ServerMessage::DocList { docs, .. } => {
-                assert!(docs.iter().any(|(id, path)| *id == doc_id && path == "writer-gate.md"));
+                assert!(docs
+                    .iter()
+                    .any(|(id, path)| *id == doc_id && path == "writer-gate.md"));
                 saw_doc_list = true;
             }
             ServerMessage::TreeUpdate { .. } => saw_tree = true,
             other => anyhow::bail!("expected create recovery projection, got {other:?}"),
         }
     }
-    anyhow::ensure!(saw_scope && saw_doc_list && saw_tree, "create recovery did not settle");
+    anyhow::ensure!(
+        saw_scope && saw_doc_list && saw_tree,
+        "create recovery did not settle"
+    );
     Ok(doc_id)
 }
 
@@ -183,12 +191,9 @@ fn is_commit_echo(message: &ServerMessage, expected_doc: DocId) -> bool {
         } => *doc_id == expected_doc && *client_op_id == CLIENT_OP_ID,
         ServerMessage::NewOp { doc_id, entry, .. } => {
             *doc_id == expected_doc
-                && entry
-                    .origin
-                    .as_ref()
-                    .is_some_and(|origin| {
-                        origin.client_id == CLIENT_ID && origin.client_op_id == CLIENT_OP_ID
-                    })
+                && entry.origin.as_ref().is_some_and(|origin| {
+                    origin.client_id == CLIENT_ID && origin.client_op_id == CLIENT_OP_ID
+                })
         }
         _ => false,
     }

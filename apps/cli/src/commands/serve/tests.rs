@@ -263,10 +263,7 @@ async fn serve_dry_run_validates_runtime_without_binding() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
-        .expect("init repo");
-    repo.set_projection_base_for_local_repo("default", &projection_base)
-        .expect("locator");
+    crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 8).expect("init repo");
 
     run(
         &ledger_dir,
@@ -350,10 +347,7 @@ async fn serve_dev_does_not_mutate_existing_deve_env() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
-        .expect("init repo");
-    repo.set_projection_base_for_local_repo("default", &projection_base)
-        .expect("locator");
+    crate::test_support::init_cataloged_repo(&ledger_dir, &projection_base, 8).expect("init repo");
 
     run(
         &ledger_dir,

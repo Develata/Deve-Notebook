@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{ProxyHarness, path_target, seed_pending, write_workspace_file};
+use super::support::{path_target, seed_pending, write_workspace_file, ProxyHarness};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
@@ -16,18 +16,12 @@ async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     proxy.apply_external_changes_in_repo(&selector)?;
-    let c1 = proxy.commit_source_control_changes_in_repo(
-        &selector,
-        "c1",
-    )?;
+    let c1 = proxy.commit_source_control_changes_in_repo(&selector, "c1")?;
     write_workspace_file(dir, "notes/b.md", "world");
     seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/b.md"))?;
     proxy.apply_external_changes_in_repo(&selector)?;
-    let c2 = proxy.commit_source_control_changes_in_repo(
-        &selector,
-        "c2",
-    )?;
+    let c2 = proxy.commit_source_control_changes_in_repo(&selector, "c2")?;
     let commits = proxy.list_commits_in_repo(&selector, 10)?;
     assert_eq!(commits.len(), 2);
     assert_eq!(commits[0].id, c2.id);

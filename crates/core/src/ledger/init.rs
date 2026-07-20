@@ -163,7 +163,7 @@ pub fn init_with_options(
         super::RepoManager::initialize_repo_info_in_new_db(local_db.as_ref(), &info)?;
     }
 
-    repair_local_repo_metadata(&ledger_dir, &execution_name, local_db.as_ref(), false, None)?;
+    repair_local_repo_metadata(&ledger_dir, &execution_name, local_db.as_ref())?;
     let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
 
     let repo = RepoManager {

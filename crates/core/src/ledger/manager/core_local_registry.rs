@@ -6,7 +6,9 @@ use redb::Database;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::ledger::manager::local_repo_metadata_repair_support::ensure_local_repo_metadata_name_authorized;
+use crate::ledger::manager::local_repo_metadata_repair_support::{
+    ensure_cataloged_repo_name_canonical, ensure_local_repo_metadata_identity,
+};
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::ledger::source_control;
@@ -98,11 +100,8 @@ impl RepoManager {
         if let Some(info) = Self::read_local_repo_info_from_db(&self.local_db)?
             && !self.is_local_repo_removed(info.uuid)?
         {
-            ensure_local_repo_metadata_name_authorized(
-                &self.ledger_dir,
-                &self.local_repo_name,
-                &info,
-            )?;
+            ensure_local_repo_metadata_identity(&self.local_repo_name, &info)?;
+            ensure_cataloged_repo_name_canonical(&self.local_repo_name, &info)?;
             if info.name == selector {
                 display_matches.push(self.local_repo_name.clone());
             }
@@ -139,7 +138,8 @@ impl RepoManager {
                 }
                 return Ok(Some(stem));
             }
-            ensure_local_repo_metadata_name_authorized(&self.ledger_dir, &stem, &info)?;
+            ensure_local_repo_metadata_identity(&stem, &info)?;
+            ensure_cataloged_repo_name_canonical(&stem, &info)?;
             if info.name == selector {
                 display_matches.push(stem);
             }

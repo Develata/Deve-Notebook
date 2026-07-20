@@ -1,4 +1,3 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
@@ -6,15 +5,23 @@ use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::tempdir;
 
+mod common;
+
 #[test]
 fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
-    let (doc_id, _ops) =
-        repo.apply_file_structure_in_local_repo("default", "notes/live.md", None, "test")?;
-    repo.run_on_local_repo("default", |db| {
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/live.md",
+        None,
+        "test",
+    )?;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
             &PendingFsEntry {
@@ -31,7 +38,7 @@ fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Resu
 
     let err = repo
         .discard_pending_target_in_local_repo(
-            "default",
+            repo.local_repo_name(),
             &ScPathTarget {
                 path: "notes/live.md".into(),
                 doc_id: Some(DocId::new()),
@@ -48,14 +55,20 @@ fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Resu
 fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
-    let (doc_id, _ops) =
-        repo.apply_file_structure_in_local_repo("default", "notes/live.md", None, "test")?;
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/live.md",
+        None,
+        "test",
+    )?;
     let wrong_doc_id = DocId::new();
     assert_ne!(doc_id, wrong_doc_id);
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
             &PendingFsEntry {
@@ -72,7 +85,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
 
     let err = repo
         .discard_pending_target_in_local_repo(
-            "default",
+            repo.local_repo_name(),
             &ScPathTarget {
                 path: "notes/live.md".into(),
                 doc_id: Some(wrong_doc_id),
@@ -80,7 +93,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
             },
         )
         .expect_err("doc_id miss must not fall back to path-only pending");
-    let pending = repo.run_on_local_repo("default", pending_fs::list_all)?;
+    let pending = repo.run_on_local_repo(repo.local_repo_name(), pending_fs::list_all)?;
 
     assert!(err.to_string().contains("Path is not in pending_fs_ops"));
     assert_eq!(pending.len(), 1);
@@ -92,12 +105,17 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
 #[test]
 fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
 
     let err = repo
-        .diff_doc_target_in_local_repo("default", &ScPathTarget::from_path("notes/missing.md"))
+        .diff_doc_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget::from_path("notes/missing.md"),
+        )
         .expect_err("untracked path-only diff target must fail closed");
 
     assert!(
@@ -110,11 +128,13 @@ fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow
 #[test]
 fn repo_diff_path_returns_not_found_when_only_legacy_path_mapping_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
     let doc_id = DocId::new();
-    repo.run_on_local_repo("default", |db| {
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
         {
             let mut p2d = write.open_table(PATH_TO_DOCID)?;

@@ -137,7 +137,12 @@ fn append_generated_structure_event_shares_peer_fact_seq_overflow() -> Result<()
 }
 
 fn init_repo(root: &std::path::Path) -> Result<RepoManager> {
-    RepoManager::init(root.join("ledger"), 2, None, None)
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &root.join("ledger"),
+        &root.join("notes"),
+        2,
+    )?;
+    Ok(repo)
 }
 
 fn insert_global_seq_sentinel(repo: &RepoManager) -> Result<()> {

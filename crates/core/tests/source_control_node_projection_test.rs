@@ -1,3 +1,5 @@
+mod common;
+
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::source_control::ChangeStatus;
@@ -9,14 +11,14 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, repo)
 }
 
 fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
-    repo.local_repo_workspace_path("default", path)
+    repo.local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path")
 }
 
@@ -46,7 +48,7 @@ fn poison_metadata_path(repo: &RepoManager, doc_id: deve_core::models::DocId, st
 
 fn scan_initial(repo: RepoManager, _dir: &TempDir) -> Arc<RepoManager> {
     let repo_root = repo
-        .local_repo_workspace_root("default")
+        .local_repo_workspace_root(repo.local_repo_name())
         .expect("workspace root");
     let repo = Arc::new(repo);
     let vfs = Vfs::new(repo_root);
@@ -116,7 +118,7 @@ fn scan_rename_prefers_node_projection_path() {
     )
     .expect("rename file");
     let vfs = Vfs::new(
-        repo.local_repo_workspace_root("default")
+        repo.local_repo_workspace_root(repo.local_repo_name())
             .expect("workspace root"),
     );
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan rename");

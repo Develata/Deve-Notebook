@@ -11,8 +11,8 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::security::IdentityKeyPair;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata()
--> anyhow::Result<()> {
+async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata(
+) -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
     let hello = signed_hello_for_repo(&remote, repo_id);
@@ -23,14 +23,12 @@ async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata(
     let _ = rx.recv().await;
 
     assert!(state.repo.list_repos(Some(&remote.peer_id()))?.is_empty());
-    assert!(
-        state
-            .repo
-            .remotes_dir()
-            .join(remote.peer_id().to_filename())
-            .join(format!("{repo_id}.redb"))
-            .exists()
-    );
+    assert!(state
+        .repo
+        .remotes_dir()
+        .join(remote.peer_id().to_filename())
+        .join(format!("{repo_id}.redb"))
+        .exists());
     Ok(())
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

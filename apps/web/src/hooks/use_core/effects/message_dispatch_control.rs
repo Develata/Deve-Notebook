@@ -7,6 +7,7 @@ use leptos::prelude::{GetUntracked, Set};
 
 use super::super::state::CoreSignals;
 use super::message_control;
+use super::message_remove_scope;
 use super::message_repo_bootstrap::maybe_switch_to_first_repo;
 use super::message_scope::{
     RepoListScope, RequestMatch, accepts_system_or_matching_request, repo_list_matches_scope,
@@ -17,11 +18,25 @@ pub fn handle_repo_list_message(
     request_id: Option<String>,
     branch: Option<String>,
     scope_nonce: Option<u64>,
-    repos: Vec<String>,
     repo_entries: Vec<RepoListEntry>,
     ws: &WsService,
     signals: CoreSignals,
 ) {
+    let display_aliases = repo_entries
+        .iter()
+        .map(|entry| entry.display_alias.clone())
+        .collect::<Vec<_>>();
+    if message_remove_scope::capture_repo_list(
+        request_id.as_deref(),
+        branch.as_deref(),
+        scope_nonce,
+        &display_aliases,
+        &repo_entries,
+        ws,
+        signals,
+    ) {
+        return;
+    }
     if !repo_list_matches_scope(
         RequestMatch {
             message_id: request_id.as_deref(),
@@ -39,7 +54,7 @@ pub fn handle_repo_list_message(
             pending_repo_switch: signals
                 .pending_repo_switch
                 .get_untracked()
-                .map(|pending| pending.expected_name),
+                .map(|pending| pending.expected_name().to_string()),
         },
     ) {
         return;
@@ -48,9 +63,9 @@ pub fn handle_repo_list_message(
     if request_id.is_some() {
         signals.set_repo_list_request_id.set(None);
     }
-    signals.set_repo_list.set(repos.clone());
+    signals.set_repo_list.set(display_aliases);
+    maybe_switch_to_first_repo(&repo_entries, ws, signals);
     signals.set_repo_entries.set(repo_entries);
-    maybe_switch_to_first_repo(&repos, ws, signals);
 }
 
 pub fn handle_peer_deleted_message(

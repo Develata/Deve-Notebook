@@ -4,9 +4,12 @@ use deve_core::models::{DocId, FactActor, LedgerEntry, MergeResolution, Op, Peer
 use std::sync::Arc;
 
 pub(crate) fn seed_local_doc(state: &Arc<AppState>, path: &str) -> anyhow::Result<DocId> {
-    let (doc_id, _ops) = state
-        .repo
-        .apply_file_structure_in_local_repo("notes", path, None, "test")?;
+    let (doc_id, _ops) = state.repo.apply_file_structure_in_local_repo(
+        state.repo.local_repo_name(),
+        path,
+        None,
+        "test",
+    )?;
     Ok(doc_id)
 }
 
@@ -47,7 +50,7 @@ pub(crate) fn seed_shared_base(
         .repo
         .local_fact_writer(FactActor::new("merge_test")?)
         .append_content_in_local_repo(
-            "notes",
+            state.repo.local_repo_name(),
             doc_id,
             Op::Insert {
                 pos: 0,
@@ -71,14 +74,17 @@ pub(crate) fn seed_shared_base(
             None,
         ),
     )?;
-    let evaluation = state
-        .repo
-        .merge_peer_in_local_repo("notes", peer_id, &repo_id, doc_id)?;
+    let evaluation = state.repo.merge_peer_in_local_repo(
+        state.repo.local_repo_name(),
+        peer_id,
+        &repo_id,
+        doc_id,
+    )?;
     let MergeResult::Success(content) = evaluation.result else {
         anyhow::bail!("equal merge fixture unexpectedly produced a conflict");
     };
     state.repo.commit_peer_merge_in_local_repo(
-        "notes",
+        state.repo.local_repo_name(),
         &evaluation.preflight,
         &content,
         MergeResolution::EstablishEqual,
@@ -94,7 +100,7 @@ pub(crate) fn seed_local_replace(
 ) -> anyhow::Result<()> {
     let writer = state.repo.local_fact_writer(FactActor::new("merge_test")?);
     writer.append_content_in_local_repo(
-        "notes",
+        state.repo.local_repo_name(),
         doc_id,
         Op::Delete {
             pos: 0,
@@ -103,7 +109,7 @@ pub(crate) fn seed_local_replace(
         2,
     )?;
     writer.append_content_in_local_repo(
-        "notes",
+        state.repo.local_repo_name(),
         doc_id,
         Op::Insert {
             pos: 0,
@@ -163,7 +169,7 @@ pub(crate) fn local_doc_content(
 ) -> anyhow::Result<(usize, String)> {
     let entries = state
         .repo
-        .get_local_ops_in_local_repo("notes", doc_id)?
+        .get_local_ops_in_local_repo(state.repo.local_repo_name(), doc_id)?
         .into_iter()
         .map(|(_, entry)| entry)
         .filter(|entry| entry.content_op().is_some())
@@ -177,7 +183,7 @@ pub(crate) fn local_doc_content(
 pub(crate) fn local_doc_entry_count(state: &Arc<AppState>, doc_id: DocId) -> anyhow::Result<usize> {
     Ok(state
         .repo
-        .get_local_ops_in_local_repo("notes", doc_id)?
+        .get_local_ops_in_local_repo(state.repo.local_repo_name(), doc_id)?
         .len())
 }
 

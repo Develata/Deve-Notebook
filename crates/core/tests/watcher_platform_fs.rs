@@ -35,12 +35,17 @@ fn watcher_atomic_replace_records_single_final_candidate() -> anyhow::Result<()>
     let change = h.wait_pending("main", "notes/live.md", ChangeStatus::Modified)?;
     assert_eq!(change.doc_id, Some(doc_id));
     assert_eq!(change.renamed_from, None);
-    let pending = h
-        .repo
-        .run_on_local_repo("main", |db| pending_fs::get(db, "notes/live.md"))?;
+    let pending = h.repo.run_on_local_repo(&h.repo_name("main"), |db| {
+        pending_fs::get(db, "notes/live.md")
+    })?;
     let pending = pending.context("atomic replace pending row")?;
     assert_eq!(pending.content_hash, pending_fs::content_hash("final"));
-    assert_eq!(h.repo.list_pending_fs_in_local_repo("main")?.len(), 1);
+    assert_eq!(
+        h.repo
+            .list_pending_fs_in_local_repo(&h.repo_name("main"))?
+            .len(),
+        1
+    );
     assert_eq!(ledger_head(&h)?, before_head);
     Ok(())
 }
@@ -151,5 +156,5 @@ fn watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start
 
 fn ledger_head(h: &Harness) -> anyhow::Result<u64> {
     h.repo
-        .run_on_local_repo("main", deve_core::ledger::range::get_max_seq)
+        .run_on_local_repo(&h.repo_name("main"), deve_core::ledger::range::get_max_seq)
 }

@@ -25,7 +25,10 @@ pub(super) fn run(repo: Arc<RepoManager>, action: RemoteImportAction) -> Result<
     let repo_id = action.repo_id();
     let repo_name = repo.resolve_local_repo_name_for_execution(Some(repo_id), None)?;
     let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
-    let coordinator = RemoteImportCoordinator::new(repo.clone(), sync.clone());
+    let membership = repo.catalog_membership_runtime();
+    repo.seed_catalog_membership_from_records()?;
+    deve_core::remote_import::RemoteImportService::recover_startup(&repo, repo_id)?;
+    let coordinator = RemoteImportCoordinator::new(repo.clone(), sync.clone(), membership);
     match action {
         RemoteImportAction::Prepare { provider, .. } => {
             let request_id = Uuid::new_v4();

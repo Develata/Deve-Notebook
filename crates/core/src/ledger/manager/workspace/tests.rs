@@ -1,30 +1,35 @@
 use super::*;
 use tempfile::TempDir;
 
-fn new_repo() -> (TempDir, RepoManager) {
+fn new_repo() -> (TempDir, RepoManager, String) {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(
-        dir.path().join("ledger"),
-        8,
-        Some("default"),
-        Some("urn:default"),
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
     )
-    .expect("init repo");
-    repo.set_projection_base_for_local_repo("default", dir.path().join("notes"))
-        .expect("set projection locator");
-    (dir, repo)
+    .expect("init cataloged repo");
+    let name = repo_id.to_string();
+    // These tests assert that workspace path *lookups* never materialize the
+    // workspace root. Catalog membership and the projection locator are durable
+    // and independent of the workspace directory, so clear the root that the
+    // creation choreography pre-created and start from an absent root.
+    let root = repo
+        .local_repo_workspace_root(&name)
+        .expect("resolve workspace root");
+    std::fs::remove_dir_all(&root).expect("clear pre-created workspace root");
+    (dir, repo, name)
 }
 
 #[test]
 fn projection_workspace_child_path_accepts_canonical_relative_path_and_root() {
-    let (_dir, repo) = new_repo();
+    let (_dir, repo, name) = new_repo();
     let root = repo
-        .local_repo_workspace_path("default", "")
+        .local_repo_workspace_path(&name, "")
         .expect("root lookup");
     assert!(!root.exists(), "path lookup must not create workspace root");
 
     assert_eq!(
-        repo.local_repo_workspace_path("default", "notes/a.md")
+        repo.local_repo_workspace_path(&name, "notes/a.md")
             .expect("safe child path"),
         root.join("notes").join("a.md")
     );
@@ -36,7 +41,7 @@ fn projection_workspace_child_path_accepts_canonical_relative_path_and_root() {
 
 #[test]
 fn projection_workspace_child_path_rejects_unsafe_or_noncanonical_inputs() {
-    let (_dir, repo) = new_repo();
+    let (_dir, repo, name) = new_repo();
     for path in [
         ".",
         "..",
@@ -64,7 +69,7 @@ fn projection_workspace_child_path_rejects_unsafe_or_noncanonical_inputs() {
         r"notes\a.md",
     ] {
         let err = repo
-            .local_repo_workspace_path("default", path)
+            .local_repo_workspace_path(&name, path)
             .expect_err("unsafe child path must fail closed");
         assert!(
             err.to_string()
@@ -76,9 +81,9 @@ fn projection_workspace_child_path_rejects_unsafe_or_noncanonical_inputs() {
 
 #[test]
 fn projection_workspace_root_symlink_cannot_escape_projection_base() {
-    let (dir, repo) = new_repo();
+    let (dir, repo, name) = new_repo();
     let root = repo
-        .local_repo_workspace_path("default", "")
+        .local_repo_workspace_path(&name, "")
         .expect("resolve absent workspace root");
     let outside = dir.path().join("outside-root");
     std::fs::create_dir_all(&outside).expect("create outside root");
@@ -87,7 +92,7 @@ fn projection_workspace_root_symlink_cannot_escape_projection_base() {
     }
 
     let root_err = repo
-        .local_repo_workspace_path("default", "")
+        .local_repo_workspace_path(&name, "")
         .expect_err("linked workspace root lookup must fail closed");
     assert!(
         root_err
@@ -98,15 +103,15 @@ fn projection_workspace_root_symlink_cannot_escape_projection_base() {
                 .contains("escapes canonical projection base"),
         "unexpected root diagnostic: {root_err:#}"
     );
-    repo.local_repo_workspace_path("default", "notes/a.md")
+    repo.local_repo_workspace_path(&name, "notes/a.md")
         .expect_err("child below linked workspace root must fail closed");
 }
 
 #[test]
 fn projection_workspace_existing_ancestor_symlink_cannot_escape_root() {
-    let (dir, repo) = new_repo();
+    let (dir, repo, name) = new_repo();
     let root = repo
-        .ensure_local_repo_workspace_identity("default")
+        .ensure_local_repo_workspace_identity(&name)
         .expect("create workspace root");
     let outside = dir.path().join("outside");
     std::fs::create_dir_all(&outside).expect("create outside dir");
@@ -116,7 +121,7 @@ fn projection_workspace_existing_ancestor_symlink_cannot_escape_root() {
     }
 
     let err = repo
-        .local_repo_workspace_path("default", "escape/a.md")
+        .local_repo_workspace_path(&name, "escape/a.md")
         .expect_err("external symlink must fail closed");
     assert!(
         err.to_string().contains("escapes canonical root"),
@@ -126,9 +131,9 @@ fn projection_workspace_existing_ancestor_symlink_cannot_escape_root() {
 
 #[test]
 fn projection_workspace_existing_ancestor_dangling_symlink_fails_closed() {
-    let (dir, repo) = new_repo();
+    let (dir, repo, name) = new_repo();
     let root = repo
-        .ensure_local_repo_workspace_identity("default")
+        .ensure_local_repo_workspace_identity(&name)
         .expect("create workspace root");
     let missing = dir.path().join("missing");
     let link = root.join("dangling");
@@ -137,7 +142,7 @@ fn projection_workspace_existing_ancestor_dangling_symlink_fails_closed() {
     }
 
     let err = repo
-        .local_repo_workspace_path("default", "dangling/a.md")
+        .local_repo_workspace_path(&name, "dangling/a.md")
         .expect_err("dangling symlink must fail closed");
     assert!(
         err.to_string()

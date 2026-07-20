@@ -11,8 +11,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::ledger::manager::local_repo_metadata_repair_support::{
-    ensure_local_repo_metadata_name_authorized, preflight_workspace_root_repair,
-    prepare_workspace_root_repair, repair_workspace_root, validate_local_repo_info,
+    ensure_local_repo_metadata_identity, validate_local_repo_info,
 };
 
 pub(super) fn validate_local_repo_metadata(
@@ -26,7 +25,7 @@ pub(super) fn validate_local_repo_metadata(
     let mut seen_urls = HashMap::new();
     let main_info = RepoManager::read_local_repo_info_from_db(main_db)?;
     if let Some(info) = main_info.as_ref() {
-        ensure_local_repo_metadata_name_authorized(ledger_dir, main_repo_name, info)?;
+        ensure_local_repo_metadata_identity(main_repo_name, info)?;
     }
     validate_local_repo_info(main_repo_name, main_info, &mut seen, &mut seen_urls)?;
 
@@ -52,7 +51,7 @@ pub(super) fn validate_local_repo_metadata(
             )
         })?;
         if let Some(info) = info.as_ref() {
-            ensure_local_repo_metadata_name_authorized(ledger_dir, &stem, info)?;
+            ensure_local_repo_metadata_identity(&stem, info)?;
         }
         validate_local_repo_info(&stem, info, &mut seen, &mut seen_urls)?;
     }
@@ -63,8 +62,6 @@ pub(crate) fn repair_local_repo_metadata(
     ledger_dir: &Path,
     main_repo_name: &str,
     main_db: &Database,
-    allow_workspace_root_rewrite: bool,
-    repair_manager: Option<&RepoManager>,
 ) -> Result<()> {
     let local_dir = ledger_dir.join("local");
     match local_dir.try_exists() {
@@ -138,7 +135,7 @@ pub(crate) fn repair_local_repo_metadata(
             )
         })?;
         let original = info.clone();
-        ensure_local_repo_metadata_name_authorized(ledger_dir, &stem, &info)?;
+        ensure_local_repo_metadata_identity(&stem, &info)?;
         if let Some(existing_owner) = seen.insert(info.uuid, stem.clone())
             && existing_owner != stem
         {
@@ -163,26 +160,9 @@ pub(crate) fn repair_local_repo_metadata(
                 existing_owner
             ));
         }
-        let workspace_repair = if allow_workspace_root_rewrite {
-            prepare_workspace_root_repair(ledger_dir, &stem, info.uuid, &info.name, &info.name)?
-        } else {
-            None
-        };
-        if let Some(plan) = workspace_repair.as_ref() {
-            let manager = repair_manager.ok_or_else(|| {
-                anyhow!(
-                    "Workspace root realign for {} refused: repair preflight manager missing",
-                    stem
-                )
-            })?;
-            preflight_workspace_root_repair(manager, plan)?;
-        }
         if info != original {
             RepoManager::write_local_repo_info_to_db(db, &info)?;
             tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
-        }
-        if let Some(plan) = workspace_repair {
-            repair_workspace_root(plan)?;
         }
     }
     Ok(())

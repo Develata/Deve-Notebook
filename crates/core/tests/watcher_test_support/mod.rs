@@ -6,6 +6,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use deve_core::sync::{SyncManager, watcher};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -17,6 +18,13 @@ pub struct Harness {
     pub dir: TempDir,
     pub repo: Arc<RepoManager>,
     pub sync: Arc<SyncManager>,
+    /// Friendly test label (e.g. "main"/"wiki") -> canonical execution name
+    /// (the repo's RepoId string). Machine names are UUID-canonical after the
+    /// catalog cutover; the labels only exist for test readability.
+    labels: HashMap<String, String>,
+    /// Extra cataloged repos are created through their own managers on the same
+    /// ledger; keep them alive so their process-cached databases stay open.
+    _extra_repos: Vec<RepoManager>,
     watcher_handles: Vec<watcher::RepoWatcherHandle>,
 }
 
@@ -26,19 +34,37 @@ impl Harness {
         let ledger = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
         std::fs::create_dir_all(&projection_base)?;
-        let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main"))?;
-        if let Some((name, url)) = extra_repo {
-            let _ = common::try_create_initialized_local_repo_with_depth(&ledger, 10, name, url)?;
+        let (main_repo, main_id) = common::init_cataloged_repo(&ledger, &projection_base)?;
+        let mut labels = HashMap::new();
+        labels.insert("main".to_string(), main_id.to_string());
+        let mut extra_repos = Vec::new();
+        if let Some((label, url)) = extra_repo {
+            let (extra, extra_id) =
+                common::init_cataloged_repo_with_url(&ledger, &projection_base, url)?;
+            labels.insert(label.to_string(), extra_id.to_string());
+            extra_repos.push(extra);
         }
-        repo.set_projection_base_for_all_local_repos_checked(projection_base)?;
-        let repo = Arc::new(repo);
+        let repo = Arc::new(main_repo);
         let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
         Ok(Self {
             dir,
             repo,
             sync,
+            labels,
+            _extra_repos: extra_repos,
             watcher_handles: Vec::new(),
         })
+    }
+
+    /// Translate a friendly test label into the repo's canonical execution name
+    /// (its RepoId string). Inputs that are not registered labels — such as an
+    /// execution name a test already resolved via `repo.local_repo_name()` —
+    /// pass through unchanged.
+    pub fn repo_name(&self, label: &str) -> String {
+        self.labels
+            .get(label)
+            .cloned()
+            .unwrap_or_else(|| label.to_string())
     }
 
     pub fn start_watchers(&mut self) -> Result<()> {
@@ -52,11 +78,12 @@ impl Harness {
     }
 
     pub fn commit_doc(&self, repo_name: &str, path: &str, content: &str) -> Result<DocId> {
+        let repo_name = self.repo_name(repo_name);
         let (doc_id, _) = self
             .repo
-            .apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
+            .apply_file_structure_in_local_repo(&repo_name, path, None, "test")?;
         self.repo.append_generated_op_in_local_repo(
-            repo_name,
+            &repo_name,
             doc_id,
             self.repo.local_peer_id().clone(),
             |seq| {
@@ -74,7 +101,7 @@ impl Harness {
                 )
             },
         )?;
-        self.sync.persist_doc_in_local_repo(repo_name, doc_id)?;
+        self.sync.persist_doc_in_local_repo(&repo_name, doc_id)?;
         Ok(doc_id)
     }
 
@@ -84,9 +111,10 @@ impl Harness {
         path: &str,
         status: ChangeStatus,
     ) -> Result<ChangeEntry> {
+        let repo_name = self.repo_name(repo_name);
         let result = self.wait_until(Duration::from_secs(5), || {
             self.repo
-                .list_pending_fs_in_local_repo(repo_name)
+                .list_pending_fs_in_local_repo(&repo_name)
                 .ok()?
                 .into_iter()
                 .find(|entry| entry.path == path && entry.status == status)
@@ -94,7 +122,7 @@ impl Harness {
         result.map_err(|err| {
             let pending = self
                 .repo
-                .list_pending_fs_in_local_repo(repo_name)
+                .list_pending_fs_in_local_repo(&repo_name)
                 .unwrap_or_default();
             anyhow!(
                 "pending {repo_name}/{path} {status:?} not observed: {err}; pending={pending:?}"
@@ -103,11 +131,13 @@ impl Harness {
     }
 
     pub fn workspace_root(&self, repo_name: &str) -> Result<PathBuf> {
-        self.repo.local_repo_workspace_root(repo_name)
+        self.repo
+            .local_repo_workspace_root(&self.repo_name(repo_name))
     }
 
     pub fn workspace_path(&self, repo_name: &str, repo_path: &str) -> Result<PathBuf> {
-        self.repo.local_repo_workspace_path(repo_name, repo_path)
+        self.repo
+            .local_repo_workspace_path(&self.repo_name(repo_name), repo_path)
     }
 
     fn wait_until<T>(&self, timeout: Duration, mut f: impl FnMut() -> Option<T>) -> Result<T> {

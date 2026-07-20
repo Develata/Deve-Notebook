@@ -4,23 +4,23 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, FactActor, LedgerEntry, Op, PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerMessage};
 use deve_core::security::EncryptedOp;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     build_state_with_mode(SyncMode::Auto)
 }
 
-pub(super) fn build_state_with_identity_peer() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
+pub(super) fn build_state_with_identity_peer(
+) -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     build_state_inner(SyncMode::Auto, true)
 }
 
@@ -37,9 +37,13 @@ fn build_state_inner(
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(
@@ -57,11 +61,7 @@ fn build_state_inner(
             sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx,
             plugins: vec![],
-            sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                local_peer,
-                repo,
-                sync_mode,
-            )),
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(local_peer, repo, sync_mode)),
             tree_manager: Arc::new(RepoTreeRegistry::new()),
             #[cfg(feature = "search")]
             search_available: false,
@@ -162,9 +162,7 @@ pub(super) fn sync_range(
     )])
 }
 
-pub(super) async fn recv_protocol_error(
-    rx: &mut mpsc::Receiver<ServerMessage>,
-) -> ServerError {
+pub(super) async fn recv_protocol_error(rx: &mut mpsc::Receiver<ServerMessage>) -> ServerError {
     match rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => error,
         other => panic!("expected ProtocolError, got {:?}", other),

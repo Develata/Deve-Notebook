@@ -5,7 +5,6 @@
 
 use super::*;
 use crate::ledger::RepoManager;
-use crate::ledger::init::RepoInitOptions;
 use crate::models::RepoId;
 use tempfile::TempDir;
 use uuid::Uuid;
@@ -22,27 +21,18 @@ fn fixture() -> anyhow::Result<Fixture> {
     let ledger = temp.path().join("ledger");
     let projection_base = temp.path().join("workspaces");
     std::fs::create_dir_all(&projection_base)?;
-    let repo_id = RepoId::new_v4();
-    let repo = RepoManager::init_with_options(
-        &ledger,
-        16,
-        Some("prepared-local-alias"),
-        RepoInitOptions {
-            repo_id: Some(repo_id),
-            repo_url: None,
-        },
-    )?;
-    let execution = repo.local_repo_name().to_string();
-    repo.set_projection_base_for_local_repo(&execution, &projection_base)?;
-    let workspace = repo.local_repo_workspace_root(&execution)?;
-    std::fs::create_dir_all(&workspace)?;
-    repo.ensure_local_repo_workspace_identity(&execution)?;
-    repo.catalog_membership_runtime().seed([])?;
+    // Prepared (uncommitted) catalog repo: UUID-canonical machine name, prepared
+    // locator, created workspace + identity marker, and process membership seeded
+    // from durable records (empty). These tests drive the create/remove cut
+    // themselves, so no membership record is committed here.
+    let prepared =
+        crate::test_support::prepare_cataloged_repo(&ledger, &projection_base, 16, None)?;
+    let marker = crate::utils::notegit::repo_identity_path(&prepared.workspace);
     Ok(Fixture {
         _temp: temp,
-        repo,
-        repo_id,
-        marker: crate::utils::notegit::repo_identity_path(&workspace),
+        repo: prepared.repo,
+        repo_id: prepared.repo_id,
+        marker,
     })
 }
 

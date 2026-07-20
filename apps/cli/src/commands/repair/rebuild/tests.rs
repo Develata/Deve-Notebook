@@ -9,9 +9,12 @@ use tempfile::TempDir;
 
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    Ok((dir, Arc::new(repo)))
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    Ok((dir, Arc::new(cataloged.repo)))
 }
 
 fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result<()> {
@@ -62,12 +65,13 @@ fn rebuild_repos_reports_authority_corrupt_without_rebuild() -> anyhow::Result<(
         ),
     )?;
 
+    let repo_name = repo.local_repo_name().to_owned();
     let sync = SyncManager::new_checked(repo)?;
-    let report = rebuild_repos(&sync, &[String::from("default")])?;
+    let report = rebuild_repos(&sync, std::slice::from_ref(&repo_name))?;
 
     assert_eq!(report.rebuilt, 0);
     assert_eq!(report.authority_corrupt.len(), 1);
-    assert_eq!(report.authority_corrupt[0].repo_name, "default");
+    assert_eq!(report.authority_corrupt[0].repo_name, repo_name);
     assert_eq!(report.authority_corrupt[0].code, "missing_parent");
     assert!(
         report.authority_corrupt[0]

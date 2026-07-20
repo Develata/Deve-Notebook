@@ -11,7 +11,12 @@ use tempfile::TempDir;
 fn new_repo() -> Result<(TempDir, RepoManager)> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    Ok((tmp_dir, RepoManager::init(&ledger_dir, 2, None, None)?))
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
+    Ok((tmp_dir, repo))
 }
 
 #[test]

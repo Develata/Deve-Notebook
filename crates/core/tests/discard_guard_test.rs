@@ -6,17 +6,23 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
 #[test]
 fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -42,7 +48,7 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
             )
         },
     )?;
-    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let file_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -60,28 +66,30 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
         )
     })?;
     let sync = SyncManager::new_checked(repo)?;
-    sync.discard_pending_in_local_repo("default", "notes/a.md")?;
+    sync.discard_pending_in_local_repo(&repo_name, "notes/a.md")?;
     assert_eq!(std::fs::read_to_string(file_path)?, "ledger");
-    assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
+    assert!(sync.should_ignore_fs_event(&repo_name, "notes/a.md"));
     Ok(())
 }
 
 #[test]
 fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
-    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let repo_name = repo.local_repo_name().to_string();
+    let file_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "temp")?;
     let sync = SyncManager::new_checked(repo)?;
-    sync.remove_projection_path_in_local_repo("default", "notes/a.md")?;
+    sync.remove_projection_path_in_local_repo(&repo_name, "notes/a.md")?;
     assert!(!file_path.exists());
-    assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
+    assert!(sync.should_ignore_fs_event(&repo_name, "notes/a.md"));
     Ok(())
 }
 
 #[test]
 fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
     let (_dir, repo) = new_repo();
+    let repo_name = repo.local_repo_name().to_string();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -107,7 +115,7 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
             )
         },
     )?;
-    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let file_path = repo.local_repo_workspace_path(&repo_name, "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -124,8 +132,8 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
             },
         )
     })?;
-    repo.discard_pending_in_local_repo("default", "notes/a.md")?;
+    repo.discard_pending_in_local_repo(&repo_name, "notes/a.md")?;
     let sync = SyncManager::new_checked(repo)?;
-    assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
+    assert!(sync.should_ignore_fs_event(&repo_name, "notes/a.md"));
     Ok(())
 }

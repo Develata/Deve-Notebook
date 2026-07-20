@@ -40,18 +40,26 @@ pub(super) fn test_channel() -> DualChannel {
 pub(super) fn init_repo(
     dir: &TempDir,
     projection_base: &Path,
-    name: &str,
     url: Option<&str>,
 ) -> anyhow::Result<RepoManager> {
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some(name), url)?;
-    repo.set_projection_base_for_all_local_repos_checked(projection_base)?;
-    Ok(repo)
+    Ok(crate::test_support::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        projection_base,
+        10,
+        url.map(str::to_string),
+    )?
+    .repo)
 }
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let repo = init_repo(&dir, &projection_base, "default", Some("urn:default"))?;
-    let default_id = repo.get_repo_info()?.expect("default info").uuid;
-    Ok((dir, app_state(Arc::new(repo))?, default_id))
+    let cataloged = crate::test_support::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        &projection_base,
+        10,
+        Some("urn:default".to_string()),
+    )?;
+    let default_id = cataloged.repo_id;
+    Ok((dir, app_state(Arc::new(cataloged.repo))?, default_id))
 }

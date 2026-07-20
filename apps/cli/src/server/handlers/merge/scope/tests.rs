@@ -17,13 +17,13 @@ use tokio::sync::{broadcast, mpsc};
 fn read_repo_id_uses_active_local_repo_without_sync_binding() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
-    let repo = init_repo(&dir, &projection_base, "default", Some("urn:default"))?;
-    let test_repo = init_repo(&dir, &projection_base, "test", None)?;
+    let repo = init_repo(&dir, &projection_base, Some("urn:default"))?;
+    let test_repo = init_repo(&dir, &projection_base, None)?;
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
     let state = app_state(Arc::new(repo))?;
     let ch = test_channel();
     let mut session = WsSession::new();
-    session.switch_repo("test".into(), Some(test_id));
+    session.switch_repo(test_id.to_string(), Some(test_id));
 
     assert_eq!(
         resolve_read_repo_id(&state, &ch, &mut session, None),
@@ -43,7 +43,10 @@ fn read_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
         resolve_read_repo_id(&state, &ch, &mut session, None),
         Some(default_id)
     );
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(default_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
@@ -51,11 +54,13 @@ fn read_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
 #[test]
 fn write_repo_id_uses_writer_ready_local_repo() -> anyhow::Result<()> {
     let (_dir, state, default_id) = build_state()?;
-    state.repo.ensure_local_repo_workspace_identity("default")?;
+    state
+        .repo
+        .ensure_local_repo_workspace_identity(&default_id.to_string())?;
     let ch = test_channel();
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("default".into(), Some(default_id));
+    session.switch_repo(default_id.to_string(), Some(default_id));
     session.set_scope_nonce(Some(0));
     session.set_writer_identity(default_id, PeerId::new("browser-peer"), 0);
 
@@ -63,7 +68,10 @@ fn write_repo_id_uses_writer_ready_local_repo() -> anyhow::Result<()> {
         resolve_write_repo_id(&state, &ch, &mut session, Some(0)),
         Some(default_id)
     );
-    assert_eq!(session.active_repo.as_deref(), Some("default"));
+    assert_eq!(
+        session.active_repo.as_deref(),
+        Some(default_id.to_string().as_str())
+    );
     assert_eq!(session.active_repo_id, Some(default_id));
     Ok(())
 }
@@ -71,12 +79,14 @@ fn write_repo_id_uses_writer_ready_local_repo() -> anyhow::Result<()> {
 #[test]
 fn write_repo_id_rejects_missing_writer_ready_scope() -> anyhow::Result<()> {
     let (_dir, state, default_id) = build_state()?;
-    state.repo.ensure_local_repo_workspace_identity("default")?;
+    state
+        .repo
+        .ensure_local_repo_workspace_identity(&default_id.to_string())?;
     let (uni_tx, mut uni_rx) = mpsc::channel(4);
     let ch = DualChannel::new(broadcast::channel(4).0, uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("default".into(), Some(default_id));
+    session.switch_repo(default_id.to_string(), Some(default_id));
     session.set_scope_nonce(Some(41));
 
     assert_eq!(
@@ -105,7 +115,7 @@ fn write_repo_id_rejects_degraded_local_projection() -> anyhow::Result<()> {
     let ch = DualChannel::new(broadcast::channel(4).0, uni_tx);
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("default".into(), Some(default_id));
+    session.switch_repo(default_id.to_string(), Some(default_id));
     session.set_scope_nonce(Some(47));
 
     assert_eq!(

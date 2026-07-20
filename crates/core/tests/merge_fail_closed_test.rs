@@ -1,12 +1,18 @@
+use deve_core::ledger::RepoInfo;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
-use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use tempfile::tempdir;
+
+mod common;
 
 #[test]
 fn merge_peer_fails_closed_when_remote_ops_are_corrupted() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
     let peer_id = PeerId::new("peer-remote");
     let local_repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let remote = RepoInfo {

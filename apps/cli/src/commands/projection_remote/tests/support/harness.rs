@@ -29,14 +29,12 @@ pub(in crate::commands::projection_remote::tests) fn initialized_default_repo()
         None,
     )
     .expect("init");
+    // Workspace segment is the bare canonical RepoId now (no "default--" alias
+    // prefix); init creates exactly one workspace directory under `notes`.
     let workspace = std::fs::read_dir(root.join("notes"))
         .expect("notes dir")
         .map(|entry| entry.expect("workspace entry").path())
-        .find(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with("default--"))
-        })
+        .find(|path| path.is_dir())
         .expect("default workspace");
 
     ProjectionRemoteHarness {

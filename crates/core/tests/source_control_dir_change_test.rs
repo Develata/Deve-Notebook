@@ -5,16 +5,21 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
 fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
-    repo.local_repo_workspace_path("default", path)
+    repo.local_repo_workspace_path(repo.local_repo_name(), path)
         .expect("workspace path")
 }
 
@@ -65,11 +70,11 @@ fn dir_change_rescan_records_child_rename_candidates() {
     .expect("rename folder");
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
-        .get_repo_info_for(None, Some("default"))
+        .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
-    sync.handle_dir_change("default", repo_id, "docs")
+    sync.handle_dir_change(repo.local_repo_name(), repo_id, "docs")
         .expect("handle dir change")
         .expect("repo-scoped result");
 
@@ -92,14 +97,14 @@ fn dir_change_scans_repo_root_refresh() {
     let (_dir, repo) = new_repo();
     write_workspace_file(repo.as_ref(), "notes/a.md", "hello");
     let repo_id = repo
-        .get_repo_info_for(None, Some("default"))
+        .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
     assert!(
-        sync.handle_dir_change("default", repo_id, "")
+        sync.handle_dir_change(repo.local_repo_name(), repo_id, "")
             .expect("handle repo root dir change")
             .is_some()
     );

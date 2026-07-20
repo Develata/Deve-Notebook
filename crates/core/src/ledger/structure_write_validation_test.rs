@@ -1,4 +1,4 @@
-use super::{RepoManager, range};
+use super::range;
 use crate::ledger::node_meta;
 use crate::models::{DocId, LedgerEntry, NodeId, StructureOp};
 use anyhow::Result;
@@ -7,7 +7,11 @@ use tempfile::TempDir;
 #[test]
 fn append_local_structure_op_rejects_missing_parent_reference() -> Result<()> {
     let tmp_dir = TempDir::new()?;
-    let repo = RepoManager::init(tmp_dir.path().join("ledger"), 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &tmp_dir.path().join("ledger"),
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     let doc_id = DocId::new();
     let entry = LedgerEntry::new_structure(
         StructureOp::CreateFile {
@@ -36,7 +40,11 @@ fn append_local_structure_op_rejects_missing_parent_reference() -> Result<()> {
 #[test]
 fn append_generated_structure_event_rejects_move_that_creates_cycle() -> Result<()> {
     let tmp_dir = TempDir::new()?;
-    let repo = RepoManager::init(tmp_dir.path().join("ledger"), 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &tmp_dir.path().join("ledger"),
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")?;
     let (notes_id, sub_id) = repo.run_on_local_repo(repo.local_repo_name(), |db| {
         Ok((

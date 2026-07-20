@@ -1,26 +1,36 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
+use crate::server::{security, tree_state::RepoTreeRegistry, AppState};
 use deve_core::config::SyncMode;
+use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
+use deve_core::models::{serialize_ledger_entry, DocId, LedgerEntry, Op, PeerId};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::broadcast;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let mut test_repo = RepoManager::init(&ledger_dir, 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
+    let (repo, _default_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
+        &ledger_dir,
+        "test",
+        &projection_base,
+        10,
+        Some("urn:test"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;

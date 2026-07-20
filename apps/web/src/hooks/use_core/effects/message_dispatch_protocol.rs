@@ -10,6 +10,7 @@ use super::message_protocol::{
     clear_failed_scope_switch, handle_protocol_error, is_session_auth_error,
     should_recover_scope_pref_after_failed_repo_switch,
 };
+use super::message_remove_scope;
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
 use crate::hooks::use_core::types::ChatMessage;
@@ -107,6 +108,16 @@ pub fn handle_protocol_error_message(
     locale: Locale,
     signals: CoreSignals,
 ) {
+    if message_remove_scope::capture_protocol_error(
+        error.code,
+        switch_nonce,
+        scope_nonce,
+        ws,
+        locale,
+        signals,
+    ) {
+        return;
+    }
     if !is_session_auth_error(error.code)
         && !accepts_protocol_error_message(scope_nonce, switch_nonce, signals)
     {

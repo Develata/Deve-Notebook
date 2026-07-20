@@ -8,9 +8,12 @@ use tempfile::TempDir;
 
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    Ok((dir, Arc::new(repo)))
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    Ok((dir, Arc::new(cataloged.repo)))
 }
 
 fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result<()> {
@@ -62,7 +65,7 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
         ),
     )?;
 
-    let reports = collect_projection_reports(repo, Some("default"))?;
+    let reports = collect_projection_reports(repo, Some(&execution_name))?;
 
     assert_eq!(reports.len(), 1);
     assert_eq!(reports[0].status, "authority_corrupt");
@@ -85,14 +88,18 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
 #[test]
 fn projection_node_check_missing_locator_fails_closed_without_panic() -> anyhow::Result<()> {
     let dir = TempDir::new()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path().join("ledger"),
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        None,
-        None,
-    )?);
+    )?;
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
+    // Catalog the repo, then remove exactly the projection locator so the repo
+    // still resolves but projection diagnosis fails closed on the missing locator.
+    repo.remove_projection_locator_for_repo_id(repo_id)?;
 
-    let err = collect_projection_reports(repo, Some("default"))
+    let err = collect_projection_reports(repo, Some(&repo_id.to_string()))
         .expect_err("missing locator must be returned as an error");
 
     assert!(

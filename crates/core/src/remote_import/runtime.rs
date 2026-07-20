@@ -38,7 +38,12 @@ pub(crate) struct RemoteImportRuntime {
 impl RemoteImportRuntime {
     pub(crate) fn open(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<Self> {
         let db = bound_local_authority_db(repo, repo_id)?;
-        Self::open_bound(db, repo.ledger_dir(), repo_id)
+        Self::open_bound(db, repo.ledger_dir(), repo_id, false)
+    }
+
+    pub(crate) fn recover_startup(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<()> {
+        let db = bound_local_authority_db(repo, repo_id)?;
+        Self::open_bound(db, repo.ledger_dir(), repo_id, true).map(|_| ())
     }
 
     #[cfg(test)]
@@ -47,13 +52,14 @@ impl RemoteImportRuntime {
         ledger_root: &Path,
         repo_id: RepoId,
     ) -> RemoteImportResult<Self> {
-        Self::open_bound(db, ledger_root, repo_id)
+        Self::open_bound(db, ledger_root, repo_id, false)
     }
 
     fn open_bound(
         db: Arc<Database>,
         ledger_root: &Path,
         repo_id: RepoId,
+        recover_startup: bool,
     ) -> RemoteImportResult<Self> {
         RemoteImportStore::validate_schema(db.as_ref())?;
         let info = RepoManager::read_local_repo_info_from_db(db.as_ref())
@@ -70,7 +76,11 @@ impl RemoteImportRuntime {
             )));
         }
         let artifacts = RemoteImportArtifactRoot::open(ledger_root, repo_id)?;
-        let store = RemoteImportStore::open(db, repo_id)?;
+        let store = if recover_startup {
+            RemoteImportStore::recover_startup(db, repo_id)?
+        } else {
+            RemoteImportStore::open(db, repo_id)?
+        };
         Ok(Self { store, artifacts })
     }
 
@@ -133,6 +143,12 @@ impl RemoteImportRuntime {
     #[allow(dead_code)] // B1 store surface; B4 wires the typed List product request.
     pub(crate) fn sessions(&self) -> RemoteImportResult<Vec<RemoteImportSessionRecord>> {
         self.store.list_sessions()
+    }
+
+    pub(super) fn repo_removal_observation(
+        &self,
+    ) -> RemoteImportResult<(u64, Vec<RemoteImportSessionRecord>)> {
+        self.store.repo_removal_observation()
     }
 
     pub(crate) fn prepare_apply(

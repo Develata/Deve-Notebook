@@ -236,7 +236,6 @@ pub(super) fn is_broken_structure_projection_error(err: &anyhow::Error) -> bool 
 #[cfg(test)]
 mod tests {
     use super::{apply_prepared_local_repo_materialization, prepare_local_repo_materialization};
-    use crate::ledger::RepoManager;
     use crate::utils::fs::checked_exists;
     use crate::writeback::PersistGuard;
 
@@ -245,9 +244,12 @@ mod tests {
     -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let projection_base = dir.path().join("projection");
-        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let (repo, _repo_id) =
+            crate::test_support::init_cataloged_repo(&dir.path().join("ledger"), &projection_base)?;
         let repo_name = repo.local_repo_name().to_string();
+        // The creation choreography pre-creates the workspace; this test asserts
+        // the root is not materialized until apply, so start from an absent root.
+        std::fs::remove_dir_all(repo.local_repo_workspace_root(&repo_name)?)?;
         repo.apply_file_structure_in_local_repo(&repo_name, "first.md", None, "test")?;
 
         let prepared = prepare_local_repo_materialization(&repo, &repo_name)?;

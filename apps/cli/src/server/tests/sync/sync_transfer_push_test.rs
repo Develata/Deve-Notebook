@@ -122,7 +122,10 @@ async fn sync_push_does_not_pollute_transport_or_local_ledger() -> anyhow::Resul
     )
     .await;
 
-    assert_eq!(state.repo.get_shadow_max_seq(&malicious_source, &repo_id)?, 1);
+    assert_eq!(
+        state.repo.get_shadow_max_seq(&malicious_source, &repo_id)?,
+        1
+    );
     assert_eq!(state.repo.get_shadow_max_seq(&relay_peer, &repo_id)?, 0);
     assert_eq!(
         state
@@ -339,5 +342,11 @@ fn signed_sync_push_header(
     source_key: &IdentityKeyPair,
     payload: &[EncryptedOp],
 ) -> Result<SyncPushHeader, deve_core::protocol::SyncSourceProofError> {
-    SyncPushHeader::signed_diff(repo_id, source_key.peer_id(), VersionVector::new(), payload, source_key)
+    SyncPushHeader::signed_diff(
+        repo_id,
+        source_key.peer_id(),
+        VersionVector::new(),
+        payload,
+        source_key,
+    )
 }

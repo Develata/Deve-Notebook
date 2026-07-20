@@ -7,15 +7,15 @@ use crate::server::AppState;
 use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
 use deve_core::security::AuthConfig;
-use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::ChangeStatus;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
 pub(super) type TestWs = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -78,7 +78,8 @@ impl SourceControlWsHarness {
                         change_type: ChangeStatus::Added,
                         content_hash: pending_fs::content_hash(content),
                         detected_at: 1,
-                        has_conflict: false,                    },
+                        has_conflict: false,
+                    },
                 )
             })
     }
@@ -95,10 +96,7 @@ impl SourceControlWsHarness {
         self.state
             .repo
             .ensure_local_repo_workspace_identity(repo_name)?;
-        let abs = self
-            .state
-            .repo
-            .local_repo_workspace_path(repo_name, path)?;
+        let abs = self.state.repo.local_repo_workspace_path(repo_name, path)?;
         if let Some(parent) = abs.parent() {
             std::fs::create_dir_all(parent)?;
         }

@@ -5,6 +5,9 @@
 
 use super::diff_projection::DiffProjectionExecutor;
 use super::repo_mutation::RepoMutationPublicationGate;
+#[cfg(test)]
+use super::runtime::repo_lifecycle_runtime::RepoLifecycleCoordinator;
+use super::runtime::repo_session_runtime::RepoSessionRuntime;
 use super::runtime::watcher_runtime::WatcherRuntimeView;
 use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
@@ -25,6 +28,20 @@ static TEST_WATCHER_VIEWS: std::sync::OnceLock<
 #[cfg(test)]
 static TEST_MUTATION_GATES: std::sync::OnceLock<
     std::sync::Mutex<std::collections::HashMap<usize, Arc<RepoMutationPublicationGate>>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(test)]
+static TEST_LIFECYCLE_COORDINATORS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<RepoLifecycleCoordinator>>>,
+> = std::sync::OnceLock::new();
+#[cfg(test)]
+static TEST_LIFECYCLE_JOBS: std::sync::OnceLock<
+    std::sync::Mutex<
+        std::collections::HashMap<
+            usize,
+            Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>,
+        >,
+    >,
 > = std::sync::OnceLock::new();
 
 pub struct AppState {
@@ -48,9 +65,131 @@ pub struct AppState {
     pub(crate) watcher_runtime: WatcherRuntimeView,
     #[cfg(not(test))]
     pub(crate) remote_import: Arc<RemoteImportCoordinator>,
+    #[cfg(not(test))]
+    pub(crate) repo_sessions: Arc<RepoSessionRuntime>,
+    #[cfg(not(test))]
+    pub(crate) repo_lifecycle_jobs:
+        Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>,
 }
 
 impl AppState {
+    pub(crate) fn catalog_membership_runtime(&self) -> deve_core::ledger::CatalogMembershipRuntime {
+        let runtime = self.repo.catalog_membership_runtime();
+        #[cfg(test)]
+        self.repo
+            .seed_catalog_membership_from_records()
+            .expect("seed test catalog membership runtime");
+        runtime
+    }
+
+    #[cfg(not(test))]
+    pub(crate) fn repo_session_runtime(&self) -> Arc<RepoSessionRuntime> {
+        self.repo_sessions.clone()
+    }
+
+    #[cfg(not(test))]
+    pub(crate) fn repo_lifecycle_jobs(
+        &self,
+    ) -> Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime> {
+        self.repo_lifecycle_jobs.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn repo_lifecycle_jobs(
+        &self,
+    ) -> Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime> {
+        use super::runtime::repo_lifecycle_job_runtime::{
+            RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink, RepoLifecycleJobRuntime,
+        };
+        let key = self as *const Self as usize;
+        let runtimes = TEST_LIFECYCLE_JOBS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+        let mut runtimes = runtimes.lock().expect("test lifecycle jobs");
+        runtimes
+            .entry(key)
+            .or_insert_with(|| {
+                RepoLifecycleJobRuntime::start(
+                    self.repo.ledger_dir(),
+                    Arc::new(RepoLifecycleHostExecutor::new(
+                        self.repo_lifecycle_coordinator(),
+                        self.repo.clone(),
+                        self.watcher_runtime_view(),
+                    )),
+                    Arc::new(RepoLifecycleHostPublicationSink::new(
+                        self.repo.clone(),
+                        self.watcher_runtime_view(),
+                        self.repo_session_runtime(),
+                        self.tx.clone(),
+                    )),
+                )
+                .expect("start test repo lifecycle jobs")
+            })
+            .clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn repo_lifecycle_coordinator(&self) -> Arc<RepoLifecycleCoordinator> {
+        let key = self as *const Self as usize;
+        let stores = TEST_LIFECYCLE_COORDINATORS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+        let mut stores = stores.lock().expect("test repo lifecycle coordinators");
+        stores
+            .entry(key)
+            .or_insert_with(|| {
+                let membership = self.catalog_membership_runtime();
+                for summary in self
+                    .repo
+                    .list_cataloged_local_repo_summaries()
+                    .expect("test Remote Import startup repo list")
+                {
+                    deve_core::remote_import::RemoteImportService::recover_startup(
+                        &self.repo,
+                        summary.repo_id,
+                    )
+                    .expect("test Remote Import startup recovery");
+                }
+                let starts = super::setup::file_watcher_starts(self.sync_manager.clone())
+                    .expect("test watcher starts");
+                let supervisor = Arc::new(
+                    super::runtime::watcher_runtime::WatcherSupervisor::start_all(
+                        starts,
+                        Arc::new(|_| {}),
+                    )
+                    .expect("test watcher supervisor"),
+                );
+                self.set_watcher_runtime_view_for_test(supervisor.view());
+                let gate = self.repo_mutation_gate();
+                RepoLifecycleCoordinator::new(
+                    self.repo.clone(),
+                    self.sync_manager.clone(),
+                    gate,
+                    supervisor,
+                    self.remote_import_coordinator(),
+                    membership,
+                )
+            })
+            .clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn repo_session_runtime(&self) -> Arc<RepoSessionRuntime> {
+        use std::collections::HashMap;
+        use std::sync::{Mutex, OnceLock};
+
+        static TEST_RUNTIMES: OnceLock<Mutex<HashMap<usize, Arc<RepoSessionRuntime>>>> =
+            OnceLock::new();
+        let key = self as *const Self as usize;
+        let runtimes = TEST_RUNTIMES.get_or_init(|| Mutex::new(HashMap::new()));
+        let mut runtimes = runtimes.lock().expect("test repo session runtimes");
+        runtimes
+            .entry(key)
+            .or_insert_with(|| {
+                let membership = self.catalog_membership_runtime();
+                RepoSessionRuntime::new(membership)
+            })
+            .clone()
+    }
+
     #[cfg(not(test))]
     pub(crate) fn remote_import_coordinator(&self) -> Arc<RemoteImportCoordinator> {
         self.remote_import.clone()
@@ -69,6 +208,7 @@ impl AppState {
             return Arc::new(RemoteImportCoordinator::new(
                 self.repo.clone(),
                 self.sync_manager.clone(),
+                self.catalog_membership_runtime(),
             ));
         };
         stores
@@ -77,6 +217,7 @@ impl AppState {
                 Arc::new(RemoteImportCoordinator::new(
                     self.repo.clone(),
                     self.sync_manager.clone(),
+                    self.catalog_membership_runtime(),
                 ))
             })
             .clone()
@@ -156,15 +297,16 @@ impl AppState {
         let stores = TEST_MUTATION_GATES
             .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let Ok(mut stores) = stores.lock() else {
-            return Arc::new(RepoMutationPublicationGate::new(
-                WatcherRuntimeView::permissive_for_tests(),
-            ));
+            panic!("test mutation gate registry is poisoned");
         };
         stores
             .entry(key)
             .or_insert_with(|| {
                 Arc::new(RepoMutationPublicationGate::new(
                     self.watcher_runtime_view(),
+                    self.repo
+                        .claim_repo_catalog_cut_authority()
+                        .expect("claim test repo catalog cut authority"),
                 ))
             })
             .clone()
@@ -215,6 +357,17 @@ impl Drop for AppState {
             && let Ok(mut gates) = gates.lock()
         {
             gates.remove(&key);
+        }
+        if let Some(coordinators) = TEST_LIFECYCLE_COORDINATORS.get()
+            && let Ok(mut coordinators) = coordinators.lock()
+            && let Some(coordinator) = coordinators.remove(&key)
+        {
+            coordinator.shutdown_watchers_for_test();
+        }
+        if let Some(runtimes) = TEST_LIFECYCLE_JOBS.get()
+            && let Ok(mut runtimes) = runtimes.lock()
+        {
+            runtimes.remove(&key);
         }
     }
 }

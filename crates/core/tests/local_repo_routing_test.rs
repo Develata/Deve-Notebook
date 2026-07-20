@@ -13,11 +13,13 @@ mod common;
 fn new_local_repos() -> (TempDir, RepoManager, RepoId, String) {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main =
-        RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("init main repo");
-    let extra_info =
-        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
-    (dir, main, extra_info.uuid, extra_info.name)
+    let (main, _main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 10)
+            .expect("init main repo");
+    let (_wiki, wiki_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 10)
+            .expect("init wiki repo");
+    (dir, main, wiki_id, wiki_id.to_string())
 }
 
 fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::DocId {

@@ -62,8 +62,8 @@ fn corrupt_store_open_is_observational_only() -> anyhow::Result<()> {
 fn repair_dry_run_does_not_initialize_empty_store_or_artifact_root() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("notes"), Some("urn:notes"))?;
-    let repo_id = repo.get_repo_info()?.expect("RepoInfo").uuid;
+    let (repo, repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"))?;
     let before = table_snapshot(repo.local_db.as_ref())?;
     let artifact_root = crate::utils::notegit::host_dir(&ledger)
         .join("remote-imports")
@@ -82,8 +82,8 @@ fn repair_dry_run_does_not_initialize_empty_store_or_artifact_root() -> anyhow::
 fn repair_dry_run_reports_preparing_without_recovery_write() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger, 8, Some("notes"), Some("urn:notes"))?;
-    let repo_id = repo.get_repo_info()?.expect("RepoInfo").uuid;
+    let (repo, repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"))?;
     let store = RemoteImportStore::open(repo.local_db.clone(), repo_id)?;
     let preparing = store.reserve(
         RemoteImportDigest::of(b"source"),

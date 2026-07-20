@@ -35,7 +35,6 @@ pub(in crate::hooks::use_core::callbacks_switch) fn build_switch_repo_callback(
             return;
         }
 
-        let selector_name = request.selector_name.clone();
         let expected_name = request.expected_name.clone();
         let repo_id = request.repo_id;
         let ws_repo_action = ws.clone();
@@ -56,20 +55,13 @@ pub(in crate::hooks::use_core::callbacks_switch) fn build_switch_repo_callback(
                 .set_pending_repo_switch
                 .set(Some(PendingRepoSwitch::switch(
                     expected_name.clone(),
+                    repo_id,
                     switch_nonce,
                 )));
-            if let Some(repo_id) = repo_id {
-                ws_repo_action.send(ClientMessage::SwitchRepoExact {
-                    name: selector_name.clone(),
-                    repo_id,
-                    switch_nonce: Some(switch_nonce),
-                });
-            } else {
-                ws_repo_action.send(ClientMessage::SwitchRepo {
-                    name: selector_name.clone(),
-                    switch_nonce: Some(switch_nonce),
-                });
-            }
+            ws_repo_action.send(ClientMessage::SwitchRepoExact {
+                repo_id,
+                switch_nonce: Some(switch_nonce),
+            });
         });
         let _ = guard_navigation(
             signals.current_doc.get_untracked(),
@@ -87,10 +79,6 @@ fn repo_switch_request_targets_current(
     request: &RepoSwitchRequest,
     signals: SwitchScopeSignals,
 ) -> bool {
-    if let Some(repo_id) = request.repo_id {
-        let repo_id = repo_id.to_string();
-        return signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str());
-    }
-
-    signals.current_repo.get_untracked().as_deref() == Some(request.expected_name.as_str())
+    let repo_id = request.repo_id.to_string();
+    signals.current_repo_id.get_untracked().as_deref() == Some(repo_id.as_str())
 }

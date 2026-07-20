@@ -3,24 +3,27 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -78,9 +81,13 @@ pub(super) fn browser_session_without_sync_scope(
 ) -> anyhow::Result<WsSession> {
     let mut session = WsSession::new();
     session.mark_browser_session();
-    session.switch_repo("default".into(), Some(repo_id));
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
-    session.set_active_db(state.repo.open_database(None, state.repo.local_repo_name())?);
+    session.set_active_db(
+        state
+            .repo
+            .open_database(None, state.repo.local_repo_name())?,
+    );
     session.set_authenticated(PeerId::new("browser"));
     session.bind_repo(repo_id);
     Ok(session)

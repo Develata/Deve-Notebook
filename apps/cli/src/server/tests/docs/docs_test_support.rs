@@ -3,15 +3,15 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
-use deve_core::ledger::{RepoManager, database::DatabaseHandle};
+use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::{path::PathBuf, sync::Arc};
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(crate) struct DocsHarness {
@@ -24,7 +24,7 @@ impl DocsHarness {
     pub(crate) fn workspace_path(&self, relative: &str) -> PathBuf {
         self.state
             .repo
-            .local_repo_workspace_path("default", relative)
+            .local_repo_workspace_path(self.state.repo.local_repo_name(), relative)
             .expect("workspace path")
     }
 }
@@ -33,10 +33,9 @@ pub(crate) fn docs_harness() -> anyhow::Result<DocsHarness> {
     let dir = tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo = Arc::new(repo);
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let cataloged = crate::test_support::init_cataloged_repo(&ledger, &projection_base, 10)?;
+    let repo_id = cataloged.repo_id;
+    let repo = Arc::new(cataloged.repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);

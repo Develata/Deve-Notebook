@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::handlers::sync::{
-    SyncPushSnapshotInput, handle_sync_push_snapshot, handle_sync_snapshot_request,
+    handle_sync_push_snapshot, handle_sync_snapshot_request, SyncPushSnapshotInput,
 };
 use super::sync_transfer_scope_test_support::{
     append_local_doc, bound_session, build_state, build_state_with_identity_peer,

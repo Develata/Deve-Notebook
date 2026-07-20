@@ -30,6 +30,12 @@ enum StoreOpenState {
     },
 }
 
+#[derive(Clone, Copy)]
+enum StoreOpenMode {
+    ActiveProcess,
+    RecoverStartup,
+}
+
 #[derive(Clone)]
 pub(super) struct RemoteImportStore {
     db: Arc<Database>,
@@ -42,6 +48,18 @@ impl RemoteImportStore {
     }
 
     pub(super) fn open(db: Arc<Database>, repo_id: RepoId) -> RemoteImportResult<Self> {
+        Self::open_with_mode(db, repo_id, StoreOpenMode::ActiveProcess)
+    }
+
+    pub(super) fn recover_startup(db: Arc<Database>, repo_id: RepoId) -> RemoteImportResult<Self> {
+        Self::open_with_mode(db, repo_id, StoreOpenMode::RecoverStartup)
+    }
+
+    fn open_with_mode(
+        db: Arc<Database>,
+        repo_id: RepoId,
+        mode: StoreOpenMode,
+    ) -> RemoteImportResult<Self> {
         Self::validate_schema(db.as_ref())?;
         let store = Self { db, repo_id };
         match store.preflight_open()? {
@@ -50,9 +68,21 @@ impl RemoteImportStore {
             StoreOpenState::RecoverPreparing {
                 session_id,
                 generation,
-            } => store.recover_interrupted(session_id, generation)?,
+            } if matches!(mode, StoreOpenMode::RecoverStartup) => {
+                store.recover_interrupted(session_id, generation)?
+            }
+            StoreOpenState::RecoverPreparing { .. } => {}
         }
-        if store.preflight_open()? != StoreOpenState::Ready {
+        let final_state = store.preflight_open()?;
+        let valid = matches!(final_state, StoreOpenState::Ready)
+            || matches!(
+                (mode, final_state),
+                (
+                    StoreOpenMode::ActiveProcess,
+                    StoreOpenState::RecoverPreparing { .. }
+                )
+            );
+        if !valid {
             return Err(RemoteImportError::Storage(
                 "Remote Import store did not reach a valid opened state".to_string(),
             ));
@@ -103,6 +133,54 @@ impl RemoteImportStore {
         }
         records.sort_by_key(|record| record.order);
         Ok(records)
+    }
+
+    /// Reads the runtime generation and all session rows from one Redb read
+    /// transaction so repo-removal admission can be revalidated exactly.
+    pub(super) fn repo_removal_observation(
+        &self,
+    ) -> RemoteImportResult<(u64, Vec<RemoteImportSessionRecord>)> {
+        let read = self.db.begin_read().map_err(RemoteImportError::storage)?;
+        let sessions = read
+            .open_table(REMOTE_IMPORT_SESSIONS)
+            .map_err(RemoteImportError::storage)?;
+        let mut records = Vec::new();
+        for row in sessions.iter().map_err(RemoteImportError::storage)? {
+            let (key, value) = row.map_err(RemoteImportError::storage)?;
+            records.push(decode_session(key.value(), value.value(), self.repo_id)?);
+        }
+        records.sort_by_key(|record| record.order);
+        drop(sessions);
+
+        let runtime_table = read
+            .open_table(REMOTE_IMPORT_RUNTIME)
+            .map_err(RemoteImportError::storage)?;
+        let runtime = runtime_table
+            .get(&RUNTIME_KEY)
+            .map_err(RemoteImportError::storage)?
+            .ok_or_else(|| {
+                RemoteImportError::Storage(
+                    "Remote Import runtime row is missing during repo-removal admission"
+                        .to_string(),
+                )
+            })?;
+        let runtime = decode_runtime(runtime.value())?;
+        validate_record_shapes(&records, &runtime)?;
+        let active = records
+            .iter()
+            .filter(|record| !record.state.is_terminal())
+            .map(|record| record.session_id)
+            .collect::<Vec<_>>();
+        match (runtime.active_session, active.as_slice()) {
+            (None, []) | (Some(_), [_]) if runtime.active_session == active.first().copied() => {}
+            _ => {
+                return Err(RemoteImportError::Storage(
+                    "Remote Import active-session invariant is corrupt during repo-removal admission"
+                        .to_string(),
+                ));
+            }
+        }
+        Ok((runtime.next_generation, records))
     }
 
     fn initialize_empty_runtime(&self) -> RemoteImportResult<()> {

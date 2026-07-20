@@ -10,11 +10,16 @@ use deve_core::sync::drift_detect::{DriftKind, detect_repo_drift};
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
@@ -47,7 +52,8 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
 
 fn materialize(repo: &Arc<RepoManager>) {
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    sync.materialize_local_repo("default").expect("materialize");
+    sync.materialize_local_repo(repo.local_repo_name())
+        .expect("materialize");
 }
 
 #[test]
@@ -56,7 +62,7 @@ fn clean_workspace_reports_no_drift() {
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     materialize(&repo);
 
-    let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
+    let report = detect_repo_drift(repo.as_ref(), repo.local_repo_name()).expect("detect");
     assert_eq!(report.explained_count, 0);
     assert!(!report.is_fault());
     assert!(report.unexplained.is_empty());
@@ -69,7 +75,7 @@ fn pending_modify_is_explained() {
     materialize(&repo);
 
     let file_path = repo
-        .local_repo_workspace_path("default", "notes/a.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
         .expect("workspace path");
     std::fs::write(&file_path, "workspace").expect("write");
     let hash = pending_fs::content_hash("workspace");
@@ -89,7 +95,7 @@ fn pending_modify_is_explained() {
     })
     .expect("pending");
 
-    let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
+    let report = detect_repo_drift(repo.as_ref(), repo.local_repo_name()).expect("detect");
     assert!(report.unexplained.is_empty());
     assert_eq!(report.explained_count, 1);
 }
@@ -101,12 +107,12 @@ fn unexplained_orphan_file_is_fault() {
     materialize(&repo);
 
     let orphan_path = repo
-        .local_repo_workspace_path("default", "notes/orphan.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/orphan.md")
         .expect("workspace path");
     std::fs::create_dir_all(orphan_path.parent().unwrap()).expect("dirs");
     std::fs::write(&orphan_path, "orphan").expect("write");
 
-    let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
+    let report = detect_repo_drift(repo.as_ref(), repo.local_repo_name()).expect("detect");
     assert_eq!(report.unexplained.len(), 1);
     assert_eq!(report.unexplained[0].kind, DriftKind::UnexpectedOnDisk);
     assert!(report.is_fault());
@@ -119,11 +125,11 @@ fn unexplained_missing_file_is_fault() {
     materialize(&repo);
 
     let tracked_path = repo
-        .local_repo_workspace_path("default", "notes/a.md")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes/a.md")
         .expect("workspace path");
     std::fs::remove_file(tracked_path).expect("remove");
 
-    let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
+    let report = detect_repo_drift(repo.as_ref(), repo.local_repo_name()).expect("detect");
     assert_eq!(report.unexplained.len(), 1);
     assert_eq!(report.unexplained[0].kind, DriftKind::MissingOnDisk);
     assert!(report.is_fault());

@@ -12,9 +12,12 @@ use tempfile::TempDir;
 
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
-    Ok((dir, Arc::new(repo)))
+    let cataloged = crate::test_support::init_cataloged_repo(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
+    Ok((dir, Arc::new(cataloged.repo)))
 }
 
 fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result<()> {
@@ -65,7 +68,8 @@ fn repair_check_fails_closed_on_authority_corrupt_projection() -> anyhow::Result
         ),
     )?;
 
-    let err = check_repair_readiness(repo, &[String::from("default")])
+    let repo_name = repo.local_repo_name().to_owned();
+    let err = check_repair_readiness(repo, std::slice::from_ref(&repo_name))
         .expect_err("authority corruption must keep repair preflight fail-closed");
 
     assert!(
@@ -76,6 +80,9 @@ fn repair_check_fails_closed_on_authority_corrupt_projection() -> anyhow::Result
         err.to_string()
             .contains("repair steps must remain disabled")
     );
-    assert!(err.to_string().contains("default:missing_parent"));
+    assert!(
+        err.to_string()
+            .contains(&format!("{repo_name}:missing_parent"))
+    );
     Ok(())
 }

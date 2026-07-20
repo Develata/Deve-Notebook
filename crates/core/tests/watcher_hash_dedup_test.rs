@@ -4,12 +4,13 @@ use deve_core::models::{LedgerEntry, Op};
 use deve_core::sync::SyncManager;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
-        .expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo(&dir.path().join("ledger"), &dir.path().join("notes"))
+            .expect("init cataloged repo");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -47,20 +48,20 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
     let repo_id = repo_id(&repo, &name)?;
 
     // File on disk matches projection — no pending change
-    let events = sync.handle_fs_event("default", repo_id, "dedup.md")?;
+    let events = sync.handle_fs_event(&name, repo_id, "dedup.md")?;
     assert!(events.is_empty(), "no change when content matches");
 
     // Write different content — should produce pending
-    let file = repo.local_repo_workspace_path("default", "dedup.md")?;
+    let file = repo.local_repo_workspace_path(&name, "dedup.md")?;
     std::fs::write(&file, "modified")?;
-    let first = sync.handle_fs_event("default", repo_id, "dedup.md")?;
+    let first = sync.handle_fs_event(&name, repo_id, "dedup.md")?;
     assert!(
         !first.is_empty(),
         "first modification should produce change"
     );
 
     // Write same modified content again — hash dedup
-    let second = sync.handle_fs_event("default", repo_id, "dedup.md")?;
+    let second = sync.handle_fs_event(&name, repo_id, "dedup.md")?;
     assert!(second.is_empty(), "repeated same content is deduped");
 
     // Only 1 pending op should exist
@@ -96,13 +97,13 @@ fn revert_to_original_clears_pending() -> anyhow::Result<()> {
     let repo_id = repo_id(&repo, &name)?;
 
     // Modify then revert
-    let file = repo.local_repo_workspace_path("default", "revert.md")?;
+    let file = repo.local_repo_workspace_path(&name, "revert.md")?;
     std::fs::write(&file, "dirty")?;
-    let changed = sync.handle_fs_event("default", repo_id, "revert.md")?;
+    let changed = sync.handle_fs_event(&name, repo_id, "revert.md")?;
     assert!(!changed.is_empty());
 
     std::fs::write(&file, "baseline")?;
-    let reverted = sync.handle_fs_event("default", repo_id, "revert.md")?;
+    let reverted = sync.handle_fs_event(&name, repo_id, "revert.md")?;
     assert!(!reverted.is_empty(), "revert event fires");
 
     // After revert, pending should be empty (content matches projection)

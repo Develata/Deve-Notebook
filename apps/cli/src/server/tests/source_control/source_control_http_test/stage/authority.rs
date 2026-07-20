@@ -2,7 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use super::super::super::source_control_grants::SourceControlGrantBranch;
-use super::super::support::{ProxyHarness, path_target, seed_pending};
+use super::super::support::{path_target, seed_pending, ProxyHarness};
 use crate::server::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;

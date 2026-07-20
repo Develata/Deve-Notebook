@@ -61,7 +61,10 @@ fn deterministic_key_and_repeat_upsert_preserve_first_seen() -> anyhow::Result<(
 #[test]
 fn corrupt_key_value_identity_blocks_load_and_clear() -> anyhow::Result<()> {
     let temp = tempfile::tempdir()?;
-    let repo = RepoManager::init(temp.path().join("ledger"), 8, Some("main"), None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+        &temp.path().join("ledger"),
+        &temp.path().join("notes"),
+    )?;
     let info = repo.get_repo_info()?.expect("repo info");
     let repo_name = info.name.clone();
     let prepared =

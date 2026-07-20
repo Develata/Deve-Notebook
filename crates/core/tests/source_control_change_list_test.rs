@@ -1,15 +1,18 @@
-use deve_core::ledger::RepoManager;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::staging;
 use tempfile::tempdir;
 
+mod common;
+
 #[test]
 fn list_changes_keeps_same_path_entries_for_different_docs() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )?;
     let doc_a = deve_core::models::DocId::new();
     let doc_b = deve_core::models::DocId::new();
 

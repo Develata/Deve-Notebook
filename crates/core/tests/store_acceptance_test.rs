@@ -7,10 +7,16 @@ use deve_core::ledger::{
 use deve_core::models::{LedgerEntry, Op};
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo(snapshot_depth: usize) -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("tempdir");
-    let repo =
-        RepoManager::init(dir.path().join("ledger"), snapshot_depth, None, None).expect("init");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        snapshot_depth,
+    )
+    .expect("init cataloged repo");
     (dir, repo)
 }
 

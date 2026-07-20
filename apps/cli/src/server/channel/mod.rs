@@ -94,6 +94,12 @@ impl DualChannel {
         }
     }
 
+    pub(crate) fn retire_session(&self) {
+        if let Some(retire_session) = &self.retire_session {
+            let _ = retire_session.send(true);
+        }
+    }
+
     pub(crate) fn diff_unicast_sender(&self) -> mpsc::Sender<ServerMessage> {
         self.diff_unicast.clone()
     }

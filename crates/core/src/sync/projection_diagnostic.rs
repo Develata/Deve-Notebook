@@ -33,17 +33,6 @@ pub(super) fn diagnose(repo: &RepoManager, repo_name: &str) -> Result<Projection
     }
 }
 
-pub(super) fn diagnose_stem(
-    repo: &RepoManager,
-    repo_name: &str,
-    repo_stem: &str,
-) -> Result<ProjectionDiagnostic> {
-    match projection_plan::build_stem(repo, repo_stem) {
-        Ok(_) => healthy_projection(repo_name),
-        Err(err) => projection_diagnostic_from_error(repo_name, err),
-    }
-}
-
 fn healthy_projection(repo_name: &str) -> Result<ProjectionDiagnostic> {
     Ok(ProjectionDiagnostic {
         repo_name: repo_name.to_string(),

@@ -12,12 +12,13 @@ use support::{build_state, recv_commit_diff, recv_history, seed_pending, write_w
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
-    let (_dir, state, default_id, _test_id) = build_state()?;
-    seed_pending(state.repo.as_ref(), "test", "notes/a.md", "hello");
+    let (_dir, state, default_id, test_id) = build_state()?;
+    let test = test_id.to_string();
+    seed_pending(state.repo.as_ref(), &test, "notes/a.md", "hello");
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.switch_repo("test".into(), Some(default_id));
+    session.switch_repo(test, Some(default_id));
 
     handle_get_changes(&state, &ch, &mut session, Some("req-1".into())).await;
     match uni_rx.recv().await {
@@ -37,25 +38,25 @@ async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
     let (dir, state, default_id, test_id) = build_state()?;
-    write_workspace_file(&dir, "test", "notes/a.md", "hello");
-    seed_pending(state.repo.as_ref(), "test", "notes/a.md", "hello");
+    let test = test_id.to_string();
+    write_workspace_file(&dir, &test, "notes/a.md", "hello");
+    seed_pending(state.repo.as_ref(), &test, "notes/a.md", "hello");
     let selector = RepoSelector {
         repo_id: Some(test_id),
-        repo_name: Some("test".into()),
+        repo_name: Some(test.clone()),
     };
     state
         .repo
         .stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
     state.repo.apply_external_changes_in_repo(&selector)?;
-    state.repo.commit_source_control_changes_in_repo(
-        &selector,
-        "initial",
-    )?;
+    state
+        .repo
+        .commit_source_control_changes_in_repo(&selector, "initial")?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.switch_repo("test".into(), Some(default_id));
+    session.switch_repo(test, Some(default_id));
 
     handle_get_commit_history(&state, &ch, &mut session, "req-1".into(), 10).await;
     match uni_rx.recv().await {

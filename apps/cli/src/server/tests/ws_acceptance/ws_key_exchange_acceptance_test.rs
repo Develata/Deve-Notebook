@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, recv_server_message, send_client_message, switch_to_notes_repo,
+    connect_harness, recv_server_message, send_client_message, switch_to_notes_repo, WsHarness,
 };
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use tokio::net::TcpStream;
@@ -105,7 +105,10 @@ fn assert_protocol_error(message: ServerMessage, scope_nonce: Option<u64>, detai
             };
             assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope, scope_nonce);
-            assert!(error.detail.as_deref().is_some_and(|got| got.contains(detail)));
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|got| got.contains(detail)));
         }
         other => panic!("expected ProtocolError, got {other:?}"),
     }

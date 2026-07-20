@@ -6,8 +6,8 @@ use super::switcher_test_support::{browser_session, build_state, unicast_channel
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_self_heal()
--> anyhow::Result<()> {
+async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_self_heal(
+) -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(90);
@@ -23,12 +23,10 @@ async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_s
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(91));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Remote branch not available:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -39,8 +37,8 @@ async fn switch_branch_from_missing_shadow_without_repo_hint_does_not_silently_s
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_remote_binding()
--> anyhow::Result<()> {
+async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_remote_binding(
+) -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(91);
@@ -57,12 +55,10 @@ async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_r
         }) => {
             assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
             assert_eq!(switch_nonce, Some(92));
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("Remote branch not available:"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("Remote branch not available:")));
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }
@@ -76,8 +72,8 @@ async fn switch_repo_on_missing_shadow_branch_reports_scope_invalid_and_clears_r
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_from_missing_shadow_with_stale_runtime_binding_clears_all_scope()
--> anyhow::Result<()> {
+async fn switch_branch_from_missing_shadow_with_stale_runtime_binding_clears_all_scope(
+) -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     let local_handle = state

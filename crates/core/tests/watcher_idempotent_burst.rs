@@ -71,7 +71,7 @@ fn stable_pending_bytes(h: &Harness, path: &str) -> anyhow::Result<Vec<u8>> {
 }
 
 fn pending_bytes(h: &Harness, path: &str) -> anyhow::Result<Vec<u8>> {
-    h.repo.run_on_local_repo("main", |db| {
+    h.repo.run_on_local_repo(&h.repo_name("main"), |db| {
         let read = db.begin_read()?;
         let table = read.open_table(PENDING_FS_OPS)?;
         table

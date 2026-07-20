@@ -6,7 +6,9 @@
 use super::route_core;
 use crate::server::{channel::DualChannel, session::WsSession};
 use deve_core::models::DocId;
-use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{
+    ClientMessage, RepoControlRequest, RepoControlResponse, ServerErrorCode, ServerMessage,
+};
 use tokio::sync::mpsc;
 
 mod support;
@@ -183,4 +185,70 @@ async fn browser_delete_peer_requires_current_scope_nonce() -> anyhow::Result<()
         false,
     )
     .await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn full_peer_cannot_mutate_host_local_repo_alias() -> anyhow::Result<()> {
+    let (_dir, state) = support::build_state()?;
+    let repo_id = state.repo.get_repo_info()?.expect("repo info").uuid;
+    let before = state.repo.host_repo_alias_runtime().binding(repo_id)?;
+    let request_id = uuid::Uuid::new_v4();
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    route_core(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::RepoControl(RepoControlRequest::SetAlias {
+            request_id,
+            repo_id,
+            alias: "peer-must-not-write".into(),
+            expected_alias_revision: before.alias_revision,
+        }),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::RepoControl(RepoControlResponse::Error {
+            request_id: actual,
+            error,
+        })) => {
+            assert_eq!(actual, request_id);
+            assert_eq!(error.code, ServerErrorCode::RepoLifecycleInvalidRequest);
+        }
+        other => panic!("expected host-control rejection, got {other:?}"),
+    }
+    assert_eq!(
+        state.repo.host_repo_alias_runtime().binding(repo_id)?,
+        before
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn full_peer_cannot_list_host_local_repo_aliases() -> anyhow::Result<()> {
+    let (_dir, state) = support::build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+
+    route_core(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::ListRepos {
+            request_id: "peer-list".into(),
+            scope_nonce: None,
+        },
+    )
+    .await;
+
+    assert!(matches!(
+        uni_rx.recv().await,
+        Some(ServerMessage::ProtocolError { .. })
+    ));
+    assert!(uni_rx.try_recv().is_err());
+    Ok(())
 }

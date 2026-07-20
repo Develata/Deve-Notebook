@@ -2,11 +2,11 @@
 //!   - 03_storage/projection#projection-locator-contract
 //!   - 04_repository#repo-catalog-contract
 
-use super::{ProjectionLocatorRecord, file_validation, repo_workspace_segment};
+use super::{ProjectionLocatorRecord, file_validation};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::RepoId;
 use anyhow::{Context, Result, anyhow};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 use unicode_normalization::UnicodeNormalization;
 
@@ -25,30 +25,40 @@ pub(super) fn validate_projection_locator_records(
     validate_records_against_local_infos(repo, records, require_all_local_locators, local_infos)
 }
 
-pub(super) fn validate_projection_locator_records_for_workspace_repair(
+pub(super) fn validate_projection_locator_records_for_prepared_creation(
     repo: &RepoManager,
     records: &[ProjectionLocatorRecord],
-    repo_id: RepoId,
-    proposed_name: &str,
-    old_root: &Path,
-    new_root: &Path,
+    prepared_repo_id: RepoId,
 ) -> Result<()> {
-    let proposed_name = super::safe_repo_path_segment(proposed_name)?;
-    let mut local_infos = repo
-        .repo_catalog_runtime()
-        .local_repo_infos_for_locator_repair_validation()?;
-    let target = local_infos
-        .iter_mut()
-        .find(|(_, info)| info.uuid == repo_id)
+    if repo
+        .repo_catalog_membership_record(prepared_repo_id)?
+        .is_some()
+    {
+        return Err(anyhow!(
+            "Prepared Projection Locator target already has catalog state: {prepared_repo_id}"
+        ));
+    }
+    let mut local_infos = Vec::new();
+    for repo_name in repo.list_local_repo_names_for_execution()? {
+        let info = repo
+            .get_repo_info_for(None, Some(&repo_name))?
+            .ok_or_else(|| anyhow!("Local repo metadata is missing for {}", repo_name))?;
+        local_infos.push((repo_name, info));
+    }
+    let execution_name = prepared_repo_id.to_string();
+    let prepared_info = repo
+        .repo_scope_runtime()
+        .read_local_repo_info_by_stem_without_repair(&execution_name)?
         .ok_or_else(|| {
-            anyhow!(
-                "Projection Locator repair target repo {} is unknown",
-                repo_id
-            )
+            anyhow!("Prepared Projection Locator target metadata is missing: {prepared_repo_id}")
         })?;
-    target.1.name = proposed_name;
-    let roots = resolved_roots_against_local_infos(repo, records, true, local_infos)?;
-    validate_workspace_repair_roots(&roots, repo_id, old_root, new_root)
+    if prepared_info.uuid != prepared_repo_id || prepared_info.name != execution_name {
+        return Err(anyhow!(
+            "Prepared Projection Locator target must use canonical RepoId identity"
+        ));
+    }
+    local_infos.push((execution_name, prepared_info));
+    validate_records_against_local_infos(repo, records, false, local_infos)
 }
 
 fn validate_records_against_local_infos(
@@ -80,20 +90,9 @@ fn resolved_roots_against_local_infos(
         .collect::<HashMap<_, _>>();
     let local_infos_by_id = local_infos
         .iter()
-        .map(|(stem, info)| (info.uuid, stem))
-        .collect::<HashMap<_, _>>();
+        .map(|(_, info)| info.uuid)
+        .collect::<HashSet<_>>();
 
-    for record in records {
-        if !local_infos_by_id.contains_key(&record.repo_id) {
-            return Err(anyhow!(
-                "Projection Locator references unknown local repo {}",
-                record.repo_id
-            ));
-        }
-    }
-
-    let ledger_dir =
-        std::fs::canonicalize(&repo.ledger_dir).unwrap_or_else(|_| repo.ledger_dir.clone());
     let mut roots = Vec::new();
     for (repo_name, info) in local_infos {
         let Some(record) = records_by_id.get(&info.uuid) else {
@@ -105,37 +104,20 @@ fn resolved_roots_against_local_infos(
             }
             continue;
         };
-        let projection_base_abs =
-            std::fs::canonicalize(&record.projection_base_abs).with_context(|| {
-                format!(
-                    "Failed to canonicalize Projection Locator base for {}: {:?}",
-                    repo_name, record.projection_base_abs
-                )
-            })?;
-        let workspace_segment = repo_workspace_segment(&info.name, info.uuid)?;
-        let root = projection_base_abs.join(&workspace_segment);
-        if root.starts_with(&ledger_dir) {
-            return Err(anyhow!(
-                "Projection workspace for {} must not be inside ledger_dir: {:?}",
-                repo_name,
-                root
-            ));
+        roots.push(resolve_record_root(repo, &repo_name, info.uuid, record)?);
+    }
+    // Unknown RepoIds are prepared create truth, not normal catalog members.
+    // They remain structurally validated and participate in workspace conflict
+    // detection, but they must not make healthy cataloged repos unreadable.
+    for record in records {
+        if !local_infos_by_id.contains(&record.repo_id) {
+            roots.push(resolve_record_root(
+                repo,
+                &record.repo_id.to_string(),
+                record.repo_id,
+                record,
+            )?);
         }
-        if root
-            .components()
-            .any(|component| matches!(component, Component::Normal(name) if name == ".notegit" || name == ".git"))
-        {
-            return Err(anyhow!(
-                "Projection workspace for {} must not be inside .notegit or .git: {:?}",
-                repo_name,
-                root
-            ));
-        }
-        roots.push(ResolvedRoot {
-            repo_id: info.uuid,
-            path: root,
-            normalized_key: normalized_workspace_key(&projection_base_abs, &workspace_segment),
-        });
     }
 
     for idx in 0..roots.len() {
@@ -162,51 +144,45 @@ fn resolved_roots_against_local_infos(
     Ok(roots)
 }
 
-fn validate_workspace_repair_roots(
-    roots: &[ResolvedRoot],
+fn resolve_record_root(
+    repo: &RepoManager,
+    repo_name: &str,
     repo_id: RepoId,
-    old_root: &Path,
-    new_root: &Path,
-) -> Result<()> {
-    let target = roots
-        .iter()
-        .find(|root| root.repo_id == repo_id)
-        .ok_or_else(|| {
-            anyhow!(
-                "Projection Locator repair target repo {} is missing",
-                repo_id
+    record: &ProjectionLocatorRecord,
+) -> Result<ResolvedRoot> {
+    let ledger_dir =
+        std::fs::canonicalize(&repo.ledger_dir).unwrap_or_else(|_| repo.ledger_dir.clone());
+    let projection_base_abs =
+        std::fs::canonicalize(&record.projection_base_abs).with_context(|| {
+            format!(
+                "Failed to canonicalize Projection Locator base for {}: {:?}",
+                repo_name, record.projection_base_abs
             )
         })?;
-    let canonical_old_root = std::fs::canonicalize(old_root).with_context(|| {
-        format!(
-            "Failed to canonicalize Projection Locator repair source: {:?}",
-            old_root
-        )
-    })?;
-    let expected_new_key = crate::utils::path::path_to_forward_slash(new_root)
-        .nfc()
-        .collect::<String>()
-        .to_ascii_lowercase();
-    if target.normalized_key != expected_new_key {
+    let workspace_segment = &record.workspace_segment;
+    let root = projection_base_abs.join(workspace_segment);
+    if root.starts_with(&ledger_dir) {
         return Err(anyhow!(
-            "Projection Locator repair target mismatch: expected {:?}, resolved {:?}",
-            new_root,
-            target.path
+            "Projection workspace for {} must not be inside ledger_dir: {:?}",
+            repo_name,
+            root
         ));
     }
-    for other in roots.iter().filter(|root| root.repo_id != repo_id) {
-        if canonical_old_root.starts_with(&other.path)
-            || other.path.starts_with(&canonical_old_root)
-        {
-            return Err(anyhow!(
-                "Projection workspace nesting conflict between repair source {:?} and repo {} root {:?}",
-                canonical_old_root,
-                other.repo_id,
-                other.path
-            ));
-        }
+    if root
+        .components()
+        .any(|component| matches!(component, Component::Normal(name) if name == ".notegit" || name == ".git"))
+    {
+        return Err(anyhow!(
+            "Projection workspace for {} must not be inside .notegit or .git: {:?}",
+            repo_name,
+            root
+        ));
     }
-    Ok(())
+    Ok(ResolvedRoot {
+        repo_id,
+        path: root,
+        normalized_key: normalized_workspace_key(&projection_base_abs, workspace_segment),
+    })
 }
 
 pub(super) fn normalized_workspace_key(base: &Path, workspace_segment: &str) -> String {

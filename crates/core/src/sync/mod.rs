@@ -84,8 +84,6 @@ use projection_health::ProjectionHealth;
 #[cfg(not(target_arch = "wasm32"))]
 pub use projection_repair_runtime::diagnose_projection_local_repo;
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) use projection_repair_runtime::diagnose_projection_local_repo_stem;
-#[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;

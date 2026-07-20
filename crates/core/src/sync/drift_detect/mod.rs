@@ -62,18 +62,6 @@ pub fn detect_repo_drift_at_workspace_root(
     detect_repo_drift_from_entries(projection, workspace, &pending, &staged)
 }
 
-pub(crate) fn detect_repo_drift_at_workspace_root_stem(
-    repo: &RepoManager,
-    repo_stem: &str,
-    workspace_root: &Path,
-) -> Result<DriftReport> {
-    let projection = enumerate::enumerate_projection_stem(repo, repo_stem)?;
-    let workspace = walk::enumerate_workspace_root(workspace_root)?;
-    let pending = repo.run_on_local_repo_stem(repo_stem, pending_fs::list_all)?;
-    let staged = repo.run_on_local_repo_stem(repo_stem, staging::list_staged_entries)?;
-    detect_repo_drift_from_entries(projection, workspace, &pending, &staged)
-}
-
 fn detect_repo_drift_from_entries(
     projection: std::collections::BTreeMap<String, enumerate::ProjectedEntry>,
     workspace: std::collections::BTreeMap<String, walk::WorkspaceEntry>,

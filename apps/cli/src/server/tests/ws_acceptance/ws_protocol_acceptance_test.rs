@@ -4,12 +4,12 @@
 //! End-to-end WebSocket protocol frame acceptance coverage.
 
 use super::ws_protocol_acceptance_support::{
-    WsHarness, connect_harness, recv_server_message, send_client_message,
+    connect_harness, recv_server_message, send_client_message, WsHarness,
 };
 use crate::server::ws::WS_JSON_TEXT_ENV_LOCK;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, AuthStatusResponse};
 use deve_core::protocol::frame::{
-    ClientFrame, WS_PROTOCOL_VERSION, encode_client_binary_with_version,
+    encode_client_binary_with_version, ClientFrame, WS_PROTOCOL_VERSION,
 };
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
@@ -110,12 +110,10 @@ async fn ws_endpoint_rejects_unsupported_protocol_version() -> anyhow::Result<()
     match recv_server_message(&mut ws).await? {
         ServerMessage::ProtocolError { error, .. } => {
             assert_eq!(error.code, ServerErrorCode::SyncVersionMismatch);
-            assert!(
-                error
-                    .detail
-                    .as_deref()
-                    .is_some_and(|detail| detail.contains("unsupported WS protocol version"))
-            );
+            assert!(error
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("unsupported WS protocol version")));
         }
         other => panic!("expected ProtocolError, got {other:?}"),
     }
@@ -170,7 +168,7 @@ async fn ws_endpoint_accepts_versioned_json_text_when_debug_enabled() -> anyhow:
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
     let frame = ClientFrame::current(ClientMessage::Ping);
-    assert_eq!(frame.protocol_version, 3);
+    assert_eq!(frame.protocol_version, 4);
     let text = serde_json::to_string(&frame)?;
 
     ws.send(Message::Text(text)).await?;

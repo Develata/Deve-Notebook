@@ -1,6 +1,6 @@
 use super::switcher_prepare_test::build_state;
 use super::switcher_selector::select_target_repo;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 
 fn seed_single_remote_target(
@@ -16,13 +16,15 @@ fn seed_single_remote_target(
             url: Some("urn:remote:default".into()),
         },
     )?;
-    let dir = state.repo.ledger_dir().to_path_buf();
-    RepoManager::init(&dir, 10, Some("test"), Some("urn:test"))?;
-    let test_id = state
-        .repo
-        .get_repo_info_for(None, Some("test"))?
-        .expect("test repo info")
-        .uuid;
+    let ledger_dir = state.repo.ledger_dir().to_path_buf();
+    let projection_base = ledger_dir.parent().expect("ledger parent").join("notes");
+    let test_id = crate::test_support::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &projection_base,
+        10,
+        Some("urn:test".to_string()),
+    )?
+    .repo_id;
     Ok((peer_id, test_id, remote_id))
 }
 

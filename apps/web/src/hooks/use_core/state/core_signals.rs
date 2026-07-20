@@ -20,6 +20,7 @@ use super::super::types::{
 };
 use super::state_types::PluginResponse;
 use crate::runtime::document::pending::PendingLocalEdits;
+use crate::runtime::remove_scope_partial::RemoveScopePartialStage;
 use crate::runtime::source_control_client::diff_session::DiffSessionWire;
 
 #[derive(Clone, Copy)]
@@ -86,6 +87,10 @@ pub struct CoreSignals {
     pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub set_current_scope_nonce: WriteSignal<u64>,
+    pub remove_scope_partial_stage: ReadSignal<Option<RemoveScopePartialStage>>,
+    pub set_remove_scope_partial_stage: WriteSignal<Option<RemoveScopePartialStage>>,
+    pub explicit_repo_selection_required: ReadSignal<bool>,
+    pub set_explicit_repo_selection_required: WriteSignal<bool>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub set_shadow_repos: WriteSignal<Vec<String>>,
     pub shadow_list_request_id: ReadSignal<Option<String>>,

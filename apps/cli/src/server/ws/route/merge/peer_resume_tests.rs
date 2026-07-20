@@ -57,7 +57,7 @@ async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> 
     drop(first_ch);
     drop(state);
 
-    let state = reopen_state(dir.path())?;
+    let state = reopen_state(dir.path(), repo_id)?;
     assert_eq!(
         state.repo.get_repo_info()?.expect("repo info").uuid,
         repo_id
