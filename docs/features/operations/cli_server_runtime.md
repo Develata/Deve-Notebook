@@ -32,8 +32,9 @@
 - `Name`: `Dry Run Server Startup`
 - `Surface`: `cli`
 - `Trigger`: run `deve serve --dry-run`
-- `Preconditions`: config is readable
-- `Immediate Result`: server startup validates configuration without binding
+- `Preconditions`: config is readable and the data root contains at least one `Normal` catalog member whose canonical `<repo_id>.redb` identity and Projection Locator are valid
+- `Immediate Result`: server startup validates the existing cataloged runtime without binding or creating a local repo database
+- `Failure Result`: a missing/empty catalog directs the operator to initialize the data root; a missing exact authority database or identity mismatch fails closed with an explicit cataloged-repo open diagnostic
 - `Application Entry`: `apps/cli/src/commands/serve.rs`
 
 ### `op.cli.server.start`
@@ -57,6 +58,7 @@
 ## Notes
 
 - `--dry-run` is modeled as a distinct operation because it changes side effects.
+- `deve serve` and `deve serve --dry-run` never use generic create-capable repo initialization. Repo creation belongs to `deve init` or the typed repo lifecycle coordinator.
 - After successful bootstrap, later failure of every watcher keeps the process alive for readonly/diagnostic access and reports aggregate health as degraded; it does not reclassify repo-local failure as host-fatal.
 - Fresh UI smoke data roots must first run `deve init --path <data-root> --repo default --projection-base <projection-base>` or otherwise point `DEVE_LEDGER_DIR` at the existing ledger directory for a data root with a valid host-local Projection Locator.
 - Local UI verification can use the embedded/bundled frontend only when the CLI was built after the latest `trunk build --release`; otherwise it may serve stale WASM. Use the two-process flow as a fallback after locator prep: backend `deve serve --dev --port 3001`, then `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` from `apps/web`.

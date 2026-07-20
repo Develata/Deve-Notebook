@@ -48,6 +48,10 @@ impl RepoManager {
 /// ("zero live repos") before any repo database is created or opened.
 pub fn normal_catalog_ids_for_ledger(ledger_dir: &Path) -> Result<Vec<RepoId>, RepoCatalogError> {
     let store = store::RepoCatalogStore::open(ledger_dir)?;
+    // This pre-composition probe has no process-local membership runtime yet.
+    // The cross-process store lock is nevertheless mandatory because list()
+    // removes project-owned crash temps and must not race a live publisher.
+    let _store_lock = store.lock()?;
     let mut ids = store
         .list()?
         .into_iter()

@@ -7,7 +7,6 @@
 use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};
 
-use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::node_meta;
 use crate::ledger::{init, range};
@@ -46,27 +45,7 @@ impl RepoManager {
         snapshot_depth: usize,
         repo_id: RepoId,
     ) -> Result<Self> {
-        let ledger_dir = ledger_dir.as_ref();
-        let local_dir =
-            Self::checked_local_dir_for(ledger_dir, "opening existing local repo by RepoId")?;
-        for (path, _stem) in redb_repo_entries(&local_dir, "opening existing local repo by RepoId")?
-        {
-            let Some(info) = Self::read_local_repo_info_from_path(&path)? else {
-                continue;
-            };
-            if info.uuid == repo_id {
-                return init::init_with_options(
-                    ledger_dir,
-                    snapshot_depth,
-                    Some(&info.name),
-                    init::RepoInitOptions {
-                        repo_id: Some(repo_id),
-                        repo_url: info.url,
-                    },
-                );
-            }
-        }
-        Err(anyhow!("Local repo not found for UUID {}", repo_id))
+        init::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)
     }
 
     /// 执行闭包于指定的本地仓库 (按名称)

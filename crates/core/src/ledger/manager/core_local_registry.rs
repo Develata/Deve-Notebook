@@ -14,21 +14,18 @@ use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::ledger::source_control;
 
 impl RepoManager {
-    fn validate_local_repo_execution_identity(db: &Database, stem: &str) -> Result<RepoInfo> {
+    pub(crate) fn validate_local_repo_execution_identity(
+        db: &Database,
+        stem: &str,
+    ) -> Result<RepoInfo> {
         let info = Self::read_local_repo_info_from_db(db)?.ok_or_else(|| {
             anyhow!(
                 "Broken local repo {} while validating execution identity: repository metadata missing",
                 stem
             )
         })?;
-        let expected_stem = info.uuid.to_string();
-        if expected_stem != stem {
-            return Err(anyhow!(
-                "Broken local repo {} while validating execution identity: physical RepoId does not match metadata RepoId {}",
-                stem,
-                info.uuid
-            ));
-        }
+        ensure_local_repo_metadata_identity(stem, &info)?;
+        ensure_cataloged_repo_name_canonical(stem, &info)?;
         Ok(info)
     }
 

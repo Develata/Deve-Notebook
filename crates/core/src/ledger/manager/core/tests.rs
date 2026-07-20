@@ -1,4 +1,5 @@
 use crate::ledger::RepoInfo;
+use crate::ledger::RepoManager;
 use crate::test_support::init_cataloged_repo;
 
 #[test]
@@ -72,6 +73,48 @@ fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Re
     assert!(
         err.to_string()
             .contains("metadata name drifted to legacy-main")
+    );
+    Ok(())
+}
+
+#[test]
+fn exact_existing_open_ignores_an_unrelated_corrupt_redb() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let (repo, repo_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
+    std::fs::write(
+        ledger_dir
+            .join("local")
+            .join(format!("{}.redb", uuid::Uuid::new_v4())),
+        b"not a redb database",
+    )?;
+
+    let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, repo_id)?;
+
+    assert_eq!(reopened.local_repo_name(), repo.local_repo_name());
+    Ok(())
+}
+
+#[test]
+fn exact_existing_open_never_recreates_a_missing_database() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let (repo, repo_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
+    let db_path = ledger_dir.join("local").join(format!("{repo_id}.redb"));
+    drop(repo);
+    crate::ledger::database_cache::evict_database_paths_under(&ledger_dir.join("local"))?;
+    std::fs::remove_file(&db_path)?;
+
+    let error = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, repo_id)
+        .err()
+        .expect("missing exact authority database must fail closed");
+
+    assert!(error.to_string().contains("Local repo not found for UUID"));
+    assert!(
+        !db_path.exists(),
+        "open-existing must not recreate authority"
     );
     Ok(())
 }

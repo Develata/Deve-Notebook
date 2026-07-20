@@ -299,6 +299,22 @@ fn catalog_file_lock_serializes_independent_store_handles() -> anyhow::Result<()
     Ok(())
 }
 
+#[test]
+fn standalone_normal_catalog_probe_respects_the_store_lock() -> anyhow::Result<()> {
+    let fixture = fixture()?;
+    let store = store::RepoCatalogStore::open(fixture.repo.ledger_dir())?;
+    let guard = store.lock()?;
+
+    assert!(matches!(
+        normal_catalog_ids_for_ledger(fixture.repo.ledger_dir()),
+        Err(RepoCatalogError::AuthorityBusy)
+    ));
+
+    drop(guard);
+    assert!(normal_catalog_ids_for_ledger(fixture.repo.ledger_dir())?.is_empty());
+    Ok(())
+}
+
 #[path = "tests/failure.rs"]
 mod failure;
 

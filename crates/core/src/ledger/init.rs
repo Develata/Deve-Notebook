@@ -35,7 +35,8 @@ use super::manager::repo_catalog_entries::redb_repo_entries;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
-use crate::utils::fs::checked_exists;
+use crate::models::RepoId;
+use crate::utils::fs::{checked_exists, ensure_open_file_matches_path, open_regular_file_read};
 
 #[derive(Debug, Clone, Default)]
 pub struct RepoInitOptions {
@@ -181,6 +182,67 @@ pub fn init_with_options(
     };
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;
+    Ok(repo)
+}
+
+/// Opens one exact canonical local authority database without creating a local
+/// authority database or scanning sibling local databases.
+pub(crate) fn init_existing_for_repo_id(
+    ledger_dir: impl AsRef<Path>,
+    snapshot_depth: usize,
+    repo_id: RepoId,
+) -> Result<RepoManager> {
+    let ledger_dir = ledger_dir.as_ref().to_path_buf();
+    let local_dir = RepoManager::checked_local_dir_for(
+        &ledger_dir,
+        "opening existing local repo by exact RepoId",
+    )?;
+    let execution_name = repo_id.to_string();
+    let db_path = local_dir.join(format!("{execution_name}.redb"));
+
+    // Keep a no-follow witness open across the Redb path open, then verify the
+    // pathname still identifies that same regular file. The containing local/
+    // directory is a protected authority boundary; no scan of sibling repos is
+    // needed to open this exact RepoId.
+    let path_witness = open_regular_file_read(&db_path, "local authority database")
+        .with_context(|| format!("Local repo not found for UUID {repo_id}"))?;
+    let local_db = cached_database(&db_path)
+        .with_context(|| format!("Failed to open local repo UUID {repo_id}"))?;
+    ensure_open_file_matches_path(&path_witness, &db_path, "local authority database")?;
+    RepoManager::validate_local_repo_execution_identity(local_db.as_ref(), &execution_name)?;
+    register_database(&db_path, local_db.clone())?;
+
+    RepoManager::validate_local_repo_schema(local_db.as_ref())?;
+    super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
+    source_control::init_tables(local_db.as_ref())?;
+    let report = node_check::check_node_consistency(local_db.as_ref())?;
+    if !report.is_clean() {
+        anyhow::bail!(
+            "Node consistency drift detected during init: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
+            report.missing_nodes.len(),
+            report.orphan_nodes.len(),
+        );
+    }
+
+    let host_keys_dir = crate::utils::notegit::host_keys_dir(&ledger_dir);
+    let local_peer_id =
+        crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
+    let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
+    let repo = RepoManager {
+        ledger_dir,
+        local_peer_id,
+        local_db,
+        local_repo_name: execution_name,
+        extra_local_dbs: RwLock::new(HashMap::new()),
+        repaired_local_runtime_tables: RwLock::new(HashSet::new()),
+        shadow_dbs: RwLock::new(HashMap::new()),
+        shadow_merge_guard: std::sync::Mutex::new(()),
+        snapshot_depth,
+        persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
+        catalog_membership,
+    };
+    repo.repair_remote_repo_catalogs()
+        .context("Failed to repair remote repo catalogs during exact repo open")?;
     Ok(repo)
 }
 

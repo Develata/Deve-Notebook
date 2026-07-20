@@ -178,12 +178,13 @@
   goal: CLI server runtime options are explicit.
   preconditions:
     - CLI 可用
-    - 当前数据根已通过 `deve init --path <data-root> --repo default --projection-base <projection-base>` 或等价流程具备 Projection Locator
+    - 当前数据根已通过 `deve init --path <data-root> --repo default --projection-base <projection-base>` 或等价流程具备 `Normal` catalog membership、canonical `<repo_id>.redb` 与 Projection Locator
   steps:
     - run: deve serve --help
     - run: deve serve --dev --dry-run --port 3001
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli commands::serve::tests -- --nocapture
+    - run: cargo test -p deve_cli --lib commands::serve::support_tests -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 

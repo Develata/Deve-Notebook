@@ -1,6 +1,8 @@
 //! plan_ref:
 //!   - 03_storage/index#repo-runtime-layout
 //!   - 03_storage/projection#projection-locator-contract
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-scope-runtime
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 19_plugins#plugin-runtime-boundary
 //!
@@ -20,7 +22,23 @@ pub(super) fn init_runtime(
     ledger_dir: &Path,
     snapshot_depth: usize,
 ) -> anyhow::Result<Arc<RepoManager>> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    if !ledger_dir.is_dir() {
+        anyhow::bail!(
+            "Server startup requires at least one cataloged local repo; run `deve init` first"
+        );
+    }
+    let repo_ids = deve_core::ledger::normal_catalog_ids_for_ledger(ledger_dir)
+        .context("Failed to read the local repo catalog for server startup")?;
+    let repo_id = repo_ids.first().copied().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Server startup requires at least one cataloged local repo; run `deve init` first"
+        )
+    })?;
+    // RepoManager still requires one process bootstrap anchor. Choose an exact,
+    // deterministic catalog member here so serve startup cannot create an
+    // uncataloged authority store. This is transitional composition wiring, not
+    // the planned per-RepoId authority-runtime convergence.
+    let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)?;
     repo.validate_projection_locator_map()?;
     Ok(Arc::new(repo))
 }
