@@ -50,12 +50,12 @@
   goal: 首发 F4/v4 协议格式、version admission、Repo Control 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
-    - 当前代码为未发布 F4/v3；批准目标为 F4/v4 lockstep，C1′ 完成前保持 gap
+    - 当前代码与批准目标均为 F4/v4 lockstep
   steps:
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture
     - run: cargo test -p deve_core unsupported_json_version_is_checked_before_message_schema -- --nocapture
-    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json -- --nocapture
     - run: cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
     - run: cargo test -p deve_cli --lib remote_import_route -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_accepts_versioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
@@ -64,9 +64,9 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF4"
-    - versioned_packet_protocol_version_eq: 3
-    - min_supported_packet_protocol_version_eq: 3
-    - unpublished_protocol_v1_v2_rejected_without_adapter: true
+    - versioned_packet_protocol_version_eq: 4
+    - min_supported_packet_protocol_version_eq: 4
+    - unpublished_protocol_v1_v2_v3_rejected_without_adapter: true
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - explicit_versioned_json_debug_only: true
     - legacy_json_fallback_absent: true

@@ -38,12 +38,13 @@ DELEGATED_SC_HEADER_VALUE=""
 
 run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 
-if [[ ";${MSYS2_ARG_CONV_EXCL:-};" == *";*;"* || ";${MSYS2_ARG_CONV_EXCL:-};" == *";/data/ledger;"* ]]; then
-  MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:-}"
-elif [ -n "${MSYS2_ARG_CONV_EXCL:-}" ]; then
-  MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL};/data/ledger"
-else
-  MSYS_ARG_CONV_EXCL="/data/ledger"
+MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:-}"
+if [[ ";${MSYS_ARG_CONV_EXCL};" != *";*;"* ]]; then
+  for container_path in /data/ledger /notes; do
+    if [[ ";${MSYS_ARG_CONV_EXCL};" != *";${container_path};"* ]]; then
+      MSYS_ARG_CONV_EXCL="${MSYS_ARG_CONV_EXCL:+${MSYS_ARG_CONV_EXCL};}${container_path}"
+    fi
+  done
 fi
 
 fail() {
@@ -112,6 +113,65 @@ find_python() {
     return 0
   fi
   return 1
+}
+
+peer_a_workspace_root() {
+  local locator_content
+  locator_content="$(docker_compose exec -T peer-a \
+    cat /data/ledger/.host/projection-locators.toml)" || return 1
+  local workspace_root
+  workspace_root="$(LOCATOR_CONTENT="$locator_content" REPO_ID="$REPO_ID" "$PYTHON_BIN" - <<'PY'
+import os
+import re
+
+repo_id = os.environ["REPO_ID"]
+content = os.environ["LOCATOR_CONTENT"]
+records = []
+current = None
+for raw_line in content.splitlines():
+    line = raw_line.strip().rstrip("\r")
+    if line == "[[locators]]":
+        current = {}
+        records.append(current)
+        continue
+    if current is None:
+        continue
+    match = re.fullmatch(
+        r"(repo_id|workspace_segment|projection_base_abs)\s*=\s*(['\"])([^'\"\r\n]+)\2",
+        line,
+    )
+    if match:
+        current[match.group(1)] = match.group(3)
+matches = [record for record in records if record.get("repo_id") == repo_id]
+if len(matches) != 1:
+    raise SystemExit(f"expected exactly one locator for repo {repo_id}")
+record = matches[0]
+base = record.get("projection_base_abs")
+segment = record.get("workspace_segment")
+if base != "/notes":
+    raise SystemExit(f"Docker smoke projection base must be /notes, observed {base!r}")
+if not segment or not re.fullmatch(r"(?:[A-Za-z0-9._-]+--)?[0-9a-f-]+", segment):
+    raise SystemExit(f"unsafe projection workspace segment: {segment!r}")
+print(f"{base}/{segment}")
+PY
+  )" || return 1
+  local identity_content
+  identity_content="$(docker_compose exec -T peer-a sh -c \
+    'test ! -L "$1" && test -f "$1" && cat "$1"' \
+    _ "${workspace_root}/.notegit/identity.toml")" || return 1
+  WORKSPACE_IDENTITY="$identity_content" REPO_ID="$REPO_ID" "$PYTHON_BIN" - <<'PY'
+import os
+import re
+
+content = os.environ["WORKSPACE_IDENTITY"]
+repo_id = os.environ["REPO_ID"]
+if not re.search(r"^version\s*=\s*1\s*$", content, re.MULTILINE):
+    raise SystemExit("workspace identity marker version is not 1")
+match = re.search(r"^repo_id\s*=\s*(['\"])([^'\"\r\n]+)\1\s*$", content, re.MULTILINE)
+if match is None or match.group(2) != repo_id:
+    raise SystemExit("workspace identity marker RepoId mismatch")
+PY
+  printf '%s\n' "$workspace_root"
 }
 
 delegated_sc_header_value() {
@@ -470,7 +530,9 @@ create_peer_a_fixture() {
   local doc_path="p2p-mesh/${fixture_id}.md"
   local doc_content="p2p-mesh-content-${fixture_id}"
 
-  local workspace_root="/notes/default--${REPO_ID}"
+  local workspace_root
+  workspace_root="$(peer_a_workspace_root)" \
+    || fail "could not resolve peer-a projection workspace for ${REPO_ID}"
   docker_compose exec -T peer-a sh -c \
     "mkdir -p '${workspace_root}/p2p-mesh' && printf '%s' '${doc_content}' > '${workspace_root}/${doc_path}'"
 
@@ -593,7 +655,9 @@ update_peer_a_fixture() {
   fixture_id="$(date +%s)-$$"
   local phase_one_content="gap-${fixture_id}-phase-one"
   local next_content="gap-${fixture_id}-phase-two"
-  local workspace_root="/notes/default--${REPO_ID}"
+  local workspace_root
+  workspace_root="$(peer_a_workspace_root)" \
+    || fail "could not resolve peer-a projection workspace for ${REPO_ID}"
 
   docker_compose exec -T peer-a sh -c \
     "printf '%s' '${phase_one_content}' > '${workspace_root}/${doc_path}'"

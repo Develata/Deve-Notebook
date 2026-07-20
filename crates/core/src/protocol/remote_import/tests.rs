@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 07_network#remote-import-wire-contract
 //!
-//! F4/v3 Remote Import wire contract tests.
+//! F4/v4 Remote Import wire contract tests.
 
 use super::*;
 use crate::protocol::frame::{
@@ -26,14 +26,14 @@ fn write_classification_is_backend_action_exact() {
 }
 
 #[test]
-fn remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json() {
+fn remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json() {
     for request in request_variants() {
         let message = ClientMessage::RemoteImport(request);
         let expected = serde_json::to_value(&message).expect("serialize expected client message");
 
-        let binary = encode_client_binary(&message).expect("encode F4/v3 client frame");
+        let binary = encode_client_binary(&message).expect("encode F4/v4 client frame");
         assert!(binary.starts_with(WS_FRAME_MAGIC));
-        let frame = decode_client_binary_frame(&binary).expect("decode F4/v3 client frame");
+        let frame = decode_client_binary_frame(&binary).expect("decode F4/v4 client frame");
         assert_eq!(frame.protocol_version, WS_PROTOCOL_VERSION);
         assert_eq!(
             serde_json::to_value(decode_client_binary(&binary).expect("decode client message"))
@@ -58,7 +58,7 @@ fn remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json() {
         let message = ServerMessage::RemoteImport(response);
         let expected = serde_json::to_value(&message).expect("serialize expected server message");
 
-        let binary = encode_server_binary(&message).expect("encode F4/v3 server frame");
+        let binary = encode_server_binary(&message).expect("encode F4/v4 server frame");
         assert!(binary.starts_with(WS_FRAME_MAGIC));
         assert_eq!(
             serde_json::to_value(decode_server_binary(&binary).expect("decode server message"))

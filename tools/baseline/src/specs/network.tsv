@@ -27,15 +27,15 @@ contains	docs/plan/07_network.md	无版本 JSON、`LegacyJsonText` 与 `DEVE_ALL
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 4;`; `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 4;`
 contains	docs/registry/first-tag-format-matrix.md	已对齐：F4/v4
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
-case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli --lib remote_import_route -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli ws_endpoint_rejects_unversioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
-case_contains	docs/acceptance-cases/06_network.md	NET-004	versioned_packet_protocol_version_eq: 3
+case_contains	docs/acceptance-cases/06_network.md	NET-004	versioned_packet_protocol_version_eq: 4
 case_contains	docs/acceptance-cases/06_network.md	NET-004	legacy_json_fallback_absent: true
 case_contains	docs/acceptance-cases/06_network.md	NET-004	remote_import_response_echoes_exact_repo_branch_scope_session_and_revision: true
 case_contains	docs/acceptance-cases/06_network.md	NET-004	remote_import_show_discard_none_revision_is_precandidate_only: true
-contains	crates/core/src/protocol/remote_import/tests.rs	remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json
+contains	crates/core/src/protocol/remote_import/tests.rs	remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json
 contains	crates/core/src/remote_import/facade/tests.rs	optional_revision_none_is_exact_for_precandidate_failure_only
 contains	apps/cli/src/server/ws/route/remote_import/tests.rs	remote_import_route_preserves_session_revision_on_typed_not_found
 contains	crates/core/src/sync/protocol.rs	Wire range is closed

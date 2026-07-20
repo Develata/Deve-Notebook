@@ -435,17 +435,17 @@
 - case_id: DIFF-013
   goal: 首个公开 WS epoch 使用 F4/v4，并让 Diff、Remote Import 与 Repo Control 都只传 backend typed projection。
   preconditions:
-    - 当前代码为未发布 F4/v3；批准目标为 F4/v4 lockstep，C1′ 完成前保持 gap
+    - 当前代码与批准目标均为 F4/v4 lockstep
   steps:
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core strict_v4_json_rejects_missing_vectors_and_legacy_peer_alias -- --nocapture
-    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json -- --nocapture
     - run: cargo test -p deve_core --lib remote_import_diff_wire_exposes_only_safe_review_projection_fields -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_rejects_unsupported_protocol_version -- --nocapture --test-threads=1
     - run: cargo test -p deve_cli ws_endpoint_rejects_unversioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
   assertions:
-    - ws_assert: f4_v3_lockstep true
-    - ws_assert: f4_v0_f4_v1_f4_v2_and_f4_v13_rejected true
+    - ws_assert: f4_v4_lockstep true
+    - ws_assert: f4_v0_f4_v1_f4_v2_f4_v3_and_f4_v13_rejected true
     - ws_assert: historical_f3_v13_rejected true
     - api_assert: commit_diff_list_contains_no_document_body true
     - api_assert: commit_file_diff_target_mismatch_fails_closed true

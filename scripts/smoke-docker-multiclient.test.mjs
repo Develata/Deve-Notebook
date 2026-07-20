@@ -15,7 +15,10 @@ import {
   webSocketMatchesExpectedOrigin,
   waitForRenderedShell,
 } from "./smoke-docker-multiclient.mjs";
-import { selectWorkspaceRoot } from "./lib/docker-multiclient-product-journeys.mjs";
+import {
+  selectWorkspaceRoot,
+  validateWorkspaceIdentity,
+} from "./lib/docker-multiclient-product-journeys.mjs";
 
 test("pending marker parser rejects malformed counts", async () => {
   const page = {
@@ -150,22 +153,52 @@ test("direct execution enters main instead of silently succeeding", () => {
 });
 
 test("product journey accepts one canonical projection workspace only", () => {
+  const bareLocator = `version = 2
+
+[[locators]]
+repo_id = "11111111-1111-4111-8111-111111111111"
+workspace_segment = "11111111-1111-4111-8111-111111111111"
+projection_base_abs = "/notes"
+canonicalized_at_unix_ms = 1
+`;
   assert.equal(
     selectWorkspaceRoot(
-      "/notes/default--11111111-1111-4111-8111-111111111111\n",
+      bareLocator,
       "11111111-1111-4111-8111-111111111111",
     ),
-    "/notes/default--11111111-1111-4111-8111-111111111111",
+    "/notes/11111111-1111-4111-8111-111111111111",
   );
+  const aliasLocator = `version = 2
+
+[[locators]]
+repo_id = '11111111-1111-4111-8111-111111111111'
+workspace_segment = 'one--11111111-1111-4111-8111-111111111111'
+projection_base_abs = '/notes'
+canonicalized_at_unix_ms = 1
+
+[[locators]]
+repo_id = '22222222-2222-4222-8222-222222222222'
+workspace_segment = 'two--22222222-2222-4222-8222-222222222222'
+projection_base_abs = '/notes'
+canonicalized_at_unix_ms = 1
+`;
   assert.equal(
     selectWorkspaceRoot(
-      "/notes/one--11111111-1111-4111-8111-111111111111\n/notes/two--22222222-2222-4222-8222-222222222222\n",
+      aliasLocator,
       "22222222-2222-4222-8222-222222222222",
     ),
     "/notes/two--22222222-2222-4222-8222-222222222222",
   );
   assert.throws(() => selectWorkspaceRoot(
-    "/tmp/escaped\n",
+    bareLocator.replace('projection_base_abs = "/notes"', 'projection_base_abs = "/tmp"'),
+    "11111111-1111-4111-8111-111111111111",
+  ));
+  validateWorkspaceIdentity(
+    'version = 1\nrepo_id = "11111111-1111-4111-8111-111111111111"\nrepo_name = "machine"\n',
+    "11111111-1111-4111-8111-111111111111",
+  );
+  assert.throws(() => validateWorkspaceIdentity(
+    'version = 1\nrepo_id = "22222222-2222-4222-8222-222222222222"\nrepo_name = "machine"\n',
     "11111111-1111-4111-8111-111111111111",
   ));
 });

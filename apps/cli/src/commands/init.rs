@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 /// **参数**:
 /// * `ledger_dir`: 账本存储路径
 /// * `repo_name`: 本地 repo 名称
-/// * `projection_base`: repo projection base；最终 workspace 为 `<projection_base>/<safe_repo_name>--<repo_id>`
+/// * `projection_base`: repo projection base；最终 workspace 为 `<projection_base>/<workspace_segment>`
 /// * `path`: 指定的初始化根目录, config.toml 和 .env 将生成在此目录下
 /// * `snapshot_depth`: 快照深度配置
 /// * `repo_id`: 可选显式 RepoId；只允许用于新 repo 或匹配既有 metadata 的 repo

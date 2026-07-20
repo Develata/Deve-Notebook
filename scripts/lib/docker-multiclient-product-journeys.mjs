@@ -106,27 +106,48 @@ async function commitAndVerifyHistory(page, path, message) {
   await waitUntil("commit visible in history", async () => (await history.innerText()).includes(message));
 }
 
-export function selectWorkspaceRoot(output, repoId) {
-  const roots = output
-    .split(/\r?\n/u)
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const matches = roots.filter((root) => root.endsWith(`--${repoId}`));
-  assert.equal(matches.length, 1, `expected one workspace for repo ${repoId}, observed ${JSON.stringify(roots)}`);
-  assert.match(matches[0], /^\/notes\/[a-zA-Z0-9._-]+--[0-9a-f-]+$/u);
-  return matches[0];
+function locatorStringField(block, field) {
+  const match = block.match(new RegExp(`^${field}\\s*=\\s*(['"])([^'"\\r\\n]+)\\1\\s*$`, "mu"));
+  assert.ok(match, `Projection Locator record is missing ${field}`);
+  return match[2];
+}
+
+export function selectWorkspaceRoot(locatorContent, repoId) {
+  assert.match(repoId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u);
+  const records = locatorContent.split(/^\[\[locators\]\]\s*$/mu).slice(1).map((block) => ({
+    repoId: locatorStringField(block, "repo_id"),
+    segment: locatorStringField(block, "workspace_segment"),
+    base: locatorStringField(block, "projection_base_abs"),
+  }));
+  const matches = records.filter((record) => record.repoId === repoId);
+  assert.equal(matches.length, 1, `expected one locator for repo ${repoId}`);
+  const [{ base, segment }] = matches;
+  assert.equal(base, "/notes", `Docker smoke projection base must be /notes, observed ${base}`);
+  assert.match(segment, /^(?:[a-zA-Z0-9._-]+--)?[0-9a-f-]+$/u);
+  return `${base}/${segment}`;
+}
+
+export function validateWorkspaceIdentity(identityContent, repoId) {
+  assert.match(identityContent, /^version\s*=\s*1\s*$/mu);
+  assert.equal(locatorStringField(identityContent, "repo_id"), repoId);
 }
 
 function mutateWorkspaceFile(repoId, path, content) {
   const docker = process.env.DEVE_DOCKER_MULTI_DOCKER_BIN ?? "docker";
   const container = process.env.DEVE_DOCKER_MULTI_CONTAINER_ID;
   assert.ok(container, "DEVE_DOCKER_MULTI_CONTAINER_ID is required for product journeys");
-  const workspaceOutput = execFileSync(
+  const locatorContent = execFileSync(
     docker,
-    ["exec", container, "find", "/notes", "-mindepth", "1", "-maxdepth", "1", "-type", "d"],
+    ["exec", container, "cat", "/data/ledger/.host/projection-locators.toml"],
     { encoding: "utf8", timeout: 30000 },
   );
-  const workspace = selectWorkspaceRoot(workspaceOutput, repoId);
+  const workspace = selectWorkspaceRoot(locatorContent, repoId);
+  const identityContent = execFileSync(
+    docker,
+    ["exec", container, "sh", "-c", 'test ! -L "$1" && test -f "$1" && cat "$1"', "_", `${workspace}/.notegit/identity.toml`],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  validateWorkspaceIdentity(identityContent, repoId);
   execFileSync(
     docker,
     ["exec", "-i", container, "tee", `${workspace}/${path}`],

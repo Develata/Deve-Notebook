@@ -16,15 +16,17 @@
     - cli_assert: ledger_local_remotes_bound true
 
 - case_id: STORE-002
-  goal: Repo 命名冲突自动重命名。
+  goal: 重复 host-local alias 不改变 RepoId 或 workspace identity，歧义 alias selector fail-closed。
   preconditions:
     - 两个 Repo 同名不同 URL
   steps:
     - run: cargo test -p deve_core init_keeps_duplicate_display_name_for_same_name_different_url -- --nocapture
+    - run: cargo test -p deve_cli --lib select_target_repo_fails_closed_on_ambiguous_local_alias -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: collision_safe_workspace_segment true
     - cli_assert: repo_identity_not_changed_by_physical_suffix true
+    - cli_assert: ambiguous_host_alias_selector_fails_closed true
 
 - case_id: STORE-003
   goal: Redb 索引表存在。

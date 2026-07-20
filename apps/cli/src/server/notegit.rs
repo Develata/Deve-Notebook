@@ -9,7 +9,7 @@ use std::path::PathBuf;
 /// 准备 host-scoped 与 repo-scoped `.notegit` 目录。
 ///
 /// Invariants:
-/// - 运行时只接受计划定义的 `ledger/.host` 与 `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/` 布局。
+/// - 运行时只接受计划定义的 `ledger/.host` 与 `<projection_base>/<workspace_segment>/.notegit/` 布局。
 /// - 启动路径不再接受旧 `.deve` 或全局 projection root 元数据。
 pub fn prepare(repo: &RepoManager) -> Result<PathBuf> {
     let host_keys_dir = deve_core::utils::notegit::host_keys_dir(repo.ledger_dir());

@@ -54,12 +54,12 @@
 - 多个服务端可以通过静态配置组成 P2P mesh。
 - Browser/WebLightPeer 仍然只连接当前服务端；server-to-server 同步使用 FullPeer `/ws` admission。
 - FullPeer Mesh v1 当前要求同一兼容协议窗口；在没有真实多版本 adapter 前，版本不匹配应显示为结构化协议错误，而不是伪装成普通断线。
-- 首个公开 `DEVEWSF4` wire epoch 为 protocol v3；历史未发布的 v1/v2 不受支持，也不保留
+- 首个公开 `DEVEWSF4` wire epoch 为 protocol v4；历史未发布的 v1/v2/v3 不受支持，也不保留
   adapter。这里的 “Mesh v1” 是产品能力代号，不等于 wire protocol version。
-- Remote Import 在 v3 中使用独立 nested typed request/response；用户切换 repo、branch 或重连后，
+- Remote Import 在 v4 中使用独立 nested typed request/response；用户切换 repo、branch 或重连后，
   旧 session/revision 的迟到结果不得重新出现在当前界面。
-- 当前代码仍为未发布 F4/v3；C1′ product cutover 的批准目标是 F4/v4 lockstep，并继续删除 legacy/unversioned JSON fallback；显式 debug JSON
-  也必须带 v3 envelope。历史 v1/v2 客户端会被结构化拒绝，不存在 adapter。
+- 当前代码已完成 C1′ 的 F4/v4 lockstep 切换，并删除 legacy/unversioned JSON fallback；显式 debug JSON
+  也必须带 v4 envelope。历史 v1/v2/v3 客户端会被结构化拒绝，不存在 adapter。
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - 重复 peer label 只影响显示，不得导致 `/api/node/role` 中不同 peer 的连接状态、attempt 或 last error 互相覆盖。

@@ -3,6 +3,8 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	cargo test -p deve_core trinity_dir_structure_after_init -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-001	cargo test -p deve_core projection_locator_toml_roundtrip -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	cargo test -p deve_core init_keeps_duplicate_display_name_for_same_name_different_url -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	cargo test -p deve_cli --lib select_target_repo_fails_closed_on_ambiguous_local_alias -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	ambiguous_host_alias_selector_fails_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_rejects_middle_content_mismatch -- --nocapture

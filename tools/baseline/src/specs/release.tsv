@@ -413,7 +413,7 @@ contains	.env.example	AUTH_SECRET=replace-with-at-least-32-random-bytes
 contains	.env.example	AUTH_PASS=$argon2id$v=19$m=65536,t=3,p=1$...
 contains	docs/plan/18_release.md	runtime image 只交付单个嵌入前端静态资源的 `deve_cli` 二进制
 contains	docs/plan/18_release.md	`deve init --path <data-root> --repo <name> --projection-base <projection-base>`
-contains	docs/plan/18_release.md	<projection-base>/<safe_repo_name>--<repo_id>/
+contains	docs/plan/18_release.md	<projection-base>/<workspace_segment>/
 contains	docs/plan/18_release.md	delivery shape、environment、ports 与聚合 repo
 contains	docs/plan/18_release.md	health counts。degraded repo
 contains	docs/plan/18_release.md	native boundary checks that do not build Linux GTK3 artifacts
@@ -424,27 +424,27 @@ contains	docs/plan/18_release.md	Redb schema 冻结为 v4
 contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 4
 contains	docs/plan/03_storage/authority.md	PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]>
-contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 3`
+contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 4`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
 contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/registry/first-tag-format-matrix.md	`REDB_SCHEMA_VERSION = 4`
 contains	docs/registry/first-tag-format-matrix.md	repo-local `PROJECTION_FAULTS`
-contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 3;`
-contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 3;`
+contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 4;`
+contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 4;`
 contains	docs/registry/first-tag-format-matrix.md	Redb schema v4
-contains	docs/registry/first-tag-format-matrix.md	已对齐：代码为 F4/v3 lockstep
+contains	docs/registry/first-tag-format-matrix.md	已对齐：F4/v4
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection transport / Remote Import
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 4;
 contains	crates/core/src/ledger/schema.rs	pub(crate) const PROJECTION_FAULTS
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 3;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 4;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 4;
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	DEVEWSF4
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	F4/v2 was also never published
 contains	docs/adr/0011-immutable-ledger-first-remote-import.md	Immutable ledger-first Remote Import
-contains	docs/adr/0011-immutable-ledger-first-remote-import.md	Redb v4 and WS v3 are first-tag targets
+contains	docs/adr/0011-immutable-ledger-first-remote-import.md	The later ADR 0013 makes WS v4 the
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md
 contains	docs/acceptance-cases/12_tech_release.md	legacy_binary_codec_dependency_absent true
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_format_matrix_bound_to_plan_and_code true
@@ -543,6 +543,8 @@ contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a log
 contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
 contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending
 contains	scripts/smoke-docker-multiclient.test.mjs	offline recovery attempts input before asserting local pending and peer immutability
+contains	scripts/lib/docker-multiclient-product-journeys.mjs	/data/ledger/.host/projection-locators.toml
+contains	scripts/lib/docker-multiclient-product-journeys.mjs	validateWorkspaceIdentity(identityContent, repoId)
 contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
 contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED
@@ -555,6 +557,10 @@ contains	scripts/smoke-docker-p2p-mesh.sh	P2P token material appeared in persist
 contains	scripts/smoke-docker-p2p-mesh.sh	assert_no_token_material_in_logs_or_persisted_data "final"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_INJECT_SEQUENCE_GAP
 contains	scripts/smoke-docker-p2p-mesh.sh	wait_for_sequence_gap_fault
+contains	scripts/smoke-docker-p2p-mesh.sh	peer_a_workspace_root
+contains	scripts/smoke-docker-p2p-mesh.sh	cat /data/ledger/.host/projection-locators.toml
+contains	scripts/smoke-docker-p2p-mesh.sh	workspace identity marker RepoId mismatch
+absent	scripts/smoke-docker-p2p-mesh.sh	/notes/default--${REPO_ID}
 contains	scripts/smoke-docker-p2p-mesh.sh	cleanup || fail "compose cleanup failed after successful smoke"
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-005
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-001

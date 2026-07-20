@@ -73,7 +73,7 @@ fn prepare_local_repo_for_startup(
     materialize_local_repo_with_policy(repo, guard, repo_name, Some(&bound_doc_ids))
 }
 
-/// 将指定本地 repo 的文档视图投影到 `<projection_base>/<safe_repo_name>--<repo_id>/`。
+/// 将指定本地 repo 的文档视图投影到 `<projection_base>/<workspace_segment>/`。
 ///
 /// Invariants:
 /// - 仅补齐缺失文件；已有工作区绝不覆盖用户文件。

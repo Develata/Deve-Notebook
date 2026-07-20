@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -228,9 +228,9 @@ enabled = true
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-当前实现仍是未发布 F4/v3；C1′ 产品切换必须一次升级为 F4/v4 lockstep。主 `/ws` 不得恢复
-legacy/unversioned JSON fallback、旧环境开关或旧 version window；显式 development/debug JSON
-也必须携带 v4 envelope。plugin-host 的 loopback
+当前实现已完成 C1′ 的 F4/v4 lockstep 切换。主 `/ws` 不得恢复 legacy/unversioned JSON
+fallback、旧环境开关或旧 version window；显式 development/debug JSON 也必须携带 v4 envelope。
+plugin-host 的 loopback
 外围消息通道属于 `19_plugins#plugin-runtime-boundary`，不进入主 `/ws` F4 编解码合同。
 
 ### 4.3 Core Message Families

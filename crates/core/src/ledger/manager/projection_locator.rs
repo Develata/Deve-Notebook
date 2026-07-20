@@ -45,7 +45,7 @@ impl RepoManager {
     /// 为所有当前本地 repo 设置同一个 Projection Locator base。
     ///
     /// Invariants:
-    /// - 参数是 projection base；最终 workspace root 为 `<base>/<safe_repo_name>--<repo_id>/`。
+    /// - 参数是 projection base；最终 workspace root 为 `<base>/<workspace_segment>/`。
     /// - 批量更新必须按最终 locator map 校验并一次写入，不能暴露或误判中间混合态。
     /// - 生产入口应优先通过 `set_projection_base_for_local_repo` 明确绑定目标 repo。
     pub fn set_projection_base_for_all_local_repos_checked(

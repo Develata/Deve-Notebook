@@ -114,7 +114,7 @@ contains	apps/web/src/i18n/extensions.rs	default off
 contains	apps/web/src/i18n/extensions.rs	Code execution disabled
 contains	docs/acceptance-cases/10_plugins.md	case_id: PLUG-003
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
-contains	docs/plan/19_plugins.md	<projection_base>/<safe_repo_name>--<repo_id>/**/*.md
+contains	docs/plan/19_plugins.md	<projection_base>/<workspace_segment>/**/*.md
 contains	docs/plan/19_plugins.md	.notegit
 contains	docs/plan/19_plugins.md	ledger-aware host functions
 contains	crates/core/src/plugin/runtime/module_resolver.rs	fn parent_traversal_import_is_rejected()
