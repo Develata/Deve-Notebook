@@ -67,23 +67,31 @@ pub fn replace_file_atomically(
             "atomic replacement destination has no file name",
         )
     })?;
-    let source_parent = std::fs::canonicalize(source_parent)?;
-    let destination_parent = std::fs::canonicalize(destination_parent)?;
-    if source_parent != destination_parent {
+    let source_parent_canonical = std::fs::canonicalize(source_parent)?;
+    let destination_parent_canonical = std::fs::canonicalize(destination_parent)?;
+    if source_parent_canonical != destination_parent_canonical {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "atomic replacement must remain within one canonical directory",
         ));
     }
-    let destination = destination_parent.join(name);
-    let destination = destination.as_os_str().encode_wide().collect::<Vec<_>>();
-    let name_bytes = destination
+    // Build the destination from the same canonical parent used for the
+    // containment check so the path passed to FILE_RENAME_INFO cannot diverge
+    // from the directory whose identity was validated above.
+    let destination_canonical = destination_parent_canonical.join(name);
+    let mut destination_wide = destination_canonical
+        .as_os_str()
+        .encode_wide()
+        .collect::<Vec<_>>();
+    let name_bytes = destination_wide
         .len()
         .checked_mul(size_of::<u16>())
         .ok_or_else(|| std::io::Error::other("atomic replacement path is too long"))?;
     let header_bytes = offset_of!(FILE_RENAME_INFO, FileName);
+    destination_wide.push(0);
     let buffer_bytes = header_bytes
         .checked_add(name_bytes)
+        .and_then(|bytes| bytes.checked_add(size_of::<u16>()))
         .ok_or_else(|| std::io::Error::other("atomic replacement buffer overflow"))?;
     let buffer_words = buffer_bytes.div_ceil(size_of::<usize>());
     let mut buffer = vec![0_usize; buffer_words];
@@ -101,9 +109,9 @@ pub fn replace_file_atomically(
             )
         })?;
         std::ptr::copy_nonoverlapping(
-            destination.as_ptr(),
+            destination_wide.as_ptr(),
             (*info).FileName.as_mut_ptr(),
-            destination.len(),
+            destination_wide.len(),
         );
     }
     // SAFETY: the handle is valid, owns DELETE access, and `buffer` contains a
@@ -325,6 +333,55 @@ mod tests {
 
         assert_eq!(std::fs::read(destination)?, b"new");
         assert!(!temp.exists());
+        let mut names = std::fs::read_dir(dir.path())?
+            .map(|entry| entry.map(|entry| entry.file_name()))
+            .collect::<std::io::Result<Vec<_>>>()?;
+        names.sort();
+        assert_eq!(names, vec![std::ffi::OsString::from("record.json")]);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn atomic_replace_terminates_an_aligned_utf16_destination() -> std::io::Result<()> {
+        use std::mem::{offset_of, size_of};
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Storage::FileSystem::FILE_RENAME_INFO;
+
+        let dir = tempfile::tempdir()?;
+        let temp = dir.path().join("aligned.tmp");
+        let destination = (0..size_of::<usize>())
+            .map(|padding| {
+                dir.path()
+                    .join(format!("aligned-{}.json", "x".repeat(padding)))
+            })
+            .find(|path| {
+                let wide_bytes = std::fs::canonicalize(dir.path())
+                    .expect("canonical temp directory")
+                    .join(path.file_name().expect("destination name"))
+                    .as_os_str()
+                    .encode_wide()
+                    .count()
+                    * size_of::<u16>();
+                (offset_of!(FILE_RENAME_INFO, FileName) + wide_bytes)
+                    .is_multiple_of(size_of::<usize>())
+            })
+            .expect("one short suffix must align the FILE_RENAME_INFO payload");
+        let destination_name = destination
+            .file_name()
+            .expect("destination name")
+            .to_os_string();
+        let mut file = create_atomic_replace_temp(&temp)?;
+        file.write_all(b"aligned")?;
+        file.sync_all()?;
+
+        replace_file_atomically(&file, &temp, &destination)?;
+
+        assert_eq!(std::fs::read(&destination)?, b"aligned");
+        let names = std::fs::read_dir(dir.path())?
+            .map(|entry| entry.map(|entry| entry.file_name()))
+            .collect::<std::io::Result<Vec<_>>>()?;
+        assert_eq!(names, vec![destination_name]);
         Ok(())
     }
 
