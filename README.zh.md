@@ -55,7 +55,8 @@ bridge。ledger 和 `.notegit/` 仍是 Deve 拥有的 runtime state。
 设计上倾向最大限度分离跨宿主机器数据面与 host-local 人类交互面：跨端保留不可变
 identity、Ledger facts 与 Markdown 信息完整性；与正确性无关的名称和视觉偏好留在本机。
 Repo alias 是这一原则的直接实例：peer 只共享 `RepoId`，永不同步 alias。首发已批准目标允许
-用户显式导入/导出 deterministic JSON 映射；在 C1′ runtime 与验收证据落地前，该能力仍处于 blocked。
+用户显式导入/导出 deterministic JSON 映射；C1′ runtime 已实现，首个 tag 仍需等待 producer-bound
+验收证据封存。
 
 ## 权威模型
 
@@ -68,8 +69,8 @@ Ledger -> Folded State -> Projection -> Projection Workspace
   `RepoId -> (projection_base, immutable workspace_segment)` 绑定。
 - `<projection_base>/<workspace_segment>/` 保存单个本地 repo 的用户可见
   Markdown projection。
-- 已批准的 repo alias 合同把 display state 保持在 host-local；C1′ runtime 落地后，修改或
-  导入 alias 不移动 workspace，也不改变 peer identity。
+- repo alias runtime 把 display state 保持在 host-local；修改或导入 alias 不移动 workspace，
+  也不改变 peer identity。
 - 文件系统变化先进入 `pending_fs_ops`；只有显式 stage/commit 才会追加 ledger facts。
 - `.notegit/` 是 Deve 拥有的 repo runtime state。
 - `.git/` 只是 Git ecosystem bridge。

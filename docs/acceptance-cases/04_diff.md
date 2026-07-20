@@ -438,7 +438,7 @@
     - 当前代码为未发布 F4/v3；批准目标为 F4/v4 lockstep，C1′ 完成前保持 gap
   steps:
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
-    - run: cargo test -p deve_core strict_v3_json_rejects_missing_vectors_and_legacy_peer_alias -- --nocapture
+    - run: cargo test -p deve_core strict_v4_json_rejects_missing_vectors_and_legacy_peer_alias -- --nocapture
     - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v3_binary_and_versioned_json -- --nocapture
     - run: cargo test -p deve_core --lib remote_import_diff_wire_exposes_only_safe_review_projection_fields -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_rejects_unsupported_protocol_version -- --nocapture --test-threads=1

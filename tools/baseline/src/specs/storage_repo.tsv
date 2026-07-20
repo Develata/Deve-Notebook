@@ -92,7 +92,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: W7 repo lifecycle coordination and B6 fresh Remote Import manage receipt are not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: B6 fresh Remote Import manage receipt is not sealed yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --test materialize_projection_test -- --nocapture
@@ -196,7 +196,7 @@ absent_optional	crates/core/src/sync/watcher/registry.rs	WatcherSlot
 absent_tree	crates/core/src/sync/watcher	ServerMessage
 absent	crates/core/src/sync/handler.rs	ServerMessage
 absent	crates/core/src/sync/pending.rs	ServerMessage
-contains	apps/cli/src/server/setup.rs	move |refresh: WatcherRefresh|
+contains	apps/cli/src/server/runtime/watcher_runtime.rs	let publisher = Arc::new(move |refresh|
 contains	apps/cli/src/server/setup.rs	fn watcher_refresh_adapter_maps_all_domain_fields()
 contains	crates/core/src/ledger/manager/remote_repo_select.rs	let Some(info) = entry.info.as_ref() else
 contains	apps/cli/src/export_entries.rs	fn jsonl_roundtrip_is_monotonic_and_line_stable()

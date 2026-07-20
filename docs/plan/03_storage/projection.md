@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-19`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/projection_persistence_runtime.rs`, `crates/core/src/projection_fault/`, `crates/core/src/ledger/manager/projection_locator.rs`, `crates/core/src/sync/projection_io.rs`, `crates/core/src/writeback/`
 
@@ -61,11 +61,19 @@ Runtime ownership：
 - locator runtime 只拥有 host-local `RepoId -> (projection_base, workspace_segment)` 绑定、workspace root 派生、
   admission 与冲突检查；它不拥有 ledger facts、projection 内容、workspace writeback、
   repo identity 或 repair 状态迁移。
+- locator runtime 必须提供独立的 typed `prepare repo creation locator` command。该 command 只允许为一个尚未进入
+  normal catalog membership、但 canonical `<repo_id>.redb` metadata 已精确证明同一 `RepoId` 的
+  `PreparedRepoCreation` 写入 locator；它必须同时按正常规则校验其余 cataloged locator、完整路径冲突与
+  workspace containment，不得把 prepared locator 暴露给正常 query/list/admission。普通 locator set/query
+  继续要求 normal catalog membership，禁止用通用 `allow unknown` 参数绕过该边界。
 
 约束：
 
 - `projection_base_abs` **MUST** 是 canonicalize 后的绝对路径；若 base 不存在，`init` / locator repair 可以先创建 base，再 canonicalize。
 - `workspace_segment` 在 locator 创建时必须经过单一路径段校验：不得包含路径分隔符、drive prefix、NUL、Windows 非法字符（`< > : " | ? *`），不得等于 `.` / `..`，不得使用 Windows reserved device name（大小写不敏感），不得以空格或点结尾，并且必须经过同目录冲突检查。
+- prepared locator command 只能新增或 exact-replace 当前 creation target 的记录；target DB identity、locator
+  `repo_id` 与 workspace marker 必须在 catalog cut 前再次 revalidate。cut 前失败只能按 prepared manifest
+  精确清理该 target，不能影响其它 locator；cut 成功后该记录才可由正常 locator query/admission 使用。
 - 本机 create 可使用 `<safe_initial_alias>--<full_repo_id>`；其它首次绑定默认使用 `<full_repo_id>`。实现不得使用短 id 作为唯一判定依据。
 - locator 一旦提交，`workspace_segment` 在该 RepoId 的本机生命周期内永久不变。普通 alias set/import **MUST NOT** 改写它；显式 workspace relocation 只能替换 `projection_base_abs` 并复用同一 segment，必须独立执行 watcher stop、identity admission、locator binding generation rotation 与 rematerialize，不得伪装成 alias rename。
 - 本地可写 repo 进入 `ProjectionReady` 前 **MUST** 存在 locator。

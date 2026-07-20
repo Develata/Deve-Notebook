@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-18 (Route B B4 product-cutover + A1/B1/C1′ contract freeze; W7 active drift)
+Generated: 2026-07-19 (A1/B1/C1′ repo identity and lifecycle convergence; Remote Import B5 drift remains)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -14,17 +14,17 @@ Keep this block stable. The graph generator reads the drift registry below.
 <!-- modeled-slice:start -->
 - Flow count: `82`
 - Status: `drifted`
-- Active drift count: `7`
+- Active drift count: `4`
 <!-- modeled-slice:end -->
 
 ## Summary
 
 | Area | Status | Notes |
 |---|---|---|
-| Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 gap，repo alias set/transfer 与 A1/B1 lifecycle保留真实 implementation drift |
-| User operations | drifted | existing 74 IDs、Remote Projection push 与 B4 backend/CLI operations align；Remote Import client、C1′ repo control与 A1/B1 lifecycle尚未收敛 |
+| Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 client gap，repo alias set/transfer 与 A1/B1 lifecycle 已对齐 |
+| User operations | drifted | existing 74 IDs、Remote Projection push、F4/v4 Repo Control与host-owned lifecycle align；Remote Import client尚未收敛 |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback 与 product API 已存在；independent client scheduled B5 |
+| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、catalog cut与lifecycle settlement已存在；Remote Import independent client scheduled B5 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -35,9 +35,6 @@ Use one entry per divergent flow. Labels must match the flow registry.
 - `remote import review`
 - `remote import apply`
 - `remote import manage`
-- `repo alias set`
-- `repo alias transfer`
-- `repo lifecycle`
 <!-- drift-registry:end -->
 
 Active drift facts:
@@ -45,10 +42,7 @@ Active drift facts:
 1. `remote import prepare`: B4 provider-bound backend/CLI Prepare 已替换旧 pull carrier；B5 尚未提供 Web Prepare intent surface。
 2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
-4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 仍是 active drift，B5 尚未提供 thin Web management surface。
-5. `repo alias set`: C1′ typed WS CAS、backend list projection 与 thin Web client 尚未实现；旧 RenameRepo 仍在 code side。
-6. `repo alias transfer`: deterministic JSON v1 core/CLI path 已实现，但 pre-B1 membership admission 仍需短暂读取各 repo authority DB；server-held DB 场景会 fail closed，tag-ready producer receipt 也尚未封存。B1 catalog cut 完成前保持 drift，不新增临时 proxy 或兼容路径。
-7. `repo lifecycle`: 当前 W7 handler-owned create/remove 尚未切到 A1 host-owned job、B1 per-RepoId catalog cut 与 committed-cut/settled publication split。
+4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 已接入 host lifecycle，B5 尚未提供 thin Web management surface。
 
 ## Flow Registry
 
@@ -196,7 +190,7 @@ Within the currently modeled operation slice:
 
 - 74 pre-existing flows remain aligned
 - Remote Projection push and B4 Remote Import backend/CLI/product wire are aligned; four approved flows retain only the honest B5 client mapping gap
-- Redb v4、sealed writer、Mounted admission 与 post-commit writeback are aligned；当前 F4/v3 必须切到批准的 F4/v4，B5/B6 与 C1′/A1/B1 gaps remain release blockers
+- Redb v4、sealed writer、Mounted admission、post-commit writeback、F4/v4 Repo Control、immutable locator 与 A1/B1 lifecycle are aligned；B5/B6 与 first-tag freshness evidence remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
 The slice is bijective at the registry/label level and intentionally carries four active drift markers until B5 closes the independent client flows；B6 再封存 0-drift evidence。

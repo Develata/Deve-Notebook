@@ -66,7 +66,8 @@ Ledger facts and Markdown fidelity; labels and visual preferences stay local
 unless they are required for correctness. Repo aliases are the concrete case:
 peers share `RepoId` and never synchronize aliases. The approved first-release
 target lets users explicitly move their local alias map with deterministic JSON;
-that target remains blocked until the C1′ runtime and acceptance evidence land.
+the C1′ runtime is implemented, while first-tag readiness remains blocked until
+the producer-bound acceptance evidence is sealed.
 
 ## Authority Model
 
@@ -79,9 +80,8 @@ Ledger -> Folded State -> Projection -> Projection Workspace
   `RepoId -> (projection_base, immutable workspace_segment)` bindings.
 - `<projection_base>/<workspace_segment>/` stores the user-visible
   Markdown projection for one local repo.
-- The approved repo-alias contract keeps display state host-local. Once the
-  C1′ runtime lands, changing or importing an alias will never move the
-  workspace or change peer identity.
+- The repo-alias runtime keeps display state host-local. Changing or importing
+  an alias never moves the workspace or changes peer identity.
 - File-system changes enter `pending_fs_ops` first. They do not mutate
   authority until an explicit stage/commit path appends ledger facts.
 - `.notegit/` is Deve-owned repo runtime state.

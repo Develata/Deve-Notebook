@@ -421,6 +421,10 @@ ReadonlyDegraded
 
 - create 必须由 `RepoLifecycleCoordinator` 使用 `Catalog -> Repo(new_repo_id)` lane 编排；handler 只提交 typed intent，不得直接创建 watcher 或修改 supervisor slot。
 - create 的唯一 committed/linearization fact 是 `RepoCatalogRuntime` 在短 `Catalog -> Repo(new_id)` lane 内，原子发布 `ledger/.host/repo-catalog/<repo_id>.json` 的 `Normal` membership record 并轮换对应 process-local membership generation。该 per-repo record 是 project-owned bounded JSON v1；conditional cut 只允许读取该单记录当前 revision，再用 same-directory temp + flush + atomic replace + directory sync 发布新状态。此前创建的 canonical `<repo_id>.redb`、locator、workspace marker 与初始 projection 都是不可被正常 listing/admission 观察的 `PreparedRepoCreation`；cut 前失败可以按 prepared manifest 精确清理，不能把 artifact 存在误判为已创建 repo。
+- prepared locator 必须通过 `projection_locator_runtime` 的 creation-only typed command 写入：该 command 以
+  canonical `<repo_id>.redb` metadata 证明 exact RepoId，只豁免当前 target 的 normal catalog membership，
+  不豁免整张 locator map 的路径、冲突或 identity 校验。正常 locator set/query/list 不得接受未入 catalog 的
+  target，也不得提供 boolean `allow unknown` 之类的通用逃生口。
 - DB identity、locator binding generation 与 workspace marker identity 必须在 permits 外形成 project-owned `RevalidatedRepoCreation`；membership cut 再 exact-compare 该 token、`PreparedRepoCreation`、RepoId 与 typed `Catalog -> Repo` permit，并产出 immutable `RepoCreationCommittedCutPlan`。cut 内除上述单个 bounded membership record 的 exact read / atomic publish 外，不得执行其它 filesystem I/O、scan、join、目录遍历或发送消息。cut 后 alias settlement 与 watcher mount 位于 permits 外；即使 settlement 失败也不得删除 repo 或撤销 membership。
 - durable create 已提交后，无论 mount 成功或失败，都只能在 mount 最终 outcome 确定后发布一次 repo-list update；该 update 必须携带最终 `Mounted` 或 readonly/unavailable 状态，不得先广播可写 success 再补发 watcher failure。
 - mount 成功时才允许发布可写 scope，并允许当前 session 自动切换到新 repo。

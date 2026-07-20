@@ -482,7 +482,7 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - B4 已接入产品 Refresh/Discard/Repair；W7 repo lifecycle coordination 与 fresh cross-platform evidence 仍待 A1/B1/B6
+    - B4 已接入产品 Refresh/Discard/Repair；A1/B1/C1′ repo lifecycle 已实现，fresh cross-platform evidence 仍待 B6
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
     - gap: B6 fresh Remote Import manage receipt is not sealed yet
