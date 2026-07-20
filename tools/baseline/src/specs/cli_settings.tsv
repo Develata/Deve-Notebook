@@ -10,7 +10,7 @@ contains	apps/cli/src/cli.rs	Init {
 contains	apps/cli/src/cli.rs	repo_id: Option<uuid::Uuid>
 contains	apps/cli/src/cli.rs	repo_url: Option<String>
 contains	apps/cli/src/cli.rs	repo-id
-contains	docs/plan/14_commands.md	`deve init --path <data-root> --repo <name> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`
+contains	docs/plan/14_commands.md	`deve init --path <data-root> --repo <alias> --projection-base <projection-base> [--repo-id <uuid>] [--repo-url <url>]`
 absent	docs/plan/14_commands.md	`deve init --repo <name> --projection-base <path>`
 case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	deve init --path <data-root> --repo default --projection-base <projection-base>
 case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007A	deve init --path <data-root> --repo default --projection-base <projection-base>
@@ -76,7 +76,7 @@ contains	apps/cli/src/commands/config/tests/plan_contract.rs	supported_config_ke
 contains	apps/cli/src/commands/config/tests/plan_contract.rs	supported_config_schema_matches_settings_plan_type_and_choices
 contains	apps/cli/src/commands/init.rs	init_config_template_matches_current_settings_schema
 contains	apps/cli/src/commands/init.rs	Projection Locator
-contains	apps/cli/src/commands/init.rs	initialize_local_repo_workspace
+contains	apps/cli/src/commands/init.rs	initialize_initial_local_repo_workspace
 contains	apps/cli/src/commands/init.rs	[ai.agent_bridge]
 contains	apps/cli/src/commands/init.rs	peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"
 absent	apps/cli/src/commands/init.rs	peer_id = "peer-b"
@@ -162,6 +162,10 @@ contains	apps/web/src/components/command_palette/registry/tests.rs	static_comman
 contains	apps/web/src/i18n/command_palette/source_control.rs	Source Control: Commit
 contains	apps/web/src/i18n/command_palette/ai.rs	AI: Switch to BUILD Mode
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004C
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-004	cargo test -p deve_cli --lib switcher_branch_scope_test -- --nocapture
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-004	cargo test -p deve_cli --lib switcher_prepare_test -- --nocapture
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-004	branch_switch_requires_exact_repo_id_on_target true
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-004	host_local_alias_and_url_do_not_override_repo_id true
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004D
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web reserved_commands -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web global_shortcut -- --nocapture

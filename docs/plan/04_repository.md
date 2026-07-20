@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-19`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -135,6 +135,8 @@ RepoHealth::Healthy && RepoMountState::Mounted
   - `CurrentScopeFallback`
 - 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
 - selector 解析必须 UUID-first；`RepoName` 与 `URL` 只能辅助定位，不得覆盖已解析的 `RepoId`。
+- branch switch 已持有当前 `RepoId` 时，target branch 必须含有 exact 同 `RepoId`；当前
+  host-local alias、URL 或 target 上“唯一 repo”都不得替代。exact RepoId 缺失必须 fail-closed。
 - selector 解析出现缺失、重复、metadata drift、URL 歧义时 **MUST** fail-closed。
 - repo / branch URL 的 WebDAV、S3 与 S3-compatible 备份展开由 `06_backup.md` 定义；该展开不得改变本章的 UUID-first repo scope 规则。
 
@@ -258,7 +260,8 @@ SwitchingRepo | SwitchingBranch
 
 约束：
 
-- repo switch 与 branch switch 只允许在解析成功后提交到 session。
+- repo switch 与 branch switch 只允许在解析成功后提交到 session。branch switch 的已知
+  `RepoId` 只允许 exact target match，不使用 alias/URL/single-repo fallback。
 - `NoScope` 也是带 `scope_nonce` 的已确认 scope epoch；进入它必须提升 nonce，使旧 RepoBound 的延迟消息失效，不能用 `None` 或零值绕开 scope gate。
 - 每个 process-local `RepoBound` 必须保存当次 bind 的 `CatalogMembershipToken`。writer admission、new bind 与 scope publication 应用都必须 exact-compare 当前 per-repo membership generation；token 一旦被 durable membership cut 撤销，旧 binding 即使尚未收到 UI 消息也必须立即拒写。
 - 旧 scope 的延迟消息不得继续驱动新 scope。

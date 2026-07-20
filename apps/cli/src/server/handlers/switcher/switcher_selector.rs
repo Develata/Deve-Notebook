@@ -26,65 +26,27 @@ pub(super) fn select_target_repo(
     current_repo_url: Option<String>,
     target_branch: Option<&PeerId>,
 ) -> Result<Option<String>> {
+    if let Some(repo_id) = current_repo_id {
+        return select_repo_selector_by_id(state, target_branch, repo_id)?
+            .map(Some)
+            .ok_or_else(|| {
+                unresolved_target_repo_error(
+                    target_branch,
+                    current_repo_name,
+                    Some(repo_id),
+                    current_repo_url.as_deref(),
+                )
+            });
+    }
     if let Some(url) = current_repo_url {
         return select_target_repo_by_url(
             state,
             had_current_repo_hint,
             target_branch,
             current_repo_name,
-            current_repo_id,
+            None,
             &url,
         );
-    }
-    if let Some(repo_id) = current_repo_id {
-        let Some(selector_by_id) = select_repo_selector_by_id(state, target_branch, repo_id)?
-        else {
-            let repos = state.repo.list_repos(target_branch)?;
-            if let Some(selector) = fallback_single_remote_repo(target_branch, &repos) {
-                return Ok(Some(selector));
-            }
-            return Err(unresolved_target_repo_error(
-                target_branch,
-                current_repo_name,
-                current_repo_id,
-                None,
-            ));
-        };
-        if let Some(repo_name) = current_repo_name {
-            if uuid::Uuid::parse_str(repo_name).is_ok() {
-                let exact_selector =
-                    recover_selector_from_raw_name(state, target_branch, repo_name)?;
-                if exact_selector.as_deref() == Some(selector_by_id.as_str()) {
-                    return Ok(Some(selector_by_id));
-                }
-                return Err(anyhow!(
-                    "Session repo mismatch: expected {}, resolved selector {} for exact repository selector {}",
-                    repo_id,
-                    selector_by_id,
-                    repo_name
-                ));
-            }
-            let Some(info) = state
-                .repo
-                .get_repo_info_for(target_branch, Some(&selector_by_id))?
-            else {
-                return Err(unresolved_target_repo_error(
-                    target_branch,
-                    current_repo_name,
-                    current_repo_id,
-                    None,
-                ));
-            };
-            if info.uuid != repo_id || info.name != repo_name {
-                return Err(anyhow!(
-                    "Session repo mismatch: expected {}, resolved selector {} for repository label {}",
-                    repo_id,
-                    selector_by_id,
-                    repo_name
-                ));
-            }
-        }
-        return Ok(Some(selector_by_id));
     }
     if let Some(repo_name) = current_repo_name {
         if uuid::Uuid::parse_str(repo_name).is_ok() {

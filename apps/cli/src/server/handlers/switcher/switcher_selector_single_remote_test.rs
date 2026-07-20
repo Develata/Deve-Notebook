@@ -29,37 +29,39 @@ fn seed_single_remote_target(
 }
 
 #[test]
-fn select_target_repo_falls_back_to_only_remote_repo_when_url_hint_misses() -> anyhow::Result<()> {
+fn select_target_repo_rejects_only_remote_repo_when_exact_id_is_missing() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (peer_id, test_id, remote_id) = seed_single_remote_target(&state)?;
+    assert_ne!(test_id, remote_id);
 
-    let selected = select_target_repo(
+    let error = select_target_repo(
         &state,
         true,
         Some(test_id),
         Some("test"),
         Some("urn:test".into()),
         Some(&peer_id),
-    )?
-    .expect("single remote selector fallback");
-    assert_eq!(selected, remote_id.to_string());
+    )
+    .expect_err("the only remote repo must not replace a missing exact RepoId");
+    assert!(error.to_string().contains(&test_id.to_string()));
     Ok(())
 }
 
 #[test]
-fn select_target_repo_falls_back_to_only_remote_repo_when_name_hint_misses() -> anyhow::Result<()> {
+fn select_target_repo_rejects_alias_fallback_when_exact_id_is_missing() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (peer_id, test_id, remote_id) = seed_single_remote_target(&state)?;
+    assert_ne!(test_id, remote_id);
 
-    let selected = select_target_repo(
+    let error = select_target_repo(
         &state,
         true,
         Some(test_id),
         Some("test"),
         None,
         Some(&peer_id),
-    )?
-    .expect("single remote selector fallback");
-    assert_eq!(selected, remote_id.to_string());
+    )
+    .expect_err("a host-local alias must not replace a missing exact RepoId");
+    assert!(error.to_string().contains(&test_id.to_string()));
     Ok(())
 }

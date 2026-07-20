@@ -23,11 +23,11 @@ pub(super) fn unresolved_target_repo_error(
     } else {
         "Local"
     };
-    if let Some(repo_name) = current_repo_name {
-        return anyhow::anyhow!("{scope} repository selector not resolved for {}", repo_name);
-    }
     if let Some(repo_id) = current_repo_id {
         return anyhow::anyhow!("Repository UUID not resolved for {}", repo_id);
+    }
+    if let Some(repo_name) = current_repo_name {
+        return anyhow::anyhow!("{scope} repository selector not resolved for {}", repo_name);
     }
     if let Some(url) = current_repo_url {
         return anyhow::anyhow!("{scope} repository selector not resolved for URL {}", url);

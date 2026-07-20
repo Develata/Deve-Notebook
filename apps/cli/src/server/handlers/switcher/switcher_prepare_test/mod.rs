@@ -115,21 +115,21 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
 }
 
 #[test]
-fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
+fn select_target_repo_uses_local_repo_id_over_other_repo_selector() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
     let (_test_repo, test_id) = init_local_repo(&dir, "urn:test")?;
     let default_id = state.repo.get_repo_info()?.expect("default repo info").uuid;
 
-    let err = select_target_repo(
+    let selected = select_target_repo(
         &state,
         false,
         Some(default_id),
         Some(&test_id.to_string()),
         None,
         None,
-    )
-    .expect_err("stale uuid must not override exact local stem");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    )?
+    .expect("exact local RepoId must override a conflicting selector hint");
+    assert_eq!(selected, default_id.to_string());
     Ok(())
 }
 

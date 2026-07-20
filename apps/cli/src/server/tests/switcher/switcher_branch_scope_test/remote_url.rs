@@ -8,15 +8,9 @@ use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tempfile::tempdir;
 
-// DECISION PENDING (USER): the UUID-first cutover removed switch_branch's
-// name/url-based cross-peer guard, and a switch whose UUID has no shadow
-// counterpart now reports success. Either this is intended under RepoId-only
-// matching (delete/repurpose this test) or a fail-closed regression (restore
-// the guard). Assertions are intentionally kept unchanged pending that ruling.
-#[ignore = "switch_branch name/url cross-peer guard removed by UUID-first cutover; awaiting USER ruling"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url(
-) -> anyhow::Result<()> {
+async fn switch_branch_fails_closed_when_target_shadow_has_different_repo_id() -> anyhow::Result<()>
+{
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
@@ -65,7 +59,7 @@ async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url
                 error
                     .detail
                     .as_deref()
-                    .is_some_and(|detail| detail.contains("repository selector not resolved")),
+                    .is_some_and(|detail| detail.contains("Repository UUID not resolved")),
                 "unexpected detail: {:?}",
                 error.detail
             );

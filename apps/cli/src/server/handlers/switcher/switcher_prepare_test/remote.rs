@@ -16,20 +16,20 @@ fn select_target_repo_prefers_collision_safe_remote_selector_for_uuid() -> anyho
 }
 
 #[test]
-fn select_target_repo_prefers_exact_remote_selector_over_stale_uuid() -> anyhow::Result<()> {
+fn select_target_repo_uses_repo_id_over_host_local_alias() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (peer_id, first_id, _second_id, second_selector) = seed_duplicate_remote(&state)?;
 
-    let err = select_target_repo(
+    let selected = select_target_repo(
         &state,
         false,
         Some(first_id),
         Some(&second_selector),
         None,
         Some(&peer_id),
-    )
-    .expect_err("stale uuid must not override exact selector");
-    assert!(err.to_string().contains("Session repo mismatch:"));
+    )?
+    .expect("exact RepoId must resolve independently of the host-local alias");
+    assert_eq!(selected, first_id.to_string());
     Ok(())
 }
 
@@ -175,7 +175,7 @@ fn select_target_repo_does_not_auto_bind_ambiguous_remote_url_matches() -> anyho
 }
 
 #[test]
-fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Result<()> {
+fn select_target_repo_uses_repo_id_over_current_repo_url() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let peer_id = PeerId::new("peer-remote");
     let first = RepoInfo {
@@ -199,8 +199,8 @@ fn select_target_repo_prefers_current_repo_url_over_stale_uuid() -> anyhow::Resu
         first.url.clone(),
         Some(&peer_id),
     )?
-    .expect("canonical URL match");
-    assert_eq!(selected, first.uuid.to_string());
+    .expect("exact RepoId match");
+    assert_eq!(selected, second.uuid.to_string());
     Ok(())
 }
 

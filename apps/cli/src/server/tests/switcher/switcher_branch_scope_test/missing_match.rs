@@ -66,7 +66,7 @@ async fn switch_branch_fails_closed_when_target_branch_lacks_current_repo_match(
                 error
                     .detail
                     .as_deref()
-                    .is_some_and(|detail| detail.contains("repository selector not resolved")),
+                    .is_some_and(|detail| detail.contains("Repository UUID not resolved")),
                 "unexpected detail: {:?}",
                 error.detail
             );

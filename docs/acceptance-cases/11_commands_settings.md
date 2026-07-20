@@ -68,9 +68,13 @@
     - 应用已运行
   steps:
     - ui_keypress: "Ctrl+Shift+K"
+    - run: cargo test -p deve_cli --lib switcher_prepare_test -- --nocapture
+    - run: cargo test -p deve_cli --lib switcher_branch_scope_test -- --nocapture
     - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: branch_switcher_visible true
+    - api_assert: branch_switch_requires_exact_repo_id_on_target true
+    - api_assert: host_local_alias_and_url_do_not_override_repo_id true
 
 - case_id: CMD-004D
   goal: Settings 全局快捷键。

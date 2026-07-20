@@ -23,7 +23,7 @@
 - `Name`: `Choose Branch Target`
 - `Surface`: `keyboard-or-pointer`
 - `Trigger`: 选择本地或远端 branch 候选项
-- `Preconditions`: switcher 已打开，候选列表非空
+- `Preconditions`: switcher 已打开，候选列表非空；跨 branch 候选必须与当前 repo 的 exact RepoId 匹配
 - `Immediate Result`: 目标 branch 被选中
 - `Application Entry`: `apps/web/src/components/search_box/providers/branch.rs`, `apps/web/src/components/search_box/logic/execute.rs`
 
@@ -42,11 +42,12 @@
 - `Surface`: `ui-state`
 - `Trigger`: 服务端返回 `BranchSwitched` 或 `ProtocolError`
 - `Preconditions`: `op.repo.branch-switch.request-switch` 已执行
-- `Immediate Result`: 当前 branch / scope 更新，或明确进入 stale-scope 错误
+- `Immediate Result`: exact RepoId 在 target branch 存在时更新 branch / scope；否则返回结构化 repo-context 错误
 - `Application Entry`: `crates/core/src/protocol/server.rs`, `apps/web/src/api/incoming/`, `apps/cli/src/server/handlers/switcher/`
 
 ## Notes
 
 - 本 flow 的核心不是打开切换器，而是 `switch_nonce` 与 `scope_nonce` 的严格门控。
 - branch switch 会重绑 repo-scoped session，因此属于仓库架构核心流，而不是单纯 UI 导航。
+- `RepoId` 是跨 peer 唯一匹配键。host-local alias 不传输，URL 与“唯一远端 repo”不得作为已知 RepoId 的 fallback。
 - 共享搜索入口如何把 `@` 模式与 `SearchAction::SwitchBranch` 路由到这里，已单独建模在 `command_surface_mode_routing.md` 与 `command_surface_action_routing.md`。

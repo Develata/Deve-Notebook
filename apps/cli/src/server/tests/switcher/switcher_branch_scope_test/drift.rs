@@ -3,22 +3,13 @@
 
 use crate::server::handlers::switcher::handle_switch_branch;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
-use deve_core::codec;
-use deve_core::ledger::schema::{REPO_INFO_METADATA_KEY, REPO_METADATA};
 use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::{RepoReadiness, ServerMessage};
 use tempfile::tempdir;
 
-// DECISION PENDING (USER): the UUID-first cutover removed switch_branch's
-// display-name-based cross-peer guard, so this now succeeds. Either the guard
-// is obsolete under RepoId-only matching (delete/repurpose this test) or its
-// removal is a Source Control fail-closed regression (restore the guard).
-// Assertions are intentionally kept unchanged pending that ruling.
-#[ignore = "switch_branch display-name cross-peer guard removed by UUID-first cutover; awaiting USER ruling"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow_peer(
-) -> anyhow::Result<()> {
+async fn switch_branch_uses_exact_repo_id_without_transporting_local_alias() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
@@ -37,37 +28,23 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
         10,
         Some("urn:notes"),
     )?;
-    let local_info = repo
-        .get_local_repo_info_by_id(notes_id)?
-        .expect("local repo info");
-    repo.run_on_local_repo(&notes_id.to_string(), |db| {
-        let read = db.begin_read()?;
-        let table = read.open_table(REPO_METADATA)?;
-        let raw = table.get(&REPO_INFO_METADATA_KEY)?.expect("repo info");
-        let mut info: RepoInfo = codec::decode(raw.value())?;
-        info.name = "peer-remote".into();
-        drop(table);
-        drop(read);
-        let write = db.begin_write()?;
-        {
-            let mut table = write.open_table(REPO_METADATA)?;
-            table.insert(&REPO_INFO_METADATA_KEY, codec::encode(&info)?.as_slice())?;
-        }
-        write.commit()?;
-        Ok(())
-    })?;
+    assert_eq!(
+        repo.host_repo_alias_runtime().binding(notes_id)?.alias,
+        "notes"
+    );
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
             uuid: notes_id,
-            name: "peer-remote".into(),
-            url: local_info.url,
+            name: notes_id.to_string(),
+            url: Some("urn:remote:independent".into()),
         },
     )?;
     let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(0);
+    session.switch_repo(notes_id.to_string(), Some(notes_id));
 
     handle_switch_branch(
         &state,
@@ -78,12 +55,47 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
     )
     .await;
 
+    let first = uni_rx.recv().await;
+    assert!(
+        matches!(
+            first,
+        Some(ServerMessage::BranchSwitched {
+            success: true,
+            switch_nonce: Some(1),
+            ..
+        })
+        ),
+        "expected successful BranchSwitched, got {first:?}"
+    );
     match uni_rx.recv().await {
-        Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+        Some(ServerMessage::RepoList {
+            branch: Some(branch),
+            repo_entries,
+            ..
+        }) => {
+            assert_eq!(branch, peer_id.to_string());
+            assert_eq!(repo_entries.len(), 1);
+            assert_eq!(repo_entries[0].repo_id, notes_id);
+            assert_eq!(repo_entries[0].display_alias, notes_id.to_string());
+            assert_eq!(repo_entries[0].readiness, RepoReadiness::Readonly);
         }
-        other => panic!("expected ProtocolError, got {:?}", other),
+        other => panic!("expected exact remote RepoList, got {other:?}"),
     }
-    assert_eq!(session.active_branch, None);
+    match uni_rx.recv().await {
+        Some(ServerMessage::RepoSwitched {
+            branch: Some(branch),
+            repo_id,
+            display_alias,
+            switch_nonce: Some(1),
+            ..
+        }) => {
+            assert_eq!(branch, peer_id.to_string());
+            assert_eq!(repo_id, notes_id);
+            assert_eq!(display_alias, notes_id.to_string());
+        }
+        other => panic!("expected exact remote RepoSwitched, got {other:?}"),
+    }
+    assert_eq!(session.active_branch.as_ref(), Some(&peer_id));
+    assert_eq!(session.active_repo_id, Some(notes_id));
     Ok(())
 }
