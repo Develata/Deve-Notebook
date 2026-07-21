@@ -81,7 +81,7 @@
   Remote Projection / Remote Import 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。
 - first-tag 批准目标为 ledger entry format v3 / `DEVELDG3`、Redb schema v4、WS binary namespace
-  `DEVEWSF4` 且 lockstep `4..=4`、immutable Remote Import。Redb v4、B4 Remote Import 与 C1′ F4/v4 cutover 已对齐；
+  `DEVEWSF4` 且 lockstep `5..=5`、immutable Remote Import。Redb v4与B4 Remote Import已对齐；ownership-aware RemoveLocalRepo要求的F4/v5 cutover仍是tag blocker；
   B5 typed review UI、B6 fresh receipts 及后续 watcher/release gates 仍阻塞 tag，不存在旧格式兼容 epoch。
 - Redb v2 只保留 `--allow-legacy-v2` 离线只读导出；v3 开发 DB 必须用旧 HEAD 导出后重建。WS v1/v2/v3、无版本 JSON、旧 CommandId 与旧 pull 不提供 adapter。
 - first-tag 验收使用 `docs/registry/acceptance-matrix.tsv`：普通 CI 验证 case/flow/journey/evidence locator 结构，tag-ready 再验证 clean current-HEAD 与 30 天内 target-host receipts。生成的 `docs/acceptance-matrix.md` 只用于阅读。

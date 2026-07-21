@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-20`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`, `apps/cli/src/watcher_runtime.rs`, `apps/cli/src/server/runtime/watcher_runtime.rs`
 
@@ -190,7 +190,7 @@ Stopping
 ### 8.9 Multi-Repo Readiness and Failure Isolation
 
 - `RepoMountState` 是 process-local readiness，与 `04_repository#repo-health-and-repair` 的 `RepoHealth` 正交。在线 workspace-dependent local write 的固定条件为 `RepoHealth::Healthy && RepoMountState::Mounted`。
-- repo-local start/worker/final-reconcile failure 只把该 repo slot 标记为 `Failed`；其它 mounted repo 继续运行。server bootstrap 最终若零个 repo `Mounted`，必须逆序关闭已启动 handle 并退出。
+- repo-local start/worker/final-reconcile failure 只把该 repo slot 标记为 `Failed`；其它 mounted repo 继续运行。零个 local repo 时 server 以 healthy `NoScope` 启动；存在 local repo 但最终零个 `Mounted` 时仍保留只读、诊断与 Create 能力。只有 typed supervisor/runtime host-fatal 才必须逆序关闭已启动 handle 并退出。
 - server 启动后即使全部 watcher 失败，仍保留纯读、ledger inspect/export、remote-shadow ingest 与 offline repair/export/diagnostic；不得把 server 整体伪装成健康可写。
 - host-fatal 只允许 typed 分类：supervisor invariant、generation corruption、thread/resource exhaustion、runtime coordination failure。`runtime coordination failure` 仅表示 process-global coordination state 已无法证明或继续安全运行，不得作为 repo-local backend/scan/dispatch/cleanup error 的兜底分类。host-fatal 必须回滚全部 handle；不得按错误字符串决定 host-wide shutdown。
 - 默认 scope、browser writer registration 与所有 workspace-dependent mutation admission 必须排除非 `Mounted` repo；repo list 可继续显示失败 repo 的只读可恢复状态。

@@ -5,7 +5,7 @@
 - `Layer`: `Application / Projection Transport`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_import_runtime.rs`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/commands/remote_import/`, `apps/cli/src/server/handlers/remote_import/`
@@ -144,7 +144,28 @@ Discard:  Ready | Stale | Failed -> Discarded
 - Refresh 只能从已封存 blobs 重算 candidate。若 `RepoId`、branch、source snapshot、远端 source locator/profile binding 与 digests 仍 exact，它可以把新 candidate revision 绑定到当前 Ledger head、当前 host-local Projection Locator 与当前 ignore snapshot，使这些本地 baseline drift 的 session 从 `Stale` 回到 `Ready`。
 - 远端 source locator/profile、branch、repo membership 或 source/manifest/blob digest drift 不可由 Refresh 重绑；session 必须保持 `Stale` 或进入 typed `Failed`。获取新远端内容必须 Discard 后重新 Prepare，不得猜测 source identity。
 - 相同 Apply 请求在响应丢失后返回并收敛已存 `RemoteImportApplyReceipt`，不得重复 append facts。该 exact replay 仍需通过 repo/scope/writer identity 与 Mounted gate，但不得被当前 Projection health 或已变化的远端 provider/locator admission 挡住，因为它不再执行新 authority mutation；若 receipt projection outcome 仍为 `Pending`，runtime 必须从 Ledger 幂等恢复 writeback，不得把它解释为未提交。启动期 recovery 只从 durable receipt + sealed artifacts 恢复，不依赖 Mounted gate 或远端 provider。
-- terminal record 只保留最近 64 条；`cleanup_pending=true` 的记录永不自动裁剪。cleanup 必须由显式 discard/repair 收敛，但 Applied receipt 的 projection outcome 仍为 `Pending` 时，sealed candidate/blobs 是幂等 writeback 的必要输入，repair 必须把该 cleanup 标为不可执行并保留全部 artifact；只有 outcome 已为 `Written / Degraded` 后才可完成 artifact cleanup。
+- terminal record 只保留最近 64 条；`cleanup_pending=true` 的记录永不自动裁剪。普通 cleanup 必须由显式 discard/repair 收敛；ownership-aware `RemoveLocalRepo` 是另一条已确认 destructive intent，只能通过本 runtime 的 typed removal plan/execute API收敛属于目标 RepoId 的 artifact。Applied receipt 的 projection outcome 仍为 `Pending` 时，sealed candidate/blobs 是幂等 writeback 的必要输入，任何 repair/removal 都必须把该 cleanup 标为不可执行并保留全部 artifact；只有 outcome 已为 `Written / Degraded` 后才可完成 artifact cleanup。
+
+### 4.1.1 Repo Removal Owner Plan {#remote-import-removal-owner-plan}
+
+`remote_import_runtime` 必须按 exact RepoId、session/revision 与 artifact identity向
+`RepoLifecycleCoordinator` 提供 narrow typed removal plan；coordinator不得读取或删除本目录：
+
+| Session / receipt state | Removal outcome |
+|---|---|
+| `Preparing / Ready / Stale / Failed` | warning；Execute 关闭新产品写门后封存 cleanup plan，Removed cut 后由本 runtime 删除 exact capture |
+| `Applied/Written` 或 `Discarded` | 允许本 runtime 清理 artifacts |
+| `Applied/Pending` | blocker；必须先完成幂等 writeback recovery |
+| `Applied/Degraded` | 由 active Projection Fault blocker阻止 remove |
+| corrupt / unknown artifact | `RepairRequired`；不得猜测 session 或删除候选 |
+
+Prepare 只生成带 owner token 的 plan；Execute 必须在 authority Quiescing 前对 catalog membership、
+authority generation、manifest digest、session/receipt state、artifact identity 与 owner token做最终
+exact revalidation并封存immutable cleanup plan。Removed cut后，本runtime只能按该plan执行artifact-only
+cleanup，不再修改即将随canonical Redb删除的session/runtime row。removal-repair同样只能使用原
+owner-issued durable identity；missing target可记为already absent，replacement或unknown identity不得
+通过文本RepoId marker重新授权。此API不授予自动background cleanup，也不改变whole-session Apply、
+receipt retention或Projection Fault authority。
 
 ### 4.2 Resource Contract {#remote-import-resource-contract}
 
@@ -201,7 +222,7 @@ pre-commit failure 不得留下事实前缀、workspace prewrite、External Chan
 
 - provider → workspace overwrite → watcher/External Changes admission；
 - Remote Import session 直接操作 Ledger authority tables，或暴露 generic callback/batch constructor；
-- remote Delete、逐文件 Apply、checkbox/select-all、隐式 rollback 或自动 cleanup authority；
+- remote Delete、逐文件 Apply、checkbox/select-all、隐式 rollback 或脱离显式 Discard/Repair/RemoveLocalRepo intent 的自动 cleanup authority；
 - 前端解析 raw detail、digest/path 或自行推导 blocker/stale/readiness；
 - 把 session `Failed/Stale/cleanup_pending` 映射为 `RepoHealth` 或 projection fault；
 - 在 Ledger commit 前写 Projection Workspace；在 writeback failure 后回滚 Ledger；
@@ -234,7 +255,7 @@ B4 已删除未发布的 pull → Projection Workspace overwrite → watcher/sca
 
 ## 12. Deferred / Removed From First Tag {#projection-backup-deferred-ledger-backup}
 
-独立 Ledger backup pack、history disaster recovery、remote Delete、逐文件 Apply、自动 cleanup、实时 sync、Git remote 与 provider-specific重型 SDK均不在首发范围。未来若引入，必须经独立 authority/runtime 决策；不得扩张本章现有边界。
+独立 Ledger backup pack、history disaster recovery、remote Delete、逐文件 Apply、无显式 destructive intent 的自动 cleanup、实时 sync、Git remote 与 provider-specific重型 SDK均不在首发范围。未来若引入，必须经独立 authority/runtime 决策；不得扩张本章现有边界。
 
 ## 本章相关命令
 

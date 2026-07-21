@@ -32,9 +32,9 @@
 - `Name`: `Dry Run Server Startup`
 - `Surface`: `cli`
 - `Trigger`: run `deve serve --dry-run`
-- `Preconditions`: config is readable and the data root contains at least one `Normal` catalog member whose canonical `<repo_id>.redb` identity and Projection Locator are valid
-- `Immediate Result`: server startup validates the existing cataloged runtime without binding or creating a local repo database
-- `Failure Result`: a missing/empty catalog directs the operator to initialize the data root; a missing exact authority database or identity mismatch fails closed with an explicit cataloged-repo open diagnostic
+- `Preconditions`: config and host registries are readable；zero `Normal` catalog members is valid
+- `Immediate Result`: server startup validates the existing cataloged runtime without binding or creating a local repo database；empty catalog reports healthy `NoScope`
+- `Failure Result`: corrupt host registry or typed host-fatal fails closed；an invalid existing repo is reported as repo-local readonly/repair state rather than fabricating a default repo
 - `Application Entry`: `apps/cli/src/commands/serve.rs`
 
 ### `op.cli.server.start`
@@ -42,10 +42,10 @@
 - `Name`: `Start Local Hub`
 - `Surface`: `cli`
 - `Trigger`: run `deve serve`
-- `Preconditions`: ledger, server config, and at least one healthy local repo Projection Locator/workspace are valid and mountable
-- `Immediate Result`: Axum HTTP/WebSocket server starts only after `WatcherSupervisor` reports at least one repo Mounted
+- `Preconditions`: ledger host registries and server config are valid；each existing local repo is independently admitted when its authority identity and Projection Locator/workspace are valid
+- `Immediate Result`: Axum HTTP/WebSocket server starts after host runtime composition; zero-repo is healthy `NoScope`, while existing repo watcher failures remain typed readonly state
 - `Partial Result`: repo-local watcher start failure leaves that repo readonly/diagnostic while other Mounted repos remain writable
-- `Failure Result`: zero Mounted at bootstrap or a typed host-fatal closes all started handles and exits non-zero
+- `Failure Result`: only a typed host-fatal closes all started handles and exits non-zero；zero repo or zero Mounted repo-local outcomes remain a running readonly/diagnostic/Create-capable host
 - `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/server/`
 
 ## Response Flow

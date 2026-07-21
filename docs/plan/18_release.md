@@ -421,7 +421,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 > [!IMPORTANT]
 > **Data Compatibility**: 首个 stable 发布后，任何涉及 `Ledger` 或 Projection Workspace / Locator 存储结构的变更，**MUST** 提供迁移路径。首选 "Copy & Rebuild" 策略（见 03_storage/）；仅当无法重建时才提供增量迁移脚本，并在 Major 版本中发布。pre-1.0 阶段允许一次性不兼容重置，但必须更新 plan 与 release notes。
 >
-> 首个公开基线保持 `LEDGER_ENTRY_FORMAT_VERSION = 3` / `DEVELDG3`，Redb schema 冻结为 v4（local-authority profile 含 Remote Import session/runtime tables 与 repo-local `PROJECTION_FAULTS`；remote shadow 不含这些 host-only tables），首个 WS epoch 为 `DEVEWSF4` / v4 lockstep。F4/v1/v2/v3、无版本 JSON、Redb v3 与缺 required table 的未发布 v4 开发 DB 都不提供 adapter、dual write 或 runtime migration。Redb v2 仍只保留 `--allow-legacy-v2` 离线只读导出；旧开发 DB 必须用对应旧 HEAD 导出后重建，不能借用 v2 救援入口。Remote Import manifest JSON v1 是 host-only capture contract，不是 Ledger payload 或同步事实格式。
+> 首个公开基线保持 `LEDGER_ENTRY_FORMAT_VERSION = 3` / `DEVELDG3`，Redb schema 冻结为 v4（local-authority profile 含 Remote Import session/runtime tables 与 repo-local `PROJECTION_FAULTS`；remote shadow 不含这些 host-only tables），首个 WS epoch 为 `DEVEWSF4` / v5 lockstep。F4/v1/v2/v3/v4、无版本 JSON、Redb v3 与缺 required table 的未发布 v4 开发 DB 都不提供 adapter、dual write 或 runtime migration。Redb v2 仍只保留 `--allow-legacy-v2` 离线只读导出；旧开发 DB 必须用对应旧 HEAD 导出后重建，不能借用 v2 救援入口。Remote Import manifest JSON v1 是 host-only capture contract，不是 Ledger payload 或同步事实格式。
 
 ### 3.1 First-tag Format Transition {#first-tag-format-transition}
 
@@ -429,7 +429,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 |---|---|---|---|---|
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
 | Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
-| WebSocket | `DEVEWSF4`, lockstep v4 | 已对齐；legacy/unversioned JSON 与 v1/v2/v3 adapter 均不存在 | C1′ + ADR 0013 | non-blocking |
+| WebSocket | `DEVEWSF4`, lockstep v5 | 当前代码仍为未发布v4；legacy/unversioned JSON已删除，但removal Prepare/Execute与v5 lockstep尚未实现 | R3 + ADR 0014 | blocked |
 | Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire 已对齐；B5 typed Web client 与 B6 fresh receipts 未完成 | B4/B5/B6 | blocked |
 | Projection Locator / repo alias | immutable `workspace_segment` + host-local alias JSON v1；peer payload no alias | 已对齐；当前 create 生成 bare canonical RepoId segment，合同仍允许一次性 host-local initial-alias segment；alias 后续不移动路径或进入 peer payload | C1′ + ADR 0013 | non-blocking |
 
@@ -437,7 +437,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 
 ### 3.2 Remote Import Release Gate {#remote-import-release-gate}
 
-首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、双 repo 隔离与真实 backend browser journey。B4 已完成 backend/CLI/product wire 与旧 pull 删除；STORE-019/020/021/023 继续保留 B5/B6/W7 尚未产出的真实 `gap`，旧 pull tests 不得冒充 Remote Import evidence。
+首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、repo removal owner-plan、双 repo 隔离与真实 backend browser journey。B4 已完成 backend/CLI/product wire 与旧 pull 删除；STORE-019/020/021/023 继续保留 B5/B6/R4 尚未产出的真实 `gap`，旧 pull tests 不得冒充 Remote Import evidence。
 
 ## 4. Open Source License (开源协议)
 

@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -182,32 +182,23 @@ version，不能比较不同 peer 的局部序号。
 
 #### Remove Scope Finalization Projection
 
-当 active repo 的 durable remove 已提交、但 server 在 lifecycle finalization 时证明 deferred fallback 已失效，server 复用现有消息形成 typed partial outcome。发起 remove 的 connection 使用：
+F4/v5 只能使用单个 backend-produced typed finalization；不得复用 Source Control error或依赖两个frame的顺序来推断lifecycle成功：
 
 ```text
-RepoList(scope_nonce = switch_nonce, final repos without removed repo)
-  -> ProtocolError(
-       code = SC_REPO_NOT_SELECTED,
-       switch_nonce = switch_nonce,
-       scope_nonce = switch_nonce)
+RepoRemovalScopeFinalized {
+  request_id: Option<Uuid>,
+  job_id,
+  removed_repo_id,
+  final_repo_list,
+  scope: RepoBound { repo_id, scope_nonce }
+       | NoScope { scope_nonce }
+}
 ```
 
-无论发起者最终成功切到 fallback，还是进入上述 invalid-fallback partial，其他已绑定同一 removed RepoId 的 connection 都必须被 server-driven invalidation。它们没有发起者的 pending nonce；server 必须为每个 connection 分配自己的 `new_scope_nonce > current_scope_nonce`，原子撤销 RepoBound/writer-ready，并发送：
-
-```text
-RepoList(scope_nonce = new_scope_nonce, final repos without removed repo)
-  -> ProtocolError(
-       code = SC_REPO_NOT_SELECTED,
-       switch_nonce = None,
-       scope_nonce = new_scope_nonce)
-```
-
-- 发起者序列只对精确匹配 `PendingRepoSwitchKind::RemoveCurrent` 与 pending `switch_nonce` 的客户端有效。observer 序列只在当前 RepoBound repo 已从 staged final RepoList 消失、`switch_nonce = None`、`scope_nonce > current_scope_nonce` 且随后 error code/nonce 精确匹配时有效；它必须覆盖并退休旧 scope 上其它 pending repo/branch switch intent。
-- Web 对两类序列都只能使用一个有界 staged slot，绑定 `(connection_epoch, stage_kind, scope_nonce, pending_remove_nonce_if_any)`，不得保存第二份 RepoList 或跨 connection 复用。第一帧必须原子安装 staged blocker 并立即清除当前 Web writer-ready，然后只暂存 final RepoList；此时尚未提交 `NoScope`、不得应用列表、不得清除任何 editor pending overlay、不得另行 bootstrap，也不得从列表自动选择第一个 repo。
-- 第二条匹配的 typed error 原子提交 `NoScope(new_scope_nonce)`、应用已暂存 RepoList、清除 current repo/doc/writer-ready 与相应 pending remove/scope-switch intent；不得合成 `RepoSwitched` 或选择第三个 repo。错误 detail 不参与判断，且该步骤**不得丢弃 editor pending overlay**。
-- staged slot 的固定 deadline 为 `10s`（`REMOVE_SCOPE_PARTIAL_STAGE_TIMEOUT_MS = 10_000`），只能使用 monotonic clock 计算，不受 wall-clock 跳变影响。连接退休/断线/认证失效、受控 scope recovery、第二个 staged sequence、乱序/不匹配帧或 deadline 到期时，必须丢弃 staged RepoList 与 pending remove/scope-switch intent、**保留全部 editor pending overlay**、保持写门关闭、退休当前 connection 并从新 connection 重建 authoritative scope；同一页面恢复期间要求用户显式选择 repo，不得自动 fallback。旧 connection epoch 的第二帧不得提交新状态。
-- nonce、stage kind、消息顺序或 error code 任一不匹配时必须走上述 fail-closed recovery；不得把普通 RepoList/ProtocolError 误解释成该 partial outcome。
-- 这只是现有 `RepoList`、`ProtocolError`、`scope_nonce/switch_nonce` 的 thin-client projection，不新增 watcher lifecycle message，也不把 fallback authority 下放到 Web。
+- 发起connection只有在request/job/connection epoch/current scope与pending removal精确匹配时才消费带request_id的finalization。backend验证optional fallback binding仍exact时可以返回RepoBound；否则返回NoScope，不把成功删除降级为错误，也不选择第三个repo。
+- 其它仍exact绑定removed RepoId的observer收到`request_id=None`的server-driven finalization；server为每个connection分配自己的`new_scope_nonce > current_scope_nonce`并返回NoScope。已独立切离的observer不得被覆盖。
+- Web必须在一次状态更新中应用backend final repo list与scope finalization，撤销removed scope的repo/doc/writer readiness并清除对应pending removal/switch intent；不得丢弃editor pending overlay、合成RepoSwitched、解析detail或从列表自动选择repo。
+- disconnect、旧connection epoch、request/job/repo/scope mismatch时丢弃该消息并保持写门关闭；新connection通过authoritative handshake/list与GetLifecycle恢复。不存在`RepoList -> ProtocolError(SC_REPO_NOT_SELECTED)` staged slot、10秒partial timeout或以Source Control error证明removal成功的兼容路径。
 
 ### 4.5 Structured Error Contract
 
@@ -462,18 +453,25 @@ command 打开 Source Control 与解析 notice detail 的路径；缺失期间�
   backend `RepoListEntry`。alias 相同不能合并 row，alias 改变不能改变 active repo/scope/doc identity。
 - Set Alias 发送 `request_id + repo_id + alias + expected_alias_revision`；收到 stale revision 时只
   展示 typed error 并刷新 RepoList，不做前端 last-write-wins、revision 自增或 detail parsing。
-- Create/Remove 只提交 lifecycle intent，并按 request_id/job_id 渲染 Accepted/Running/terminal 状态。
-  transport disconnect 后重连使用 GetLifecycle；不得重发一个新 request_id 来猜测前次是否成功。
+- Create只提交lifecycle intent。Remove先发送Prepare，保存仅属于当前authenticated principal/session、
+  connection epoch、scope、request与backend `preparation_id`的preview及opaque confirmation token；
+  token只驻留内存，不得进入URL、browser storage或telemetry。用户确认后发送具有新request_id且
+  显式引用exact preparation_id的Execute，并按request_id/job_id渲染
+  Accepted/Running/terminal状态。前端不得计算token TTL、解析preview/detail或自行判断blocker。
+  transport disconnect会丢弃尚未消费的preview/token；已admission Execute重连后使用GetLifecycle，
+  不得重发新request_id猜测前次是否成功。
 - `RepoCreationSettledPublication` / `RepoRemovalSettledPublication` 的 mount、readonly、partial、repair
   分类完全由 backend outcome 决定。Web 不读取路径、marker、locator、watcher generation 或 raw error
-  推断 cleanup、重启、fallback 或 rollback。
+  推断 cleanup、重启、fallback、NoScope 或 rollback。最后一个repo移除后只渲染backend提交的
+  zero-repo/NoScope状态与Create入口。
 - alias JSON import/export 只属于 CLI/operator surface；Web 不读取本地 JSON、不实现 warning/skip
   规则，也不拥有 alias store cache。
 - lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发
   status refresh，不能在新 scope 自动切换 repo。editor pending overlay 与 repo-control state 分离。
 
-该 runtime 在 C1′/A1/B1 code 与 browser evidence 完成前登记为 `planned/no-code-yet`，不得复用旧
-rename controller 或把 Source Control/External Changes state 当作 adapter。
+当前F4/v4 alias/create thin path已存在；F4/v5 removal preview-token、zero-repo与browser evidence
+完成前runtime保持部分承载。不得保留direct Remove adapter、复用旧rename controller或把
+Source Control/External Changes state当作adapter。
 
 ## 12. Refactor Target
 

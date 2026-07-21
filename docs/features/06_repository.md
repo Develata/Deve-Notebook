@@ -27,8 +27,9 @@
 - 用户可以切换当前激活 repo。
 - Source Control、Explorer、当前文档作用域应随 repo 切换而同步变化。
 - 界面不应同时把所有 repo 混成一个全局工作区。
-- 仓库展开界面应提供新增、设置本地 alias 与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于修改当前 host 的显示 alias 或移除该 repo。
-- 普通移除仓库会删除本机该 repo 的 Ledger history 与 Deve-owned runtime state，但保留 Projection Workspace 容器、Markdown/附件、`.git` 与其它非 `.notegit` 文件。确认文案必须准确说明两类结果，不能写成“所有数据已删除”或“仅从列表隐藏”。
+- 仓库展开界面应提供新增、设置本地 alias 与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于修改当前 host 的显示 alias 或先打开backend removal preview。
+- 普通移除仓库采用Prepare → Execute：preview只显示backend生成的preserved/deleted categories与typed warning/blocker，确认后才消费短期token。它会删除本机该repo的Ledger history与Deve-owned runtime state，但保留Projection Workspace容器、Markdown/附件、`.git`与其它非`.notegit`文件。确认文案必须准确说明两类结果，不能写成“所有数据已删除”或“仅从列表隐藏”。
+- 最后一个repo可以移除；完成后界面进入`NoScope`空状态，仍可登录、查看诊断和创建首个新repo。没有fallback不应显示为删除失败。
 - create/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
 - create 已提交但 workspace ingestion mount 失败时，新 repo 保留只读可见，当前 session 不自动切换。
 - alias 修改只更新当前 host 的列表/标题显示；不停止 watcher、不移动 workspace、不改变可写状态、scope 或其它 peer 的名称。
@@ -65,7 +66,7 @@
 - Refresh 只重算已封存 snapshot：在 RepoId/branch/source/locator 仍 exact 时可把新 revision 绑定到当前 Ledger head 与 ignore snapshot；source/locator/branch/membership/tamper drift 不可重绑。要读取新的远端内容必须先 Discard 后重新 Prepare。
 - active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。alias 修改不搬 RepoId-based artifacts，也不使 session stale。
 - Web / Command Palette 只提交 typed intent；backend 解析 repo scope、locator/profile、credential ref、session/revision 与 blockers。S3-compatible UX 只能选择 backend-defined profile handle，不收集 endpoint URL 或 secret。
-- 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，W7 RepoId/provider lifecycle coordination仍待 A1/B1 收敛，独立 Web review surface 由 B5 交付。正式命令面见 `14_commands#remote-import-command-contract`。
+- 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，现有 RepoId/provider lifecycle coordination已存在，ownership-aware removal owner-plan由R4补齐，独立Web review surface由B5交付。正式命令面见`14_commands#remote-import-command-contract`。
 
 ## 非目标
 
@@ -143,7 +144,10 @@
 - 新增 repo 后自动切换到新 repo。
 - 上述自动切换仅在新 repo 成功 mounted 时发生；若 durable create 已提交但 mount 失败，新 repo 只读可见且当前 session 保持原 repo。
 - alias 修改后列表与标题显示新名称，`RepoId`、scope、writer readiness 与 workspace path 不变；修改非当前 repo 不改变当前 scope。
-- 移除前必须先通过显式 Remote Import Discard/Repair 清空该 repo 的 session/artifact debt。移除后目标 repo 从普通列表消失，本机 canonical `.redb`、workspace `.notegit`、locator 与 alias 均已删除；workspace root、Markdown/附件、`.git`、remote shadow 与显式 backup/export 保留。
+- Prepare必须显示Remote Import owner返回的typed状态：未Applied的session作为warning并由Execute显式discard/cleanup；Applied/Pending、Applied/Degraded或unknown/corrupt artifact作为blocker。用户不需要在正常可清理状态下先跳到另一个页面手工清空。
+- 移除后目标repo从普通列表消失，本机canonical`.redb`、workspace`.notegit`、locator、alias与owner-issued Remote Import capture均已删除；watcher/provider/session slot由各runtime退休而不是作为文件删除。persistent authority lock空文件保留为host协调身份；workspace root、Markdown/附件、`.git`、remote shadow与位于reserved removal roots之外的operator恢复输入保留。
+- Prepare发现active operator recovery input与`.notegit`、canonical Redb或Remote Import target重叠时必须阻断。顶层`.notegit`或DB identity replacement不能靠同RepoId文本marker自动repair；child link/reparse entry只删除entry本身且external target保留。
+- Web不得显示manifest/path/digest/token binding或raw cleanup detail，也不得自行推断blocker、TTL、fallback或repair动作。confirmation token只驻留当前connection内存并绑定认证session/connection；刷新或重连后必须重新Prepare。
 
 ### REPO-FEAT-05: Repo lifecycle 的 mount partial outcome
 
@@ -163,6 +167,9 @@
 - create 返回“已创建但工作区摄取不可用”，新 repo 只读可见且当前 session 未切换。
 - alias store failure 不改变旧 alias；成功 alias set 只更新 display，不发生 remount、scope 切换、Projection Fault 或 Remote Import stale。
 - final reconcile 失败发生在 durable remove 前时，remove 不提交并可恢复旧 watcher；任何混合事实都进入 repair，不由 UI 猜测回滚。
-- durable remove 已提交但 deferred fallback 在最终 publication 前已 removed、membership generation 改变或 ingestion Failed 时，不绑定失效 repo、不静默选择第三个 repo；无关 repo 的 catalog mutation 不影响该 fallback token。发起 session 进入自己的 `NoScope` partial。无论发起者 fallback 成功或失败，所有仍绑定 removed RepoId 的 observer session 都提交各自的新 `NoScope` epoch并撤销 writer-ready，且不复用发起者 switch nonce。每个受影响 Web connection 按固定顺序暂存携带自身 scope nonce 的最终 `RepoList`，再以匹配的 `ProtocolError / SC_REPO_NOT_SELECTED` 提交结果；不得收到伪造 `RepoSwitched`，也不新增 watcher lifecycle wire message。Web 只清除对应 pending remove/scope-switch intent，不丢弃 editor pending overlay，不自动选择其它 repo。
-- membership remove 的 authority cut 在短 `Catalog -> Repo(target)` lane 内原子替换该 RepoId 的 bounded catalog record 并轮换 process-local generation，且不遍历 session；旧 binding 从 cut 起立即拒写。session fan-out 在 permit 外执行。Web 收到第一帧 final RepoList 时立即关闭 writer-ready，但在第二帧前不应用列表、不提交 NoScope、也不丢 editor pending overlay。
+- Execute先原子持久化token consumption与job admission，再关闭产品写门、quiesce provider、完成watcher E2，之后才进入authority Quiescing。任一pre-cut失败不得留下“token已消费但job不存在”的不可恢复状态。
+- pre-cut失败必须逆序恢复authority、watcher、exact provider generation并释放Transitioning reservation；provider resume或其它补偿失败时repo保持typed readonly/repair，不得伪装成正常Active。
+- durable remove已提交但optional fallback在最终publication前失效时，不绑定失效repo、不静默选择第三个repo，也不把成功删除改报为error。发起者与所有仍绑定removed RepoId的observer session各自提交新的`NoScope` epoch并撤销writer-ready；Web只消费backend最终RepoList/lifecycle outcome，清除对应pending remove/scope-switch intent，不丢弃editor pending overlay。
+- membership remove的authority cut在短`Catalog -> Repo(target)` lane内原子替换该RepoId的bounded catalog record并轮换process-local generation，且不遍历session；旧binding从cut起立即拒写。session fan-out在permit外执行，前端不得实现旧两帧partial-stage或从`SC_REPO_NOT_SELECTED`推断删除成功。
 - repo list/scope publication 只出现最终一次 typed outcome。
+- cleanup成功后先fsync durable terminal result并释放authority lock handle，再best-effort投递session/network publication；投递失败不得阻止same-RepoId readmission。

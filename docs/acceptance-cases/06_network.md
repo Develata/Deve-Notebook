@@ -47,15 +47,19 @@
     - watcher_health_exposes_no_repo_identity_generation_path_or_failure_detail: true
 
 - case_id: NET-004
-  goal: 首发 F4/v4 协议格式、version admission、Repo Control 与 debug JSON 边界可证明。
+  goal: 首发 F4/v5 协议格式、version admission、Repo Control removal preview-token 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
-    - 当前代码与批准目标均为 F4/v4 lockstep
+    - 批准目标为F4/v5 lockstep；当前代码仍是未发布F4/v4，R3切换前保持真实gap
   steps:
+    - gap: F4/v5 removal Prepare/Execute wire and lockstep producer are not implemented until R3
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture
     - run: cargo test -p deve_core unsupported_json_version_is_checked_before_message_schema -- --nocapture
-    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrips_in_f4_v4_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib remote_import_and_repo_control_nested_wire_roundtrip_in_f4_v5_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib direct_remove_lifecycle_intent_is_absent_from_f4_v5 -- --nocapture
+    - run: cargo test -p deve_core --lib repo_removal_execute_wire_binds_distinct_request_and_preparation_ids -- --nocapture
+    - run: cargo test -p deve_core --lib repo_removal_wire_binds_optional_fallback_and_typed_scope_finalization -- --nocapture
     - run: cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
     - run: cargo test -p deve_cli --lib remote_import_route -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_accepts_versioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
@@ -64,9 +68,9 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF4"
-    - versioned_packet_protocol_version_eq: 4
-    - min_supported_packet_protocol_version_eq: 4
-    - unpublished_protocol_v1_v2_v3_rejected_without_adapter: true
+    - versioned_packet_protocol_version_eq: 5
+    - min_supported_packet_protocol_version_eq: 5
+    - unpublished_protocol_v1_v2_v3_v4_rejected_without_adapter: true
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - explicit_versioned_json_debug_only: true
     - legacy_json_fallback_absent: true
@@ -75,6 +79,11 @@
     - malformed_versioned_payload_error_code: "SYNC_INVALID_PAYLOAD"
     - remote_import_response_echoes_exact_repo_branch_scope_session_and_revision: true
     - remote_import_show_discard_none_revision_is_precandidate_only: true
+    - repo_removal_prepare_response_carries_backend_preparation_id: true
+    - repo_removal_execute_request_has_distinct_request_id_and_exact_preparation_id: true
+    - repo_removal_optional_fallback_is_prepare_selected_and_execute_opaque_bound: true
+    - repo_removal_final_repo_list_and_scope_are_one_typed_finalization: true
+    - repo_removal_finalization_does_not_use_sc_repo_not_selected: true
 
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。

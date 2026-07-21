@@ -53,8 +53,9 @@ blueprint in `docs/plan/`.
 | [0006](./0006-native-linux-gtk3-first-tag-route.md) | Native Linux GTK3 first-tag route | Accepted |
 | [0007](./0007-projection-backup-first-tag-route.md) | Projection Backup first-tag route | Superseded by 0011 |
 | [0008](./0008-s3-compatible-remote-projection-credential-binding.md) | S3-compatible Remote Projection credential binding | Accepted |
-| [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Superseded by 0011 |
+| [0009](./0009-first-public-websocket-protocol-epoch.md) | First public WebSocket protocol epoch | Superseded by 0014 |
 | [0010](./0010-sealed-pre-tag-release-candidate.md) | Sealed pre-tag release candidate promotion | Accepted |
 | [0011](./0011-immutable-ledger-first-remote-import.md) | Immutable ledger-first Remote Import | Accepted |
 | [0012](./0012-repo-local-redb-projection-fault-store.md) | Repo-local Redb Projection Fault store | Accepted |
 | [0013](./0013-immutable-repo-id-host-local-alias.md) | Immutable RepoId and host-local repo alias | Accepted |
+| [0014](./0014-ownership-aware-local-repo-removal.md) | Ownership-aware local repository removal | Accepted |

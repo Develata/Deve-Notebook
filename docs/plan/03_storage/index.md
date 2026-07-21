@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -73,9 +73,9 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/.host/projection-locators.toml`
 - `ledger/.host/repo-aliases.json`
 - `ledger/.host/repo-catalog.lock`
+- `ledger/.host/repo-authority-locks/<repo_id>.lock`
 - `ledger/.host/repo-catalog/<repo_id>.json`
 - `ledger/.host/repo-lifecycle-jobs/<request_id>.json`
-- `ledger/backups/<repo_id>-<timestamp>.redb`
 
 每个 local-authority Redb v4 database 内还包含 host-local、非同步的
 `projection_faults` recovery side table。它与 Remote Import workflow rows 共处同一
@@ -111,19 +111,37 @@ authority lock。它必须以 no-follow regular handle 打开并在加锁后复�
 runtime mutex 与该 file lock 的固定顺序是 process mutex -> file lock。未取得 file lock 的调用不得
 读取 conditional cut truth、清理 crash temp、发布 catalog record 或完成 bootstrap seed。
 
+`repo-authority-locks/<repo_id>.lock` 是 `authority_storage_runtime` 按 exact RepoId 使用的稳定
+跨进程协调身份。该空文件不包含 repo 数据、永不进入 removal manifest，也不得在 retire 后 unlink；
+只有其 OS lock handle 具有排他语义。slot 必须在打开 canonical DB 之前取得该 handle，并持续持有到
+DB 关闭/删除、owner cleanup、catalog tombstone retirement 与 durable terminal job result fsync 全部完成后才释放；
+session/network publication delivery位于lock release之后，失败只形成control-plane delivery debt。
+later same-RepoId admission 必须重新锁定同一 pathname、重读 current membership并建立新 slot generation；
+server 已持有该锁时，CLI只能通过 authenticated loopback proxy 使用同一 runtime，不得另开数据库或
+把 OS 删除失败当作排他协议。
+
 每个 catalog record 的 deterministic JSON v1 至少包含
 `format="deve.host-repo-membership"`、`version=1`、exact `repo_id`、
 `state="normal|removed"`、单调 `membership_revision`、prepared identity digest 与最近一次
 `lifecycle_request_id`；文件名、payload RepoId 与 DB identity 任一不一致必须 fail-closed。
 `removed` 只是在 ownership-aware `RemoveLocalRepo` 已线性化但 cleanup 尚未全部收敛期间的
-transient tombstone；Remote Import 已由其 owner 显式收敛为 clean/absent，且成功删除 exact local
-DB、workspace `.notegit`、locator 与 alias 后，必须由 catalog owner 删除该 record。它不是可恢复的长期软删除状态。
+transient tombstone；Remote Import owner 已完成本次 removal plan，且成功删除 exact local DB、
+workspace `.notegit`、locator 与 alias 后，必须由 catalog owner 删除该 record。它不是可恢复的长期软删除状态。
 `repo-lifecycle-jobs/<request_id>.json` 是 `RepoLifecycleJobRuntime` 的 host-local admission/completion
 receipt，记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome；
-remove receipt 还必须固定 exact ownership manifest、fingerprint/token 与逐 owner cleanup outcome；它不授予
-repo membership，也不得进入 Ledger/sync。active/cleanup-debt receipt 永不裁剪；normal repo 的 create
+remove preparation 还必须固定 exact ownership manifest、manifest digest、confirmation-token hash/expiry/
+issuer binding 与逐 owner cleanup outcome。Execute 必须在同一 durable record 内原子转换为
+`ExecuteAdmitted { execute_request_id, job_id, consumed_token_hash }` 并 fsync 后才启动 worker；原始
+confirmation token 不得落盘。它不授予 repo membership，
+也不得进入 Ledger/sync。active/cleanup-debt receipt 永不裁剪；normal repo 的 create
 receipt 至少由 catalog record 可追溯，terminal receipt 的 bounded retention 归
 `04_repository#repo-lifecycle-coordinator`。
+
+当前 `backups/projection-workspace` 只是在 `recover` 命令中由 operator 指定/提供的外部恢复输入，
+没有 project-owned RepoId ownership manifest，也不是本章管理的 local-backup runtime。普通
+`RemoveLocalRepo` 必须保留所有位于 reserved removal roots 之外的该类输入；若 active recovery input
+与 exact `.notegit`、canonical Redb 或 owner-issued Remote Import capture target 重叠，Prepare 必须
+返回 blocker。首发不得为了删除功能临时新建 managed Ledger backup authority。
 
 ### 3.1.1 Remote Import Runtime Layout {#remote-import-runtime-layout}
 
@@ -160,8 +178,9 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
 - `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
 - ownership-aware `RemoveLocalRepo` 只能删除 workspace root 下 exact、identity-matched 且自身非
-  symlink/junction 的 `.notegit/` 树；workspace root 与其它 child（包括 Markdown、附件、`.git/`、
-  `.gitignore`、`.deveignore`）全部保留。递归删除不得跟随任何 child symlink/reparse point。
+  symlink/junction/reparse point 的 `.notegit/` 树；workspace root 与其它 child（包括 Markdown、附件、`.git/`、
+  `.gitignore`、`.deveignore`）全部保留。no-follow walker 可以删除 child link/reparse entry 本身，
+  但不得解析或进入 target；顶层 `.notegit` identity replacement 永远阻断自动 removal/repair。
 
 > Projection Locator Layout（projection-locator-contract）见 [projection.md#projection-locator-contract](./projection.md#projection-locator-contract)（§3.2.1）。
 
@@ -256,7 +275,7 @@ RepoDiscovered
   ```
 
 - watcher 初始化或运行期失败必须对该 repo fail-closed 为 `RepoMountState::Failed`，不得写入 projection fault journal，也不得伪装为 `DegradedProjection`。
-- server bootstrap 对 repo-local watcher start failure 按 repo 隔离；健康且成功 mounted 的 repo 继续运行。启动完成时若零个 repo 处于 `Mounted`，host 必须回滚已启动 watcher 并终止 server。
+- server bootstrap 对 repo-local watcher start failure 按 repo 隔离；健康且成功 mounted 的 repo 继续运行。零个 local repo 时，host 以 `NoScope` 正常启动且 watcher `expected=0` 为 healthy；存在 local repo 但零个 `Mounted` 时，host 仍保留只读、诊断与 Create 能力。只有 typed supervisor/runtime host-fatal 才回滚已启动 watcher 并终止 server。
 - server 已运行后即使全部 watcher 后续失败，仍保留纯读、ledger inspect/export 与离线 repair/diagnostic 能力；所有依赖 workspace 当前性的在线本地 mutation 保持关闭。
 - `Transitioning / Mounted / Failed` 的 generation、失败原子切点与 owned lifecycle 唯一由 [watcher contract](./watcher.md#watcher-contract) 定义；repo create/remove 的 durable 与 mount 协调唯一由 `04_repository#repo-lifecycle-coordinator` 定义。host-local alias不参与 mount lifecycle。
 

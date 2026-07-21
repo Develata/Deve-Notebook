@@ -48,7 +48,7 @@
 
 ### 5. Native 双模式
 
-- Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、默认 repo/projection 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
+- Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、zero-repo host registry 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复；不得为启动成功而自动创建默认 repo/projection。
 - `LocalBackend` 必须在主 WebView 创建前完成 native session handoff 与 bootstrap 注入。Android 因 Wry cookie API 不受支持，必须在 WebView 登记后以无参数 native command 调用系统 CookieManager 安装 HttpOnly cookie，确认后只 reload 一次；cookie/secret 不得进入 JS 或 command 参数。
 - Mobile v1 不使用 child process。
 - Mobile 可从可信 bundled `LocalBackend` Settings 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。

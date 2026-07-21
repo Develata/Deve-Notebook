@@ -275,31 +275,47 @@
 - case_id: STORE-014A
   goal: 本地 Repo 新增、host-local alias、安全移除与 watcher mount partial outcome。
   preconditions:
-    - WebLightPeer 已认证并处于 local writable scope
-    - 至少存在两个 local repo
+    - WebLightPeer 已认证
+    - fixture 可分别启动 zero/one/multi local repo host
   steps:
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
-    - run: cargo test -p deve_cli removed_membership_generation_changed_or_failed_fallback_is_not_bound -- --nocapture
-    - run: cargo test -p deve_web remove_current_fallback_failure_commits_no_scope -- --nocapture
-    - run: cargo test -p deve_cli remove_current_invalidates_all_bound_sessions -- --nocapture
-    - run: cargo test -p deve_web remove_partial_stage_is_connection_epoch_bounded -- --nocapture
-    - gap: ownership-aware RemoveLocalRepo exact manifest, handle retirement, owned-state cleanup, and repair producer are not implemented yet
+    - gap: R1-R6 per-RepoId authority ownership, zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh evidence are not implemented yet
+    - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
+    - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
+    - run: cargo test -p deve_cli --lib zero_repo_create_without_projection_base_returns_typed_error -- --nocapture
+    - run: cargo test -p deve_cli --lib prepare_local_repo_removal_reissues_and_invalidates_confirmation_token -- --nocapture
+    - run: cargo test -p deve_cli --lib execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token -- --nocapture
+    - run: cargo test -p deve_cli --lib execute_local_repo_removal_retry_returns_existing_job_or_result -- --nocapture
+    - run: cargo test -p deve_cli --lib execute_local_repo_removal_atomically_persists_admission_before_worker -- --nocapture
+    - run: cargo test -p deve_cli --lib web_removal_token_binds_principal_connection_and_server_incarnation -- --nocapture
+    - run: cargo test -p deve_cli --lib offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_deletes_owned_state_and_preserves_workspace_content -- --nocapture
     - run: cargo test -p deve_cli --lib remove_local_repo_cleanup_failure_is_exactly_repairable -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_retires_bootstrap_and_secondary_db_leases -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_fails_closed_while_another_process_holds_authority -- --nocapture
+    - run: cargo test -p deve_core --lib persistent_authority_lock_path_survives_removal_and_serializes_readmission -- --nocapture
+    - run: cargo test -p deve_core --lib readmitted_repo_id_replaces_retired_slot_with_new_generation -- --nocapture
+    - run: cargo test -p deve_core --lib concurrent_same_repo_id_readmission_uses_one_reopening_reservation -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_rejects_notegit_symlink_and_reparse_escape -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_no_follow_walker_never_enters_child_link_targets -- --nocapture
     - run: cargo test -p deve_cli --lib remove_local_repo_restart_classifies_each_durable_cut_from_exact_manifest -- --nocapture
     - run: cargo test -p deve_cli --lib remove_local_repo_manifest_precedes_tombstone_and_cleanup_complete_precedes_retirement -- --nocapture
     - run: cargo test -p deve_cli --lib remove_local_repo_old_request_cannot_remove_readmitted_membership -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_local_repo_remote_import_owner_state_matrix -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_repair_dry_run_and_explicit_apply_reauthorize_only_proven_drift -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_repair_rejects_replaced_notegit_and_redb_even_with_matching_repo_id_text -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_prepare_blocks_overlapping_operator_recovery_input -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_pre_cut_failure_compensates_provider_watcher_authority_and_transition -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_provider_resume_failure_remains_typed_readonly_repair -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_terminal_result_releases_lock_before_publication_delivery -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
     - chrome_mcp: 点击 repo 行更多菜单并修改本机 alias
-    - chrome_mcp: 点击非当前 repo 行更多菜单并执行移除
+    - chrome_mcp: 点击 repo 行更多菜单，检查 backend preview 后确认移除
+    - chrome_mcp: 移除最后一个 repo，验证 NoScope 空状态，重启后创建首个 repo
     - chrome_mcp: 在 failure fixture 中分别执行 create/remove 与 alias store failure，观察最终 scope/list/display publication
   assertions:
     - ui_assert: repo_switcher_create_button_visible true
@@ -308,21 +324,35 @@
     - ui_assert: removed_repo_hidden_from_normal_list true
     - cli_assert: removed_repo_local_redb_not_present true
     - cli_assert: removed_repo_notegit_not_present true
-    - cli_assert: remove_requires_remote_import_owner_to_report_clean_and_artifacts_absent true
+    - cli_assert: remote_import_owner_returns_typed_removal_plan_and_performs_cleanup true
     - cli_assert: removed_repo_locator_and_alias_not_present true
     - cli_assert: removed_repo_workspace_markdown_attachments_and_git_preserved true
-    - cli_assert: removed_repo_remote_shadows_backups_and_exports_preserved true
+    - cli_assert: removed_repo_remote_shadows_and_nonoverlapping_operator_recovery_input_preserved true
     - cli_assert: removed_repo_catalog_tombstone_absent_after_successful_cleanup true
     - cli_assert: cleanup_failure_retains_exact_manifest_tombstone_and_repair_debt true
     - cli_assert: cleanup_debt_receipt_is_not_pruned_before_tombstone_retirement true
     - cli_assert: alias_locator_and_catalog_conditional_delete_preserve_other_repo_rows true
     - cli_assert: bootstrap_and_secondary_repo_handle_retirement_have_identical_semantics true
     - cli_assert: external_process_authority_holder_blocks_redb_delete_on_windows_and_unix true
-    - cli_assert: notegit_symlink_junction_and_child_reparse_points_fail_closed_without_escape true
+    - cli_assert: notegit_top_level_symlink_junction_reparse_or_identity_replacement_fails_closed true
+    - cli_assert: notegit_child_link_entry_is_deleted_without_following_or_touching_external_target true
     - cli_assert: manifest_parent_identity_and_containment_drift_fail_closed true
-    - cli_assert: remote_import_pending_and_cleanup_artifacts_are_never_removed_by_lifecycle_owner true
+    - cli_assert: replaced_redb_requires_original_file_and_membership_genesis_identity_and_is_never_auto_applied true
+    - cli_assert: overlapping_operator_recovery_input_blocks_prepare true
+    - cli_assert: remote_import_pending_and_degraded_are_blocked_while_safe_states_are_owner_cleaned true
     - cli_assert: old_remove_request_cannot_affect_readmitted_same_repo_id true
+    - cli_assert: confirmation_token_is_256_bit_hashed_five_minute_single_use_and_membership_bound true
+    - cli_assert: execute_admission_atomically_consumes_token_and_persists_request_job_before_worker true
+    - cli_assert: online_token_is_principal_connection_and_server_incarnation_bound_and_memory_only true
+    - cli_assert: offline_token_is_authority_root_lock_identity_and_preparation_bound_not_process_bound true
+    - cli_assert: repeated_prepare_invalidates_previous_token true
+    - cli_assert: exact_execute_retry_is_idempotent_after_lost_response true
+    - ws_assert: websocket_protocol_is_f4_v5_and_direct_remove_intent_is_absent true
     - ui_assert: remove_confirmation_states_irreversible_no_ledger_restore_and_workspace_git_preserved true
+    - ui_assert: removal_preview_uses_backend_categories_and_never_exposes_path_digest_or_manifest true
+    - ui_assert: last_repo_removal_commits_no_scope_without_error true
+    - ui_assert: zero_repo_restart_keeps_login_diagnostic_and_create_available true
+    - ui_assert: zero_repo_create_without_base_renders_repo_creation_projection_base_required true
     - cli_assert: create_mount_failure_keeps_repo_readonly_and_current_scope_unchanged true
     - cli_assert: alias_set_never_stops_watcher_or_moves_workspace true
     - cli_assert: alias_import_unknown_invalid_duplicate_entries_warn_skip_and_summarize true
@@ -331,29 +361,37 @@
     - cli_assert: peer_sync_and_remote_import_never_transmit_alias true
     - cli_assert: remove_final_reconcile_precedes_removed_marker_and_locator_cleanup true
     - cli_assert: remove_precommit_failure_keeps_current_scope_and_restarts_old_watcher true
-    - cli_assert: removed_membership_generation_changed_or_failed_fallback_is_not_bound true
-    - cli_assert: unrelated_catalog_mutation_does_not_invalidate_fallback_token true
-    - ws_assert: invalid_fallback_publishes_final_repo_list_then_protocol_error_sc_repo_not_selected_with_matching_switch_nonce true
-    - ws_assert: invalid_fallback_does_not_emit_repo_switched true
-    - ws_assert: invalid_fallback_repo_list_and_protocol_error_share_new_scope_nonce_equal_to_switch_nonce true
-    - web_assert: pending_remove_buffers_final_repo_list_then_commits_no_scope_and_clears_pending_remove_intent_on_typed_error true
-    - web_assert: invalid_fallback_partial_never_auto_selects_another_repo true
+    - cli_assert: stale_optional_fallback_never_binds_and_does_not_downgrade_successful_removal true
+    - web_assert: no_fallback_commits_no_scope_and_clears_pending_remove_intent_on_typed_success true
+    - web_assert: stale_optional_fallback_never_auto_selects_another_repo true
     - web_assert: old_repo_scope_messages_are_stale_after_no_scope_epoch_commit true
     - ws_assert: all_observer_sessions_bound_to_removed_repo_receive_distinct_per_connection_no_scope_epochs true
     - ws_assert: invalid_fallback_initiator_and_observers_use_distinct_per_connection_no_scope_epochs true
-    - ws_assert: observer_invalidation_uses_protocol_error_without_initiator_switch_nonce true
+    - ws_assert: observer_invalidation_uses_typed_repo_control_finalization_without_initiator_request_id true
     - web_assert: observer_invalidation_retires_old_scope_pending_switch_but_preserves_editor_pending_overlay true
-    - web_assert: remove_partial_stage_has_one_slot_bound_to_connection_epoch_kind_and_nonce true
-    - web_assert: disconnect_mismatch_second_stage_or_10s_timeout_discards_stage_and_retires_connection true
-    - web_assert: old_connection_second_frame_cannot_commit_and_recovery_requires_explicit_repo_selection true
+    - web_assert: prepare_and_execute_responses_are_bound_to_connection_epoch_request_and_scope true
+    - web_assert: single_typed_finalization_atomically_carries_final_repo_list_and_scope true
+    - web_assert: removal_success_is_never_inferred_from_sc_repo_not_selected_or_two_frame_order true
+    - ws_assert: optional_fallback_is_user_selected_prepare_bound_opaque_and_never_backend_auto_selected true
+    - web_assert: disconnect_or_mismatch_discards_preview_and_token_without_canceling_admitted_job true
+    - web_assert: old_connection_response_cannot_commit_ui_state_and_recovery_requires_fresh_prepare true
     - cli_assert: membership_revocation_cut_is_o1_and_session_fanout_runs_outside_catalog_permit true
     - cli_assert: old_binding_write_admission_fails_immediately_on_membership_generation_mismatch true
-    - web_assert: first_repo_list_frame_immediately_closes_writer_ready_without_committing_no_scope true
-    - web_assert: every_half_sequence_failure_preserves_editor_pending_overlay true
-    - web_assert: remove_partial_deadline_uses_monotonic_clock true
+    - web_assert: removal_publication_closes_writer_ready_and_commits_per_connection_no_scope_epoch true
+    - web_assert: every_publication_failure_preserves_editor_pending_overlay true
+    - web_assert: frontend_does_not_compute_confirmation_ttl_or_blockers true
     - cli_assert: mixed_lifecycle_truth_enters_repair_without_guessing_rollback true
     - ui_assert: lifecycle_publication_waits_for_final_mount_outcome true
     - cli_assert: final_e2_refresh_is_deferred_until_lifecycle_finalization true
+    - cli_assert: provider_quiesce_and_watcher_e2_precede_authority_quiescing_and_removed_cut true
+    - cli_assert: persistent_authority_lock_path_is_not_a_cleanup_target true
+    - cli_assert: readmitted_same_repo_id_uses_new_slot_generation_and_rejects_old_capabilities true
+    - cli_assert: remote_import_cleanup_is_sealed_before_quiescing_and_artifact_only_after_removed_cut true
+    - cli_assert: destructive_manifest_has_no_repo_runtime_catch_all true
+    - cli_assert: pre_cut_compensation_restores_provider_generation_invalidates_owner_plan_and_releases_transition true
+    - cli_assert: failed_pre_cut_compensation_remains_readonly_repair_not_active true
+    - cli_assert: durable_terminal_result_fsync_precedes_lock_release_and_best_effort_publication true
+    - cli_assert: concurrent_same_repo_id_readmission_has_one_reopening_reservation_and_generation true
 
 - case_id: STORE-015
   goal: Writeback failure 后 Ledger Ack 仍成立。
@@ -507,10 +545,10 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - B4 已接入产品 Refresh/Discard/Repair；A1/B1/C1′ repo lifecycle 已实现，fresh cross-platform evidence 仍待 B6
+    - B4已接入产品Refresh/Discard/Repair；R4 removal owner-plan与B6 fresh cross-platform evidence仍待实现
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
-    - gap: B6 fresh Remote Import manage receipt is not sealed yet
+    - gap: R4 removal owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

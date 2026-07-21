@@ -63,7 +63,8 @@ The accepted contract is:
 7. The unpublished F4/v2 WebSocket schema is replaced by F4/v3 lockstep. Legacy
    JSON text and unversioned JSON fallbacks are removed; explicitly versioned
    debug JSON remains a development surface. ADR 0013 later supersedes only
-   this still-unpublished wire target with F4/v4 Repo Control.
+   this still-unpublished wire target with F4/v4 Repo Control; ADR 0014 then
+   supersedes that unpublished target with F4/v5 removal Prepare/Execute.
 8. The Remote Import Web client is a sibling of Source Control and External
    Changes. It may reuse presentation primitives, but not their controller,
    state, authority, or detail-parsing behavior.
@@ -80,8 +81,8 @@ credential authority.
   publication by F4/v3; no v1 or v2 adapter is created.
 - `DEVELDG3`, Ledger payload v3, sync facts, Projection format, and remote-shadow
   merge semantics remain unchanged.
-- Redb v4 remains the first-tag target. The later ADR 0013 makes WS v4 the
-  first-tag target; F4/v3 is development history and receives no adapter.
+- Redb v4 remains the first-tag target. ADR 0014 makes WS v5 the first-tag
+  target; F4/v3 and F4/v4 are development history and receive no adapter.
 - Failure recovery uses explicit discard/repair and durable
   `cleanup_pending`; it does not infer rollback, delete authority, or cleanup
   success from filesystem state.

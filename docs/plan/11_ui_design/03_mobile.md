@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -39,7 +39,7 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 `NativeShellMode` 的 Mobile 语义如下：
 
 *   `LocalBackend` 是 native-packaging Android/Mobile 默认模式。Mobile 壳层只负责 embedded loopback lifecycle、endpoint/session bootstrap、foreground reprobe、readiness 展示与失败恢复。
-*   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   `LocalBackend` 的本地数据根位于 app-private data root；server/CLI runtime 只初始化 host registries；零 repo 时不得自动创建隐藏或默认 repo。首次 Create 才建立 Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
 *   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff 与 bootstrap plugin 注册之后创建；不得先创建无 endpoint/session bootstrap 的主 WebView。Android Wry 不实现 `WebView::set_cookie`，因此 Android 必须在 WebView 已登记后通过无参数 native command 调用系统 `CookieManager` 安装 HttpOnly cookie，确认成功后才 reload 一次并进入 authenticated runtime；cookie/token/secret 不得进入 command 参数、JavaScript 或 bootstrap payload。
 *   `RemoteBrowser { https_origin }` 是显式远端模式。壳层必须在创建主 WebView 前把已校验 origin 写入 native `WindowConfig`，不得靠远端页面执行 init-script redirect；后续 `/api` 与 `/ws` 均由浏览器同源规则解析。native 壳不提供本机 session cookie、端口、repo bootstrap、native bootstrap capability 或 Tauri command handler。

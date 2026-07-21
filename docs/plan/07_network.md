@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -175,7 +175,7 @@ enabled = true
 
 - 先冻结 expected set `E`：只包含需要 watcher 的 `RepoHealth::Healthy` local repo；remote shadow、removed、quarantined、repairing 与 durable degraded repo 不计入。
 - `expected = |E|`；`running` 只统计 `E` 中处于 `RepoMountState::Mounted` 的 repo，因此必须满足 `0 <= running <= expected`；`unavailable = expected - running`，包含 transition、failed 与其它未 mounted slot。
-- `status` 按固定优先级计算，不允许重叠解释：无法取得可信且完整的 `WatcherRuntimeView` 时为 `unknown`；否则，`E` 中存在 `Failed`、非 transition 的未 mounted slot或计数/slot 不变量破坏时为 `degraded`；否则，`E` 中至少一个 slot 为 `Transitioning` 时为 `transitioning`；其余情况为 `healthy`，即 `E` 全部 Mounted（`E` 为空时聚合本身也为 healthy；server bootstrap 的“零个 Mounted 必须退出”由 host contract 单独执行）。
+- `status` 按固定优先级计算，不允许重叠解释：无法取得可信且完整的 `WatcherRuntimeView` 时为 `unknown`；否则，`E` 中存在 `Failed`、非 transition 的未 mounted slot或计数/slot 不变量破坏时为 `degraded`；否则，`E` 中至少一个 slot 为 `Transitioning` 时为 `transitioning`；其余情况为 `healthy`，即 `E` 全部 Mounted。`E` 为空时聚合与host bootstrap都合法healthy，server进入`NoScope`；不得把zero-repo误报为watcher failure。
 - aggregate **MUST NOT** 暴露 repo 名、`RepoId`、generation、workspace path、failure phase/kind/detail 或 tracing 内容。
 
 ## 4. Transport and Message Contract
@@ -209,11 +209,11 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- 首个公开 wire epoch 固定为 `protocol_version = 4`，兼容窗口为 `4..=4`。v4 同时包含
-  workspace ingestion unavailable、nested Remote Import family，以及 nested Repo Control
-  alias/lifecycle family。
+- 首个公开 wire epoch 固定为 `protocol_version = 5`，兼容窗口为 `5..=5`。v5 同时包含
+  workspace ingestion unavailable、nested Remote Import family、Repo Control alias/create family，
+  以及 ownership-aware removal Prepare/Execute preview-token flow。
   历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v1、F4/v2、F4/v13
-  和未发布的 F4/v3 全部 fail-closed，不提供 adapter。F4/v4 发布后只允许单调升级，不得再次重置或复用旧
+  和未发布的 F4/v3、F4/v4 全部 fail-closed，不提供 adapter。F4/v5 发布后只允许单调升级，不得再次重置或复用旧
   `(magic, version)` identity。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump F4
   内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
@@ -222,14 +222,15 @@ enabled = true
 - 浏览器生产客户端到服务端 **MUST** 使用 versioned postcard binary frame；收到任意 text frame、损坏
   binary frame 或不支持的 wire identity 时必须退休当前 connection epoch 并重连，不得把错误帧投影成
   普通业务消息继续消费。text-frame versioned JSON 只能由 server 的显式 development/debug 入口解析。
-- development/debug JSON **MUST** 显式携带 `protocol_version = 4` 并使用与 postcard frame 相同的
-  v4 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
+- development/debug JSON **MUST** 显式携带 `protocol_version = 5` 并使用与 postcard frame 相同的
+  v5 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
   不得解析或回退。所有 sync frame **MUST** 显式携带当前 schema 要求的 vector 字段。
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-当前实现已完成 C1′ 的 F4/v4 lockstep 切换。主 `/ws` 不得恢复 legacy/unversioned JSON
-fallback、旧环境开关或旧 version window；显式 development/debug JSON 也必须携带 v4 envelope。
+当前实现仍为未发布的 F4/v4；R3 必须一次性切换到 F4/v5并删除旧 direct Remove形态，期间不得
+恢复 legacy/unversioned JSON fallback、旧环境开关或旧 version window；显式 development/debug
+JSON 也必须携带 v5 envelope。
 plugin-host 的 loopback
 外围消息通道属于 `19_plugins#plugin-runtime-boundary`，不进入主 `/ws` F4 编解码合同。
 
@@ -320,7 +321,7 @@ pre-candidate `Failed` record：Show/Discard 使用 `revision=None` 表示对“
 
 ### 4.3.2 Repo Control Wire Contract {#repo-control-wire-contract}
 
-F4/v4 删除旧 `SwitchRepo` name selector、`CreateRepo`、`RenameRepo` 与 `RemoveRepo` 顶层 variants，
+F4/v5 保持删除旧 `SwitchRepo` name selector、`CreateRepo`、`RenameRepo` 与 `RemoveRepo` 顶层 variants，
 不保留 adapter。repo scope switch 只保留 exact `SwitchRepoExact { repo_id, switch_nonce }`；display
 alias 不回传为 selector。host-local alias 与 A1 lifecycle 使用单个 nested family：
 
@@ -332,15 +333,50 @@ RepoControlRequest =
   SetAlias { request_id, repo_id, alias, expected_alias_revision }
   | SubmitLifecycle { request_id, lifecycle_intent }
   | GetLifecycle { request_id }
+  | PrepareLocalRepoRemoval {
+      request_id,
+      repo_id,
+      current_scope_nonce,
+      fallback_repo_id: Option<RepoId>
+    }
+  | ExecuteLocalRepoRemoval {
+      request_id,
+      preparation_id,
+      confirmation_token,
+      fallback_binding: Option<OpaqueFallbackBinding>,
+      current_scope_nonce,
+      switch_nonce
+    }
 
 RepoLifecycleIntent =
   Create { initial_alias, current_scope_nonce, switch_nonce }
-  | Remove { repo_id, current_scope_nonce, switch_nonce }
 
 RepoControlResponse =
   AliasSet { request_id, binding }
+  | LocalRepoRemovalPrepared {
+      request_id,
+      preparation_id,
+      repo_id,
+      preview,
+      confirmation_token,
+      fallback_binding: Option<OpaqueFallbackBinding>,
+      expires_at
+    }
   | LifecycleAccepted { request_id, job_id, target_repo_id }
   | LifecycleStatus { request_id, job_id, state, outcome }
+  | LocalRepoRemovalSettled {
+      request_id,
+      job_id,
+      removed_repo_id,
+      final_repo_list,
+      scope: RepoBound { repo_id, scope_nonce } | NoScope { scope_nonce }
+    }
+  | LocalRepoRemovalObserverInvalidated {
+      job_id,
+      removed_repo_id,
+      final_repo_list,
+      scope: NoScope { scope_nonce }
+    }
   | Error { request_id, error }
 ```
 
@@ -349,8 +385,25 @@ RepoControlResponse =
 - lifecycle submit 的 session observer 绑定当前 connection epoch 与
   `(current_scope_nonce, switch_nonce)`；job ownership 不绑定 connection。observer 消失只取消该
   connection 的可选 auto-switch，不取消 job、settlement、repo-list publication 或 completion。
-- Create 的 target RepoId 由 backend admission 生成并在 `LifecycleAccepted` 返回；同一 request_id
-  retry 必须返回同一 job/target。Remove 始终携带 exact RepoId，不能按 alias 查找。
+- removal Prepare request id与Execute request id必须不同；Execute显式引用backend生成的exact
+  `preparation_id`。服务端在同一durable record内原子写入
+  `ExecuteAdmitted { execute_request_id, job_id, consumed_token_hash }`并fsync后才返回accepted或启动worker；
+  exact retry返回既有job/result，不重新消费token。
+- fallback只能由用户在Prepare中显式选择。backend对候选RepoId的membership revision、health、mount
+  generation与当前connection/scope生成opaque binding；Execute只能回显该binding。binding缺失或stale时
+  backend返回成功的NoScope finalization，不自动选择其它repo。initiator与observer都通过单个typed
+  scope-finalization response原子接收final RepoList与scope；不得复用`SC_REPO_NOT_SELECTED`或两帧顺序。
+- Web token绑定authenticated principal/session、connection epoch与server runtime incarnation，且只驻留
+  当前连接的内存；LocalCliProxy token绑定proxy principal与server incarnation。offline CLI token绑定
+  canonical authority-root identity、persistent per-RepoId lock file identity、membership/generation与
+  preparation record，不绑定短命CLI process。任何token不得进入URL、browser storage、telemetry或raw detail。
+- Create 的 target RepoId 由 backend admission生成并在`LifecycleAccepted`返回；同一request_id
+  retry必须返回同一job/target。Remove不得进入`RepoLifecycleIntent`：Prepare始终携带exact RepoId，
+  backend只返回typed preserved/deleted category、warning/blocker与短期token；Execute必须消费仍绑定
+  exact membership/authority/scope/runtime identity的一次性token，不能按alias或preview文本查找。
+- 相同Prepare request retry必须重新签发token并废止旧token；相同Execute retry必须返回既有job/
+  result。token raw value、manifest/path/digest、RepoId以外的内部identity与原始failure detail不得进入
+  durable response projection。token expiry、invalid/stale与removal blocker使用`13_i18n`的typed code。
 - `GetLifecycle` 允许重连后按 request_id 取得既有 Accepted/Running/terminal/repair outcome；前端不得
   通过自然语言 detail 或 repo-list 差分猜测 job 是否提交。
 - `RepoListEntry` 只暴露 `repo_id + display_alias + alias_revision + readiness`；不得暴露

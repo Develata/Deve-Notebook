@@ -39,7 +39,7 @@
 
 ### 5. Native 双模式
 
-- Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、默认 repo/projection 初始化、loopback endpoint、session handoff、健康探测和重启协调。
+- Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、zero-repo host registry 初始化、loopback endpoint、session handoff、健康探测和重启协调；不得为启动成功而自动创建默认 repo/projection。
 - LocalBackend 的 `deve_cli serve --native-loopback` 后端应随 Desktop 父进程生命周期停止；Windows target-host 关闭或终止 Desktop 后不应留下孤儿本地后端。其它 target-host 在具备等价平台约束前不得宣称同等级别的异常终止保护。
 - Desktop 可通过启动参数 `--remote-url https://host[:port]` 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；脚本化/诊断启动仍可使用 `DEVE_NATIVE_REMOTE_URL`。
 - Desktop bundled LocalBackend Settings 提供 Backend section，可校验并切换到 Remote Backend。默认 Local Backend 不要求用户单独启动后端。

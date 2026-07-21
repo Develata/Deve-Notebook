@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -90,6 +90,7 @@ LocalBackend 或 NoteGit authority。
 | :---------------------- | :----- | :--------- | :----------------------------------------------------- |
 | `profile`               | String | `standard` | 运行模式: `standard` (全功能), `low-spec` (低配).      |
 | `ledger_dir`            | String | `ledger`   | 账本存储目录 (Relative or Absolute).                   |
+| `repo_creation_projection_base` | Optional absolute path | *(none)* | zero-repo host 创建首个 repo 时使用的默认 Projection Base；不是 workspace authority。 |
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (接收后暂存，按单一 peer/repo 目标确认后原子合并). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
 | `mem_cache_mb`          | Number | `128`      | 内存缓存上限 (MB).                                      |
@@ -118,11 +119,12 @@ peer entry 必须在配置加载时 fail-closed，不能静默忽略后续 peer�
 
 ### 2.2.1 Projection Locator Settings
 
-Projection base / workspace root 不属于 `config.toml` 的全局键。
+已存在 repo 的 projection base / workspace root 不属于 `config.toml` 的全局键。
 
 规则：
 
 *   系统 **MUST NOT** 支持 `vault_path` / `DEVE_VAULT_PATH` 作为全局投影根。
+*   `repo_creation_projection_base` 只在没有 current local locator 可复用时，为 Create 提供一个显式 absolute parent base。它不得覆盖既有 locator、推导 workspace root 或参与 repo identity；zero-repo host 缺失该键时仍可启动，但 Create 返回 `REPO_CREATION_PROJECTION_BASE_REQUIRED`。
 *   每个本地可写 repo 的 projection base 与 immutable `workspace_segment` 必须通过 host-local Projection Locator 绑定；最终 workspace root 为 `<projection_base>/<workspace_segment>/`。当前 alias 不参与路径计算。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
 *   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
 *   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。

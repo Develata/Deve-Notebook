@@ -32,7 +32,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: B6 fresh Remote Import manage receipt is not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 removal owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
 contains	apps/cli/src/remote_projection_transport/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()

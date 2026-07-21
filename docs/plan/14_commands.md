@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-19`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -31,11 +31,15 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repo alias set --repo-id <uuid> --alias <text> --expected-revision <u64>`: CAS 更新当前 host 的 repo display alias；不得改变 Ledger、locator、workspace、watcher 或 sync state。
     *   `deve repo alias export --output <file>`: 输出 deterministic JSON v1，按完整 RepoId 排序；只含 `format/version/aliases[{repo_id,alias}]`。输出采用同目录完整临时文件 + atomic no-clobber publish；拒绝覆盖既有路径或写入 Ledger authority tree。
     *   `deve repo alias import --input <file> [--apply]`: 默认 dry-run。unknown local RepoId、invalid alias、duplicate RepoId 或 per-entry admission failure 必须 warning + skip，并在结尾逐项汇总；通过校验的 entry 以单个原子 accepted batch 写入。store-wide commit failure 是全局错误。
+    *   `deve repo remove --repo-id <uuid>`: 调用 backend Prepare service，输出 safe preserved/deleted categories、typed warnings/blockers、`preparation_id`与短期confirmation token；默认不删除任何对象。
+    *   `deve repo remove --repo-id <uuid> --apply --token <opaque>`: 调用同一 Execute service并消费一次性token，必须同时使用前次preview返回的exact `preparation_id`（CLI可将其封装进opaque token envelope，不得从RepoId猜测）。server持有authority时，两次调用都经authenticated `LocalCliProxy`并绑定server incarnation；offline两次invocation绑定canonical authority-root identity、persistent lock-file identity、membership/generation与preparation record，不绑定短命CLI process。不得接受alias/path作为target，也不得绕过server-held authority lock直接打开DB。
+    *   `deve repo removal-repair --request-id <uuid>`: 默认只读，输出exact remaining target categories、identity drift与可用时的短期repair token；不暴露host path/digest。
+    *   `deve repo removal-repair --request-id <uuid> --apply --token <opaque>`: 只重新授权仍可证明属于原RepoId且位于原containment内的drifted committed cleanup；unknown/mismatched/unsafe reparse永远fail-closed。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
     *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。
     *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
     *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更；standalone command 直接拥有不可复制的 repo watcher handle 集合，必须观察 terminal worker failure，任一 handle 失败时逆序显式 shutdown 全部 handle 并以非零状态退出。正常退出也必须显式 shutdown；不得依赖全局 watcher registry、按 `RepoId` stop free function 或 `Drop` 静默清理。
-    *   `deve serve`: 启动 HTTP/WebSocket 服务端；repo-local watcher start failure 只使该 repo readonly，至少一个 repo Mounted 才允许启动成功。启动后全部 watcher 失败时服务保留 readonly/export/diagnostic，workspace-dependent mutation 返回结构化 unavailable。host-fatal 只按 typed supervisor/runtime failure 分类。
+    *   `deve serve`: 启动 HTTP/WebSocket 服务端；零local repo是合法`NoScope` host，watcher `expected=0`为healthy，login/diagnostic/Create可用。repo-local watcher start failure只使该repo readonly；只有typed supervisor/runtime host-fatal才终止服务。全部watcher失败时服务仍保留readonly/export/diagnostic，workspace-dependent mutation返回结构化unavailable。
     *   `deve dump`: 调试工具 (Dump Ops).
     *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
     *   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。
@@ -60,6 +64,17 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
   warning 文案不得被调用方解析为控制信号。
 - JSON 不能创建 repo 或携带路径、locator、peer/provider、credential、revision。format/version
   不支持、顶层 JSON malformed 或超过预算时整个命令 fail-closed，不进入 per-entry apply。
+
+### 1.0.2 Repo Removal Command Contract
+
+- CLI与Web必须复用`04_repository#repo-lifecycle-coordinator`的Prepare/Execute/Repair service；CLI只负责
+  bounded参数/输出、typed command dispatch和本地proxy选择，不拥有manifest、filesystem walker、
+  Remote Import cleanup、authority retirement或catalog mutation。
+- server持有per-RepoId authority lock时，CLI只能使用authenticated loopback
+  `LocalCliProxyAuthority`；offline执行必须启动同一host runtime，不得创建第二套cleanup authority。
+- Prepare与repair dry-run无destructive effect。`--apply`与opaque token必须同时存在；token只输出到
+  当前调用者，不写日志或shell completion。退出码必须区分blocked、expired/stale、committed-partial与
+  repair-required，调用方不得解析natural-language detail。
 *   **Optional Bridge Contract**:
     *   Git main mirror lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
     *   Git main mirror 不再有 `source_control.git_bridge` 配置；NoteGit/ngit commit 成功后始终尝试排队 mirror record。

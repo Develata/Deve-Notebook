@@ -17,12 +17,20 @@
 - `Immediate Result`: host runtime 返回 job_id/target RepoId；transport waiter 不拥有 job
 - `Application Entry`: `apps/web/src/runtime/repo_control_client.rs` → `apps/cli/src/server/handlers/repo_control.rs` → `apps/cli/src/server/runtime/repo_lifecycle_job_runtime.rs`
 
-### `op.repo.lifecycle.submit-remove`
+### `op.repo.lifecycle.prepare-remove`
 
-- `Name`: `Submit Remove Job`
+- `Name`: `Prepare Local Removal`
 - `Surface`: `typed-ws`
-- `Preconditions`: exact RepoId；Remote Import/fallback admission 可证明；per-repo single-flight 可用
-- `Immediate Result`: host runtime 接管 job；observer 绑定当前 connection/scope epoch
+- `Preconditions`: authenticated exact RepoId/scope；ownership与owner plans可读取；optional fallback必须由用户显式选择；不得改变membership
+- `Immediate Result`: backend返回safe preview、preparation_id、optional opaque fallback binding与五分钟一次性token；不删除对象
+- `Application Entry`: `apps/web/src/runtime/repo_control_client.rs` → `apps/cli/src/server/handlers/repo_control.rs` → `apps/cli/src/server/runtime/repo_lifecycle_job_runtime.rs`
+
+### `op.repo.lifecycle.execute-remove`
+
+- `Name`: `Execute Prepared Local Removal`
+- `Surface`: `typed-ws`
+- `Preconditions`: exact preparation/token/issuer/scope；per-repo single-flight可用；owner plans仍exact
+- `Immediate Result`: token consumption与job admission原子持久化，host runtime接管job；observer绑定当前connection/scope epoch
 - `Application Entry`: `apps/web/src/runtime/repo_control_client.rs` → `apps/cli/src/server/handlers/repo_control.rs` → `apps/cli/src/server/runtime/repo_lifecycle_job_runtime.rs`
 
 ### `op.repo.lifecycle.query`
@@ -43,5 +51,5 @@
 
 ## Notes
 
-- create/remove 使用 prepare → short authority cut → settle。create 的长期 membership authority 是 per-RepoId catalog record；remove 先把它原子切为 transient `Removed` tombstone，再按 immutable ownership manifest 清理 Deve-owned repo state，全部收敛后删除 tombstone。remove 永不删除 workspace root、Markdown/附件、`.git`、remote shadows 或显式 backup/export。
+- create使用prepare → short authority cut → settle；remove显式执行Prepare → Execute，Execute先原子持久化token consumption与job admission，再按provider quiesce → watcher E2 → authority retirement → short membership cut → owner cleanup收敛。create的长期membership authority是per-RepoId catalog record；remove先把它原子切为transient`Removed` tombstone，再按immutable ownership manifest经各owner清理Deve-owned repo state，全部收敛后删除tombstone。最后一个repo允许删除并进入`NoScope`。remove永不删除workspace root、Markdown/附件、`.git`、remote shadows、persistent authority lock pathname或位于removal roots之外的operator恢复输入。
 - alias set 不属于 lifecycle；handler/connection drop 不取消已 admission job。

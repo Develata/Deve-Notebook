@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-20`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -37,7 +37,7 @@ Desktop native adapter 是进程与平台壳层，不是业务 authority；第�
 `NativeShellMode` 的 Desktop 语义如下：
 
 *   `LocalBackend` 是 native-packaging 默认模式。Desktop 壳层只负责 sidecar 生命周期、loopback endpoint、native session handoff、health probe、restart budget、bootstrap/recovery 注入与窗口/菜单/托盘事件。
-*   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。server/CLI runtime 只初始化 host registries；零 repo 时不得自动创建隐藏或默认 repo。首次 Create 才建立 Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   Desktop host 若显式收到 `DEVE_GIT_EXECUTABLE`，必须先验证其为 absolute、存在的 ordinary file 并 canonicalize；显式值无效时不得回退。未显式配置时，host **MAY** 从自己的绝对 `PATH` entries 与 Windows `PATHEXT` 解析 Git。启动 sidecar 时必须二选一传递 canonical `DEVE_GIT_EXECUTABLE` 或内部 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不得把宿主完整 `PATH` / `PATHEXT` 加入 allowlist；unavailable 状态不得退回普通 executable search。
 *   Git 不可用不得阻断 `LocalBackend` service、native session 或 NoteGit ledger commit；Git mirror/import/export/push 只能进入 unavailable/out-of-sync 诊断。该绑定是 shell-to-sidecar process contract，不授予 Desktop shell `.git` 或 Source Control authority。
 *   Windows packaged UI gate 必须启动已安装的 Desktop binary，而不是仅探测 marker。gate 使用临时 app-private data root、隔离 WebView2 user-data 与随机 CDP port，必须通过真实 WebView 完成 native session、create/edit、NoteGit commit/history 和 Settings keyboard focus trap，并在窗口关闭后确认受控 sidecar 已退出。CDP 只驱动前端 intent；所有业务写入仍经过 server/core writer gate。

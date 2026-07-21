@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-21`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
@@ -431,10 +431,31 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
 ### 11.1 Authority Layer
 
 - 负责 ledger append validation、runtime side table 归类、authority table 读写边界。
-- 必须为 exact `RepoId` 提供 typed authority-use admission 与 retirement proof。ownership-aware
-  `RemoveLocalRepo` 在 membership revocation 后必须阻止新 authority use、等待已准入使用者退出、
-  从进程/全局 cache 移除该 RepoId 的 handle，并获得跨进程 exclusive removal proof，然后才允许
-  删除 canonical `.redb`。唯一 handle owner、revocable lease 或等价 composition 的具体骨架属于
-  实现前的 architecture decision。Unix unlink 后仍存活的旧 handle 与 Windows 打开文件删除失败
-  都是 invariant violation，不得降级为隐藏 authority 或用下次重启掩盖。
+- `LocalAuthorityRuntime` 是当前 host 所有 local Redb handle 的唯一 owner；每个 exact `RepoId`
+  对应一个带 generation 的 `RepoAuthoritySlot`，单个 slot incarnation 状态固定为
+  `Active -> Quiescing -> Retired`。
+  `RepoManager` 只能组合该 runtime 与其它 host registries，不得另持 bootstrap `local_db`、secondary
+  DB map 或 runtime 外 cache authority。
+- 调用者只能取得不可 Clone 的 `RepoAuthorityLease`；lease 仅在其受控生命周期内借用
+  `&Database`，不得导出 `Arc<Database>`、缓存 raw handle 或跨 repo 复用。所有 local authority
+  操作必须显式携带 RepoId并在 admission 时 exact-compare slot generation/state。
+- ownership-aware `RemoveLocalRepo` 必须先关闭 product mutation admission、封存 owner cleanup plan、
+  quiesce provider并完成 watcher E2；authority slot 此后才进入 Quiescing，拒绝新 ordinary lease并在
+  commit 前有界等待已准入 lease 退出。首发 drain 上限固定 30 秒；超时必须恢复同 generation 的
+  Active admission、补偿性重启 watcher并返回 typed busy，不得进入 membership cut。
+- 成功 drain 后，runtime owner创建不可导出的 `RepoAuthorityRetirement` exclusive capability。它只允许
+  exact pre-cut revalidation、DB close/eviction与retirement proof，不是普通读写lease，也不得传给
+  lifecycle coordinator或其它runtime。per-RepoId OS lock handle必须保持到DB delete、owner cleanup、
+  catalog retirement和durable terminal result fsync完成，再把当前slot incarnation置为Retired并释放handle；
+  session/network publication delivery不得延长lock生命周期；
+  lock pathname本身永久保留。
+- later same-RepoId membership admission必须使用map-level single-flight reservation：短持runtime map mutex把
+  `Retired -> Reopening(reservation_id, prior_generation)`，释放mutex后取得同一persistent lock pathname的
+  OS lock并exact重读Normal membership/DB identity，最后短持mutex exact-CAS为
+  `Active(new_generation)`。失败必须exact rollback为Retired并释放handle。不得跨filesystem I/O持有map mutex；
+  两个并发admission只能有一个reservation成为新slot。任何旧lease、retirement capability、preparation或token
+  都不得跨incarnation复用。
+- runtime map mutex 只保护 slot map/state transition，不得跨 DB/filesystem I/O、await、watcher、
+  provider、publication 或 lease drain。Unix unlink 后仍存活的旧 handle 与 Windows 打开文件删除失败
+  都是 invariant violation，不得降级为 cleanup debt或用下次重启掩盖。
 - 不得读取 UI 状态、watcher 原始事件或未归一化路径作为业务真相。

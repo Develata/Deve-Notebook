@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-18`
+- `Last Review`: `2026-07-21`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Remote Projection / Remote Import 状态与 authority 边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -150,7 +150,7 @@ watcher start/worker/final-reconcile failure 映射到 `03_storage/watcher#watch
 | `T2` 警告 | 409 冲突 / 作用域失效；显式列入的 repo-local 可隔离 503 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH`、`STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` | 工单 + 观察 Error Budget |
 | `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
 
-某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 与 repo-local 可隔离的 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` 为显式例外。单 repo watcher `Failed` → `T2`；bootstrap 零 Mounted 或 typed host-fatal → `T1`。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
+某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 与 repo-local 可隔离的 `STORAGE_WORKSPACE_INGESTION_UNAVAILABLE` 为显式例外。单 repo watcher `Failed` 或存在local repo但bootstrap零Mounted → `T2`；零local repo的healthy `NoScope`不告警；只有typed host-fatal → `T1`。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
 
 Remote Import 映射：provider/prepare/session pre-commit failure 与 cleanup-required → `T2`；stale/blocked/not-found/invalid-state 等 4xx → `T3`；authority apply/storage transaction failure → `T1`；post-commit projection degraded 沿既有 projection fault tier。具体 HTTP 状态仍只引用 `13_i18n`。
 

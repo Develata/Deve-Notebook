@@ -118,7 +118,7 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
-    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v4 Repo Control、B5/B6 与其余 release gates 仍阻塞 tag
+    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control、B5/B6 与其余 release gates 仍阻塞 tag
     - release baseline 必须同时验证 approved target 与 current implementation，不得把 current 当作首发完成态
   steps:
     - run: rustup target add wasm32-unknown-unknown
@@ -136,9 +136,9 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 4|Redb schema v4" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "WS_PROTOCOL_VERSION = 4" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "已对齐：F4/v4" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 4" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "当前代码仍为未发布 F4/v4" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
     - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0

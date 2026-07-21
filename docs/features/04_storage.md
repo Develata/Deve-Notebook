@@ -37,7 +37,7 @@
 - 缺失 ledger entry 格式信封、缺失 redb schema version 或 schema version 不匹配时，系统应明确报告该 repo 需要 reset / repair / migration，不应猜测旧格式继续打开。
 - 对明确选择的 schema v2 开发库，用户可以在服务停止时运行 `deve export --allow-legacy-v2` 做只读 JSON/Markdown 导出；该入口不会打开正常写入、同步或 repair authority。
 - workspace ingestion failure 与 repo/projection 损坏是两类不同状态。前者只使当前进程无法可靠接收该 repo 的外部文件变化：该 repo 保持只读可见，Ledger inspect/export 与诊断仍可用，不能被显示为 `DegradedProjection`。
-- 多 repo server 中，一个 repo 的 workspace ingestion failure 不应关闭其它已 mounted repo；健康 repo 继续可写。服务启动时若没有任何 repo 成功 mounted，则明确启动失败。
+- 多 repo server 中，一个 repo 的 workspace ingestion failure 不应关闭其它已 mounted repo；健康 repo 继续可写。零 local repo时watcher expected=0且host以healthy `NoScope`运行；存在local repo但零个Mounted时host保持degraded/readonly、diagnostic与Create可用。只有typed host-fatal才导致启动失败。
 - 运行期 workspace ingestion failure 的首版恢复方式是重启服务；产品不提供 watcher restart endpoint，也不要求用户理解 backend/thread 细节。
 - owned watcher 关闭时先停止并 join backend producer；已开始的 dispatch 完成后丢弃尚未消费的 hint，再按启动时的 exact RepoId 与 canonical root 做一次 final full reconcile，并最多发送一次 typed refresh。关闭返回后不得再产生 callback 或 pending candidate；stop/final-scan 失败只作为 typed primary/cleanup 诊断，不覆盖既有 worker 首因。
 
@@ -167,7 +167,7 @@
 
 补充 host/runtime 验收：
 
-- bootstrap 完成后若零个 repo Mounted，server 必须清理已启动 handle 并非零退出；不能以“全局只读但已就绪”继续启动。
+- bootstrap 完成后，零个 local repo 是 healthy `NoScope`；存在 local repo 但零个 Mounted 时 server 仍提供只读、诊断与 Create。只有 typed supervisor/runtime host-fatal 才清理已启动 handle 并非零退出。
 - supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed host-fatal 必须全量回滚已启动 watcher 并终止 server；不得通过字符串匹配扩大或缩小 host-fatal 集合。
 - server 已运行后即使所有 watcher 后续均 Failed，也必须保留只读与诊断入口，并把 aggregate ingestion health 投影为 degraded；不得因 repo-local terminal failure 退出整个进程。
 

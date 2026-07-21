@@ -41,10 +41,13 @@
 - 已知过时断言包括：Watcher backend 缺失、WS Unauthorized 为 plain text、Agent Bridge 默认拉起 CLI、locale detection 缺失、`server/mod.rs` 过大，以及 MCP 可作为产品 runtime 方向。
 - `legacy-acceptance-checklist-2026-05-01.md` 已删除；权威入口是 `docs/acceptance-cases/00_index.md`。
 
-## Pending Decisions
+## Approved Architecture Decisions
 
-- `ownership-aware-repo-removal-architecture-stop-2026-07-20.md`：RemoveLocalRepo 的
-  per-RepoId DB authority retirement、committed cleanup repair 与 old-request replay protection；等待 USER 裁定，未构成 live contract。
+- `ownership-aware-repo-removal-architecture-stop-2026-07-20.md`：USER 已批准
+  `A1 + B1 + C2′`；live contract 位于 plan，报告只保留决策证据。
+- `ownership-aware-repo-removal-r0-safety-stop-2026-07-20.md`：R0 三路复审发现跨进程
+  lock 删除、authority/E2 顺序、token crash cut 与 repair proof 冲突；USER 于 2026-07-21
+  批准 `A1-S + B1-S + C2′-S` 安全细化。
 
 ## Retired Cleanup Policy
 

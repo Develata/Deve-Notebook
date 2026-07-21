@@ -3,6 +3,9 @@
 - Status: Accepted
 - Date: 2026-07-18
 
+> Decision item 7's unpublished F4/v4 target is superseded by ADR 0014 F4/v5.
+> RepoId and host-local alias decisions remain accepted.
+
 ## Context
 
 The previous repository contract treated the current repo name as a

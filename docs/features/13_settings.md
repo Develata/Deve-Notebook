@@ -42,6 +42,7 @@
 - 当前真实可用的设置应清楚标记并生效。
 - 预留或未来能力不应伪装成已经完成。
 - 运行时配置写入口应复用 plan 中的类型与范围约束；例如 `p2p.connect_interval_ms = 0` 这类会破坏重连节流语义的值必须被拒绝，不能写入 `config.toml` 后再依赖运行时兜底。
+- `repo_creation_projection_base` 是zero-repo host创建首个repo时的可选host配置，不要求首发Settings UI直接编辑。缺失时server仍可运行，Create界面只渲染backend的`REPO_CREATION_PROJECTION_BASE_REQUIRED`提示，不得猜测默认目录。
 
 ## 非目标
 

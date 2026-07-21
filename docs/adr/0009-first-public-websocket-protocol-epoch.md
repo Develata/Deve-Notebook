@@ -1,8 +1,8 @@
 # 0009. First public WebSocket protocol epoch
 
-- Status: Superseded by 0011, then 0013
+- Status: Superseded by 0014
 - Date: 2026-07-14
-- Superseded: 2026-07-17
+- Superseded: 2026-07-20
 
 > F4/v1 was never published. The USER-approved watcher convergence contract adds
 > a public typed workspace-ingestion error before the first tag, so the current
@@ -17,6 +17,10 @@
 > F4/v3 was likewise never published. ADR 0013 adds the typed Repo Control
 > family and exact RepoId-only selectors, so the first public target is F4/v4.
 > No v1/v2/v3 adapter is authorized.
+
+> F4/v4 was also never published. ADR 0014 replaces direct Remove with an
+> ownership-aware Prepare/Execute confirmation-token flow, so the first public
+> target is F4/v5. No v1/v2/v3/v4 adapter is authorized.
 
 ## Context
 
@@ -77,6 +81,10 @@ pre-publication cutover, not a compatibility window.
 ADR 0013 subsequently advances the still-unpublished target to
 `WS_PROTOCOL_VERSION = 4` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 4`, adds
 nested Repo Control, and removes name-based/legacy repo lifecycle variants.
+
+ADR 0014 subsequently advances the still-unpublished target to
+`WS_PROTOCOL_VERSION = 5` and `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5`, deletes
+direct Remove intent, and adds membership-bound removal Prepare/Execute.
 
 ## References
 

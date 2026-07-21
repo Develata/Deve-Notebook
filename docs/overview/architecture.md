@@ -55,9 +55,9 @@ The approved workspace-ingestion path preserves the same four-layer direction wh
 
 ```text
 UI / HTTP / WS handlers
-  -> typed intent / RepoLifecycleJobRuntime
+  -> typed Prepare/Execute intent / RepoLifecycleJobRuntime
   -> RepoLifecycleCoordinator
-  -> RepoMutationPublicationGate + WatcherRuntimeView
+  -> LocalAuthorityRuntime + RepoMutationPublicationGate + WatcherRuntimeView
   -> WatcherSupervisor
   -> RepoWatcherHandle
   -> FsWatcherBackend adapter
@@ -68,15 +68,21 @@ UI / HTTP / WS handlers
 - `WatcherSupervisor` is the CLI host runtime owner of repo slots, generations and lifecycle; handlers never receive it.
 - `WatcherRuntimeView` exposes only snapshot/aggregate readiness to `AppState`, mutation admission and `/api/node/role`.
 - `RepoLifecycleJobRuntime` is the transport-independent owner of accepted create/remove jobs; handlers may stop waiting but cannot cancel durable convergence.
-- `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice. `RemoveLocalRepo` uses a typed ownership manifest: it deletes local Redb and Deve-owned repo runtime state after revocation, while preserving the workspace root, Markdown/attachments, `.git`, remote shadows and explicit backups/exports.
+- `LocalAuthorityRuntime` is the sole per-RepoId Redb owner. Non-clone leases borrow the database; product mutation admission closes before provider quiesce and watcher E2, then Quiescing drains bounded in-flight use. The per-RepoId lock pathname is persistent host coordination identity; its OS handle stays held through exact cleanup/tombstone retirement, and later same-RepoId admission creates a new slot generation.
+- Same-RepoId readmission first installs one map-level `Reopening` reservation, performs lock/DB/catalog I/O outside the map mutex, and exact-CAS installs the new Active generation. Before the Removed cut, failure runs inverse compensation for authority, watcher, provider and sealed owner plans; compensation failure stays typed readonly/repair.
+- `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice. `RemoveLocalRepo` first returns a backend preview and five-minute one-time token, then uses a typed ownership manifest and owner-specific cleanup APIs. It deletes local Redb/Deve runtime while preserving the workspace root, Markdown/attachments, `.git`, remote shadows and operator recovery input.
+- `remote_import_runtime` owns its artifact removal plan. Safe non-applied states are warning+owner cleanup; Pending/Degraded/unknown states block rather than granting the lifecycle coordinator path authority. The owner seals cleanup before authority retirement and performs artifact-only cleanup after the Removed cut.
+- zero local repos is a valid `NoScope` host state. Watcher expected=0 is healthy; login, diagnostics and Create stay available.
+- A fallback is an optional user choice bound during Prepare, never backend auto-selection. Cleanup fsyncs its durable terminal result and releases the authority lock before best-effort publication; clients receive final RepoList and scope in one typed finalization.
 - durable `RepoHealth` and process-local `RepoMountState` are orthogonal. Workspace-dependent writes require `Healthy + Mounted`; watcher failure never becomes a projection fault or Ledger fact.
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
 The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health,
-E2 final-state shutdown, host-owned lifecycle jobs and the A1/B1 prepare/cut/settle skeleton are
+E2 final-state shutdown, host-owned lifecycle jobs and the existing prepare/cut/settle skeleton are
 implemented. `flow.repo.lifecycle` remains active drift because ownership-aware removal still lacks
-safe per-RepoId authority retirement, manifest-bound owned-state settlement, exact repair and
-destructive UI evidence. A catalog tombstone alone is not evidence of physical cleanup.
+safe per-RepoId authority retirement, zero-repo composition, F4/v5 preview-token admission,
+manifest-bound owned-state settlement, exact repair and destructive UI evidence. A catalog tombstone
+alone is not evidence of physical cleanup.
 
 ## Cross-host Data and Host-local Interaction
 
@@ -107,7 +113,7 @@ Remote provider
   -> Workspace
 ```
 
-Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B4 已激活 backend/CLI/product wire并删除旧 pull substitute；82-flow modeled slice 同时诚实登记 Remote Import client、C1′ repo control 与 A1/B1 lifecycle drift。
+Remote Projection owns push/source streaming only. Remote Import owns durable session/candidate lifecycle and its typed repo-removal artifact plan, but cannot write authority tables directly. Source Control and External Changes are sibling domains, not import controllers; the Web client is a thin typed projection. B4 已激活 backend/CLI/product wire并删除旧 pull substitute；82-flow modeled slice 同时诚实登记 Remote Import client 与 ownership-aware lifecycle drift。
 
 Post-commit Projection outcome uses one repo-local Redb v4 settlement boundary:
 `Pending -> Written` updates only the stored receipt, while `Pending -> Degraded`
