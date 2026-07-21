@@ -135,8 +135,14 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+      - name: Install cargo-audit 0.22.2
+        uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2.84.0
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
+
+      - name: Verify cargo-audit version
+        run: test "$(cargo audit --version)" = "cargo-audit 0.22.2"
 
       - name: Build linux/amd64 image once
         env:
