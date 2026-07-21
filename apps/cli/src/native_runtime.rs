@@ -19,7 +19,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-pub const NATIVE_DEFAULT_REPO_NAME: &str = "default";
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,7 +26,7 @@ pub struct NativeLocalBackendLayout {
     pub app_data_dir: PathBuf,
     pub ledger_dir: PathBuf,
     pub projection_base: PathBuf,
-    pub workspace_root: PathBuf,
+    pub workspace_root: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -148,36 +147,19 @@ pub fn init_default_native_backend(
     } else {
         Vec::new()
     };
-    let (repo, workspace_root) = match existing.as_slice() {
-        [] => {
-            let report = crate::repo_init::initialize_initial_local_repo_workspace(
-                &ledger_dir,
-                NATIVE_DEFAULT_REPO_NAME,
-                &projection_base,
-                snapshot_depth,
-                None,
-                None,
-            )?;
-            let repo = RepoManager::init_existing_for_repo_id(
-                &ledger_dir,
-                snapshot_depth,
-                report.repo_id,
-            )?;
-            (repo, report.workspace_root)
-        }
-        [repo_id] => {
+    let (repo, workspace_root) = match existing.first().copied() {
+        None => (
+            RepoManager::init_empty_host(&ledger_dir, snapshot_depth)?,
+            None,
+        ),
+        Some(repo_id) => {
             let repo =
-                RepoManager::init_existing_for_repo_id(&ledger_dir, snapshot_depth, *repo_id)?;
+                RepoManager::init_existing_for_repo_id(&ledger_dir, snapshot_depth, repo_id)?;
             let workspace_root =
                 repo.check_projection_locator_for_local_repo(&repo_id.to_string())?;
-            (repo, workspace_root)
+            (repo, Some(workspace_root))
         }
-        _ => anyhow::bail!(
-            "native default backend requires exactly one cataloged local repo, found {}",
-            existing.len()
-        ),
     };
-    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(&ledger_dir))
         .with_context(|| format!("Failed to create native host key dir under {ledger_dir:?}"))?;
     repo.validate_projection_locator_map()?;
@@ -298,14 +280,15 @@ impl NativeEmbeddedTransportRuntime {
 }
 
 fn native_server_launch_options(options: &NativeLocalBackendOptions) -> ServerLaunchOptions {
-    match options.auth_material.clone() {
+    let launch = match options.auth_material.clone() {
         Some(auth_material) => ServerLaunchOptions::native_loopback_with_auth_material(
             options.port,
             options.session_bound,
             auth_material,
         ),
         None => ServerLaunchOptions::native_loopback(options.port, options.session_bound),
-    }
+    };
+    launch.with_repo_creation_projection_base(Some(options.app_data_dir.join("workspace")))
 }
 
 pub fn bind_native_loopback_listener(
@@ -381,12 +364,12 @@ fn default_native_plugin_dir_candidates() -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::{
-        NATIVE_DEFAULT_REPO_NAME, NativeLocalBackendOptions, bind_native_loopback_listener,
+        NativeLocalBackendOptions, bind_native_loopback_listener,
         bind_native_loopback_listener_exact, init_default_native_backend,
     };
 
     #[test]
-    fn native_default_backend_initializes_repo_projection_and_notegit() {
+    fn native_default_backend_starts_empty_without_creating_repo_authority() {
         let dir = tempfile::tempdir().expect("tempdir");
         let (repo, layout) =
             init_default_native_backend(dir.path(), 8).expect("init native backend");
@@ -397,40 +380,35 @@ mod tests {
         );
         assert!(layout.ledger_dir.join("local").is_dir());
         assert!(layout.projection_base.is_dir());
-        assert!(layout.workspace_root.is_dir());
-        assert!(
-            layout
-                .workspace_root
-                .join(".notegit/identity.toml")
-                .is_file()
-        );
-
-        let gitignore =
-            std::fs::read_to_string(layout.workspace_root.join(".gitignore")).expect("gitignore");
-        assert!(gitignore.lines().any(|line| line.trim() == ".notegit/"));
+        assert!(layout.workspace_root.is_none());
         let summaries = repo
             .list_cataloged_local_repo_summaries()
             .expect("catalog listing");
-        assert_eq!(summaries.len(), 1, "native backend catalogs one repo");
-        let alias = repo
-            .host_repo_alias_runtime()
-            .binding(summaries[0].repo_id)
-            .expect("alias lookup");
-        assert_eq!(
-            alias.alias, NATIVE_DEFAULT_REPO_NAME,
-            "initial alias binds the native default display name"
+        assert!(
+            summaries.is_empty(),
+            "native startup must not invent a repo"
+        );
+        assert!(
+            std::fs::read_dir(layout.ledger_dir.join("local"))
+                .expect("local dir")
+                .all(|entry| entry
+                    .expect("entry")
+                    .path()
+                    .extension()
+                    .is_none_or(|ext| ext != "redb")),
+            "native NoScope startup must not create local Redb"
         );
 
         // Reopen must reuse the cataloged repo instead of creating another.
         drop(repo);
         let (repo, second_layout) =
             init_default_native_backend(dir.path(), 8).expect("reopen native backend");
-        assert_eq!(second_layout.workspace_root, layout.workspace_root);
+        assert_eq!(second_layout.workspace_root, None);
         assert_eq!(
             repo.list_cataloged_local_repo_summaries()
                 .expect("catalog listing after reopen")
                 .len(),
-            1
+            0
         );
     }
 

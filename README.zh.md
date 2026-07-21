@@ -219,6 +219,7 @@ Mobile Tauri bundle 在生产 shell 运行中加载 bundled `frontendDist` asset
 重要本地配置：
 
 - `ledger_dir`：本地 ledger/runtime storage。
+- `repo_creation_projection_base`：仅用于 zero-repo host 创建首个 repo 的可选绝对基目录；缺失时仍可正常启动。
 - `profile`：`standard` 或 `low-spec`。
 - `sync_mode`：`auto` 或 `manual`。
 - `merge_strategy`：`manual` 或 `auto`。

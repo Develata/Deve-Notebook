@@ -161,7 +161,14 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
                 repo,
                 watcher,
             };
-            let result = if let Some((initial_alias, projection_base)) = job.intent.create_parts() {
+            let result = if let Some((initial_alias, projection_base, projection_base_repo_id)) =
+                job.intent.create_parts()
+            {
+                if let Err(error) = coordinator
+                    .revalidate_create_projection_base(projection_base_repo_id, projection_base)
+                {
+                    return executor.classify_failure(&job, error);
+                }
                 coordinator
                     .create(CreateRepoIntent {
                         repo_id: job.target_repo_id,

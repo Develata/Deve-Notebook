@@ -12,7 +12,6 @@ use std::path::{Path, PathBuf};
 
 pub(crate) struct LocalRepoInitReport {
     pub repo_name: String,
-    pub repo_id: uuid::Uuid,
     pub workspace_root: PathBuf,
 }
 
@@ -48,7 +47,6 @@ pub(crate) fn prepare_local_repo_workspace(
     Ok((
         LocalRepoInitReport {
             repo_name: actual_repo_name,
-            repo_id,
             workspace_root,
         },
         repo,

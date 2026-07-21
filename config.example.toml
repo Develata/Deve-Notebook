@@ -6,6 +6,8 @@ profile = "standard"
 # Path Configuration
 # Local ledger storage (contains database and logs)
 ledger_dir = "ledger"
+# Optional absolute base used only when a zero-repo host creates its first repo.
+# repo_creation_projection_base = "C:/Users/example/Documents/Deve-Notebook"
 # Projection workspace roots are configured per repo with:
 # deve repo projection set --repo <name-or-uuid> --base <path>
 

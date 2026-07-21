@@ -1,4 +1,4 @@
-use super::support::{ensure_native_loopback_default_workspace, init_runtime};
+use super::support::init_runtime;
 
 fn redb_names(ledger_dir: &std::path::Path) -> Vec<std::ffi::OsString> {
     let mut names = std::fs::read_dir(ledger_dir.join("local"))
@@ -12,36 +12,22 @@ fn redb_names(ledger_dir: &std::path::Path) -> Vec<std::ffi::OsString> {
 }
 
 #[test]
-fn native_loopback_bootstrap_creates_default_workspace_for_empty_data_root() {
+fn serve_runtime_supports_empty_catalog_without_creating_local_repo() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
 
-    ensure_native_loopback_default_workspace(&ledger_dir, 8).expect("native bootstrap");
-
     let repo = init_runtime(&ledger_dir, 8).expect("repo");
     repo.validate_projection_locator_map().expect("locator map");
-    // Machine names are canonical UUID strings and resolution does not consult
-    // the host-local "default" alias, so resolve the bootstrapped repo through
-    // the durable catalog.
     let summaries = repo
         .list_cataloged_local_repo_summaries()
         .expect("catalog summaries");
-    assert_eq!(
-        summaries.len(),
-        1,
-        "bootstrap must catalog exactly one repo"
-    );
-    let workspace = repo
-        .local_repo_workspace_root(&summaries[0].execution_name)
-        .expect("default workspace");
-    let projection_base = std::fs::canonicalize(dir.path().join("notes")).expect("canonical notes");
-    assert!(workspace.starts_with(projection_base));
-    assert!(workspace.join(".notegit/identity.toml").is_file());
+    assert!(summaries.is_empty(), "empty startup must not invent a repo");
+    assert!(redb_names(&ledger_dir).is_empty());
     assert!(dir.path().join("ledger/.host/keys").is_dir());
 }
 
 #[test]
-fn native_loopback_bootstrap_preserves_existing_valid_locator() {
+fn serve_runtime_preserves_existing_valid_locator() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("custom-notes");
@@ -55,8 +41,6 @@ fn native_loopback_bootstrap_preserves_existing_valid_locator() {
         None,
     )
     .expect("init");
-
-    ensure_native_loopback_default_workspace(&ledger_dir, 8).expect("native bootstrap");
 
     let repo = init_runtime(&ledger_dir, 8).expect("repo");
     let summaries = repo
@@ -106,21 +90,19 @@ fn serve_runtime_opens_exact_cataloged_repo_without_creating_an_orphan() {
 }
 
 #[test]
-fn serve_runtime_rejects_an_empty_catalog_without_creating_local_repo_database() {
+fn serve_runtime_accepts_an_empty_catalog_without_creating_local_repo_database() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     std::fs::create_dir_all(&ledger_dir).expect("empty ledger root");
 
-    let error = init_runtime(&ledger_dir, 8)
-        .err()
-        .expect("empty catalog must fail closed");
-
+    let repo = init_runtime(&ledger_dir, 8).expect("empty catalog should compose NoScope");
     assert!(
-        error.to_string().contains("run `deve init` first"),
-        "{error}"
+        repo.list_cataloged_local_repo_summaries()
+            .unwrap()
+            .is_empty()
     );
     assert!(
-        !ledger_dir.join("local").exists(),
-        "failed serve startup must not create local authority storage"
+        redb_names(&ledger_dir).is_empty(),
+        "NoScope startup must not create local authority databases"
     );
 }

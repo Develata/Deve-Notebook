@@ -12,7 +12,7 @@ use deve_core::config::{AppProfile, P2pConfig, RuntimeEnvironment, SyncMode};
 use deve_core::plugin::runtime::host;
 use deve_core::security::AuthConfig;
 use reqwest::Client;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::time::{Duration, sleep, timeout};
 
@@ -21,9 +21,7 @@ mod support;
 mod support_tests;
 #[cfg(test)]
 mod tests;
-use support::{
-    ensure_native_loopback_default_workspace, find_free_port, init_runtime, load_plugins,
-};
+use support::{find_free_port, init_runtime, load_plugins};
 
 pub struct ServeOptions {
     pub port: u16,
@@ -35,6 +33,7 @@ pub struct ServeOptions {
     pub p2p: P2pConfig,
     pub native_loopback: bool,
     pub loopback_only: bool,
+    pub repo_creation_projection_base: Option<PathBuf>,
 }
 
 /// 启动后端服务器
@@ -55,6 +54,7 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         p2p,
         native_loopback,
         loopback_only,
+        repo_creation_projection_base,
     } = options;
     let runtime_environment = RuntimeEnvironment::for_serve(dev);
     if dev {
@@ -73,7 +73,8 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
     } else {
         server::ServerLaunchOptions::release(port)
     }
-    .with_runtime_environment(runtime_environment);
+    .with_runtime_environment(runtime_environment)
+    .with_repo_creation_projection_base(repo_creation_projection_base);
     let bind_addr = launch.bind_addr();
     let listener = match tokio::net::TcpListener::bind(bind_addr).await {
         Ok(listener) => listener,
@@ -89,9 +90,6 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         Err(err) => return Err(err.into()),
     };
 
-    if native_loopback {
-        ensure_native_loopback_default_workspace(ledger_dir, snapshot_depth)?;
-    }
     let repo_arc = init_runtime(ledger_dir, snapshot_depth)?;
     let plugins = load_plugins()?;
 

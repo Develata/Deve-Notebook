@@ -23,7 +23,8 @@ impl SyncManager {
     }
 
     pub fn persist_doc(&self, doc_id: DocId) -> Result<()> {
-        self.persist_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
+        let repo_name = self.repo.current_local_repo_name()?;
+        self.persist_doc_in_local_repo(&repo_name, doc_id)
     }
 
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
@@ -118,13 +119,8 @@ impl SyncManager {
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
         persist: bool,
     ) -> Result<(u64, u64)> {
-        self.apply_local_op_in_local_repo(
-            self.repo.local_repo_name(),
-            doc_id,
-            peer_id,
-            op_entry_builder,
-            persist,
-        )
+        let repo_name = self.repo.current_local_repo_name()?;
+        self.apply_local_op_in_local_repo(&repo_name, doc_id, peer_id, op_entry_builder, persist)
     }
 
     /// Invariant: 追加 Op、重建文档与保存快照必须命中同一 `repo_name`。

@@ -3,6 +3,29 @@ use crate::ledger::RepoManager;
 use crate::test_support::init_cataloged_repo;
 
 #[test]
+fn empty_host_has_no_implicit_primary_and_never_creates_local_redb() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+
+    let repo = RepoManager::init_empty_host(&ledger_dir, 8)?;
+
+    assert!(repo.list_cataloged_local_repo_summaries()?.is_empty());
+    assert!(repo.local_repo_name().is_empty());
+    assert!(
+        repo.list_local_docs(None)
+            .expect_err("NoScope default read must fail closed")
+            .to_string()
+            .contains("Repository not found")
+    );
+    assert!(std::fs::read_dir(ledger_dir.join("local"))?.all(|entry| {
+        entry
+            .map(|entry| entry.path().extension().is_none_or(|ext| ext != "redb"))
+            .unwrap_or(false)
+    }));
+    Ok(())
+}
+
+#[test]
 fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;

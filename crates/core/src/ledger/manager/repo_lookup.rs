@@ -28,7 +28,14 @@ impl RepoManager {
         branch: Option<&PeerId>,
         repo_name: Option<&str>,
     ) -> Result<Option<RepoInfo>> {
-        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
+        let default_name;
+        let name = match repo_name {
+            Some(name) => name,
+            None => {
+                default_name = self.current_local_repo_name()?;
+                &default_name
+            }
+        };
         if let Some(peer_id) = branch {
             return self.read_remote_repo_info(peer_id, name);
         }

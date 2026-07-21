@@ -54,6 +54,7 @@ pub async fn run(
                     p2p: config.p2p.clone(),
                     native_loopback,
                     loopback_only,
+                    repo_creation_projection_base: config.repo_creation_projection_base.clone(),
                 },
             )
             .await?

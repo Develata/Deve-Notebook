@@ -30,7 +30,7 @@ fn terminal_retention_is_deterministic_bounded_and_protects_control_debt() {
         Uuid::new_v4(),
         Uuid::new_v4(),
         protected_repo,
-        RepoLifecycleJobIntent::create("protected", projection).expect("create intent"),
+        RepoLifecycleJobIntent::create("protected", projection, None).expect("create intent"),
     )
     .expect("protected receipt");
     protected.complete(RepoLifecycleJobCompletion::succeeded(

@@ -34,12 +34,6 @@ impl<'a> SourceControlWriteRuntime<'a> {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
-        if repo_name == self.manager.local_repo_name() {
-            return self
-                .manager
-                .commit_runtime()
-                .commit_source_control_changes(message);
-        }
         self.manager
             .commit_runtime()
             .commit_source_control_changes_in_local_repo(repo_name, message)

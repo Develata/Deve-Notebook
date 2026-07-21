@@ -18,9 +18,18 @@ impl<'a> RepairRuntime<'a> {
     }
 
     pub(crate) fn repair_local_repo_catalog(&self) -> Result<()> {
+        let normal_repo_ids = self.manager.normal_repo_catalog_ids()?;
+        let validation_first = self
+            .manager
+            .local_authority
+            .primary_repo_id()
+            .filter(|repo_id| normal_repo_ids.contains(repo_id))
+            .or_else(|| normal_repo_ids.first().copied())
+            .map(|repo_id| repo_id.to_string())
+            .unwrap_or_default();
         repair_local_repo_metadata(
             &self.manager.ledger_dir,
-            self.manager.local_repo_name(),
+            &validation_first,
             &self.manager.local_authority,
         )?;
         self.manager.repair_local_repo_source_control_tables()

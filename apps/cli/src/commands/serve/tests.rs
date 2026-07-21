@@ -277,6 +277,7 @@ async fn serve_dry_run_validates_runtime_without_binding() {
             p2p: P2pConfig::default(),
             native_loopback: false,
             loopback_only: false,
+            repo_creation_projection_base: None,
         },
     )
     .await
@@ -302,6 +303,7 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
             p2p: P2pConfig::default(),
             native_loopback: true,
             loopback_only: false,
+            repo_creation_projection_base: None,
         },
     )
     .await
@@ -329,6 +331,7 @@ async fn release_loopback_refuses_proxy_fallback_when_port_is_occupied() {
             p2p: P2pConfig::default(),
             native_loopback: false,
             loopback_only: true,
+            repo_creation_projection_base: None,
         },
     )
     .await
@@ -361,6 +364,7 @@ async fn serve_dev_does_not_mutate_existing_deve_env() {
             p2p: P2pConfig::default(),
             native_loopback: false,
             loopback_only: false,
+            repo_creation_projection_base: None,
         },
     )
     .await

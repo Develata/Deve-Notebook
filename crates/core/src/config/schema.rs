@@ -5,6 +5,7 @@
 //! Runtime config schema and serde/default contracts.
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use super::defaults;
@@ -216,6 +217,9 @@ pub struct Config {
     /// 账本目录路径。
     #[serde(default = "defaults::ledger")]
     pub ledger_dir: String,
+    /// Optional absolute base used only when a zero-repo host creates its first repo.
+    #[serde(default)]
+    pub repo_creation_projection_base: Option<PathBuf>,
     /// 同步模式。
     #[serde(default)]
     pub sync_mode: SyncMode,
@@ -250,6 +254,7 @@ impl Default for Config {
         Self {
             profile: defaults::profile(),
             ledger_dir: defaults::ledger(),
+            repo_creation_projection_base: None,
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
             snapshot_depth: defaults::snapshot_depth(),

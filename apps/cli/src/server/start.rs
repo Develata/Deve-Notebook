@@ -118,6 +118,9 @@ impl EmbeddedServerRuntime {
             identity_key: key_pair,
             watcher_runtime,
             watcher_supervisor: watcher_supervisor.clone(),
+            repo_creation_projection_base: launch
+                .repo_creation_projection_base()
+                .map(std::path::Path::to_path_buf),
         })?;
         #[cfg(not(test))]
         deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(

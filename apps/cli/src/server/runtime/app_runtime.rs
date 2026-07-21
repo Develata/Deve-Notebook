@@ -27,6 +27,7 @@ use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -51,6 +52,7 @@ pub(crate) struct AppStateParts {
     pub identity_key: Arc<IdentityKeyPair>,
     pub watcher_runtime: WatcherRuntimeView,
     pub watcher_supervisor: Arc<WatcherSupervisor>,
+    pub repo_creation_projection_base: Option<PathBuf>,
 }
 
 pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppState>> {
@@ -58,6 +60,8 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppSta
     let _watcher_runtime = parts.watcher_runtime;
     #[cfg(test)]
     let _watcher_supervisor = parts.watcher_supervisor;
+    #[cfg(test)]
+    let _repo_creation_projection_base = parts.repo_creation_projection_base;
     #[cfg(not(test))]
     let catalog_membership = parts.repo.catalog_membership_runtime();
     #[cfg(not(test))]
@@ -81,6 +85,7 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppSta
         parts.watcher_supervisor.clone(),
         remote_import.clone(),
         parts.repo.catalog_membership_runtime(),
+        parts.repo_creation_projection_base.clone(),
     );
     #[cfg(not(test))]
     let repo_lifecycle_jobs = RepoLifecycleJobRuntime::start(
@@ -121,5 +126,7 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppSta
         repo_sessions,
         #[cfg(not(test))]
         repo_lifecycle_jobs,
+        #[cfg(not(test))]
+        repo_creation_projection_base: parts.repo_creation_projection_base.map(Arc::new),
     }))
 }

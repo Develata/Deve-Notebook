@@ -11,9 +11,12 @@ pub(super) fn resolve_local_sc_target(
     path: &str,
 ) -> Result<ScPathTarget, Box<EvalAltResult>> {
     let path = to_forward_slash(path);
+    let repo_name = repo_manager
+        .current_local_repo_name()
+        .map_err(|error| Box::<EvalAltResult>::from(error.to_string()))?;
     repo_manager
-        .tracked_target_for_path_in_local_repo(repo_manager.local_repo_name(), &path)
-        .map_err(|e: anyhow::Error| e.to_string().into())
+        .tracked_target_for_path_in_local_repo(&repo_name, &path)
+        .map_err(|error| Box::<EvalAltResult>::from(error.to_string()))
 }
 
 #[cfg(test)]

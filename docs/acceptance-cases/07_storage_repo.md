@@ -284,10 +284,13 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1 per-RepoId authority ownership is implemented; R2-R6 zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh cross-process evidence are not implemented yet
+    - gap: R1 per-RepoId authority ownership and R2 zero-repo NoScope/configured first Create are implemented; dedicated REPO_CREATION_PROJECTION_BASE_REQUIRED wire projection and R3-R6 F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh cross-process evidence are not implemented yet
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
+    - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
-    - run: cargo test -p deve_cli --lib zero_repo_create_without_projection_base_returns_typed_error -- --nocapture
+    - run: cargo test -p deve_cli --lib zero_repo_create_without_projection_base_is_typed_before_ws_v5_projection -- --nocapture
+    - run: cargo test -p deve_cli --lib remove_last_then_create_uses_new_durable_membership_for_default_reads -- --nocapture
+    - run: cargo test -p deve_cli --lib queued_create_rejects_projection_base -- --nocapture
     - run: cargo test -p deve_cli --lib prepare_local_repo_removal_reissues_and_invalidates_confirmation_token -- --nocapture
     - run: cargo test -p deve_cli --lib execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token -- --nocapture
     - run: cargo test -p deve_cli --lib execute_local_repo_removal_retry_returns_existing_job_or_result -- --nocapture

@@ -35,7 +35,8 @@ impl RepoManager {
     }
 
     pub fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
-        self.list_changes_in_local_repo(self.local_repo_name())
+        let repo_name = self.current_local_repo_name()?;
+        self.list_changes_in_local_repo(&repo_name)
     }
 
     pub fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
@@ -44,7 +45,8 @@ impl RepoManager {
     }
 
     pub fn diff_doc_path(&self, path: &str) -> Result<String> {
-        self.diff_doc_path_in_local_repo(self.local_repo_name(), path)
+        let repo_name = self.current_local_repo_name()?;
+        self.diff_doc_path_in_local_repo(&repo_name, path)
     }
 
     pub fn diff_doc_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<String> {
@@ -99,7 +101,8 @@ impl RepoManager {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>> {
-        self.diff_commits_in_local_repo(self.local_repo_name(), commit_a_id, commit_b_id)
+        let repo_name = self.current_local_repo_name()?;
+        self.diff_commits_in_local_repo(&repo_name, commit_a_id, commit_b_id)
     }
 
     pub fn diff_commits_in_local_repo(

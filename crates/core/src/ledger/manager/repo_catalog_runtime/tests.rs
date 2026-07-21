@@ -306,6 +306,15 @@ fn removed_catalog_record_cannot_reanimate_a_residual_database() -> anyhow::Resu
             .to_string()
             .contains("No durable Normal local repository")
     );
+    let empty = RepoManager::init_empty_host(&ledger, 8)?;
+    assert!(empty.list_cataloged_local_repo_summaries()?.is_empty());
+    assert!(
+        ledger
+            .join("local")
+            .join(format!("{repo_id}.redb"))
+            .is_file(),
+        "R2 composes NoScope without admitting or deleting committed cleanup debt"
+    );
     Ok(())
 }
 

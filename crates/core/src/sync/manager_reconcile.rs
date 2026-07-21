@@ -11,7 +11,8 @@ use tracing::info;
 
 impl SyncManager {
     pub fn reconcile_doc(&self, doc_id: DocId) -> Result<bool> {
-        self.reconcile_doc_in_local_repo(self.repo.local_repo_name(), doc_id)
+        let repo_name = self.repo.current_local_repo_name()?;
+        self.reconcile_doc_in_local_repo(&repo_name, doc_id)
     }
 
     pub fn reconcile_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<bool> {

@@ -17,6 +17,8 @@ use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+#[cfg(not(test))]
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -70,9 +72,23 @@ pub struct AppState {
     #[cfg(not(test))]
     pub(crate) repo_lifecycle_jobs:
         Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>,
+    #[cfg(not(test))]
+    pub(crate) repo_creation_projection_base: Option<Arc<PathBuf>>,
 }
 
 impl AppState {
+    #[cfg(not(test))]
+    pub(crate) fn repo_creation_projection_base(&self) -> Option<&Path> {
+        self.repo_creation_projection_base
+            .as_deref()
+            .map(PathBuf::as_path)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn repo_creation_projection_base(&self) -> Option<&std::path::Path> {
+        None
+    }
+
     pub(crate) fn catalog_membership_runtime(&self) -> deve_core::ledger::CatalogMembershipRuntime {
         let runtime = self.repo.catalog_membership_runtime();
         #[cfg(test)]
@@ -166,6 +182,7 @@ impl AppState {
                     supervisor,
                     self.remote_import_coordinator(),
                     membership,
+                    None,
                 )
             })
             .clone()

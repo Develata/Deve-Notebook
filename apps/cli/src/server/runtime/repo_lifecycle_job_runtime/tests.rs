@@ -131,7 +131,7 @@ impl RepoLifecyclePublicationSink for TestSink {
 }
 
 fn create_intent(root: &std::path::Path, alias: &str) -> RepoLifecycleJobIntent {
-    RepoLifecycleJobIntent::create(alias, root).expect("create intent")
+    RepoLifecycleJobIntent::create(alias, root, None).expect("create intent")
 }
 
 async fn terminal_status(

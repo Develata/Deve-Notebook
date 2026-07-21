@@ -114,3 +114,107 @@ async fn remove_publication_revalidates_fallback_mount_after_cut() -> anyhow::Re
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn remove_last_repo_enters_no_scope_without_requiring_fallback() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let coordinator = state.repo_lifecycle_coordinator();
+    let only_repo = state
+        .repo
+        .list_cataloged_local_repo_summaries()?
+        .into_iter()
+        .next()
+        .expect("fixture repo");
+
+    let outcome = coordinator
+        .remove(only_repo.repo_id, uuid::Uuid::new_v4())
+        .await?;
+
+    assert!(outcome.fallback.is_none());
+    assert!(state.repo.list_cataloged_local_repo_summaries()?.is_empty());
+    assert!(!coordinator.watcher_is_mounted_for_test(only_repo.repo_id));
+    coordinator.shutdown_watchers_for_test();
+    Ok(())
+}
+
+#[tokio::test]
+async fn remove_last_then_create_uses_new_durable_membership_for_default_reads()
+-> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    let coordinator = state.repo_lifecycle_coordinator();
+    let old_repo = state
+        .repo
+        .list_cataloged_local_repo_summaries()?
+        .into_iter()
+        .next()
+        .expect("fixture repo");
+    coordinator
+        .remove(old_repo.repo_id, uuid::Uuid::new_v4())
+        .await?;
+
+    let new_repo = RepoId::new_v4();
+    assert_eq!(
+        create_repo(&state, &dir.path().join("replacement-notes"), new_repo).await?,
+        RepoMountOutcome::Mounted
+    );
+
+    assert_eq!(state.repo.current_local_repo_name()?, new_repo.to_string());
+    assert!(state.repo.list_local_docs(None)?.is_empty());
+    coordinator.shutdown_watchers_for_test();
+    Ok(())
+}
+
+#[tokio::test]
+async fn queued_create_rejects_removed_projection_base_source() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let coordinator = state.repo_lifecycle_coordinator();
+    let source = state
+        .repo
+        .list_cataloged_local_repo_summaries()?
+        .into_iter()
+        .next()
+        .expect("fixture repo");
+    let prepared_base = state
+        .repo
+        .projection_locator_for_local_repo(&source.execution_name)?
+        .projection_base_abs;
+
+    coordinator
+        .remove(source.repo_id, uuid::Uuid::new_v4())
+        .await?;
+
+    let error = coordinator
+        .revalidate_create_projection_base(Some(source.repo_id), &prepared_base)
+        .expect_err("removed source repo must invalidate a queued create");
+    assert!(error.to_string().contains("left the local catalog"));
+    coordinator.shutdown_watchers_for_test();
+    Ok(())
+}
+
+#[test]
+fn queued_create_rejects_projection_base_locator_drift() -> anyhow::Result<()> {
+    let (dir, state) = build_state()?;
+    let coordinator = state.repo_lifecycle_coordinator();
+    let source = state
+        .repo
+        .list_cataloged_local_repo_summaries()?
+        .into_iter()
+        .next()
+        .expect("fixture repo");
+    let prepared_base = state
+        .repo
+        .projection_locator_for_local_repo(&source.execution_name)?
+        .projection_base_abs;
+    let relocated = dir.path().join("relocated-notes");
+    std::fs::create_dir_all(&relocated)?;
+    state
+        .repo
+        .set_projection_base_for_repo_id(source.repo_id, &relocated)?;
+
+    let error = coordinator
+        .revalidate_create_projection_base(Some(source.repo_id), &prepared_base)
+        .expect_err("locator drift must invalidate a queued create");
+    assert!(error.to_string().contains("binding changed"));
+    coordinator.shutdown_watchers_for_test();
+    Ok(())
+}

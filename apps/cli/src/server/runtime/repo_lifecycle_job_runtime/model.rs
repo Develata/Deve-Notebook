@@ -24,6 +24,7 @@ enum RepoLifecycleJobIntentKind {
     Create {
         initial_alias: String,
         projection_base: PathBuf,
+        projection_base_repo_id: Option<RepoId>,
     },
     Remove {
         repo_id: RepoId,
@@ -34,6 +35,7 @@ impl RepoLifecycleJobIntent {
     pub(crate) fn create(
         initial_alias: &str,
         projection_base: impl AsRef<Path>,
+        projection_base_repo_id: Option<RepoId>,
     ) -> Result<Self, RepoLifecycleJobError> {
         let initial_alias = HostRepoAliasRuntime::normalize_alias(initial_alias)
             .map_err(|_| RepoLifecycleJobError::InvalidRequest)?;
@@ -45,6 +47,7 @@ impl RepoLifecycleJobIntent {
             inner: RepoLifecycleJobIntentKind::Create {
                 initial_alias,
                 projection_base: projection_base.to_path_buf(),
+                projection_base_repo_id,
             },
         })
     }
@@ -62,12 +65,17 @@ impl RepoLifecycleJobIntent {
         }
     }
 
-    pub(crate) fn create_parts(&self) -> Option<(&str, &Path)> {
+    pub(crate) fn create_parts(&self) -> Option<(&str, &Path, Option<RepoId>)> {
         match &self.inner {
             RepoLifecycleJobIntentKind::Create {
                 initial_alias,
                 projection_base,
-            } => Some((initial_alias, projection_base.as_path())),
+                projection_base_repo_id,
+            } => Some((
+                initial_alias,
+                projection_base.as_path(),
+                *projection_base_repo_id,
+            )),
             RepoLifecycleJobIntentKind::Remove { .. } => None,
         }
     }
@@ -91,6 +99,7 @@ impl RepoLifecycleJobIntent {
             RepoLifecycleJobIntentKind::Create {
                 initial_alias,
                 projection_base,
+                ..
             } => {
                 let normalized = HostRepoAliasRuntime::normalize_alias(initial_alias)
                     .map_err(|_| RepoLifecycleJobError::InvalidRequest)?;

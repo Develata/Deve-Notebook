@@ -31,10 +31,6 @@ impl<'a> CommitRuntime<'a> {
         Self { manager }
     }
 
-    pub(crate) fn commit_source_control_changes(&self, message: &str) -> Result<CommitInfo> {
-        self.commit_source_control_changes_in_local_repo(self.manager.local_repo_name(), message)
-    }
-
     pub(crate) fn commit_source_control_changes_in_local_repo(
         &self,
         repo_name: &str,

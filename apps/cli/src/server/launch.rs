@@ -13,6 +13,7 @@ use deve_core::{
 use std::{
     fmt,
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::{Path, PathBuf},
 };
 
 use super::node_role::NativeServiceSummary;
@@ -24,6 +25,7 @@ pub struct ServerLaunchOptions {
     advertised_host: &'static str,
     runtime_environment: RuntimeEnvironment,
     native: Option<NativeLaunchSession>,
+    repo_creation_projection_base: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,6 +102,7 @@ impl ServerLaunchOptions {
             advertised_host: "0.0.0.0",
             runtime_environment: RuntimeEnvironment::from_env(),
             native: None,
+            repo_creation_projection_base: None,
         }
     }
 
@@ -110,6 +113,7 @@ impl ServerLaunchOptions {
             advertised_host: "127.0.0.1",
             runtime_environment: RuntimeEnvironment::from_env(),
             native: None,
+            repo_creation_projection_base: None,
         }
     }
 
@@ -123,6 +127,7 @@ impl ServerLaunchOptions {
                 session_bound,
                 auth_material: None,
             }),
+            repo_creation_projection_base: None,
         }
     }
 
@@ -141,6 +146,7 @@ impl ServerLaunchOptions {
                 session_bound,
                 auth_material: Some(auth_material),
             }),
+            repo_creation_projection_base: None,
         }
     }
 
@@ -156,6 +162,15 @@ impl ServerLaunchOptions {
     pub fn with_runtime_environment(mut self, environment: RuntimeEnvironment) -> Self {
         self.runtime_environment = environment;
         self
+    }
+
+    pub fn with_repo_creation_projection_base(mut self, base: Option<PathBuf>) -> Self {
+        self.repo_creation_projection_base = base;
+        self
+    }
+
+    pub fn repo_creation_projection_base(&self) -> Option<&Path> {
+        self.repo_creation_projection_base.as_deref()
     }
 
     pub fn runtime_environment(&self) -> RuntimeEnvironment {

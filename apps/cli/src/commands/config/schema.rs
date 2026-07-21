@@ -14,6 +14,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::integer("ai.agent_bridge.timeout_ms"),
     ConfigKeySpec::integer("concurrency"),
     ConfigKeySpec::string("ledger_dir", &[]),
+    ConfigKeySpec::optional_absolute_path("repo_creation_projection_base"),
     ConfigKeySpec::integer("mem_cache_mb"),
     ConfigKeySpec::string("merge_strategy", &["manual", "auto"]),
     ConfigKeySpec::positive_integer("p2p.connect_interval_ms"),
@@ -76,12 +77,20 @@ impl ConfigKeySpec {
             kind: ValueKind::EnvName,
         }
     }
+
+    const fn optional_absolute_path(key: &'static str) -> Self {
+        Self {
+            key,
+            kind: ValueKind::OptionalAbsolutePath,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 enum ValueKind {
     String { choices: &'static [&'static str] },
     EnvName,
+    OptionalAbsolutePath,
     Bool,
     Integer { min: i64 },
 }
@@ -91,6 +100,7 @@ impl ValueKind {
     fn plan_type(self) -> &'static str {
         match self {
             Self::String { .. } | Self::EnvName => "String",
+            Self::OptionalAbsolutePath => "Optional absolute path",
             Self::Bool => "Bool",
             Self::Integer { .. } => "Number",
         }
@@ -99,7 +109,7 @@ impl ValueKind {
     fn choices(self) -> &'static [&'static str] {
         match self {
             Self::String { choices } => choices,
-            Self::EnvName | Self::Bool | Self::Integer { .. } => &[],
+            Self::EnvName | Self::OptionalAbsolutePath | Self::Bool | Self::Integer { .. } => &[],
         }
     }
 }
@@ -108,9 +118,18 @@ pub(super) fn parse_whitelisted_value(key: &str, value: &str) -> anyhow::Result<
     match value_kind(key)? {
         ValueKind::String { choices } => parse_string(value, choices),
         ValueKind::EnvName => parse_env_name(value),
+        ValueKind::OptionalAbsolutePath => parse_absolute_path(value),
         ValueKind::Bool => parse_bool(value),
         ValueKind::Integer { min } => parse_integer(value, min),
     }
+}
+
+fn parse_absolute_path(value: &str) -> anyhow::Result<Value> {
+    let value = value.trim().trim_matches('"').to_string();
+    if value.is_empty() || !std::path::Path::new(&value).is_absolute() {
+        return Err(anyhow!("Invalid absolute path: {value}"));
+    }
+    Ok(Value::String(value))
 }
 
 fn value_kind(key: &str) -> anyhow::Result<ValueKind> {

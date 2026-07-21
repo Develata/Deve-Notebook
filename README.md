@@ -241,6 +241,7 @@ Start from `config.example.toml`.
 Important local keys:
 
 - `ledger_dir`: local ledger/runtime storage.
+- `repo_creation_projection_base`: optional absolute base used only to create the first repo on a zero-repo host; startup remains valid when omitted.
 - `profile`: `standard` or `low-spec`.
 - `sync_mode`: `auto` or `manual`.
 - `merge_strategy`: `manual` or `auto`.

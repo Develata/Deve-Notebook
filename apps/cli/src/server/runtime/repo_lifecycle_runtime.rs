@@ -28,6 +28,7 @@ use deve_core::remote_import::{
     RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot,
 };
 use deve_core::sync::SyncManager;
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(test)]
 use std::sync::atomic::AtomicBool;
@@ -39,6 +40,7 @@ pub(crate) struct RepoLifecycleCoordinator {
     watchers: Arc<WatcherSupervisor>,
     remote_import: Arc<RemoteImportCoordinator>,
     membership: CatalogMembershipRuntime,
+    configured_projection_base: Option<PathBuf>,
     #[cfg(test)]
     fail_fallback_publication: AtomicBool,
 }
@@ -63,6 +65,7 @@ impl RepoLifecycleCoordinator {
         watchers: Arc<WatcherSupervisor>,
         remote_import: Arc<RemoteImportCoordinator>,
         membership: CatalogMembershipRuntime,
+        configured_projection_base: Option<PathBuf>,
     ) -> Arc<Self> {
         Arc::new(Self {
             repo,
@@ -71,6 +74,7 @@ impl RepoLifecycleCoordinator {
             watchers,
             remote_import,
             membership,
+            configured_projection_base,
             #[cfg(test)]
             fail_fallback_publication: AtomicBool::new(false),
         })
@@ -268,12 +272,6 @@ impl RepoLifecycleCoordinator {
                     }
                 }
                 let summaries = self.repo.list_cataloged_local_repo_summaries()?;
-                if summaries.len() <= 1 {
-                    return Err(RepoLifecycleError::NotCommitted {
-                        operation: "remove",
-                        detail: "cannot remove the last local repository".to_string(),
-                    });
-                }
                 let old = summaries
                     .iter()
                     .find(|summary| summary.repo_id == repo_id)
@@ -293,12 +291,6 @@ impl RepoLifecycleCoordinator {
                     let membership = self.membership.issue(summary.repo_id)?;
                     fallback = Some(RepoRemovalFallback::new(summary, membership, mount));
                     break;
-                }
-                if fallback.is_none() {
-                    return Err(RepoLifecycleError::NotCommitted {
-                        operation: "remove",
-                        detail: "no alternate Healthy + Mounted local repository".to_string(),
-                    });
                 }
                 Ok(RemoveReservation {
                     watcher: self.watchers.reserve_existing(repo_id)?,

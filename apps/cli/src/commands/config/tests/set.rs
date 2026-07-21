@@ -27,6 +27,44 @@ fn set_ui_key_is_preserved_without_breaking_runtime_config() {
 }
 
 #[test]
+fn set_repo_creation_projection_base_round_trips_through_runtime_validation() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let projection_base = dir.path().join("notes");
+
+    set_in_file(
+        &path,
+        "repo_creation_projection_base",
+        &projection_base.to_string_lossy(),
+    )
+    .expect("set absolute projection base");
+
+    let output = std::fs::read_to_string(path).expect("read config");
+    let config = Config::from_toml_str_checked(&output).expect("runtime-valid config");
+    assert_eq!(
+        config.repo_creation_projection_base.as_deref(),
+        Some(projection_base.as_path())
+    );
+}
+
+#[test]
+fn set_rejects_relative_repo_creation_projection_base_without_rewriting() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let original = "profile = \"standard\"\n";
+    std::fs::write(&path, original).expect("seed config");
+
+    let error = set_in_file(&path, "repo_creation_projection_base", "relative/notes")
+        .expect_err("relative base must fail closed");
+
+    assert!(error.to_string().contains("Invalid absolute path"));
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("read config"),
+        original
+    );
+}
+
+#[test]
 fn set_rejects_unknown_key() {
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("config.toml");

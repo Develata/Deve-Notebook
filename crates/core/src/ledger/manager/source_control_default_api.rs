@@ -13,46 +13,55 @@ use anyhow::Result;
 impl RepoManager {
     /// 取消暂存指定文件
     pub fn unstage_file(&self, path: &str) -> Result<()> {
-        self.unstage_file_in_local_repo(self.local_repo_name(), path)
+        let repo_name = self.current_local_repo_name()?;
+        self.unstage_file_in_local_repo(&repo_name, path)
     }
 
     /// 获取已暂存文件列表
     pub fn list_staged(&self) -> Result<Vec<ChangeEntry>> {
-        self.list_staged_in_local_repo(self.local_repo_name())
+        let repo_name = self.current_local_repo_name()?;
+        self.list_staged_in_local_repo(&repo_name)
     }
 
     /// 获取提交历史
     pub fn list_commits(&self, limit: u32) -> Result<Vec<CommitInfo>> {
-        self.list_commits_in_local_repo(self.local_repo_name(), limit)
+        let repo_name = self.current_local_repo_name()?;
+        self.list_commits_in_local_repo(&repo_name, limit)
     }
 
     /// 创建 Source Control 版本锚点；只覆盖 confirmed ledger changes。
     pub fn commit_source_control_changes(&self, message: &str) -> Result<CommitInfo> {
-        self.commit_source_control_changes_in_local_repo(self.local_repo_name(), message)
+        let repo_name = self.current_local_repo_name()?;
+        self.commit_source_control_changes_in_local_repo(&repo_name, message)
     }
 
     /// 将 External Changes staging 显式写入 ledger，但不创建 Source Control commit anchor。
     pub fn apply_external_changes(&self) -> Result<ExternalApplyReceipt> {
-        self.apply_external_changes_in_local_repo(self.local_repo_name())
+        let repo_name = self.current_local_repo_name()?;
+        self.apply_external_changes_in_local_repo(&repo_name)
     }
 
     /// 获取所有待确认的文件变更
     pub fn list_pending_fs(&self) -> Result<Vec<ChangeEntry>> {
-        self.list_pending_fs_in_local_repo(self.local_repo_name())
+        let repo_name = self.current_local_repo_name()?;
+        self.list_pending_fs_in_local_repo(&repo_name)
     }
 
     /// 获取已进 ledger 但尚未被最新 commit anchor 覆盖的变更
     pub fn list_confirmed_ledger_changes(&self) -> Result<Vec<ChangeEntry>> {
-        self.list_confirmed_ledger_changes_in_local_repo(self.local_repo_name())
+        let repo_name = self.current_local_repo_name()?;
+        self.list_confirmed_ledger_changes_in_local_repo(&repo_name)
     }
 
     /// 将待确认变更移入暂存区 (Working Dir → Staging)
     pub fn stage_pending(&self, path: &str) -> Result<()> {
-        self.stage_pending_in_local_repo(self.local_repo_name(), path)
+        let repo_name = self.current_local_repo_name()?;
+        self.stage_pending_in_local_repo(&repo_name, path)
     }
 
     /// 丢弃待确认变更
     pub fn discard_pending(&self, path: &str) -> Result<()> {
-        self.discard_pending_in_local_repo(self.local_repo_name(), path)
+        let repo_name = self.current_local_repo_name()?;
+        self.discard_pending_in_local_repo(&repo_name, path)
     }
 }

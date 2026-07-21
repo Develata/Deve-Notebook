@@ -189,6 +189,11 @@ impl PreparedRepoAuthority {
                 leases: 0,
             },
         );
+        if owner.primary_repo.get().is_none() {
+            let _ = owner
+                .primary_repo
+                .get_or_init(|| super::PrimaryRepoBinding::new(self.repo_id));
+        }
         self.settled = true;
         Ok(())
     }

@@ -347,6 +347,63 @@ pub(crate) fn init_existing_for_repo_id(
     Ok(repo)
 }
 
+/// Composes the host registries for a durable catalog with zero Normal repos.
+///
+/// The empty runtime is intentionally distinct from repo initialization: it
+/// creates host layout and identity only, and never opens or creates a local
+/// authority database.
+pub(crate) fn init_empty_host(
+    ledger_dir: impl AsRef<Path>,
+    snapshot_depth: usize,
+) -> Result<RepoManager> {
+    let ledger_dir = ledger_dir.as_ref().to_path_buf();
+    std::fs::create_dir_all(ledger_dir.join("local"))
+        .with_context(|| format!("Failed to create empty local authority dir: {ledger_dir:?}"))?;
+    std::fs::create_dir_all(ledger_dir.join("remotes"))
+        .with_context(|| format!("Failed to create empty shadow authority dir: {ledger_dir:?}"))?;
+
+    let catalog_snapshot = catalog_bootstrap_snapshot_for_ledger(&ledger_dir)?;
+    if !catalog_snapshot.normal_repo_ids().is_empty() {
+        anyhow::bail!("empty host initialization requires zero durable Normal local repos");
+    }
+    let uncataloged = redb_repo_entries(
+        &ledger_dir.join("local"),
+        "checking empty-host local authority artifacts",
+    )?;
+    let removed_repo_ids = catalog_snapshot.removed_repo_ids();
+    let has_unknown_authority = uncataloged.iter().any(|(_, stem)| {
+        uuid::Uuid::parse_str(stem)
+            .ok()
+            .is_none_or(|repo_id| !removed_repo_ids.contains(&repo_id))
+    });
+    if has_unknown_authority {
+        anyhow::bail!(
+            "Uncataloged local authority artifacts require explicit ownership repair; empty host startup will not admit them"
+        );
+    }
+
+    let host_keys_dir = crate::utils::notegit::host_keys_dir(&ledger_dir);
+    let local_peer_id =
+        crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
+    let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
+    let repo = RepoManager {
+        local_authority: LocalAuthorityRuntime::empty(&ledger_dir),
+        ledger_dir,
+        local_peer_id,
+        initial_prepared_authority: std::sync::Mutex::new(None),
+        shadow_dbs: RwLock::new(HashMap::new()),
+        shadow_merge_guard: std::sync::Mutex::new(()),
+        snapshot_depth,
+        persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
+        catalog_membership,
+    };
+    repo.seed_catalog_membership_from_records()
+        .context("Failed to seed empty local repo catalog membership")?;
+    repo.repair_remote_repo_catalogs()
+        .context("Failed to repair remote repo catalogs during empty host init")?;
+    Ok(repo)
+}
+
 /// 初始化本地数据库的核心表
 ///
 /// 包括:

@@ -26,7 +26,8 @@ impl RepoManager {
         repo_id: &RepoId,
         doc_id: DocId,
     ) -> Result<MergeEvaluation> {
-        self.merge_peer_in_local_repo(self.local_repo_name(), peer_id, repo_id, doc_id)
+        let local_repo_name = self.current_local_repo_name()?;
+        self.merge_peer_in_local_repo(&local_repo_name, peer_id, repo_id, doc_id)
     }
 
     /// Evaluate a source-isolated three-way merge without changing authority.

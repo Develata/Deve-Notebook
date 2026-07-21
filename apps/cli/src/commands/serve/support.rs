@@ -6,8 +6,6 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 19_plugins#plugin-runtime-boundary
 //!
-use crate::commands;
-use anyhow::Context;
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::loader::PluginLoader;
 use std::net::TcpListener;
@@ -15,79 +13,23 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
-const NATIVE_DEFAULT_REPO: &str = "default";
-const NATIVE_DEFAULT_PROJECTION_BASE: &str = "notes";
-
 pub(super) fn init_runtime(
     ledger_dir: &Path,
     snapshot_depth: usize,
 ) -> anyhow::Result<Arc<RepoManager>> {
-    if !ledger_dir.is_dir() {
-        anyhow::bail!(
-            "Server startup requires at least one cataloged local repo; run `deve init` first"
-        );
-    }
-    let repo_ids = deve_core::ledger::normal_catalog_ids_for_ledger(ledger_dir)
-        .context("Failed to read the local repo catalog for server startup")?;
-    let repo_id = repo_ids.first().copied().ok_or_else(|| {
-        anyhow::anyhow!(
-            "Server startup requires at least one cataloged local repo; run `deve init` first"
-        )
-    })?;
-    // RepoManager still requires one process bootstrap anchor. Choose an exact,
-    // deterministic catalog member here so serve startup cannot create an
-    // uncataloged authority store. This is transitional composition wiring, not
-    // the planned per-RepoId authority-runtime convergence.
-    let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)?;
-    repo.validate_projection_locator_map()?;
-    Ok(Arc::new(repo))
-}
-
-pub(super) fn ensure_native_loopback_default_workspace(
-    ledger_dir: &Path,
-    snapshot_depth: usize,
-) -> anyhow::Result<()> {
-    // "No cataloged repos" means "needs bootstrap": an empty locator map is
-    // vacuously valid, so locator-map validity cannot drive this decision.
-    // The probe reads durable catalog records without creating any repo; a
-    // missing ledger root is a first boot with zero cataloged repos.
-    let existing = if ledger_dir.exists() {
+    let repo_ids = if ledger_dir.exists() {
         deve_core::ledger::normal_catalog_ids_for_ledger(ledger_dir)?
     } else {
         Vec::new()
     };
-    if let Some(repo_id) = existing.first() {
-        let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, *repo_id)?;
-        repo.validate_projection_locator_map()?;
-        return Ok(());
-    }
-
-    let data_root = native_loopback_data_root(ledger_dir)?;
-    let projection_base = data_root.join(NATIVE_DEFAULT_PROJECTION_BASE);
-    commands::init::run(
-        ledger_dir,
-        NATIVE_DEFAULT_REPO,
-        &projection_base,
-        data_root,
-        snapshot_depth,
-        None,
-        None,
-    )
-}
-
-fn native_loopback_data_root(ledger_dir: &Path) -> anyhow::Result<PathBuf> {
-    if ledger_dir
-        .file_name()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| name.eq_ignore_ascii_case("ledger"))
-        && let Some(parent) = ledger_dir
-            .parent()
-            .filter(|path| !path.as_os_str().is_empty())
-    {
-        return Ok(parent.to_path_buf());
-    }
-
-    std::env::current_dir().context("Failed to resolve native loopback data root")
+    let repo = match repo_ids.first().copied() {
+        Some(repo_id) => {
+            RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)?
+        }
+        None => RepoManager::init_empty_host(ledger_dir, snapshot_depth)?,
+    };
+    repo.validate_projection_locator_map()?;
+    Ok(Arc::new(repo))
 }
 
 pub(super) fn load_plugins()

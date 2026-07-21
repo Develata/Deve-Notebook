@@ -141,11 +141,12 @@ impl<'a> SourceControlReadRuntime<'a> {
     }
 
     pub(crate) fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
+        let repo_name = self.manager.current_local_repo_name()?;
         self.manager.run_on_primary_local_repo(|db| {
             source_control::validate_tables(db).map_err(|err| {
                 anyhow::anyhow!(
                     "Broken local repo {} while validating source control tables: {}",
-                    self.manager.local_repo_name(),
+                    repo_name,
                     err
                 )
             })?;

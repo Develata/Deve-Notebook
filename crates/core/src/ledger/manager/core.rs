@@ -48,6 +48,14 @@ impl RepoManager {
         init::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)
     }
 
+    /// Composes a host runtime with no local repo authority mounted.
+    ///
+    /// This is the legal `NoScope` bootstrap path. It creates only host-owned
+    /// directories and identity; it never creates or opens a local Redb.
+    pub fn init_empty_host(ledger_dir: impl AsRef<Path>, snapshot_depth: usize) -> Result<Self> {
+        init::init_empty_host(ledger_dir, snapshot_depth)
+    }
+
     /// 执行闭包于指定的本地仓库 (按名称)
     ///
     /// * `repo_name`: 仓库名称 (e.g. "default", "wiki").
@@ -67,9 +75,35 @@ impl RepoManager {
         Err(anyhow!("Repository not found: {}", selector))
     }
 
-    /// 获取主本地仓库的规范执行 selector（物理 RepoId stem）。
+    /// Returns the bootstrap repo selector, if this process started with one.
+    ///
+    /// This is retained for bootstrap/test compatibility only. Product paths
+    /// must use an explicit RepoId or [`Self::current_local_repo_name`], because
+    /// the bootstrap member can later be removed.
     pub fn local_repo_name(&self) -> &str {
-        self.local_authority.primary_repo_name()
+        self.local_authority.primary_repo_name().unwrap_or("")
+    }
+
+    /// Resolves the current implicit local selector from durable membership.
+    ///
+    /// Product paths should prefer an explicit RepoId. This bounded default is
+    /// retained for legacy host APIs, but it never returns a removed bootstrap
+    /// anchor: after lifecycle transitions it selects the sole remaining repo,
+    /// keeps a still-live bootstrap member, or fails closed on zero/ambiguity.
+    pub fn current_local_repo_name(&self) -> Result<String> {
+        let summaries = self.list_cataloged_local_repo_summaries()?;
+        if let Some(primary) = self.local_authority.primary_repo_id()
+            && summaries.iter().any(|summary| summary.repo_id == primary)
+        {
+            return Ok(primary.to_string());
+        }
+        match summaries.as_slice() {
+            [summary] => Ok(summary.execution_name.clone()),
+            [] => Err(anyhow!("no local repository is selected")),
+            _ => Err(anyhow!(
+                "multiple local repositories exist without an explicit RepoId selector"
+            )),
+        }
     }
 
     /// 列出指定本地仓库的文档
@@ -77,13 +111,27 @@ impl RepoManager {
         &self,
         repo_name: Option<&str>,
     ) -> Result<Vec<(crate::models::DocId, String)>> {
-        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
+        let default_name;
+        let name = match repo_name {
+            Some(name) => name,
+            None => {
+                default_name = self.current_local_repo_name()?;
+                &default_name
+            }
+        };
         self.run_on_local_repo(name, node_meta::list_file_docs)
     }
 
     /// 列出指定本地仓库的节点
     pub fn list_local_nodes(&self, repo_name: Option<&str>) -> Result<Vec<(NodeId, NodeMeta)>> {
-        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
+        let default_name;
+        let name = match repo_name {
+            Some(name) => name,
+            None => {
+                default_name = self.current_local_repo_name()?;
+                &default_name
+            }
+        };
         self.run_on_local_repo(name, node_meta::list_nodes)
     }
 
@@ -109,8 +157,8 @@ impl RepoManager {
     where
         F: FnOnce(&redb::Database) -> Result<R>,
     {
-        let lease = self.lease_local_authority(self.local_authority.primary_repo_id())?;
-        f(lease.db())
+        let repo_name = self.current_local_repo_name()?;
+        self.run_on_local_repo(&repo_name, f)
     }
 
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)

@@ -19,7 +19,7 @@ use redb::Database;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, Mutex, Weak};
+use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -37,6 +37,8 @@ pub enum LocalAuthorityError {
     NotAdmitted(RepoId),
     #[error("local authority for RepoId {0} requires explicit repair")]
     RepairRequired(RepoId),
+    #[error("no local repository is mounted in the current host runtime")]
+    NoLocalRepo,
     #[error(
         "local authority generation for RepoId {repo_id} is stale: expected {expected}, actual {actual}"
     )]
@@ -109,9 +111,22 @@ struct LocalAuthorityInner {
 /// This type is deliberately not `Clone`. Short-lived access is represented by
 /// a non-clone [`RepoAuthorityLease`].
 pub(crate) struct LocalAuthorityRuntime {
-    primary_repo_id: RepoId,
-    primary_repo_name: String,
+    primary_repo: OnceLock<PrimaryRepoBinding>,
     inner: Arc<LocalAuthorityInner>,
+}
+
+struct PrimaryRepoBinding {
+    repo_id: RepoId,
+    execution_name: String,
+}
+
+impl PrimaryRepoBinding {
+    fn new(repo_id: RepoId) -> Self {
+        Self {
+            repo_id,
+            execution_name: repo_id.to_string(),
+        }
+    }
 }
 
 /// Bootstrap-only owner used while selecting an existing local RepoId.
@@ -241,6 +256,17 @@ pub(crate) enum RepoAuthoritySlotSnapshot {
 }
 
 impl LocalAuthorityRuntime {
+    pub(crate) fn empty(ledger_dir: &Path) -> Self {
+        Self {
+            primary_repo: OnceLock::new(),
+            inner: Arc::new(LocalAuthorityInner {
+                ledger_dir: ledger_dir.to_path_buf(),
+                slots: Mutex::new(HashMap::new()),
+                lease_released: Condvar::new(),
+            }),
+        }
+    }
+
     pub(crate) fn prepare_new_initialized<F>(
         ledger_dir: &Path,
         primary_repo_id: RepoId,
@@ -250,8 +276,7 @@ impl LocalAuthorityRuntime {
         F: FnOnce(&Database) -> Result<(), LocalAuthorityError>,
     {
         let runtime = Self {
-            primary_repo_id,
-            primary_repo_name: primary_repo_id.to_string(),
+            primary_repo: OnceLock::from(PrimaryRepoBinding::new(primary_repo_id)),
             inner: Arc::new(LocalAuthorityInner {
                 ledger_dir: ledger_dir.to_path_buf(),
                 slots: Mutex::new(HashMap::new()),
@@ -274,22 +299,28 @@ impl LocalAuthorityRuntime {
         let lease = admit_existing_from_inner(&inner, primary_repo_id)?;
         drop(lease);
         Ok(Self {
-            primary_repo_id,
-            primary_repo_name: primary_repo_id.to_string(),
+            primary_repo: OnceLock::from(PrimaryRepoBinding::new(primary_repo_id)),
             inner,
         })
     }
 
-    pub(crate) fn primary_repo_name(&self) -> &str {
-        &self.primary_repo_name
+    pub(crate) fn primary_repo_name(&self) -> Option<&str> {
+        self.primary_repo
+            .get()
+            .map(|binding| binding.execution_name.as_str())
     }
 
-    pub(crate) fn primary_repo_id(&self) -> RepoId {
-        self.primary_repo_id
+    pub(crate) fn primary_repo_id(&self) -> Option<RepoId> {
+        self.primary_repo.get().map(|binding| binding.repo_id)
     }
 
     pub(crate) fn lease_primary(&self) -> Result<RepoAuthorityLease, LocalAuthorityError> {
-        self.lease(self.primary_repo_id)
+        self.lease(
+            self.primary_repo
+                .get()
+                .map(|binding| binding.repo_id)
+                .ok_or(LocalAuthorityError::NoLocalRepo)?,
+        )
     }
 
     pub(crate) fn lease(&self, repo_id: RepoId) -> Result<RepoAuthorityLease, LocalAuthorityError> {

@@ -32,11 +32,14 @@ use std::path::Path;
 impl RepoManager {
     pub(crate) fn refresh_local_repo_catalog(&self) -> Result<()> {
         let normal_repo_ids = self.normal_repo_catalog_ids()?;
-        validate_local_repo_metadata(
-            self.local_repo_name(),
-            &self.local_authority,
-            &normal_repo_ids,
-        )?;
+        let validation_first = self
+            .local_authority
+            .primary_repo_id()
+            .filter(|repo_id| normal_repo_ids.contains(repo_id))
+            .or_else(|| normal_repo_ids.first().copied())
+            .map(|repo_id| repo_id.to_string())
+            .unwrap_or_default();
+        validate_local_repo_metadata(&validation_first, &self.local_authority, &normal_repo_ids)?;
         self.validate_local_repo_source_control_tables()
     }
 }
@@ -58,6 +61,7 @@ pub(crate) struct RepoCatalogBootstrapSnapshot {
     has_records: bool,
     normal_records: Vec<RepoCatalogMembershipRecord>,
     normal_repo_ids: Vec<RepoId>,
+    removed_repo_ids: Vec<RepoId>,
 }
 
 impl RepoCatalogBootstrapSnapshot {
@@ -78,6 +82,10 @@ impl RepoCatalogBootstrapSnapshot {
     pub(crate) fn normal_records(&self) -> &[RepoCatalogMembershipRecord] {
         &self.normal_records
     }
+
+    pub(crate) fn removed_repo_ids(&self) -> &[RepoId] {
+        &self.removed_repo_ids
+    }
 }
 
 pub(crate) fn catalog_bootstrap_snapshot_for_ledger(
@@ -90,6 +98,12 @@ pub(crate) fn catalog_bootstrap_snapshot_for_ledger(
     let _store_lock = store.lock()?;
     let records = store.list()?;
     let has_records = !records.is_empty();
+    let mut removed_repo_ids = records
+        .iter()
+        .filter(|record| record.state() == RepoCatalogMembershipState::Removed)
+        .map(RepoCatalogMembershipRecord::repo_id)
+        .collect::<Vec<_>>();
+    removed_repo_ids.sort();
     let mut normal_records = records
         .into_iter()
         .filter(|record| record.state() == RepoCatalogMembershipState::Normal)
@@ -103,6 +117,7 @@ pub(crate) fn catalog_bootstrap_snapshot_for_ledger(
         has_records,
         normal_records,
         normal_repo_ids,
+        removed_repo_ids,
     })
 }
 

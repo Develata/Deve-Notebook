@@ -4,8 +4,46 @@
 //!
 //! Exact catalog and Remote Import admission projections used by lifecycle.
 
-use super::RepoLifecycleError;
+use super::{RepoLifecycleCoordinator, RepoLifecycleError};
+use deve_core::models::RepoId;
 use deve_core::remote_import::{RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalSnapshot};
+use std::path::Path;
+
+impl RepoLifecycleCoordinator {
+    pub(crate) fn revalidate_create_projection_base(
+        &self,
+        source_repo_id: Option<RepoId>,
+        prepared_base: &Path,
+    ) -> Result<(), RepoLifecycleError> {
+        let current = if let Some(repo_id) = source_repo_id {
+            let execution_name =
+                self.repo
+                    .find_local_repo_name_by_id(repo_id)?
+                    .ok_or_else(|| RepoLifecycleError::NotCommitted {
+                        operation: "create projection-base admission",
+                        detail: "projection-base source repo left the local catalog".to_string(),
+                    })?;
+            self.repo
+                .projection_locator_for_local_repo(&execution_name)?
+                .projection_base_abs
+        } else {
+            self.configured_projection_base.clone().ok_or_else(|| {
+                RepoLifecycleError::NotCommitted {
+                    operation: "create projection-base admission",
+                    detail: "repo creation projection base is no longer configured".to_string(),
+                }
+            })?
+        };
+        if current != prepared_base {
+            return Err(RepoLifecycleError::NotCommitted {
+                operation: "create projection-base admission",
+                detail: "projection-base binding changed while the lifecycle job was queued"
+                    .to_string(),
+            });
+        }
+        Ok(())
+    }
+}
 
 pub(super) fn admitted_snapshot(
     admission: RemoteImportRepoRemovalAdmission,

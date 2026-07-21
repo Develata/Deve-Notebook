@@ -26,9 +26,11 @@ impl<'a> AuthorityStorageRuntime<'a> {
 
     pub(crate) fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
         self.ensure_local_origin(&entry.origin_peer_id)?;
-        let repo_scope = ops::local_repo_scope(self.manager.local_repo_name());
-        self.manager
-            .run_on_primary_local_repo(|db| ops::append_op_to_db(db, entry, &repo_scope))
+        let repo_name = self.manager.current_local_repo_name()?;
+        let repo_scope = ops::local_repo_scope(&repo_name);
+        self.manager.run_on_local_repo(&repo_name, |db| {
+            ops::append_op_to_db(db, entry, &repo_scope)
+        })
     }
 
     pub(crate) fn append_local_op_in_local_repo(
@@ -49,8 +51,9 @@ impl<'a> AuthorityStorageRuntime<'a> {
         op_entry_builder: impl FnMut(u64) -> LedgerEntry,
     ) -> Result<(u64, u64)> {
         self.ensure_local_origin(&peer_id)?;
-        let repo_scope = ops::local_repo_scope(self.manager.local_repo_name());
-        self.manager.run_on_primary_local_repo(move |db| {
+        let repo_name = self.manager.current_local_repo_name()?;
+        let repo_scope = ops::local_repo_scope(&repo_name);
+        self.manager.run_on_local_repo(&repo_name, move |db| {
             ops::append_generated_op(db, doc_id, peer_id, &repo_scope, op_entry_builder)
         })
     }
@@ -156,7 +159,7 @@ impl RepoManager {
         repo_id: RepoId,
         inspect: impl FnOnce(&redb::Database) -> std::result::Result<R, LocalAuthorityError>,
     ) -> std::result::Result<R, LocalAuthorityError> {
-        if self.local_authority.primary_repo_id() != repo_id {
+        if self.local_authority.primary_repo_id() != Some(repo_id) {
             return Err(LocalAuthorityError::NotAdmitted(repo_id));
         }
         let prepared = self
@@ -246,7 +249,7 @@ impl RepoManager {
         {
             return Err(LocalAuthorityError::NotAdmitted(repo_id));
         }
-        if self.local_authority.primary_repo_id() != repo_id {
+        if self.local_authority.primary_repo_id() != Some(repo_id) {
             return Err(LocalAuthorityError::NotAdmitted(repo_id));
         }
         let mut initial = self

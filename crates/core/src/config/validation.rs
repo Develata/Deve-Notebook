@@ -10,7 +10,17 @@ use std::collections::HashSet;
 
 pub(super) fn validate(config: &Config) -> Result<()> {
     validate_runtime_numbers(config)?;
+    validate_repo_creation_projection_base(config)?;
     validate_p2p(config)
+}
+
+fn validate_repo_creation_projection_base(config: &Config) -> Result<()> {
+    if let Some(path) = config.repo_creation_projection_base.as_deref()
+        && !path.is_absolute()
+    {
+        bail!("repo_creation_projection_base must be an absolute path");
+    }
+    Ok(())
 }
 
 fn validate_runtime_numbers(config: &Config) -> Result<()> {
@@ -154,7 +164,27 @@ fn validate_port(key: &str, port: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_ws_url;
+    use super::{validate, validate_ws_url};
+
+    #[test]
+    fn repo_creation_projection_base_must_be_absolute_when_present() {
+        let config = crate::config::Config {
+            repo_creation_projection_base: Some("relative/notes".into()),
+            ..crate::config::Config::default()
+        };
+        let error = validate(&config).expect_err("relative first-repo base must fail closed");
+        assert!(
+            error
+                .to_string()
+                .contains("repo_creation_projection_base must be an absolute path")
+        );
+
+        let config = crate::config::Config {
+            repo_creation_projection_base: Some(std::env::temp_dir()),
+            ..crate::config::Config::default()
+        };
+        validate(&config).expect("absolute first-repo base should be accepted");
+    }
 
     #[test]
     fn p2p_ws_url_requires_structured_authority() {

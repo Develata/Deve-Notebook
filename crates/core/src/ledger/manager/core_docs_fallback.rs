@@ -14,7 +14,14 @@ impl RepoManager {
         &self,
         repo_name: Option<&str>,
     ) -> Result<Vec<(DocId, String)>> {
-        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
+        let default_name;
+        let name = match repo_name {
+            Some(name) => name,
+            None => {
+                default_name = self.current_local_repo_name()?;
+                &default_name
+            }
+        };
         self.run_on_local_repo(name, metadata::list_docs)
     }
 

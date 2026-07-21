@@ -12,6 +12,7 @@ use crate::server::runtime::repo_lifecycle_job_runtime::{
 };
 use crate::server::runtime::repo_session_runtime::FinalRepoListProjection;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
+use deve_core::models::RepoId;
 use deve_core::protocol::{
     RepoControlResponse, RepoLifecycleIntent, RepoLifecycleOperation, RepoLifecycleOutcome,
     RepoLifecycleState, ServerErrorCode, ServerMessage,
@@ -59,7 +60,15 @@ pub(super) async fn handle_submit_lifecycle(
             }
             let projection_base = match projection_base_for_new_repo(state, session) {
                 Ok(base) => base,
-                Err(error) => {
+                Err(ProjectionBaseAdmissionError::Required) => {
+                    send_simple_error(
+                        channel,
+                        request_id,
+                        ServerErrorCode::RepoLifecycleInvalidRequest,
+                    );
+                    return;
+                }
+                Err(ProjectionBaseAdmissionError::Invalid(error)) => {
                     tracing::warn!(%error, "repo create projection base admission failed");
                     send_simple_error(
                         channel,
@@ -69,7 +78,11 @@ pub(super) async fn handle_submit_lifecycle(
                     return;
                 }
             };
-            match RepoLifecycleJobIntent::create(&initial_alias, projection_base) {
+            match RepoLifecycleJobIntent::create(
+                &initial_alias,
+                projection_base.path,
+                projection_base.source_repo_id,
+            ) {
                 Ok(intent) => intent,
                 Err(error) => {
                     send_job_error(channel, request_id, &error);
@@ -261,20 +274,68 @@ fn valid_lifecycle_observer(
 fn projection_base_for_new_repo(
     state: &Arc<AppState>,
     session: &WsSession,
-) -> anyhow::Result<PathBuf> {
+) -> Result<PreparedProjectionBaseBinding, ProjectionBaseAdmissionError> {
+    projection_base_for_new_repo_with_config(state, session, state.repo_creation_projection_base())
+}
+
+fn projection_base_for_new_repo_with_config(
+    state: &Arc<AppState>,
+    session: &WsSession,
+    configured_base: Option<&std::path::Path>,
+) -> Result<PreparedProjectionBaseBinding, ProjectionBaseAdmissionError> {
     let selected_id = session.active_repo_id.or(session.last_local_repo_id);
-    let execution_name = if let Some(repo_id) = selected_id {
-        state
+    if let Some(repo_id) = selected_id {
+        let execution_name = state
             .repo
             .find_local_repo_name_by_id(repo_id)?
-            .ok_or_else(|| anyhow::anyhow!("projection base RepoId is absent from local catalog"))?
-    } else {
-        state.repo.local_repo_name().to_string()
-    };
-    Ok(state
-        .repo
-        .projection_locator_for_local_repo(&execution_name)?
-        .projection_base_abs)
+            .ok_or_else(|| {
+                ProjectionBaseAdmissionError::Invalid(anyhow::anyhow!(
+                    "projection base RepoId is absent from local catalog"
+                ))
+            })?;
+        return Ok(PreparedProjectionBaseBinding {
+            path: state
+                .repo
+                .projection_locator_for_local_repo(&execution_name)?
+                .projection_base_abs,
+            source_repo_id: Some(repo_id),
+        });
+    }
+    configured_base
+        .map(|path| PreparedProjectionBaseBinding {
+            path: PathBuf::from(path),
+            source_repo_id: None,
+        })
+        .ok_or(ProjectionBaseAdmissionError::Required)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct PreparedProjectionBaseBinding {
+    path: PathBuf,
+    source_repo_id: Option<RepoId>,
+}
+
+#[derive(Debug)]
+enum ProjectionBaseAdmissionError {
+    Required,
+    Invalid(anyhow::Error),
+}
+
+impl std::fmt::Display for ProjectionBaseAdmissionError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Required => formatter.write_str("repo creation projection base is required"),
+            Self::Invalid(error) => error.fmt(formatter),
+        }
+    }
+}
+
+impl std::error::Error for ProjectionBaseAdmissionError {}
+
+impl From<anyhow::Error> for ProjectionBaseAdmissionError {
+    fn from(error: anyhow::Error) -> Self {
+        Self::Invalid(error)
+    }
 }
 
 fn status_response(status: RepoLifecycleJobStatus) -> RepoControlResponse {
@@ -324,4 +385,69 @@ fn send_job_error(channel: &DualChannel, request_id: Uuid, error: &RepoLifecycle
         "repo lifecycle request failed",
         error,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ProjectionBaseAdmissionError, projection_base_for_new_repo_with_config};
+    use crate::server::runtime::repo_lifecycle_runtime::{CreateRepoIntent, RepoMountOutcome};
+    use crate::server::switcher_test_support::{app_state, browser_session};
+    use deve_core::ledger::RepoManager;
+    use deve_core::models::RepoId;
+
+    #[tokio::test]
+    async fn zero_repo_host_starts_no_scope_and_creates_from_configured_base() -> anyhow::Result<()>
+    {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let projection_base = dir.path().join("notes");
+        std::fs::create_dir_all(&projection_base)?;
+        let repo = RepoManager::init_empty_host(&ledger, 8)?;
+        let state = app_state(repo, projection_base.clone(), dir.path().join("host"))?;
+        assert!(state.repo.list_cataloged_local_repo_summaries()?.is_empty());
+
+        let session = browser_session(1);
+        let resolved =
+            projection_base_for_new_repo_with_config(&state, &session, Some(&projection_base))?;
+        assert_eq!(resolved.source_repo_id, None);
+        let repo_id = RepoId::new_v4();
+        let outcome = state
+            .repo_lifecycle_coordinator()
+            .create(CreateRepoIntent {
+                repo_id,
+                initial_alias: "first repo".to_string(),
+                projection_base: resolved.path,
+                lifecycle_request_id: uuid::Uuid::new_v4(),
+            })
+            .await?;
+
+        assert_eq!(outcome.mount, RepoMountOutcome::Mounted);
+        assert_eq!(state.repo.list_cataloged_local_repo_summaries()?.len(), 1);
+        assert_eq!(state.repo.current_local_repo_name()?, repo_id.to_string());
+        assert!(
+            state
+                .repo
+                .check_projection_locator_for_local_repo(&repo_id.to_string())?
+                .starts_with(std::fs::canonicalize(&projection_base)?)
+        );
+        state
+            .repo_lifecycle_coordinator()
+            .shutdown_watchers_for_test();
+        Ok(())
+    }
+
+    #[test]
+    fn zero_repo_create_without_projection_base_is_typed_before_ws_v5_projection()
+    -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let repo = RepoManager::init_empty_host(dir.path().join("ledger"), 8)?;
+        let state = app_state(repo, dir.path().join("unused"), dir.path().join("host"))?;
+        let session = browser_session(1);
+
+        assert!(matches!(
+            projection_base_for_new_repo_with_config(&state, &session, None),
+            Err(ProjectionBaseAdmissionError::Required)
+        ));
+        Ok(())
+    }
 }
