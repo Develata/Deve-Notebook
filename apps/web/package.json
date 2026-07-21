@@ -30,6 +30,7 @@
     "build": "node builder.js",
     "test:editor-remote-ops": "node js/editor_remote_ops.test.cjs",
     "test:rendering-heading": "node js/extensions/block_styling.test.cjs",
+    "test:render-companion": "node js/extensions/render_companion.test.cjs",
     "postinstall": "npm run build"
   },
   "devDependencies": {

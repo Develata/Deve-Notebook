@@ -1,136 +1,139 @@
-import { WidgetType, Decoration, EditorView } from "@codemirror/view";
+import { WidgetType, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
-import { findMathRanges } from "./utils.js";
 import { renderKatex } from "../rendering_bridge.js";
+import { editorCopy } from "../i18n.js";
+import { renderRangeIndexField } from "./render_range_index.js";
+import {
+  createRenderFieldState,
+  taggedCompanion,
+  taggedReplace,
+  updateRenderFieldState,
+} from "./render_field.js";
+import { reportReplaceFailure } from "./render_effects.js";
 
 const MAX_NESTED_MATH_DEPTH = 10;
+export const MAX_COMPANION_MATH_LENGTH = 8192;
 
-// --- 辅助函数: 计算行的引用深度 ---
 function getLineQuoteDepth(lineText) {
-    let depth = 0;
-    for (let i = 0; i < lineText.length; i++) {
-        const char = lineText[i];
-        if (char === '>') depth++;
-        else if (char !== ' ' && char !== '\t') break;
-    }
-    return depth;
+  let depth = 0;
+  for (const char of lineText) {
+    if (char === ">") depth++;
+    else if (char !== " " && char !== "\t") break;
+  }
+  return depth;
 }
 
 function mathSourceText(content, isBlock) {
-    const marker = isBlock ? "$$" : "$";
-    return marker + content + marker;
+  const marker = isBlock ? "$$" : "$";
+  return marker + content + marker;
 }
 
-// --- Math Widget (数学公式组件) ---
-export class MathWidget extends WidgetType {
-  constructor(content, isBlock, quoteDepth = 0, sourceAnchor = null) {
-    super();
-    this.content = content;
-    this.isBlock = isBlock;
-    this.quoteDepth = quoteDepth;  // [NEW] 嵌套深度
-    this.sourceAnchor = sourceAnchor;
-  }
-  
-  toDOM(view) {
-    let span = document.createElement("span");
-    span.className = "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
-    renderKatex(this.content, span, {
-      throwOnError: false,
-      displayMode: this.isBlock,
-    }, mathSourceText(this.content, this.isBlock));
+function showCompanionStatus(wrapper, key) {
+  wrapper.classList.add("cm-active-preview-status");
+  wrapper.textContent = editorCopy(key);
+}
 
-    // [Block Math] 使用 wrapper + padding 代替 margin
-    // 这样 offsetHeight 能正确包含间距，确保行号对齐
-    if (this.isBlock) {
-        const wrapper = document.createElement('div');
-        wrapper.style.paddingTop = '1rem';
-        wrapper.style.paddingBottom = '1rem';
-        
-        // [NEW] 应用嵌套深度样式
-        if (this.quoteDepth > 0) {
-            const effectiveDepth = Math.min(this.quoteDepth, MAX_NESTED_MATH_DEPTH);
-            wrapper.classList.add(`cm-nested-math-depth-${effectiveDepth}`);
-        }
-        
-        wrapper.appendChild(span);
-        
-        // [Fix RangeError] Handle selection manually
-        wrapper.onclick = (e) => {
-            e.preventDefault();
-            const pos = Number.isInteger(this.sourceAnchor)
-                ? this.sourceAnchor
-                : view.posAtDOM(wrapper);
-            if (pos !== null) {
-                view.dispatch({ selection: { anchor: pos } });
-                view.focus();
-            }
-        };
-        
-        return wrapper;
+export class MathWidget extends WidgetType {
+  constructor(range, mode, quoteDepth = 0) {
+    super();
+    this.range = range;
+    this.content = range.content;
+    this.isBlock = range.type === "BLOCK";
+    this.mode = mode;
+    this.quoteDepth = quoteDepth;
+  }
+
+  eq(other) {
+    return this.range.key === other.range.key
+      && this.content === other.content
+      && this.isBlock === other.isBlock
+      && this.mode === other.mode
+      && this.quoteDepth === other.quoteDepth;
+  }
+
+  toDOM(view) {
+    const span = document.createElement("span");
+    span.className = "cm-math-widget" + (this.isBlock ? " cm-block-math" : "");
+
+    if (!this.isBlock) {
+      const rendered = renderKatex(this.content, span, {
+        throwOnError: false,
+        displayMode: false,
+      }, mathSourceText(this.content, false));
+      if (!rendered) reportReplaceFailure(view, this.range);
+      return span;
     }
 
-    return span;
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-render-widget-shell cm-math-render-shell";
+    if (this.mode === "companion") {
+      wrapper.classList.add("cm-active-preview");
+      wrapper.dataset.deveActivePreview = "math";
+      wrapper.setAttribute("aria-hidden", "true");
+    }
+
+    if (this.quoteDepth > 0) {
+      const effectiveDepth = Math.min(this.quoteDepth, MAX_NESTED_MATH_DEPTH);
+      wrapper.classList.add(`cm-nested-math-depth-${effectiveDepth}`);
+    }
+
+    if (this.mode === "companion" && this.content.length > MAX_COMPANION_MATH_LENGTH) {
+      showCompanionStatus(wrapper, "companionPaused");
+      return wrapper;
+    }
+
+    wrapper.appendChild(span);
+    const rendered = renderKatex(this.content, span, {
+      throwOnError: false,
+      displayMode: true,
+    }, "");
+
+    if (!rendered) {
+      if (this.mode === "companion") showCompanionStatus(wrapper, "renderError");
+      else reportReplaceFailure(view, this.range);
+    }
+
+    if (this.mode === "replace") {
+      wrapper.onclick = (event) => {
+        event.preventDefault();
+        view.dispatch({ selection: { anchor: this.range.from } });
+        view.focus();
+      };
+    }
+    return wrapper;
   }
 
   ignoreEvent() {
-      // Only ignore events for Block Math to prevent cursor crashes
-      // Inline math behaves like text usually
-      return this.isBlock;
+    return this.isBlock;
   }
 }
 
-/**
- * 计算数学公式装饰
- */
-function computeMathDecorations(state) {
-  let widgets = [];
-  let doc = state.doc.toString();
-  let selection = state.selection.main;
-  
-  // 使用共享解析器查找范围
-  const ranges = findMathRanges(doc);
-
-  for (let r of ranges) {
-      const isBlock = r.type === "BLOCK";
-      const content = doc.slice(r.contentFrom, r.contentTo);
-      
-      const isCursorTouching = selection.head >= r.from && selection.head <= r.to;
-      
-      // [NEW] 计算公式所在行的引用深度
-      let quoteDepth = 0;
-      if (isBlock) {
-          const line = state.doc.lineAt(r.from);
-          quoteDepth = getLineQuoteDepth(line.text);
-      }
-      
-      // 仅当光标未触碰时渲染 Widget
-      if (!isCursorTouching) {
-        widgets.push(
-            Decoration.replace({ 
-                widget: new MathWidget(content, isBlock, quoteDepth, r.contentFrom),
-                // [NEW] block: true 让 Block Math 支持块级光标行为
-                block: isBlock
-            }).range(r.from, r.to)
-        );
-      }
-  }
-  
-  widgets.sort((a, b) => a.from - b.from);
-  return Decoration.set(widgets);
+function buildMathDecorations({ state, range, revealed, companion }) {
+  if (revealed && !companion) return [];
+  const quoteDepth = range.type === "BLOCK"
+    ? getLineQuoteDepth(state.doc.lineAt(range.from).text)
+    : 0;
+  const mode = companion ? "companion" : "replace";
+  const widget = new MathWidget(range, mode, quoteDepth);
+  return companion
+    ? [taggedCompanion(state, range, widget)]
+    : [taggedReplace(range, widget, range.type === "BLOCK")];
 }
 
-/**
- * Math State Field (数学公式状态字段)
- */
 export const mathStateField = StateField.define({
   create(state) {
-    return computeMathDecorations(state);
+    return createRenderFieldState(state, "math", buildMathDecorations);
   },
-  update(decorations, transaction) {
-    if (transaction.docChanged || transaction.selection) {
-      return computeMathDecorations(transaction.state);
-    }
-    return decorations;
+  update(value, transaction) {
+    return updateRenderFieldState(
+      value,
+      transaction,
+      "math",
+      buildMathDecorations,
+      { refreshOnTheme: true },
+    );
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
 });
+
+export { renderRangeIndexField };

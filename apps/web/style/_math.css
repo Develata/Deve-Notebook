@@ -25,6 +25,15 @@
   border-radius: 0;
 }
 
+.cm-math-render-shell {
+  text-align: center;
+}
+
+.cm-math-render-shell .cm-math-widget.cm-block-math {
+  margin: 0;
+  padding: 0.35rem 0;
+}
+
 /* ==================== Chat 公式展示 ==================== */
 .chat-math {
   display: inline-block;

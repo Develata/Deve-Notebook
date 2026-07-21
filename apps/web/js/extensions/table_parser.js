@@ -4,6 +4,8 @@
  * 负责解析纯文本的 Markdown 表格语法，不包含任何 DOM 或 CodeMirror 依赖。
  */
 
+import { scanFencedRanges } from "./fenced_ranges.js";
+
 /**
  * 解析表格文本
  * 
@@ -79,27 +81,56 @@ export function parseTable(tableText) {
  * @param {string} doc - 文档全文
  * @returns {Array} - 表格范围数组 [{ from, to, data }]
  */
-export function findTableRanges(doc) {
+export function findTableRanges(doc, protectedRanges = scanFencedRanges(doc)) {
     const ranges = [];
     const lines = doc.split('\n');
+    const lineStarts = [];
+    const protectedLines = [];
+    let scanPos = 0;
+    let protectedIndex = 0;
+    for (const line of lines) {
+        const lineTo = scanPos + line.length;
+        while (
+            protectedIndex < protectedRanges.length
+            && protectedRanges[protectedIndex].to <= scanPos
+        ) {
+            protectedIndex++;
+        }
+        const protectedRange = protectedRanges[protectedIndex];
+        lineStarts.push(scanPos);
+        protectedLines.push(!!protectedRange && protectedRange.from < lineTo);
+        scanPos = lineTo + 1;
+    }
     let i = 0;
     let pos = 0;
     
     while (i < lines.length) {
         const line = lines[i];
+        if (protectedLines[i]) {
+            pos += line.length + 1;
+            i++;
+            continue;
+        }
         
         // 检查当前行是否可能是表头 (包含 | )
         if (line.includes('|') && i + 1 < lines.length) {
             const nextLine = lines[i + 1];
             
             // 检查下一行是否是分隔符 (包含 | 和 -)
-            if (nextLine.includes('|') && nextLine.includes('-')) {
+            if (
+                nextLine.includes('|')
+                && nextLine.includes('-')
+                && !protectedLines[i + 1]
+            ) {
                 const startPos = pos;
                 let tableEnd = i + 1;
                 
                 // 向下查找表格结束位置
                 for (let j = i + 2; j < lines.length; j++) {
-                    if (lines[j].includes('|')) {
+                    if (
+                        lines[j].includes('|')
+                        && !protectedLines[j]
+                    ) {
                         tableEnd = j;
                     } else {
                         break;
@@ -107,11 +138,7 @@ export function findTableRanges(doc) {
                 }
                 
                 // 计算结束时的字符位置 (累加行长 + 换行符)
-                let endPos = startPos;
-                for (let j = i; j <= tableEnd; j++) {
-                    endPos += lines[j].length + 1;
-                }
-                endPos--; // 移除最后一个换行符带来的偏移
+                const endPos = lineStarts[tableEnd] + lines[tableEnd].length;
                 
                 // 提取表格文本并解析
                 const tableText = lines.slice(i, tableEnd + 1).join('\n');

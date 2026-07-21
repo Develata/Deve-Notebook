@@ -1,6 +1,7 @@
 import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { findMathRanges, findFrontmatterRange } from "./utils.js";
+import { findFrontmatterRange } from "./utils.js";
+import { renderRangeIndexField } from "./render_range_index.js";
 
 /**
  * Hybrid Plugin (混合插件)
@@ -13,10 +14,14 @@ import { findMathRanges, findFrontmatterRange } from "./utils.js";
 export const hybridPlugin = ViewPlugin.fromClass(
   class {
     constructor(view) {
+      this.frontmatter = findFrontmatterRange(view.state.doc.toString());
       this.decorations = this.computeDecorations(view);
     }
     
     update(update) {
+      if (update.docChanged) {
+        this.frontmatter = findFrontmatterRange(update.state.doc.toString());
+      }
       if (update.docChanged || update.viewportChanged || update.selectionSet) {
         this.decorations = this.computeDecorations(update.view);
       }
@@ -26,14 +31,13 @@ export const hybridPlugin = ViewPlugin.fromClass(
       let widgets = [];
       const { from, to } = view.viewport;
       const selection = view.state.selection.main;
-      const doc = view.state.doc.toString();
       
       // 辅助函数: 检查光标是否在范围内
       const isCursorIn = (nodeFrom, nodeTo) =>
         selection.head >= nodeFrom && selection.head <= nodeTo;
 
       // 1. 获取所有数学公式范围，避免处理公式内的内容
-      const mathRanges = findMathRanges(doc);
+      const mathRanges = view.state.field(renderRangeIndexField).ranges("math");
       
       const isInsideMath = (nodeFrom, nodeTo) => {
         for (let r of mathRanges) {
@@ -45,7 +49,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
 
       // 2. Frontmatter Detection (Strict)
       // 计算一次，如果存在有效的 Frontmatter，则添加装饰
-      const fm = findFrontmatterRange(doc);
+      const fm = this.frontmatter;
       if (fm) {
           // 仅当 Frontmatter 在视口范围内时渲染
           if (fm.from <= to && fm.to >= from) {

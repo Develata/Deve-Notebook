@@ -28,6 +28,8 @@ import {
 
 import { languages } from "@codemirror/language-data";
 import { mathStateField } from "./extensions/math.js";
+import { renderRangeIndexField } from "./extensions/render_range_index.js";
+import { renderThemeObserver } from "./extensions/render_effects.js";
 import { hybridPlugin } from "./extensions/hybrid.js";
 import { tableStateField } from "./extensions/table.js";
 import { imageStateField } from "./extensions/image.js";
@@ -133,6 +135,8 @@ export function initCodeMirror(element, onDelta) {
               codeLanguages: languages,
               extensions: [GFM],
             }),
+            renderRangeIndexField,
+            renderThemeObserver,
             hybridPlugin,
             mathStateField,
             tableStateField,

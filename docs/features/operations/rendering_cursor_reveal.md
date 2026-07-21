@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.rendering.cursor-reveal`
 - `Domain`: `rendering`
 - `Related Feature Chapters`: `docs/features/03_rendering.md`
-- `Related Acceptance Cases`: `RENDER-CURSOR-001`, `RENDER-RICH-002`
+- `Related Acceptance Cases`: `RENDER-CURSOR-001`, `RENDER-COMPANION-001`, `RENDER-RICH-002`
 
 ## Operations
 
@@ -27,6 +27,15 @@
 - `Immediate Result`: source text changes rather than a detached rich-text projection
 - `Application Entry`: `apps/web/src/editor/delta_input.rs`, `apps/web/src/editor/delta_input_forward.rs`
 
+### `op.render.cursor.show-block-companion`
+
+- `Name`: `Show Active Block Companion Preview`
+- `Surface`: `editor`
+- `Trigger`: collapsed main cursor enters block math, Mermaid, or Markdown table source
+- `Preconditions`: Hybrid Decoration is active and the block is within the companion resource fuse
+- `Immediate Result`: source remains editable and one passive derived preview appears below the closing source line
+- `Application Entry`: `apps/web/js/extensions/render_range_index.js`, `apps/web/js/extensions/math.js`, `apps/web/js/extensions/table.js`, `apps/web/js/extensions/mermaid.js`
+
 ### `op.render.cursor.leave-token`
 
 - `Name`: `Leave Rendered Token`
@@ -40,7 +49,7 @@
 
 1. User moves the cursor into a rendered token.
 2. Instruction interface receives selection/cursor updates from editor runtime.
-3. Flow coordination compares cursor range with renderable spans and switches the active span to source mode.
+3. Flow coordination compares every selection range with cached renderable spans, switches intersecting spans to source mode, and may attach one companion preview for the collapsed main cursor.
 4. Execution domains are rendering projection, editor runtime, and ledger-backed document content.
 
 ## Notes

@@ -49,7 +49,7 @@ contains	apps/web/js/extensions/block_styling.test.cjs	#申话
 contains	apps/web/js/extensions/block_styling.test.cjs	hybrid plugin must not duplicate the block styling heading line projection
 contains	apps/web/js/extensions/block_styling.test.cjs	# 申话
 contains	apps/web/js/extensions/block_styling.test.cjs	headingLineRule
-contains	apps/web/js/index_editor_adapter.js	editor.bundle.js?rev=20260703-heading-lineheight
+contains	apps/web/js/index_editor_adapter.js	editor.bundle.js?rev=20260721-active-companion-preview
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
 absent	apps/web/js/extensions/hybrid.js	cm-heading-line

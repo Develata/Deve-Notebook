@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.rendering.projection-refresh`
 - `Domain`: `rendering`
 - `Related Feature Chapters`: `docs/features/03_rendering.md`
-- `Related Acceptance Cases`: `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001`
+- `Related Acceptance Cases`: `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001`, `RENDER-COMPANION-001`
 
 ## Operations
 
@@ -36,11 +36,20 @@
 - `Immediate Result`: visible projection reflects the latest source without creating a second text authority
 - `Application Entry`: `apps/web/js/extensions/inline_renderer.js`, `apps/web/js/extensions/math.js`, `apps/web/js/extensions/mermaid.js`
 
+### `op.render.refresh.active-companion`
+
+- `Name`: `Refresh Active Block Companion`
+- `Surface`: `editor`
+- `Trigger`: edit active block math, Mermaid, or table source
+- `Preconditions`: the main cursor remains collapsed inside the block
+- `Immediate Result`: math/table refresh immediately; Mermaid keeps only the latest request after a 200 ms trailing debounce
+- `Application Entry`: `apps/web/js/extensions/render_range_index.js`, `apps/web/js/extensions/math.js`, `apps/web/js/extensions/table.js`, `apps/web/js/extensions/mermaid.js`
+
 ## Response Flow
 
 1. User edits authoritative Markdown source.
 2. Instruction interface forwards editor deltas and selection transitions.
-3. Flow coordination recomputes projection widgets and hidden-syntax decorations from source.
+3. Flow coordination rebuilds the range index only for document changes; selection-only transitions query the cached index and update only affected decorations.
 4. Execution domains are editor runtime, rendering projection, and ledger-backed document content.
 
 ## Notes

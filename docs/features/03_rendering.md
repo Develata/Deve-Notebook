@@ -9,6 +9,7 @@
 - 平时面对的是可控、可预测的源码编辑体验
 - 阅读时可以享受公式、图表、任务列表等增强渲染
 - 光标进入时永远能回到真实源码，不被“富文本假象”困住
+- 编辑块级公式、Mermaid 或表格时，可以在源码下方同时看到最新的伴随预览
 
 ## 验收边界
 
@@ -18,6 +19,7 @@
 - Markdown 显示必须区分三种模式：纯源码模式、混合模式、禁止编辑的纯 preview 模式。
 - 纯源码模式显示完整 Markdown 源码，但标题行仍保留标题字号和行高。
 - 混合模式中，鼠标指针、光标或选区所在行及其关联块显示源码；非活动区域参与渲染，可隐藏 `#` 等 Markdown 标记。
+- 混合模式中，折叠的主光标进入块级公式、Mermaid 或表格时，源码下方显示一个伴随预览；框选源码时只保留源码，多选区也只允许主光标产生一个伴随预览。
 - 纯 preview 模式是只读阅读模式，参考 Obsidian reading mode，显示渲染结果，不显示 Markdown 源码。
 - 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
 - ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度；隐藏 `#` 标记时不得退回普通段落行高。
@@ -51,6 +53,7 @@
 - 当光标进入公式、Frontmatter、强调、引用、列表标记等渲染区域时，对应渲染必须立即让位给源码。
 - 用户不应被只读装饰遮挡，导致无法精确编辑。
 - Cursor reveal 不应改变标题行的行高；它只控制源码标记是否显示。
+- 块级公式、Mermaid 和表格在主光标编辑时，源码仍是主层，紧邻下方的预览只负责反馈当前源码结果，不应抢走光标或点击行为。
 - 原子操作示例：[`operations/rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md)
 - 细粒度操作示例：[`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 
@@ -69,8 +72,16 @@
 - ` ```mermaid ` 代码块应渲染成图表。
 - 图表大小与源码块高度保持可预测关系。
 - 用户进入源码区域时，必须能继续编辑原 Mermaid 文本。
+- 编辑 Mermaid 时，伴随预览在停止输入约 200 ms 后刷新，并且不得用迟到结果覆盖更新内容。
 - 原子操作示例：[`operations/rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md)
 - 细粒度操作示例：[`operations/rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md), [`operations/rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md)
+
+### 4.1 活动块伴随预览
+
+- 块级公式与表格在源码编辑后立即刷新伴随预览；Mermaid 使用短 debounce 保持输入流畅。
+- 预览使用编辑器现有主题和内容宽度；表格在窄屏时只在预览内部横向滚动。
+- 公式、图表或表格过大时，伴随预览显示已暂停状态，源码编辑不受影响。
+- 单个预览失败不得隐藏、替换或损坏用户正在编辑的源码。
 
 ### 5. 任务列表与 Frontmatter
 
@@ -161,23 +172,25 @@
 - 混合模式 active 行显示源码，但不退回正文行高。
 - preview 模式不显示 Markdown 源码，不允许编辑。
 
-### RENDER-FEAT-02: 数学公式与 Mermaid
+### RENDER-FEAT-02: 数学公式、Mermaid 与表格伴随预览
 
 前置条件：
 
-- 文档中包含行内公式、块级公式和 Mermaid 代码块。
+- 文档中包含行内公式、块级公式、Mermaid 代码块和 Markdown 表格。
 
 步骤：
 
 1. 打开文档并观察公式和图表渲染。
 2. 点击或移动光标进入对应源码区域。
-3. 修改少量 LaTeX 或 Mermaid 文本。
+3. 修改少量 LaTeX、Mermaid 和表格文本。
+4. 框选整段源码，再测试多光标与 night 主题。
 
 期望结果：
 
 - 阅读时显示渲染结果。
-- 编辑时显示真实源码。
-- 修改后结果与源码保持一致。
+- 编辑块级对象时显示真实源码及其下方唯一的伴随预览；框选时只显示源码。
+- 数学与表格立即刷新，Mermaid 在停止输入约 200 ms 后只显示最新结果。
+- night 主题与窄屏表格保持可读，光标移动和主题切换不产生文档写入。
 
 ### RENDER-FEAT-03: Outline 与链接激活
 

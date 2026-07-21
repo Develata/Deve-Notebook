@@ -286,7 +286,7 @@ registerEditorBridgeGlobal("ensureEditorAdapter", () => {
   );
   logToOverlay("Lazy-loading editor adapter bundle...");
 
-  editorBootstrapState.adapterLoading = import("./editor.bundle.js?rev=20260703-heading-lineheight")
+  editorBootstrapState.adapterLoading = import("./editor.bundle.js?rev=20260721-active-companion-preview")
     .then((module) => {
       attachEditorAdapter(module);
     })

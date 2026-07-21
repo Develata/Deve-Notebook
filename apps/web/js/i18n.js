@@ -9,6 +9,8 @@ const FALLBACK_COPY = {
             moreActions: "More Actions",
             noActionsAvailable: "No actions available",
             mermaidError: "Mermaid Error",
+            companionPaused: "Preview paused: content is too large",
+            renderError: "Preview unavailable while the source remains editable",
         },
     },
     "zh-CN": {
@@ -17,6 +19,8 @@ const FALLBACK_COPY = {
             moreActions: "更多操作",
             noActionsAvailable: "暂无可用操作",
             mermaidError: "Mermaid 错误",
+            companionPaused: "预览已暂停：内容过大",
+            renderError: "预览暂不可用，源码仍可编辑",
         },
     },
 };

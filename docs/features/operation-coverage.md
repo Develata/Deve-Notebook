@@ -49,7 +49,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-003A`, `REL-007`, `REL-008`, `TECH-001`, `PERF-001`, `REL-013`, `REL-014` |
 | `flow.release.artifact-publish` | [`release_artifact_publish.md`](./operations/release_artifact_publish.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.release.delivery-verification` | [`release_delivery_verification.md`](./operations/release_delivery_verification.md) | `REL-001`, `REL-002`, `REL-003` |
-| `flow.rendering.cursor-reveal` | [`rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
+| `flow.rendering.cursor-reveal` | [`rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md) | `RENDER-CURSOR-001`, `RENDER-COMPANION-001`, `RENDER-RICH-002` |
 | `flow.rendering.checkbox-writeback` | [`rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md) | `RENDER-RICH-001` |
 | `flow.rendering.inline-source-reveal` | [`rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
 | `flow.rendering.link-activation-gate` | [`rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md) | `RENDER-LINK-001` |
@@ -59,7 +59,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 | `flow.rendering.math-source-projection` | [`rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md) | `RENDER-MATH-001`, `RENDER-BLOCK-001` |
 | `flow.rendering.mermaid-source-projection` | [`rendering_mermaid_source_projection.md`](./operations/rendering_mermaid_source_projection.md) | `RENDER-MERMAID-001`, `RENDER-BLOCK-001` |
 | `flow.rendering.outline-navigation` | [`rendering_outline_navigation.md`](./operations/rendering_outline_navigation.md) | `RENDER-OUTLINE-001` |
-| `flow.rendering.projection-refresh` | [`rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md) | `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001` |
+| `flow.rendering.projection-refresh` | [`rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md) | `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001`, `RENDER-COMPANION-001` |
 | `flow.repo.branch-switch` | [`repo_branch_switch.md`](./operations/repo_branch_switch.md) | `CMD-004`, `REPO-FEAT-02`, `REPO-FEAT-03` |
 | `flow.repo.file-op-shell-routing` | [`repo_file_op_shell_routing.md`](./operations/repo_file_op_shell_routing.md) | `REPO-FEAT-01`, `UI-DESK-003` |
 | `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012`, `STORE-013` |

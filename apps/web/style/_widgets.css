@@ -4,9 +4,62 @@
  * 表格、复选框等交互组件的样式。
  */
 
+/* ==================== 编辑器派生渲染组件 ==================== */
+.cm-render-widget-shell {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 0;
+  color: var(--editor-text);
+}
+
+.cm-active-preview {
+  border-inline-start: 2px solid var(--border-accent);
+  border-top: 1px solid var(--editor-border);
+  padding: 0.65rem 0.75rem 0.75rem;
+  background: var(--bg-editor);
+}
+
+.cm-active-preview-status {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  color: var(--fg-secondary);
+  font-family: var(--code-font);
+  font-size: 0.75rem;
+}
+
+.cm-table-render-shell {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.cm-mermaid-widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cm-mermaid-content {
+  display: flex;
+  width: 100%;
+  min-height: 6rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.cm-mermaid-content svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 32rem;
+}
+
 /* ==================== 表格组件 ==================== */
 .cm-table-widget {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
   font-size: 14px;
 }

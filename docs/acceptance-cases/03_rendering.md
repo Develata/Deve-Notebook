@@ -84,6 +84,31 @@
   assertions:
     - ui_assert: source_visible_for_current_token true
 
+- case_id: RENDER-COMPANION-001
+  goal: 活动块源码下方显示唯一、无 authority 的伴随预览。
+  preconditions:
+    - 文档包含块级公式、Mermaid、Markdown 表格，以及 fence 内的伪公式和伪表格。
+  steps:
+    - run: node apps/web/js/extensions/render_companion.test.cjs
+    - ui_move_cursor_into: "block_math_source"
+    - ui_edit_source: "block_math_source"
+    - ui_move_cursor_into: "mermaid_source"
+    - ui_edit_source: "mermaid_source"
+    - ui_move_cursor_into: "table_source"
+    - ui_resize_viewport: [390, 844]
+    - ui_switch_theme: "night"
+  assertions:
+    - ui_assert: active_source_visible true
+    - ui_assert: active_companion_count 1
+    - ui_assert: nonempty_selection_companion_count 0
+    - ui_assert: fenced_false_positive_count 0
+    - ui_assert: selection_only_parser_calls 0
+    - ui_assert: selection_and_theme_delta_messages 0
+    - ui_assert: mermaid_latest_result_after_debounce true
+    - ui_assert: oversized_companion_paused_without_source_loss true
+    - ui_assert: narrow_table_scrolls_inside_preview true
+    - ui_assert: night_theme_companion_readable true
+
 - case_id: RENDER-LINK-001
   goal: 链接需 Ctrl/Cmd 激活。
   preconditions:

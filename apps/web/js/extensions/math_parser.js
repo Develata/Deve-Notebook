@@ -1,21 +1,35 @@
+import { scanFencedRanges } from "./fenced_ranges.js";
+
 /**
  * 查找文档中的数学公式范围 (Robust GFM-aware Parser)
  * 
  * 遵循以下优先级 (Priority):
- * 1. Fenced Code (```) & Inline Code (`) -> 忽略内部内容
+ * 1. Fenced Code & Inline Code (`) -> 忽略内部内容
  * 2. Escaping (\) -> 忽略转义字符
  * 3. Math ($$) -> Block
  * 4. Math ($) -> Inline (Smart Boundary Check)
  * 
  * @param {string} doc - 文档全文
+ * @param {Array} fencedRanges - 共享 fenced scanner 的 half-open ranges
  * @returns {Array} - 返回范围对象数组
  */
-export function findMathRanges(doc) {
+export function findMathRanges(doc, fencedRanges = scanFencedRanges(doc)) {
   const ranges = [];
+  const backtickRuns = indexBacktickRuns(doc);
   let i = 0;
   const len = doc.length;
+  let fenceIndex = 0;
   
   while (i < len) {
+    while (fenceIndex < fencedRanges.length && fencedRanges[fenceIndex].to <= i) {
+      fenceIndex++;
+    }
+    const fence = fencedRanges[fenceIndex];
+    if (fence && i >= fence.from && i < fence.to) {
+      i = fence.to;
+      continue;
+    }
+
     const char = doc[i];
     
     // 1. Escaping: 跳过转义字符 (例如 \$)
@@ -24,62 +38,22 @@ export function findMathRanges(doc) {
       continue;
     }
     
-    // 2. Fenced Code Block: ```
-    if (char === '`' && doc.startsWith('```', i)) {
-      // 查找代码块结束
-      const start = i;
-      i += 3;
-      const endMatch = doc.indexOf('```', i);
-      if (endMatch !== -1) {
-        i = endMatch + 3;
-      } else {
-        i = len; // 未闭合，跳到末尾
-      }
-      continue; 
-    }
-    
-    // 3. Inline Code: `
+    // 2. Inline Code: `
     if (char === '`') {
-      const start = i;
-      // 计算起始反引号数量 (Run Length)
-      let runLength = 0;
-      while (i + runLength < len && doc[i + runLength] === '`') {
-        runLength++;
-      }
-      
-      i += runLength;
-      
-      // 查找匹配的结束反引号串
-      let closed = false;
-      while (i < len) {
-        if (doc[i] === '`') {
-           // 检查是否是一串相同长度的反引号
-           let closeRun = 0;
-           while (i + closeRun < len && doc[i + closeRun] === '`') {
-             closeRun++;
-           }
-           
-           if (closeRun === runLength) {
-             i += closeRun;
-             closed = true;
-             break;
-           } else {
-             // 长度不匹配，继续向前
-             i += closeRun; 
-           }
-        } else {
-           i++;
-        }
-      }
-      continue; // 无论是否闭合，都跳过已扫描部分
+      const run = backtickRuns.get(i);
+      const close = run?.next;
+      if (close && (!fence || close.from < fence.from)) i = close.to;
+      else i = run?.to ?? i + 1;
+      continue;
     }
     
-    // 4. Block Math: $$
+    // 3. Block Math: $$
     // (注意: 必须在 check $ 之前)
     if (char === '$' && doc.startsWith('$$', i)) {
        const start = i;
        i += 2; 
-       const endMatch = doc.indexOf('$$', i);
+       const nextFence = fencedRanges[fenceIndex];
+       const endMatch = findBlockMathEnd(doc, i, nextFence?.from ?? len, backtickRuns);
        if (endMatch !== -1) {
           ranges.push({
              type: "BLOCK",
@@ -96,7 +70,7 @@ export function findMathRanges(doc) {
        continue;
     }
     
-    // 5. Inline Math: $
+    // 4. Inline Math: $
     if (char === '$') {
        // Smart Boundary Check (Start)
        // 规则: $ 紧邻非空字符 (First char non-whitespace)
@@ -114,6 +88,8 @@ export function findMathRanges(doc) {
        let scanI = i;
        
        while (scanI < len) {
+          const nextFence = fencedRanges[fenceIndex];
+          if (nextFence && scanI >= nextFence.from) break;
           const c = doc[scanI];
           
           if (c === '\\') {
@@ -162,4 +138,62 @@ export function findMathRanges(doc) {
   }
   
   return ranges;
+}
+
+function findBlockMathEnd(doc, from, limit, backtickRuns) {
+  let i = from;
+  while (i < limit) {
+    if (doc[i] === '\\') {
+      i += 2;
+      continue;
+    }
+    if (doc[i] === '`') {
+      const run = backtickRuns.get(i);
+      const close = run?.next;
+      i = close && close.from < limit ? close.to : (run?.to ?? i + 1);
+      continue;
+    }
+    if (doc.startsWith('$$', i)) return i;
+    i++;
+  }
+  return -1;
+}
+
+function indexBacktickRuns(doc) {
+  const runs = [];
+  for (let i = 0; i < doc.length;) {
+    if (doc[i] !== '`') {
+      i++;
+      continue;
+    }
+    const from = i;
+    while (i < doc.length && doc[i] === '`') i++;
+    runs.push({ from, to: i, length: i - from, next: null });
+  }
+
+  const nextByLength = new Map();
+  const runsByStart = new Map();
+  for (let i = runs.length - 1; i >= 0; i--) {
+    const run = runs[i];
+    run.next = nextByLength.get(run.length) || null;
+    const escapedPrefix = precedingBackslashCount(doc, run.from) % 2 === 1;
+    if (escapedPrefix && run.length > 1) {
+      const suffixLength = run.length - 1;
+      runsByStart.set(run.from + 1, {
+        from: run.from + 1,
+        to: run.to,
+        length: suffixLength,
+        next: nextByLength.get(suffixLength) || null,
+      });
+    }
+    nextByLength.set(run.length, run);
+    runsByStart.set(run.from, run);
+  }
+  return runsByStart;
+}
+
+function precedingBackslashCount(doc, position) {
+  let count = 0;
+  for (let i = position - 1; i >= 0 && doc[i] === '\\'; i--) count++;
+  return count;
 }

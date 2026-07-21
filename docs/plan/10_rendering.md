@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-14`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -80,7 +80,7 @@ V_editor = Project(L_confirmed) + O_pending
 其中：
 
 - `Source Projection` 是真实可编辑主视图，显示完整 Markdown 源码；但 ATX 标题行仍按标题层级应用整行字号与行高。
-- `Hybrid Decoration` 是混合模式：光标/选区所在行及其关联块显示源码；非活动区域可隐藏 `#`、强调、链接等语法标记并显示投影样式。它只是对 source 的 decoration / reveal 规则，不是独立 authority。
+- `Hybrid Decoration` 是混合模式：光标/选区所在行及其关联块显示源码；非活动区域可隐藏 `#`、强调、链接等语法标记并显示投影样式。块级 math、Mermaid 与 Markdown table 在折叠主光标进入其源码范围时，可以在源码块下方显示一个派生 companion preview；该 preview 仍是 source decoration，不是独立 Preview Projection 或 authority。
 - `Preview Projection` 是只读阅读投影，参考 Obsidian reading mode：显示渲染结果，不显示 Markdown 源码，不允许编辑，不得成为写入真值源。
 
 ### 2.4 Editor Kernel Stack
@@ -225,9 +225,12 @@ Baseline contract 的行内支持集合：
 - 光标进入 widget 的源码范围时，render projection **MUST** 让位给源码。
 - 在 Hybrid Decoration 中，光标/选区所在行及关联块让位给源码；非活动行继续按渲染投影显示。
 - Cursor reveal 只改变标记可见性与 widget/source 切换，不得取消标题、引用、代码块等块级行高 projection。
+- 所有 selection ranges 相交的 widget 源码都必须恢复；只有折叠的主光标可以在块级 math、Mermaid 或 table 下方产生 companion preview。主选区非空时不得显示 companion preview，且每个 EditorView 同时最多一个 companion preview。
+- companion preview 必须挂在 closing delimiter 所在行的行尾之后，保持源码完整可编辑；它必须是被动、`aria-hidden` 的派生 widget，不得通过点击、滚动或 renderer completion 产生文档 changes。
 - 适用范围：
   - math
   - mermaid
+  - table
   - emphasis syntax
   - frontmatter
   - link source
@@ -274,6 +277,16 @@ Baseline contract 的行内支持集合：
 
 - mermaid 渲染必须静态打包，无运行时网络依赖。
 - zoom/scale 应通过源码块高度或容器约束完成，不得脱离源码边界悬浮。
+- Mermaid companion preview 的源码编辑使用 200 ms trailing debounce；同一 EditorView 的伴随 Mermaid 渲染必须 single-flight/latest-wins，销毁 widget 时清理 timer 并拒绝迟到结果。
+- Mermaid render key 必须包含当前视觉主题；`data-deve-theme-pref` 变化只触发 projection effect，不得触发文档 delta。`night` 使用 dark theme，其余风格使用 default theme。
+
+### 6.2.1 Active Block Companion Preview
+
+- block math、Mermaid 与 Markdown table 共用一个无 authority 的 render range index。fenced code 的识别优先于 math/table，table 还必须排除 block math，任何源码位置不得同时属于两个块级 render ranges。
+- fenced scanner 必须支持 backtick/tilde、至少三个 marker、最多三个前导空格、closing marker 长度不短于 opening marker，以及未闭合 fence 到文档末尾；非行首 marker 不得成为 fenced block。
+- document change 可以在 v1 中全量重建 range index；selection-only、theme 与 widget failure effect 不得重新 stringify/parse 文档，只能查询缓存范围并局部更新 decorations。
+- KaTeX/table companion 在编辑事务后立即刷新。companion resource fuse 固定为：block math 8192 UTF-16 code units、Mermaid 32768 code units、table 131072 code units且最多 2000 cells；超限只暂停 companion renderer，源码继续可编辑，非活动 replace widget 的既有尺寸语义不变。
+- companion renderer 失败时保留上方源码并在 companion 内显示紧凑失败状态；非活动 replace widget 失败时必须撤销该 replace decoration、恢复真实源码，并在源码或主题变化后允许重试。
 
 ### 6.3 Rich Markdown Widgets
 
@@ -340,6 +353,8 @@ Baseline contract 的行内支持集合：
 - first paint 优先首屏 + 预缓冲区
 - 文本可完整加载，但渲染层只虚拟可视区
 - UTF-16 index cache 可作为定位优化，但不是第二真值
+- 设 render ranges 数为 `K`、selection ranges 数为 `S`、与 selection 相交的 ranges 数为 `Q`：selection-only 的 range discovery 与目标状态计算为 `O(S log K + Q)`；受影响 decoration 必须一次批量提交，`RangeSet` 可复用过滤区间外的 chunks，但最坏提交成本按 `O(K + Q)` 计，不宣称严格 `O(Q)`，并且 parser 调用次数必须为零。document change 的 v1 全量索引重建为 `O(N + K)`，另加实际 renderer 成本。
+- KaTeX 成本记为 `T_K(m)`；table DOM 构造约为 `O(m + cells)`；Mermaid 成本记为 `T_M(m) + O(|SVG|)`。不得把 Mermaid 复杂度简化为只依赖图的 `V/E`，也不得把 renderer 时间混入纯索引复杂度后宣称严格线性。
 
 阶段边界：
 
@@ -408,7 +423,7 @@ Baseline contract 的行内支持集合：
   view、callback 与 bootstrap owner，保持 fail-closed，不得保留半活跃 bridge。已脱离
   DOM 的迟到 host 必须在退休当前 view 之前被拒绝，不得接管 active owner，也不得通过
   全局 readonly adapter 修改当前 owner 的可写状态。
-- 单个 widget 渲染失败时，必须回退为源码显示，不得破坏整篇文档编辑。
+- 单个 widget 渲染失败时，必须回退为源码显示，不得破坏整篇文档编辑。活动 companion 已同时显示源码，只显示紧凑错误即可；非活动 replace widget 必须撤销 replace decoration，而不是在遮住源码的 widget 内重复一份不可编辑源码。
 - outline projection 失败时，只允许降级为 plain heading text，不得阻断文档编辑主链。
 
 ## 11. Forbidden Patterns
