@@ -7,18 +7,12 @@ use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use std::path::Path;
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
 pub(super) fn stale_local_binding_session(path: &Path) -> anyhow::Result<WsSession> {
     let mut session = WsSession::new();
-    session.set_active_db(DatabaseHandle {
-        db: Arc::new(redb::Database::create(path.join("stale-local.redb"))?),
-        readonly: false,
-        branch: None,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "ghost".into(),
-    });
+    let _ = path;
+    session.set_active_db(DatabaseHandle::local(uuid::Uuid::new_v4(), "ghost".into()));
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(uuid::Uuid::new_v4());
     session.set_sync_scope_nonce(41);

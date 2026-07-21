@@ -23,20 +23,27 @@
 
 use anyhow::{Context, Result};
 use redb::Database;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
-use super::database::{cached_database, cached_or_create_database, register_database};
 use super::init_reuse::should_reuse_existing_repo;
-use super::manager::repair_local_repo_metadata;
 use super::manager::repo_catalog_entries::redb_repo_entries;
+use super::manager::{
+    LocalAuthorityDiscovery, LocalAuthorityRuntime, catalog_bootstrap_snapshot_for_ledger,
+};
 use super::node_check;
 use super::schema::*;
 use super::source_control;
 use crate::models::RepoId;
-use crate::utils::fs::{checked_exists, ensure_open_file_matches_path, open_regular_file_read};
+use crate::utils::fs::checked_exists;
+
+mod catalog;
+use catalog::{
+    ExistingLocalRepo, scan_cataloged_local_repos, select_existing_local_repo,
+    validate_current_cataloged_identity,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct RepoInitOptions {
@@ -103,12 +110,99 @@ pub fn init_with_options(
         crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
 
     // 3. Resolve display identity from metadata, then use RepoId as the only physical stem.
-    let existing = scan_local_repo_catalog(&local_dir)?;
-    let selection = select_existing_local_repo(&existing, &base_name, repo_url, options.repo_id)?;
-    let (final_name, repo_uuid, local_db, is_new_repo) = if let Some(selected) = selection {
-        let db = cached_database(&selected.path)
-            .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", selected.path))?;
-        (selected.info.name.clone(), selected.info.uuid, db, false)
+    let catalog_snapshot = catalog_bootstrap_snapshot_for_ledger(&ledger_dir)?;
+    let discovery = LocalAuthorityDiscovery::new(&ledger_dir);
+    let explicit_selection = if let Some(repo_id) = options.repo_id {
+        if catalog_snapshot.has_records() && !catalog_snapshot.normal_repo_ids().contains(&repo_id)
+        {
+            anyhow::bail!(
+                "Explicit local RepoId {} is not a durable Normal catalog member",
+                repo_id
+            );
+        }
+        let path = local_dir.join(format!("{repo_id}.redb"));
+        if checked_exists(&path, "explicit local RepoId during init")? {
+            if !catalog_snapshot.has_records() {
+                anyhow::bail!(
+                    "Uncataloged local authority {} requires explicit ownership repair; normal init cannot resume a prepared artifact",
+                    repo_id
+                );
+            }
+            let lease = discovery.lease(repo_id)?;
+            let info = RepoManager::read_local_repo_info_from_db(lease.db())?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Broken local repo {} while opening explicit local RepoId: repository metadata missing",
+                    repo_id
+                )
+            })?;
+            if info.uuid != repo_id
+                || info.name != repo_id.to_string()
+                || !should_reuse_existing_repo(repo_url, &info)
+            {
+                anyhow::bail!(
+                    "Existing local RepoId {} metadata does not match explicit init request",
+                    repo_id
+                );
+            }
+            Some(ExistingLocalRepo { path, info })
+        } else if catalog_snapshot.has_records() {
+            anyhow::bail!(
+                "Durable Normal local RepoId {} has no canonical authority database",
+                repo_id
+            );
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let existing = if options.repo_id.is_none() {
+        if catalog_snapshot.has_records() {
+            scan_cataloged_local_repos(&local_dir, &discovery, catalog_snapshot.normal_records())?
+        } else {
+            let uncataloged = redb_repo_entries(
+                &local_dir,
+                "checking uncataloged local authorities during bootstrap",
+            )?;
+            if !uncataloged.is_empty() {
+                anyhow::bail!(
+                    "Uncataloged local authority artifacts require explicit ownership repair; normal init will not admit prepared or orphan databases"
+                );
+            }
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+    let selection = if options.repo_id.is_some() {
+        explicit_selection.as_ref()
+    } else {
+        select_existing_local_repo(&existing, &base_name, repo_url, None)?
+    };
+    if selection.is_none() && catalog_snapshot.has_records() {
+        anyhow::bail!(
+            "No durable Normal local repository matches the requested selector; physical databases are not admitted outside explicit repair"
+        );
+    }
+    drop(discovery);
+    let (_selection_name, repo_uuid, local_authority, initial_prepared_authority) = if let Some(
+        selected,
+    ) = selection
+    {
+        let authority = LocalAuthorityRuntime::open_existing(&ledger_dir, selected.info.uuid)
+            .with_context(|| format!("无法打开现有数据库: {:?}", selected.path))?;
+        let lease = authority.lease_primary()?;
+        let record = catalog_snapshot
+            .normal_record(selected.info.uuid)
+            .ok_or_else(|| anyhow::anyhow!("selected RepoId lost durable Normal membership"))?;
+        validate_current_cataloged_identity(&ledger_dir, record, lease.db())?;
+        drop(lease);
+        (
+            selected.info.name.clone(),
+            selected.info.uuid,
+            authority,
+            None,
+        )
     } else {
         let display_name = base_name.clone();
         let repo_uuid = options.repo_id.unwrap_or_else(uuid::Uuid::new_v4);
@@ -120,66 +214,71 @@ pub fn init_with_options(
                 db_path
             );
         }
-        let db = cached_or_create_database(&db_path)
-            .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
-        (display_name, repo_uuid, db, true)
-    };
-    let execution_name = repo_uuid.to_string();
-    register_database(
-        &local_dir.join(format!("{}.redb", execution_name)),
-        local_db.clone(),
-    )?;
-
-    // 4. 初始化核心表
-    if is_new_repo {
-        init_core_tables(local_db.as_ref())?;
-    } else {
-        super::RepoManager::validate_local_repo_schema(local_db.as_ref())?;
-        super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
-    }
-
-    // 5. 初始化 Source Control 表
-    source_control::init_tables(local_db.as_ref())?;
-
-    // 6. Node 表一致性检查（repair 需显式触发）
-    let report = node_check::check_node_consistency(local_db.as_ref())?;
-    if !report.is_clean() {
-        anyhow::bail!(
-            "Node consistency drift detected during init: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
-            report.missing_nodes.len(),
-            report.orphan_nodes.len(),
-        );
-    }
-
-    // 7. 写入 Metadata (如果是新库，或者旧库缺失)
-    if is_new_repo {
         let info = super::RepoInfo {
             uuid: repo_uuid,
-            name: final_name.clone(),
+            name: repo_uuid.to_string(),
             url: options
                 .repo_url
                 .clone()
-                .or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
+                .or_else(|| Some(format!("urn:uuid:{repo_uuid}"))),
         };
-        super::RepoManager::initialize_repo_info_in_new_db(local_db.as_ref(), &info)?;
+        let (authority, prepared) = LocalAuthorityRuntime::prepare_new_initialized(
+                &ledger_dir,
+                repo_uuid,
+                |db| {
+                    init_core_tables(db)?;
+                    source_control::init_tables(db)?;
+                    let report = node_check::check_node_consistency(db)?;
+                    if !report.is_clean() {
+                        return Err(anyhow::anyhow!(
+                            "Node consistency drift detected during prepared init: missing={} orphan={}",
+                            report.missing_nodes.len(),
+                            report.orphan_nodes.len(),
+                        )
+                        .into());
+                    }
+                    super::RepoManager::initialize_repo_info_in_new_db(db, &info)?;
+                    Ok(())
+                },
+            )
+            .with_context(|| format!("无法创建本地数据库: {:?}", db_path))?;
+        (display_name, repo_uuid, authority, Some(prepared))
+    };
+    if initial_prepared_authority.is_none() {
+        let local_db = local_authority.lease_primary()?;
+        super::RepoManager::validate_local_repo_schema(local_db.db())?;
+        super::runtime_tables::repair_client_op_index(local_db.db())?;
+        source_control::init_tables(local_db.db())?;
+        let report = node_check::check_node_consistency(local_db.db())?;
+        if !report.is_clean() {
+            anyhow::bail!(
+                "Node consistency drift detected during init: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
+                report.missing_nodes.len(),
+                report.orphan_nodes.len(),
+            );
+        }
     }
 
-    repair_local_repo_metadata(&ledger_dir, &execution_name, local_db.as_ref())?;
     let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
 
     let repo = RepoManager {
         ledger_dir,
         local_peer_id,
-        local_db,
-        local_repo_name: execution_name,
-        extra_local_dbs: RwLock::new(HashMap::new()),
-        repaired_local_runtime_tables: RwLock::new(HashSet::new()),
+        local_authority,
+        initial_prepared_authority: std::sync::Mutex::new(initial_prepared_authority),
         shadow_dbs: RwLock::new(HashMap::new()),
         shadow_merge_guard: std::sync::Mutex::new(()),
         snapshot_depth,
         persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
         catalog_membership,
     };
+    repo.seed_catalog_membership_from_records()
+        .context("Failed to seed local repo catalog membership during init")?;
+    if catalog_snapshot.has_records() {
+        repo.catalog_membership_runtime()
+            .issue(repo_uuid)
+            .context("Selected local repo ceased to be a Normal catalog member during init")?;
+    }
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;
     Ok(repo)
@@ -193,29 +292,25 @@ pub(crate) fn init_existing_for_repo_id(
     repo_id: RepoId,
 ) -> Result<RepoManager> {
     let ledger_dir = ledger_dir.as_ref().to_path_buf();
-    let local_dir = RepoManager::checked_local_dir_for(
-        &ledger_dir,
-        "opening existing local repo by exact RepoId",
-    )?;
-    let execution_name = repo_id.to_string();
-    let db_path = local_dir.join(format!("{execution_name}.redb"));
-
-    // Keep a no-follow witness open across the Redb path open, then verify the
-    // pathname still identifies that same regular file. The containing local/
-    // directory is a protected authority boundary; no scan of sibling repos is
-    // needed to open this exact RepoId.
-    let path_witness = open_regular_file_read(&db_path, "local authority database")
+    let catalog_snapshot = catalog_bootstrap_snapshot_for_ledger(&ledger_dir)?;
+    if !catalog_snapshot.has_records() || !catalog_snapshot.normal_repo_ids().contains(&repo_id) {
+        anyhow::bail!(
+            "Explicit local RepoId {} is not a durable Normal catalog member",
+            repo_id
+        );
+    }
+    let local_authority = LocalAuthorityRuntime::open_existing(&ledger_dir, repo_id)
         .with_context(|| format!("Local repo not found for UUID {repo_id}"))?;
-    let local_db = cached_database(&db_path)
-        .with_context(|| format!("Failed to open local repo UUID {repo_id}"))?;
-    ensure_open_file_matches_path(&path_witness, &db_path, "local authority database")?;
-    RepoManager::validate_local_repo_execution_identity(local_db.as_ref(), &execution_name)?;
-    register_database(&db_path, local_db.clone())?;
+    let local_db = local_authority.lease_primary()?;
+    let record = catalog_snapshot
+        .normal_record(repo_id)
+        .ok_or_else(|| anyhow::anyhow!("exact RepoId lost durable Normal membership"))?;
+    validate_current_cataloged_identity(&ledger_dir, record, local_db.db())?;
 
-    RepoManager::validate_local_repo_schema(local_db.as_ref())?;
-    super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
-    source_control::init_tables(local_db.as_ref())?;
-    let report = node_check::check_node_consistency(local_db.as_ref())?;
+    RepoManager::validate_local_repo_schema(local_db.db())?;
+    super::runtime_tables::repair_client_op_index(local_db.db())?;
+    source_control::init_tables(local_db.db())?;
+    let report = node_check::check_node_consistency(local_db.db())?;
     if !report.is_clean() {
         anyhow::bail!(
             "Node consistency drift detected during init: missing={} orphan={}; run `deve_cli node-check --repair` to repair explicitly",
@@ -228,19 +323,25 @@ pub(crate) fn init_existing_for_repo_id(
     let local_peer_id =
         crate::security::load_or_generate_identity_key_at(&host_keys_dir)?.peer_id();
     let catalog_membership = super::manager::CatalogMembershipRuntime::for_ledger(&ledger_dir)?;
+    drop(local_db);
     let repo = RepoManager {
         ledger_dir,
         local_peer_id,
-        local_db,
-        local_repo_name: execution_name,
-        extra_local_dbs: RwLock::new(HashMap::new()),
-        repaired_local_runtime_tables: RwLock::new(HashSet::new()),
+        local_authority,
+        initial_prepared_authority: std::sync::Mutex::new(None),
         shadow_dbs: RwLock::new(HashMap::new()),
         shadow_merge_guard: std::sync::Mutex::new(()),
         snapshot_depth,
         persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
         catalog_membership,
     };
+    repo.seed_catalog_membership_from_records()
+        .context("Failed to seed local repo catalog membership during exact repo open")?;
+    if catalog_snapshot.has_records() {
+        repo.catalog_membership_runtime()
+            .issue(repo_id)
+            .context("Exact local repo ceased to be a Normal catalog member during init")?;
+    }
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during exact repo open")?;
     Ok(repo)
@@ -260,7 +361,7 @@ pub(crate) fn init_existing_for_repo_id(
 /// - `NODE_OPS`: 结构事实节点索引
 /// - `SNAPSHOT_INDEX`: 快照索引
 /// - `SNAPSHOT_DATA`: 快照数据
-fn init_core_tables(db: &Database) -> Result<()> {
+pub(crate) fn init_core_tables(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
     {
         let _ = write_txn.open_table(DOCID_TO_PATH)?;
@@ -284,106 +385,4 @@ fn init_core_tables(db: &Database) -> Result<()> {
     }
     write_txn.commit()?;
     Ok(())
-}
-
-struct ExistingLocalRepo {
-    path: std::path::PathBuf,
-    info: super::RepoInfo,
-}
-
-fn scan_local_repo_catalog(local_dir: &Path) -> Result<Vec<ExistingLocalRepo>> {
-    let mut repos = Vec::new();
-    let mut ids = HashMap::new();
-    let mut urls = HashMap::new();
-    for (path, stem) in redb_repo_entries(local_dir, "initializing local repo")? {
-        let info = super::RepoManager::read_required_local_repo_info_from_path(
-            &path,
-            &stem,
-            "initializing local repo",
-        )
-        .map_err(|err| {
-            anyhow::anyhow!(
-                "Broken local repo {} while initializing catalog: {}",
-                stem,
-                err
-            )
-        })?;
-        let expected_stem = info.uuid.to_string();
-        if stem != expected_stem {
-            anyhow::bail!(
-                "Broken v4 local repo {} while initializing catalog: physical stem must equal RepoId {}",
-                stem,
-                info.uuid
-            );
-        }
-        if let Some(owner) = ids.insert(info.uuid, stem.clone()) {
-            anyhow::bail!(
-                "Broken local catalog: duplicate RepoId {} at {} and {}",
-                info.uuid,
-                owner,
-                stem
-            );
-        }
-        if let Some(url) = &info.url
-            && let Some(owner) = urls.insert(url.clone(), stem.clone())
-        {
-            anyhow::bail!(
-                "Broken local catalog: duplicate repository URL {} at {} and {}",
-                url,
-                owner,
-                stem
-            );
-        }
-        repos.push(ExistingLocalRepo { path, info });
-    }
-    Ok(repos)
-}
-
-fn select_existing_local_repo<'a>(
-    repos: &'a [ExistingLocalRepo],
-    requested_name: &str,
-    requested_url: Option<&str>,
-    requested_id: Option<uuid::Uuid>,
-) -> Result<Option<&'a ExistingLocalRepo>> {
-    if let Some(repo_id) = requested_id {
-        if let Some(repo) = repos.iter().find(|repo| repo.info.uuid == repo_id) {
-            if repo.info.name != requested_name
-                || !should_reuse_existing_repo(requested_url, &repo.info)
-            {
-                anyhow::bail!(
-                    "Existing local RepoId {} metadata does not match explicit init request",
-                    repo_id
-                );
-            }
-            return Ok(Some(repo));
-        }
-        if let Some(repo) = repos.iter().find(|repo| {
-            repo.info.name == requested_name
-                && should_reuse_existing_repo(requested_url, &repo.info)
-        }) {
-            anyhow::bail!(
-                "explicit repo-id init fails closed: repository selector {} resolves to existing RepoId {}, not requested RepoId {}",
-                requested_name,
-                repo.info.uuid,
-                repo_id
-            );
-        }
-        return Ok(None);
-    }
-    let matches = repos
-        .iter()
-        .filter(|repo| {
-            repo.info.name == requested_name
-                && should_reuse_existing_repo(requested_url, &repo.info)
-        })
-        .collect::<Vec<_>>();
-    match matches.as_slice() {
-        [] => Ok(None),
-        [repo] => Ok(Some(*repo)),
-        _ => anyhow::bail!(
-            "Ambiguous local repository init selector {} matched {} RepoIds; pass an explicit RepoId or unique URL",
-            requested_name,
-            matches.len()
-        ),
-    }
 }

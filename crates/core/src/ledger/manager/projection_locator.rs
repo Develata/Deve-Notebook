@@ -143,6 +143,50 @@ impl RepoManager {
         repo_id: RepoId,
         projection_base: impl AsRef<Path>,
     ) -> Result<ProjectionLocatorRecord> {
+        let info = self.with_initial_primary_for_catalog(repo_id, |db| {
+            RepoManager::read_local_repo_info_from_db(db)
+                .map_err(crate::ledger::LocalAuthorityError::Other)?
+                .ok_or_else(|| {
+                    crate::ledger::LocalAuthorityError::Invariant(format!(
+                        "Prepared Projection Locator target metadata is missing: {repo_id}"
+                    ))
+                })
+        })?;
+        self.prepare_projection_locator_for_repo_creation_inner(
+            repo_id,
+            projection_base.as_ref(),
+            info,
+        )
+    }
+
+    pub fn prepare_projection_locator_for_repo_creation_with_authority(
+        &self,
+        repo_id: RepoId,
+        projection_base: impl AsRef<Path>,
+        authority: &crate::ledger::PreparedRepoAuthority,
+    ) -> Result<ProjectionLocatorRecord> {
+        if authority.repo_id() != repo_id {
+            return Err(anyhow!(
+                "Prepared Projection Locator authority RepoId mismatch: expected {repo_id}, got {}",
+                authority.repo_id()
+            ));
+        }
+        let info = RepoManager::read_local_repo_info_from_db(authority.db())?.ok_or_else(|| {
+            anyhow!("Prepared Projection Locator target metadata is missing: {repo_id}")
+        })?;
+        self.prepare_projection_locator_for_repo_creation_inner(
+            repo_id,
+            projection_base.as_ref(),
+            info,
+        )
+    }
+
+    fn prepare_projection_locator_for_repo_creation_inner(
+        &self,
+        repo_id: RepoId,
+        projection_base: &Path,
+        info: RepoInfo,
+    ) -> Result<ProjectionLocatorRecord> {
         let _map_guard = ProjectionLocatorMapGuard::acquire(&self.ledger_dir)?;
         if self.repo_catalog_membership_record(repo_id)?.is_some() {
             return Err(anyhow!(
@@ -150,12 +194,6 @@ impl RepoManager {
             ));
         }
         let execution_name = repo_id.to_string();
-        let info = self
-            .repo_scope_runtime()
-            .read_local_repo_info_by_stem_without_repair(&execution_name)?
-            .ok_or_else(|| {
-                anyhow!("Prepared Projection Locator target metadata is missing: {repo_id}")
-            })?;
         if info.uuid != repo_id || info.name != execution_name {
             return Err(anyhow!(
                 "Prepared Projection Locator target must use canonical RepoId identity: expected {repo_id}, metadata uuid={}, name={:?}",
@@ -163,7 +201,7 @@ impl RepoManager {
                 info.name
             ));
         }
-        let projection_base_abs = canonicalize_projection_base(projection_base.as_ref())?;
+        let projection_base_abs = canonicalize_projection_base(projection_base)?;
         let record = ProjectionLocatorRecord {
             repo_id,
             workspace_segment: execution_name,
@@ -186,6 +224,7 @@ impl RepoManager {
             self,
             &file.locators,
             repo_id,
+            info,
         )?;
         self.write_projection_locator_file(&file)?;
         Ok(record)

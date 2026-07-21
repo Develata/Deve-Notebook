@@ -22,9 +22,6 @@ pub struct Harness {
     /// (the repo's RepoId string). Machine names are UUID-canonical after the
     /// catalog cutover; the labels only exist for test readability.
     labels: HashMap<String, String>,
-    /// Extra cataloged repos are created through their own managers on the same
-    /// ledger; keep them alive so their process-cached databases stay open.
-    _extra_repos: Vec<RepoManager>,
     watcher_handles: Vec<watcher::RepoWatcherHandle>,
 }
 
@@ -37,12 +34,9 @@ impl Harness {
         let (main_repo, main_id) = common::init_cataloged_repo(&ledger, &projection_base)?;
         let mut labels = HashMap::new();
         labels.insert("main".to_string(), main_id.to_string());
-        let mut extra_repos = Vec::new();
         if let Some((label, url)) = extra_repo {
-            let (extra, extra_id) =
-                common::init_cataloged_repo_with_url(&ledger, &projection_base, url)?;
+            let extra_id = common::add_cataloged_repo_with_url(&main_repo, &projection_base, url)?;
             labels.insert(label.to_string(), extra_id.to_string());
-            extra_repos.push(extra);
         }
         let repo = Arc::new(main_repo);
         let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
@@ -51,7 +45,6 @@ impl Harness {
             repo,
             sync,
             labels,
-            _extra_repos: extra_repos,
             watcher_handles: Vec::new(),
         })
     }
@@ -124,8 +117,13 @@ impl Harness {
                 .repo
                 .list_pending_fs_in_local_repo(&repo_name)
                 .unwrap_or_default();
+            let watcher_snapshots = self
+                .watcher_handles
+                .iter()
+                .map(watcher::RepoWatcherHandle::snapshot)
+                .collect::<Vec<_>>();
             anyhow!(
-                "pending {repo_name}/{path} {status:?} not observed: {err}; pending={pending:?}"
+                "pending {repo_name}/{path} {status:?} not observed: {err}; pending={pending:?}; watcher_snapshots={watcher_snapshots:?}"
             )
         })
     }

@@ -2,7 +2,7 @@
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-catalog-repair-contract
 
-use crate::ledger::database::{cached_database, relocate_database_path};
+use crate::ledger::database::{cached_shadow_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::remote_repo_scan_helpers::{
     checked_remote_peer_dir, duplicate_catalog_ids, repaired_remote_repo_info,
@@ -59,7 +59,7 @@ impl<'a> RepoCatalogRuntime<'a> {
                 path
             };
             if repair.write_back {
-                let db = cached_database(&target)?;
+                let db = cached_shadow_database(&target)?;
                 RepoManager::write_repo_info_to_db(db.as_ref(), &repair.info)?;
             }
         }

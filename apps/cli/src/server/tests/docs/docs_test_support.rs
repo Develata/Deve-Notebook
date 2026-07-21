@@ -105,13 +105,18 @@ pub(crate) fn stale_db_handle(
     branch: Option<PeerId>,
     repo_name: &str,
 ) -> anyhow::Result<DatabaseHandle> {
-    Ok(DatabaseHandle {
-        db: Arc::new(redb::Database::create(path)?),
-        readonly,
-        branch,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: repo_name.into(),
-    })
+    let repo_id = uuid::Uuid::new_v4();
+    if readonly || branch.is_some() {
+        let db = Arc::new(redb::Database::create(path)?);
+        Ok(DatabaseHandle::remote(
+            db,
+            branch.unwrap_or_else(|| PeerId::new("readonly")),
+            repo_id,
+            repo_name.into(),
+        ))
+    } else {
+        Ok(DatabaseHandle::local(repo_id, repo_name.into()))
+    }
 }
 
 pub(crate) async fn recv_protocol_error(

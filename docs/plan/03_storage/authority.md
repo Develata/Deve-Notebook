@@ -431,9 +431,15 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
 ### 11.1 Authority Layer
 
 - 负责 ledger append validation、runtime side table 归类、authority table 读写边界。
+
+#### 11.1.1 Local Authority Owner Contract {#local-authority-owner-contract}
+
 - `LocalAuthorityRuntime` 是当前 host 所有 local Redb handle 的唯一 owner；每个 exact `RepoId`
-  对应一个带 generation 的 `RepoAuthoritySlot`，单个 slot incarnation 状态固定为
-  `Active -> Quiescing -> Retired`。
+  对应一个带 generation 的 `RepoAuthoritySlot`。首次 admission 在 durable Normal catalog cut 前只能走
+  `Opening -> Preparing`；初始化失败、panic、prepared capability遗失或身份不明必须进入
+  `RepairRequired`，不得被normal/default recovery观察。已admit incarnation的remove序列固定为
+  `Active -> Quiescing -> CommittedCleanup -> Retired`；`CommittedCleanup` 必须继续持有persistent
+  owner lock，只有显式完成owner cleanup与terminal settlement才能进入`Retired`。
   `RepoManager` 只能组合该 runtime 与其它 host registries，不得另持 bootstrap `local_db`、secondary
   DB map 或 runtime 外 cache authority。
 - 调用者只能取得不可 Clone 的 `RepoAuthorityLease`；lease 仅在其受控生命周期内借用

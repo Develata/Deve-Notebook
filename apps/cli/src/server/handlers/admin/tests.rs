@@ -20,13 +20,14 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, uuid::Uu
         Some("urn:default".to_string()),
     )?;
     let default_id = default.repo_id;
-    let second = crate::test_support::init_cataloged_repo_with_url(
+    let second_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &default.repo,
         &ledger,
+        "notes",
         &projection_base,
         10,
-        Some("urn:notes".to_string()),
+        Some("urn:notes"),
     )?;
-    let second_id = second.repo_id;
     let repo = Arc::new(default.repo);
     let (tx, _rx) = broadcast::channel(8);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;

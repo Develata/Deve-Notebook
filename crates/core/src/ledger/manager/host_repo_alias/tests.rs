@@ -34,8 +34,17 @@ fn init_alias_repo(ledger: &std::path::Path) -> anyhow::Result<RepoManager> {
     let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
     Ok(repo)
+}
+
+fn add_alias_repo(repo: &RepoManager, ledger: &std::path::Path) -> anyhow::Result<RepoId> {
+    let projection = ledger
+        .parent()
+        .expect("test ledger has parent")
+        .join("alias-test-projections");
+    crate::test_support::add_cataloged_repo(repo, ledger, &projection, None)
 }
 
 fn repo_ids(repo: &RepoManager) -> anyhow::Result<Vec<RepoId>> {
@@ -127,7 +136,7 @@ fn export_is_deterministic_and_contains_only_explicit_active_aliases() -> anyhow
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let repo = init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
+    add_alias_repo(&repo, &ledger)?;
     let mut ids = repo_ids(&repo)?;
     ids.sort();
     let runtime = repo.host_repo_alias_runtime();
@@ -154,9 +163,9 @@ fn import_reports_every_bad_entry_skips_all_duplicates_and_commits_good_batch() 
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let repo = init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
+    add_alias_repo(&repo, &ledger)?;
+    add_alias_repo(&repo, &ledger)?;
+    add_alias_repo(&repo, &ledger)?;
     let ids = repo_ids(&repo)?;
     let good = ids[0];
     let duplicate = ids[1];
@@ -232,7 +241,7 @@ fn apply_revalidates_membership_after_preview() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let repo = init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
+    add_alias_repo(&repo, &ledger)?;
     let primary = repo.get_repo_info()?.expect("primary").uuid;
     let target = repo
         .list_cataloged_local_repo_summaries()?

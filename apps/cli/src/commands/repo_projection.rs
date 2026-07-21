@@ -214,6 +214,7 @@ mod tests {
         assert_eq!(report.unexplained.len(), 1);
         assert_eq!(report.unexplained[0].path, "extra.md");
 
+        drop(repo);
         drift(&ledger, &repo_name, Some(&root), 8)?;
         Ok(())
     }

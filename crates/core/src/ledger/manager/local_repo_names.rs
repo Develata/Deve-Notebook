@@ -26,17 +26,20 @@ mod tests {
         let (main, main_id) =
             crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
                 .expect("main");
-        let (_wiki, wiki_id) =
-            crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
-                .expect("wiki");
+        let wiki_id = crate::test_support::add_cataloged_repo(
+            &main,
+            &ledger_dir,
+            &dir.path().join("wiki-notes"),
+            None,
+        )
+        .expect("wiki");
         // Drift the secondary's physical RepoId so its stem no longer matches
         // its metadata RepoId.
         let wiki_db = main
-            .open_database(None, &wiki_id.to_string())
-            .expect("wiki db")
-            .db;
+            .local_authority_lease_for_test(wiki_id)
+            .expect("wiki db");
         crate::test_support::write_repo_metadata(
-            wiki_db.as_ref(),
+            wiki_db.db(),
             &RepoInfo {
                 uuid: main_id,
                 name: main_id.to_string(),
@@ -63,10 +66,9 @@ mod tests {
             crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))
                 .expect("main");
         let main_db = main
-            .open_database(None, &main_id.to_string())
-            .expect("main db")
-            .db;
-        crate::test_support::delete_repo_metadata(main_db.as_ref()).expect("delete metadata");
+            .local_authority_lease_for_test(main_id)
+            .expect("main db");
+        crate::test_support::delete_repo_metadata(main_db.db()).expect("delete metadata");
 
         let err = main
             .list_local_repo_names_for_execution()

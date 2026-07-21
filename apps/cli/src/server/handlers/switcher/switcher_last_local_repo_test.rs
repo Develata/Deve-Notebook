@@ -30,21 +30,23 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
         Some("urn:default".to_string()),
     )?
     .repo;
-    let test_id = crate::test_support::init_cataloged_repo_with_url(
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
         &ledger_dir,
+        "test",
         &projection_base,
         10,
-        Some("urn:test".to_string()),
-    )?
-    .repo_id;
+        Some("urn:test"),
+    )?;
     let peer_id = PeerId::new("peer-remote");
-    let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
         &peer_id,
         &RepoInfo {
-            uuid: remote_repo_id,
+            // Cross-peer correspondence is RepoId-first. The remote display
+            // name is deliberately different and remains peer-local.
+            uuid: test_id,
             name: "default".into(),
-            url: Some("urn:remote:default".into()),
+            url: Some("urn:test".into()),
         },
     )?;
 
@@ -70,6 +72,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = browser_session(0);
     session.switch_repo(test_id.to_string(), Some(test_id));
+    session.bind_catalog_membership(state.catalog_membership_runtime().issue(test_id)?);
 
     handle_switch_branch(
         &state,

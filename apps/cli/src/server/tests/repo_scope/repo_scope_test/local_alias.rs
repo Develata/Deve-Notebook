@@ -18,8 +18,9 @@ fn rewrite_local_metadata(
     repo_name: &str,
     info: RepoInfo,
 ) -> anyhow::Result<()> {
-    let db = repo.open_database(None, repo_name)?.db;
-    let txn = db.begin_write()?;
+    let repo_id = uuid::Uuid::parse_str(repo_name)?;
+    let db = repo.lease_local_authority(repo_id)?;
+    let txn = db.db().begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
         let version = codec::encode(&REDB_SCHEMA_VERSION)?;

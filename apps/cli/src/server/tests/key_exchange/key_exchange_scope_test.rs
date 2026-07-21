@@ -57,13 +57,11 @@ async fn request_key_with_stale_local_binding_bootstraps_single_repo() -> anyhow
     let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(71);
-    session.set_active_db(DatabaseHandle {
-        db: stale_db,
-        readonly: false,
-        branch: None,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "ghost".into(),
-    });
+    drop(stale_db);
+    session.set_active_db(DatabaseHandle::local(
+        uuid::Uuid::new_v4(),
+        "ghost".into(),
+    ));
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(uuid::Uuid::new_v4());
     session.set_sync_scope_nonce(71);

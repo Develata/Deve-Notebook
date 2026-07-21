@@ -16,10 +16,8 @@ impl RemoteImportStore {
         session_id: crate::remote_import::types::RemoteImportSessionId,
         generation: u64,
     ) -> RemoteImportResult<()> {
-        let write = self
-            .db()
-            .begin_write()
-            .map_err(RemoteImportError::storage)?;
+        let db = self.lease_db()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         {
             let mut sessions = write
                 .open_table(REMOTE_IMPORT_SESSIONS)

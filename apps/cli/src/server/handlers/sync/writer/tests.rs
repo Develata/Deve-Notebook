@@ -15,11 +15,12 @@ fn rejects_unbound_repo() {
 }
 
 #[test]
-fn rejects_readonly_writer_registration() {
+fn rejects_stale_readonly_binding_in_local_scope() {
     let (mut session, repo_id, peer_id) = browser_session(new_repo_id());
     set_db(&mut session, true, None, Some(repo_id), "notes");
     let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
-    assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
+    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_sync_cleared(&session);
 }
 
 #[test]
@@ -151,13 +152,18 @@ fn set_db(
 ) {
     let dir = tempfile::tempdir().expect("tempdir");
     let db = Arc::new(redb::Database::create(dir.path().join("remote.redb")).expect("db"));
-    session.set_active_db(DatabaseHandle {
-        db,
-        readonly,
-        branch,
-        repo_id,
-        repo_name: repo_name.into(),
-    });
+    let repo_id = repo_id.expect("writer binding RepoId");
+    let handle = if readonly || branch.is_some() {
+        DatabaseHandle::remote(
+            db,
+            branch.unwrap_or_else(|| PeerId::new("readonly")),
+            repo_id,
+            repo_name.into(),
+        )
+    } else {
+        DatabaseHandle::local(repo_id, repo_name.into())
+    };
+    session.set_active_db(handle);
 }
 
 fn assert_sync_cleared(session: &WsSession) {

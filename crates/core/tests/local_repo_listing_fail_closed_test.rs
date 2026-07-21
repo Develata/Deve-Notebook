@@ -11,10 +11,10 @@ fn local_repo_listing_fails_closed_on_missing_main_metadata() {
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
             .expect("main");
     let main_db = repo
-        .open_database(None, &main_id.to_string())
-        .expect("main db");
+        .lease_local_authority(main_id)
+        .expect("main authority lease");
 
-    common::delete_repo_metadata(main_db.db.as_ref());
+    common::delete_repo_metadata(main_db.db());
 
     let err = repo
         .list_repos(None)

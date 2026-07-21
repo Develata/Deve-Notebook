@@ -14,7 +14,7 @@ impl RepoManager {
         &self,
         repo_name: Option<&str>,
     ) -> Result<Vec<(DocId, String)>> {
-        let name = repo_name.unwrap_or(&self.local_repo_name);
+        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
         self.run_on_local_repo(name, metadata::list_docs)
     }
 

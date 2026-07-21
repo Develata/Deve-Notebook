@@ -7,7 +7,6 @@ use deve_core::codec;
 use deve_core::ledger::schema::{
     REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
 };
-use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tempfile::tempdir;
@@ -18,10 +17,21 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    let local = RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:notes"))?;
-    let local_info = local.get_repo_info()?.expect("local notes info");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let (repo, _) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
+    let local_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
+        &ledger_dir,
+        "notes",
+        &projection_base,
+        10,
+        Some("urn:notes"),
+    )?;
     let peer_id = PeerId::new("peer-remote");
     let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
@@ -35,7 +45,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
     let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(28);
-    session.switch_repo(local_info.uuid.to_string(), None);
+    session.switch_repo(local_id.to_string(), None);
 
     handle_switch_branch(
         &state,
@@ -79,8 +89,8 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     let peer_id = PeerId::new("peer-remote");
     let state = app_state(repo, projection_base, dir.path().join("host"))?;
     state.repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
-    let db = state.repo.open_database(None, &default_id.to_string())?.db;
-    let txn = db.begin_write()?;
+    let db = state.repo.lease_local_authority(default_id)?;
+    let txn = db.db().begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
         let version = codec::encode(&REDB_SCHEMA_VERSION)?;

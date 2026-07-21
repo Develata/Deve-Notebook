@@ -19,7 +19,7 @@ pub(crate) use types::{
 };
 
 use crate::remote_import_runtime::RemoteImportCoordinator;
-use crate::repo_init::prepare_local_repo_workspace;
+use crate::repo_init::prepare_local_repo_workspace_with_owner;
 use crate::server::repo_mutation::RepoMutationPublicationGate;
 use crate::server::runtime::watcher_runtime::{WatcherMountReservation, WatcherSupervisor};
 use deve_core::ledger::{CatalogMembershipRuntime, LocalRepoSummary};
@@ -120,11 +120,10 @@ impl RepoLifecycleCoordinator {
             })
             .await??;
 
-        let _report = match prepare_local_repo_workspace(
-            self.repo.ledger_dir(),
+        let prepared_workspace = match prepare_local_repo_workspace_with_owner(
+            &self.repo,
             intent.repo_id,
             &intent.projection_base,
-            self.repo.snapshot_depth(),
             None,
         ) {
             Ok(report) => report,
@@ -137,10 +136,11 @@ impl RepoLifecycleCoordinator {
                 ));
             }
         };
-        let prepared = match self
-            .repo
-            .prepare_repo_creation_membership(intent.repo_id, intent.lifecycle_request_id)
-        {
+        let prepared = match self.repo.prepare_repo_creation_membership_with_authority(
+            intent.repo_id,
+            intent.lifecycle_request_id,
+            &prepared_workspace,
+        ) {
             Ok(prepared) => prepared,
             Err(error) => {
                 return Err(self.abort_create_pre_cut(
@@ -151,7 +151,10 @@ impl RepoLifecycleCoordinator {
                 ));
             }
         };
-        let revalidated = match self.repo.revalidate_repo_creation_membership(&prepared) {
+        let revalidated = match self
+            .repo
+            .revalidate_repo_creation_membership_with_authority(&prepared, &prepared_workspace)
+        {
             Ok(revalidated) => revalidated,
             Err(error) => {
                 return Err(self.abort_create_pre_cut(
@@ -169,9 +172,14 @@ impl RepoLifecycleCoordinator {
                     .commit_repo_creation_membership(&prepared, &revalidated, permit)
             })
             .await;
-        match cut {
-            Ok(Ok(commit)) => debug_assert_eq!(commit.record().repo_id(), intent.repo_id),
-            Ok(Err(error)) => {
+        let commit = match cut {
+            Ok(Ok(commit)) => commit,
+            first => {
+                let (phase, primary) = match first {
+                    Ok(Err(error)) => ("create catalog cut", error.to_string()),
+                    Err(error) => ("create catalog gate", error.to_string()),
+                    Ok(Ok(_)) => unreachable!("success handled by outer match"),
+                };
                 let committed = self
                     .repo
                     .repo_catalog_membership_record(intent.repo_id)
@@ -182,27 +190,51 @@ impl RepoLifecycleCoordinator {
                     return Err(self.abort_create_pre_cut(
                         reservation,
                         intent.repo_id,
-                        "create catalog cut",
-                        error.to_string(),
+                        phase,
+                        primary,
                     ));
                 }
-            }
-            Err(error) => {
-                let committed = self
-                    .repo
-                    .repo_catalog_membership_record(intent.repo_id)
-                    .ok()
-                    .flatten()
-                    .is_some_and(|record| record.confirms_created(intent.lifecycle_request_id));
-                if !committed {
-                    return Err(self.abort_create_pre_cut(
-                        reservation,
-                        intent.repo_id,
-                        "create catalog gate",
-                        error.to_string(),
-                    ));
+                let retry = self
+                    .gate
+                    .execute_catalog_repo_cut(intent.repo_id, |permit| {
+                        self.repo
+                            .commit_repo_creation_membership(&prepared, &revalidated, permit)
+                    })
+                    .await;
+                match retry {
+                    Ok(Ok(commit)) => commit,
+                    retry => {
+                        let retry = match retry {
+                            Ok(Err(error)) => error.to_string(),
+                            Err(error) => error.to_string(),
+                            Ok(Ok(_)) => unreachable!("success handled by outer match"),
+                        };
+                        let detail =
+                            format!("{primary}; exact committed create retry failed: {retry}");
+                        mount::mark_repair_required(&self.watchers, &reservation, detail.clone());
+                        return Err(RepoLifecycleError::RepairRequired {
+                            operation: "create authority activation",
+                            repo_id: intent.repo_id,
+                            detail,
+                        });
+                    }
                 }
             }
+        };
+        debug_assert_eq!(commit.record().repo_id(), intent.repo_id);
+
+        if let Err(error) =
+            self.repo
+                .activate_prepared_local_repo_authority(prepared_workspace, &prepared, &commit)
+        {
+            let detail =
+                format!("catalog committed but local authority activation failed: {error}");
+            mount::mark_repair_required(&self.watchers, &reservation, detail.clone());
+            return Err(RepoLifecycleError::RepairRequired {
+                operation: "create authority activation",
+                repo_id: intent.repo_id,
+                detail,
+            });
         }
 
         if let Err(error) =

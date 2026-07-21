@@ -5,7 +5,7 @@ use crate::server::handlers::switcher::handle_switch_branch;
 use crate::server::session::WsSession;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
 use crate::server::AppState;
-use deve_core::ledger::{RepoInfo, RepoManager};
+use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -17,12 +17,24 @@ fn state_with_shadow(create_notes: bool) -> anyhow::Result<Harness> {
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
+    let (repo, _) = crate::server::catalog_repo_support::catalog_initial_repo(
+        &ledger_dir,
+        "default",
+        &projection_base,
+        10,
+        Some("urn:default"),
+    )?;
     let default_info = repo.get_repo_info()?.expect("default repo info");
     if create_notes {
-        RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:notes"))?;
+        crate::server::catalog_repo_support::catalog_additional_repo(
+            &repo,
+            &ledger_dir,
+            "notes",
+            &projection_base,
+            10,
+            Some("urn:notes"),
+        )?;
     }
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &default_info)?;
     let state = app_state(repo, projection_base, dir.path().join("host"))?;

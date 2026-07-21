@@ -95,7 +95,6 @@ impl SyncEngine {
 mod tests {
     use super::{HandshakeError, SyncEngine};
     use crate::config::SyncMode;
-    use crate::ledger::RepoManager;
     use crate::models::VersionVector;
     use crate::models::{PeerId, RepoId};
     use crate::security::IdentityKeyPair;
@@ -106,9 +105,11 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let ledger = dir.path().join("ledger");
         let projection_base = dir.path().join("notes");
-        let mut repo = RepoManager::init(&ledger, 8, Some("notes"), Some("urn:test:notes"))?;
-        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+        let (repo, repo_id) = crate::test_support::init_cataloged_repo_with_url(
+            &ledger,
+            &projection_base,
+            "urn:test:notes",
+        )?;
         let repo = Arc::new(repo);
         let engine = SyncEngine::new(PeerId::new("local"), repo, SyncMode::Auto, None);
         Ok((dir, engine, repo_id))

@@ -125,8 +125,12 @@ fn test_client_op_index_is_repo_scoped() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
     let (repo, main_id) =
         crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("main-notes"))?;
-    let (_wiki, wiki_id) =
-        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("wiki-notes"))?;
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &repo,
+        &ledger_dir,
+        &tmp_dir.path().join("wiki-notes"),
+        None,
+    )?;
     let main_name = main_id.to_string();
     let wiki_name = wiki_id.to_string();
     let main_doc = DocId::new();

@@ -252,31 +252,25 @@ mod tests {
         );
     }
 
-    // Under UUID-first identity the machine-name selector equals the RepoId, so
-    // `commands::init::run` can no longer collide two RepoIds on one selector
-    // (each explicit RepoId is a distinct repo). The fail-closed guard itself
-    // still lives in `RepoManager::init_with_options`: a display-name selector
-    // that already resolves to a different RepoId must reject a mismatched
-    // explicit RepoId rather than silently reuse or fork it.
+    // Under UUID-first identity, an explicit different RepoId denotes a
+    // distinct repo even if the caller supplies the same display alias. The
+    // fail-closed identity check therefore binds the same RepoId to its durable
+    // URL rather than treating a host-local alias as machine authority.
     #[test]
-    fn init_repo_id_mismatch_fails_closed_for_existing_repo() {
+    fn init_existing_repo_id_fails_closed_on_url_mismatch() {
         use deve_core::ledger::init::RepoInitOptions;
 
         let dir = tempfile::tempdir().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
         let existing_id =
             uuid::Uuid::parse_str("11111111-1111-1111-1111-111111111111").expect("uuid");
-        let mismatched_id =
-            uuid::Uuid::parse_str("22222222-2222-2222-2222-222222222222").expect("uuid");
-
-        RepoManager::init_with_options(
+        crate::repo_init::initialize_initial_local_repo_workspace(
             &ledger_dir,
+            "default",
+            &dir.path().join("notes"),
             8,
-            Some("default"),
-            RepoInitOptions {
-                repo_id: Some(existing_id),
-                repo_url: Some("urn:test:default".to_string()),
-            },
+            Some(existing_id),
+            Some("urn:test:default".to_string()),
         )
         .expect("init existing repo");
 
@@ -285,16 +279,16 @@ mod tests {
             8,
             Some("default"),
             RepoInitOptions {
-                repo_id: Some(mismatched_id),
-                repo_url: Some("urn:test:default".to_string()),
+                repo_id: Some(existing_id),
+                repo_url: Some("urn:test:other".to_string()),
             },
         )
         .err()
-        .expect("repo id mismatch must fail closed");
+        .expect("repo URL mismatch must fail closed");
 
         assert!(
             err.to_string()
-                .contains("explicit repo-id init fails closed")
+                .contains("metadata does not match explicit init request")
         );
     }
 

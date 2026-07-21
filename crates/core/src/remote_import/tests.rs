@@ -12,7 +12,7 @@ use super::artifact::{MANIFEST_FILE, RemoteImportArtifactRoot};
 use super::error::RemoteImportError;
 use super::repair::RemoteImportRepairFinding;
 use super::runtime::RemoteImportRuntime;
-use super::store::RemoteImportStore;
+use super::store::{RemoteImportStore, RemoteImportTestDatabase};
 use super::types::{
     RemoteImportBaseline, RemoteImportCandidateRevision, RemoteImportDigest,
     RemoteImportFailureKind, RemoteImportPrepareRequest, RemoteImportRefreshRequest,
@@ -25,14 +25,13 @@ use crate::ledger::{RepoManager, init::RepoInitOptions};
 use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 struct Fixture {
     _dir: tempfile::TempDir,
     ledger: PathBuf,
     repo_id: crate::models::RepoId,
     repo: RepoManager,
-    db: Arc<redb::Database>,
+    db: RemoteImportTestDatabase,
     runtime: RemoteImportRuntime,
 }
 
@@ -57,15 +56,27 @@ impl Fixture {
         let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
         std::fs::create_dir_all(&workspace)?;
         crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
-        repo.seed_catalog_membership_from_records()?;
+        repo.seed_catalog_membership_from_records()
+            .map_err(|error| anyhow::anyhow!("fixture membership seed failed: {error}"))?;
         let authority = repo.claim_repo_catalog_cut_authority()?;
-        let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
-        let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+        let prepared = repo
+            .prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())
+            .map_err(|error| anyhow::anyhow!("fixture creation prepare failed: {error}"))?;
+        let revalidated = repo
+            .revalidate_repo_creation_membership(&prepared)
+            .map_err(|error| anyhow::anyhow!("fixture creation revalidate failed: {error}"))?;
         let permit = authority.permit(repo_id)?;
-        repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
-        let handle = repo.open_database(None, repo.local_repo_name())?;
-        let db = handle.db;
-        let runtime = RemoteImportRuntime::open(&repo, repo_id)?;
+        let commit = repo
+            .commit_repo_creation_membership(&prepared, &revalidated, &permit)
+            .map_err(|error| anyhow::anyhow!("fixture creation commit failed: {error}"))?;
+        repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)
+            .map_err(|error| anyhow::anyhow!("fixture authority activation failed: {error}"))?;
+        let db = RemoteImportTestDatabase::from_authority(
+            repo.local_authority_lease_for_test(repo_id)
+                .map_err(|error| anyhow::anyhow!("fixture authority lease failed: {error}"))?,
+        );
+        let runtime = RemoteImportRuntime::open(&repo, repo_id)
+            .map_err(|error| anyhow::anyhow!("fixture runtime open failed: {error}"))?;
         Ok(Self {
             _dir: dir,
             ledger,

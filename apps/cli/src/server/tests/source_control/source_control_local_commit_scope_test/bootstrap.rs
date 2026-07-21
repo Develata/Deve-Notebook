@@ -46,13 +46,11 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
     bind_default_browser_writer(&state, &mut session, 29)?;
-    session.set_active_db(DatabaseHandle {
-        db: stale_db,
-        readonly: false,
-        branch: None,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "ghost".into(),
-    });
+    drop(stale_db);
+    session.set_active_db(DatabaseHandle::local(
+        uuid::Uuid::new_v4(),
+        "ghost".into(),
+    ));
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(uuid::Uuid::new_v4());
     session.set_sync_scope_nonce(29);

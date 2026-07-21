@@ -2,11 +2,11 @@
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-catalog-repair-contract
 
-use crate::ledger::database::cached_or_create_database;
+use crate::ledger::manager::authority_storage_runtime::LocalAuthorityRuntime;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
+use crate::models::RepoId;
 use anyhow::{Context, Result, anyhow};
-use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -15,41 +15,28 @@ use crate::ledger::manager::local_repo_metadata_repair_support::{
 };
 
 pub(super) fn validate_local_repo_metadata(
-    ledger_dir: &Path,
     main_repo_name: &str,
-    main_db: &Database,
+    authority: &LocalAuthorityRuntime,
+    normal_repo_ids: &[RepoId],
 ) -> Result<()> {
-    let local_dir = RepoManager::checked_local_dir_for(ledger_dir, "validating local catalog")?;
-
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
-    let main_info = RepoManager::read_local_repo_info_from_db(main_db)?;
-    if let Some(info) = main_info.as_ref() {
-        ensure_local_repo_metadata_identity(main_repo_name, info)?;
-    }
-    validate_local_repo_info(main_repo_name, main_info, &mut seen, &mut seen_urls)?;
+    let mut stems = normal_repo_ids
+        .iter()
+        .map(|repo_id| repo_id.to_string())
+        .collect::<Vec<_>>();
+    stems.sort_by_key(|stem| usize::from(stem != main_repo_name));
 
-    let mut entries = redb_repo_entries(&local_dir, "validating local catalog")?;
-    entries.sort_by(|(_, left_stem), (_, right_stem)| left_stem.cmp(right_stem));
-
-    for (path, stem) in entries {
-        if stem == main_repo_name {
-            continue;
-        }
-        let db = cached_or_create_database(&path).map_err(|err| {
-            anyhow!(
-                "Broken local repo {} while validating catalog: {}",
-                stem,
-                err
-            )
-        })?;
-        let info = RepoManager::read_local_repo_info_from_db(db.as_ref()).map_err(|err| {
-            anyhow!(
-                "Broken local repo {} while validating metadata: {}",
-                stem,
-                err
-            )
-        })?;
+    for stem in stems {
+        let info = authority
+            .inspect_existing_stem(&stem, RepoManager::read_local_repo_info_from_db)
+            .map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while validating catalog: {}",
+                    stem,
+                    err
+                )
+            })?;
         if let Some(info) = info.as_ref() {
             ensure_local_repo_metadata_identity(&stem, info)?;
         }
@@ -61,7 +48,7 @@ pub(super) fn validate_local_repo_metadata(
 pub(crate) fn repair_local_repo_metadata(
     ledger_dir: &Path,
     main_repo_name: &str,
-    main_db: &Database,
+    authority: &LocalAuthorityRuntime,
 ) -> Result<()> {
     let local_dir = ledger_dir.join("local");
     match local_dir.try_exists() {
@@ -100,70 +87,58 @@ pub(crate) fn repair_local_repo_metadata(
 
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
-    for (path, stem) in entries {
-        let db = if stem == main_repo_name {
-            None
-        } else {
-            match cached_or_create_database(&path) {
-                Ok(db) => Some(db),
-                Err(err) => {
+    for (_path, stem) in entries {
+        authority.inspect_existing_stem(&stem, |db| {
+            let read_info = RepoManager::read_local_repo_info_from_db(db);
+            let mut info = match read_info {
+                Ok(info) => info,
+                Err(err) if stem != main_repo_name => {
                     return Err(anyhow!(
-                        "Broken local repo {} while repairing catalog: {}",
+                        "Broken local repo {} while reading metadata during repair: {}",
                         stem,
                         err
                     ));
                 }
+                Err(err) => return Err(err),
             }
-        };
-        let db = db.as_deref().unwrap_or(main_db);
-        let read_info = RepoManager::read_local_repo_info_from_db(db);
-        let mut info = match read_info {
-            Ok(info) => info,
-            Err(err) if stem != main_repo_name => {
+            .ok_or_else(|| {
+                anyhow!(
+                    "Broken local repo {} while repairing catalog: repository metadata missing",
+                    stem
+                )
+            })?;
+            let original = info.clone();
+            ensure_local_repo_metadata_identity(&stem, &info)?;
+            if let Some(existing_owner) = seen.insert(info.uuid, stem.clone())
+                && existing_owner != stem
+            {
                 return Err(anyhow!(
-                    "Broken local repo {} while reading metadata during repair: {}",
+                    "Broken local repo {} while repairing catalog: duplicate local repository UUID {} also used by {}",
                     stem,
-                    err
+                    info.uuid,
+                    existing_owner
                 ));
             }
-            Err(err) => return Err(err),
-        }
-        .ok_or_else(|| {
-            anyhow!(
-                "Broken local repo {} while repairing catalog: repository metadata missing",
-                stem
-            )
+            if info.url.is_none() {
+                info.url = Some(format!("urn:uuid:{}", info.uuid));
+            }
+            if let Some(url) = info.url.clone()
+                && let Some(existing_owner) = seen_urls.insert(url.clone(), stem.clone())
+                && existing_owner != stem
+            {
+                return Err(anyhow!(
+                    "Broken local repo {} while repairing catalog: duplicate local repository URL {} also used by {}",
+                    stem,
+                    url,
+                    existing_owner
+                ));
+            }
+            if info != original {
+                RepoManager::write_local_repo_info_to_db(db, &info)?;
+                tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
+            }
+            Ok(())
         })?;
-        let original = info.clone();
-        ensure_local_repo_metadata_identity(&stem, &info)?;
-        if let Some(existing_owner) = seen.insert(info.uuid, stem.clone())
-            && existing_owner != stem
-        {
-            return Err(anyhow!(
-                "Broken local repo {} while repairing catalog: duplicate local repository UUID {} also used by {}",
-                stem,
-                info.uuid,
-                existing_owner
-            ));
-        }
-        if info.url.is_none() {
-            info.url = Some(format!("urn:uuid:{}", info.uuid));
-        }
-        if let Some(url) = info.url.clone()
-            && let Some(existing_owner) = seen_urls.insert(url.clone(), stem.clone())
-            && existing_owner != stem
-        {
-            return Err(anyhow!(
-                "Broken local repo {} while repairing catalog: duplicate local repository URL {} also used by {}",
-                stem,
-                url,
-                existing_owner
-            ));
-        }
-        if info != original {
-            RepoManager::write_local_repo_info_to_db(db, &info)?;
-            tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
-        }
     }
     Ok(())
 }

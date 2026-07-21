@@ -5,7 +5,9 @@
 use super::{
     channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
-use crate::repo_init::{initialize_initial_local_repo_workspace, prepare_local_repo_workspace};
+use crate::repo_init::{
+    initialize_initial_local_repo_workspace, prepare_local_repo_workspace_with_owner,
+};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, FactActor, Op, PeerId};
@@ -42,18 +44,30 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
     let default_repo_name = default_repo_id.to_string();
     let (test_repo_id, test_repo_name) = if with_test_repo {
         let test_repo_id = uuid::Uuid::new_v4();
-        prepare_local_repo_workspace(
-            &ledger,
+        let prepared_authority = prepare_local_repo_workspace_with_owner(
+            &repo,
             test_repo_id,
             &projection_base,
-            10,
             Some("urn:test".to_string()),
         )?;
         let authority = repo.claim_repo_catalog_cut_authority()?;
-        let prepared = repo.prepare_repo_creation_membership(test_repo_id, uuid::Uuid::new_v4())?;
-        let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+        let prepared = repo.prepare_repo_creation_membership_with_authority(
+            test_repo_id,
+            uuid::Uuid::new_v4(),
+            &prepared_authority,
+        )?;
+        let revalidated = repo.revalidate_repo_creation_membership_with_authority(
+            &prepared,
+            &prepared_authority,
+        )?;
         let permit = authority.permit(test_repo_id)?;
-        repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+        let committed =
+            repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+        repo.activate_prepared_local_repo_authority(
+            prepared_authority,
+            &prepared,
+            &committed,
+        )?;
         repo.host_repo_alias_runtime()
             .set_alias(test_repo_id, "test", 0)?;
         (Some(test_repo_id), Some(test_repo_id.to_string()))

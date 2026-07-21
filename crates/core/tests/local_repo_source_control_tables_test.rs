@@ -12,17 +12,17 @@ fn local_catalog_fails_closed_on_missing_secondary_source_control_tables_until_r
     let (repo, main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
             .expect("main");
-    let (_legacy, legacy_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("legacy-notes"), 8)
+    let legacy_id =
+        common::add_cataloged_repo_with_depth(&repo, &dir.path().join("legacy-notes"), 8)
             .expect("legacy");
     // Drop the secondary repo's source-control tables to simulate a legacy repo
     // created before those tables existed. The repo keeps its Normal catalog
     // membership, so it stays visible to resolution but fails closed on any
     // source-control access until an explicit repair.
     let legacy_db = repo
-        .open_database(None, &legacy_id.to_string())
-        .expect("legacy db");
-    let write = legacy_db.db.begin_write().expect("write txn");
+        .lease_local_authority(legacy_id)
+        .expect("legacy authority lease");
+    let write = legacy_db.db().begin_write().expect("write txn");
     let _ = write
         .delete_table(staging::STAGED_TABLE)
         .expect("delete staged table");
@@ -67,9 +67,9 @@ fn main_local_repo_fails_closed_on_missing_source_control_tables_until_repair() 
             .expect("main");
 
     let handle = repo
-        .open_database(None, &main_id.to_string())
-        .expect("open main db");
-    let write = handle.db.begin_write().expect("write txn");
+        .lease_local_authority(main_id)
+        .expect("main authority lease");
+    let write = handle.db().begin_write().expect("write txn");
     let _ = write
         .delete_table(staging::STAGED_TABLE)
         .expect("delete staged table");

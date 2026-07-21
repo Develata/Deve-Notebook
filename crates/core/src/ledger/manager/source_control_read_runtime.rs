@@ -141,14 +141,16 @@ impl<'a> SourceControlReadRuntime<'a> {
     }
 
     pub(crate) fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
-        source_control::validate_tables(self.manager.local_db.as_ref()).map_err(|err| {
-            anyhow::anyhow!(
-                "Broken local repo {} while validating source control tables: {}",
-                self.manager.local_repo_name(),
-                err
-            )
-        })?;
-        source_control::get_committed_content(&self.manager.local_db, doc_id)
+        self.manager.run_on_primary_local_repo(|db| {
+            source_control::validate_tables(db).map_err(|err| {
+                anyhow::anyhow!(
+                    "Broken local repo {} while validating source control tables: {}",
+                    self.manager.local_repo_name(),
+                    err
+                )
+            })?;
+            source_control::get_committed_content(db, doc_id)
+        })
     }
 
     pub(crate) fn detect_change(

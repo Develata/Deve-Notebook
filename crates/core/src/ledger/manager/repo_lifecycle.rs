@@ -87,7 +87,8 @@ mod tests {
         let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
         let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
         let permit = authority.permit(repo_id)?;
-        repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+        let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+        repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
         let summaries = repo.list_cataloged_local_repo_summaries()?;
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].name, summaries[0].repo_id.to_string());

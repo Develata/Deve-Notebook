@@ -75,6 +75,84 @@ pub fn init_cataloged_repo_with_id(
     Ok(repo)
 }
 
+pub fn add_cataloged_repo(
+    owner: &RepoManager,
+    projection_base: &Path,
+) -> anyhow::Result<uuid::Uuid> {
+    add_cataloged_repo_with(owner, projection_base, owner.snapshot_depth(), None)
+}
+
+pub fn add_cataloged_repo_with_url(
+    owner: &RepoManager,
+    projection_base: &Path,
+    repo_url: &str,
+) -> anyhow::Result<uuid::Uuid> {
+    add_cataloged_repo_with(
+        owner,
+        projection_base,
+        owner.snapshot_depth(),
+        Some(repo_url),
+    )
+}
+
+pub fn add_cataloged_repo_with_depth(
+    owner: &RepoManager,
+    projection_base: &Path,
+    snapshot_depth: usize,
+) -> anyhow::Result<uuid::Uuid> {
+    add_cataloged_repo_with(owner, projection_base, snapshot_depth, None)
+}
+
+fn add_cataloged_repo_with(
+    owner: &RepoManager,
+    projection_base: &Path,
+    _snapshot_depth: usize,
+    repo_url: Option<&str>,
+) -> anyhow::Result<uuid::Uuid> {
+    let repo_id = uuid::Uuid::new_v4();
+    let execution_name = repo_id.to_string();
+    let (_info, prepared_authority) =
+        owner.create_local_repo_authority(repo_id, repo_url.map(str::to_string))?;
+    let locator = owner.prepare_projection_locator_for_repo_creation_with_authority(
+        repo_id,
+        projection_base,
+        &prepared_authority,
+    )?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    deve_core::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    let authority = owner.claim_repo_catalog_cut_authority()?;
+    let prepared = owner.prepare_repo_creation_membership_with_authority(
+        repo_id,
+        uuid::Uuid::new_v4(),
+        &prepared_authority,
+    )?;
+    let revalidated =
+        owner.revalidate_repo_creation_membership_with_authority(&prepared, &prepared_authority)?;
+    let permit = authority.permit(repo_id)?;
+    let commit = owner.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    owner.activate_prepared_local_repo_authority(prepared_authority, &prepared, &commit)?;
+    Ok(repo_id)
+}
+
+pub fn add_initialized_local_repo(
+    owner: &RepoManager,
+    _snapshot_depth: usize,
+    repo_url: &str,
+) -> anyhow::Result<RepoInfo> {
+    let projection_base = owner
+        .ledger_dir()
+        .parent()
+        .unwrap_or_else(|| owner.ledger_dir())
+        .join("test-projections");
+    let repo_id = add_cataloged_repo_with_url(owner, &projection_base, repo_url)?;
+    Ok(RepoInfo {
+        uuid: repo_id,
+        name: repo_id.to_string(),
+        url: Some(repo_url.to_string()),
+    })
+}
+
 fn init_cataloged_repo_with(
     ledger_dir: &Path,
     projection_base: &Path,
@@ -103,7 +181,8 @@ fn init_cataloged_repo_with(
     let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
     Ok((repo, repo_id))
 }
 

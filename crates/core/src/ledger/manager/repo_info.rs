@@ -3,7 +3,7 @@
 
 use crate::codec;
 use crate::ledger::RepoManager;
-use crate::ledger::database::cached_database;
+use crate::ledger::database::cached_shadow_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::{
     PROJECTION_FAULTS, REDB_SCHEMA_VERSION, REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS,
@@ -15,7 +15,7 @@ use std::path::Path;
 
 impl RepoManager {
     pub fn get_repo_info(&self) -> Result<Option<RepoInfo>> {
-        Self::read_local_repo_info_from_db(&self.local_db)
+        self.run_on_primary_local_repo(Self::read_local_repo_info_from_db)
     }
 
     pub(crate) fn read_repo_info_from_db(db: &Database) -> Result<Option<RepoInfo>> {
@@ -80,28 +80,9 @@ impl RepoManager {
         Self::read_repo_info_from_db(db)
     }
 
-    pub(crate) fn read_repo_info_from_path(path: &Path) -> Result<Option<RepoInfo>> {
-        let db = cached_database(path)?;
+    pub(crate) fn read_shadow_repo_info_from_path(path: &Path) -> Result<Option<RepoInfo>> {
+        let db = cached_shadow_database(path)?;
         Self::read_repo_info_from_db(db.as_ref())
-    }
-
-    pub(crate) fn read_local_repo_info_from_path(path: &Path) -> Result<Option<RepoInfo>> {
-        let db = cached_database(path)?;
-        Self::read_local_repo_info_from_db(db.as_ref())
-    }
-
-    pub(crate) fn read_required_local_repo_info_from_path(
-        path: &Path,
-        stem: &str,
-        context: &str,
-    ) -> Result<RepoInfo> {
-        Self::read_local_repo_info_from_path(path)?.ok_or_else(|| {
-            anyhow!(
-                "Broken local repo {} while {}: repository metadata missing",
-                stem,
-                context
-            )
-        })
     }
 
     pub(crate) fn repo_stem_from_path(path: &Path, context: &str) -> Result<String> {

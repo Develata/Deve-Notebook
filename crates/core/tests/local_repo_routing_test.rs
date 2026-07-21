@@ -5,7 +5,7 @@ use deve_core::models::{LedgerEntry, LedgerEvent, NodeId, Op, RepoId, RepoType};
 use deve_core::security::RepoKey;
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::SyncSnapshotRequest;
-use std::sync::Arc;
+use std::sync::{Arc, Barrier};
 use tempfile::TempDir;
 
 mod common;
@@ -16,9 +16,8 @@ fn new_local_repos() -> (TempDir, RepoManager, RepoId, String) {
     let (main, _main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 10)
             .expect("init main repo");
-    let (_wiki, wiki_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 10)
-            .expect("init wiki repo");
+    let wiki_id = common::add_cataloged_repo_with_depth(&main, &dir.path().join("wiki-notes"), 10)
+        .expect("init wiki repo");
     (dir, main, wiki_id, wiki_id.to_string())
 }
 
@@ -45,11 +44,55 @@ fn seed_extra_doc(repo: &RepoManager, repo_name: &str) -> deve_core::models::Doc
     doc_id
 }
 
+fn primary_repo_id(repo: &RepoManager, extra_id: RepoId) -> RepoId {
+    repo.list_local_repo_names_for_execution()
+        .expect("list durable local repos")
+        .into_iter()
+        .map(|name| name.parse::<RepoId>().expect("RepoId execution name"))
+        .find(|repo_id| *repo_id != extra_id)
+        .expect("primary RepoId")
+}
+
+#[test]
+fn concurrent_catalog_refreshes_share_the_process_cut() {
+    let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+    let primary_id = primary_repo_id(&repo, extra_id);
+    let mut expected = vec![primary_id.to_string(), extra_id.to_string()];
+    expected.sort();
+    let repo = Arc::new(repo);
+    let barrier = Arc::new(Barrier::new(5));
+    let mut workers = Vec::new();
+
+    for _ in 0..4 {
+        let repo = repo.clone();
+        let barrier = barrier.clone();
+        let expected = expected.clone();
+        workers.push(std::thread::spawn(move || {
+            barrier.wait();
+            for _ in 0..32 {
+                let mut names = repo
+                    .list_local_repo_names_for_execution()
+                    .expect("concurrent catalog refresh");
+                names.sort();
+                assert_eq!(names, expected);
+            }
+        }));
+    }
+
+    barrier.wait();
+    for worker in workers {
+        worker.join().expect("catalog refresh worker");
+    }
+}
+
 #[test]
 fn local_repo_reads_route_by_repo_id() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let main_id = primary_repo_id(&repo, extra_id);
+    let main_doc_id = seed_extra_doc(&repo, &main_id.to_string());
     let doc_id = seed_extra_doc(&repo, &extra_name);
     let repo_type = RepoType::Local(extra_id);
+    let main_type = RepoType::Local(main_id);
 
     assert_eq!(
         repo.list_docs(&repo_type).expect("list docs"),
@@ -79,11 +122,31 @@ fn local_repo_reads_route_by_repo_id() {
         .len(),
         3
     );
+    assert_eq!(
+        repo.list_docs(&main_type).expect("list primary docs"),
+        vec![(main_doc_id, "notes/extra.md".to_string())]
+    );
+    assert!(
+        repo.list_docs(&repo_type)
+            .expect("re-list secondary docs")
+            .iter()
+            .all(|(listed, _)| *listed != main_doc_id),
+        "secondary reads must not leak primary facts"
+    );
+    assert!(
+        repo.list_docs(&main_type)
+            .expect("re-list primary docs")
+            .iter()
+            .all(|(listed, _)| *listed != doc_id),
+        "primary reads must not leak secondary facts"
+    );
 }
 
 #[test]
 fn sync_snapshot_uses_requested_local_repo_id() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
+    let main_id = primary_repo_id(&repo, extra_id);
+    let main_doc_id = seed_extra_doc(&repo, &main_id.to_string());
     let doc_id = seed_extra_doc(&repo, &extra_name);
     let repo_key = RepoKey::generate();
     let local_peer = repo.local_peer_id().clone();
@@ -109,6 +172,12 @@ fn sync_snapshot_uses_requested_local_repo_id() {
         .map(|enc| repo_key.decrypt(enc).expect("decrypt snapshot entry"))
         .collect::<Vec<_>>();
     assert!(entries.iter().any(|entry| entry.doc_id == Some(doc_id)));
+    assert!(
+        entries
+            .iter()
+            .all(|entry| entry.doc_id != Some(main_doc_id)),
+        "secondary snapshot must not contain primary content facts"
+    );
     assert!(entries.iter().any(|entry| {
         matches!(
             entry.event,
@@ -122,12 +191,14 @@ fn sync_snapshot_uses_requested_local_repo_id() {
 
 #[test]
 fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
-    let (dir, mut repo, extra_id, extra_name) = new_local_repos();
+    let (dir, mut repo, extra_id, _extra_name) = new_local_repos();
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
         .expect("projection locators");
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
     common::write_repo_metadata(
-        extra_db.db.as_ref(),
+        extra_db.db(),
         &RepoInfo {
             uuid: extra_id,
             name: "legacy-wiki".into(),
@@ -154,12 +225,14 @@ fn local_repo_reads_fail_closed_on_stale_metadata_name_selector() {
 
 #[test]
 fn workspace_resolution_fails_closed_after_locator_alias_drift() {
-    let (dir, mut repo, extra_id, extra_name) = new_local_repos();
+    let (dir, mut repo, extra_id, _extra_name) = new_local_repos();
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
         .expect("projection locators");
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
     common::write_repo_metadata(
-        extra_db.db.as_ref(),
+        extra_db.db(),
         &RepoInfo {
             uuid: extra_id,
             name: "legacy-wiki".into(),
@@ -204,9 +277,11 @@ fn execution_resolution_accepts_repo_id_physical_stem() {
 
 #[test]
 fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
-    let (_dir, repo, extra_id, extra_name) = new_local_repos();
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    common::poison_repo_metadata_invalid_codec(extra_db.db.as_ref());
+    let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
+    common::poison_repo_metadata_invalid_codec(extra_db.db());
 
     let err = repo
         .find_local_repo_name_by_id(extra_id)
@@ -222,9 +297,11 @@ fn local_repo_id_lookup_fails_closed_when_secondary_metadata_is_unreadable() {
 
 #[test]
 fn workspace_resolution_fails_closed_when_secondary_repo_info_is_missing() {
-    let (_dir, repo, extra_id, extra_name) = new_local_repos();
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    common::delete_repo_metadata(extra_db.db.as_ref());
+    let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
+    common::delete_repo_metadata(extra_db.db());
 
     let err = repo
         .resolve_local_workspace_path("wiki/notes/extra.md")
@@ -235,9 +312,11 @@ fn workspace_resolution_fails_closed_when_secondary_repo_info_is_missing() {
 
 #[test]
 fn exact_repo_id_execution_fails_closed_when_metadata_is_missing() {
-    let (_dir, repo, extra_id, extra_name) = new_local_repos();
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
-    common::delete_repo_metadata(extra_db.db.as_ref());
+    let (_dir, repo, extra_id, _extra_name) = new_local_repos();
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
+    common::delete_repo_metadata(extra_db.db());
 
     let err = repo
         .run_on_local_repo(&extra_id.to_string(), |_db| Ok::<_, anyhow::Error>(()))
@@ -249,10 +328,12 @@ fn exact_repo_id_execution_fails_closed_when_metadata_is_missing() {
 #[test]
 fn exact_repo_id_execution_fails_closed_when_metadata_repo_id_drifts() {
     let (_dir, repo, extra_id, extra_name) = new_local_repos();
-    let extra_db = repo.open_database(None, &extra_name).expect("extra db");
+    let extra_db = repo
+        .lease_local_authority(extra_id)
+        .expect("extra authority lease");
     let drifted_id = uuid::Uuid::new_v4();
     common::write_repo_metadata(
-        extra_db.db.as_ref(),
+        extra_db.db(),
         &RepoInfo {
             uuid: drifted_id,
             name: extra_name,

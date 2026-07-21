@@ -1,11 +1,11 @@
-use super::{RepoManager, cached_database};
+use super::{RepoManager, cached_shadow_database};
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
 #[cfg(unix)]
 #[test]
-fn cached_database_fails_closed_when_path_is_unstatable() {
+fn cached_shadow_database_fails_closed_when_path_is_unstatable() {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let blocked = dir.path().join("blocked");
@@ -16,7 +16,7 @@ fn cached_database_fails_closed_when_path_is_unstatable() {
     std::fs::set_permissions(&blocked, perms).expect("chmod 000");
     let path = blocked.join("notes.redb");
 
-    let err = cached_database(&path).expect_err("unstatable path must fail closed");
+    let err = cached_shadow_database(&path).expect_err("unstatable path must fail closed");
 
     std::fs::set_permissions(&blocked, original).expect("restore perms");
     assert!(
@@ -26,13 +26,14 @@ fn cached_database_fails_closed_when_path_is_unstatable() {
 }
 
 #[test]
-fn cached_database_never_initializes_an_empty_existing_file() {
+fn cached_shadow_database_never_initializes_an_empty_existing_file() {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("empty.redb");
     std::fs::File::create(&path).expect("empty file");
 
-    let error = cached_database(&path).expect_err("existing opener must not initialize a DB");
+    let error =
+        cached_shadow_database(&path).expect_err("existing opener must not initialize a DB");
 
     assert!(!error.to_string().is_empty());
     assert_eq!(std::fs::metadata(&path).expect("metadata").len(), 0);
@@ -47,9 +48,13 @@ fn open_local_database_fails_closed_when_path_is_unstatable() {
     let (repo, _main_id) =
         crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
             .expect("main");
-    let (_wiki, wiki_id) =
-        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
-            .expect("wiki");
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &repo,
+        &ledger_dir,
+        &dir.path().join("wiki-notes"),
+        None,
+    )
+    .expect("wiki");
     let wiki_name = wiki_id.to_string();
     let local_dir = dir.path().join("ledger/local");
     let original = std::fs::metadata(&local_dir)
@@ -83,12 +88,18 @@ fn open_local_database_fails_closed_when_repo_metadata_is_missing() {
     let (repo, _main_id) =
         crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes"))
             .expect("main");
-    let (_wiki, wiki_id) =
-        crate::test_support::init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))
-            .expect("wiki");
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &repo,
+        &ledger_dir,
+        &dir.path().join("wiki-notes"),
+        None,
+    )
+    .expect("wiki");
     let wiki_name = wiki_id.to_string();
-    let wiki_db = repo.open_database(None, &wiki_name).expect("wiki db");
-    crate::test_support::delete_repo_metadata(wiki_db.db.as_ref()).expect("delete metadata");
+    let wiki_db = repo
+        .local_authority_lease_for_test(wiki_id)
+        .expect("wiki db");
+    crate::test_support::delete_repo_metadata(wiki_db.db()).expect("delete metadata");
 
     let err = match repo.open_database(None, &wiki_name) {
         Ok(_) => panic!("missing local metadata must fail closed"),
@@ -121,7 +132,8 @@ fn open_remote_database_fails_closed_when_selector_metadata_is_missing() {
     let remote = repo
         .open_database(Some(&peer_id), "wiki")
         .expect("remote db");
-    crate::test_support::delete_repo_metadata(remote.db.as_ref()).expect("delete metadata");
+    crate::test_support::delete_repo_metadata(remote.remote_db().expect("remote db"))
+        .expect("delete metadata");
 
     let err = match repo.open_database(Some(&peer_id), "wiki") {
         Ok(_) => panic!("missing remote metadata must fail closed"),

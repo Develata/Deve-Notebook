@@ -8,7 +8,9 @@ mod common;
 fn remote_catalog_repair_fails_closed_on_metadata_less_non_uuid_shadow() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let peer_id = PeerId::new("peer-remote");
     common::seed_metadata_less_shadow_repo(&repo, &peer_id, "notes");
 
@@ -25,9 +27,12 @@ fn remote_catalog_repair_fails_closed_on_metadata_less_non_uuid_shadow() {
 fn init_fails_closed_on_metadata_less_non_uuid_shadow() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let peer_id = PeerId::new("peer-remote");
     common::seed_metadata_less_shadow_repo(&repo, &peer_id, "notes");
+    drop(repo);
 
     let err = RepoManager::init(&ledger_dir, 10, None, None)
         .err()

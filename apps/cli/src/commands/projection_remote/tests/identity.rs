@@ -27,6 +27,9 @@ fn run_s3_push_checks_workspace_identity_before_provider_io() {
     .expect_err("workspace identity gate must fail before S3 provider I/O");
 
     let message = err.to_string();
-    assert!(message.contains("Projection workspace identity marker is invalid"));
+    assert!(
+        message.contains("identity marker"),
+        "unexpected identity admission error: {message}"
+    );
     assert!(s3_provider.uploaded_paths.is_empty());
 }

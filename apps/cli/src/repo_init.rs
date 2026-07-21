@@ -5,6 +5,7 @@
 //!
 //! Shared local repo initialization path for CLI and server-created repos.
 
+use deve_core::ledger::PreparedRepoAuthority;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::init::RepoInitOptions;
 use std::path::{Path, PathBuf};
@@ -21,7 +22,7 @@ pub(crate) fn prepare_local_repo_workspace(
     projection_base: &Path,
     snapshot_depth: usize,
     repo_url: Option<String>,
-) -> anyhow::Result<LocalRepoInitReport> {
+) -> anyhow::Result<(LocalRepoInitReport, RepoManager)> {
     let execution_name = repo_id.to_string();
     let repo = RepoManager::init_with_options(
         ledger_dir,
@@ -44,11 +45,35 @@ pub(crate) fn prepare_local_repo_workspace(
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
 
-    Ok(LocalRepoInitReport {
-        repo_name: actual_repo_name,
+    Ok((
+        LocalRepoInitReport {
+            repo_name: actual_repo_name,
+            repo_id,
+            workspace_root,
+        },
+        repo,
+    ))
+}
+
+pub(crate) fn prepare_local_repo_workspace_with_owner(
+    repo: &RepoManager,
+    repo_id: uuid::Uuid,
+    projection_base: &Path,
+    repo_url: Option<String>,
+) -> anyhow::Result<PreparedRepoAuthority> {
+    let (info, authority) = repo.create_local_repo_authority(repo_id, repo_url)?;
+    let locator = repo.prepare_projection_locator_for_repo_creation_with_authority(
         repo_id,
-        workspace_root,
-    })
+        projection_base,
+        &authority,
+    )?;
+    let workspace_root = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace_root)?;
+    deve_core::utils::notegit::ensure_repo_identity_marker(&workspace_root, repo_id, &info.name)?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
+    std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(repo.ledger_dir()))?;
+
+    Ok(authority)
 }
 
 pub(crate) fn initialize_initial_local_repo_workspace(
@@ -60,21 +85,20 @@ pub(crate) fn initialize_initial_local_repo_workspace(
     repo_url: Option<String>,
 ) -> anyhow::Result<LocalRepoInitReport> {
     let repo_id = repo_id.unwrap_or_else(uuid::Uuid::new_v4);
-    let mut report = prepare_local_repo_workspace(
+    let (mut report, repo) = prepare_local_repo_workspace(
         ledger_dir,
         repo_id,
         projection_base,
         snapshot_depth,
         repo_url,
     )?;
-    let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)?;
-    repo.seed_catalog_membership_from_records()?;
     let authority = repo.claim_repo_catalog_cut_authority()?;
     let lifecycle_request_id = uuid::Uuid::new_v4();
     let prepared = repo.prepare_repo_creation_membership(repo_id, lifecycle_request_id)?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
     let alias = repo
         .host_repo_alias_runtime()
         .set_alias(repo_id, initial_alias, 0)?

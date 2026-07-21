@@ -38,11 +38,11 @@ fn test_repo_manager_init() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
 
-    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let (_repo, repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
 
     // 验证目录结构
     assert!(ledger_dir.exists());
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     assert!(
         ledger_dir
             .join("local")
@@ -54,18 +54,19 @@ fn test_repo_manager_init() -> Result<()> {
     Ok(())
 }
 
-/// 测试自定义仓库名称初始化
+/// Display-name input never changes canonical authority identity.
 #[test]
 fn test_repo_manager_init_custom_name() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
 
     // Initialize with custom name "my_wiki"
-    let repo = RepoManager::init(&ledger_dir, 10, Some("my_wiki"), None)?;
+    let (repo, _repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
 
     // Verify file creation
     let info = repo.get_repo_info()?.expect("repo info");
-    assert_eq!(info.name, "my_wiki");
+    assert_eq!(info.name, info.uuid.to_string());
     assert!(
         ledger_dir
             .join("local")
@@ -86,7 +87,8 @@ fn test_repo_manager_init_custom_name() -> Result<()> {
 fn test_local_and_shadow_isolation() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let (repo, _local_repo_id) =
+        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("notes"))?;
 
     let doc_id = DocId::new();
     let local_peer_id = repo.local_peer_id().clone();
@@ -151,7 +153,11 @@ fn test_snapshot_pruning() -> Result<()> {
     let ledger_dir = tmp_dir.path().join("ledger");
 
     // 设置快照深度为 2
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     let doc_id = DocId::new();
     let peer_id = repo.local_peer_id().clone();
 
@@ -175,20 +181,23 @@ fn test_snapshot_pruning() -> Result<()> {
     }
 
     // 验证裁剪结果
-    let read_txn = repo.local_db.begin_read()?;
-    let index = read_txn.open_multimap_table(SNAPSHOT_INDEX)?;
-    let data = read_txn.open_table(SNAPSHOT_DATA)?;
+    repo.run_on_primary_local_repo(|db| {
+        let read_txn = db.begin_read()?;
+        let index = read_txn.open_multimap_table(SNAPSHOT_INDEX)?;
+        let data = read_txn.open_table(SNAPSHOT_DATA)?;
 
-    let mut seqs = Vec::new();
-    for item in index.get(doc_id.as_u128())? {
-        seqs.push(item?.value());
-    }
-    seqs.sort();
+        let mut seqs = Vec::new();
+        for item in index.get(doc_id.as_u128())? {
+            seqs.push(item?.value());
+        }
+        seqs.sort();
 
-    assert_eq!(seqs, vec![2, 3], "快照索引应该只包含 2 和 3");
-    assert!(data.get(1)?.is_none(), "快照 1 的数据应该被删除");
-    assert!(data.get(2)?.is_some(), "快照 2 的数据应该存在");
-    assert!(data.get(3)?.is_some(), "快照 3 的数据应该存在");
+        assert_eq!(seqs, vec![2, 3], "快照索引应该只包含 2 和 3");
+        assert!(data.get(1)?.is_none(), "快照 1 的数据应该被删除");
+        assert!(data.get(2)?.is_some(), "快照 2 的数据应该存在");
+        assert!(data.get(3)?.is_some(), "快照 3 的数据应该存在");
+        Ok(())
+    })?;
 
     Ok(())
 }
@@ -197,7 +206,11 @@ fn test_snapshot_pruning() -> Result<()> {
 fn snapshot_rejects_middle_content_mismatch() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 2, None, None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo_with_depth(
+        &ledger_dir,
+        &tmp_dir.path().join("notes"),
+        2,
+    )?;
     let doc_id = DocId::new();
     let content = format!("{}ledger-middle{}", "a".repeat(1024), "z".repeat(1024));
     let candidate = format!("{}forged-middle{}", "a".repeat(1024), "z".repeat(1024));

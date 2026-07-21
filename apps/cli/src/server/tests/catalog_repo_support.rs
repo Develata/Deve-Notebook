@@ -16,7 +16,9 @@
 //! select repos by their UUID stem (`repo_id.to_string()` /
 //! `repo.local_repo_name()`), not by alias.
 
-use crate::repo_init::{initialize_initial_local_repo_workspace, prepare_local_repo_workspace};
+use crate::repo_init::{
+    initialize_initial_local_repo_workspace, prepare_local_repo_workspace_with_owner,
+};
 use deve_core::ledger::RepoManager;
 use std::path::Path;
 
@@ -51,25 +53,30 @@ pub(crate) fn catalog_initial_repo(
 /// membership. Returns the new `RepoId`.
 pub(crate) fn catalog_additional_repo(
     repo: &RepoManager,
-    ledger_dir: &Path,
+    _ledger_dir: &Path,
     alias: &str,
     projection_base: &Path,
-    snapshot_depth: usize,
+    _snapshot_depth: usize,
     repo_url: Option<&str>,
 ) -> anyhow::Result<uuid::Uuid> {
     let repo_id = uuid::Uuid::new_v4();
-    prepare_local_repo_workspace(
-        ledger_dir,
+    let prepared_authority = prepare_local_repo_workspace_with_owner(
+        repo,
         repo_id,
         projection_base,
-        snapshot_depth,
         repo_url.map(str::to_string),
     )?;
     let authority = repo.claim_repo_catalog_cut_authority()?;
-    let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
-    let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
+    let prepared = repo.prepare_repo_creation_membership_with_authority(
+        repo_id,
+        uuid::Uuid::new_v4(),
+        &prepared_authority,
+    )?;
+    let revalidated = repo
+        .revalidate_repo_creation_membership_with_authority(&prepared, &prepared_authority)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let committed = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_prepared_local_repo_authority(prepared_authority, &prepared, &committed)?;
     repo.host_repo_alias_runtime()
         .set_alias(repo_id, alias, 0)?;
     Ok(repo_id)

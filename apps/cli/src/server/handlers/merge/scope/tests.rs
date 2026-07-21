@@ -18,8 +18,14 @@ fn read_repo_id_uses_active_local_repo_without_sync_binding() -> anyhow::Result<
     let dir = tempdir()?;
     let projection_base = dir.path().join("notes");
     let repo = init_repo(&dir, &projection_base, Some("urn:default"))?;
-    let test_repo = init_repo(&dir, &projection_base, None)?;
-    let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        &repo,
+        &dir.path().join("ledger"),
+        "test",
+        &projection_base,
+        10,
+        None,
+    )?;
     let state = app_state(Arc::new(repo))?;
     let ch = test_channel();
     let mut session = WsSession::new();

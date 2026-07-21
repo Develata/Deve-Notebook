@@ -21,7 +21,7 @@ impl RepoManager {
         {
             return Ok(path);
         }
-        match Self::read_repo_info_from_path(&path)? {
+        match Self::read_shadow_repo_info_from_path(&path)? {
             Some(current) if current.uuid == info.uuid => Ok(path),
             Some(current) => anyhow::bail!(
                 "Shadow authority path collision for RepoId {}: metadata belongs to {}",

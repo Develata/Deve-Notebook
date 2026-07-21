@@ -158,9 +158,12 @@ pub(super) fn resolve_imported_change_to_queued_commit(
             )?;
         doc_id
     };
-    let repo = open_repo(ledger_dir, projection_base)?;
-    let repo_name = repo.local_repo_name().to_string();
-    let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+    let (repo_name, repo_root) = {
+        let repo = open_repo(ledger_dir, projection_base)?;
+        let repo_name = repo.local_repo_name().to_string();
+        let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+        (repo_name, repo_root)
+    };
     write_workspace_file(&repo_root, "note.md", "git import\n");
     ngit::import(ledger_dir, Some(&repo_name), true, 10)?;
 

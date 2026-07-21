@@ -7,12 +7,10 @@ use std::sync::Arc;
 fn handle(repo_name: &str, repo_id: Option<uuid::Uuid>, branch: Option<PeerId>) -> DatabaseHandle {
     let dir = tempfile::tempdir().expect("tempdir");
     let db = Arc::new(redb::Database::create(dir.path().join("repo.redb")).expect("db"));
-    DatabaseHandle {
-        db,
-        readonly: true,
-        branch,
-        repo_id,
-        repo_name: repo_name.into(),
+    let branch = branch.expect("remote test binding");
+    match repo_id {
+        Some(repo_id) => DatabaseHandle::remote(db, branch, repo_id, repo_name.into()),
+        None => DatabaseHandle::unresolved_remote(db, branch, repo_name.into()),
     }
 }
 

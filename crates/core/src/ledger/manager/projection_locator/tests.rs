@@ -29,7 +29,8 @@ fn init_cataloged_repo(
     let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
     Ok((repo, repo_id))
 }
 
@@ -218,7 +219,7 @@ fn projection_locator_shared_base_allows_distinct_repo_roots() -> anyhow::Result
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
     let (main, default_id) = init_cataloged_repo(&ledger, &base)?;
-    let (_, wiki_id) = init_cataloged_repo(&ledger, &base)?;
+    let wiki_id = crate::test_support::add_cataloged_repo(&main, &ledger, &base, None)?;
 
     assert_eq!(
         main.local_repo_workspace_root(&default_id.to_string())?,
@@ -239,7 +240,7 @@ fn projection_locator_set_all_validates_final_map_not_intermediate_mix() -> anyh
     let old_base = dir.path().join("notes");
     let new_base = old_base.join("wiki");
     let (mut main, default_id) = init_cataloged_repo(&ledger, &old_base)?;
-    let (_, wiki_id) = init_cataloged_repo(&ledger, &old_base)?;
+    let wiki_id = crate::test_support::add_cataloged_repo(&main, &ledger, &old_base, None)?;
     main.set_projection_base_for_all_local_repos_checked(&new_base)?;
 
     let new_base = std::fs::canonicalize(&new_base)?;
@@ -262,7 +263,7 @@ fn projection_locator_nested_workspace_roots_fail_closed() -> anyhow::Result<()>
     let base = dir.path().join("notes");
     let (main, default_id) = init_cataloged_repo(&ledger, &base)?;
     let wiki_base = dir.path().join("wiki-notes");
-    let (_, wiki_id) = init_cataloged_repo(&ledger, &wiki_base)?;
+    let wiki_id = crate::test_support::add_cataloged_repo(&main, &ledger, &wiki_base, None)?;
     let err = main
         .set_projection_base_for_repo_id(wiki_id, base.join(default_id.to_string()))
         .expect_err("nested workspace roots must fail closed");

@@ -122,12 +122,13 @@ fn ngit_import_apply_rejects_broken_workspace_identity() -> Result<()> {
     }
 
     write_workspace_file(&repo_root, "note.md", "hello import\n");
-    corrupt_workspace_identity(&repo_root)?;
+    let original_identity = corrupt_workspace_identity(&repo_root)?;
 
     let err = ngit::import(&ledger_dir, Some(&repo_name), true, 10)
         .expect_err("git import --apply must reject a broken workspace identity");
 
     assert_identity_gate_error(&err);
+    restore_workspace_identity(&repo_root, &original_identity)?;
     let repo = RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
     let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
     assert!(pending.is_empty(), "{pending:?}");
@@ -157,13 +158,23 @@ fn ngit_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     Ok(())
 }
 
-fn corrupt_workspace_identity(workspace: &std::path::Path) -> Result<()> {
+fn corrupt_workspace_identity(workspace: &std::path::Path) -> Result<Vec<u8>> {
+    let identity_path = deve_core::utils::notegit::repo_identity_path(workspace);
+    let original_identity = std::fs::read(&identity_path)?;
     std::fs::write(
-        deve_core::utils::notegit::repo_identity_path(workspace),
+        identity_path,
         format!(
             "version = 1\nrepo_id = \"{}\"\nrepo_name = \"default\"\n",
             Uuid::new_v4()
         ),
+    )?;
+    Ok(original_identity)
+}
+
+fn restore_workspace_identity(workspace: &std::path::Path, original: &[u8]) -> Result<()> {
+    std::fs::write(
+        deve_core::utils::notegit::repo_identity_path(workspace),
+        original,
     )?;
     Ok(())
 }

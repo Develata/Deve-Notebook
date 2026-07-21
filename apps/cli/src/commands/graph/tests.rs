@@ -66,6 +66,7 @@ fn graph_command_writes_read_only_projection_json() {
     let b = seed_doc(&repo, "notes/b.md", "");
     seed_doc(&repo, "notes/a.md", "[[b]] and [B](b.md)");
     let output = dir.path().join("graph.json");
+    drop(repo);
 
     run(
         &ledger_dir,
@@ -108,6 +109,7 @@ fn graph_command_fails_closed_on_corrupt_structure_projection() {
             1,
         ),
     );
+    drop(repo);
 
     let output = dir.path().join("graph.json");
     let err = run(

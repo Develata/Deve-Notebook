@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-lifecycle-coordinator
 //!   - 03_storage/authority#repo-mutation-publication-gate
 
+use super::cut_failure::{publish_error, publish_error_with_abort};
 use super::error::state_name;
 use super::model::{
     PreparedRepoCreation, PreparedRepoRemoval, RepoCatalogCreationCommit,
@@ -10,8 +11,9 @@ use super::model::{
     RevalidatedRepoCreation, RevalidatedRepoRemoval,
 };
 use super::prepared_identity;
-use super::store::{RepoCatalogPublishFailure, RepoCatalogPublishPhase, RepoCatalogStore};
+use super::store::{RepoCatalogPublishPhase, RepoCatalogStore};
 use super::{CatalogMembershipError, RepoCatalogCutPermit, RepoCatalogError, RepoCatalogRuntime};
+use crate::ledger::PreparedRepoAuthority;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 use uuid::Uuid;
@@ -31,6 +33,30 @@ impl RepoManager {
         prepared: &PreparedRepoCreation,
     ) -> Result<RevalidatedRepoCreation, RepoCatalogError> {
         self.repo_catalog_runtime().revalidate_creation(prepared)
+    }
+
+    pub fn prepare_repo_creation_membership_with_authority(
+        &self,
+        repo_id: RepoId,
+        lifecycle_request_id: Uuid,
+        authority: &PreparedRepoAuthority,
+    ) -> Result<PreparedRepoCreation, RepoCatalogError> {
+        let identity = prepared_identity::snapshot_prepared(self, repo_id, authority)?;
+        self.repo_catalog_runtime().prepare_creation_with_identity(
+            repo_id,
+            lifecycle_request_id,
+            identity,
+        )
+    }
+
+    pub fn revalidate_repo_creation_membership_with_authority(
+        &self,
+        prepared: &PreparedRepoCreation,
+        authority: &PreparedRepoAuthority,
+    ) -> Result<RevalidatedRepoCreation, RepoCatalogError> {
+        let observed = prepared_identity::snapshot_prepared(self, prepared.repo_id, authority)?;
+        self.repo_catalog_runtime()
+            .revalidate_creation_with_identity(prepared, observed)
     }
 
     /// Commits only the bounded repo-catalog sub-cut. B1 exposes no public
@@ -98,6 +124,16 @@ impl RepoCatalogRuntime<'_> {
         repo_id: RepoId,
         lifecycle_request_id: Uuid,
     ) -> Result<PreparedRepoCreation, RepoCatalogError> {
+        let identity = prepared_identity::snapshot_initial_primary(self.manager, repo_id)?;
+        self.prepare_creation_with_identity(repo_id, lifecycle_request_id, identity)
+    }
+
+    fn prepare_creation_with_identity(
+        &self,
+        repo_id: RepoId,
+        lifecycle_request_id: Uuid,
+        identity: super::PreparedRepoIdentity,
+    ) -> Result<PreparedRepoCreation, RepoCatalogError> {
         validate_request_id(lifecycle_request_id)?;
         let store = RepoCatalogStore::open(&self.manager.ledger_dir)?;
         if store.load(repo_id)?.is_some() {
@@ -116,7 +152,7 @@ impl RepoCatalogRuntime<'_> {
         Ok(PreparedRepoCreation {
             repo_id,
             lifecycle_request_id,
-            prepared_identity: prepared_identity::snapshot(self.manager, repo_id)?,
+            prepared_identity: identity,
         })
     }
 
@@ -124,7 +160,29 @@ impl RepoCatalogRuntime<'_> {
         &self,
         prepared: &PreparedRepoCreation,
     ) -> Result<RevalidatedRepoCreation, RepoCatalogError> {
-        let observed = prepared_identity::snapshot(self.manager, prepared.repo_id)?;
+        let store = RepoCatalogStore::open(&self.manager.ledger_dir)?;
+        if let Some(current) = store.load(prepared.repo_id)? {
+            if current.confirms_created(prepared.lifecycle_request_id)
+                && current.prepared_identity_digest() == prepared.prepared_identity.to_hex()
+            {
+                return Ok(RevalidatedRepoCreation {
+                    repo_id: prepared.repo_id,
+                    lifecycle_request_id: prepared.lifecycle_request_id,
+                    prepared_identity: prepared.prepared_identity,
+                    store,
+                });
+            }
+            return Err(RepoCatalogError::AlreadyExists(prepared.repo_id));
+        }
+        let observed = prepared_identity::snapshot_initial_primary(self.manager, prepared.repo_id)?;
+        self.revalidate_creation_with_identity(prepared, observed)
+    }
+
+    fn revalidate_creation_with_identity(
+        &self,
+        prepared: &PreparedRepoCreation,
+        observed: super::PreparedRepoIdentity,
+    ) -> Result<RevalidatedRepoCreation, RepoCatalogError> {
         if observed != prepared.prepared_identity {
             return Err(RepoCatalogError::PreparedIdentityChanged(prepared.repo_id));
         }
@@ -207,6 +265,23 @@ impl RepoCatalogRuntime<'_> {
         prepared: &PreparedRepoRemoval,
     ) -> Result<RevalidatedRepoRemoval, RepoCatalogError> {
         let repo_id = prepared.normal_record.repo_id;
+        let store = RepoCatalogStore::open(&self.manager.ledger_dir)?;
+        let desired = RepoCatalogMembershipRecord::removed(
+            &prepared.normal_record,
+            prepared.lifecycle_request_id,
+        )?;
+        // A lost response or post-replace durability failure is retried from
+        // the exact prepared request. Once its Removed record is visible the
+        // ordinary authority membership is intentionally gone, so retry must
+        // seal that exact durable cut without reopening the database.
+        if store.load(repo_id)?.as_ref() == Some(&desired) {
+            return Ok(RevalidatedRepoRemoval {
+                repo_id,
+                lifecycle_request_id: prepared.lifecycle_request_id,
+                prepared_identity: prepared.prepared_identity,
+                store,
+            });
+        }
         // A relocation after prepare changes this current removal snapshot, but
         // does not compare against the historical creation digest in record v1.
         let observed = prepared_identity::snapshot(self.manager, repo_id)?;
@@ -217,7 +292,7 @@ impl RepoCatalogRuntime<'_> {
             repo_id,
             lifecycle_request_id: prepared.lifecycle_request_id,
             prepared_identity: observed,
-            store: RepoCatalogStore::open(&self.manager.ledger_dir)?,
+            store,
         })
     }
 
@@ -360,46 +435,6 @@ fn validate_removal_revalidation(
         Ok(())
     } else {
         Err(RepoCatalogError::PreparedIdentityChanged(repo_id))
-    }
-}
-
-fn publish_error(repo_id: RepoId, failure: RepoCatalogPublishFailure) -> RepoCatalogError {
-    publish_error_with_abort(repo_id, failure, None)
-}
-
-fn publish_error_with_abort(
-    repo_id: RepoId,
-    failure: RepoCatalogPublishFailure,
-    abort: Option<String>,
-) -> RepoCatalogError {
-    let phase = match failure.phase {
-        RepoCatalogPublishPhase::BeforeReplace => "before_replace",
-        RepoCatalogPublishPhase::AfterReplaceSync => "after_replace_sync",
-    };
-    let mut cleanup = failure.cleanup.map(|error| error.to_string());
-    if let Some(abort) = abort {
-        cleanup = Some(match cleanup {
-            Some(cleanup) => format!("temp_cleanup={cleanup}; membership_abort={abort}"),
-            None => format!("membership_abort={abort}"),
-        });
-    }
-    match failure.phase {
-        RepoCatalogPublishPhase::BeforeReplace => RepoCatalogError::PublishFailed {
-            repo_id,
-            phase,
-            primary: failure.primary.to_string(),
-            cleanup,
-        },
-        RepoCatalogPublishPhase::AfterReplaceSync => RepoCatalogError::CutOutcomeUnknown {
-            repo_id,
-            detail: match cleanup {
-                Some(cleanup) => format!(
-                    "phase={phase}; primary={}; cleanup={cleanup}",
-                    failure.primary
-                ),
-                None => format!("phase={phase}; primary={}", failure.primary),
-            },
-        },
     }
 }
 

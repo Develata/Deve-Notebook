@@ -3,13 +3,14 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::models::PeerId;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(
-        dir.path().join("ledger"),
-        10,
-        Some("notes"),
-        Some("urn:test:notes"),
+    let (repo, _repo_id) = common::init_cataloged_repo_with_url(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        "urn:test:notes",
     )
     .expect("init repo");
     (dir, repo)

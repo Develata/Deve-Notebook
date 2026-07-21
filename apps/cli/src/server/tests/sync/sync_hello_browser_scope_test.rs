@@ -22,13 +22,11 @@ async fn browser_sync_hello_rejects_stale_active_db_binding() -> anyhow::Result<
     let mut session = browser_session(repo_id, &remote);
     let db_dir = tempfile::tempdir().expect("tempdir");
     let db = Arc::new(redb::Database::create(db_dir.path().join("stale.redb"))?);
-    session.set_active_db(DatabaseHandle {
-        db,
-        readonly: false,
-        branch: None,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "notes".into(),
-    });
+    drop(db);
+    session.set_active_db(DatabaseHandle::local(
+        uuid::Uuid::new_v4(),
+        "notes".into(),
+    ));
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 

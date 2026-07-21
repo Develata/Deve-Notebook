@@ -18,13 +18,14 @@ fn seed_single_remote_target(
     )?;
     let ledger_dir = state.repo.ledger_dir().to_path_buf();
     let projection_base = ledger_dir.parent().expect("ledger parent").join("notes");
-    let test_id = crate::test_support::init_cataloged_repo_with_url(
+    let test_id = crate::server::catalog_repo_support::catalog_additional_repo(
+        state.repo.as_ref(),
         &ledger_dir,
+        "test",
         &projection_base,
         10,
-        Some("urn:test".to_string()),
-    )?
-    .repo_id;
+        Some("urn:test"),
+    )?;
     Ok((peer_id, test_id, remote_id))
 }
 

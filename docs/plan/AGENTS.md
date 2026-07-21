@@ -107,6 +107,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `03_storage/authority#ledger-entry-format-contract` | `authority.md ### 4.1.1 Ledger Entry Format Contract` | LedgerEntry 序列化/解码格式与版本兼容合同 |
 | `03_storage/authority#redb-schema-version-contract` | `authority.md ### 4.3.1 Redb Schema Version Gate` | redb schema 版本闸门与迁移/拒绝边界 |
 | `03_storage/authority#repo-mutation-publication-gate` | `authority.md ### 6.1.1 Repository Mutation Publication Gate` | repo-scoped 本地 authority writer 串行、提交结果分类与有序 projection recovery 发布 |
+| `03_storage/authority#local-authority-owner-contract` | `authority.md #### 11.1.1 Local Authority Owner Contract` | per-RepoId Redb owner、prepared admission、不可 Clone lease、quiesce/retirement 与 persistent lock 合同 |
 | `03_storage/projection#projection-contract` | `projection.md ## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
 | `03_storage/watcher#watcher-contract` | `watcher.md ## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `03_storage/repair#backup-export` | `repair.md ### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |

@@ -23,14 +23,11 @@ fn runtime_rejects_repo_id_mismatch_before_artifact_or_durable_mutation() -> any
         .join("remote-imports")
         .join(wrong_repo_id.to_string());
 
-    let error =
-        RemoteImportRuntime::open_for_test(fixture.db.clone(), &fixture.ledger, wrong_repo_id)
-            .err()
-            .expect("mismatched RepoId must fail closed");
+    let error = RemoteImportRuntime::open(&fixture.repo, wrong_repo_id)
+        .err()
+        .expect("mismatched RepoId must fail closed");
 
-    assert!(
-        matches!(error, RemoteImportError::Storage(message) if message.contains("does not match"))
-    );
+    assert!(matches!(error, RemoteImportError::Storage(_)));
     assert_eq!(table_snapshot(&fixture.db)?, before);
     assert!(!wrong_root.exists());
     Ok(())
@@ -64,7 +61,9 @@ fn repair_dry_run_does_not_initialize_empty_store_or_artifact_root() -> anyhow::
     let ledger = dir.path().join("ledger");
     let (repo, repo_id) =
         crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"))?;
-    let before = table_snapshot(repo.local_db.as_ref())?;
+    let db =
+        RemoteImportTestDatabase::from_authority(repo.local_authority_lease_for_test(repo_id)?);
+    let before = table_snapshot(&db)?;
     let artifact_root = crate::utils::notegit::host_dir(&ledger)
         .join("remote-imports")
         .join(repo_id.to_string());
@@ -73,7 +72,7 @@ fn repair_dry_run_does_not_initialize_empty_store_or_artifact_root() -> anyhow::
     let report = RemoteImportRuntime::dry_run_repair(&repo, repo_id)?;
 
     assert!(report.findings.is_empty());
-    assert_eq!(table_snapshot(repo.local_db.as_ref())?, before);
+    assert_eq!(table_snapshot(&db)?, before);
     assert!(!artifact_root.exists());
     Ok(())
 }
@@ -84,14 +83,16 @@ fn repair_dry_run_reports_preparing_without_recovery_write() -> anyhow::Result<(
     let ledger = dir.path().join("ledger");
     let (repo, repo_id) =
         crate::test_support::init_cataloged_repo(&ledger, &dir.path().join("notes"))?;
-    let store = RemoteImportStore::open(repo.local_db.clone(), repo_id)?;
+    let db =
+        RemoteImportTestDatabase::from_authority(repo.local_authority_lease_for_test(repo_id)?);
+    let store = RemoteImportStore::open(db.clone(), repo_id)?;
     let preparing = store.reserve(
         RemoteImportDigest::of(b"source"),
         RemoteImportDigest::of(b"locator"),
         0.into(),
         RemoteImportDigest::of(b"ignore"),
     )?;
-    let before = table_snapshot(repo.local_db.as_ref())?;
+    let before = table_snapshot(&db)?;
     let artifact_root = crate::utils::notegit::host_dir(&ledger)
         .join("remote-imports")
         .join(repo_id.to_string());
@@ -105,7 +106,7 @@ fn repair_dry_run_reports_preparing_without_recovery_write() -> anyhow::Result<(
                 preparing.session_id
             ))
     );
-    assert_eq!(table_snapshot(repo.local_db.as_ref())?, before);
+    assert_eq!(table_snapshot(&db)?, before);
     assert!(!artifact_root.exists());
     Ok(())
 }

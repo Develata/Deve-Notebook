@@ -15,9 +15,8 @@ fn two_local_repos() -> (TempDir, RepoManager, Uuid, Uuid) {
     let (main, main_id) =
         common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:main")
             .expect("init main repo");
-    let (_wiki, wiki_id) =
-        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:wiki")
-            .expect("init wiki repo");
+    let wiki_id = common::add_cataloged_repo_with_url(&main, &projection_base, "urn:wiki")
+        .expect("init wiki repo");
     (dir, main, main_id, wiki_id)
 }
 

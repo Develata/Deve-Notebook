@@ -69,7 +69,7 @@ impl RepoManager {
 
     /// 获取主本地仓库的规范执行 selector（物理 RepoId stem）。
     pub fn local_repo_name(&self) -> &str {
-        &self.local_repo_name
+        self.local_authority.primary_repo_name()
     }
 
     /// 列出指定本地仓库的文档
@@ -77,13 +77,13 @@ impl RepoManager {
         &self,
         repo_name: Option<&str>,
     ) -> Result<Vec<(crate::models::DocId, String)>> {
-        let name = repo_name.unwrap_or(&self.local_repo_name);
+        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
         self.run_on_local_repo(name, node_meta::list_file_docs)
     }
 
     /// 列出指定本地仓库的节点
     pub fn list_local_nodes(&self, repo_name: Option<&str>) -> Result<Vec<(NodeId, NodeMeta)>> {
-        let name = repo_name.unwrap_or(&self.local_repo_name);
+        let name = repo_name.unwrap_or_else(|| self.local_repo_name());
         self.run_on_local_repo(name, node_meta::list_nodes)
     }
 
@@ -105,10 +105,12 @@ impl RepoManager {
         self.ledger_dir.join("remotes")
     }
 
-    /// 获取本地数据库的只读事务 (用于高级查询)
-    pub fn local_db_read_txn(&self) -> Result<redb::ReadTransaction> {
-        Self::validate_local_repo_schema(self.local_db.as_ref())?;
-        Ok(self.local_db.begin_read()?)
+    pub(crate) fn run_on_primary_local_repo<F, R>(&self, f: F) -> Result<R>
+    where
+        F: FnOnce(&redb::Database) -> Result<R>,
+    {
+        let lease = self.lease_local_authority(self.local_authority.primary_repo_id())?;
+        f(lease.db())
     }
 
     /// 获取本地库指定序列号范围的操作 (用于 P2P 同步增量推送)

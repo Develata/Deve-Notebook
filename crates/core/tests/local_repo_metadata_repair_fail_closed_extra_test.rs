@@ -1,22 +1,29 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
 use tempfile::TempDir;
 
+mod common;
+
 #[test]
-fn local_repo_listing_fails_closed_on_hidden_non_redb_entry() {
+fn local_repo_listing_ignores_hidden_nonmember_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     let local_dir = ledger_dir.join("local");
     std::fs::write(local_dir.join(".stale"), b"local-junk").expect("hidden junk");
 
-    let list_err = repo
-        .list_repos(None)
-        .expect_err("hidden non-redb local entry must fail listing");
-    assert!(list_err.to_string().contains("unexpected non-redb entry"));
-
-    let exec_err = repo
-        .list_local_repo_names_for_execution()
-        .expect_err("hidden non-redb local entry must fail execution listing");
-    assert!(exec_err.to_string().contains("unexpected non-redb entry"));
+    assert_eq!(
+        repo.list_repos(None).expect("catalog listing"),
+        vec![repo_id.to_string()]
+    );
+    assert_eq!(
+        repo.list_local_repo_names_for_execution()
+            .expect("execution listing"),
+        vec![repo_id.to_string()]
+    );
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report hidden non-redb local entry");
+    assert!(repair_err.to_string().contains("unexpected non-redb entry"));
 }

@@ -323,12 +323,13 @@ mod tests {
             })?;
             workspace
         };
-        corrupt_workspace_identity(&workspace)?;
+        let original_identity = corrupt_workspace_identity(&workspace)?;
 
         let err = stage(&ledger_dir, Some(&repo_name), true, 10)
             .expect_err("stage --all must reject a broken workspace identity");
 
         assert_identity_gate_error(&err);
+        restore_workspace_identity(&workspace, &original_identity)?;
         let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         let pending = repo.run_on_local_repo(&repo_name, pending_fs::list_all)?;
         let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
@@ -368,12 +369,13 @@ mod tests {
             repo.stage_pending_in_local_repo(&repo_name, "notes/a.md")?;
             workspace
         };
-        corrupt_workspace_identity(&workspace)?;
+        let original_identity = corrupt_workspace_identity(&workspace)?;
 
         let err = commit(&ledger_dir, Some(&repo_name), "commit broken identity", 10)
             .expect_err("commit must reject a broken workspace identity");
 
         assert_identity_gate_error(&err);
+        restore_workspace_identity(&workspace, &original_identity)?;
         let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         let staged = repo.run_on_local_repo(&repo_name, staging::list_staged_entries)?;
         let commits = repo.list_commits_in_local_repo(&repo_name, 10)?;
@@ -382,13 +384,26 @@ mod tests {
         Ok(())
     }
 
-    fn corrupt_workspace_identity(workspace: &std::path::Path) -> anyhow::Result<()> {
+    fn corrupt_workspace_identity(workspace: &std::path::Path) -> anyhow::Result<Vec<u8>> {
+        let identity_path = deve_core::utils::notegit::repo_identity_path(workspace);
+        let original_identity = std::fs::read(&identity_path)?;
         std::fs::write(
-            deve_core::utils::notegit::repo_identity_path(workspace),
+            identity_path,
             format!(
                 "version = 1\nrepo_id = \"{}\"\nrepo_name = \"default\"\n",
                 Uuid::new_v4()
             ),
+        )?;
+        Ok(original_identity)
+    }
+
+    fn restore_workspace_identity(
+        workspace: &std::path::Path,
+        original: &[u8],
+    ) -> anyhow::Result<()> {
+        std::fs::write(
+            deve_core::utils::notegit::repo_identity_path(workspace),
+            original,
         )?;
         Ok(())
     }

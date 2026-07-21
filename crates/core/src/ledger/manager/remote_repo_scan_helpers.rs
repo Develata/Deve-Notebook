@@ -59,7 +59,7 @@ pub(super) fn read_remote_repo_info_without_repair(
     path: &Path,
     _stem: &str,
 ) -> Result<Option<RepoInfo>> {
-    RepoManager::read_repo_info_from_path(path)
+    RepoManager::read_shadow_repo_info_from_path(path)
 }
 
 pub(super) fn scanned_remote_repo_info(
@@ -71,7 +71,7 @@ pub(super) fn scanned_remote_repo_info(
 }
 
 pub(super) fn repaired_remote_repo_info(path: &Path, stem: &str) -> Result<RemoteRepoCatalogInfo> {
-    let original = RepoManager::read_repo_info_from_path(path)?;
+    let original = RepoManager::read_shadow_repo_info_from_path(path)?;
     let Some(mut info) = original.clone().or_else(|| {
         uuid::Uuid::parse_str(stem).ok().map(|repo_id| RepoInfo {
             uuid: repo_id,

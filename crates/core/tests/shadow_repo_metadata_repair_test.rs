@@ -17,13 +17,14 @@ fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
 #[test]
 fn remote_catalog_keeps_legacy_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    let info = common::create_initialized_local_repo_with_depth(
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
         &dir.path().join("ledger"),
+        &dir.path().join("notes"),
         10,
-        "wiki",
-        "urn:test:wiki",
-    );
+    )
+    .expect("init repo");
+    let info =
+        common::add_initialized_local_repo(&repo, 10, "urn:test:wiki").expect("initialized wiki");
     let peer_id = PeerId::new("peer-remote");
 
     common::seed_shadow_without_metadata_row(&repo, &peer_id, info.uuid);
@@ -42,7 +43,8 @@ fn remote_catalog_keeps_legacy_uuid_shadow_non_switchable_without_remote_metadat
     let handle = repo
         .open_database(Some(&peer_id), &info.uuid.to_string())
         .expect("open repaired shadow");
-    let repaired = read_repo_info(&handle.db).expect("repo info written back");
+    let repaired = read_repo_info(handle.remote_db().expect("remote database"))
+        .expect("repo info written back");
     assert_eq!(repaired.name, info.uuid.to_string());
     assert_eq!(repaired.uuid, info.uuid);
     assert!(
@@ -57,9 +59,11 @@ fn remote_catalog_keeps_legacy_uuid_shadow_non_switchable_without_remote_metadat
 fn init_keeps_uuid_shadow_non_switchable_without_remote_metadata() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let info =
-        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:test:wiki");
+        common::add_initialized_local_repo(&repo, 10, "urn:test:wiki").expect("initialized wiki");
     let peer_id = PeerId::new("peer-remote");
 
     common::seed_shadow_without_metadata_row(&repo, &peer_id, info.uuid);
@@ -69,8 +73,10 @@ fn init_keeps_uuid_shadow_non_switchable_without_remote_metadata() {
             .join(format!("{}.redb", info.uuid))
             .exists()
     );
+    drop(repo);
 
-    let repaired = RepoManager::init(&ledger_dir, 10, None, None).expect("re-init repo");
+    let repaired =
+        RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id).expect("re-init repo");
     assert!(
         repaired
             .list_repos(Some(&peer_id))
@@ -90,9 +96,12 @@ fn init_keeps_uuid_shadow_non_switchable_without_remote_metadata() {
 fn init_fails_closed_on_broken_shadow_catalogs() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let _repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let peer_id = PeerId::new("peer-bad");
     common::seed_broken_remote_shadow_repo(&ledger_dir, &peer_id, "broken");
+    drop(repo);
 
     let err = RepoManager::init(&ledger_dir, 10, None, None)
         .err()
@@ -106,9 +115,11 @@ fn init_fails_closed_on_broken_shadow_catalogs() {
 fn local_catalog_repair_does_not_make_legacy_shadow_runtime_readable() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let main = RepoManager::init(&ledger_dir, 10, Some("main"), Some("urn:main")).expect("main");
+    let (main, _main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("main");
     let wiki_info =
-        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:wiki");
+        common::add_initialized_local_repo(&main, 10, "urn:wiki").expect("initialized wiki");
     let peer_id = PeerId::new("peer-remote");
 
     common::seed_shadow_without_metadata_row(&main, &peer_id, wiki_info.uuid);
@@ -132,24 +143,20 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
     let ledger_dir = dir.path().join("ledger");
     let (main, _main_id) =
         common::init_cataloged_repo(&ledger_dir, &dir.path().join("main-notes")).expect("main");
-    let (_wiki, wiki_id) = common::init_cataloged_repo_with_url(
-        &ledger_dir,
-        &dir.path().join("wiki-notes"),
-        "urn:wiki",
-    )
-    .expect("wiki");
+    let wiki_id =
+        common::add_cataloged_repo_with_url(&main, &dir.path().join("wiki-notes"), "urn:wiki")
+            .expect("wiki");
     let peer_id = PeerId::new("peer-remote");
 
     let wiki_db = main
-        .open_database(None, &wiki_id.to_string())
-        .expect("wiki db")
-        .db;
+        .lease_local_authority(wiki_id)
+        .expect("wiki authority lease");
     let poisoned = deve_core::ledger::RepoInfo {
         uuid: wiki_id,
         name: String::new(),
         url: Some("urn:wiki".to_string()),
     };
-    common::write_repo_metadata(wiki_db.as_ref(), &poisoned);
+    common::write_repo_metadata(wiki_db.db(), &poisoned);
 
     common::seed_shadow_without_metadata_row(&main, &peer_id, wiki_id);
     main.repair_remote_repo_catalogs()
@@ -172,9 +179,11 @@ fn remote_catalog_repair_does_not_borrow_local_metadata_for_shadow_naming() {
 fn remote_catalog_repair_fails_closed_on_broken_peer() {
     let dir = TempDir::new().expect("create tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let info =
-        common::create_initialized_local_repo_with_depth(&ledger_dir, 10, "wiki", "urn:test:wiki");
+        common::add_initialized_local_repo(&repo, 10, "urn:test:wiki").expect("initialized wiki");
     let good_peer = PeerId::new("peer-good");
     let bad_peer = PeerId::new("peer-bad");
 

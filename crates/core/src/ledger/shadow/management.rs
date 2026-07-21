@@ -18,7 +18,7 @@
 //! **类型**: Core MUST (核心必选)
 
 use crate::codec;
-use crate::ledger::database::cached_or_create_database;
+use crate::ledger::database::cached_or_create_shadow_database;
 use crate::ledger::manager::types::RepoInfo;
 use crate::ledger::schema::*;
 use crate::models::{PeerId, RepoId};
@@ -87,7 +87,7 @@ pub fn load_shadow_db(
     std::fs::create_dir_all(&peer_dir)
         .with_context(|| format!("Failed to create shadow directory for peer: {}", peer_id))?;
 
-    let db = cached_or_create_database(db_path).with_context(|| {
+    let db = cached_or_create_shadow_database(db_path).with_context(|| {
         format!(
             "Failed to create shadow database for peer {} repo {}",
             peer_id, repo_id

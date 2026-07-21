@@ -21,13 +21,11 @@ async fn list_docs_with_stale_local_binding_bootstraps_single_repo() -> anyhow::
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(17));
-    session.set_active_db(DatabaseHandle {
-        db: stale_db,
-        readonly: false,
-        branch: None,
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "ghost".into(),
-    });
+    drop(stale_db);
+    session.set_active_db(DatabaseHandle::local(
+        uuid::Uuid::new_v4(),
+        "ghost".into(),
+    ));
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(uuid::Uuid::new_v4());
     session.set_sync_scope_nonce(17);

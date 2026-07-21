@@ -44,7 +44,13 @@ fn commit_creation(
     let permit = repo
         .catalog_membership_runtime()
         .cut_permit_for_test(prepared.repo_id());
-    repo.commit_repo_creation_membership(prepared, &revalidated, &permit)
+    let commit = repo.commit_repo_creation_membership(prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(prepared, &commit)
+        .map_err(|error| RepoCatalogError::PreparedIdentityUnavailable {
+            repo_id: prepared.repo_id(),
+            detail: error.to_string(),
+        })?;
+    Ok(commit)
 }
 
 fn commit_removal(
@@ -252,7 +258,7 @@ fn remove_cut_rejects_record_changed_after_prepare() -> anyhow::Result<()> {
 }
 
 #[test]
-fn managers_for_one_ledger_share_the_single_process_membership_authority() -> anyhow::Result<()> {
+fn second_manager_for_same_repo_is_rejected_by_authority_owner() -> anyhow::Result<()> {
     let fixture = fixture()?;
     let prepared = fixture
         .repo
@@ -260,25 +266,65 @@ fn managers_for_one_ledger_share_the_single_process_membership_authority() -> an
     let committed = commit_creation(&fixture.repo, &prepared)?;
     let old_token = committed.membership().clone();
 
-    let reopened = RepoManager::init_existing_for_repo_id(
+    let error = match RepoManager::init_existing_for_repo_id(
         fixture.repo.ledger_dir(),
         fixture.repo.snapshot_depth(),
         fixture.repo_id,
-    )?;
-    reopened.seed_catalog_membership_from_records()?;
-    let new_token = reopened
-        .catalog_membership_runtime()
-        .issue(fixture.repo_id)?;
-    assert!(
-        reopened
-            .catalog_membership_runtime()
-            .revalidate(&new_token)
-            .is_ok()
-    );
-    reopened
+    ) {
+        Ok(_) => panic!("same RepoId must have one live authority owner"),
+        Err(error) => error,
+    };
+    assert!(format!("{error:#}").contains("busy"));
+    fixture
+        .repo
         .catalog_membership_runtime()
         .revalidate(&old_token)?;
-    assert_eq!(new_token, old_token);
+    Ok(())
+}
+
+#[test]
+fn removed_catalog_record_cannot_reanimate_a_residual_database() -> anyhow::Result<()> {
+    let fixture = fixture()?;
+    let ledger = fixture.repo.ledger_dir().to_path_buf();
+    let repo_id = fixture.repo_id;
+    let created = fixture
+        .repo
+        .prepare_repo_creation_membership(repo_id, Uuid::new_v4())?;
+    commit_creation(&fixture.repo, &created)?;
+    let removed = fixture
+        .repo
+        .prepare_repo_removal_membership(repo_id, Uuid::new_v4())?;
+    commit_removal(&fixture.repo, &removed)?;
+    drop(fixture.repo);
+
+    let error = match RepoManager::init(&ledger, 8, None, None) {
+        Ok(_) => panic!("Removed catalog member must not be selected from a residual database"),
+        Err(error) => error,
+    };
+    assert!(
+        error
+            .to_string()
+            .contains("No durable Normal local repository")
+    );
+    Ok(())
+}
+
+#[test]
+fn uncataloged_prepared_database_requires_explicit_repair_after_restart() -> anyhow::Result<()> {
+    let temp = tempfile::tempdir()?;
+    let ledger = temp.path().join("ledger");
+    let prepared = RepoManager::init(&ledger, 8, Some("notes"), Some("urn:notes"))?;
+    drop(prepared);
+
+    let error = match RepoManager::init(&ledger, 8, Some("notes"), Some("urn:notes")) {
+        Ok(_) => panic!("normal init must not infer membership from an uncataloged database"),
+        Err(error) => error,
+    };
+    assert!(
+        error
+            .to_string()
+            .contains("Uncataloged local authority artifacts require explicit ownership repair")
+    );
     Ok(())
 }
 

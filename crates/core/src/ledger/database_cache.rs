@@ -148,6 +148,7 @@ fn file_stamp(_path: &Path, metadata: &Metadata) -> Result<FileStamp> {
     })
 }
 
+#[cfg(test)]
 pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) -> Result<()> {
     OPENED_DBS
         .write()

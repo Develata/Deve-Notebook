@@ -3,12 +3,13 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 03_storage/index#repo-runtime-layout
 //!
+use super::authority_storage_runtime::{LocalAuthorityRuntime, PreparedRepoAuthority};
 use super::repo_catalog_runtime::CatalogMembershipRuntime;
 use crate::models::{PeerId, RepoId};
 use crate::writeback::PersistGuard;
 use redb::Database;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -39,14 +40,11 @@ pub struct RepoManager {
     pub(crate) ledger_dir: PathBuf,
     /// Physical host identity used for every locally-authored fact.
     pub(crate) local_peer_id: PeerId,
-    /// 本地权威库 (local.redb) - 默认/主库
-    pub(crate) local_db: Arc<Database>,
-    /// 主库名称
-    pub(crate) local_repo_name: String,
-    /// 其他本地库缓存 (name -> Database)。不变量：同一路径在进程内只打开一次。
-    pub(crate) extra_local_dbs: RwLock<HashMap<String, Arc<Database>>>,
-    /// 已完成 runtime side-table repair 的本地 secondary repo。
-    pub(crate) repaired_local_runtime_tables: RwLock<HashSet<String>>,
+    /// 唯一拥有全部本地 Redb handle、generation 与跨进程锁的 runtime。
+    pub(crate) local_authority: LocalAuthorityRuntime,
+    /// Unique capability for the first local repo before its durable Normal
+    /// catalog cut. Ordinary local-authority access remains membership-gated.
+    pub(crate) initial_prepared_authority: Mutex<Option<PreparedRepoAuthority>>,
     /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
     pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
     /// Serializes authenticated shadow mutation with merge checkpoint evaluation/commit.

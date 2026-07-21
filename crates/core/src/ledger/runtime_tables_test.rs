@@ -10,8 +10,12 @@ fn repairs_missing_client_op_index_for_secondary_local_repo_on_runtime_open() ->
     let ledger_dir = tmp_dir.path().join("ledger");
     let (repo, _main_id) =
         crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("main-notes"))?;
-    let (_wiki, wiki_id) =
-        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("wiki-notes"))?;
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &repo,
+        &ledger_dir,
+        &tmp_dir.path().join("wiki-notes"),
+        None,
+    )?;
     let wiki_name = wiki_id.to_string();
     let doc_id = DocId::new();
     let peer_id = repo.local_peer_id().clone();
@@ -91,6 +95,7 @@ fn repairs_empty_client_op_index_for_primary_local_repo_on_init() -> Result<()> 
         write.commit()?;
         Ok(())
     })?;
+    drop(repo);
 
     let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, main_id)?;
     let found = reopened
@@ -166,6 +171,7 @@ fn repairs_partial_non_empty_client_op_index_for_primary_local_repo_on_init() ->
         write.commit()?;
         Ok(())
     })?;
+    drop(repo);
 
     let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, main_id)?;
     let first = reopened
@@ -229,6 +235,7 @@ fn rebuild_coalesces_legacy_duplicate_client_op_metadata_to_first_seq() -> Resul
         write.commit()?;
         Ok(())
     })?;
+    drop(repo);
 
     let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, main_id)?;
     let found = reopened
@@ -251,8 +258,12 @@ fn fails_closed_when_ledger_ops_authority_missing_for_secondary_local_repo() -> 
     let ledger_dir = tmp_dir.path().join("ledger");
     let (repo, main_id) =
         crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("main-notes"))?;
-    let (_wiki, wiki_id) =
-        crate::test_support::init_cataloged_repo(&ledger_dir, &tmp_dir.path().join("wiki-notes"))?;
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &repo,
+        &ledger_dir,
+        &tmp_dir.path().join("wiki-notes"),
+        None,
+    )?;
     let wiki_name = wiki_id.to_string();
     repo.run_on_local_repo(&wiki_name, |db| {
         let write = db.begin_write()?;
@@ -260,6 +271,7 @@ fn fails_closed_when_ledger_ops_authority_missing_for_secondary_local_repo() -> 
         write.commit()?;
         Ok(())
     })?;
+    drop(repo);
 
     let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, main_id)?;
     let err = reopened

@@ -20,14 +20,10 @@ impl<'a> RepairRuntime<'a> {
     pub(crate) fn repair_local_repo_catalog(&self) -> Result<()> {
         repair_local_repo_metadata(
             &self.manager.ledger_dir,
-            &self.manager.local_repo_name,
-            self.manager.local_db.as_ref(),
+            self.manager.local_repo_name(),
+            &self.manager.local_authority,
         )?;
-        RepoManager::repair_local_repo_source_control_tables(
-            &self.manager.ledger_dir,
-            &self.manager.local_repo_name,
-            self.manager.local_db.as_ref(),
-        )
+        self.manager.repair_local_repo_source_control_tables()
     }
 
     pub(crate) fn repair_remote_repo_catalogs(&self) -> Result<()> {

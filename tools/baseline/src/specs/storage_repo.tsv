@@ -117,7 +117,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-010	run: scripts/ch
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli create_repo -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli repo_lifecycle -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1-R6 per-RepoId authority ownership, zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh evidence are not implemented yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1 per-RepoId authority ownership is implemented; R2-R6 zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh cross-process evidence are not implemented yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib zero_repo_create_without_projection_base_returns_typed_error -- --nocapture

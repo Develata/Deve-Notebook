@@ -53,7 +53,7 @@ fn corrupt_catalog_record_is_a_global_failure_and_preserves_alias_store() -> any
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let repo = init_alias_repo(&ledger)?;
-    init_alias_repo(&ledger)?;
+    add_alias_repo(&repo, &ledger)?;
     let ids = repo_ids(&repo)?;
     let runtime = repo.host_repo_alias_runtime();
     runtime.set_alias(ids[0], "before", 0)?;

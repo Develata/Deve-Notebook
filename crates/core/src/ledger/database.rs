@@ -6,22 +6,17 @@
 //!
 //! # 数据库访问模块 (Database Access)
 //!
-//! 提供获取数据库引用的方法，供会话级锁定使用。
+//! 提供 repo scope binding 与远端只读数据库引用。
 //!
 //! **设计说明**:
-//! Redb 的 `Database::create()` 会获取独占文件锁，不能在同一进程中多次打开同一文件。
-//! 因此，我们使用一个缓存 (`opened_dbs`) 来存储已打开的数据库的 Arc 引用。
-//! 主库 (`local_db`) 已经被 RepoManager 持有，我们通过路径匹配来避免重复打开。
+//! 本地 Redb 只由 `LocalAuthorityRuntime` 持有，session handle 仅保存 RepoId binding。
+//! 远端 shadow DB 仍可使用 Arc，因为它不属于本地 authority retirement 边界。
 
 use super::RepoManager;
-use super::database_cache::{
-    CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
-};
-pub(crate) use super::database_cache::{register_database, relocate_database_path};
-pub(crate) use super::database_open::{cached_database, cached_or_create_database};
+pub(crate) use super::database_cache::relocate_database_path;
+pub(crate) use super::database_open::{cached_or_create_shadow_database, cached_shadow_database};
 use crate::models::PeerId;
 use crate::models::RepoId;
-use crate::utils::fs::checked_exists;
 use anyhow::Result;
 use redb::Database;
 use std::path::Path;
@@ -34,8 +29,7 @@ mod runtime;
 /// 包含数据库引用及其访问模式
 #[derive(Clone)]
 pub struct DatabaseHandle {
-    /// 数据库引用
-    pub db: Arc<Database>,
+    remote_db: Option<Arc<Database>>,
     /// 是否为只读模式 (remotes/ 下的数据库)
     pub readonly: bool,
     /// 分支标识 (None = local, Some = remote)
@@ -46,39 +40,49 @@ pub struct DatabaseHandle {
     pub repo_name: String,
 }
 
+impl DatabaseHandle {
+    pub fn local(repo_id: RepoId, repo_name: String) -> Self {
+        Self {
+            remote_db: None,
+            readonly: false,
+            branch: None,
+            repo_id: Some(repo_id),
+            repo_name,
+        }
+    }
+
+    pub fn remote(db: Arc<Database>, peer_id: PeerId, repo_id: RepoId, repo_name: String) -> Self {
+        Self {
+            remote_db: Some(db),
+            readonly: true,
+            branch: Some(peer_id),
+            repo_id: Some(repo_id),
+            repo_name,
+        }
+    }
+
+    /// Creates a read-only remote binding whose RepoId has not been resolved.
+    /// Such a binding can never satisfy a RepoId-scoped authority check.
+    pub fn unresolved_remote(db: Arc<Database>, peer_id: PeerId, repo_name: String) -> Self {
+        Self {
+            remote_db: Some(db),
+            readonly: true,
+            branch: Some(peer_id),
+            repo_id: None,
+            repo_name,
+        }
+    }
+
+    pub fn remote_db(&self) -> Result<&Database> {
+        self.remote_db
+            .as_deref()
+            .ok_or_else(|| anyhow::anyhow!("local session binding does not own a database handle"))
+    }
+}
+
 impl RepoManager {
     pub(crate) fn database_runtime(&self) -> runtime::RepoDatabaseRuntime<'_> {
         runtime::RepoDatabaseRuntime::new(self)
-    }
-
-    fn repair_secondary_local_runtime_tables(
-        &self,
-        repo_name: &str,
-        db: &Arc<Database>,
-    ) -> Result<()> {
-        Self::validate_local_repo_schema(db.as_ref())?;
-        if repo_name == self.local_repo_name {
-            return Ok(());
-        }
-        if self
-            .repaired_local_runtime_tables
-            .read()
-            .map_err(|_| anyhow::anyhow!("Local repo runtime repair lock poisoned"))?
-            .contains(repo_name)
-        {
-            return Ok(());
-        }
-        if super::runtime_tables::repair_client_op_index(db.as_ref())? {
-            tracing::warn!(
-                "Rebuilt client_op_index while opening local repo runtime tables: {}",
-                repo_name
-            );
-        }
-        self.repaired_local_runtime_tables
-            .write()
-            .map_err(|_| anyhow::anyhow!("Local repo runtime repair lock poisoned"))?
-            .insert(repo_name.to_string());
-        Ok(())
     }
 
     /// 打开并返回指定分支和仓库的数据库句柄
@@ -100,69 +104,9 @@ impl RepoManager {
         self.database_runtime().open_database(branch, repo_name)
     }
 
-    /// 获取或打开本地数据库 (返回 Arc)
-    pub(crate) fn get_or_open_local_db(&self, name: &str) -> Result<Arc<Database>> {
-        let cache_key = self.ledger_dir.join("local").join(format!("{}.redb", name));
-
-        // 1. 检查全局缓存
-        if let Some(db) = reusable_cached_database(cache_key.as_path())? {
-            Self::validate_local_repo_schema(db.as_ref())?;
-            self.repair_secondary_local_runtime_tables(name, &db)?;
-            return Ok(db);
-        }
-        OPENED_DBS
-            .write()
-            .map_err(|_| {
-                anyhow::anyhow!(
-                    "Database cache lock poisoned while removing {:?}",
-                    cache_key
-                )
-            })?
-            .remove(cache_key.as_path());
-
-        // 2. 检查是否是主库 (已经被 RepoManager 持有)
-        // 主库的路径检查
-        let main_db_path = self
-            .ledger_dir
-            .join("local")
-            .join(format!("{}.redb", self.local_repo_name));
-
-        if cache_key == main_db_path {
-            Self::validate_local_repo_schema(self.local_db.as_ref())?;
-            return Ok(self.local_db.clone());
-        }
-
-        // 3. 检查文件是否存在
-        if !checked_exists(&cache_key, "local database path")? {
-            return Err(anyhow::anyhow!("Repository not found: {}", name));
-        }
-
-        // 4. 打开新数据库并缓存
-        let db = Database::create(&cache_key)?;
-        let arc_db = Arc::new(db);
-        Self::validate_local_repo_schema(arc_db.as_ref())?;
-        self.repair_secondary_local_runtime_tables(name, &arc_db)?;
-
-        {
-            let mut cache = OPENED_DBS.write().map_err(|_| {
-                anyhow::anyhow!("Database cache lock poisoned while storing {:?}", cache_key)
-            })?;
-            cache.insert(
-                cache_key.clone(),
-                CachedDatabaseEntry {
-                    db: arc_db.clone(),
-                    stamp: current_file_stamp(&cache_key)?,
-                },
-            );
-        }
-
-        tracing::info!("Opened and cached database: {:?}", cache_key);
-        Ok(arc_db)
-    }
-
     /// 获取或打开影子数据库 (返回 Arc)
     fn get_or_open_db_at(&self, db_path: &Path) -> Result<Arc<Database>> {
-        cached_database(db_path)
+        cached_shadow_database(db_path)
     }
 }
 

@@ -15,7 +15,7 @@ use anyhow::Result;
 
 impl RepoManager {
     pub fn repair_rename_doc_mapping(&self, old_path: &str, new_path: &str) -> Result<()> {
-        metadata::rename_doc(&self.local_db, old_path, new_path)
+        self.run_on_primary_local_repo(|db| metadata::rename_doc(db, old_path, new_path))
     }
 
     pub fn repair_rename_doc_mapping_in_local_repo(
@@ -28,7 +28,7 @@ impl RepoManager {
     }
 
     pub fn repair_delete_doc_mapping(&self, path: &str) -> Result<()> {
-        metadata::delete_doc(&self.local_db, path)
+        self.run_on_primary_local_repo(|db| metadata::delete_doc(db, path))
     }
 
     pub fn repair_delete_doc_mapping_in_local_repo(
@@ -40,7 +40,7 @@ impl RepoManager {
     }
 
     pub fn repair_rename_folder_mapping(&self, old_prefix: &str, new_prefix: &str) -> Result<()> {
-        metadata::rename_folder(&self.local_db, old_prefix, new_prefix)
+        self.run_on_primary_local_repo(|db| metadata::rename_folder(db, old_prefix, new_prefix))
     }
 
     pub fn repair_rename_folder_mapping_in_local_repo(
@@ -55,7 +55,7 @@ impl RepoManager {
     }
 
     pub fn repair_delete_folder_mapping(&self, prefix: &str) -> Result<usize> {
-        metadata::delete_folder(&self.local_db, prefix)
+        self.run_on_primary_local_repo(|db| metadata::delete_folder(db, prefix))
     }
 
     pub fn repair_delete_folder_mapping_in_local_repo(

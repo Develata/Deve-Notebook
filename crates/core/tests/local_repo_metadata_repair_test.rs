@@ -11,25 +11,23 @@ fn repair_fails_closed_on_repo_id_mismatch_without_rewriting_identity() {
     let (main, main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
             .expect("main");
-    let (_wiki, wiki_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
-            .expect("wiki");
+    let wiki_id = common::add_cataloged_repo_with_depth(&main, &dir.path().join("wiki-notes"), 8)
+        .expect("wiki");
     let wiki_db = main
-        .open_database(None, &wiki_id.to_string())
-        .expect("wiki db")
-        .db;
+        .lease_local_authority(wiki_id)
+        .expect("wiki authority lease");
 
     let bad = RepoInfo {
         uuid: main_id,
         name: main_id.to_string(),
         url: Some(format!("urn:uuid:{}", main_id)),
     };
-    common::write_repo_metadata(wiki_db.as_ref(), &bad);
+    common::write_repo_metadata(wiki_db.db(), &bad);
     let err = main
         .repair_local_repo_catalog()
         .expect_err("repair must not rewrite RepoId identity");
     assert!(err.to_string().contains("physical RepoId does not match"));
-    assert_eq!(common::read_repo_metadata(wiki_db.as_ref()), bad);
+    assert_eq!(common::read_repo_metadata(wiki_db.db()), bad);
 }
 
 #[test]
@@ -42,8 +40,8 @@ fn local_repo_duplicate_display_aliases_are_valid_and_never_resolve_selectors() 
         "urn:test:wiki-a",
     )
     .expect("main");
-    let (_second, second_id) = common::init_cataloged_repo_with_url(
-        &ledger_dir,
+    let second_id = common::add_cataloged_repo_with_url(
+        &main,
         &dir.path().join("second-notes"),
         "urn:test:wiki-b",
     )
@@ -81,9 +79,7 @@ fn local_repo_execution_requires_explicit_selector_when_multiple_repos_exist() {
     let (main, _main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
             .expect("main");
-    let (_wiki, _wiki_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
-            .expect("wiki");
+    common::add_cataloged_repo_with_depth(&main, &dir.path().join("wiki-notes"), 8).expect("wiki");
 
     let err = main
         .resolve_local_repo_name_for_execution(None, None)
@@ -102,15 +98,13 @@ fn repair_fails_closed_on_duplicate_local_repo_url_without_rewriting_it() {
         "urn:main",
     )
     .expect("main");
-    let (_notes, notes_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes-notes"), 8)
-            .expect("notes");
+    let notes_id = common::add_cataloged_repo_with_depth(&main, &dir.path().join("notes-notes"), 8)
+        .expect("notes");
     let other_db = main
-        .open_database(None, &notes_id.to_string())
-        .expect("notes db")
-        .db;
+        .lease_local_authority(notes_id)
+        .expect("notes authority lease");
     common::write_repo_metadata(
-        other_db.as_ref(),
+        other_db.db(),
         &RepoInfo {
             uuid: notes_id,
             name: notes_id.to_string(),
@@ -122,50 +116,63 @@ fn repair_fails_closed_on_duplicate_local_repo_url_without_rewriting_it() {
         .expect_err("repair must not rewrite duplicate URL identity");
     assert!(err.to_string().contains("duplicate local repository URL"));
     assert_eq!(
-        common::read_repo_metadata(other_db.as_ref()).url.as_deref(),
+        common::read_repo_metadata(other_db.db()).url.as_deref(),
         Some("urn:main")
     );
 }
 
 #[test]
-fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
+fn init_without_url_reuses_the_only_repo_without_treating_display_name_as_identity() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let first = RepoManager::init(
+    let (first, first_id) = common::init_cataloged_repo_with_url(
         &ledger_dir,
-        8,
-        Some("wiki"),
-        Some("https://example.com/wiki.git"),
+        &dir.path().join("notes"),
+        "https://example.com/wiki.git",
     )
     .expect("init explicit wiki");
+    let first_info = first
+        .get_repo_info_for(None, Some(&first_id.to_string()))
+        .expect("first info")
+        .expect("present");
+    drop(first);
     let second = RepoManager::init(&ledger_dir, 8, Some("wiki"), None).expect("init implicit wiki");
 
-    let first_info = first.get_repo_info().expect("first info").expect("present");
     let second_info = second
         .get_repo_info()
         .expect("second info")
         .expect("present");
-    assert_eq!(first_info.name, "wiki");
-    assert_eq!(second_info.name, "wiki");
-    assert_ne!(first_info.uuid, second_info.uuid);
+    assert_eq!(second_info.uuid, first_info.uuid);
+    assert_eq!(second_info.name, first_info.uuid.to_string());
+    assert_eq!(second_info.url, first_info.url);
 }
 
 #[test]
 fn init_keeps_duplicate_display_name_for_same_name_different_url() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let first = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("https://a.example"))
-        .expect("init first wiki");
-    let second = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("https://b.example"))
-        .expect("init second wiki");
-
-    let first_info = first.get_repo_info().expect("first info").expect("present");
-    let second_info = second
-        .get_repo_info()
+    let (owner, first_id) = common::init_cataloged_repo_with_url(
+        &ledger_dir,
+        &dir.path().join("first-notes"),
+        "https://a.example",
+    )
+    .expect("init first wiki");
+    let second_id = common::add_cataloged_repo_with_url(
+        &owner,
+        &dir.path().join("second-notes"),
+        "https://b.example",
+    )
+    .expect("init second wiki");
+    let first_info = owner
+        .get_repo_info_for(None, Some(&first_id.to_string()))
+        .expect("first info")
+        .expect("present");
+    let second_info = owner
+        .get_repo_info_for(None, Some(&second_id.to_string()))
         .expect("second info")
         .expect("present");
-    assert_eq!(first_info.name, "wiki");
-    assert_eq!(second_info.name, "wiki");
+    assert_eq!(first_info.name, first_info.uuid.to_string());
+    assert_eq!(second_info.name, second_info.uuid.to_string());
     assert_eq!(first_info.url.as_deref(), Some("https://a.example"));
     assert_eq!(second_info.url.as_deref(), Some("https://b.example"));
     assert_ne!(first_info.uuid, second_info.uuid);
@@ -194,7 +201,10 @@ fn init_fails_closed_on_existing_local_repo_without_metadata() {
         Ok(_) => panic!("missing repo metadata must fail closed"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("repository metadata missing"));
+    assert!(
+        err.to_string()
+            .contains("Uncataloged local authority artifacts require explicit ownership repair")
+    );
 }
 
 #[test]

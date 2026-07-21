@@ -57,21 +57,13 @@ pub(crate) fn record_fault(
         workspace_root,
         input.last_error,
     );
-    let handle = repo
-        .open_database(None, &execution_name)
-        .map_err(ProjectionFaultError::storage)?;
-    if handle.readonly || handle.repo_id != Some(info.uuid) {
-        return Err(ProjectionFaultError::Invariant(format!(
-            "projection fault target is not the exact local repo {}",
-            info.uuid
-        )));
-    }
-    let write = handle
-        .db
-        .begin_write()
-        .map_err(ProjectionFaultError::storage)?;
-    record_prepared_in_txn(&write, info.uuid, &prepared)?;
-    write.commit().map_err(ProjectionFaultError::storage)
+    repo.run_on_local_repo(&execution_name, |db| {
+        let write = db.begin_write().map_err(ProjectionFaultError::storage)?;
+        record_prepared_in_txn(&write, info.uuid, &prepared)?;
+        write.commit().map_err(ProjectionFaultError::storage)?;
+        Ok(())
+    })
+    .map_err(ProjectionFaultError::storage)
 }
 
 pub(crate) fn prepare_remote_import_fault(
@@ -193,27 +185,27 @@ pub(crate) fn load_degraded_repo_ids(repo: &RepoManager) -> ProjectionFaultResul
         .list_local_repo_names_for_execution()
         .map_err(ProjectionFaultError::storage)?;
     for execution_name in names {
-        let handle = repo
-            .open_database(None, &execution_name)
-            .map_err(ProjectionFaultError::storage)?;
-        let repo_id = handle.repo_id.ok_or_else(|| {
-            ProjectionFaultError::Invariant(format!("local repo {execution_name} has no RepoId"))
+        let repo_id = Uuid::parse_str(&execution_name).map_err(|_| {
+            ProjectionFaultError::Invariant(format!(
+                "local repo execution name is not a RepoId: {execution_name}"
+            ))
         })?;
-        let read = handle
-            .db
-            .begin_read()
+        let has_fault = repo
+            .run_on_local_repo(&execution_name, |db| {
+                let read = db.begin_read().map_err(ProjectionFaultError::storage)?;
+                let table = read
+                    .open_table(PROJECTION_FAULTS)
+                    .map_err(ProjectionFaultError::storage)?;
+                for row in table.iter().map_err(ProjectionFaultError::storage)? {
+                    let (key, value) = row.map_err(ProjectionFaultError::storage)?;
+                    let fault = decode_fault(key.value(), value.value(), repo_id)?;
+                    if fault.status == ProjectionFaultStatus::Pending {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            })
             .map_err(ProjectionFaultError::storage)?;
-        let table = read
-            .open_table(PROJECTION_FAULTS)
-            .map_err(ProjectionFaultError::storage)?;
-        let mut has_fault = false;
-        for row in table.iter().map_err(ProjectionFaultError::storage)? {
-            let (key, value) = row.map_err(ProjectionFaultError::storage)?;
-            let fault = decode_fault(key.value(), value.value(), repo_id)?;
-            if fault.status == ProjectionFaultStatus::Pending {
-                has_fault = true;
-            }
-        }
         if has_fault {
             degraded.push(repo_id);
         }
@@ -264,39 +256,31 @@ pub(crate) fn clear_faults_for_repo(
     let execution_name = repo
         .resolve_local_repo_name_for_execution(Some(info.uuid), Some(repo_name))
         .map_err(ProjectionFaultError::storage)?;
-    let handle = repo
-        .open_database(None, &execution_name)
-        .map_err(ProjectionFaultError::storage)?;
-    if handle.readonly || handle.repo_id != Some(info.uuid) {
-        return Err(ProjectionFaultError::Invariant(format!(
-            "projection fault clear target is not the exact local repo {}",
-            info.uuid
-        )));
-    }
-    let write = handle
-        .db
-        .begin_write()
-        .map_err(ProjectionFaultError::storage)?;
-    verify_repo_identity_in_txn(&write, info.uuid)?;
-    {
-        let mut table = write
-            .open_table(PROJECTION_FAULTS)
-            .map_err(ProjectionFaultError::storage)?;
-        let keys = table
-            .iter()
-            .map_err(ProjectionFaultError::storage)?
-            .map(|row| {
-                let (key, value) = row.map_err(ProjectionFaultError::storage)?;
-                let key = key.value();
-                decode_fault(key, value.value(), info.uuid)?;
-                Ok(key)
-            })
-            .collect::<ProjectionFaultResult<Vec<_>>>()?;
-        for key in keys {
-            table.remove(&key).map_err(ProjectionFaultError::storage)?;
+    repo.run_on_local_repo(&execution_name, |db| {
+        let write = db.begin_write().map_err(ProjectionFaultError::storage)?;
+        verify_repo_identity_in_txn(&write, info.uuid)?;
+        {
+            let mut table = write
+                .open_table(PROJECTION_FAULTS)
+                .map_err(ProjectionFaultError::storage)?;
+            let keys = table
+                .iter()
+                .map_err(ProjectionFaultError::storage)?
+                .map(|row| {
+                    let (key, value) = row.map_err(ProjectionFaultError::storage)?;
+                    let key = key.value();
+                    decode_fault(key, value.value(), info.uuid)?;
+                    Ok(key)
+                })
+                .collect::<ProjectionFaultResult<Vec<_>>>()?;
+            for key in keys {
+                table.remove(&key).map_err(ProjectionFaultError::storage)?;
+            }
         }
-    }
-    write.commit().map_err(ProjectionFaultError::storage)
+        write.commit().map_err(ProjectionFaultError::storage)?;
+        Ok(())
+    })
+    .map_err(ProjectionFaultError::storage)
 }
 
 fn verify_repo_identity_in_txn(

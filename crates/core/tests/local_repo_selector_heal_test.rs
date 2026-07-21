@@ -9,9 +9,8 @@ fn resolve_local_repo_name_rejects_selector_mismatch_after_repair() {
     let (repo, default_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("default-notes"), 8)
             .expect("init default");
-    let (_test, test_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("test-notes"), 8)
-            .expect("init test");
+    let test_id = common::add_cataloged_repo_with_depth(&repo, &dir.path().join("test-notes"), 8)
+        .expect("init test");
 
     let err = repo
         .resolve_local_repo_name(Some(default_id), Some(&test_id.to_string()))
@@ -26,9 +25,8 @@ fn resolve_local_repo_name_for_execution_rejects_selector_mismatch() {
     let (repo, default_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("default-notes"), 8)
             .expect("init default");
-    let (_test, test_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("test-notes"), 8)
-            .expect("init test");
+    let test_id = common::add_cataloged_repo_with_depth(&repo, &dir.path().join("test-notes"), 8)
+        .expect("init test");
 
     let err = repo
         .resolve_local_repo_name_for_execution(Some(default_id), Some(&test_id.to_string()))

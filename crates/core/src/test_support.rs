@@ -74,9 +74,12 @@ pub(crate) fn commit_cataloged_repo_membership(
         .repo
         .revalidate_repo_creation_membership(&creation)?;
     let permit = authority.permit(prepared.repo_id)?;
-    prepared
+    let commit = prepared
         .repo
         .commit_repo_creation_membership(&creation, &revalidated, &permit)?;
+    prepared
+        .repo
+        .activate_initial_prepared_local_repo_authority(&creation, &commit)?;
     Ok(())
 }
 
@@ -113,6 +116,41 @@ pub(crate) fn init_cataloged_repo_with_depth(
     let prepared = prepare_cataloged_repo(ledger_dir, projection_base, snapshot_depth, None)?;
     commit_cataloged_repo_membership(&prepared)?;
     Ok((prepared.repo, prepared.repo_id))
+}
+
+/// Adds one cataloged repo while preserving a single long-lived test
+/// composition root. The short-lived creator owns only the new RepoId and is
+/// dropped before `owner` can lease the new authority.
+pub(crate) fn add_cataloged_repo(
+    owner: &RepoManager,
+    _ledger_dir: &Path,
+    projection_base: &Path,
+    repo_url: Option<&str>,
+) -> anyhow::Result<uuid::Uuid> {
+    let repo_id = uuid::Uuid::new_v4();
+    let execution_name = repo_id.to_string();
+    let (_info, prepared_authority) =
+        owner.create_local_repo_authority(repo_id, repo_url.map(str::to_string))?;
+    let locator = owner.prepare_projection_locator_for_repo_creation_with_authority(
+        repo_id,
+        projection_base,
+        &prepared_authority,
+    )?;
+    let workspace = locator.projection_base_abs.join(&locator.workspace_segment);
+    std::fs::create_dir_all(&workspace)?;
+    crate::utils::notegit::ensure_repo_identity_marker(&workspace, repo_id, &execution_name)?;
+    let authority = owner.claim_repo_catalog_cut_authority()?;
+    let prepared = owner.prepare_repo_creation_membership_with_authority(
+        repo_id,
+        uuid::Uuid::new_v4(),
+        &prepared_authority,
+    )?;
+    let revalidated =
+        owner.revalidate_repo_creation_membership_with_authority(&prepared, &prepared_authority)?;
+    let permit = authority.permit(repo_id)?;
+    let commit = owner.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    owner.activate_prepared_local_repo_authority(prepared_authority, &prepared, &commit)?;
+    Ok(repo_id)
 }
 
 pub(crate) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyhow::Result<()> {

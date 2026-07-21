@@ -7,7 +7,7 @@ use tempfile::TempDir;
 mod common;
 
 #[test]
-fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
+fn local_repo_listing_ignores_uncataloged_broken_artifact_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let (repo, _repo_id) =
@@ -15,14 +15,15 @@ fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
             .expect("main");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
 
-    let list_err = repo
-        .list_repos(None)
-        .expect_err("broken local repo must fail closed");
-    assert!(list_err.to_string().contains("Broken local repo broken"));
-    let exec_err = repo
-        .list_local_repo_names_for_execution()
-        .expect_err("broken local repo must fail execution listing");
-    assert!(exec_err.to_string().contains("Broken local repo broken"));
+    assert_eq!(
+        repo.list_repos(None).expect("catalog listing"),
+        vec![repo.local_repo_name().to_string()]
+    );
+    assert_eq!(
+        repo.list_local_repo_names_for_execution()
+            .expect("execution listing"),
+        vec![repo.local_repo_name().to_string()]
+    );
     assert_eq!(
         repo.resolve_local_repo_name(None, Some(repo.local_repo_name()))
             .expect("exact RepoId execution selector remains valid"),
@@ -30,22 +31,41 @@ fn local_repo_listing_fails_closed_on_broken_secondary_repo() {
     );
     let resolve_err = repo
         .resolve_local_repo_name(None, Some("broken"))
-        .expect_err("broken selector must fail resolution");
-    assert!(resolve_err.to_string().contains("Broken local repo broken"));
+        .expect_err("uncataloged selector must fail resolution");
+    assert!(resolve_err.to_string().contains("Local repo not found"));
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report broken orphan");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("physical authority selector is not a RepoId: broken"),
+        "{repair_err:#}"
+    );
 }
 
 #[test]
-fn init_fails_closed_on_broken_secondary_repo() {
+fn init_ignores_uncataloged_broken_artifact_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let _repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
+    drop(repo);
 
-    let err = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"))
-        .err()
-        .expect("broken local repo must fail init");
-    let detail = format!("{err:#}");
-    assert!(detail.contains("Broken local repo broken"));
+    let reopened = RepoManager::init(&ledger_dir, 8, None, None).expect("cataloged init");
+    assert_eq!(
+        reopened.list_repos(None).expect("catalog listing"),
+        vec![repo_id.to_string()]
+    );
+    let err = reopened
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report broken orphan");
+    assert!(
+        format!("{err:#}").contains("physical authority selector is not a RepoId: broken"),
+        "{err:#}"
+    );
 }
 
 #[cfg(unix)]
@@ -53,13 +73,16 @@ fn init_fails_closed_on_broken_secondary_repo() {
 fn init_fails_closed_on_unstatable_local_db_path() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let _repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     let local_dir = ledger_dir.join("local");
     let original = std::fs::metadata(&local_dir)
         .expect("metadata")
         .permissions();
     let mut perms = original.clone();
     perms.set_mode(0o000);
+    drop(repo);
     std::fs::set_permissions(&local_dir, perms).expect("chmod 000");
 
     let err = match RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")) {
@@ -76,50 +99,59 @@ fn init_fails_closed_on_unstatable_local_db_path() {
 }
 
 #[test]
-fn set_projection_base_for_all_local_repos_checked_fails_closed_on_broken_secondary_repo() {
+fn projection_mount_ignores_uncataloged_broken_artifact_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let first_projection_base = dir.path().join("notes-ok");
-    std::fs::create_dir_all(&first_projection_base).expect("first projection base dir");
-    repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)
-        .expect("initial projection base mount");
+    let (mut repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &first_projection_base, 8)
+            .expect("main");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
     let projection_base = dir.path().join("notes");
     std::fs::create_dir_all(&projection_base).expect("projection base dir");
 
-    let err = repo
-        .set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect_err("broken local repo must fail checked projection base mount");
-    assert!(err.to_string().contains("Broken local repo broken"));
-    let root_err = repo
-        .local_repo_workspace_root("main")
-        .expect_err("workspace root lookup must also fail closed on broken catalog");
-    assert!(root_err.to_string().contains("Broken local repo broken"));
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("cataloged projection mount");
+    assert!(repo.local_repo_workspace_root(&repo_id.to_string()).is_ok());
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report broken orphan");
+    assert!(
+        repair_err
+            .to_string()
+            .contains("physical authority selector is not a RepoId: broken"),
+        "{repair_err:#}"
+    );
 }
 
 #[cfg(unix)]
 #[test]
-fn local_repo_listing_fails_closed_on_invalid_repo_stem() {
+fn local_repo_listing_ignores_invalid_nonmember_stem_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     common::seed_invalid_stem_local_repo(&ledger_dir);
 
-    let list_err = repo
-        .list_repos(None)
-        .expect_err("invalid repo stem must fail local listing");
-    assert!(list_err.to_string().contains("invalid file stem"));
-
-    let exec_err = repo
-        .list_local_repo_names_for_execution()
-        .expect_err("invalid repo stem must fail execution listing");
-    assert!(exec_err.to_string().contains("invalid file stem"));
-
-    let lookup_err = repo
-        .find_local_repo_name_by_id(uuid::Uuid::new_v4())
-        .expect_err("invalid repo stem must fail UUID lookup");
-    assert!(lookup_err.to_string().contains("invalid file stem"));
+    assert_eq!(
+        repo.list_repos(None).expect("catalog listing"),
+        vec![repo_id.to_string()]
+    );
+    assert_eq!(
+        repo.list_local_repo_names_for_execution()
+            .expect("execution listing"),
+        vec![repo_id.to_string()]
+    );
+    assert_eq!(
+        repo.find_local_repo_name_by_id(uuid::Uuid::new_v4())
+            .expect("catalog lookup"),
+        None
+    );
+    let repair_err = repo
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report invalid file stem");
+    assert!(repair_err.to_string().contains("invalid file stem"));
 }
 
 #[test]
@@ -129,14 +161,13 @@ fn runtime_and_explicit_repair_fail_closed_on_secondary_repo_id_mismatch() {
     let (main, main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("main-notes"), 8)
             .expect("main");
-    let (_wiki, wiki_id) =
-        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("wiki-notes"), 8)
-            .expect("wiki");
+    let wiki_id = common::add_cataloged_repo_with_depth(&main, &dir.path().join("wiki-notes"), 8)
+        .expect("wiki");
     let wiki_db = main
-        .open_database(None, &wiki_id.to_string())
-        .expect("wiki db");
+        .lease_local_authority(wiki_id)
+        .expect("wiki authority lease");
     common::write_repo_metadata(
-        wiki_db.db.as_ref(),
+        wiki_db.db(),
         &RepoInfo {
             uuid: main_id,
             name: main_id.to_string(),
@@ -157,24 +188,23 @@ fn runtime_and_explicit_repair_fail_closed_on_secondary_repo_id_mismatch() {
             .to_string()
             .contains("physical RepoId does not match")
     );
-    assert_eq!(
-        common::read_repo_metadata(wiki_db.db.as_ref()).uuid,
-        main_id
-    );
+    assert_eq!(common::read_repo_metadata(wiki_db.db()).uuid, main_id);
 }
 
 #[test]
-fn runtime_and_explicit_repair_fail_closed_on_missing_secondary_metadata() {
+fn runtime_ignores_uncataloged_metadata_less_artifact_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
+            .expect("main");
     let missing_id = uuid::Uuid::new_v4();
     common::seed_metadata_less_local_repo(&ledger_dir, &missing_id.to_string());
 
-    let err = repo
-        .list_repos(None)
-        .expect_err("runtime listing must fail closed on missing metadata");
-    assert!(err.to_string().contains("repository metadata missing"));
+    assert_eq!(
+        repo.list_repos(None).expect("catalog listing"),
+        vec![repo_id.to_string()]
+    );
 
     let repair_err = repo
         .repair_local_repo_catalog()
@@ -191,21 +221,11 @@ fn runtime_and_explicit_repair_fail_closed_on_missing_secondary_metadata() {
 fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("notes-base");
-    std::fs::create_dir_all(projection_base.join("notes")).expect("workspace root");
-    main.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("mount projection base");
-    let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
-    common::write_repo_metadata(
-        wiki_db.as_ref(),
-        &RepoInfo {
-            uuid: wiki_info.uuid,
-            name: "notes".into(),
-            url: wiki_info.url.clone(),
-        },
-    );
+    let (main, _main_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &projection_base, 8).expect("main");
+    common::add_cataloged_repo_with_url(&main, &projection_base, "urn:wiki")
+        .expect("initialized wiki");
 
     let original = std::fs::metadata(&projection_base)
         .expect("metadata")

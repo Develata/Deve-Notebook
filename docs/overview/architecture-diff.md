@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-20 (ownership-aware RemoveLocalRepo target registered; implementation remains drifted)
+Generated: 2026-07-21 (R1 per-RepoId authority ownership landed; removal flow remains drifted)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -24,7 +24,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 client gap，`repo lifecycle` 保留 ownership-aware removal gap |
 | User operations | drifted | current F4/v4 direct submit-remove Repo Control job仍存在；machine projection已分别登记目标F4/v5 Prepare/Execute missing nodes。zero-repo、destructive settlement/repair 与 Remote Import client 尚未收敛 |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback与repo catalog cut已存在；per-RepoId DB owner/lease、zero-repo composition、owned-state settlement/repair 与 Remote Import independent client 尚未收敛 |
+| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、repo catalog cut与per-RepoId DB owner/lease已存在；zero-repo composition、owned-state settlement/repair 与 Remote Import independent client 尚未收敛 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -44,7 +44,7 @@ Active drift facts:
 2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
 4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 已接入 host lifecycle，B5 尚未提供 thin Web management surface。
-5. `repo lifecycle`: host-owned jobs、现有prepare/cut/settle骨架与session-scoped publication已存在；ownership-aware `RemoveLocalRepo`仍缺per-RepoId authority owner/lease与Reopening reservation、zero-repo host、F4/v5 preview-token/atomic admission/single typed finalization、manifest-bound cleanup/repair与destructive UI evidence。
+5. `repo lifecycle`: host-owned jobs、现有prepare/cut/settle骨架、session-scoped publication与R1 per-RepoId authority owner/non-clone lease、pre-admission fail-closed状态和retirement capability已存在；later same-RepoId Reopening尚未实现，ownership-aware `RemoveLocalRepo`仍缺zero-repo host、F4/v5 preview-token/atomic admission/single typed finalization、manifest-bound cleanup/repair与destructive UI evidence。
 
 ## Flow Registry
 

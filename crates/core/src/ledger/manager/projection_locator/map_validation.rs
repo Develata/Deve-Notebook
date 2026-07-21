@@ -29,6 +29,7 @@ pub(super) fn validate_projection_locator_records_for_prepared_creation(
     repo: &RepoManager,
     records: &[ProjectionLocatorRecord],
     prepared_repo_id: RepoId,
+    prepared_info: RepoInfo,
 ) -> Result<()> {
     if repo
         .repo_catalog_membership_record(prepared_repo_id)?
@@ -46,12 +47,6 @@ pub(super) fn validate_projection_locator_records_for_prepared_creation(
         local_infos.push((repo_name, info));
     }
     let execution_name = prepared_repo_id.to_string();
-    let prepared_info = repo
-        .repo_scope_runtime()
-        .read_local_repo_info_by_stem_without_repair(&execution_name)?
-        .ok_or_else(|| {
-            anyhow!("Prepared Projection Locator target metadata is missing: {prepared_repo_id}")
-        })?;
     if prepared_info.uuid != prepared_repo_id || prepared_info.name != execution_name {
         return Err(anyhow!(
             "Prepared Projection Locator target must use canonical RepoId identity"

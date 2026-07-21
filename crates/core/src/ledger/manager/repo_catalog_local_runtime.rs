@@ -3,7 +3,6 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 03_storage/projection#projection-locator-contract
 
-use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::repo_catalog_runtime::RepoCatalogRuntime;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use anyhow::{Result, anyhow};
@@ -11,27 +10,23 @@ use anyhow::{Result, anyhow};
 impl<'a> RepoCatalogRuntime<'a> {
     pub(crate) fn list_local_display_names(&self) -> Result<Vec<String>> {
         self.refresh_local_catalog()?;
-        let target_dir =
-            RepoManager::checked_local_dir_for(&self.manager.ledger_dir, "listing repos")?;
-
         let mut named = Vec::new();
-        for (path, stem) in redb_repo_entries(&target_dir, "listing repos")? {
-            let info = if stem == self.manager.local_repo_name {
-                self.manager.get_repo_info()?.ok_or_else(|| {
-                    anyhow!(
-                        "Broken local repo {} while listing repos: repository metadata missing",
-                        stem
-                    )
-                })?
-            } else {
-                RepoManager::read_required_local_repo_info_from_path(&path, &stem, "listing repos")
-                    .map_err(|err| {
-                        anyhow!("Broken local repo {} while listing repos: {}", stem, err)
-                    })?
-            };
-            if self.manager.is_local_repo_removed(info.uuid)? {
-                continue;
-            }
+        for repo_id in self.manager.normal_repo_catalog_ids()? {
+            let stem = repo_id.to_string();
+            let info = self
+                .manager
+                .run_on_local_repo_stem(&stem, |db| {
+                    let info = RepoManager::read_local_repo_info_from_db(db)?.ok_or_else(|| {
+                        anyhow!(
+                            "Broken local repo {} while listing repos: repository metadata missing",
+                            stem
+                        )
+                    })?;
+                    Ok(info)
+                })
+                .map_err(|err| {
+                    anyhow!("Broken local repo {} while listing repos: {}", stem, err)
+                })?;
             named.push((stem, info.name));
         }
 
@@ -64,28 +59,21 @@ impl<'a> RepoCatalogRuntime<'a> {
     }
 
     fn local_repo_info_snapshot(&self, context: &str) -> Result<Vec<(String, RepoInfo)>> {
-        let local_dir = RepoManager::checked_local_dir_for(&self.manager.ledger_dir, context)?;
         let mut repos = Vec::new();
-        for (path, stem) in redb_repo_entries(&local_dir, context)? {
-            if stem == self.manager.local_repo_name {
-                let info = self.manager.get_repo_info()?.ok_or_else(|| {
-                    anyhow!(
-                        "Broken local repo {} while {}: repository metadata missing",
-                        stem,
-                        context
-                    )
-                })?;
-                if self.manager.is_local_repo_removed(info.uuid)? {
-                    continue;
-                }
-                repos.push((stem, info));
-                continue;
-            }
-            let info = RepoManager::read_required_local_repo_info_from_path(&path, &stem, context)
+        for repo_id in self.manager.normal_repo_catalog_ids()? {
+            let stem = repo_id.to_string();
+            let info = self
+                .manager
+                .run_on_local_repo_stem(&stem, |db| {
+                    RepoManager::read_local_repo_info_from_db(db)?.ok_or_else(|| {
+                        anyhow!(
+                            "Broken local repo {} while {}: repository metadata missing",
+                            stem,
+                            context
+                        )
+                    })
+                })
                 .map_err(|err| anyhow!("Broken local repo {} while {}: {}", stem, context, err))?;
-            if self.manager.is_local_repo_removed(info.uuid)? {
-                continue;
-            }
             repos.push((stem, info));
         }
         repos.sort_by(|(left, _), (right, _)| left.cmp(right));

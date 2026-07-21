@@ -70,8 +70,8 @@ fn load_repo_view(
     })?;
     let (docs, nodes) = if let Some(handle) = prepared.db.as_ref() {
         (
-            node_meta::list_file_docs(&handle.db)?,
-            node_meta::list_nodes(&handle.db)?,
+            node_meta::list_file_docs(handle.remote_db()?)?,
+            node_meta::list_nodes(handle.remote_db()?)?,
         )
     } else if let Some(peer_id) = branch.cloned() {
         (

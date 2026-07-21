@@ -2,7 +2,6 @@
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
 
-use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::RepoId;
 use anyhow::Result;
@@ -27,54 +26,34 @@ impl<'a> RepoScopeLookupRuntime<'a> {
         &self,
         target_id: RepoId,
     ) -> Result<Option<String>> {
-        if let Some(info) = RepoManager::read_local_repo_info_from_db(&self.manager.local_db)
-            .map_err(|err| {
-                anyhow::anyhow!(
-                    "Broken local repo {} while resolving UUID {} without repair: {}",
-                    self.manager.local_repo_name,
-                    target_id,
-                    err
-                )
-            })?
-            && info.uuid == target_id
-            && !self.manager.is_local_repo_removed(info.uuid)?
-        {
-            return Ok(Some(self.manager.local_repo_name.clone()));
+        if !self.manager.normal_repo_catalog_ids()?.contains(&target_id) {
+            return Ok(None);
         }
-
-        let local_dir = RepoManager::checked_local_dir_for(
-            &self.manager.ledger_dir,
-            "resolving local repo UUID without repair",
-        )?;
-
-        for (path, file_stem) in
-            redb_repo_entries(&local_dir, "resolving local repo UUID without repair")?
-        {
-            if file_stem == self.manager.local_repo_name {
-                continue;
-            }
-            let info = RepoManager::read_required_local_repo_info_from_path(
-                &path,
-                &file_stem,
-                "resolving UUID without repair",
-            )
+        let stem = target_id.to_string();
+        let lease = self
+            .manager
+            .lease_local_authority(target_id)
             .map_err(|err| {
                 anyhow::anyhow!(
                     "Broken local repo {} while resolving UUID {} without repair: {}",
-                    file_stem,
+                    stem,
                     target_id,
                     err
                 )
             })?;
-            if self.manager.is_local_repo_removed(info.uuid)? {
-                continue;
-            }
-            if info.uuid == target_id {
-                return Ok(Some(file_stem));
-            }
+        let info = RepoManager::read_local_repo_info_from_db(lease.db())?.ok_or_else(|| {
+            anyhow::anyhow!(
+                "Broken local repo {} while resolving UUID without repair: repository metadata missing",
+                stem
+            )
+        })?;
+        if info.uuid != target_id || info.name != stem {
+            anyhow::bail!(
+                "Broken local repo {} while resolving UUID without repair: metadata identity mismatch",
+                stem
+            );
         }
-
-        Ok(None)
+        Ok(Some(stem))
     }
 
     pub(crate) fn get_local_repo_info_by_id(&self, repo_id: RepoId) -> Result<Option<RepoInfo>> {
@@ -130,10 +109,7 @@ impl<'a> RepoScopeLookupRuntime<'a> {
         &self,
         stem: &str,
     ) -> Result<Option<RepoInfo>> {
-        if stem == self.manager.local_repo_name {
-            return RepoManager::read_local_repo_info_from_db(&self.manager.local_db);
-        }
-        self.manager
-            .run_on_local_repo_stem(stem, RepoManager::read_repo_info_from_db)
+        let lease = self.manager.lease_local_authority_stem(stem)?;
+        RepoManager::read_local_repo_info_from_db(lease.db())
     }
 }

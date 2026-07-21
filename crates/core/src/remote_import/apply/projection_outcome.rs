@@ -30,8 +30,10 @@ pub(in crate::remote_import) fn settle_projection_degraded(
     expected: &RemoteImportApplyReceipt,
     last_error: &str,
 ) -> RemoteImportResult<RemoteImportApplyReceipt> {
-    let info = RepoManager::read_local_repo_info_from_db(store.db().as_ref())
-        .map_err(RemoteImportError::storage)?
+    let info = store
+        .with_db(|db| {
+            RepoManager::read_local_repo_info_from_db(db).map_err(RemoteImportError::storage)
+        })?
         .ok_or_else(|| {
             RemoteImportError::Storage(
                 "Remote Import projection settlement RepoInfo is missing".to_string(),
@@ -73,10 +75,8 @@ fn settle(
     expected: &RemoteImportApplyReceipt,
     settlement: ProjectionSettlement<'_>,
 ) -> RemoteImportResult<RemoteImportApplyReceipt> {
-    let write = store
-        .db()
-        .begin_write()
-        .map_err(RemoteImportError::storage)?;
+    let db = store.lease_db()?;
+    let write = db.begin_write().map_err(RemoteImportError::storage)?;
     let receipt = settle_in_txn(&write, store, expected, settlement)?;
     write.commit().map_err(RemoteImportError::storage)?;
     Ok(receipt)
@@ -158,10 +158,8 @@ pub(in crate::remote_import) fn settle_degraded_without_commit_for_test(
     expected: &RemoteImportApplyReceipt,
     fault: &PreparedProjectionFault,
 ) -> RemoteImportResult<RemoteImportApplyReceipt> {
-    let write = store
-        .db()
-        .begin_write()
-        .map_err(RemoteImportError::storage)?;
+    let db = store.lease_db()?;
+    let write = db.begin_write().map_err(RemoteImportError::storage)?;
     let receipt = settle_in_txn(
         &write,
         store,

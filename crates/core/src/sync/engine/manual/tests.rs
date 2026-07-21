@@ -6,6 +6,7 @@ use crate::sync::engine::SyncEngine;
 use crate::sync::protocol::SyncResponse;
 use std::sync::Arc;
 
+mod routing;
 mod snapshot;
 
 fn build_engine(
@@ -20,9 +21,11 @@ fn build_engine(
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(&ledger, 8, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo_with_url(
+        &ledger,
+        &projection_base,
+        "urn:test:notes",
+    )?;
     let repo = Arc::new(repo);
     let key = RepoKey::generate();
     let engine = SyncEngine::new(
@@ -459,41 +462,5 @@ fn failed_manual_merge_restores_payloads_and_all_resource_counters() -> anyhow::
         );
         assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
     }
-    Ok(())
-}
-
-#[test]
-fn manual_merge_rejects_mixed_peer_targets() -> anyhow::Result<()> {
-    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
-    let peer_a = PeerId::new("remote-a");
-    let peer_b = PeerId::new("remote-b");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_a, repo_id, &key, 1)?)?;
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer_b, repo_id, &key, 1)?)?;
-
-    let err = engine
-        .merge_pending()
-        .expect_err("mixed peer targets must fail closed");
-    assert!(err.to_string().contains("one peer/repo target"));
-    assert_eq!(engine.pending_ops_count(), 2);
-    assert_eq!(repo.get_shadow_max_seq(&peer_a, &repo_id)?, 0);
-    assert_eq!(repo.get_shadow_max_seq(&peer_b, &repo_id)?, 0);
-    Ok(())
-}
-
-#[test]
-fn manual_merge_rejects_mixed_repo_targets() -> anyhow::Result<()> {
-    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
-    let other_repo_id = uuid::Uuid::new_v4();
-    let peer = PeerId::new("remote");
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
-    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, other_repo_id, &key, 1)?)?;
-
-    let err = engine
-        .merge_pending()
-        .expect_err("mixed repo targets must fail closed");
-    assert!(err.to_string().contains("one peer/repo target"));
-    assert_eq!(engine.pending_ops_count(), 2);
-    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 0);
-    assert_eq!(repo.get_shadow_max_seq(&peer, &other_repo_id)?, 0);
     Ok(())
 }

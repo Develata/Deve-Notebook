@@ -49,8 +49,8 @@ fn legacy_v2_export_without_explicit_flag_fails_closed() -> Result<()> {
     .expect_err("normal export must reject a schema-v2 repo");
     let message = format!("{error:#}");
     assert!(
-        message.contains("schema") && message.contains('2'),
-        "unexpected error: {message}"
+        message.contains("Uncataloged local authority artifacts require explicit ownership repair"),
+        "normal UUID-first admission must reject the legacy filename before any export: {message}"
     );
     assert!(!output.exists());
     Ok(())

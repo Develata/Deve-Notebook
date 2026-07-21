@@ -15,7 +15,9 @@ use anyhow::Result;
 impl RepoManager {
     /// 保存文档快照 (仅限本地库)
     pub fn save_snapshot(&self, doc_id: DocId, seq: u64, content: &str) -> Result<()> {
-        snapshot::save_snapshot(&self.local_db, doc_id, seq, content, self.snapshot_depth)
+        self.run_on_primary_local_repo(|db| {
+            snapshot::save_snapshot(db, doc_id, seq, content, self.snapshot_depth)
+        })
     }
 
     pub fn save_snapshot_in_local_repo(
@@ -32,7 +34,7 @@ impl RepoManager {
 
     /// 读取文档的最新快照 (仅限本地库)
     pub fn load_latest_snapshot(&self, doc_id: DocId) -> Result<Option<(u64, String)>> {
-        snapshot::load_latest_snapshot(&self.local_db, doc_id)
+        self.run_on_primary_local_repo(|db| snapshot::load_latest_snapshot(db, doc_id))
     }
 
     pub fn load_latest_snapshot_in_local_repo(

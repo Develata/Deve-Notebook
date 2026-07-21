@@ -87,9 +87,8 @@ fn multi_repo_listing_isolation() {
     let (alpha, alpha_id) =
         common::init_cataloged_repo_with_depth(&ledger, &dir.path().join("alpha-notes"), 10)
             .expect("init alpha");
-    let (_beta, beta_id) =
-        common::init_cataloged_repo_with_depth(&ledger, &dir.path().join("beta-notes"), 10)
-            .expect("init beta");
+    let beta_id = common::add_cataloged_repo_with_depth(&alpha, &dir.path().join("beta-notes"), 10)
+        .expect("init beta");
 
     let (doc_a, _) = alpha
         .apply_file_structure_in_local_repo(alpha.local_repo_name(), "readme.md", None, "test")

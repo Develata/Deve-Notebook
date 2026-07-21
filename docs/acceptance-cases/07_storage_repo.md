@@ -282,7 +282,9 @@
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
-    - gap: R1-R6 per-RepoId authority ownership, zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh evidence are not implemented yet
+    - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
+    - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
+    - gap: R1 per-RepoId authority ownership is implemented; R2-R6 zero-repo host, F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh cross-process evidence are not implemented yet
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_create_without_projection_base_returns_typed_error -- --nocapture

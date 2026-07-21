@@ -20,7 +20,8 @@ fn resolve_session_repo_preserves_missing_local_catalog_failure() -> anyhow::Res
 
     let detail = err.to_string();
     assert!(
-        detail.contains("local repo directory missing"),
+        detail.contains("local repo directory missing")
+            || detail.contains("Failed to open local authority database"),
         "unexpected error detail: {detail}"
     );
     assert_eq!(

@@ -47,7 +47,7 @@ fn projection_locator_runtime_check_validates_full_map_conflicts() -> anyhow::Re
     std::fs::create_dir_all(&base)?;
     let (main, default_id) = super::init_cataloged_repo(&ledger, &base)?;
     let wiki_base = dir.path().join("wiki-notes");
-    let (_, wiki_id) = super::init_cataloged_repo(&ledger, &wiki_base)?;
+    let wiki_id = crate::test_support::add_cataloged_repo(&main, &ledger, &wiki_base, None)?;
     let nested_base = base.join(default_id.to_string());
     std::fs::create_dir_all(&nested_base)?;
 
@@ -154,16 +154,12 @@ fn prepared_locator_does_not_block_cataloged_repo_queries() -> anyhow::Result<()
     let base = dir.path().join("notes");
     let (main, healthy_id) = super::init_cataloged_repo(&ledger, &base)?;
     let prepared_id = uuid::Uuid::new_v4();
-    let prepared = RepoManager::init_with_options(
-        &ledger,
-        8,
-        Some(&prepared_id.to_string()),
-        crate::ledger::init::RepoInitOptions {
-            repo_id: Some(prepared_id),
-            repo_url: None,
-        },
+    let (_info, prepared) = main.create_local_repo_authority(prepared_id, None)?;
+    main.prepare_projection_locator_for_repo_creation_with_authority(
+        prepared_id,
+        &base,
+        &prepared,
     )?;
-    prepared.prepare_projection_locator_for_repo_creation(prepared_id, &base)?;
 
     let visible = main.list_projection_locators()?;
     assert_eq!(visible.len(), 1);
@@ -218,7 +214,8 @@ fn prepared_locator_is_raw_recovery_truth_until_catalog_cut() -> anyhow::Result<
     let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
 
     assert_eq!(repo.list_projection_locators()?, vec![locator]);
     Ok(())
@@ -273,40 +270,63 @@ fn concurrent_locator_map_writes_do_not_drop_entries() -> anyhow::Result<()> {
     let base = dir.path().join("notes");
     std::fs::create_dir_all(&base)?;
     let ids: Vec<uuid::Uuid> = (0..4).map(|_| uuid::Uuid::new_v4()).collect();
-    let managers = ids
+    let primary_id = ids[0];
+    let expected_count = ids.len();
+    let owner = Arc::new(RepoManager::init_with_options(
+        &ledger,
+        4,
+        Some(&primary_id.to_string()),
+        crate::ledger::init::RepoInitOptions {
+            repo_id: Some(primary_id),
+            repo_url: None,
+        },
+    )?);
+    let prepared = ids[1..]
         .iter()
-        .map(|id| {
-            RepoManager::init_with_options(
-                &ledger,
-                4,
-                Some(&id.to_string()),
-                crate::ledger::init::RepoInitOptions {
-                    repo_id: Some(*id),
-                    repo_url: None,
-                },
-            )
+        .map(|repo_id| {
+            owner
+                .create_local_repo_authority(*repo_id, None)
+                .map(|(_, p)| p)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let handles: Vec<_> = managers
-        .into_iter()
-        .zip(ids.iter().copied())
-        .map(|(repo, id)| {
+    std::thread::scope(|scope| -> anyhow::Result<()> {
+        let primary = {
+            let owner = owner.clone();
             let base = base.clone();
-            std::thread::spawn(move || {
-                repo.prepare_projection_locator_for_repo_creation(id, &base)
+            scope.spawn(move || {
+                owner
+                    .prepare_projection_locator_for_repo_creation(primary_id, &base)
                     .map(|_| ())
             })
-        })
-        .collect();
-    for handle in handles {
-        handle.join().expect("prepare thread panicked")?;
-    }
+        };
+        let handles = prepared
+            .iter()
+            .map(|authority| {
+                let owner = owner.clone();
+                let base = base.clone();
+                scope.spawn(move || {
+                    owner
+                        .prepare_projection_locator_for_repo_creation_with_authority(
+                            authority.repo_id(),
+                            &base,
+                            authority,
+                        )
+                        .map(|_| ())
+                })
+            })
+            .collect::<Vec<_>>();
+        primary.join().expect("primary prepare thread panicked")?;
+        for handle in handles {
+            handle.join().expect("prepare thread panicked")?;
+        }
+        Ok(())
+    })?;
 
     let file = read_projection_locator_file(&projection_locator_path_for(&ledger))?;
     assert_eq!(
         file.locators.len(),
-        ids.len(),
+        expected_count,
         "every concurrently prepared locator entry must survive the map rewrite"
     );
     Ok(())

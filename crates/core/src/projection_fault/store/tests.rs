@@ -2,13 +2,15 @@
 //!   - 03_storage/projection#durable-projection-fault-contract
 
 use super::*;
-use crate::ledger::RepoManager;
 use redb::ReadableTable;
 
 #[test]
 fn deterministic_key_and_repeat_upsert_preserve_first_seen() -> anyhow::Result<()> {
     let temp = tempfile::tempdir()?;
-    let repo = RepoManager::init(temp.path().join("ledger"), 8, Some("main"), None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+        &temp.path().join("ledger"),
+        &temp.path().join("notes"),
+    )?;
     let info = repo.get_repo_info()?.expect("repo info");
     let first = prepare(
         &info,
@@ -35,12 +37,13 @@ fn deterministic_key_and_repeat_upsert_preserve_first_seen() -> anyhow::Result<(
     second.value.last_seen_at_unix_ms = first.value.last_seen_at_unix_ms + 1;
     assert_eq!(first.key, second.key);
 
-    let write = repo.local_db.begin_write()?;
+    let lease = repo.local_authority_lease_for_test(info.uuid)?;
+    let write = lease.db().begin_write()?;
     record_prepared_in_txn(&write, info.uuid, &first)?;
     record_prepared_in_txn(&write, info.uuid, &second)?;
     write.commit()?;
 
-    let read = repo.local_db.begin_read()?;
+    let read = lease.db().begin_read()?;
     let table = read.open_table(PROJECTION_FAULTS)?;
     let row = table.get(&first.key)?.expect("fault row");
     let stored = decode_fault(first.key, row.value(), info.uuid)?;
@@ -61,7 +64,7 @@ fn deterministic_key_and_repeat_upsert_preserve_first_seen() -> anyhow::Result<(
 #[test]
 fn corrupt_key_value_identity_blocks_load_and_clear() -> anyhow::Result<()> {
     let temp = tempfile::tempdir()?;
-    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+    let (repo, repo_id) = crate::test_support::init_cataloged_repo(
         &temp.path().join("ledger"),
         &temp.path().join("notes"),
     )?;
@@ -71,7 +74,8 @@ fn corrupt_key_value_identity_blocks_load_and_clear() -> anyhow::Result<()> {
         prepare_remote_import_fault(info.uuid, info.name, 1, 1, Uuid::new_v4(), 9, "failed");
     let wrong_key = [0x5a; 32];
     let bytes = crate::codec::encode(&prepared.value)?;
-    let write = repo.local_db.begin_write()?;
+    let lease = repo.local_authority_lease_for_test(repo_id)?;
+    let write = lease.db().begin_write()?;
     {
         write
             .open_table(PROJECTION_FAULTS)?
@@ -92,7 +96,7 @@ fn corrupt_key_value_identity_blocks_load_and_clear() -> anyhow::Result<()> {
             .to_string()
             .contains("key/value identity mismatch")
     );
-    let read = repo.local_db.begin_read()?;
+    let read = lease.db().begin_read()?;
     assert_eq!(read.open_table(PROJECTION_FAULTS)?.iter()?.count(), 1);
     Ok(())
 }
@@ -100,7 +104,10 @@ fn corrupt_key_value_identity_blocks_load_and_clear() -> anyhow::Result<()> {
 #[test]
 fn decoder_rejects_version_repo_and_trailing_or_malformed_payload() -> anyhow::Result<()> {
     let temp = tempfile::tempdir()?;
-    let repo = RepoManager::init(temp.path().join("ledger"), 8, Some("main"), None)?;
+    let (repo, _repo_id) = crate::test_support::init_cataloged_repo(
+        &temp.path().join("ledger"),
+        &temp.path().join("notes"),
+    )?;
     let info = repo.get_repo_info()?.expect("repo info");
     let prepared =
         prepare_remote_import_fault(info.uuid, info.name, 7, 3, Uuid::new_v4(), 11, "failed");

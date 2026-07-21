@@ -31,8 +31,8 @@ impl<'a> RepoDatabaseRuntime<'a> {
         let stem = self
             .manager
             .resolve_local_repo_name_for_execution(None, Some(name))?;
-        let db = self.manager.get_or_open_local_db(&stem)?;
-        let repo_id = RepoManager::read_local_repo_info_from_db(db.as_ref())?
+        let lease = self.manager.lease_local_authority_stem(&stem)?;
+        let repo_id = RepoManager::read_local_repo_info_from_db(lease.db())?
             .map(|info| info.uuid)
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -40,13 +40,7 @@ impl<'a> RepoDatabaseRuntime<'a> {
                     stem
                 )
             })?;
-        Ok(DatabaseHandle {
-            db,
-            readonly: false,
-            branch: None,
-            repo_id: Some(repo_id),
-            repo_name: stem,
-        })
+        Ok(DatabaseHandle::local(repo_id, stem))
     }
 
     fn open_remote_database(&self, peer_id: &PeerId, name: &str) -> Result<DatabaseHandle> {
@@ -73,21 +67,19 @@ impl<'a> RepoDatabaseRuntime<'a> {
             .and_then(|repos| repos.get(&repo_id))
             .cloned();
         if let Some(db) = loaded {
-            return Ok(DatabaseHandle {
+            return Ok(DatabaseHandle::remote(
                 db,
-                readonly: true,
-                branch: Some(peer_id.clone()),
-                repo_id: Some(repo_id),
+                peer_id.clone(),
+                repo_id,
                 repo_name,
-            });
+            ));
         }
         let db = self.manager.get_or_open_db_at(&resolved.path)?;
-        Ok(DatabaseHandle {
+        Ok(DatabaseHandle::remote(
             db,
-            readonly: true,
-            branch: Some(peer_id.clone()),
-            repo_id: Some(repo_id),
+            peer_id.clone(),
+            repo_id,
             repo_name,
-        })
+        ))
     }
 }

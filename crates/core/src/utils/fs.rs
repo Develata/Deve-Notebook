@@ -156,6 +156,26 @@ pub fn open_regular_file_read(path: &Path, context: &str) -> std::io::Result<Fil
     Ok(file)
 }
 
+/// Creates one new regular file without following a final-component
+/// symlink/reparse point and keeps the exact opened identity as a witness.
+///
+/// This is intended for authority files that another library subsequently
+/// opens by pathname. Callers must keep the returned handle alive and use
+/// [`ensure_open_file_matches_path`] after that second open.
+pub fn create_regular_file_new(path: &Path, context: &str) -> std::io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create_new(true);
+    apply_no_follow(&mut options);
+    let file = options.open(path).map_err(|error| {
+        std::io::Error::new(
+            error.kind(),
+            format!("Failed to create {context} without following links at {path:?}: {error}"),
+        )
+    })?;
+    validate_regular_handle(&file, path, context)?;
+    Ok(file)
+}
+
 /// Opens or creates a regular lock file without following a final-component
 /// symlink/reparse point. Callers should lock it, then call
 /// [`ensure_open_file_matches_path`] before relying on the pathname as a mutex.

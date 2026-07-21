@@ -4,10 +4,12 @@
 //!   - 03_storage/projection#projection-locator-contract
 
 use super::{PreparedRepoIdentity, RepoCatalogError};
+use crate::ledger::PreparedRepoAuthority;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 use crate::utils::notegit;
 use crate::utils::path::path_to_forward_slash;
+use anyhow::Context;
 use serde::Serialize;
 
 const PREPARED_IDENTITY_FORMAT: &str = "deve.prepared-repo-identity";
@@ -37,24 +39,64 @@ pub(super) fn snapshot(
     })
 }
 
+pub(super) fn snapshot_initial_primary(
+    manager: &RepoManager,
+    repo_id: RepoId,
+) -> Result<PreparedRepoIdentity, RepoCatalogError> {
+    manager
+        .with_initial_primary_for_catalog(repo_id, |db| {
+            snapshot_from_db(manager, repo_id, db)
+                .map_err(crate::ledger::LocalAuthorityError::Other)
+        })
+        .map_err(|error| RepoCatalogError::PreparedIdentityUnavailable {
+            repo_id,
+            detail: error.to_string(),
+        })
+}
+
 fn snapshot_inner(manager: &RepoManager, repo_id: RepoId) -> anyhow::Result<PreparedRepoIdentity> {
+    let lease = manager.lease_local_authority(repo_id)?;
+    snapshot_from_db(manager, repo_id, lease.db())
+}
+
+pub(super) fn snapshot_prepared(
+    manager: &RepoManager,
+    repo_id: RepoId,
+    authority: &PreparedRepoAuthority,
+) -> Result<PreparedRepoIdentity, RepoCatalogError> {
+    if authority.repo_id() != repo_id {
+        return Err(RepoCatalogError::PreparedIdentityUnavailable {
+            repo_id,
+            detail: format!(
+                "prepared authority RepoId mismatch: expected {repo_id}, got {}",
+                authority.repo_id()
+            ),
+        });
+    }
+    snapshot_from_db(manager, repo_id, authority.db()).map_err(|error| {
+        RepoCatalogError::PreparedIdentityUnavailable {
+            repo_id,
+            detail: error.to_string(),
+        }
+    })
+}
+
+fn snapshot_from_db(
+    manager: &RepoManager,
+    repo_id: RepoId,
+    db: &redb::Database,
+) -> anyhow::Result<PreparedRepoIdentity> {
+    snapshot_from_db_at(&manager.ledger_dir, repo_id, db)
+}
+
+pub(super) fn snapshot_from_db_at(
+    ledger_dir: &std::path::Path,
+    repo_id: RepoId,
+    db: &redb::Database,
+) -> anyhow::Result<PreparedRepoIdentity> {
     let stem = repo_id.to_string();
-    let local_dir = RepoManager::checked_local_dir_for(
-        manager.ledger_dir(),
-        "snapshotting prepared repo identity",
-    )?;
-    let db_path = local_dir.join(format!("{stem}.redb"));
-    let repo_info = if manager.local_repo_name() == stem {
-        manager
-            .get_repo_info()?
-            .ok_or_else(|| anyhow::anyhow!("repository metadata is missing for {repo_id}"))?
-    } else {
-        RepoManager::read_required_local_repo_info_from_path(
-            &db_path,
-            &stem,
-            "snapshotting prepared repo identity",
-        )?
-    };
+    let repo_info = RepoManager::read_local_repo_info_from_db(db)?
+        .ok_or_else(|| anyhow::anyhow!("repository metadata is missing for {repo_id}"))?;
     if repo_info.uuid != repo_id {
         anyhow::bail!(
             "prepared DB identity mismatch: expected {repo_id}, got {}",
@@ -62,12 +104,19 @@ fn snapshot_inner(manager: &RepoManager, repo_id: RepoId) -> anyhow::Result<Prep
         );
     }
 
-    let locator = manager
-        .query_projection_locator_record_for_repo_id(repo_id)?
+    let locator =
+        crate::ledger::manager::projection_locator::projection_locator_record_for_repo_id(
+            ledger_dir, repo_id,
+        )?
         .ok_or_else(|| anyhow::anyhow!("Projection Locator is missing for {repo_id}"))?;
     let workspace_segment = locator.workspace_segment.clone();
-    let workspace_root =
-        std::fs::canonicalize(locator.projection_base_abs.join(&workspace_segment))?;
+    let declared_workspace_root = locator.projection_base_abs.join(&workspace_segment);
+    let workspace_root = std::fs::canonicalize(&declared_workspace_root).with_context(|| {
+        format!(
+            "Failed to canonicalize Projection workspace root: {:?}",
+            declared_workspace_root
+        )
+    })?;
     notegit::validate_repo_identity_marker(&workspace_root, repo_id)?;
 
     let manifest = PreparedIdentityManifest {

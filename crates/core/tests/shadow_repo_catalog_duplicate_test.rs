@@ -7,7 +7,12 @@ mod common;
 #[test]
 fn remote_catalog_repair_fails_closed_on_duplicate_shadow_uuid() {
     let dir = TempDir::new().expect("tempdir");
-    let repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init repo");
     let peer_id = PeerId::new("peer-dup");
     let info = RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -30,7 +35,9 @@ fn remote_catalog_repair_fails_closed_on_duplicate_shadow_uuid() {
 fn init_fails_closed_on_duplicate_shadow_uuid_catalogs() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let repo = RepoManager::init(&ledger_dir, 10, None, None).expect("init repo");
+    let (repo, _repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 10)
+            .expect("init repo");
     let peer_id = PeerId::new("peer-dup");
     let info = RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -40,6 +47,7 @@ fn init_fails_closed_on_duplicate_shadow_uuid_catalogs() {
 
     common::seed_shadow_repo_info(&repo, &peer_id, "wiki", &info);
     common::seed_shadow_repo_info(&repo, &peer_id, "wiki-1", &info);
+    drop(repo);
 
     let err = RepoManager::init(&ledger_dir, 10, None, None)
         .err()

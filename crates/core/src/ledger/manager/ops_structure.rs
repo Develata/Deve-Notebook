@@ -18,7 +18,7 @@ impl RepoManager {
     }
 
     pub fn get_local_structure_ops(&self, node_id: NodeId) -> Result<Vec<(u64, LedgerEntry)>> {
-        ops::get_structure_ops_for_node_from_db(&self.local_db, node_id)
+        self.run_on_primary_local_repo(|db| ops::get_structure_ops_for_node_from_db(db, node_id))
     }
 
     pub fn get_local_structure_ops_in_local_repo(

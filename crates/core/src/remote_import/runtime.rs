@@ -26,9 +26,7 @@ use crate::{ledger::RepoManager, models::RepoId};
 use authority::bound_local_authority_db;
 pub(crate) use capture::RemoteImportCapture;
 use capture::{classify_failure, fail_with_primary};
-use redb::Database;
 use std::path::Path;
-use std::sync::Arc;
 
 pub(crate) struct RemoteImportRuntime {
     pub(super) store: RemoteImportStore,
@@ -37,33 +35,27 @@ pub(crate) struct RemoteImportRuntime {
 
 impl RemoteImportRuntime {
     pub(crate) fn open(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<Self> {
-        let db = bound_local_authority_db(repo, repo_id)?;
-        Self::open_bound(db, repo.ledger_dir(), repo_id, false)
+        let lease = bound_local_authority_db(repo, repo_id)?;
+        let store = RemoteImportStore::open_authority(lease, repo_id)?;
+        Self::open_bound(store, repo.ledger_dir(), repo_id)
     }
 
     pub(crate) fn recover_startup(repo: &RepoManager, repo_id: RepoId) -> RemoteImportResult<()> {
-        let db = bound_local_authority_db(repo, repo_id)?;
-        Self::open_bound(db, repo.ledger_dir(), repo_id, true).map(|_| ())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn open_for_test(
-        db: Arc<Database>,
-        ledger_root: &Path,
-        repo_id: RepoId,
-    ) -> RemoteImportResult<Self> {
-        Self::open_bound(db, ledger_root, repo_id, false)
+        let lease = bound_local_authority_db(repo, repo_id)?;
+        let store = RemoteImportStore::recover_startup_authority(lease, repo_id)?;
+        Self::open_bound(store, repo.ledger_dir(), repo_id).map(|_| ())
     }
 
     fn open_bound(
-        db: Arc<Database>,
+        store: RemoteImportStore,
         ledger_root: &Path,
         repo_id: RepoId,
-        recover_startup: bool,
     ) -> RemoteImportResult<Self> {
-        RemoteImportStore::validate_schema(db.as_ref())?;
-        let info = RepoManager::read_local_repo_info_from_db(db.as_ref())
-            .map_err(RemoteImportError::storage)?
+        store.with_db(RemoteImportStore::validate_schema)?;
+        let info = store
+            .with_db(|db| {
+                RepoManager::read_local_repo_info_from_db(db).map_err(RemoteImportError::storage)
+            })?
             .ok_or_else(|| {
                 RemoteImportError::Storage(
                     "Remote Import local authority RepoInfo is missing".to_string(),
@@ -76,11 +68,6 @@ impl RemoteImportRuntime {
             )));
         }
         let artifacts = RemoteImportArtifactRoot::open(ledger_root, repo_id)?;
-        let store = if recover_startup {
-            RemoteImportStore::recover_startup(db, repo_id)?
-        } else {
-            RemoteImportStore::open(db, repo_id)?
-        };
         Ok(Self { store, artifacts })
     }
 
@@ -88,8 +75,8 @@ impl RemoteImportRuntime {
         repo: &RepoManager,
         repo_id: RepoId,
     ) -> RemoteImportResult<RemoteImportRepairReport> {
-        let db = bound_local_authority_db(repo, repo_id)?;
-        let store = RemoteImportStore::open_read_only(db, repo_id)?;
+        let lease = bound_local_authority_db(repo, repo_id)?;
+        let store = RemoteImportStore::open_read_only_authority(lease, repo_id)?;
         let artifacts = RemoteImportArtifactRoot::open_existing(repo.ledger_dir(), repo_id)?;
         dry_run_repair(&store, artifacts.as_ref())
     }
@@ -252,20 +239,13 @@ pub(crate) fn pending_projection_repo_ids(repo: &RepoManager) -> RemoteImportRes
         .list_local_repo_names_for_execution()
         .map_err(RemoteImportError::storage)?
     {
-        let handle = repo
-            .open_database(None, &execution_name)
-            .map_err(RemoteImportError::storage)?;
-        let repo_id = handle.repo_id.ok_or_else(|| {
+        let repo_id = uuid::Uuid::parse_str(&execution_name).map_err(|_| {
             RemoteImportError::Storage(format!(
-                "Remote Import local repo {execution_name} has no RepoId"
+                "Remote Import local repo execution name is not a RepoId: {execution_name}"
             ))
         })?;
-        if handle.readonly {
-            return Err(RemoteImportError::Storage(format!(
-                "Remote Import projection recovery opened local repo {execution_name} read-only"
-            )));
-        }
-        let store = RemoteImportStore::open_read_only(handle.db, repo_id)?;
+        let lease = bound_local_authority_db(repo, repo_id)?;
+        let store = RemoteImportStore::open_read_only_authority(lease, repo_id)?;
         if store.list_sessions()?.iter().any(|record| {
             record.state == RemoteImportState::Applied
                 && record.apply_receipt.as_ref().is_some_and(|receipt| {

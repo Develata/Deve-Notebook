@@ -24,8 +24,8 @@ fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() 
     )?;
     // Drift the mirror's URL to collide with the "test" repo so the counterpart
     // scan sees duplicate local owners for `urn:test`.
-    let mirror_db = state.repo.open_database(None, &mirror_id.to_string())?.db;
-    let txn = mirror_db.begin_write()?;
+    let mirror_db = state.repo.lease_local_authority(mirror_id)?;
+    let txn = mirror_db.db().begin_write()?;
     txn.open_table(REPO_METADATA)?.insert(
         &REPO_INFO_METADATA_KEY,
         codec::encode(&RepoInfo {
@@ -63,8 +63,8 @@ fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() 
 fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadable(
 ) -> anyhow::Result<()> {
     let (_dir, state, default_id, _test_id) = build_state()?;
-    let db = state.repo.open_database(None, &default_id.to_string())?.db;
-    let txn = db.begin_write()?;
+    let db = state.repo.lease_local_authority(default_id)?;
+    let txn = db.db().begin_write()?;
     {
         let mut table = txn.open_table(REPO_METADATA)?;
         let version = codec::encode(&REDB_SCHEMA_VERSION)?;

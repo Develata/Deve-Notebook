@@ -18,6 +18,11 @@ pub mod types;
 mod workspace;
 
 mod authority_storage_runtime;
+pub(crate) use authority_storage_runtime::BoundRepoAuthority;
+pub(crate) use authority_storage_runtime::{LocalAuthorityDiscovery, LocalAuthorityRuntime};
+pub use authority_storage_runtime::{
+    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease,
+};
 mod commit_apply;
 mod commit_plan;
 mod commit_preflight;
@@ -32,10 +37,9 @@ pub use host_repo_alias::{
     HostRepoAliasImportSummary, HostRepoAliasImportWarning, HostRepoAliasImportWarningReason,
     HostRepoAliasRuntime, HostRepoAliasSetResult, HostRepoAliasValidationError,
 };
+pub(crate) mod local_fact_writer;
 mod local_repo_metadata_repair;
 mod local_repo_metadata_repair_support;
-pub(crate) use local_repo_metadata_repair::repair_local_repo_metadata;
-pub(crate) mod local_fact_writer;
 mod local_repo_names;
 mod local_repo_source_control_repair;
 mod merge_ops;
@@ -63,6 +67,9 @@ pub use repo_catalog_runtime::{
     RepoCatalogCreationCommit, RepoCatalogCutAuthority, RepoCatalogCutPermit, RepoCatalogError,
     RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
     RevalidatedRepoCreation, RevalidatedRepoRemoval, normal_catalog_ids_for_ledger,
+};
+pub(crate) use repo_catalog_runtime::{
+    catalog_bootstrap_snapshot_for_ledger, prepared_identity_for_existing_database,
 };
 mod repo_catalog_shadow_runtime;
 mod repo_db;

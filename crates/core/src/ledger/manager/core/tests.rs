@@ -8,10 +8,15 @@ fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let (main, _main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
-    let (_wiki, wiki_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))?;
-    let wiki_db = main.open_database(None, &wiki_id.to_string())?.db;
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &main,
+        &ledger_dir,
+        &dir.path().join("wiki-notes"),
+        None,
+    )?;
+    let wiki_db = main.local_authority_lease_for_test(wiki_id)?;
 
-    crate::test_support::delete_repo_metadata(wiki_db.as_ref())?;
+    crate::test_support::delete_repo_metadata(wiki_db.db())?;
 
     let err = main
         .resolve_local_repo_stem(&wiki_id.to_string())
@@ -26,12 +31,20 @@ fn resolve_local_selector_fails_closed_on_stale_secondary_alias_drift() -> anyho
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let (main, _main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
-    let (wiki, wiki_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("wiki-notes"))?;
-    let wiki_info = wiki.get_repo_info()?.expect("wiki info");
-    let wiki_db = main.open_database(None, &wiki_id.to_string())?.db;
+    let wiki_id = crate::test_support::add_cataloged_repo(
+        &main,
+        &ledger_dir,
+        &dir.path().join("wiki-notes"),
+        None,
+    )?;
+    let wiki_info = main
+        .repo_scope_runtime()
+        .get_local_repo_info_by_id_without_repair(wiki_id)?
+        .expect("wiki info");
+    let wiki_db = main.local_authority_lease_for_test(wiki_id)?;
 
     crate::test_support::write_repo_metadata(
-        wiki_db.as_ref(),
+        wiki_db.db(),
         &RepoInfo {
             uuid: wiki_id,
             name: "legacy-wiki".into(),
@@ -56,10 +69,10 @@ fn resolve_local_selector_fails_closed_on_stale_main_alias_drift() -> anyhow::Re
     let ledger_dir = dir.path().join("ledger");
     let (main, main_id) = init_cataloged_repo(&ledger_dir, &dir.path().join("notes"))?;
     let info = main.get_repo_info()?.expect("main info");
-    let main_db = main.open_database(None, &main_id.to_string())?.db;
+    let main_db = main.local_authority_lease_for_test(main_id)?;
 
     crate::test_support::write_repo_metadata(
-        main_db.as_ref(),
+        main_db.db(),
         &RepoInfo {
             uuid: main_id,
             name: "legacy-main".into(),
@@ -89,10 +102,12 @@ fn exact_existing_open_ignores_an_unrelated_corrupt_redb() -> anyhow::Result<()>
             .join(format!("{}.redb", uuid::Uuid::new_v4())),
         b"not a redb database",
     )?;
+    let expected_name = repo.local_repo_name().to_string();
+    drop(repo);
 
     let reopened = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, repo_id)?;
 
-    assert_eq!(reopened.local_repo_name(), repo.local_repo_name());
+    assert_eq!(reopened.local_repo_name(), expected_name);
     Ok(())
 }
 
@@ -115,6 +130,35 @@ fn exact_existing_open_never_recreates_a_missing_database() -> anyhow::Result<()
     assert!(
         !db_path.exists(),
         "open-existing must not recreate authority"
+    );
+    Ok(())
+}
+
+#[test]
+fn exact_existing_open_never_admits_an_uncataloged_database() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let repo_id = uuid::Uuid::new_v4();
+    let repo = crate::ledger::init::init_with_options(
+        &ledger_dir,
+        8,
+        Some("prepared"),
+        crate::ledger::init::RepoInitOptions {
+            repo_id: Some(repo_id),
+            repo_url: None,
+        },
+    )?;
+    drop(repo);
+
+    let error = RepoManager::init_existing_for_repo_id(&ledger_dir, 8, repo_id)
+        .err()
+        .expect("uncataloged authority database must require explicit repair");
+
+    assert!(
+        error
+            .to_string()
+            .contains("is not a durable Normal catalog member")
     );
     Ok(())
 }

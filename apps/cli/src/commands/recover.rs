@@ -85,19 +85,18 @@ mod tests {
                 1,
             )
             .expect("append content");
-
-        run(&ledger_dir, Some(repo_name.clone()), 8).expect("recover");
-
         let workspace_path = repo
             .local_repo_workspace_path(&repo_name, "notes/recovered.md")
             .expect("workspace path");
-        deve_core::utils::notegit::validate_repo_identity_marker(
-            &repo
-                .local_repo_workspace_root(&repo_name)
-                .expect("workspace root"),
-            repo_id,
-        )
-        .expect("identity marker");
+        let workspace_root = repo
+            .local_repo_workspace_root(&repo_name)
+            .expect("workspace root");
+        drop(repo);
+
+        run(&ledger_dir, Some(repo_name.clone()), 8).expect("recover");
+
+        deve_core::utils::notegit::validate_repo_identity_marker(&workspace_root, repo_id)
+            .expect("identity marker");
         assert_eq!(
             std::fs::read_to_string(workspace_path).expect("recovered file"),
             "recovered from ledger"

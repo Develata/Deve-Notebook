@@ -3,7 +3,9 @@
 //!   - 03_storage/index#repo-runtime-layout
 //!   - 04_repository#repo-catalog-contract
 //!
-//! Global Redb open/create helpers backed by the process-wide database cache.
+//! Remote-shadow Redb open/create helpers backed by the process-wide cache.
+//!
+//! Local authority databases must be opened only by `LocalAuthorityRuntime`.
 
 use super::database_cache::{
     CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
@@ -14,7 +16,7 @@ use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
 
-pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
+pub(crate) fn cached_shadow_database(db_path: &Path) -> Result<Arc<Database>> {
     if !checked_exists(db_path, "database path")? {
         return Err(anyhow::anyhow!("Repository not found: {:?}", db_path));
     }
@@ -41,7 +43,7 @@ pub(crate) fn cached_database(db_path: &Path) -> Result<Arc<Database>> {
     Ok(arc_db)
 }
 
-pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>> {
+pub(crate) fn cached_or_create_shadow_database(db_path: &Path) -> Result<Arc<Database>> {
     if let Some(db) = reusable_cached_database(db_path)? {
         return Ok(db);
     }

@@ -16,8 +16,8 @@ fn setup_repos() -> (TempDir, Arc<RepoManager>, String, String) {
     let projection_base = dir.path().join("notes");
     let (main, main_id) =
         common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:main").expect("main");
-    let (_wiki, wiki_id) =
-        common::init_cataloged_repo_with_url(&ledger, &projection_base, "urn:wiki").expect("wiki");
+    let wiki_id =
+        common::add_cataloged_repo_with_url(&main, &projection_base, "urn:wiki").expect("wiki");
     (
         dir,
         Arc::new(main),

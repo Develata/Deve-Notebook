@@ -20,13 +20,12 @@ async fn edit_clears_stale_remote_readonly_binding_before_checks() -> anyhow::Re
     let mut session = writer_browser_session(&h.default_repo_name, h.default_repo_id, 29);
     session.set_authenticated(PeerId::new("writer"));
     session.bind_repo(h.default_repo_id);
-    session.set_active_db(DatabaseHandle {
-        db: stale_db,
-        readonly: true,
-        branch: Some(PeerId::new("remote")),
-        repo_id: Some(uuid::Uuid::new_v4()),
-        repo_name: "shadow".into(),
-    });
+    session.set_active_db(DatabaseHandle::remote(
+        stale_db,
+        PeerId::new("remote"),
+        uuid::Uuid::new_v4(),
+        "shadow".into(),
+    ));
 
     send_insert(&h.state, &ch, &mut session, doc_id, 5).await;
 

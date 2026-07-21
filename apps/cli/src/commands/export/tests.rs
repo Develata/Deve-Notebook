@@ -64,6 +64,7 @@ fn markdown_export_supports_single_doc_output() {
         .repo;
     let doc_id = seed_doc(&repo, "notes/a.md", "hello export");
     let output = dir.path().join("single.md");
+    drop(repo);
 
     run(
         &ledger_dir,
@@ -93,6 +94,7 @@ fn markdown_export_preserves_user_frontmatter_without_system_metadata() {
     let content = "---\ntitle: User Note\n---\nbody";
     let doc_id = seed_doc(&repo, "notes/frontmatter.md", content);
     let output = dir.path().join("frontmatter.md");
+    drop(repo);
 
     run(
         &ledger_dir,
@@ -160,6 +162,7 @@ fn markdown_export_requires_explicit_degraded_projection_flag() {
             1,
         ),
     );
+    drop(repo);
 
     let output = dir.path().join("export");
     let err = run(

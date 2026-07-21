@@ -2,11 +2,13 @@
 //!   - 03_storage/authority#remote-import-workflow-tables
 //!   - 06_backup#remote-import-state-machine
 
+mod database;
 mod recovery;
 pub(super) mod retention;
 mod transitions;
 
 use crate::ledger::RepoManager;
+use crate::ledger::manager::BoundRepoAuthority;
 use crate::ledger::schema::{REMOTE_IMPORT_RUNTIME, REMOTE_IMPORT_SESSIONS};
 use crate::models::RepoId;
 use crate::remote_import::error::{RemoteImportError, RemoteImportResult};
@@ -17,6 +19,10 @@ use crate::remote_import::types::{
 use redb::{Database, ReadableTable};
 use std::collections::BTreeSet;
 use std::sync::Arc;
+
+#[cfg(test)]
+pub(super) use self::database::RemoteImportTestDatabase;
+use self::database::{StoreDatabase, StoreDatabaseLease};
 
 pub(super) const RUNTIME_KEY: u8 = 0;
 
@@ -38,7 +44,7 @@ enum StoreOpenMode {
 
 #[derive(Clone)]
 pub(super) struct RemoteImportStore {
-    db: Arc<Database>,
+    db: Arc<StoreDatabase>,
     repo_id: RepoId,
 }
 
@@ -47,20 +53,44 @@ impl RemoteImportStore {
         RepoManager::validate_local_repo_schema(db).map_err(RemoteImportError::storage)
     }
 
-    pub(super) fn open(db: Arc<Database>, repo_id: RepoId) -> RemoteImportResult<Self> {
-        Self::open_with_mode(db, repo_id, StoreOpenMode::ActiveProcess)
+    #[cfg(test)]
+    pub(super) fn open(
+        db: impl Into<RemoteImportTestDatabase>,
+        repo_id: RepoId,
+    ) -> RemoteImportResult<Self> {
+        Self::open_with_mode(db.into().0, repo_id, StoreOpenMode::ActiveProcess)
     }
 
-    pub(super) fn recover_startup(db: Arc<Database>, repo_id: RepoId) -> RemoteImportResult<Self> {
-        Self::open_with_mode(db, repo_id, StoreOpenMode::RecoverStartup)
+    pub(super) fn open_authority(
+        authority: BoundRepoAuthority,
+        repo_id: RepoId,
+    ) -> RemoteImportResult<Self> {
+        Self::open_with_mode(
+            Arc::new(StoreDatabase::Authority(authority)),
+            repo_id,
+            StoreOpenMode::ActiveProcess,
+        )
+    }
+
+    pub(super) fn recover_startup_authority(
+        authority: BoundRepoAuthority,
+        repo_id: RepoId,
+    ) -> RemoteImportResult<Self> {
+        Self::open_with_mode(
+            Arc::new(StoreDatabase::Authority(authority)),
+            repo_id,
+            StoreOpenMode::RecoverStartup,
+        )
     }
 
     fn open_with_mode(
-        db: Arc<Database>,
+        db: Arc<StoreDatabase>,
         repo_id: RepoId,
         mode: StoreOpenMode,
     ) -> RemoteImportResult<Self> {
-        Self::validate_schema(db.as_ref())?;
+        let lease = db.lease()?;
+        Self::validate_schema(&lease)?;
+        drop(lease);
         let store = Self { db, repo_id };
         match store.preflight_open()? {
             StoreOpenState::Empty => store.initialize_empty_runtime()?,
@@ -90,15 +120,43 @@ impl RemoteImportStore {
         Ok(store)
     }
 
-    pub(super) fn open_read_only(db: Arc<Database>, repo_id: RepoId) -> RemoteImportResult<Self> {
-        Self::validate_schema(db.as_ref())?;
+    #[cfg(test)]
+    pub(super) fn open_read_only(
+        db: impl Into<RemoteImportTestDatabase>,
+        repo_id: RepoId,
+    ) -> RemoteImportResult<Self> {
+        let db = db.into().0;
+        let lease = db.lease()?;
+        Self::validate_schema(&lease)?;
+        drop(lease);
         let store = Self { db, repo_id };
         store.preflight_open()?;
         Ok(store)
     }
 
-    pub(super) fn db(&self) -> &Arc<Database> {
-        &self.db
+    pub(super) fn open_read_only_authority(
+        authority: BoundRepoAuthority,
+        repo_id: RepoId,
+    ) -> RemoteImportResult<Self> {
+        let db = Arc::new(StoreDatabase::Authority(authority));
+        let lease = db.lease()?;
+        Self::validate_schema(&lease)?;
+        drop(lease);
+        let store = Self { db, repo_id };
+        store.preflight_open()?;
+        Ok(store)
+    }
+
+    pub(super) fn with_db<R>(
+        &self,
+        inspect: impl FnOnce(&Database) -> RemoteImportResult<R>,
+    ) -> RemoteImportResult<R> {
+        let lease = self.db.lease()?;
+        inspect(&lease)
+    }
+
+    pub(in crate::remote_import) fn lease_db(&self) -> RemoteImportResult<StoreDatabaseLease<'_>> {
+        self.db.lease()
     }
 
     pub(super) fn repo_id(&self) -> RepoId {
@@ -109,7 +167,8 @@ impl RemoteImportStore {
         &self,
         session_id: RemoteImportSessionId,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let read = self.db.begin_read().map_err(RemoteImportError::storage)?;
+        let db = self.db.lease()?;
+        let read = db.begin_read().map_err(RemoteImportError::storage)?;
         let sessions = read
             .open_table(REMOTE_IMPORT_SESSIONS)
             .map_err(RemoteImportError::storage)?;
@@ -121,7 +180,8 @@ impl RemoteImportStore {
     }
 
     pub(super) fn list_sessions(&self) -> RemoteImportResult<Vec<RemoteImportSessionRecord>> {
-        let read = self.db.begin_read().map_err(RemoteImportError::storage)?;
+        let db = self.db.lease()?;
+        let read = db.begin_read().map_err(RemoteImportError::storage)?;
         let sessions = read
             .open_table(REMOTE_IMPORT_SESSIONS)
             .map_err(RemoteImportError::storage)?;
@@ -140,7 +200,8 @@ impl RemoteImportStore {
     pub(super) fn repo_removal_observation(
         &self,
     ) -> RemoteImportResult<(u64, Vec<RemoteImportSessionRecord>)> {
-        let read = self.db.begin_read().map_err(RemoteImportError::storage)?;
+        let db = self.db.lease()?;
+        let read = db.begin_read().map_err(RemoteImportError::storage)?;
         let sessions = read
             .open_table(REMOTE_IMPORT_SESSIONS)
             .map_err(RemoteImportError::storage)?;
@@ -184,7 +245,8 @@ impl RemoteImportStore {
     }
 
     fn initialize_empty_runtime(&self) -> RemoteImportResult<()> {
-        let write = self.db.begin_write().map_err(RemoteImportError::storage)?;
+        let db = self.db.lease()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         {
             let sessions = write
                 .open_table(REMOTE_IMPORT_SESSIONS)
@@ -227,7 +289,8 @@ impl RemoteImportStore {
     }
 
     fn preflight_open(&self) -> RemoteImportResult<StoreOpenState> {
-        let read = self.db.begin_read().map_err(RemoteImportError::storage)?;
+        let db = self.db.lease()?;
+        let read = db.begin_read().map_err(RemoteImportError::storage)?;
         let sessions = read
             .open_table(REMOTE_IMPORT_SESSIONS)
             .map_err(RemoteImportError::storage)?;

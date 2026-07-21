@@ -19,11 +19,11 @@ use anyhow::Result;
 impl RepoManager {
     /// 根据路径获取 DocId
     pub fn get_docid(&self, path: &str) -> Result<Option<DocId>> {
-        doc_lookup::resolve_doc_id(&self.local_db, path)
+        self.run_on_primary_local_repo(|db| doc_lookup::resolve_doc_id(db, path))
     }
 
     pub fn get_file_meta_for_doc(&self, doc_id: DocId) -> Result<Option<NodeMeta>> {
-        node_meta::file_meta_for_doc(&self.local_db, doc_id)
+        self.run_on_primary_local_repo(|db| node_meta::file_meta_for_doc(db, doc_id))
     }
 
     pub fn get_file_meta_for_doc_in_local_repo(
@@ -36,7 +36,7 @@ impl RepoManager {
 
     /// 根据 Inode 获取 DocId
     pub fn get_docid_by_inode(&self, inode: &crate::models::FileNodeId) -> Result<Option<DocId>> {
-        inode_index::get_docid(&self.local_db, inode)
+        self.run_on_primary_local_repo(|db| inode_index::get_docid(db, inode))
     }
 
     pub fn get_docid_by_inode_in_local_repo(
@@ -64,7 +64,7 @@ impl RepoManager {
 
     /// 绑定 Inode 到 DocId
     pub fn bind_inode(&self, inode: &crate::models::FileNodeId, doc_id: DocId) -> Result<()> {
-        inode_index::bind_docid(&self.local_db, inode, doc_id)
+        self.run_on_primary_local_repo(|db| inode_index::bind_docid(db, inode, doc_id))
     }
 
     pub fn bind_inode_in_local_repo(

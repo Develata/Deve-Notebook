@@ -24,10 +24,8 @@ impl RemoteImportStore {
         baseline_head: GlobalSeq,
         ignore_digest: crate::remote_import::types::RemoteImportDigest,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let write = self
-            .db()
-            .begin_write()
-            .map_err(RemoteImportError::storage)?;
+        let db = self.lease_db()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         let record;
         {
             let mut runtime_table = write
@@ -192,10 +190,8 @@ impl RemoteImportStore {
         generation: u64,
         expected_revision: Option<RemoteImportCandidateRevision>,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let write = self
-            .db()
-            .begin_write()
-            .map_err(RemoteImportError::storage)?;
+        let db = self.lease_db()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         let record;
         {
             let mut sessions = write
@@ -261,10 +257,8 @@ impl RemoteImportStore {
         &self,
         session_id: RemoteImportSessionId,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let write = self
-            .db()
-            .begin_write()
-            .map_err(RemoteImportError::storage)?;
+        let db = self.lease_db()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         let record;
         {
             let mut sessions = write
@@ -298,10 +292,8 @@ impl RemoteImportStore {
         _expected: &'static str,
         update: impl FnOnce(&mut RemoteImportSessionRecord) -> RemoteImportResult<()>,
     ) -> RemoteImportResult<RemoteImportSessionRecord> {
-        let write = self
-            .db()
-            .begin_write()
-            .map_err(RemoteImportError::storage)?;
+        let db = self.lease_db()?;
+        let write = db.begin_write().map_err(RemoteImportError::storage)?;
         let record;
         {
             let mut sessions = write

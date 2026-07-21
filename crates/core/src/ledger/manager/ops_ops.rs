@@ -111,7 +111,7 @@ impl RepoManager {
     }
 
     pub fn get_local_ops(&self, doc_id: DocId) -> Result<Vec<(u64, LedgerEntry)>> {
-        ops::get_ops_from_db(&self.local_db, doc_id)
+        self.run_on_primary_local_repo(|db| ops::get_ops_from_db(db, doc_id))
     }
 
     pub fn get_local_ops_in_local_repo(

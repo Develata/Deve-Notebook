@@ -40,20 +40,19 @@ pub(crate) fn init_cataloged_repo_with_url(
     repo_url: Option<String>,
 ) -> anyhow::Result<CatalogedTestRepo> {
     let repo_id = RepoId::new_v4();
-    let report = crate::repo_init::prepare_local_repo_workspace(
+    let (report, repo) = crate::repo_init::prepare_local_repo_workspace(
         ledger_dir,
         repo_id,
         projection_base,
         snapshot_depth,
         repo_url,
     )?;
-    let repo = RepoManager::init_existing_for_repo_id(ledger_dir, snapshot_depth, repo_id)?;
-    repo.seed_catalog_membership_from_records()?;
     let authority = repo.claim_repo_catalog_cut_authority()?;
     let prepared = repo.prepare_repo_creation_membership(repo_id, uuid::Uuid::new_v4())?;
     let revalidated = repo.revalidate_repo_creation_membership(&prepared)?;
     let permit = authority.permit(repo_id)?;
-    repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    let commit = repo.commit_repo_creation_membership(&prepared, &revalidated, &permit)?;
+    repo.activate_initial_prepared_local_repo_authority(&prepared, &commit)?;
     Ok(CatalogedTestRepo {
         repo,
         repo_id,

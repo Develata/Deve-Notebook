@@ -2,16 +2,21 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 
+mod common;
+
 #[test]
-fn local_repo_listing_fails_closed_on_unexpected_non_redb_entry() -> anyhow::Result<()> {
+fn local_repo_listing_ignores_unexpected_nonmember_and_repair_reports_it() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
-    let repo = RepoManager::init(dir.path(), 8, Some("default"), Some("urn:default"))?;
-    let local_dir = dir.path().join("local");
+    let ledger_dir = dir.path().join("ledger");
+    let (repo, repo_id) =
+        common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)?;
+    let local_dir = ledger_dir.join("local");
     std::fs::write(local_dir.join("stray.txt"), "oops")?;
 
+    assert_eq!(repo.list_repos(None)?, vec![repo_id.to_string()]);
     let err = repo
-        .list_repos(None)
-        .expect_err("unexpected local non-redb entry must fail closed");
+        .repair_local_repo_catalog()
+        .expect_err("explicit repair must report unexpected local non-redb entry");
     assert!(err.to_string().contains("unexpected non-redb entry"));
     Ok(())
 }
