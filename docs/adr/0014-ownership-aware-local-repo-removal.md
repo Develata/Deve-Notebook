@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-20
 - Amended: 2026-07-21 (`A1-S + B1-S + C2′-S` safety refinement)
+- Amended: 2026-07-22 (`D1-SQ + O1-FREEZE` path-safety refinement)
 
 ## Context
 
@@ -40,18 +41,33 @@ removable, leaving a useful zero-repo host.
    explicit apply token. Textual RepoId markers cannot prove replacement ownership: replaced
    top-level `.notegit`, Redb, parent, unknown, escaping or unsafe-reparse identity is never applied.
 6. `remote_import_runtime` remains the only owner of its artifacts and exposes a narrow typed
-   removal plan/cleanup API. The plan is sealed before authority retirement; after the Removed cut,
-   the owner performs artifact-only cleanup without mutating session rows in the retiring Redb. The
-   lifecycle coordinator orchestrates owners but never deletes their paths or rows directly.
-7. Before the Removed cut, any failure runs exact inverse compensation for authority, watcher,
-   provider generation, sealed owner plans and Transitioning reservation. Compensation failure is
-   a typed readonly/repair outcome with the write gate still closed. After cleanup, the durable
-   terminal result is fsynced and the authority lock handle is released before best-effort
-   session/network publication.
+   removal plan/cleanup API. Execute first closes product admission and quiesces the provider, then
+   seals one immutable cleanup plan from the stable artifact tree before watcher E2 and authority
+   retirement. After the Removed cut, the owner quarantines and deletes the whole exact repo
+   artifact root without mutating session rows in the retiring Redb. The lifecycle coordinator
+   orchestrates owners but never deletes their paths or rows directly.
+7. Before the Removed cut, any failure runs exact inverse compensation: restore authority state,
+   restart the exact watcher generation, invalidate the sealed owner plan, resume the exact provider
+   generation, then release Transitioning and the product write gate. Compensation failure is a
+   typed readonly/repair outcome with the write gate still closed. After cleanup, a non-publishable
+   terminal candidate is fsynced; only after authority retirement and lock release may the terminal
+   receipt enable best-effort session/network publication.
 8. A fallback repo is an optional user choice made during Prepare. Execute can only echo the
    backend-issued opaque binding. Missing/stale fallback succeeds into `NoScope`; backend never
    chooses another repo. Final RepoList and scope are delivered as one typed finalization, never
    inferred from Source Control errors or message ordering.
+9. Every owner root uses a manifest-bound same-parent quarantine cut. The original object is moved
+   without replacement, the moved FileId/inode and parent containment are revalidated and synced,
+   and only the exact quarantine object may then be deleted. `.notegit` first moves its identity
+   marker to a workspace-sibling quarantine by one same-filesystem, no-replace rename with both
+   source and destination parent identities pinned; this is the sole controlled cross-directory
+   exception. The tree then moves to its workspace-sibling quarantine, is deleted, and the separate
+   marker quarantine is deleted last. Quarantine is an internal destructive intermediate state,
+   not a recycle bin or restore surface.
+10. Removal persistence distinguishes `CutAttempted` from an exact observed Removed tombstone and
+    persists a terminal candidate before authority retirement. A worker may publish success only
+    after the authority slot is Retired, the OS lock is released and terminal completion is durably
+    enabled. Unknown cut truth or retirement failure remains recoverable cleanup debt.
 
 ## Consequences
 

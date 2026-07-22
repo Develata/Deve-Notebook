@@ -4,8 +4,8 @@
 
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Version`: `0.0.2`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -76,6 +76,7 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/.host/repo-authority-locks/<repo_id>.lock`
 - `ledger/.host/repo-catalog/<repo_id>.json`
 - `ledger/.host/repo-lifecycle-jobs/<request_id>.json`
+- `ledger/.host/repo-lifecycle-jobs/removals/<preparation_id>.json`
 
 每个 local-authority Redb v4 database 内还包含 host-local、非同步的
 `projection_faults` recovery side table。它与 Remote Import workflow rows 共处同一
@@ -120,19 +121,27 @@ later same-RepoId admission 必须重新锁定同一 pathname、重读 current m
 server 已持有该锁时，CLI只能通过 authenticated loopback proxy 使用同一 runtime，不得另开数据库或
 把 OS 删除失败当作排他协议。
 
-每个 catalog record 的 deterministic JSON v1 至少包含
-`format="deve.host-repo-membership"`、`version=1`、exact `repo_id`、
+每个 catalog record 的 deterministic JSON v2 至少包含
+`format="deve.host-repo-membership"`、`version=2`、exact `repo_id`、
 `state="normal|removed"`、单调 `membership_revision`、prepared identity digest 与最近一次
-`lifecycle_request_id`；文件名、payload RepoId 与 DB identity 任一不一致必须 fail-closed。
+`lifecycle_request_id`；`removed` 还必须包含 exact `removal_manifest_digest`，`normal` 禁止携带该字段。
+文件名、payload RepoId 与 DB identity 任一不一致必须 fail-closed；未发布的 v1 record 不保留 adapter。
 `removed` 只是在 ownership-aware `RemoveLocalRepo` 已线性化但 cleanup 尚未全部收敛期间的
 transient tombstone；Remote Import owner 已完成本次 removal plan，且成功删除 exact local DB、
 workspace `.notegit`、locator 与 alias 后，必须由 catalog owner 删除该 record。它不是可恢复的长期软删除状态。
-`repo-lifecycle-jobs/<request_id>.json` 是 `RepoLifecycleJobRuntime` 的 host-local admission/completion
-receipt，记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome；
-remove preparation 还必须固定 exact ownership manifest、manifest digest、confirmation-token hash/expiry/
-issuer binding 与逐 owner cleanup outcome。Execute 必须在同一 durable record 内原子转换为
-`ExecuteAdmitted { execute_request_id, job_id, consumed_token_hash }` 并 fsync 后才启动 worker；原始
-confirmation token 不得落盘。它不授予 repo membership，
+`repo-lifecycle-jobs/<request_id>.json` 是普通 create/job 的 host-local admission/completion receipt，
+记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome。
+Remove 使用 `repo-lifecycle-jobs/removals/<preparation_id>.json` 的 deterministic JSON v3；其
+`format="deve.host-local-repo-removal"`、`version=3`、filename stem 与 payload `preparation_id`
+必须exact一致，另存非空且互异的`prepare_request_id`，Execute后再存非空且与前两者互异的
+`execute_request_id`。请求命名空间在启动时从全部普通receipt与removal record重建，任一重复即
+fail closed。v3至少固定exact ownership manifest/digest、confirmation-token hash/expiry/issuer binding、
+tagged admission state (`Prepared | Superseded | ExecuteAdmitted`)、独立单调cut state
+(`NotAttempted | Attempted | Observed{tombstone}`)、三个owner opaque checkpoint与独立单调terminal
+state (`None | Candidate{completion} | Complete`)；cut和terminal不是互斥phase，`Candidate/Complete`
+必须隐含`Observed`与`CleanupComplete`。Execute 必须在同一 durable record 内原子转换为
+`ExecuteAdmitted { execute_request_id, job_id, consumed_token_hash, ... }` 并 fsync 后才启动 worker；原始
+confirmation token 不得落盘；未发布的 v1/v2 removal record 不保留 adapter。它不授予 repo membership，
 也不得进入 Ledger/sync。active/cleanup-debt receipt 永不裁剪；normal repo 的 create
 receipt 至少由 catalog record 可追溯，terminal receipt 的 bounded retention 归
 `04_repository#repo-lifecycle-coordinator`。
@@ -152,6 +161,8 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
   source-manifest.json
   candidates/<revision>.json
   blobs/<sha256>
+ledger/.host/remote-imports/<repo_id>/.removal-plan.json
+ledger/.host/remote-imports/.deve-removing-<quarantine_id>-<repo_id>/
 ```
 
 - `source-manifest.json` is deterministic JSON schema v1; `blobs/<sha256>` are
@@ -163,6 +174,14 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
 - Redb owns session identity/state and exact digests; the filesystem owns only
   the sealed payload bytes. Neither side may infer the missing half from names
   or timestamps.
+- `.removal-plan.json` 是 `remote_import_runtime` 在 remove pre-cut 阶段维护的per-RepoId single
+  owner-only durable plan slot。通用 lifecycle receipt 只保存其 opaque path identity、logical epoch与
+  content digest，不内嵌逐文件清单。相同job重试必须exact复用；新job只能在provider quiesced时以
+  atomic replace+parent sync发布更高logical epoch，故每repo最多一个sidecar。pre-cut补偿只使当前epoch
+  逻辑失效，不执行pathname删除；失效slot由下一次seal原子替换或由最终whole-root cleanup收敛。Removed cut后，owner必须把exact `<repo_id>` artifact root
+  no-replace移动到同父、manifest-bound `.deve-removing-*` quarantine，复核moved identity并sync parent，
+  再删除整个quarantine root；不再逐项unlink inventory path。sidecar、quarantine path与identity不得进入
+  sync、browser、session state或正常capture listing。
 
 ### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
@@ -177,6 +196,9 @@ ledger/.host/remote-imports/<repo_id>/<session_id>/
 - `.notegit/` **MUST** 被 watcher 忽略。
 - `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
+- Remove Prepare 为 `.notegit` tree、identity marker与canonical Redb冻结同父、manifest-bound
+  quarantine pathname；这些保留名只属于exact removal job。quarantine不是backup/recycle bin，不能被
+  watcher、normal startup、repo discovery或repair scan当成可admit repo对象。
 - ownership-aware `RemoveLocalRepo` 只能删除 workspace root 下 exact、identity-matched 且自身非
   symlink/junction/reparse point 的 `.notegit/` 树；workspace root 与其它 child（包括 Markdown、附件、`.git/`、
   `.gitignore`、`.deveignore`）全部保留。no-follow walker 可以删除 child link/reparse entry 本身，

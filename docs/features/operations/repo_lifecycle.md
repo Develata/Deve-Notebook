@@ -51,5 +51,5 @@
 
 ## Notes
 
-- create使用prepare → short authority cut → settle；remove显式执行Prepare → Execute，Execute先原子持久化token consumption与job admission，再按provider quiesce → watcher E2 → authority retirement → short membership cut → owner cleanup收敛。create的长期membership authority是per-RepoId catalog record；remove先把它原子切为transient`Removed` tombstone，再按immutable ownership manifest经各owner清理Deve-owned repo state，全部收敛后删除tombstone。最后一个repo允许删除并进入`NoScope`。remove永不删除workspace root、Markdown/附件、`.git`、remote shadows、persistent authority lock pathname或位于removal roots之外的operator恢复输入。
+- create使用prepare → short authority cut → settle；remove显式执行Prepare → Execute，Execute先原子持久化token consumption与job admission，再关闭产品写门、复核静态owner、quiesce provider并封存stable Remote Import plan、运行watcher E2、retire authority，最后执行short membership cut与owner quarantine cleanup。create的长期membership authority是per-RepoId catalog record；remove先把它原子切为transient`Removed` tombstone，再按immutable ownership manifest经各owner清理Deve-owned repo state，全部收敛后删除tombstone。最后一个repo允许删除并进入`NoScope`。remove永不删除workspace root、Markdown/附件、`.git`、remote shadows、persistent authority lock pathname或位于removal roots之外的operator恢复输入。
 - alias set 不属于 lifecycle；handler/connection drop 不取消已 admission job。

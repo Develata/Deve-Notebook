@@ -64,7 +64,7 @@
 - 用户只能整 session Apply 或 Discard；没有 checkbox、逐文件选择和 remote Delete。任一 blocker 禁用整个 Apply。
 - Apply 通过 sealed whole-session Ledger transaction提交，事务内先保存“Ledger 已提交、Projection outcome pending”的 durable receipt，随后才执行 Projection writeback。成功收敛为 Written；失败与 durable fault 一起收敛为 Degraded。崩溃/重试从 Ledger 幂等恢复，不重复导入、不回滚 Ledger。
 - Refresh 只重算已封存 snapshot：在 RepoId/branch/source/locator 仍 exact 时可把新 revision 绑定到当前 Ledger head 与 ignore snapshot；source/locator/branch/membership/tamper drift 不可重绑。要读取新的远端内容必须先 Discard 后重新 Prepare。
-- active session 或 cleanup pending 会阻止 repo remove；用户必须显式 Discard 或运行 dry-run 后的 repair cleanup。alias 修改不搬 RepoId-based artifacts，也不使 session stale。
+- `Preparing / Ready / Stale / Failed` session 只产生 warning，并由已确认的 Remove Execute 通过 Remote Import owner plan 显式清理；`Applied/Pending`、`Applied/Degraded` 与 unknown/corrupt artifact 才阻止 repo remove。普通 Remote Import cleanup pending 仍须显式 Discard/repair；alias 修改不搬 RepoId-based artifacts，也不使 session stale。
 - Web / Command Palette 只提交 typed intent；backend 解析 repo scope、locator/profile、credential ref、session/revision 与 blockers。S3-compatible UX 只能选择 backend-defined profile handle，不收集 endpoint URL 或 secret。
 - 旧 pull→workspace→External Changes 已由 B4 一次删除，不作为兼容能力；backend/CLI Remote Import 已激活，现有 RepoId/provider lifecycle coordination已存在，ownership-aware removal owner-plan由R4补齐，独立Web review surface由B5交付。正式命令面见`14_commands#remote-import-command-contract`。
 

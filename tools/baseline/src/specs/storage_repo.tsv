@@ -94,7 +94,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 removal owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --test materialize_projection_test -- --nocapture
@@ -117,7 +117,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-010	run: scripts/ch
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli create_repo -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli repo_lifecycle -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1 per-RepoId authority ownership, R2 zero-repo NoScope/configured first Create and typed REPO_CREATION_PROJECTION_BASE_REQUIRED, plus R3 F4/v5 manifest/token/atomic ExecuteAdmitted envelope are implemented; R4-R6 exact owner cleanup/repair and remaining recovery-overlap proof, single typed finalization, thin UI and fresh cross-process evidence are not implemented yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1-R3 authority ownership, zero-repo NoScope and F4/v5 Prepare/Execute admission are implemented; R4 D1-SQ quarantine owners, O1-FREEZE ordering, cut debt and two-phase finalization are approved but not yet sealed by implementation evidence; explicit drift repair, later same-RepoId Reopening, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -134,25 +134,12 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo tes
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_store_rejects_aggregate_bytes_over_load_budget -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib web_removal_token_binds_principal_connection_and_server_incarnation -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_deletes_owned_state_and_preserves_workspace_content -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib remove_local_repo_cleanup_failure_is_exactly_repairable -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_retires_bootstrap_and_secondary_db_leases -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_fails_closed_while_another_process_holds_authority -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib persistent_authority_lock_path_survives_removal_and_serializes_readmission -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib readmitted_repo_id_replaces_retired_slot_with_new_generation -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib concurrent_same_repo_id_readmission_uses_one_reopening_reservation -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_rejects_notegit_symlink_and_reparse_escape -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib remove_local_repo_no_follow_walker_never_enters_child_link_targets -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib remove_local_repo_restart_classifies_each_durable_cut_from_exact_manifest -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib remove_local_repo_manifest_precedes_tombstone_and_cleanup_complete_precedes_retirement -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib remove_local_repo_old_request_cannot_remove_readmitted_membership -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib remove_local_repo_remote_import_owner_state_matrix -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_repair_dry_run_and_explicit_apply_reauthorize_only_proven_drift -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_repair_rejects_replaced_notegit_and_redb_even_with_matching_repo_id_text -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_prepare_blocks_overlapping_operator_recovery_input -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_pre_cut_failure_compensates_provider_watcher_authority_and_transition -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_provider_resume_failure_remains_typed_readonly_repair -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib removal_terminal_result_releases_lock_before_publication_delivery -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: D1-SQ owner matrix
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: `.notegit`必须覆盖marker cross-directory quarantine
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: O1-FREEZE必须覆盖capture seal/abort
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: cut/finalization必须覆盖CutAttempted未知truth
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: R4成功路径必须逐项证明Redb
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: R5/R6必须覆盖lost Execute response跨runtime replay
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_local_redb_not_present true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_notegit_not_present true

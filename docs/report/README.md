@@ -48,6 +48,10 @@
 - `ownership-aware-repo-removal-r0-safety-stop-2026-07-20.md`：R0 三路复审发现跨进程
   lock 删除、authority/E2 顺序、token crash cut 与 repair proof 冲突；USER 于 2026-07-21
   批准 `A1-S + B1-S + C2′-S` 安全细化。
+- `ownership-aware-repo-removal-r4-path-safety-stop-2026-07-22.md`：R4 审查发现 `.notegit`、
+  canonical Redb 与 Remote Import cleanup 的 pathname TOCTOU，以及 committed-cut debt/authority
+  retirement finalization 缺口；USER 于 2026-07-22 批准 `D1-SQ + O1-FREEZE`、cut debt、
+  two-phase finalization 与 catalog JSON v2 安全收敛。
 
 ## Retired Cleanup Policy
 

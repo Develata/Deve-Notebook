@@ -4,8 +4,8 @@
 
 - `Layer`: `Application / Projection Transport`
 - `Status`: `Current MUST`
-- `Version`: `0.1.0`
-- `Last Review`: `2026-07-21`
+- `Version`: `0.1.1`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_import_runtime.rs`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/commands/remote_import/`, `apps/cli/src/server/handlers/remote_import/`
@@ -159,10 +159,15 @@ Discard:  Ready | Stale | Failed -> Discarded
 | `Applied/Degraded` | 由 active Projection Fault blocker阻止 remove |
 | corrupt / unknown artifact | `RepairRequired`；不得猜测 session 或删除候选 |
 
-Prepare 只生成带 owner token 的 plan；Execute 必须在 authority Quiescing 前对 catalog membership、
-authority generation、manifest digest、session/receipt state、artifact identity 与 owner token做最终
-exact revalidation并封存immutable cleanup plan。Removed cut后，本runtime只能按该plan执行artifact-only
-cleanup，不再修改即将随canonical Redb删除的session/runtime row。removal-repair同样只能使用原
+Prepare 只生成带 owner token 的 observation；Execute 必须先关闭新产品写门并 quiesce provider，等待
+既有 capture 完成封存或安全中止，再对 catalog membership、authority generation、manifest digest、
+session/receipt state、artifact identity 与 owner token做最终exact revalidation并封存immutable cleanup
+plan。plan持有compact owner token并绑定per-RepoId single inventory sidecar slot的logical epoch与digest；
+相同job重试exact复用，新job只可在provider quiesced时atomic replace为更高epoch，因此每repo最多一个
+sidecar。pre-cut invalidation只使当前epoch失效，不得按pathname删除sidecar；失效slot由下次seal替换或
+最终whole-root cleanup收敛。Removed cut后，本runtime必须把exact repo artifact root整体移动到同父、
+manifest-bound quarantine，复核moved identity后执行artifact-only cleanup，不再逐项unlink inventory path，
+也不修改即将随canonical Redb删除的session/runtime row。removal-repair同样只能使用原
 owner-issued durable identity；missing target可记为already absent，replacement或unknown identity不得
 通过文本RepoId marker重新授权。此API不授予自动background cleanup，也不改变whole-session Apply、
 receipt retention或Projection Fault authority。
@@ -179,8 +184,14 @@ receipt retention或Projection Fault authority。
 | 单路径 UTF-8 bytes | 1024 |
 | 全部路径 UTF-8 bytes | 2 MiB |
 | review page | 默认 100，最大 200 |
+| removal inventory entries | 65,536 |
+| removal inventory depth | 8 |
+| serialized removal sidecar | 32 MiB |
 
-任一预算超限都在 session 可 Apply 前 fail-closed。capture 必须逐文件 streaming，不得把完整 64 MiB snapshot 聚合进内存。remote 缺失文件不产生 Delete；首版无逐文件选择。
+任一 capture 预算超限都在 session 可 Apply 前 fail-closed。removal inventory预算超限必须发生在
+任何quarantine/membership cut之前；读取sidecar最多分配32 MiB + 1 byte，不得把64 MiB payload聚合
+进sidecar或内存，且需要negative fixture证明超限fail-closed。capture 必须逐文件 streaming，不得把
+完整64 MiB snapshot聚合进内存。remote 缺失文件不产生 Delete；首版无逐文件选择。
 
 ## 5. Review and Apply Authority
 
