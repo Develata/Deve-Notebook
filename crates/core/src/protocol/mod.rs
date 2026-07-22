@@ -76,7 +76,7 @@ pub use repo_control::{
     LocalRepoRemovalPreview, LocalRepoRemovalWarning, OpaqueFallbackBinding,
     RemovalConfirmationToken, RepoAliasBinding, RepoControlRequest, RepoControlResponse,
     RepoLifecycleIntent, RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState,
-    RepoReadiness,
+    RepoReadiness, RepoRemovalFinalScope,
 };
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};

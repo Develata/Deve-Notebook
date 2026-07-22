@@ -130,6 +130,7 @@ pub(super) async fn handle_execute(
         .repo_lifecycle_jobs()
         .execute_removal(RepoRemovalExecuteIntent {
             request_id,
+            expected_repo_id: None,
             preparation_id,
             confirmation_token,
             fallback_binding,

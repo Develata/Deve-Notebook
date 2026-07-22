@@ -222,6 +222,22 @@ pub async fn run(
             },
         )?,
         Some(Commands::Repo { action }) => match action {
+            RepoAction::Remove {
+                repo_id,
+                apply,
+                token,
+                auth,
+            } => {
+                commands::repo_remove::run(
+                    ledger_dir,
+                    repo_id,
+                    apply,
+                    token.as_deref(),
+                    auth,
+                    config.snapshot_depth,
+                )
+                .await?
+            }
             RepoAction::Alias { action } => match action {
                 RepoAliasAction::Set {
                     repo_id,

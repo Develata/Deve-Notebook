@@ -25,6 +25,7 @@ pub mod repair;
 pub mod repo_alias;
 mod repo_arg;
 pub mod repo_projection;
+pub mod repo_remove;
 pub mod sc;
 pub mod sc_status;
 pub mod scan;

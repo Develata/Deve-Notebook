@@ -14,6 +14,7 @@ mod diff_projection;
 mod error_classify;
 pub mod handlers;
 mod launch;
+pub(crate) mod local_repo_removal_cli_runtime;
 pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;

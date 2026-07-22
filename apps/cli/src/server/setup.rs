@@ -79,15 +79,33 @@ fn allowed_origins_from_values<'a>(
         .collect()
 }
 
-pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Result<()> {
+pub(super) fn write_main_port_hint(
+    host_dir: &std::path::Path,
+    hint: &crate::local_cli_proxy_contract::LocalCliOwnerHint,
+) -> Result<()> {
     let Some(host_root) = host_dir.parent() else {
         return Err(anyhow!(
             "Host directory has no parent while writing main port hint"
         ));
     };
     let hint_path = host_root.join("main_port");
-    std::fs::write(&hint_path, port.to_string())
-        .with_context(|| format!("Failed to write main port hint: {:?}", hint_path))
+    let temp_path = host_root.join(format!(".main-port-{}.tmp", uuid::Uuid::new_v4()));
+    let mut temp = deve_core::utils::fs::create_atomic_replace_temp(&temp_path)
+        .with_context(|| format!("Failed to create main port hint temp: {temp_path:?}"))?;
+    let result = (|| -> Result<()> {
+        use std::io::Write;
+        serde_json::to_writer(&mut temp, hint).context("Failed to encode main port hint")?;
+        temp.write_all(b"\n")?;
+        temp.sync_all()?;
+        deve_core::utils::fs::replace_file_atomically(&temp, &temp_path, &hint_path)
+            .with_context(|| format!("Failed to publish main port hint: {hint_path:?}"))?;
+        deve_core::utils::fs::sync_directory(host_root)?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temp_path);
+    }
+    result
 }
 
 /// 启动每个本地 repo 的 watcher。
@@ -192,13 +210,38 @@ mod tests {
         let bad_root = dir.path().join("host-root");
         std::fs::write(&bad_root, "not-a-dir").expect("bad root file");
 
-        let err = write_main_port_hint(&bad_root.join(".host"), 3001)
+        let hint = crate::local_cli_proxy_contract::LocalCliOwnerHint::new(
+            3001,
+            "aaaaaaaaaaaa".into(),
+            uuid::Uuid::from_u128(1),
+        );
+        let err = write_main_port_hint(&bad_root.join(".host"), &hint)
             .expect_err("invalid host root must fail closed");
 
         assert!(
-            err.to_string().contains("Failed to write main port hint")
+            err.to_string()
+                .contains("Failed to create main port hint temp")
                 || err.to_string().contains("Not a directory")
         );
+    }
+
+    #[test]
+    fn main_port_hint_is_deterministic_owner_bound_json() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let host_dir = dir.path().join(".host").join("keys");
+        std::fs::create_dir_all(&host_dir).expect("host key dir");
+        let hint = crate::local_cli_proxy_contract::LocalCliOwnerHint::new(
+            3001,
+            "aaaaaaaaaaaa".into(),
+            uuid::Uuid::from_u128(7),
+        );
+        write_main_port_hint(&host_dir, &hint).expect("write owner hint");
+        let bytes =
+            std::fs::read(dir.path().join(".host").join("main_port")).expect("read owner hint");
+        let decoded: crate::local_cli_proxy_contract::LocalCliOwnerHint =
+            serde_json::from_slice(&bytes).expect("decode owner hint");
+        assert_eq!(decoded, hint);
+        assert!(decoded.is_valid());
     }
 
     #[test]

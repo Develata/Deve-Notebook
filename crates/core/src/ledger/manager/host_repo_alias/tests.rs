@@ -101,6 +101,32 @@ fn missing_alias_falls_back_to_full_repo_id_and_set_is_cas() -> anyhow::Result<(
 }
 
 #[test]
+fn manager_bound_alias_admission_does_not_reopen_durable_catalog_lock() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let repo = init_alias_repo(&ledger)?;
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let manager_runtime = repo.host_repo_alias_runtime();
+    let offline_runtime = HostRepoAliasRuntime::open_existing(&ledger)?;
+
+    repo.with_repo_catalog_store_lock_for_test(|| {
+        assert_eq!(
+            manager_runtime
+                .binding(repo_id)
+                .expect("manager-bound admission uses process membership")
+                .repo_id,
+            repo_id
+        );
+        assert!(
+            offline_runtime.binding(repo_id).is_err(),
+            "offline admission must still respect the durable catalog lock"
+        );
+    })?;
+    Ok(())
+}
+
+#[test]
 fn alias_validation_is_display_only_but_rejects_empty_control_and_oversize() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;

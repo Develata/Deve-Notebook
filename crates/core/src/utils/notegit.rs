@@ -70,6 +70,7 @@ pub fn ensure_repo_identity_marker(
 /// Restores the project-owned marker for an explicitly authorized same-RepoId
 /// reincarnation. Unlike first admission, retained workspace content is
 /// expected; an unexplained non-empty `.notegit` namespace still fails closed.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) fn ensure_repo_identity_marker_for_readmission(
     repo_root: &Path,
     repo_id: RepoId,

@@ -174,13 +174,6 @@ pub fn remove_repository(locale: Locale) -> &'static str {
     }
 }
 
-pub fn remove_repository_confirm(locale: Locale, name: &str) -> String {
-    match locale {
-        Locale::En => format!("Remove repository \"{name}\" from the local switcher?"),
-        Locale::Zh => format!("从本地切换列表移除存储库“{name}”？"),
-    }
-}
-
 pub fn switch_branch_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Switch Branch (Ctrl+Shift+K)",

@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -327,31 +327,39 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 ### 6.11 Local CLI Proxy Authority {#local-cli-proxy-authority}
 
 `LocalCliProxyAuthority` 是 CLI host 的 crate-private、process-scoped admission capability，唯一 owner
-为 server `auth_gateway`。它只解决“repo DB 已由本机 server 持有时，`remote-import` CLI 如何把 typed
-request 交给该 owner process”；它不是 browser write grant、FullPeer/delegated Source Control capability、
-native IPC capability 或新的 credential authority。
+为 server `auth_gateway`。它只解决“repo DB 已由本机 server 持有时，受批准的本机 CLI typed request
+如何交给该 owner process”。首发只枚举 `RemoteImport` 与 `RepoRemoval` 两个互不转换的 request family；
+它不是 browser write grant、FullPeer/delegated Source Control capability、native IPC capability、通用
+HTTP tunnel 或新的 credential authority。
 
 构造条件必须全部成立：
 
 1. TCP peer 是 loopback；转发头、Host header 或 locator 中的 localhost 文本不能替代真实 peer address。
-2. CLI 通过既有 `POST /api/auth/login` 使用显式 operator credential 建立 JWT session，并把返回的
+2. CLI 必须先读取该 ledger host 的 deterministic `.host/main_port` JSON v1 owner hint，并将其 `main_port + host_peer_id + runtime_incarnation` 与 unauthenticated `/api/node/role` 响应 exact 匹配；匹配完成前不得从 stdin 读取或向网络发送 operator password。这是 owner-process identity proof，不是新的授权 secret。
+3. CLI 通过既有 `POST /api/auth/login` 使用显式 operator credential 建立 JWT session，并把返回的
    HttpOnly `token` cookie 仅保留在当前 CLI process 的隔离 cookie jar；proxy 请求必须把该 JWT 作为
    `Authorization: Bearer` 重新提交。endpoint 不接受 Cookie-only、anonymous localhost dev session、
    browser Source Control grant、P2P inbound token 或 delegated Source Control secret。
-3. JWT 必须由当前 `AuthConfig` 验证 `sub/iat/exp/ver`，且必须含非空 per-login `sid`；本入口不接受
+4. JWT 必须由当前 `AuthConfig` 验证 `sub/iat/exp/ver`，且必须含非空 per-login `sid`；本入口不接受
    缺失 `sid` 的历史 token。CLI 不得把 password/JWT 写入 config、host runtime file、URL、日志或 receipt。
-4. admission 只生成 Remote Import operation capability，绑定
-   `(auth sid, request_id, operation, repo_id, branch, scope_nonce, session_id?, revision?, request body digest)`；
+5. admission 只生成family-specific operation capability。Remote Import绑定
+   `(family, auth sid, request_id, operation, repo_id, branch, scope_nonce, session_id?, revision?, request body digest)`；
+   Repo Removal replay admission绑定`(family, auth sid, request_id, operation, repo_id, preparation_id?,
+   current_scope_nonce, switch_nonce?, request body digest)`；durable removal issuer另绑定稳定的operator
+   subject/token-version digest与server runtime incarnation，使同一operator的下一次CLI登录可以消费前次
+   Prepare token，而不同operator或server incarnation不能复用。当前产品面只允许Prepare、Execute、Status；
+   显式Repair必须在owner提供typed repair API后作为同family独立operation加入，不得借用Execute；
    不授予通用 HTTP、Source Control、Ledger table、watcher lifecycle 或 filesystem capability。
-5. `auth_gateway` 维护有界、TTL 限制的 process-local request identity cache。同一
+6. `auth_gateway` 维护有界、TTL 限制的 process-local request identity cache。同一
    同一 `(sid, request_id)` 若 identity/digest 不同必须 fail-closed；完全相同的重复 Apply 只能转交
    `remote_import_runtime` 返回 durable stored receipt，不得再次 append。server shutdown 清空 cache；
    重启后的 exactly-once 由 Redb session/receipt CAS，而不是内存 cache 保证。
 
-handler 只能把已验证 capability 与 typed Remote Import intent 交给 coordinator。repo/branch/scope、
-session/revision、Mounted/write gate 和 sealed writer 仍由各自 owner exact revalidate；本 capability
+handler 只能把已验证 capability 与对应的 typed Remote Import intent 或 Repo Removal intent 交给其
+既有coordinator。repo/branch/scope、session/revision、removal preparation/token、Mounted/write gate和
+sealed writer仍由各自owner exact revalidate；两个family不得互相反序列化或共享业务capability。本capability
 不能绕过 DB lock、mutation lane 或 publication。认证、loopback、replay admission 任一步失败都必须在
-provider/session/Ledger I/O 前返回既有结构化 `AUTH_*` 结果。proxy 不可用时 CLI 必须报 typed failure，
+provider/session/Ledger/removal owner I/O前返回既有结构化`AUTH_*`结果。proxy不可用时CLI必须报typed failure，
 不得退回直开被占用 DB、browser grant 或匿名 localhost。
 
 ## 7. Session Probe Policy {#session-probe-policy}
@@ -435,7 +443,8 @@ provider/session/Ledger I/O 前返回既有结构化 `AUTH_*` 结果。proxy 不
 - cookies
 - brute force
 - headers
-- loopback-only `LocalCliProxyAuthority` admission；不拥有 Remote Import session 或 Ledger writer
+- loopback-only `LocalCliProxyAuthority` admission；只枚举 Remote Import / Repo Removal typed family，
+  不拥有 Remote Import session、removal settlement 或 Ledger writer
 
 ### 11.3 Browser Auth Layer
 

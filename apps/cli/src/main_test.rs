@@ -69,6 +69,49 @@ fn repo_alias_commands_expose_set_export_and_dry_run_import() {
 }
 
 #[test]
+fn repo_remove_requires_explicit_apply_and_opaque_token_pair() {
+    let repo_id = uuid::Uuid::new_v4();
+    let preview =
+        Args::try_parse_from(["deve", "repo", "remove", "--repo-id", &repo_id.to_string()])
+            .expect("parse removal preview");
+    assert!(matches!(
+        preview.command,
+        Some(Commands::Repo {
+            action: RepoAction::Remove {
+                repo_id: parsed,
+                apply: false,
+                token: None,
+                ..
+            }
+        }) if parsed == repo_id
+    ));
+
+    assert!(
+        Args::try_parse_from([
+            "deve",
+            "repo",
+            "remove",
+            "--repo-id",
+            &repo_id.to_string(),
+            "--apply",
+        ])
+        .is_err()
+    );
+    assert!(
+        Args::try_parse_from([
+            "deve",
+            "repo",
+            "remove",
+            "--repo-id",
+            &repo_id.to_string(),
+            "--token",
+            "opaque",
+        ])
+        .is_err()
+    );
+}
+
+#[test]
 fn export_accepts_out_alias_for_output() {
     let args = Args::try_parse_from([
         "deve",

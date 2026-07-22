@@ -165,3 +165,34 @@ fn repo_switcher_switch_target_is_exact_repo_id() {
     assert_eq!(target.expected_name, "display");
     assert_eq!(target.repo_id, repo_id);
 }
+
+#[test]
+fn removal_dialog_is_a_single_typed_backend_projection() {
+    let source = include_str!("removal_dialog.rs");
+
+    assert!(source.contains("data-deve-repo-removal-dialog=\"visible\""));
+    assert!(source.contains("role=\"dialog\""));
+    assert!(source.contains("aria-modal=\"true\""));
+    assert!(source.contains("min-h-[44px]"));
+    assert!(source.contains("safe-area-inset-bottom"));
+    assert!(source.contains("attach_modal_focus_restore_effect_with_fallback"));
+    assert!(source.contains("preview.deleted"));
+    assert!(source.contains("preview.preserved"));
+    assert!(source.contains("preview.warnings"));
+    assert!(source.contains("preview.blockers"));
+    assert!(source.contains("value.can_execute"));
+    assert!(!source.contains("window.confirm"));
+    assert!(!source.contains("confirmation_token"));
+    assert!(!source.contains("manifest"));
+    assert!(!source.contains("detail"));
+}
+
+#[test]
+fn remove_row_only_requests_backend_preview() {
+    let source = include_str!("row/actions.rs");
+
+    assert!(source.contains("on_remove_repo.run"));
+    assert!(source.contains("min-h-[44px]"));
+    assert!(!source.contains("ExecuteLocalRepoRemoval"));
+    assert!(!source.contains("window.confirm"));
+}

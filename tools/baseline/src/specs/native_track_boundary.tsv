@@ -1,4 +1,6 @@
 # Generated from scripts/check-native-track-boundary.sh fixed-string assertions. Dynamic allowlist checks live in native_track_boundary.rs.
+contains	docs/plan/17_tech_stack.md	Core host filesystem authority **MAY** 在 `cfg(windows)` 下独立使用 `windows-sys`
+contains	crates/core/Cargo.toml	windows-sys = { version = "0.61.2", default-features = false, features = ["Wdk_Storage_FileSystem", "Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_IO"] }
 contains	apps/desktop/src/lib.rs	#[cfg(feature = "native-packaging")]
 contains	apps/desktop/src/lib.rs	mod process_runtime;
 contains	apps/desktop/src/lib.rs	mod service_bootstrap;

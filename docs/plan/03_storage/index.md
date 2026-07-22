@@ -67,6 +67,11 @@ Workspace_r = P_r ⊕ D_r
 
 ### 3.1 Ledger Layout
 
+Host runtime composition MUST resolve the configured `ledger_dir` to one canonical absolute
+directory before opening any RepoId-scoped authority, catalog, locator, alias, or lifecycle owner.
+Relative configuration remains valid and is resolved exactly once against the process working
+directory; downstream owners MUST NOT retain or independently reinterpret the relative spelling.
+
 - `ledger/local/<repo_id>.redb`
 - `ledger/remotes/<peer_id>/<repo_id>.redb`
 - `ledger/.host/identity.key`

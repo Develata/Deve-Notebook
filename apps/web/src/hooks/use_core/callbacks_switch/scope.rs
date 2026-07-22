@@ -43,6 +43,7 @@ mod tests {
             PendingBranchSwitch::new(PendingBranchTarget::Local, 1),
         ));
         let (pending_repo_switch, set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
+        let (removal_preview, set_removal_preview) = signal(None);
 
         assert!(!can_start_scope_switch(SwitchScopeSignals {
             current_doc,
@@ -58,6 +59,8 @@ mod tests {
             set_handshake_scope_nonce,
             set_pending_branch_switch,
             set_pending_repo_switch,
+            removal_preview,
+            set_removal_preview,
         }));
 
         set_pending_branch_switch.set(None);
@@ -81,6 +84,8 @@ mod tests {
             set_handshake_scope_nonce,
             set_pending_branch_switch,
             set_pending_repo_switch,
+            removal_preview,
+            set_removal_preview,
         }));
     }
 }

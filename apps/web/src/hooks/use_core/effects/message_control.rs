@@ -11,7 +11,6 @@ use leptos::prelude::{GetUntracked, Set, Update};
 use super::super::effects_switch;
 use super::super::state::CoreSignals;
 use super::message_control_runtime::{refresh_after_branch_switch, refresh_after_repo_switch};
-use super::message_remove_scope;
 use super::message_scope::string_branch_matches_scope;
 
 pub fn handle_branch_switched(
@@ -52,14 +51,6 @@ pub fn handle_repo_switched(
             .map(|pending| pending.into_target()),
     ) {
         leptos::logging::warn!("忽略 RepoSwitched: branch 与当前 scope 不匹配");
-        return;
-    }
-    let staged_repo_switch =
-        message_remove_scope::admit_repo_switched(&name, &uuid, switch_nonce, ws, signals);
-    if matches!(
-        staged_repo_switch,
-        message_remove_scope::RepoSwitchedStageAdmission::Rejected
-    ) {
         return;
     }
     let active_branch = signals.active_branch.get_untracked();
@@ -118,7 +109,6 @@ pub fn handle_repo_switched(
     if outcome.should_refresh {
         refresh_after_repo_switch(ws, signals);
     }
-    message_remove_scope::settle_repo_switched(staged_repo_switch, outcome.accepted, ws, signals);
 }
 
 struct SessionRestoreScopeInput<'a> {

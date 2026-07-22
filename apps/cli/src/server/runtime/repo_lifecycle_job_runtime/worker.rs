@@ -403,15 +403,20 @@ async fn publish_one(
     sink: &dyn RepoLifecyclePublicationSink,
     request_id: Uuid,
 ) -> Result<(), RepoLifecycleJobError> {
-    let publication = store
+    let receipt = store
         .receipt(request_id)
-        .and_then(|receipt| receipt.publication.clone())
+        .ok_or(RepoLifecycleJobError::NotFound)?;
+    let job_id = receipt.job_id;
+    let publication = receipt
+        .publication
+        .clone()
         .ok_or(RepoLifecycleJobError::NotFound)?;
     let mut last_error = None;
     for _ in 0..PUBLICATION_ATTEMPTS {
         let publication = publication.clone();
         let attempt =
-            AssertUnwindSafe(async { sink.publish(request_id, publication).await }).catch_unwind();
+            AssertUnwindSafe(async { sink.publish(request_id, job_id, publication).await })
+                .catch_unwind();
         match tokio::time::timeout(PUBLICATION_ATTEMPT_TIMEOUT, attempt).await {
             Ok(Ok(Ok(()))) => {
                 store.update(request_id, LifecycleReceipt::mark_publication_delivered)?;

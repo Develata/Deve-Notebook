@@ -81,5 +81,7 @@ pub(super) fn switch_scope(signals: &CoreSignals) -> SwitchScopeSignals {
         set_handshake_scope_nonce: signals.set_handshake_scope_nonce,
         set_pending_branch_switch: signals.set_pending_branch_switch,
         set_pending_repo_switch: signals.set_pending_repo_switch,
+        removal_preview: signals.removal_preview,
+        set_removal_preview: signals.set_removal_preview,
     }
 }

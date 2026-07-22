@@ -11,6 +11,7 @@ use leptos::prelude::*;
 mod create_form;
 mod logic;
 mod menu;
+mod removal_dialog;
 mod row;
 mod trigger;
 
@@ -18,6 +19,7 @@ mod trigger;
 mod tests;
 
 use self::menu::RepoSwitcherMenu;
+use self::removal_dialog::RepoRemovalDialog;
 use self::trigger::RepoSwitcherTrigger;
 
 #[component]
@@ -30,10 +32,12 @@ pub fn RepoSwitcher() -> impl IntoView {
     let (action_repo, set_action_repo) = signal(None::<RepoId>);
     let (renaming_repo, set_renaming_repo) = signal(None::<RepoId>);
     let (rename_name, set_rename_name) = signal(String::new());
+    let trigger_ref = NodeRef::<leptos::html::Button>::new();
 
     view! {
         <div class="relative">
             <RepoSwitcherTrigger
+                trigger_ref=trigger_ref
                 show_menu=show_menu
                 set_show_menu=set_show_menu
                 set_action_repo=set_action_repo
@@ -59,5 +63,6 @@ pub fn RepoSwitcher() -> impl IntoView {
                 />
             </Show>
         </div>
+        <RepoRemovalDialog fallback_focus_ref=trigger_ref />
     }
 }

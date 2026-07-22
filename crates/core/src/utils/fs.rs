@@ -4,6 +4,7 @@ mod authority;
 mod identity;
 mod quarantine;
 
+#[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
 pub(crate) use authority::{
     create_regular_file_lock_new, ensure_open_file_matches_identity,
     open_regular_file_lock_existing,

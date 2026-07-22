@@ -39,6 +39,7 @@ use uuid::Uuid;
 const COMMAND_CAPACITY: usize = 32;
 
 pub(crate) struct RepoLifecycleJobRuntime {
+    runtime_incarnation: Uuid,
     accepting: AtomicBool,
     shutdown_started: AtomicBool,
     commands: mpsc::Sender<worker::Command>,
@@ -64,6 +65,7 @@ impl RepoLifecycleJobRuntime {
             receiver,
         ));
         Ok(Arc::new(Self {
+            runtime_incarnation,
             accepting: AtomicBool::new(true),
             shutdown_started: AtomicBool::new(false),
             commands,
@@ -71,6 +73,10 @@ impl RepoLifecycleJobRuntime {
             shutdown_result: Mutex::new(None),
             shutdown_notify: Notify::new(),
         }))
+    }
+
+    pub(crate) const fn runtime_incarnation(&self) -> Uuid {
+        self.runtime_incarnation
     }
 
     pub(crate) async fn prepare_removal(

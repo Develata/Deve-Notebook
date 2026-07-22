@@ -214,6 +214,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `13_i18n#i18n-error-code-catalog` | `## 6. Error Code Catalog` | 后端结构化错误码到前端文案的唯一权威目录 |
 | `14_commands#cli-commands` | `## 1. CLI Commands` | CLI 命令集合、帮助面与配置命令入口 |
 | `14_commands#repo-alias-command-contract` | `### 1.0.1 Repo Alias Command Contract` | host-local alias JSON CLI、dry-run、warning summary 与 atomic accepted batch |
+| `14_commands#repo-removal-command-contract` | `### 1.0.2 Repo Removal Command Contract` | ownership-aware local removal 的 shared Prepare/Execute CLI、proxy/offline authority 与 typed preview/result |
 | `14_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
 | `15_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
 | `15_settings#native-host-local-backend-preference` | `### 2.2.2 Native Host-local Backend Preference` | Desktop/Mobile native backend preference 的 host-local JSON 持久化、local/remote 模式与敏感数据禁止边界 |

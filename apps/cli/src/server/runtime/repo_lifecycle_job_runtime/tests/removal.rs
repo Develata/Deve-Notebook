@@ -89,6 +89,7 @@ fn execute_intent(
 ) -> RepoRemovalExecuteIntent {
     RepoRemovalExecuteIntent {
         request_id: Uuid::new_v4(),
+        expected_repo_id: None,
         preparation_id: prepared.preparation_id,
         confirmation_token: token,
         fallback_binding: prepared.fallback_binding.clone(),

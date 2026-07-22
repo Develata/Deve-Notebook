@@ -80,6 +80,8 @@ fn role_payload_with_watcher_health(
         "role": r.role,
         "ws_port": r.ws_port,
         "main_port": r.main_port,
+        "host_peer_id": r.host_peer_id,
+        "runtime_incarnation": r.runtime_incarnation,
         "version": r.version,
         "profile": r.profile,
         "delivery": r.delivery,
@@ -157,6 +159,8 @@ mod tests {
             role: "main".into(),
             ws_port: 3001,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
@@ -168,6 +172,11 @@ mod tests {
         });
 
         assert_eq!(payload["role"], "main");
+        assert_eq!(payload["host_peer_id"], "aaaaaaaaaaaa");
+        assert_eq!(
+            payload["runtime_incarnation"],
+            uuid::Uuid::from_u128(1).to_string()
+        );
         assert_eq!(payload["version"], "0.0.1");
         assert_eq!(payload["profile"], "standard");
         assert_eq!(payload["delivery"], "embedded-frontend");
@@ -193,6 +202,8 @@ mod tests {
                 role: "main".into(),
                 ws_port: 3001,
                 main_port: 3001,
+                host_peer_id: "aaaaaaaaaaaa".into(),
+                runtime_incarnation: uuid::Uuid::from_u128(1),
                 version: "0.0.1".into(),
                 profile: "standard".into(),
                 delivery: "embedded-frontend".into(),
@@ -218,6 +229,8 @@ mod tests {
                 role: "main".into(),
                 ws_port: 3001,
                 main_port: 3001,
+                host_peer_id: "aaaaaaaaaaaa".into(),
+                runtime_incarnation: uuid::Uuid::from_u128(1),
                 version: "0.0.1".into(),
                 profile: "standard".into(),
                 delivery: "embedded-frontend".into(),
@@ -257,6 +270,8 @@ mod tests {
             role: "native-main".into(),
             ws_port: 3001,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
@@ -291,6 +306,8 @@ mod tests {
             role: "main".into(),
             ws_port: 3001,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
@@ -331,6 +348,8 @@ mod tests {
             role: "native-main".into(),
             ws_port: 3001,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),
@@ -360,6 +379,8 @@ mod tests {
             role: "proxy".into(),
             ws_port: 3002,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),

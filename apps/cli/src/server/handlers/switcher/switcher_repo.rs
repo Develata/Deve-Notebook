@@ -48,7 +48,7 @@ pub(super) async fn handle_switch_repo(
     }
 }
 
-pub(super) async fn commit_repo_switch(
+pub(crate) async fn commit_repo_switch(
     state: &Arc<AppState>,
     session: &mut WsSession,
     name: String,

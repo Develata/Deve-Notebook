@@ -11,7 +11,7 @@ use crate::server::session::WsSession;
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::ledger::{CatalogMembershipRuntime, CatalogMembershipToken};
 use deve_core::models::RepoId;
-use deve_core::protocol::{RepoListEntry, ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{RepoListEntry, ServerMessage};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -137,6 +137,7 @@ impl RepoSessionRuntime {
     /// traversed or while commands are enqueued.
     pub(crate) fn invalidate_removed_repo_observers(
         &self,
+        job_id: uuid::Uuid,
         removed_repo_id: RepoId,
         excluded_session_id: Option<u64>,
         final_list: FinalRepoListProjection,
@@ -162,6 +163,7 @@ impl RepoSessionRuntime {
                 continue;
             };
             let command = RepoSessionCommand::Removed {
+                job_id,
                 removed_repo_id,
                 expected_membership: binding.membership.clone(),
                 expected_scope_nonce: binding.scope_nonce,
@@ -222,6 +224,7 @@ impl RepoSessionRuntime {
     pub(crate) fn publish_lifecycle_settlement(
         &self,
         request_id: uuid::Uuid,
+        job_id: uuid::Uuid,
         publication: super::repo_lifecycle_job_runtime::RepoLifecycleSettledPublication,
         final_list: FinalRepoListProjection,
     ) -> Result<Option<u64>, RepoSessionRuntimeError> {
@@ -235,6 +238,7 @@ impl RepoSessionRuntime {
             };
             let command = RepoSessionCommand::LifecycleSettled {
                 request_id,
+                job_id,
                 expected_scope_nonce: observer.expected_scope_nonce,
                 switch_nonce: observer.switch_nonce,
                 publication,
@@ -283,6 +287,7 @@ impl Drop for RepoSessionPermit {
 
 pub(crate) enum RepoSessionCommand {
     Removed {
+        job_id: uuid::Uuid,
         removed_repo_id: RepoId,
         expected_membership: CatalogMembershipToken,
         expected_scope_nonce: u64,
@@ -291,6 +296,7 @@ pub(crate) enum RepoSessionCommand {
     },
     LifecycleSettled {
         request_id: uuid::Uuid,
+        job_id: uuid::Uuid,
         expected_scope_nonce: u64,
         switch_nonce: u64,
         publication: super::repo_lifecycle_job_runtime::RepoLifecycleSettledPublication,
@@ -307,6 +313,7 @@ impl RepoSessionCommand {
     ) -> bool {
         match self {
             Self::Removed {
+                job_id,
                 removed_repo_id,
                 expected_membership,
                 expected_scope_nonce,
@@ -322,7 +329,16 @@ impl RepoSessionCommand {
                 }
                 state.revoke_source_control_write_grant_for_session(session);
                 session.commit_no_scope(removed_repo_id, next_scope_nonce);
-                enqueue_no_scope_sequence(channel, final_list, next_scope_nonce, None);
+                channel.unicast(ServerMessage::RepoControl(
+                    deve_core::protocol::RepoControlResponse::LocalRepoRemovalObserverInvalidated {
+                        job_id,
+                        removed_repo_id,
+                        final_repo_list: final_list.entries,
+                        scope: deve_core::protocol::RepoRemovalFinalScope::NoScope {
+                            scope_nonce: deve_core::protocol::ScopeNonce::new(next_scope_nonce),
+                        },
+                    },
+                ));
                 true
             }
             Self::LifecycleSettled { .. } => {
@@ -330,25 +346,6 @@ impl RepoSessionCommand {
             }
         }
     }
-}
-
-pub(crate) fn enqueue_no_scope_sequence(
-    channel: &DualChannel,
-    final_list: FinalRepoListProjection,
-    scope_nonce: u64,
-    switch_nonce: Option<u64>,
-) {
-    channel.unicast(ServerMessage::RepoList {
-        request_id: None,
-        branch: None,
-        scope_nonce: Some(scope_nonce),
-        repo_entries: final_list.entries,
-    });
-    channel.send_protocol_error_with_scope_and_switch_nonce(
-        ServerError::new(ServerErrorCode::ScRepoNotSelected),
-        Some(scope_nonce),
-        switch_nonce,
-    );
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -94,6 +94,7 @@ fn publish_lifecycle_settlement_targets_exact_observer_then_none() {
     let fixture = bound_session_fixture();
     let (permit, mut commands, _channel, _retirement) = register_session(&fixture.runtime);
     let request_id = uuid::Uuid::new_v4();
+    let job_id = uuid::Uuid::new_v4();
     fixture
         .runtime
         .register_lifecycle_observer(permit.id(), request_id, 7, 8)
@@ -108,6 +109,7 @@ fn publish_lifecycle_settlement_targets_exact_observer_then_none() {
         .runtime
         .publish_lifecycle_settlement(
             request_id,
+            job_id,
             publication,
             FinalRepoListProjection { entries: vec![] },
         )
@@ -116,11 +118,13 @@ fn publish_lifecycle_settlement_targets_exact_observer_then_none() {
     match commands.try_recv().expect("queued settlement command") {
         RepoSessionCommand::LifecycleSettled {
             request_id: seen,
+            job_id: seen_job_id,
             expected_scope_nonce,
             switch_nonce,
             ..
         } => {
             assert_eq!(seen, request_id);
+            assert_eq!(seen_job_id, job_id);
             assert_eq!(expected_scope_nonce, 7);
             assert_eq!(switch_nonce, 8);
         }
@@ -137,6 +141,7 @@ fn publish_lifecycle_settlement_targets_exact_observer_then_none() {
         .runtime
         .publish_lifecycle_settlement(
             request_id,
+            job_id,
             publication,
             FinalRepoListProjection { entries: vec![] },
         )
@@ -156,6 +161,7 @@ fn invalidate_removed_repo_observers_fans_out_once_and_excludes_initiator() {
     let invalidated = fixture
         .runtime
         .invalidate_removed_repo_observers(
+            uuid::Uuid::new_v4(),
             fixture.repo_id,
             Some(initiator.id()),
             FinalRepoListProjection { entries: vec![] },
@@ -186,6 +192,7 @@ fn invalidate_removed_repo_observers_fans_out_once_and_excludes_initiator() {
     let invalidated = fixture
         .runtime
         .invalidate_removed_repo_observers(
+            uuid::Uuid::new_v4(),
             fixture.repo_id,
             None,
             FinalRepoListProjection { entries: vec![] },
@@ -195,6 +202,7 @@ fn invalidate_removed_repo_observers_fans_out_once_and_excludes_initiator() {
     let invalidated = fixture
         .runtime
         .invalidate_removed_repo_observers(
+            uuid::Uuid::new_v4(),
             fixture.repo_id,
             None,
             FinalRepoListProjection { entries: vec![] },
@@ -215,6 +223,7 @@ fn invalidate_removed_repo_observers_retires_session_when_commands_undeliverable
     let invalidated = fixture
         .runtime
         .invalidate_removed_repo_observers(
+            uuid::Uuid::new_v4(),
             fixture.repo_id,
             None,
             FinalRepoListProjection { entries: vec![] },

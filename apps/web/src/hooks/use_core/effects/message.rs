@@ -15,7 +15,6 @@ use super::super::write_gate::RepoWriteGateState;
 use super::message_dispatch;
 use super::message_projection_recovery;
 use super::message_refresh::{capture_refresh_scope, should_send_refresh_through_read_gate};
-use super::message_remove_scope;
 use crate::runtime::repo_control_client::RepoControlClient;
 
 /// 设置消息处理 Effect。
@@ -170,7 +169,6 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
         repo_control,
     } = context;
     let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
-    message_remove_scope::retire_stale_or_expired(ws_rx, signals);
     projection_refresh.enter_scope(ProjectionRefreshScope {
         connection_epoch: current_connection_epoch,
         repo_id: signals

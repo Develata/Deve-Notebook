@@ -4,6 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::PendingRepoSwitch;
+use crate::hooks::use_core::scope_prefs::clear_scope_pref;
 use deve_core::protocol::{ClientMessage, RepoListEntry};
 use leptos::prelude::{GetUntracked, Set};
 
@@ -11,12 +12,10 @@ use super::super::state::CoreSignals;
 use super::super::switch_nonce::next_switch_nonce_after;
 
 pub fn maybe_switch_to_first_repo(entries: &[RepoListEntry], ws: &WsService, signals: CoreSignals) {
-    let Some(first_repo) = entries.first() else {
+    let Some(target_repo) = bootstrap_repo_target(entries, signals) else {
+        clear_stale_unbound_scope(entries, signals);
         return;
     };
-    if !should_auto_switch_to_first_repo(entries, signals) {
-        return;
-    }
 
     let Some(switch_nonce) = next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
     else {
@@ -28,29 +27,59 @@ pub fn maybe_switch_to_first_repo(entries: &[RepoListEntry], ws: &WsService, sig
     signals
         .set_pending_repo_switch
         .set(Some(PendingRepoSwitch::switch(
-            first_repo.display_alias.clone(),
-            first_repo.repo_id,
+            target_repo.display_alias.clone(),
+            target_repo.repo_id,
             switch_nonce,
         )));
     ws.send(ClientMessage::SwitchRepoExact {
-        repo_id: first_repo.repo_id,
+        repo_id: target_repo.repo_id,
         switch_nonce: Some(switch_nonce),
     });
 }
 
-fn should_auto_switch_to_first_repo(entries: &[RepoListEntry], signals: CoreSignals) -> bool {
-    !entries.is_empty()
-        && !signals.explicit_repo_selection_required.get_untracked()
-        && signals.current_repo.get_untracked().is_none()
-        && signals.current_repo_id.get_untracked().is_none()
-        && signals.active_branch.get_untracked().is_none()
-        && signals.pending_branch_switch.get_untracked().is_none()
-        && signals.pending_repo_switch.get_untracked().is_none()
+fn bootstrap_repo_target(
+    entries: &[RepoListEntry],
+    signals: CoreSignals,
+) -> Option<&RepoListEntry> {
+    if entries.is_empty()
+        || signals.explicit_repo_selection_required.get_untracked()
+        || signals.active_branch.get_untracked().is_some()
+        || signals.pending_branch_switch.get_untracked().is_some()
+        || signals.pending_repo_switch.get_untracked().is_some()
+    {
+        return None;
+    }
+
+    match (
+        signals.current_repo.get_untracked(),
+        signals.current_repo_id.get_untracked(),
+    ) {
+        (None, Some(restored_repo_id)) => restored_repo_id
+            .parse::<deve_core::models::RepoId>()
+            .ok()
+            .and_then(|repo_id| entries.iter().find(|entry| entry.repo_id == repo_id)),
+        (None, None) => entries.first(),
+        _ => None,
+    }
+}
+
+fn clear_stale_unbound_scope(entries: &[RepoListEntry], signals: CoreSignals) {
+    let stale = signals.current_repo.get_untracked().is_none()
+        && signals
+            .current_repo_id
+            .get_untracked()
+            .and_then(|value| value.parse::<deve_core::models::RepoId>().ok())
+            .is_some_and(|repo_id| entries.iter().all(|entry| entry.repo_id != repo_id));
+    if stale {
+        clear_scope_pref();
+        signals.set_current_repo_id.set(None);
+        signals.set_explicit_repo_selection_required.set(true);
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::should_auto_switch_to_first_repo;
+    use super::bootstrap_repo_target;
     use crate::hooks::use_core::PendingRepoSwitch;
     use crate::hooks::use_core::state::init_signals;
     use leptos::prelude::*;
@@ -74,7 +103,10 @@ mod tests {
         let signals = init_signals(signal(crate::api::ConnectionStatus::Connected).0);
         let repos = repo_entries(&["default", "test"]);
 
-        assert!(should_auto_switch_to_first_repo(&repos, signals));
+        assert_eq!(
+            bootstrap_repo_target(&repos, signals).map(|entry| entry.display_alias.as_str()),
+            Some("default")
+        );
 
         signals
             .set_pending_repo_switch
@@ -83,7 +115,7 @@ mod tests {
                 uuid::Uuid::nil(),
                 1,
             )));
-        assert!(!should_auto_switch_to_first_repo(&repos, signals));
+        assert!(bootstrap_repo_target(&repos, signals).is_none());
     }
 
     #[test]
@@ -98,7 +130,7 @@ mod tests {
             .set_current_repo_id
             .set(Some(uuid::Uuid::new_v4().to_string()));
 
-        assert!(!should_auto_switch_to_first_repo(&repos, signals));
+        assert!(bootstrap_repo_target(&repos, signals).is_none());
     }
 
     #[test]
@@ -110,6 +142,35 @@ mod tests {
 
         signals.set_explicit_repo_selection_required.set(true);
 
-        assert!(!should_auto_switch_to_first_repo(&repos, signals));
+        assert!(bootstrap_repo_target(&repos, signals).is_none());
+    }
+
+    #[test]
+    fn exact_repo_restore_resolves_through_the_current_backend_list() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Connected).0);
+        let repos = repo_entries(&["first", "remembered"]);
+        signals
+            .set_current_repo_id
+            .set(Some(repos[1].repo_id.to_string()));
+
+        assert_eq!(
+            bootstrap_repo_target(&repos, signals).map(|entry| entry.repo_id),
+            Some(repos[1].repo_id)
+        );
+    }
+
+    #[test]
+    fn missing_exact_repo_restore_stays_unbound() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let signals = init_signals(signal(crate::api::ConnectionStatus::Connected).0);
+        let repos = repo_entries(&["current"]);
+        signals
+            .set_current_repo_id
+            .set(Some(uuid::Uuid::new_v4().to_string()));
+
+        assert!(bootstrap_repo_target(&repos, signals).is_none());
     }
 }

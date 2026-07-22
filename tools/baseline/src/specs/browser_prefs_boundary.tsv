@@ -27,8 +27,9 @@ contains	apps/web/src/components/settings_prefs.rs	deve.ui.ai_chat_visible
 contains	apps/web/src/components/settings_prefs.rs	deve.ui.max_document_tabs
 contains	apps/web/src/i18n/mod.rs	write_pref
 contains	apps/web/src/storage/prefs.rs	typed_prefs_roundtrip_through_fallback_layer
-contains	apps/web/src/hooks/use_core/scope_prefs.rs	repo_name: String
-contains	apps/web/src/hooks/use_core/scope_prefs.rs	fn serialize_scope_pref(repo_name: String) -> Option<String>
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	repo_id: RepoId
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	branch: StoredScopeBranchKind
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	fn serialize_scope_pref(repo_id: RepoId) -> Option<String>
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	active_branch: Option<PeerId>
 absent	apps/web/src/hooks/use_core/scope_prefs.rs	expect("scope pref should serialize")
-absent	apps/web/src/hooks/use_core/scope_prefs.rs	repo_id:
-absent	apps/web/src/hooks/use_core/scope_prefs.rs	active_branch:
+absent	apps/web/src/hooks/use_core/scope_prefs.rs	repo_name: String

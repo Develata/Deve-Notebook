@@ -10,6 +10,7 @@
 use crate::runtime::domain::{
     PendingRepoSwitch, RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest,
 };
+use crate::runtime::repo_control_client::RepoRemovalPresentation;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
@@ -32,6 +33,9 @@ pub struct ScopeClient {
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,
+    pub removal_preview: ReadSignal<Option<RepoRemovalPresentation>>,
+    pub on_confirm_remove_repo: Callback<deve_core::models::RepoId>,
+    pub on_cancel_remove_repo: Callback<deve_core::models::RepoId>,
     pub on_switch_branch: Callback<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,

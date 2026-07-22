@@ -222,6 +222,10 @@ pub fn build_app_with_native_session_and_p2p(
             "/api/local-cli/remote-import",
             post(handlers::remote_import::http::local_cli_proxy),
         )
+        .route(
+            "/api/local-cli/repo-removal",
+            post(handlers::repo_control::http::local_cli_proxy),
+        )
         .layer(DefaultBodyLimit::max(
             auth::local_cli_proxy::LOCAL_CLI_PROXY_MAX_REQUEST_BODY_BYTES,
         ))

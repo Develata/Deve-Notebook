@@ -4,7 +4,10 @@
 
 use super::*;
 use crate::api::ConnectionStatus;
-use deve_core::protocol::{ServerError, ServerErrorCode};
+use deve_core::protocol::{
+    LocalRepoRemovalDeletedCategory, LocalRepoRemovalPreservedCategory, LocalRepoRemovalWarning,
+    ServerError, ServerErrorCode,
+};
 
 fn scope(epoch: u64, repo_id: Option<RepoId>, nonce: u64) -> RepoControlScope {
     RepoControlScope::new(epoch, repo_id, None, nonce)
@@ -44,6 +47,7 @@ fn removal_preview_accepts_an_exact_non_current_repo_target() {
         current.clone(),
         PendingKind::RemovalPrepare {
             repo_id: removed_repo_id,
+            display_alias: "archive".into(),
         },
     );
 
@@ -67,9 +71,106 @@ fn removal_preview_accepts_an_exact_non_current_repo_target() {
 
     assert!(matches!(
         admission,
-        Some(RepoControlAdmission::RemovalPrepared { repo_id, .. })
-            if repo_id == removed_repo_id
+        Some(RepoControlAdmission::RemovalPrepared { presentation })
+            if presentation.repo_id == removed_repo_id
     ));
+}
+
+#[test]
+fn prepared_removal_consumes_secret_once_and_accepts_one_typed_finalization() {
+    let owner = leptos::reactive::owner::Owner::new();
+    owner.with(|| {
+        let client = RepoControlClient::default();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let current = scope(4, Some(repo_id), 8);
+        let prepare_request = client.prepare_remove_repo(
+            &ws,
+            current.clone(),
+            repo_id,
+            "research".into(),
+        );
+        ws.drain_sent_for_test();
+        let preparation_id = Uuid::new_v4();
+        assert!(matches!(
+            client.accept(
+                RepoControlResponse::LocalRepoRemovalPrepared {
+                    request_id: prepare_request,
+                    preparation_id,
+                    repo_id,
+                    preview: LocalRepoRemovalPreview {
+                        deleted: vec![LocalRepoRemovalDeletedCategory::LocalLedgerAuthority],
+                        preserved: vec![LocalRepoRemovalPreservedCategory::WorkspaceContent],
+                        warnings: vec![LocalRepoRemovalWarning::LedgerHistoryHasNoSupportedRestore],
+                        blockers: Vec::new(),
+                    },
+                    confirmation_token: RemovalConfirmationToken::from_backend("a".repeat(64)),
+                    fallback_binding: None,
+                    expires_at_unix_ms: Some(123),
+                },
+                &current,
+            ),
+            Some(RepoControlAdmission::RemovalPrepared { presentation })
+                if presentation.can_execute
+        ));
+
+        let execute_request = client
+            .execute_prepared_removal(&ws, current.clone(), repo_id, 9)
+            .expect("execute prepared removal");
+        assert_eq!(
+            client.execute_prepared_removal(&ws, current.clone(), repo_id, 10),
+            Err(PreparedRemovalExecutionError::Missing)
+        );
+        let sent = ws.drain_sent_for_test();
+        assert_eq!(sent.len(), 1);
+        assert!(matches!(
+            &sent[0],
+            ClientMessage::RepoControl(RepoControlRequest::ExecuteLocalRepoRemoval {
+                request_id,
+                preparation_id: actual_preparation,
+                current_scope_nonce,
+                switch_nonce,
+                ..
+            }) if *request_id == execute_request
+                && *actual_preparation == preparation_id
+                && current_scope_nonce.get() == 8
+                && switch_nonce.get() == 9
+        ));
+
+        let job_id = Uuid::new_v4();
+        assert!(matches!(
+            client.accept(
+                RepoControlResponse::LifecycleAccepted {
+                    request_id: execute_request,
+                    job_id,
+                    target_repo_id: repo_id,
+                },
+                &current,
+            ),
+            Some(RepoControlAdmission::LifecycleAccepted { .. })
+        ));
+        let finalization = client.accept(
+            RepoControlResponse::LocalRepoRemovalSettled {
+                request_id: execute_request,
+                job_id,
+                removed_repo_id: repo_id,
+                final_repo_list: Vec::new(),
+                scope: RepoRemovalFinalScope::NoScope {
+                    scope_nonce: ScopeNonce::new(9),
+                },
+            },
+            &current,
+        );
+        assert!(matches!(
+            finalization,
+            Some(RepoControlAdmission::RemovalFinalized {
+                request_id: Some(request_id),
+                job_id: actual_job,
+                removed_repo_id,
+                ..
+            }) if request_id == execute_request && actual_job == job_id && removed_repo_id == repo_id
+        ));
+    });
 }
 
 #[test]
@@ -128,6 +229,7 @@ fn error_admission_exposes_only_typed_code() {
         Some(RepoControlAdmission::Error {
             code: ServerErrorCode::RepoLifecycleBusy,
             lifecycle_request: true,
+            removal_request: true,
         })
     );
 }
@@ -161,6 +263,40 @@ fn reconnect_rebinds_lifecycle_and_requests_exact_status_once() {
         }
         assert_eq!(client.resume_lifecycles(&ws, current), 0);
         assert!(ws.drain_sent_for_test().is_empty());
+    });
+}
+
+#[test]
+fn same_connection_scope_change_rebinds_lifecycle_once() {
+    let owner = leptos::reactive::owner::Owner::new();
+    owner.with(|| {
+        let client = RepoControlClient::default();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let removed_repo_id = RepoId::new_v4();
+        let selected_repo_id = RepoId::new_v4();
+        let request_id = Uuid::new_v4();
+        client.register(
+            request_id,
+            scope(4, Some(removed_repo_id), 8),
+            PendingKind::Lifecycle {
+                lifecycle: PendingLifecycle::Remove {
+                    repo_id: removed_repo_id,
+                },
+                accepted: Some((Uuid::new_v4(), removed_repo_id)),
+            },
+        );
+
+        let selected = scope(4, Some(selected_repo_id), 9);
+        assert_eq!(client.resume_lifecycles(&ws, selected.clone()), 1);
+        let sent = ws.drain_sent_for_test();
+        assert_eq!(sent.len(), 1);
+        assert!(matches!(
+            &sent[0],
+            ClientMessage::RepoControl(RepoControlRequest::GetLifecycle {
+                request_id: actual_request_id,
+            }) if *actual_request_id == request_id
+        ));
+        assert_eq!(client.resume_lifecycles(&ws, selected), 0);
     });
 }
 

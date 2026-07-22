@@ -10,12 +10,15 @@
 use deve_core::config::RuntimeEnvironment;
 use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
 use std::sync::{Arc, OnceLock, RwLock};
+use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct NodeRole {
     pub role: String,
     pub ws_port: u16,
     pub main_port: u16,
+    pub host_peer_id: String,
+    pub runtime_incarnation: Uuid,
     pub version: String,
     pub profile: String,
     pub delivery: String,
@@ -248,6 +251,8 @@ fn default_node_role() -> NodeRole {
         role: "unknown".into(),
         ws_port: 0,
         main_port: 0,
+        host_peer_id: String::new(),
+        runtime_incarnation: Uuid::nil(),
         version: env!("CARGO_PKG_VERSION").into(),
         profile: "unknown".into(),
         delivery: "unknown".into(),
@@ -345,6 +350,8 @@ mod tests {
             role: "main".into(),
             ws_port: 3001,
             main_port: 3001,
+            host_peer_id: "aaaaaaaaaaaa".into(),
+            runtime_incarnation: uuid::Uuid::from_u128(1),
             version: "0.0.1".into(),
             profile: "standard".into(),
             delivery: "embedded-frontend".into(),

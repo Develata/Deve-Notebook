@@ -225,6 +225,19 @@ pub(crate) enum ConfigAction {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum RepoAction {
+    /// Preview or execute ownership-aware local repo removal
+    Remove {
+        #[arg(long = "repo-id")]
+        repo_id: uuid::Uuid,
+        /// Execute the prepared removal; requires an opaque confirmation token
+        #[arg(long, requires = "token")]
+        apply: bool,
+        /// Opaque token emitted by the preview command
+        #[arg(long, requires = "apply")]
+        token: Option<String>,
+        #[command(flatten)]
+        auth: LocalCliAuthArgs,
+    },
     /// Inspect or update host-local repo display aliases
     Alias {
         #[command(subcommand)]

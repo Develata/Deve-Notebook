@@ -31,6 +31,7 @@ impl RepoLifecyclePublicationSink for HangingSink {
     fn publish(
         &self,
         _request_id: Uuid,
+        _job_id: Uuid,
         _publication: RepoLifecycleSettledPublication,
     ) -> model::JobFuture<Result<(), String>> {
         Box::pin(pending())
@@ -43,6 +44,7 @@ impl RepoLifecyclePublicationSink for PanicSink {
     fn publish(
         &self,
         _request_id: Uuid,
+        _job_id: Uuid,
         _publication: RepoLifecycleSettledPublication,
     ) -> model::JobFuture<Result<(), String>> {
         panic!("injected publication construction panic")

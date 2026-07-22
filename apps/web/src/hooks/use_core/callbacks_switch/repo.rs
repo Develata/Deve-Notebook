@@ -16,7 +16,10 @@ use leptos::prelude::GetUntracked;
 mod tests;
 
 pub(super) use create::build_create_repo_callback;
-pub(super) use manage::{build_remove_repo_callback, build_rename_repo_callback};
+pub(super) use manage::{
+    build_cancel_remove_repo_callback, build_confirm_remove_repo_callback,
+    build_remove_repo_callback, build_rename_repo_callback,
+};
 pub(super) use switch::build_switch_repo_callback;
 
 fn repo_control_scope(ws: &WsService, signals: SwitchScopeSignals) -> RepoControlScope {

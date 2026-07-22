@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -65,7 +65,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 - JSON 不能创建 repo 或携带路径、locator、peer/provider、credential、revision。format/version
   不支持、顶层 JSON malformed 或超过预算时整个命令 fail-closed，不进入 per-entry apply。
 
-### 1.0.2 Repo Removal Command Contract
+### 1.0.2 Repo Removal Command Contract {#repo-removal-command-contract}
 
 - CLI与Web必须复用`04_repository#repo-lifecycle-coordinator`的Prepare/Execute/Repair service；CLI只负责
   bounded参数/输出、typed command dispatch和本地proxy选择，不拥有manifest、filesystem walker、

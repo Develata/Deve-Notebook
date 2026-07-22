@@ -364,8 +364,22 @@ impl RepoCatalogRuntime<'_> {
         let store = RepoCatalogStore::open(&self.manager.ledger_dir)?;
         let _cut = self.manager.catalog_membership.cut_guard()?;
         let _process_lock = store.lock()?;
-        let repo_ids = normal_ids(store.list()?);
-        self.manager.catalog_membership.seed(repo_ids)?;
+        let records = store.list()?;
+        let normal_repo_ids = records
+            .iter()
+            .filter_map(|record| {
+                (record.state() == RepoCatalogMembershipState::Normal).then_some(record.repo_id())
+            })
+            .collect::<Vec<_>>();
+        let removed_repo_ids = records
+            .iter()
+            .filter_map(|record| {
+                (record.state() == RepoCatalogMembershipState::Removed).then_some(record.repo_id())
+            })
+            .collect::<Vec<_>>();
+        self.manager
+            .catalog_membership
+            .seed_with_removed(normal_repo_ids, removed_repo_ids)?;
         Ok(())
     }
 

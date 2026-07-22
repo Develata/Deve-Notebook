@@ -176,6 +176,7 @@ fn test_scope_client(
     let (shadow_repos, _) = signal(Vec::<String>::new());
     let (repo_list, _) = signal(Vec::<String>::new());
     let (repo_entries, _) = signal(Vec::<RepoListEntry>::new());
+    let (removal_preview, _) = signal(None);
     let (is_spectator, _) = signal(false);
     ScopeClient {
         current_doc,
@@ -189,6 +190,9 @@ fn test_scope_client(
         on_create_repo: noop::<String>(),
         on_rename_repo: noop::<RepoRenameRequest>(),
         on_remove_repo: noop::<RepoRemoveRequest>(),
+        removal_preview,
+        on_confirm_remove_repo: noop::<deve_core::models::RepoId>(),
+        on_cancel_remove_repo: noop::<deve_core::models::RepoId>(),
         on_switch_branch: noop::<Option<String>>(),
         set_current_repo,
         set_current_repo_id,

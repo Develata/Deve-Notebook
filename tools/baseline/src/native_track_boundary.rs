@@ -55,6 +55,9 @@ const MANIFEST_DEPENDENCIES: &[(&str, &str, &str)] = &[
     ("apps/mobile/Cargo.toml", "tauri-build", "2.6.1"),
 ];
 
+const REQUIRED_PLATFORM_DEPENDENCIES: &[(&str, &str, &str)] =
+    &[("crates/core/Cargo.toml", "windows-sys", "0.61.2")];
+
 const TAURI_IMPORT_ALLOWED: &[&str] = &[
     "apps/desktop/src/menu_tray.rs",
     "apps/desktop/src/main.rs",
@@ -98,6 +101,30 @@ pub fn run() -> Result<()> {
 }
 
 fn check_manifest_dependencies(root: &Path) -> Result<()> {
+    for (file, dep, version) in REQUIRED_PLATFORM_DEPENDENCIES {
+        let content = read_required(root, file)?;
+        let prefix = format!("{dep} =");
+        let line = content
+            .lines()
+            .find(|line| line.trim_start().starts_with(&prefix))
+            .ok_or_else(|| anyhow::anyhow!("{LABEL}: missing dependency '{dep}' in {file}"))?;
+        if !line.contains(&format!("version = \"{version}\"")) {
+            return fail(format!(
+                "dependency '{dep}' must pin version {version} in {file}"
+            ));
+        }
+        if line.contains("optional = true") {
+            return fail(format!(
+                "required platform dependency '{dep}' must not be optional in {file}"
+            ));
+        }
+        if !line.contains("default-features = false") {
+            return fail(format!(
+                "dependency '{dep}' must disable default features in {file}"
+            ));
+        }
+    }
+
     for (file, dep, version) in MANIFEST_DEPENDENCIES {
         let content = read_required(root, file)?;
         let prefix = format!("{dep} =");
@@ -196,11 +223,11 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
             continue;
         }
         let rel = display_path(root, &cargo_toml);
-        if rel == "apps/desktop/Cargo.toml" {
+        if rel == "apps/desktop/Cargo.toml" || rel == "crates/core/Cargo.toml" {
             continue;
         }
         return fail(format!(
-            "windows-sys dependency is only allowed in Desktop native-packaging scope: {rel}"
+            "windows-sys dependency is outside the Desktop process adapter and Core host-filesystem allowlist: {rel}"
         ));
     }
 
@@ -212,7 +239,11 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
         &Scan::new().skip_dirs(&["gen", "target", "node_modules", "dist"]),
         &import_regex,
     )? {
-        if line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs"
+        if line.rel == "crates/core/src/utils/fs.rs"
+            || line.rel == "crates/core/src/utils/fs/identity.rs"
+            || line.rel == "crates/core/src/utils/fs/quarantine/windows.rs"
+            || line.rel == "crates/core/src/remote_import/artifact/durability.rs"
+            || line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs"
             || line
                 .rel
                 .starts_with("apps/desktop/src/process_runtime/process_group/windows/")
@@ -220,7 +251,7 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
             continue;
         }
         return fail(format!(
-            "windows-sys runtime import outside Desktop process adapter: {}",
+            "windows-sys runtime import outside the exact Desktop/Core allowlist: {}",
             line.display()
         ));
     }

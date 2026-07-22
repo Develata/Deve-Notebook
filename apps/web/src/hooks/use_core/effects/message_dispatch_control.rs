@@ -7,7 +7,6 @@ use leptos::prelude::{GetUntracked, Set};
 
 use super::super::state::CoreSignals;
 use super::message_control;
-use super::message_remove_scope;
 use super::message_repo_bootstrap::maybe_switch_to_first_repo;
 use super::message_scope::{
     RepoListScope, RequestMatch, accepts_system_or_matching_request, repo_list_matches_scope,
@@ -26,17 +25,6 @@ pub fn handle_repo_list_message(
         .iter()
         .map(|entry| entry.display_alias.clone())
         .collect::<Vec<_>>();
-    if message_remove_scope::capture_repo_list(
-        request_id.as_deref(),
-        branch.as_deref(),
-        scope_nonce,
-        &display_aliases,
-        &repo_entries,
-        ws,
-        signals,
-    ) {
-        return;
-    }
     if !repo_list_matches_scope(
         RequestMatch {
             message_id: request_id.as_deref(),

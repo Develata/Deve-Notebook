@@ -2,6 +2,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::runtime::domain::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
+use crate::runtime::repo_control_client::RepoRemovalPresentation;
 use deve_core::models::PeerId;
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
@@ -19,6 +20,9 @@ pub struct BranchContext {
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,
+    pub removal_preview: ReadSignal<Option<RepoRemovalPresentation>>,
+    pub on_confirm_remove_repo: Callback<deve_core::models::RepoId>,
+    pub on_cancel_remove_repo: Callback<deve_core::models::RepoId>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,

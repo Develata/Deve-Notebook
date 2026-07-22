@@ -8,6 +8,8 @@ use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason
 use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use crate::i18n::Locale;
 use crate::runtime::repo_control_client::RepoControlClient;
+use crate::runtime::repo_control_client::RepoRemovalPresentation;
+use deve_core::models::RepoId;
 use leptos::prelude::*;
 
 mod branch;
@@ -23,6 +25,9 @@ pub struct SwitchCallbacks {
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,
+    pub removal_preview: ReadSignal<Option<RepoRemovalPresentation>>,
+    pub on_confirm_remove_repo: Callback<RepoId>,
+    pub on_cancel_remove_repo: Callback<RepoId>,
 }
 
 pub(super) fn show_switch_block(
@@ -65,8 +70,17 @@ pub fn create_switch_callbacks(
         locale,
         signals,
         set_sync_banner,
-        repo_control,
+        repo_control.clone(),
     );
+    let on_confirm_remove_repo = repo::build_confirm_remove_repo_callback(
+        ws.clone(),
+        locale,
+        signals,
+        set_sync_banner,
+        repo_control.clone(),
+    );
+    let on_cancel_remove_repo =
+        repo::build_cancel_remove_repo_callback(ws.clone(), signals, repo_control);
 
     SwitchCallbacks {
         on_switch_branch,
@@ -74,5 +88,8 @@ pub fn create_switch_callbacks(
         on_create_repo,
         on_rename_repo,
         on_remove_repo,
+        removal_preview: signals.removal_preview,
+        on_confirm_remove_repo,
+        on_cancel_remove_repo,
     }
 }

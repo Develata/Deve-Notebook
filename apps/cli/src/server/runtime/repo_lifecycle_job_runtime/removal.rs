@@ -112,6 +112,9 @@ pub(crate) struct RepoRemovalPrepareIntent {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct RepoRemovalExecuteIntent {
     pub(crate) request_id: Uuid,
+    /// Source adapters that carry an explicit target bind it here. The WS v5
+    /// shape intentionally relies on its already-bound preparation identity.
+    pub(crate) expected_repo_id: Option<RepoId>,
     pub(crate) preparation_id: Uuid,
     pub(crate) confirmation_token: RemovalConfirmationToken,
     pub(crate) fallback_binding: Option<OpaqueFallbackBinding>,

@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -159,8 +159,11 @@ enabled = true
   - `role`
   - `ws_port`
   - `main_port`
+  - `host_peer_id`
+  - `runtime_incarnation`
   - `watcher_health`
 - 生产默认入口仍然是单一 origin；该接口只用于诊断、本地开发和 fallback 观测。
+- `.host/main_port` 是 deterministic JSON v1 owner hint，只包含 `main_port + host_peer_id + runtime_incarnation`。需要 operator credential 的 Local CLI proxy 在读取 password 前必须将该 hint 与 `/api/node/role` 的 exact 三元组匹配；旧的纯端口开发文件 fail closed，不作为兼容输入。
 
 `watcher_health` 是 workspace ingestion readiness 的 aggregate，只允许以下 shape：
 
@@ -810,7 +813,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
   `/api/node/role` aggregate 只读查询；不得把 `WatcherSupervisor` 或 handle 的 start/stop/restart
   authority 暴露给 HTTP/WS handler。
 - server composition root 唯一拥有 `WatcherSupervisor` 与 `RepoLifecycleCoordinator`。普通 mutation
-  handler 进入 `execute_mounted_repo`，repo create/remove handler 只提交 host-owned lifecycle job typed intent；host-local alias handler 只调用 alias runtime，不获得 watcher/lifecycle authority；
+  handler 进入 `execute_mounted_repo`，repo create/remove handler 只提交 host-owned lifecycle job typed intent；host-local alias handler 在短 `Catalog -> Repo` lane 内调用 alias runtime 并拒绝 Transitioning，但不获得 watcher/lifecycle authority；
   二者均不得依据 tracing detail、路径存在性或 UI 状态推断 watcher readiness。
 
 ### 12.4 Web Runtime {#web-ws-runtime}

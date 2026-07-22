@@ -3,7 +3,7 @@
 //!
 //! Bearer-only, loopback-only admission for typed Remote Import CLI requests.
 
-use crate::local_cli_proxy_contract::LocalCliRemoteImportRequest;
+use crate::local_cli_proxy_contract::{LocalCliRemoteImportRequest, LocalCliRepoRemovalRequest};
 use axum::http::{HeaderMap, StatusCode, header};
 use deve_core::models::RepoId;
 use deve_core::protocol::auth::AuthErrorCode;
@@ -42,6 +42,7 @@ pub(crate) struct LocalCliProxyAuthority {
     request_id: Uuid,
     repo_id: RepoId,
     operation: &'static str,
+    principal_digest: String,
 }
 
 impl LocalCliProxyAuthority {
@@ -55,6 +56,10 @@ impl LocalCliProxyAuthority {
 
     pub(crate) fn operation(&self) -> &'static str {
         self.operation
+    }
+
+    pub(crate) fn principal_digest(&self) -> &str {
+        &self.principal_digest
     }
 }
 
@@ -72,39 +77,7 @@ impl LocalCliProxyGateway {
         config: &AuthConfig,
         body: &[u8],
     ) -> Result<(LocalCliProxyAuthority, LocalCliRemoteImportRequest), LocalCliProxyRejection> {
-        if !peer.ip().is_loopback() {
-            return Err(forbidden());
-        }
-        if headers.contains_key(header::COOKIE)
-            || headers.contains_key(header::ORIGIN)
-            || headers.contains_key("x-deve-source-control-delegation")
-        {
-            return Err(forbidden());
-        }
-        let mut authorization_values = headers.get_all(header::AUTHORIZATION).iter();
-        let authorization = authorization_values
-            .next()
-            .and_then(|value| value.to_str().ok())
-            .ok_or_else(missing_token)?;
-        if authorization_values.next().is_some() {
-            return Err(missing_token());
-        }
-        let token = authorization
-            .strip_prefix("Bearer ")
-            .filter(|token| !token.trim().is_empty())
-            .ok_or_else(missing_token)?;
-        let claims = jwt::validate_token(&config.secret, token, config.token_version)
-            .map_err(|_| expired_token())?;
-        if claims.sub != config.username {
-            return Err(expired_token());
-        }
-        let sid = claims
-            .sid
-            .filter(|sid| !sid.trim().is_empty())
-            .ok_or_else(expired_token)?;
-        if body.len() > LOCAL_CLI_PROXY_MAX_REQUEST_BODY_BYTES {
-            return Err(forbidden());
-        }
+        let authenticated = authenticate(peer, headers, config, body)?;
         let request =
             serde_json::from_slice::<LocalCliRemoteImportRequest>(body).map_err(|_| forbidden())?;
         let identity = request.exact_identity();
@@ -117,6 +90,7 @@ impl LocalCliProxyGateway {
             return Err(forbidden());
         }
         let identity_digest = exact_identity_digest(
+            "remote-import",
             request.operation_name(),
             repo_id,
             scope_nonce.get(),
@@ -124,12 +98,66 @@ impl LocalCliProxyGateway {
             revision,
             body,
         );
-        self.admit_identity(&sid, request.request_id(), identity_digest)?;
+        self.admit_identity(&authenticated.sid, request.request_id(), identity_digest)?;
         Ok((
             LocalCliProxyAuthority {
                 request_id: request.request_id(),
                 repo_id,
                 operation: request.operation_name(),
+                principal_digest: authenticated.principal_digest,
+            },
+            request,
+        ))
+    }
+
+    pub(crate) fn admit_repo_removal(
+        &self,
+        peer: SocketAddr,
+        headers: &HeaderMap,
+        config: &AuthConfig,
+        body: &[u8],
+    ) -> Result<(LocalCliProxyAuthority, LocalCliRepoRemovalRequest), LocalCliProxyRejection> {
+        let authenticated = authenticate(peer, headers, config, body)?;
+        let request =
+            serde_json::from_slice::<LocalCliRepoRemovalRequest>(body).map_err(|_| forbidden())?;
+        let repo_id = request.repo_id();
+        let request_id = request.request_id();
+        let (scope_nonce, switch_nonce, preparation_id) = request.scope_identity();
+        if repo_id.is_nil() || request_id.is_nil() {
+            return Err(forbidden());
+        }
+        match &request {
+            LocalCliRepoRemovalRequest::Prepare { .. } if scope_nonce == 0 => {
+                return Err(forbidden());
+            }
+            LocalCliRepoRemovalRequest::Execute { .. }
+                if preparation_id.is_none_or(|value| value.is_nil())
+                    || scope_nonce == 0
+                    || switch_nonce.is_none_or(|value| value <= scope_nonce) =>
+            {
+                return Err(forbidden());
+            }
+            LocalCliRepoRemovalRequest::Status {
+                execute_request_id, ..
+            } if execute_request_id.is_nil() => return Err(forbidden()),
+            _ => {}
+        }
+        let digest = exact_identity_digest(
+            "repo-removal",
+            request.operation_name(),
+            repo_id,
+            scope_nonce,
+            preparation_id,
+            switch_nonce,
+            body,
+        );
+        self.admit_identity(&authenticated.sid, request_id, digest)?;
+        Ok((
+            LocalCliProxyAuthority {
+                request_id,
+                repo_id,
+                operation: request.operation_name(),
+                principal_digest: authenticated.principal_digest,
             },
             request,
         ))
@@ -167,6 +195,7 @@ impl LocalCliProxyGateway {
 }
 
 fn exact_identity_digest(
+    family: &str,
     operation: &str,
     repo_id: RepoId,
     scope_nonce: u64,
@@ -175,7 +204,8 @@ fn exact_identity_digest(
     body: &[u8],
 ) -> [u8; 32] {
     let mut hasher = Sha256::new();
-    hasher.update(b"deve-local-cli-proxy-identity-v1\0");
+    hasher.update(b"deve-local-cli-proxy-identity-v2\0");
+    hash_field(&mut hasher, family.as_bytes());
     hash_field(&mut hasher, operation.as_bytes());
     hash_field(&mut hasher, repo_id.as_bytes());
     hash_field(&mut hasher, &scope_nonce.to_le_bytes());
@@ -189,6 +219,67 @@ fn exact_identity_digest(
     }
     hash_field(&mut hasher, &Sha256::digest(body));
     hasher.finalize().into()
+}
+
+fn authenticate(
+    peer: SocketAddr,
+    headers: &HeaderMap,
+    config: &AuthConfig,
+    body: &[u8],
+) -> Result<AuthenticatedCli, LocalCliProxyRejection> {
+    if !peer.ip().is_loopback()
+        || headers.contains_key(header::COOKIE)
+        || headers.contains_key(header::ORIGIN)
+        || headers.contains_key("x-deve-source-control-delegation")
+        || body.len() > LOCAL_CLI_PROXY_MAX_REQUEST_BODY_BYTES
+    {
+        return Err(forbidden());
+    }
+    let mut authorization_values = headers.get_all(header::AUTHORIZATION).iter();
+    let authorization = authorization_values
+        .next()
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(missing_token)?;
+    if authorization_values.next().is_some() {
+        return Err(missing_token());
+    }
+    let token = authorization
+        .strip_prefix("Bearer ")
+        .filter(|token| !token.trim().is_empty())
+        .ok_or_else(missing_token)?;
+    let claims = jwt::validate_token(&config.secret, token, config.token_version)
+        .map_err(|_| expired_token())?;
+    if claims.sub != config.username {
+        return Err(expired_token());
+    }
+    let sid = claims
+        .sid
+        .filter(|sid| !sid.trim().is_empty())
+        .ok_or_else(expired_token)?;
+    Ok(AuthenticatedCli {
+        sid,
+        // The removal confirmation is intentionally usable by a later CLI
+        // process authenticated as the same operator.  Browser/session ids
+        // remain replay-cache identities, not durable removal principals.
+        principal_digest: principal_binding_digest(&claims.sub, config.token_version),
+    })
+}
+
+struct AuthenticatedCli {
+    sid: String,
+    principal_digest: String,
+}
+
+fn principal_binding_digest(subject: &str, token_version: u32) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"deve-local-cli-principal-v1\0");
+    hash_field(&mut hasher, subject.as_bytes());
+    hash_field(&mut hasher, &token_version.to_le_bytes());
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn hash_field(hasher: &mut Sha256, value: &[u8]) {

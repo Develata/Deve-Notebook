@@ -17,7 +17,7 @@ contains	docs/plan/08_auth.md	### 6.11 Local CLI Proxy Authority {#local-cli-pro
 contains	docs/plan/08_auth.md	endpoint 不接受 Cookie-only、anonymous localhost dev session
 contains	docs/plan/08_auth.md	同一 `(sid, request_id)` 若 identity/digest 不同必须 fail-closed
 contains	docs/features/09_auth.md	Local CLI proxy 不是 browser auth surface，也不是新的持久 credential store
-contains	docs/registry/runtime-skeleton-registry.md	B4 需新增 loopback-only `LocalCliProxyAuthority`
+contains	docs/registry/runtime-skeleton-registry.md	loopback-only `LocalCliProxyAuthority`仅枚举Remote Import与Repo Removal family
 contains	crates/core/src/security/auth/config/tests.rs	missing_secret_or_password_fails_closed_in_production
 contains	crates/core/src/security/auth/config/tests.rs	invalid_auth_token_version_fails_closed
 contains	crates/core/src/security/auth/config/tests.rs	anonymous_localhost_requires_development_env

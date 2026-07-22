@@ -10,13 +10,21 @@ use crate::server::{launch::ServerLaunchOptions, node_role, static_files};
 use deve_core::config::AppProfile;
 use deve_core::ledger::RepoManager;
 use std::collections::HashSet;
+use uuid::Uuid;
 
-pub(crate) fn init_node_role(launch: &ServerLaunchOptions, profile: AppProfile) {
+pub(crate) fn init_node_role(
+    launch: &ServerLaunchOptions,
+    profile: AppProfile,
+    host_peer_id: String,
+    runtime_incarnation: Uuid,
+) {
     let port = launch.port();
     node_role::set_node_role(node_role::NodeRole {
         role: launch.node_role_label().into(),
         ws_port: port,
         main_port: port,
+        host_peer_id,
+        runtime_incarnation,
         version: env!("CARGO_PKG_VERSION").into(),
         profile: profile_label(profile).into(),
         delivery: static_files::delivery_shape().into(),

@@ -39,6 +39,7 @@ pub mod js_bridge;
 pub mod login;
 pub mod merge;
 pub mod playback;
+pub mod repo_control;
 pub mod search;
 pub mod server_error;
 pub mod settings;
@@ -157,6 +158,7 @@ pub mod t {
     pub use super::login;
     pub use super::merge;
     pub use super::playback;
+    pub use super::repo_control;
     pub use super::search;
     pub use super::server_error;
     pub use super::settings;

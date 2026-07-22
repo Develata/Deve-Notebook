@@ -186,9 +186,10 @@ mod tests {
 
         let err = check(&ledger, &repo_name, 8)
             .expect_err("projection check must verify workspace root exists");
+        let detail = err.to_string();
         assert!(
-            err.to_string()
-                .contains("Failed to canonicalize Projection workspace root"),
+            detail.contains("repo catalog prepared identity could not be established")
+                && detail.contains("Projection workspace root is unavailable"),
             "{err}"
         );
         Ok(())

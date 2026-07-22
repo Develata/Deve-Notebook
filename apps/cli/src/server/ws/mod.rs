@@ -184,6 +184,7 @@ pub(crate) async fn handle_socket(
                 let applied = match command {
                     crate::server::runtime::repo_session_runtime::RepoSessionCommand::LifecycleSettled {
                         request_id,
+                        job_id,
                         expected_scope_nonce,
                         switch_nonce,
                         publication,
@@ -193,6 +194,7 @@ pub(crate) async fn handle_socket(
                         &ch,
                         &mut session,
                         request_id,
+                        job_id,
                         expected_scope_nonce,
                         switch_nonce,
                         publication,

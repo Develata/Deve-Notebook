@@ -8,6 +8,7 @@
 //! handler returns or the connection disappears.
 
 mod alias;
+pub(crate) mod http;
 mod lifecycle;
 mod removal;
 mod settlement;
@@ -50,7 +51,8 @@ pub(crate) async fn handle_repo_control(
                 repo_id,
                 &alias,
                 expected_alias_revision,
-            );
+            )
+            .await;
         }
         RepoControlRequest::SubmitLifecycle {
             request_id,

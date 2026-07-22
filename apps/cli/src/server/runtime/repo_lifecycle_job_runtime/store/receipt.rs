@@ -141,10 +141,10 @@ impl LifecycleReceipt {
 
     pub(in crate::server::runtime::repo_lifecycle_job_runtime) fn append_publication_failure(
         &mut self,
-        error: String,
+        diagnostic: String,
     ) {
         self.publication_attempts = self.publication_attempts.saturating_add(1);
-        self.publication_last_error = Some(truncate_utf8(error, PUBLICATION_ERROR_MAX_BYTES));
+        self.publication_last_error = Some(truncate_utf8(diagnostic, PUBLICATION_ERROR_MAX_BYTES));
         self.updated_at_ms = chrono::Utc::now().timestamp_millis();
     }
 

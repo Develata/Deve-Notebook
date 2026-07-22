@@ -158,10 +158,6 @@ impl PendingRepoSwitch {
         self.kind == PendingRepoSwitchKind::RestoreSession
     }
 
-    pub fn is_remove_current(&self) -> bool {
-        self.kind == PendingRepoSwitchKind::RemoveCurrent
-    }
-
     pub fn is_explicit_switch(&self) -> bool {
         self.kind == PendingRepoSwitchKind::Switch
     }

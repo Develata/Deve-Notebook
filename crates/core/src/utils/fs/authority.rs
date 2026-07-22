@@ -7,6 +7,7 @@ use super::{HostPathIdentity, apply_no_follow, create_regular_file_new, validate
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) fn open_regular_file_read_write_existing(
     path: &Path,
     context: &str,
@@ -26,14 +27,17 @@ pub(crate) fn open_regular_file_read_write_existing(
     Ok(file)
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) fn open_regular_file_lock_existing(path: &Path, context: &str) -> std::io::Result<File> {
     open_regular_file_read_write_existing(path, context)
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) fn create_regular_file_lock_new(path: &Path, context: &str) -> std::io::Result<File> {
     create_regular_file_new(path, context)
 }
 
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub(crate) fn ensure_open_file_matches_identity(
     file: &File,
     expected: &HostPathIdentity,

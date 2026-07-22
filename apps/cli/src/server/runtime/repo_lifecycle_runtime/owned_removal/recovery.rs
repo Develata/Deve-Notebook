@@ -114,9 +114,9 @@ impl RepoLifecycleCoordinator {
         remote_plan: Option<&RemoteImportRepoRemovalPlan>,
         primary: String,
     ) -> RepoLifecycleJobCompletion {
-        let repair = |stage: &str, error: String| {
+        let repair = |stage: &str, diagnostic: String| {
             RepoLifecycleJobCompletion::repair_required(primary.clone())
-                .with_cleanup(format!("pre-cut {stage} failed: {error}"))
+                .with_cleanup(format!("pre-cut {stage} failed: {diagnostic}"))
         };
         if let Some(authority) = authority
             && let Err(error) = authority.rollback()

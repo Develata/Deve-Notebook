@@ -163,6 +163,8 @@ fn proxy_node_role(
         role: "proxy".into(),
         ws_port: plugin_port,
         main_port,
+        host_peer_id: String::new(),
+        runtime_incarnation: uuid::Uuid::nil(),
         version: env!("CARGO_PKG_VERSION").into(),
         profile: "proxy".into(),
         delivery: "plugin-host-proxy".into(),

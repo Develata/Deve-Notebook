@@ -47,9 +47,11 @@ HostRepoAliasBinding = {
 约束：
 
 - `host_repo_alias_runtime` 唯一拥有 host-local alias store；Ledger、sync、Remote Import、provider transport、Projection Locator 与 repo catalog 不得保存“当前 alias”的第二份可写副本。
+- composition root 内的 alias admission 必须复用该 `RepoManager` 的 process-local `CatalogMembershipRuntime` 快照，避免绕回 durable catalog 文件锁并与 watcher/lifecycle 自竞争；仅无 composition root 的 offline `open_existing` 路径可以读取受跨进程锁保护的 durable catalog snapshot。
 - alias 缺失时 display fallback 是完整 canonical `RepoId`，其 CAS revision 固定为 `0`；首次成功写入产生 revision `1`，后续内容变化逐一递增，同值写入是保留原 revision 的幂等成功。alias 可以重复，按 alias 选择命中多个 RepoId 时必须 fail-closed。
 - backend repo list/show projection 必须同时返回 `repo_id + display_alias + alias_revision`；Web/CLI 只能回送该 opaque revision，不能自行递增或从 alias 内容推导 revision。
 - alias 修改是 host-local CAS：`SetHostRepoAlias { repo_id, alias, expected_alias_revision }`。它不得 append Ledger、改变 repo metadata/genesis、停止 watcher、移动 workspace、更新 locator、使 Remote Import stale 或制造 Projection Fault。
+- online alias CAS 必须在短 `Catalog -> Repo(repo_id)` mutation lane 内完成，并在同一 lane 内拒绝 `RepoReadiness::Transitioning`；它仍不获得 watcher 启停或 lifecycle authority。这保证 removal 关闭产品写门后不再有 alias revision 漂移，而 Mounted/Unavailable 只读状态本身不禁止 host-local alias 管理。
 - alias 校验只服务人类显示：trim 后非空、UTF-8 最多 256 bytes、不得含 control character 或 NUL。`/`、`\\`、标点与 emoji 可以存在，因为 alias 永不进入物理路径。
 - inter-peer sync、Remote Projection transport 与 Remote Import manifest/receipt **MUST NOT** 传输 alias。浏览器控制协议可以接收当前 host 生成的 display alias，但不得把它回写为跨宿主事实。
 

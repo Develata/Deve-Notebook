@@ -24,7 +24,7 @@
 use anyhow::{Context, Result};
 use redb::Database;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use super::RepoManager;
@@ -96,6 +96,7 @@ pub fn init_with_options(
     // 1. 创建目录结构
     std::fs::create_dir_all(&ledger_dir)
         .with_context(|| format!("无法创建账本目录: {:?}", ledger_dir))?;
+    let ledger_dir = canonical_ledger_dir(&ledger_dir)?;
 
     let local_dir = ledger_dir.join("local");
     std::fs::create_dir_all(&local_dir)
@@ -291,7 +292,7 @@ pub(crate) fn init_existing_for_repo_id(
     snapshot_depth: usize,
     repo_id: RepoId,
 ) -> Result<RepoManager> {
-    let ledger_dir = ledger_dir.as_ref().to_path_buf();
+    let ledger_dir = canonical_ledger_dir(ledger_dir.as_ref())?;
     let catalog_snapshot = catalog_bootstrap_snapshot_for_ledger(&ledger_dir)?;
     if !catalog_snapshot.has_records() || !catalog_snapshot.normal_repo_ids().contains(&repo_id) {
         anyhow::bail!(
@@ -361,6 +362,7 @@ pub(crate) fn init_empty_host(
         .with_context(|| format!("Failed to create empty local authority dir: {ledger_dir:?}"))?;
     std::fs::create_dir_all(ledger_dir.join("remotes"))
         .with_context(|| format!("Failed to create empty shadow authority dir: {ledger_dir:?}"))?;
+    let ledger_dir = canonical_ledger_dir(&ledger_dir)?;
 
     let catalog_snapshot = catalog_bootstrap_snapshot_for_ledger(&ledger_dir)?;
     if !catalog_snapshot.normal_repo_ids().is_empty() {
@@ -402,6 +404,11 @@ pub(crate) fn init_empty_host(
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during empty host init")?;
     Ok(repo)
+}
+
+fn canonical_ledger_dir(ledger_dir: &Path) -> Result<PathBuf> {
+    std::fs::canonicalize(ledger_dir)
+        .with_context(|| format!("Failed to canonicalize ledger directory: {ledger_dir:?}"))
 }
 
 /// 初始化本地数据库的核心表

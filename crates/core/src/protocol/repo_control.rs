@@ -141,7 +141,25 @@ pub struct LocalRepoRemovalPreview {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "operation", rename_all = "snake_case")]
+pub enum RepoRemovalFinalScope {
+    RepoBound {
+        repo_id: RepoId,
+        scope_nonce: ScopeNonce,
+    },
+    NoScope {
+        scope_nonce: ScopeNonce,
+    },
+}
+
+impl RepoRemovalFinalScope {
+    pub const fn scope_nonce(&self) -> ScopeNonce {
+        match self {
+            Self::RepoBound { scope_nonce, .. } | Self::NoScope { scope_nonce } => *scope_nonce,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RepoLifecycleIntent {
     Create {
         initial_alias: String,
@@ -247,6 +265,19 @@ pub enum RepoControlResponse {
         outcome: Option<RepoLifecycleOutcome>,
         publication_pending: bool,
     },
+    LocalRepoRemovalSettled {
+        request_id: Uuid,
+        job_id: Uuid,
+        removed_repo_id: RepoId,
+        final_repo_list: Vec<super::RepoListEntry>,
+        scope: RepoRemovalFinalScope,
+    },
+    LocalRepoRemovalObserverInvalidated {
+        job_id: Uuid,
+        removed_repo_id: RepoId,
+        final_repo_list: Vec<super::RepoListEntry>,
+        scope: RepoRemovalFinalScope,
+    },
     Error {
         request_id: Uuid,
         error: ServerError,
@@ -261,22 +292,5 @@ fn is_hex_256(value: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{OpaqueFallbackBinding, RemovalConfirmationToken};
-
-    #[test]
-    fn opaque_removal_secrets_validate_shape_and_redact_debug() {
-        let value = "a".repeat(64);
-        let token = RemovalConfirmationToken::from_backend(value.clone()).expect("token");
-        let fallback = OpaqueFallbackBinding::from_backend(value).expect("fallback");
-        assert_eq!(format!("{token:?}"), "RemovalConfirmationToken([redacted])");
-        assert_eq!(format!("{fallback:?}"), "OpaqueFallbackBinding([redacted])");
-        assert!(RemovalConfirmationToken::from_backend("A".repeat(64)).is_none());
-        assert!(OpaqueFallbackBinding::from_backend("a".repeat(63)).is_none());
-        assert!(serde_json::from_str::<RemovalConfirmationToken>(r#""short""#).is_err());
-        assert!(
-            serde_json::from_str::<OpaqueFallbackBinding>(&format!("\"{}\"", "A".repeat(64)))
-                .is_err()
-        );
-    }
-}
+#[path = "repo_control/tests.rs"]
+mod tests;

@@ -1,6 +1,6 @@
 # Architecture Diff Report (doc vs code)
 
-Generated: 2026-07-21 (R3 preview-token admission landed; removal settlement remains drifted)
+Generated: 2026-07-22 (R5 normal removal surfaces landed; repair/evidence remain drifted)
 
 This report compares [`architecture-doc.lisp`](./architecture-doc.lisp)
 against [`architecture-code.lisp`](./architecture-code.lisp). Plan remains
@@ -22,9 +22,9 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Area | Status | Notes |
 |---|---|---|
 | Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow保留 B5 client gap，`repo lifecycle` 保留 ownership-aware removal gap |
-| User operations | drifted | current F4/v5 Repo Control已删除direct submit-remove并接入Prepare/Execute admission。zero-repo与首个Create配置已收敛；destructive settlement/repair、single typed finalization与Remote Import client尚未收敛 |
+| User operations | drifted | current F4/v5 Repo Control已删除direct submit-remove并接入Prepare/Execute、thin Web确认面、single typed finalization与normal CLI；explicit removal repair、R6 evidence与Remote Import client尚未收敛 |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
-| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、repo catalog cut、per-RepoId DB owner/lease与zero-repo composition已存在；owned-state settlement/repair与Remote Import independent client尚未收敛 |
+| Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、repo catalog cut、per-RepoId DB owner/lease、zero-repo composition与owned-state settlement已存在；explicit drift repair与Remote Import independent client尚未收敛 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
 
 ## Drift Registry
@@ -44,7 +44,7 @@ Active drift facts:
 2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
 4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 已接入 host lifecycle，B5 尚未提供 thin Web management surface。
-5. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `NoScope`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation及唯一production coordinator路径已实现；explicit drift repair、single typed finalization、R5 UI/CLI与R6 fresh跨平台证据仍未实现。
+5. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `NoScope`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation、R5 single typed finalization、thin Web确认面及normal offline/proxy CLI已实现；explicit drift repair、distinct process exit status与R6 fresh跨平台证据仍未实现。
 
 ## Flow Registry
 

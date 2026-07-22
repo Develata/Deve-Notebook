@@ -245,35 +245,60 @@ fn revalidate(
         .prepare_projection_locator_removal(manifest.repo_id)
         .ok()
         .filter(|locator| locator == &manifest.locator);
-    let exact = repo
+    let catalog_exact = repo
         .repo_catalog_membership_record(manifest.repo_id)
         .ok()
         .flatten()
-        .is_some_and(|record| record == manifest.catalog)
-        && repo
-            .revalidate_local_authority_for_removal(&manifest.authority)
-            .ok()
-            .unwrap_or(false)
-        && current_locator.is_some()
-        && manifest.notegit.revalidate().unwrap_or(false)
-        && repo
-            .host_repo_alias_runtime()
-            .prepare_removal(manifest.repo_id)
-            .ok()
-            .is_some_and(|plan| plan == manifest.alias)
-        && watcher
-            .admit(manifest.repo_id)
-            .ok()
-            .is_some_and(|token| token.generation() == manifest.watcher_generation)
-        && !projection_degraded(repo, sync_manager, manifest.repo_id).unwrap_or(true)
-        && matches!(
-            remote_import.revalidate_repo_removal(manifest.repo_id, &manifest.remote_import),
-            Ok(RemoteImportRepoRemovalRevalidation::Exact)
-        )
-        && fallback_revalidates(repo, watcher, sync_manager, manifest);
+        .is_some_and(|record| record == manifest.catalog);
+    let authority_exact = repo
+        .revalidate_local_authority_for_removal(&manifest.authority)
+        .ok()
+        .unwrap_or(false);
+    let locator_exact = current_locator.is_some();
+    let notegit_exact = manifest.notegit.revalidate().unwrap_or(false);
+    let current_alias = repo
+        .host_repo_alias_runtime()
+        .prepare_removal(manifest.repo_id)
+        .ok();
+    let alias_exact = current_alias
+        .as_ref()
+        .is_some_and(|plan| plan == &manifest.alias);
+    let watcher_exact = watcher
+        .admit(manifest.repo_id)
+        .ok()
+        .is_some_and(|token| token.generation() == manifest.watcher_generation);
+    let projection_healthy =
+        !projection_degraded(repo, sync_manager, manifest.repo_id).unwrap_or(true);
+    let remote_import_exact = matches!(
+        remote_import.revalidate_repo_removal(manifest.repo_id, &manifest.remote_import),
+        Ok(RemoteImportRepoRemovalRevalidation::Exact)
+    );
+    let fallback_exact = fallback_revalidates(repo, watcher, sync_manager, manifest);
+    let exact = catalog_exact
+        && authority_exact
+        && locator_exact
+        && notegit_exact
+        && alias_exact
+        && watcher_exact
+        && projection_healthy
+        && remote_import_exact
+        && fallback_exact;
     if exact {
         Ok(())
     } else {
+        tracing::warn!(
+            repo_id = %manifest.repo_id,
+            catalog_exact,
+            authority_exact,
+            locator_exact,
+            notegit_exact,
+            alias_exact,
+            watcher_exact,
+            projection_healthy,
+            remote_import_exact,
+            fallback_exact,
+            "repository removal confirmation revalidation failed"
+        );
         Err(RepoLifecycleJobError::ConfirmationStale)
     }
 }

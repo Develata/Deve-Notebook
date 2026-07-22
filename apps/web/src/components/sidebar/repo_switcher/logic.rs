@@ -5,7 +5,6 @@
 //!
 //! Pure state helpers for the repository switcher view.
 
-use crate::i18n::{Locale, t};
 use deve_core::models::RepoId;
 use deve_core::protocol::RepoListEntry;
 
@@ -119,11 +118,4 @@ pub(super) fn repo_switcher_switch_target(row: &RepoSwitcherRow) -> RepoSwitcher
         expected_name: row.name.clone(),
         repo_id: row.repo_id,
     }
-}
-
-pub(super) fn repo_switcher_remove_confirmed(locale: Locale, name: &str) -> bool {
-    let message = t::sidebar::remove_repository_confirm(locale, name);
-    web_sys::window()
-        .and_then(|window| window.confirm_with_message(&message).ok())
-        .unwrap_or(false)
 }

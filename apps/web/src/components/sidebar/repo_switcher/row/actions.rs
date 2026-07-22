@@ -12,10 +12,7 @@ use deve_core::models::RepoId;
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
-use super::super::logic::{
-    repo_switcher_remove_button_marker, repo_switcher_remove_confirmed,
-    repo_switcher_rename_button_marker,
-};
+use super::super::logic::{repo_switcher_remove_button_marker, repo_switcher_rename_button_marker};
 
 #[component]
 pub(super) fn RepoSwitcherRowActions(
@@ -26,7 +23,6 @@ pub(super) fn RepoSwitcherRowActions(
     set_show_menu: WriteSignal<bool>,
     rename_value_name: String,
     set_rename_name: WriteSignal<String>,
-    action_title_name: String,
     remove_current_name: String,
     on_remove_repo: Callback<RepoRemoveRequest>,
     locale: RwSignal<Locale>,
@@ -37,13 +33,12 @@ pub(super) fn RepoSwitcherRowActions(
                 return view! {}.into_any();
             }
             let rename_value_name = rename_value_name.clone();
-            let action_title_name = action_title_name.clone();
             let remove_current_name = remove_current_name.clone();
             view! {
                 <div class="absolute right-2 top-8 z-[calc(var(--z-floating)_+_2)] w-36 bg-panel border border-default shadow-lg rounded-md py-1 text-xs">
                     <button
                         type="button"
-                        class="w-full px-2 py-1.5 flex items-center gap-2 text-left hover:bg-hover"
+                        class="flex min-h-[44px] w-full items-center gap-2 px-2 py-2 text-left hover:bg-hover"
                         data-deve-repo-switcher-rename=repo_switcher_rename_button_marker()
                         on:click=move |e: MouseEvent| {
                             e.stop_propagation();
@@ -57,19 +52,17 @@ pub(super) fn RepoSwitcherRowActions(
                     </button>
                     <button
                         type="button"
-                        class="w-full px-2 py-1.5 flex items-center gap-2 text-left text-danger hover:bg-hover"
+                        class="flex min-h-[44px] w-full items-center gap-2 px-2 py-2 text-left text-danger hover:bg-hover"
                         data-deve-repo-switcher-remove=repo_switcher_remove_button_marker()
                         on:click=move |e: MouseEvent| {
                             e.stop_propagation();
-                            if repo_switcher_remove_confirmed(locale.get(), &action_title_name) {
-                                on_remove_repo.run(RepoRemoveRequest {
-                                    repo_id,
-                                    current_name: remove_current_name.clone(),
-                                });
-                                set_action_repo.set(None);
-                                set_renaming_repo.set(None);
-                                set_show_menu.set(false);
-                            }
+                            on_remove_repo.run(RepoRemoveRequest {
+                                repo_id,
+                                current_name: remove_current_name.clone(),
+                            });
+                            set_action_repo.set(None);
+                            set_renaming_repo.set(None);
+                            set_show_menu.set(false);
                         }
                     >
                         <Trash2 class="w-3.5 h-3.5" />

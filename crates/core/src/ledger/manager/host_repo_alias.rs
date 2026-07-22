@@ -19,6 +19,7 @@ pub use model::{
 use self::import::{ParsedImport, evaluate_import};
 use self::membership::{LocalRepoAdmission, LocalRepoMembershipSnapshot, checked_local_dir};
 use self::store::{AliasStore, AliasStoreGuard};
+use crate::ledger::CatalogMembershipRuntime;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 use std::path::{Path, PathBuf};
@@ -27,6 +28,7 @@ pub const HOST_REPO_ALIAS_IMPORT_MAX_BYTES: usize = 1024 * 1024;
 /// Host-only alias capability opened without creating or repairing any repo.
 pub struct HostRepoAliasRuntime {
     ledger_dir: PathBuf,
+    process_membership: Option<CatalogMembershipRuntime>,
 }
 
 impl HostRepoAliasRuntime {
@@ -41,17 +43,22 @@ impl HostRepoAliasRuntime {
     pub fn open_existing(ledger_dir: impl AsRef<Path>) -> Result<Self, HostRepoAliasError> {
         let ledger_dir = ledger_dir.as_ref().to_path_buf();
         checked_local_dir(&ledger_dir, "opening host repo alias runtime")?;
-        Ok(Self { ledger_dir })
+        Ok(Self {
+            ledger_dir,
+            process_membership: None,
+        })
     }
 
     fn for_manager(manager: &RepoManager) -> Self {
         Self {
             ledger_dir: manager.ledger_dir.clone(),
+            process_membership: Some(manager.catalog_membership_runtime()),
         }
     }
 
     pub fn binding(&self, repo_id: RepoId) -> Result<HostRepoAliasBinding, HostRepoAliasError> {
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         self.require_active_local_repo(&membership, repo_id)?;
         let store = AliasStore::load(&self.ledger_dir)?;
         Ok(store.binding_or_fallback(repo_id))
@@ -65,7 +72,8 @@ impl HostRepoAliasRuntime {
     ) -> Result<HostRepoAliasSetResult, HostRepoAliasError> {
         let alias = model::normalize_alias(alias)?;
         let _store_guard = AliasStoreGuard::acquire(&self.ledger_dir)?;
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         self.require_active_local_repo(&membership, repo_id)?;
         let mut store = AliasStore::load(&self.ledger_dir)?;
         let result = store.set(repo_id, alias, expected_alias_revision)?;
@@ -77,7 +85,8 @@ impl HostRepoAliasRuntime {
 
     pub fn export_json(&self) -> Result<String, HostRepoAliasError> {
         let store = AliasStore::load(&self.ledger_dir)?;
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         let mut aliases = Vec::new();
         for binding in store.bindings() {
             match membership.admit(binding.repo_id)? {
@@ -105,7 +114,8 @@ impl HostRepoAliasRuntime {
     ) -> Result<HostRepoAliasImportSummary, HostRepoAliasError> {
         let parsed = ParsedImport::parse(input)?;
         let store = AliasStore::load(&self.ledger_dir)?;
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         evaluate_import(&parsed, &store, |repo_id| membership.admit(repo_id))
             .map(|evaluation| evaluation.summary)
     }
@@ -119,7 +129,8 @@ impl HostRepoAliasRuntime {
         let parsed = ParsedImport::parse(input)?;
         let _store_guard = AliasStoreGuard::acquire(&self.ledger_dir)?;
         let mut store = AliasStore::load(&self.ledger_dir)?;
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         let evaluation = evaluate_import(&parsed, &store, |repo_id| membership.admit(repo_id))?;
         let changed = evaluation.apply(&mut store)?;
         if changed {
@@ -132,7 +143,8 @@ impl HostRepoAliasRuntime {
         &self,
         repo_id: RepoId,
     ) -> Result<HostRepoAliasRemovalPlan, HostRepoAliasError> {
-        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        let membership =
+            LocalRepoMembershipSnapshot::load(&self.ledger_dir, self.process_membership.as_ref())?;
         self.require_active_local_repo(&membership, repo_id)?;
         let binding = AliasStore::load(&self.ledger_dir)?.binding_or_fallback(repo_id);
         Ok(HostRepoAliasRemovalPlan { binding })
@@ -143,7 +155,11 @@ impl HostRepoAliasRuntime {
         plan: &HostRepoAliasRemovalPlan,
     ) -> Result<HostRepoAliasCleanupDisposition, HostRepoAliasError> {
         let _store_guard = AliasStoreGuard::acquire(&self.ledger_dir)?;
-        membership::require_removed(&self.ledger_dir, plan.repo_id())?;
+        membership::require_removed(
+            &self.ledger_dir,
+            self.process_membership.as_ref(),
+            plan.repo_id(),
+        )?;
         let mut store = AliasStore::load(&self.ledger_dir)?;
         let current = store.binding_or_fallback(plan.repo_id());
         if current != plan.binding {

@@ -18,7 +18,6 @@ pub mod document_client;
 pub mod domain;
 pub mod external_changes_client;
 pub mod projection_recovery;
-pub(crate) mod remove_scope_partial;
 pub mod rendering_client;
 pub mod repo_control_client;
 pub mod scope_client;

@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt, two-phase finalization and the Option A owner-prepared same-process readmission path are implemented; explicit drift repair, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
+    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt, two-phase finalization, Option A owner-prepared same-process readmission, R5 single typed Web finalization and normal offline/proxy CLI are implemented; explicit drift repair, distinct process exit status and R6 fresh cross-process/browser evidence remain
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -301,6 +301,10 @@
     - run: cargo test -p deve_cli --lib removal_store_rejects_aggregate_bytes_over_load_budget -- --nocapture
     - run: cargo test -p deve_cli --lib web_removal_token_binds_principal_connection_and_server_incarnation -- --nocapture
     - run: cargo test -p deve_cli --lib offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity -- --nocapture
+    - run: cargo test -p deve_cli --lib server::auth::local_cli_proxy::tests -- --nocapture
+    - run: cargo test -p deve_cli --lib main_test::repo_remove_requires_explicit_apply_and_opaque_token_pair -- --nocapture
+    - run: cargo test -p deve_web --bin deve_web runtime::repo_control_client::tests -- --nocapture
+    - run: cargo test -p deve_web --bin deve_web components::sidebar::repo_switcher::tests -- --nocapture
     - planned_proof: D1-SQ owner matrix必须覆盖original/quarantine exact、missing、both-present、unproven both-missing、changed identity，以及classify/rename/delete边界的deterministic race injection
     - planned_proof: `.notegit`必须覆盖marker cross-directory quarantine、tree same-parent quarantine、marker-last delete的每个fsync/crash cut，并用Windows junction/reparse与Linux symlink第二进程证明外部target不变
     - planned_proof: O1-FREEZE必须覆盖capture seal/abort、quiesce失败、watcher E2后plan drift、严格逆序补偿和provider generation恢复失败

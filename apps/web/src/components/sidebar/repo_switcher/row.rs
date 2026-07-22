@@ -40,7 +40,6 @@ pub(super) fn RepoSwitcherRowView(
     let rename_current_name = row.name.clone();
     let rename_alias_revision = row.alias_revision;
     let remove_current_name = row.name.clone();
-    let action_title_name = row.name.clone();
     let rename_value_name = row.name.clone();
 
     view! {
@@ -82,7 +81,6 @@ pub(super) fn RepoSwitcherRowView(
                 set_show_menu=set_show_menu
                 rename_value_name=rename_value_name
                 set_rename_name=set_rename_name
-                action_title_name=action_title_name
                 remove_current_name=remove_current_name
                 on_remove_repo=on_remove_repo
                 locale=locale

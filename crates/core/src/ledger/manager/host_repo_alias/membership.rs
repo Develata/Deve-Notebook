@@ -7,7 +7,9 @@
 //! watcher readiness, or the retired removed-repo registry.
 
 use super::model::HostRepoAliasError;
-use crate::ledger::manager::repo_catalog_runtime::normal_catalog_ids_for_ledger;
+use crate::ledger::manager::repo_catalog_runtime::{
+    CatalogMembershipRuntime, normal_catalog_ids_for_ledger,
+};
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
 use std::collections::HashSet;
@@ -23,11 +25,19 @@ pub(super) struct LocalRepoMembershipSnapshot {
 }
 
 impl LocalRepoMembershipSnapshot {
-    pub(super) fn load(ledger_dir: &Path) -> Result<Self, HostRepoAliasError> {
-        let active = normal_catalog_ids_for_ledger(ledger_dir)
-            .map_err(|error| HostRepoAliasError::Runtime(error.into()))?
-            .into_iter()
-            .collect();
+    pub(super) fn load(
+        ledger_dir: &Path,
+        process_membership: Option<&CatalogMembershipRuntime>,
+    ) -> Result<Self, HostRepoAliasError> {
+        let active = match process_membership {
+            Some(membership) => membership
+                .normal_repo_ids_snapshot()
+                .map_err(|error| HostRepoAliasError::Runtime(error.into()))?,
+            None => normal_catalog_ids_for_ledger(ledger_dir)
+                .map_err(|error| HostRepoAliasError::Runtime(error.into()))?,
+        }
+        .into_iter()
+        .collect();
         Ok(Self { active })
     }
 
@@ -42,14 +52,25 @@ impl LocalRepoMembershipSnapshot {
 
 pub(super) fn require_removed(
     ledger_dir: &Path,
+    process_membership: Option<&CatalogMembershipRuntime>,
     repo_id: RepoId,
 ) -> Result<(), HostRepoAliasError> {
-    let snapshot =
-        crate::ledger::manager::repo_catalog_runtime::catalog_bootstrap_snapshot_for_ledger(
-            ledger_dir,
+    if let Some(membership) = process_membership {
+        return match membership.is_removed_snapshot(repo_id) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(HostRepoAliasError::UnknownLocalRepo(repo_id)),
+            Err(error) => Err(HostRepoAliasError::Runtime(error.into())),
+        };
+    }
+    let record =
+        crate::ledger::manager::repo_catalog_runtime::catalog_membership_record_for_ledger(
+            ledger_dir, repo_id,
         )
         .map_err(|error| HostRepoAliasError::Runtime(error.into()))?;
-    if snapshot.removed_repo_ids().contains(&repo_id) {
+    if record.is_some_and(|record| {
+        record.state()
+            == crate::ledger::manager::repo_catalog_runtime::RepoCatalogMembershipState::Removed
+    }) {
         Ok(())
     } else {
         Err(HostRepoAliasError::UnknownLocalRepo(repo_id))

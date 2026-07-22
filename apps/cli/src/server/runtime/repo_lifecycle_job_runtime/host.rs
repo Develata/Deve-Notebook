@@ -320,6 +320,7 @@ impl RepoLifecyclePublicationSink for RepoLifecycleHostPublicationSink {
     fn publish(
         &self,
         request_id: uuid::Uuid,
+        job_id: uuid::Uuid,
         publication: RepoLifecycleSettledPublication,
     ) -> JobFuture<Result<(), String>> {
         let projection = self.final_projection();
@@ -328,11 +329,21 @@ impl RepoLifecyclePublicationSink for RepoLifecycleHostPublicationSink {
         Box::pin(async move {
             let projection = projection?;
             let initiator_id = sessions
-                .publish_lifecycle_settlement(request_id, publication.clone(), projection.clone())
+                .publish_lifecycle_settlement(
+                    request_id,
+                    job_id,
+                    publication.clone(),
+                    projection.clone(),
+                )
                 .map_err(|error| error.to_string())?;
             if let RepoLifecycleSettledPublication::Removed { repo_id, .. } = publication {
                 sessions
-                    .invalidate_removed_repo_observers(repo_id, initiator_id, projection.clone())
+                    .invalidate_removed_repo_observers(
+                        job_id,
+                        repo_id,
+                        initiator_id,
+                        projection.clone(),
+                    )
                     .map_err(|error| error.to_string())?;
             }
             let _ = tx.send(ServerMessage::RepoList {

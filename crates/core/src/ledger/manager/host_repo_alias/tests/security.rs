@@ -69,9 +69,10 @@ fn corrupt_catalog_record_is_a_global_failure_and_preserves_alias_store() -> any
         json!({"repo_id": ids[0], "alias": "after"}),
         json!({"repo_id": ids[1], "alias": "second"}),
     ]);
+    let offline = HostRepoAliasRuntime::open_existing(&ledger)?;
 
     assert!(matches!(
-        runtime.apply_import_json(&input),
+        offline.apply_import_json(&input),
         Err(HostRepoAliasError::Runtime(_))
     ));
     assert_eq!(std::fs::read(&store_path)?, before);
@@ -96,9 +97,10 @@ fn oversized_catalog_record_is_a_global_failure_and_preserves_alias_store() -> a
         vec![b'x'; 16 * 1024 + 1],
     )?;
     let input = import_document(vec![json!({"repo_id": repo_id, "alias": "after"})]);
+    let offline = HostRepoAliasRuntime::open_existing(&ledger)?;
 
     assert!(matches!(
-        runtime.apply_import_json(&input),
+        offline.apply_import_json(&input),
         Err(HostRepoAliasError::Runtime(_))
     ));
     assert_eq!(std::fs::read(&store_path)?, before);

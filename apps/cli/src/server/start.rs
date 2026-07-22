@@ -81,7 +81,7 @@ impl EmbeddedServerRuntime {
     ) -> anyhow::Result<Self> {
         runtime::install_repo_host_apis(&repo)?;
         runtime::init_observability_runtime()?;
-        let host_dir = runtime::prepare_host_layout(repo.as_ref(), launch.port())?;
+        let host_dir = runtime::prepare_host_layout(repo.as_ref())?;
         let tx = runtime::new_server_broadcast_channel();
 
         let sync_manager = runtime::init_sync_manager(repo.clone())?;
@@ -215,13 +215,20 @@ impl ServerTransportRuntime {
             })?
             .port();
         let launch = launch.with_port(bound_port);
-        runtime::refresh_host_port_hint(&self.host_dir, bound_port).map_err(|source| {
+        let runtime_incarnation = self.app_state.repo_lifecycle_jobs().runtime_incarnation();
+        let host_peer_id = self.app_state.identity_key.peer_id().to_string();
+        let owner_hint = crate::local_cli_proxy_contract::LocalCliOwnerHint::new(
+            bound_port,
+            host_peer_id.clone(),
+            runtime_incarnation,
+        );
+        runtime::refresh_host_port_hint(&self.host_dir, &owner_hint).map_err(|source| {
             ServerTransportServeError {
                 source,
                 sessions_retired: true,
             }
         })?;
-        runtime::init_node_role(&launch, self.profile);
+        runtime::init_node_role(&launch, self.profile, host_peer_id, runtime_incarnation);
         runtime::update_repo_health(
             self.app_state.repo.as_ref(),
             self.app_state.sync_manager.as_ref(),

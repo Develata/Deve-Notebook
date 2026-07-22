@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -198,7 +198,7 @@ RepoRemovalScopeFinalized {
 - 发起connection只有在request/job/connection epoch/current scope与pending removal精确匹配时才消费带request_id的finalization。backend验证optional fallback binding仍exact时可以返回RepoBound；否则返回NoScope，不把成功删除降级为错误，也不选择第三个repo。
 - 其它仍exact绑定removed RepoId的observer收到`request_id=None`的server-driven finalization；server为每个connection分配自己的`new_scope_nonce > current_scope_nonce`并返回NoScope。已独立切离的observer不得被覆盖。
 - Web必须在一次状态更新中应用backend final repo list与scope finalization，撤销removed scope的repo/doc/writer readiness并清除对应pending removal/switch intent；不得丢弃editor pending overlay、合成RepoSwitched、解析detail或从列表自动选择repo。
-- disconnect、旧connection epoch、request/job/repo/scope mismatch时丢弃该消息并保持写门关闭；新connection通过authoritative handshake/list与GetLifecycle恢复。不存在`RepoList -> ProtocolError(SC_REPO_NOT_SELECTED)` staged slot、10秒partial timeout或以Source Control error证明removal成功的兼容路径。
+- disconnect、旧connection epoch、request/job/repo/scope mismatch时丢弃该消息并保持写门关闭；新connection通过authoritative handshake/list与GetLifecycle恢复。同一connection内发生exact scope epoch变化时，Web也必须仅将未完成lifecycle observer重绑到新scope并发送typed `GetLifecycle`；不得自行推断job结果或覆盖用户已选scope。不存在`RepoList -> ProtocolError(SC_REPO_NOT_SELECTED)` staged slot、10秒partial timeout或以Source Control error证明removal成功的兼容路径。
 
 ### 4.5 Structured Error Contract
 
@@ -380,6 +380,9 @@ Web incoming ring 检测到 sequence gap 后，必须停止处理缺口之后的
 ### 8.3 Stale Scope Recovery
 
 - 当 persisted last scope 指向失效 repo 时，前端必须清理旧 scope 并重新 bootstrap。
+- browser-local last-scope preference 必须按 `15_settings#browser-storage-policy` 只保存 canonical
+  `RepoId + local branch kind`。恢复时仍须以当前 backend `RepoListEntry` exact re-admission 后发起
+  typed switch；无匹配时清除旧提示并要求显式选择，不能把任何 browser value 提升为 scope authority。
 - 不得卡在 `Repository context is invalid` 或 `scope mismatch` 的无限错误态。
 
 ## 9. Implementation Blueprint Reference
@@ -469,11 +472,11 @@ command 打开 Source Control 与解析 notice detail 的路径；缺失期间�
 - lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发
   status refresh，不能在新 scope 自动切换 repo。editor pending overlay 与 repo-control state 分离。
 
-当前F4/v5 protocol/server 已实现 removal Prepare/Execute admission，Web 仅实现 Prepare intent 与 typed
-response decode；dispatch 尚不保留 preview/token，也尚未开放 Execute、确认 UI 或 lifecycle finalization。
-这些 browser-owned 部分统一留给 R5，在此之前 `repo_control_client` 保持部分承载。不得把“能够解码”
-写成“已持有 confirmation state”，也不得保留 direct Remove adapter、复用旧 rename controller或把
-Source Control/External Changes state 当作 adapter。
+当前F4/v5 protocol/server与`repo_control_client`已实现完整的Prepare/Execute、仅内存confirmation state、
+单层typed确认面及initiator/observer single typed finalization。旧的`RepoList -> ProtocolError`两帧
+partial slot和direct Remove adapter均已删除；NoScope/fallback只投影backend结果，editor pending overlay
+保持独立。该client在R5产品路径上已落地，但runtime registry在explicit drift repair与R6 fresh browser/
+cross-process证据完成前继续标为部分承载；不得复用rename、Source Control或External Changes controller。
 
 ## 12. Refactor Target
 

@@ -10,6 +10,7 @@ use leptos::prelude::*;
 use super::super::navigation::PendingNavigation;
 use crate::runtime::document::pending::PendingLocalEdits;
 use crate::runtime::domain::{PendingBranchSwitch, PendingRepoSwitch};
+use crate::runtime::repo_control_client::RepoRemovalPresentation;
 
 #[derive(Clone, Copy)]
 pub struct SwitchScopeSignals {
@@ -26,6 +27,8 @@ pub struct SwitchScopeSignals {
     pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
     pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
     pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
+    pub removal_preview: ReadSignal<Option<RepoRemovalPresentation>>,
+    pub set_removal_preview: WriteSignal<Option<RepoRemovalPresentation>>,
 }
 
 #[derive(Clone, Copy)]

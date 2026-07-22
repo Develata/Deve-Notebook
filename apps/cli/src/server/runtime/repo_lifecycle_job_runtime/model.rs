@@ -268,6 +268,7 @@ pub(crate) trait RepoLifecyclePublicationSink: Send + Sync + 'static {
     fn publish(
         &self,
         request_id: Uuid,
+        job_id: Uuid,
         publication: RepoLifecycleSettledPublication,
     ) -> JobFuture<Result<(), String>>;
 }

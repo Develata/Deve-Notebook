@@ -26,6 +26,22 @@ fn empty_host_has_no_implicit_primary_and_never_creates_local_redb() -> anyhow::
 }
 
 #[test]
+fn repo_manager_retains_one_canonical_absolute_ledger_root() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("parent").join("..").join("ledger");
+    std::fs::create_dir_all(dir.path().join("parent"))?;
+
+    let repo = RepoManager::init_empty_host(&ledger_dir, 8)?;
+
+    assert!(repo.ledger_dir().is_absolute());
+    assert_eq!(
+        repo.ledger_dir(),
+        std::fs::canonicalize(dir.path().join("ledger"))?
+    );
+    Ok(())
+}
+
+#[test]
 fn resolve_local_selector_fails_closed_on_missing_secondary_metadata() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;

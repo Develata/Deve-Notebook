@@ -81,19 +81,32 @@ impl CatalogMembershipRuntime {
         }
     }
 
-    /// Seeds the exact bootstrap catalog. Repeating the same current member
-    /// set is idempotent; duplicate or different sets fail closed.
-    pub(crate) fn seed(
+    #[cfg(test)]
+    fn seed(
         &self,
         repo_ids: impl IntoIterator<Item = RepoId>,
     ) -> Result<(), CatalogMembershipError> {
+        self.seed_with_removed(repo_ids, std::iter::empty())
+    }
+
+    pub(crate) fn seed_with_removed(
+        &self,
+        normal_repo_ids: impl IntoIterator<Item = RepoId>,
+        removed_repo_ids: impl IntoIterator<Item = RepoId>,
+    ) -> Result<(), CatalogMembershipError> {
         let mut unique = HashSet::new();
         let mut ordered = Vec::new();
-        for repo_id in repo_ids {
+        for repo_id in normal_repo_ids {
             if !unique.insert(repo_id) {
                 return Err(CatalogMembershipError::DuplicateSeed(repo_id));
             }
-            ordered.push(repo_id);
+            ordered.push((repo_id, CatalogMembershipPhase::Normal));
+        }
+        for repo_id in removed_repo_ids {
+            if !unique.insert(repo_id) {
+                return Err(CatalogMembershipError::DuplicateSeed(repo_id));
+            }
+            ordered.push((repo_id, CatalogMembershipPhase::Removed));
         }
         let mut state = self
             .inner
@@ -104,25 +117,26 @@ impl CatalogMembershipRuntime {
             let current = state
                 .slots
                 .iter()
-                .filter_map(|(repo_id, slot)| {
-                    (slot.phase == CatalogMembershipPhase::Normal).then_some(*repo_id)
-                })
-                .collect::<HashSet<_>>();
-            return if current == unique {
+                .map(|(repo_id, slot)| (*repo_id, slot.phase))
+                .collect::<HashMap<_, _>>();
+            let expected = ordered.iter().copied().collect::<HashMap<_, _>>();
+            return if current == expected {
                 Ok(())
             } else {
                 Err(CatalogMembershipError::SeedDrift)
             };
         }
-        state.slots.extend(ordered.into_iter().map(|repo_id| {
-            (
-                repo_id,
-                CatalogMembershipSlot {
-                    generation: CatalogMembershipGeneration::INITIAL,
-                    phase: CatalogMembershipPhase::Normal,
-                },
-            )
-        }));
+        state
+            .slots
+            .extend(ordered.into_iter().map(|(repo_id, phase)| {
+                (
+                    repo_id,
+                    CatalogMembershipSlot {
+                        generation: CatalogMembershipGeneration::INITIAL,
+                        phase,
+                    },
+                )
+            }));
         state.seeded = true;
         Ok(())
     }
@@ -140,6 +154,40 @@ impl CatalogMembershipRuntime {
             .filter(|slot| slot.phase == CatalogMembershipPhase::Normal)
             .ok_or(CatalogMembershipError::NotMember(repo_id))?;
         Ok(self.token(repo_id, slot.generation))
+    }
+
+    pub(crate) fn normal_repo_ids_snapshot(&self) -> Result<Vec<RepoId>, CatalogMembershipError> {
+        let state = self
+            .inner
+            .state
+            .read()
+            .map_err(|_| CatalogMembershipError::Poisoned)?;
+        ensure_seeded(&state)?;
+        let mut repo_ids = state
+            .slots
+            .iter()
+            .filter_map(|(repo_id, slot)| {
+                (slot.phase == CatalogMembershipPhase::Normal).then_some(*repo_id)
+            })
+            .collect::<Vec<_>>();
+        repo_ids.sort_unstable();
+        Ok(repo_ids)
+    }
+
+    pub(crate) fn is_removed_snapshot(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<bool, CatalogMembershipError> {
+        let state = self
+            .inner
+            .state
+            .read()
+            .map_err(|_| CatalogMembershipError::Poisoned)?;
+        ensure_seeded(&state)?;
+        Ok(state
+            .slots
+            .get(&repo_id)
+            .is_some_and(|slot| slot.phase == CatalogMembershipPhase::Removed))
     }
 
     pub fn revalidate(&self, token: &CatalogMembershipToken) -> Result<(), CatalogMembershipError> {

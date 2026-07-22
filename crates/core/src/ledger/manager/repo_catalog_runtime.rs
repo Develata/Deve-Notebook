@@ -56,6 +56,13 @@ pub fn normal_catalog_ids_for_ledger(ledger_dir: &Path) -> Result<Vec<RepoId>, R
     Ok(catalog_bootstrap_snapshot_for_ledger(ledger_dir)?.normal_repo_ids)
 }
 
+pub(crate) fn catalog_membership_record_for_ledger(
+    ledger_dir: &Path,
+    repo_id: RepoId,
+) -> Result<Option<RepoCatalogMembershipRecord>, RepoCatalogError> {
+    store::RepoCatalogStore::open(ledger_dir)?.load(repo_id)
+}
+
 /// Durable catalog truth used before a `RepoManager` composition root exists.
 ///
 /// `has_records` deliberately distinguishes a never-cataloged bootstrap from
@@ -175,6 +182,16 @@ impl RepoManager {
     /// `RepoManager` composition runtime.
     pub fn catalog_membership_runtime(&self) -> CatalogMembershipRuntime {
         self.catalog_membership.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_repo_catalog_store_lock_for_test<T>(
+        &self,
+        action: impl FnOnce() -> T,
+    ) -> Result<T, RepoCatalogError> {
+        let store = store::RepoCatalogStore::open(&self.ledger_dir)?;
+        let _guard = store.lock()?;
+        Ok(action())
     }
 
     /// Claims the unique host mutation capability for the catalog cut lane.

@@ -68,6 +68,7 @@ fn switch_signals(
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
     let (_, set_handshake_ready) = signal(true);
     let (_, set_handshake_scope_nonce) = signal(Some(current_scope_nonce_value));
+    let (removal_preview, set_removal_preview) = signal(None);
 
     SwitchScopeSignals {
         current_doc,
@@ -83,5 +84,7 @@ fn switch_signals(
         set_handshake_scope_nonce,
         set_pending_branch_switch,
         set_pending_repo_switch,
+        removal_preview,
+        set_removal_preview,
     }
 }

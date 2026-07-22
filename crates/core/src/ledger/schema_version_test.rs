@@ -92,26 +92,28 @@ fn shadow_v4_uses_uuid_stem_without_local_remote_import_tables() -> anyhow::Resu
         .join(peer.to_filename())
         .join(format!("{repo_id}.redb"));
     assert!(path.is_file());
-    let db = crate::ledger::database::cached_shadow_database(&path)?;
-    let read = db.begin_read()?;
-    let metadata = read.open_table(REPO_METADATA)?;
-    let raw = metadata
-        .get(&REPO_SCHEMA_VERSION_METADATA_KEY)?
-        .expect("schema version");
-    let version: u16 = codec::decode(raw.value())?;
-    assert_eq!(version, 4);
-    assert!(matches!(
-        read.open_table(REMOTE_IMPORT_SESSIONS),
-        Err(redb::TableError::TableDoesNotExist(_))
-    ));
-    assert!(matches!(
-        read.open_table(REMOTE_IMPORT_RUNTIME),
-        Err(redb::TableError::TableDoesNotExist(_))
-    ));
-    assert!(matches!(
-        read.open_table(PROJECTION_FAULTS),
-        Err(redb::TableError::TableDoesNotExist(_))
-    ));
+    repo.run_on_shadow_repo_by_id(&peer, &repo_id, |db| {
+        let read = db.begin_read()?;
+        let metadata = read.open_table(REPO_METADATA)?;
+        let raw = metadata
+            .get(&REPO_SCHEMA_VERSION_METADATA_KEY)?
+            .expect("schema version");
+        let version: u16 = codec::decode(raw.value())?;
+        assert_eq!(version, 4);
+        assert!(matches!(
+            read.open_table(REMOTE_IMPORT_SESSIONS),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ));
+        assert!(matches!(
+            read.open_table(REMOTE_IMPORT_RUNTIME),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ));
+        assert!(matches!(
+            read.open_table(PROJECTION_FAULTS),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ));
+        Ok(())
+    })?;
     Ok(())
 }
 

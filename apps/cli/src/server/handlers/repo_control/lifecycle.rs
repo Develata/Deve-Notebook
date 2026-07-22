@@ -228,7 +228,7 @@ pub(super) fn replay_terminal_status(
         })?;
     state
         .repo_session_runtime()
-        .publish_lifecycle_settlement(request_id, publication, final_list)
+        .publish_lifecycle_settlement(request_id, status.job_id, publication, final_list)
         .map_err(|error| {
             tracing::warn!(%error, "lifecycle observer publication replay failed");
             let _ = state

@@ -7,10 +7,46 @@
 
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{
-    RemoteImportRequest, RemoteImportRequestContext, RemoteImportResponse, ScopeNonce, ServerError,
+    LocalRepoRemovalPreview, OpaqueFallbackBinding, RemoteImportRequest,
+    RemoteImportRequestContext, RemoteImportResponse, RemovalConfirmationToken,
+    RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, ScopeNonce, ServerError,
+    SwitchNonce,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+pub(crate) const LOCAL_CLI_OWNER_HINT_FORMAT: &str = "deve.local-cli-owner";
+pub(crate) const LOCAL_CLI_OWNER_HINT_VERSION: u8 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct LocalCliOwnerHint {
+    pub(crate) format: String,
+    pub(crate) version: u8,
+    pub(crate) main_port: u16,
+    pub(crate) host_peer_id: String,
+    pub(crate) runtime_incarnation: Uuid,
+}
+
+impl LocalCliOwnerHint {
+    pub(crate) fn new(main_port: u16, host_peer_id: String, runtime_incarnation: Uuid) -> Self {
+        Self {
+            format: LOCAL_CLI_OWNER_HINT_FORMAT.into(),
+            version: LOCAL_CLI_OWNER_HINT_VERSION,
+            main_port,
+            host_peer_id,
+            runtime_incarnation,
+        }
+    }
+
+    pub(crate) fn is_valid(&self) -> bool {
+        self.format == LOCAL_CLI_OWNER_HINT_FORMAT
+            && self.version == LOCAL_CLI_OWNER_HINT_VERSION
+            && self.main_port != 0
+            && !self.host_peer_id.trim().is_empty()
+            && !self.runtime_incarnation.is_nil()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "kebab-case")]
@@ -123,6 +159,110 @@ pub(crate) enum LocalCliRemoteImportResponse {
         scope_nonce: ScopeNonce,
         finding_count: usize,
         repairable_count: usize,
+    },
+    Error {
+        request_id: Uuid,
+        error: ServerError,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "operation", rename_all = "kebab-case")]
+pub(crate) enum LocalCliRepoRemovalRequest {
+    Prepare {
+        request_id: Uuid,
+        repo_id: RepoId,
+        current_scope_nonce: ScopeNonce,
+    },
+    Execute {
+        request_id: Uuid,
+        repo_id: RepoId,
+        preparation_id: Uuid,
+        confirmation_token: RemovalConfirmationToken,
+        fallback_binding: Option<OpaqueFallbackBinding>,
+        current_scope_nonce: ScopeNonce,
+        switch_nonce: SwitchNonce,
+    },
+    Status {
+        request_id: Uuid,
+        execute_request_id: Uuid,
+        repo_id: RepoId,
+    },
+}
+
+impl LocalCliRepoRemovalRequest {
+    pub(crate) const fn request_id(&self) -> Uuid {
+        match self {
+            Self::Prepare { request_id, .. }
+            | Self::Execute { request_id, .. }
+            | Self::Status { request_id, .. } => *request_id,
+        }
+    }
+
+    pub(crate) const fn repo_id(&self) -> RepoId {
+        match self {
+            Self::Prepare { repo_id, .. }
+            | Self::Execute { repo_id, .. }
+            | Self::Status { repo_id, .. } => *repo_id,
+        }
+    }
+
+    pub(crate) const fn operation_name(&self) -> &'static str {
+        match self {
+            Self::Prepare { .. } => "prepare",
+            Self::Execute { .. } => "execute",
+            Self::Status { .. } => "status",
+        }
+    }
+
+    pub(crate) const fn scope_identity(&self) -> (u64, Option<u64>, Option<Uuid>) {
+        match self {
+            Self::Prepare {
+                current_scope_nonce,
+                ..
+            } => (current_scope_nonce.get(), None, None),
+            Self::Execute {
+                current_scope_nonce,
+                switch_nonce,
+                preparation_id,
+                ..
+            } => (
+                current_scope_nonce.get(),
+                Some(switch_nonce.get()),
+                Some(*preparation_id),
+            ),
+            Self::Status {
+                execute_request_id, ..
+            } => (0, None, Some(*execute_request_id)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "result", rename_all = "kebab-case")]
+pub(crate) enum LocalCliRepoRemovalResponse {
+    Prepared {
+        request_id: Uuid,
+        preparation_id: Uuid,
+        repo_id: RepoId,
+        preview: LocalRepoRemovalPreview,
+        confirmation_token: Option<RemovalConfirmationToken>,
+        fallback_binding: Option<OpaqueFallbackBinding>,
+    },
+    Accepted {
+        request_id: Uuid,
+        job_id: Uuid,
+        repo_id: RepoId,
+    },
+    Status {
+        request_id: Uuid,
+        execute_request_id: Uuid,
+        job_id: Uuid,
+        repo_id: RepoId,
+        operation: RepoLifecycleOperation,
+        state: RepoLifecycleState,
+        outcome: Option<RepoLifecycleOutcome>,
+        publication_pending: bool,
     },
     Error {
         request_id: Uuid,

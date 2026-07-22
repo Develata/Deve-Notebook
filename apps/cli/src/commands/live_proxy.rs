@@ -8,12 +8,15 @@ use crate::admin_api::{
     DumpResponse, ExportEntry, GitStatusResponse, NodeCheckResponse, ProjectionCheckResponse,
     ScStatusResponse,
 };
+use crate::local_cli_proxy_contract::LocalCliOwnerHint;
 use anyhow::{Context, Result, anyhow};
 use deve_core::config::RuntimeEnvironment;
+use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginRequest, LoginResponse};
 use deve_core::security::AuthConfig;
 use reqwest::{Client, RequestBuilder, header};
 use serde::Deserialize;
 use std::future::Future;
+use std::io::Read;
 use std::path::Path;
 
 const DEFAULT_MAIN_PORT: u16 = 3001;
@@ -24,13 +27,19 @@ struct NodeRoleResponse {
     ws_port: u16,
     main_port: u16,
     #[serde(default)]
+    host_peer_id: Option<String>,
+    #[serde(default)]
+    runtime_incarnation: Option<uuid::Uuid>,
+    #[serde(default)]
     environment: Option<String>,
 }
 
 pub fn is_db_lock_error(err: &anyhow::Error) -> bool {
     err.chain().any(|cause| {
-        let text = cause.to_string();
-        text.contains("Database already open") || text.contains("Cannot acquire lock")
+        matches!(
+            cause.downcast_ref::<deve_core::ledger::LocalAuthorityError>(),
+            Some(deve_core::ledger::LocalAuthorityError::Busy(_))
+        )
     })
 }
 
@@ -142,6 +151,10 @@ pub(crate) fn main_base_url(ledger_dir: &Path) -> Result<String> {
 }
 
 fn read_main_port_hint(ledger_dir: &Path) -> Result<Option<u16>> {
+    Ok(read_main_owner_hint(ledger_dir)?.map(|hint| hint.main_port))
+}
+
+fn read_main_owner_hint(ledger_dir: &Path) -> Result<Option<LocalCliOwnerHint>> {
     let path = ledger_dir.join(".host").join("main_port");
     match path.try_exists() {
         Ok(true) => {}
@@ -151,15 +164,14 @@ fn read_main_port_hint(ledger_dir: &Path) -> Result<Option<u16>> {
                 .with_context(|| format!("Failed to stat main port hint file: {:?}", path));
         }
     }
-    let raw = std::fs::read_to_string(&path)
+    let raw = std::fs::read(&path)
         .with_context(|| format!("Failed to read main port hint file: {:?}", path))?;
-    let port = raw.trim().parse().with_context(|| {
-        format!(
-            "Invalid main port hint in {:?}: expected u16, got {:?}",
-            path, raw
-        )
-    })?;
-    Ok(Some(port))
+    let hint: LocalCliOwnerHint = serde_json::from_slice(&raw)
+        .with_context(|| format!("Invalid main port owner hint in {path:?}"))?;
+    if !hint.is_valid() {
+        return Err(anyhow!("Invalid main port owner hint in {path:?}"));
+    }
+    Ok(Some(hint))
 }
 
 async fn detect_main_port() -> Result<u16> {
@@ -237,6 +249,118 @@ pub(crate) fn local_client() -> Result<Client> {
         .no_proxy()
         .build()
         .context("Failed to build localhost proxy client")
+}
+
+pub(crate) struct LocalCliProxySession {
+    client: Client,
+    base: String,
+    bearer: String,
+}
+
+impl LocalCliProxySession {
+    pub(crate) fn post(&self, path: &str) -> RequestBuilder {
+        self.client
+            .post(format!("{}{path}", self.base))
+            .bearer_auth(&self.bearer)
+    }
+}
+
+pub(crate) async fn authenticated_session(
+    ledger_dir: &Path,
+    auth_user: Option<String>,
+    auth_password_stdin: bool,
+) -> Result<LocalCliProxySession> {
+    let username = auth_user.ok_or_else(|| {
+        anyhow!("--auth-user is required when the owner server holds the repo DB")
+    })?;
+    if !auth_password_stdin {
+        return Err(anyhow!(
+            "--auth-password-stdin is required when the owner server holds the repo DB"
+        ));
+    }
+    let hint = read_main_owner_hint(ledger_dir)?
+        .ok_or_else(|| anyhow!("Local CLI owner process hint is missing"))?;
+    let base = format!("http://127.0.0.1:{}", hint.main_port);
+    let client = local_client()?;
+    let role = fetch_node_role(&client, &base).await?;
+    if !trusted_owner_endpoint(&hint, &role) {
+        return Err(anyhow!("Main process endpoint identity mismatch"));
+    }
+    let password = read_password_from_stdin()?;
+    let response = client
+        .post(format!("{base}/api/auth/login"))
+        .json(&LoginRequest { username, password })
+        .send()
+        .await
+        .context("Local CLI operator login failed")?;
+    let status = response.status();
+    let tokens = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .filter_map(extract_token_cookie)
+        .collect::<Vec<_>>();
+    let body = response
+        .json::<LoginResponse>()
+        .await
+        .map_err(|_| anyhow!("AUTH_INTERNAL_ERROR"))?;
+    if !status.is_success() || !body.success {
+        return Err(anyhow!(auth_code_name(
+            body.code.unwrap_or(AuthErrorCode::InternalError)
+        )));
+    }
+    if tokens.len() != 1 {
+        return Err(anyhow!("AUTH_TOKEN_MISSING"));
+    }
+    Ok(LocalCliProxySession {
+        client,
+        base,
+        bearer: tokens.into_iter().next().expect("single token checked"),
+    })
+}
+
+fn trusted_owner_endpoint(hint: &LocalCliOwnerHint, role: &NodeRoleResponse) -> bool {
+    trusted_main_port(role, hint.main_port) == Some(hint.main_port)
+        && role.host_peer_id.as_deref() == Some(hint.host_peer_id.as_str())
+        && role.runtime_incarnation == Some(hint.runtime_incarnation)
+}
+
+fn read_password_from_stdin() -> Result<String> {
+    let mut password = String::new();
+    std::io::stdin()
+        .read_to_string(&mut password)
+        .context("Failed to read operator password from stdin")?;
+    while matches!(password.as_bytes().last(), Some(b'\n' | b'\r')) {
+        password.pop();
+    }
+    if password.is_empty() {
+        return Err(anyhow!("Operator password from stdin is empty"));
+    }
+    Ok(password)
+}
+
+fn extract_token_cookie(value: &str) -> Option<String> {
+    let pair = value.split(';').next()?.trim();
+    let token = pair.strip_prefix("token=")?;
+    (!token.is_empty()).then(|| token.to_string())
+}
+
+pub(crate) fn auth_code_name(code: AuthErrorCode) -> &'static str {
+    match code {
+        AuthErrorCode::InvalidPassword => "AUTH_INVALID_PASSWORD",
+        AuthErrorCode::TokenExpired => "AUTH_TOKEN_EXPIRED",
+        AuthErrorCode::TokenMissing => "AUTH_TOKEN_MISSING",
+        AuthErrorCode::RateLimited => "AUTH_RATE_LIMITED",
+        AuthErrorCode::CsrfMismatch => "AUTH_CSRF_MISMATCH",
+        AuthErrorCode::InternalError => "AUTH_INTERNAL_ERROR",
+    }
+}
+
+pub(crate) fn decode_auth_rejection(bytes: &[u8]) -> Result<&'static str> {
+    let response = serde_json::from_slice::<AuthErrorResponse>(bytes)
+        .map_err(|_| anyhow!("AUTH_INTERNAL_ERROR"))?;
+    Ok(auth_code_name(response.code))
 }
 
 fn trusted_main_port(role: &NodeRoleResponse, probed_port: u16) -> Option<u16> {

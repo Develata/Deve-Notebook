@@ -28,6 +28,7 @@ use std::sync::Arc;
 pub(crate) use self::switcher_payload::{
     RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
 };
+pub(crate) use self::switcher_repo::commit_repo_switch;
 
 pub async fn handle_switch_branch(
     state: &Arc<AppState>,

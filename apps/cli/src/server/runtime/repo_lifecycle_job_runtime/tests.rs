@@ -110,6 +110,7 @@ impl RepoLifecyclePublicationSink for TestSink {
     fn publish(
         &self,
         request_id: Uuid,
+        _job_id: Uuid,
         publication: RepoLifecycleSettledPublication,
     ) -> model::JobFuture<Result<(), String>> {
         let should_fail = self

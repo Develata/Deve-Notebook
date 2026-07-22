@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-16`
+- `Last Review`: `2026-07-22`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -133,7 +133,13 @@ Gate 状态：
 - Desktop Windows `LocalBackend` **MAY** 在 `apps/desktop` 的 `native-packaging`
   feature scope 内使用 `windows-sys` Job Object 与 `PROC_THREAD_ATTRIBUTE_JOB_LIST`
   API，把 `deve_cli` sidecar 在创建时绑定到父 Desktop 进程生命周期；若宿主已有 Job 链拒绝 Job List，fallback
-  必须使用 `CREATE_SUSPENDED -> AssignProcessToJobObject -> ResumeThread`，不得让后端在归组前运行。该依赖不得进入 workspace root、core、cli、web 或 mobile。
+  必须使用 `CREATE_SUSPENDED -> AssignProcessToJobObject -> ResumeThread`，不得让后端在归组前运行。该
+  process-adapter 用法不得进入 workspace root、core、cli、web 或 mobile。
+- Core host filesystem authority **MAY** 在 `cfg(windows)` 下独立使用 `windows-sys`，但只限
+  `utils/fs.rs`、`utils/fs/identity.rs`、`utils/fs/quarantine/windows.rs` 与
+  `remote_import/artifact/durability.rs` 的 handle-bound identity、no-replace quarantine、reparse 防护与
+  durable rename；dependency feature 必须精确限制为 `Wdk_Storage_FileSystem`、`Win32_Foundation`、
+  `Win32_Storage_FileSystem`、`Win32_System_IO`，不得借此引入 UI、process、network 或 credential authority。
 - `LocalBackend` 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
 - 默认 release、target-host package、Android/iOS package execution 不得被解释为 store/physical-device release ready；native 本地后端可用性只表示 LocalBackend peer 语义通过对应 smoke，不代表签名/商店/物理设备发布就绪。
 

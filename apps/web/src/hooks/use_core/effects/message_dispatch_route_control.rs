@@ -17,6 +17,7 @@ use super::message_dispatch_control::{
     handle_repo_switched_message,
 };
 use super::message_dispatch_shadow::handle_shadow_list_message;
+use super::message_repo_removal;
 
 pub fn route_control_message(
     msg: ServerMessage,
@@ -41,7 +42,11 @@ pub fn route_control_message(
             repo_entries,
         } => {
             handle_repo_list_message(request_id, branch, scope_nonce, repo_entries, ws, signals);
-            repo_control.resume_lifecycles(ws, current_repo_control_scope(ws, signals));
+            let scope = current_repo_control_scope(ws, signals);
+            if repo_control.synchronize_scope(&scope) {
+                signals.set_removal_preview.set(None);
+            }
+            repo_control.resume_lifecycles(ws, scope);
             None
         }
         ServerMessage::BranchSwitched {
@@ -71,7 +76,11 @@ pub fn route_control_message(
                 ws,
                 signals,
             );
-            repo_control.resume_lifecycles(ws, current_repo_control_scope(ws, signals));
+            let scope = current_repo_control_scope(ws, signals);
+            if repo_control.synchronize_scope(&scope) {
+                signals.set_removal_preview.set(None);
+            }
+            repo_control.resume_lifecycles(ws, scope);
             None
         }
         ServerMessage::PeerDeleted {
@@ -86,7 +95,28 @@ pub fn route_control_message(
             if let Some(admission) = repo_control.accept(response, &scope) {
                 match admission {
                     RepoControlAdmission::AliasSet(_) => {}
-                    RepoControlAdmission::RemovalPrepared { .. } => {}
+                    RepoControlAdmission::RemovalPrepared { presentation } => {
+                        signals.set_removal_preview.set(Some(presentation));
+                    }
+                    RepoControlAdmission::RemovalFinalized {
+                        removed_repo_id,
+                        final_repo_list,
+                        scope,
+                        ..
+                    } => {
+                        if !message_repo_removal::apply(
+                            ws,
+                            signals,
+                            removed_repo_id,
+                            final_repo_list,
+                            scope,
+                        ) {
+                            ws.clear_writer_ready();
+                            signals.set_handshake_ready.set(false);
+                            signals.set_removal_preview.set(None);
+                            ws.request_reconnect_for_resync(ws.connection_epoch.get_untracked());
+                        }
+                    }
                     RepoControlAdmission::LifecycleAccepted {
                         target_repo_id,
                         operation: RepoLifecycleOperation::Create,
@@ -137,6 +167,7 @@ pub fn route_control_message(
                     RepoControlAdmission::Error {
                         code,
                         lifecycle_request,
+                        removal_request,
                     } => {
                         signals
                             .set_sync_banner
@@ -146,6 +177,9 @@ pub fn route_control_message(
                             signals
                                 .set_handshake_retry_nonce
                                 .update(|nonce| *nonce = nonce.wrapping_add(1));
+                        }
+                        if removal_request {
+                            signals.set_removal_preview.set(None);
                         }
                     }
                 }

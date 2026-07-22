@@ -20,6 +20,8 @@ use tokio::time::{timeout, Duration};
 use tokio_tungstenite::tungstenite::{Error as WsError, Message};
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
+const SERVER_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
+
 pub(super) struct WsHarness {
     _dir: TempDir,
     pub(super) repo_id: uuid::Uuid,
@@ -135,7 +137,10 @@ pub(super) async fn recv_server_message<S>(ws: &mut S) -> anyhow::Result<ServerM
 where
     S: Stream<Item = Result<Message, WsError>> + Unpin,
 {
-    let msg = timeout(Duration::from_secs(2), ws.next()).await?;
+    // Full-workspace tests deliberately exercise many Redb and real-filesystem
+    // paths in parallel. Keep this producer timeout finite while allowing the
+    // host scheduler to service the ledger/projection write path under load.
+    let msg = timeout(SERVER_RESPONSE_TIMEOUT, ws.next()).await?;
     let Some(msg) = msg else {
         anyhow::bail!("websocket closed before server response");
     };

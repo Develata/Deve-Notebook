@@ -56,12 +56,17 @@
 
 ### 6. Local CLI Proxy 隔离
 
-- repo DB 被本机 server 持有时，`remote-import` CLI 只可通过 loopback-only
-  `LocalCliProxyAuthority` 发送 typed request，不能绕锁直开 DB。
+- repo DB 被本机 server 持有时，`remote-import` 与 `repo remove/removal-repair` CLI 只可通过
+  loopback-only `LocalCliProxyAuthority` 发送各自的typed request，不能绕锁直开DB，也不能把一个
+  family的capability改作另一个family。
 - CLI 使用既有 operator login/JWT authority，但把 token 仅保留在当前 process；Cookie-only、anonymous
   localhost dev session、browser Source Control grant、P2P/delegated token 都不能构造该 capability。
-- capability 只绑定一个 exact Remote Import request/scope/session/revision；server 仍负责 blocker、Mounted、
-  writer gate、transaction 与 publication 判断。CLI 不获得通用 Ledger、watcher 或 Source Control authority。
+- CLI 必须在读取 operator password 前先用 ledger-local `.host/main_port` JSON owner hint 匹配
+  `/api/node/role` 的 `main_port + host_peer_id + runtime_incarnation`；陈旧、缺失或指向其它进程的 hint 必须 fail closed。
+- capability 按 family 精确绑定：Remote Import 绑定 request/scope/session/revision，Repo Removal 绑定
+  Prepare/Execute/Status 的 RepoId、preparation/request/job identity；两者不得互相 replay。server 仍负责
+  blocker、Mounted、writer gate、transaction 与 publication 判断。CLI 不获得通用 Ledger、watcher 或
+  Source Control authority；`removal-repair` 仍是后续显式 surface。
 - proxy admission 失败时 CLI 显式报认证/代理不可用，不退回匿名访问、browser grant 或直写 DB。
 
 ## 非目标

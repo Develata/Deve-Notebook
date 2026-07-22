@@ -28,7 +28,11 @@
 - Source Control、Explorer、当前文档作用域应随 repo 切换而同步变化。
 - 界面不应同时把所有 repo 混成一个全局工作区。
 - 仓库展开界面应提供新增、设置本地 alias 与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于修改当前 host 的显示 alias 或先打开backend removal preview。
-- 普通移除仓库采用Prepare → Execute：preview只显示backend生成的preserved/deleted categories与typed warning/blocker，确认后才消费短期token。它会删除本机该repo的Ledger history与Deve-owned runtime state，但保留Projection Workspace容器、Markdown/附件、`.git`与其它非`.notegit`文件。确认文案必须准确说明两类结果，不能写成“所有数据已删除”或“仅从列表隐藏”。
+- 普通移除仓库采用Prepare → Execute：点击移除只发Prepare；backend preview返回后打开单层确认面，
+  分区显示preserved/deleted categories与typed warning/blocker，确认后才消费短期token。确认面不得使用
+  browser原生confirm、展示host path/digest/raw detail或自行计算TTL；无backend token时确认按钮禁用。
+  它会删除本机该repo的Ledger history与Deve-owned runtime state，但保留Projection Workspace容器、
+  Markdown/附件、`.git`与其它非`.notegit`文件。确认文案必须准确说明两类结果，不能写成“所有数据已删除”或“仅从列表隐藏”。
 - 最后一个repo可以移除；完成后界面进入`NoScope`空状态，仍可登录、查看诊断和创建首个新repo。没有fallback不应显示为删除失败。
 - create/remove 的 repo list 与 scope 结果只在 watcher mount 最终 outcome 已知后更新；页面不得先显示成功再自行补偿。
 - create 已提交但 workspace ingestion mount 失败时，新 repo 保留只读可见，当前 session 不自动切换。

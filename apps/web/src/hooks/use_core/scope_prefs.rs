@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::storage::prefs::{read_pref, remove_pref, write_pref};
+use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, rc::Rc};
@@ -13,7 +14,14 @@ const SCOPE_PREF_KEY: &str = "deve.ui.last_scope";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct StoredScopePref {
-    repo_name: String,
+    repo_id: RepoId,
+    branch: StoredScopeBranchKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum StoredScopeBranchKind {
+    Local,
 }
 
 pub(super) fn restore_scope_pref(signals: &CoreSignals) {
@@ -24,7 +32,10 @@ pub(super) fn restore_scope_pref(signals: &CoreSignals) {
         clear_scope_pref();
         return;
     };
-    signals.set_current_repo.set(Some(scope.repo_name));
+    signals.set_current_repo.set(None);
+    signals
+        .set_current_repo_id
+        .set(Some(scope.repo_id.to_string()));
 }
 
 pub(super) fn setup_scope_pref_effect(signals: &CoreSignals) {
@@ -32,7 +43,8 @@ pub(super) fn setup_scope_pref_effect(signals: &CoreSignals) {
     let last_saved = Rc::new(RefCell::new(read_pref(SCOPE_PREF_KEY)));
     Effect::new(move |_| {
         match next_scope_pref_json(
-            signals.current_repo.get(),
+            signals.current_repo_id.get(),
+            signals.active_branch.get(),
             signals.pending_repo_switch.get().is_some()
                 || signals.pending_branch_switch.get().is_some(),
         ) {
@@ -60,20 +72,30 @@ pub(super) fn clear_scope_pref() {
     remove_pref(SCOPE_PREF_KEY);
 }
 
-fn next_scope_pref_json(repo_name: Option<String>, switching: bool) -> ScopePrefUpdate {
+fn next_scope_pref_json(
+    repo_id: Option<String>,
+    active_branch: Option<PeerId>,
+    switching: bool,
+) -> ScopePrefUpdate {
     if switching {
         return ScopePrefUpdate::Skip;
     }
-    match repo_name.filter(|name| !name.trim().is_empty()) {
-        Some(repo_name) => {
-            serialize_scope_pref(repo_name).map_or(ScopePrefUpdate::Skip, ScopePrefUpdate::Persist)
+    if active_branch.is_some() {
+        return ScopePrefUpdate::Clear;
+    }
+    match repo_id.and_then(|value| value.parse::<RepoId>().ok()) {
+        Some(repo_id) => {
+            serialize_scope_pref(repo_id).map_or(ScopePrefUpdate::Skip, ScopePrefUpdate::Persist)
         }
         None => ScopePrefUpdate::Clear,
     }
 }
 
-fn serialize_scope_pref(repo_name: String) -> Option<String> {
-    match serde_json::to_string(&StoredScopePref { repo_name }) {
+fn serialize_scope_pref(repo_id: RepoId) -> Option<String> {
+    match serde_json::to_string(&StoredScopePref {
+        repo_id,
+        branch: StoredScopeBranchKind::Local,
+    }) {
         Ok(json) => Some(json),
         Err(err) => {
             leptos::logging::warn!("无法序列化 repo scope preference: {}", err);
@@ -83,8 +105,7 @@ fn serialize_scope_pref(repo_name: String) -> Option<String> {
 }
 
 fn parse_scope_pref(raw: &str) -> Option<StoredScopePref> {
-    let scope: StoredScopePref = serde_json::from_str(raw).ok()?;
-    (!scope.repo_name.trim().is_empty()).then_some(scope)
+    serde_json::from_str(raw).ok()
 }
 
 enum ScopePrefUpdate {

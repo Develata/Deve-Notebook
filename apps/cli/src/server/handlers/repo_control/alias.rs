@@ -8,11 +8,13 @@
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::ledger::HostRepoAliasError;
 use deve_core::models::RepoId;
-use deve_core::protocol::{RepoAliasBinding, RepoControlResponse, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{
+    RepoAliasBinding, RepoControlResponse, RepoReadiness, ServerErrorCode, ServerMessage,
+};
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub(super) fn handle_set_alias(
+pub(super) async fn handle_set_alias(
     state: &Arc<AppState>,
     channel: &DualChannel,
     session: &WsSession,
@@ -21,13 +23,19 @@ pub(super) fn handle_set_alias(
     alias: &str,
     expected_alias_revision: u64,
 ) {
-    let result =
-        state
-            .repo
-            .host_repo_alias_runtime()
-            .set_alias(repo_id, alias, expected_alias_revision);
+    let alias_runtime = state.repo.host_repo_alias_runtime();
+    let watcher = state.watcher_runtime_view();
+    let result = state
+        .repo_mutation_gate()
+        .execute_catalog_repo_unpublished(repo_id, || {
+            admit_alias_mutation(watcher.repo_readiness(repo_id))?;
+            alias_runtime
+                .set_alias(repo_id, alias, expected_alias_revision)
+                .map_err(AliasExecutionError::Alias)
+        })
+        .await;
     match result {
-        Ok(result) => {
+        Ok(Ok(result)) => {
             let binding = RepoAliasBinding {
                 repo_id: result.binding.repo_id,
                 display_alias: result.binding.alias,
@@ -53,13 +61,36 @@ pub(super) fn handle_set_alias(
                 }
             }
         }
-        Err(error) => super::send_error(
+        Ok(Err(AliasExecutionError::Transitioning)) => {
+            super::send_simple_error(channel, request_id, ServerErrorCode::RepoLifecycleBusy)
+        }
+        Ok(Err(AliasExecutionError::Alias(error))) => super::send_error(
             channel,
             request_id,
             alias_error_code(&error),
             "repo alias request failed",
             &error,
         ),
+        Err(error) => super::send_error(
+            channel,
+            request_id,
+            ServerErrorCode::RepoAliasStoreFailed,
+            "repo alias mutation lane failed",
+            &error,
+        ),
+    }
+}
+
+enum AliasExecutionError {
+    Transitioning,
+    Alias(HostRepoAliasError),
+}
+
+fn admit_alias_mutation(readiness: RepoReadiness) -> Result<(), AliasExecutionError> {
+    if readiness == RepoReadiness::Transitioning {
+        Err(AliasExecutionError::Transitioning)
+    } else {
+        Ok(())
     }
 }
 
@@ -70,5 +101,25 @@ fn alias_error_code(error: &HostRepoAliasError) -> ServerErrorCode {
         }
         HostRepoAliasError::RevisionConflict { .. } => ServerErrorCode::RepoAliasStale,
         _ => ServerErrorCode::RepoAliasStoreFailed,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alias_admission_rejects_only_lifecycle_transition() {
+        assert!(matches!(
+            admit_alias_mutation(RepoReadiness::Transitioning),
+            Err(AliasExecutionError::Transitioning)
+        ));
+        for readiness in [
+            RepoReadiness::Mounted,
+            RepoReadiness::Readonly,
+            RepoReadiness::Unavailable,
+        ] {
+            assert!(admit_alias_mutation(readiness).is_ok());
+        }
     }
 }

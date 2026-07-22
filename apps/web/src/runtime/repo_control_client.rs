@@ -11,12 +11,14 @@ use deve_core::models::RepoId;
 use deve_core::protocol::{
     ClientMessage, LocalRepoRemovalPreview, OpaqueFallbackBinding, RemovalConfirmationToken,
     RepoAliasBinding, RepoControlRequest, RepoControlResponse, RepoLifecycleIntent,
-    RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, ScopeNonce, ServerErrorCode,
-    SwitchNonce,
+    RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, RepoListEntry,
+    RepoRemovalFinalScope, ScopeNonce, ServerErrorCode, SwitchNonce,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+
+mod accept;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RepoControlScope {
@@ -67,7 +69,7 @@ impl PendingLifecycle {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum PendingKind {
     Alias {
         repo_id: RepoId,
@@ -78,6 +80,7 @@ enum PendingKind {
     },
     RemovalPrepare {
         repo_id: RepoId,
+        display_alias: String,
     },
 }
 
@@ -97,13 +100,14 @@ pub enum RepoControlAdmission {
         operation: RepoLifecycleOperation,
     },
     RemovalPrepared {
-        request_id: Uuid,
-        preparation_id: Uuid,
-        repo_id: RepoId,
-        preview: LocalRepoRemovalPreview,
-        confirmation_token: Option<RemovalConfirmationToken>,
-        fallback_binding: Option<OpaqueFallbackBinding>,
-        expires_at_unix_ms: Option<i64>,
+        presentation: RepoRemovalPresentation,
+    },
+    RemovalFinalized {
+        request_id: Option<Uuid>,
+        job_id: Uuid,
+        removed_repo_id: RepoId,
+        final_repo_list: Vec<RepoListEntry>,
+        scope: RepoRemovalFinalScope,
     },
     LifecycleStatus {
         request_id: Uuid,
@@ -117,12 +121,38 @@ pub enum RepoControlAdmission {
     Error {
         code: ServerErrorCode,
         lifecycle_request: bool,
+        removal_request: bool,
     },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoRemovalPresentation {
+    pub repo_id: RepoId,
+    pub display_alias: String,
+    pub preview: LocalRepoRemovalPreview,
+    pub can_execute: bool,
+}
+
+#[derive(Clone)]
+struct PreparedRemoval {
+    scope: RepoControlScope,
+    preparation_id: Uuid,
+    repo_id: RepoId,
+    confirmation_token: Option<RemovalConfirmationToken>,
+    fallback_binding: Option<OpaqueFallbackBinding>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PreparedRemovalExecutionError {
+    Missing,
+    ScopeChanged,
+    Blocked,
 }
 
 #[derive(Clone, Default)]
 pub struct RepoControlClient {
     pending: Arc<Mutex<HashMap<Uuid, PendingRequest>>>,
+    prepared_removal: Arc<Mutex<Option<PreparedRemoval>>>,
 }
 
 impl RepoControlClient {
@@ -170,10 +200,18 @@ impl RepoControlClient {
         ws: &WsService,
         scope: RepoControlScope,
         repo_id: RepoId,
+        display_alias: String,
     ) -> Uuid {
         let request_id = Uuid::new_v4();
         let scope_nonce = scope.scope_nonce;
-        self.register(request_id, scope, PendingKind::RemovalPrepare { repo_id });
+        self.register(
+            request_id,
+            scope,
+            PendingKind::RemovalPrepare {
+                repo_id,
+                display_alias,
+            },
+        );
         ws.send(ClientMessage::RepoControl(
             RepoControlRequest::PrepareLocalRepoRemoval {
                 request_id,
@@ -185,8 +223,89 @@ impl RepoControlClient {
         request_id
     }
 
-    /// Rebind transport-local observation after an exact browser reconnect.
-    /// The backend remains the job owner; the client only asks for typed state.
+    pub fn execute_prepared_removal(
+        &self,
+        ws: &WsService,
+        scope: RepoControlScope,
+        repo_id: RepoId,
+        switch_nonce: u64,
+    ) -> Result<Uuid, PreparedRemovalExecutionError> {
+        let prepared = {
+            let mut slot = self
+                .prepared_removal
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let Some(prepared) = slot.as_ref() else {
+                return Err(PreparedRemovalExecutionError::Missing);
+            };
+            if prepared.scope != scope || prepared.repo_id != repo_id {
+                *slot = None;
+                return Err(PreparedRemovalExecutionError::ScopeChanged);
+            }
+            if prepared.confirmation_token.is_none() {
+                return Err(PreparedRemovalExecutionError::Blocked);
+            }
+            slot.take().expect("prepared removal checked above")
+        };
+        let request_id = Uuid::new_v4();
+        self.register(
+            request_id,
+            scope.clone(),
+            PendingKind::Lifecycle {
+                lifecycle: PendingLifecycle::Remove { repo_id },
+                accepted: None,
+            },
+        );
+        ws.send(ClientMessage::RepoControl(
+            RepoControlRequest::ExecuteLocalRepoRemoval {
+                request_id,
+                preparation_id: prepared.preparation_id,
+                confirmation_token: prepared
+                    .confirmation_token
+                    .expect("prepared removal token checked above"),
+                fallback_binding: prepared.fallback_binding,
+                current_scope_nonce: ScopeNonce::new(scope.scope_nonce),
+                switch_nonce: SwitchNonce::new(switch_nonce),
+            },
+        ));
+        Ok(request_id)
+    }
+
+    pub fn cancel_prepared_removal(&self, scope: &RepoControlScope, repo_id: RepoId) -> bool {
+        let mut slot = self
+            .prepared_removal
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if slot
+            .as_ref()
+            .is_some_and(|prepared| prepared.scope == *scope && prepared.repo_id == repo_id)
+        {
+            *slot = None;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn synchronize_scope(&self, current_scope: &RepoControlScope) -> bool {
+        let mut slot = self
+            .prepared_removal
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if slot
+            .as_ref()
+            .is_some_and(|prepared| prepared.scope != *current_scope)
+        {
+            *slot = None;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Rebind transport-local observation after an exact connection or scope
+    /// epoch change. The backend remains the job owner; the client only asks
+    /// for typed state and never derives the lifecycle outcome.
     pub fn resume_lifecycles(&self, ws: &WsService, current_scope: RepoControlScope) -> usize {
         let request_ids = {
             let mut pending = self
@@ -196,10 +315,10 @@ impl RepoControlClient {
             pending
                 .iter_mut()
                 .filter_map(|(request_id, request)| {
-                    let PendingKind::Lifecycle { .. } = request.kind else {
+                    let PendingKind::Lifecycle { .. } = &request.kind else {
                         return None;
                     };
-                    if request.scope.connection_epoch == current_scope.connection_epoch {
+                    if request.scope == current_scope {
                         return None;
                     }
                     request.scope = current_scope.clone();
@@ -215,136 +334,6 @@ impl RepoControlClient {
             ));
         }
         request_ids.len()
-    }
-
-    pub fn accept(
-        &self,
-        response: RepoControlResponse,
-        current_scope: &RepoControlScope,
-    ) -> Option<RepoControlAdmission> {
-        let request_id = response_request_id(&response);
-        let mut pending = self
-            .pending
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let request = pending.get_mut(&request_id)?;
-        if request.scope != *current_scope {
-            pending.remove(&request_id);
-            return None;
-        }
-
-        match response {
-            RepoControlResponse::AliasSet { binding, .. } => {
-                let PendingKind::Alias { repo_id } = request.kind else {
-                    pending.remove(&request_id);
-                    return None;
-                };
-                pending.remove(&request_id);
-                (binding.repo_id == repo_id).then_some(RepoControlAdmission::AliasSet(binding))
-            }
-            RepoControlResponse::LocalRepoRemovalPrepared {
-                preparation_id,
-                repo_id,
-                preview,
-                confirmation_token,
-                fallback_binding,
-                expires_at_unix_ms,
-                ..
-            } => {
-                let PendingKind::RemovalPrepare {
-                    repo_id: expected_repo_id,
-                } = request.kind
-                else {
-                    pending.remove(&request_id);
-                    return None;
-                };
-                pending.remove(&request_id);
-                (repo_id == expected_repo_id).then_some(RepoControlAdmission::RemovalPrepared {
-                    request_id,
-                    preparation_id,
-                    repo_id,
-                    preview,
-                    confirmation_token,
-                    fallback_binding,
-                    expires_at_unix_ms,
-                })
-            }
-            RepoControlResponse::LifecycleAccepted {
-                job_id,
-                target_repo_id,
-                ..
-            } => {
-                let PendingKind::Lifecycle {
-                    lifecycle,
-                    accepted,
-                } = &mut request.kind
-                else {
-                    pending.remove(&request_id);
-                    return None;
-                };
-                if !lifecycle.accepts_target(target_repo_id) {
-                    pending.remove(&request_id);
-                    return None;
-                }
-                *accepted = Some((job_id, target_repo_id));
-                Some(RepoControlAdmission::LifecycleAccepted {
-                    request_id,
-                    job_id,
-                    target_repo_id,
-                    operation: lifecycle.operation(),
-                })
-            }
-            RepoControlResponse::LifecycleStatus {
-                job_id,
-                target_repo_id,
-                operation,
-                state,
-                outcome,
-                publication_pending,
-                ..
-            } => {
-                let PendingKind::Lifecycle {
-                    lifecycle,
-                    accepted,
-                } = &mut request.kind
-                else {
-                    pending.remove(&request_id);
-                    return None;
-                };
-                if lifecycle.operation() != operation || !lifecycle.accepts_target(target_repo_id) {
-                    pending.remove(&request_id);
-                    return None;
-                }
-                match accepted {
-                    Some(identity) if *identity != (job_id, target_repo_id) => {
-                        pending.remove(&request_id);
-                        return None;
-                    }
-                    Some(_) => {}
-                    None => *accepted = Some((job_id, target_repo_id)),
-                }
-                if state == RepoLifecycleState::Terminal && !publication_pending {
-                    pending.remove(&request_id);
-                }
-                Some(RepoControlAdmission::LifecycleStatus {
-                    request_id,
-                    job_id,
-                    target_repo_id,
-                    operation,
-                    state,
-                    outcome,
-                    publication_pending,
-                })
-            }
-            RepoControlResponse::Error { error, .. } => {
-                let lifecycle_request = matches!(request.kind, PendingKind::Lifecycle { .. });
-                pending.remove(&request_id);
-                Some(RepoControlAdmission::Error {
-                    code: error.code,
-                    lifecycle_request,
-                })
-            }
-        }
     }
 
     fn submit_lifecycle(
@@ -377,16 +366,6 @@ impl RepoControlClient {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .insert(request_id, PendingRequest { scope, kind });
-    }
-}
-
-fn response_request_id(response: &RepoControlResponse) -> Uuid {
-    match response {
-        RepoControlResponse::AliasSet { request_id, .. }
-        | RepoControlResponse::LocalRepoRemovalPrepared { request_id, .. }
-        | RepoControlResponse::LifecycleAccepted { request_id, .. }
-        | RepoControlResponse::LifecycleStatus { request_id, .. }
-        | RepoControlResponse::Error { request_id, .. } => *request_id,
     }
 }
 

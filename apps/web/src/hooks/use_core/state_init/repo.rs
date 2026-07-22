@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 //!
+use crate::runtime::repo_control_client::RepoRemovalPresentation;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;
 use deve_core::protocol::RepoListEntry;
@@ -27,10 +28,8 @@ pub(super) struct RepoSignals {
     pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub set_current_scope_nonce: WriteSignal<u64>,
-    pub remove_scope_partial_stage:
-        ReadSignal<Option<crate::runtime::remove_scope_partial::RemoveScopePartialStage>>,
-    pub set_remove_scope_partial_stage:
-        WriteSignal<Option<crate::runtime::remove_scope_partial::RemoveScopePartialStage>>,
+    pub removal_preview: ReadSignal<Option<RepoRemovalPresentation>>,
+    pub set_removal_preview: WriteSignal<Option<RepoRemovalPresentation>>,
     pub explicit_repo_selection_required: ReadSignal<bool>,
     pub set_explicit_repo_selection_required: WriteSignal<bool>,
     pub shadow_repos: ReadSignal<Vec<String>>,
@@ -72,8 +71,8 @@ pub(super) fn init_repo_signals() -> RepoSignals {
         set_pending_repo_switch: scope.set_pending_repo_switch,
         current_scope_nonce: scope.current_scope_nonce,
         set_current_scope_nonce: scope.set_current_scope_nonce,
-        remove_scope_partial_stage: scope.remove_scope_partial_stage,
-        set_remove_scope_partial_stage: scope.set_remove_scope_partial_stage,
+        removal_preview: scope.removal_preview,
+        set_removal_preview: scope.set_removal_preview,
         explicit_repo_selection_required: scope.explicit_repo_selection_required,
         set_explicit_repo_selection_required: scope.set_explicit_repo_selection_required,
         shadow_repos: projection.shadow_repos,

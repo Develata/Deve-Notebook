@@ -13,6 +13,7 @@ use super::logic::{repo_switcher_after_trigger_click, repo_switcher_trigger_mark
 
 #[component]
 pub(super) fn RepoSwitcherTrigger(
+    trigger_ref: NodeRef<leptos::html::Button>,
     show_menu: ReadSignal<bool>,
     set_show_menu: WriteSignal<bool>,
     set_action_repo: WriteSignal<Option<RepoId>>,
@@ -21,6 +22,7 @@ pub(super) fn RepoSwitcherTrigger(
 ) -> impl IntoView {
     view! {
         <button
+            node_ref=trigger_ref
             type="button"
             data-deve-repo-switcher-trigger=repo_switcher_trigger_marker()
             class="p-1 rounded text-secondary hover:bg-hover cursor-pointer transform transition-transform"

@@ -140,6 +140,7 @@ fn branch_context_from_signals(
     let (shadow_repos, _) = signal(shadows.into_iter().map(str::to_string).collect::<Vec<_>>());
     let (repo_list, _) = signal(vec!["default".to_string()]);
     let (repo_entries, _) = signal(Vec::new());
+    let (removal_preview, _) = signal(None);
     BranchContext {
         active_branch,
         set_active_branch,
@@ -152,6 +153,9 @@ fn branch_context_from_signals(
         on_create_repo: Callback::new(|_: String| {}),
         on_rename_repo: Callback::new(|_| {}),
         on_remove_repo: Callback::new(|_| {}),
+        removal_preview,
+        on_confirm_remove_repo: Callback::new(|_| {}),
+        on_cancel_remove_repo: Callback::new(|_| {}),
         shadow_repos,
         on_list_shadows: Callback::new(|_| {}),
         repo_list,

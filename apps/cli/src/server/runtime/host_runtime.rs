@@ -27,12 +27,13 @@ pub(crate) fn install_sync_host_api(
     Ok(())
 }
 
-pub(crate) fn prepare_host_layout(repo: &RepoManager, port: u16) -> anyhow::Result<PathBuf> {
-    let host_dir = notegit::prepare(repo)?;
-    setup::write_main_port_hint(&host_dir, port)?;
-    Ok(host_dir)
+pub(crate) fn prepare_host_layout(repo: &RepoManager) -> anyhow::Result<PathBuf> {
+    notegit::prepare(repo)
 }
 
-pub(crate) fn refresh_host_port_hint(host_dir: &std::path::Path, port: u16) -> anyhow::Result<()> {
-    setup::write_main_port_hint(host_dir, port)
+pub(crate) fn refresh_host_port_hint(
+    host_dir: &std::path::Path,
+    hint: &crate::local_cli_proxy_contract::LocalCliOwnerHint,
+) -> anyhow::Result<()> {
+    setup::write_main_port_hint(host_dir, hint)
 }

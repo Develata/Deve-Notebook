@@ -139,6 +139,9 @@ pub(super) async fn execute_removal(
         let supplied_token_hash = token_hash(&intent.confirmation_token);
         let supplied_fallback_hash = intent.fallback_binding.as_ref().map(fallback_hash);
         let exact = record.preparation_id == intent.preparation_id
+            && intent
+                .expected_repo_id
+                .is_none_or(|repo_id| repo_id == record.repo_id)
             && record.scope_nonce == intent.scope_nonce
             && record.issuer == intent.issuer
             && matches!(
@@ -170,6 +173,12 @@ pub(super) async fn execute_removal(
         .removal(intent.preparation_id)
         .cloned()
         .ok_or(RepoLifecycleJobError::NotFound)?;
+    if intent
+        .expected_repo_id
+        .is_some_and(|repo_id| repo_id != record.repo_id)
+    {
+        return Err(RepoLifecycleJobError::ConfirmationInvalid);
+    }
     if (record.issuer.is_runtime_bound() && record.runtime_incarnation != runtime_incarnation)
         || record.issuer != intent.issuer
         || record.scope_nonce != intent.scope_nonce

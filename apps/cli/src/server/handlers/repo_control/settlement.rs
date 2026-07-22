@@ -3,14 +3,14 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 //! Transport-side application of settled lifecycle publications: exact scope
-//! validation, fallback switch, and the two-frame no-scope sequence.
+//! validation and one typed repo-list/scope finalization.
 
 use crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleSettledPublication;
-use crate::server::runtime::repo_session_runtime::{
-    FinalRepoListProjection, enqueue_no_scope_sequence,
-};
+use crate::server::runtime::repo_session_runtime::FinalRepoListProjection;
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::{
+    RepoControlResponse, RepoRemovalFinalScope, ScopeNonce, ServerErrorCode, ServerMessage,
+};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -22,6 +22,7 @@ pub(crate) async fn apply_lifecycle_settlement(
     channel: &DualChannel,
     session: &mut WsSession,
     request_id: Uuid,
+    job_id: Uuid,
     expected_scope_nonce: u64,
     switch_nonce: u64,
     publication: RepoLifecycleSettledPublication,
@@ -61,32 +62,51 @@ pub(crate) async fn apply_lifecycle_settlement(
             repo_id,
             fallback_repo_id,
         } => {
-            if session.active_repo_id != Some(repo_id) {
-                channel.unicast(ServerMessage::RepoList {
-                    request_id: None,
-                    branch: None,
-                    scope_nonce: Some(session.scope_nonce()),
-                    repo_entries: final_list.entries,
-                });
-                return true;
-            }
-            if let Some(fallback_repo_id) = fallback_repo_id {
-                crate::server::handlers::switcher::handle_switch_repo(
+            let scope = if session.active_repo_id != Some(repo_id) {
+                session
+                    .active_repo_id
+                    .map(|active_repo_id| RepoRemovalFinalScope::RepoBound {
+                        repo_id: active_repo_id,
+                        scope_nonce: ScopeNonce::new(session.scope_nonce()),
+                    })
+            } else if let Some(fallback_repo_id) = fallback_repo_id {
+                let switched = crate::server::handlers::switcher::commit_repo_switch(
                     state,
-                    channel,
                     session,
                     fallback_repo_id.to_string(),
                     Some(fallback_repo_id),
                     Some(switch_nonce),
                 )
-                .await;
-                if session.active_repo_id == Some(fallback_repo_id) {
-                    return true;
+                .await
+                .is_ok()
+                    && session.active_repo_id == Some(fallback_repo_id);
+                switched.then_some(RepoRemovalFinalScope::RepoBound {
+                    repo_id: fallback_repo_id,
+                    scope_nonce: ScopeNonce::new(session.scope_nonce()),
+                })
+            } else {
+                None
+            };
+
+            let scope = match scope {
+                Some(scope) => scope,
+                None => {
+                    state.revoke_source_control_write_grant_for_session(session);
+                    session.commit_no_scope(repo_id, switch_nonce);
+                    RepoRemovalFinalScope::NoScope {
+                        scope_nonce: ScopeNonce::new(switch_nonce),
+                    }
                 }
-            }
-            state.revoke_source_control_write_grant_for_session(session);
-            session.commit_no_scope(repo_id, switch_nonce);
-            enqueue_no_scope_sequence(channel, final_list, switch_nonce, Some(switch_nonce));
+            };
+            channel.unicast(ServerMessage::RepoControl(
+                RepoControlResponse::LocalRepoRemovalSettled {
+                    request_id,
+                    job_id,
+                    removed_repo_id: repo_id,
+                    final_repo_list: final_list.entries,
+                    scope,
+                },
+            ));
             true
         }
     }

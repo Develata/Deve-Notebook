@@ -100,6 +100,7 @@ fn closing_last_active_document_returns_home_without_activating_inactive_diff_ta
     let (shadow_repos, _) = signal(Vec::<String>::new());
     let (repo_list, _) = signal(Vec::<String>::new());
     let (repo_entries, _) = signal(Vec::<RepoListEntry>::new());
+    let (removal_preview, _) = signal(None);
     let scope = ScopeClient {
         current_doc,
         current_repo,
@@ -112,6 +113,9 @@ fn closing_last_active_document_returns_home_without_activating_inactive_diff_ta
         on_create_repo: noop(),
         on_rename_repo: noop(),
         on_remove_repo: noop(),
+        removal_preview,
+        on_confirm_remove_repo: noop(),
+        on_cancel_remove_repo: noop(),
         on_switch_branch: noop(),
         set_current_repo,
         set_current_repo_id,
