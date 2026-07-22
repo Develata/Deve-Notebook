@@ -13,6 +13,20 @@ use std::path::Path;
 use std::sync::{Arc, Condvar, Mutex};
 use uuid::Uuid;
 
+pub(super) struct PrimaryRepoBinding {
+    pub(super) repo_id: RepoId,
+    pub(super) execution_name: String,
+}
+
+impl PrimaryRepoBinding {
+    pub(super) fn new(repo_id: RepoId) -> Self {
+        Self {
+            repo_id,
+            execution_name: repo_id.to_string(),
+        }
+    }
+}
+
 impl LocalAuthorityDiscovery {
     pub(crate) fn new(ledger_dir: &Path) -> Self {
         Self {
@@ -115,7 +129,14 @@ pub(super) fn lease_from_inner(
             Some(RepoAuthoritySlot::Opening { .. }) | Some(RepoAuthoritySlot::Preparing { .. }) => {
                 return Err(LocalAuthorityError::Busy(repo_id));
             }
+            Some(RepoAuthoritySlot::Reopening { .. })
+            | Some(RepoAuthoritySlot::ReopeningPrepared { .. }) => {
+                return Err(LocalAuthorityError::Busy(repo_id));
+            }
             Some(RepoAuthoritySlot::RepairRequired { .. }) => {
+                return Err(LocalAuthorityError::RepairRequired(repo_id));
+            }
+            Some(RepoAuthoritySlot::ReopeningRepairRequired { .. }) => {
                 return Err(LocalAuthorityError::RepairRequired(repo_id));
             }
             Some(RepoAuthoritySlot::Retired { .. }) => {
@@ -154,7 +175,10 @@ fn admit_existing_from_inner_with_hook(
                 drop(slots);
                 return lease_from_inner(inner, repo_id);
             }
-            Some(RepoAuthoritySlot::Opening { .. }) | Some(RepoAuthoritySlot::Preparing { .. }) => {
+            Some(RepoAuthoritySlot::Opening { .. })
+            | Some(RepoAuthoritySlot::Reopening { .. })
+            | Some(RepoAuthoritySlot::Preparing { .. })
+            | Some(RepoAuthoritySlot::ReopeningPrepared { .. }) => {
                 return Err(LocalAuthorityError::Busy(repo_id));
             }
             Some(RepoAuthoritySlot::Quiescing { .. })
@@ -162,6 +186,9 @@ fn admit_existing_from_inner_with_hook(
                 return Err(LocalAuthorityError::Quiescing(repo_id));
             }
             Some(RepoAuthoritySlot::RepairRequired { .. }) => {
+                return Err(LocalAuthorityError::RepairRequired(repo_id));
+            }
+            Some(RepoAuthoritySlot::ReopeningRepairRequired { .. }) => {
                 return Err(LocalAuthorityError::RepairRequired(repo_id));
             }
             Some(RepoAuthoritySlot::Retired { .. }) => {
@@ -214,9 +241,18 @@ fn admit_existing_from_inner_with_hook(
             opening.settle_after_transition();
             Ok(lease)
         }
-        Err(error) => {
+        Err(LocalAuthorityError::Busy(_)) => {
             slots.remove(&repo_id);
             opening.settle_after_transition();
+            Err(LocalAuthorityError::Busy(repo_id))
+        }
+        Err(error) => {
+            slots.insert(repo_id, RepoAuthoritySlot::RepairRequired { generation: 1 });
+            opening.settle_after_transition();
+            // Seal the ambiguous incarnation for explicit repair, while
+            // preserving the typed schema/authority failure that explains why
+            // admission was rejected. The slot state and the returned
+            // diagnostic serve different responsibilities.
             Err(error)
         }
     }

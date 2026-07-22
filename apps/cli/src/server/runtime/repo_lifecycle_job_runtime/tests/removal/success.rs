@@ -111,3 +111,76 @@ async fn execute_local_repo_removal_atomically_persists_admission_before_worker(
     drop((state, dir, test_guard));
     Ok(())
 }
+
+#[tokio::test]
+async fn completed_removal_can_readmit_same_repo_only_through_owner_prepared_path()
+-> anyhow::Result<()> {
+    let (test_guard, dir, state) = build_state().await?;
+    let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
+    let locator = state
+        .repo
+        .validated_projection_locator_for_repo_id(repo_id)?;
+    let projection_base = locator.projection_base_abs.clone();
+    let workspace = projection_base.join(&locator.workspace_segment);
+    let markdown = workspace.join("survives-readmission.md");
+    std::fs::write(&markdown, "# retained workspace\n")?;
+    let runtime = state.repo_lifecycle_jobs();
+    timeout(Duration::from_secs(10), async {
+        loop {
+            if state.watcher_runtime_view().admit(repo_id).is_ok() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .context("watcher did not reach Mounted before readmission removal")?;
+    let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(55)).await?;
+    let accepted = runtime
+        .execute_removal(execute_intent(
+            &prepared,
+            prepared
+                .confirmation_token
+                .clone()
+                .expect("readmission removal must be confirmable"),
+            web_issuer(55),
+        ))
+        .await?;
+    let terminal = terminal_status(&runtime, accepted.request_id).await?;
+    assert_eq!(terminal.outcome, Some(RepoLifecycleJobOutcome::Succeeded));
+
+    let outcome = state
+        .repo_lifecycle_coordinator()
+        .readmit_retired_repo(
+            crate::server::runtime::repo_lifecycle_runtime::ReadmitRetiredRepoIntent {
+                repo_id,
+                initial_alias: "readmitted locally".to_string(),
+                projection_base,
+                lifecycle_request_id: Uuid::new_v4(),
+                repo_url: None,
+            },
+        )
+        .await?;
+    assert!(outcome.mount.is_mounted());
+    assert_eq!(
+        state
+            .repo
+            .repo_catalog_membership_record(repo_id)?
+            .map(|record| record.state()),
+        Some(deve_core::ledger::RepoCatalogMembershipState::Normal)
+    );
+    assert!(markdown.is_file(), "readmission must preserve Markdown");
+    assert!(workspace.join(".notegit/identity.toml").is_file());
+    assert!(
+        dir.path()
+            .join("ledger/local")
+            .join(format!("{repo_id}.redb"))
+            .is_file()
+    );
+    runtime.shutdown().await?;
+    state
+        .repo_lifecycle_coordinator()
+        .shutdown_watchers_for_test();
+    drop((state, dir, test_guard));
+    Ok(())
+}

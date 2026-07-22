@@ -9,7 +9,6 @@ use crate::ledger::manager::authority_storage_runtime::local_authority::{
     LocalAuthorityError, LocalAuthorityRuntime, RepoAuthorityCleanupGuard,
     RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof, RepoAuthoritySlot,
 };
-use crate::models::RepoId;
 
 impl LocalAuthorityRuntime {
     /// Reacquires the persistent owner lock for an exact interrupted
@@ -65,7 +64,9 @@ impl LocalAuthorityRuntime {
             repo_id,
             RepoAuthoritySlot::CommittedCleanup {
                 generation: snapshot.generation(),
-                authority_lock,
+                authority_lock: std::sync::Arc::new(authority_lock),
+                expected_lock_identity: snapshot.authority_lock().clone(),
+                removed_database_identity: snapshot.database().clone(),
                 db_path: db_path.clone(),
                 cleanup_capability_issued: true,
             },
@@ -84,7 +85,7 @@ impl LocalAuthorityRuntime {
         snapshot: &RepoAuthorityRemovalSnapshot,
     ) -> Result<RepoAuthorityRetirementProof, LocalAuthorityError> {
         let repo_id = snapshot.repo_id();
-        self.validate_retired_slot(repo_id, snapshot.generation())?;
+        self.validate_retired_slot(snapshot)?;
         let (authority_lock, db_path) =
             super::super::resource::open_committed_cleanup_lock(&self.inner.ledger_dir, snapshot)?;
         if db_path != snapshot.database().path()
@@ -92,7 +93,7 @@ impl LocalAuthorityRuntime {
         {
             return Err(LocalAuthorityError::CleanupIdentityChanged(repo_id));
         }
-        self.validate_retired_slot(repo_id, snapshot.generation())?;
+        self.validate_retired_slot(snapshot)?;
         Ok(RepoAuthorityRetirementProof {
             _authority_lock: authority_lock,
             repo_id,
@@ -102,17 +103,23 @@ impl LocalAuthorityRuntime {
 
     fn validate_retired_slot(
         &self,
-        repo_id: RepoId,
-        generation: u64,
+        snapshot: &RepoAuthorityRemovalSnapshot,
     ) -> Result<(), LocalAuthorityError> {
+        let repo_id = snapshot.repo_id();
+        let generation = snapshot.generation();
         let slots = self
             .inner
             .slots
             .lock()
             .map_err(|_| LocalAuthorityError::Poisoned)?;
         match slots.get(&repo_id) {
-            Some(RepoAuthoritySlot::Retired { prior_generation })
-                if *prior_generation == generation =>
+            Some(RepoAuthoritySlot::Retired {
+                prior_generation,
+                expected_lock_identity,
+                removed_database_identity,
+            }) if *prior_generation == generation
+                && expected_lock_identity == snapshot.authority_lock()
+                && removed_database_identity == snapshot.database() =>
             {
                 Ok(())
             }

@@ -13,7 +13,7 @@ use anyhow::Context;
 use serde::Serialize;
 
 const PREPARED_IDENTITY_FORMAT: &str = "deve.prepared-repo-identity";
-const PREPARED_IDENTITY_VERSION: u32 = 1;
+const PREPARED_IDENTITY_VERSION: u32 = 2;
 #[derive(Serialize)]
 struct PreparedIdentityManifest<'a> {
     format: &'static str,
@@ -25,6 +25,11 @@ struct PreparedIdentityManifest<'a> {
     workspace_segment: &'a str,
     locator_binding_epoch: i64,
     workspace_marker_repo_id: RepoId,
+    authority_database: &'a crate::utils::fs::HostPathIdentity,
+    authority_lock: &'a crate::utils::fs::HostPathIdentity,
+    locator_store: &'a crate::utils::fs::HostPathIdentity,
+    workspace_root: &'a crate::utils::fs::HostPathIdentity,
+    workspace_marker: &'a crate::utils::fs::HostPathIdentity,
 }
 
 pub(super) fn snapshot(
@@ -56,7 +61,13 @@ pub(super) fn snapshot_initial_primary(
 
 fn snapshot_inner(manager: &RepoManager, repo_id: RepoId) -> anyhow::Result<PreparedRepoIdentity> {
     let lease = manager.lease_local_authority(repo_id)?;
-    snapshot_from_db(manager, repo_id, lease.db())
+    let authority = lease.identity_observation()?;
+    let locator =
+        crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard::acquire(
+            &manager.ledger_dir,
+            repo_id,
+        )?;
+    snapshot_from_observations(repo_id, lease.db(), &authority, &locator)
 }
 
 pub(super) fn snapshot_prepared(
@@ -73,12 +84,21 @@ pub(super) fn snapshot_prepared(
             ),
         });
     }
-    snapshot_from_db(manager, repo_id, authority.db()).map_err(|error| {
-        RepoCatalogError::PreparedIdentityUnavailable {
+    let result = (|| {
+        let authority_identity = authority.identity_observation()?;
+        let locator =
+            crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard::acquire(
+                &manager.ledger_dir,
+                repo_id,
+            )?;
+        snapshot_from_observations(repo_id, authority.db(), &authority_identity, &locator)
+    })();
+    result.map_err(
+        |error: anyhow::Error| RepoCatalogError::PreparedIdentityUnavailable {
             repo_id,
             detail: error.to_string(),
-        }
-    })
+        },
+    )
 }
 
 fn snapshot_from_db(
@@ -94,6 +114,48 @@ pub(super) fn snapshot_from_db_at(
     repo_id: RepoId,
     db: &redb::Database,
 ) -> anyhow::Result<PreparedRepoIdentity> {
+    let database_path = ledger_dir.join("local").join(format!("{repo_id}.redb"));
+    let lock_path = crate::utils::notegit::host_dir(ledger_dir)
+        .join("repo-authority-locks")
+        .join(format!("{repo_id}.lock"));
+    let authority = crate::ledger::manager::authority_storage_runtime::PreparedAuthorityIdentity {
+        database: crate::utils::fs::HostPathIdentity::capture(
+            &database_path,
+            crate::utils::fs::HostPathKind::RegularFile,
+        )?,
+        authority_lock: crate::utils::fs::HostPathIdentity::capture(
+            &lock_path,
+            crate::utils::fs::HostPathKind::RegularFile,
+        )?,
+    };
+    let locator =
+        crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard::acquire(
+            ledger_dir, repo_id,
+        )?;
+    snapshot_from_observations(repo_id, db, &authority, &locator)
+}
+
+pub(crate) fn snapshot_prepared_with_guard(
+    repo_id: RepoId,
+    authority: &PreparedRepoAuthority,
+    locator: &crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard,
+) -> anyhow::Result<(
+    PreparedRepoIdentity,
+    crate::ledger::manager::authority_storage_runtime::PreparedAuthorityIdentity,
+)> {
+    let authority_identity = authority.identity_observation()?;
+    let identity =
+        snapshot_from_observations(repo_id, authority.db(), &authority_identity, locator)?;
+    Ok((identity, authority_identity))
+}
+
+fn snapshot_from_observations(
+    repo_id: RepoId,
+    db: &redb::Database,
+    authority: &crate::ledger::manager::authority_storage_runtime::PreparedAuthorityIdentity,
+    locator_guard: &crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard,
+) -> anyhow::Result<PreparedRepoIdentity> {
+    locator_guard.revalidate()?;
     let stem = repo_id.to_string();
     let repo_info = RepoManager::read_local_repo_info_from_db(db)?
         .ok_or_else(|| anyhow::anyhow!("repository metadata is missing for {repo_id}"))?;
@@ -104,11 +166,7 @@ pub(super) fn snapshot_from_db_at(
         );
     }
 
-    let locator =
-        crate::ledger::manager::projection_locator::projection_locator_record_for_repo_id(
-            ledger_dir, repo_id,
-        )?
-        .ok_or_else(|| anyhow::anyhow!("Projection Locator is missing for {repo_id}"))?;
+    let locator = locator_guard.locator();
     let workspace_segment = locator.workspace_segment.clone();
     let declared_workspace_root = locator.projection_base_abs.join(&workspace_segment);
     let workspace_root = std::fs::canonicalize(&declared_workspace_root).with_context(|| {
@@ -118,6 +176,9 @@ pub(super) fn snapshot_from_db_at(
         )
     })?;
     notegit::validate_repo_identity_marker(&workspace_root, repo_id)?;
+    if workspace_root != locator_guard.workspace_root().path() {
+        anyhow::bail!("prepared workspace root changed for {repo_id}");
+    }
 
     let manifest = PreparedIdentityManifest {
         format: PREPARED_IDENTITY_FORMAT,
@@ -129,6 +190,11 @@ pub(super) fn snapshot_from_db_at(
         workspace_segment: &workspace_segment,
         locator_binding_epoch: locator.canonicalized_at_unix_ms,
         workspace_marker_repo_id: repo_id,
+        authority_database: authority.database(),
+        authority_lock: authority.authority_lock(),
+        locator_store: locator_guard.store(),
+        workspace_root: locator_guard.workspace_root(),
+        workspace_marker: locator_guard.marker(),
     };
     let bytes = serde_json::to_vec(&manifest)?;
     Ok(PreparedRepoIdentity::from_manifest_bytes(&bytes))

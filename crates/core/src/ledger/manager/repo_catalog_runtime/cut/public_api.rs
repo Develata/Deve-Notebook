@@ -6,9 +6,23 @@
 
 use super::*;
 use crate::ledger::PreparedRepoAuthority;
+use crate::ledger::manager::repo_catalog_runtime::{
+    PreparedRepoIdentity, RepoCreationActivationError,
+};
 use crate::ledger::manager::types::RepoManager;
 
 impl RepoManager {
+    pub(crate) fn with_repo_creation_activation_guard<T>(
+        &self,
+        creation: &PreparedRepoCreation,
+        commit: &RepoCatalogCreationCommit,
+        observed: PreparedRepoIdentity,
+        activate: impl FnOnce() -> Result<T, crate::ledger::LocalAuthorityError>,
+    ) -> Result<T, RepoCreationActivationError> {
+        self.repo_catalog_runtime()
+            .with_creation_activation_guard(creation, commit, observed, activate)
+    }
+
     pub fn prepare_repo_creation_membership(
         &self,
         repo_id: RepoId,

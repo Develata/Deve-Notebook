@@ -67,6 +67,40 @@ pub fn ensure_repo_identity_marker(
     write_repo_identity_marker(repo_root, repo_id, repo_name)
 }
 
+/// Restores the project-owned marker for an explicitly authorized same-RepoId
+/// reincarnation. Unlike first admission, retained workspace content is
+/// expected; an unexplained non-empty `.notegit` namespace still fails closed.
+pub(crate) fn ensure_repo_identity_marker_for_readmission(
+    repo_root: &Path,
+    repo_id: RepoId,
+) -> Result<()> {
+    let marker_path = repo_identity_path(repo_root);
+    if let Some(marker) = read_repo_identity_marker(&marker_path)? {
+        validate_repo_identity(repo_root, &marker, repo_id)?;
+        return Ok(());
+    }
+    let internal = repo_dir(repo_root);
+    match std::fs::symlink_metadata(&internal) {
+        Ok(metadata) => {
+            if !metadata.is_dir() || metadata.file_type().is_symlink() {
+                return Err(anyhow!(
+                    "readmission refuses non-directory .notegit namespace: {:?}",
+                    internal
+                ));
+            }
+            if std::fs::read_dir(&internal)?.next().transpose()?.is_some() {
+                return Err(anyhow!(
+                    "readmission refuses unexplained non-empty .notegit namespace: {:?}",
+                    internal
+                ));
+            }
+        }
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    write_repo_identity_marker(repo_root, repo_id, &repo_id.to_string())
+}
+
 pub fn validate_repo_identity_marker(repo_root: &Path, repo_id: RepoId) -> Result<()> {
     let path = repo_identity_path(repo_root);
     let marker = read_repo_identity_marker(&path)?.ok_or_else(|| {

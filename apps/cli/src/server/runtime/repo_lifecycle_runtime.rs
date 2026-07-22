@@ -10,11 +10,15 @@ mod admission;
 mod io;
 mod mount;
 mod owned_removal;
+mod readmission;
 #[cfg(test)]
 mod tests;
 mod types;
 
-pub(crate) use types::{CreateRepoIntent, CreateRepoOutcome, RepoLifecycleError, RepoMountOutcome};
+pub(crate) use types::{
+    CreateRepoIntent, CreateRepoOutcome, ReadmitRetiredRepoIntent, RepoLifecycleError,
+    RepoMountOutcome,
+};
 #[cfg(test)]
 pub(crate) use types::{RemoveRepoOutcome, RepoRemovalFallback};
 

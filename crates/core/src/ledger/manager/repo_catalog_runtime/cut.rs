@@ -19,6 +19,52 @@ use uuid::Uuid;
 mod public_api;
 
 impl RepoCatalogRuntime<'_> {
+    pub(super) fn with_creation_activation_guard<T>(
+        &self,
+        creation: &PreparedRepoCreation,
+        commit: &RepoCatalogCreationCommit,
+        observed: super::PreparedRepoIdentity,
+        activate: impl FnOnce() -> Result<T, crate::ledger::LocalAuthorityError>,
+    ) -> Result<T, super::RepoCreationActivationError> {
+        let repo_id = creation.repo_id;
+        if observed != creation.prepared_identity
+            || commit.record().repo_id() != repo_id
+            || !commit
+                .record()
+                .confirms_created(creation.lifecycle_request_id)
+            || commit.record().prepared_identity_digest() != creation.prepared_identity.to_hex()
+        {
+            return Err(super::RepoCreationActivationError::Catalog(
+                RepoCatalogError::PreparedIdentityChanged(repo_id),
+            ));
+        }
+        let _cut = self
+            .manager
+            .catalog_membership
+            .cut_guard()
+            .map_err(RepoCatalogError::from)
+            .map_err(super::RepoCreationActivationError::Catalog)?;
+        let store = RepoCatalogStore::open(&self.manager.ledger_dir)
+            .map_err(super::RepoCreationActivationError::Catalog)?;
+        let _process_lock = store
+            .lock()
+            .map_err(super::RepoCreationActivationError::Catalog)?;
+        let current = store
+            .load(repo_id)
+            .map_err(super::RepoCreationActivationError::Catalog)?;
+        if current.as_ref() != Some(commit.record()) {
+            return Err(super::RepoCreationActivationError::Catalog(
+                RepoCatalogError::PreparedIdentityChanged(repo_id),
+            ));
+        }
+        self.manager
+            .catalog_membership
+            .with_activation_guard(commit.membership(), activate)
+            .map_err(RepoCatalogError::from)
+            .map_err(super::RepoCreationActivationError::Catalog)?
+            .map_err(super::RepoCreationActivationError::Authority)
+    }
+
     fn prepare_creation(
         &self,
         repo_id: RepoId,

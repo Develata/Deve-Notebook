@@ -6,6 +6,22 @@ use crate::ledger::init::init_core_tables;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use std::time::{Duration, Instant};
 
+mod admission_error;
+mod reopening;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum RepoAuthoritySlotSnapshot {
+    Opening,
+    Reopening { generation: u64 },
+    Preparing { generation: u64 },
+    ReopeningPrepared { generation: u64 },
+    RepairRequired { generation: u64 },
+    Active { generation: u64 },
+    Quiescing { generation: u64 },
+    CommittedCleanup { generation: u64 },
+    Retired { prior_generation: u64 },
+}
+
 fn new_runtime() -> anyhow::Result<(tempfile::TempDir, LocalAuthorityRuntime, RepoId)> {
     let dir = tempfile::tempdir()?;
     std::fs::create_dir_all(dir.path().join("local"))?;
@@ -109,11 +125,16 @@ fn explicit_cleanup_retires_without_ordinary_reopen() -> anyhow::Result<()> {
         runtime.lease(repo_id),
         Err(LocalAuthorityError::Retired(id)) if id == repo_id
     ));
-    let reopened_lock = crate::utils::fs::open_regular_file_lock(
+    let reopened_lock = crate::utils::fs::open_regular_file_lock_existing(
         snapshot.authority_lock().path(),
         "retired local authority lock",
     )?;
     reopened_lock.try_lock()?;
+    crate::utils::fs::ensure_open_file_matches_identity(
+        &reopened_lock,
+        snapshot.authority_lock(),
+        "retired local authority lock",
+    )?;
     reopened_lock.unlock()?;
     Ok(())
 }
@@ -342,6 +363,49 @@ fn failed_secondary_initialization_never_publishes_active_authority() -> anyhow:
             .is_file(),
         "an unverified path must be left for explicit repair, never guessed safe to delete"
     );
+    Ok(())
+}
+
+#[test]
+fn fresh_create_lock_only_residual_is_explicit_repair_debt() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    std::fs::create_dir_all(dir.path().join("local"))?;
+    std::fs::create_dir_all(
+        crate::utils::notegit::host_dir(dir.path()).join("repo-authority-locks"),
+    )?;
+    let repo_id = Uuid::new_v4();
+    drop(crate::utils::fs::create_regular_file_lock_new(
+        &super::resource::authority_lock_path(dir.path(), repo_id),
+        "interrupted authority lock",
+    )?);
+    let runtime = LocalAuthorityRuntime::empty(dir.path());
+
+    assert!(
+        runtime
+            .create_repo_initialized(repo_id, |_| Ok(()))
+            .is_err()
+    );
+    assert_eq!(
+        runtime.snapshot_for_test(repo_id)?,
+        Some(RepoAuthoritySlotSnapshot::RepairRequired { generation: 1 })
+    );
+    assert!(!super::resource::database_path(dir.path(), repo_id).exists());
+    Ok(())
+}
+
+#[test]
+fn existing_inspection_does_not_create_missing_host_directories() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    std::fs::create_dir_all(dir.path().join("local"))?;
+    let runtime = LocalAuthorityRuntime::empty(dir.path());
+    let repo_id = Uuid::new_v4();
+
+    assert!(
+        runtime
+            .inspect_existing_stem(&repo_id.to_string(), |_| Ok(()))
+            .is_err()
+    );
+    assert!(!crate::utils::notegit::host_dir(dir.path()).exists());
     Ok(())
 }
 

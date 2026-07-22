@@ -8,7 +8,7 @@ mod cut_failure;
 mod error;
 mod membership;
 mod model;
-mod prepared_identity;
+pub(crate) mod prepared_identity;
 mod store;
 
 pub use error::RepoCatalogError;
@@ -28,6 +28,11 @@ use crate::models::PeerId;
 use crate::models::RepoId;
 use anyhow::Result;
 use std::path::Path;
+
+pub(crate) enum RepoCreationActivationError {
+    Catalog(RepoCatalogError),
+    Authority(crate::ledger::LocalAuthorityError),
+}
 
 impl RepoManager {
     pub(crate) fn refresh_local_repo_catalog(&self) -> Result<()> {

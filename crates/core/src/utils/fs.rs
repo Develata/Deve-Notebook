@@ -1,8 +1,13 @@
 //! plan_ref: infra
 
+mod authority;
 mod identity;
 mod quarantine;
 
+pub(crate) use authority::{
+    create_regular_file_lock_new, ensure_open_file_matches_identity,
+    open_regular_file_lock_existing,
+};
 pub use identity::{HostFileIdentity, HostPathIdentity, HostPathKind, HostPathState};
 #[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
 pub(crate) use quarantine::{HostQuarantineCut, HostQuarantinePlan, delete_pinned_identity};
@@ -431,6 +436,50 @@ mod tests {
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
         assert_eq!(std::fs::read(destination)?, b"old");
         assert_eq!(std::fs::read(displaced)?, b"expected");
+        Ok(())
+    }
+
+    #[test]
+    fn existing_authority_open_never_creates_a_missing_path() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("authority.lock");
+
+        let error = open_regular_file_lock_existing(&path, "test authority lock")
+            .expect_err("existing-only open must reject a missing path");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::NotFound);
+        assert!(!path.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn fresh_authority_create_never_reuses_an_existing_path() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("authority.lock");
+        let first = create_regular_file_lock_new(&path, "test authority lock")?;
+
+        let error = create_regular_file_lock_new(&path, "test authority lock")
+            .expect_err("fresh create must reject an existing lock lineage");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+        ensure_open_file_matches_path(&first, &path, "test authority lock")?;
+        Ok(())
+    }
+
+    #[test]
+    fn captured_identity_rejects_path_replacement() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("authority.lock");
+        drop(create_regular_file_lock_new(&path, "test authority lock")?);
+        let expected = HostPathIdentity::capture(&path, HostPathKind::RegularFile)?;
+        std::fs::remove_file(&path)?;
+        let replacement = create_regular_file_lock_new(&path, "replacement authority lock")?;
+
+        let error =
+            ensure_open_file_matches_identity(&replacement, &expected, "test authority lock")
+                .expect_err("replacement object must not satisfy the captured lineage");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::Other);
         Ok(())
     }
 }

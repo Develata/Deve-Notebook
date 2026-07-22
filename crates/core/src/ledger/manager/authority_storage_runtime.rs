@@ -6,7 +6,7 @@
 mod local_authority;
 
 pub(crate) use local_authority::{
-    BoundRepoAuthority, LocalAuthorityDiscovery, LocalAuthorityRuntime,
+    BoundRepoAuthority, LocalAuthorityDiscovery, LocalAuthorityRuntime, PreparedAuthorityIdentity,
 };
 pub use local_authority::{
     LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityCleanupGuard,
@@ -289,6 +289,43 @@ impl RepoManager {
         Ok((info, prepared))
     }
 
+    /// Prepares the owner-held authority, locator row, and marker for an exact
+    /// same-process `Retired` RepoId. Activation remains impossible until the
+    /// caller commits a fresh catalog record and enters the composed guard.
+    pub fn prepare_retired_local_repo_reincarnation(
+        &self,
+        repo_id: RepoId,
+        projection_base: &std::path::Path,
+        repo_url: Option<String>,
+    ) -> anyhow::Result<PreparedRepoAuthority> {
+        let info = crate::ledger::RepoInfo {
+            uuid: repo_id,
+            name: repo_id.to_string(),
+            url: repo_url.or_else(|| Some(format!("urn:uuid:{repo_id}"))),
+        };
+        let prepared = self
+            .local_authority
+            .prepare_retired_repo_initialized(repo_id, |db| {
+                crate::ledger::init::init_core_tables(db)?;
+                crate::ledger::source_control::init_tables(db)?;
+                Self::initialize_repo_info_in_new_db(db, &info)?;
+                Ok(())
+            })?;
+        let locator = self.prepare_projection_locator_for_repo_creation_with_authority(
+            repo_id,
+            projection_base,
+            &prepared,
+        )?;
+        let workspace_root = locator.projection_base_abs.join(&locator.workspace_segment);
+        std::fs::create_dir_all(&workspace_root)?;
+        crate::utils::notegit::ensure_repo_identity_marker_for_readmission(
+            &workspace_root,
+            repo_id,
+        )?;
+        crate::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
+        Ok(prepared)
+    }
+
     pub fn activate_prepared_local_repo_authority(
         &self,
         prepared: PreparedRepoAuthority,
@@ -303,11 +340,35 @@ impl RepoManager {
         {
             return Err(LocalAuthorityError::NotAdmitted(prepared.repo_id()));
         }
-        prepared.activate(
-            &self.local_authority,
-            commit.membership(),
-            &self.catalog_membership,
-        )
+        let locator_guard =
+            crate::ledger::manager::projection_locator::ProjectionLocatorActivationGuard::acquire(
+                &self.ledger_dir,
+                prepared.repo_id(),
+            )
+            .map_err(LocalAuthorityError::Other)?;
+        let (observed, authority_identity) =
+            crate::ledger::manager::repo_catalog_runtime::prepared_identity::snapshot_prepared_with_guard(
+                prepared.repo_id(),
+                &prepared,
+                &locator_guard,
+            )
+            .map_err(LocalAuthorityError::Other)?;
+        self.with_repo_creation_activation_guard(creation, commit, observed, || {
+            locator_guard
+                .revalidate()
+                .map_err(LocalAuthorityError::Other)?;
+            prepared.activate_composed_guarded(&self.local_authority, &authority_identity)
+        })
+        .map_err(|error| {
+            match error {
+            crate::ledger::manager::repo_catalog_runtime::RepoCreationActivationError::Catalog(
+                error,
+            ) => LocalAuthorityError::Other(error.into()),
+            crate::ledger::manager::repo_catalog_runtime::RepoCreationActivationError::Authority(
+                error,
+            ) => error,
+        }
+        })
     }
 
     pub fn activate_initial_prepared_local_repo_authority(
@@ -337,11 +398,7 @@ impl RepoManager {
             return Ok(());
         };
         drop(initial);
-        prepared.activate(
-            &self.local_authority,
-            commit.membership(),
-            &self.catalog_membership,
-        )
+        self.activate_prepared_local_repo_authority(prepared, creation, commit)
     }
 
     #[cfg(test)]

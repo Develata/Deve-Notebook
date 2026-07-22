@@ -28,6 +28,15 @@ pub(crate) struct CreateRepoOutcome {
     pub(crate) mount: RepoMountOutcome,
 }
 
+#[allow(dead_code)] // Option A's compiled producer is exercised by the integration harness.
+pub(crate) struct ReadmitRetiredRepoIntent {
+    pub(crate) repo_id: RepoId,
+    pub(crate) initial_alias: String,
+    pub(crate) projection_base: PathBuf,
+    pub(crate) lifecycle_request_id: uuid::Uuid,
+    pub(crate) repo_url: Option<String>,
+}
+
 #[cfg(test)]
 pub(crate) struct RepoRemovalFallback {
     summary: LocalRepoSummary,

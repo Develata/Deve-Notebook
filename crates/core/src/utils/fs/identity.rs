@@ -100,12 +100,20 @@ impl HostPathIdentity {
         self.kind
     }
 
-    pub(super) const fn parent_identity(&self) -> HostFileIdentity {
+    pub(crate) const fn parent_identity(&self) -> HostFileIdentity {
         self.parent_identity
     }
 
     pub(crate) const fn object_identity(&self) -> HostFileIdentity {
         self.object_identity
+    }
+
+    /// Revalidates an already-open handle against both the captured object and
+    /// the captured parent/path lineage. This closes the A-to-B pathname swap
+    /// that a plain "handle matches current path" check cannot detect.
+    pub(crate) fn matches_open_file(&self, file: &File) -> std::io::Result<bool> {
+        Ok(identity_from_handle(file)? == self.object_identity
+            && self.classify()? == HostPathState::Exact)
     }
 }
 

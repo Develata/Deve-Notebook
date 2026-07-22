@@ -10,12 +10,14 @@ mod checkpoint;
 mod creation;
 mod drainage;
 mod inspection;
+mod prepared;
 mod reservation;
 mod resource;
 mod retirement;
 
 use crate::models::RepoId;
 use crate::utils::fs::{HostPathIdentity, HostPathKind, HostQuarantinePlan};
+use admission::PrimaryRepoBinding;
 use admission::{admit_existing_from_inner, lease_from_inner};
 pub use checkpoint::{
     RepoAuthorityDatabaseCheckpoint, RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof,
@@ -27,6 +29,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use thiserror::Error;
 use uuid::Uuid;
+
+pub use prepared::PreparedRepoAuthority;
+pub(crate) use prepared::{PreparedAuthorityIdentity, PreparedRepoAuthorityOrigin};
 
 #[derive(Debug, Error)]
 pub enum LocalAuthorityError {
@@ -69,7 +74,7 @@ pub enum LocalAuthorityError {
 struct RepoAuthorityResources {
     db: Database,
     db_witness: File,
-    authority_lock: File,
+    authority_lock: Arc<File>,
     lock_path: PathBuf,
     db_path: PathBuf,
 }
@@ -79,10 +84,32 @@ enum RepoAuthoritySlot {
     Opening {
         reservation_id: Uuid,
     },
+    Reopening {
+        reservation_id: Uuid,
+        generation: u64,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
+        authority_lock: Option<Arc<File>>,
+        resources: Option<Arc<RepoAuthorityResources>>,
+    },
     Preparing {
         reservation_id: Uuid,
         generation: u64,
         resources: Arc<RepoAuthorityResources>,
+    },
+    ReopeningPrepared {
+        reservation_id: Uuid,
+        generation: u64,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
+        resources: Arc<RepoAuthorityResources>,
+    },
+    ReopeningRepairRequired {
+        generation: u64,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
+        authority_lock: Option<Arc<File>>,
+        resources: Option<Arc<RepoAuthorityResources>>,
     },
     RepairRequired {
         generation: u64,
@@ -99,12 +126,16 @@ enum RepoAuthoritySlot {
     },
     CommittedCleanup {
         generation: u64,
-        authority_lock: File,
+        authority_lock: Arc<File>,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
         db_path: PathBuf,
         cleanup_capability_issued: bool,
     },
     Retired {
         prior_generation: u64,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
     },
 }
 
@@ -121,20 +152,6 @@ struct LocalAuthorityInner {
 pub(crate) struct LocalAuthorityRuntime {
     primary_repo: OnceLock<PrimaryRepoBinding>,
     inner: Arc<LocalAuthorityInner>,
-}
-
-struct PrimaryRepoBinding {
-    repo_id: RepoId,
-    execution_name: String,
-}
-
-impl PrimaryRepoBinding {
-    fn new(repo_id: RepoId) -> Self {
-        Self {
-            repo_id,
-            execution_name: repo_id.to_string(),
-        }
-    }
 }
 
 /// Bootstrap-only owner used while selecting an existing local RepoId.
@@ -159,17 +176,6 @@ pub struct RepoAuthorityLease {
     resources: Arc<RepoAuthorityResources>,
     repo_id: RepoId,
     generation: u64,
-}
-
-/// Non-clone capability for a newly initialized authority that has not yet
-/// crossed the durable catalog-membership cut.
-pub struct PreparedRepoAuthority {
-    inner: Arc<LocalAuthorityInner>,
-    resources: Arc<RepoAuthorityResources>,
-    reservation_id: Uuid,
-    repo_id: RepoId,
-    generation: u64,
-    settled: bool,
 }
 
 /// Exclusive pre-commit capability for a repo authority cut.
@@ -272,6 +278,30 @@ impl RepoAuthorityLease {
         })
     }
 
+    pub(crate) fn identity_observation(
+        &self,
+    ) -> Result<PreparedAuthorityIdentity, LocalAuthorityError> {
+        resource::validate_resource_identity(&self.resources)?;
+        let database =
+            HostPathIdentity::capture(&self.resources.db_path, HostPathKind::RegularFile)?;
+        let authority_lock =
+            HostPathIdentity::capture(&self.resources.lock_path, HostPathKind::RegularFile)?;
+        crate::utils::fs::ensure_open_file_matches_identity(
+            &self.resources.db_witness,
+            &database,
+            "local authority database identity",
+        )?;
+        crate::utils::fs::ensure_open_file_matches_identity(
+            &self.resources.authority_lock,
+            &authority_lock,
+            "local authority lock identity",
+        )?;
+        Ok(PreparedAuthorityIdentity {
+            database,
+            authority_lock,
+        })
+    }
+
     #[cfg(test)]
     pub(crate) fn db_path(&self) -> &Path {
         &self.resources.db_path
@@ -313,16 +343,7 @@ impl Drop for RepoAuthorityLease {
 }
 
 #[cfg(test)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum RepoAuthoritySlotSnapshot {
-    Opening,
-    Preparing { generation: u64 },
-    RepairRequired { generation: u64 },
-    Active { generation: u64 },
-    Quiescing { generation: u64 },
-    CommittedCleanup { generation: u64 },
-    Retired { prior_generation: u64 },
-}
+use tests::RepoAuthoritySlotSnapshot;
 
 impl LocalAuthorityRuntime {
     pub(crate) fn empty(ledger_dir: &Path) -> Self {
@@ -424,8 +445,23 @@ impl LocalAuthorityRuntime {
             .map_err(|_| LocalAuthorityError::Poisoned)?;
         Ok(slots.get(&repo_id).map(|slot| match slot {
             RepoAuthoritySlot::Opening { .. } => RepoAuthoritySlotSnapshot::Opening,
+            RepoAuthoritySlot::Reopening { generation, .. } => {
+                RepoAuthoritySlotSnapshot::Reopening {
+                    generation: *generation,
+                }
+            }
             RepoAuthoritySlot::Preparing { generation, .. } => {
                 RepoAuthoritySlotSnapshot::Preparing {
+                    generation: *generation,
+                }
+            }
+            RepoAuthoritySlot::ReopeningPrepared { generation, .. } => {
+                RepoAuthoritySlotSnapshot::ReopeningPrepared {
+                    generation: *generation,
+                }
+            }
+            RepoAuthoritySlot::ReopeningRepairRequired { generation, .. } => {
+                RepoAuthoritySlotSnapshot::RepairRequired {
                     generation: *generation,
                 }
             }
@@ -447,7 +483,9 @@ impl LocalAuthorityRuntime {
                     generation: *generation,
                 }
             }
-            RepoAuthoritySlot::Retired { prior_generation } => RepoAuthoritySlotSnapshot::Retired {
+            RepoAuthoritySlot::Retired {
+                prior_generation, ..
+            } => RepoAuthoritySlotSnapshot::Retired {
                 prior_generation: *prior_generation,
             },
         }))

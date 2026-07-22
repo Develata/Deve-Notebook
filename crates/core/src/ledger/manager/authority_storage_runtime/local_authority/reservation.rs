@@ -97,3 +97,170 @@ impl Drop for OpeningReservation {
         }
     }
 }
+
+/// Panic-safe ownership of a same-process Retired -> Reopening reservation.
+/// Once a reopening may have created a fresh database, abandonment is repair
+/// debt; it must never silently restore Retired and permit a second attempt.
+pub(super) struct ReopeningReservation {
+    inner: Arc<LocalAuthorityInner>,
+    repo_id: RepoId,
+    reservation_id: Uuid,
+    generation: u64,
+    settled: bool,
+}
+
+impl ReopeningReservation {
+    pub(super) fn new(
+        inner: &Arc<LocalAuthorityInner>,
+        repo_id: RepoId,
+        reservation_id: Uuid,
+        generation: u64,
+    ) -> Self {
+        Self {
+            inner: inner.clone(),
+            repo_id,
+            reservation_id,
+            generation,
+            settled: false,
+        }
+    }
+
+    pub(super) fn settle_after_transition(&mut self) {
+        self.settled = true;
+    }
+
+    pub(super) fn attach_lock(
+        &self,
+        authority_lock: &Arc<std::fs::File>,
+    ) -> Result<(), LocalAuthorityError> {
+        let mut slots = self
+            .inner
+            .slots
+            .lock()
+            .map_err(|_| LocalAuthorityError::Poisoned)?;
+        let Some(RepoAuthoritySlot::Reopening {
+            reservation_id,
+            generation,
+            authority_lock: current,
+            ..
+        }) = slots.get_mut(&self.repo_id)
+        else {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening reservation disappeared for RepoId {}",
+                self.repo_id
+            )));
+        };
+        if *reservation_id != self.reservation_id || *generation != self.generation {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening reservation changed for RepoId {}",
+                self.repo_id
+            )));
+        }
+        if current.is_some() {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening lock was already attached for RepoId {}",
+                self.repo_id
+            )));
+        }
+        *current = Some(authority_lock.clone());
+        Ok(())
+    }
+
+    pub(super) fn attach_resources(
+        &self,
+        resources: &Arc<super::RepoAuthorityResources>,
+    ) -> Result<(), LocalAuthorityError> {
+        let mut slots = self
+            .inner
+            .slots
+            .lock()
+            .map_err(|_| LocalAuthorityError::Poisoned)?;
+        let Some(RepoAuthoritySlot::Reopening {
+            reservation_id,
+            generation,
+            authority_lock,
+            resources: current,
+            ..
+        }) = slots.get_mut(&self.repo_id)
+        else {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening reservation disappeared for RepoId {}",
+                self.repo_id
+            )));
+        };
+        if *reservation_id != self.reservation_id
+            || *generation != self.generation
+            || !authority_lock
+                .as_ref()
+                .is_some_and(|lock| Arc::ptr_eq(lock, &resources.authority_lock))
+            || current.is_some()
+        {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening resource ownership changed for RepoId {}",
+                self.repo_id
+            )));
+        }
+        *current = Some(resources.clone());
+        Ok(())
+    }
+
+    fn seal_repair(&self) -> Result<(), LocalAuthorityError> {
+        let mut slots = self
+            .inner
+            .slots
+            .lock()
+            .map_err(|_| LocalAuthorityError::Poisoned)?;
+        let Some(RepoAuthoritySlot::Reopening {
+            reservation_id,
+            generation,
+            expected_lock_identity,
+            removed_database_identity,
+            authority_lock,
+            resources,
+        }) = slots.remove(&self.repo_id)
+        else {
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening reservation changed for RepoId {}",
+                self.repo_id
+            )));
+        };
+        if reservation_id != self.reservation_id || generation != self.generation {
+            slots.insert(
+                self.repo_id,
+                RepoAuthoritySlot::Reopening {
+                    reservation_id,
+                    generation,
+                    expected_lock_identity,
+                    removed_database_identity,
+                    authority_lock,
+                    resources,
+                },
+            );
+            return Err(LocalAuthorityError::Invariant(format!(
+                "reopening reservation changed for RepoId {}",
+                self.repo_id
+            )));
+        }
+        slots.insert(
+            self.repo_id,
+            RepoAuthoritySlot::ReopeningRepairRequired {
+                generation: self.generation,
+                expected_lock_identity,
+                removed_database_identity,
+                authority_lock,
+                resources,
+            },
+        );
+        Ok(())
+    }
+}
+
+impl Drop for ReopeningReservation {
+    fn drop(&mut self) {
+        if !self.settled
+            && let Err(error) = self.seal_repair()
+        {
+            tracing::error!(repo_id = %self.repo_id, %error, "failed to seal dropped local authority reopening reservation");
+        }
+    }
+}

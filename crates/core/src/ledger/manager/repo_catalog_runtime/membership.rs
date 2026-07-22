@@ -152,6 +152,21 @@ impl CatalogMembershipRuntime {
         self.validate_token(&state, token)
     }
 
+    pub(super) fn with_activation_guard<T, E>(
+        &self,
+        token: &CatalogMembershipToken,
+        activate: impl FnOnce() -> Result<T, E>,
+    ) -> Result<Result<T, E>, CatalogMembershipError> {
+        let state = self
+            .inner
+            .state
+            .write()
+            .map_err(|_| CatalogMembershipError::Poisoned)?;
+        ensure_seeded(&state)?;
+        self.validate_token(&state, token)?;
+        Ok(activate())
+    }
+
     pub(super) fn validate_cut_permit(
         &self,
         permit: &RepoCatalogCutPermit,

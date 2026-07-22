@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt and two-phase finalization are implemented; Option A owner-prepared same-RepoId reincarnation is approved but not yet proven; explicit drift repair, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
+    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt, two-phase finalization and the Option A owner-prepared same-process readmission path are implemented; explicit drift repair, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -306,7 +306,9 @@
     - planned_proof: O1-FREEZE必须覆盖capture seal/abort、quiesce失败、watcher E2后plan drift、严格逆序补偿和provider generation恢复失败
     - planned_proof: cut/finalization必须覆盖CutAttempted未知truth、exact Normal补偿、CutObserved重建、owner mutation后receipt前、TerminalCandidate、authority retirement失败和lock release后cold-host restart
     - planned_proof: R6 fresh producer必须逐项重证Redb、`.notegit`、Remote Import、locator、alias和tombstone消失，同时Markdown、附件、未知文件、`.git`、ignore文件、remote shadows、operator backups及其它RepoId保留
-    - planned_proof: Option A必须用production API覆盖real remove/tombstone retirement -> Retired expected lock identity -> Reopening -> existing-only exact lock -> ReopeningPrepared -> fresh Normal commit -> guarded DB/locator/marker/lock identity -> Active(frozen next generation)，并证明old token/lease/cleanup capability失效、并发单赢家、missing/replaced/unlinked lock不被重建、catalog cut后失败只形成lock-held repair debt
+    - test: `cargo test -p deve_cli --lib completed_removal_can_readmit_same_repo_only_through_owner_prepared_path -- --nocapture`
+    - test: `cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests::reopening:: -- --nocapture`
+    - planned_proof: R6仍须补齐并发single-winner、catalog cut后activation failure、旧token/lease/cleanup capability跨incarnation失效及Windows/Linux独立进程fresh receipt
     - planned_proof: crash matrix必须覆盖reservation后、DB/locator/marker prepare后、Normal fsync后/Active CAS前、Active后/existing-DB repair前的cold host rebuild；exact Normal只能在完整identity重算后admit，catalog-absent residual DB与fully removed restart without Retired proof均fail closed
     - planned_proof: pure activation validation前后DB side tables必须byte-equivalent；generation overflow与final catalog revalidation failure不得留下Active；ordinary lease、repo scope与Remote Import bind不得依赖某功能先偶然reopen
     - planned_proof: activation必须证明DB witness/genesis、authority lock、locator store+row revision及workspace root+marker identity均进入digest，并在Transitioning + locator read + catalog + authority固定锁序中阻止合法owner mutation竞态

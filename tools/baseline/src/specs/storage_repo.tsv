@@ -94,7 +94,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan已实现；B6 fresh Remote Import manage receipt尚未封存
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_child_path -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --lib projection_workspace_existing_ancestor -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-024	cargo test -p deve_core --test materialize_projection_test -- --nocapture
@@ -117,7 +117,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-010	run: scripts/ch
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli create_repo -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli repo_lifecycle -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1-R3 authority ownership, zero-repo NoScope and F4/v5 Prepare/Execute admission are implemented; R4 D1-SQ quarantine owners, O1-FREEZE ordering, cut debt and two-phase finalization are approved but not yet sealed by implementation evidence; explicit drift repair, later same-RepoId Reopening, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt, two-phase finalization and the Option A owner-prepared same-process readmission path are implemented; explicit drift repair, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -138,7 +138,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof:
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: `.notegit`必须覆盖marker cross-directory quarantine
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: O1-FREEZE必须覆盖capture seal/abort
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: cut/finalization必须覆盖CutAttempted未知truth
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: R4成功路径必须逐项证明Redb
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: R6 fresh producer必须逐项重证Redb
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	planned_proof: R5/R6必须覆盖lost Execute response跨runtime replay
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	removed_repo_local_redb_not_present true
@@ -213,7 +213,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	remote_import_
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	destructive_manifest_has_no_repo_runtime_catch_all true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	pre_cut_compensation_restores_provider_generation_invalidates_owner_plan_and_releases_transition true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	failed_pre_cut_compensation_remains_readonly_repair_not_active true
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	durable_terminal_result_fsync_precedes_lock_release_and_best_effort_publication true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	terminal_candidate_fsync_precedes_lock_release_and_terminal_receipt_publication_enablement_follows_retired true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-014A	concurrent_same_repo_id_readmission_has_one_reopening_reservation_and_generation true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-015	run: scripts/check-storage-repo-baseline.sh
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-016	run: scripts/check-storage-repo-baseline.sh

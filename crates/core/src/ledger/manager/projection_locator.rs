@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::{Component, Path, PathBuf};
 
+mod activation;
 mod file_validation;
 mod map_validation;
 mod removal;
@@ -21,6 +22,8 @@ use store::{
     ProjectionLocatorFile, ProjectionLocatorMapGuard, projection_locator_path_for,
     read_projection_locator_file, write_projection_locator_file,
 };
+
+pub(crate) use activation::ProjectionLocatorActivationGuard;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
