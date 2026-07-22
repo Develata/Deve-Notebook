@@ -1,6 +1,6 @@
 # Repo Reopening Authority Stop — 2026-07-22
 
-Status: `Requires user decision`
+Status: `Approved — Option A`
 
 Exact base: `main@1aa6af9dc1072796e6f47e5d4b1ec9fea28efda3`
 
@@ -58,12 +58,14 @@ system in which some features can reopen a repo and others remain permanently
 
 ## Option A — Two-Stage Owner-Prepared Reincarnation (Recommended)
 
-Introduce one crate-private, non-clone capability owned jointly by the existing
-catalog and authority runtimes. The state choreography is:
+Introduce one crate-private, non-clone authority capability and one composed
+identity proof without transferring DB/lock ownership to the catalog. The
+refined state choreography is:
 
 ```text
-Retired(prior_generation)
-  -> ReopeningPrepared(reservation_id, prior_generation, prepared_authority)
+Retired(prior_generation, expected_lock_identity)
+  -> Reopening(reservation_id, frozen_next_generation, expected_lock_identity)
+  -> ReopeningPrepared(reservation_id, frozen_next_generation, prepared_authority)
   -> durable Normal catalog commit with fresh membership generation
   -> exact activation revalidation
   -> Active(prior_generation + 1)
@@ -71,15 +73,21 @@ Retired(prior_generation)
 
 ### Prepare phase
 
-- exact-CAS the runtime slot from `Retired` to `ReopeningPrepared`;
-- require the old removal job to be terminal and the durable catalog record to
-  be absent;
+- checked-add and freeze the next generation, then exact-CAS `Retired` to
+  `Reopening`; the live Retired slot is the same-process terminal proof and
+  does not depend on bounded receipt retention;
+- require the durable catalog record to be absent;
 - open the existing persistent lock with **no create and no symlink/reparse
-  traversal**; a missing or replaced lock is `RepairRequired`;
+  traversal**, then compare the opened handle/path to the Retired expected
+  identity; a missing, replaced or unproven lock is `RepairRequired`;
 - while holding that lock, require the canonical DB to be absent before a new
   incarnation is created;
-- create the new DB through the authority owner and produce a
-  `PreparedRepoAuthority` plus project-owned `PreparedRepoIdentity`;
+- create and deterministically initialize the new DB through the authority
+  owner, then exact-CAS to `ReopeningPrepared` and retain the non-clone
+  `PreparedRepoAuthority`;
+- let the composition layer combine DB physical/genesis identity, lock
+  identity, locator store + exact row revision, and workspace root + marker
+  identity into a project-owned `PreparedRepoIdentity`;
 - do not expose a lease and do not publish `Active`.
 
 ### Catalog cut
@@ -92,21 +100,31 @@ Retired(prior_generation)
 
 ### Activation phase
 
-- reacquire the short catalog cut guard;
-- exact-revalidate the fresh membership token and durable `Normal` record;
-- recompute the opened DB + locator + marker identity through a **pure**
-  validation path and compare its digest with the record;
+- retain the lifecycle Transitioning permit, then acquire fixed-order locator
+  read capability, catalog activation guard and authority slot capability so
+  every project-owned identity owner is frozen through the final CAS;
+- within the composed guard only bounded no-follow DB/lock/locator/marker
+  identity revalidation is allowed, never repair/write/scan;
+- exact-revalidate the fresh membership token, durable `Normal` record,
+  recomputed identity digest and reservation;
 - exact-CAS the same reservation to `Active(prior_generation + 1)` while the
   catalog guard is held;
-- only after the CAS may repair/index initialization run through normal
-  admitted authority APIs.
+- only after the CAS may existing-DB repair or mutating index upgrade run
+  through normal admitted authority APIs. Deterministic new-DB schema/table
+  initialization remains a required prepare-phase operation.
 
 ### Failure semantics
 
-- before the durable catalog cut: exact rollback removes only the newly
-  prepared incarnation and restores `Retired`;
-- after a committed catalog cut: activation failure becomes typed repair debt;
-  it must not guess rollback, delete the new DB, or restore old membership;
+- a failed or unknown catalog call is classified under the catalog process
+  lock: only exact Normal absence permits pre-cut owner-specific rollback;
+  exact matching Normal continues activation/recovery, and unreadable/mixed
+  truth is repair debt;
+- pre-cut rollback may only invoke conditional DB, locator and marker owner
+  cleanup; it never deletes the persistent lock, workspace content or another
+  RepoId;
+- after a committed catalog cut, activation failure becomes lock-held typed
+  repair debt; it must not guess rollback, delete the new DB, restore old
+  membership or publish a lease;
 - panic/drop before activation releases the prepared DB and lock only after
   exact reservation rollback or marks repair if rollback cannot be proven;
 - old membership tokens, removal tokens, cleanup capabilities and leases remain
@@ -121,8 +139,13 @@ Retired(prior_generation)
 - does not require a new crate, wire message, durable schema or compatibility
   adapter;
 - provides the clean long-term producer for future explicit same-RepoId import
-  or readmission without coupling it to Remote Import or an accidental command
-  order.
+  or readmission while a live Retired proof exists, without coupling it to
+  Remote Import or an accidental command order. Durable lineage after a fully
+  removed host restart remains a separate future decision and fails closed.
+- this work's only reachable producer is a typed server-composition
+  `RepoLifecycleCoordinator::readmit_retired_repo` used by the production
+  runtime and integration harness; it does not add a WS/CLI/UI trigger. Current
+  Create remains fresh-UUID-only.
 
 ## Option B — Restart-Only Readmission
 
@@ -175,15 +198,14 @@ sign-off must continue to list this as an explicit gap.
 - no DB repair/index mutation occurs before final activation;
 - generation exhaustion and final catalog revalidation failure never leave an
   unintended `Active` slot;
+- cold rebuild after Normal fsync but before Active recomputes DB, locator,
+  marker and lock identity before admission; catalog-absent residual DB fails
+  closed;
 - Windows second-process lock/reparse and Linux inode/unlink tests.
 
-## Decision Requested
+## Decision
 
-Approve one of:
-
-- **Option A**: refine the plan and implement two-stage owner-prepared
-  reincarnation; or
-- **Option B**: revise the plan to make same-RepoId readmission restart-only for
-  the first release.
-
-Recommendation: **Option A** for the cleanest long-term authority model.
+The USER approved **Option A** on 2026-07-22. The live contract is projected
+into `docs/plan/03_storage/authority.md` and `docs/plan/04_repository.md`.
+Implementation must preserve the stop conditions above and keep the first-tag
+gate blocked until the required production-path evidence is sealed.

@@ -68,7 +68,7 @@ UI / HTTP / WS handlers
 - `WatcherSupervisor` is the CLI host runtime owner of repo slots, generations and lifecycle; handlers never receive it.
 - `WatcherRuntimeView` exposes only snapshot/aggregate readiness to `AppState`, mutation admission and `/api/node/role`.
 - `RepoLifecycleJobRuntime` is the transport-independent owner of accepted create/remove jobs; handlers may stop waiting but cannot cancel durable convergence.
-- `LocalAuthorityRuntime` is the sole per-RepoId Redb owner. Non-clone leases borrow the database; product mutation admission closes before provider quiesce and watcher E2, then Quiescing drains bounded in-flight use. The per-RepoId lock pathname is persistent host coordination identity; its OS handle stays held through exact cleanup/tombstone retirement. R4 implements `CommittedCleanup -> Retired`; later same-RepoId `Reopening` remains an approved R5 follow-up.
+- `LocalAuthorityRuntime` is the sole per-RepoId Redb owner. Non-clone leases borrow the database; product mutation admission closes before provider quiesce and watcher E2, then Quiescing drains bounded in-flight use. The per-RepoId lock pathname is persistent host coordination identity; its OS handle stays held through exact cleanup/tombstone retirement. R4 implements `CommittedCleanup -> Retired`. Approved-but-not-yet-implemented Option A targets `Retired(expected lock identity) -> Reopening -> ReopeningPrepared -> fresh Normal -> guarded Active(next generation)`; the composed identity binds DB, locator, marker and lock without moving their authority into the UI or catalog.
 - Removal uses O1-FREEZE: reserve Transitioning, revalidate static owners, quiesce provider, seal the stable Remote Import plan, run watcher E2, then retire authority. R4 implements exact inverse compensation before the catalog cut and recoverable committed cleanup after it; R6 still owns fresh cold-host and cross-platform evidence sealing.
 - `RepoLifecycleCoordinator` is the only create/remove flow coordinator allowed to request mount transitions. Host-local alias changes never enter this slice. `RemoveLocalRepo` first returns a backend preview and five-minute one-time token, then uses a typed ownership manifest and owner-specific cleanup APIs. It deletes local Redb/Deve runtime while preserving the workspace root, Markdown/attachments, `.git`, remote shadows and operator recovery input.
 - `remote_import_runtime` owns its artifact removal plan. Safe non-applied states are warning+owner cleanup; Pending/Degraded/unknown states block rather than granting the lifecycle coordinator path authority. R4 seals a compact token only after provider quiescence, keeps the large inventory in a digest-bound sidecar and moves the exact repo artifact root into a same-parent quarantine before deletion; R6 fresh producer evidence remains pending.
@@ -79,10 +79,10 @@ UI / HTTP / WS handlers
 
 The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health,
 E2 final-state shutdown, zero-repo composition, F4/v5 preview-token admission and host-owned
-lifecycle jobs are implemented. `flow.repo.lifecycle` remains active drift because ownership-aware
-removal still lacks signed D1-SQ/O1-FREEZE settlement, cut-debt reconstruction, two-phase authority
-finalization, explicit drift repair and R5/R6 product/cross-platform evidence. A catalog tombstone
-alone is not evidence of physical cleanup.
+lifecycle jobs are implemented. R4 also implements signed D1-SQ/O1-FREEZE settlement, cut-debt
+reconstruction and two-phase authority finalization. `flow.repo.lifecycle` remains active drift for
+approved Option A reincarnation, explicit drift repair and R5/R6 product/cross-platform evidence.
+A catalog tombstone alone is not evidence of physical cleanup.
 
 ## Cross-host Data and Host-local Interaction
 

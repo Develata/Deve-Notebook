@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-07-22`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
@@ -452,15 +452,50 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
 - 成功 drain 后，runtime owner创建不可导出的 `RepoAuthorityRetirement` exclusive capability。它只允许
   exact pre-cut revalidation、DB close/eviction与retirement proof，不是普通读写lease，也不得传给
   lifecycle coordinator或其它runtime。per-RepoId OS lock handle必须保持到DB delete、owner cleanup、
-  catalog retirement和durable terminal result fsync完成，再把当前slot incarnation置为Retired并释放handle；
+  catalog retirement和`TerminalCandidate(publication disabled)` fsync完成，再把当前slot incarnation置为Retired
+  并释放handle；durable terminal receipt只能在Retired之后原子启用publication，
   session/network publication delivery不得延长lock生命周期；
   lock pathname本身永久保留。
-- later same-RepoId membership admission必须使用map-level single-flight reservation：短持runtime map mutex把
-  `Retired -> Reopening(reservation_id, prior_generation)`，释放mutex后取得同一persistent lock pathname的
-  OS lock并exact重读Normal membership/DB identity，最后短持mutex exact-CAS为
-  `Active(new_generation)`。失败必须exact rollback为Retired并释放handle。不得跨filesystem I/O持有map mutex；
-  两个并发admission只能有一个reservation成为新slot。任何旧lease、retirement capability、preparation或token
-  都不得跨incarnation复用。
+- later same-RepoId membership admission必须走two-stage owner-prepared reincarnation。`Retired`必须保留
+  `prior_generation + expected_lock_identity`；先checked-add并冻结next generation，再短持runtime map mutex完成
+  `Retired -> Reopening(reservation_id, next_generation, expected_lock_identity)`。释放mutex后只能以
+  existing-only、no-follow方式取得同一persistent lock pathname并把opened handle/path与expected identity
+  exact-compare；lock缺失、replacement、unlink/recreate、generation overflow或identity proof缺失均进入
+  `RepairRequired`，不得create新lock。持锁后必须证明canonical DB absent，再由authority owner创建并完成
+  deterministic new-DB schema/table/repo-metadata初始化，随后exact-CAS为
+  `ReopeningPrepared(reservation_id, next_generation, prepared_authority)`；此时不得导出lease、运行existing-DB
+  repair/mutating upgrade helper或发布Active。
+- authority owner始终保有不可导出的prepared authority与persistent lock；Projection Locator与workspace marker
+  仍由各自owner提供typed observation，`RepoManager` composition layer据此构造immutable
+  `PreparedRepoIdentity`，catalog只消费该identity proof与cut permit，不取得DB/lock capability。identity manifest
+  v2必须绑定canonical DB physical witness/FileId与repo genesis/metadata identity、authority lock identity、locator
+  store identity + exact row token/revision，以及workspace root + marker identity；fresh deterministic Normal record是
+  catalog cut后的唯一durable recovery fact。该digest算法升级不改变catalog JSON/Redb schema，但旧开发态digest
+  不兼容且fail closed。
+- `ReopeningPrepared` reservation和persistent lock必须跨catalog cut继续存活。activation必须继续持有
+  `RepoLifecycleCoordinator` 的exact Transitioning permit以阻断project-owned create/remove/locator/marker mutation，
+  并使用独立的短composed activation guard：按固定`locator read capability -> catalog activation guard -> authority
+  slot`顺序持有locator store/row revision、pinned marker/root observation与authority DB/lock witness；guard内只允许
+  bounded no-follow identity revalidation、exact durable Normal record/membership/digest/reservation compare与slot CAS，
+  禁止repair/write、scan、network、watcher I/O、await或unbounded work。所有project-owned locator/marker mutation
+  必须在同一owner capability/generation上串行或因stale generation失败；external filesystem在activation后的漂移
+  由每次normal use继续exact-revalidate并fail closed。exact match时CAS为`Active(next_generation)`；
+  CAS/invariant/mutex failure仍是lock-held repair
+  debt，不得描述为infallible。只有Active后才能通过normal admitted authority API运行existing-DB repair或
+  mutating index upgrade。
+- catalog cut调用失败或响应未知时，只有在catalog process lock下exact证明Normal record absent才属于pre-cut；
+  exact matching Normal必须继续activation/recovery，unreadable/mixed/foreign truth必须保持prepared resources与
+  lock并进入repair，禁止cleanup。cold startup遇Normal record时必须先重算完整prepared identity（含lock identity）
+  才能admit；mismatch进入repair，不得走ordinary schema-only admission。catalog absent但DB残留同样进入repair。
+  已完整remove且进程重启后不再有`Retired` expected identity，本轮不得仅凭persistent pathname自动same-RepoId
+  reincarnation；未来跨重启显式import需要另行批准durable lineage proof，不能借receipt retention或soft tombstone偷渡。
+- map mutex不得跨DB/filesystem I/O、catalog I/O、await、watcher或provider持有；两个并发admission只能有一个
+  reservation。pre-cut exact rollback只能调用owner-specific conditional cleanup：新DB走authority owner、locator
+  row走locator owner、marker/`.notegit`走marker owner；persistent lock、workspace root、非`.notegit` child与其它
+  RepoId永不进入cleanup。无法唯一证明cleanup或任何post-cut failure时，当前进程必须让RepairRequired slot继续
+  持有prepared resources与OS lock、拒绝ordinary admission/publication且只允许typed recovery；panic重启后按
+  上一条durable catalog truth分类。任何旧lease、retirement capability、membership/removal token、preparation
+  或cleanup capability都不得跨incarnation复用。
 - runtime map mutex 只保护 slot map/state transition，不得跨 DB/filesystem I/O、await、watcher、
   provider、publication 或 lease drain。Unix unlink 后仍存活的旧 handle 与 Windows 打开文件删除失败
   都是 invariant violation，不得降级为 cleanup debt或用下次重启掩盖。

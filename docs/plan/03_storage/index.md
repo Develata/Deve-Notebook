@@ -115,9 +115,14 @@ runtime mutex 与该 file lock 的固定顺序是 process mutex -> file lock。�
 `repo-authority-locks/<repo_id>.lock` 是 `authority_storage_runtime` 按 exact RepoId 使用的稳定
 跨进程协调身份。该空文件不包含 repo 数据、永不进入 removal manifest，也不得在 retire 后 unlink；
 只有其 OS lock handle 具有排他语义。slot 必须在打开 canonical DB 之前取得该 handle，并持续持有到
-DB 关闭/删除、owner cleanup、catalog tombstone retirement 与 durable terminal job result fsync 全部完成后才释放；
-session/network publication delivery位于lock release之后，失败只形成control-plane delivery debt。
-later same-RepoId admission 必须重新锁定同一 pathname、重读 current membership并建立新 slot generation；
+DB 关闭/删除、owner cleanup、catalog tombstone retirement 与`TerminalCandidate(publication disabled)` fsync
+全部完成后才释放；terminal receipt/publication enablement与session/network delivery位于Retired/lock release之后，
+失败只形成control-plane delivery debt。
+same-process later same-RepoId admission只能从带expected lock identity的live `Retired`进入
+`Reopening -> ReopeningPrepared`：existing-only/no-follow取得并exact复核persistent lock，owner准备fresh DB，
+composition绑定DB/lock/locator/marker identity，fresh Normal commit后在固定锁序的composed activation guard中
+exact-CAS新generation。unknown cut按durable Normal truth分类；fully removed host restart若没有live Retired proof
+不得仅凭pathname或旧receipt自动readmit；
 server 已持有该锁时，CLI只能通过 authenticated loopback proxy 使用同一 runtime，不得另开数据库或
 把 OS 删除失败当作排他协议。
 

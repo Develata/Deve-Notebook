@@ -44,7 +44,7 @@ Active drift facts:
 2. `remote import review`: B4 backend/CLI List/Show/Page/Diff 与 blocker projection 已独立于 Source Control/External Changes；B5 尚未提供 `remote_import_client`。
 3. `remote import apply`: B4 已激活 Mounted admission、sealed whole-session Apply、exactly-once receipt 与 Ledger-to-Projection rematerialization；B5 尚未提供 thin Web Apply surface。
 4. `remote import manage`: B4 已激活 Refresh/Discard/dry-run repair/explicit cleanup product API；W7 provider quiesce/membership coordination 已接入 host lifecycle，B5 尚未提供 thin Web management surface。
-5. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `NoScope`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。later same-RepoId Reopening、explicit drift repair、single typed finalization、R5 UI/CLI与R6 fresh跨平台证据仍未实现。
+5. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `NoScope`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation已批准、尚待代码与production-path证据；explicit drift repair、single typed finalization、R5 UI/CLI与R6 fresh跨平台证据仍未实现。
 
 ## Flow Registry
 

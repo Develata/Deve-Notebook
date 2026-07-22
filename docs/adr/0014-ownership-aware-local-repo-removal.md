@@ -4,6 +4,7 @@
 - Date: 2026-07-20
 - Amended: 2026-07-21 (`A1-S + B1-S + C2′-S` safety refinement)
 - Amended: 2026-07-22 (`D1-SQ + O1-FREEZE` path-safety refinement)
+- Amended: 2026-07-22 (Option A two-stage owner-prepared same-RepoId reincarnation)
 
 ## Context
 
@@ -23,8 +24,16 @@ removable, leaving a useful zero-repo host.
    owner. Callers receive non-clone bounded leases; retirement closes admission only after provider
    quiesce and watcher E2, drains existing leases and retains an exclusive per-RepoId OS lock through
    cleanup and catalog retirement. The empty lock pathname is persistent host coordination identity,
-   never a cleanup target. Same-RepoId readmission first reserves one map-level `Reopening` slot,
-   then reacquires/revalidates outside the map mutex and installs one new generation by exact CAS.
+   never a cleanup target. A live `Retired` slot retains the prior generation and exact lock
+   identity. Same-RepoId readmission reserves `Reopening`, opens and exact-compares that lock
+   existing-only, then owner-prepares a new DB before transitioning to `ReopeningPrepared`.
+   Composition binds DB, locator, marker and lock observations into one prepared identity; only that
+   proof, including DB/lock physical identity and locator/marker owner revisions, may publish a fresh
+   Normal catalog membership. The lifecycle Transitioning permit and a fixed-order composed read
+   guard freeze project-owned identity mutation until the authority CAS installs the frozen next
+   generation. Unknown catalog-cut outcomes are classified by exact durable truth;
+   pre-cut owner-specific rollback is allowed only when Normal is proven absent, while post-cut or
+   mixed truth is lock-held repair debt and never guesses rollback.
 2. Zero local repos is a valid `NoScope` host. Watcher expected=0 is healthy. First Create uses an
    explicit absolute `repo_creation_projection_base` when no current locator exists.
 3. Remove is a two-phase backend flow. Prepare persists an exact ownership manifest and returns
@@ -81,6 +90,15 @@ removable, leaving a useful zero-repo host.
 - R1-R6 evidence must cover persistent lock identity, slot reincarnation, atomic admission/crash cuts,
   inverse compensation, single typed finalization, no-follow deletion, issuer-bound token replay,
   Remote Import states, zero-repo restart and real desktop/mobile browser flows before tag readiness.
+- Same-RepoId reincarnation stays inside the existing authority/catalog runtimes: it adds no Ledger,
+  Redb-table, Projection, sync-fact or WebSocket format and exposes no lease before guarded activation.
+- The fresh Normal prepared-identity digest also binds the persistent lock identity, so a crash after
+  the catalog cut can cold-revalidate before ordinary admission. A fully removed repo whose process
+  has lost the live Retired proof cannot be reincarnated from pathname or pruned receipts; durable
+  cross-restart lineage is a separate future decision rather than an implicit tombstone.
+- The first implementation exposes only a compiled server-composition producer for a live Retired
+  RepoId. Existing F4/v5 Create remains fresh-UUID-only and Remote Import remains scoped to an
+  admitted repo; no UI, CLI or wire surface is added by this amendment.
 
 ## References
 
