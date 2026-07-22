@@ -4,35 +4,43 @@
 //!
 //! Pre-commit quiescence and post-commit authority retirement capabilities.
 
+mod cleanup_drop;
+mod recovery;
+
+use super::checkpoint::RepoAuthorityDatabaseCheckpointState;
 use super::{
-    LocalAuthorityError, RepoAuthorityCleanupGuard, RepoAuthorityQuiesceGuard,
-    RepoAuthorityResources, RepoAuthoritySlot,
+    LocalAuthorityError, RepoAuthorityCleanupGuard, RepoAuthorityDatabaseCheckpoint,
+    RepoAuthorityQuiesceGuard, RepoAuthorityRemovalSnapshot, RepoAuthorityResources,
+    RepoAuthoritySlot,
 };
 use crate::models::RepoId;
-use std::path::Path;
 use std::sync::Arc;
 
 #[allow(dead_code)] // Consumed by the approved R3/R4 removal coordinator.
 impl RepoAuthorityQuiesceGuard {
-    pub(crate) fn repo_id(&self) -> RepoId {
+    pub fn repo_id(&self) -> RepoId {
         self.repo_id
     }
 
-    pub(crate) fn generation(&self) -> u64 {
+    pub fn generation(&self) -> u64 {
         self.generation
     }
 
     /// Re-opens the admission gate without changing its generation.
-    pub(crate) fn rollback(mut self) -> Result<(), LocalAuthorityError> {
+    pub fn rollback(mut self) -> Result<(), LocalAuthorityError> {
         self.rollback_inner()
     }
 
     /// Crosses the irreversible authority cut after the caller has durably
     /// committed the removal tombstone. The database closes here, while the
     /// persistent owner lock moves into the slot itself.
-    pub(crate) fn into_committed_cleanup(
+    pub fn into_committed_cleanup(
         mut self,
     ) -> Result<RepoAuthorityCleanupGuard, LocalAuthorityError> {
+        // This capability is callable only after the durable Removed cut. From
+        // this point every error must remain fail-closed in Quiescing or
+        // CommittedCleanup; Drop must never reopen ordinary admission.
+        self.settled = true;
         let resources = self.resources.take().ok_or_else(|| {
             LocalAuthorityError::Invariant(format!(
                 "RepoId {} quiesce guard has no resources",
@@ -116,7 +124,6 @@ impl RepoAuthorityQuiesceGuard {
                 // The durable cut already happened and the DB is closed. Keep
                 // the process-level exclusion forever rather than reopening.
                 std::mem::forget(authority_lock);
-                self.settled = true;
                 return Err(LocalAuthorityError::Poisoned);
             }
         };
@@ -130,7 +137,6 @@ impl RepoAuthorityQuiesceGuard {
         );
         if !exact_committed_reservation {
             std::mem::forget(authority_lock);
-            self.settled = true;
             return Err(LocalAuthorityError::Invariant(format!(
                 "RepoId {} lost its committed cleanup reservation",
                 self.repo_id
@@ -142,9 +148,9 @@ impl RepoAuthorityQuiesceGuard {
                 generation: self.generation,
                 authority_lock,
                 db_path: db_path.clone(),
+                cleanup_capability_issued: true,
             },
         );
-        self.settled = true;
         Ok(RepoAuthorityCleanupGuard {
             inner: self.inner.clone(),
             db_path,
@@ -262,25 +268,98 @@ impl Drop for RepoAuthorityQuiesceGuard {
 
 #[allow(dead_code)] // Consumed by the approved R4 removal coordinator.
 impl RepoAuthorityCleanupGuard {
-    pub(crate) fn repo_id(&self) -> RepoId {
+    pub fn repo_id(&self) -> RepoId {
         self.repo_id
     }
 
-    pub(crate) fn generation(&self) -> u64 {
+    pub fn generation(&self) -> u64 {
         self.generation
     }
 
-    pub(crate) fn db_path(&self) -> &Path {
+    #[cfg(test)]
+    pub(crate) fn db_path(&self) -> &std::path::Path {
         &self.db_path
     }
 
-    /// Marks the authority slot retired only after owner-specific cleanup and
-    /// exact catalog retirement have completed.
-    pub(crate) fn complete(mut self) -> Result<(), LocalAuthorityError> {
-        self.complete_inner()
+    pub fn advance_database_cleanup(
+        &mut self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+        checkpoint: &RepoAuthorityDatabaseCheckpoint,
+    ) -> Result<RepoAuthorityDatabaseCheckpoint, LocalAuthorityError> {
+        if self.settled
+            || snapshot.repo_id != self.repo_id
+            || snapshot.generation != self.generation
+            || snapshot.database.kind() != crate::utils::fs::HostPathKind::RegularFile
+            || snapshot.database.path() != self.db_path
+        {
+            return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
+        }
+        {
+            let slots = self
+                .inner
+                .slots
+                .lock()
+                .map_err(|_| LocalAuthorityError::Poisoned)?;
+            if !matches!(
+                slots.get(&self.repo_id),
+                Some(RepoAuthoritySlot::CommittedCleanup { generation, db_path, .. })
+                    if *generation == self.generation && *db_path == self.db_path
+            ) {
+                return Err(LocalAuthorityError::StaleGeneration {
+                    repo_id: self.repo_id,
+                    expected: self.generation,
+                    actual: slot_generation(slots.get(&self.repo_id)).unwrap_or(0),
+                });
+            }
+        }
+        let state = match &checkpoint.state {
+            RepoAuthorityDatabaseCheckpointState::Prepared => {
+                RepoAuthorityDatabaseCheckpointState::DatabaseQuarantined {
+                    database: snapshot.database_quarantine.cut()?,
+                }
+            }
+            RepoAuthorityDatabaseCheckpointState::DatabaseQuarantined { database } => {
+                database.delete()?;
+                RepoAuthorityDatabaseCheckpointState::DatabaseDeleted {
+                    database: database.clone(),
+                }
+            }
+            RepoAuthorityDatabaseCheckpointState::DatabaseDeleted { database } => {
+                if !database.is_deleted()? {
+                    return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
+                }
+                RepoAuthorityDatabaseCheckpointState::DatabaseDeleted {
+                    database: database.clone(),
+                }
+            }
+        };
+        Ok(RepoAuthorityDatabaseCheckpoint { state })
     }
 
-    fn complete_inner(&mut self) -> Result<(), LocalAuthorityError> {
+    pub fn verify_database_cleanup_complete(
+        &self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+        checkpoint: &RepoAuthorityDatabaseCheckpoint,
+    ) -> Result<(), LocalAuthorityError> {
+        if self.settled
+            || snapshot.repo_id != self.repo_id
+            || snapshot.generation != self.generation
+        {
+            return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
+        }
+        let RepoAuthorityDatabaseCheckpointState::DatabaseDeleted { database } = &checkpoint.state
+        else {
+            return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
+        };
+        if !database.belongs_to(&snapshot.database_quarantine) || !database.is_deleted()? {
+            return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
+        }
+        Ok(())
+    }
+
+    /// Called only by the composed `RepoManager` after it has verified both
+    /// the owner-issued DB checkpoint and exact catalog tombstone retirement.
+    pub(crate) fn complete_inner(&mut self) -> Result<(), LocalAuthorityError> {
         if self.settled {
             return Ok(());
         }
@@ -299,6 +378,7 @@ impl RepoAuthorityCleanupGuard {
             generation,
             authority_lock,
             db_path,
+            cleanup_capability_issued,
         } = slot
         else {
             slots.insert(self.repo_id, slot);
@@ -307,13 +387,14 @@ impl RepoAuthorityCleanupGuard {
                 self.repo_id
             )));
         };
-        if generation != self.generation || db_path != self.db_path {
+        if generation != self.generation || db_path != self.db_path || !cleanup_capability_issued {
             slots.insert(
                 self.repo_id,
                 RepoAuthoritySlot::CommittedCleanup {
                     generation,
                     authority_lock,
                     db_path,
+                    cleanup_capability_issued,
                 },
             );
             return Err(LocalAuthorityError::StaleGeneration {
@@ -335,13 +416,14 @@ impl RepoAuthorityCleanupGuard {
     }
 }
 
-impl Drop for RepoAuthorityCleanupGuard {
-    fn drop(&mut self) {
-        if !self.settled {
-            // A committed cleanup may only release its owner lock after the
-            // owner-specific receipt and exact tombstone retirement succeed.
-            // Leaving the slot untouched is intentionally fail-closed.
-            tracing::error!(repo_id = %self.repo_id, generation = self.generation, "committed local authority cleanup guard dropped before completion; owner lock retained");
-        }
+pub(super) fn slot_generation(slot: Option<&RepoAuthoritySlot>) -> Option<u64> {
+    match slot? {
+        RepoAuthoritySlot::Opening { .. } => None,
+        RepoAuthoritySlot::Preparing { generation, .. }
+        | RepoAuthoritySlot::RepairRequired { generation }
+        | RepoAuthoritySlot::Active { generation, .. }
+        | RepoAuthoritySlot::Quiescing { generation, .. }
+        | RepoAuthoritySlot::CommittedCleanup { generation, .. } => Some(*generation),
+        RepoAuthoritySlot::Retired { prior_generation } => Some(*prior_generation),
     }
 }

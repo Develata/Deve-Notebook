@@ -149,6 +149,10 @@ impl AliasStore {
         })
     }
 
+    pub(super) fn remove_exact(&mut self, expected: &HostRepoAliasBinding) -> bool {
+        self.rows.remove(&expected.repo_id).is_some()
+    }
+
     pub(super) fn publish(&self, ledger_dir: &Path) -> Result<(), HostRepoAliasError> {
         let host_dir = checked_host_dir(ledger_dir)?;
         let path = host_dir.join(STORE_FILE);

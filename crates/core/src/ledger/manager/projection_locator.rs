@@ -12,8 +12,10 @@ use std::path::{Component, Path, PathBuf};
 
 mod file_validation;
 mod map_validation;
+mod removal;
 mod store;
 
+pub use removal::{ProjectionLocatorCleanupDisposition, ProjectionLocatorRemovalPlan};
 pub(crate) use store::projection_locator_record_for_repo_id;
 use store::{
     ProjectionLocatorFile, ProjectionLocatorMapGuard, projection_locator_path_for,
@@ -21,6 +23,7 @@ use store::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProjectionLocatorRecord {
     pub repo_id: RepoId,
     pub workspace_segment: String,

@@ -24,8 +24,9 @@ pub use facade::{
     RemoteImportBinding, RemoteImportCandidatePage, RemoteImportCandidateView,
     RemoteImportCaptureSink, RemoteImportDiffView, RemoteImportEntryId, RemoteImportPageCursor,
     RemoteImportRepairPlan, RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalBlocked,
-    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalRevalidation,
-    RemoteImportRepoRemovalSnapshot, RemoteImportService, RemoteImportSessionView,
+    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalCheckpoint, RemoteImportRepoRemovalPlan,
+    RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot, RemoteImportService,
+    RemoteImportSessionView,
 };
 #[allow(unused_imports)]
 pub(crate) use repair::{RemoteImportRepairFinding, RemoteImportRepairReport};

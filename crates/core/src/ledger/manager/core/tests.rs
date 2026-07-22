@@ -11,11 +11,11 @@ fn empty_host_has_no_implicit_primary_and_never_creates_local_redb() -> anyhow::
 
     assert!(repo.list_cataloged_local_repo_summaries()?.is_empty());
     assert!(repo.local_repo_name().is_empty());
-    assert!(
+    assert_eq!(
         repo.list_local_docs(None)
             .expect_err("NoScope default read must fail closed")
-            .to_string()
-            .contains("Repository not found")
+            .to_string(),
+        "no local repository is selected"
     );
     assert!(std::fs::read_dir(ledger_dir.join("local"))?.all(|entry| {
         entry

@@ -1,8 +1,11 @@
 //! plan_ref: infra
 
 mod identity;
+mod quarantine;
 
-pub use identity::{HostFileIdentity, HostPathIdentity, HostPathKind};
+pub use identity::{HostFileIdentity, HostPathIdentity, HostPathKind, HostPathState};
+#[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
+pub(crate) use quarantine::{HostQuarantineCut, HostQuarantinePlan, delete_pinned_identity};
 
 use anyhow::{Context, Result};
 use std::fs::{File, Metadata, OpenOptions};

@@ -9,6 +9,9 @@ use crate::models::RepoId;
 use tempfile::TempDir;
 use uuid::Uuid;
 
+const REMOVAL_MANIFEST_DIGEST: &str =
+    "0000000000000000000000000000000000000000000000000000000000000000";
+
 struct Fixture {
     _temp: TempDir,
     repo: RepoManager,
@@ -171,9 +174,11 @@ fn remove_cut_is_conditional_idempotent_and_invalidates_old_token() -> anyhow::R
         .prepare_repo_creation_membership(fixture.repo_id, Uuid::new_v4())?;
     commit_creation(&fixture.repo, &created)?;
     let remove_request = Uuid::new_v4();
-    let prepared = fixture
-        .repo
-        .prepare_repo_removal_membership(fixture.repo_id, remove_request)?;
+    let prepared = fixture.repo.prepare_repo_removal_membership(
+        fixture.repo_id,
+        remove_request,
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
     let old_token = prepared.membership().clone();
 
     let committed = commit_removal(&fixture.repo, &prepared)?;
@@ -216,9 +221,11 @@ fn removal_uses_current_relocation_snapshot_not_historical_create_digest() -> an
         .repo
         .ensure_local_repo_workspace_identity(&execution)?;
 
-    let prepared = fixture
-        .repo
-        .prepare_repo_removal_membership(fixture.repo_id, Uuid::new_v4())?;
+    let prepared = fixture.repo.prepare_repo_removal_membership(
+        fixture.repo_id,
+        Uuid::new_v4(),
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
     assert_ne!(
         prepared.prepared_identity().to_hex(),
         prepared.normal_record.prepared_identity_digest()
@@ -234,9 +241,11 @@ fn remove_cut_rejects_record_changed_after_prepare() -> anyhow::Result<()> {
         .repo
         .prepare_repo_creation_membership(fixture.repo_id, Uuid::new_v4())?;
     commit_creation(&fixture.repo, &created)?;
-    let prepared = fixture
-        .repo
-        .prepare_repo_removal_membership(fixture.repo_id, Uuid::new_v4())?;
+    let prepared = fixture.repo.prepare_repo_removal_membership(
+        fixture.repo_id,
+        Uuid::new_v4(),
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
 
     let store = store::RepoCatalogStore::open(fixture.repo.ledger_dir())?;
     let _store_lock = store.lock()?;
@@ -291,9 +300,11 @@ fn removed_catalog_record_cannot_reanimate_a_residual_database() -> anyhow::Resu
         .repo
         .prepare_repo_creation_membership(repo_id, Uuid::new_v4())?;
     commit_creation(&fixture.repo, &created)?;
-    let removed = fixture
-        .repo
-        .prepare_repo_removal_membership(repo_id, Uuid::new_v4())?;
+    let removed = fixture.repo.prepare_repo_removal_membership(
+        repo_id,
+        Uuid::new_v4(),
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
     commit_removal(&fixture.repo, &removed)?;
     drop(fixture.repo);
 
@@ -390,6 +401,28 @@ fn catalog_record_tamper_fails_closed() -> anyhow::Result<()> {
     assert!(matches!(
         fixture.repo.repo_catalog_membership_record(fixture.repo_id),
         Err(RepoCatalogError::InvalidRecord(_))
+    ));
+    Ok(())
+}
+
+#[test]
+fn catalog_v1_record_fails_closed() -> anyhow::Result<()> {
+    let fixture = fixture()?;
+    let prepared = fixture
+        .repo
+        .prepare_repo_creation_membership(fixture.repo_id, Uuid::new_v4())?;
+    commit_creation(&fixture.repo, &prepared)?;
+    let path = crate::utils::notegit::host_dir(fixture.repo.ledger_dir())
+        .join("repo-catalog")
+        .join(format!("{}.json", fixture.repo_id));
+    let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(&path)?)?;
+    value["version"] = serde_json::json!(1);
+    std::fs::write(&path, serde_json::to_vec(&value)?)?;
+
+    assert!(matches!(
+        fixture.repo.repo_catalog_membership_record(fixture.repo_id),
+        Err(RepoCatalogError::InvalidRecord(detail))
+            if detail.contains("unsupported version 1")
     ));
     Ok(())
 }

@@ -13,7 +13,9 @@ mod core_docs_fallback;
 mod core_local_registry;
 pub mod locator;
 pub mod projection_locator;
-pub use projection_locator::ProjectionLocatorRecord;
+pub use projection_locator::{
+    ProjectionLocatorCleanupDisposition, ProjectionLocatorRecord, ProjectionLocatorRemovalPlan,
+};
 pub mod types;
 mod workspace;
 
@@ -21,7 +23,9 @@ mod authority_storage_runtime;
 pub(crate) use authority_storage_runtime::BoundRepoAuthority;
 pub(crate) use authority_storage_runtime::{LocalAuthorityDiscovery, LocalAuthorityRuntime};
 pub use authority_storage_runtime::{
-    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease, RepoAuthorityRemovalSnapshot,
+    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityCleanupGuard,
+    RepoAuthorityDatabaseCheckpoint, RepoAuthorityLease, RepoAuthorityQuiesceGuard,
+    RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof,
 };
 mod commit_apply;
 mod commit_plan;
@@ -33,9 +37,10 @@ mod dir_structure_support;
 mod git_mirror_queue_runtime;
 mod host_repo_alias;
 pub use host_repo_alias::{
-    HOST_REPO_ALIAS_IMPORT_MAX_BYTES, HostRepoAliasBinding, HostRepoAliasError,
-    HostRepoAliasImportSummary, HostRepoAliasImportWarning, HostRepoAliasImportWarningReason,
-    HostRepoAliasRuntime, HostRepoAliasSetResult, HostRepoAliasValidationError,
+    HOST_REPO_ALIAS_IMPORT_MAX_BYTES, HostRepoAliasBinding, HostRepoAliasCleanupDisposition,
+    HostRepoAliasError, HostRepoAliasImportSummary, HostRepoAliasImportWarning,
+    HostRepoAliasImportWarningReason, HostRepoAliasRemovalPlan, HostRepoAliasRuntime,
+    HostRepoAliasSetResult, HostRepoAliasValidationError,
 };
 pub(crate) mod local_fact_writer;
 mod local_repo_metadata_repair;
@@ -66,7 +71,8 @@ pub use repo_catalog_runtime::{
     CatalogMembershipToken, PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval,
     RepoCatalogCreationCommit, RepoCatalogCutAuthority, RepoCatalogCutPermit, RepoCatalogError,
     RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
-    RevalidatedRepoCreation, RevalidatedRepoRemoval, normal_catalog_ids_for_ledger,
+    RepoCatalogRetirementDisposition, RevalidatedRepoCreation, RevalidatedRepoRemoval,
+    normal_catalog_ids_for_ledger,
 };
 pub(crate) use repo_catalog_runtime::{
     catalog_bootstrap_snapshot_for_ledger, prepared_identity_for_existing_database,

@@ -256,6 +256,25 @@ impl RepoCatalogStore {
         sync_directory(&self.dir).map_err(Into::into)
     }
 
+    pub(super) fn remove_exact(
+        &self,
+        expected: &RepoCatalogMembershipRecord,
+    ) -> Result<bool, RepoCatalogError> {
+        let current = self.load(expected.repo_id())?;
+        match current {
+            None => Ok(false),
+            Some(current) if current == *expected => {
+                std::fs::remove_file(self.record_path(expected.repo_id()))?;
+                sync_directory(&self.dir)?;
+                Ok(true)
+            }
+            Some(_) => Err(RepoCatalogError::CutOutcomeUnknown {
+                repo_id: expected.repo_id(),
+                detail: "catalog tombstone changed before exact retirement".to_string(),
+            }),
+        }
+    }
+
     #[cfg(test)]
     pub(super) fn post_replace_failure_marker(&self) -> PathBuf {
         self.dir
@@ -379,7 +398,7 @@ fn read_record(
     record.validate(expected_repo_id)?;
     if bytes != canonical_record_bytes(&record)? {
         return Err(RepoCatalogError::InvalidRecord(format!(
-            "repo catalog record is not deterministic JSON v1: {path:?}"
+            "repo catalog record is not deterministic JSON v2: {path:?}"
         )));
     }
     Ok(record)

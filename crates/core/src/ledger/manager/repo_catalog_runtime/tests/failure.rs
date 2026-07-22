@@ -50,9 +50,11 @@ fn post_replace_remove_failure_never_reopens_old_token() -> anyhow::Result<()> {
         .repo
         .prepare_repo_creation_membership(fixture.repo_id, Uuid::new_v4())?;
     commit_creation(&fixture.repo, &create)?;
-    let prepared = fixture
-        .repo
-        .prepare_repo_removal_membership(fixture.repo_id, Uuid::new_v4())?;
+    let prepared = fixture.repo.prepare_repo_removal_membership(
+        fixture.repo_id,
+        Uuid::new_v4(),
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
     let old = prepared.membership().clone();
     let store = store::RepoCatalogStore::open(fixture.repo.ledger_dir())?;
     let marker = store.post_replace_failure_marker();
@@ -96,9 +98,11 @@ fn pre_replace_remove_failure_restores_only_a_fresh_generation() -> anyhow::Resu
         .repo
         .prepare_repo_creation_membership(fixture.repo_id, Uuid::new_v4())?;
     commit_creation(&fixture.repo, &create)?;
-    let prepared = fixture
-        .repo
-        .prepare_repo_removal_membership(fixture.repo_id, Uuid::new_v4())?;
+    let prepared = fixture.repo.prepare_repo_removal_membership(
+        fixture.repo_id,
+        Uuid::new_v4(),
+        REMOVAL_MANIFEST_DIGEST,
+    )?;
     let old = prepared.membership().clone();
     let store = store::RepoCatalogStore::open(fixture.repo.ledger_dir())?;
     let marker = store.pre_replace_failure_marker();

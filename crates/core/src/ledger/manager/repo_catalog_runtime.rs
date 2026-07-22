@@ -19,7 +19,7 @@ pub use membership::{
 pub use model::{
     PreparedRepoCreation, PreparedRepoIdentity, PreparedRepoRemoval, RepoCatalogCreationCommit,
     RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
-    RevalidatedRepoCreation, RevalidatedRepoRemoval,
+    RepoCatalogRetirementDisposition, RevalidatedRepoCreation, RevalidatedRepoRemoval,
 };
 
 use crate::ledger::manager::local_repo_metadata_repair::validate_local_repo_metadata;

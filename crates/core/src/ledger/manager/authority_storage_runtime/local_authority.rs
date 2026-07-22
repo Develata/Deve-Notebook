@@ -6,6 +6,7 @@
 //! Process-local owner of every local Redb authority handle.
 
 mod admission;
+mod checkpoint;
 mod creation;
 mod drainage;
 mod inspection;
@@ -14,10 +15,12 @@ mod resource;
 mod retirement;
 
 use crate::models::RepoId;
-use crate::utils::fs::{HostPathIdentity, HostPathKind};
+use crate::utils::fs::{HostPathIdentity, HostPathKind, HostQuarantinePlan};
 use admission::{admit_existing_from_inner, lease_from_inner};
+pub use checkpoint::{
+    RepoAuthorityDatabaseCheckpoint, RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof,
+};
 use redb::Database;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -53,6 +56,8 @@ pub enum LocalAuthorityError {
     DrainTimeout(RepoId),
     #[error("local authority invariant failed: {0}")]
     Invariant(String),
+    #[error("local authority cleanup identity changed for RepoId {0}")]
+    CleanupIdentityChanged(RepoId),
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -96,6 +101,7 @@ enum RepoAuthoritySlot {
         generation: u64,
         authority_lock: File,
         db_path: PathBuf,
+        cleanup_capability_issued: bool,
     },
     Retired {
         prior_generation: u64,
@@ -155,36 +161,6 @@ pub struct RepoAuthorityLease {
     generation: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RepoAuthorityRemovalSnapshot {
-    repo_id: RepoId,
-    generation: u64,
-    database: HostPathIdentity,
-    authority_lock: HostPathIdentity,
-}
-
-impl RepoAuthorityRemovalSnapshot {
-    pub const fn repo_id(&self) -> RepoId {
-        self.repo_id
-    }
-
-    pub const fn generation(&self) -> u64 {
-        self.generation
-    }
-
-    pub fn database(&self) -> &HostPathIdentity {
-        &self.database
-    }
-
-    pub fn authority_lock(&self) -> &HostPathIdentity {
-        &self.authority_lock
-    }
-
-    pub fn revalidate(&self) -> std::io::Result<bool> {
-        Ok(self.database.revalidate()? && self.authority_lock.revalidate()?)
-    }
-}
-
 /// Non-clone capability for a newly initialized authority that has not yet
 /// crossed the durable catalog-membership cut.
 pub struct PreparedRepoAuthority {
@@ -201,7 +177,7 @@ pub struct PreparedRepoAuthority {
 /// Dropping this value rolls the slot back to `Active`. Only the removal
 /// coordinator may cross the durable commit cut with `into_committed_cleanup`.
 #[allow(dead_code)] // Consumed by the approved R3/R4 removal coordinator.
-pub(crate) struct RepoAuthorityQuiesceGuard {
+pub struct RepoAuthorityQuiesceGuard {
     inner: Arc<LocalAuthorityInner>,
     resources: Option<Arc<RepoAuthorityResources>>,
     repo_id: RepoId,
@@ -212,7 +188,7 @@ pub(crate) struct RepoAuthorityQuiesceGuard {
 /// Post-commit cleanup capability. The Redb handle is already closed while the
 /// cross-process owner lock remains held.
 #[allow(dead_code)] // Consumed by the approved R4 removal coordinator.
-pub(crate) struct RepoAuthorityCleanupGuard {
+pub struct RepoAuthorityCleanupGuard {
     inner: Arc<LocalAuthorityInner>,
     db_path: PathBuf,
     repo_id: RepoId,
@@ -271,13 +247,24 @@ impl RepoAuthorityLease {
             }
         }
         resource::validate_resource_identity(&self.resources)?;
+        let database =
+            HostPathIdentity::capture(&self.resources.db_path, HostPathKind::RegularFile)?;
+        let quarantine_id = Uuid::new_v4().simple().to_string();
+        let database_parent = self.resources.db_path.parent().ok_or_else(|| {
+            LocalAuthorityError::Invariant("local authority database has no parent".to_string())
+        })?;
+        let database_quarantine = HostQuarantinePlan::same_parent(
+            database.clone(),
+            database_parent.join(format!(
+                ".deve-removing-{quarantine_id}-{}.redb",
+                self.repo_id
+            )),
+        )?;
         Ok(RepoAuthorityRemovalSnapshot {
             repo_id: self.repo_id,
             generation: self.generation,
-            database: HostPathIdentity::capture(
-                &self.resources.db_path,
-                HostPathKind::RegularFile,
-            )?,
+            database,
+            database_quarantine,
             authority_lock: HostPathIdentity::capture(
                 &self.resources.lock_path,
                 HostPathKind::RegularFile,

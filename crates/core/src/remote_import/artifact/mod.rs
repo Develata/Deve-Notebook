@@ -9,7 +9,10 @@ mod root;
 mod verify;
 
 pub(super) use capture::{ArtifactCapture, validate_remote_path};
-pub(super) use root::{ArtifactEntry, CandidateArtifactEntry, RemoteImportArtifactRoot};
+pub(super) use root::{
+    ArtifactEntry, CandidateArtifactEntry, RemoteImportArtifactRemovalCheckpoint,
+    RemoteImportArtifactRemovalPlan, RemoteImportArtifactRoot,
+};
 pub(super) use verify::{
     VerifiedRemoteImportEntry, publish_candidate_revision, verify_apply_artifacts,
     verify_exact_published_session, verify_published_session, verify_review_artifacts,

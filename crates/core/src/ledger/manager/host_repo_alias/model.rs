@@ -9,10 +9,33 @@ pub(super) const EXPORT_FORMAT: &str = "deve.host-repo-aliases";
 pub(super) const EXPORT_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HostRepoAliasBinding {
     pub repo_id: RepoId,
     pub alias: String,
     pub alias_revision: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HostRepoAliasRemovalPlan {
+    pub(super) binding: HostRepoAliasBinding,
+}
+
+impl HostRepoAliasRemovalPlan {
+    pub fn repo_id(&self) -> RepoId {
+        self.binding.repo_id
+    }
+
+    pub fn alias_revision(&self) -> u64 {
+        self.binding.alias_revision
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostRepoAliasCleanupDisposition {
+    Deleted,
+    AlreadyAbsent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

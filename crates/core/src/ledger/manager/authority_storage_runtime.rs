@@ -9,7 +9,9 @@ pub(crate) use local_authority::{
     BoundRepoAuthority, LocalAuthorityDiscovery, LocalAuthorityRuntime,
 };
 pub use local_authority::{
-    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease, RepoAuthorityRemovalSnapshot,
+    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityCleanupGuard,
+    RepoAuthorityDatabaseCheckpoint, RepoAuthorityLease, RepoAuthorityQuiesceGuard,
+    RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof,
 };
 
 use crate::ledger::manager::types::RepoManager;
@@ -144,6 +146,69 @@ impl RepoManager {
         repo_id: crate::models::RepoId,
     ) -> std::result::Result<RepoAuthorityRemovalSnapshot, LocalAuthorityError> {
         self.lease_local_authority(repo_id)?.removal_snapshot()
+    }
+
+    /// Revalidates the exact, already-sealed removal snapshot without
+    /// constructing a second quarantine identity.
+    pub fn revalidate_local_authority_for_removal(
+        &self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+    ) -> std::result::Result<bool, LocalAuthorityError> {
+        if snapshot.repo_id() == RepoId::nil() || !snapshot.revalidate()? {
+            return Ok(false);
+        }
+        let lease = self.lease_local_authority(snapshot.repo_id())?;
+        Ok(lease.generation() == snapshot.generation())
+    }
+
+    pub fn quiesce_local_authority_for_removal(
+        &self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+    ) -> std::result::Result<RepoAuthorityQuiesceGuard, LocalAuthorityError> {
+        if snapshot.repo_id() == RepoId::nil() || !snapshot.revalidate()? {
+            return Err(LocalAuthorityError::CleanupIdentityChanged(
+                snapshot.repo_id(),
+            ));
+        }
+        self.local_authority
+            .quiesce(snapshot.repo_id(), snapshot.generation())
+    }
+
+    pub fn resume_local_authority_cleanup(
+        &self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+    ) -> std::result::Result<RepoAuthorityCleanupGuard, LocalAuthorityError> {
+        self.local_authority.resume_committed_cleanup(snapshot)
+    }
+
+    pub fn acquire_local_authority_retirement_proof(
+        &self,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+    ) -> std::result::Result<RepoAuthorityRetirementProof, LocalAuthorityError> {
+        self.local_authority.acquire_retired_finalization(snapshot)
+    }
+
+    /// Releases the persistent authority owner lock only after the composed
+    /// owner proves both canonical DB cleanup and exact catalog retirement.
+    pub fn retire_local_authority_after_removal(
+        &self,
+        mut cleanup: RepoAuthorityCleanupGuard,
+        snapshot: &RepoAuthorityRemovalSnapshot,
+        checkpoint: &RepoAuthorityDatabaseCheckpoint,
+    ) -> Result<()> {
+        if cleanup.repo_id() != snapshot.repo_id() || cleanup.generation() != snapshot.generation()
+        {
+            anyhow::bail!("local authority retirement capability does not bind its snapshot");
+        }
+        cleanup.verify_database_cleanup_complete(snapshot, checkpoint)?;
+        if self
+            .repo_catalog_membership_record(snapshot.repo_id())?
+            .is_some()
+        {
+            anyhow::bail!("local authority retirement preceded exact catalog retirement");
+        }
+        cleanup.complete_inner()?;
+        Ok(())
     }
 
     pub(crate) fn lease_local_authority_stem(

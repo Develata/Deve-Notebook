@@ -4,6 +4,7 @@
 use super::types::{
     RemoteImportBlocker, RemoteImportCandidateRevision, RemoteImportSessionId, RemoteImportState,
 };
+use crate::models::RepoId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -64,6 +65,8 @@ pub enum RemoteImportError {
     ApplyFailed(String),
     #[error("Remote Import repair inventory changed after dry-run")]
     RepairPlanChanged,
+    #[error("Remote Import removal state changed for repo {0}")]
+    RepoRemovalChanged(RepoId),
 }
 
 impl RemoteImportError {

@@ -101,6 +101,36 @@ fn checked_lock_directory(ledger_dir: &Path) -> Result<PathBuf, LocalAuthorityEr
     Ok(locks)
 }
 
+pub(super) fn open_committed_cleanup_lock(
+    ledger_dir: &Path,
+    snapshot: &super::RepoAuthorityRemovalSnapshot,
+) -> Result<(std::fs::File, PathBuf), LocalAuthorityError> {
+    let repo_id = snapshot.repo_id();
+    let lock_dir = checked_lock_directory(ledger_dir)?;
+    let lock_path = lock_dir.join(format!("{repo_id}.lock"));
+    let local_dir =
+        RepoManager::checked_local_dir_for(ledger_dir, "resuming local authority cleanup")?;
+    let db_path = local_dir.join(format!("{repo_id}.redb"));
+    if snapshot.authority_lock().path() != lock_path || snapshot.database().path() != db_path {
+        return Err(LocalAuthorityError::CleanupIdentityChanged(repo_id));
+    }
+    if snapshot.authority_lock().classify()? != crate::utils::fs::HostPathState::Exact {
+        return Err(LocalAuthorityError::CleanupIdentityChanged(repo_id));
+    }
+    if snapshot.database().classify()? == crate::utils::fs::HostPathState::Changed {
+        return Err(LocalAuthorityError::CleanupIdentityChanged(repo_id));
+    }
+    let authority_lock = open_regular_file_lock(&lock_path, "local authority cleanup lock")?;
+    if let Err(error) = authority_lock.try_lock() {
+        return match error {
+            std::fs::TryLockError::WouldBlock => Err(LocalAuthorityError::Busy(repo_id)),
+            std::fs::TryLockError::Error(error) => Err(LocalAuthorityError::Io(error)),
+        };
+    }
+    ensure_open_file_matches_path(&authority_lock, &lock_path, "local authority cleanup lock")?;
+    Ok((authority_lock, db_path))
+}
+
 fn create_regular_directory(path: &Path, context: &str) -> Result<(), LocalAuthorityError> {
     match std::fs::create_dir(path) {
         Ok(()) => {}

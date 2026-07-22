@@ -11,9 +11,9 @@ mod model;
 mod store;
 
 pub use model::{
-    HostRepoAliasBinding, HostRepoAliasError, HostRepoAliasImportSummary,
-    HostRepoAliasImportWarning, HostRepoAliasImportWarningReason, HostRepoAliasSetResult,
-    HostRepoAliasValidationError,
+    HostRepoAliasBinding, HostRepoAliasCleanupDisposition, HostRepoAliasError,
+    HostRepoAliasImportSummary, HostRepoAliasImportWarning, HostRepoAliasImportWarningReason,
+    HostRepoAliasRemovalPlan, HostRepoAliasSetResult, HostRepoAliasValidationError,
 };
 
 use self::import::{ParsedImport, evaluate_import};
@@ -126,6 +126,51 @@ impl HostRepoAliasRuntime {
             store.publish(&self.ledger_dir)?;
         }
         Ok(evaluation.summary)
+    }
+
+    pub fn prepare_removal(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<HostRepoAliasRemovalPlan, HostRepoAliasError> {
+        let membership = LocalRepoMembershipSnapshot::load(&self.ledger_dir)?;
+        self.require_active_local_repo(&membership, repo_id)?;
+        let binding = AliasStore::load(&self.ledger_dir)?.binding_or_fallback(repo_id);
+        Ok(HostRepoAliasRemovalPlan { binding })
+    }
+
+    pub fn cleanup_removal(
+        &self,
+        plan: &HostRepoAliasRemovalPlan,
+    ) -> Result<HostRepoAliasCleanupDisposition, HostRepoAliasError> {
+        let _store_guard = AliasStoreGuard::acquire(&self.ledger_dir)?;
+        membership::require_removed(&self.ledger_dir, plan.repo_id())?;
+        let mut store = AliasStore::load(&self.ledger_dir)?;
+        let current = store.binding_or_fallback(plan.repo_id());
+        if current != plan.binding {
+            return Err(HostRepoAliasError::RevisionConflict {
+                repo_id: plan.repo_id(),
+                expected: plan.binding.alias_revision,
+                current: current.alias_revision,
+            });
+        }
+        if plan.binding.alias_revision == 0 {
+            return Ok(HostRepoAliasCleanupDisposition::AlreadyAbsent);
+        }
+        if !store.remove_exact(&plan.binding) {
+            return Err(HostRepoAliasError::StoreInvalid(
+                "exact alias row disappeared during cleanup".to_string(),
+            ));
+        }
+        store.publish(&self.ledger_dir)?;
+        Ok(HostRepoAliasCleanupDisposition::Deleted)
+    }
+
+    pub fn removal_is_absent(
+        &self,
+        plan: &HostRepoAliasRemovalPlan,
+    ) -> Result<bool, HostRepoAliasError> {
+        let current = AliasStore::load(&self.ledger_dir)?.binding_or_fallback(plan.repo_id());
+        Ok(current.alias_revision == 0)
     }
 
     fn require_active_local_repo(

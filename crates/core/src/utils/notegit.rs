@@ -7,13 +7,16 @@ use serde::{Deserialize, Serialize};
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 
+mod removal;
+pub use removal::{NotegitRemovalCheckpoint, NotegitRemovalPlan, prepare_removal};
+
 pub const NOTE_GIT_DIR: &str = ".notegit";
 pub const GIT_DIR: &str = ".git";
 pub const NOTE_GIT_IGNORE_PATTERN: &str = ".notegit/";
 const DEVE_IGNORE_FILE: &str = ".deveignore";
 const IDENTITY_FILE: &str = "identity.toml";
 const IDENTITY_VERSION: u32 = 1;
-
+const IDENTITY_MARKER_MAX_BYTES: u64 = 64 * 1024;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct RepoIdentityMarker {
     version: u32,

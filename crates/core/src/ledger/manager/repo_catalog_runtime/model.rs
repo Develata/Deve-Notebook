@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 pub(super) const CATALOG_RECORD_FORMAT: &str = "deve.host-repo-membership";
-pub(super) const CATALOG_RECORD_VERSION: u32 = 1;
+pub(super) const CATALOG_RECORD_VERSION: u32 = 2;
 pub(super) const CATALOG_RECORD_MAX_BYTES: u64 = 16 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +31,8 @@ pub struct RepoCatalogMembershipRecord {
     pub(super) membership_revision: u64,
     pub(super) prepared_identity_digest: String,
     pub(super) lifecycle_request_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) removal_manifest_digest: Option<String>,
 }
 
 impl RepoCatalogMembershipRecord {
@@ -65,6 +67,19 @@ impl RepoCatalogMembershipRecord {
             && self.lifecycle_request_id == lifecycle_request_id
     }
 
+    pub fn confirms_removed_manifest(
+        &self,
+        lifecycle_request_id: Uuid,
+        manifest_digest: &str,
+    ) -> bool {
+        self.confirms_removed(lifecycle_request_id)
+            && self.removal_manifest_digest.as_deref() == Some(manifest_digest)
+    }
+
+    pub fn removal_manifest_digest(&self) -> Option<&str> {
+        self.removal_manifest_digest.as_deref()
+    }
+
     pub fn prepared_identity_digest(&self) -> &str {
         &self.prepared_identity_digest
     }
@@ -82,13 +97,16 @@ impl RepoCatalogMembershipRecord {
             membership_revision: 1,
             prepared_identity_digest: identity.to_hex(),
             lifecycle_request_id,
+            removal_manifest_digest: None,
         }
     }
 
     pub(super) fn removed(
         normal: &Self,
         lifecycle_request_id: Uuid,
+        manifest_digest: &str,
     ) -> Result<Self, RepoCatalogError> {
+        validate_digest(manifest_digest, "removal_manifest_digest")?;
         let revision = normal.membership_revision.checked_add(1).ok_or(
             RepoCatalogError::MembershipRevisionExhausted(normal.repo_id),
         )?;
@@ -100,6 +118,7 @@ impl RepoCatalogMembershipRecord {
             membership_revision: revision,
             prepared_identity_digest: normal.prepared_identity_digest.clone(),
             lifecycle_request_id,
+            removal_manifest_digest: Some(manifest_digest.to_string()),
         })
     }
 
@@ -133,6 +152,22 @@ impl RepoCatalogMembershipRecord {
             ));
         }
         PreparedRepoIdentity::from_hex(&self.prepared_identity_digest)?;
+        match self.state {
+            RepoCatalogMembershipState::Normal if self.removal_manifest_digest.is_some() => {
+                return Err(RepoCatalogError::InvalidRecord(
+                    "normal catalog record must not carry removal_manifest_digest".to_string(),
+                ));
+            }
+            RepoCatalogMembershipState::Removed => validate_digest(
+                self.removal_manifest_digest.as_deref().ok_or_else(|| {
+                    RepoCatalogError::InvalidRecord(
+                        "removed catalog record is missing removal_manifest_digest".to_string(),
+                    )
+                })?,
+                "removal_manifest_digest",
+            )?,
+            RepoCatalogMembershipState::Normal => {}
+        }
         Ok(())
     }
 }
@@ -196,6 +231,7 @@ pub struct PreparedRepoRemoval {
     pub(super) membership: CatalogMembershipToken,
     pub(super) prepared_identity: PreparedRepoIdentity,
     pub(super) lifecycle_request_id: Uuid,
+    pub(super) manifest_digest: String,
 }
 
 pub struct RevalidatedRepoCreation {
@@ -218,6 +254,7 @@ pub struct RevalidatedRepoRemoval {
     pub(super) repo_id: RepoId,
     pub(super) lifecycle_request_id: Uuid,
     pub(super) prepared_identity: PreparedRepoIdentity,
+    pub(super) manifest_digest: String,
     pub(super) store: RepoCatalogStore,
 }
 
@@ -226,8 +263,15 @@ impl std::fmt::Debug for RevalidatedRepoRemoval {
         f.debug_struct("RevalidatedRepoRemoval")
             .field("repo_id", &self.repo_id)
             .field("lifecycle_request_id", &self.lifecycle_request_id)
+            .field("manifest_digest", &self.manifest_digest)
             .finish_non_exhaustive()
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RepoCatalogRetirementDisposition {
+    Retired,
+    AlreadyAbsent,
 }
 
 impl PreparedRepoRemoval {
@@ -245,6 +289,24 @@ impl PreparedRepoRemoval {
 
     pub const fn prepared_identity(&self) -> PreparedRepoIdentity {
         self.prepared_identity
+    }
+
+    pub fn manifest_digest(&self) -> &str {
+        &self.manifest_digest
+    }
+}
+
+fn validate_digest(value: &str, field: &str) -> Result<(), RepoCatalogError> {
+    if value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        Ok(())
+    } else {
+        Err(RepoCatalogError::InvalidRecord(format!(
+            "{field} must be 64 lowercase hex characters"
+        )))
     }
 }
 

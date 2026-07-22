@@ -4,6 +4,9 @@
 //!   - 06_backup#projection-backup-secret-ref-contract
 
 mod cleanup;
+pub(in crate::remote_import) use cleanup::{
+    RemoteImportArtifactRemovalCheckpoint, RemoteImportArtifactRemovalPlan,
+};
 
 use super::durability::{publish_directory_no_replace, sync_directory_checked};
 use super::{BLOBS_DIR, CANDIDATES_DIR};

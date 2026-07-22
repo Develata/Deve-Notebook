@@ -77,6 +77,7 @@ fn quiescing_rejects_new_leases_and_timeout_restores_active() -> anyhow::Result<
 #[test]
 fn explicit_cleanup_retires_without_ordinary_reopen() -> anyhow::Result<()> {
     let (dir, runtime, repo_id) = new_runtime()?;
+    let snapshot = runtime.lease(repo_id)?.removal_snapshot()?;
     let quiesce = runtime.quiesce_for_test(repo_id, 1, Duration::from_secs(1))?;
     assert_eq!(quiesce.repo_id(), repo_id);
     assert_eq!(quiesce.generation(), 1);
@@ -92,7 +93,12 @@ fn explicit_cleanup_retires_without_ordinary_reopen() -> anyhow::Result<()> {
         Err(error) => error,
     };
     assert!(matches!(error, LocalAuthorityError::Busy(id) if id == repo_id));
-    cleanup.complete()?;
+    let mut cleanup = cleanup;
+    let checkpoint =
+        cleanup.advance_database_cleanup(&snapshot, &snapshot.initial_database_checkpoint())?;
+    let checkpoint = cleanup.advance_database_cleanup(&snapshot, &checkpoint)?;
+    cleanup.verify_database_cleanup_complete(&snapshot, &checkpoint)?;
+    cleanup.complete_inner()?;
     assert_eq!(
         runtime.snapshot_for_test(repo_id)?,
         Some(RepoAuthoritySlotSnapshot::Retired {
@@ -103,7 +109,12 @@ fn explicit_cleanup_retires_without_ordinary_reopen() -> anyhow::Result<()> {
         runtime.lease(repo_id),
         Err(LocalAuthorityError::Retired(id)) if id == repo_id
     ));
-    LocalAuthorityRuntime::open_existing(dir.path(), repo_id)?;
+    let reopened_lock = crate::utils::fs::open_regular_file_lock(
+        snapshot.authority_lock().path(),
+        "retired local authority lock",
+    )?;
+    reopened_lock.try_lock()?;
+    reopened_lock.unlock()?;
     Ok(())
 }
 
@@ -139,7 +150,7 @@ fn dropped_quiesce_guard_restores_active_without_generation_change() -> anyhow::
 }
 
 #[test]
-fn committed_cut_close_race_restores_rollback_capability() -> anyhow::Result<()> {
+fn committed_cut_close_race_stays_fail_closed_until_process_recovery() -> anyhow::Result<()> {
     let (_dir, runtime, repo_id) = new_runtime()?;
     let guard = runtime.quiesce_for_test(repo_id, 1, Duration::from_secs(1))?;
     let leaked_resource = guard
@@ -155,9 +166,12 @@ fn committed_cut_close_race_restores_rollback_capability() -> anyhow::Result<()>
     drop(leaked_resource);
     assert_eq!(
         runtime.snapshot_for_test(repo_id)?,
-        Some(RepoAuthoritySlotSnapshot::Active { generation: 1 })
+        Some(RepoAuthoritySlotSnapshot::Quiescing { generation: 1 })
     );
-    assert_eq!(runtime.lease(repo_id)?.generation(), 1);
+    assert!(matches!(
+        runtime.lease(repo_id),
+        Err(LocalAuthorityError::Quiescing(id)) if id == repo_id
+    ));
     Ok(())
 }
 

@@ -40,6 +40,22 @@ impl LocalRepoMembershipSnapshot {
     }
 }
 
+pub(super) fn require_removed(
+    ledger_dir: &Path,
+    repo_id: RepoId,
+) -> Result<(), HostRepoAliasError> {
+    let snapshot =
+        crate::ledger::manager::repo_catalog_runtime::catalog_bootstrap_snapshot_for_ledger(
+            ledger_dir,
+        )
+        .map_err(|error| HostRepoAliasError::Runtime(error.into()))?;
+    if snapshot.removed_repo_ids().contains(&repo_id) {
+        Ok(())
+    } else {
+        Err(HostRepoAliasError::UnknownLocalRepo(repo_id))
+    }
+}
+
 pub(super) fn checked_local_dir(
     ledger_dir: &Path,
     context: &str,

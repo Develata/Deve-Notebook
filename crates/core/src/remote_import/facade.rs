@@ -15,8 +15,8 @@ mod types;
 
 pub use removal::{
     RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalBlocked,
-    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalRevalidation,
-    RemoteImportRepoRemovalSnapshot,
+    RemoteImportRepoRemovalBlocker, RemoteImportRepoRemovalCheckpoint, RemoteImportRepoRemovalPlan,
+    RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot,
 };
 pub use types::{
     REMOTE_IMPORT_DEFAULT_PAGE_SIZE, REMOTE_IMPORT_MAX_PAGE_SIZE, RemoteImportApplyView,

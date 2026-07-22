@@ -255,7 +255,11 @@ fn apply_revalidates_membership_after_preview() -> anyhow::Result<()> {
 
     repo.seed_catalog_membership_from_records()?;
     let authority = repo.claim_repo_catalog_cut_authority()?;
-    let prepared = repo.prepare_repo_removal_membership(target, uuid::Uuid::new_v4())?;
+    let prepared = repo.prepare_repo_removal_membership(
+        target,
+        uuid::Uuid::new_v4(),
+        "0000000000000000000000000000000000000000000000000000000000000000",
+    )?;
     let revalidated = repo.revalidate_repo_removal_membership(&prepared)?;
     let permit = authority.permit(target)?;
     repo.commit_repo_removal_membership(&prepared, &revalidated, &permit)?;
