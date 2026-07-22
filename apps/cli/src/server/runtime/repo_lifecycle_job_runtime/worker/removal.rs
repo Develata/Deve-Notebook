@@ -20,10 +20,20 @@ use deve_core::protocol::{OpaqueFallbackBinding, RemovalConfirmationToken};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::sync::Arc;
+use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
 const CONFIRMATION_TTL_MS: i64 = 5 * 60 * 1_000;
+
+pub(super) struct ExecuteRemovalContext<'a> {
+    pub(super) store: &'a mut ReceiptStore,
+    pub(super) executor: &'a Arc<dyn RepoLifecycleJobExecutor>,
+    pub(super) jobs: &'a mut JoinSet<FinishedJob>,
+    pub(super) active_repos: &'a mut HashSet<RepoId>,
+    pub(super) runtime_incarnation: Uuid,
+    pub(super) progress_tx: mpsc::Sender<super::RemovalProgressCommand>,
+}
 
 pub(super) async fn prepare_removal(
     store: &mut ReceiptStore,
@@ -112,14 +122,18 @@ pub(super) async fn prepare_removal(
 }
 
 pub(super) async fn execute_removal(
-    store: &mut ReceiptStore,
-    executor: &Arc<dyn RepoLifecycleJobExecutor>,
-    jobs: &mut JoinSet<FinishedJob>,
-    active_repos: &mut HashSet<RepoId>,
-    runtime_incarnation: Uuid,
+    context: ExecuteRemovalContext<'_>,
     now_ms: i64,
     intent: RepoRemovalExecuteIntent,
 ) -> Result<RepoLifecycleJobAccepted, RepoLifecycleJobError> {
+    let ExecuteRemovalContext {
+        store,
+        executor,
+        jobs,
+        active_repos,
+        runtime_incarnation,
+        progress_tx,
+    } = context;
     intent.issuer.validate()?;
     if let Some(record) = store.removal_by_execute_request(intent.request_id) {
         let supplied_token_hash = token_hash(&intent.confirmation_token);
@@ -211,7 +225,14 @@ pub(super) async fn execute_removal(
         receipt,
     )?;
     active_repos.insert(record.repo_id);
-    spawn_job(jobs, executor.clone(), admitted(&receipt), false);
+    let removal = super::removal_execution_for_request(store, receipt.request_id, progress_tx)?;
+    spawn_job(
+        jobs,
+        executor.clone(),
+        admitted(&receipt),
+        Some(removal),
+        false,
+    );
     Ok(accepted(&receipt))
 }
 

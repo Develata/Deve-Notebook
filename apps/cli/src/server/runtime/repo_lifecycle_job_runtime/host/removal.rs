@@ -20,12 +20,7 @@ use deve_core::remote_import::{
     RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalBlocker,
     RemoteImportRepoRemovalRevalidation,
 };
-use deve_core::utils::fs::{HostPathIdentity, HostPathKind};
 use deve_core::utils::notegit;
-use sha2::{Digest, Sha256};
-use std::io::Read;
-
-const IDENTITY_MARKER_MAX_BYTES: u64 = 64 * 1024;
 
 impl RepoRemovalPlanner for RepoLifecycleHostExecutor {
     fn prepare_removal(
@@ -101,7 +96,7 @@ fn build_preparation(
             None
         }
     };
-    let locator = match repo.validated_projection_locator_for_repo_id(repo_id) {
+    let locator = match repo.prepare_projection_locator_removal(repo_id) {
         Ok(locator) => Some(locator),
         Err(_) => {
             push_unique(
@@ -111,10 +106,10 @@ fn build_preparation(
             None
         }
     };
-    let workspace_identity = locator
+    let notegit_plan = locator
         .as_ref()
-        .and_then(|locator| workspace_identities(locator, repo_id).ok());
-    if workspace_identity.is_none() {
+        .and_then(|locator| prepare_notegit_plan(locator, repo_id).ok());
+    if notegit_plan.is_none() {
         push_unique(
             &mut preview.blockers,
             LocalRepoRemovalBlocker::WorkspaceIdentityUnverified,
@@ -136,13 +131,16 @@ fn build_preparation(
             LocalRepoRemovalBlocker::ProjectionFault,
         ),
         Ok(false) => {}
-        Err(_) => push_unique(
-            &mut preview.blockers,
-            LocalRepoRemovalBlocker::RepairRequired,
-        ),
+        Err(error) => {
+            tracing::warn!(repo_id = %repo_id, %error, "local removal projection-health admission failed");
+            push_unique(
+                &mut preview.blockers,
+                LocalRepoRemovalBlocker::RepairRequired,
+            );
+        }
     }
-    let alias_revision = match repo.host_repo_alias_runtime().binding(repo_id) {
-        Ok(binding) => Some(binding.alias_revision),
+    let alias = match repo.host_repo_alias_runtime().prepare_removal(repo_id) {
+        Ok(plan) => Some(plan),
         Err(_) => {
             push_unique(
                 &mut preview.blockers,
@@ -174,7 +172,8 @@ fn build_preparation(
             );
             None
         }
-        Err(_) => {
+        Err(error) => {
+            tracing::warn!(repo_id = %repo_id, %error, "local removal Remote Import admission failed");
             push_unique(
                 &mut preview.blockers,
                 LocalRepoRemovalBlocker::RepairRequired,
@@ -206,8 +205,8 @@ fn build_preparation(
         catalog,
         authority,
         locator,
-        workspace_identity,
-        alias_revision,
+        notegit_plan,
+        alias,
         watcher_generation,
         remote_snapshot,
     ) {
@@ -215,8 +214,8 @@ fn build_preparation(
             Some(catalog),
             Some(authority),
             Some(locator),
-            Some((workspace_root, notegit_root, identity_marker, identity_marker_digest)),
-            Some(alias_revision),
+            Some(notegit),
+            Some(alias),
             Some(watcher_generation),
             Some(remote_import),
         ) => Some(RepoRemovalManifest {
@@ -224,11 +223,8 @@ fn build_preparation(
             catalog,
             authority,
             locator,
-            workspace_root,
-            notegit_root,
-            identity_marker,
-            identity_marker_digest,
-            alias_revision,
+            notegit,
+            alias,
             watcher_generation,
             remote_import,
             fallback,
@@ -246,35 +242,25 @@ fn revalidate(
     manifest: &RepoRemovalManifest,
 ) -> Result<(), RepoLifecycleJobError> {
     let current_locator = repo
-        .validated_projection_locator_for_repo_id(manifest.repo_id)
+        .prepare_projection_locator_removal(manifest.repo_id)
         .ok()
         .filter(|locator| locator == &manifest.locator);
-    let current_workspace = current_locator
-        .as_ref()
-        .and_then(|locator| workspace_identities(locator, manifest.repo_id).ok());
     let exact = repo
         .repo_catalog_membership_record(manifest.repo_id)
         .ok()
         .flatten()
         .is_some_and(|record| record == manifest.catalog)
         && repo
-            .snapshot_local_authority_for_removal(manifest.repo_id)
+            .revalidate_local_authority_for_removal(&manifest.authority)
             .ok()
-            .is_some_and(|snapshot| snapshot == manifest.authority)
-        && manifest.authority.revalidate().unwrap_or(false)
-        && current_workspace.is_some_and(
-            |(workspace_root, notegit_root, identity_marker, identity_marker_digest)| {
-                workspace_root == manifest.workspace_root
-                    && notegit_root == manifest.notegit_root
-                    && identity_marker == manifest.identity_marker
-                    && identity_marker_digest == manifest.identity_marker_digest
-            },
-        )
+            .unwrap_or(false)
+        && current_locator.is_some()
+        && manifest.notegit.revalidate().unwrap_or(false)
         && repo
             .host_repo_alias_runtime()
-            .binding(manifest.repo_id)
+            .prepare_removal(manifest.repo_id)
             .ok()
-            .is_some_and(|binding| binding.alias_revision == manifest.alias_revision)
+            .is_some_and(|plan| plan == manifest.alias)
         && watcher
             .admit(manifest.repo_id)
             .ok()
@@ -292,39 +278,17 @@ fn revalidate(
     }
 }
 
-fn workspace_identities(
-    locator: &deve_core::ledger::ProjectionLocatorRecord,
+fn prepare_notegit_plan(
+    locator: &deve_core::ledger::ProjectionLocatorRemovalPlan,
     repo_id: RepoId,
-) -> anyhow::Result<(HostPathIdentity, HostPathIdentity, HostPathIdentity, String)> {
-    let workspace_root =
-        std::fs::canonicalize(locator.projection_base_abs.join(&locator.workspace_segment))?;
-    let marker_path = notegit::repo_identity_path(&workspace_root);
-    let marker_file =
-        deve_core::utils::fs::open_regular_file_read(&marker_path, "repo removal identity marker")?;
-    let marker_len = marker_file.metadata()?.len();
-    if marker_len > IDENTITY_MARKER_MAX_BYTES {
-        anyhow::bail!("repo identity marker exceeds removal admission budget");
-    }
-    let mut marker_bytes = Vec::with_capacity(marker_len as usize);
-    (&marker_file)
-        .take(IDENTITY_MARKER_MAX_BYTES + 1)
-        .read_to_end(&mut marker_bytes)?;
-    if marker_bytes.len() as u64 > IDENTITY_MARKER_MAX_BYTES {
-        anyhow::bail!("repo identity marker exceeds removal admission budget");
-    }
-    notegit::validate_repo_identity_marker_content(&marker_bytes, &workspace_root, repo_id)?;
-    deve_core::utils::fs::ensure_open_file_matches_path(
-        &marker_file,
-        &marker_path,
-        "repo removal identity marker",
+) -> anyhow::Result<deve_core::utils::notegit::NotegitRemovalPlan> {
+    let workspace_root = std::fs::canonicalize(
+        locator
+            .record()
+            .projection_base_abs
+            .join(&locator.record().workspace_segment),
     )?;
-    let marker_identity = HostPathIdentity::capture(&marker_path, HostPathKind::RegularFile)?;
-    Ok((
-        HostPathIdentity::capture(&workspace_root, HostPathKind::Directory)?,
-        HostPathIdentity::capture(&notegit::repo_dir(&workspace_root), HostPathKind::Directory)?,
-        marker_identity,
-        format!("{:x}", Sha256::digest(&marker_bytes)),
-    ))
+    notegit::prepare_removal(&workspace_root, repo_id)
 }
 
 fn fallback_snapshot(

@@ -9,6 +9,7 @@
 mod admission;
 mod io;
 mod mount;
+mod owned_removal;
 #[cfg(test)]
 mod tests;
 mod types;
@@ -36,20 +37,29 @@ use deve_core::sync::SyncManager;
 use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(test)]
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU8};
 
 pub(crate) struct RepoLifecycleCoordinator {
     repo: Arc<deve_core::ledger::RepoManager>,
     sync: Arc<SyncManager>,
     gate: Arc<RepoMutationPublicationGate>,
     watchers: Arc<WatcherSupervisor>,
-    #[cfg(test)]
     remote_import: Arc<RemoteImportCoordinator>,
     #[cfg(test)]
     membership: CatalogMembershipRuntime,
     configured_projection_base: Option<PathBuf>,
     #[cfg(test)]
     fail_fallback_publication: AtomicBool,
+    #[cfg(test)]
+    fail_next_owned_cleanup_step: AtomicU8,
+    #[cfg(test)]
+    fail_next_authority_retirement: AtomicBool,
+    #[cfg(test)]
+    fail_after_cut_attempted: AtomicBool,
+    #[cfg(test)]
+    fail_after_catalog_cut: AtomicBool,
+    #[cfg(test)]
+    fail_next_terminal_completion: AtomicBool,
 }
 
 #[cfg(test)]
@@ -77,19 +87,28 @@ impl RepoLifecycleCoordinator {
         configured_projection_base: Option<PathBuf>,
     ) -> Arc<Self> {
         #[cfg(not(test))]
-        let _ = (&remote_import, &membership);
+        let _ = membership;
         Arc::new(Self {
             repo,
             sync,
             gate,
             watchers,
-            #[cfg(test)]
             remote_import,
             #[cfg(test)]
             membership,
             configured_projection_base,
             #[cfg(test)]
             fail_fallback_publication: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_next_owned_cleanup_step: AtomicU8::new(0),
+            #[cfg(test)]
+            fail_next_authority_retirement: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_after_cut_attempted: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_after_catalog_cut: AtomicBool::new(false),
+            #[cfg(test)]
+            fail_next_terminal_completion: AtomicBool::new(false),
         })
     }
 
@@ -314,10 +333,11 @@ impl RepoLifecycleCoordinator {
                 })
             })
             .await??;
-        let prepared = match self
-            .repo
-            .prepare_repo_removal_membership(repo_id, lifecycle_request_id)
-        {
+        let prepared = match self.repo.prepare_repo_removal_membership(
+            repo_id,
+            lifecycle_request_id,
+            "0000000000000000000000000000000000000000000000000000000000000000",
+        ) {
             Ok(prepared) => prepared,
             Err(error) => {
                 return Err(self.cancel_remove_before_stop(initial, error.to_string()));
@@ -470,14 +490,5 @@ impl RepoLifecycleCoordinator {
             fallback: initial.fallback,
             repair_required,
         })
-    }
-}
-
-impl From<anyhow::Error> for RepoLifecycleError {
-    fn from(error: anyhow::Error) -> Self {
-        Self::NotCommitted {
-            operation: "lifecycle",
-            detail: error.to_string(),
-        }
     }
 }

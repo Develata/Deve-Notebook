@@ -32,7 +32,6 @@ pub(super) struct ProviderTaskRuntime {
     idle: Condvar,
 }
 
-#[cfg(test)]
 #[derive(Debug)]
 pub(crate) struct ProviderQuiesceToken {
     repo_id: RepoId,
@@ -73,7 +72,6 @@ impl ProviderTaskRuntime {
         })
     }
 
-    #[cfg(test)]
     pub(super) fn quiesce(
         &self,
         repo_id: RepoId,
@@ -100,7 +98,6 @@ impl ProviderTaskRuntime {
         })
     }
 
-    #[cfg(test)]
     pub(super) fn resume(&self, token: &ProviderQuiesceToken) -> Result<(), ProviderTaskError> {
         let mut slots = self
             .slots
@@ -117,7 +114,6 @@ impl ProviderTaskRuntime {
         Ok(())
     }
 
-    #[cfg(test)]
     pub(super) fn finish(&self, token: ProviderQuiesceToken) -> Result<(), ProviderTaskError> {
         let mut slots = self
             .slots
@@ -131,6 +127,42 @@ impl ProviderTaskRuntime {
         }
         slots.remove(&token.repo_id);
         Ok(())
+    }
+
+    pub(super) fn cleanup_removed_repo(&self, repo_id: RepoId) -> Result<bool, ProviderTaskError> {
+        let mut slots = self
+            .slots
+            .lock()
+            .map_err(|_| ProviderTaskError::Coordination)?;
+        match slots.get(&repo_id) {
+            None => Ok(false),
+            Some(slot) if slot.active => Err(ProviderTaskError::Busy),
+            Some(_) => {
+                slots.remove(&repo_id);
+                self.idle.notify_all();
+                Ok(true)
+            }
+        }
+    }
+
+    pub(super) fn admission_is_open(&self, repo_id: RepoId) -> Result<bool, ProviderTaskError> {
+        let slots = self
+            .slots
+            .lock()
+            .map_err(|_| ProviderTaskError::Coordination)?;
+        Ok(slots
+            .get(&repo_id)
+            .is_none_or(|slot| !slot.active && !slot.quiescing))
+    }
+
+    pub(super) fn removed_repo_slot_is_absent(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<bool, ProviderTaskError> {
+        self.slots
+            .lock()
+            .map(|slots| !slots.contains_key(&repo_id))
+            .map_err(|_| ProviderTaskError::Coordination)
     }
 }
 

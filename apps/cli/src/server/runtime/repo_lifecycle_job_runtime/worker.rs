@@ -3,10 +3,12 @@
 
 use super::model::{
     AdmittedRepoLifecycleJob, RepoLifecycleJobAccepted, RepoLifecycleJobCompletion,
-    RepoLifecycleJobError, RepoLifecycleJobExecutor, RepoLifecycleJobIntent, RepoLifecycleJobPhase,
+    RepoLifecycleJobError, RepoLifecycleJobExecutor, RepoLifecycleJobIntent,
     RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
 };
+use super::removal::{RemovalProgressCommand, RepoRemovalExecution, RepoRemovalProgress};
 use super::removal::{RepoRemovalExecuteIntent, RepoRemovalPrepareIntent, RepoRemovalPrepared};
+use super::store::RemovalPreparationState;
 use super::store::{LifecycleReceipt, ReceiptStore};
 use deve_core::models::RepoId;
 use futures::FutureExt;
@@ -25,6 +27,7 @@ const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(1);
 #[cfg(test)]
 const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(50);
 
+mod progress;
 mod removal;
 
 pub(super) enum Command {
@@ -64,6 +67,7 @@ pub(super) async fn run(
     runtime_incarnation: Uuid,
     mut commands: mpsc::Receiver<Command>,
 ) -> Result<(), RepoLifecycleJobError> {
+    let (progress_tx, mut progress_rx) = mpsc::channel(32);
     prune_terminal(&mut store, executor.as_ref())?;
     let mut jobs = JoinSet::new();
     let mut active_repos = HashSet::new();
@@ -74,6 +78,7 @@ pub(super) async fn run(
         &mut jobs,
         &mut active_repos,
         &mut recovery,
+        &progress_tx,
     )?;
     retry_pending_publications(&mut store, publication_sink.as_ref()).await?;
     prune_terminal(&mut store, executor.as_ref())?;
@@ -129,11 +134,14 @@ pub(super) async fn run(
                     }
                     Some(Command::ExecuteRemoval { intent, now_ms, reply }) => {
                         let result = removal::execute_removal(
-                            &mut store,
-                            &executor,
-                            &mut jobs,
-                            &mut active_repos,
-                            runtime_incarnation,
+                            removal::ExecuteRemovalContext {
+                                store: &mut store,
+                                executor: &executor,
+                                jobs: &mut jobs,
+                                active_repos: &mut active_repos,
+                                runtime_incarnation,
+                                progress_tx: progress_tx.clone(),
+                            },
                             now_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
                             intent,
                         ).await;
@@ -151,6 +159,15 @@ pub(super) async fn run(
                         shutdown_reply = Some(reply);
                     }
                     None => break,
+                }
+            }
+            progress = progress_rx.recv(), if !jobs.is_empty() => {
+                let Some(progress) = progress else {
+                    return Err(RepoLifecycleJobError::Coordination("removal progress channel stopped"));
+                };
+                let result = progress::apply(&mut store, progress);
+                if let Err(RepoLifecycleJobError::Store(detail)) = &result {
+                    return Err(RepoLifecycleJobError::Store(detail.clone()));
                 }
             }
             finished = jobs.join_next(), if !jobs.is_empty() => {
@@ -176,6 +193,7 @@ pub(super) async fn run(
                     &mut jobs,
                     &mut active_repos,
                     &mut recovery,
+                    &progress_tx,
                 )?;
             }
         }
@@ -230,7 +248,7 @@ fn admit(
     let receipt = store
         .receipt(request_id)
         .expect("inserted lifecycle receipt must remain addressable");
-    spawn_job(jobs, executor.clone(), admitted(receipt), false);
+    spawn_job(jobs, executor.clone(), admitted(receipt), None, false);
     Ok(RepoLifecycleJobAccepted {
         request_id,
         job_id,
@@ -244,6 +262,7 @@ fn spawn_recovery_jobs(
     jobs: &mut JoinSet<FinishedJob>,
     active_repos: &mut HashSet<RepoId>,
     recovery: &mut VecDeque<LifecycleReceipt>,
+    progress_tx: &mpsc::Sender<RemovalProgressCommand>,
 ) -> Result<(), RepoLifecycleJobError> {
     while jobs.len() < MAX_ACTIVE_JOBS {
         let Some(receipt) = recovery.pop_front() else {
@@ -254,10 +273,17 @@ fn spawn_recovery_jobs(
                 "multiple interrupted lifecycle jobs target one RepoId",
             ));
         }
-        let receipt = store.update(receipt.request_id, |receipt| {
-            receipt.mark_phase(RepoLifecycleJobPhase::Recovering)
-        })?;
-        spawn_job(jobs, executor.clone(), admitted(&receipt), true);
+        let receipt = store.update(receipt.request_id, LifecycleReceipt::mark_recovering)?;
+        let removal = if receipt.operation == super::model::RepoLifecycleJobOperation::Remove {
+            Some(removal_execution_for_request(
+                store,
+                receipt.request_id,
+                progress_tx.clone(),
+            )?)
+        } else {
+            None
+        };
+        spawn_job(jobs, executor.clone(), admitted(&receipt), removal, true);
     }
     Ok(())
 }
@@ -266,16 +292,18 @@ fn spawn_job(
     jobs: &mut JoinSet<FinishedJob>,
     executor: Arc<dyn RepoLifecycleJobExecutor>,
     job: AdmittedRepoLifecycleJob,
+    removal: Option<RepoRemovalExecution>,
     recovery: bool,
 ) {
     jobs.spawn(async move {
         let request_id = job.request_id;
         let target_repo_id = job.target_repo_id;
         let result = AssertUnwindSafe(async move {
-            let future = if recovery {
-                executor.recover(job)
-            } else {
-                executor.execute(job)
+            let future = match (recovery, removal) {
+                (true, Some(removal)) => executor.recover_removal(job, removal),
+                (false, Some(removal)) => executor.execute_removal(job, removal),
+                (true, None) => executor.recover(job),
+                (false, None) => executor.execute(job),
             };
             future.await
         })
@@ -288,6 +316,36 @@ fn spawn_job(
             result,
         }
     });
+}
+
+pub(super) fn removal_execution_for_request(
+    store: &ReceiptStore,
+    execute_request_id: Uuid,
+    sender: mpsc::Sender<RemovalProgressCommand>,
+) -> Result<RepoRemovalExecution, RepoLifecycleJobError> {
+    let record = store
+        .removal_by_execute_request(execute_request_id)
+        .ok_or(RepoLifecycleJobError::NotFound)?;
+    let manifest = record
+        .manifest
+        .clone()
+        .ok_or(RepoLifecycleJobError::RemovalBlocked)?;
+    let manifest_digest = record
+        .manifest_digest
+        .clone()
+        .ok_or(RepoLifecycleJobError::RemovalBlocked)?;
+    let state = match &record.state {
+        RemovalPreparationState::ExecuteAdmitted { execution, .. } => execution.as_ref().clone(),
+        _ => return Err(RepoLifecycleJobError::ConfirmationInvalid),
+    };
+    Ok(RepoRemovalExecution {
+        preparation_id: record.preparation_id,
+        execute_request_id,
+        manifest_digest,
+        manifest,
+        state,
+        progress: RepoRemovalProgress::new(record.preparation_id, execute_request_id, sender),
+    })
 }
 
 fn panic_message(panic: Box<dyn std::any::Any + Send>) -> String {
@@ -316,7 +374,13 @@ async fn complete_and_publish(
     request_id: Uuid,
     completion: RepoLifecycleJobCompletion,
 ) -> Result<(), RepoLifecycleJobError> {
-    let receipt = store.update(request_id, |receipt| receipt.complete(completion))?;
+    if store.removal_has_committed_debt_for_request(request_id) {
+        return Ok(());
+    }
+    let receipt = match store.receipt(request_id) {
+        Some(receipt) if receipt.phase.is_terminal() => receipt.clone(),
+        _ => store.update(request_id, |receipt| receipt.complete(completion))?,
+    };
     if receipt.publication_pending {
         publish_one(store, sink, request_id).await?;
     }

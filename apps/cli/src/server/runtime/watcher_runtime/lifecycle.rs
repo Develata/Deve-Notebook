@@ -5,7 +5,6 @@
 //! Nonblocking lifecycle reservation and handle extraction.
 
 use super::error::WatcherLifecycleError;
-#[cfg(test)]
 use super::slot::WatcherMountSnapshot;
 use super::slot::{MountSlot, RepoMountState, SlotTransitionError};
 use super::supervisor::WatcherSupervisor;
@@ -37,7 +36,6 @@ impl WatcherMountReservation {
         self.generation
     }
 
-    #[cfg(test)]
     pub(crate) fn previous_generation(&self) -> Option<u64> {
         self.previous.as_ref().map(|slot| slot.generation())
     }
@@ -271,6 +269,50 @@ impl WatcherSupervisor {
         Ok(())
     }
 
+    pub(crate) fn cleanup_removed_repo_runtime(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<bool, WatcherLifecycleError> {
+        let owned = self.owned.lock().map_err(|_| {
+            WatcherLifecycleError::Coordination("watcher supervisor owner registry poisoned")
+        })?;
+        if owned.handles.contains_key(&repo_id) {
+            return Err(WatcherLifecycleError::HandleStillOwned {
+                repo_id,
+                generation: owned
+                    .handles
+                    .get(&repo_id)
+                    .map(|entry| entry.generation)
+                    .unwrap_or(0),
+            });
+        }
+        let mut slots = self.slots.lock().map_err(|_| {
+            WatcherLifecycleError::Coordination("watcher supervisor slot registry poisoned")
+        })?;
+        let Some(slot) = slots.remove(&repo_id) else {
+            return Ok(false);
+        };
+        slot.drop_deferred();
+        slot.mark_stopped_preserving_refresh();
+        Ok(true)
+    }
+
+    pub(crate) fn removed_repo_runtime_is_absent(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<bool, WatcherLifecycleError> {
+        let owned = self.owned.lock().map_err(|_| {
+            WatcherLifecycleError::Coordination("watcher supervisor owner registry poisoned")
+        })?;
+        if owned.handles.contains_key(&repo_id) {
+            return Ok(false);
+        }
+        let slots = self.slots.lock().map_err(|_| {
+            WatcherLifecycleError::Coordination("watcher supervisor slot registry poisoned")
+        })?;
+        Ok(!slots.contains_key(&repo_id))
+    }
+
     #[cfg(test)]
     pub(crate) fn discard_deferred(
         &self,
@@ -284,7 +326,6 @@ impl WatcherSupervisor {
         Ok(())
     }
 
-    #[cfg(test)]
     pub(crate) fn snapshot(
         &self,
         repo_id: RepoId,
@@ -299,7 +340,6 @@ impl WatcherSupervisor {
             .ok_or(WatcherLifecycleError::Missing(repo_id))
     }
 
-    #[cfg(test)]
     pub(crate) fn mounted_generation(&self, repo_id: RepoId) -> Result<u64, WatcherLifecycleError> {
         let snapshot = self.snapshot(repo_id)?;
         if snapshot.state() == RepoMountState::Mounted {

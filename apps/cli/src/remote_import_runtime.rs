@@ -7,6 +7,7 @@
 //! Remote Import facade. It owns no Ledger tables or workspace decisions.
 
 mod provider_tasks;
+mod removal;
 mod source_binding;
 
 use crate::remote_projection_transport::{
@@ -19,12 +20,10 @@ use deve_core::protocol::RemoteProjectionProvider;
 use deve_core::remote_import::{
     RemoteImportApplyView, RemoteImportBinding, RemoteImportCandidatePage,
     RemoteImportCandidateRevision, RemoteImportDiffView, RemoteImportEntryId,
-    RemoteImportPageCursor, RemoteImportRepairPlan, RemoteImportRepoRemovalAdmission,
-    RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot, RemoteImportResult,
-    RemoteImportService, RemoteImportSessionId, RemoteImportSessionView,
+    RemoteImportPageCursor, RemoteImportRepairPlan, RemoteImportResult, RemoteImportService,
+    RemoteImportSessionId, RemoteImportSessionView,
 };
 use deve_core::sync::SyncManager;
-#[cfg(test)]
 pub(crate) use provider_tasks::ProviderQuiesceToken;
 use provider_tasks::{ProviderTaskError, ProviderTaskLease, ProviderTaskRuntime};
 use source_binding::{ResolvedRemoteSource, canonical_binding_material, infer_provider};
@@ -323,64 +322,6 @@ impl RemoteImportCoordinator {
         expected_token: &str,
     ) -> Result<RemoteImportRepairPlan, RemoteImportHostError> {
         Ok(RemoteImportService::open(&self.repo, repo_id)?.apply_repair(expected_token)?)
-    }
-
-    pub(crate) fn repo_removal_admission(
-        &self,
-        repo_id: RepoId,
-    ) -> Result<RemoteImportRepoRemovalAdmission, RemoteImportHostError> {
-        if self
-            .applying
-            .lock()
-            .map_err(|_| RemoteImportHostError::Coordination)?
-            .contains(&repo_id)
-        {
-            return Err(RemoteImportHostError::ApplyBusy);
-        }
-        Ok(RemoteImportService::open(&self.repo, repo_id)?.repo_removal_admission()?)
-    }
-
-    pub(crate) fn revalidate_repo_removal(
-        &self,
-        repo_id: RepoId,
-        expected: &RemoteImportRepoRemovalSnapshot,
-    ) -> Result<RemoteImportRepoRemovalRevalidation, RemoteImportHostError> {
-        if self
-            .applying
-            .lock()
-            .map_err(|_| RemoteImportHostError::Coordination)?
-            .contains(&repo_id)
-        {
-            return Err(RemoteImportHostError::ApplyBusy);
-        }
-        Ok(RemoteImportService::open(&self.repo, repo_id)?.revalidate_repo_removal(expected)?)
-    }
-
-    /// Closes provider admission for one repo and waits until an in-flight
-    /// immutable capture has either sealed or aborted. The returned token is
-    /// exact process-local evidence for the remove commit phase.
-    #[cfg(test)]
-    pub(crate) fn quiesce_provider_for_remove(
-        &self,
-        repo_id: RepoId,
-    ) -> Result<ProviderQuiesceToken, RemoteImportHostError> {
-        self.providers.quiesce(repo_id).map_err(Into::into)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn resume_provider_after_failed_remove(
-        &self,
-        token: &ProviderQuiesceToken,
-    ) -> Result<(), RemoteImportHostError> {
-        self.providers.resume(token).map_err(Into::into)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn finish_provider_after_remove(
-        &self,
-        token: ProviderQuiesceToken,
-    ) -> Result<(), RemoteImportHostError> {
-        self.providers.finish(token).map_err(Into::into)
     }
 
     fn resolve_source(

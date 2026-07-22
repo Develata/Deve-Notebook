@@ -14,7 +14,6 @@ use deve_core::sync::SyncManager;
 use deve_core::sync::watcher::{WatcherFailure, WatcherFailureKind, WatcherFailurePhase};
 use std::sync::Arc;
 
-#[cfg(test)]
 pub(super) fn stop_reserved(
     supervisor: &WatcherSupervisor,
     reservation: &WatcherMountReservation,
@@ -28,6 +27,18 @@ pub(super) fn mount_reserved(
     reservation: &WatcherMountReservation,
     execution_name: String,
 ) -> RepoMountOutcome {
+    if start_reserved_unfinalized(supervisor, sync, reservation, execution_name).is_err() {
+        return RepoMountOutcome::Failed;
+    }
+    finalize_started(supervisor, reservation)
+}
+
+pub(super) fn start_reserved_unfinalized(
+    supervisor: &WatcherSupervisor,
+    sync: Arc<SyncManager>,
+    reservation: &WatcherMountReservation,
+    execution_name: String,
+) -> Result<(), WatcherLifecycleError> {
     let start = match setup::file_watcher_start(sync, execution_name, reservation.generation()) {
         Ok(start) => start,
         Err(error) => {
@@ -40,14 +51,29 @@ pub(super) fn mount_reserved(
                     error.to_string(),
                 ),
             );
-            return RepoMountOutcome::Failed;
+            return Err(WatcherLifecycleError::FailedBeforeMounted {
+                repo_id: reservation.repo_id(),
+                failure: Box::new(WatcherFailure::new(
+                    WatcherFailurePhase::Prepare,
+                    WatcherFailureKind::Repository,
+                    error.to_string(),
+                )),
+                cleanup: None,
+            });
         }
     };
     if let Err(error) = supervisor.start_reserved(reservation, start) {
         fail_reservation(supervisor, reservation, lifecycle_failure(&error));
         tracing::error!(%error, "dynamic repo watcher start failed");
-        return RepoMountOutcome::Failed;
+        return Err(error);
     }
+    Ok(())
+}
+
+pub(super) fn finalize_started(
+    supervisor: &WatcherSupervisor,
+    reservation: &WatcherMountReservation,
+) -> RepoMountOutcome {
     match supervisor.finalize_mounted(reservation) {
         Ok(_) => RepoMountOutcome::Mounted,
         Err(error) => {

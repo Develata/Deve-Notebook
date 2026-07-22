@@ -3,9 +3,8 @@
 //!
 //! Deterministic bounded lifecycle receipt retention.
 
-use super::{
-    LifecycleReceipt, RepoLifecycleJobOperation, TERMINAL_RECEIPT_LIMIT, TERMINAL_RETENTION_MS,
-};
+use super::{LifecycleReceipt, TERMINAL_RECEIPT_LIMIT, TERMINAL_RETENTION_MS};
+use crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobOperation;
 use deve_core::models::RepoId;
 use uuid::Uuid;
 

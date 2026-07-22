@@ -304,12 +304,10 @@ impl WatcherMountSnapshot {
         self.repo_id
     }
 
-    #[cfg(test)]
     pub(crate) fn generation(&self) -> u64 {
         self.generation
     }
 
-    #[cfg(test)]
     pub(crate) fn state(&self) -> RepoMountState {
         self.state
     }

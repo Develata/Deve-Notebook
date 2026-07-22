@@ -4,9 +4,12 @@
 //!
 //! Durable Prepare/Execute identities for ownership-aware local removal.
 
+use super::model::RepoLifecycleJobCompletion;
 use super::model::{JobFuture, RepoLifecycleJobError};
+use super::store::removal::{RemovalCleanupDisposition, RemovalCleanupStep, RemovalExecutionState};
 use deve_core::ledger::{
-    ProjectionLocatorRecord, RepoAuthorityRemovalSnapshot, RepoCatalogMembershipRecord,
+    HostRepoAliasRemovalPlan, ProjectionLocatorRemovalPlan, RepoAuthorityRemovalSnapshot,
+    RepoCatalogMembershipRecord,
 };
 use deve_core::models::RepoId;
 use deve_core::protocol::{
@@ -14,7 +17,9 @@ use deve_core::protocol::{
 };
 use deve_core::remote_import::RemoteImportRepoRemovalSnapshot;
 use deve_core::utils::fs::{HostPathIdentity, HostPathKind};
+use deve_core::utils::notegit::NotegitRemovalPlan;
 use serde::{Deserialize, Serialize};
+use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -127,33 +132,199 @@ pub(crate) struct RepoRemovalPrepared {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RepoRemovalFallbackSnapshot {
-    pub(super) repo_id: RepoId,
-    pub(super) membership_revision: u64,
-    pub(super) authority_generation: u64,
-    pub(super) watcher_generation: u64,
+    pub(crate) repo_id: RepoId,
+    pub(crate) membership_revision: u64,
+    pub(crate) authority_generation: u64,
+    pub(crate) watcher_generation: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RepoRemovalManifest {
-    pub(super) repo_id: RepoId,
-    pub(super) catalog: RepoCatalogMembershipRecord,
-    pub(super) authority: RepoAuthorityRemovalSnapshot,
-    pub(super) locator: ProjectionLocatorRecord,
-    pub(super) workspace_root: HostPathIdentity,
-    pub(super) notegit_root: HostPathIdentity,
-    pub(super) identity_marker: HostPathIdentity,
-    pub(super) identity_marker_digest: String,
-    pub(super) alias_revision: u64,
-    pub(super) watcher_generation: u64,
-    pub(super) remote_import: RemoteImportRepoRemovalSnapshot,
-    pub(super) fallback: Option<RepoRemovalFallbackSnapshot>,
+    pub(crate) repo_id: RepoId,
+    pub(crate) catalog: RepoCatalogMembershipRecord,
+    pub(crate) authority: RepoAuthorityRemovalSnapshot,
+    pub(crate) locator: ProjectionLocatorRemovalPlan,
+    pub(crate) notegit: NotegitRemovalPlan,
+    pub(crate) alias: HostRepoAliasRemovalPlan,
+    pub(crate) watcher_generation: u64,
+    pub(crate) remote_import: RemoteImportRepoRemovalSnapshot,
+    pub(crate) fallback: Option<RepoRemovalFallbackSnapshot>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct RepoRemovalPreparation {
     pub(super) manifest: Option<RepoRemovalManifest>,
     pub(super) preview: LocalRepoRemovalPreview,
+}
+
+pub(crate) struct RepoRemovalExecution {
+    pub(crate) preparation_id: Uuid,
+    pub(crate) execute_request_id: Uuid,
+    pub(crate) manifest_digest: String,
+    pub(crate) manifest: RepoRemovalManifest,
+    pub(crate) state: RemovalExecutionState,
+    pub(crate) progress: RepoRemovalProgress,
+}
+
+#[derive(Clone)]
+pub(crate) struct RepoRemovalProgress {
+    preparation_id: Uuid,
+    execute_request_id: Uuid,
+    sender: mpsc::Sender<RemovalProgressCommand>,
+}
+
+pub(super) struct RemovalProgressCommand {
+    pub(super) preparation_id: Uuid,
+    pub(super) execute_request_id: Uuid,
+    pub(super) update: RemovalProgressUpdate,
+    pub(super) reply: oneshot::Sender<Result<RemovalExecutionState, RepoLifecycleJobError>>,
+}
+
+pub(super) enum RemovalProgressUpdate {
+    SealRemoteImport(Box<deve_core::remote_import::RemoteImportRepoRemovalPlan>),
+    CutAttempted,
+    CutObserved(RepoCatalogMembershipRecord),
+    CutNotCommitted,
+    RemoteImportCheckpoint(Box<deve_core::remote_import::RemoteImportRepoRemovalCheckpoint>),
+    NotegitCheckpoint(deve_core::utils::notegit::NotegitRemovalCheckpoint),
+    AuthorityCheckpoint(Box<deve_core::ledger::RepoAuthorityDatabaseCheckpoint>),
+    CleanupStep {
+        step: RemovalCleanupStep,
+        disposition: RemovalCleanupDisposition,
+    },
+    CleanupComplete,
+    TombstoneRetired,
+    TerminalCandidate(Box<RepoLifecycleJobCompletion>),
+    TerminalComplete,
+}
+
+impl RepoRemovalProgress {
+    pub(super) fn new(
+        preparation_id: Uuid,
+        execute_request_id: Uuid,
+        sender: mpsc::Sender<RemovalProgressCommand>,
+    ) -> Self {
+        Self {
+            preparation_id,
+            execute_request_id,
+            sender,
+        }
+    }
+
+    async fn record(
+        &self,
+        update: RemovalProgressUpdate,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        let (reply, response) = oneshot::channel();
+        self.sender
+            .send(RemovalProgressCommand {
+                preparation_id: self.preparation_id,
+                execute_request_id: self.execute_request_id,
+                update,
+                reply,
+            })
+            .await
+            .map_err(|_| RepoLifecycleJobError::Coordination("removal progress owner stopped"))?;
+        response
+            .await
+            .map_err(|_| RepoLifecycleJobError::Coordination("removal progress reply dropped"))?
+    }
+
+    pub(crate) async fn seal_remote_import(
+        &self,
+        plan: deve_core::remote_import::RemoteImportRepoRemovalPlan,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::SealRemoteImport(Box::new(plan)))
+            .await
+    }
+
+    pub(crate) async fn cut_attempted(
+        &self,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::CutAttempted).await
+    }
+
+    pub(crate) async fn cut_observed(
+        &self,
+        tombstone: RepoCatalogMembershipRecord,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::CutObserved(tombstone))
+            .await
+    }
+
+    pub(crate) async fn cut_not_committed(
+        &self,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::CutNotCommitted).await
+    }
+
+    pub(crate) async fn cleanup_step(
+        &self,
+        step: RemovalCleanupStep,
+        disposition: RemovalCleanupDisposition,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::CleanupStep { step, disposition })
+            .await
+    }
+
+    pub(crate) async fn remote_import_checkpoint(
+        &self,
+        checkpoint: deve_core::remote_import::RemoteImportRepoRemovalCheckpoint,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::RemoteImportCheckpoint(Box::new(
+            checkpoint,
+        )))
+        .await
+    }
+
+    pub(crate) async fn notegit_checkpoint(
+        &self,
+        checkpoint: deve_core::utils::notegit::NotegitRemovalCheckpoint,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::NotegitCheckpoint(checkpoint))
+            .await
+    }
+
+    pub(crate) async fn authority_checkpoint(
+        &self,
+        checkpoint: deve_core::ledger::RepoAuthorityDatabaseCheckpoint,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::AuthorityCheckpoint(Box::new(
+            checkpoint,
+        )))
+        .await
+    }
+
+    pub(crate) async fn cleanup_complete(
+        &self,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::CleanupComplete).await
+    }
+
+    pub(crate) async fn tombstone_retired(
+        &self,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::TombstoneRetired).await
+    }
+
+    pub(crate) async fn terminal_candidate(
+        &self,
+        completion: RepoLifecycleJobCompletion,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::TerminalCandidate(Box::new(
+            completion,
+        )))
+        .await
+    }
+
+    pub(crate) async fn terminal_complete(
+        &self,
+    ) -> Result<RemovalExecutionState, RepoLifecycleJobError> {
+        self.record(RemovalProgressUpdate::TerminalComplete).await
+    }
 }
 
 pub(crate) trait RepoRemovalPlanner: Send + Sync + 'static {

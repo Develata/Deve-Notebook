@@ -2,15 +2,9 @@
 //!   - 03_storage/index#repo-runtime-layout
 //!   - 04_repository#repo-lifecycle-coordinator
 
-use super::model::{
-    RepoLifecycleJobCompletion, RepoLifecycleJobError, RepoLifecycleJobIntent,
-    RepoLifecycleJobOperation, RepoLifecycleJobOutcome, RepoLifecycleJobPhase,
-    RepoLifecycleJobStatus, RepoLifecycleSettledPublication,
-};
+use super::model::RepoLifecycleJobError;
 use deve_core::models::RepoId;
 use deve_core::utils::{fs as safe_fs, notegit};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -18,6 +12,8 @@ use uuid::Uuid;
 
 pub(super) mod removal;
 pub(super) use removal::{RemovalPreparationRecord, RemovalPreparationState};
+mod receipt;
+pub(super) use receipt::LifecycleReceipt;
 mod request_namespace;
 #[cfg(test)]
 mod test_support;
@@ -27,181 +23,11 @@ mod retention;
 
 const RECEIPT_DIR: &str = "repo-lifecycle-jobs";
 const LOCK_FILE: &str = "repo-lifecycle-jobs.lock";
-const RECEIPT_FORMAT: &str = "deve.host-repo-lifecycle-job";
-const RECEIPT_VERSION: u32 = 1;
 const RECEIPT_MAX_BYTES: u64 = 64 * 1024;
 const TERMINAL_RETENTION_MS: i64 = 24 * 60 * 60 * 1_000;
 const TERMINAL_RECEIPT_LIMIT: usize = 1024;
-const PRIMARY_MAX_BYTES: usize = 2 * 1024;
-const CLEANUP_MAX_ITEMS: usize = 8;
-const CLEANUP_ITEM_MAX_BYTES: usize = 1024;
-const PUBLICATION_ERROR_MAX_BYTES: usize = 1024;
 #[cfg(test)]
 pub(super) const POST_REPLACE_FAILURE_MARKER: &str = ".inject-post-replace-failure";
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct LifecycleReceipt {
-    format: String,
-    version: u32,
-    pub(super) request_id: Uuid,
-    pub(super) job_id: Uuid,
-    pub(super) target_repo_id: RepoId,
-    pub(super) operation: RepoLifecycleJobOperation,
-    pub(super) intent_digest: String,
-    pub(super) intent: RepoLifecycleJobIntent,
-    pub(super) phase: RepoLifecycleJobPhase,
-    pub(super) outcome: Option<RepoLifecycleJobOutcome>,
-    pub(super) publication: Option<RepoLifecycleSettledPublication>,
-    pub(super) publication_pending: bool,
-    pub(super) publication_attempts: u32,
-    pub(super) publication_last_error: Option<String>,
-    pub(super) primary: Option<String>,
-    pub(super) cleanup: Vec<String>,
-    pub(super) admitted_at_ms: i64,
-    pub(super) updated_at_ms: i64,
-}
-
-impl LifecycleReceipt {
-    pub(super) fn admitted(
-        request_id: Uuid,
-        job_id: Uuid,
-        target_repo_id: RepoId,
-        intent: RepoLifecycleJobIntent,
-    ) -> Result<Self, RepoLifecycleJobError> {
-        let now = chrono::Utc::now().timestamp_millis();
-        let intent_digest = intent_digest(&intent)?;
-        Ok(Self {
-            format: RECEIPT_FORMAT.to_owned(),
-            version: RECEIPT_VERSION,
-            request_id,
-            job_id,
-            target_repo_id,
-            operation: intent.operation(),
-            intent_digest,
-            intent,
-            phase: RepoLifecycleJobPhase::Running,
-            outcome: None,
-            publication: None,
-            publication_pending: false,
-            publication_attempts: 0,
-            publication_last_error: None,
-            primary: None,
-            cleanup: Vec::new(),
-            admitted_at_ms: now,
-            updated_at_ms: now,
-        })
-    }
-
-    pub(super) fn status(&self) -> RepoLifecycleJobStatus {
-        RepoLifecycleJobStatus {
-            request_id: self.request_id,
-            job_id: self.job_id,
-            target_repo_id: self.target_repo_id,
-            operation: self.operation,
-            phase: self.phase,
-            outcome: self.outcome,
-            publication_pending: self.publication_pending,
-            publication: self.publication.clone(),
-        }
-    }
-
-    pub(super) fn matches_intent(
-        &self,
-        intent: &RepoLifecycleJobIntent,
-    ) -> Result<bool, RepoLifecycleJobError> {
-        Ok(self.intent_digest == intent_digest(intent)? && self.intent == *intent)
-    }
-
-    pub(super) fn mark_phase(&mut self, phase: RepoLifecycleJobPhase) {
-        self.phase = phase;
-        self.updated_at_ms = chrono::Utc::now().timestamp_millis();
-    }
-
-    pub(super) fn complete(&mut self, completion: RepoLifecycleJobCompletion) {
-        self.phase = RepoLifecycleJobPhase::Terminal;
-        self.outcome = Some(completion.outcome);
-        self.publication_pending = completion.publication.is_some();
-        self.publication = completion.publication;
-        self.primary = completion
-            .primary
-            .map(|value| truncate_utf8(value, PRIMARY_MAX_BYTES));
-        self.cleanup = completion
-            .cleanup
-            .into_iter()
-            .take(CLEANUP_MAX_ITEMS)
-            .map(|value| truncate_utf8(value, CLEANUP_ITEM_MAX_BYTES))
-            .collect();
-        self.updated_at_ms = chrono::Utc::now().timestamp_millis();
-    }
-
-    pub(super) fn mark_publication_delivered(&mut self) {
-        self.publication_pending = false;
-        self.publication_last_error = None;
-        self.updated_at_ms = chrono::Utc::now().timestamp_millis();
-    }
-
-    pub(super) fn append_publication_failure(&mut self, error: String) {
-        self.publication_attempts = self.publication_attempts.saturating_add(1);
-        self.publication_last_error = Some(truncate_utf8(error, PUBLICATION_ERROR_MAX_BYTES));
-        self.updated_at_ms = chrono::Utc::now().timestamp_millis();
-    }
-
-    fn validate(&self, path_request_id: Uuid) -> Result<(), RepoLifecycleJobError> {
-        if self.format != RECEIPT_FORMAT || self.version != RECEIPT_VERSION {
-            return Err(store_invalid("unsupported receipt format or version"));
-        }
-        self.intent.validate()?;
-        if self.request_id != path_request_id
-            || self.intent.operation() != self.operation
-            || self.intent_digest != intent_digest(&self.intent)?
-        {
-            return Err(store_invalid("receipt identity or intent digest mismatch"));
-        }
-        if self
-            .intent
-            .requested_repo_id()
-            .is_some_and(|id| id != self.target_repo_id)
-        {
-            return Err(store_invalid("remove target RepoId mismatch"));
-        }
-        if self.phase.is_terminal() != self.outcome.is_some() {
-            return Err(store_invalid("receipt phase/outcome mismatch"));
-        }
-        if self.publication_pending && self.publication.is_none() {
-            return Err(store_invalid("publication debt has no publication payload"));
-        }
-        if self.publication.is_some()
-            && matches!(
-                self.outcome,
-                Some(
-                    RepoLifecycleJobOutcome::NotCommitted | RepoLifecycleJobOutcome::RepairRequired
-                )
-            )
-        {
-            return Err(store_invalid(
-                "non-committed or repair outcome carries a settled publication",
-            ));
-        }
-        if let Some(publication) = &self.publication {
-            let publication_matches = match (self.operation, publication) {
-                (
-                    RepoLifecycleJobOperation::Create,
-                    RepoLifecycleSettledPublication::Created { repo_id, .. },
-                )
-                | (
-                    RepoLifecycleJobOperation::Remove,
-                    RepoLifecycleSettledPublication::Removed { repo_id, .. },
-                ) => *repo_id == self.target_repo_id,
-                _ => false,
-            };
-            if !publication_matches {
-                return Err(store_invalid("publication operation or RepoId mismatch"));
-            }
-        }
-        Ok(())
-    }
-}
 
 pub(super) struct ReceiptStore {
     dir: PathBuf,
@@ -258,7 +84,13 @@ impl ReceiptStore {
                     .values()
                     .filter_map(RemovalPreparationRecord::receipt),
             )
-            .filter(|receipt| !receipt.phase.is_terminal())
+            .filter(|receipt| {
+                !receipt.phase.is_terminal()
+                    || removals.values().any(|record| {
+                        record.receipt_for_request(receipt.request_id).is_some()
+                            && record.has_committed_debt()
+                    })
+            })
         {
             if !active_repos.insert(receipt.target_repo_id) {
                 return Err(store_invalid(
@@ -291,7 +123,13 @@ impl ReceiptStore {
                     .values()
                     .filter_map(RemovalPreparationRecord::receipt),
             )
-            .filter(|receipt| !receipt.phase.is_terminal())
+            .filter(|receipt| {
+                !receipt.phase.is_terminal()
+                    || self.removals.values().any(|record| {
+                        record.receipt_for_request(receipt.request_id).is_some()
+                            && record.has_committed_debt()
+                    })
+            })
             .cloned()
             .collect()
     }
@@ -442,23 +280,6 @@ fn read_receipt(path: &Path, request_id: Uuid) -> Result<LifecycleReceipt, RepoL
     let receipt: LifecycleReceipt = serde_json::from_slice(&bytes)?;
     receipt.validate(request_id)?;
     Ok(receipt)
-}
-
-fn intent_digest(intent: &RepoLifecycleJobIntent) -> Result<String, RepoLifecycleJobError> {
-    let bytes = serde_json::to_vec(intent)?;
-    Ok(format!("{:x}", Sha256::digest(bytes)))
-}
-
-fn truncate_utf8(mut value: String, max_bytes: usize) -> String {
-    if value.len() <= max_bytes {
-        return value;
-    }
-    let mut boundary = max_bytes;
-    while !value.is_char_boundary(boundary) {
-        boundary -= 1;
-    }
-    value.truncate(boundary);
-    value
 }
 
 fn checked_directory(path: &Path, create: bool) -> Result<PathBuf, RepoLifecycleJobError> {

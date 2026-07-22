@@ -165,7 +165,8 @@ pub(crate) struct AdmittedRepoLifecycleJob {
     pub(crate) intent: RepoLifecycleJobIntent,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RepoLifecycleJobCompletion {
     pub(crate) outcome: RepoLifecycleJobOutcome,
     pub(crate) publication: Option<RepoLifecycleSettledPublication>,
@@ -212,7 +213,6 @@ impl RepoLifecycleJobCompletion {
         }
     }
 
-    #[cfg(test)]
     pub(crate) fn with_cleanup(mut self, cleanup: impl Into<String>) -> Self {
         self.cleanup.push(cleanup.into());
         self
@@ -242,6 +242,22 @@ pub(crate) trait RepoLifecycleJobExecutor: super::removal::RepoRemovalPlanner {
     fn execute(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion>;
 
     fn recover(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion>;
+
+    fn execute_removal(
+        &self,
+        job: AdmittedRepoLifecycleJob,
+        _removal: super::removal::RepoRemovalExecution,
+    ) -> JobFuture<RepoLifecycleJobCompletion> {
+        self.execute(job)
+    }
+
+    fn recover_removal(
+        &self,
+        job: AdmittedRepoLifecycleJob,
+        _removal: super::removal::RepoRemovalExecution,
+    ) -> JobFuture<RepoLifecycleJobCompletion> {
+        self.recover(job)
+    }
 
     fn retain_create_receipt(&self, _repo_id: RepoId) -> bool {
         false

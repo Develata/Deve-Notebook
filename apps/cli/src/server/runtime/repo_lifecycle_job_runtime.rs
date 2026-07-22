@@ -16,15 +16,18 @@ mod worker;
 
 pub(crate) use host::{RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink};
 pub(crate) use model::{
-    RepoLifecycleJobAccepted, RepoLifecycleJobError, RepoLifecycleJobExecutor,
-    RepoLifecycleJobIntent, RepoLifecycleJobOperation, RepoLifecycleJobOutcome,
-    RepoLifecycleJobPhase, RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
-    RepoLifecycleSettledPublication,
+    RepoLifecycleJobAccepted, RepoLifecycleJobCompletion, RepoLifecycleJobError,
+    RepoLifecycleJobExecutor, RepoLifecycleJobIntent, RepoLifecycleJobOperation,
+    RepoLifecycleJobOutcome, RepoLifecycleJobPhase, RepoLifecycleJobStatus,
+    RepoLifecyclePublicationSink, RepoLifecycleSettledPublication,
 };
 pub(crate) use removal::{
-    RepoRemovalExecuteIntent, RepoRemovalIssuerBinding, RepoRemovalPrepareIntent,
-    RepoRemovalPrepared,
+    RepoRemovalExecuteIntent, RepoRemovalExecution, RepoRemovalFallbackSnapshot,
+    RepoRemovalIssuerBinding, RepoRemovalPrepareIntent, RepoRemovalPrepared,
 };
+#[cfg(test)]
+pub(crate) use store::removal::PRE_REPLACE_FAILURE_MARKER as REMOVAL_PRE_REPLACE_FAILURE_MARKER;
+pub(crate) use store::removal::{RemovalCleanupDisposition, RemovalCleanupStep, RemovalCutState};
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};

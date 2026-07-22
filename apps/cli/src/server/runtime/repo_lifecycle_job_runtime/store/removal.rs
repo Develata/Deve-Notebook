@@ -3,10 +3,17 @@
 //!
 //! Same-owner durable removal preparation and admitted-job records.
 
-use super::{
-    LifecycleReceipt, RECEIPT_MAX_BYTES, TERMINAL_RECEIPT_LIMIT, TERMINAL_RETENTION_MS,
-    checked_directory, is_reparse, store_invalid,
+mod execution;
+mod retention;
+
+pub(crate) use execution::{
+    RemovalCleanupDisposition, RemovalCleanupReceipt, RemovalCleanupStep, RemovalCutState,
+    RemovalExecutionState, RemovalTerminalState,
 };
+#[cfg(test)]
+pub(super) use retention::removal_retention_removals_for_test;
+
+use super::{LifecycleReceipt, RECEIPT_MAX_BYTES, checked_directory, is_reparse, store_invalid};
 use crate::server::runtime::repo_lifecycle_job_runtime::removal::{
     RepoRemovalFallbackSnapshot, RepoRemovalIssuerBinding, RepoRemovalManifest,
 };
@@ -22,7 +29,9 @@ use uuid::Uuid;
 use super::ReceiptStore;
 
 const FORMAT: &str = "deve.host-local-repo-removal";
-const VERSION: u32 = 1;
+const VERSION: u32 = 3;
+#[cfg(test)]
+pub(crate) const PRE_REPLACE_FAILURE_MARKER: &str = ".inject-removal-pre-replace-failure";
 const STORE_ENTRY_LIMIT: usize = 2_048;
 const STORE_AGGREGATE_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
@@ -40,6 +49,7 @@ pub(crate) enum RemovalPreparationState {
         consumed_fallback_hash: Option<String>,
         switch_nonce: u64,
         receipt: Box<LifecycleReceipt>,
+        execution: Box<RemovalExecutionState>,
     },
 }
 
@@ -114,6 +124,14 @@ impl RemovalPreparationRecord {
         }
     }
 
+    pub(super) fn has_committed_debt(&self) -> bool {
+        matches!(
+            &self.state,
+            RemovalPreparationState::ExecuteAdmitted { execution, .. }
+                if execution.has_committed_debt()
+        )
+    }
+
     pub(crate) fn receipt_for_request(&self, request_id: Uuid) -> Option<&LifecycleReceipt> {
         match &self.state {
             RemovalPreparationState::ExecuteAdmitted {
@@ -144,6 +162,7 @@ impl RemovalPreparationRecord {
             || self.version != VERSION
             || self.prepare_request_id.is_nil()
             || self.preparation_id.is_nil()
+            || self.prepare_request_id == self.preparation_id
         {
             return Err(store_invalid("invalid removal preparation identity"));
         }
@@ -181,9 +200,13 @@ impl RemovalPreparationRecord {
                 consumed_token_hash,
                 consumed_fallback_hash,
                 receipt,
+                execution,
                 ..
             } => {
-                if execute_request_id.is_nil() || *execute_request_id == self.prepare_request_id {
+                if execute_request_id.is_nil()
+                    || *execute_request_id == self.prepare_request_id
+                    || *execute_request_id == self.preparation_id
+                {
                     return Err(store_invalid(
                         "removal prepare and execute request ids must be distinct",
                     ));
@@ -199,6 +222,11 @@ impl RemovalPreparationRecord {
                     return Err(store_invalid("admitted removal receipt identity mismatch"));
                 }
                 receipt.validate(*execute_request_id)?;
+                let digest = self
+                    .manifest_digest
+                    .as_deref()
+                    .ok_or_else(|| store_invalid("admitted removal has no manifest digest"))?;
+                execution.validate(*execute_request_id, digest, receipt)?;
             }
         }
         Ok(())
@@ -226,6 +254,11 @@ impl ReceiptStore {
         self.removals
             .values()
             .find(|record| record.receipt_for_request(request_id).is_some())
+    }
+
+    pub(crate) fn removal_has_committed_debt_for_request(&self, request_id: Uuid) -> bool {
+        self.removal_by_execute_request(request_id)
+            .is_some_and(RemovalPreparationRecord::has_committed_debt)
     }
 
     pub(crate) fn publish_preparation(
@@ -297,12 +330,53 @@ impl ReceiptStore {
             consumed_fallback_hash,
             switch_nonce,
             receipt: Box::new(receipt.clone()),
+            execution: Box::new(RemovalExecutionState::default()),
         };
         record.updated_at_ms = chrono::Utc::now().timestamp_millis();
         record.validate()?;
         publish_removal(&self.removal_dir, &record)?;
         self.removals.insert(preparation_id, record);
         Ok(receipt)
+    }
+
+    pub(crate) fn update_removal_execution(
+        &mut self,
+        preparation_id: Uuid,
+        execute_request_id: Uuid,
+        mutate: impl FnOnce(
+            &mut RemovalExecutionState,
+            &mut LifecycleReceipt,
+        ) -> Result<(), super::super::RepoLifecycleJobError>,
+    ) -> Result<RemovalExecutionState, super::super::RepoLifecycleJobError> {
+        let mut record = self
+            .removals
+            .get(&preparation_id)
+            .cloned()
+            .ok_or(super::super::RepoLifecycleJobError::NotFound)?;
+        let RemovalPreparationState::ExecuteAdmitted {
+            execute_request_id: stored_request_id,
+            receipt,
+            execution,
+            ..
+        } = &mut record.state
+        else {
+            return Err(super::super::RepoLifecycleJobError::ConfirmationInvalid);
+        };
+        if *stored_request_id != execute_request_id {
+            return Err(super::super::RepoLifecycleJobError::RequestConflict);
+        }
+        mutate(execution, receipt)?;
+        record.updated_at_ms = chrono::Utc::now().timestamp_millis();
+        record.validate()?;
+        publish_removal(&self.removal_dir, &record)?;
+        let execution = match &record.state {
+            RemovalPreparationState::ExecuteAdmitted { execution, .. } => {
+                execution.as_ref().clone()
+            }
+            _ => unreachable!("validated admitted removal changed variant"),
+        };
+        self.removals.insert(preparation_id, record);
+        Ok(execution)
     }
 }
 
@@ -374,6 +448,12 @@ pub(super) fn publish_removal(
         let mut file = safe_fs::create_atomic_replace_temp(&temp)?;
         file.write_all(&bytes)?;
         file.sync_all()?;
+        #[cfg(test)]
+        if dir.join(PRE_REPLACE_FAILURE_MARKER).try_exists()? {
+            return Err(store_invalid(
+                "injected removal preparation pre-replace failure",
+            ));
+        }
         safe_fs::replace_file_atomically(&file, &temp, &path)?;
         safe_fs::sync_directory(dir)?;
         Ok(())
@@ -384,54 +464,7 @@ pub(super) fn publish_removal(
     result
 }
 
-pub(super) fn prune_removals(
-    dir: &Path,
-    records: &mut BTreeMap<Uuid, RemovalPreparationRecord>,
-    now_ms: i64,
-) -> Result<usize, super::super::RepoLifecycleJobError> {
-    let remove = removal_retention_removals(records, now_ms);
-    for id in &remove {
-        let path = dir.join(format!("{id}.json"));
-        let metadata = std::fs::symlink_metadata(&path)?;
-        if !metadata.is_file() || metadata.file_type().is_symlink() || is_reparse(&metadata) {
-            return Err(store_invalid(
-                "refusing to prune a non-regular removal record",
-            ));
-        }
-        std::fs::remove_file(path)?;
-        records.remove(id);
-    }
-    if !remove.is_empty() {
-        safe_fs::sync_directory(dir)?;
-    }
-    Ok(remove.len())
-}
-
-fn removal_retention_removals(
-    records: &BTreeMap<Uuid, RemovalPreparationRecord>,
-    now_ms: i64,
-) -> Vec<Uuid> {
-    let cutoff = now_ms.saturating_sub(TERMINAL_RETENTION_MS);
-    let mut candidates = records
-        .values()
-        .filter(|record| match &record.state {
-            RemovalPreparationState::Prepared { .. } => record.expires_at_unix_ms < now_ms,
-            RemovalPreparationState::Superseded => true,
-            RemovalPreparationState::ExecuteAdmitted { receipt, .. } => {
-                receipt.phase.is_terminal() && !receipt.publication_pending
-            }
-        })
-        .map(|record| (record.preparation_id, record.updated_at_ms))
-        .collect::<Vec<_>>();
-    candidates.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
-    candidates
-        .into_iter()
-        .enumerate()
-        .filter_map(|(index, (id, updated_at_ms))| {
-            (index >= TERMINAL_RECEIPT_LIMIT || updated_at_ms < cutoff).then_some(id)
-        })
-        .collect()
-}
+pub(super) use retention::prune_removals;
 
 fn read_removal(
     path: &Path,
@@ -451,14 +484,6 @@ fn read_removal(
     let record: RemovalPreparationRecord = serde_json::from_slice(&bytes)?;
     record.validate()?;
     Ok(record)
-}
-
-#[cfg(test)]
-pub(super) fn removal_retention_removals_for_test(
-    records: &BTreeMap<Uuid, RemovalPreparationRecord>,
-    now_ms: i64,
-) -> Vec<Uuid> {
-    removal_retention_removals(records, now_ms)
 }
 
 fn validate_hash(value: &str) -> Result<(), super::super::RepoLifecycleJobError> {

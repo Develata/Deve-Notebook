@@ -65,3 +65,50 @@ fn removal_store_rejects_aggregate_bytes_over_load_budget() -> anyhow::Result<()
     ));
     Ok(())
 }
+
+#[test]
+fn removal_preparation_v2_fails_closed() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let preparation_id = Uuid::new_v4();
+    let record = RemovalPreparationRecord::prepared(
+        Uuid::new_v4(),
+        preparation_id,
+        Uuid::new_v4(),
+        1,
+        None,
+        RepoRemovalIssuerBinding::Web {
+            principal_digest: "a".repeat(64),
+            connection_epoch: 1,
+        },
+        Uuid::new_v4(),
+        None,
+        None,
+        LocalRepoRemovalPreview {
+            deleted: Vec::new(),
+            preserved: Vec::new(),
+            warnings: Vec::new(),
+            blockers: vec![LocalRepoRemovalBlocker::RepairRequired],
+        },
+        None,
+        None,
+        60_000,
+    );
+    let mut store = ReceiptStore::open(dir.path())?;
+    store.publish_preparation(record)?;
+    drop(store);
+
+    let path = dir
+        .path()
+        .join(".host/repo-lifecycle-jobs/removals")
+        .join(format!("{preparation_id}.json"));
+    let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(&path)?)?;
+    value["version"] = serde_json::json!(2);
+    std::fs::write(&path, serde_json::to_vec_pretty(&value)?)?;
+
+    assert!(matches!(
+        ReceiptStore::open(dir.path()),
+        Err(RepoLifecycleJobError::Store(detail))
+            if detail.contains("invalid removal preparation identity")
+    ));
+    Ok(())
+}

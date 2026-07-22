@@ -217,6 +217,32 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
         })
     }
 
+    fn execute_removal(
+        &self,
+        job: AdmittedRepoLifecycleJob,
+        removal: super::removal::RepoRemovalExecution,
+    ) -> JobFuture<RepoLifecycleJobCompletion> {
+        let coordinator = self.coordinator.clone();
+        Box::pin(async move {
+            if job.target_repo_id != removal.manifest.repo_id
+                || job.request_id != removal.execute_request_id
+            {
+                return RepoLifecycleJobCompletion::repair_required(
+                    "removal job identity does not match its durable execution plan",
+                );
+            }
+            coordinator.remove_owned(removal).await
+        })
+    }
+
+    fn recover_removal(
+        &self,
+        job: AdmittedRepoLifecycleJob,
+        removal: super::removal::RepoRemovalExecution,
+    ) -> JobFuture<RepoLifecycleJobCompletion> {
+        self.execute_removal(job, removal)
+    }
+
     fn recover(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion> {
         let repo = self.repo.clone();
         let watcher = self.watcher.clone();

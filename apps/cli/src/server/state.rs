@@ -46,6 +46,26 @@ static TEST_LIFECYCLE_JOBS: std::sync::OnceLock<
     >,
 > = std::sync::OnceLock::new();
 
+#[cfg(test)]
+static TEST_REPO_SESSION_RUNTIMES: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<RepoSessionRuntime>>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(test)]
+static TEST_REMOTE_IMPORT_COORDINATORS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<RemoteImportCoordinator>>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(test)]
+static TEST_DIFF_PROJECTION_EXECUTORS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<DiffProjectionExecutor>>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(test)]
+static TEST_SOURCE_CONTROL_WRITE_GRANTS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Arc<SourceControlWriteGrants>>>,
+> = std::sync::OnceLock::new();
+
 pub struct AppState {
     pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
@@ -192,13 +212,9 @@ impl AppState {
 
     #[cfg(test)]
     pub(crate) fn repo_session_runtime(&self) -> Arc<RepoSessionRuntime> {
-        use std::collections::HashMap;
-        use std::sync::{Mutex, OnceLock};
-
-        static TEST_RUNTIMES: OnceLock<Mutex<HashMap<usize, Arc<RepoSessionRuntime>>>> =
-            OnceLock::new();
         let key = self as *const Self as usize;
-        let runtimes = TEST_RUNTIMES.get_or_init(|| Mutex::new(HashMap::new()));
+        let runtimes = TEST_REPO_SESSION_RUNTIMES
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let mut runtimes = runtimes.lock().expect("test repo session runtimes");
         runtimes
             .entry(key)
@@ -216,13 +232,9 @@ impl AppState {
 
     #[cfg(test)]
     pub(crate) fn remote_import_coordinator(&self) -> Arc<RemoteImportCoordinator> {
-        use std::collections::HashMap;
-        use std::sync::{Mutex, OnceLock};
-
-        static TEST_COORDINATORS: OnceLock<Mutex<HashMap<usize, Arc<RemoteImportCoordinator>>>> =
-            OnceLock::new();
         let key = self as *const Self as usize;
-        let stores = TEST_COORDINATORS.get_or_init(|| Mutex::new(HashMap::new()));
+        let stores = TEST_REMOTE_IMPORT_COORDINATORS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let Ok(mut stores) = stores.lock() else {
             return Arc::new(RemoteImportCoordinator::new(
                 self.repo.clone(),
@@ -254,13 +266,9 @@ impl AppState {
 
     #[cfg(test)]
     pub(crate) fn diff_projection_executor(&self) -> Arc<DiffProjectionExecutor> {
-        use std::collections::HashMap;
-        use std::sync::{Mutex, OnceLock};
-
-        static TEST_EXECUTORS: OnceLock<Mutex<HashMap<usize, Arc<DiffProjectionExecutor>>>> =
-            OnceLock::new();
         let key = self as *const Self as usize;
-        let stores = TEST_EXECUTORS.get_or_init(|| Mutex::new(HashMap::new()));
+        let stores = TEST_DIFF_PROJECTION_EXECUTORS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let Ok(mut stores) = stores.lock() else {
             return Arc::new(DiffProjectionExecutor::new());
         };
@@ -284,13 +292,9 @@ impl AppState {
 
     #[cfg(test)]
     pub(crate) fn source_control_write_grants(&self) -> Arc<SourceControlWriteGrants> {
-        use std::collections::HashMap;
-        use std::sync::{Mutex, OnceLock};
-
-        static TEST_GRANTS: OnceLock<Mutex<HashMap<usize, Arc<SourceControlWriteGrants>>>> =
-            OnceLock::new();
         let key = self as *const Self as usize;
-        let stores = TEST_GRANTS.get_or_init(|| Mutex::new(HashMap::new()));
+        let stores = TEST_SOURCE_CONTROL_WRITE_GRANTS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
         let Ok(mut stores) = stores.lock() else {
             return Arc::new(SourceControlWriteGrants::new());
         };
@@ -387,6 +391,26 @@ impl Drop for AppState {
             && let Ok(mut runtimes) = runtimes.lock()
         {
             runtimes.remove(&key);
+        }
+        if let Some(runtimes) = TEST_REPO_SESSION_RUNTIMES.get()
+            && let Ok(mut runtimes) = runtimes.lock()
+        {
+            runtimes.remove(&key);
+        }
+        if let Some(coordinators) = TEST_REMOTE_IMPORT_COORDINATORS.get()
+            && let Ok(mut coordinators) = coordinators.lock()
+        {
+            coordinators.remove(&key);
+        }
+        if let Some(executors) = TEST_DIFF_PROJECTION_EXECUTORS.get()
+            && let Ok(mut executors) = executors.lock()
+        {
+            executors.remove(&key);
+        }
+        if let Some(grants) = TEST_SOURCE_CONTROL_WRITE_GRANTS.get()
+            && let Ok(mut grants) = grants.lock()
+        {
+            grants.remove(&key);
         }
     }
 }

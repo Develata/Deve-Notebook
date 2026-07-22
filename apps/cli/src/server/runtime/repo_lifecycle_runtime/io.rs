@@ -8,7 +8,6 @@ use super::RemoveReservation;
 use super::RepoLifecycleCoordinator;
 #[cfg(test)]
 use super::RepoRemovalFallback;
-#[cfg(test)]
 use crate::remote_import_runtime::ProviderQuiesceToken;
 use crate::server::runtime::watcher_runtime::WatcherMountReservation;
 use deve_core::models::RepoId;
@@ -163,6 +162,35 @@ impl RepoLifecycleCoordinator {
         .map_err(|_| super::RepoLifecycleError::Coordination("watcher mount task failed"))
     }
 
+    pub(super) async fn start_mount_unfinalized(
+        &self,
+        reservation: WatcherMountReservation,
+        execution_name: String,
+    ) -> Result<WatcherMountReservation, super::RepoLifecycleError> {
+        let watchers = self.watchers.clone();
+        let sync = self.sync.clone();
+        let joined = tokio::task::spawn_blocking(move || {
+            let result = super::mount::start_reserved_unfinalized(
+                &watchers,
+                sync,
+                &reservation,
+                execution_name,
+            );
+            (reservation, result)
+        })
+        .await
+        .map_err(|_| super::RepoLifecycleError::Coordination("watcher start task failed"))?;
+        joined.1.map_err(super::RepoLifecycleError::from)?;
+        Ok(joined.0)
+    }
+
+    pub(super) fn finalize_started_mount(
+        &self,
+        reservation: WatcherMountReservation,
+    ) -> Result<super::RepoMountOutcome, super::RepoLifecycleError> {
+        Ok(super::mount::finalize_started(&self.watchers, &reservation))
+    }
+
     #[cfg(test)]
     pub(super) async fn fail_reservation(
         &self,
@@ -176,7 +204,6 @@ impl RepoLifecycleCoordinator {
         .await;
     }
 
-    #[cfg(test)]
     pub(super) async fn quiesce_provider(
         &self,
         repo_id: RepoId,
@@ -188,7 +215,6 @@ impl RepoLifecycleCoordinator {
             .map_err(Into::into)
     }
 
-    #[cfg(test)]
     pub(super) async fn resume_provider(
         &self,
         token: ProviderQuiesceToken,
@@ -202,7 +228,6 @@ impl RepoLifecycleCoordinator {
         Ok(())
     }
 
-    #[cfg(test)]
     pub(super) async fn finish_provider(
         &self,
         token: ProviderQuiesceToken,

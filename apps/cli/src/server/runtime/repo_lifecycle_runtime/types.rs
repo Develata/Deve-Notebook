@@ -4,7 +4,6 @@
 //!
 //! Typed host outcomes for dynamic local-repo lifecycle operations.
 
-#[cfg(test)]
 use crate::remote_import_runtime::RemoteImportHostError;
 #[cfg(test)]
 use crate::server::repo_mutation::MountedRepoAdmission;
@@ -120,7 +119,6 @@ pub(crate) enum RepoLifecycleError {
     Membership(CatalogMembershipError),
     Catalog(RepoCatalogError),
     Alias(HostRepoAliasError),
-    #[cfg(test)]
     RemoteImport(RemoteImportHostError),
     #[cfg(test)]
     RemoteImportBlocked(Vec<RemoteImportRepoRemovalBlocker>),
@@ -136,6 +134,15 @@ pub(crate) enum RepoLifecycleError {
     Coordination(&'static str),
 }
 
+impl From<anyhow::Error> for RepoLifecycleError {
+    fn from(error: anyhow::Error) -> Self {
+        Self::NotCommitted {
+            operation: "lifecycle",
+            detail: error.to_string(),
+        }
+    }
+}
+
 impl std::fmt::Display for RepoLifecycleError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -144,7 +151,6 @@ impl std::fmt::Display for RepoLifecycleError {
             Self::Membership(error) => error.fmt(formatter),
             Self::Catalog(error) => error.fmt(formatter),
             Self::Alias(error) => error.fmt(formatter),
-            #[cfg(test)]
             Self::RemoteImport(error) => error.fmt(formatter),
             #[cfg(test)]
             Self::RemoteImportBlocked(blockers) => write!(
@@ -203,7 +209,6 @@ impl From<HostRepoAliasError> for RepoLifecycleError {
     }
 }
 
-#[cfg(test)]
 impl From<RemoteImportHostError> for RepoLifecycleError {
     fn from(error: RemoteImportHostError) -> Self {
         Self::RemoteImport(error)

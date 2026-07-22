@@ -12,14 +12,33 @@ use super::super::{
 };
 use super::create_intent;
 use crate::server::AppState;
-use crate::server::switcher_test_support::build_state;
+use crate::server::switcher_test_support::{
+    app_state as build_app_state, build_state as build_state_inner,
+};
 use anyhow::Context;
 use deve_core::models::RepoId;
 use deve_core::utils::fs::{HostPathIdentity, HostPathKind};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 use tokio::time::timeout;
 use uuid::Uuid;
+
+static REMOVAL_INTEGRATION_TEST_MUTEX: LazyLock<Arc<tokio::sync::Mutex<()>>> =
+    LazyLock::new(|| Arc::new(tokio::sync::Mutex::new(())));
+
+mod cut_recovery;
+mod recovery;
+mod success;
+
+async fn build_state() -> anyhow::Result<(
+    tokio::sync::OwnedMutexGuard<()>,
+    tempfile::TempDir,
+    Arc<AppState>,
+)> {
+    let guard = REMOVAL_INTEGRATION_TEST_MUTEX.clone().lock_owned().await;
+    let (dir, state) = build_state_inner()?;
+    Ok((guard, dir, state))
+}
 
 fn web_issuer(connection_epoch: u64) -> RepoRemovalIssuerBinding {
     web_issuer_with_principal('a', connection_epoch)
@@ -83,7 +102,10 @@ async fn terminal_status(
     runtime: &RepoLifecycleJobRuntime,
     request_id: Uuid,
 ) -> Result<super::super::RepoLifecycleJobStatus, RepoLifecycleJobError> {
-    timeout(Duration::from_secs(2), async {
+    // The lifecycle worker may be sharing a single-job test host with the
+    // full workspace suite. Keep this a hard producer timeout, but leave
+    // enough headroom for a loaded Windows runner to reach the terminal cut.
+    timeout(Duration::from_secs(10), async {
         loop {
             let status = runtime.status(request_id).await?;
             if status.phase == RepoLifecycleJobPhase::Terminal {
@@ -117,15 +139,42 @@ fn restart_runtime(
     )
 }
 
+fn rebuild_cold_host(dir: &tempfile::TempDir) -> anyhow::Result<Arc<AppState>> {
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let repo = deve_core::ledger::RepoManager::init_empty_host(&ledger_dir, 10)?;
+    build_app_state(
+        repo,
+        projection_base,
+        deve_core::utils::notegit::host_keys_dir(&ledger_dir),
+    )
+}
+
+fn rebuild_cold_host_for_repo(
+    dir: &tempfile::TempDir,
+    repo_id: RepoId,
+) -> anyhow::Result<Arc<AppState>> {
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let repo = deve_core::ledger::RepoManager::init_existing_for_repo_id(&ledger_dir, 10, repo_id)?;
+    build_app_state(
+        repo,
+        projection_base,
+        deve_core::utils::notegit::host_keys_dir(&ledger_dir),
+    )
+}
+
 #[tokio::test]
 async fn prepare_local_repo_removal_reissues_and_invalidates_confirmation_token()
 -> anyhow::Result<()> {
-    let (dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let request_id = Uuid::new_v4();
     let first = prepare(&runtime, repo_id, request_id, web_issuer(11)).await?;
-    let first_token = first.confirmation_token.expect("first token");
+    let first_token = first
+        .confirmation_token
+        .unwrap_or_else(|| panic!("first preview blocked: {:?}", first.preview));
     let second = prepare(&runtime, repo_id, request_id, web_issuer(11)).await?;
     let second_token = second
         .confirmation_token
@@ -145,17 +194,21 @@ async fn prepare_local_repo_removal_reissues_and_invalidates_confirmation_token(
         .join(format!("{}.json", second.preparation_id));
     assert!(!std::fs::read_to_string(record_path)?.contains(second_token.as_str()));
     runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
 #[tokio::test]
 async fn execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token()
 -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(20)).await?;
-    let token = prepared.confirmation_token.clone().expect("token");
+    let token = prepared
+        .confirmation_token
+        .clone()
+        .unwrap_or_else(|| panic!("preview blocked: {:?}", prepared.preview));
 
     let wrong_issuer = runtime
         .execute_removal(execute_intent(&prepared, token.clone(), web_issuer(21)))
@@ -188,7 +241,10 @@ async fn execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token
     let stale = runtime
         .execute_removal(execute_intent(
             &prepared,
-            prepared.confirmation_token.clone().expect("token"),
+            prepared
+                .confirmation_token
+                .clone()
+                .unwrap_or_else(|| panic!("preview blocked: {:?}", prepared.preview)),
             web_issuer(20),
         ))
         .await
@@ -221,18 +277,22 @@ async fn execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token
         RepoLifecycleJobError::ConfirmationStale
     ));
     runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
 #[tokio::test]
 async fn execute_local_repo_removal_retry_returns_existing_job_or_result() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(30)).await?;
     let mut execute = execute_intent(
         &prepared,
-        prepared.confirmation_token.clone().expect("token"),
+        prepared
+            .confirmation_token
+            .clone()
+            .unwrap_or_else(|| panic!("preview blocked: {:?}", prepared.preview)),
         web_issuer(30),
     );
     let first = runtime.execute_removal(execute.clone()).await?;
@@ -244,19 +304,23 @@ async fn execute_local_repo_removal_retry_returns_existing_job_or_result() -> an
         Err(RepoLifecycleJobError::RequestConflict)
     ));
     runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
 #[tokio::test]
 async fn removal_request_ids_share_one_namespace_with_prepare_and_create() -> anyhow::Result<()> {
-    let (dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(35)).await?;
 
     let mut same_as_prepare = execute_intent(
         &prepared,
-        prepared.confirmation_token.clone().expect("token"),
+        prepared
+            .confirmation_token
+            .clone()
+            .unwrap_or_else(|| panic!("preview blocked: {:?}", prepared.preview)),
         web_issuer(35),
     );
     same_as_prepare.request_id = prepared.request_id;
@@ -290,13 +354,14 @@ async fn removal_request_ids_share_one_namespace_with_prepare_and_create() -> an
         Err(RepoLifecycleJobError::RequestConflict)
     ));
     runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
 #[tokio::test]
 async fn lifecycle_store_rejects_cross_record_request_id_collision_on_restart() -> anyhow::Result<()>
 {
-    let (dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let projection = std::fs::canonicalize(dir.path())?;
@@ -323,53 +388,23 @@ async fn lifecycle_store_rejects_cross_record_request_id_collision_on_restart() 
         restart_runtime(&state),
         Err(RepoLifecycleJobError::Store(detail)) if detail.contains("duplicate")
     ));
-    Ok(())
-}
-
-#[tokio::test]
-async fn execute_local_repo_removal_atomically_persists_admission_before_worker()
--> anyhow::Result<()> {
-    let (dir, state) = build_state()?;
-    let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
-    let runtime = state.repo_lifecycle_jobs();
-    let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(40)).await?;
-    let execute = execute_intent(
-        &prepared,
-        prepared.confirmation_token.clone().expect("token"),
-        web_issuer(40),
-    );
-    let request_id = execute.request_id;
-    runtime.execute_removal(execute).await?;
-    let record_path = dir
-        .path()
-        .join("ledger/.host/repo-lifecycle-jobs/removals")
-        .join(format!("{}.json", prepared.preparation_id));
-    assert!(std::fs::read_to_string(record_path)?.contains("execute_admitted"));
-
-    let status = terminal_status(&runtime, request_id).await?;
-    assert_eq!(status.outcome, Some(RepoLifecycleJobOutcome::NotCommitted));
-    assert!(
-        state
-            .repo
-            .repo_catalog_membership_record(repo_id)?
-            .is_some_and(|record| {
-                record.state() == deve_core::ledger::RepoCatalogMembershipState::Normal
-            })
-    );
-    runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
 #[tokio::test]
 async fn web_removal_token_binds_principal_connection_and_server_incarnation() -> anyhow::Result<()>
 {
-    let (_dir, state) = build_state()?;
+    let (test_guard, dir, state) = build_state().await?;
     let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
     let runtime = state.repo_lifecycle_jobs();
     let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), web_issuer(50)).await?;
     let execute = execute_intent(
         &prepared,
-        prepared.confirmation_token.clone().expect("token"),
+        prepared
+            .confirmation_token
+            .clone()
+            .unwrap_or_else(|| panic!("preview blocked: {:?}", prepared.preview)),
         web_issuer(50),
     );
     let wrong_principal = runtime
@@ -392,57 +427,6 @@ async fn web_removal_token_binds_principal_connection_and_server_incarnation() -
         Err(RepoLifecycleJobError::ConfirmationInvalid)
     ));
     restarted.shutdown().await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity()
--> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
-    let issuer = offline_issuer(&state, repo_id)?;
-    assert!(issuer.validate().is_ok(), "offline issuer must start exact");
-    let runtime = state.repo_lifecycle_jobs();
-    let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), issuer.clone())
-        .await
-        .context("offline prepare")?;
-    let foreign = tempfile::tempdir()?;
-    let foreign_lock_path = foreign.path().join("authority.lock");
-    std::fs::write(&foreign_lock_path, b"foreign")?;
-    let foreign_issuer = RepoRemovalIssuerBinding::OfflineAuthority {
-        authority_root: HostPathIdentity::capture(foreign.path(), HostPathKind::Directory)?,
-        authority_lock: HostPathIdentity::capture(&foreign_lock_path, HostPathKind::RegularFile)?,
-    };
-    let foreign_error = runtime
-        .execute_removal(execute_intent(
-            &prepared,
-            prepared.confirmation_token.clone().expect("token"),
-            foreign_issuer,
-        ))
-        .await
-        .expect_err("foreign authority root must not consume an offline confirmation");
-    assert!(matches!(
-        foreign_error,
-        RepoLifecycleJobError::ConfirmationInvalid
-    ));
-    let execute = execute_intent(
-        &prepared,
-        prepared.confirmation_token.clone().expect("token"),
-        issuer,
-    );
-    runtime.shutdown().await?;
-
-    let restarted = restart_runtime(&state)?;
-    assert!(
-        execute.issuer.validate().is_ok(),
-        "offline issuer must remain exact across runtime restart"
-    );
-    let accepted = restarted
-        .execute_removal(execute)
-        .await
-        .context("offline execute after restart")?;
-    let status = terminal_status(&restarted, accepted.request_id).await?;
-    assert_eq!(status.outcome, Some(RepoLifecycleJobOutcome::NotCommitted));
-    restarted.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
