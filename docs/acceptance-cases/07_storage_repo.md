@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R3 authority ownership, zero-repo NoScope and F4/v5 Prepare/Execute admission are implemented; R4 D1-SQ quarantine owners, O1-FREEZE ordering, cut debt and two-phase finalization are approved but not yet sealed by implementation evidence; explicit drift repair, later same-RepoId Reopening, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
+    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt and two-phase finalization are implemented; explicit drift repair, later same-RepoId Reopening, R5 UI/CLI and R6 fresh cross-process/browser evidence remain
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -305,7 +305,7 @@
     - planned_proof: `.notegit`必须覆盖marker cross-directory quarantine、tree same-parent quarantine、marker-last delete的每个fsync/crash cut，并用Windows junction/reparse与Linux symlink第二进程证明外部target不变
     - planned_proof: O1-FREEZE必须覆盖capture seal/abort、quiesce失败、watcher E2后plan drift、严格逆序补偿和provider generation恢复失败
     - planned_proof: cut/finalization必须覆盖CutAttempted未知truth、exact Normal补偿、CutObserved重建、owner mutation后receipt前、TerminalCandidate、authority retirement失败和lock release后cold-host restart
-    - planned_proof: R4成功路径必须逐项证明Redb、`.notegit`、Remote Import、locator、alias和tombstone消失，同时Markdown、附件、未知文件、`.git`、ignore文件、remote shadows、operator backups及其它RepoId保留
+    - planned_proof: R6 fresh producer必须逐项重证Redb、`.notegit`、Remote Import、locator、alias和tombstone消失，同时Markdown、附件、未知文件、`.git`、ignore文件、remote shadows、operator backups及其它RepoId保留
     - planned_proof: R5/R6必须覆盖lost Execute response跨runtime replay、later same-RepoId readmission、explicit drift repair、Windows/Linux第二进程锁与真实Desktop/Mobile backend UI
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
@@ -541,10 +541,10 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - B4已接入产品Refresh/Discard/Repair；R4 D1-SQ whole-root quarantine owner-plan与B6 fresh cross-platform evidence仍待实现
+    - B4已接入产品Refresh/Discard/Repair；R4 D1-SQ whole-root quarantine owner-plan已实现，B6 fresh cross-platform evidence仍待完成
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
-    - gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan and B6 fresh Remote Import manage receipt are not sealed yet
+    - gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan已实现；B6 fresh Remote Import manage receipt尚未封存
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true
