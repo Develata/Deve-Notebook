@@ -74,9 +74,10 @@ pub use manager::{
     HostRepoAliasImportWarningReason, HostRepoAliasRuntime, HostRepoAliasSetResult,
     HostRepoAliasValidationError, LocalAuthorityError, PreparedRepoAuthority, PreparedRepoCreation,
     PreparedRepoIdentity, PreparedRepoRemoval, ProjectionLocatorRecord, RepoAuthorityLease,
-    RepoCatalogCreationCommit, RepoCatalogCutAuthority, RepoCatalogCutPermit, RepoCatalogError,
-    RepoCatalogMembershipRecord, RepoCatalogMembershipState, RepoCatalogRemovalCommit,
-    RevalidatedRepoCreation, RevalidatedRepoRemoval, normal_catalog_ids_for_ledger,
+    RepoAuthorityRemovalSnapshot, RepoCatalogCreationCommit, RepoCatalogCutAuthority,
+    RepoCatalogCutPermit, RepoCatalogError, RepoCatalogMembershipRecord,
+    RepoCatalogMembershipState, RepoCatalogRemovalCommit, RevalidatedRepoCreation,
+    RevalidatedRepoRemoval, normal_catalog_ids_for_ledger,
 };
 pub(crate) use shadow_transfer::ShadowPayload; // Export RepoManager and RepoInfo // Export core impl methods if they were free functions, but they are impl RepoManager
 // We don't need to export manager::core because impl blocks are attached to the struct.

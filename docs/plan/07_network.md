@@ -228,7 +228,9 @@ enabled = true
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-当前实现仍为未发布的 F4/v4；R3 必须一次性切换到 F4/v5并删除旧 direct Remove形态，期间不得
+当前实现已一次性切换到未发布的 F4/v5并删除旧 direct Remove形态；R3已落地
+Prepare/Execute admission、exact manifest、issuer-bound短期token与atomic `ExecuteAdmitted`持久化。
+R4仍负责destructive settlement与single typed finalization，R5负责完整薄前端确认面。实现期间不得
 恢复 legacy/unversioned JSON fallback、旧环境开关或旧 version window；显式 development/debug
 JSON 也必须携带 v5 envelope。
 plugin-host 的 loopback
@@ -358,9 +360,9 @@ RepoControlResponse =
       preparation_id,
       repo_id,
       preview,
-      confirmation_token,
+      confirmation_token: Option<RemovalConfirmationToken>,
       fallback_binding: Option<OpaqueFallbackBinding>,
-      expires_at
+      expires_at_unix_ms: Option<i64>
     }
   | LifecycleAccepted { request_id, job_id, target_repo_id }
   | LifecycleStatus { request_id, job_id, state, outcome }

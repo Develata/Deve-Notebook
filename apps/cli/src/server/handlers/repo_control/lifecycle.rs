@@ -35,11 +35,6 @@ pub(super) async fn handle_submit_lifecycle(
             current_scope_nonce,
             switch_nonce,
             ..
-        }
-        | RepoLifecycleIntent::Remove {
-            current_scope_nonce,
-            switch_nonce,
-            ..
         } => (current_scope_nonce.get(), switch_nonce.get()),
     };
     let intent = match lifecycle_intent {
@@ -64,7 +59,7 @@ pub(super) async fn handle_submit_lifecycle(
                     send_simple_error(
                         channel,
                         request_id,
-                        ServerErrorCode::RepoLifecycleInvalidRequest,
+                        ServerErrorCode::RepoCreationProjectionBaseRequired,
                     );
                     return;
                 }
@@ -89,23 +84,6 @@ pub(super) async fn handle_submit_lifecycle(
                     return;
                 }
             }
-        }
-        RepoLifecycleIntent::Remove {
-            repo_id,
-            current_scope_nonce,
-            switch_nonce,
-        } => {
-            if !valid_lifecycle_observer(session, current_scope_nonce.get(), switch_nonce.get())
-                || session.active_branch.is_some()
-            {
-                send_simple_error(
-                    channel,
-                    request_id,
-                    ServerErrorCode::RepoLifecycleInvalidRequest,
-                );
-                return;
-            }
-            RepoLifecycleJobIntent::remove(repo_id)
         }
     };
     let Some(session_id) = session.repo_session_runtime_id() else {
@@ -224,7 +202,7 @@ pub(super) async fn handle_get_lifecycle(
     channel.unicast(ServerMessage::RepoControl(status_response(status)));
 }
 
-fn replay_terminal_status(
+pub(super) fn replay_terminal_status(
     state: &Arc<AppState>,
     session_id: u64,
     request_id: Uuid,
@@ -338,7 +316,7 @@ impl From<anyhow::Error> for ProjectionBaseAdmissionError {
     }
 }
 
-fn status_response(status: RepoLifecycleJobStatus) -> RepoControlResponse {
+pub(super) fn status_response(status: RepoLifecycleJobStatus) -> RepoControlResponse {
     RepoControlResponse::LifecycleStatus {
         request_id: status.request_id,
         job_id: status.job_id,
@@ -363,9 +341,17 @@ fn status_response(status: RepoLifecycleJobStatus) -> RepoControlResponse {
     }
 }
 
-fn job_error_code(error: &RepoLifecycleJobError) -> ServerErrorCode {
+pub(super) fn job_error_code(error: &RepoLifecycleJobError) -> ServerErrorCode {
     match error {
         RepoLifecycleJobError::Busy => ServerErrorCode::RepoLifecycleBusy,
+        RepoLifecycleJobError::RemovalBlocked => ServerErrorCode::RepoLifecycleRemovalBlocked,
+        RepoLifecycleJobError::ConfirmationInvalid => {
+            ServerErrorCode::RepoLifecycleConfirmationInvalid
+        }
+        RepoLifecycleJobError::ConfirmationExpired => {
+            ServerErrorCode::RepoLifecycleConfirmationExpired
+        }
+        RepoLifecycleJobError::ConfirmationStale => ServerErrorCode::RepoLifecycleConfirmationStale,
         RepoLifecycleJobError::NotFound => ServerErrorCode::RepoLifecycleNotFound,
         RepoLifecycleJobError::InvalidRequest | RepoLifecycleJobError::RequestConflict => {
             ServerErrorCode::RepoLifecycleInvalidRequest
@@ -377,7 +363,11 @@ fn job_error_code(error: &RepoLifecycleJobError) -> ServerErrorCode {
     }
 }
 
-fn send_job_error(channel: &DualChannel, request_id: Uuid, error: &RepoLifecycleJobError) {
+pub(super) fn send_job_error(
+    channel: &DualChannel,
+    request_id: Uuid,
+    error: &RepoLifecycleJobError,
+) {
     super::send_error(
         channel,
         request_id,

@@ -249,6 +249,16 @@ fn pending_projection_artifacts_are_not_repairable_or_deleted() -> anyhow::Resul
             .projection_outcome,
         RemoteImportProjectionOutcome::Pending
     );
+    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+    else {
+        panic!("Applied/Pending must block repo removal");
+    };
+    assert_eq!(
+        blocked.blockers(),
+        &[RemoteImportRepoRemovalBlocker::ProjectionPending {
+            session_id: ready.session_id,
+        }]
+    );
     Ok(())
 }
 
@@ -280,6 +290,16 @@ fn degraded_projection_settlement_updates_current_process_health() -> anyhow::Re
         RemoteImportProjectionOutcome::Degraded
     );
     assert!(sync.is_projection_degraded(fixture.repo.local_repo_name()));
+    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+    else {
+        panic!("Applied/Degraded must block repo removal");
+    };
+    assert_eq!(
+        blocked.blockers(),
+        &[RemoteImportRepoRemovalBlocker::ProjectionDegraded {
+            session_id: ready.session_id,
+        }]
+    );
     assert!(service.is_exact_apply_replay(
         fixture.repo.as_ref(),
         request_id,
@@ -367,7 +387,8 @@ fn optional_revision_none_is_exact_for_precandidate_failure_only() -> anyhow::Re
 }
 
 #[test]
-fn repo_removal_admission_classifies_preparing_ready_and_failed_as_active() -> anyhow::Result<()> {
+fn repo_removal_admission_allows_owned_capture_cleanup_without_hiding_drift() -> anyhow::Result<()>
+{
     let fixture = Fixture::new()?;
     let service = RemoteImportService::open(fixture.repo.as_ref(), fixture.repo_id)?;
     let admitted = match service.repo_removal_admission()? {
@@ -385,23 +406,23 @@ fn repo_removal_admission_classifies_preparing_ready_and_failed_as_active() -> a
         &fixture.source,
         &fixture.locator,
     )?;
-    assert_removal_active(&service, RemoteImportState::Preparing)?;
+    assert_removal_capture_cleanup(&service)?;
     assert!(matches!(
         service.revalidate_repo_removal(&admitted)?,
-        RemoteImportRepoRemovalRevalidation::Changed(RemoteImportRepoRemovalAdmission::Blocked(_))
+        RemoteImportRepoRemovalRevalidation::Changed(RemoteImportRepoRemovalAdmission::Admitted(_))
     ));
     assert!(
         preparing
             .capture_file("../unsafe.md", Cursor::new(b"unsafe"))
             .is_err()
     );
-    assert_removal_active(&service, RemoteImportState::Failed)?;
+    assert_removal_capture_cleanup(&service)?;
     let failed_id = preparing.session_id();
     drop(preparing);
     service.discard(failed_id, None)?;
 
     let ready = fixture.ready_session()?;
-    assert_removal_active(&service, RemoteImportState::Ready)?;
+    assert_removal_capture_cleanup(&service)?;
     service.discard(ready.session_id, ready.revision)?;
     assert!(matches!(
         service.repo_removal_admission()?,
@@ -411,7 +432,7 @@ fn repo_removal_admission_classifies_preparing_ready_and_failed_as_active() -> a
 }
 
 #[test]
-fn repo_removal_admission_blocks_cleanup_debt_without_cli_state_inference() -> anyhow::Result<()> {
+fn repo_removal_admission_marks_owner_cleanup_debt_without_blocking() -> anyhow::Result<()> {
     let fixture = Fixture::new()?;
     let ready = fixture.ready_session()?;
     let service = RemoteImportService::open(fixture.repo.as_ref(), fixture.repo_id)?;
@@ -425,33 +446,20 @@ fn repo_removal_admission_blocks_cleanup_debt_without_cli_state_inference() -> a
             .map(|candidate| candidate.revision),
     )?;
 
-    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+    let RemoteImportRepoRemovalAdmission::Admitted(snapshot) = service.repo_removal_admission()?
     else {
-        panic!("cleanup debt must block repo removal");
+        panic!("owner cleanup debt must remain removable");
     };
-    assert_eq!(blocked.repo_id(), fixture.repo_id);
-    assert_eq!(
-        blocked.blockers(),
-        &[RemoteImportRepoRemovalBlocker::CleanupPending {
-            session_id: ready.session_id,
-            state: RemoteImportState::Discarded,
-        }]
-    );
+    assert_eq!(snapshot.repo_id(), fixture.repo_id);
+    assert!(snapshot.capture_cleanup_required());
     Ok(())
 }
 
-fn assert_removal_active(
-    service: &RemoteImportService,
-    expected_state: RemoteImportState,
-) -> anyhow::Result<()> {
-    let RemoteImportRepoRemovalAdmission::Blocked(blocked) = service.repo_removal_admission()?
+fn assert_removal_capture_cleanup(service: &RemoteImportService) -> anyhow::Result<()> {
+    let RemoteImportRepoRemovalAdmission::Admitted(snapshot) = service.repo_removal_admission()?
     else {
-        panic!("active session must block repo removal");
+        panic!("owner-cleanable capture must not block repo removal");
     };
-    assert!(matches!(
-        blocked.blockers(),
-        [RemoteImportRepoRemovalBlocker::ActiveSession { state, .. }]
-            if *state == expected_state
-    ));
+    assert!(snapshot.capture_cleanup_required());
     Ok(())
 }

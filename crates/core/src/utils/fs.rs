@@ -1,5 +1,9 @@
 //! plan_ref: infra
 
+mod identity;
+
+pub use identity::{HostFileIdentity, HostPathIdentity, HostPathKind};
+
 use anyhow::{Context, Result};
 use std::fs::{File, Metadata, OpenOptions};
 use std::path::Path;

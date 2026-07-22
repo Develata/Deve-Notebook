@@ -75,6 +75,22 @@ pub fn validate_repo_identity_marker(repo_root: &Path, repo_id: RepoId) -> Resul
     validate_repo_identity(repo_root, &marker, repo_id)
 }
 
+/// Validates an identity marker already read through a caller-owned no-follow handle.
+///
+/// This keeps parsing and RepoId semantics project-owned while allowing destructive
+/// admission paths to bind the validated bytes to an exact open-file identity.
+pub fn validate_repo_identity_marker_content(
+    content: &[u8],
+    repo_root: &Path,
+    repo_id: RepoId,
+) -> Result<()> {
+    let content = std::str::from_utf8(content).context("repo identity marker is not UTF-8")?;
+    let marker: RepoIdentityMarker = toml::from_str(content)
+        .with_context(|| format!("Failed to parse repo identity marker: {:?}", repo_root))?;
+    validate_repo_identity_marker_version(&marker, repo_root)?;
+    validate_repo_identity(repo_root, &marker, repo_id)
+}
+
 fn write_repo_identity_marker(repo_root: &Path, repo_id: RepoId, repo_name: &str) -> Result<()> {
     let dir = repo_dir(repo_root);
     std::fs::create_dir_all(&dir)
@@ -116,6 +132,11 @@ fn read_repo_identity_marker(path: &Path) -> Result<Option<RepoIdentityMarker>> 
         .with_context(|| format!("Failed to read repo identity marker: {:?}", path))?;
     let marker: RepoIdentityMarker = toml::from_str(&content)
         .with_context(|| format!("Failed to parse repo identity marker: {:?}", path))?;
+    validate_repo_identity_marker_version(&marker, path)?;
+    Ok(Some(marker))
+}
+
+fn validate_repo_identity_marker_version(marker: &RepoIdentityMarker, path: &Path) -> Result<()> {
     if marker.version != IDENTITY_VERSION {
         return Err(anyhow!(
             "Unsupported repo identity marker version {} in {:?}",
@@ -123,7 +144,7 @@ fn read_repo_identity_marker(path: &Path) -> Result<Option<RepoIdentityMarker>> 
             path
         ));
     }
-    Ok(Some(marker))
+    Ok(())
 }
 
 fn validate_repo_identity(

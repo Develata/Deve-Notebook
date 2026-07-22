@@ -50,16 +50,17 @@
   goal: 首发 F4/v5 协议格式、version admission、Repo Control removal preview-token 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
-    - 批准目标为F4/v5 lockstep；当前代码仍是未发布F4/v4，R3切换前保持真实gap
+    - 当前代码已切换至未发布F4/v5 lockstep；首发前仍须封存同一HEAD的fresh wire evidence
   steps:
-    - gap: F4/v5 removal Prepare/Execute wire and lockstep producer are not implemented until R3
+    - gap: Fresh exact-HEAD F4/v5 negative and debug JSON producer receipt remains pending until R6
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture
     - run: cargo test -p deve_core unsupported_json_version_is_checked_before_message_schema -- --nocapture
     - run: cargo test -p deve_core --lib remote_import_and_repo_control_nested_wire_roundtrip_in_f4_v5_binary_and_versioned_json -- --nocapture
     - run: cargo test -p deve_core --lib direct_remove_lifecycle_intent_is_absent_from_f4_v5 -- --nocapture
     - run: cargo test -p deve_core --lib repo_removal_execute_wire_binds_distinct_request_and_preparation_ids -- --nocapture
-    - run: cargo test -p deve_core --lib repo_removal_wire_binds_optional_fallback_and_typed_scope_finalization -- --nocapture
+    - run: cargo test -p deve_core --lib repo_removal_wire_rejects_malformed_opaque_confirmation_values -- --nocapture
+    - gap: R4 single typed removal finalization producer is not implemented yet; R3 proves optional fallback admission only
     - run: cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
     - run: cargo test -p deve_cli --lib remote_import_route -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_accepts_versioned_json_text_when_debug_enabled -- --nocapture --test-threads=1

@@ -24,6 +24,7 @@ pub(crate) struct WatcherMountReservation {
     pub(super) target: Arc<MountSlot>,
     pub(super) previous: Option<Arc<MountSlot>>,
     pub(super) previous_state: Option<RepoMountState>,
+    #[allow(dead_code)] // R4 rollback restores the exact prior mount slot.
     pub(super) previous_expected_handle: bool,
 }
 
@@ -77,6 +78,7 @@ impl WatcherSupervisor {
         })
     }
 
+    #[allow(dead_code)] // R4 ownership-aware remove consumes this capability.
     pub(crate) fn reserve_existing(
         &self,
         repo_id: RepoId,
@@ -189,6 +191,7 @@ impl WatcherSupervisor {
         Ok(())
     }
 
+    #[allow(dead_code)] // R4 ownership-aware remove consumes this capability.
     pub(crate) fn shutdown_reserved(
         &self,
         reservation: &WatcherMountReservation,
@@ -235,6 +238,7 @@ impl WatcherSupervisor {
         }
     }
 
+    #[allow(dead_code)] // R4 ownership-aware remove consumes this capability.
     pub(crate) fn finalize_removed(
         &self,
         reservation: WatcherMountReservation,

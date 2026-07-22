@@ -13,6 +13,8 @@ use tokio::sync::Semaphore;
 use tokio::time::{Duration, timeout};
 
 mod failure;
+mod removal;
+mod removal_store;
 mod retention;
 
 struct TestExecutor {
@@ -20,6 +22,8 @@ struct TestExecutor {
     executions: AtomicUsize,
     recoveries: AtomicUsize,
 }
+
+impl super::removal::RepoRemovalPlanner for TestExecutor {}
 
 impl TestExecutor {
     fn blocked() -> Arc<Self> {
@@ -210,26 +214,16 @@ async fn dropping_transport_observation_does_not_cancel_accepted_job() {
 }
 
 #[tokio::test]
-async fn exact_repo_single_flight_and_global_bound_fail_busy_without_receipt() {
+async fn global_active_job_bound_fails_busy_without_receipt() {
     let dir = tempfile::tempdir().expect("tempdir");
     let projection = std::fs::canonicalize(dir.path()).expect("canonical projection");
     let executor = TestExecutor::blocked();
     let runtime =
         RepoLifecycleJobRuntime::start(dir.path(), executor.clone(), Arc::new(TestSink::default()))
             .expect("job runtime");
-    let remove_repo = RepoId::new_v4();
-    let first_remove = Uuid::new_v4();
-    runtime
-        .submit(first_remove, RepoLifecycleJobIntent::remove(remove_repo))
-        .await
-        .expect("remove admission");
-    let duplicate = runtime
-        .submit(Uuid::new_v4(), RepoLifecycleJobIntent::remove(remove_repo))
-        .await
-        .expect_err("same RepoId must be single flight");
-    assert!(matches!(duplicate, RepoLifecycleJobError::Busy));
-
-    for index in 0..3 {
+    // Removal no longer enters this generic submit path in F4/v5; its exact
+    // RepoId single-flight is owned by Prepare/Execute admission tests.
+    for index in 0..4 {
         runtime
             .submit(
                 Uuid::new_v4(),
@@ -250,7 +244,6 @@ async fn exact_repo_single_flight_and_global_bound_fail_busy_without_receipt() {
     ));
 
     executor.release(4);
-    terminal_status(&runtime, first_remove).await;
     runtime.shutdown().await.expect("shutdown");
 }
 

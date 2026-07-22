@@ -58,13 +58,13 @@
   adapter。这里的 “Mesh v1” 是产品能力代号，不等于 wire protocol version。
 - Remote Import 在 v5 中使用独立 nested typed request/response；用户切换 repo、branch 或重连后，
   旧 session/revision 的迟到结果不得重新出现在当前界面。
-- v5在当前未发布F4/v4 nested Repo Control基础上加入ownership-aware removal
+- 当前未发布F4/v5 nested Repo Control已加入ownership-aware removal
   Prepare/Execute preview-token shape，并继续删除legacy/unversioned JSON fallback；显式debug JSON
   必须带v5 envelope。Prepare response携带backend `preparation_id`；Execute使用不同request_id并引用
   exact preparation_id，token绑定authenticated issuer/connection或offline authority identity。用户可在
   Prepare显式选择optional fallback，backend只返回opaque exact binding；最终RepoList与RepoBound/NoScope
   由单个typed Repo Control finalization投影，不复用Source Control error或两帧顺序。
-  R3完成前当前代码仍是tag blocker，历史v1/v2/v3/v4均不存在adapter。
+  R3 admission已实现；R4 destructive settlement、R5完整确认UI与R6证据仍是tag blocker，历史v1/v2/v3/v4均不存在adapter。
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - 重复 peer label 只影响显示，不得导致 `/api/node/role` 中不同 peer 的连接状态、attempt 或 last error 互相覆盖。

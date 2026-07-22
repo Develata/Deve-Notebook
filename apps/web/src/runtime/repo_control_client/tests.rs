@@ -33,6 +33,46 @@ fn stale_connection_or_scope_discards_response() {
 }
 
 #[test]
+fn removal_preview_accepts_an_exact_non_current_repo_target() {
+    let client = RepoControlClient::default();
+    let current_repo_id = RepoId::new_v4();
+    let removed_repo_id = RepoId::new_v4();
+    let request_id = Uuid::new_v4();
+    let current = scope(4, Some(current_repo_id), 8);
+    client.register(
+        request_id,
+        current.clone(),
+        PendingKind::RemovalPrepare {
+            repo_id: removed_repo_id,
+        },
+    );
+
+    let admission = client.accept(
+        RepoControlResponse::LocalRepoRemovalPrepared {
+            request_id,
+            preparation_id: Uuid::new_v4(),
+            repo_id: removed_repo_id,
+            preview: LocalRepoRemovalPreview {
+                deleted: Vec::new(),
+                preserved: Vec::new(),
+                warnings: Vec::new(),
+                blockers: Vec::new(),
+            },
+            confirmation_token: RemovalConfirmationToken::from_backend("a".repeat(64)),
+            fallback_binding: None,
+            expires_at_unix_ms: Some(123),
+        },
+        &current,
+    );
+
+    assert!(matches!(
+        admission,
+        Some(RepoControlAdmission::RemovalPrepared { repo_id, .. })
+            if repo_id == removed_repo_id
+    ));
+}
+
+#[test]
 fn lifecycle_identity_mismatch_is_fail_closed() {
     let client = RepoControlClient::default();
     let repo_id = RepoId::new_v4();

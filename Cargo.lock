@@ -1270,6 +1270,7 @@ dependencies = [
  "ctrlc",
  "deve_core",
  "futures",
+ "getrandom 0.3.4",
  "hmac",
  "quick-xml",
  "redb",

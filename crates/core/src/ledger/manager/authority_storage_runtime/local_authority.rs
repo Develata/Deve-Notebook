@@ -14,8 +14,10 @@ mod resource;
 mod retirement;
 
 use crate::models::RepoId;
+use crate::utils::fs::{HostPathIdentity, HostPathKind};
 use admission::{admit_existing_from_inner, lease_from_inner};
 use redb::Database;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -153,6 +155,36 @@ pub struct RepoAuthorityLease {
     generation: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RepoAuthorityRemovalSnapshot {
+    repo_id: RepoId,
+    generation: u64,
+    database: HostPathIdentity,
+    authority_lock: HostPathIdentity,
+}
+
+impl RepoAuthorityRemovalSnapshot {
+    pub const fn repo_id(&self) -> RepoId {
+        self.repo_id
+    }
+
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    pub fn database(&self) -> &HostPathIdentity {
+        &self.database
+    }
+
+    pub fn authority_lock(&self) -> &HostPathIdentity {
+        &self.authority_lock
+    }
+
+    pub fn revalidate(&self) -> std::io::Result<bool> {
+        Ok(self.database.revalidate()? && self.authority_lock.revalidate()?)
+    }
+}
+
 /// Non-clone capability for a newly initialized authority that has not yet
 /// crossed the durable catalog-membership cut.
 pub struct PreparedRepoAuthority {
@@ -201,6 +233,56 @@ impl RepoAuthorityLease {
     #[allow(dead_code)] // Bound into the R3 confirmation token.
     pub fn generation(&self) -> u64 {
         self.generation
+    }
+
+    pub fn removal_snapshot(&self) -> Result<RepoAuthorityRemovalSnapshot, LocalAuthorityError> {
+        let runtime = self.runtime.upgrade().ok_or_else(|| {
+            LocalAuthorityError::Invariant(
+                "local authority runtime disappeared while a lease remained live".to_string(),
+            )
+        })?;
+        {
+            let slots = runtime
+                .slots
+                .lock()
+                .map_err(|_| LocalAuthorityError::Poisoned)?;
+            match slots.get(&self.repo_id) {
+                Some(RepoAuthoritySlot::Active {
+                    generation,
+                    resources,
+                    leases: 1,
+                }) if *generation == self.generation && Arc::ptr_eq(resources, &self.resources) => {
+                }
+                Some(RepoAuthoritySlot::Active { .. }) => {
+                    return Err(LocalAuthorityError::Busy(self.repo_id));
+                }
+                Some(RepoAuthoritySlot::Quiescing { .. }) => {
+                    return Err(LocalAuthorityError::Quiescing(self.repo_id));
+                }
+                Some(RepoAuthoritySlot::Retired { .. }) => {
+                    return Err(LocalAuthorityError::Retired(self.repo_id));
+                }
+                _ => {
+                    return Err(LocalAuthorityError::Invariant(format!(
+                        "RepoId {} removal lease no longer matches its active slot",
+                        self.repo_id
+                    )));
+                }
+            }
+        }
+        resource::validate_resource_identity(&self.resources)?;
+        Ok(RepoAuthorityRemovalSnapshot {
+            repo_id: self.repo_id,
+            generation: self.generation,
+            database: HostPathIdentity::capture(
+                &self.resources.db_path,
+                HostPathKind::RegularFile,
+            )?,
+            authority_lock: HostPathIdentity::capture(
+                &self.resources.lock_path,
+                HostPathKind::RegularFile,
+            )?,
+        })
     }
 
     #[cfg(test)]

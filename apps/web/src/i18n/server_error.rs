@@ -160,6 +160,24 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Repository lifecycle request is invalid"
         }
         (Locale::Zh, ServerErrorCode::RepoLifecycleInvalidRequest) => "仓库生命周期请求无效",
+        (Locale::En, ServerErrorCode::RepoLifecycleAuthorityBusy) => "Repository authority is busy",
+        (Locale::Zh, ServerErrorCode::RepoLifecycleAuthorityBusy) => "仓库权威状态正忙",
+        (Locale::En, ServerErrorCode::RepoLifecycleRemovalBlocked) => {
+            "Repository removal is blocked"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleRemovalBlocked) => "仓库移除被阻塞",
+        (Locale::En, ServerErrorCode::RepoLifecycleConfirmationInvalid) => {
+            "Repository removal confirmation is invalid"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleConfirmationInvalid) => "仓库移除确认无效",
+        (Locale::En, ServerErrorCode::RepoLifecycleConfirmationExpired) => {
+            "Repository removal confirmation expired"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleConfirmationExpired) => "仓库移除确认已过期",
+        (Locale::En, ServerErrorCode::RepoLifecycleConfirmationStale) => {
+            "Repository removal preview is stale"
+        }
+        (Locale::Zh, ServerErrorCode::RepoLifecycleConfirmationStale) => "仓库移除预览已过期",
         (Locale::En, ServerErrorCode::RepoLifecycleCommittedPartial) => {
             "Repository change committed with limited availability"
         }
@@ -174,6 +192,12 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Repository update publication is pending"
         }
         (Locale::Zh, ServerErrorCode::RepoLifecyclePublicationPending) => "仓库更新仍待发布",
+        (Locale::En, ServerErrorCode::RepoCreationProjectionBaseRequired) => {
+            "Configure a projection base before creating the first repository"
+        }
+        (Locale::Zh, ServerErrorCode::RepoCreationProjectionBaseRequired) => {
+            "创建首个仓库前请配置投影基础目录"
+        }
         (Locale::En, ServerErrorCode::GraphDegradedProjectionRequired) => {
             "Graph projection requires explicit degraded export"
         }

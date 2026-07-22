@@ -140,6 +140,7 @@ impl PendingRepoSwitch {
         )
     }
 
+    #[allow(dead_code)] // R5 binds this only after explicit Execute admission.
     pub fn remove_current(current_name: impl Into<String>, switch_nonce: u64) -> Self {
         Self::new(
             current_name,

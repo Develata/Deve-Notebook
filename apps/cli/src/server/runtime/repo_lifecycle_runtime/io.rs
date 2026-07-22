@@ -4,8 +4,11 @@
 //! Blocking host I/O adapters kept outside mutation permits.
 
 #[cfg(test)]
+use super::RemoveReservation;
+use super::RepoLifecycleCoordinator;
+#[cfg(test)]
 use super::RepoRemovalFallback;
-use super::{RemoveReservation, RepoLifecycleCoordinator};
+#[cfg(test)]
 use crate::remote_import_runtime::ProviderQuiesceToken;
 use crate::server::runtime::watcher_runtime::WatcherMountReservation;
 use deve_core::models::RepoId;
@@ -36,6 +39,7 @@ impl RepoLifecycleCoordinator {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn cancel_remove_before_stop(
         &self,
         initial: RemoveReservation,
@@ -56,6 +60,7 @@ impl RepoLifecycleCoordinator {
         }
     }
 
+    #[cfg(test)]
     pub(super) async fn restore_remove_pre_cut(
         &self,
         initial: RemoveReservation,
@@ -124,6 +129,7 @@ impl RepoLifecycleCoordinator {
         );
     }
 
+    #[cfg(test)]
     pub(super) async fn stop_remove(
         &self,
         initial: RemoveReservation,
@@ -157,6 +163,7 @@ impl RepoLifecycleCoordinator {
         .map_err(|_| super::RepoLifecycleError::Coordination("watcher mount task failed"))
     }
 
+    #[cfg(test)]
     pub(super) async fn fail_reservation(
         &self,
         reservation: WatcherMountReservation,
@@ -169,6 +176,7 @@ impl RepoLifecycleCoordinator {
         .await;
     }
 
+    #[cfg(test)]
     pub(super) async fn quiesce_provider(
         &self,
         repo_id: RepoId,
@@ -180,6 +188,7 @@ impl RepoLifecycleCoordinator {
             .map_err(Into::into)
     }
 
+    #[cfg(test)]
     pub(super) async fn resume_provider(
         &self,
         token: ProviderQuiesceToken,
@@ -193,6 +202,7 @@ impl RepoLifecycleCoordinator {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(super) async fn finish_provider(
         &self,
         token: ProviderQuiesceToken,

@@ -9,6 +9,7 @@
 
 mod alias;
 mod lifecycle;
+mod removal;
 mod settlement;
 
 pub(crate) use settlement::apply_lifecycle_settlement;
@@ -66,6 +67,44 @@ pub(crate) async fn handle_repo_control(
         }
         RepoControlRequest::GetLifecycle { request_id } => {
             lifecycle::handle_get_lifecycle(state, channel, session, request_id).await;
+        }
+        RepoControlRequest::PrepareLocalRepoRemoval {
+            request_id,
+            repo_id,
+            current_scope_nonce,
+            fallback_repo_id,
+        } => {
+            removal::handle_prepare(
+                state,
+                channel,
+                session,
+                request_id,
+                repo_id,
+                current_scope_nonce,
+                fallback_repo_id,
+            )
+            .await;
+        }
+        RepoControlRequest::ExecuteLocalRepoRemoval {
+            request_id,
+            preparation_id,
+            confirmation_token,
+            fallback_binding,
+            current_scope_nonce,
+            switch_nonce,
+        } => {
+            removal::handle_execute(
+                state,
+                channel,
+                session,
+                request_id,
+                preparation_id,
+                confirmation_token,
+                fallback_binding,
+                current_scope_nonce,
+                switch_nonce,
+            )
+            .await;
         }
     }
 }

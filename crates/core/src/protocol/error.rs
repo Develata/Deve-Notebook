@@ -130,12 +130,24 @@ pub enum ServerErrorCode {
     RepoLifecycleNotFound,
     #[serde(rename = "REPO_LIFECYCLE_INVALID_REQUEST")]
     RepoLifecycleInvalidRequest,
+    #[serde(rename = "REPO_LIFECYCLE_AUTHORITY_BUSY")]
+    RepoLifecycleAuthorityBusy,
+    #[serde(rename = "REPO_LIFECYCLE_REMOVAL_BLOCKED")]
+    RepoLifecycleRemovalBlocked,
+    #[serde(rename = "REPO_LIFECYCLE_CONFIRMATION_INVALID")]
+    RepoLifecycleConfirmationInvalid,
+    #[serde(rename = "REPO_LIFECYCLE_CONFIRMATION_EXPIRED")]
+    RepoLifecycleConfirmationExpired,
+    #[serde(rename = "REPO_LIFECYCLE_CONFIRMATION_STALE")]
+    RepoLifecycleConfirmationStale,
     #[serde(rename = "REPO_LIFECYCLE_COMMITTED_PARTIAL")]
     RepoLifecycleCommittedPartial,
     #[serde(rename = "REPO_LIFECYCLE_REPAIR_REQUIRED")]
     RepoLifecycleRepairRequired,
     #[serde(rename = "REPO_LIFECYCLE_PUBLICATION_PENDING")]
     RepoLifecyclePublicationPending,
+    #[serde(rename = "REPO_CREATION_PROJECTION_BASE_REQUIRED")]
+    RepoCreationProjectionBaseRequired,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

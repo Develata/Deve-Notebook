@@ -6,33 +6,35 @@
 //! Typed repo-removal admission. The Remote Import runtime, rather than a CLI
 //! caller, owns the active-session and cleanup-debt classification.
 
-use super::super::{RemoteImportResult, RemoteImportSessionId, RemoteImportState};
+use super::super::{
+    RemoteImportProjectionOutcome, RemoteImportResult, RemoteImportSessionId, RemoteImportState,
+};
 use super::RemoteImportService;
 use crate::models::RepoId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RemoteImportRepoRemovalBlocker {
-    ActiveSession {
-        session_id: RemoteImportSessionId,
-        state: RemoteImportState,
-    },
-    CleanupPending {
-        session_id: RemoteImportSessionId,
-        state: RemoteImportState,
-    },
+    ProjectionPending { session_id: RemoteImportSessionId },
+    ProjectionDegraded { session_id: RemoteImportSessionId },
 }
 
 /// Opaque exact observation of the repo-local Remote Import workflow. The
 /// generation is intentionally not exposed as product or durable identity.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteImportRepoRemovalSnapshot {
     repo_id: RepoId,
     runtime_generation: u64,
+    capture_cleanup_required: bool,
 }
 
 impl RemoteImportRepoRemovalSnapshot {
     pub const fn repo_id(&self) -> RepoId {
         self.repo_id
+    }
+
+    pub const fn capture_cleanup_required(&self) -> bool {
+        self.capture_cleanup_required
     }
 }
 
@@ -76,25 +78,36 @@ pub enum RemoteImportRepoRemovalRevalidation {
 impl RemoteImportService {
     pub fn repo_removal_admission(&self) -> RemoteImportResult<RemoteImportRepoRemovalAdmission> {
         let (runtime_generation, records) = self.inner.repo_removal_observation()?;
+        let mut blockers = Vec::new();
+        let capture_cleanup_required = records
+            .iter()
+            .any(|record| !record.state.is_terminal() || record.cleanup_pending);
+        for record in &records {
+            if record.state == RemoteImportState::Applied {
+                match record
+                    .apply_receipt
+                    .as_ref()
+                    .map(|receipt| receipt.projection_outcome)
+                {
+                    Some(RemoteImportProjectionOutcome::Pending) => {
+                        blockers.push(RemoteImportRepoRemovalBlocker::ProjectionPending {
+                            session_id: record.session_id,
+                        });
+                    }
+                    Some(RemoteImportProjectionOutcome::Degraded) => {
+                        blockers.push(RemoteImportRepoRemovalBlocker::ProjectionDegraded {
+                            session_id: record.session_id,
+                        });
+                    }
+                    Some(RemoteImportProjectionOutcome::Written) | None => {}
+                }
+            }
+        }
         let snapshot = RemoteImportRepoRemovalSnapshot {
             repo_id: self.repo_id,
             runtime_generation,
+            capture_cleanup_required,
         };
-        let mut blockers = Vec::new();
-        for record in records {
-            if !record.state.is_terminal() {
-                blockers.push(RemoteImportRepoRemovalBlocker::ActiveSession {
-                    session_id: record.session_id,
-                    state: record.state,
-                });
-            }
-            if record.cleanup_pending {
-                blockers.push(RemoteImportRepoRemovalBlocker::CleanupPending {
-                    session_id: record.session_id,
-                    state: record.state,
-                });
-            }
-        }
         if blockers.is_empty() {
             Ok(RemoteImportRepoRemovalAdmission::Admitted(snapshot))
         } else {

@@ -13,17 +13,22 @@ mod mount;
 mod tests;
 mod types;
 
-pub(crate) use types::{
-    CreateRepoIntent, CreateRepoOutcome, RemoveRepoOutcome, RepoLifecycleError, RepoMountOutcome,
-    RepoRemovalFallback,
-};
+pub(crate) use types::{CreateRepoIntent, CreateRepoOutcome, RepoLifecycleError, RepoMountOutcome};
+#[cfg(test)]
+pub(crate) use types::{RemoveRepoOutcome, RepoRemovalFallback};
 
 use crate::remote_import_runtime::RemoteImportCoordinator;
 use crate::repo_init::prepare_local_repo_workspace_with_owner;
 use crate::server::repo_mutation::RepoMutationPublicationGate;
-use crate::server::runtime::watcher_runtime::{WatcherMountReservation, WatcherSupervisor};
-use deve_core::ledger::{CatalogMembershipRuntime, LocalRepoSummary};
+#[cfg(test)]
+use crate::server::runtime::watcher_runtime::WatcherMountReservation;
+use crate::server::runtime::watcher_runtime::WatcherSupervisor;
+use deve_core::ledger::CatalogMembershipRuntime;
+#[cfg(test)]
+use deve_core::ledger::LocalRepoSummary;
+#[cfg(test)]
 use deve_core::models::RepoId;
+#[cfg(test)]
 use deve_core::remote_import::{
     RemoteImportRepoRemovalRevalidation, RemoteImportRepoRemovalSnapshot,
 };
@@ -38,13 +43,16 @@ pub(crate) struct RepoLifecycleCoordinator {
     sync: Arc<SyncManager>,
     gate: Arc<RepoMutationPublicationGate>,
     watchers: Arc<WatcherSupervisor>,
+    #[cfg(test)]
     remote_import: Arc<RemoteImportCoordinator>,
+    #[cfg(test)]
     membership: CatalogMembershipRuntime,
     configured_projection_base: Option<PathBuf>,
     #[cfg(test)]
     fail_fallback_publication: AtomicBool,
 }
 
+#[cfg(test)]
 struct RemoveReservation {
     watcher: WatcherMountReservation,
     old: LocalRepoSummary,
@@ -52,6 +60,7 @@ struct RemoveReservation {
     import_snapshot: RemoteImportRepoRemovalSnapshot,
 }
 
+#[cfg(test)]
 enum RemoveCutError {
     Precondition(RepoLifecycleError),
     Catalog(deve_core::ledger::RepoCatalogError),
@@ -67,12 +76,16 @@ impl RepoLifecycleCoordinator {
         membership: CatalogMembershipRuntime,
         configured_projection_base: Option<PathBuf>,
     ) -> Arc<Self> {
+        #[cfg(not(test))]
+        let _ = (&remote_import, &membership);
         Arc::new(Self {
             repo,
             sync,
             gate,
             watchers,
+            #[cfg(test)]
             remote_import,
+            #[cfg(test)]
             membership,
             configured_projection_base,
             #[cfg(test)]
@@ -252,6 +265,7 @@ impl RepoLifecycleCoordinator {
         Ok(CreateRepoOutcome { mount })
     }
 
+    #[cfg(test)]
     pub(crate) async fn remove(
         &self,
         repo_id: RepoId,

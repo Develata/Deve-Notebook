@@ -6,7 +6,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{RepoScopeFailure, map_repo_scope_error};
-use crate::server::runtime::repo_lifecycle_runtime::RepoRemovalFallback;
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use deve_core::models::RepoId;
@@ -43,7 +42,7 @@ pub(super) async fn handle_switch_repo(
         return;
     }
 
-    match commit_repo_switch(state, session, name, repo_id, switch_nonce, None).await {
+    match commit_repo_switch(state, session, name, repo_id, switch_nonce).await {
         Ok(repo_view) => emit_repo_view(ch, repo_view),
         Err(error) => ch.send_protocol_error_with_switch_nonce(error, switch_nonce),
     }
@@ -55,16 +54,7 @@ pub(super) async fn commit_repo_switch(
     name: String,
     repo_id: Option<RepoId>,
     switch_nonce: Option<u64>,
-    fallback: Option<&RepoRemovalFallback>,
 ) -> Result<Option<RepoViewMessages>, ServerError> {
-    if let Some(fallback) = fallback {
-        fallback
-            .revalidate(&state.repo, &state.catalog_membership_runtime())
-            .map_err(|_| ServerError::new(ServerErrorCode::ScRepoNotSelected))?;
-        if repo_id != Some(fallback.summary().repo_id) {
-            return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
-        }
-    }
     let branch = session.active_branch.clone();
     let repo_name = match resolve_requested_repo_name(state, branch.as_ref(), &name, repo_id) {
         Ok(Some(repo_name)) => repo_name,
@@ -109,11 +99,6 @@ pub(super) async fn commit_repo_switch(
         Some(repo_view),
     )
     .map_err(map_repo_scope_error)?;
-    if let Some(fallback) = fallback {
-        fallback
-            .revalidate(&state.repo, &state.catalog_membership_runtime())
-            .map_err(|_| ServerError::new(ServerErrorCode::ScRepoNotSelected))?;
-    }
     if let Some(auth_session_id) = session.auth_session_id() {
         state
             .source_control_write_grants()

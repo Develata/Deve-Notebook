@@ -120,6 +120,7 @@ impl MountedRepoAdmission {
         self.token.repo_id()
     }
 
+    #[allow(dead_code)] // R4 revalidates explicit fallback admission before settlement.
     pub(crate) fn revalidate(&self) -> Result<(), RepoMutationGateError> {
         self.token.revalidate().map_err(RepoMutationGateError::from)
     }

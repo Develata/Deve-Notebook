@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-21`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -429,7 +429,7 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 |---|---|---|---|---|
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
 | Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
-| WebSocket | `DEVEWSF4`, lockstep v5 | 当前代码仍为未发布v4；legacy/unversioned JSON已删除，但removal Prepare/Execute与v5 lockstep尚未实现 | R3 + ADR 0014 | blocked |
+| WebSocket | `DEVEWSF4`, lockstep v5 | 当前代码已切换未发布F4/v5并删除legacy/unversioned JSON与direct Remove；R3 Prepare/Execute admission已实现，R4 destructive settlement、R5 UI/finalization与R6 fresh evidence仍阻塞首发 | R3-R6 + ADR 0014 | partially aligned |
 | Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire 已对齐；B5 typed Web client 与 B6 fresh receipts 未完成 | B4/B5/B6 | blocked |
 | Projection Locator / repo alias | immutable `workspace_segment` + host-local alias JSON v1；peer payload no alias | 已对齐；当前 create 生成 bare canonical RepoId segment，合同仍允许一次性 host-local initial-alias segment；alias 后续不移动路径或进入 peer payload | C1′ + ADR 0013 | non-blocking |
 

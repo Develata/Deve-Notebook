@@ -7,6 +7,7 @@
 //! Remote Import facade. It owns no Ledger tables or workspace decisions.
 
 mod provider_tasks;
+mod source_binding;
 
 use crate::remote_projection_transport::{
     NormalizedRemotePath, RemoteSourceAcquisition, RemoteSourceSink, SourceAcquisitionError,
@@ -23,8 +24,10 @@ use deve_core::remote_import::{
     RemoteImportService, RemoteImportSessionId, RemoteImportSessionView,
 };
 use deve_core::sync::SyncManager;
+#[cfg(test)]
 pub(crate) use provider_tasks::ProviderQuiesceToken;
 use provider_tasks::{ProviderTaskError, ProviderTaskLease, ProviderTaskRuntime};
+use source_binding::{ResolvedRemoteSource, canonical_binding_material, infer_provider};
 use std::collections::HashSet;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
@@ -326,6 +329,14 @@ impl RemoteImportCoordinator {
         &self,
         repo_id: RepoId,
     ) -> Result<RemoteImportRepoRemovalAdmission, RemoteImportHostError> {
+        if self
+            .applying
+            .lock()
+            .map_err(|_| RemoteImportHostError::Coordination)?
+            .contains(&repo_id)
+        {
+            return Err(RemoteImportHostError::ApplyBusy);
+        }
         Ok(RemoteImportService::open(&self.repo, repo_id)?.repo_removal_admission()?)
     }
 
@@ -334,12 +345,21 @@ impl RemoteImportCoordinator {
         repo_id: RepoId,
         expected: &RemoteImportRepoRemovalSnapshot,
     ) -> Result<RemoteImportRepoRemovalRevalidation, RemoteImportHostError> {
+        if self
+            .applying
+            .lock()
+            .map_err(|_| RemoteImportHostError::Coordination)?
+            .contains(&repo_id)
+        {
+            return Err(RemoteImportHostError::ApplyBusy);
+        }
         Ok(RemoteImportService::open(&self.repo, repo_id)?.revalidate_repo_removal(expected)?)
     }
 
     /// Closes provider admission for one repo and waits until an in-flight
     /// immutable capture has either sealed or aborted. The returned token is
     /// exact process-local evidence for the remove commit phase.
+    #[cfg(test)]
     pub(crate) fn quiesce_provider_for_remove(
         &self,
         repo_id: RepoId,
@@ -347,6 +367,7 @@ impl RemoteImportCoordinator {
         self.providers.quiesce(repo_id).map_err(Into::into)
     }
 
+    #[cfg(test)]
     pub(crate) fn resume_provider_after_failed_remove(
         &self,
         token: &ProviderQuiesceToken,
@@ -354,6 +375,7 @@ impl RemoteImportCoordinator {
         self.providers.resume(token).map_err(Into::into)
     }
 
+    #[cfg(test)]
     pub(crate) fn finish_provider_after_remove(
         &self,
         token: ProviderQuiesceToken,
@@ -447,14 +469,6 @@ impl RemoteSourceSink for CaptureBridge<'_> {
     }
 }
 
-struct ResolvedRemoteSource {
-    provider: RemoteProjectionProvider,
-    locator: String,
-    source_binding: RemoteImportBinding,
-    locator_binding: RemoteImportBinding,
-    s3_provider: Option<crate::remote_projection_transport::s3::S3ProjectionProvider>,
-}
-
 struct ApplyLease<'a> {
     applying: &'a Mutex<HashSet<RepoId>>,
     repo_id: RepoId,
@@ -466,33 +480,4 @@ impl Drop for ApplyLease<'_> {
             applying.remove(&self.repo_id);
         }
     }
-}
-
-fn infer_provider(locator: &str) -> Result<RemoteProjectionProvider, RemoteImportHostError> {
-    let webdav = SourceAcquisitionRequest::new(RemoteProjectionProvider::WebDav, locator);
-    let s3 = SourceAcquisitionRequest::new(RemoteProjectionProvider::S3, locator);
-    match (webdav.is_ok(), s3.is_ok()) {
-        (true, false) => Ok(RemoteProjectionProvider::WebDav),
-        (false, true) => Ok(RemoteProjectionProvider::S3),
-        _ => Err(RemoteImportHostError::Locator(
-            "remote projection locator does not select exactly one provider".to_string(),
-        )),
-    }
-}
-
-fn canonical_binding_material(
-    provider: RemoteProjectionProvider,
-    locator: Option<&str>,
-    profile_id: Option<&str>,
-) -> Vec<u8> {
-    let mut material = Vec::new();
-    for field in [
-        provider.as_str(),
-        locator.unwrap_or(""),
-        profile_id.unwrap_or(""),
-    ] {
-        material.extend_from_slice(&(field.len() as u64).to_le_bytes());
-        material.extend_from_slice(field.as_bytes());
-    }
-    material
 }

@@ -130,6 +130,8 @@ impl AppState {
                         self.repo_lifecycle_coordinator(),
                         self.repo.clone(),
                         self.watcher_runtime_view(),
+                        self.sync_manager.clone(),
+                        self.remote_import_coordinator(),
                     )),
                     Arc::new(RepoLifecycleHostPublicationSink::new(
                         self.repo.clone(),

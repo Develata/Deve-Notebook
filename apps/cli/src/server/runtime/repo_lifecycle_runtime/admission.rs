@@ -6,6 +6,7 @@
 
 use super::{RepoLifecycleCoordinator, RepoLifecycleError};
 use deve_core::models::RepoId;
+#[cfg(test)]
 use deve_core::remote_import::{RemoteImportRepoRemovalAdmission, RemoteImportRepoRemovalSnapshot};
 use std::path::Path;
 
@@ -45,6 +46,7 @@ impl RepoLifecycleCoordinator {
     }
 }
 
+#[cfg(test)]
 pub(super) fn admitted_snapshot(
     admission: RemoteImportRepoRemovalAdmission,
 ) -> Result<RemoteImportRepoRemovalSnapshot, RepoLifecycleError> {
@@ -56,6 +58,7 @@ pub(super) fn admitted_snapshot(
     }
 }
 
+#[cfg(test)]
 pub(super) fn admission_error(admission: RemoteImportRepoRemovalAdmission) -> RepoLifecycleError {
     match admission {
         RemoteImportRepoRemovalAdmission::Blocked(blocked) => {

@@ -43,6 +43,20 @@ fn lease_is_repo_and_generation_exact() -> anyhow::Result<()> {
 }
 
 #[test]
+fn removal_snapshot_requires_the_only_live_authority_lease() -> anyhow::Result<()> {
+    let (_dir, runtime, repo_id) = new_runtime()?;
+    let writer = runtime.lease(repo_id)?;
+    let removal = runtime.lease(repo_id)?;
+    assert!(matches!(
+        removal.removal_snapshot(),
+        Err(LocalAuthorityError::Busy(id)) if id == repo_id
+    ));
+    drop(writer);
+    assert_eq!(removal.removal_snapshot()?.repo_id(), repo_id);
+    Ok(())
+}
+
+#[test]
 fn quiescing_rejects_new_leases_and_timeout_restores_active() -> anyhow::Result<()> {
     let (_dir, runtime, repo_id) = new_runtime()?;
     let lease = runtime.lease(repo_id)?;

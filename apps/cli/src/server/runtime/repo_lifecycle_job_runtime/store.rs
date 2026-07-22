@@ -16,6 +16,15 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+pub(super) mod removal;
+pub(super) use removal::{RemovalPreparationRecord, RemovalPreparationState};
+mod request_namespace;
+#[cfg(test)]
+mod test_support;
+#[cfg(test)]
+pub(super) use test_support::{removal_retention_removals_for_test, retention_removals_for_test};
+mod retention;
+
 const RECEIPT_DIR: &str = "repo-lifecycle-jobs";
 const LOCK_FILE: &str = "repo-lifecycle-jobs.lock";
 const RECEIPT_FORMAT: &str = "deve.host-repo-lifecycle-job";
@@ -197,6 +206,8 @@ impl LifecycleReceipt {
 pub(super) struct ReceiptStore {
     dir: PathBuf,
     rows: BTreeMap<Uuid, LifecycleReceipt>,
+    removal_dir: PathBuf,
+    removals: BTreeMap<Uuid, RemovalPreparationRecord>,
     _lock: std::fs::File,
 }
 
@@ -210,11 +221,15 @@ impl ReceiptStore {
         })?;
         safe_fs::ensure_open_file_matches_path(&lock, &lock_path, "repo lifecycle job lock")?;
         let dir = checked_directory(&host_dir.join(RECEIPT_DIR), true)?;
+        let removal_dir = checked_directory(&dir.join("removals"), true)?;
         let mut rows = BTreeMap::new();
         for entry in std::fs::read_dir(&dir)? {
             let entry = entry?;
             let path = entry.path();
             let metadata = std::fs::symlink_metadata(&path)?;
+            if path == removal_dir {
+                continue;
+            }
             if !metadata.is_file() || metadata.file_type().is_symlink() || is_reparse(&metadata) {
                 return Err(store_invalid(
                     "receipt directory contains a non-regular entry",
@@ -233,8 +248,18 @@ impl ReceiptStore {
                 return Err(store_invalid("duplicate lifecycle request receipt"));
             }
         }
+        let removals = removal::load_removals(&removal_dir)?;
+        request_namespace::validate(&rows, &removals)?;
         let mut active_repos = std::collections::HashSet::new();
-        for receipt in rows.values().filter(|receipt| !receipt.phase.is_terminal()) {
+        for receipt in rows
+            .values()
+            .chain(
+                removals
+                    .values()
+                    .filter_map(RemovalPreparationRecord::receipt),
+            )
+            .filter(|receipt| !receipt.phase.is_terminal())
+        {
             if !active_repos.insert(receipt.target_repo_id) {
                 return Err(store_invalid(
                     "multiple active receipts target the same RepoId",
@@ -244,17 +269,28 @@ impl ReceiptStore {
         Ok(Self {
             dir,
             rows,
+            removal_dir,
+            removals,
             _lock: lock,
         })
     }
 
     pub(super) fn receipt(&self, request_id: Uuid) -> Option<&LifecycleReceipt> {
-        self.rows.get(&request_id)
+        self.rows.get(&request_id).or_else(|| {
+            self.removals
+                .values()
+                .find_map(|record| record.receipt_for_request(request_id))
+        })
     }
 
     pub(super) fn active_receipts(&self) -> Vec<LifecycleReceipt> {
         self.rows
             .values()
+            .chain(
+                self.removals
+                    .values()
+                    .filter_map(RemovalPreparationRecord::receipt),
+            )
             .filter(|receipt| !receipt.phase.is_terminal())
             .cloned()
             .collect()
@@ -263,6 +299,11 @@ impl ReceiptStore {
     pub(super) fn pending_publications(&self) -> Vec<Uuid> {
         self.rows
             .values()
+            .chain(
+                self.removals
+                    .values()
+                    .filter_map(RemovalPreparationRecord::receipt),
+            )
             .filter(|receipt| receipt.publication_pending)
             .map(|receipt| receipt.request_id)
             .collect()
@@ -272,7 +313,7 @@ impl ReceiptStore {
         &mut self,
         receipt: LifecycleReceipt,
     ) -> Result<(), RepoLifecycleJobError> {
-        if self.rows.contains_key(&receipt.request_id) {
+        if self.request_id_is_bound(receipt.request_id) {
             return Err(store_invalid("duplicate lifecycle request receipt"));
         }
         self.publish(&receipt)?;
@@ -285,15 +326,36 @@ impl ReceiptStore {
         request_id: Uuid,
         mutate: impl FnOnce(&mut LifecycleReceipt),
     ) -> Result<LifecycleReceipt, RepoLifecycleJobError> {
-        let mut receipt = self
-            .rows
-            .get(&request_id)
+        if let Some(mut receipt) = self.rows.get(&request_id).cloned() {
+            mutate(&mut receipt);
+            receipt.validate(request_id)?;
+            self.publish(&receipt)?;
+            self.rows.insert(request_id, receipt.clone());
+            return Ok(receipt);
+        }
+        let preparation_id = self
+            .removals
+            .iter()
+            .find_map(|(preparation_id, record)| {
+                record
+                    .receipt_for_request(request_id)
+                    .is_some()
+                    .then_some(*preparation_id)
+            })
+            .ok_or(RepoLifecycleJobError::NotFound)?;
+        let mut record = self
+            .removals
+            .get(&preparation_id)
             .cloned()
             .ok_or(RepoLifecycleJobError::NotFound)?;
-        mutate(&mut receipt);
-        receipt.validate(request_id)?;
-        self.publish(&receipt)?;
-        self.rows.insert(request_id, receipt.clone());
+        let receipt = record
+            .receipt_mut_for_request(request_id)
+            .ok_or(RepoLifecycleJobError::NotFound)?;
+        mutate(receipt);
+        let receipt = receipt.clone();
+        record.validate()?;
+        removal::publish_removal(&self.removal_dir, &record)?;
+        self.removals.insert(preparation_id, record);
         Ok(receipt)
     }
 
@@ -301,7 +363,7 @@ impl ReceiptStore {
         &mut self,
         mut retain_normal_create: impl FnMut(RepoId) -> bool,
     ) -> Result<usize, RepoLifecycleJobError> {
-        let remove = terminal_retention_removals(
+        let remove = retention::terminal_retention_removals(
             self.rows.values(),
             chrono::Utc::now().timestamp_millis(),
             &mut retain_normal_create,
@@ -318,7 +380,20 @@ impl ReceiptStore {
         if !remove.is_empty() {
             safe_fs::sync_directory(&self.dir)?;
         }
-        Ok(remove.len())
+        let removal_count = removal::prune_removals(
+            &self.removal_dir,
+            &mut self.removals,
+            chrono::Utc::now().timestamp_millis(),
+        )?;
+        Ok(remove.len() + removal_count)
+    }
+
+    pub(super) fn prune_removals_only(&mut self) -> Result<usize, RepoLifecycleJobError> {
+        removal::prune_removals(
+            &self.removal_dir,
+            &mut self.removals,
+            chrono::Utc::now().timestamp_millis(),
+        )
     }
 
     fn publish(&self, receipt: &LifecycleReceipt) -> Result<(), RepoLifecycleJobError> {
@@ -351,42 +426,6 @@ impl ReceiptStore {
         }
         result
     }
-}
-
-fn terminal_retention_removals<'a>(
-    rows: impl Iterator<Item = &'a LifecycleReceipt>,
-    now_ms: i64,
-    retain_normal_create: &mut impl FnMut(RepoId) -> bool,
-) -> Vec<Uuid> {
-    let cutoff = now_ms.saturating_sub(TERMINAL_RETENTION_MS);
-    let mut candidates = rows
-        .filter(|receipt| {
-            receipt.phase.is_terminal()
-                && !receipt.publication_pending
-                && !(receipt.operation == RepoLifecycleJobOperation::Create
-                    && retain_normal_create(receipt.target_repo_id))
-        })
-        .map(|receipt| (receipt.request_id, receipt.updated_at_ms))
-        .collect::<Vec<_>>();
-    candidates.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
-    candidates
-        .into_iter()
-        .enumerate()
-        .filter_map(|(index, (request_id, updated_at_ms))| {
-            (index >= TERMINAL_RECEIPT_LIMIT || updated_at_ms < cutoff).then_some(request_id)
-        })
-        .collect()
-}
-
-#[cfg(test)]
-pub(super) fn retention_removals_for_test(
-    receipts: &[LifecycleReceipt],
-    now_ms: i64,
-    protected: &std::collections::HashSet<RepoId>,
-) -> Vec<Uuid> {
-    terminal_retention_removals(receipts.iter(), now_ms, &mut |repo_id| {
-        protected.contains(&repo_id)
-    })
 }
 
 fn read_receipt(path: &Path, request_id: Uuid) -> Result<LifecycleReceipt, RepoLifecycleJobError> {

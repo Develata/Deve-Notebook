@@ -238,7 +238,7 @@ pub(crate) struct RepoLifecycleJobStatus {
     pub(crate) publication: Option<RepoLifecycleSettledPublication>,
 }
 
-pub(crate) trait RepoLifecycleJobExecutor: Send + Sync + 'static {
+pub(crate) trait RepoLifecycleJobExecutor: super::removal::RepoRemovalPlanner {
     fn execute(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion>;
 
     fn recover(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion>;
@@ -266,6 +266,14 @@ pub(crate) enum RepoLifecycleJobError {
     RequestConflict,
     #[error("repository lifecycle runtime is busy")]
     Busy,
+    #[error("repository removal is blocked")]
+    RemovalBlocked,
+    #[error("repository removal confirmation is invalid")]
+    ConfirmationInvalid,
+    #[error("repository removal confirmation has expired")]
+    ConfirmationExpired,
+    #[error("repository removal confirmation is stale")]
+    ConfirmationStale,
     #[error("repository lifecycle request was not found")]
     NotFound,
     #[error("repository lifecycle receipt store failed: {0}")]

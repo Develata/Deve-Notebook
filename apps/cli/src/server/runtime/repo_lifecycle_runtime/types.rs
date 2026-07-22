@@ -4,14 +4,17 @@
 //!
 //! Typed host outcomes for dynamic local-repo lifecycle operations.
 
+#[cfg(test)]
 use crate::remote_import_runtime::RemoteImportHostError;
-use crate::server::repo_mutation::{MountedRepoAdmission, RepoMutationGateError};
+#[cfg(test)]
+use crate::server::repo_mutation::MountedRepoAdmission;
+use crate::server::repo_mutation::RepoMutationGateError;
 use crate::server::runtime::watcher_runtime::WatcherLifecycleError;
-use deve_core::ledger::{
-    CatalogMembershipError, CatalogMembershipToken, HostRepoAliasError, LocalRepoSummary,
-    RepoCatalogError,
-};
+use deve_core::ledger::{CatalogMembershipError, HostRepoAliasError, RepoCatalogError};
+#[cfg(test)]
+use deve_core::ledger::{CatalogMembershipToken, LocalRepoSummary};
 use deve_core::models::RepoId;
+#[cfg(test)]
 use deve_core::remote_import::RemoteImportRepoRemovalBlocker;
 use std::path::PathBuf;
 
@@ -26,12 +29,14 @@ pub(crate) struct CreateRepoOutcome {
     pub(crate) mount: RepoMountOutcome,
 }
 
+#[cfg(test)]
 pub(crate) struct RepoRemovalFallback {
     summary: LocalRepoSummary,
     membership: CatalogMembershipToken,
     mount: MountedRepoAdmission,
 }
 
+#[cfg(test)]
 impl RepoRemovalFallback {
     pub(super) fn new(
         summary: LocalRepoSummary,
@@ -89,8 +94,10 @@ impl RepoRemovalFallback {
     }
 }
 
+#[cfg(test)]
 pub(crate) struct RemoveRepoOutcome {
     pub(crate) fallback: Option<RepoRemovalFallback>,
+    #[allow(dead_code)] // Legacy safety regression fixture; production R3 has no soft-remove path.
     pub(crate) repair_required: bool,
 }
 
@@ -113,7 +120,9 @@ pub(crate) enum RepoLifecycleError {
     Membership(CatalogMembershipError),
     Catalog(RepoCatalogError),
     Alias(HostRepoAliasError),
+    #[cfg(test)]
     RemoteImport(RemoteImportHostError),
+    #[cfg(test)]
     RemoteImportBlocked(Vec<RemoteImportRepoRemovalBlocker>),
     NotCommitted {
         operation: &'static str,
@@ -135,7 +144,9 @@ impl std::fmt::Display for RepoLifecycleError {
             Self::Membership(error) => error.fmt(formatter),
             Self::Catalog(error) => error.fmt(formatter),
             Self::Alias(error) => error.fmt(formatter),
+            #[cfg(test)]
             Self::RemoteImport(error) => error.fmt(formatter),
+            #[cfg(test)]
             Self::RemoteImportBlocked(blockers) => write!(
                 formatter,
                 "repository removal is blocked by {} Remote Import condition(s)",
@@ -192,6 +203,7 @@ impl From<HostRepoAliasError> for RepoLifecycleError {
     }
 }
 
+#[cfg(test)]
 impl From<RemoteImportHostError> for RepoLifecycleError {
     fn from(error: RemoteImportHostError) -> Self {
         Self::RemoteImport(error)

@@ -7,6 +7,8 @@ use std::future::pending;
 
 struct PanicExecutor;
 
+impl super::super::removal::RepoRemovalPlanner for PanicExecutor {}
+
 impl RepoLifecycleJobExecutor for PanicExecutor {
     fn execute(
         &self,

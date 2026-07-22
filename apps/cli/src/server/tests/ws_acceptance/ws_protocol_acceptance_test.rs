@@ -168,7 +168,10 @@ async fn ws_endpoint_accepts_versioned_json_text_when_debug_enabled() -> anyhow:
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
     let frame = ClientFrame::current(ClientMessage::Ping);
-    assert_eq!(frame.protocol_version, 4);
+    assert_eq!(
+        frame.protocol_version,
+        deve_core::protocol::WS_PROTOCOL_VERSION
+    );
     let text = serde_json::to_string(&frame)?;
 
     ws.send(Message::Text(text)).await?;

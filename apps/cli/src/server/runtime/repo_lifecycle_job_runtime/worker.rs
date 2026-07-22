@@ -6,6 +6,7 @@ use super::model::{
     RepoLifecycleJobError, RepoLifecycleJobExecutor, RepoLifecycleJobIntent, RepoLifecycleJobPhase,
     RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
 };
+use super::removal::{RepoRemovalExecuteIntent, RepoRemovalPrepareIntent, RepoRemovalPrepared};
 use super::store::{LifecycleReceipt, ReceiptStore};
 use deve_core::models::RepoId;
 use futures::FutureExt;
@@ -24,6 +25,8 @@ const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(1);
 #[cfg(test)]
 const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(50);
 
+mod removal;
+
 pub(super) enum Command {
     Submit {
         request_id: Uuid,
@@ -33,6 +36,15 @@ pub(super) enum Command {
     Status {
         request_id: Uuid,
         reply: oneshot::Sender<Result<RepoLifecycleJobStatus, RepoLifecycleJobError>>,
+    },
+    PrepareRemoval {
+        intent: RepoRemovalPrepareIntent,
+        reply: oneshot::Sender<Result<RepoRemovalPrepared, RepoLifecycleJobError>>,
+    },
+    ExecuteRemoval {
+        intent: RepoRemovalExecuteIntent,
+        now_ms: Option<i64>,
+        reply: oneshot::Sender<Result<RepoLifecycleJobAccepted, RepoLifecycleJobError>>,
     },
     Shutdown {
         reply: oneshot::Sender<Result<(), RepoLifecycleJobError>>,
@@ -49,6 +61,7 @@ pub(super) async fn run(
     mut store: ReceiptStore,
     executor: Arc<dyn RepoLifecycleJobExecutor>,
     publication_sink: Arc<dyn RepoLifecyclePublicationSink>,
+    runtime_incarnation: Uuid,
     mut commands: mpsc::Receiver<Command>,
 ) -> Result<(), RepoLifecycleJobError> {
     prune_terminal(&mut store, executor.as_ref())?;
@@ -98,6 +111,39 @@ pub(super) async fn run(
                             .map(LifecycleReceipt::status)
                             .ok_or(RepoLifecycleJobError::NotFound);
                         let _ = reply.send(result);
+                    }
+                    Some(Command::PrepareRemoval { intent, reply }) => {
+                        let result = removal::prepare_removal(
+                            &mut store,
+                            executor.as_ref(),
+                            runtime_incarnation,
+                            intent,
+                        ).await;
+                        match result {
+                            Err(RepoLifecycleJobError::Store(detail)) => {
+                                let _ = reply.send(Err(RepoLifecycleJobError::Store(detail.clone())));
+                                return Err(RepoLifecycleJobError::Store(detail));
+                            }
+                            result => { let _ = reply.send(result); }
+                        }
+                    }
+                    Some(Command::ExecuteRemoval { intent, now_ms, reply }) => {
+                        let result = removal::execute_removal(
+                            &mut store,
+                            &executor,
+                            &mut jobs,
+                            &mut active_repos,
+                            runtime_incarnation,
+                            now_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
+                            intent,
+                        ).await;
+                        match result {
+                            Err(RepoLifecycleJobError::Store(detail)) => {
+                                let _ = reply.send(Err(RepoLifecycleJobError::Store(detail.clone())));
+                                return Err(RepoLifecycleJobError::Store(detail));
+                            }
+                            result => { let _ = reply.send(result); }
+                        }
                     }
                     Some(Command::Shutdown { reply }) => {
                         commands.close();
@@ -150,7 +196,13 @@ fn admit(
     request_id: Uuid,
     intent: RepoLifecycleJobIntent,
 ) -> Result<RepoLifecycleJobAccepted, RepoLifecycleJobError> {
+    if request_id.is_nil() {
+        return Err(RepoLifecycleJobError::InvalidRequest);
+    }
     intent.validate()?;
+    if intent.operation() == super::model::RepoLifecycleJobOperation::Remove {
+        return Err(RepoLifecycleJobError::InvalidRequest);
+    }
     if let Some(receipt) = store.receipt(request_id) {
         if !receipt.matches_intent(&intent)? {
             return Err(RepoLifecycleJobError::RequestConflict);
@@ -160,6 +212,9 @@ fn admit(
             job_id: receipt.job_id,
             target_repo_id: receipt.target_repo_id,
         });
+    }
+    if store.request_id_is_bound(request_id) {
+        return Err(RepoLifecycleJobError::RequestConflict);
     }
     if jobs.len() >= MAX_ACTIVE_JOBS {
         return Err(RepoLifecycleJobError::Busy);
@@ -332,6 +387,12 @@ fn reject_queued_commands(commands: &mut mpsc::Receiver<Command>) {
                 request_id: _,
                 reply,
             } => {
+                let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
+            }
+            Command::PrepareRemoval { reply, .. } => {
+                let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
+            }
+            Command::ExecuteRemoval { reply, .. } => {
                 let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
             }
             Command::Shutdown { reply } => {

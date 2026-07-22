@@ -43,6 +43,10 @@ impl AuthSessionId {
     pub(crate) fn for_test(seed: &str) -> Self {
         Self(format!("test:{}", sha256_hex(seed.as_bytes())))
     }
+
+    pub(crate) fn removal_binding_digest(&self) -> String {
+        sha256_hex(format!("deve-removal-principal:{}", self.0).as_bytes())
+    }
 }
 
 impl PartialEq for AuthSessionId {

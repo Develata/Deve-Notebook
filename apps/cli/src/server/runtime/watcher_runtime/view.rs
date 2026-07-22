@@ -255,6 +255,10 @@ impl MountAdmissionToken {
         self.repo_id
     }
 
+    pub(crate) fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub(crate) fn revalidate(&self) -> Result<(), MountAdmissionError> {
         if self.slot.repo_id == self.repo_id
             && self.slot.generation == self.generation

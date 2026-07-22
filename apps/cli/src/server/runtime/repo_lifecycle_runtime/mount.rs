@@ -14,6 +14,7 @@ use deve_core::sync::SyncManager;
 use deve_core::sync::watcher::{WatcherFailure, WatcherFailureKind, WatcherFailurePhase};
 use std::sync::Arc;
 
+#[cfg(test)]
 pub(super) fn stop_reserved(
     supervisor: &WatcherSupervisor,
     reservation: &WatcherMountReservation,

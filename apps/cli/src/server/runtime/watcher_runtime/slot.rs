@@ -93,6 +93,7 @@ impl MountSlot {
         RepoMountState::decode(self.state.load(Ordering::Acquire))
     }
 
+    #[allow(dead_code)] // R4 ownership-aware remove consumes this transition.
     pub(super) fn begin_lifecycle_transition(&self) -> Result<RepoMountState, SlotTransitionError> {
         let _route = self
             .deferred_refresh
@@ -282,6 +283,7 @@ fn coordination_failure(primary: impl Into<String>) -> WatcherFailure {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(dead_code)] // R4 ownership-aware remove consumes this typed failure.
 pub(super) enum SlotTransitionError {
     Busy(RepoMountState),
     Coordination,

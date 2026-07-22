@@ -32,6 +32,7 @@ pub(super) struct ProviderTaskRuntime {
     idle: Condvar,
 }
 
+#[cfg(test)]
 #[derive(Debug)]
 pub(crate) struct ProviderQuiesceToken {
     repo_id: RepoId,
@@ -72,6 +73,7 @@ impl ProviderTaskRuntime {
         })
     }
 
+    #[cfg(test)]
     pub(super) fn quiesce(
         &self,
         repo_id: RepoId,
@@ -98,6 +100,7 @@ impl ProviderTaskRuntime {
         })
     }
 
+    #[cfg(test)]
     pub(super) fn resume(&self, token: &ProviderQuiesceToken) -> Result<(), ProviderTaskError> {
         let mut slots = self
             .slots
@@ -114,6 +117,7 @@ impl ProviderTaskRuntime {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(super) fn finish(&self, token: ProviderQuiesceToken) -> Result<(), ProviderTaskError> {
         let mut slots = self
             .slots

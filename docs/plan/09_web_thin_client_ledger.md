@@ -469,9 +469,11 @@ command 打开 Source Control 与解析 notice detail 的路径；缺失期间�
 - lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发
   status refresh，不能在新 scope 自动切换 repo。editor pending overlay 与 repo-control state 分离。
 
-当前F4/v4 alias/create thin path已存在；F4/v5 removal preview-token、zero-repo与browser evidence
-完成前runtime保持部分承载。不得保留direct Remove adapter、复用旧rename controller或把
-Source Control/External Changes state当作adapter。
+当前F4/v5 protocol/server 已实现 removal Prepare/Execute admission，Web 仅实现 Prepare intent 与 typed
+response decode；dispatch 尚不保留 preview/token，也尚未开放 Execute、确认 UI 或 lifecycle finalization。
+这些 browser-owned 部分统一留给 R5，在此之前 `repo_control_client` 保持部分承载。不得把“能够解码”
+写成“已持有 confirmation state”，也不得保留 direct Remove adapter、复用旧 rename controller或把
+Source Control/External Changes state 当作 adapter。
 
 ## 12. Refactor Target
 

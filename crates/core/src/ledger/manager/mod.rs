@@ -21,7 +21,7 @@ mod authority_storage_runtime;
 pub(crate) use authority_storage_runtime::BoundRepoAuthority;
 pub(crate) use authority_storage_runtime::{LocalAuthorityDiscovery, LocalAuthorityRuntime};
 pub use authority_storage_runtime::{
-    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease,
+    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease, RepoAuthorityRemovalSnapshot,
 };
 mod commit_apply;
 mod commit_plan;

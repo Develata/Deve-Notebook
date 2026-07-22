@@ -9,7 +9,8 @@
 use crate::api::WsService;
 use deve_core::models::RepoId;
 use deve_core::protocol::{
-    ClientMessage, RepoAliasBinding, RepoControlRequest, RepoControlResponse, RepoLifecycleIntent,
+    ClientMessage, LocalRepoRemovalPreview, OpaqueFallbackBinding, RemovalConfirmationToken,
+    RepoAliasBinding, RepoControlRequest, RepoControlResponse, RepoLifecycleIntent,
     RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, ScopeNonce, ServerErrorCode,
     SwitchNonce,
 };
@@ -44,7 +45,10 @@ impl RepoControlScope {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PendingLifecycle {
     Create,
-    Remove { repo_id: RepoId },
+    #[allow(dead_code)] // R5 consumes the admitted removal job identity.
+    Remove {
+        repo_id: RepoId,
+    },
 }
 
 impl PendingLifecycle {
@@ -72,6 +76,9 @@ enum PendingKind {
         lifecycle: PendingLifecycle,
         accepted: Option<(Uuid, RepoId)>,
     },
+    RemovalPrepare {
+        repo_id: RepoId,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -88,6 +95,15 @@ pub enum RepoControlAdmission {
         job_id: Uuid,
         target_repo_id: RepoId,
         operation: RepoLifecycleOperation,
+    },
+    RemovalPrepared {
+        request_id: Uuid,
+        preparation_id: Uuid,
+        repo_id: RepoId,
+        preview: LocalRepoRemovalPreview,
+        confirmation_token: Option<RemovalConfirmationToken>,
+        fallback_binding: Option<OpaqueFallbackBinding>,
+        expires_at_unix_ms: Option<i64>,
     },
     LifecycleStatus {
         request_id: Uuid,
@@ -149,24 +165,24 @@ impl RepoControlClient {
         )
     }
 
-    pub fn remove_repo(
+    pub fn prepare_remove_repo(
         &self,
         ws: &WsService,
         scope: RepoControlScope,
         repo_id: RepoId,
-        switch_nonce: u64,
     ) -> Uuid {
+        let request_id = Uuid::new_v4();
         let scope_nonce = scope.scope_nonce;
-        self.submit_lifecycle(
-            ws,
-            scope,
-            PendingLifecycle::Remove { repo_id },
-            RepoLifecycleIntent::Remove {
+        self.register(request_id, scope, PendingKind::RemovalPrepare { repo_id });
+        ws.send(ClientMessage::RepoControl(
+            RepoControlRequest::PrepareLocalRepoRemoval {
+                request_id,
                 repo_id,
                 current_scope_nonce: ScopeNonce::new(scope_nonce),
-                switch_nonce: SwitchNonce::new(switch_nonce),
+                fallback_repo_id: None,
             },
-        )
+        ));
+        request_id
     }
 
     /// Rebind transport-local observation after an exact browser reconnect.
@@ -225,6 +241,33 @@ impl RepoControlClient {
                 };
                 pending.remove(&request_id);
                 (binding.repo_id == repo_id).then_some(RepoControlAdmission::AliasSet(binding))
+            }
+            RepoControlResponse::LocalRepoRemovalPrepared {
+                preparation_id,
+                repo_id,
+                preview,
+                confirmation_token,
+                fallback_binding,
+                expires_at_unix_ms,
+                ..
+            } => {
+                let PendingKind::RemovalPrepare {
+                    repo_id: expected_repo_id,
+                } = request.kind
+                else {
+                    pending.remove(&request_id);
+                    return None;
+                };
+                pending.remove(&request_id);
+                (repo_id == expected_repo_id).then_some(RepoControlAdmission::RemovalPrepared {
+                    request_id,
+                    preparation_id,
+                    repo_id,
+                    preview,
+                    confirmation_token,
+                    fallback_binding,
+                    expires_at_unix_ms,
+                })
             }
             RepoControlResponse::LifecycleAccepted {
                 job_id,
@@ -340,6 +383,7 @@ impl RepoControlClient {
 fn response_request_id(response: &RepoControlResponse) -> Uuid {
     match response {
         RepoControlResponse::AliasSet { request_id, .. }
+        | RepoControlResponse::LocalRepoRemovalPrepared { request_id, .. }
         | RepoControlResponse::LifecycleAccepted { request_id, .. }
         | RepoControlResponse::LifecycleStatus { request_id, .. }
         | RepoControlResponse::Error { request_id, .. } => *request_id,

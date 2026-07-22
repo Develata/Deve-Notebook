@@ -19,10 +19,14 @@ use deve_core::protocol::{RepoListEntry, ServerMessage};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
+mod removal;
+
 pub(crate) struct RepoLifecycleHostExecutor {
     coordinator: Arc<RepoLifecycleCoordinator>,
     repo: Arc<RepoManager>,
     watcher: WatcherRuntimeView,
+    sync_manager: Arc<deve_core::sync::SyncManager>,
+    remote_import: Arc<crate::remote_import_runtime::RemoteImportCoordinator>,
 }
 
 impl RepoLifecycleHostExecutor {
@@ -30,11 +34,15 @@ impl RepoLifecycleHostExecutor {
         coordinator: Arc<RepoLifecycleCoordinator>,
         repo: Arc<RepoManager>,
         watcher: WatcherRuntimeView,
+        sync_manager: Arc<deve_core::sync::SyncManager>,
+        remote_import: Arc<crate::remote_import_runtime::RemoteImportCoordinator>,
     ) -> Self {
         Self {
             coordinator,
             repo,
             watcher,
+            sync_manager,
+            remote_import,
         }
     }
 
@@ -155,12 +163,21 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
         let coordinator = self.coordinator.clone();
         let repo = self.repo.clone();
         let watcher = self.watcher.clone();
+        let sync_manager = self.sync_manager.clone();
+        let remote_import = self.remote_import.clone();
         Box::pin(async move {
             let executor = Self {
                 coordinator: coordinator.clone(),
                 repo,
                 watcher,
+                sync_manager,
+                remote_import,
             };
+            if job.intent.remove_repo_id().is_some() {
+                return RepoLifecycleJobCompletion::not_committed(
+                    "ownership-aware cleanup execution is not connected until R4",
+                );
+            }
             let result = if let Some((initial_alias, projection_base, projection_base_repo_id)) =
                 job.intent.create_parts()
             {
@@ -191,27 +208,6 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
                             )
                         }
                     })
-            } else if let Some(repo_id) = job.intent.remove_repo_id() {
-                coordinator
-                    .remove(repo_id, job.request_id)
-                    .await
-                    .map(|outcome| {
-                        let publication = RepoLifecycleSettledPublication::Removed {
-                            repo_id,
-                            fallback_repo_id: outcome
-                                .fallback
-                                .as_ref()
-                                .map(|fallback| fallback.summary().repo_id),
-                        };
-                        if outcome.repair_required {
-                            RepoLifecycleJobCompletion::committed_partial_with_publication(
-                                "repository removed with cleanup debt",
-                                publication,
-                            )
-                        } else {
-                            RepoLifecycleJobCompletion::succeeded(publication)
-                        }
-                    })
             } else {
                 return RepoLifecycleJobCompletion::repair_required(
                     "lifecycle intent has no executable operation",
@@ -225,11 +221,15 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
         let repo = self.repo.clone();
         let watcher = self.watcher.clone();
         let coordinator = self.coordinator.clone();
+        let sync_manager = self.sync_manager.clone();
+        let remote_import = self.remote_import.clone();
         Box::pin(async move {
             Self {
                 coordinator,
                 repo,
                 watcher,
+                sync_manager,
+                remote_import,
             }
             .recover_from_truth(&job)
         })

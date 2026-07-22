@@ -309,7 +309,7 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
 }
 
 #[test]
-fn strict_v4_json_rejects_missing_vectors_and_legacy_peer_alias() {
+fn strict_v5_json_rejects_missing_vectors_and_legacy_peer_alias() {
     let repo_id = uuid::Uuid::new_v4();
     let client_request = format!(
         r#"{{"protocol_version":{WS_PROTOCOL_VERSION},"message":{{"SyncRequest":{{"repo_id":"{repo_id}","requests":[]}}}}}}"#
@@ -355,7 +355,7 @@ fn strict_v4_json_rejects_missing_vectors_and_legacy_peer_alias() {
 }
 
 #[test]
-fn strict_v4_json_rejects_alias_only_repo_list_shape() {
+fn strict_v5_json_rejects_alias_only_repo_list_shape() {
     let legacy = serde_json::json!({
         "protocol_version": WS_PROTOCOL_VERSION,
         "message": {

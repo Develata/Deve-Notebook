@@ -94,6 +94,8 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppSta
             repo_lifecycle.clone(),
             parts.repo.clone(),
             parts.watcher_runtime.clone(),
+            parts.sync_manager.clone(),
+            remote_import.clone(),
         )),
         Arc::new(RepoLifecycleHostPublicationSink::new(
             parts.repo.clone(),

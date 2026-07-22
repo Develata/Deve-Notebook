@@ -72,8 +72,11 @@ pub use remote_import::{
 };
 pub use remote_projection::RemoteProjectionProvider;
 pub use repo_control::{
-    RepoAliasBinding, RepoControlRequest, RepoControlResponse, RepoLifecycleIntent,
-    RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState, RepoReadiness,
+    LocalRepoRemovalBlocker, LocalRepoRemovalDeletedCategory, LocalRepoRemovalPreservedCategory,
+    LocalRepoRemovalPreview, LocalRepoRemovalWarning, OpaqueFallbackBinding,
+    RemovalConfirmationToken, RepoAliasBinding, RepoControlRequest, RepoControlResponse,
+    RepoLifecycleIntent, RepoLifecycleOperation, RepoLifecycleOutcome, RepoLifecycleState,
+    RepoReadiness,
 };
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};

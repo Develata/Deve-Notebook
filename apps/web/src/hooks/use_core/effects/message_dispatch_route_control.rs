@@ -86,6 +86,7 @@ pub fn route_control_message(
             if let Some(admission) = repo_control.accept(response, &scope) {
                 match admission {
                     RepoControlAdmission::AliasSet(_) => {}
+                    RepoControlAdmission::RemovalPrepared { .. } => {}
                     RepoControlAdmission::LifecycleAccepted {
                         target_repo_id,
                         operation: RepoLifecycleOperation::Create,

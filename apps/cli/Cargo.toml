@@ -40,6 +40,7 @@ redb.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
 hmac = "0.12"
 sha2 = "0.10"
+getrandom.workspace = true
 rhai = { version = "1.19", features = ["serde", "sync"] }
 uuid.workspace = true
 ctrlc = "3.4"

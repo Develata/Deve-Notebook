@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1 per-RepoId authority ownership and R2 zero-repo NoScope/configured first Create are implemented; dedicated REPO_CREATION_PROJECTION_BASE_REQUIRED wire projection and R3-R6 F4/v5 preview-token removal, owned cleanup/repair, thin UI and fresh cross-process evidence are not implemented yet
+    - gap: R1 per-RepoId authority ownership, R2 zero-repo NoScope/configured first Create and typed REPO_CREATION_PROJECTION_BASE_REQUIRED, plus R3 F4/v5 manifest/token/atomic ExecuteAdmitted envelope are implemented; R4-R6 exact owner cleanup/repair and remaining recovery-overlap proof, single typed finalization, thin UI and fresh cross-process evidence are not implemented yet
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -295,6 +295,10 @@
     - run: cargo test -p deve_cli --lib execute_local_repo_removal_rejects_expired_stale_and_wrong_issuer_token -- --nocapture
     - run: cargo test -p deve_cli --lib execute_local_repo_removal_retry_returns_existing_job_or_result -- --nocapture
     - run: cargo test -p deve_cli --lib execute_local_repo_removal_atomically_persists_admission_before_worker -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_request_ids_share_one_namespace_with_prepare_and_create -- --nocapture
+    - run: cargo test -p deve_cli --lib lifecycle_store_rejects_cross_record_request_id_collision_on_restart -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_retention_is_bounded_before_loading_another_prepare -- --nocapture
+    - run: cargo test -p deve_cli --lib removal_store_rejects_aggregate_bytes_over_load_budget -- --nocapture
     - run: cargo test -p deve_cli --lib web_removal_token_binds_principal_connection_and_server_incarnation -- --nocapture
     - run: cargo test -p deve_cli --lib offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity -- --nocapture
     - run: cargo test -p deve_core --lib remove_local_repo_deletes_owned_state_and_preserves_workspace_content -- --nocapture

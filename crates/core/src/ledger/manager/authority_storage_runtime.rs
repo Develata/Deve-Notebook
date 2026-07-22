@@ -8,7 +8,9 @@ mod local_authority;
 pub(crate) use local_authority::{
     BoundRepoAuthority, LocalAuthorityDiscovery, LocalAuthorityRuntime,
 };
-pub use local_authority::{LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease};
+pub use local_authority::{
+    LocalAuthorityError, PreparedRepoAuthority, RepoAuthorityLease, RepoAuthorityRemovalSnapshot,
+};
 
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::ops;
@@ -135,6 +137,13 @@ impl RepoManager {
             .revalidate(&membership)
             .map_err(|_| LocalAuthorityError::NotAdmitted(repo_id))?;
         Ok(lease)
+    }
+
+    pub fn snapshot_local_authority_for_removal(
+        &self,
+        repo_id: crate::models::RepoId,
+    ) -> std::result::Result<RepoAuthorityRemovalSnapshot, LocalAuthorityError> {
+        self.lease_local_authority(repo_id)?.removal_snapshot()
     }
 
     pub(crate) fn lease_local_authority_stem(

@@ -137,7 +137,7 @@
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 4|Redb schema v4" docs/registry/first-tag-format-matrix.md
     - run: rg -n "WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "当前代码仍为未发布 F4/v4" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "当前代码已切换F4/v5" docs/registry/first-tag-format-matrix.md
     - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
     - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:

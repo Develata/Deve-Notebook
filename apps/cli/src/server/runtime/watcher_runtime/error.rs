@@ -15,12 +15,15 @@ pub(crate) enum WatcherLifecycleError {
         repo_id: RepoId,
         generation: u64,
     },
+    #[allow(dead_code)] // R4 ownership-aware remove reserves existing mounts.
     Busy {
         repo_id: RepoId,
         generation: u64,
         state: RepoMountState,
     },
+    #[allow(dead_code)] // R4 ownership-aware remove reserves existing mounts.
     Missing(RepoId),
+    #[allow(dead_code)] // R4 ownership-aware remove reserves existing mounts.
     GenerationExhausted(RepoId),
     StaleReservation {
         repo_id: RepoId,
@@ -45,6 +48,7 @@ pub(crate) enum WatcherLifecycleError {
         repo_id: RepoId,
         generation: u64,
     },
+    #[allow(dead_code)] // R4 ownership-aware remove performs E2 shutdown.
     Shutdown {
         repo_id: RepoId,
         failure: WatcherFailure,
