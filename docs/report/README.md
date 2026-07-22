@@ -53,6 +53,13 @@
   retirement finalization 缺口；USER 于 2026-07-22 批准 `D1-SQ + O1-FREEZE`、cut debt、
   two-phase finalization 与 catalog JSON v2 安全收敛。
 
+## Pending Architecture Decisions
+
+- `repo-reopening-authority-stop-2026-07-22.md`：R5 same-RepoId in-process
+  Reopening 暴露 prepared authority / fresh catalog membership 的生产闭环、persistent lock
+  continuity 与 durable identity binding 缺口；等待 USER 在 two-stage owner-prepared
+  reincarnation（推荐）与 restart-only readmission 之间裁定。
+
 ## Retired Cleanup Policy
 
 重复短报告会被合并到主题 baseline；被合并的原文件只在 git history 中保留。需要追溯具体批次时，先读主题 baseline 的 `Retired Source Reports` 列表，再查对应提交历史。
