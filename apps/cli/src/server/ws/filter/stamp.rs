@@ -65,6 +65,17 @@ pub(super) fn stamp_scope_nonce(msg: ServerMessage, scope_nonce: u64) -> ServerM
             peer_id,
             scope_nonce: Some(scope_nonce),
         },
+        ServerMessage::RepoList {
+            request_id,
+            branch,
+            repo_entries,
+            ..
+        } => ServerMessage::RepoList {
+            request_id,
+            branch,
+            scope_nonce: Some(scope_nonce),
+            repo_entries,
+        },
         ServerMessage::ProjectionRecoveryRequired(mut recovery) => {
             recovery.scope_nonce = Some(scope_nonce);
             ServerMessage::ProjectionRecoveryRequired(recovery)

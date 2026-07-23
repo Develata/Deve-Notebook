@@ -110,7 +110,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke, or verifies an explicitly supplied existing candidate image without rebuilding |
 | `smoke-docker-multiclient.sh` | Builds or reuses one Docker candidate image, then drives isolated Playwright clients; the required product tier also proves repo lifecycle, typed diff, Source Control, and External Changes |
-| `lib/docker-multiclient-product-journeys.mjs` | UI-only Docker browser journey helper plus a narrow `docker exec` projection mutation used to prove External Changes does not bypass ledger authority |
+| `lib/docker-multiclient-product-journeys.mjs` | Docker product-journey helper for UI intent, candidate-container setup/restart, and container-side removal preservation assertions |
+| `lib/docker-multiclient-runtime.mjs` | Browser diagnostics, shell probes, exact runtime-incarnation restart proof, and narrow restart transport-error classification for Docker multiclient evidence |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
 | `lib/android-tools.sh` | Shared Android SDK / Android Studio JBR discovery helpers for local and target-host Android gates |
 

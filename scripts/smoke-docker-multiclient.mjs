@@ -1,11 +1,38 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
+  assertNoScope,
+  assertRemovalPreservation,
+  createFirstRepoFromNoScope,
+  exerciseLastRepoNoScope,
   exerciseRepoLifecycle,
   exerciseSourceControlAndExternalChanges,
+  restartCandidateContainer,
 } from "./lib/docker-multiclient-product-journeys.mjs";
+import {
+  attachDiagnostics,
+  delay,
+  editorContentIncludes,
+  isDirectInvocation,
+  readNodeRole,
+  relevantConsoleErrors,
+  relevantRequestFailures,
+  renderedShellPresent,
+  renderedShellSelector,
+  waitForRestartedNodeRole,
+  waitForRenderedShell,
+  waitUntil as waitUntilWithTimeout,
+  webSocketMatchesExpectedOrigin as runtimeWebSocketMatchesExpectedOrigin,
+} from "./lib/docker-multiclient-runtime.mjs";
+
+export {
+  editorContentIncludes,
+  isDirectInvocation,
+  renderedShellPresent,
+  renderedShellSelector,
+  relevantConsoleErrors,
+  waitForRenderedShell,
+};
 
 const playwrightRequire = createRequire(
   process.env.DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM ?? import.meta.url,
@@ -21,96 +48,12 @@ const timeoutMs = Number(process.env.DEVE_DOCKER_MULTI_TIMEOUT_MS ?? "60000");
 const productJourneys = ["1", "true"].includes(
   (process.env.DEVE_DOCKER_MULTI_PRODUCT_JOURNEYS ?? "0").toLowerCase(),
 );
-export const renderedShellSelector = "#login-username, [data-deve-sync-status]";
-
-export function renderedShellPresent(selector, root = document) {
-  return root.querySelector(selector) != null;
-}
-
-export async function waitForRenderedShell(page, timeout = 15000) {
-  await page.waitForFunction(renderedShellPresent, renderedShellSelector, { timeout });
-}
-
-export function isDirectInvocation(argvPath = process.argv[1], moduleUrl = import.meta.url) {
-  return Boolean(argvPath) && moduleUrl === pathToFileURL(resolve(argvPath)).href;
-}
-
-export function editorContentIncludes(expected, root = window) {
-  if (typeof root.getEditorContent !== "function") {
-    return false;
-  }
-  const content = root.getEditorContent();
-  return typeof content === "string" && content.includes(expected);
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function waitUntil(label, predicate, timeout = timeoutMs) {
-  const started = Date.now();
-  let lastError;
-  while (Date.now() - started < timeout) {
-    try {
-      if (await predicate()) {
-        return;
-      }
-    } catch (err) {
-      lastError = err;
-    }
-    await delay(250);
-  }
-  const suffix = lastError ? `: ${lastError.message}` : "";
-  throw new Error(`timeout waiting for ${label}${suffix}`);
+  return waitUntilWithTimeout(label, predicate, timeout);
 }
 
-function attachDiagnostics(page, label) {
-  const diag = {
-    label,
-    wsUrls: [],
-    responses: [],
-    consoleErrors: [],
-    pageErrors: [],
-    offline: false,
-  };
-
-  page.on("websocket", (ws) => {
-    diag.wsUrls.push(ws.url());
-  });
-  page.on("response", (response) => {
-    const url = new URL(response.url());
-    if (url.pathname.startsWith("/api/")) {
-      diag.responses.push({ path: url.pathname, status: response.status() });
-    }
-  });
-  page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      const message = msg.text();
-      diag.consoleErrors.push({ message, duringOffline: diag.offline });
-      if (!diag.offline) {
-        console.error(`docker-multiclient-smoke: ${label} console error: ${message}`);
-      }
-    }
-  });
-  page.on("pageerror", (err) => {
-    const detail = err.stack || err.message;
-    diag.pageErrors.push(detail);
-    console.error(`docker-multiclient-smoke: ${label} page error: ${detail}`);
-  });
-
-  return diag;
-}
-
-export function relevantConsoleErrors(diag) {
-  return diag.consoleErrors.filter(({ message, duringOffline }) => {
-    if (message.includes("favicon.ico")) {
-      return false;
-    }
-    if (duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")) {
-      return false;
-    }
-    return true;
-  });
+export function webSocketMatchesExpectedOrigin(url, httpOrigin = expectedOrigin) {
+  return runtimeWebSocketMatchesExpectedOrigin(url, httpOrigin);
 }
 
 function assertApiResponse(diag, path, expectedStatus) {
@@ -125,25 +68,8 @@ function assertApiResponse(diag, path, expectedStatus) {
   );
 }
 
-export function webSocketMatchesExpectedOrigin(url, httpOrigin = expectedOrigin) {
-  try {
-    const expected = new URL(httpOrigin);
-    expected.protocol = expected.protocol === "https:" ? "wss:" : "ws:";
-    const observed = new URL(url);
-    return observed.origin === expected.origin && observed.pathname === "/ws";
-  } catch {
-    return false;
-  }
-}
-
 function hasRelativeWs(diag) {
-  return diag.wsUrls.some((url) => {
-    try {
-      return webSocketMatchesExpectedOrigin(url);
-    } catch {
-      return false;
-    }
-  });
+  return diag.sockets.some(({ url }) => webSocketMatchesExpectedOrigin(url, expectedOrigin));
 }
 
 async function assertPageHealthy(page, diag) {
@@ -159,6 +85,12 @@ async function assertPageHealthy(page, diag) {
     consoleErrors.length,
     0,
     `${diag.label} has console errors: ${JSON.stringify(consoleErrors)}`,
+  );
+  const requestFailures = relevantRequestFailures(diag);
+  assert.equal(
+    requestFailures.length,
+    0,
+    `${diag.label} has unexpected request failures: ${JSON.stringify(requestFailures)}`,
   );
   assert.equal(
     diag.pageErrors.length,
@@ -221,6 +153,63 @@ async function login(page, diag) {
   assertApiResponse(diag, "/api/node/role", 200);
   assertApiResponse(diag, "/api/auth/status", 200);
   await assertPageHealthy(page, diag);
+}
+
+async function reopenNoScope(page, diag) {
+  await page.goto("about:blank");
+  await delay(50);
+  const socketCountBefore = diag.sockets.length;
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await waitForRenderedShell(page, timeoutMs);
+  const username = page.locator("#login-username");
+  if (await username.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await username.fill(authUser);
+    await page.locator("#login-password").fill(authPassword);
+    await page.locator('button[type="submit"]').click();
+  }
+  await waitUntil(
+    `${diag.label} current-navigation websocket server frame`,
+    () => diag.sockets
+      .slice(socketCountBefore)
+      .some(({ url, frames }) => webSocketMatchesExpectedOrigin(url) && frames > 0),
+  );
+  await assertNoScope(page, `${diag.label} after restart`);
+}
+
+async function reopenReady(page, diag) {
+  const socketCountBefore = diag.sockets.length;
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await waitForRenderedShell(page, timeoutMs);
+  const username = page.locator("#login-username");
+  if (await username.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await username.fill(authUser);
+    await page.locator("#login-password").fill(authPassword);
+    await page.locator('button[type="submit"]').click();
+  }
+  await waitForReady(page, `${diag.label} after phase restart`);
+  await waitUntil(
+    `${diag.label} phase-restart websocket server frame`,
+    () => diag.sockets
+      .slice(socketCountBefore)
+      .some(({ url, frames }) => webSocketMatchesExpectedOrigin(url) && frames > 0),
+  );
+  await assertPageHealthy(page, diag);
+}
+
+async function restartBetweenProductPhases(pages) {
+  const roleBeforeRestart = await readNodeRole(baseUrl);
+  await Promise.all(pages.map((page) => page.goto("about:blank")));
+  restartCandidateContainer();
+  const roleAfterRestart = await waitForRestartedNodeRole({
+    baseUrl,
+    before: roleBeforeRestart,
+    timeoutMs,
+  });
+  assert.notEqual(
+    roleAfterRestart.runtime_incarnation,
+    roleBeforeRestart.runtime_incarnation,
+    "product phase restart must replace the process runtime",
+  );
 }
 
 async function openSearch(page) {
@@ -301,7 +290,7 @@ async function exerciseOfflineRecovery(context, page, diag, peerPage) {
   const contentBefore = await editorContent(page);
   const peerContentBefore = await editorContent(peerPage);
   const pendingBefore = await pendingAckCount(page);
-  const wsCountBefore = diag.wsUrls.length;
+  const socketCountBefore = diag.sockets.length;
   diag.offline = true;
   await context.setOffline(true);
   await page.locator('[data-deve-disconnect-overlay="lockdown"]').waitFor({
@@ -336,7 +325,9 @@ async function exerciseOfflineRecovery(context, page, diag, peerPage) {
   });
   await waitUntil(
     `${diag.label} reconnect websocket`,
-    () => diag.wsUrls.slice(wsCountBefore).some((url) => webSocketMatchesExpectedOrigin(url)),
+    () => diag.sockets
+      .slice(socketCountBefore)
+      .some(({ url, frames }) => webSocketMatchesExpectedOrigin(url) && frames > 0),
     timeoutMs,
   );
   await waitForWritableEditor(page);
@@ -365,8 +356,8 @@ async function main() {
     contexts.push(contextA, contextB);
     const pageA = await contextA.newPage();
     const pageB = await contextB.newPage();
-    const diagA = attachDiagnostics(pageA, "client-a");
-    const diagB = attachDiagnostics(pageB, "client-b");
+    const diagA = attachDiagnostics(pageA, "client-a", expectedOrigin);
+    const diagB = attachDiagnostics(pageB, "client-b", expectedOrigin);
 
     await login(pageA, diagA);
     await login(pageB, diagB);
@@ -390,6 +381,8 @@ async function main() {
       "client-a must receive client-b's post-reconnect edit",
     );
     let productEvidence = null;
+    let lastRepoEvidence = null;
+    let recreatedRepo = null;
     if (productJourneys) {
       productEvidence = await exerciseSourceControlAndExternalChanges({
         page: pageA,
@@ -398,6 +391,68 @@ async function main() {
         path: docPath,
         currentContent: `${content}${recoveryContent}`,
       });
+
+      // The host-side Playwright contexts share one Docker gateway IP. Separate
+      // the high-traffic collaboration/source-control phase from the removal
+      // phase without weakening the product's 120 requests/minute/IP contract.
+      // Volumes stay mounted, so this also proves the first phase is durable.
+      await restartBetweenProductPhases([pageA, pageB]);
+      await reopenReady(pageA, diagA);
+      await reopenReady(pageB, diagB);
+
+      const mobileContext = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+      });
+      contexts.push(mobileContext);
+      const mobilePage = await mobileContext.newPage();
+      const mobileDiag = attachDiagnostics(
+        mobilePage,
+        "client-mobile-390x844",
+        expectedOrigin,
+      );
+      await login(mobilePage, mobileDiag);
+      lastRepoEvidence = await exerciseLastRepoNoScope({
+        page: mobilePage,
+        observerPages: [pageA, pageB],
+      });
+
+      const roleBeforeRestart = await readNodeRole(baseUrl);
+      for (const diag of [diagA, diagB, mobileDiag]) {
+        diag.hostRestart = true;
+      }
+      restartCandidateContainer();
+      const roleAfterRestart = await waitForRestartedNodeRole({
+        baseUrl,
+        before: roleBeforeRestart,
+        timeoutMs,
+      });
+      for (const diag of [diagA, diagB, mobileDiag]) {
+        diag.hostRestart = false;
+      }
+      await reopenNoScope(pageA, diagA);
+      await reopenNoScope(pageB, diagB);
+      await reopenNoScope(mobilePage, mobileDiag);
+      assertRemovalPreservation(
+        lastRepoEvidence.removedRepoId,
+        lastRepoEvidence.preservation,
+      );
+      recreatedRepo = await createFirstRepoFromNoScope(mobilePage, [pageA, pageB]);
+      assert.notEqual(recreatedRepo.repoId, lastRepoEvidence.removedRepoId);
+      assertRemovalPreservation(
+        lastRepoEvidence.removedRepoId,
+        lastRepoEvidence.preservation,
+      );
+      await assertPageHealthy(mobilePage, mobileDiag);
+      productEvidence = {
+        ...productEvidence,
+        mobileViewport: mobilePage.viewportSize(),
+        mobileServerFrames: mobileDiag.sockets
+          .reduce((total, socket) => total + socket.frames, 0),
+        restartRuntimeChanged:
+          roleAfterRestart.runtime_incarnation !== roleBeforeRestart.runtime_incarnation,
+      };
     }
     await assertPageHealthy(pageA, diagA);
     await assertPageHealthy(pageB, diagB);
@@ -408,9 +463,11 @@ async function main() {
       docPath,
       repoLifecycle,
       productEvidence,
+      lastRepoEvidence,
+      recreatedRepo,
       clients: [
-        { label: diagA.label, ws: diagA.wsUrls.length },
-        { label: diagB.label, ws: diagB.wsUrls.length },
+        { label: diagA.label, ws: diagA.sockets.length },
+        { label: diagB.label, ws: diagB.sockets.length },
       ],
     }));
   } finally {
@@ -421,7 +478,7 @@ async function main() {
   }
 }
 
-if (isDirectInvocation()) {
+if (isDirectInvocation(process.argv[1], import.meta.url)) {
   main().catch((err) => {
     console.error("docker-multiclient-smoke: Playwright failure");
     console.error(err);

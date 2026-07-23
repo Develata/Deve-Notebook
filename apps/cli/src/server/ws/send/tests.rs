@@ -12,7 +12,9 @@ use crate::server::session::WsSession;
 use axum::extract::ws::Message;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::frame::decode_server_binary;
-use deve_core::protocol::{ConfirmedOp, ProjectionRecoveryCause, ServerMessage};
+use deve_core::protocol::{
+    ConfirmedOp, ProjectionRecoveryCause, RepoListEntry, RepoReadiness, ServerMessage,
+};
 use futures::StreamExt;
 use tokio::sync::broadcast;
 use tokio::time::{Duration, timeout};
@@ -171,6 +173,58 @@ async fn peer_deleted_broadcasts_are_not_dropped_when_unicast_queue_is_full() {
             assert_eq!(scope_nonce, Some(13));
         }
         other => panic!("expected queued PeerDeleted, got {:?}", other),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn repo_list_broadcasts_are_not_dropped_for_no_scope_browser() {
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = new_unicast_channel();
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(13));
+    let filter = BroadcastFilter::for_session(&session);
+    let repo_id = uuid::Uuid::new_v4();
+
+    spawn_broadcast_forwarder(broadcast_rx, unicast_tx.clone(), filter);
+
+    for _ in 0..UNICAST_CAPACITY {
+        unicast_tx
+            .try_send(ServerMessage::Pong)
+            .expect("fill unicast queue");
+    }
+    broadcast_tx
+        .send(ServerMessage::RepoList {
+            request_id: None,
+            branch: None,
+            scope_nonce: None,
+            repo_entries: vec![RepoListEntry {
+                repo_id,
+                display_alias: "created".into(),
+                alias_revision: 1,
+                readiness: RepoReadiness::Mounted,
+            }],
+        })
+        .expect("broadcast repo list");
+
+    for _ in 0..UNICAST_CAPACITY {
+        assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));
+    }
+    tokio::task::yield_now().await;
+    match unicast_rx.recv().await {
+        Some(ServerMessage::RepoList {
+            request_id,
+            branch,
+            scope_nonce,
+            repo_entries,
+        }) => {
+            assert_eq!(request_id, None);
+            assert_eq!(branch, None);
+            assert_eq!(scope_nonce, Some(13));
+            assert_eq!(repo_entries.len(), 1);
+            assert_eq!(repo_entries[0].repo_id, repo_id);
+        }
+        other => panic!("expected queued RepoList, got {other:?}"),
     }
 }
 

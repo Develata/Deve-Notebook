@@ -534,12 +534,12 @@ contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="cr
 contains	scripts/smoke-docker-multiclient.mjs	context.setOffline(true)
 contains	scripts/smoke-docker-multiclient.mjs	offline input must not enqueue pending edits
 contains	scripts/smoke-docker-multiclient.mjs	offline input must not reach the peer editor
-contains	scripts/smoke-docker-multiclient.mjs	observed.origin === expected.origin && observed.pathname === "/ws"
+contains	scripts/lib/docker-multiclient-runtime.mjs	observed.origin === expected.origin && observed.pathname === "/ws"
 contains	scripts/smoke-docker-multiclient.mjs	await waitForRenderedShell(page, timeoutMs)
 contains	scripts/smoke-docker-multiclient.mjs	await appendEditorContent(pageB, recoveryContent)
 contains	scripts/smoke-docker-multiclient.mjs	await waitForEditorContains(pageA, recoveryContent)
-contains	scripts/smoke-docker-multiclient.mjs	diag.wsUrls.slice(wsCountBefore).some
-contains	scripts/smoke-docker-multiclient.mjs	duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")
+contains	scripts/smoke-docker-multiclient.mjs	.some(({ url, frames }) => webSocketMatchesExpectedOrigin(url) && frames > 0)
+contains	scripts/lib/docker-multiclient-runtime.mjs	duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")
 contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a login or sync marker
 contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
 contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending

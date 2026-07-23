@@ -166,6 +166,7 @@ fn must_deliver_broadcast(msg: &ServerMessage) -> bool {
             | ServerMessage::NewOp { .. }
             | ServerMessage::ProjectionRecoveryRequired(_)
             | ServerMessage::PeerDeleted { .. }
+            | ServerMessage::RepoList { .. }
     )
 }
 

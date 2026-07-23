@@ -11,11 +11,17 @@ fn deve(root: &Path, args: &[&str]) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_deve"));
     command.current_dir(root).args(args);
     for (key, _) in std::env::vars_os() {
-        if key.to_string_lossy().starts_with("DEVE_") {
+        if is_deve_env_key(&key.to_string_lossy()) {
             command.env_remove(key);
         }
     }
     command.output().expect("run deve")
+}
+
+fn is_deve_env_key(key: &str) -> bool {
+    key.as_bytes()
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"DEVE_"))
 }
 
 fn text(bytes: &[u8]) -> String {
@@ -150,4 +156,39 @@ fn removal_preview_and_apply_cross_process_preserve_workspace_and_git() {
             .expect("catalog summaries")
             .is_empty()
     );
+}
+
+#[test]
+fn removal_repair_real_deve_child_fails_closed_with_typed_22() {
+    assert!(is_deve_env_key("DEVE_RELEASE_CANDIDATE_IMAGE"));
+    assert!(is_deve_env_key("deve_acceptance_removal_repair_outcome"));
+    assert!(is_deve_env_key("DeVe_MiXeD"));
+    assert!(!is_deve_env_key("NOT_DEVE_VALUE"));
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    let root_text = root.to_str().expect("root UTF-8");
+    let ledger = root.join("ledger");
+    let removal_dir = ledger.join(".host/repo-lifecycle-jobs/removals");
+    std::fs::create_dir_all(&removal_dir).expect("create corrupt removal store");
+    let request_id = uuid::Uuid::new_v4().to_string();
+    std::fs::write(
+        removal_dir.join(format!("{}.json", uuid::Uuid::new_v4())),
+        b"{\"format\":\"corrupt\"}\n",
+    )
+    .expect("write corrupt removal receipt");
+
+    let output = deve(
+        root,
+        &["repo", "removal-repair", "--request-id", &request_id],
+    );
+    let stdout = text(&output.stdout);
+    let stderr = text(&output.stderr);
+    assert_eq!(
+        output.status.code(),
+        Some(22),
+        "unexpected repair-required exit:\nstdout={stdout}\nstderr={stderr}"
+    );
+    assert!(stderr.contains("REPO_LIFECYCLE_REPAIR_REQUIRED"));
+    assert!(!stderr.contains(root_text), "stderr leaked a host path");
 }

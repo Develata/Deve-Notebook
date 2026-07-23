@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R6 implementation includes explicit exact-identity cleanup repair, typed process-exit mapping, separate-process normal removal preservation proof and a destructive secondary-repo Docker browser producer; repair-specific child-process 20/21/22 plus last-repo NoScope/restart/390x844 candidate-image receipts remain required on one clean exact HEAD
+    - gap: R1-R6 implementation includes explicit exact-identity cleanup repair, test-harness child-process 20/21/22 mapping, a real `deve` repair fail-closed 22 process, separate-process normal removal preservation proof and producer definitions for secondary/last-repo Desktop/Mobile browser journeys; exact Windows/Linux and candidate-image receipts remain required on one clean exact HEAD
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -305,6 +305,7 @@
     - run: cargo test -p deve_cli --lib legacy_removal_preparation_versions_fail_closed -- --nocapture
     - run: cargo test -p deve_cli --lib server::auth::local_cli_proxy::tests -- --nocapture
     - run: cargo test -p deve_cli --lib main_test::repo_remove_requires_explicit_apply_and_opaque_token_pair -- --nocapture
+    - run: cargo test -p deve_cli --lib commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary -- --nocapture
     - run: cargo test -p deve_cli --test repo_removal_cli_test -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::repo_control_client::tests -- --nocapture
     - run: cargo test -p deve_web --bin deve_web components::sidebar::repo_switcher::tests -- --nocapture

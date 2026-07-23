@@ -28,11 +28,61 @@ async function scope(page) {
   }));
 }
 
+async function ensureRepoSwitcherVisible(page) {
+  const trigger = page.locator("[data-deve-repo-switcher-trigger]").first();
+  if (await trigger.isVisible().catch(() => false)) {
+    return trigger;
+  }
+  const openDrawer = page.locator('[data-deve-mobile-header-action="open_left_drawer"]');
+  await openDrawer.click();
+  await trigger.waitFor({ state: "visible", timeout: timeoutMs });
+  return trigger;
+}
+
+async function openRepoSwitcher(page) {
+  const trigger = await ensureRepoSwitcherVisible(page);
+  await trigger.click();
+  await page.locator('[data-deve-repo-switcher-menu="visible"]').waitFor({
+    state: "visible",
+    timeout: timeoutMs,
+  });
+}
+
+async function assertRemovalDialogContract(page, dialog, expectedAlias) {
+  const text = await dialog.innerText();
+  assert.ok(
+    text.includes(expectedAlias),
+    "removal preview must identify the backend-selected display alias",
+  );
+  await dialog.locator("#repo-removal-deleted-heading").waitFor({ state: "visible" });
+  await dialog.locator("#repo-removal-preserved-heading").waitFor({ state: "visible" });
+  assert.ok(
+    await dialog.locator("#repo-removal-deleted-heading + ul > li").count() > 0,
+    "removal preview must render backend-owned deleted categories",
+  );
+  assert.ok(
+    await dialog.locator("#repo-removal-preserved-heading + ul > li").count() > 0,
+    "removal preview must render backend-owned preserved categories",
+  );
+  const confirm = dialog.locator('[data-deve-repo-removal-confirm="true"]');
+  assert.equal(await confirm.isEnabled(), true, "unblocked removal must be backend-enabled");
+  const box = await dialog.locator('[role="dialog"]').boundingBox();
+  const viewport = pageViewport(page);
+  if (box && viewport) {
+    assert.ok(box.x >= 0 && box.x + box.width <= viewport.width + 1);
+    assert.ok(box.y >= 0 && box.y + box.height <= viewport.height + 1);
+  }
+}
+
+function pageViewport(page) {
+  return page.viewportSize();
+}
+
 export async function exerciseRepoLifecycle(page) {
   const initial = await scope(page);
   assert.ok(initial.repoId, "initial repo scope must expose a repo id");
   const repoName = `browser-smoke-${Date.now()}`;
-  await page.locator("[data-deve-repo-switcher-trigger]").click();
+  await openRepoSwitcher(page);
   await page.locator("[data-deve-repo-switcher-create]").click();
   const createInput = page.locator("[data-deve-repo-switcher-create-input]");
   await createInput.fill(repoName);
@@ -43,9 +93,9 @@ export async function exerciseRepoLifecycle(page) {
   });
   const created = await scope(page);
   assert.ok(created.repoId, "created repo scope must expose a repo id");
-  const createdWorkspace = prepareRemovalPreservationFixture(created.repoId);
+  const createdPreservation = prepareRemovalPreservationFixture(created.repoId);
 
-  await page.locator("[data-deve-repo-switcher-trigger]").click();
+  await openRepoSwitcher(page);
   await page
     .locator('[data-deve-repo-switcher-item-name="default"]')
     .click();
@@ -54,27 +104,154 @@ export async function exerciseRepoLifecycle(page) {
     return current.status === "ready" && current.repoId === initial.repoId;
   });
 
-  await page.locator("[data-deve-repo-switcher-trigger]").click();
+  await openRepoSwitcher(page);
   const createdRow = page
     .locator(`[data-deve-repo-switcher-item-name="${repoName}"]`)
     .locator("xpath=..");
   await createdRow.locator("[data-deve-repo-switcher-actions]").click();
-  await createdRow.locator("[data-deve-repo-switcher-remove]").click();
+  await page.locator("[data-deve-repo-switcher-remove]").click();
   const dialog = page.locator('[data-deve-repo-removal-dialog="visible"]');
   await dialog.waitFor({ state: "visible", timeout: timeoutMs });
-  assert.ok(
-    (await dialog.innerText()).includes(repoName),
-    "removal preview must identify the backend-selected display alias",
-  );
+  await assertRemovalDialogContract(page, dialog, repoName);
   await dialog.locator('[data-deve-repo-removal-confirm="true"]').click();
   await dialog.waitFor({ state: "hidden", timeout: timeoutMs });
   await waitUntil("removed repository absent from switcher", async () =>
     (await page.locator(`[data-deve-repo-switcher-item-name="${repoName}"]`).count()) === 0);
+  await waitUntil("fallback repository ready after removal", async () => {
+    const current = await scope(page);
+    return current.repoId === initial.repoId && current.status === "ready";
+  });
   const afterRemoval = await scope(page);
   assert.equal(afterRemoval.repoId, initial.repoId);
   assert.equal(afterRemoval.status, "ready");
-  assertRemovalPreservation(created.repoId, createdWorkspace);
+  assertRemovalPreservation(created.repoId, createdPreservation);
   return { initialRepoId: initial.repoId, removedRepoId: created.repoId };
+}
+
+function dockerRuntime() {
+  const docker = process.env.DEVE_DOCKER_MULTI_DOCKER_BIN ?? "docker";
+  const container = process.env.DEVE_DOCKER_MULTI_CONTAINER_ID;
+  assert.ok(container, "DEVE_DOCKER_MULTI_CONTAINER_ID is required for product journeys");
+  return { docker, container };
+}
+
+function configureFirstRepoProjectionBase() {
+  const { docker, container } = dockerRuntime();
+  execFileSync(
+    docker,
+    [
+      "exec",
+      container,
+      "deve",
+      "config",
+      "set",
+      "repo_creation_projection_base",
+      "/notes",
+    ],
+    { stdio: ["ignore", "ignore", "pipe"], timeout: 30000 },
+  );
+}
+
+export async function assertNoScope(page, label) {
+  await waitUntil(`${label} NoScope`, async () => {
+    const current = await scope(page);
+    return current.repoId === "";
+  });
+  await openRepoSwitcher(page);
+  assert.equal(
+    await page.locator("[data-deve-repo-switcher-item]").count(),
+    0,
+    `${label} NoScope must expose no local repo rows`,
+  );
+  await page.locator("[data-deve-repo-switcher-create]").waitFor({
+    state: "visible",
+    timeout: timeoutMs,
+  });
+  await page.locator("[data-deve-repo-switcher-backdrop]").click();
+}
+
+export async function exerciseLastRepoNoScope({ page, observerPages }) {
+  const viewport = pageViewport(page);
+  assert.deepEqual(viewport, { width: 390, height: 844 });
+  const before = await scope(page);
+  assert.ok(before.repoId, "mobile last-repo journey requires one selected repo");
+  configureFirstRepoProjectionBase();
+  const preservation = prepareRemovalPreservationFixture(before.repoId);
+
+  await openRepoSwitcher(page);
+  const rows = page.locator("[data-deve-repo-switcher-item]");
+  assert.equal(await rows.count(), 1, "last-repo journey requires exactly one repo");
+  const row = rows.first().locator("xpath=..");
+  const alias = (await rows.first().getAttribute("data-deve-repo-switcher-item-name")) ?? "";
+  assert.ok(alias, "last repo must expose a display alias");
+  await row.locator("[data-deve-repo-switcher-actions]").click();
+  await page.locator("[data-deve-repo-switcher-remove]").click();
+  const dialog = page.locator('[data-deve-repo-removal-dialog="visible"]');
+  await dialog.waitFor({ state: "visible", timeout: timeoutMs });
+  await assertRemovalDialogContract(page, dialog, alias);
+  await dialog.locator("#repo-removal-warnings-heading").waitFor({
+    state: "visible",
+    timeout: timeoutMs,
+  });
+  await dialog.locator('[data-deve-repo-removal-confirm="true"]').click();
+  await dialog.waitFor({ state: "hidden", timeout: timeoutMs });
+
+  await assertNoScope(page, "mobile client");
+  for (const [index, observer] of observerPages.entries()) {
+    await assertNoScope(observer, `desktop observer ${index + 1}`);
+  }
+  assertRemovalPreservation(before.repoId, preservation);
+  const overflow = await page.evaluate(() => ({
+    width: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  assert.equal(overflow.width, 390);
+  assert.ok(
+    overflow.scrollWidth <= overflow.width,
+    `mobile NoScope overflowed horizontally: ${JSON.stringify(overflow)}`,
+  );
+  return { removedRepoId: before.repoId, preservation };
+}
+
+export function restartCandidateContainer() {
+  const { docker, container } = dockerRuntime();
+  execFileSync(docker, ["restart", container], {
+    stdio: ["ignore", "ignore", "pipe"],
+    timeout: 60000,
+  });
+}
+
+export async function createFirstRepoFromNoScope(page, observerPages = []) {
+  const name = `after-restart-${Date.now()}`;
+  await openRepoSwitcher(page);
+  await page.locator("[data-deve-repo-switcher-create]").click();
+  const input = page.locator("[data-deve-repo-switcher-create-input]");
+  await input.fill(name);
+  await input.press("Enter");
+  await waitUntil("first repo created after NoScope restart", async () => {
+    const current = await scope(page);
+    return current.status === "ready" && Boolean(current.repoId);
+  });
+  const created = await scope(page);
+  assert.ok(created.repoId);
+  await openRepoSwitcher(page);
+  const creatorRow = page.locator(`[data-deve-repo-switcher-item-name="${name}"]`);
+  await waitUntil("created repo alias in creator list", async () =>
+    (await creatorRow.count()) === 1);
+  await page.locator("[data-deve-repo-switcher-backdrop]").click();
+
+  for (const [index, observer] of observerPages.entries()) {
+    await openRepoSwitcher(observer);
+    const row = observer.locator(`[data-deve-repo-switcher-item-name="${name}"]`);
+    await waitUntil(`created repo alias in observer ${index + 1}`, async () =>
+      (await row.count()) === 1);
+    await row.click();
+    await waitUntil(`created repo scope in observer ${index + 1}`, async () => {
+      const current = await scope(observer);
+      return current.status === "ready" && current.repoId === created.repoId;
+    });
+  }
+  return { name, repoId: created.repoId };
 }
 
 async function openActivity(page, item) {
@@ -187,13 +364,33 @@ function prepareRemovalPreservationFixture(repoId) {
     ],
     { stdio: ["ignore", "ignore", "pipe"], timeout: 30000 },
   );
-  return workspace;
+  return {
+    workspace,
+    expectedHash: readPreservationHash(docker, container, workspace),
+  };
 }
 
-function assertRemovalPreservation(repoId, workspace) {
+function readPreservationHash(docker, container, workspace) {
+  return execFileSync(
+    docker,
+    [
+      "exec",
+      container,
+      "sh",
+      "-c",
+      'set -eu; root="$1"; sha256sum "$root/preserved.md" "$root/unknown.bin" "$root/.git/config" "$root/.gitignore"',
+      "_",
+      workspace,
+    ],
+    { encoding: "utf8", timeout: 30000 },
+  );
+}
+
+export function assertRemovalPreservation(repoId, preservation) {
   const docker = process.env.DEVE_DOCKER_MULTI_DOCKER_BIN ?? "docker";
   const container = process.env.DEVE_DOCKER_MULTI_CONTAINER_ID;
   assert.ok(container, "DEVE_DOCKER_MULTI_CONTAINER_ID is required for product journeys");
+  const { workspace, expectedHash } = preservation;
   execFileSync(
     docker,
     [
@@ -207,6 +404,11 @@ function assertRemovalPreservation(repoId, workspace) {
       repoId,
     ],
     { stdio: ["ignore", "ignore", "pipe"], timeout: 30000 },
+  );
+  assert.equal(
+    readPreservationHash(docker, container, workspace),
+    expectedHash,
+    "workspace, unknown, ignore, and Git bytes must remain unchanged",
   );
 }
 
@@ -250,7 +452,18 @@ async function applyExternalChange(page, peerPage, repoId, path, externalContent
   await openTypedDiff(page, pending);
   await assertNoBrowserErrorOverlay(page, "after closing External Changes diff");
   const stage = pending.locator('[data-deve-external-action="stage"]');
+  const stageResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/sc/stage-pending"
+      && response.request().method() === "POST";
+  }, { timeout: timeoutMs });
   await stage.click();
+  const stageResponse = await stageResponsePromise;
+  assert.equal(
+    stageResponse.status(),
+    204,
+    `External Changes stage returned ${stageResponse.status()}`,
+  );
 
   const staged = page
     .locator('[data-deve-external-section-body="staged"] [data-deve-external-changes-row]')

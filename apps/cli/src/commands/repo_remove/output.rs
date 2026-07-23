@@ -190,6 +190,11 @@ fn exit(code: u8, label: &'static str) -> anyhow::Error {
 mod tests {
     use super::*;
     use crate::process_exit_code;
+    use std::process::Command;
+
+    const PROCESS_FIXTURE_ENV: &str = "DEVE_TEST_REMOVAL_PROCESS_OUTCOME";
+    const PROCESS_TEST_NAME: &str =
+        "commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary";
 
     #[test]
     fn lifecycle_outcomes_map_to_contract_exit_codes() {
@@ -232,6 +237,48 @@ mod tests {
             ),
             22
         );
+    }
+
+    #[test]
+    fn lifecycle_outcomes_cross_process_boundary() {
+        if let Some(outcome) = std::env::var_os(PROCESS_FIXTURE_ENV) {
+            let (outcome, publication_pending) = match outcome.to_string_lossy().as_ref() {
+                "not_committed" => (RepoLifecycleOutcome::NotCommitted, false),
+                "committed_partial" => (RepoLifecycleOutcome::CommittedPartial, false),
+                "publication_pending" => (RepoLifecycleOutcome::Succeeded, true),
+                "repair_required" => (RepoLifecycleOutcome::RepairRequired, false),
+                other => panic!("unknown process fixture outcome: {other}"),
+            };
+            let error = terminal(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                RepoLifecycleState::Terminal,
+                Some(outcome),
+                publication_pending,
+            )
+            .expect_err("fixture outcome must be non-zero");
+            std::process::exit(i32::from(process_exit_code(&error)));
+        }
+
+        for (outcome, expected) in [
+            ("not_committed", 20),
+            ("committed_partial", 21),
+            ("publication_pending", 21),
+            ("repair_required", 22),
+        ] {
+            let child = Command::new(std::env::current_exe().expect("current test executable"))
+                .args(["--exact", PROCESS_TEST_NAME, "--nocapture"])
+                .env(PROCESS_FIXTURE_ENV, outcome)
+                .output()
+                .expect("spawn lifecycle exit fixture");
+            assert_eq!(
+                child.status.code(),
+                Some(expected),
+                "{outcome} child failed:\nstdout={}\nstderr={}",
+                String::from_utf8_lossy(&child.stdout),
+                String::from_utf8_lossy(&child.stderr),
+            );
+        }
     }
 
     #[test]

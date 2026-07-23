@@ -6,7 +6,7 @@
 use super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op};
-use deve_core::protocol::{ConfirmedOp, ServerMessage};
+use deve_core::protocol::{ConfirmedOp, RepoListEntry, RepoReadiness, ServerMessage};
 
 #[test]
 fn stamps_runtime_broadcasts_with_session_scope_nonce() {
@@ -53,6 +53,12 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
         peer_id: "peer-a".into(),
         scope_nonce: None,
     });
+    let repo_list = filter.stamp_scope_nonce(ServerMessage::RepoList {
+        request_id: None,
+        branch: None,
+        scope_nonce: None,
+        repo_entries: vec![],
+    });
 
     match commit {
         Some(ServerMessage::CommitAck { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
@@ -75,6 +81,10 @@ fn stamps_runtime_broadcasts_with_session_scope_nonce() {
     match peer_deleted {
         Some(ServerMessage::PeerDeleted { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected peer-deleted message: {:?}", other),
+    }
+    match repo_list {
+        Some(ServerMessage::RepoList { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
+        other => panic!("unexpected repo-list message: {:?}", other),
     }
 }
 
@@ -102,6 +112,46 @@ fn recipient_scope_nonce_overrides_producer_nonce_for_runtime_broadcast() {
     match new_op {
         Some(ServerMessage::NewOp { scope_nonce, .. }) => assert_eq!(scope_nonce, Some(9)),
         other => panic!("unexpected new-op message: {:?}", other),
+    }
+}
+
+#[test]
+fn no_scope_browser_receives_recipient_scoped_repo_list_projection() {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(9));
+    let filter = BroadcastFilter::for_session(&session);
+    let repo_id = uuid::Uuid::new_v4();
+
+    let message = filter
+        .stamp_scope_nonce(ServerMessage::RepoList {
+            request_id: None,
+            branch: None,
+            scope_nonce: None,
+            repo_entries: vec![RepoListEntry {
+                repo_id,
+                display_alias: "created".into(),
+                alias_revision: 1,
+                readiness: RepoReadiness::Mounted,
+            }],
+        })
+        .expect("scope filter should remain available");
+
+    assert!(filter.should_forward(&message));
+    match message {
+        ServerMessage::RepoList {
+            request_id,
+            branch,
+            scope_nonce,
+            repo_entries,
+        } => {
+            assert_eq!(request_id, None);
+            assert_eq!(branch, None);
+            assert_eq!(scope_nonce, Some(9));
+            assert_eq!(repo_entries.len(), 1);
+            assert_eq!(repo_entries[0].repo_id, repo_id);
+        }
+        other => panic!("unexpected repo-list message: {other:?}"),
     }
 }
 

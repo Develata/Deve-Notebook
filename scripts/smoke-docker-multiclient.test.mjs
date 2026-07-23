@@ -19,6 +19,10 @@ import {
   selectWorkspaceRoot,
   validateWorkspaceIdentity,
 } from "./lib/docker-multiclient-product-journeys.mjs";
+import {
+  isExpectedRestartTransportError,
+  relevantRequestFailures,
+} from "./lib/docker-multiclient-runtime.mjs";
 
 test("pending marker parser rejects malformed counts", async () => {
   const page = {
@@ -96,6 +100,164 @@ test("internet disconnected console errors are ignored only during the offline w
   assert.deepEqual(
     relevantConsoleErrors({ consoleErrors: [{ message, duringOffline: false }] }),
     [{ message, duringOffline: false }],
+  );
+});
+
+test("controlled host restart ignores only restart-scoped transport errors", () => {
+  const expectedOrigin = "http://127.0.0.1:3101";
+  const message = "WebSocket connection to 'ws://127.0.0.1:3101/ws' failed";
+  const expectedFailure = [{
+    url: `${expectedOrigin}/api/node/role`,
+    errorText: "net::ERR_CONNECTION_REFUSED",
+    duringHostRestart: true,
+  }];
+  const resourceMessage = "Failed to load resource: net::ERR_CONNECTION_REFUSED";
+  assert.equal(isExpectedRestartTransportError(message, expectedOrigin), true);
+  assert.equal(
+    isExpectedRestartTransportError(resourceMessage, expectedOrigin, expectedFailure),
+    true,
+  );
+  assert.equal(
+    isExpectedRestartTransportError(resourceMessage, expectedOrigin, []),
+    false,
+  );
+  assert.equal(
+    isExpectedRestartTransportError(
+      "WebSocket connection to 'ws://elsewhere.invalid/ws' failed",
+      expectedOrigin,
+    ),
+    false,
+  );
+  assert.equal(isExpectedRestartTransportError("net::ERR_CONNECTION_REFUSED", expectedOrigin), false);
+  assert.equal(
+    isExpectedRestartTransportError("TypeError: Failed to fetch", expectedOrigin, []),
+    false,
+  );
+  const unexpectedFailure = {
+    url: "https://elsewhere.invalid/api/data",
+    errorText: "net::ERR_CONNECTION_REFUSED",
+    duringHostRestart: true,
+  };
+  assert.equal(
+    isExpectedRestartTransportError(resourceMessage, expectedOrigin, [unexpectedFailure]),
+    false,
+  );
+  assert.equal(
+    isExpectedRestartTransportError(
+      "TypeError: Failed to fetch",
+      expectedOrigin,
+    ),
+    false,
+  );
+  assert.equal(
+    isExpectedRestartTransportError("unexpected product error", expectedOrigin, expectedFailure),
+    false,
+  );
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: expectedFailure,
+      consoleErrors: [{ message, duringOffline: false, duringHostRestart: true }],
+    }),
+    [],
+  );
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: expectedFailure,
+      consoleErrors: [{ message, duringOffline: false, duringHostRestart: false }],
+    }),
+    [{ message, duringOffline: false, duringHostRestart: false }],
+  );
+  assert.deepEqual(
+    relevantRequestFailures({
+      expectedOrigin,
+      requestFailures: [...expectedFailure, unexpectedFailure],
+    }),
+    [unexpectedFailure],
+  );
+  const disconnectedSocketFailure = {
+    ...expectedFailure[0],
+    errorText: "net::ERR_SOCKET_NOT_CONNECTED",
+  };
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: [disconnectedSocketFailure],
+      consoleErrors: [{
+        message: "Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED",
+        duringOffline: false,
+        duringHostRestart: true,
+      }],
+    }),
+    [],
+  );
+  assert.deepEqual(
+    relevantRequestFailures({
+      expectedOrigin,
+      requestFailures: [disconnectedSocketFailure],
+    }),
+    [],
+  );
+  const unexpectedFailureKind = {
+    url: `${expectedOrigin}/api/node/role`,
+    errorText: "net::ERR_CERT_AUTHORITY_INVALID",
+    duringHostRestart: true,
+  };
+  assert.deepEqual(
+    relevantRequestFailures({
+      expectedOrigin,
+      requestFailures: [unexpectedFailureKind],
+    }),
+    [unexpectedFailureKind],
+  );
+  for (const errorText of ["net::ERR_FAILED", "net::ERR_ABORTED"]) {
+    const broadFailure = {
+      url: `${expectedOrigin}/api/node/role`,
+      errorText,
+      duringHostRestart: true,
+    };
+    assert.deepEqual(
+      relevantRequestFailures({
+        expectedOrigin,
+        requestFailures: [broadFailure],
+      }),
+      [broadFailure],
+    );
+  }
+});
+
+test("a fully authoritative 204 may end with Chromium abort but other aborts fail", () => {
+  const expectedOrigin = "http://127.0.0.1:3101";
+  const noContentAbort = {
+    url: `${expectedOrigin}/api/sc/stage-pending`,
+    errorText: "net::ERR_ABORTED",
+    responseStatus: 204,
+  };
+  const bodyBearingAbort = {
+    ...noContentAbort,
+    responseStatus: 200,
+  };
+  const unconfirmedAbort = {
+    ...noContentAbort,
+    responseStatus: undefined,
+  };
+  const foreignAbort = {
+    ...noContentAbort,
+    url: "https://example.invalid/api/sc/stage-pending",
+  };
+
+  assert.deepEqual(
+    relevantRequestFailures({
+      expectedOrigin,
+      requestFailures: [
+        noContentAbort,
+        bodyBearingAbort,
+        unconfirmedAbort,
+        foreignAbort,
+      ],
+    }),
+    [bodyBearingAbort, unconfirmedAbort, foreignAbort],
   );
 });
 
@@ -211,7 +373,9 @@ test("tag-ready product journey covers destructive repo removal, typed diff, sou
   assert.match(source, /data-deve-repo-switcher-create-input/);
   assert.match(source, /data-deve-repo-switcher-remove/);
   assert.match(source, /data-deve-repo-removal-confirm/);
+  assert.match(source, /fallback repository ready after removal/);
   assert.match(source, /assertRemovalPreservation/);
+  assert.match(source, /sha256sum/);
   assert.match(source, /test ! -e "\$root\/\.notegit"/);
   assert.match(source, /test -f "\$root\/\.git\/config"/);
   assert.match(source, /data-deve-diff-projection=\\?"backend-typed/);
@@ -219,4 +383,35 @@ test("tag-ready product journey covers destructive repo removal, typed diff, sou
   assert.match(source, /data-deve-external-section-body=\\?"pending/);
   assert.match(source, /data-deve-external-apply=\\?"true/);
   assert.match(source, /external workspace mutation must not bypass ledger authority/);
+});
+
+test("tag-ready product journey covers mobile last-repo NoScope, restart, and first create", () => {
+  const journey = fs.readFileSync(
+    new URL("./lib/docker-multiclient-product-journeys.mjs", import.meta.url),
+    "utf8",
+  );
+  const runner = fs.readFileSync(
+    new URL("./smoke-docker-multiclient.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(journey, /exerciseLastRepoNoScope/);
+  assert.match(journey, /repo_creation_projection_base/);
+  assert.match(journey, /assertNoScope/);
+  assert.match(journey, /restartCandidateContainer/);
+  assert.match(journey, /createFirstRepoFromNoScope/);
+  assert.match(journey, /scrollWidth <= overflow\.width/);
+  assert.match(runner, /viewport: \{ width: 390, height: 844 \}/);
+  assert.match(runner, /await reopenNoScope\(pageA, diagA\)/);
+  assert.match(runner, /await reopenNoScope\(mobilePage, mobileDiag\)/);
+  assert.match(runner, /runtime_incarnation/);
+  assert.match(runner, /some\(\(\{ url, frames \}\) => webSocketMatchesExpectedOrigin\(url\) && frames > 0\)/);
+  assert.match(runner, /page\.goto\("about:blank"\)/);
+  assert.match(runner, /mobileViewport: mobilePage\.viewportSize\(\)/);
+  assert.match(runner, /mobileServerFrames: mobileDiag\.sockets/);
+  assert.match(runner, /createFirstRepoFromNoScope\(mobilePage, \[pageA, pageB\]\)/);
+  assert.match(journey, /created repo scope in observer/);
+  assert.ok(
+    [...runner.matchAll(/assertRemovalPreservation\(/gu)].length >= 2,
+    "the old workspace must be rechecked after restart and after same-host recreation",
+  );
 });
