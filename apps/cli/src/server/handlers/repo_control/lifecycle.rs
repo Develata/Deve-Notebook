@@ -343,7 +343,9 @@ pub(super) fn status_response(status: RepoLifecycleJobStatus) -> RepoControlResp
 
 pub(super) fn job_error_code(error: &RepoLifecycleJobError) -> ServerErrorCode {
     match error {
-        RepoLifecycleJobError::Busy => ServerErrorCode::RepoLifecycleBusy,
+        RepoLifecycleJobError::Busy | RepoLifecycleJobError::OwnerActive => {
+            ServerErrorCode::RepoLifecycleBusy
+        }
         RepoLifecycleJobError::RemovalBlocked => ServerErrorCode::RepoLifecycleRemovalBlocked,
         RepoLifecycleJobError::ConfirmationInvalid => {
             ServerErrorCode::RepoLifecycleConfirmationInvalid
@@ -352,6 +354,10 @@ pub(super) fn job_error_code(error: &RepoLifecycleJobError) -> ServerErrorCode {
             ServerErrorCode::RepoLifecycleConfirmationExpired
         }
         RepoLifecycleJobError::ConfirmationStale => ServerErrorCode::RepoLifecycleConfirmationStale,
+        RepoLifecycleJobError::RemovalRepairNotRequired => {
+            ServerErrorCode::RepoLifecycleInvalidRequest
+        }
+        RepoLifecycleJobError::RemovalRepairBlocked => ServerErrorCode::RepoLifecycleRepairRequired,
         RepoLifecycleJobError::NotFound => ServerErrorCode::RepoLifecycleNotFound,
         RepoLifecycleJobError::InvalidRequest | RepoLifecycleJobError::RequestConflict => {
             ServerErrorCode::RepoLifecycleInvalidRequest

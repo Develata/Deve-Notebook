@@ -177,12 +177,9 @@ async fn attempted_cut_with_changed_normal_truth_remains_repair_debt() -> anyhow
     let state = rebuild_cold_host_for_repo(&dir, repo_id)?;
     let restarted = state.repo_lifecycle_jobs();
     tokio::time::sleep(Duration::from_millis(250)).await;
-    assert!(
-        restarted
-            .status(accepted.request_id)
-            .await?
-            .outcome
-            .is_none()
+    assert_eq!(
+        restarted.status(accepted.request_id).await?.outcome,
+        Some(RepoLifecycleJobOutcome::RepairRequired)
     );
     assert_eq!(
         state

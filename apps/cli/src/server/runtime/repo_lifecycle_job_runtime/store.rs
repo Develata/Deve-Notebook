@@ -42,9 +42,8 @@ impl ReceiptStore {
         let host_dir = checked_directory(&notegit::host_dir(ledger_dir), true)?;
         let lock_path = host_dir.join(LOCK_FILE);
         let lock = safe_fs::open_regular_file_lock(&lock_path, "repo lifecycle job lock")?;
-        lock.try_lock().map_err(|error| {
-            store_invalid(format!("repo lifecycle job lock is already held: {error}"))
-        })?;
+        lock.try_lock()
+            .map_err(|_| RepoLifecycleJobError::OwnerActive)?;
         safe_fs::ensure_open_file_matches_path(&lock, &lock_path, "repo lifecycle job lock")?;
         let dir = checked_directory(&host_dir.join(RECEIPT_DIR), true)?;
         let removal_dir = checked_directory(&dir.join("removals"), true)?;

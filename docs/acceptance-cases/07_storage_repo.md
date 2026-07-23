@@ -284,7 +284,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R4 authority ownership, zero-repo NoScope, F4/v5 Prepare/Execute admission, D1-SQ quarantine owners, O1-FREEZE ordering, cut debt, two-phase finalization, Option A owner-prepared same-process readmission, R5 single typed Web finalization and normal offline/proxy CLI are implemented; explicit drift repair, distinct process exit status and R6 fresh cross-process/browser evidence remain
+    - gap: R1-R6 implementation includes explicit exact-identity cleanup repair, typed process-exit mapping, separate-process normal removal preservation proof and a destructive secondary-repo Docker browser producer; repair-specific child-process 20/21/22 plus last-repo NoScope/restart/390x844 candidate-image receipts remain required on one clean exact HEAD
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -301,8 +301,11 @@
     - run: cargo test -p deve_cli --lib removal_store_rejects_aggregate_bytes_over_load_budget -- --nocapture
     - run: cargo test -p deve_cli --lib web_removal_token_binds_principal_connection_and_server_incarnation -- --nocapture
     - run: cargo test -p deve_cli --lib offline_removal_token_survives_two_cli_invocations_only_for_exact_authority_identity -- --nocapture
+    - run: cargo test -p deve_cli --lib explicit_repair_reissues_expires_and_consumes_one_shot_authorization -- --nocapture
+    - run: cargo test -p deve_cli --lib legacy_removal_preparation_versions_fail_closed -- --nocapture
     - run: cargo test -p deve_cli --lib server::auth::local_cli_proxy::tests -- --nocapture
     - run: cargo test -p deve_cli --lib main_test::repo_remove_requires_explicit_apply_and_opaque_token_pair -- --nocapture
+    - run: cargo test -p deve_cli --test repo_removal_cli_test -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::repo_control_client::tests -- --nocapture
     - run: cargo test -p deve_web --bin deve_web components::sidebar::repo_switcher::tests -- --nocapture
     - planned_proof: D1-SQ owner matrix必须覆盖original/quarantine exact、missing、both-present、unproven both-missing、changed identity，以及classify/rename/delete边界的deterministic race injection
@@ -354,6 +357,9 @@
     - cli_assert: offline_token_is_authority_root_lock_identity_and_preparation_bound_not_process_bound true
     - cli_assert: repeated_prepare_invalidates_previous_token true
     - cli_assert: exact_execute_retry_is_idempotent_after_lost_response true
+    - cli_assert: repair_preview_exposes_only_typed_remaining_categories_and_exact_identity_truth true
+    - cli_assert: repair_token_is_five_minute_single_use_and_invalidated_by_repreview_or_checkpoint_change true
+    - cli_assert: removal_process_exit_codes_are_success_0_not_committed_20_committed_partial_21_repair_required_22 true
     - ws_assert: websocket_protocol_is_f4_v5_and_direct_remove_intent_is_absent true
     - ui_assert: remove_confirmation_states_irreversible_no_ledger_restore_and_workspace_git_preserved true
     - ui_assert: removal_preview_uses_backend_categories_and_never_exposes_path_digest_or_manifest true

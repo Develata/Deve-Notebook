@@ -238,6 +238,22 @@ pub async fn run(
                 )
                 .await?
             }
+            RepoAction::RemovalRepair {
+                request_id,
+                apply,
+                token,
+                auth,
+            } => {
+                commands::repo_remove::run_repair(
+                    ledger_dir,
+                    request_id,
+                    apply,
+                    token.as_deref(),
+                    auth,
+                    config.snapshot_depth,
+                )
+                .await?
+            }
             RepoAction::Alias { action } => match action {
                 RepoAliasAction::Set {
                     repo_id,

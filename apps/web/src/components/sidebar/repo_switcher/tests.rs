@@ -171,6 +171,7 @@ fn removal_dialog_is_a_single_typed_backend_projection() {
     let source = include_str!("removal_dialog.rs");
 
     assert!(source.contains("data-deve-repo-removal-dialog=\"visible\""));
+    assert!(source.contains("data-deve-repo-removal-confirm=\"true\""));
     assert!(source.contains("role=\"dialog\""));
     assert!(source.contains("aria-modal=\"true\""));
     assert!(source.contains("min-h-[44px]"));

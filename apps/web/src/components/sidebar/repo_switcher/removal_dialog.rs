@@ -155,6 +155,7 @@ pub(super) fn RepoRemovalDialog(
                         </button>
                         <button
                             type="button"
+                            data-deve-repo-removal-confirm="true"
                             class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             disabled=move || !core.removal_preview.get().is_some_and(|value| value.can_execute)
                             on:click=move |_| {

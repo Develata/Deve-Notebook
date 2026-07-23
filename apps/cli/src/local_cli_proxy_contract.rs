@@ -5,6 +5,7 @@
 //! Process-local HTTP contract used only when the owner server holds a repo
 //! database. It is not a browser or public Remote Import wire surface.
 
+use crate::server::RepoRemovalRepairInspection;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{
     LocalRepoRemovalPreview, OpaqueFallbackBinding, RemoteImportRequest,
@@ -188,6 +189,13 @@ pub(crate) enum LocalCliRepoRemovalRequest {
         execute_request_id: Uuid,
         repo_id: RepoId,
     },
+    RepairPrepare {
+        request_id: Uuid,
+    },
+    RepairApply {
+        request_id: Uuid,
+        token: String,
+    },
 }
 
 impl LocalCliRepoRemovalRequest {
@@ -195,7 +203,9 @@ impl LocalCliRepoRemovalRequest {
         match self {
             Self::Prepare { request_id, .. }
             | Self::Execute { request_id, .. }
-            | Self::Status { request_id, .. } => *request_id,
+            | Self::Status { request_id, .. }
+            | Self::RepairPrepare { request_id }
+            | Self::RepairApply { request_id, .. } => *request_id,
         }
     }
 
@@ -204,6 +214,7 @@ impl LocalCliRepoRemovalRequest {
             Self::Prepare { repo_id, .. }
             | Self::Execute { repo_id, .. }
             | Self::Status { repo_id, .. } => *repo_id,
+            Self::RepairPrepare { .. } | Self::RepairApply { .. } => RepoId::nil(),
         }
     }
 
@@ -212,6 +223,8 @@ impl LocalCliRepoRemovalRequest {
             Self::Prepare { .. } => "prepare",
             Self::Execute { .. } => "execute",
             Self::Status { .. } => "status",
+            Self::RepairPrepare { .. } => "repair-prepare",
+            Self::RepairApply { .. } => "repair-apply",
         }
     }
 
@@ -234,6 +247,9 @@ impl LocalCliRepoRemovalRequest {
             Self::Status {
                 execute_request_id, ..
             } => (0, None, Some(*execute_request_id)),
+            Self::RepairPrepare { request_id } | Self::RepairApply { request_id, .. } => {
+                (0, None, Some(*request_id))
+            }
         }
     }
 }
@@ -263,6 +279,12 @@ pub(crate) enum LocalCliRepoRemovalResponse {
         state: RepoLifecycleState,
         outcome: Option<RepoLifecycleOutcome>,
         publication_pending: bool,
+    },
+    RepairPrepared {
+        request_id: Uuid,
+        inspection: RepoRemovalRepairInspection,
+        token: Option<String>,
+        expires_at_unix_ms: Option<i64>,
     },
     Error {
         request_id: Uuid,

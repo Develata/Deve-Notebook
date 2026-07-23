@@ -38,6 +38,42 @@ pub(crate) enum RepoRemovalIssuerBinding {
     },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "issuer", rename_all = "snake_case", deny_unknown_fields)]
+pub(crate) enum RepoRemovalRepairIssuerBinding {
+    LocalCliProxy {
+        principal_digest: String,
+        runtime_incarnation: Uuid,
+    },
+    OfflineReceiptAuthority {
+        authority_root: HostPathIdentity,
+        lifecycle_lock: HostPathIdentity,
+    },
+}
+
+impl RepoRemovalRepairIssuerBinding {
+    pub(super) fn validate(&self) -> Result<(), RepoLifecycleJobError> {
+        match self {
+            Self::LocalCliProxy {
+                principal_digest,
+                runtime_incarnation,
+            } if is_sha256_hex(principal_digest) && !runtime_incarnation.is_nil() => Ok(()),
+            Self::OfflineReceiptAuthority {
+                authority_root,
+                lifecycle_lock,
+            } if authority_root.kind() == HostPathKind::Directory
+                && lifecycle_lock.kind() == HostPathKind::RegularFile
+                && authority_root.revalidate().unwrap_or(false)
+                && lifecycle_lock.revalidate().unwrap_or(false)
+                && lifecycle_lock.path().starts_with(authority_root.path()) =>
+            {
+                Ok(())
+            }
+            _ => Err(RepoLifecycleJobError::InvalidRequest),
+        }
+    }
+}
+
 impl RepoRemovalIssuerBinding {
     pub(super) fn validate(&self) -> Result<(), RepoLifecycleJobError> {
         match self {
@@ -132,6 +168,73 @@ pub(crate) struct RepoRemovalPrepared {
     pub(crate) confirmation_token: Option<RemovalConfirmationToken>,
     pub(crate) fallback_binding: Option<OpaqueFallbackBinding>,
     pub(crate) expires_at_unix_ms: Option<i64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RemovalRepairToken(String);
+
+impl RemovalRepairToken {
+    pub(crate) fn from_backend(value: String) -> Option<Self> {
+        (value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .then_some(Self(value))
+    }
+
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum RepoRemovalRepairTarget {
+    RemoteImportArtifacts,
+    ProcessRuntimeSlots,
+    NotegitTree,
+    LocalAuthorityDatabase,
+    ProjectionLocator,
+    HostAlias,
+    CatalogTombstone,
+    AuthorityRetirement,
+    TerminalReceipt,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum RepoRemovalRepairTruth {
+    Exact,
+    AlreadyAbsent,
+    Changed,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RepoRemovalRepairItem {
+    pub(crate) target: RepoRemovalRepairTarget,
+    pub(crate) truth: RepoRemovalRepairTruth,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RepoRemovalRepairInspection {
+    pub(crate) request_id: Uuid,
+    pub(crate) repo_id: RepoId,
+    pub(crate) remaining: Vec<RepoRemovalRepairItem>,
+    pub(crate) apply_allowed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RepoRemovalRepairPrepared {
+    pub(crate) inspection: RepoRemovalRepairInspection,
+    pub(crate) token: Option<RemovalRepairToken>,
+    pub(crate) expires_at_unix_ms: Option<i64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RepoRemovalRepairApplyIntent {
+    pub(crate) request_id: Uuid,
+    pub(crate) token: RemovalRepairToken,
+    pub(crate) issuer: RepoRemovalRepairIssuerBinding,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

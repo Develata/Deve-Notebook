@@ -226,4 +226,14 @@ impl RemoteImportService {
             &checkpoint.artifact,
         )
     }
+
+    pub fn repo_removal_repair_retry_is_exact(
+        plan: &RemoteImportRepoRemovalPlan,
+        checkpoint: &RemoteImportRepoRemovalCheckpoint,
+    ) -> RemoteImportResult<bool> {
+        super::super::artifact::RemoteImportArtifactRoot::repo_removal_repair_retry_is_exact(
+            &plan.artifact,
+            &checkpoint.artifact,
+        )
+    }
 }

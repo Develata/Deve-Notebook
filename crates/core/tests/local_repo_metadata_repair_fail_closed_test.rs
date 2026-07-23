@@ -212,7 +212,8 @@ fn runtime_ignores_uncataloged_metadata_less_artifact_and_repair_reports_it() {
     assert!(
         repair_err
             .to_string()
-            .contains("repository metadata missing")
+            .contains("repository metadata missing"),
+        "unexpected repair error: {repair_err:#}"
     );
 }
 

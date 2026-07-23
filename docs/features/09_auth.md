@@ -61,12 +61,14 @@
   family的capability改作另一个family。
 - CLI 使用既有 operator login/JWT authority，但把 token 仅保留在当前 process；Cookie-only、anonymous
   localhost dev session、browser Source Control grant、P2P/delegated token 都不能构造该 capability。
-- CLI 必须在读取 operator password 前先用 ledger-local `.host/main_port` JSON owner hint 匹配
-  `/api/node/role` 的 `main_port + host_peer_id + runtime_incarnation`；陈旧、缺失或指向其它进程的 hint 必须 fail closed。
+- CLI 先尝试取得persistent owner lock；只有lock由live server持有时才使用ledger-local
+  `.host/main_port` JSON owner hint匹配`/api/node/role`的`main_port + host_peer_id + runtime_incarnation`。
+  stale hint不得阻止合法offline repair，missing/mismatched hint也不得绕过live owner。读取operator password前必须完成endpoint匹配。
 - capability 按 family 精确绑定：Remote Import 绑定 request/scope/session/revision，Repo Removal 绑定
-  Prepare/Execute/Status 的 RepoId、preparation/request/job identity；两者不得互相 replay。server 仍负责
+  Prepare/Execute/Status/RepairPrepare/RepairApply的RepoId、preparation/request/job identity；repair token
+  另绑定operator principal与server lifecycle incarnation，lost response只重放同一job/result；两者不得互相 replay。server 仍负责
   blocker、Mounted、writer gate、transaction 与 publication 判断。CLI 不获得通用 Ledger、watcher 或
-  Source Control authority；`removal-repair` 仍是后续显式 surface。
+  Source Control authority；`removal-repair`已是独立typed surface，不复用普通Execute capability。
 - proxy admission 失败时 CLI 显式报认证/代理不可用，不退回匿名访问、browser grant 或直写 DB。
 
 ## 非目标

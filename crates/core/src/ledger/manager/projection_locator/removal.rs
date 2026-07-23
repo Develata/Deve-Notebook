@@ -82,4 +82,16 @@ impl RepoManager {
             .query_projection_locator_record_for_repo_id(plan.repo_id())?
             .is_none())
     }
+
+    pub fn projection_locator_removal_retry_is_exact(
+        &self,
+        plan: &ProjectionLocatorRemovalPlan,
+    ) -> Result<bool> {
+        Ok(
+            match self.query_projection_locator_record_for_repo_id(plan.repo_id())? {
+                Some(current) => current == plan.record,
+                None => true,
+            },
+        )
+    }
 }

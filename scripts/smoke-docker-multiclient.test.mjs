@@ -203,12 +203,17 @@ canonicalized_at_unix_ms = 1
   ));
 });
 
-test("tag-ready product journey covers repo, typed diff, source control, and external apply", () => {
+test("tag-ready product journey covers destructive repo removal, typed diff, source control, and external apply", () => {
   const source = fs.readFileSync(
     new URL("./lib/docker-multiclient-product-journeys.mjs", import.meta.url),
     "utf8",
   );
   assert.match(source, /data-deve-repo-switcher-create-input/);
+  assert.match(source, /data-deve-repo-switcher-remove/);
+  assert.match(source, /data-deve-repo-removal-confirm/);
+  assert.match(source, /assertRemovalPreservation/);
+  assert.match(source, /test ! -e "\$root\/\.notegit"/);
+  assert.match(source, /test -f "\$root\/\.git\/config"/);
   assert.match(source, /data-deve-diff-projection=\\?"backend-typed/);
   assert.match(source, /textarea\[name=\\?"commit-message/);
   assert.match(source, /data-deve-external-section-body=\\?"pending/);

@@ -3,6 +3,7 @@
 //!   - 06_backup#remote-import-removal-owner-plan
 
 mod inventory;
+mod repair;
 mod settlement;
 
 use self::inventory::{TreeFingerprint, inventory_digest, inventory_tree};

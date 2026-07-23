@@ -220,6 +220,42 @@ impl NotegitRemovalPlan {
         }
         Ok(())
     }
+
+    /// Read-only proof used by the explicit removal-repair admission. It never
+    /// rebinds a replaced object: every accepted state is derived from the
+    /// original owner-issued identities and quarantine plan.
+    pub fn repair_retry_is_exact(&self, checkpoint: &NotegitRemovalCheckpoint) -> Result<bool> {
+        if self.workspace_root.classify()? != HostPathState::Exact {
+            return Ok(false);
+        }
+        let exact = match &checkpoint.state {
+            NotegitRemovalCheckpointState::Prepared => {
+                self.revalidate()?
+                    && self.marker_quarantine.revalidate_prepared()?
+                    && self.tree_quarantine.revalidate_prepared()?
+            }
+            NotegitRemovalCheckpointState::MarkerQuarantined { marker } => {
+                marker.original_path_is_absent()?
+                    && marker.is_quarantined_exact()?
+                    && self.tree_quarantine.revalidate_prepared()?
+            }
+            NotegitRemovalCheckpointState::TreeQuarantined { marker, tree } => {
+                marker.original_path_is_absent()?
+                    && marker.is_quarantined_exact()?
+                    && tree.original_path_is_absent()?
+                    && tree.is_quarantined_exact()?
+            }
+            NotegitRemovalCheckpointState::TreeDeleted { marker } => {
+                marker.original_path_is_absent()?
+                    && marker.is_quarantined_exact()?
+                    && self.tree_quarantine.is_fully_absent()?
+            }
+            NotegitRemovalCheckpointState::MarkerDeleted => {
+                self.verify_complete(checkpoint).is_ok()
+            }
+        };
+        Ok(exact)
+    }
 }
 
 impl NotegitRemovalCheckpoint {

@@ -4,7 +4,8 @@
 use super::model::{
     AdmittedRepoLifecycleJob, RepoLifecycleJobAccepted, RepoLifecycleJobCompletion,
     RepoLifecycleJobError, RepoLifecycleJobExecutor, RepoLifecycleJobIntent,
-    RepoLifecycleJobStatus, RepoLifecyclePublicationSink,
+    RepoLifecycleJobOutcome, RepoLifecycleJobPhase, RepoLifecycleJobStatus,
+    RepoLifecyclePublicationSink,
 };
 use super::removal::{RemovalProgressCommand, RepoRemovalExecution, RepoRemovalProgress};
 use super::removal::{RepoRemovalExecuteIntent, RepoRemovalPrepareIntent, RepoRemovalPrepared};
@@ -15,20 +16,16 @@ use futures::FutureExt;
 use std::collections::{HashSet, VecDeque};
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
 const MAX_ACTIVE_JOBS: usize = 4;
-const PUBLICATION_ATTEMPTS: usize = 3;
-#[cfg(not(test))]
-const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(1);
-#[cfg(test)]
-const PUBLICATION_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(50);
 
 mod progress;
+mod publication;
 mod removal;
+mod repair;
 
 pub(super) enum Command {
     Submit {
@@ -49,6 +46,19 @@ pub(super) enum Command {
         now_ms: Option<i64>,
         reply: oneshot::Sender<Result<RepoLifecycleJobAccepted, RepoLifecycleJobError>>,
     },
+    PrepareRemovalRepair {
+        request_id: Uuid,
+        issuer: super::removal::RepoRemovalRepairIssuerBinding,
+        now_ms: Option<i64>,
+        reply: oneshot::Sender<
+            Result<super::removal::RepoRemovalRepairPrepared, RepoLifecycleJobError>,
+        >,
+    },
+    ApplyRemovalRepair {
+        intent: super::removal::RepoRemovalRepairApplyIntent,
+        now_ms: Option<i64>,
+        reply: oneshot::Sender<Result<RepoLifecycleJobAccepted, RepoLifecycleJobError>>,
+    },
     Shutdown {
         reply: oneshot::Sender<Result<(), RepoLifecycleJobError>>,
     },
@@ -65,13 +75,20 @@ pub(super) async fn run(
     executor: Arc<dyn RepoLifecycleJobExecutor>,
     publication_sink: Arc<dyn RepoLifecyclePublicationSink>,
     runtime_incarnation: Uuid,
+    skip_recovery_request_id: Option<Uuid>,
     mut commands: mpsc::Receiver<Command>,
 ) -> Result<(), RepoLifecycleJobError> {
     let (progress_tx, mut progress_rx) = mpsc::channel(32);
-    prune_terminal(&mut store, executor.as_ref())?;
+    publication::prune_terminal(&mut store, executor.as_ref())?;
     let mut jobs = JoinSet::new();
     let mut active_repos = HashSet::new();
-    let mut recovery = VecDeque::from(store.active_receipts());
+    let mut recovery = VecDeque::from(
+        store
+            .active_receipts()
+            .into_iter()
+            .filter(|receipt| Some(receipt.request_id) != skip_recovery_request_id)
+            .collect::<Vec<_>>(),
+    );
     spawn_recovery_jobs(
         &mut store,
         &executor,
@@ -80,8 +97,8 @@ pub(super) async fn run(
         &mut recovery,
         &progress_tx,
     )?;
-    retry_pending_publications(&mut store, publication_sink.as_ref()).await?;
-    prune_terminal(&mut store, executor.as_ref())?;
+    publication::retry_pending_publications(&mut store, publication_sink.as_ref()).await?;
+    publication::prune_terminal(&mut store, executor.as_ref())?;
 
     let mut shutdown_reply = None;
     loop {
@@ -111,10 +128,30 @@ pub(super) async fn run(
                         }
                     }
                     Some(Command::Status { request_id, reply }) => {
-                        let result = store
-                            .receipt(request_id)
-                            .map(LifecycleReceipt::status)
-                            .ok_or(RepoLifecycleJobError::NotFound);
+                        let result = store.receipt(request_id).map(|receipt| {
+                            let mut status = receipt.status();
+                            if active_repos.contains(&status.target_repo_id)
+                                && status.phase.is_terminal()
+                            {
+                                // Removal settlement persists its terminal receipt before the
+                                // owner task returns and before the worker attempts control-plane
+                                // publication. Keep that narrow durable cut internal until the
+                                // task has joined, otherwise a polling CLI can report transient
+                                // publication debt as the final result.
+                                status.phase = RepoLifecycleJobPhase::Running;
+                                status.outcome = None;
+                                status.publication_pending = false;
+                                status.publication = None;
+                            } else if store.removal_has_committed_debt_for_request(request_id)
+                                && !active_repos.contains(&status.target_repo_id)
+                            {
+                                status.phase = RepoLifecycleJobPhase::Terminal;
+                                status.outcome = Some(RepoLifecycleJobOutcome::RepairRequired);
+                                status.publication_pending = false;
+                                status.publication = None;
+                            }
+                            status
+                        }).ok_or(RepoLifecycleJobError::NotFound);
                         let _ = reply.send(result);
                     }
                     Some(Command::PrepareRemoval { intent, reply }) => {
@@ -153,6 +190,44 @@ pub(super) async fn run(
                             result => { let _ = reply.send(result); }
                         }
                     }
+                    Some(Command::PrepareRemovalRepair { request_id, issuer, now_ms, reply }) => {
+                        let result = repair::prepare(
+                            &mut store,
+                            executor.as_ref(),
+                            &active_repos,
+                            &progress_tx,
+                            request_id,
+                            issuer,
+                            now_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
+                        );
+                        match result {
+                            Err(RepoLifecycleJobError::Store(detail)) => {
+                                let _ = reply.send(Err(RepoLifecycleJobError::Store(detail.clone())));
+                                return Err(RepoLifecycleJobError::Store(detail));
+                            }
+                            result => { let _ = reply.send(result); }
+                        }
+                    }
+                    Some(Command::ApplyRemovalRepair { intent, now_ms, reply }) => {
+                        let result = repair::apply(
+                            repair::ApplyRepairContext {
+                                store: &mut store,
+                                executor: &executor,
+                                jobs: &mut jobs,
+                                active_repos: &mut active_repos,
+                                progress_tx: progress_tx.clone(),
+                            },
+                            intent,
+                            now_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
+                        );
+                        match result {
+                            Err(RepoLifecycleJobError::Store(detail)) => {
+                                let _ = reply.send(Err(RepoLifecycleJobError::Store(detail.clone())));
+                                return Err(RepoLifecycleJobError::Store(detail));
+                            }
+                            result => { let _ = reply.send(result); }
+                        }
+                    }
                     Some(Command::Shutdown { reply }) => {
                         commands.close();
                         reject_queued_commands(&mut commands);
@@ -180,7 +255,7 @@ pub(super) async fn run(
                     Ok(completion) => completion,
                     Err(error) => RepoLifecycleJobCompletion::repair_required(error),
                 };
-                complete_and_publish(
+                publication::complete_and_publish(
                     &mut store,
                     publication_sink.as_ref(),
                     executor.as_ref(),
@@ -198,8 +273,8 @@ pub(super) async fn run(
             }
         }
     }
-    retry_pending_publications(&mut store, publication_sink.as_ref()).await?;
-    prune_terminal(&mut store, executor.as_ref())?;
+    publication::retry_pending_publications(&mut store, publication_sink.as_ref()).await?;
+    publication::prune_terminal(&mut store, executor.as_ref())?;
     if let Some(reply) = shutdown_reply {
         let _ = reply.send(Ok(()));
     }
@@ -367,85 +442,6 @@ fn admitted(receipt: &LifecycleReceipt) -> AdmittedRepoLifecycleJob {
     }
 }
 
-async fn complete_and_publish(
-    store: &mut ReceiptStore,
-    sink: &dyn RepoLifecyclePublicationSink,
-    executor: &dyn RepoLifecycleJobExecutor,
-    request_id: Uuid,
-    completion: RepoLifecycleJobCompletion,
-) -> Result<(), RepoLifecycleJobError> {
-    if store.removal_has_committed_debt_for_request(request_id) {
-        return Ok(());
-    }
-    let receipt = match store.receipt(request_id) {
-        Some(receipt) if receipt.phase.is_terminal() => receipt.clone(),
-        _ => store.update(request_id, |receipt| receipt.complete(completion))?,
-    };
-    if receipt.publication_pending {
-        publish_one(store, sink, request_id).await?;
-    }
-    prune_terminal(store, executor)?;
-    Ok(())
-}
-
-async fn retry_pending_publications(
-    store: &mut ReceiptStore,
-    sink: &dyn RepoLifecyclePublicationSink,
-) -> Result<(), RepoLifecycleJobError> {
-    for request_id in store.pending_publications() {
-        publish_one(store, sink, request_id).await?;
-    }
-    Ok(())
-}
-
-async fn publish_one(
-    store: &mut ReceiptStore,
-    sink: &dyn RepoLifecyclePublicationSink,
-    request_id: Uuid,
-) -> Result<(), RepoLifecycleJobError> {
-    let receipt = store
-        .receipt(request_id)
-        .ok_or(RepoLifecycleJobError::NotFound)?;
-    let job_id = receipt.job_id;
-    let publication = receipt
-        .publication
-        .clone()
-        .ok_or(RepoLifecycleJobError::NotFound)?;
-    let mut last_error = None;
-    for _ in 0..PUBLICATION_ATTEMPTS {
-        let publication = publication.clone();
-        let attempt =
-            AssertUnwindSafe(async { sink.publish(request_id, job_id, publication).await })
-                .catch_unwind();
-        match tokio::time::timeout(PUBLICATION_ATTEMPT_TIMEOUT, attempt).await {
-            Ok(Ok(Ok(()))) => {
-                store.update(request_id, LifecycleReceipt::mark_publication_delivered)?;
-                return Ok(());
-            }
-            Ok(Ok(Err(error))) => last_error = Some(error),
-            Ok(Err(panic)) => last_error = Some(panic_message(panic)),
-            Err(_) => last_error = Some("publication attempt timed out".to_string()),
-        }
-    }
-    if let Some(error) = last_error {
-        store.update(request_id, |receipt| {
-            receipt.append_publication_failure(error)
-        })?;
-    }
-    Ok(())
-}
-
-fn prune_terminal(
-    store: &mut ReceiptStore,
-    executor: &dyn RepoLifecycleJobExecutor,
-) -> Result<(), RepoLifecycleJobError> {
-    store.prune_terminal(|repo_id| {
-        std::panic::catch_unwind(AssertUnwindSafe(|| executor.retain_create_receipt(repo_id)))
-            .unwrap_or(true)
-    })?;
-    Ok(())
-}
-
 fn reject_queued_commands(commands: &mut mpsc::Receiver<Command>) {
     while let Ok(command) = commands.try_recv() {
         match command {
@@ -456,6 +452,12 @@ fn reject_queued_commands(commands: &mut mpsc::Receiver<Command>) {
                 request_id: _,
                 reply,
             } => {
+                let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
+            }
+            Command::PrepareRemovalRepair { reply, .. } => {
+                let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
+            }
+            Command::ApplyRemovalRepair { reply, .. } => {
                 let _ = reply.send(Err(RepoLifecycleJobError::AdmissionClosed));
             }
             Command::PrepareRemoval { reply, .. } => {

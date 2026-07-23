@@ -9,7 +9,7 @@ use crate::commands::remote_import::LocalCliAuthArgs;
 use crate::local_cli_proxy_contract::{LocalCliRepoRemovalRequest, LocalCliRepoRemovalResponse};
 use anyhow::{Context, Result, anyhow, bail};
 use deve_core::models::RepoId;
-use deve_core::protocol::{ScopeNonce, SwitchNonce};
+use deve_core::protocol::{RepoLifecycleState, ScopeNonce, ServerErrorCode, SwitchNonce};
 use std::path::Path;
 use tokio::time::{Duration, sleep};
 use uuid::Uuid;
@@ -29,6 +29,21 @@ pub(super) async fn run(
     match encoded_token {
         Some(encoded) => execute(&session, repo_id, encoded).await,
         None => prepare(&session, repo_id).await,
+    }
+}
+
+pub(super) async fn run_repair(
+    ledger_dir: &Path,
+    request_id: Uuid,
+    encoded_token: Option<&str>,
+    auth: LocalCliAuthArgs,
+) -> Result<()> {
+    let session =
+        live_proxy::authenticated_session(ledger_dir, auth.auth_user, auth.auth_password_stdin)
+            .await?;
+    match encoded_token {
+        Some(token) => apply_repair(&session, request_id, token).await,
+        None => prepare_repair(&session, request_id).await,
     }
 }
 
@@ -86,6 +101,76 @@ async fn execute(
             repo_id: actual_repo_id,
         } if request_id == token.execute_request_id && actual_repo_id == repo_id => {
             output::accepted(repo_id, request_id, job_id);
+            poll_status(session, repo_id, request_id).await
+        }
+        LocalCliRepoRemovalResponse::Error { error, .. } => server_error(error),
+        _ => bail!("REPO_LIFECYCLE_REPAIR_REQUIRED"),
+    }
+}
+
+async fn prepare_repair(
+    session: &live_proxy::LocalCliProxySession,
+    request_id: Uuid,
+) -> Result<()> {
+    loop {
+        let response = send(
+            session,
+            &LocalCliRepoRemovalRequest::RepairPrepare { request_id },
+        )
+        .await?;
+        match response {
+            LocalCliRepoRemovalResponse::RepairPrepared {
+                request_id: actual_request_id,
+                inspection,
+                token,
+                expires_at_unix_ms,
+            } if actual_request_id == request_id && inspection.request_id == request_id => {
+                return output::repair_prepared(&inspection, token.as_deref(), expires_at_unix_ms);
+            }
+            LocalCliRepoRemovalResponse::Status {
+                execute_request_id,
+                repo_id,
+                state,
+                outcome,
+                publication_pending,
+                ..
+            } if execute_request_id == request_id && state == RepoLifecycleState::Terminal => {
+                return output::terminal(repo_id, request_id, state, outcome, publication_pending);
+            }
+            LocalCliRepoRemovalResponse::Error { error, .. }
+                if error.code == ServerErrorCode::RepoLifecycleBusy =>
+            {
+                sleep(Duration::from_millis(100)).await;
+            }
+            LocalCliRepoRemovalResponse::Error { error, .. } => return server_error(error),
+            _ => bail!("REPO_LIFECYCLE_REPAIR_REQUIRED"),
+        }
+    }
+}
+
+async fn apply_repair(
+    session: &live_proxy::LocalCliProxySession,
+    request_id: Uuid,
+    token: &str,
+) -> Result<()> {
+    if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        bail!("REPO_LIFECYCLE_CONFIRMATION_INVALID");
+    }
+    let response = send(
+        session,
+        &LocalCliRepoRemovalRequest::RepairApply {
+            request_id,
+            token: token.to_owned(),
+        },
+    )
+    .await?;
+    match response {
+        LocalCliRepoRemovalResponse::Accepted {
+            request_id: actual_request_id,
+            job_id,
+            repo_id,
+        } if actual_request_id == request_id && !repo_id.is_nil() => {
+            output::repair_accepted(repo_id, request_id, job_id);
             poll_status(session, repo_id, request_id).await
         }
         LocalCliRepoRemovalResponse::Error { error, .. } => server_error(error),
@@ -166,5 +251,5 @@ async fn send(
 
 fn server_error(error: deve_core::protocol::ServerError) -> Result<()> {
     let code = serde_json::to_string(&error.code)?;
-    bail!(code.trim_matches('"').to_string())
+    Err(output::symbolic_error(code.trim_matches('"').to_string()))
 }

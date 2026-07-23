@@ -9,6 +9,7 @@ use super::model::{
     AdmittedRepoLifecycleJob, JobFuture, RepoLifecycleJobCompletion, RepoLifecycleJobExecutor,
     RepoLifecyclePublicationSink, RepoLifecycleSettledPublication,
 };
+use super::removal::RepoRemovalRepairInspection;
 use crate::server::runtime::repo_lifecycle_runtime::{
     CreateRepoIntent, RepoLifecycleCoordinator, RepoLifecycleError,
 };
@@ -241,6 +242,13 @@ impl RepoLifecycleJobExecutor for RepoLifecycleHostExecutor {
         removal: super::removal::RepoRemovalExecution,
     ) -> JobFuture<RepoLifecycleJobCompletion> {
         self.execute_removal(job, removal)
+    }
+
+    fn inspect_removal_repair(
+        &self,
+        removal: &super::removal::RepoRemovalExecution,
+    ) -> Result<RepoRemovalRepairInspection, super::model::RepoLifecycleJobError> {
+        self.coordinator.inspect_owned_removal_repair(removal)
     }
 
     fn recover(&self, job: AdmittedRepoLifecycleJob) -> JobFuture<RepoLifecycleJobCompletion> {

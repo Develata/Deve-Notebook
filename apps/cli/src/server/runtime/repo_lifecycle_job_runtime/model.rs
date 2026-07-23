@@ -259,6 +259,13 @@ pub(crate) trait RepoLifecycleJobExecutor: super::removal::RepoRemovalPlanner {
         self.recover(job)
     }
 
+    fn inspect_removal_repair(
+        &self,
+        _removal: &super::removal::RepoRemovalExecution,
+    ) -> Result<super::removal::RepoRemovalRepairInspection, RepoLifecycleJobError> {
+        Err(RepoLifecycleJobError::InvalidRequest)
+    }
+
     fn retain_create_receipt(&self, _repo_id: RepoId) -> bool {
         false
     }
@@ -275,6 +282,8 @@ pub(crate) trait RepoLifecyclePublicationSink: Send + Sync + 'static {
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RepoLifecycleJobError {
+    #[error("repository lifecycle owner is active")]
+    OwnerActive,
     #[error("repository lifecycle admission is closed")]
     AdmissionClosed,
     #[error("repository lifecycle request is invalid")]
@@ -291,6 +300,10 @@ pub(crate) enum RepoLifecycleJobError {
     ConfirmationExpired,
     #[error("repository removal confirmation is stale")]
     ConfirmationStale,
+    #[error("repository removal has no committed cleanup debt")]
+    RemovalRepairNotRequired,
+    #[error("repository removal repair is blocked by owner identity")]
+    RemovalRepairBlocked,
     #[error("repository lifecycle request was not found")]
     NotFound,
     #[error("repository lifecycle receipt store failed: {0}")]

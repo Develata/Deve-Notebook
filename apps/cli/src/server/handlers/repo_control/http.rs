@@ -12,9 +12,10 @@ use crate::local_cli_proxy_contract::{LocalCliRepoRemovalRequest, LocalCliRepoRe
 use crate::server::AppState;
 use crate::server::auth::local_cli_proxy::LocalCliProxyGateway;
 use crate::server::runtime::repo_lifecycle_job_runtime::{
-    RepoLifecycleJobOperation as HostOperation, RepoLifecycleJobOutcome as HostOutcome,
-    RepoLifecycleJobPhase as HostPhase, RepoRemovalExecuteIntent, RepoRemovalIssuerBinding,
-    RepoRemovalPrepareIntent,
+    RemovalRepairToken, RepoLifecycleJobOperation as HostOperation,
+    RepoLifecycleJobOutcome as HostOutcome, RepoLifecycleJobPhase as HostPhase,
+    RepoRemovalExecuteIntent, RepoRemovalIssuerBinding, RepoRemovalPrepareIntent,
+    RepoRemovalRepairApplyIntent, RepoRemovalRepairIssuerBinding,
 };
 use axum::body::Bytes;
 use axum::extract::{ConnectInfo, State};
@@ -58,16 +59,22 @@ pub(crate) async fn local_cli_proxy(
             ServerErrorCode::RepoLifecycleRepairRequired,
         );
     }
+    let principal_digest = authority.principal_digest().to_string();
     let issuer = RepoRemovalIssuerBinding::LocalCliProxy {
-        principal_digest: authority.principal_digest().to_string(),
+        principal_digest: principal_digest.clone(),
     };
-    execute(state, request, issuer).await
+    let repair_issuer = RepoRemovalRepairIssuerBinding::LocalCliProxy {
+        principal_digest,
+        runtime_incarnation: state.repo_lifecycle_jobs().runtime_incarnation(),
+    };
+    execute(state, request, issuer, repair_issuer).await
 }
 
 async fn execute(
     state: Arc<AppState>,
     request: LocalCliRepoRemovalRequest,
     issuer: RepoRemovalIssuerBinding,
+    repair_issuer: RepoRemovalRepairIssuerBinding,
 ) -> Response {
     match request {
         LocalCliRepoRemovalRequest::Prepare {
@@ -188,6 +195,87 @@ async fn execute(
             ),
             Err(error) => job_error_response(request_id, &error),
         },
+        LocalCliRepoRemovalRequest::RepairPrepare { request_id } => {
+            match state
+                .repo_lifecycle_jobs()
+                .prepare_removal_repair(request_id, repair_issuer)
+                .await
+            {
+                Ok(prepared) => (
+                    StatusCode::OK,
+                    Json(LocalCliRepoRemovalResponse::RepairPrepared {
+                        request_id,
+                        inspection: prepared.inspection,
+                        token: prepared.token.map(|token| token.as_str().to_string()),
+                        expires_at_unix_ms: prepared.expires_at_unix_ms,
+                    }),
+                )
+                    .into_response(),
+                Err(
+                    crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::RemovalRepairNotRequired,
+                ) => match state.repo_lifecycle_jobs().status(request_id).await {
+                    Ok(status) => (
+                        StatusCode::OK,
+                        Json(LocalCliRepoRemovalResponse::Status {
+                            request_id,
+                            execute_request_id: request_id,
+                            job_id: status.job_id,
+                            repo_id: status.target_repo_id,
+                            operation: RepoLifecycleOperation::Remove,
+                            state: match status.phase {
+                                HostPhase::Accepted => RepoLifecycleState::Accepted,
+                                HostPhase::Running => RepoLifecycleState::Running,
+                                HostPhase::Recovering => RepoLifecycleState::Recovering,
+                                HostPhase::Terminal => RepoLifecycleState::Terminal,
+                            },
+                            outcome: status.outcome.map(|outcome| match outcome {
+                                HostOutcome::Succeeded => RepoLifecycleOutcome::Succeeded,
+                                HostOutcome::NotCommitted => RepoLifecycleOutcome::NotCommitted,
+                                HostOutcome::CommittedPartial => {
+                                    RepoLifecycleOutcome::CommittedPartial
+                                }
+                                HostOutcome::RepairRequired => {
+                                    RepoLifecycleOutcome::RepairRequired
+                                }
+                            }),
+                            publication_pending: status.publication_pending,
+                        }),
+                    )
+                        .into_response(),
+                    Err(error) => job_error_response(request_id, &error),
+                },
+                Err(error) => job_error_response(request_id, &error),
+            }
+        }
+        LocalCliRepoRemovalRequest::RepairApply { request_id, token } => {
+            let Some(token) = RemovalRepairToken::from_backend(token) else {
+                return error_response(
+                    StatusCode::CONFLICT,
+                    request_id,
+                    ServerErrorCode::RepoLifecycleConfirmationInvalid,
+                );
+            };
+            match state
+                .repo_lifecycle_jobs()
+                .apply_removal_repair(RepoRemovalRepairApplyIntent {
+                    request_id,
+                    token,
+                    issuer: repair_issuer,
+                })
+                .await
+            {
+                Ok(accepted) => (
+                    StatusCode::ACCEPTED,
+                    Json(LocalCliRepoRemovalResponse::Accepted {
+                        request_id: accepted.request_id,
+                        job_id: accepted.job_id,
+                        repo_id: accepted.target_repo_id,
+                    }),
+                )
+                    .into_response(),
+                Err(error) => job_error_response(request_id, &error),
+            }
+        }
     }
 }
 
@@ -208,7 +296,8 @@ fn job_error_response(
         crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::NotFound => {
             StatusCode::NOT_FOUND
         }
-        crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::Busy => {
+        crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::Busy
+        | crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::OwnerActive => {
             StatusCode::SERVICE_UNAVAILABLE
         }
         crate::server::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobError::Store(_)

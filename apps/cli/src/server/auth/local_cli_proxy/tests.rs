@@ -132,6 +132,58 @@ fn removal_execute_rejects_zero_scope_stale_switch_and_nil_preparation() {
 }
 
 #[test]
+fn removal_repair_admission_is_session_scoped_and_validates_token() {
+    let config = config();
+    let preview_headers = bearer_headers(&config);
+    let apply_headers = bearer_headers(&config);
+    let gateway = LocalCliProxyGateway::default();
+    let peer = SocketAddr::from(([127, 0, 0, 1], 32001));
+    let request_id = Uuid::new_v4();
+    let preview = serde_json::to_vec(&LocalCliRepoRemovalRequest::RepairPrepare { request_id })
+        .expect("repair preview");
+    let apply = serde_json::to_vec(&LocalCliRepoRemovalRequest::RepairApply {
+        request_id,
+        token: "a".repeat(64),
+    })
+    .expect("repair apply");
+
+    let (preview_authority, _) = gateway
+        .admit_repo_removal(peer, &preview_headers, &config, &preview)
+        .expect("repair preview admission");
+    let (apply_authority, _) = gateway
+        .admit_repo_removal(peer, &apply_headers, &config, &apply)
+        .expect("repair apply admission");
+    assert_eq!(preview_authority.operation(), "repair-prepare");
+    assert_eq!(apply_authority.operation(), "repair-apply");
+    gateway
+        .admit_repo_removal(peer, &apply_headers, &config, &apply)
+        .expect("exact apply replay");
+
+    let conflicting_apply = serde_json::to_vec(&LocalCliRepoRemovalRequest::RepairApply {
+        request_id,
+        token: "b".repeat(64),
+    })
+    .expect("conflicting apply");
+    assert_eq!(
+        gateway
+            .admit_repo_removal(peer, &apply_headers, &config, &conflicting_apply)
+            .unwrap_err(),
+        forbidden()
+    );
+    let invalid = serde_json::to_vec(&LocalCliRepoRemovalRequest::RepairApply {
+        request_id: Uuid::new_v4(),
+        token: "not-a-token".into(),
+    })
+    .expect("invalid apply");
+    assert_eq!(
+        gateway
+            .admit_repo_removal(peer, &apply_headers, &config, &invalid)
+            .unwrap_err(),
+        forbidden()
+    );
+}
+
+#[test]
 fn admission_rejects_non_loopback_cookie_and_zero_scope() {
     let config = config();
     let headers = bearer_headers(&config);

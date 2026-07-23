@@ -10,9 +10,11 @@
 
 use super::repo_mutation::RepoMutationPublicationGate;
 use super::runtime::repo_lifecycle_job_runtime::{
-    RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink, RepoLifecycleJobError,
-    RepoLifecycleJobOutcome, RepoLifecycleJobPhase, RepoLifecycleJobRuntime,
-    RepoRemovalExecuteIntent, RepoRemovalIssuerBinding, RepoRemovalPrepareIntent,
+    RemovalRepairToken, RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink,
+    RepoLifecycleJobError, RepoLifecycleJobOutcome, RepoLifecycleJobPhase, RepoLifecycleJobRuntime,
+    RepoLifecycleStoreClaim, RepoRemovalExecuteIntent, RepoRemovalIssuerBinding,
+    RepoRemovalPrepareIntent, RepoRemovalRepairApplyIntent, RepoRemovalRepairIssuerBinding,
+    RepoRemovalRepairPrepared,
 };
 use super::runtime::repo_lifecycle_runtime::RepoLifecycleCoordinator;
 use super::runtime::repo_session_runtime::RepoSessionRuntime;
@@ -28,6 +30,7 @@ use deve_core::protocol::{
 use deve_core::remote_import::RemoteImportService;
 use deve_core::sync::SyncManager;
 use deve_core::utils::fs::{HostPathIdentity, HostPathKind};
+use deve_core::utils::notegit;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
@@ -60,10 +63,57 @@ pub(crate) struct OfflineRemovalRuntime {
     repo: Arc<RepoManager>,
     jobs: Arc<RepoLifecycleJobRuntime>,
     watchers: Arc<WatcherSupervisor>,
+    repair_issuer: Option<RepoRemovalRepairIssuerBinding>,
+}
+
+pub(crate) struct OfflineRemovalClaim {
+    lifecycle: RepoLifecycleStoreClaim,
+    repair_issuer: RepoRemovalRepairIssuerBinding,
 }
 
 impl OfflineRemovalRuntime {
     pub(crate) fn start(repo: Arc<RepoManager>) -> Result<Self> {
+        Self::start_inner(repo, None, None)
+    }
+
+    pub(crate) fn claim_repair(
+        ledger_dir: &std::path::Path,
+    ) -> Result<OfflineRemovalClaim, RepoLifecycleJobError> {
+        let lifecycle = RepoLifecycleJobRuntime::claim_store(ledger_dir)?;
+        let authority_root = HostPathIdentity::capture(ledger_dir, HostPathKind::Directory)
+            .map_err(RepoLifecycleJobError::from)?;
+        let lifecycle_lock = HostPathIdentity::capture(
+            &notegit::host_dir(ledger_dir).join("repo-lifecycle-jobs.lock"),
+            HostPathKind::RegularFile,
+        )
+        .map_err(RepoLifecycleJobError::from)?;
+        let repair_issuer = RepoRemovalRepairIssuerBinding::OfflineReceiptAuthority {
+            authority_root,
+            lifecycle_lock,
+        };
+        Ok(OfflineRemovalClaim {
+            lifecycle,
+            repair_issuer,
+        })
+    }
+
+    pub(crate) fn start_repair(
+        repo: Arc<RepoManager>,
+        claim: OfflineRemovalClaim,
+        request_id: Uuid,
+    ) -> Result<Self> {
+        Self::start_inner(
+            repo,
+            Some((claim.lifecycle, request_id)),
+            Some(claim.repair_issuer),
+        )
+    }
+
+    fn start_inner(
+        repo: Arc<RepoManager>,
+        claimed_repair: Option<(RepoLifecycleStoreClaim, Uuid)>,
+        repair_issuer: Option<RepoRemovalRepairIssuerBinding>,
+    ) -> Result<Self> {
         repo.seed_catalog_membership_from_records()?;
         for summary in repo.list_cataloged_local_repo_summaries()? {
             RemoteImportService::recover_startup(&repo, summary.repo_id)?;
@@ -92,26 +142,33 @@ impl OfflineRemovalRuntime {
             membership.clone(),
             None,
         );
-        let jobs = RepoLifecycleJobRuntime::start(
-            repo.ledger_dir(),
-            Arc::new(RepoLifecycleHostExecutor::new(
-                coordinator,
-                repo.clone(),
-                watcher_view.clone(),
-                sync,
-                remote_import,
-            )),
-            Arc::new(RepoLifecycleHostPublicationSink::new(
-                repo.clone(),
-                watcher_view,
-                RepoSessionRuntime::new(membership),
-                tx,
-            )),
-        )?;
+        let executor = Arc::new(RepoLifecycleHostExecutor::new(
+            coordinator,
+            repo.clone(),
+            watcher_view.clone(),
+            sync,
+            remote_import,
+        ));
+        let publication = Arc::new(RepoLifecycleHostPublicationSink::new(
+            repo.clone(),
+            watcher_view,
+            RepoSessionRuntime::new(membership),
+            tx,
+        ));
+        let jobs = match claimed_repair {
+            Some((claim, request_id)) => RepoLifecycleJobRuntime::start_claimed(
+                claim,
+                executor,
+                publication,
+                Some(request_id),
+            )?,
+            None => RepoLifecycleJobRuntime::start(repo.ledger_dir(), executor, publication)?,
+        };
         Ok(Self {
             repo,
             jobs,
             watchers,
+            repair_issuer,
         })
     }
 
@@ -176,6 +233,44 @@ impl OfflineRemovalRuntime {
             Err(RepoLifecycleJobError::NotFound) => Ok(None),
             Err(error) => Err(error.into()),
         }
+    }
+
+    pub(crate) async fn prepare_repair(
+        &self,
+        request_id: Uuid,
+    ) -> Result<RepoRemovalRepairPrepared> {
+        let issuer = self
+            .repair_issuer
+            .clone()
+            .ok_or(RepoLifecycleJobError::InvalidRequest)?;
+        self.jobs
+            .prepare_removal_repair(request_id, issuer)
+            .await
+            .map_err(Into::into)
+    }
+
+    pub(crate) async fn apply_repair(
+        &self,
+        request_id: Uuid,
+        token: RemovalRepairToken,
+    ) -> Result<OfflineRemovalAccepted> {
+        let issuer = self
+            .repair_issuer
+            .clone()
+            .ok_or(RepoLifecycleJobError::InvalidRequest)?;
+        let accepted = self
+            .jobs
+            .apply_removal_repair(RepoRemovalRepairApplyIntent {
+                request_id,
+                token,
+                issuer,
+            })
+            .await?;
+        Ok(OfflineRemovalAccepted {
+            request_id: accepted.request_id,
+            job_id: accepted.job_id,
+            repo_id: accepted.target_repo_id,
+        })
     }
 
     pub(crate) async fn shutdown(self) -> Result<()> {

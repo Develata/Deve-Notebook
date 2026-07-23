@@ -22,12 +22,17 @@ pub(crate) use model::{
     RepoLifecyclePublicationSink, RepoLifecycleSettledPublication,
 };
 pub(crate) use removal::{
-    RepoRemovalExecuteIntent, RepoRemovalExecution, RepoRemovalFallbackSnapshot,
-    RepoRemovalIssuerBinding, RepoRemovalPrepareIntent, RepoRemovalPrepared,
+    RemovalRepairToken, RepoRemovalExecuteIntent, RepoRemovalExecution,
+    RepoRemovalFallbackSnapshot, RepoRemovalIssuerBinding, RepoRemovalPrepareIntent,
+    RepoRemovalPrepared, RepoRemovalRepairApplyIntent, RepoRemovalRepairInspection,
+    RepoRemovalRepairIssuerBinding, RepoRemovalRepairItem, RepoRemovalRepairPrepared,
+    RepoRemovalRepairTarget, RepoRemovalRepairTruth,
 };
 #[cfg(test)]
 pub(crate) use store::removal::PRE_REPLACE_FAILURE_MARKER as REMOVAL_PRE_REPLACE_FAILURE_MARKER;
-pub(crate) use store::removal::{RemovalCleanupDisposition, RemovalCleanupStep, RemovalCutState};
+pub(crate) use store::removal::{
+    RemovalCleanupDisposition, RemovalCleanupStep, RemovalCutState, RemovalTerminalState,
+};
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -37,6 +42,10 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 const COMMAND_CAPACITY: usize = 32;
+
+pub(crate) struct RepoLifecycleStoreClaim {
+    store: store::ReceiptStore,
+}
 
 pub(crate) struct RepoLifecycleJobRuntime {
     runtime_incarnation: Uuid,
@@ -54,14 +63,36 @@ impl RepoLifecycleJobRuntime {
         executor: Arc<dyn RepoLifecycleJobExecutor>,
         publication_sink: Arc<dyn RepoLifecyclePublicationSink>,
     ) -> Result<Arc<Self>, RepoLifecycleJobError> {
-        let store = store::ReceiptStore::open(ledger_dir)?;
+        Self::start_claimed(
+            Self::claim_store(ledger_dir)?,
+            executor,
+            publication_sink,
+            None,
+        )
+    }
+
+    pub(crate) fn claim_store(
+        ledger_dir: &Path,
+    ) -> Result<RepoLifecycleStoreClaim, RepoLifecycleJobError> {
+        Ok(RepoLifecycleStoreClaim {
+            store: store::ReceiptStore::open(ledger_dir)?,
+        })
+    }
+
+    pub(crate) fn start_claimed(
+        claim: RepoLifecycleStoreClaim,
+        executor: Arc<dyn RepoLifecycleJobExecutor>,
+        publication_sink: Arc<dyn RepoLifecyclePublicationSink>,
+        skip_recovery_request_id: Option<Uuid>,
+    ) -> Result<Arc<Self>, RepoLifecycleJobError> {
         let runtime_incarnation = Uuid::new_v4();
         let (commands, receiver) = mpsc::channel(COMMAND_CAPACITY);
         let worker = tokio::spawn(worker::run(
-            store,
+            claim.store,
             executor,
             publication_sink,
             runtime_incarnation,
+            skip_recovery_request_id,
             receiver,
         ));
         Ok(Arc::new(Self {
@@ -106,6 +137,64 @@ impl RepoLifecycleJobRuntime {
             .send(worker::Command::ExecuteRemoval {
                 intent,
                 now_ms: None,
+                reply,
+            })
+            .await
+            .map_err(|_| self.closed_or_coordination())?;
+        response.await.map_err(|_| self.closed_or_coordination())?
+    }
+
+    pub(crate) async fn prepare_removal_repair(
+        &self,
+        request_id: Uuid,
+        issuer: RepoRemovalRepairIssuerBinding,
+    ) -> Result<RepoRemovalRepairPrepared, RepoLifecycleJobError> {
+        if !self.accepting.load(Ordering::Acquire) {
+            return Err(RepoLifecycleJobError::AdmissionClosed);
+        }
+        let (reply, response) = oneshot::channel();
+        self.commands
+            .send(worker::Command::PrepareRemovalRepair {
+                request_id,
+                issuer,
+                now_ms: None,
+                reply,
+            })
+            .await
+            .map_err(|_| self.closed_or_coordination())?;
+        response.await.map_err(|_| self.closed_or_coordination())?
+    }
+
+    pub(crate) async fn apply_removal_repair(
+        &self,
+        intent: RepoRemovalRepairApplyIntent,
+    ) -> Result<RepoLifecycleJobAccepted, RepoLifecycleJobError> {
+        if !self.accepting.load(Ordering::Acquire) {
+            return Err(RepoLifecycleJobError::AdmissionClosed);
+        }
+        let (reply, response) = oneshot::channel();
+        self.commands
+            .send(worker::Command::ApplyRemovalRepair {
+                intent,
+                now_ms: None,
+                reply,
+            })
+            .await
+            .map_err(|_| self.closed_or_coordination())?;
+        response.await.map_err(|_| self.closed_or_coordination())?
+    }
+
+    #[cfg(test)]
+    async fn apply_removal_repair_at_for_test(
+        &self,
+        intent: RepoRemovalRepairApplyIntent,
+        now_ms: i64,
+    ) -> Result<RepoLifecycleJobAccepted, RepoLifecycleJobError> {
+        let (reply, response) = oneshot::channel();
+        self.commands
+            .send(worker::Command::ApplyRemovalRepair {
+                intent,
+                now_ms: Some(now_ms),
                 reply,
             })
             .await

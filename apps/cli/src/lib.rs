@@ -7,6 +7,7 @@
 
 mod admin_api;
 mod cli;
+mod cli_exit;
 #[allow(dead_code)]
 mod commands;
 mod dispatch;
@@ -35,6 +36,7 @@ pub(crate) use cli::run_pre_config_command;
 pub(crate) use cli::{
     Commands, ConfigAction, NgitAction, RepoAction, RepoAliasAction, RepoProjectionAction,
 };
+pub use cli_exit::process_exit_code;
 pub(crate) use commands::projection_remote::ProjectionRemoteAction;
 pub(crate) use commands::remote_import::{LocalCliAuthArgs, RemoteImportAction};
 pub(crate) use commands::sc::ScAction;

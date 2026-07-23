@@ -4,6 +4,8 @@
 //! Same-owner durable removal preparation and admitted-job records.
 
 mod execution;
+mod persistence;
+mod repair;
 mod retention;
 
 pub(crate) use execution::{
@@ -13,27 +15,22 @@ pub(crate) use execution::{
 #[cfg(test)]
 pub(super) use retention::removal_retention_removals_for_test;
 
-use super::{LifecycleReceipt, RECEIPT_MAX_BYTES, checked_directory, is_reparse, store_invalid};
+use super::{LifecycleReceipt, store_invalid};
 use crate::server::runtime::repo_lifecycle_job_runtime::removal::{
     RepoRemovalFallbackSnapshot, RepoRemovalIssuerBinding, RepoRemovalManifest,
+    RepoRemovalRepairIssuerBinding,
 };
 use deve_core::models::RepoId;
 use deve_core::protocol::LocalRepoRemovalPreview;
-use deve_core::utils::fs as safe_fs;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::io::{Read, Write};
-use std::path::Path;
 use uuid::Uuid;
 
 use super::ReceiptStore;
 
 const FORMAT: &str = "deve.host-local-repo-removal";
-const VERSION: u32 = 3;
+const VERSION: u32 = 4;
 #[cfg(test)]
 pub(crate) const PRE_REPLACE_FAILURE_MARKER: &str = ".inject-removal-pre-replace-failure";
-const STORE_ENTRY_LIMIT: usize = 2_048;
-const STORE_AGGREGATE_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case", deny_unknown_fields)]
@@ -55,6 +52,23 @@ pub(crate) enum RemovalPreparationState {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(crate) struct RemovalRepairAuthorization {
+    token_hash: String,
+    inspection_digest: String,
+    execution_digest: String,
+    issuer: RepoRemovalRepairIssuerBinding,
+    expires_at_unix_ms: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RemovalRepairConsumption {
+    token_hash: String,
+    issuer: RepoRemovalRepairIssuerBinding,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RemovalPreparationRecord {
     format: String,
     version: u32,
@@ -71,6 +85,8 @@ pub(crate) struct RemovalPreparationRecord {
     pub(crate) fallback: Option<RepoRemovalFallbackSnapshot>,
     pub(crate) expires_at_unix_ms: i64,
     pub(crate) state: RemovalPreparationState,
+    pub(crate) repair_authorization: Option<RemovalRepairAuthorization>,
+    pub(crate) repair_consumption: Option<RemovalRepairConsumption>,
     pub(crate) updated_at_ms: i64,
 }
 
@@ -113,6 +129,8 @@ impl RemovalPreparationRecord {
                 token_hash,
                 fallback_binding_hash,
             },
+            repair_authorization: None,
+            repair_consumption: None,
             updated_at_ms: chrono::Utc::now().timestamp_millis(),
         }
     }
@@ -229,6 +247,47 @@ impl RemovalPreparationRecord {
                 execution.validate(*execute_request_id, digest, receipt)?;
             }
         }
+        if self.repair_authorization.is_some() && self.repair_consumption.is_some() {
+            return Err(store_invalid(
+                "removal repair authorization and consumption overlap",
+            ));
+        }
+        match (&self.state, &self.repair_authorization) {
+            (RemovalPreparationState::ExecuteAdmitted { execution, .. }, Some(authorization)) => {
+                validate_hash(&authorization.token_hash)?;
+                validate_hash(&authorization.inspection_digest)?;
+                validate_hash(&authorization.execution_digest)?;
+                authorization.issuer.validate()?;
+                if authorization.expires_at_unix_ms <= 0
+                    || authorization.execution_digest != execution_digest(execution)?
+                    || !execution.has_committed_debt()
+                {
+                    return Err(store_invalid("invalid removal repair authorization"));
+                }
+            }
+            (RemovalPreparationState::ExecuteAdmitted { .. }, None)
+            | (RemovalPreparationState::Prepared { .. }, None)
+            | (RemovalPreparationState::Superseded, None) => {}
+            _ => {
+                return Err(store_invalid(
+                    "removal repair authorization is not bound to admitted cleanup debt",
+                ));
+            }
+        }
+        match (&self.state, &self.repair_consumption) {
+            (RemovalPreparationState::ExecuteAdmitted { .. }, Some(consumption)) => {
+                validate_hash(&consumption.token_hash)?;
+                consumption.issuer.validate()?;
+            }
+            (RemovalPreparationState::ExecuteAdmitted { .. }, None)
+            | (RemovalPreparationState::Prepared { .. }, None)
+            | (RemovalPreparationState::Superseded, None) => {}
+            _ => {
+                return Err(store_invalid(
+                    "removal repair consumption is not bound to admitted cleanup",
+                ));
+            }
+        }
         Ok(())
     }
 }
@@ -332,6 +391,8 @@ impl ReceiptStore {
             receipt: Box::new(receipt.clone()),
             execution: Box::new(RemovalExecutionState::default()),
         };
+        record.repair_authorization = None;
+        record.repair_consumption = None;
         record.updated_at_ms = chrono::Utc::now().timestamp_millis();
         record.validate()?;
         publish_removal(&self.removal_dir, &record)?;
@@ -366,6 +427,7 @@ impl ReceiptStore {
             return Err(super::super::RepoLifecycleJobError::RequestConflict);
         }
         mutate(execution, receipt)?;
+        record.repair_authorization = None;
         record.updated_at_ms = chrono::Utc::now().timestamp_millis();
         record.validate()?;
         publish_removal(&self.removal_dir, &record)?;
@@ -390,101 +452,9 @@ pub(crate) fn manifest_digest(
     ))
 }
 
-pub(super) fn load_removals(
-    dir: &Path,
-) -> Result<BTreeMap<Uuid, RemovalPreparationRecord>, super::super::RepoLifecycleJobError> {
-    let dir = checked_directory(dir, true)?;
-    let mut records = BTreeMap::new();
-    let mut entry_count = 0_usize;
-    let mut aggregate_bytes = 0_u64;
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let metadata = std::fs::symlink_metadata(&path)?;
-        entry_count = entry_count.saturating_add(1);
-        aggregate_bytes = aggregate_bytes.saturating_add(metadata.len());
-        if entry_count > STORE_ENTRY_LIMIT || aggregate_bytes > STORE_AGGREGATE_MAX_BYTES {
-            return Err(store_invalid("removal store exceeds bounded load budget"));
-        }
-        if !metadata.is_file() || metadata.file_type().is_symlink() || is_reparse(&metadata) {
-            return Err(store_invalid("removal store contains a non-regular entry"));
-        }
-        if path.extension().and_then(|value| value.to_str()) != Some("json") {
-            continue;
-        }
-        let preparation_id = path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .and_then(|value| Uuid::parse_str(value).ok())
-            .ok_or_else(|| store_invalid("removal record name is not a preparation UUID"))?;
-        let record = read_removal(&path)?;
-        if record.preparation_id != preparation_id
-            || records.insert(preparation_id, record).is_some()
-        {
-            return Err(store_invalid("duplicate or mismatched removal preparation"));
-        }
-    }
-    Ok(records)
-}
-
-pub(super) fn publish_removal(
-    dir: &Path,
-    record: &RemovalPreparationRecord,
-) -> Result<(), super::super::RepoLifecycleJobError> {
-    record.validate()?;
-    let path = dir.join(format!("{}.json", record.preparation_id));
-    let temp = dir.join(format!(
-        ".{}.{}.{}.tmp",
-        record.preparation_id,
-        std::process::id(),
-        Uuid::new_v4()
-    ));
-    let mut bytes = serde_json::to_vec_pretty(record)?;
-    bytes.push(b'\n');
-    if bytes.len() as u64 > RECEIPT_MAX_BYTES {
-        return Err(store_invalid("removal preparation exceeds size budget"));
-    }
-    let result = (|| -> Result<(), super::super::RepoLifecycleJobError> {
-        let mut file = safe_fs::create_atomic_replace_temp(&temp)?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-        #[cfg(test)]
-        if dir.join(PRE_REPLACE_FAILURE_MARKER).try_exists()? {
-            return Err(store_invalid(
-                "injected removal preparation pre-replace failure",
-            ));
-        }
-        safe_fs::replace_file_atomically(&file, &temp, &path)?;
-        safe_fs::sync_directory(dir)?;
-        Ok(())
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&temp);
-    }
-    result
-}
-
+pub(super) use persistence::{load_removals, publish_removal};
+use repair::execution_digest;
 pub(super) use retention::prune_removals;
-
-fn read_removal(
-    path: &Path,
-) -> Result<RemovalPreparationRecord, super::super::RepoLifecycleJobError> {
-    let file = safe_fs::open_regular_file_read(path, "repo removal preparation")?;
-    let metadata = file.metadata()?;
-    if metadata.len() > RECEIPT_MAX_BYTES {
-        return Err(store_invalid("removal preparation exceeds size budget"));
-    }
-    let mut bytes = Vec::with_capacity(metadata.len() as usize);
-    file.take(RECEIPT_MAX_BYTES + 1).read_to_end(&mut bytes)?;
-    if bytes.len() as u64 > RECEIPT_MAX_BYTES {
-        return Err(store_invalid(
-            "removal preparation exceeds read size budget",
-        ));
-    }
-    let record: RemovalPreparationRecord = serde_json::from_slice(&bytes)?;
-    record.validate()?;
-    Ok(record)
-}
 
 fn validate_hash(value: &str) -> Result<(), super::super::RepoLifecycleJobError> {
     if value.len() == 64

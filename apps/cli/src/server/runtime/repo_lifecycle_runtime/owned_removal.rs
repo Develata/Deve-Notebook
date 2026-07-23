@@ -8,6 +8,7 @@
 
 mod finalization;
 mod recovery;
+mod repair;
 mod settlement;
 
 use super::RepoLifecycleCoordinator;

@@ -715,6 +715,64 @@
       ],
       "steps": [
         {
+          "program": "cargo",
+          "args": [
+            {
+              "literal": "test"
+            },
+            {
+              "literal": "--locked"
+            },
+            {
+              "literal": "-p"
+            },
+            {
+              "literal": "deve_cli"
+            },
+            {
+              "literal": "--lib"
+            },
+            {
+              "literal": "repo_lifecycle_job_runtime::tests::removal"
+            },
+            {
+              "literal": "--"
+            },
+            {
+              "literal": "--nocapture"
+            }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            {
+              "literal": "test"
+            },
+            {
+              "literal": "--locked"
+            },
+            {
+              "literal": "-p"
+            },
+            {
+              "literal": "deve_cli"
+            },
+            {
+              "literal": "--test"
+            },
+            {
+              "literal": "repo_removal_cli_test"
+            },
+            {
+              "literal": "--"
+            },
+            {
+              "literal": "--nocapture"
+            }
+          ]
+        },
+        {
           "program": "bash",
           "args": [
             {
@@ -723,7 +781,7 @@
           ]
         }
       ],
-      "note": "Run authenticated Docker browser repo, multiclient edit/offline recovery, Source Control, and External Changes journeys"
+      "note": "Run exact-head ownership-aware removal tests plus authenticated Docker browser removal, multiclient edit/offline recovery, Source Control, and External Changes journeys"
     },
     {
       "producer_id": "docker.p2p-gap-recovery",

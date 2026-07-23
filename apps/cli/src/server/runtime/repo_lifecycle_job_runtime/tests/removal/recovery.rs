@@ -51,12 +51,24 @@ async fn offline_removal_token_survives_two_cli_invocations_only_for_exact_autho
         "offline issuer must remain exact across runtime restart"
     );
     let accepted = restarted
-        .execute_removal(execute)
+        .execute_removal(execute.clone())
         .await
         .context("offline execute after restart")?;
     let status = terminal_status(&restarted, accepted.request_id).await?;
     assert_eq!(status.outcome, Some(RepoLifecycleJobOutcome::Succeeded));
     restarted.shutdown().await?;
+    let replay_runtime = restart_runtime(&state)?;
+    let replayed = replay_runtime
+        .execute_removal(execute)
+        .await
+        .context("offline execute lost-response replay after terminal restart")?;
+    assert_eq!(replayed, accepted);
+    let replayed_status = terminal_status(&replay_runtime, replayed.request_id).await?;
+    assert_eq!(
+        replayed_status.outcome,
+        Some(RepoLifecycleJobOutcome::Succeeded)
+    );
+    replay_runtime.shutdown().await?;
     drop((state, dir, test_guard));
     Ok(())
 }
@@ -95,7 +107,7 @@ async fn committed_cleanup_debt_is_recovered_from_the_exact_owner_receipt() -> a
                     .is_some_and(|record| {
                         record.state() == deve_core::ledger::RepoCatalogMembershipState::Removed
                     });
-                if removed && status.outcome.is_none() {
+                if removed && status.outcome == Some(RepoLifecycleJobOutcome::RepairRequired) {
                     break Ok::<_, anyhow::Error>(());
                 }
                 tokio::time::sleep(Duration::from_millis(25)).await;
@@ -124,6 +136,121 @@ async fn committed_cleanup_debt_is_recovered_from_the_exact_owner_receipt() -> a
         restarted.shutdown().await?;
         drop((state, dir, test_guard));
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn explicit_repair_reissues_expires_and_consumes_one_shot_authorization() -> anyhow::Result<()>
+{
+    let (test_guard, dir, state) = build_state().await?;
+    let repo_id = state.repo.list_cataloged_local_repo_summaries()?[0].repo_id;
+    let runtime = state.repo_lifecycle_jobs();
+    let issuer = web_issuer(77);
+    let prepared = prepare(&runtime, repo_id, Uuid::new_v4(), issuer.clone()).await?;
+    let execute = execute_intent(
+        &prepared,
+        prepared
+            .confirmation_token
+            .clone()
+            .unwrap_or_else(|| panic!("missing token: {:?}", prepared.preview)),
+        issuer,
+    );
+    let request_id = execute.request_id;
+    state
+        .repo_lifecycle_coordinator()
+        .fail_next_owned_cleanup_for_test(
+            super::super::super::RemovalCleanupStep::ProcessRuntimeSlots,
+        );
+    runtime.execute_removal(execute).await?;
+    let debt = terminal_status(&runtime, request_id).await?;
+    assert_eq!(debt.outcome, Some(RepoLifecycleJobOutcome::RepairRequired));
+
+    let repair_issuer = local_proxy_repair_issuer(&runtime, 'b');
+    let first = runtime
+        .prepare_removal_repair(request_id, repair_issuer.clone())
+        .await?;
+    assert!(first.inspection.apply_allowed);
+    assert!(!first.inspection.remaining.is_empty());
+    let first_token = first.token.expect("first repair token");
+    let second = runtime
+        .prepare_removal_repair(request_id, repair_issuer.clone())
+        .await?;
+    let second_token = second.token.expect("second repair token");
+    let before_expiry = second.expires_at_unix_ms.expect("repair expiry") - 1;
+    let superseded = runtime
+        .apply_removal_repair_at_for_test(
+            RepoRemovalRepairApplyIntent {
+                request_id,
+                token: first_token,
+                issuer: repair_issuer.clone(),
+            },
+            before_expiry,
+        )
+        .await
+        .expect_err("reissued preview must invalidate old token");
+    assert!(matches!(
+        superseded,
+        RepoLifecycleJobError::ConfirmationStale
+    ));
+    let expired = runtime
+        .apply_removal_repair_at_for_test(
+            RepoRemovalRepairApplyIntent {
+                request_id,
+                token: second_token,
+                issuer: repair_issuer.clone(),
+            },
+            second.expires_at_unix_ms.expect("repair expiry") + 1,
+        )
+        .await
+        .expect_err("expired repair token must fail");
+    assert!(matches!(
+        expired,
+        RepoLifecycleJobError::ConfirmationExpired
+    ));
+
+    let current = runtime
+        .prepare_removal_repair(request_id, repair_issuer.clone())
+        .await?;
+    let current_token = current.token.expect("current repair token");
+    let foreign = runtime
+        .apply_removal_repair(RepoRemovalRepairApplyIntent {
+            request_id,
+            token: current_token.clone(),
+            issuer: local_proxy_repair_issuer(&runtime, 'd'),
+        })
+        .await
+        .expect_err("repair token must bind its exact operator and runtime");
+    assert!(matches!(foreign, RepoLifecycleJobError::ConfirmationStale));
+    let accepted = runtime
+        .apply_removal_repair(RepoRemovalRepairApplyIntent {
+            request_id,
+            token: current_token.clone(),
+            issuer: repair_issuer.clone(),
+        })
+        .await?;
+    assert_eq!(accepted.target_repo_id, repo_id);
+    let replayed_while_running = runtime
+        .apply_removal_repair(RepoRemovalRepairApplyIntent {
+            request_id,
+            token: current_token.clone(),
+            issuer: repair_issuer.clone(),
+        })
+        .await?;
+    assert_eq!(replayed_while_running.request_id, accepted.request_id);
+    assert_eq!(replayed_while_running.job_id, accepted.job_id);
+    let recovered = terminal_status(&runtime, request_id).await?;
+    assert_eq!(recovered.outcome, Some(RepoLifecycleJobOutcome::Succeeded));
+    let replayed_after_terminal = runtime
+        .apply_removal_repair(RepoRemovalRepairApplyIntent {
+            request_id,
+            token: current_token,
+            issuer: repair_issuer,
+        })
+        .await?;
+    assert_eq!(replayed_after_terminal.request_id, accepted.request_id);
+    assert_eq!(replayed_after_terminal.job_id, accepted.job_id);
+    runtime.shutdown().await?;
+    drop((state, dir, test_guard));
     Ok(())
 }
 
@@ -157,7 +284,10 @@ async fn completed_owner_drift_blocks_later_cleanup_after_cold_restart() -> anyh
                 .is_some_and(|record| {
                     record.state() == deve_core::ledger::RepoCatalogMembershipState::Removed
                 })
-                && runtime.status(request_id).await?.outcome.is_none()
+                && matches!(
+                    runtime.status(request_id).await?.outcome,
+                    None | Some(RepoLifecycleJobOutcome::RepairRequired)
+                )
             {
                 break Ok::<_, anyhow::Error>(());
             }
@@ -185,10 +315,16 @@ async fn completed_owner_drift_blocks_later_cleanup_after_cold_restart() -> anyh
     let restarted = state.repo_lifecycle_jobs();
     tokio::time::sleep(Duration::from_millis(250)).await;
     let status = restarted.status(request_id).await?;
-    assert!(
-        status.outcome.is_none(),
-        "owner drift must remain repair debt"
+    assert_eq!(
+        status.outcome,
+        Some(RepoLifecycleJobOutcome::RepairRequired),
+        "owner drift must remain visible as repair debt"
     );
+    let repair = restarted
+        .prepare_removal_repair(request_id, local_proxy_repair_issuer(&restarted, 'c'))
+        .await?;
+    assert!(!repair.inspection.apply_allowed);
+    assert!(repair.token.is_none());
     assert!(
         state
             .repo
@@ -239,7 +375,9 @@ async fn authority_retirement_failure_keeps_candidate_unpublished_and_cold_recov
         loop {
             let text = std::fs::read_to_string(&record_path)?;
             let status = runtime.status(request_id).await?;
-            if text.contains("\"state\": \"candidate\"") && status.outcome.is_none() {
+            if text.contains("\"state\": \"candidate\"")
+                && status.outcome == Some(RepoLifecycleJobOutcome::RepairRequired)
+            {
                 break Ok::<_, anyhow::Error>(());
             }
             tokio::time::sleep(Duration::from_millis(25)).await;

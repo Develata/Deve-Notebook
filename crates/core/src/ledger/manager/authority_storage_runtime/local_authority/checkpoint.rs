@@ -5,7 +5,7 @@
 //! Opaque durable progress for canonical Redb quarantine cleanup.
 
 use crate::models::RepoId;
-use crate::utils::fs::{HostPathIdentity, HostQuarantineCut, HostQuarantinePlan};
+use crate::utils::fs::{HostPathIdentity, HostPathState, HostQuarantineCut, HostQuarantinePlan};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 
@@ -73,6 +73,37 @@ impl RepoAuthorityRemovalSnapshot {
             return Ok(false);
         };
         Ok(database.belongs_to(&self.database_quarantine) && database.is_deleted()?)
+    }
+
+    /// Read-only repair admission. A replacement DB or lock is never rebound,
+    /// even when its pathname or embedded RepoId text matches.
+    pub fn repair_retry_is_exact(
+        &self,
+        checkpoint: &RepoAuthorityDatabaseCheckpoint,
+    ) -> std::io::Result<bool> {
+        if self.authority_lock.classify()? != HostPathState::Exact {
+            return Ok(false);
+        }
+        let exact = match &checkpoint.state {
+            RepoAuthorityDatabaseCheckpointState::Prepared => {
+                match self.database_quarantine.observe_cut() {
+                    Ok(Some(database)) => {
+                        database.original_path_is_absent()? && database.is_quarantined_exact()?
+                    }
+                    Ok(None) => self.database_quarantine.revalidate_prepared()?,
+                    Err(_) => false,
+                }
+            }
+            RepoAuthorityDatabaseCheckpointState::DatabaseQuarantined { database } => {
+                database.belongs_to(&self.database_quarantine)
+                    && database.original_path_is_absent()?
+                    && database.is_quarantined_exact()?
+            }
+            RepoAuthorityDatabaseCheckpointState::DatabaseDeleted { database } => {
+                database.belongs_to(&self.database_quarantine) && database.is_deleted()?
+            }
+        };
+        Ok(exact)
     }
 }
 

@@ -189,6 +189,14 @@ impl HostRepoAliasRuntime {
         Ok(current.alias_revision == 0)
     }
 
+    pub fn removal_retry_is_exact(
+        &self,
+        plan: &HostRepoAliasRemovalPlan,
+    ) -> Result<bool, HostRepoAliasError> {
+        let current = AliasStore::load(&self.ledger_dir)?.binding_or_fallback(plan.repo_id());
+        Ok(current.alias_revision == 0 || current == plan.binding)
+    }
+
     fn require_active_local_repo(
         &self,
         membership: &LocalRepoMembershipSnapshot,

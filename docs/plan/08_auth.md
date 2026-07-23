@@ -335,7 +335,7 @@ HTTP tunnel 或新的 credential authority。
 构造条件必须全部成立：
 
 1. TCP peer 是 loopback；转发头、Host header 或 locator 中的 localhost 文本不能替代真实 peer address。
-2. CLI 必须先读取该 ledger host 的 deterministic `.host/main_port` JSON v1 owner hint，并将其 `main_port + host_peer_id + runtime_incarnation` 与 unauthenticated `/api/node/role` 响应 exact 匹配；匹配完成前不得从 stdin 读取或向网络发送 operator password。这是 owner-process identity proof，不是新的授权 secret。
+2. CLI 必须先尝试取得对应的persistent owner lock；只有锁已由live server持有时才进入proxy路径，并读取该ledger host的deterministic `.host/main_port` JSON v1 owner hint，将其`main_port + host_peer_id + runtime_incarnation`与unauthenticated `/api/node/role`响应exact匹配。stale hint不能阻止已成功取得owner lock的offline操作，missing hint也不能允许绕过已被占用的owner lock。endpoint匹配完成前不得从stdin读取或向网络发送operator password；hint是live owner endpoint identity proof，不是owner存活证明或新的授权secret。
 3. CLI 通过既有 `POST /api/auth/login` 使用显式 operator credential 建立 JWT session，并把返回的
    HttpOnly `token` cookie 仅保留在当前 CLI process 的隔离 cookie jar；proxy 请求必须把该 JWT 作为
    `Authorization: Bearer` 重新提交。endpoint 不接受 Cookie-only、anonymous localhost dev session、
@@ -347,8 +347,9 @@ HTTP tunnel 或新的 credential authority。
    Repo Removal replay admission绑定`(family, auth sid, request_id, operation, repo_id, preparation_id?,
    current_scope_nonce, switch_nonce?, request body digest)`；durable removal issuer另绑定稳定的operator
    subject/token-version digest与server runtime incarnation，使同一operator的下一次CLI登录可以消费前次
-   Prepare token，而不同operator或server incarnation不能复用。当前产品面只允许Prepare、Execute、Status；
-   显式Repair必须在owner提供typed repair API后作为同family独立operation加入，不得借用Execute；
+   Prepare token，而不同operator或server incarnation不能复用。当前产品面允许Prepare、Execute、Status、
+   RepairPrepare与RepairApply；repair授权另绑定operator principal与当前lifecycle runtime incarnation，
+   consumed token只可重放同一job/result。Repair是同family独立operation，不得借用Execute；
    不授予通用 HTTP、Source Control、Ledger table、watcher lifecycle 或 filesystem capability。
 6. `auth_gateway` 维护有界、TTL 限制的 process-local request identity cache。同一
    同一 `(sid, request_id)` 若 identity/digest 不同必须 fail-closed；完全相同的重复 Apply 只能转交

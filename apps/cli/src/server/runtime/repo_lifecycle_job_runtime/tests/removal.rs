@@ -4,7 +4,7 @@
 
 use super::super::removal::{
     RepoRemovalExecuteIntent, RepoRemovalIssuerBinding, RepoRemovalPrepareIntent,
-    RepoRemovalPrepared,
+    RepoRemovalPrepared, RepoRemovalRepairApplyIntent, RepoRemovalRepairIssuerBinding,
 };
 use super::super::{
     RepoLifecycleHostExecutor, RepoLifecycleHostPublicationSink, RepoLifecycleJobError,
@@ -48,6 +48,16 @@ fn web_issuer_with_principal(principal: char, connection_epoch: u64) -> RepoRemo
     RepoRemovalIssuerBinding::Web {
         principal_digest: principal.to_string().repeat(64),
         connection_epoch,
+    }
+}
+
+fn local_proxy_repair_issuer(
+    runtime: &RepoLifecycleJobRuntime,
+    principal: char,
+) -> RepoRemovalRepairIssuerBinding {
+    RepoRemovalRepairIssuerBinding::LocalCliProxy {
+        principal_digest: principal.to_string().repeat(64),
+        runtime_incarnation: runtime.runtime_incarnation(),
     }
 }
 

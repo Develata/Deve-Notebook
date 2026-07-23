@@ -112,6 +112,53 @@ fn repo_remove_requires_explicit_apply_and_opaque_token_pair() {
 }
 
 #[test]
+fn repo_removal_repair_requires_request_id_and_apply_token_pair() {
+    let request_id = uuid::Uuid::new_v4();
+    let preview = Args::try_parse_from([
+        "deve",
+        "repo",
+        "removal-repair",
+        "--request-id",
+        &request_id.to_string(),
+    ])
+    .expect("parse repair preview");
+    assert!(matches!(
+        preview.command,
+        Some(Commands::Repo {
+            action: RepoAction::RemovalRepair {
+                request_id: parsed,
+                apply: false,
+                token: None,
+                ..
+            }
+        }) if parsed == request_id
+    ));
+    assert!(
+        Args::try_parse_from([
+            "deve",
+            "repo",
+            "removal-repair",
+            "--request-id",
+            &request_id.to_string(),
+            "--apply",
+        ])
+        .is_err()
+    );
+    assert!(
+        Args::try_parse_from([
+            "deve",
+            "repo",
+            "removal-repair",
+            "--request-id",
+            &request_id.to_string(),
+            "--token",
+            "opaque",
+        ])
+        .is_err()
+    );
+}
+
+#[test]
 fn export_accepts_out_alias_for_output() {
     let args = Args::try_parse_from([
         "deve",

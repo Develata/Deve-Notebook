@@ -41,9 +41,11 @@
   `deve repo remove --repo-id <uuid> --apply --token <opaque>`才执行。server持有authority时两次调用都走
   authenticated loopback proxy，且在读取password前必须匹配ledger-local owner hint与server process incarnation；offline两次invocation绑定稳定authority-root/lock identity而不是短命process。
   输出按backend顺序列出deleted/preserved/warning/blocker，不打印path、manifest、digest或raw cleanup detail。
-  normal Prepare/Execute现已可用；`deve repo removal-repair --request-id <uuid>`仍是首发阻塞目标，必须在
-  owner-specific typed repair API完成后默认dry-run，实际清理再提供`--apply --token`，当前不得用普通
-  Execute或pathname脚本替代。
+  normal Prepare/Execute与owner-specific repair共用同一lifecycle worker。`deve repo removal-repair
+  --request-id <uuid>`默认dry-run，只显示remaining category、typed owner truth与可用时的opaque token；
+  `--apply --token`只重试原sealed cleanup。replacement、unknown identity或unsafe reparse不签发token，
+  不得用普通Execute、文本RepoId或pathname脚本替代。remove/repair以0/20/21/22分别表达成功、
+  NotCommitted、CommittedPartial与RepairRequired，普通CLI错误仍为1。
 - CLI 输出只消费 typed failure/mount outcome；不得按 backend 错误字符串决定 repo 隔离、host shutdown 或恢复动作。
 
 ### 4. NoteGit / Git Main Mirror Repair Command Boundary

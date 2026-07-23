@@ -123,7 +123,12 @@ impl LocalCliProxyGateway {
         let repo_id = request.repo_id();
         let request_id = request.request_id();
         let (scope_nonce, switch_nonce, preparation_id) = request.scope_identity();
-        if repo_id.is_nil() || request_id.is_nil() {
+        let is_repair = matches!(
+            &request,
+            LocalCliRepoRemovalRequest::RepairPrepare { .. }
+                | LocalCliRepoRemovalRequest::RepairApply { .. }
+        );
+        if (!is_repair && repo_id.is_nil()) || request_id.is_nil() {
             return Err(forbidden());
         }
         match &request {
@@ -140,6 +145,11 @@ impl LocalCliProxyGateway {
             LocalCliRepoRemovalRequest::Status {
                 execute_request_id, ..
             } if execute_request_id.is_nil() => return Err(forbidden()),
+            LocalCliRepoRemovalRequest::RepairApply { token, .. }
+                if token.len() != 64 || !token.bytes().all(|byte| byte.is_ascii_hexdigit()) =>
+            {
+                return Err(forbidden());
+            }
             _ => {}
         }
         let digest = exact_identity_digest(

@@ -141,17 +141,18 @@ transient tombstone；Remote Import owner 已完成本次 removal plan，且成�
 workspace `.notegit`、locator 与 alias 后，必须由 catalog owner 删除该 record。它不是可恢复的长期软删除状态。
 `repo-lifecycle-jobs/<request_id>.json` 是普通 create/job 的 host-local admission/completion receipt，
 记录 operation、normalized intent digest、target RepoId、phase 与 terminal/repair outcome。
-Remove 使用 `repo-lifecycle-jobs/removals/<preparation_id>.json` 的 deterministic JSON v3；其
-`format="deve.host-local-repo-removal"`、`version=3`、filename stem 与 payload `preparation_id`
+Remove 使用 `repo-lifecycle-jobs/removals/<preparation_id>.json` 的 deterministic JSON v4；其
+`format="deve.host-local-repo-removal"`、`version=4`、filename stem 与 payload `preparation_id`
 必须exact一致，另存非空且互异的`prepare_request_id`，Execute后再存非空且与前两者互异的
 `execute_request_id`。请求命名空间在启动时从全部普通receipt与removal record重建，任一重复即
-fail closed。v3至少固定exact ownership manifest/digest、confirmation-token hash/expiry/issuer binding、
+fail closed。v4至少固定exact ownership manifest/digest、confirmation-token hash/expiry/issuer binding、
 tagged admission state (`Prepared | Superseded | ExecuteAdmitted`)、独立单调cut state
 (`NotAttempted | Attempted | Observed{tombstone}`)、三个owner opaque checkpoint与独立单调terminal
-state (`None | Candidate{completion} | Complete`)；cut和terminal不是互斥phase，`Candidate/Complete`
+state (`None | Candidate{completion} | Complete`)，以及可选的一次性repair token hash、五分钟expiry、
+execution digest与exact owner observation digest；任何checkpoint推进必须原子废止repair授权。cut和terminal不是互斥phase，`Candidate/Complete`
 必须隐含`Observed`与`CleanupComplete`。Execute 必须在同一 durable record 内原子转换为
 `ExecuteAdmitted { execute_request_id, job_id, consumed_token_hash, ... }` 并 fsync 后才启动 worker；原始
-confirmation token 不得落盘；未发布的 v1/v2 removal record 不保留 adapter。它不授予 repo membership，
+confirmation token 不得落盘；未发布的 v1/v2/v3 removal record 不保留 adapter。它不授予 repo membership，
 也不得进入 Ledger/sync。active/cleanup-debt receipt 永不裁剪；normal repo 的 create
 receipt 至少由 catalog record 可追溯，terminal receipt 的 bounded retention 归
 `04_repository#repo-lifecycle-coordinator`。

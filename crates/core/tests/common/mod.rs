@@ -284,6 +284,10 @@ pub fn seed_broken_local_repo_file(ledger_dir: &Path, stem: &str) {
 
 pub fn seed_metadata_less_local_repo(ledger_dir: &Path, stem: &str) {
     std::fs::create_dir_all(ledger_dir.join("local")).expect("create local dir");
+    let authority_locks = ledger_dir.join(".host").join("repo-authority-locks");
+    std::fs::create_dir_all(&authority_locks).expect("create local authority lock dir");
+    std::fs::File::create(authority_locks.join(format!("{stem}.lock")))
+        .expect("create local authority lock");
     let db =
         redb::Database::create(local_repo_file(ledger_dir, stem)).expect("metadata-less repo db");
     let txn = db.begin_write().expect("write txn");

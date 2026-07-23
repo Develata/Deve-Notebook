@@ -82,6 +82,16 @@ impl RemoteImportCoordinator {
         )?)
     }
 
+    pub(crate) fn repo_removal_repair_retry_is_exact(
+        &self,
+        plan: &RemoteImportRepoRemovalPlan,
+        checkpoint: &RemoteImportRepoRemovalCheckpoint,
+    ) -> Result<bool, RemoteImportHostError> {
+        Ok(RemoteImportService::repo_removal_repair_retry_is_exact(
+            plan, checkpoint,
+        )?)
+    }
+
     pub(crate) fn revalidate_sealed_repo_removal(
         &self,
         repo_id: RepoId,

@@ -41,6 +41,9 @@ export async function exerciseRepoLifecycle(page) {
     const current = await scope(page);
     return current.status === "ready" && current.repoId && current.repoId !== initial.repoId;
   });
+  const created = await scope(page);
+  assert.ok(created.repoId, "created repo scope must expose a repo id");
+  const createdWorkspace = prepareRemovalPreservationFixture(created.repoId);
 
   await page.locator("[data-deve-repo-switcher-trigger]").click();
   await page
@@ -50,7 +53,28 @@ export async function exerciseRepoLifecycle(page) {
     const current = await scope(page);
     return current.status === "ready" && current.repoId === initial.repoId;
   });
-  return { initialRepoId: initial.repoId, createdRepo: repoName };
+
+  await page.locator("[data-deve-repo-switcher-trigger]").click();
+  const createdRow = page
+    .locator(`[data-deve-repo-switcher-item-name="${repoName}"]`)
+    .locator("xpath=..");
+  await createdRow.locator("[data-deve-repo-switcher-actions]").click();
+  await createdRow.locator("[data-deve-repo-switcher-remove]").click();
+  const dialog = page.locator('[data-deve-repo-removal-dialog="visible"]');
+  await dialog.waitFor({ state: "visible", timeout: timeoutMs });
+  assert.ok(
+    (await dialog.innerText()).includes(repoName),
+    "removal preview must identify the backend-selected display alias",
+  );
+  await dialog.locator('[data-deve-repo-removal-confirm="true"]').click();
+  await dialog.waitFor({ state: "hidden", timeout: timeoutMs });
+  await waitUntil("removed repository absent from switcher", async () =>
+    (await page.locator(`[data-deve-repo-switcher-item-name="${repoName}"]`).count()) === 0);
+  const afterRemoval = await scope(page);
+  assert.equal(afterRemoval.repoId, initial.repoId);
+  assert.equal(afterRemoval.status, "ready");
+  assertRemovalPreservation(created.repoId, createdWorkspace);
+  return { initialRepoId: initial.repoId, removedRepoId: created.repoId };
 }
 
 async function openActivity(page, item) {
@@ -132,7 +156,7 @@ export function validateWorkspaceIdentity(identityContent, repoId) {
   assert.equal(locatorStringField(identityContent, "repo_id"), repoId);
 }
 
-function mutateWorkspaceFile(repoId, path, content) {
+function dockerWorkspaceRoot(repoId) {
   const docker = process.env.DEVE_DOCKER_MULTI_DOCKER_BIN ?? "docker";
   const container = process.env.DEVE_DOCKER_MULTI_CONTAINER_ID;
   assert.ok(container, "DEVE_DOCKER_MULTI_CONTAINER_ID is required for product journeys");
@@ -141,7 +165,53 @@ function mutateWorkspaceFile(repoId, path, content) {
     ["exec", container, "cat", "/data/ledger/.host/projection-locators.toml"],
     { encoding: "utf8", timeout: 30000 },
   );
-  const workspace = selectWorkspaceRoot(locatorContent, repoId);
+  return {
+    docker,
+    container,
+    workspace: selectWorkspaceRoot(locatorContent, repoId),
+  };
+}
+
+function prepareRemovalPreservationFixture(repoId) {
+  const { docker, container, workspace } = dockerWorkspaceRoot(repoId);
+  execFileSync(
+    docker,
+    [
+      "exec",
+      container,
+      "sh",
+      "-c",
+      'set -eu; root="$1"; printf "# preserved\\n" > "$root/preserved.md"; printf "unknown\\n" > "$root/unknown.bin"; mkdir -p "$root/.git"; printf "[core]\\n" > "$root/.git/config"',
+      "_",
+      workspace,
+    ],
+    { stdio: ["ignore", "ignore", "pipe"], timeout: 30000 },
+  );
+  return workspace;
+}
+
+function assertRemovalPreservation(repoId, workspace) {
+  const docker = process.env.DEVE_DOCKER_MULTI_DOCKER_BIN ?? "docker";
+  const container = process.env.DEVE_DOCKER_MULTI_CONTAINER_ID;
+  assert.ok(container, "DEVE_DOCKER_MULTI_CONTAINER_ID is required for product journeys");
+  execFileSync(
+    docker,
+    [
+      "exec",
+      container,
+      "sh",
+      "-c",
+      'set -eu; root="$1"; repo_id="$2"; test -f "$root/preserved.md"; test -f "$root/unknown.bin"; test -f "$root/.git/config"; test -f "$root/.gitignore"; test ! -e "$root/.notegit"; test ! -e "/data/ledger/local/${repo_id}.redb"',
+      "_",
+      workspace,
+      repoId,
+    ],
+    { stdio: ["ignore", "ignore", "pipe"], timeout: 30000 },
+  );
+}
+
+function mutateWorkspaceFile(repoId, path, content) {
+  const { docker, container, workspace } = dockerWorkspaceRoot(repoId);
   const identityContent = execFileSync(
     docker,
     ["exec", container, "sh", "-c", 'test ! -L "$1" && test -f "$1" && cat "$1"', "_", `${workspace}/.notegit/identity.toml`],

@@ -238,6 +238,20 @@ pub(crate) enum RepoAction {
         #[command(flatten)]
         auth: LocalCliAuthArgs,
     },
+    /// Inspect or explicitly retry a committed local repo removal cleanup debt
+    RemovalRepair {
+        /// Execute request id emitted by the original removal
+        #[arg(long = "request-id")]
+        request_id: uuid::Uuid,
+        /// Retry the original sealed cleanup plan; requires a fresh repair token
+        #[arg(long, requires = "token")]
+        apply: bool,
+        /// Opaque token emitted by the read-only repair preview
+        #[arg(long, requires = "apply")]
+        token: Option<String>,
+        #[command(flatten)]
+        auth: LocalCliAuthArgs,
+    },
     /// Inspect or update host-local repo display aliases
     Alias {
         #[command(subcommand)]

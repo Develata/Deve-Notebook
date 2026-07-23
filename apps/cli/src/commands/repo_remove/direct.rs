@@ -4,7 +4,8 @@
 
 use super::output;
 use super::token::CliRemovalToken;
-use crate::server::local_repo_removal_cli_runtime::OfflineRemovalRuntime;
+use crate::server::local_repo_removal_cli_runtime::{OfflineRemovalClaim, OfflineRemovalRuntime};
+use crate::server::{RemovalRepairToken, RepoLifecycleJobError};
 use anyhow::{Result, anyhow};
 use deve_core::ledger::RepoManager;
 use deve_core::models::RepoId;
@@ -30,6 +31,28 @@ pub(super) async fn run(
         (Ok(()), Err(cleanup)) => Err(cleanup.context("offline removal runtime shutdown failed")),
         (Err(primary), Err(cleanup)) => Err(primary.context(format!(
             "offline removal runtime shutdown also failed: {cleanup}"
+        ))),
+    }
+}
+
+pub(super) async fn run_repair(
+    repo: Arc<RepoManager>,
+    claim: OfflineRemovalClaim,
+    request_id: Uuid,
+    encoded_token: Option<&str>,
+) -> Result<()> {
+    let runtime = OfflineRemovalRuntime::start_repair(repo, claim, request_id)?;
+    let operation = match encoded_token {
+        Some(encoded) => apply_repair(&runtime, request_id, encoded).await,
+        None => prepare_repair(&runtime, request_id).await,
+    };
+    let shutdown = runtime.shutdown().await;
+    match (operation, shutdown) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(primary), Ok(())) => Err(primary),
+        (Ok(()), Err(cleanup)) => Err(cleanup.context("offline repair runtime shutdown failed")),
+        (Err(primary), Err(cleanup)) => Err(primary.context(format!(
+            "offline repair runtime shutdown also failed: {cleanup}"
         ))),
     }
 }
@@ -63,6 +86,40 @@ async fn execute(
         return Err(anyhow!("REPO_LIFECYCLE_REPAIR_REQUIRED"));
     }
     output::accepted(repo_id, accepted.request_id, accepted.job_id);
+    wait_terminal(runtime, accepted.request_id).await
+}
+
+async fn prepare_repair(runtime: &OfflineRemovalRuntime, request_id: Uuid) -> Result<()> {
+    let prepared = match runtime.prepare_repair(request_id).await {
+        Ok(prepared) => prepared,
+        Err(error)
+            if error.chain().any(|cause| {
+                matches!(
+                    cause.downcast_ref::<RepoLifecycleJobError>(),
+                    Some(RepoLifecycleJobError::RemovalRepairNotRequired)
+                )
+            }) =>
+        {
+            return wait_terminal(runtime, request_id).await;
+        }
+        Err(error) => return Err(error),
+    };
+    output::repair_prepared(
+        &prepared.inspection,
+        prepared.token.as_ref().map(RemovalRepairToken::as_str),
+        prepared.expires_at_unix_ms,
+    )
+}
+
+async fn apply_repair(
+    runtime: &OfflineRemovalRuntime,
+    request_id: Uuid,
+    encoded_token: &str,
+) -> Result<()> {
+    let token = RemovalRepairToken::from_backend(encoded_token.to_owned())
+        .ok_or_else(|| anyhow!("REPO_LIFECYCLE_CONFIRMATION_INVALID"))?;
+    let accepted = runtime.apply_repair(request_id, token).await?;
+    output::repair_accepted(accepted.repo_id, accepted.request_id, accepted.job_id);
     wait_terminal(runtime, accepted.request_id).await
 }
 
