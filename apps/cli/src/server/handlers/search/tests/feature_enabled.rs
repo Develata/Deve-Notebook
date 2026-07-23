@@ -38,8 +38,18 @@ fn scores_path_matches_above_content_matches() {
 #[test]
 fn scope_search_scans_current_repo_documents() -> anyhow::Result<()> {
     let h = edit_harness(true)?;
-    let rust_doc = seed_doc_with_content(&h.state, "default", "notes/rust.md", "Rust search")?;
-    seed_doc_with_content(&h.state, "test", "notes/rust.md", "Other repo Rust")?;
+    let rust_doc = seed_doc_with_content(
+        &h.state,
+        &h.default_repo_name,
+        "notes/rust.md",
+        "Rust search",
+    )?;
+    seed_doc_with_content(
+        &h.state,
+        h.test_repo_name.as_deref().expect("test repo name"),
+        "notes/rust.md",
+        "Other repo Rust",
+    )?;
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
@@ -58,8 +68,8 @@ fn scope_search_scans_current_repo_documents() -> anyhow::Result<()> {
 #[test]
 fn scope_search_honors_limit_and_blank_query() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    seed_doc_with_content(&h.state, "default", "notes/a.md", "needle")?;
-    seed_doc_with_content(&h.state, "default", "notes/b.md", "needle")?;
+    seed_doc_with_content(&h.state, &h.default_repo_name, "notes/a.md", "needle")?;
+    seed_doc_with_content(&h.state, &h.default_repo_name, "notes/b.md", "needle")?;
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
@@ -78,7 +88,7 @@ fn scope_search_honors_limit_and_blank_query() -> anyhow::Result<()> {
 #[test]
 fn scope_search_scans_remote_branch_documents() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    seed_doc_with_content(&h.state, "default", "notes/local.md", "needle")?;
+    seed_doc_with_content(&h.state, &h.default_repo_name, "notes/local.md", "needle")?;
     let peer_id = PeerId::new("peer-a");
     let remote_doc = seed_remote_doc_with_content(
         &h.state,
@@ -105,9 +115,14 @@ fn scope_search_scans_remote_branch_documents() -> anyhow::Result<()> {
 #[test]
 fn scope_search_orders_by_score_then_path_before_limit() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let path_match = seed_doc_with_content(&h.state, "default", "notes/needle-alpha.md", "plain")?;
-    seed_doc_with_content(&h.state, "default", "notes/b.md", "needle")?;
-    seed_doc_with_content(&h.state, "default", "notes/a.md", "needle")?;
+    let path_match = seed_doc_with_content(
+        &h.state,
+        &h.default_repo_name,
+        "notes/needle-alpha.md",
+        "plain",
+    )?;
+    seed_doc_with_content(&h.state, &h.default_repo_name, "notes/b.md", "needle")?;
+    seed_doc_with_content(&h.state, &h.default_repo_name, "notes/a.md", "needle")?;
     let scope = ResolvedRepo {
         repo_id: h.default_repo_id,
         repo_name: "default".into(),
@@ -132,7 +147,7 @@ fn scope_search_orders_by_score_then_path_before_limit() -> anyhow::Result<()> {
 async fn handler_returns_structured_error_when_runtime_search_is_disabled() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
     let (ch, mut rx) = test_channel(&h.state);
-    let mut session = session_for_repo("default", h.default_repo_id);
+    let mut session = session_for_repo(&h.default_repo_name, h.default_repo_id);
 
     handle_search(
         &h.state,
@@ -164,10 +179,15 @@ async fn handler_returns_structured_error_when_runtime_search_is_disabled() -> a
 #[tokio::test]
 async fn handler_emits_repo_scoped_search_results() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
-    let doc_id = seed_doc_with_content(&h.state, "default", "notes/search.md", "Needle body")?;
+    let doc_id = seed_doc_with_content(
+        &h.state,
+        &h.default_repo_name,
+        "notes/search.md",
+        "Needle body",
+    )?;
     let state = search_enabled_state(&h.state);
     let (ch, mut rx) = test_channel(&state);
-    let mut session = session_for_repo("default", h.default_repo_id);
+    let mut session = session_for_repo(&h.default_repo_name, h.default_repo_id);
 
     handle_search(
         &state,
@@ -206,10 +226,15 @@ async fn handler_emits_repo_scoped_search_results() -> anyhow::Result<()> {
 async fn handler_returns_scoped_empty_results_for_blank_query_and_zero_limit() -> anyhow::Result<()>
 {
     let h = edit_harness(false)?;
-    seed_doc_with_content(&h.state, "default", "notes/search.md", "Needle body")?;
+    seed_doc_with_content(
+        &h.state,
+        &h.default_repo_name,
+        "notes/search.md",
+        "Needle body",
+    )?;
     let state = search_enabled_state(&h.state);
     let (ch, mut rx) = test_channel(&state);
-    let mut session = session_for_repo("default", h.default_repo_id);
+    let mut session = session_for_repo(&h.default_repo_name, h.default_repo_id);
 
     handle_search(
         &state,
