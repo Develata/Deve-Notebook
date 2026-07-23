@@ -5,25 +5,20 @@
 //!
 //! Unique server owner of watcher handles, slots and generations.
 
-use super::error::{
-    WatcherLifecycleError, WatcherSupervisorShutdownError, WatcherSupervisorStartError,
-};
-use super::slot::{RepoMountState, RuntimeSlots};
+use super::error::WatcherSupervisorShutdownError;
+use super::slot::RuntimeSlots;
 use super::view::WatcherRuntimeView;
 use deve_core::models::RepoId;
 use deve_core::sync::watcher::{
-    RepoWatcherHandle, RepoWatcherStart, WatcherFailure, WatcherFailureKind, WatcherFailurePhase,
+    RepoWatcherHandle, WatcherFailure, WatcherFailureKind, WatcherFailurePhase,
     WatcherRefreshCallback,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 #[cfg(test)]
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
-
-const BOOTSTRAP_BUILDING: u8 = 0;
-const BOOTSTRAP_RUNNING: u8 = 1;
-const BOOTSTRAP_FAILED: u8 = 2;
+#[cfg(test)]
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 
 pub(crate) struct WatcherSupervisor {
     pub(super) slots: RuntimeSlots,
@@ -52,108 +47,8 @@ pub(super) struct HandleKey {
     pub(super) generation: u64,
 }
 
-pub(super) struct BootstrapTracker {
-    state: AtomicU8,
-    failure: OnceLock<(RepoId, WatcherFailure)>,
-}
-
-impl BootstrapTracker {
-    fn new() -> Self {
-        Self {
-            state: AtomicU8::new(BOOTSTRAP_BUILDING),
-            failure: OnceLock::new(),
-        }
-    }
-
-    pub(super) fn fail(&self, repo_id: RepoId, failure: WatcherFailure) {
-        let _ = self.failure.set((repo_id, failure));
-        let _ = self.state.compare_exchange(
-            BOOTSTRAP_BUILDING,
-            BOOTSTRAP_FAILED,
-            Ordering::AcqRel,
-            Ordering::Acquire,
-        );
-    }
-
-    fn seal(&self) -> bool {
-        self.state
-            .compare_exchange(
-                BOOTSTRAP_BUILDING,
-                BOOTSTRAP_RUNNING,
-                Ordering::AcqRel,
-                Ordering::Acquire,
-            )
-            .is_ok()
-    }
-}
-
 impl WatcherSupervisor {
-    pub(crate) fn start_all(
-        starts: Vec<RepoWatcherStart>,
-        publisher: WatcherRefreshCallback,
-    ) -> Result<Self, WatcherSupervisorStartError> {
-        let mut repo_ids = HashSet::with_capacity(starts.len());
-        for start in &starts {
-            if !repo_ids.insert(start.repo_id()) {
-                return Err(WatcherSupervisorStartError::DuplicateRepo(start.repo_id()));
-            }
-        }
-
-        let supervisor = Self::empty(starts.len(), publisher);
-        let tracker = Arc::new(BootstrapTracker::new());
-        let mut started = Vec::with_capacity(starts.len());
-        for start in starts {
-            let repo_id = start.repo_id();
-            let reservation = match supervisor.reserve_bootstrap(repo_id, start.generation()) {
-                Ok(reservation) => reservation,
-                Err(_) => {
-                    let cleanup = supervisor.shutdown_collect();
-                    return Err(WatcherSupervisorStartError::Coordination { cleanup });
-                }
-            };
-            if let Err(error) =
-                supervisor.start_reserved_inner(&reservation, start, Some(tracker.clone()))
-            {
-                let cleanup = supervisor.shutdown_collect();
-                return Err(map_start_error(repo_id, error, cleanup));
-            }
-            if let Err(error) = supervisor.finalize_mounted(&reservation) {
-                let cleanup = supervisor.shutdown_collect();
-                return Err(map_start_error(repo_id, error, cleanup));
-            }
-            started.push(repo_id);
-        }
-
-        match supervisor.validate_bootstrap(&started) {
-            Ok(()) if tracker.seal() => Ok(supervisor),
-            Ok(()) => {
-                let (repo_id, failure) = tracker.failure.get().cloned().unwrap_or_else(|| {
-                    (
-                        started.first().copied().unwrap_or_else(RepoId::nil),
-                        coordination_failure(
-                            "watcher bootstrap seal failed without a recorded repo failure",
-                        ),
-                    )
-                });
-                let cleanup = supervisor.shutdown_collect();
-                Err(WatcherSupervisorStartError::FailedBeforeMounted {
-                    repo_id,
-                    failure,
-                    cleanup,
-                })
-            }
-            Err((repo_id, failure)) => {
-                let cleanup = supervisor.shutdown_collect();
-                Err(WatcherSupervisorStartError::FailedBeforeMounted {
-                    repo_id,
-                    failure,
-                    cleanup,
-                })
-            }
-        }
-    }
-
-    fn empty(capacity: usize, publisher: WatcherRefreshCallback) -> Self {
+    pub(super) fn empty(capacity: usize, publisher: WatcherRefreshCallback) -> Self {
         Self {
             slots: Arc::new(Mutex::new(HashMap::with_capacity(capacity))),
             owned: Mutex::new(OwnedHandles {
@@ -193,36 +88,7 @@ impl WatcherSupervisor {
         }
     }
 
-    fn validate_bootstrap(&self, start_order: &[RepoId]) -> Result<(), (RepoId, WatcherFailure)> {
-        let slots = self.slots.lock().map_err(|_| {
-            (
-                start_order.first().copied().unwrap_or_else(RepoId::nil),
-                coordination_failure("watcher supervisor slot registry poisoned"),
-            )
-        })?;
-        for repo_id in start_order {
-            let Some(slot) = slots.get(repo_id) else {
-                return Err((
-                    *repo_id,
-                    coordination_failure("watcher bootstrap slot disappeared before handoff"),
-                ));
-            };
-            if slot.state() != RepoMountState::Mounted {
-                return Err((
-                    *repo_id,
-                    slot.recorded_failure().unwrap_or_else(|| {
-                        coordination_failure(format!(
-                            "watcher bootstrap final cut found {:?} mount state",
-                            slot.state()
-                        ))
-                    }),
-                ));
-            }
-        }
-        Ok(())
-    }
-
-    fn shutdown_collect(&self) -> Vec<WatcherFailure> {
+    pub(super) fn shutdown_collect(&self) -> Vec<WatcherFailure> {
         let slots = match self.slots.lock() {
             Ok(slots) => slots.values().cloned().collect::<Vec<_>>(),
             Err(poisoned) => poisoned.into_inner().values().cloned().collect(),
@@ -291,56 +157,10 @@ impl Drop for WatcherSupervisor {
     }
 }
 
-fn map_start_error(
-    repo_id: RepoId,
-    error: WatcherLifecycleError,
-    cleanup: Vec<WatcherFailure>,
-) -> WatcherSupervisorStartError {
-    match error {
-        WatcherLifecycleError::Start { source, .. } => WatcherSupervisorStartError::Start {
-            repo_id,
-            source,
-            cleanup,
-        },
-        WatcherLifecycleError::FailedBeforeMounted { failure, .. } => {
-            WatcherSupervisorStartError::FailedBeforeMounted {
-                repo_id,
-                failure: *failure,
-                cleanup,
-            }
-        }
-        WatcherLifecycleError::Shutdown { failure, .. } => {
-            WatcherSupervisorStartError::FailedBeforeMounted {
-                repo_id,
-                failure,
-                cleanup,
-            }
-        }
-        _ => WatcherSupervisorStartError::Coordination { cleanup },
-    }
-}
-
 pub(super) fn coordination_failure(primary: impl Into<String>) -> WatcherFailure {
     WatcherFailure::new(
         WatcherFailurePhase::Worker,
         WatcherFailureKind::Coordination,
         primary,
     )
-}
-
-#[cfg(test)]
-mod bootstrap_tests {
-    use super::*;
-
-    #[test]
-    fn bootstrap_seal_is_the_single_failure_cut() {
-        let before_cut = BootstrapTracker::new();
-        before_cut.fail(RepoId::new_v4(), coordination_failure("failed before cut"));
-        assert!(!before_cut.seal());
-
-        let after_cut = BootstrapTracker::new();
-        assert!(after_cut.seal());
-        after_cut.fail(RepoId::new_v4(), coordination_failure("failed after cut"));
-        assert_eq!(after_cut.state.load(Ordering::Acquire), BOOTSTRAP_RUNNING);
-    }
 }

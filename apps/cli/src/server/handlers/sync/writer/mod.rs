@@ -161,7 +161,12 @@ fn validate_local_projection_writable(
             "writer scope does not match resolved local repo",
         ));
     }
-    ensure_resolved_local_repo_writable(state, &resolved)
+    ensure_resolved_local_repo_writable(state, &resolved)?;
+    state
+        .repo_mutation_gate()
+        .admit_mounted_repo(repo_id)
+        .map(|_| ())
+        .map_err(|error| error.server_error())
 }
 
 #[cfg(test)]

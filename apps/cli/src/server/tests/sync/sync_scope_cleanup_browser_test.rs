@@ -5,13 +5,14 @@
 use super::handlers::sync::{
     handle_register_writer, handle_sync_request, handle_sync_snapshot_request,
 };
+use super::runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView};
 use super::source_control_grants::{AuthSessionId, SourceControlGrantBranch};
 use super::sync_scope_cleanup_test_support::{
     assert_runtime_binding_cleared, browser_session_without_sync_scope, build_state,
     recv_protocol_error, try_recv_protocol_error, unicast_channel,
 };
 use deve_core::models::PeerId;
-use deve_core::protocol::ServerErrorCode;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::Result<()> {
@@ -211,5 +212,77 @@ fn browser_writer_registration_rejects_broken_workspace_identity() -> anyhow::Re
         .source_control_write_grants()
         .authorize_browser_local(&auth_session_id, repo_id, 41)
         .expect_err("broken workspace identity must revoke source control write grant");
+    Ok(())
+}
+
+#[test]
+fn watcher_server_isolation_writer_registration_rejects_unmounted_repo() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    state.set_watcher_runtime_view_for_test(WatcherRuntimeView::with_state_for_test(
+        repo_id,
+        1,
+        RepoMountState::Failed,
+    ));
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session_without_sync_scope(&state, repo_id, 43)?;
+    session.set_sync_scope_nonce(43);
+
+    handle_register_writer(
+        &state,
+        &ch,
+        &mut session,
+        repo_id,
+        PeerId::new("browser"),
+        43,
+    );
+
+    let (error, scope_nonce) = try_recv_protocol_error(&mut rx);
+    assert_eq!(
+        error.code,
+        ServerErrorCode::StorageWorkspaceIngestionUnavailable
+    );
+    assert_eq!(scope_nonce, Some(43));
+    assert!(session.writer_identity.is_none());
+    Ok(())
+}
+
+#[test]
+fn watcher_server_isolation_failed_peer_does_not_block_mounted_writer_registration()
+-> anyhow::Result<()> {
+    let (_dir, state, mounted_repo) = build_state()?;
+    let failed_repo = uuid::Uuid::new_v4();
+    let view =
+        WatcherRuntimeView::with_state_for_test(mounted_repo, 1, RepoMountState::Mounted);
+    view.insert_state_for_test(failed_repo, 1, RepoMountState::Failed);
+    state.set_watcher_runtime_view_for_test(view);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session_without_sync_scope(&state, mounted_repo, 47)?;
+    session.set_sync_scope_nonce(47);
+    let writer = PeerId::new("browser");
+
+    handle_register_writer(
+        &state,
+        &ch,
+        &mut session,
+        mounted_repo,
+        writer.clone(),
+        47,
+    );
+
+    match rx.try_recv().expect("mounted writer response") {
+        ServerMessage::WriteReady {
+            peer_id,
+            repo_id,
+            scope_nonce,
+            branch,
+        } => {
+            assert_eq!(peer_id, writer);
+            assert_eq!(repo_id, mounted_repo);
+            assert_eq!(scope_nonce.get(), 47);
+            assert_eq!(branch, None);
+        }
+        other => panic!("expected WriteReady, got {other:?}"),
+    }
+    assert!(session.writer_identity.is_some());
     Ok(())
 }

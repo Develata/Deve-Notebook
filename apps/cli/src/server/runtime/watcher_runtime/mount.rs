@@ -7,9 +7,7 @@
 use super::error::WatcherLifecycleError;
 use super::lifecycle::WatcherMountReservation;
 use super::slot::{MountSlot, RepoMountState, WatcherMountSnapshot};
-use super::supervisor::{
-    BootstrapTracker, HandleKey, OwnedHandle, WatcherSupervisor, coordination_failure,
-};
+use super::supervisor::{HandleKey, OwnedHandle, WatcherSupervisor, coordination_failure};
 use deve_core::models::RepoId;
 use deve_core::sync::watcher::{RepoWatcherHandle, RepoWatcherStart, WatcherFailure};
 use std::sync::Arc;
@@ -22,7 +20,7 @@ impl WatcherSupervisor {
         reservation: &WatcherMountReservation,
         start: RepoWatcherStart,
     ) -> Result<(), WatcherLifecycleError> {
-        self.start_reserved_inner(reservation, start, None)
+        self.start_reserved_inner(reservation, start)
     }
 
     pub(crate) fn finalize_mounted(
@@ -36,12 +34,12 @@ impl WatcherSupervisor {
             .as_ref()
             .map(|slot| slot.take_deferred())
             .transpose()
-            .map_err(|_| refresh_coordination_error())?
+            .map_err(|_| refresh_coordination_error(reservation.repo_id))?
             .flatten();
         reservation
             .target
             .merge_deferred(previous_refresh)
-            .map_err(|_| refresh_coordination_error())?;
+            .map_err(|_| refresh_coordination_error(reservation.repo_id))?;
         if let Err(failure) = reservation.target.mark_mounted(&self.publisher) {
             let cleanup = self
                 .take_handle(reservation.repo_id, reservation.generation)?
@@ -109,7 +107,6 @@ impl WatcherSupervisor {
         &self,
         reservation: &WatcherMountReservation,
         start: RepoWatcherStart,
-        bootstrap: Option<Arc<BootstrapTracker>>,
     ) -> Result<(), WatcherLifecycleError> {
         self.validate_current(reservation)?;
         if start.repo_id() != reservation.repo_id || start.generation() != reservation.generation {
@@ -131,16 +128,11 @@ impl WatcherSupervisor {
         let refresh_slot = reservation.target.clone();
         let refresh_publisher = self.publisher.clone();
         let failure_slot = reservation.target.clone();
-        let failure_bootstrap = bootstrap.clone();
-        let repo_id = reservation.repo_id;
         let start = start
             .with_refresh(Arc::new(move |refresh| {
                 refresh_slot.route_refresh(refresh, &refresh_publisher);
             }))
             .with_failure_callback(Arc::new(move |failure| {
-                if let Some(bootstrap) = &failure_bootstrap {
-                    bootstrap.fail(repo_id, failure.clone());
-                }
                 failure_slot.fail(failure);
             }));
 
@@ -166,9 +158,19 @@ impl WatcherSupervisor {
             });
         }
         {
-            let mut owned = self.owned.lock().map_err(|_| {
-                WatcherLifecycleError::Coordination("watcher supervisor owner registry poisoned")
-            })?;
+            let mut owned = match self.owned.lock() {
+                Ok(owned) => owned,
+                Err(_) => {
+                    let cleanup = handle.shutdown().err();
+                    reservation.target.fail(coordination_failure(
+                        "watcher supervisor owner registry poisoned",
+                    ));
+                    return Err(WatcherLifecycleError::HostCoordination {
+                        detail: "watcher supervisor owner registry poisoned",
+                        cleanup: cleanup.map(Box::new),
+                    });
+                }
+            };
             if owned.shutting_down || owned.handles.contains_key(&reservation.repo_id) {
                 drop(owned);
                 let cleanup = handle.shutdown().err();
@@ -233,8 +235,12 @@ impl WatcherSupervisor {
     }
 }
 
-fn refresh_coordination_error() -> WatcherLifecycleError {
-    WatcherLifecycleError::Coordination(
-        "watcher refresh route poisoned during lifecycle finalization",
-    )
+fn refresh_coordination_error(repo_id: RepoId) -> WatcherLifecycleError {
+    WatcherLifecycleError::FailedBeforeMounted {
+        repo_id,
+        failure: Box::new(coordination_failure(
+            "watcher refresh route poisoned during lifecycle finalization",
+        )),
+        cleanup: None,
+    }
 }

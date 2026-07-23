@@ -6,6 +6,7 @@
 //! Server watcher composition adapter. Lifecycle ownership stays in the
 //! supervisor; AppState receives only its read-only runtime view.
 
+mod bootstrap;
 mod error;
 mod lifecycle;
 mod mount;
@@ -36,7 +37,13 @@ pub(crate) fn start_file_watchers(
     sync_manager: Arc<SyncManager>,
     tx: broadcast::Sender<ServerMessage>,
 ) -> Result<WatcherSupervisor> {
-    let starts = setup::file_watcher_starts(sync_manager)?;
+    let starts = setup::file_watcher_starts(sync_manager).map_err(|error| {
+        error::WatcherSupervisorStartError::new(
+            error::WatcherHostFatalKind::RuntimeCoordinationFailure,
+            None,
+            format!("watcher bootstrap inventory failed: {error}"),
+        )
+    })?;
     let publisher = Arc::new(move |refresh| {
         let _ = tx.send(setup::watcher_refresh_message(refresh));
     });

@@ -112,11 +112,11 @@ pub(super) fn write_main_port_hint(
 pub(super) fn file_watcher_starts(
     sync_manager: Arc<deve_core::sync::SyncManager>,
 ) -> Result<Vec<RepoWatcherStart>> {
-    let mut starts = Vec::new();
-    for repo_name in sync_manager.healthy_local_repo_names_for_execution()? {
-        starts.push(file_watcher_start(sync_manager.clone(), repo_name, 1)?);
-    }
-    Ok(starts)
+    Ok(sync_manager
+        .healthy_local_repo_ids_for_execution()?
+        .into_iter()
+        .map(|repo_id| RepoWatcherStart::new(sync_manager.clone(), repo_id, repo_id.to_string(), 1))
+        .collect())
 }
 
 /// Build one generation-bound repo start. Refresh/failure callbacks are

@@ -14,6 +14,8 @@ use deve_core::sync::watcher::{
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
+mod isolation;
+
 type WatcherFixture = (
     tempfile::TempDir,
     Arc<deve_core::ledger::RepoManager>,
@@ -186,9 +188,24 @@ fn supervisor_duplicate_reservation_fails_before_attach() -> anyhow::Result<()> 
     };
 
     assert!(matches!(
-        error,
-        super::error::WatcherSupervisorStartError::DuplicateRepo(id) if id == repo_id
+        error.kind(),
+        super::error::WatcherHostFatalKind::SupervisorInvariant
     ));
+    assert_eq!(error.repo_id(), Some(repo_id));
+    Ok(())
+}
+
+#[test]
+fn empty_repo_set_is_a_healthy_no_scope_runtime() -> anyhow::Result<()> {
+    let supervisor = WatcherSupervisor::start_all(Vec::new(), no_op_publisher())?;
+    let aggregate = supervisor.view().aggregate(&HashSet::new());
+
+    assert_eq!(aggregate.status, WatcherRuntimeAggregateStatus::Healthy);
+    assert_eq!(aggregate.expected, 0);
+    assert_eq!(aggregate.running, 0);
+    assert_eq!(aggregate.unavailable, 0);
+
+    supervisor.shutdown()?;
     Ok(())
 }
 

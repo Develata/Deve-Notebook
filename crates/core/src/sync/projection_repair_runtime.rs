@@ -141,6 +141,24 @@ impl SyncManager {
             .collect()
     }
 
+    /// Returns durable Normal RepoIds without resolving per-repo metadata.
+    ///
+    /// Host bootstrap uses this inventory so one repo-local metadata or
+    /// workspace failure reaches that repo's watcher slot instead of
+    /// short-circuiting the complete watcher collection.
+    pub fn healthy_local_repo_ids_for_execution(&self) -> Result<Vec<RepoId>> {
+        let degraded = self
+            .projection_health
+            .degraded_snapshot()
+            .map_err(anyhow::Error::msg)?;
+        Ok(self
+            .repo
+            .normal_repo_catalog_ids()?
+            .into_iter()
+            .filter(|repo_id| !degraded.contains(repo_id))
+            .collect())
+    }
+
     pub fn degraded_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
         let degraded = self
             .projection_health

@@ -43,8 +43,25 @@ impl RepoManager {
         f(lease.db())
     }
     pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
+        let normal_repo_ids = self.normal_repo_catalog_ids()?;
+        if let Ok(repo_id) = uuid::Uuid::parse_str(selector)
+            && normal_repo_ids.contains(&repo_id)
+        {
+            let stem = repo_id.to_string();
+            self.run_on_local_repo_stem(&stem, |_| Ok(()))
+                .map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while resolving exact UUID {}: {}",
+                        stem,
+                        selector,
+                        err
+                    )
+                })?;
+            return Ok(Some(stem));
+        }
+
         let mut display_matches = Vec::new();
-        for repo_id in self.normal_repo_catalog_ids()? {
+        for repo_id in normal_repo_ids {
             let stem = repo_id.to_string();
             let info = self
                 .run_on_local_repo_stem(&stem, |db| {
@@ -63,17 +80,6 @@ impl RepoManager {
                     err
                 )
             })?;
-            if stem == selector {
-                if info.uuid.to_string() != stem {
-                    return Err(anyhow!(
-                        "Broken local repo {} while resolving selector {}: physical RepoId does not match metadata RepoId {}",
-                        stem,
-                        selector,
-                        info.uuid
-                    ));
-                }
-                return Ok(Some(stem));
-            }
             ensure_local_repo_metadata_identity(&stem, &info)?;
             ensure_cataloged_repo_name_canonical(&stem, &info)?;
             if info.name == selector {

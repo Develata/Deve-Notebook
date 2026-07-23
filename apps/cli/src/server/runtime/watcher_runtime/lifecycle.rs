@@ -172,19 +172,25 @@ impl WatcherSupervisor {
             });
         }
         reservation.target.drop_deferred();
-        match (reservation.previous, reservation.previous_state) {
+        let refresh = match (reservation.previous, reservation.previous_state) {
             (Some(previous), Some(state)) => {
-                previous.restore_after_cancel(state, &self.publisher)?;
+                let refresh = previous.restore_after_cancel(state)?;
                 slots.insert(reservation.repo_id, previous);
+                refresh
             }
             (None, None) => {
                 slots.remove(&reservation.repo_id);
+                None
             }
             _ => {
                 return Err(WatcherLifecycleError::Coordination(
                     "watcher reservation previous state is incomplete",
                 ));
             }
+        };
+        drop(slots);
+        if let Some(refresh) = refresh {
+            (self.publisher)(refresh);
         }
         Ok(())
     }

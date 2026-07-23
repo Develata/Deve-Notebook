@@ -133,4 +133,29 @@ mod tests {
         assert_eq!(degraded_projection.unavailable, 0);
         Ok(())
     }
+
+    #[test]
+    fn watcher_server_isolation_all_failed_reports_public_degraded_health() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let projection_base = dir.path().join("notes");
+        std::fs::create_dir_all(&projection_base)?;
+        let cataloged = crate::test_support::init_cataloged_repo_with_url(
+            &dir.path().join("ledger"),
+            &projection_base,
+            8,
+            Some("urn:main".to_string()),
+        )?;
+        let repo = Arc::new(cataloged.repo);
+        let sync = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
+        let view =
+            WatcherRuntimeView::with_state_for_test(cataloged.repo_id, 1, RepoMountState::Failed);
+
+        let health = current_watcher_health(repo.as_ref(), sync.as_ref(), &view);
+
+        assert_eq!(health.status, "degraded");
+        assert_eq!(health.expected, 1);
+        assert_eq!(health.running, 0);
+        assert_eq!(health.unavailable, 1);
+        Ok(())
+    }
 }

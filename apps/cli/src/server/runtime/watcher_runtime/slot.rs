@@ -13,7 +13,7 @@ use deve_core::sync::watcher::{
 };
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock, TryLockError};
 
 const MOUNT_STARTING: u8 = 0;
 const MOUNT_MOUNTED: u8 = 1;
@@ -58,6 +58,7 @@ pub(super) struct MountSlot {
     pub(super) generation: u64,
     pub(super) state: AtomicU8,
     failure: OnceLock<WatcherFailure>,
+    failure_cleanup: Mutex<Vec<String>>,
     deferred_refresh: Mutex<DeferredRefresh>,
 }
 
@@ -81,6 +82,7 @@ impl MountSlot {
             generation,
             state: AtomicU8::new(state),
             failure: OnceLock::new(),
+            failure_cleanup: Mutex::new(Vec::new()),
             deferred_refresh: Mutex::new(DeferredRefresh::default()),
         }
     }
@@ -126,7 +128,7 @@ impl MountSlot {
         let mut route = self.deferred_refresh.lock().map_err(|_| {
             coordination_failure("watcher refresh route poisoned during mount handoff")
         })?;
-        loop {
+        let refresh = loop {
             let current = self.state.load(Ordering::Acquire);
             if !matches!(current, MOUNT_STARTING | MOUNT_TRANSITIONING) {
                 return Err(self.recorded_failure().unwrap_or_else(|| {
@@ -141,33 +143,49 @@ impl MountSlot {
                 .compare_exchange_weak(current, MOUNT_MOUNTED, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
-                if let Some(refresh) = route.take() {
-                    publisher(refresh);
-                }
-                return Ok(());
+                break route.take();
             }
+        };
+        drop(route);
+        if let Some(refresh) = refresh {
+            publisher(refresh);
         }
+        Ok(())
     }
 
     pub(super) fn restore_after_cancel(
         &self,
         state: RepoMountState,
-        publisher: &WatcherRefreshCallback,
-    ) -> Result<(), WatcherLifecycleError> {
+    ) -> Result<Option<WatcherRefresh>, WatcherLifecycleError> {
         let mut route = self.deferred_refresh.lock().map_err(|_| {
             WatcherLifecycleError::Coordination(
                 "watcher refresh route poisoned while cancelling lifecycle transition",
             )
         })?;
-        self.state.store(state.encode(), Ordering::Release);
-        if state == RepoMountState::Mounted {
-            if let Some(refresh) = route.take() {
-                publisher(refresh);
-            }
-        } else {
+        if self.failure.get().is_some() {
+            self.state.store(MOUNT_FAILED, Ordering::Release);
             route.clear();
+            return Ok(None);
         }
-        Ok(())
+        match self.state.compare_exchange(
+            MOUNT_TRANSITIONING,
+            state.encode(),
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        ) {
+            Ok(_) if state == RepoMountState::Mounted => Ok(route.take()),
+            Ok(_) => {
+                route.clear();
+                Ok(None)
+            }
+            Err(MOUNT_FAILED | MOUNT_STOPPED) => {
+                route.clear();
+                Ok(None)
+            }
+            Err(_) => Err(WatcherLifecycleError::Coordination(
+                "watcher lifecycle cancellation observed an invalid previous slot state",
+            )),
+        }
     }
 
     pub(super) fn route_refresh(
@@ -183,16 +201,24 @@ impl MountSlot {
             )));
             return;
         }
-        let Ok(mut route) = self.deferred_refresh.lock() else {
-            self.fail(coordination_failure(
-                "watcher refresh route poisoned while dispatching refresh",
-            ));
-            return;
+        let publication = {
+            let Ok(mut route) = self.deferred_refresh.lock() else {
+                self.fail(coordination_failure(
+                    "watcher refresh route poisoned while dispatching refresh",
+                ));
+                return;
+            };
+            match self.state() {
+                RepoMountState::Mounted => Some(refresh),
+                RepoMountState::Starting | RepoMountState::Transitioning => {
+                    route.push(refresh);
+                    None
+                }
+                RepoMountState::Failed | RepoMountState::Stopped => None,
+            }
         };
-        match self.state() {
-            RepoMountState::Mounted => publisher(refresh),
-            RepoMountState::Starting | RepoMountState::Transitioning => route.push(refresh),
-            RepoMountState::Failed | RepoMountState::Stopped => {}
+        if let Some(refresh) = publication {
+            publisher(refresh);
         }
     }
 
@@ -219,13 +245,24 @@ impl MountSlot {
     }
 
     pub(super) fn fail(&self, failure: WatcherFailure) {
-        self.record_failure(failure);
-        let _route = match self.deferred_refresh.lock() {
-            Ok(route) => route,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-        if self.state() != RepoMountState::Stopped {
-            self.state.store(MOUNT_FAILED, Ordering::Release);
+        let _ = self.failure.set(failure);
+        loop {
+            let current = self.state.load(Ordering::Acquire);
+            if matches!(current, MOUNT_FAILED | MOUNT_STOPPED) {
+                break;
+            }
+            if self
+                .state
+                .compare_exchange_weak(current, MOUNT_FAILED, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                break;
+            }
+        }
+        match self.deferred_refresh.try_lock() {
+            Ok(mut route) => route.clear(),
+            Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner().clear(),
+            Err(TryLockError::WouldBlock) => {}
         }
     }
 
@@ -248,20 +285,47 @@ impl MountSlot {
     }
 
     pub(super) fn mark_failed_and_drop(&self, failure: WatcherFailure) {
-        self.record_failure(failure);
+        self.merge_failure(failure);
+        self.state.store(MOUNT_FAILED, Ordering::Release);
         match self.deferred_refresh.lock() {
             Ok(mut route) => route.clear(),
             Err(poisoned) => poisoned.into_inner().clear(),
         }
-        self.state.store(MOUNT_FAILED, Ordering::Release);
     }
 
-    fn record_failure(&self, failure: WatcherFailure) {
-        let _ = self.failure.set(failure);
+    fn merge_failure(&self, failure: WatcherFailure) {
+        if self.failure.set(failure.clone()).is_ok() {
+            return;
+        }
+        let Some(primary) = self.failure.get() else {
+            return;
+        };
+        let distinct_failure = (primary.phase != failure.phase
+            || primary.kind != failure.kind
+            || primary.primary != failure.primary)
+            .then(|| failure.to_string());
+        let mut additions = failure.cleanup;
+        if let Some(distinct_failure) = distinct_failure {
+            additions.insert(0, distinct_failure);
+        }
+        if additions.is_empty() {
+            return;
+        }
+        match self.failure_cleanup.lock() {
+            Ok(mut cleanup) => cleanup.extend(additions),
+            Err(poisoned) => poisoned.into_inner().extend(additions),
+        }
     }
 
     pub(super) fn recorded_failure(&self) -> Option<WatcherFailure> {
-        self.failure.get().cloned()
+        let mut failure = self.failure.get()?.clone();
+        match self.failure_cleanup.lock() {
+            Ok(cleanup) => failure.cleanup.extend(cleanup.iter().cloned()),
+            Err(poisoned) => failure
+                .cleanup
+                .extend(poisoned.into_inner().iter().cloned()),
+        }
+        Some(failure)
     }
 
     pub(super) fn snapshot(&self) -> WatcherMountSnapshot {

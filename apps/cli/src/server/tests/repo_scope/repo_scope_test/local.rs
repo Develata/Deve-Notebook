@@ -4,6 +4,7 @@
 use super::support::build_state;
 use crate::server::{
     repo_scope::{bootstrap_local_repo, resolve_session_repo, resolve_session_repo_and_sync},
+    runtime::watcher_runtime::{RepoMountState, WatcherRuntimeView},
     session::WsSession,
     source_control_grants::{AuthSessionId, SourceControlGrantBranch},
 };
@@ -141,5 +142,33 @@ fn bootstrap_local_repo_requires_explicit_selection_when_multiple_local_repos_ex
     let session = WsSession::new();
     let err = bootstrap_local_repo(&state, &session).expect_err("multi repo bootstrap must fail");
     assert!(err.to_string().contains("Active repository not selected"));
+    Ok(())
+}
+
+#[test]
+fn watcher_server_isolation_default_scope_uses_the_only_mounted_repo() -> anyhow::Result<()> {
+    let (_dir, state, default_id, test_id) = build_state()?;
+    let view =
+        WatcherRuntimeView::with_state_for_test(default_id, 1, RepoMountState::Mounted);
+    view.insert_state_for_test(test_id, 1, RepoMountState::Failed);
+    state.set_watcher_runtime_view_for_test(view);
+
+    let resolved = bootstrap_local_repo(&state, &WsSession::new())?;
+
+    assert_eq!(resolved.repo_id, default_id);
+    Ok(())
+}
+
+#[test]
+fn watcher_server_isolation_default_scope_rejects_zero_mounted_repos() -> anyhow::Result<()> {
+    let (_dir, state, default_id, test_id) = build_state()?;
+    let view = WatcherRuntimeView::with_state_for_test(default_id, 1, RepoMountState::Failed);
+    view.insert_state_for_test(test_id, 1, RepoMountState::Failed);
+    state.set_watcher_runtime_view_for_test(view);
+
+    let error = bootstrap_local_repo(&state, &WsSession::new())
+        .expect_err("failed watcher slots must not become the default scope");
+
+    assert!(error.to_string().contains("No mounted local repository"));
     Ok(())
 }

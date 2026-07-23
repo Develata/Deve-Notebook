@@ -53,6 +53,10 @@ pub(crate) enum WatcherLifecycleError {
         repo_id: RepoId,
         failure: WatcherFailure,
     },
+    HostCoordination {
+        detail: &'static str,
+        cleanup: Option<Box<WatcherFailure>>,
+    },
     Coordination(&'static str),
 }
 
@@ -127,6 +131,13 @@ impl fmt::Display for WatcherLifecycleError {
                     "watcher shutdown failed for repo {repo_id}: {failure}"
                 )
             }
+            Self::HostCoordination { detail, cleanup } => {
+                formatter.write_str(detail)?;
+                if let Some(cleanup) = cleanup {
+                    write!(formatter, "; cleanup failure: {cleanup}")?;
+                }
+                Ok(())
+            }
             Self::Coordination(detail) => formatter.write_str(detail),
         }
     }
@@ -138,75 +149,91 @@ impl std::error::Error for WatcherLifecycleError {
             Self::Start { source, .. } => Some(source),
             Self::FailedBeforeMounted { failure, .. } => Some(failure.as_ref()),
             Self::Shutdown { failure, .. } => Some(failure),
+            Self::HostCoordination {
+                cleanup: Some(cleanup),
+                ..
+            } => Some(cleanup.as_ref()),
             _ => None,
         }
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum WatcherHostFatalKind {
+    SupervisorInvariant,
+    GenerationCorruption,
+    ThreadResourceExhaustion,
+    RuntimeCoordinationFailure,
+}
+
 #[derive(Debug)]
-pub(crate) enum WatcherSupervisorStartError {
-    DuplicateRepo(RepoId),
-    Coordination {
-        cleanup: Vec<WatcherFailure>,
-    },
-    Start {
-        repo_id: RepoId,
-        source: WatcherStartError,
-        cleanup: Vec<WatcherFailure>,
-    },
-    FailedBeforeMounted {
+pub(crate) struct WatcherSupervisorStartError {
+    kind: WatcherHostFatalKind,
+    repo_id: Option<RepoId>,
+    primary: String,
+    failure: Option<Box<WatcherFailure>>,
+    cleanup: Vec<WatcherFailure>,
+}
+
+impl WatcherSupervisorStartError {
+    pub(super) fn new(
+        kind: WatcherHostFatalKind,
+        repo_id: Option<RepoId>,
+        primary: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind,
+            repo_id,
+            primary: primary.into(),
+            failure: None,
+            cleanup: Vec::new(),
+        }
+    }
+
+    pub(super) fn from_failure(
+        kind: WatcherHostFatalKind,
         repo_id: RepoId,
         failure: WatcherFailure,
-        cleanup: Vec<WatcherFailure>,
-    },
+    ) -> Self {
+        Self {
+            kind,
+            repo_id: Some(repo_id),
+            primary: failure.to_string(),
+            failure: Some(Box::new(failure)),
+            cleanup: Vec::new(),
+        }
+    }
+
+    pub(super) fn with_cleanup(mut self, cleanup: Vec<WatcherFailure>) -> Self {
+        self.cleanup = cleanup;
+        self
+    }
+
+    pub(crate) fn kind(&self) -> WatcherHostFatalKind {
+        self.kind
+    }
+
+    pub(crate) fn repo_id(&self) -> Option<RepoId> {
+        self.repo_id
+    }
 }
 
 impl fmt::Display for WatcherSupervisorStartError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DuplicateRepo(repo_id) => {
-                write!(
-                    formatter,
-                    "duplicate watcher reservation for repo {repo_id}"
-                )
-            }
-            Self::Coordination { cleanup } => {
-                formatter.write_str("watcher supervisor coordination failed")?;
-                write_failures(formatter, cleanup)
-            }
-            Self::Start {
-                repo_id,
-                source,
-                cleanup,
-            } => {
-                write!(
-                    formatter,
-                    "watcher start failed for repo {repo_id}: {source}"
-                )?;
-                write_failures(formatter, cleanup)
-            }
-            Self::FailedBeforeMounted {
-                repo_id,
-                failure,
-                cleanup,
-            } => {
-                write!(
-                    formatter,
-                    "watcher failed before mount handoff for repo {repo_id}: {failure}"
-                )?;
-                write_failures(formatter, cleanup)
-            }
+        write!(formatter, "watcher host-fatal {:?}", self.kind)?;
+        if let Some(repo_id) = self.repo_id {
+            write!(formatter, " for repo {repo_id}")?;
         }
+        write!(formatter, ": {}", self.primary)?;
+        write_failures(formatter, &self.cleanup)
     }
 }
 
 impl std::error::Error for WatcherSupervisorStartError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Start { source, .. } => Some(source),
-            Self::FailedBeforeMounted { failure, .. } => Some(failure),
-            Self::DuplicateRepo(_) | Self::Coordination { .. } => None,
-        }
+        self.failure
+            .as_deref()
+            .map(|failure| failure as &(dyn std::error::Error + 'static))
     }
 }
 

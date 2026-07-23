@@ -239,8 +239,11 @@
     - watcher_failure_does_not_write_projection_fault_or_degraded_projection: true
     - readonly_ledger_export_and_remote_shadow_ingest_remain_available: true
     - repo_local_watcher_failure_keeps_other_mounted_repo_writable: true
+    - production_bootstrap_inventory_does_not_resolve_or_short_circuit_per_repo_metadata: true
     - host_fatal_watcher_failure_rolls_back_all_started_handles_and_aborts_server: true
-    - bootstrap_with_zero_mounted_repos_cleans_up_and_aborts_server: true
+    - terminal_failure_closes_mount_admission_without_waiting_for_refresh_publication: true
+    - lifecycle_cancel_never_restores_a_terminally_failed_watcher_to_mounted: true
+    - bootstrap_with_zero_mounted_repos_keeps_readonly_diagnostics_and_create_available: true
     - runtime_all_watchers_failed_keeps_readonly_and_diagnostics_available_with_degraded_health: true
     - cli_assert: repo_file_ops_baseline_bound true
 
