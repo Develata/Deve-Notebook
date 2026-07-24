@@ -20,6 +20,10 @@ const LOCK_FILE: &str = "repo-aliases.lock";
 const STORE_FORMAT: &str = "deve.host-repo-alias-store";
 const STORE_VERSION: u32 = 1;
 const STORE_MAX_BYTES: u64 = 2 * 1024 * 1024;
+#[cfg(test)]
+pub(super) const PRE_REPLACE_FAILURE_MARKER: &str = ".repo-alias-fail-before-replace";
+#[cfg(test)]
+pub(super) const POST_REPLACE_FAILURE_MARKER: &str = ".repo-alias-fail-after-replace";
 
 #[derive(Debug, Default)]
 pub(super) struct AliasStore {
@@ -178,7 +182,21 @@ impl AliasStore {
             let mut file = create_atomic_replace_temp(&temp)?;
             file.write_all(&bytes)?;
             file.sync_all()?;
+            #[cfg(test)]
+            if host_dir.join(PRE_REPLACE_FAILURE_MARKER).try_exists()? {
+                return Err(std::io::Error::other(
+                    "injected repo alias failure before atomic replace",
+                )
+                .into());
+            }
             replace_file_atomically(&file, &temp, &path)?;
+            #[cfg(test)]
+            if host_dir.join(POST_REPLACE_FAILURE_MARKER).try_exists()? {
+                return Err(std::io::Error::other(
+                    "injected repo alias failure after atomic replace",
+                )
+                .into());
+            }
             sync_directory(&host_dir)?;
             Ok(())
         })();

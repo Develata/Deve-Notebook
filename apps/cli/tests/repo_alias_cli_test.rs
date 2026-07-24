@@ -21,6 +21,25 @@ fn output_text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+fn export_aliases(root: &Path, output: &Path) -> serde_json::Value {
+    let export = deve(
+        root,
+        &[
+            "repo",
+            "alias",
+            "export",
+            "--output",
+            output.to_str().expect("output UTF-8"),
+        ],
+    );
+    assert!(
+        export.status.success(),
+        "export failed: {}",
+        output_text(&export.stderr)
+    );
+    serde_json::from_slice(&std::fs::read(output).expect("read export")).expect("parse export")
+}
+
 #[test]
 fn alias_import_process_reports_all_warnings_and_fails_malformed_documents() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -65,6 +84,49 @@ fn alias_import_process_reports_all_warnings_and_fails_malformed_documents() {
     )
     .expect("write import");
 
+    let before_dry_run = export_aliases(root, &root.join("before-dry-run-export.json"));
+    let dry_run = deve(
+        root,
+        &[
+            "repo",
+            "alias",
+            "import",
+            "--input",
+            input.to_str().expect("input UTF-8"),
+        ],
+    );
+    assert!(
+        dry_run.status.success(),
+        "dry-run failed: {}",
+        output_text(&dry_run.stderr)
+    );
+    let dry_run_stdout = output_text(&dry_run.stdout);
+    let dry_run_stderr = output_text(&dry_run.stderr);
+    assert!(
+        dry_run_stdout
+            .contains("repo_alias_import: mode=dry-run accepted=1 changed=1 unchanged=0 skipped=2")
+    );
+    assert!(dry_run_stderr.contains(&format!(
+        "warning: index=1 repo_id={unknown} reason=repo_id is not an active local repository"
+    )));
+    assert!(dry_run_stderr.contains(&format!(
+        "warning: index=2 repo_id={invalid_alias_id} reason=alias contains a control character"
+    )));
+    assert_eq!(
+        dry_run_stderr
+            .lines()
+            .filter(|line| line.starts_with("warning:"))
+            .count(),
+        2
+    );
+
+    let dry_run_output = root.join("dry-run-export.json");
+    let dry_run_exported = export_aliases(root, &dry_run_output);
+    assert_eq!(
+        dry_run_exported, before_dry_run,
+        "dry-run must preserve the exact pre-existing alias export"
+    );
+
     let apply = deve(
         root,
         &[
@@ -83,35 +145,25 @@ fn alias_import_process_reports_all_warnings_and_fails_malformed_documents() {
     );
     let stdout = output_text(&apply.stdout);
     let stderr = output_text(&apply.stderr);
-    assert!(stdout.contains("accepted=1 changed=1 unchanged=0 skipped=2"));
-    assert!(stderr.contains("repo_id is not an active local repository"));
-    assert!(stderr.contains("alias contains a control character"));
+    assert!(
+        stdout.contains("repo_alias_import: mode=apply accepted=1 changed=1 unchanged=0 skipped=2")
+    );
+    assert!(stderr.contains(&format!(
+        "warning: index=1 repo_id={unknown} reason=repo_id is not an active local repository"
+    )));
+    assert!(stderr.contains(&format!(
+        "warning: index=2 repo_id={invalid_alias_id} reason=alias contains a control character"
+    )));
     assert_eq!(
         stderr
             .lines()
-            .filter(|line| line.contains("warning:"))
+            .filter(|line| line.starts_with("warning:"))
             .count(),
         2
     );
 
     let output = root.join("exported.json");
-    let export = deve(
-        root,
-        &[
-            "repo",
-            "alias",
-            "export",
-            "--output",
-            output.to_str().expect("output UTF-8"),
-        ],
-    );
-    assert!(
-        export.status.success(),
-        "export failed: {}",
-        output_text(&export.stderr)
-    );
-    let exported: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(output).expect("read export")).expect("parse export");
+    let exported = export_aliases(root, &output);
     assert_eq!(exported["aliases"].as_array().expect("aliases").len(), 1);
     assert_eq!(exported["aliases"][0]["repo_id"], repo_id.to_string());
     assert_eq!(exported["aliases"][0]["alias"], "math");
@@ -131,4 +183,12 @@ fn alias_import_process_reports_all_warnings_and_fails_malformed_documents() {
     );
     assert!(!rejected.status.success());
     assert!(output_text(&rejected.stderr).contains("invalid alias import document"));
+
+    let post_reject_output = root.join("post-reject-export.json");
+    let post_reject_exported = export_aliases(root, &post_reject_output);
+    assert_eq!(
+        post_reject_exported["aliases"],
+        json!([{"repo_id": repo_id, "alias": "math"}]),
+        "malformed import must preserve the previously applied alias store"
+    );
 }

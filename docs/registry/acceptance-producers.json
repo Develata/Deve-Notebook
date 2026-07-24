@@ -317,6 +317,55 @@
       "note": "Execute the currently implemented Storage and Repository command groups; Remote Import gaps remain producer-free until B6"
     },
     {
+      "producer_id": "cli.repo-alias-transfer",
+      "evidence_ids": [
+        "smoke.cli.repo-alias-transfer"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 600,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "ledger::manager::host_repo_alias::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--test" },
+            { "literal": "repo_alias_cli_test" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Run cohesive core alias contract coverage and real CLI dry-run/apply/rejection process coverage as one current-HEAD repo alias transfer receipt"
+    },
+    {
       "producer_id": "desktop.macos-target-host",
       "evidence_ids": [
         "smoke.desktop.macos-target-host"

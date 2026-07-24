@@ -222,7 +222,7 @@
     - network_contains: "/api/node/role"
 
 - case_id: CMD-008
-  goal: CLI export and dump inspection options are discoverable.
+  goal: CLI export/dump inspection与host-local repo alias JSON transfer可发现且有进程级证据。
   preconditions:
     - CLI 可用
   steps:
@@ -231,8 +231,15 @@
     - run: deve export --format markdown --allow-degraded-projection --help
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli export -- --nocapture
+    - run: cargo test --locked -p deve_core --lib ledger::manager::host_repo_alias::tests -- --nocapture
+    - run: cargo test --locked -p deve_cli --test repo_alias_cli_test -- --nocapture
   assertions:
     - exit_code_all_eq: 0
+    - cli_assert: alias_import_dry_run_does_not_write_and_apply_revalidates true
+    - cli_assert: alias_import_warning_summary_lists_every_skipped_entry true
+    - cli_assert: alias_import_duplicate_repo_ids_skip_every_occurrence true
+    - cli_assert: alias_import_valid_entries_commit_as_one_atomic_batch true
+    - cli_assert: alias_import_malformed_top_level_fails_closed_and_preserves_existing_store true
 
 - case_id: CMD-009
   goal: CLI repair and admin commands are discoverable.

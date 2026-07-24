@@ -192,12 +192,14 @@ fn import_reports_every_bad_entry_skips_all_duplicates_and_commits_good_batch() 
     add_alias_repo(&repo, &ledger)?;
     add_alias_repo(&repo, &ledger)?;
     add_alias_repo(&repo, &ledger)?;
+    add_alias_repo(&repo, &ledger)?;
     let ids = repo_ids(&repo)?;
     let good = ids[0];
     let duplicate = ids[1];
     let unknown = RepoId::new_v4();
     let input = import_document(vec![
         json!({"repo_id": good, "alias": "  good  "}),
+        json!({"repo_id": ids[4], "alias": "second"}),
         json!({"repo_id": duplicate, "alias": "first"}),
         json!({"repo_id": duplicate, "alias": "last"}),
         json!({"repo_id": unknown, "alias": "foreign"}),
@@ -209,34 +211,109 @@ fn import_reports_every_bad_entry_skips_all_duplicates_and_commits_good_batch() 
     let runtime = repo.host_repo_alias_runtime();
 
     let preview = runtime.preview_import_json(&input)?;
-    assert_eq!(preview.accepted, 1);
-    assert_eq!(preview.changed, 1);
+    assert_eq!(preview.accepted, 2);
+    assert_eq!(preview.changed, 2);
     assert_eq!(preview.unchanged, 0);
     assert_eq!(preview.skipped, 7);
-    assert_eq!(preview.warnings.len(), 7);
-    assert_eq!(preview.warnings[0].index, 1);
-    assert_eq!(
-        preview.warnings[0].reason,
-        HostRepoAliasImportWarningReason::DuplicateRepoId
-    );
-    assert_eq!(preview.warnings[1].index, 2);
     assert_eq!(
         preview
             .warnings
             .iter()
-            .find(|warning| warning.index == 4)
-            .expect("control-character warning")
-            .reason,
-        HostRepoAliasImportWarningReason::AliasContainsControl
+            .map(|warning| (warning.index, warning.repo_id, warning.reason.clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            (
+                2,
+                Some(duplicate),
+                HostRepoAliasImportWarningReason::DuplicateRepoId,
+            ),
+            (
+                3,
+                Some(duplicate),
+                HostRepoAliasImportWarningReason::DuplicateRepoId,
+            ),
+            (
+                4,
+                Some(unknown),
+                HostRepoAliasImportWarningReason::UnknownLocalRepo,
+            ),
+            (
+                5,
+                Some(ids[2]),
+                HostRepoAliasImportWarningReason::AliasContainsControl,
+            ),
+            (6, None, HostRepoAliasImportWarningReason::RepoIdInvalid,),
+            (
+                7,
+                Some(ids[3]),
+                HostRepoAliasImportWarningReason::AliasMissing,
+            ),
+            (8, None, HostRepoAliasImportWarningReason::EntryNotObject,),
+        ]
     );
     assert_eq!(runtime.binding(good)?.alias_revision, 0);
+    assert_eq!(runtime.binding(ids[4])?.alias_revision, 0);
 
     let applied = runtime.apply_import_json(&input)?;
     assert_eq!(applied, preview);
     assert_eq!(runtime.binding(good)?.alias, "good");
     assert_eq!(runtime.binding(good)?.alias_revision, 1);
+    assert_eq!(runtime.binding(ids[4])?.alias, "second");
+    assert_eq!(runtime.binding(ids[4])?.alias_revision, 1);
     assert_eq!(runtime.binding(duplicate)?.alias_revision, 0);
     assert_eq!(runtime.binding(ids[2])?.alias_revision, 0);
+    Ok(())
+}
+
+#[test]
+fn import_publish_failures_never_persist_a_partial_accepted_batch() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let repo = init_alias_repo(&ledger)?;
+    add_alias_repo(&repo, &ledger)?;
+    let mut ids = repo_ids(&repo)?;
+    ids.sort();
+    let runtime = repo.host_repo_alias_runtime();
+    runtime.set_alias(ids[0], "before-a", 0)?;
+    runtime.set_alias(ids[1], "before-b", 0)?;
+    let input = import_document(vec![
+        json!({"repo_id": ids[0], "alias": "after-a"}),
+        json!({"repo_id": ids[1], "alias": "after-b"}),
+    ]);
+    let host_dir = crate::utils::notegit::host_dir(&ledger);
+    let store_path = host_dir.join("repo-aliases.json");
+    let before = std::fs::read(&store_path)?;
+
+    let pre_replace_marker = host_dir.join(super::store::PRE_REPLACE_FAILURE_MARKER);
+    std::fs::write(&pre_replace_marker, b"fail")?;
+    let pre_replace_error = runtime
+        .apply_import_json(&input)
+        .expect_err("failure before replace must abort import");
+    std::fs::remove_file(pre_replace_marker)?;
+    assert!(
+        pre_replace_error
+            .to_string()
+            .contains("injected repo alias failure before atomic replace")
+    );
+    assert_eq!(std::fs::read(&store_path)?, before);
+    assert_eq!(runtime.binding(ids[0])?.alias, "before-a");
+    assert_eq!(runtime.binding(ids[1])?.alias, "before-b");
+
+    let post_replace_marker = host_dir.join(super::store::POST_REPLACE_FAILURE_MARKER);
+    std::fs::write(&post_replace_marker, b"fail")?;
+    let post_replace_error = runtime
+        .apply_import_json(&input)
+        .expect_err("failure after replace must report durability uncertainty");
+    std::fs::remove_file(post_replace_marker)?;
+    assert!(
+        post_replace_error
+            .to_string()
+            .contains("injected repo alias failure after atomic replace")
+    );
+    let reopened = HostRepoAliasRuntime::open_existing(&ledger)?;
+    assert_eq!(reopened.binding(ids[0])?.alias, "after-a");
+    assert_eq!(reopened.binding(ids[1])?.alias, "after-b");
     Ok(())
 }
 

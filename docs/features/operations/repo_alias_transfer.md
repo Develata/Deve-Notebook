@@ -37,4 +37,6 @@
 
 - Web 不实现本 flow；CLI 只调用 backend/core typed runtime，不复制 JSON admission 规则。
 - inter-peer sync、Remote Projection 与 Remote Import 不读取该文件。
-- Runtime/CLI 已实现；tag-ready producer receipt 尚未封存，因此 acceptance matrix 继续保留 evidence gap，不能把代码测试冒充 freshness receipt。
+- Runtime/CLI 已实现；`cli.repo-alias-transfer` producer 绑定 core batch contract 与真实
+  CLI process。最终候选仍必须在 clean current HEAD 上重新生成对应 receipt，不能复用旧
+  HEAD 的测试结果冒充 freshness evidence。
