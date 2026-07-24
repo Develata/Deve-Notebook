@@ -20,8 +20,10 @@ use crate::runtime::source_control_client::diff_session::{
     DiffProjectionIntent, DiffProjectionStatus, DiffSessionWire, next_diff_revision,
 };
 use deve_core::protocol::{MergeConflictAction, ServerError, ServerErrorCode};
+use deve_core::source_control::diff_projection::DiffProjection;
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
+use std::sync::Arc;
 
 const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
 const DIFF_CLOSE_BUTTON_CLASS: &str = "diff-close-button min-h-11 min-w-11 rounded p-1 text-[var(--diff-muted)] hover:bg-[var(--diff-btn-hover)]";
@@ -31,6 +33,37 @@ pub(crate) fn diff_view_class(mobile: bool) -> &'static str {
         "diff-view-mobile h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]"
     } else {
         "h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]"
+    }
+}
+
+/// Shared read-only renderer boundary for backend-produced diff projections.
+///
+/// Callers outside Source Control do not need to depend on its controller
+/// session model or construct draft/merge state.
+#[component]
+pub fn ReadonlyDiffView(
+    display_path: String,
+    projection: Arc<DiffProjection>,
+    #[prop(default = false)] force_unified: bool,
+    #[prop(default = false)] mobile: bool,
+    on_close: Callback<()>,
+) -> impl IntoView {
+    let session = DiffSessionWire::with_projection_and_display_path(
+        display_path.clone(),
+        display_path,
+        projection,
+    );
+    view! {
+        <DiffView
+            session
+            is_readonly=true
+            force_unified
+            mobile
+            on_compute_projection=None
+            on_persist_draft=None
+            on_resolve_merge_conflict=None
+            on_close
+        />
     }
 }
 

@@ -11,6 +11,7 @@ pub(super) fn sidebar_tab_marker(view: SidebarView) -> &'static str {
         SidebarView::Search => "search",
         SidebarView::SourceControl => "source_control",
         SidebarView::ExternalChanges => "external_changes",
+        SidebarView::RemoteImport => "remote_import",
         SidebarView::Extensions => "extensions",
     }
 }
@@ -28,6 +29,7 @@ pub(super) fn LeftDrawerTabButton(
         SidebarView::Search => t::sidebar::search(locale.get()),
         SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
         SidebarView::ExternalChanges => t::sidebar::external_changes(locale.get()),
+        SidebarView::RemoteImport => t::sidebar::remote_import(locale.get()),
         SidebarView::Extensions => t::sidebar::extensions(locale.get()),
     });
 
@@ -66,6 +68,7 @@ pub(super) fn sidebar_tab_class(view: SidebarView) -> &'static str {
         SidebarView::Search => "mobile-tab-search",
         SidebarView::SourceControl => "mobile-tab-source-control",
         SidebarView::ExternalChanges => "mobile-tab-external-changes",
+        SidebarView::RemoteImport => "mobile-tab-remote-import",
         SidebarView::Extensions => "mobile-tab-extensions",
     }
 }
@@ -87,6 +90,10 @@ mod tests {
             sidebar_tab_marker(SidebarView::ExternalChanges),
             "external_changes"
         );
+        assert_eq!(
+            sidebar_tab_marker(SidebarView::RemoteImport),
+            "remote_import"
+        );
         assert_eq!(sidebar_tab_marker(SidebarView::Extensions), "extensions");
     }
 
@@ -104,6 +111,10 @@ mod tests {
         assert_eq!(
             sidebar_tab_class(SidebarView::ExternalChanges),
             "mobile-tab-external-changes"
+        );
+        assert_eq!(
+            sidebar_tab_class(SidebarView::RemoteImport),
+            "mobile-tab-remote-import"
         );
         assert_eq!(
             sidebar_tab_class(SidebarView::Extensions),

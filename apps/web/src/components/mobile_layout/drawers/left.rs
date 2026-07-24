@@ -45,6 +45,7 @@ pub fn LeftDrawer(
         SidebarView::Search => t::sidebar::search(locale.get()).to_string(),
         SidebarView::SourceControl => t::sidebar::source_control(locale.get()).to_string(),
         SidebarView::ExternalChanges => t::sidebar::external_changes(locale.get()).to_string(),
+        SidebarView::RemoteImport => t::sidebar::remote_import(locale.get()).to_string(),
         SidebarView::Extensions => t::sidebar::extensions(locale.get()).to_string(),
     });
 

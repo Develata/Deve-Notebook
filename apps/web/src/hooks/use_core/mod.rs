@@ -116,6 +116,7 @@ pub fn use_core() -> CoreState {
             .on_get_changes
             .clone(),
         state.runtime_clients.repo_control.clone(),
+        state.runtime_clients.remote_import.clone(),
     );
 
     provide_context(state.clone());

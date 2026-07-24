@@ -27,6 +27,7 @@ pub fn provide_sub_contexts(state: &CoreState) {
     provide_context(state.runtime_clients.source_control.clone());
     provide_context(state.runtime_clients.external_changes.clone());
     provide_context(state.runtime_clients.rendering.clone());
+    provide_context(state.runtime_clients.remote_import.clone());
     provide_context(doc::build_doc_context(state));
     provide_context(editor::build_editor_context(state));
     provide_context(chat::build_chat_context(state));

@@ -15,6 +15,7 @@ use super::super::write_gate::RepoWriteGateState;
 use super::message_dispatch;
 use super::message_projection_recovery;
 use super::message_refresh::{capture_refresh_scope, should_send_refresh_through_read_gate};
+use crate::runtime::remote_import_client::RemoteImportClient;
 use crate::runtime::repo_control_client::RepoControlClient;
 
 /// 设置消息处理 Effect。
@@ -23,6 +24,7 @@ pub fn setup(
     signals: &CoreSignals,
     external_changes_refresh: Callback<()>,
     repo_control: RepoControlClient,
+    remote_import: RemoteImportClient,
 ) {
     let ws_rx = ws.clone();
     let signals = *signals;
@@ -141,6 +143,7 @@ pub fn setup(
                 external_changes_refresh,
                 projection_refresh: &projection_refresh,
                 repo_control: &repo_control,
+                remote_import: &remote_import,
             },
         );
     });
@@ -155,6 +158,7 @@ struct MessageProcessingContext<'a> {
     external_changes_refresh: Callback<()>,
     projection_refresh: &'a ProjectionRefreshCoordinator,
     repo_control: &'a RepoControlClient,
+    remote_import: &'a RemoteImportClient,
 }
 
 fn process_available_messages(ws_rx: &WsService, context: MessageProcessingContext<'_>) {
@@ -167,6 +171,7 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
         external_changes_refresh,
         projection_refresh,
         repo_control,
+        remote_import,
     } = context;
     let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
     projection_refresh.enter_scope(ProjectionRefreshScope {
@@ -223,7 +228,10 @@ fn process_available_messages(ws_rx: &WsService, context: MessageProcessingConte
                 locale,
                 schedule_refresh,
                 external_changes_refresh,
-                repo_control,
+                message_dispatch::MessageDispatchClients {
+                    repo_control,
+                    remote_import,
+                },
             );
             if let Some((response, request_id)) = refresh_response {
                 message_projection_recovery::response_completed(
@@ -252,6 +260,20 @@ mod tests {
     use std::collections::VecDeque;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn fixture_remote_import(
+        ws: &WsService,
+        signals: crate::hooks::use_core::state::CoreSignals,
+    ) -> crate::runtime::remote_import_client::RemoteImportClient {
+        crate::runtime::remote_import_client::RemoteImportClient::new(
+            ws.clone(),
+            signals.current_repo_id,
+            signals.active_branch,
+            signals.current_scope_nonce,
+            signals.pending_branch_switch,
+            signals.pending_repo_switch,
+        )
+    }
 
     fn metrics_message(uptime_secs: u64, active_connections: u32) -> ServerMessage {
         ServerMessage::SystemMetrics {
@@ -291,6 +313,7 @@ mod tests {
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
                 repo_control: &Default::default(),
+                remote_import: &fixture_remote_import(&ws, signals),
             },
         );
 
@@ -341,6 +364,7 @@ mod tests {
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
                 repo_control: &Default::default(),
+                remote_import: &fixture_remote_import(&ws, signals),
             },
         );
 
@@ -374,6 +398,7 @@ mod tests {
                 external_changes_refresh: Callback::new(|()| {}),
                 projection_refresh: &Default::default(),
                 repo_control: &Default::default(),
+                remote_import: &fixture_remote_import(&ws, signals),
             },
         );
 
@@ -429,6 +454,7 @@ mod tests {
                 }),
                 projection_refresh: &Default::default(),
                 repo_control: &Default::default(),
+                remote_import: &fixture_remote_import(&ws, signals),
             },
         );
 

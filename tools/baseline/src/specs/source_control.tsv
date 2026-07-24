@@ -3,7 +3,7 @@ contains	docs/plan/12_source_control_ui.md	Remote Import 是 Source Control 与 
 contains	docs/plan/12_source_control_ui.md	不得直接升级为 Git writer。Remote Projection command 只执行 push
 contains	docs/plan/06_backup.md	Remote Import 不通过 workspace overwrite、External Changes 或 Source Control staging admission
 contains	docs/registry/runtime-skeleton-registry.md	B4 已删除 Remote Projection pull 的 External Changes/Source Control foreign routing
-contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `未启动` | `未启动`
+contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `部分承载` | `apps/web/src/runtime/remote_import_client.rs`
 contains	docs/plan/14_commands.md	Source Control / NoteGit-like Workflow
 contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
 contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode

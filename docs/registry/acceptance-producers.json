@@ -102,6 +102,95 @@
       "note": "Run the typed diff projection and public protocol epoch selectors"
     },
     {
+      "producer_id": "network.ws-f4-v5",
+      "evidence_ids": [
+        "smoke.network.ws-f4-v5"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "protocol::frame::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "protocol::remote_import::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "protocol::repo_control::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "ws_endpoint_" },
+            { "literal": "--" },
+            { "literal": "--nocapture" },
+            { "literal": "--test-threads=1" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "p2p_transport_" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Atomically prove the first public F4/v5 epoch, fail-closed version admission, typed nested wires, explicit debug JSON and FullPeer binary-only transport"
+    },
+    {
       "producer_id": "ci.projection-recovery",
       "evidence_ids": [
         "test.cli.critical-delivery-order",
@@ -364,6 +453,123 @@
         }
       ],
       "note": "Run cohesive core alias contract coverage and real CLI dry-run/apply/rejection process coverage as one current-HEAD repo alias transfer receipt"
+    },
+    {
+      "producer_id": "web.repo-alias-set",
+      "evidence_ids": [
+        "smoke.web.repo-alias-set"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "ledger::manager::host_repo_alias::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "protocol::repo_control::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "server::handlers::repo_control::alias::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "full_peer_cannot_mutate_host_local_repo_alias" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "runtime::repo_control_client::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "same_repo_rename_projection_updates_alias_without_refreshing_scope" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "components::sidebar::repo_switcher::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Atomically prove host-local alias CAS, F4/v5 isolation, server admission and exact Web projection without moving workspace or changing repo scope"
     },
     {
       "producer_id": "desktop.macos-target-host",

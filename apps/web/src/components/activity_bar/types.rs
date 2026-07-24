@@ -17,6 +17,7 @@ pub enum SidebarView {
     Search,        // 搜索
     SourceControl, // 源代码管理 (Git)
     ExternalChanges,
+    RemoteImport,
     Extensions, // 扩展
 }
 
@@ -27,6 +28,7 @@ impl SidebarView {
             Self::Search,
             Self::SourceControl,
             Self::ExternalChanges,
+            Self::RemoteImport,
             Self::Extensions,
         ]
     }
@@ -37,6 +39,7 @@ impl SidebarView {
             Self::Search => t::sidebar::search(locale),
             Self::SourceControl => t::sidebar::source_control(locale),
             Self::ExternalChanges => t::sidebar::external_changes(locale),
+            Self::RemoteImport => t::sidebar::remote_import(locale),
             Self::Extensions => t::sidebar::extensions(locale),
         }
     }
@@ -49,6 +52,7 @@ impl SidebarView {
             Self::Search => view! { <icons::Search class=cls/> }.into_any(),
             Self::SourceControl => view! { <icons::SourceControl class=cls/> }.into_any(),
             Self::ExternalChanges => view! { <icons::FolderInput class=cls/> }.into_any(),
+            Self::RemoteImport => view! { <icons::Download class=cls/> }.into_any(),
             Self::Extensions => view! { <icons::LayoutGrid class=cls/> }.into_any(),
         }
     }

@@ -444,8 +444,10 @@ candidate revision、blocker 计算或 Ledger Apply authority。
 - reconnect 后 client 必须重新 List/Show 当前 scope；不得把旧 scope session projection迁移到新
   scope。相同 request 的 durable Apply receipt 由后端 exactly-once 语义返回，Web 不自行重放 authority write。
 
-本 runtime 继续登记为 `planned/no-code-yet`，B5 才激活独立实现。B4 已删除 Remote Projection
-command 打开 Source Control 与解析 notice detail 的路径；缺失期间不以其它 controller 作为 adapter。
+本 runtime 已由 B5 激活独立 typed client 与同级 sibling view；它按 connection epoch、scope、
+selected session/revision 与 request generation fail closed，重连后重新 List，并通过共享只读 diff
+presentation 渲染 backend projection。B4 已删除 Remote Projection command 打开 Source Control 与解析
+notice detail 的路径；B6 仍负责真实 provider/browser receipt，不得以 unit projection 冒充。
 
 ### 11.5 Repo Control Client Contract {#repo-control-client-contract}
 

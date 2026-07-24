@@ -157,9 +157,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | B1 已落地 store/capture，B2 已落地 transport 依赖边界，B3 已落地 sealed authority writer；产品接线待 B4，UI 待 B5 |
 | `06_backup#projection-backup-failure-modes` | `## 8. Failure Modes` | Remote Projection transport 与 Remote Import capture/session/apply 的 typed failure、fail-closed 与 cleanup 边界 |
 | `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v5 nested request/response、typed errors 与不泄密投影 |
-| `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | scope/revision-bound typed client 与 stale response 丢弃；planned/no-code-yet |
+| `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | B5 scope/revision/generation-bound typed client、reconnect reload 与 stale response 丢弃 |
 | `09_web_thin_client_ledger#repo-control-client-contract` | `### 11.5 Repo Control Client Contract` | exact RepoId/alias revision/job status thin client |
-| `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | Remote Import 与 Source Control/External Changes 同级但独立的薄壳层；planned/no-code-yet |
+| `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | B5 Remote Import 与 Source Control/External Changes 同级但独立的薄壳层 |
 | `14_commands#remote-import-command-contract` | `### 1.1 Remote Projection Push and Remote Import Commands` | projection push 与 remote-import prepare/review/apply/manage 命令面 |
 | `05_diff_logic#typed-diff-projection-contract` | `### 2.5 Typed Diff Projection Contract` | backend-owned typed diff projection、显示层消费与 authority-neutral diff 边界 |
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |

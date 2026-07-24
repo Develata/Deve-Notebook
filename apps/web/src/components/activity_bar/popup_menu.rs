@@ -17,6 +17,7 @@ pub(super) fn activity_more_item_marker(view: SidebarView) -> &'static str {
         SidebarView::Search => "activity_more_item_search",
         SidebarView::SourceControl => "activity_more_item_source_control",
         SidebarView::ExternalChanges => "activity_more_item_external_changes",
+        SidebarView::RemoteImport => "activity_more_item_remote_import",
         SidebarView::Extensions => "activity_more_item_extensions",
     }
 }
@@ -27,6 +28,7 @@ pub(super) fn activity_more_pin_action_marker(view: SidebarView) -> &'static str
         SidebarView::Search => "activity_more_pin_search",
         SidebarView::SourceControl => "activity_more_pin_source_control",
         SidebarView::ExternalChanges => "activity_more_pin_external_changes",
+        SidebarView::RemoteImport => "activity_more_pin_remote_import",
         SidebarView::Extensions => "activity_more_pin_extensions",
     }
 }

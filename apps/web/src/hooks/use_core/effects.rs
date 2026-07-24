@@ -40,6 +40,7 @@ mod message_sync;
 mod message_sync_dispatch;
 
 use crate::api::WsService;
+use crate::runtime::remote_import_client::RemoteImportClient;
 use crate::runtime::repo_control_client::RepoControlClient;
 
 use super::state::CoreSignals;
@@ -56,6 +57,13 @@ pub fn setup_message_effect(
     signals: &CoreSignals,
     external_changes_refresh: leptos::prelude::Callback<()>,
     repo_control: RepoControlClient,
+    remote_import: RemoteImportClient,
 ) {
-    message::setup(ws, signals, external_changes_refresh, repo_control);
+    message::setup(
+        ws,
+        signals,
+        external_changes_refresh,
+        repo_control,
+        remote_import,
+    );
 }

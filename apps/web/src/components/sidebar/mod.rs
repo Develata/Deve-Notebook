@@ -22,6 +22,7 @@ pub mod extensions;
 pub mod external_changes;
 pub mod item;
 pub mod path_utils;
+pub mod remote_import;
 pub mod repo_switcher;
 pub mod source_control;
 pub mod tree;
@@ -30,6 +31,7 @@ pub mod types;
 use self::explorer::ExplorerView;
 use self::extensions::ExtensionsView;
 use self::external_changes::ExternalChangesView;
+use self::remote_import::RemoteImportView;
 use crate::components::activity_bar::SidebarView;
 use crate::components::main_layout::SearchControl;
 
@@ -80,6 +82,9 @@ pub fn Sidebar(
                 }.into_any(),
                 SidebarView::ExternalChanges => view! {
                     <ExternalChangesView />
+                }.into_any(),
+                SidebarView::RemoteImport => view! {
+                    <RemoteImportView />
                 }.into_any(),
                 SidebarView::Search => view! {
                     <ExplorerView

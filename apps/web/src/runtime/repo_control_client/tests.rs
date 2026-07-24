@@ -36,6 +36,49 @@ fn stale_connection_or_scope_discards_response() {
 }
 
 #[test]
+fn set_alias_sends_exact_cas_and_accepts_typed_binding() {
+    let owner = leptos::reactive::owner::Owner::new();
+    owner.with(|| {
+        let client = RepoControlClient::default();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let current = scope(4, Some(repo_id), 8);
+
+        let request_id = client.set_alias(&ws, current.clone(), repo_id, "research".into(), 2);
+        assert!(matches!(
+            ws.drain_sent_for_test().as_slice(),
+            [ClientMessage::RepoControl(RepoControlRequest::SetAlias {
+                request_id: actual_request,
+                repo_id: actual_repo,
+                alias,
+                expected_alias_revision: 2,
+            })] if *actual_request == request_id
+                && *actual_repo == repo_id
+                && alias == "research"
+        ));
+
+        assert_eq!(
+            client.accept(
+                RepoControlResponse::AliasSet {
+                    request_id,
+                    binding: RepoAliasBinding {
+                        repo_id,
+                        display_alias: "research".into(),
+                        alias_revision: 3,
+                    },
+                },
+                &current,
+            ),
+            Some(RepoControlAdmission::AliasSet(RepoAliasBinding {
+                repo_id,
+                display_alias: "research".into(),
+                alias_revision: 3,
+            }))
+        );
+    });
+}
+
+#[test]
 fn removal_preview_accepts_an_exact_non_current_repo_target() {
     let client = RepoControlClient::default();
     let current_repo_id = RepoId::new_v4();

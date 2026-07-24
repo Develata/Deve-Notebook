@@ -27,18 +27,19 @@ contains	docs/plan/07_network.md	无版本 JSON、`LegacyJsonText` 与 `DEVE_ALL
 contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 5;`; `MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5;`
 contains	docs/registry/first-tag-format-matrix.md	当前代码已切换F4/v5
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
-case_contains	docs/acceptance-cases/06_network.md	NET-004	gap: Fresh exact-HEAD F4/v5 negative and debug JSON producer receipt remains pending until R6
+case_contains	docs/acceptance-cases/06_network.md	NET-004	receipt: `network.ws-f4-v5`
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core unsupported_json_version_is_checked_before_message_schema -- --nocapture
-case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib remote_import_and_repo_control_nested_wire_roundtrip_in_f4_v5_binary_and_versioned_json -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib remote_import_nested_wire_roundtrip_in_f4_v5_binary_and_versioned_json -- --nocapture
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib repo_control_nested_wire_roundtrips_in_f4_v5_binary_and_versioned_json -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib direct_remove_lifecycle_intent_is_absent_from_f4_v5 -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib repo_removal_execute_wire_binds_distinct_request_and_preparation_ids -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib repo_removal_wire_rejects_malformed_opaque_confirmation_values -- --nocapture
-case_contains	docs/acceptance-cases/06_network.md	NET-004	gap: R4 single typed removal finalization producer is not implemented yet; R3 proves optional fallback admission only
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli --lib remote_import_route -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli ws_endpoint_accepts_versioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
 case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli ws_endpoint_rejects_unversioned_json_text_when_debug_enabled -- --nocapture --test-threads=1
+case_contains	docs/acceptance-cases/06_network.md	NET-004	cargo test -p deve_cli --lib p2p_transport_ -- --nocapture
 case_contains	docs/acceptance-cases/06_network.md	NET-004	packet_format_eq: ["server", "versioned-postcard"]
 case_contains	docs/acceptance-cases/06_network.md	NET-004	packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
 case_contains	docs/acceptance-cases/06_network.md	NET-004	binary_packet_magic_eq: "DEVEWSF4"

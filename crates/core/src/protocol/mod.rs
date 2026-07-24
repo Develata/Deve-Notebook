@@ -63,12 +63,13 @@ pub use relay_proxy::{
     validate_sync_push_attribution, validate_sync_snapshot_attribution,
 };
 pub use remote_import::{
-    RemoteImportApplyReceipt, RemoteImportBlocker, RemoteImportCandidatePage,
-    RemoteImportCandidateRevision, RemoteImportCandidateView, RemoteImportChangeKind,
-    RemoteImportEntryId, RemoteImportPageCursor, RemoteImportProjectionOutcome,
-    RemoteImportRequest, RemoteImportRequestContext, RemoteImportResponse,
-    RemoteImportResponseContext, RemoteImportSessionId, RemoteImportSessionView, RemoteImportState,
-    RemoteProjectionPushRequest, RemoteProjectionPushResponse,
+    REMOTE_IMPORT_DEFAULT_PAGE_SIZE, REMOTE_IMPORT_MAX_PAGE_SIZE, RemoteImportApplyReceipt,
+    RemoteImportBlocker, RemoteImportCandidatePage, RemoteImportCandidateRevision,
+    RemoteImportCandidateView, RemoteImportChangeKind, RemoteImportEntryId, RemoteImportPageCursor,
+    RemoteImportProjectionOutcome, RemoteImportRequest, RemoteImportRequestContext,
+    RemoteImportResponse, RemoteImportResponseContext, RemoteImportSessionId,
+    RemoteImportSessionView, RemoteImportState, RemoteProjectionPushRequest,
+    RemoteProjectionPushResponse,
 };
 pub use remote_projection::RemoteProjectionProvider;
 pub use repo_control::{

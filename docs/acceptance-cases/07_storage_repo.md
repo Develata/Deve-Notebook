@@ -281,6 +281,7 @@
     - WebLightPeer 已认证
     - fixture 可分别启动 zero/one/multi local repo host
   steps:
+    - receipt: `web.repo-alias-set` 原子执行host-local CAS、F4/v5 transport、server admission、Web exact projection与same-scope alias publication证据
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
@@ -499,6 +500,7 @@
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
     - run: cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
+    - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
     - gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
   assertions:
     - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
@@ -512,7 +514,8 @@
     - B4 backend review/blocker/diff 与 CLI/WS product API 已实现
   steps:
     - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
-    - gap: B5 thin client and B6 fresh Remote Import review receipt are not sealed yet
+    - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
+    - gap: B6 fresh Remote Import review/browser receipt is not sealed yet
   assertions:
     - api_assert: remote_import_review_is_backend_owned true
     - api_assert: remote_import_review_exposes_no_locator_blob_digest_credential_or_raw_failure_detail true
@@ -526,7 +529,8 @@
   steps:
     - run: cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
     - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
-    - gap: B5 browser journey and B6 fresh Remote Import apply receipt are not sealed yet
+    - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
+    - gap: B6 fresh Remote Import apply/browser receipt is not sealed yet
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
@@ -562,10 +566,11 @@
   goal: Remote Import Refresh/Discard/Repair/retention/cleanup 生命周期具有真实 producer 证据。
   preconditions:
     - B1 已实现 durable recovery、retention 与 dry-run repair inventory
-    - B4已接入产品Refresh/Discard/Repair；R4 D1-SQ whole-root quarantine owner-plan已实现，B6 fresh cross-platform evidence仍待完成
+    - B4已接入产品Refresh/Discard/Repair；R4 D1-SQ whole-root quarantine owner-plan已实现
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
-    - gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan已实现；B6 fresh Remote Import manage receipt尚未封存
+    - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
+    - gap: B6 fresh Remote Import manage/browser receipt is not sealed yet
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

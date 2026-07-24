@@ -16,7 +16,7 @@
 - `Trigger`: 打开 Remote Import view
 - `Preconditions`: repo/branch/scope exact，Ledger/session store 可读
 - `Immediate Result`: backend 返回 typed session summaries
-- `Application Entry`: `apps/cli/src/commands/remote_import/` / typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`；B5 补独立 `remote_import_client`
+- `Application Entry`: `apps/web/src/runtime/remote_import_client.rs` / `apps/cli/src/commands/remote_import/` / typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.review.show`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 打开 exact session/revision
 - `Preconditions`: exact session/revision 存在
 - `Immediate Result`: backend 返回 state、summary 与 typed blockers
-- `Application Entry`: `apps/cli/src/commands/remote_import/` / typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`；B5 补独立 `remote_import_client`
+- `Application Entry`: `apps/web/src/runtime/remote_import_client.rs` / `apps/cli/src/commands/remote_import/` / typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.review.page`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 请求下一页 candidate entries
 - `Preconditions`: cursor opaque、绑定相同 revision，limit ≤ 200
 - `Immediate Result`: backend 返回 entry_id、display label、change kind 与 typed blocker
-- `Application Entry`: typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`；B5 补独立 `remote_import_client`
+- `Application Entry`: `apps/web/src/runtime/remote_import_client.rs` → typed WS → `apps/cli/src/remote_import_runtime.rs` → `crates/core/src/remote_import/`
 
 ### `op.remote-import.review.diff`
 
@@ -55,4 +55,4 @@
 ## Notes
 
 - 无 checkbox、逐文件选择或前端 blocker 推理。
-- B4 backend/CLI review 已激活且旧 External Changes/Source Control substitute 已删除；B5 独立 thin client 与 B6 producer receipt 仍是明确缺口。
+- B4 backend/CLI review 与 B5 独立 thin client/sibling view 已激活，旧 External Changes/Source Control substitute 已删除；B6 producer/browser receipt 仍是明确缺口。

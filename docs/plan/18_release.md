@@ -430,14 +430,14 @@ subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
 | Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
 | WebSocket | `DEVEWSF4`, lockstep v5 | 当前代码已切换未发布F4/v5并删除legacy/unversioned JSON与direct Remove；R3 Prepare/Execute admission已实现，R4 destructive settlement、R5 UI/finalization与R6 fresh evidence仍阻塞首发 | R3-R6 + ADR 0014 | partially aligned |
-| Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire 已对齐；B5 typed Web client 与 B6 fresh receipts 未完成 | B4/B5/B6 | blocked |
+| Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire与B5 typed Web client/sibling view已对齐；B6 fresh provider/browser receipts 未完成 | B4/B5/B6 | blocked |
 | Projection Locator / repo alias | immutable `workspace_segment` + host-local alias JSON v1；peer payload no alias | 已对齐；当前 create 生成 bare canonical RepoId segment，合同仍允许一次性 host-local initial-alias segment；alias 后续不移动路径或进入 peer payload | C1′ + ADR 0013 | non-blocking |
 
 “Approved target”不等于实现完成。release gate 必须同时读取 `docs/registry/first-tag-format-matrix.md` 的 target/current 两列；当前不一致必须阻止 candidate/tag-ready，不能因为文档出现目标字符串而通过。
 
 ### 3.2 Remote Import Release Gate {#remote-import-release-gate}
 
-首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、repo removal owner-plan、双 repo 隔离与真实 backend browser journey。B4 已完成 backend/CLI/product wire 与旧 pull 删除；STORE-019/020/021/023 继续保留 B5/B6/R4 尚未产出的真实 `gap`，旧 pull tests 不得冒充 Remote Import evidence。
+首发前必须由同一精确 HEAD 证明 immutable capture、restart recovery、typed review/blocker、whole-session Ledger Apply、post-commit writeback、cleanup/retention、repo removal owner-plan、双 repo 隔离与真实 backend browser journey。B4 已完成 backend/CLI/product wire 与旧 pull 删除，B5 已完成 exact-scope typed Web client/sibling view；STORE-019/020/021/023 继续保留 B6 尚未产出的真实 provider/browser `gap`，旧 pull tests 或B5 unit projection不得冒充 Remote Import evidence。
 
 ## 4. Open Source License (开源协议)
 

@@ -11,6 +11,7 @@ use crate::runtime::{
         ExternalChangesClient, ExternalChangesHttpScope,
         create_external_changes_mutation_callbacks, create_external_changes_refresh_callback,
     },
+    remote_import_client::RemoteImportClient,
     rendering_client::RenderingClient,
     repo_control_client::RepoControlClient,
     scope_client::ScopeClient,
@@ -94,6 +95,14 @@ pub(super) fn assemble_core_state(
         ws.clone(),
         external_changes_refresh.clone(),
         external_changes_error,
+    );
+    let remote_import = RemoteImportClient::new(
+        ws.clone(),
+        sync.current_repo_id,
+        sync.active_branch,
+        sync.current_scope_nonce,
+        sync.pending_branch_switch,
+        sync.pending_repo_switch,
     );
     let runtime_clients = CoreRuntimeClients {
         session: SessionClient {
@@ -192,6 +201,7 @@ pub(super) fn assemble_core_state(
             load_eta_ms: runtime.load_eta_ms,
             set_load_eta_ms: runtime.set_load_eta_ms,
         },
+        remote_import,
         repo_control,
     };
 

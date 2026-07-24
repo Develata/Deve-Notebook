@@ -54,4 +54,4 @@
 
 ## Notes
 
-- B4产品Refresh/Discard/Repair与现有RepoId/provider lifecycle coordination已激活；R4仍需补Remote Import owner的repo-removal plan/cleanup：authority Quiescing前exact封存immutable owner plan，Removed cut后只按该plan做artifact-only cleanup，不再修改即将删除的session row。STORE-023继续保留R4/B6 fresh receipt真实gap。
+- B4产品Refresh/Discard/Repair与现有RepoId/provider lifecycle coordination已激活；B5 Web Refresh/Discard management只发送typed intent；R4已实现authority Quiescing前exact封存immutable owner plan，以及Removed cut后按该plan执行artifact-only cleanup。STORE-023继续保留B6 fresh browser receipt真实gap。

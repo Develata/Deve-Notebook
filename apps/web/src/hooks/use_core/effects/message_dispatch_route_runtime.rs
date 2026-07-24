@@ -6,6 +6,7 @@ use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::show_temporary_sync_banner;
 use crate::i18n::Locale;
 use crate::runtime::domain::SearchHit;
+use crate::runtime::remote_import_client::RemoteImportClient;
 use deve_core::protocol::ServerMessage;
 use leptos::prelude::GetUntracked;
 
@@ -20,9 +21,14 @@ pub fn route_runtime_message(
     _ws: &WsService,
     locale: Locale,
     signals: CoreSignals,
+    remote_import: &RemoteImportClient,
 ) -> Option<ServerMessage> {
     let msg = route_search_results_message(msg, signals)?;
     match msg {
+        ServerMessage::RemoteImport(response) => {
+            remote_import.accept(response);
+            None
+        }
         ServerMessage::RemoteProjectionPush(response) => {
             if accepts_remote_projection_push_response(&response, signals) {
                 let message = response.error.map_or_else(
@@ -123,6 +129,17 @@ mod tests {
         (runtime, init_signals(connection_status))
     }
 
+    fn remote_import_client(ws: &WsService, signals: CoreSignals) -> RemoteImportClient {
+        RemoteImportClient::new(
+            ws.clone(),
+            signals.current_repo_id,
+            signals.active_branch,
+            signals.current_scope_nonce,
+            signals.pending_branch_switch,
+            signals.pending_repo_switch,
+        )
+    }
+
     #[test]
     fn route_search_results_rejects_stale_scope_before_state_update() {
         let (_runtime, signals) = init_runtime();
@@ -157,6 +174,8 @@ mod tests {
         signals.set_current_repo_id.set(Some(repo_id.to_string()));
         signals.set_current_scope_nonce.set(7);
 
+        let ws = crate::api::WsService::new_for_test(crate::api::ConnectionStatus::Connected);
+        let remote_import = remote_import_client(&ws, signals);
         let stale = route_runtime_message(
             ServerMessage::RemoteProjectionPush(RemoteProjectionPushResponse {
                 request_id: uuid::Uuid::new_v4(),
@@ -168,9 +187,10 @@ mod tests {
                     "CANARY_PRIVATE_BACKEND_DETAIL",
                 )),
             }),
-            &crate::api::WsService::new_for_test(crate::api::ConnectionStatus::Connected),
+            &ws,
             Locale::En,
             signals,
+            &remote_import,
         );
         assert!(stale.is_none());
         assert!(signals.sync_banner.get_untracked().is_none());
@@ -194,6 +214,7 @@ mod tests {
                 &crate::api::WsService::new_for_test(crate::api::ConnectionStatus::Connected),
                 Locale::En,
                 signals,
+                &remote_import,
             );
 
             let banner = signals.sync_banner.get_untracked().expect("typed banner");

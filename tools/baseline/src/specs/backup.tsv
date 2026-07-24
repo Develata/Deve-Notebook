@@ -9,8 +9,8 @@ contains	docs/plan/06_backup.md	PROJECTION_FAULTS
 contains	docs/adr/0012-repo-local-redb-projection-fault-store.md	Remote Import post-commit coordinator owns the dedicated short Redb
 contains	docs/registry/runtime-skeleton-registry.md	`remote_projection_transport_runtime` | `部分承载`
 contains	docs/registry/runtime-skeleton-registry.md	`remote_import_runtime` | `部分承载` | `crates/core/src/remote_import/`
-contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `未启动` | `未启动`
-contains	docs/registry/first-tag-format-matrix.md	Remote Import主体及R4 provider-quiesced plan、logical invalidation和whole-root quarantine/delete已落地
+contains	docs/registry/runtime-skeleton-registry.md	`remote_import_client` | `部分承载` | `apps/web/src/runtime/remote_import_client.rs`
+contains	docs/registry/first-tag-format-matrix.md	Remote Import主体、B5 typed client/sibling view及R4 provider-quiesced plan、logical invalidation和whole-root quarantine/delete已落地
 absent	docs/registry/runtime-skeleton-registry.md	backup_locator_runtime
 absent	docs/registry/runtime-skeleton-registry.md	backup_pack_runtime
 absent	docs/registry/runtime-skeleton-registry.md	backup_restore_runtime
@@ -20,10 +20,10 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib remote_import -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: B5 thin client and B6 fresh Remote Import review receipt are not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: B6 fresh Remote Import review/browser receipt is not sealed yet
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	remote_import_fault_and_degraded_receipt_share_one_transaction true
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: B5 browser journey and B6 fresh Remote Import apply receipt are not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: B6 fresh Remote Import apply/browser receipt is not sealed yet
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_cleanup_completion()
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn replay_rejects_corrupt_stored_receipt_core()
 contains	crates/core/src/remote_import/tests/apply/admission.rs	fn active_session_pointer_drift_rejects_without_facts()
@@ -32,7 +32,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: R4 O1-FREEZE seal + whole-root quarantine owner-plan已实现；B6 fresh Remote Import manage receipt尚未封存
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: B6 fresh Remote Import manage/browser receipt is not sealed yet
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
 contains	apps/cli/src/remote_projection_transport/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()

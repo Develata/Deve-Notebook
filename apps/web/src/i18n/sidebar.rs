@@ -83,6 +83,13 @@ pub fn external_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn remote_import(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remote Import",
+        Locale::Zh => "远程导入",
+    }
+}
+
 pub fn extensions(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Extensions",

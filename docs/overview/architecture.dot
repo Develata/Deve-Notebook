@@ -2114,7 +2114,7 @@ digraph DeveNoteArchitecture {
             label="Remote Projection / Import runtimes [03/05/06/09]"; style="rounded,filled"; fillcolor="#effef3"; color="#16a34a";
             mod_remote_transport [label="remote_projection_transport_runtime", fillcolor="#f0fdf4"];
             mod_remote_import [label="remote_import_runtime\n(B4 backend active)", fillcolor="#f0fdf4"];
-            mod_remote_import_client [label="remote_import_client\n(B5 pending)", fillcolor="#fee2e2", color="#dc2626"];
+            mod_remote_import_client [label="remote_import_client\n(B5 active)", fillcolor="#f0fdf4", color="#16a34a"];
             mod_remote_import_writer [label="sealed source writer", fillcolor="#f0fdf4"];
             mod_remote_projection_writeback [label="projection writeback", fillcolor="#f0fdf4"];
         }
@@ -4436,14 +4436,6 @@ digraph DeveNoteArchitecture {
     op_render_mermaid_delta -> op_render_mermaid_leave [style=dashed, color="#d97706", constraint=false];
 
     // generated drift markers from architecture-diff.md
-    drift_remote_import_prepare [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
-    user_remote_import_prepare_spine -> drift_remote_import_prepare [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
-    drift_remote_import_review [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
-    user_remote_import_review_spine -> drift_remote_import_review [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
-    drift_remote_import_apply [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
-    user_remote_import_apply_spine -> drift_remote_import_apply [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
-    drift_remote_import_manage [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
-    user_remote_import_manage_spine -> drift_remote_import_manage [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
     drift_repo_switch [label="*", shape=circle, width=0.34, height=0.34, fixedsize=true, fillcolor="#dc2626", fontcolor="white", color="#991b1b", fontsize=12, penwidth=1.3];
     user_repo_switch_spine -> drift_repo_switch [dir=none, style=dashed, color="#dc2626", constraint=false, penwidth=1.2];
 
@@ -4461,7 +4453,7 @@ digraph DeveNoteArchitecture {
         legend_core [label="execution domain", fillcolor="#fdf2f8"];
         legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
         legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
-        legend_note [label="5 active drift marker(s);
+        legend_note [label="1 active drift marker(s);
 see architecture-diff.md", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
