@@ -1,0 +1,118 @@
+diff --git a/notify/src/windows.rs b/notify/src/windows.rs
+index 797052e..0c10902 100644
+--- a/notify/src/windows.rs
++++ b/notify/src/windows.rs
+@@ -20,8 +20,8 @@ use std::slice;
+ use std::sync::{Arc, Mutex};
+ use std::thread;
+ use windows_sys::Win32::Foundation::{
+-    CloseHandle, ERROR_ACCESS_DENIED, ERROR_OPERATION_ABORTED, ERROR_SUCCESS, HANDLE,
+-    INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
++    CloseHandle, ERROR_ACCESS_DENIED, ERROR_NOTIFY_ENUM_DIR, ERROR_OPERATION_ABORTED,
++    ERROR_SUCCESS, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
+ };
+ use windows_sys::Win32::Storage::FileSystem::{
+     CreateFileW, ReadDirectoryChangesW, FILE_ACTION_ADDED, FILE_ACTION_MODIFIED,
+@@ -328,13 +328,25 @@ fn start_read(
+     }
+ }
+-
++
++fn completion_requires_rescan(error_code: u32, bytes_written: u32) -> bool {
++    error_code == ERROR_NOTIFY_ENUM_DIR || (error_code == ERROR_SUCCESS && bytes_written == 0)
++}
++
++fn emit_event(event_handler: &Mutex<dyn EventHandler>, res: Result<Event>) {
++    if let Ok(mut guard) = event_handler.lock() {
++        let handler: &mut dyn EventHandler = &mut *guard;
++        handler.handle_event(res);
++    }
++}
++
+ unsafe extern "system" fn handle_event(
+     error_code: u32,
+-    _bytes_written: u32,
++    bytes_written: u32,
+     overlapped: *mut OVERLAPPED,
+ ) {
+     let overlapped: Box<OVERLAPPED> = Box::from_raw(overlapped);
+     let request: Box<ReadDirectoryRequest> = Box::from_raw(overlapped.hEvent as *mut _);
++    let requires_rescan = completion_requires_rescan(error_code, bytes_written);
+-
++
+     match error_code {
+         ERROR_OPERATION_ABORTED => {
+@@ -354,6 +366,10 @@ unsafe extern "system" fn handle_event(
+         ERROR_SUCCESS => {
+             // Success, continue to handle the event
+         }
++        ERROR_NOTIFY_ENUM_DIR => {
++            // The change buffer overflowed. Rearm the watch, then ask the caller
++            // to rebuild current state instead of parsing an incomplete buffer.
++        }
+         _ => {
+             // Some unidentified error occurred, log and unwatch the directory, then return.
+             log::error!(
+@@ -375,6 +391,14 @@ unsafe extern "system" fn handle_event(
+         request.action_tx,
+     );
+-
++
++    if requires_rescan {
++        emit_event(
++            &request.event_handler,
++            Ok(Event::new(EventKind::Other).set_flag(Flag::Rescan)),
++        );
++        return;
++    }
++
+     // The FILE_NOTIFY_INFORMATION struct has a variable length due to the variable length
+     // string as its last member. Each struct contains an offset for getting the next entry in
+     // the buffer.
+@@ -413,13 +437,6 @@ unsafe extern "system" fn handle_event(
+-
++
+             let newe = Event::new(EventKind::Any).add_path(path);
+-
++
+-            fn emit_event(event_handler: &Mutex<dyn EventHandler>, res: Result<Event>) {
+-                if let Ok(mut guard) = event_handler.lock() {
+-                    let f: &mut dyn EventHandler = &mut *guard;
+-                    f.handle_event(res);
+-                }
+-            }
+-
+             let event_handler = |res| emit_event(&request.event_handler, res);
+-
++
+             if cur_entry.Action == FILE_ACTION_RENAMED_OLD_NAME {
+@@ -600,3 +617,29 @@ impl Drop for ReadDirectoryChangesWatcher {
+ unsafe impl Send for ReadDirectoryChangesWatcher {}
+ // Because all public methods are `&mut self` it's also perfectly safe to share references.
+ unsafe impl Sync for ReadDirectoryChangesWatcher {}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn zero_byte_success_requires_rescan() {
++        assert!(completion_requires_rescan(ERROR_SUCCESS, 0));
++    }
++
++    #[test]
++    fn error_notify_enum_dir_requires_rescan() {
++        assert!(completion_requires_rescan(ERROR_NOTIFY_ENUM_DIR, 1024));
++    }
++
++    #[test]
++    fn non_empty_success_keeps_normal_event_parsing() {
++        assert!(!completion_requires_rescan(ERROR_SUCCESS, 1));
++    }
++
++    #[test]
++    fn rescan_event_sets_the_public_rescan_flag() {
++        let event = Event::new(EventKind::Other).set_flag(Flag::Rescan);
++        assert!(event.need_rescan());
++    }
++}
