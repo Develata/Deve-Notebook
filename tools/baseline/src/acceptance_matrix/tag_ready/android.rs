@@ -7,6 +7,7 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
+use super::repo_lifecycle::validate_repo_lifecycle_claims;
 use super::{MatrixRow, Receipt};
 
 pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Result<()> {
@@ -55,6 +56,7 @@ pub(super) fn validate_android_claims(receipt: &Receipt, row: &MatrixRow) -> Res
     {
         bail!("Android writable lifecycle journey is incomplete");
     }
+    validate_repo_lifecycle_claims(claims, journey, "Android")?;
     if row.mode == "remote-browser" {
         validate_remote_journey(journey)?;
         validate_remote_recovery(claims)?;
@@ -80,6 +82,7 @@ fn validate_local_journey(journey: &Value) -> Result<()> {
         "backgroundResume",
         "staleScopeRejected",
         "pendingPreserved",
+        "repoRemovalNoScope",
     ] {
         if journey.get(claim).and_then(Value::as_bool) != Some(true) {
             bail!("Android LocalBackend journey is missing required claim {claim}");
@@ -148,6 +151,7 @@ fn validate_remote_journey(journey: &Value) -> Result<()> {
         "edit",
         "commitHistory",
         "backgroundResume",
+        "repoRemovalNoScope",
         "zeroNativeIpc",
         "nativeLocalRecovery",
         "remoteSurfaceDestroyedBeforeLocalIpc",

@@ -18,6 +18,14 @@ test("RemoteBrowser WebView proof covers facade, IPC, CSP, and real business UI"
   assert.match(source, /content security policy/i);
   assert.match(source, /createAndEditDocument/);
   assert.match(source, /commitAndVerifyHistory/);
+  assert.match(source, /exerciseLastRepoRemoval/);
+  assert.match(source, /repoRemovalNoScope/);
+  assert.ok(
+    source.indexOf("exerciseLastRepoRemoval(page)") < source.indexOf("const ipcRequests"),
+    "IPC/CSP observations must include the repo removal journey",
+  );
+  assert.match(source, /zeroNativeIpc,/);
+  assert.doesNotMatch(source, /zeroNativeIpc:\s*true/);
   assert.doesNotMatch(source, /__TAURI_INTERNALS__\?\.invoke\(/);
 });
 
@@ -33,6 +41,38 @@ test("host smoke enters remote mode by preference and returns through the native
   assert.doesNotMatch(hostSource, /ArgumentList.*--remote-url/);
   assert.match(hostSource, /Environment\.Remove\("DEVE_NATIVE_REMOTE_URL"\)/);
   assert.match(hostSource, /UTF8Encoding\]\:\:new\(\$false\)/);
+});
+
+test("host smoke preserves runner-owned claims paths and keeps local recovery evidence distinct", () => {
+  assert.match(hostSource, /Resolve-AuthorityEvidencePath/);
+  assert.match(
+    hostSource,
+    /GetEnvironmentVariable\("DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH", "Process"\)/,
+  );
+  assert.match(
+    hostSource,
+    /GetEnvironmentVariable\("DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH", "Process"\)/,
+  );
+  assert.match(hostSource, /remote and local authority evidence paths must be distinct/);
+  assert.match(hostSource, /Restore-ProcessEnvironmentVariable/);
+  assert.doesNotMatch(
+    hostSource,
+    /Remove-Item Env:DEVE_DESKTOP_(?:REMOTE|LOCAL)_AUTHORITY_EVIDENCE_PATH/,
+  );
+});
+
+test("host smoke consumes the nested typed claims schema emitted by both WebView journeys", () => {
+  assert.match(hostSource, /remoteAuthority\.scope\.repoId/);
+  assert.match(hostSource, /localAuthority\.scope\.repoId/);
+  assert.match(hostSource, /remoteAuthority\.scope\.scopeNonce/);
+  assert.match(hostSource, /localAuthority\.scope\.scopeNonce/);
+  assert.match(hostSource, /remoteAuthority\.repoLifecycle\.noScope/);
+  assert.match(hostSource, /localAuthority\.repoLifecycle\.noScope/);
+  assert.match(hostSource, /smoke-desktop-remote-browser/);
+  assert.match(hostSource, /smoke-desktop-packaged-ui/);
+  assert.match(hostSource, /mode transition authority evidence schema is invalid/);
+  assert.doesNotMatch(hostSource, /remoteAuthority\.repoId/);
+  assert.doesNotMatch(hostSource, /localAuthority\.repoId/);
 });
 
 test("host smoke normalizes the work root before passing Node module paths", () => {

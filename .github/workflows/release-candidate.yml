@@ -163,6 +163,13 @@ jobs:
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE=%s\n' "$image" >>"$GITHUB_ENV"
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$image_id" >>"$GITHUB_ENV"
 
+      - name: Run Linux cross-process repo lifecycle producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer repo-lifecycle.process-linux
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-repo-lifecycle-linux"
+
       - name: Run multiclient, offline, Source Control and External Changes
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run

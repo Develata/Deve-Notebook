@@ -36,15 +36,10 @@ fn field(output: &str, key: &str) -> String {
         .to_owned()
 }
 
-#[test]
-fn removal_preview_and_apply_cross_process_preserve_workspace_and_git() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let root = dir.path();
-    let projection = root.join("projection");
-    let repo_id = uuid::Uuid::new_v4();
-    let repo_id_text = repo_id.to_string();
+fn init_local_repo(root: &Path, projection: &Path, repo_name: &str, repo_id: uuid::Uuid) {
     let root_text = root.to_str().expect("root UTF-8");
     let projection_text = projection.to_str().expect("projection UTF-8");
+    let repo_id_text = repo_id.to_string();
     let init = deve(
         root,
         &[
@@ -52,25 +47,28 @@ fn removal_preview_and_apply_cross_process_preserve_workspace_and_git() {
             "--path",
             root_text,
             "--repo",
-            "local",
+            repo_name,
             "--projection-base",
             projection_text,
             "--repo-id",
             &repo_id_text,
         ],
     );
-    assert!(init.status.success(), "init failed: {}", text(&init.stderr));
+    assert!(
+        init.status.success(),
+        "init {repo_name} failed:\nstdout={}\nstderr={}",
+        text(&init.stdout),
+        text(&init.stderr)
+    );
+}
 
-    let workspace = projection.join(&repo_id_text);
-    std::fs::write(workspace.join("kept.md"), b"# keep").expect("write markdown");
-    std::fs::create_dir_all(workspace.join(".git")).expect("create git");
-    std::fs::write(workspace.join(".git/config"), b"[core]\n").expect("write git config");
-    std::fs::write(workspace.join("unknown.bin"), b"keep").expect("write unknown");
-
+fn preview_and_apply_removal(root: &Path, repo_id: uuid::Uuid) -> String {
+    let repo_id_text = repo_id.to_string();
     let preview = deve(root, &["repo", "remove", "--repo-id", &repo_id_text]);
     assert!(
         preview.status.success(),
-        "preview failed: {}",
+        "preview failed:\nstdout={}\nstderr={}",
+        text(&preview.stdout),
         text(&preview.stderr)
     );
     let preview_stdout = text(&preview.stdout);
@@ -93,13 +91,34 @@ fn removal_preview_and_apply_cross_process_preserve_workspace_and_git() {
     );
     assert!(
         apply.status.success(),
-        "apply failed: {}",
+        "apply failed:\nstdout={}\nstderr={}",
+        text(&apply.stdout),
         text(&apply.stderr)
     );
     let apply_stdout = text(&apply.stdout);
     assert!(apply_stdout.contains("repo_removal=accepted"));
     assert!(apply_stdout.contains("repo_removal=terminal"));
     assert!(apply_stdout.contains("outcome=succeeded"));
+    apply_stdout
+}
+
+#[test]
+fn removal_preview_and_apply_cross_process_preserve_workspace_and_git() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    let projection = root.join("projection");
+    let repo_id = uuid::Uuid::new_v4();
+    let repo_id_text = repo_id.to_string();
+    let root_text = root.to_str().expect("root UTF-8");
+    init_local_repo(root, &projection, "local", repo_id);
+
+    let workspace = projection.join(&repo_id_text);
+    std::fs::write(workspace.join("kept.md"), b"# keep").expect("write markdown");
+    std::fs::create_dir_all(workspace.join(".git")).expect("create git");
+    std::fs::write(workspace.join(".git/config"), b"[core]\n").expect("write git config");
+    std::fs::write(workspace.join("unknown.bin"), b"keep").expect("write unknown");
+
+    let apply_stdout = preview_and_apply_removal(root, repo_id);
     let execute_request_id = field(&apply_stdout, "request_id");
 
     assert!(workspace.join("kept.md").is_file());

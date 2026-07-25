@@ -288,7 +288,11 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - gap: R1-R6 implementation includes explicit exact-identity cleanup repair, test-harness child-process 20/21/22 mapping, a real `deve` repair fail-closed 22 process, separate-process normal removal preservation proof and producer definitions for secondary/last-repo Desktop/Mobile browser journeys; exact Windows/Linux and candidate-image receipts remain required on one clean exact HEAD
+    - receipt: `repo-lifecycle.process-linux` 在 Linux exact HEAD 原子执行 removal runtime、真实 `deve` preview/apply/repair 子进程、20/21/22 映射、lost-response replay、secondary preservation 与 last-repo NoScope
+    - receipt: `repo-lifecycle.process-windows` 在 Windows exact HEAD 执行同一命令组并产生独立 evidence ID，不与 Linux receipt 形成双重身份
+    - receipt: `docker.multiclient-product` 通过真实 candidate image 浏览器 journey 证明 backend preview、initiator/observer finalization、last-repo NoScope、restart 后 first-create 与 workspace/Git preservation
+    - receipt: `desktop.local-backend` 与 `desktop.remote-browser` 分别通过安装后的 Windows WebView typed claims 证明 last-repo removal/NoScope，并由各自 host harness 证明 sidecar/recovery cleanup
+    - receipt: `android.local-backend` 与 `android.remote-browser` 分别通过 target-qualified WebView typed claims 证明 last-repo removal/NoScope，并保留已有 restart/recovery/no-orphan 证据
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture

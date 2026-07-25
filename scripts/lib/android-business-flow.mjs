@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import {
   openMobileSidebarView,
   readPendingAckCount,
@@ -112,4 +113,82 @@ export function commitAndroidChange(page, message, { waitUntil, delay }) {
     delay,
     inputText: async (value) => dispatchWebViewText(page, value),
   });
+}
+
+async function readRepoScope(page) {
+  return page.call(() => {
+    const status = document.querySelector("[data-deve-sync-status]");
+    return {
+      status: status?.getAttribute("data-deve-sync-status") ?? null,
+      repoId: status?.getAttribute("data-deve-repo-id") ?? "",
+      scopeNonce: Number(status?.getAttribute("data-deve-scope-nonce")),
+    };
+  });
+}
+
+async function openRepoSwitcher(page, waitUntil) {
+  const mobile = await page.call(() =>
+    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
+  if (mobile) {
+    await openMobileSidebarView(page, "explorer", {
+      click: clickVisible,
+      waitUntil,
+    });
+  }
+  await clickVisible(page, "[data-deve-repo-switcher-trigger]");
+  await waitUntil("Android repo switcher", () => page.call(() =>
+    Boolean(globalThis.__deveVisibleElement("[data-deve-repo-switcher-create]"))));
+}
+
+export async function exerciseAndroidLastRepoRemoval(page, { waitUntil }) {
+  const before = await readRepoScope(page);
+  assert.equal(before.status, "ready");
+  assert.ok(before.repoId, "Android repo removal requires a selected repo");
+  assert.ok(Number.isInteger(before.scopeNonce) && before.scopeNonce > 0);
+
+  await openRepoSwitcher(page, waitUntil);
+  const row = await page.call(() => {
+    const items = [...document.querySelectorAll("[data-deve-repo-switcher-item]")];
+    if (items.length !== 1) return { count: items.length };
+    const item = items[0];
+    const actions = item.parentElement?.querySelector("[data-deve-repo-switcher-actions]");
+    if (!(actions instanceof HTMLElement)) return { count: items.length, actions: false };
+    actions.click();
+    return {
+      count: items.length,
+      actions: true,
+      alias: item.getAttribute("data-deve-repo-switcher-item-name") ?? "",
+    };
+  });
+  assert.equal(row.count, 1, "Android repo removal requires exactly one local repo");
+  assert.equal(row.actions, true, "Android repo row must expose actions");
+  assert.ok(row.alias, "Android last repo must expose a backend-projected alias");
+  await clickVisible(page, "[data-deve-repo-switcher-remove]");
+  await waitUntil("Android repo removal preview", () => page.call(() => {
+    const dialog = globalThis.__deveVisibleElement('[data-deve-repo-removal-dialog="visible"]');
+    const preserved = dialog?.querySelector("#repo-removal-preserved-heading");
+    const confirm = dialog?.querySelector('[data-deve-repo-removal-confirm="true"]');
+    return dialog && preserved && confirm instanceof HTMLButtonElement && !confirm.disabled;
+  }));
+  await clickVisible(page, '[data-deve-repo-removal-confirm="true"]');
+  const noScope = await waitUntil("Android last repo NoScope finalization", async () => {
+    const current = await readRepoScope(page);
+    return current.repoId === "" ? current : null;
+  });
+  assert.ok(
+    Number.isInteger(noScope.scopeNonce) && noScope.scopeNonce > before.scopeNonce,
+    "Android last repo removal must advance the backend scope nonce",
+  );
+  await openRepoSwitcher(page, waitUntil);
+  const remaining = await page.call(() =>
+    document.querySelectorAll("[data-deve-repo-switcher-item]").length);
+  assert.equal(remaining, 0, "Android NoScope must expose no local repo rows");
+  await clickVisible(page, "[data-deve-repo-switcher-backdrop]");
+  return {
+    alias: row.alias,
+    removedRepoId: before.repoId,
+    scopeNonceBeforeRemoval: before.scopeNonce,
+    scopeNonceAfterRemoval: noScope.scopeNonce,
+    noScope: true,
+  };
 }

@@ -7,6 +7,7 @@ import {
   commitAndVerifyHistory,
   createAndEditDocument,
   delay,
+  exerciseLastRepoRemoval,
   findBundledLocalPage,
   waitForReady,
   waitUntil,
@@ -105,14 +106,6 @@ async function main() {
   }));
   assert.ok(scope.repoId, "LocalBackend must expose the backend-projected repo scope");
   assert.ok(Number.isInteger(scope.scopeNonce) && scope.scopeNonce > 0);
-  if (authorityEvidencePath) {
-    writeFileSync(authorityEvidencePath, `${JSON.stringify({
-      origin: new URL(page.url()).origin,
-      httpBase: nativeBootstrap.http_base,
-      sessionBound: nativeBootstrap.session_bound,
-      ...scope,
-    }, null, 2)}\n`, "utf8");
-  }
   assert.equal(await page.locator("#login-username").count(), 0, "native session must bypass login UI");
   const stamp = Date.now();
   console.log("desktop-packaged-ui-webview: creating and editing document");
@@ -125,6 +118,26 @@ async function main() {
   await commitAndVerifyHistory(page, `packaged ui smoke ${stamp}`);
   console.log("desktop-packaged-ui-webview: checking Settings focus trap");
   await verifySettingsFocusTrap(page, assertNoErrors);
+  console.log("desktop-packaged-ui-webview: removing last repo into NoScope");
+  const repoLifecycle = await exerciseLastRepoRemoval(page);
+  if (authorityEvidencePath) {
+    writeFileSync(authorityEvidencePath, `${JSON.stringify({
+      schema: 1,
+      producer: "smoke-desktop-packaged-ui",
+      mode: "local-backend",
+      origin: new URL(page.url()).origin,
+      httpBase: nativeBootstrap.http_base,
+      sessionBound: nativeBootstrap.session_bound,
+      scope,
+      repoLifecycle,
+      journey: {
+        loginOrNativeSession: true,
+        edit: true,
+        commitHistory: true,
+        repoRemovalNoScope: repoLifecycle.noScope,
+      },
+    }, null, 2)}\n`, "utf8");
+  }
   assertNoErrors("packaged WebView");
   console.log("desktop-packaged-ui-webview: ok");
 }

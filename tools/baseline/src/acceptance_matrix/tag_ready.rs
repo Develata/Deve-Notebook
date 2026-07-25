@@ -13,8 +13,11 @@ use std::path::Path;
 use std::process::Command;
 
 mod android;
+mod desktop;
+mod repo_lifecycle;
 
 use android::validate_android_claims;
+use desktop::validate_desktop_claims;
 
 #[derive(Clone, Debug)]
 struct ReceiptRecord {
@@ -141,6 +144,14 @@ fn validate_receipt(
     }
     if row.surface == "android" {
         validate_android_claims(receipt, row)?;
+    }
+    if row.surface == "desktop"
+        && matches!(
+            row.evidence_id.as_str(),
+            "smoke.desktop.local-backend" | "smoke.desktop.remote-browser"
+        )
+    {
+        validate_desktop_claims(receipt, row)?;
     }
     validate_freshness(receipt, row, now)
 }
@@ -351,150 +362,4 @@ fn git_output<const N: usize>(root: &Path, args: [&str; N]) -> Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        Receipt, ReceiptProducerBinding, ReceiptRecord, validate_execution_groups, validate_receipt,
-    };
-    use crate::acceptance_matrix::model::MatrixRow;
-    use chrono::{Duration, Utc};
-    use serde_json::json;
-    use std::collections::BTreeMap;
-
-    fn row() -> MatrixRow {
-        MatrixRow {
-            requirement_id: "journey.android".into(),
-            journey_id: "android-local-backend".into(),
-            flow_id: "none".into(),
-            case_id: "none".into(),
-            surface: "android".into(),
-            mode: "local-backend".into(),
-            gate: "tag-ready".into(),
-            requirement: "required".into(),
-            evidence_kind: "receipt".into(),
-            evidence_id: "smoke.android".into(),
-            evidence_ref: "receipts/smoke.android.json".into(),
-            freshness: "target-host-30d".into(),
-            note: String::new(),
-        }
-    }
-
-    fn binding() -> ReceiptProducerBinding {
-        ReceiptProducerBinding {
-            producer_id: "android.local-backend".into(),
-            contract_fingerprint: "fnv1a64:1111111111111111".into(),
-            evidence_ids: vec!["smoke.android".into()],
-            artifacts: vec!["scripts/smoke-mobile-android-lifecycle.sh".into()],
-            bound_env: Vec::new(),
-        }
-    }
-
-    fn record(now: chrono::DateTime<Utc>) -> ReceiptRecord {
-        ReceiptRecord {
-            relative_path: "receipts/smoke.android.json".into(),
-            receipt: Receipt {
-                schema: 3,
-                producer_id: "android.local-backend".into(),
-                producer_contract: "fnv1a64:1111111111111111".into(),
-                execution_id: "exec-fnv1a64-2222222222222222".into(),
-                execution_evidence_ids: vec!["smoke.android".into()],
-                evidence_id: "smoke.android".into(),
-                evidence_ref: "receipts/smoke.android.json".into(),
-                head: "abc".into(),
-                head_after: Some("abc".into()),
-                dirty_before: false,
-                dirty_after: false,
-                os: "linux".into(),
-                arch: "x86_64".into(),
-                target_os: "android".into(),
-                surface: "android".into(),
-                mode: "local-backend".into(),
-                started_at: (now - Duration::minutes(1)).to_rfc3339(),
-                finished_at: now.to_rfc3339(),
-                status: "passed".into(),
-                exit_code: Some(0),
-                error: None,
-                command_program: "bash".into(),
-                command_arg_count: 1,
-                command_fingerprint: "fnv1a64:0123456789abcdef".into(),
-                command_artifacts: vec!["scripts/smoke-mobile-android-lifecycle.sh".into()],
-                producer_inputs: BTreeMap::new(),
-                claims: Some(json!({
-                    "schema": 1,
-                    "producer": "smoke-mobile-android-lifecycle",
-                    "mode": "local-backend",
-                    "target": {
-                        "sdkLevel": 29,
-                        "webViewProviderPackage": "com.google.android.webview",
-                        "webViewProviderVersion": "137.0.7151.115",
-                        "webViewProviderMajor": 137,
-                        "avdName": "deve-api37",
-                        "buildFingerprint": "google/sdk_gphone64_x86_64/test",
-                        "model": "sdk_gphone64_x86_64",
-                        "supportBaseline": true
-                    },
-                    "webcrypto": { "writable": true, "blocker": null },
-                    "journey": {
-                        "loginOrNativeSession": true,
-                        "edit": true,
-                        "commitHistory": true,
-                        "backgroundResume": true,
-                        "staleScopeRejected": true,
-                        "pendingPreserved": true,
-                        "writableLifecycleComplete": true
-                    }
-                })),
-            },
-        }
-    }
-
-    fn validate_fixture(
-        record: &ReceiptRecord,
-        row: &MatrixRow,
-        binding: &ReceiptProducerBinding,
-    ) -> Result<(), anyhow::Error> {
-        validate_execution_groups([&record.receipt], "acceptance-matrix tag-ready fixture")?;
-        validate_receipt(record, row, binding, "abc", Utc::now())
-    }
-
-    #[test]
-    fn target_host_receipt_requires_current_producer_contract() {
-        let now = Utc::now();
-        let row = row();
-        let binding = binding();
-        let mut record = record(now);
-        assert!(validate_fixture(&record, &row, &binding).is_ok());
-        record.receipt.producer_id = "manual.unbound".into();
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-        record.receipt.producer_id = binding.producer_id.clone();
-        record.receipt.producer_contract = "fnv1a64:9999999999999999".into();
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-    }
-
-    #[test]
-    fn target_host_receipt_rejects_dirty_stale_and_future_ranges() {
-        let now = Utc::now();
-        let row = row();
-        let binding = binding();
-        let mut record = record(now);
-        record.receipt.dirty_before = true;
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-        record.receipt.dirty_before = false;
-        record.receipt.started_at = (now - Duration::days(31)).to_rfc3339();
-        record.receipt.finished_at = (now - Duration::days(31)).to_rfc3339();
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-        record.receipt.started_at = (now + Duration::minutes(2)).to_rfc3339();
-        record.receipt.finished_at = now.to_rfc3339();
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-    }
-
-    #[test]
-    fn execution_group_requires_every_declared_sibling() {
-        let now = Utc::now();
-        let row = row();
-        let mut binding = binding();
-        binding.evidence_ids.push("smoke.android.second".into());
-        let mut record = record(now);
-        record.receipt.execution_evidence_ids = binding.evidence_ids.clone();
-        assert!(validate_fixture(&record, &row, &binding).is_err());
-    }
-}
+mod tests;

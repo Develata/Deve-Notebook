@@ -103,6 +103,13 @@ jobs:
           pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
           if ($LASTEXITCODE -ne 0) { throw 'PowerShell WebView2 CDP regression failed' }
 
+      - name: Run Windows cross-process repo lifecycle producer
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer repo-lifecycle.process-windows
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-repo-lifecycle"
+
       - name: Build exact Web projection
         run: scripts/build-web-dist-ci.sh
 

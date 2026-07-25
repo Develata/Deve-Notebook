@@ -10,12 +10,24 @@ const localSmoke = fs.readFileSync(
   new URL("./smoke-mobile-android-lifecycle.sh", import.meta.url),
   "utf8",
 );
+const localJourney = fs.readFileSync(
+  new URL("./smoke-mobile-android-lifecycle.mjs", import.meta.url),
+  "utf8",
+);
 const remoteSmoke = fs.readFileSync(
   new URL("./smoke-mobile-android-remote-browser.sh", import.meta.url),
   "utf8",
 );
 const remoteJourney = fs.readFileSync(
   new URL("./smoke-mobile-android-remote-browser.mjs", import.meta.url),
+  "utf8",
+);
+const businessFlow = fs.readFileSync(
+  new URL("./lib/android-business-flow.mjs", import.meta.url),
+  "utf8",
+);
+const writableEvidence = fs.readFileSync(
+  new URL("./lib/android-writable-evidence.mjs", import.meta.url),
   "utf8",
 );
 const cleanup = fs.readFileSync(
@@ -55,6 +67,20 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
 test("local and remote producers use separate claims outputs", () => {
   assert.match(localSmoke, /DEVE_MOBILE_ANDROID_LOCAL_EVIDENCE_PATH/);
   assert.match(remoteSmoke, /DEVE_MOBILE_ANDROID_REMOTE_EVIDENCE_PATH/);
+});
+
+test("both Android writable journeys remove the last repo through backend preview and reach NoScope", () => {
+  assert.match(businessFlow, /data-deve-repo-switcher-remove/);
+  assert.match(businessFlow, /data-deve-repo-removal-confirm/);
+  assert.match(businessFlow, /Android last repo NoScope finalization/);
+  assert.match(businessFlow, /noScope\.scopeNonce > before\.scopeNonce/);
+  assert.match(localJourney, /exerciseAndroidLastRepoRemoval/);
+  assert.match(remoteJourney, /exerciseAndroidLastRepoRemoval/);
+  assert.match(localJourney, /repoRemovalNoScope/);
+  assert.match(remoteJourney, /repoRemovalNoScope/);
+  assert.match(localJourney, /repoLifecycle,\s*journey:/);
+  assert.match(remoteJourney, /journey,\s*repoLifecycle,/);
+  assert.match(writableEvidence, /if \(repoLifecycle\) evidence\.repoLifecycle = repoLifecycle/);
 });
 
 test("every RemoteBrowser page generation rechecks network, CSP, and native bridge isolation", () => {

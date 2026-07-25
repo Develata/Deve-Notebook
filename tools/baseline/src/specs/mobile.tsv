@@ -688,8 +688,9 @@ contains	scripts/lib/android-target-capability.mjs	providerMajor >= 137
 contains	scripts/lib/android-target-capability.mjs	sdkLevel >= 29
 contains	scripts/smoke-mobile-android-lifecycle.mjs	mobile-android-lifecycle: backgrounding app
 contains	scripts/smoke-mobile-android-lifecycle.mjs	readonly negative evidence accepted
-contains	scripts/smoke-mobile-android-lifecycle.mjs	probeWebCryptoEd25519
-contains	scripts/smoke-mobile-android-lifecycle.mjs	evaluateWritableProbeExpectation
+contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/android-identity-capability.mjs
+contains	scripts/lib/android-identity-capability.mjs	probeWebCryptoEd25519
+contains	scripts/lib/android-identity-capability.mjs	evaluateWritableProbeExpectation
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-webview-interaction.mjs
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/android-business-flow.mjs
 contains	scripts/lib/android-business-flow.mjs	./mobile-source-control-interaction.mjs

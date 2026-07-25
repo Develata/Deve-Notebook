@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 const timeoutMs = Number(process.env.DEVE_DESKTOP_PACKAGED_UI_TIMEOUT_MS ?? "60000");
 
 export function delay(ms) {
@@ -109,4 +111,68 @@ export async function commitAndVerifyHistory(page, message) {
   const history = page.locator('[data-deve-sc-panel-body="history"]');
   await history.waitFor({ state: "visible", timeout: timeoutMs });
   await waitUntil("commit visible in history", async () => (await history.innerText()).includes(message));
+}
+
+async function readScope(page) {
+  return page.locator("[data-deve-sync-status]").first().evaluate((element) => ({
+    status: element.getAttribute("data-deve-sync-status"),
+    repoId: element.getAttribute("data-deve-repo-id") ?? "",
+    scopeNonce: Number(element.getAttribute("data-deve-scope-nonce")),
+  }));
+}
+
+async function openRepoSwitcher(page) {
+  const trigger = page.locator("[data-deve-repo-switcher-trigger]").first();
+  await trigger.waitFor({ state: "visible", timeout: timeoutMs });
+  await trigger.click();
+  await page.locator("[data-deve-repo-switcher-create]").waitFor({
+    state: "visible",
+    timeout: timeoutMs,
+  });
+}
+
+export async function exerciseLastRepoRemoval(page) {
+  const before = await readScope(page);
+  assert.equal(before.status, "ready");
+  assert.ok(before.repoId, "repo removal journey requires a selected repo");
+  assert.ok(Number.isInteger(before.scopeNonce) && before.scopeNonce > 0);
+
+  await openRepoSwitcher(page);
+  const rows = page.locator("[data-deve-repo-switcher-item]");
+  assert.equal(await rows.count(), 1, "repo removal journey requires exactly one local repo");
+  const alias = (await rows.first().getAttribute("data-deve-repo-switcher-item-name")) ?? "";
+  assert.ok(alias, "last repo must expose a backend-projected alias");
+  const row = rows.first().locator("xpath=..");
+  await row.locator("[data-deve-repo-switcher-actions]").click();
+  await page.locator("[data-deve-repo-switcher-remove]").click();
+
+  const dialog = page.locator('[data-deve-repo-removal-dialog="visible"]');
+  await dialog.waitFor({ state: "visible", timeout: timeoutMs });
+  await dialog.locator("#repo-removal-preserved-heading").waitFor({
+    state: "visible",
+    timeout: timeoutMs,
+  });
+  const confirm = dialog.locator('[data-deve-repo-removal-confirm="true"]');
+  assert.equal(await confirm.isEnabled(), true, "backend preview must admit the removal");
+  await confirm.click();
+  await dialog.waitFor({ state: "hidden", timeout: timeoutMs });
+
+  const noScope = await waitUntil("last repo removal NoScope finalization", async () => {
+    const current = await readScope(page);
+    return current.repoId === "" ? current : null;
+  });
+  assert.ok(
+    Number.isInteger(noScope.scopeNonce) && noScope.scopeNonce > before.scopeNonce,
+    "last repo removal must advance the backend scope nonce",
+  );
+  await openRepoSwitcher(page);
+  assert.equal(await page.locator("[data-deve-repo-switcher-item]").count(), 0);
+  await page.locator("[data-deve-repo-switcher-backdrop]").click();
+  return {
+    alias,
+    removedRepoId: before.repoId,
+    scopeNonceBeforeRemoval: before.scopeNonce,
+    scopeNonceAfterRemoval: noScope.scopeNonce,
+    noScope: true,
+  };
 }

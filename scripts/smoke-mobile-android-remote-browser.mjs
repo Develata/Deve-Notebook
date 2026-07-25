@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
 import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
+import { writeAndroidWritableEvidence } from "./lib/android-writable-evidence.mjs";
 import {
   findStableAppPage,
   isExpectedCdpTargetRetirement,
@@ -13,6 +12,7 @@ import {
   commitAndroidChange,
   createAndroidDocument,
   dispatchWebViewText,
+  exerciseAndroidLastRepoRemoval,
   loginAndroidRemote,
 } from "./lib/android-business-flow.mjs";
 
@@ -192,23 +192,6 @@ async function nativeInvoke(page, command, args = {}) {
   return outcome.value;
 }
 
-function writeEvidence(capability, recovery, journey) {
-  if (!evidencePath) return;
-  if (!targetFactsPath) throw new Error("Android RemoteBrowser evidence requires target facts");
-  const target = JSON.parse(readFileSync(targetFactsPath, "utf8"));
-  const evidence = {
-    schema: 1,
-    producer: "smoke-mobile-android-remote-browser",
-    mode: "remote-browser",
-    target,
-    webcrypto: capability,
-    journey,
-    recovery,
-  };
-  mkdirSync(dirname(evidencePath), { recursive: true });
-  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
-}
-
 async function main() {
   if (!cdpEndpoint || !remoteOrigin || !username || !password || !adb || !serial) {
     throw new Error("CDP endpoint, remote origin, credentials, adb, and serial are required");
@@ -255,6 +238,7 @@ async function main() {
   assert.equal(remoteScope.status, "ready");
   assert.ok(remoteScope.repoId, "RemoteBrowser must expose a repo-scoped ready handshake");
   assert.ok(Number.isInteger(remoteScope.scopeNonce) && remoteScope.scopeNonce > 0);
+  const repoLifecycle = await exerciseAndroidLastRepoRemoval(page, { waitUntil });
 
   const ipcRequests = observations.requests.filter((url) => url.includes("ipc.localhost"));
   const ipcCspErrors = observations.consoleErrors.filter((message) =>
@@ -369,6 +353,7 @@ async function main() {
     edit: true,
     commitHistory: true,
     backgroundResume: true,
+    repoRemovalNoScope: repoLifecycle.noScope,
     zeroNativeIpc: ipcRequests.length === 0 && ipcCspErrors.length === 0,
     nativeLocalRecovery: transition.phase === "local_window_created",
     remoteSurfaceDestroyedBeforeLocalIpc: remoteSurfaceRetired
@@ -383,7 +368,16 @@ async function main() {
     writableLifecycleComplete: true,
   };
   assert.ok(Object.values(journey).every((value) => value === true));
-  writeEvidence(capability, recovery, journey);
+  writeAndroidWritableEvidence({
+    evidencePath,
+    targetFactsPath,
+    producer: "smoke-mobile-android-remote-browser",
+    mode: "remote-browser",
+    webcrypto: capability,
+    journey,
+    repoLifecycle,
+    recovery,
+  });
   console.log("mobile-android-remote-browser: ok");
 }
 

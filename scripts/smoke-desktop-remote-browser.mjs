@@ -4,6 +4,7 @@ import { writeFileSync } from "node:fs";
 import {
   commitAndVerifyHistory,
   createAndEditDocument,
+  exerciseLastRepoRemoval,
   waitForReady,
   waitUntil,
 } from "./lib/desktop-webview-business-flow.mjs";
@@ -82,13 +83,7 @@ async function main() {
   }));
   assert.ok(scope.repoId, "RemoteBrowser must expose the backend-projected repo scope");
   assert.ok(Number.isInteger(scope.scopeNonce) && scope.scopeNonce > 0);
-  if (authorityEvidencePath) {
-    writeFileSync(authorityEvidencePath, `${JSON.stringify({
-      origin: new URL(page.url()).origin,
-      ...scope,
-    }, null, 2)}\n`, "utf8");
-  }
-
+  const repoLifecycle = await exerciseLastRepoRemoval(page);
   const ipcRequests = networkUrls.filter((url) => {
     try {
       return new URL(url).hostname === "ipc.localhost";
@@ -100,6 +95,24 @@ async function main() {
     /ipc\.localhost|content security policy|refused to connect/i.test(message));
   assert.deepEqual(ipcRequests, [], `RemoteBrowser emitted native IPC requests: ${ipcRequests}`);
   assert.deepEqual(ipcCspErrors, [], `RemoteBrowser emitted IPC/CSP errors: ${ipcCspErrors}`);
+  const zeroNativeIpc = ipcRequests.length === 0 && ipcCspErrors.length === 0;
+  if (authorityEvidencePath) {
+    writeFileSync(authorityEvidencePath, `${JSON.stringify({
+      schema: 1,
+      producer: "smoke-desktop-remote-browser",
+      mode: "remote-browser",
+      origin: new URL(page.url()).origin,
+      scope,
+      repoLifecycle,
+      journey: {
+        loginOrNativeSession: true,
+        edit: true,
+        commitHistory: true,
+        zeroNativeIpc,
+        repoRemovalNoScope: repoLifecycle.noScope,
+      },
+    }, null, 2)}\n`, "utf8");
+  }
   console.log("desktop-remote-browser-webview: ok");
 }
 

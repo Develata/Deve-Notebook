@@ -21,6 +21,12 @@ test("packaged smoke uses real UI intents for document and source-control flows"
   assert.match(businessFlowSource, /cm\.pressSequentially\(content/);
   assert.match(businessFlowSource, /textarea\[name=\\?"commit-message\\?"\]/);
   assert.match(businessFlowSource, /data-deve-sc-panel-body=\\?"history\\?"/);
+  assert.match(businessFlowSource, /data-deve-repo-switcher-remove/);
+  assert.match(businessFlowSource, /data-deve-repo-removal-confirm/);
+  assert.match(businessFlowSource, /last repo removal NoScope finalization/);
+  assert.match(businessFlowSource, /noScope\.scopeNonce > before\.scopeNonce/);
+  assert.match(source, /exerciseLastRepoRemoval/);
+  assert.match(source, /repoRemovalNoScope/);
   assert.doesNotMatch(businessFlowSource, /fetch\([^)]*(ledger|commit|source.control)/i);
 });
 

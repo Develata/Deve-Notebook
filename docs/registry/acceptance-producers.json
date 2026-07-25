@@ -695,6 +695,8 @@
         "scripts/lib/mobile-webview-interaction.mjs",
         "scripts/lib/mobile-source-control-interaction.mjs",
         "scripts/lib/android-business-flow.mjs",
+        "scripts/lib/android-identity-capability.mjs",
+        "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
@@ -770,6 +772,7 @@
         "scripts/lib/mobile-webview-interaction.mjs",
         "scripts/lib/mobile-source-control-interaction.mjs",
         "scripts/lib/android-business-flow.mjs",
+        "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
@@ -817,7 +820,9 @@
         "DEVE_DESKTOP_PACKAGE_NO_SIGN": "1",
         "DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED": "1"
       },
-      "claims_env": {},
+      "claims_env": {
+        "smoke.desktop.local-backend": "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH"
+      },
       "artifacts": [
         "scripts/check-desktop-platform-package-build.sh",
         "scripts/check-desktop-installer-smoke.sh",
@@ -845,7 +850,7 @@
           ]
         }
       ],
-      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend, native session, NoteGit, Git bridge, and orphan cleanup"
+      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend, backend-owned last-repo removal into NoScope, native session, NoteGit, Git bridge, and orphan cleanup"
     },
     {
       "producer_id": "desktop.remote-browser",
@@ -872,7 +877,9 @@
         "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
       ],
       "environment": {},
-      "claims_env": {},
+      "claims_env": {
+        "smoke.desktop.remote-browser": "DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH"
+      },
       "artifacts": [
         "scripts/check-desktop-remote-browser-smoke.ps1",
         "scripts/lib/desktop-install-root.ps1",
@@ -928,7 +935,139 @@
           ]
         }
       ],
-      "note": "Exercise packaged Windows RemoteBrowser and native-owned recovery to a fresh LocalBackend without remote IPC"
+      "note": "Exercise packaged Windows RemoteBrowser last-repo removal into NoScope and native-owned recovery to a fresh LocalBackend without remote IPC"
+    },
+    {
+      "producer_id": "repo-lifecycle.process-linux",
+      "evidence_ids": [
+        "smoke.repo-lifecycle.process-linux"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux"
+      ],
+      "timeout_seconds": 1800,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/repo-lifecycle-producer-contract.test.mjs"
+      ],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "repo_lifecycle_runtime::tests" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "repo_lifecycle_job_runtime::tests::removal" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--test" },
+            { "literal": "repo_removal_cli_test" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "node",
+          "args": [
+            { "literal": "--test" },
+            { "literal": "scripts/repo-lifecycle-producer-contract.test.mjs" }
+          ]
+        }
+      ],
+      "note": "Linux exact-HEAD producer combines host-owned secondary/last-repo runtime proof with real removal/repair children, lost-response replay, preservation, and exit 20/21/22"
+    },
+    {
+      "producer_id": "repo-lifecycle.process-windows",
+      "evidence_ids": [
+        "smoke.repo-lifecycle.process-windows"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "windows"
+      ],
+      "timeout_seconds": 1800,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/repo-lifecycle-producer-contract.test.mjs"
+      ],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "repo_lifecycle_runtime::tests" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "repo_lifecycle_job_runtime::tests::removal" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--test" },
+            { "literal": "repo_removal_cli_test" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "node",
+          "args": [
+            { "literal": "--test" },
+            { "literal": "scripts/repo-lifecycle-producer-contract.test.mjs" }
+          ]
+        }
+      ],
+      "note": "Windows exact-HEAD producer combines host-owned secondary/last-repo runtime proof with real removal/repair children, lost-response replay, preservation, and exit 20/21/22"
     },
     {
       "producer_id": "docker.remote-import-browser",
@@ -1098,93 +1237,6 @@
       ],
       "steps": [
         {
-          "program": "cargo",
-          "args": [
-            {
-              "literal": "test"
-            },
-            {
-              "literal": "--locked"
-            },
-            {
-              "literal": "-p"
-            },
-            {
-              "literal": "deve_cli"
-            },
-            {
-              "literal": "--lib"
-            },
-            {
-              "literal": "repo_lifecycle_job_runtime::tests::removal"
-            },
-            {
-              "literal": "--"
-            },
-            {
-              "literal": "--nocapture"
-            }
-          ]
-        },
-        {
-          "program": "cargo",
-          "args": [
-            {
-              "literal": "test"
-            },
-            {
-              "literal": "--locked"
-            },
-            {
-              "literal": "-p"
-            },
-            {
-              "literal": "deve_cli"
-            },
-            {
-              "literal": "--lib"
-            },
-            {
-              "literal": "commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary"
-            },
-            {
-              "literal": "--"
-            },
-            {
-              "literal": "--nocapture"
-            }
-          ]
-        },
-        {
-          "program": "cargo",
-          "args": [
-            {
-              "literal": "test"
-            },
-            {
-              "literal": "--locked"
-            },
-            {
-              "literal": "-p"
-            },
-            {
-              "literal": "deve_cli"
-            },
-            {
-              "literal": "--test"
-            },
-            {
-              "literal": "repo_removal_cli_test"
-            },
-            {
-              "literal": "--"
-            },
-            {
-              "literal": "--nocapture"
-            }
-          ]
-        },
-        {
           "program": "bash",
           "args": [
             {
@@ -1193,7 +1245,7 @@
           ]
         }
       ],
-      "note": "Run exact-head ownership-aware removal tests, test-harness child-process exit proofs plus a real deve fail-closed repair process, and authenticated Desktop/Mobile Docker browser removal, NoScope restart, multiclient edit/offline recovery, Source Control, and External Changes journeys"
+      "note": "Run authenticated Desktop/Mobile Docker browser removal, initiator/observer NoScope finalization, exact candidate restart, multiclient edit/offline recovery, Source Control, and External Changes journeys"
     },
     {
       "producer_id": "docker.p2p-gap-recovery",

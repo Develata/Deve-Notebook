@@ -26,6 +26,18 @@ if ([string]::IsNullOrEmpty($Password)) {
 
 function Fail($Message) { throw "desktop-remote-browser-smoke: $Message" }
 
+function Resolve-AuthorityEvidencePath($VariableName, $FallbackPath) {
+    $configured = [Environment]::GetEnvironmentVariable($VariableName, "Process")
+    if ([string]::IsNullOrWhiteSpace($configured)) {
+        return [System.IO.Path]::GetFullPath($FallbackPath)
+    }
+    return [System.IO.Path]::GetFullPath($configured)
+}
+
+function Restore-ProcessEnvironmentVariable($VariableName, $PreviousValue) {
+    [Environment]::SetEnvironmentVariable($VariableName, $PreviousValue, "Process")
+}
+
 function Get-InstalledSidecars($ExecutablePath) {
     $expectedPath = [System.IO.Path]::GetFullPath($ExecutablePath)
     @(Get-CimInstance Win32_Process -Filter "Name = 'deve_cli.exe'" | Where-Object {
@@ -187,8 +199,25 @@ $runRoot = Join-Path $workRootPath "remote-browser-$runId"
 $dataRoot = Join-Path $runRoot "data"
 $webviewRoot = Join-Path $runRoot "webview2"
 $playwrightRoot = Join-Path $workRootPath "playwright-core"
-$remoteAuthorityEvidence = Join-Path $runRoot "remote-authority.json"
-$localAuthorityEvidence = Join-Path $runRoot "local-authority.json"
+$remoteAuthorityEvidenceBeforeSmoke =
+    [Environment]::GetEnvironmentVariable("DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH", "Process")
+$localAuthorityEvidenceBeforeSmoke =
+    [Environment]::GetEnvironmentVariable("DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH", "Process")
+$remoteAuthorityEvidence = Resolve-AuthorityEvidencePath `
+    "DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH" `
+    (Join-Path $runRoot "remote-authority.json")
+$localAuthorityEvidence = Resolve-AuthorityEvidencePath `
+    "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH" `
+    (Join-Path $runRoot "local-authority.json")
+if (
+    [string]::Equals(
+        $remoteAuthorityEvidence,
+        $localAuthorityEvidence,
+        [System.StringComparison]::OrdinalIgnoreCase
+    )
+) {
+    Fail "remote and local authority evidence paths must be distinct"
+}
 New-Item -ItemType Directory -Force -Path $dataRoot, $webviewRoot, $playwrightRoot | Out-Null
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 $preferenceJson = @{ mode = "remote"; remote_url = $remote.GetLeftPart([UriPartial]::Authority) } |
@@ -242,7 +271,11 @@ try {
     $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $remote.GetLeftPart([UriPartial]::Authority)
     $env:DEVE_DESKTOP_REMOTE_USERNAME = $Username
     $env:DEVE_DESKTOP_REMOTE_PASSWORD = $Password
-    $env:DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH = $remoteAuthorityEvidence
+    [Environment]::SetEnvironmentVariable(
+        "DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH",
+        $remoteAuthorityEvidence,
+        "Process"
+    )
     try {
         & $node (Join-Path $PSScriptRoot "smoke-desktop-remote-browser.mjs")
         if ($LASTEXITCODE -ne 0) { Fail "RemoteBrowser WebView automation failed" }
@@ -250,7 +283,9 @@ try {
         Remove-Item Env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN -ErrorAction SilentlyContinue
         Remove-Item Env:DEVE_DESKTOP_REMOTE_USERNAME -ErrorAction SilentlyContinue
         Remove-Item Env:DEVE_DESKTOP_REMOTE_PASSWORD -ErrorAction SilentlyContinue
-        Remove-Item Env:DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH -ErrorAction SilentlyContinue
+        Restore-ProcessEnvironmentVariable `
+            "DEVE_DESKTOP_REMOTE_AUTHORITY_EVIDENCE_PATH" `
+            $remoteAuthorityEvidenceBeforeSmoke
     }
 
     $oldPid = $desktop.Id
@@ -290,22 +325,47 @@ try {
         Fail "native local transition did not persist canonical local preference"
     }
 
-    $env:DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH = $localAuthorityEvidence
+    [Environment]::SetEnvironmentVariable(
+        "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH",
+        $localAuthorityEvidence,
+        "Process"
+    )
     try {
         & $node (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs")
         if ($LASTEXITCODE -ne 0) { Fail "restarted LocalBackend WebView automation failed" }
     } finally {
-        Remove-Item Env:DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH -ErrorAction SilentlyContinue
+        Restore-ProcessEnvironmentVariable `
+            "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH" `
+            $localAuthorityEvidenceBeforeSmoke
     }
     $remoteAuthority = Get-Content -Raw -LiteralPath $remoteAuthorityEvidence | ConvertFrom-Json
     $localAuthority = Get-Content -Raw -LiteralPath $localAuthorityEvidence | ConvertFrom-Json
+    if (
+        [int]$remoteAuthority.schema -ne 1 -or
+        $remoteAuthority.producer -ne "smoke-desktop-remote-browser" -or
+        $remoteAuthority.mode -ne "remote-browser" -or
+        [int]$localAuthority.schema -ne 1 -or
+        $localAuthority.producer -ne "smoke-desktop-packaged-ui" -or
+        $localAuthority.mode -ne "local-backend"
+    ) {
+        Fail "mode transition authority evidence schema is invalid"
+    }
+    if (
+        $remoteAuthority.repoLifecycle.noScope -ne $true -or
+        $remoteAuthority.journey.repoRemovalNoScope -ne $true -or
+        $localAuthority.repoLifecycle.noScope -ne $true -or
+        $localAuthority.journey.repoRemovalNoScope -ne $true
+    ) {
+        Fail "mode transition did not prove last-repo NoScope finalization"
+    }
     if ($remoteAuthority.origin -eq $localAuthority.httpBase) {
         Fail "local restart reused the remote authority origin"
     }
     if (
-        [string]::IsNullOrWhiteSpace($remoteAuthority.repoId) -or
-        [string]::IsNullOrWhiteSpace($localAuthority.repoId) -or
-        [int64]$remoteAuthority.scopeNonce -le 0 -or [int64]$localAuthority.scopeNonce -le 0 -or
+        [string]::IsNullOrWhiteSpace($remoteAuthority.scope.repoId) -or
+        [string]::IsNullOrWhiteSpace($localAuthority.scope.repoId) -or
+        [int64]$remoteAuthority.scope.scopeNonce -le 0 -or
+        [int64]$localAuthority.scope.scopeNonce -le 0 -or
         $localAuthority.sessionBound -ne $true
     ) {
         Fail "mode transition did not capture fresh endpoint/session/scope evidence"
