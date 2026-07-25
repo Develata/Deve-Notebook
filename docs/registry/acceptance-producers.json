@@ -1304,6 +1304,41 @@
       "note": "Atomically verify sealed candidate artifacts, SPDX documents, checksums, and GitHub attestations"
     },
     {
+      "producer_id": "github.pvr-enabled",
+      "evidence_ids": [
+        "github.pvr.enabled"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 120,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {
+        "github.pvr.enabled": "DEVE_GITHUB_PVR_CLAIMS"
+      },
+      "artifacts": [
+        "scripts/check-github-pvr-enabled.mjs"
+      ],
+      "steps": [
+        {
+          "program": "node",
+          "args": [
+            {
+              "literal": "scripts/check-github-pvr-enabled.mjs"
+            }
+          ]
+        }
+      ],
+      "note": "Read-only exact-repository GitHub API proof that Private Vulnerability Reporting is enabled"
+    },
+    {
       "producer_id": "security.tag-ready-audit",
       "evidence_ids": [
         "audit.security.tag-ready"

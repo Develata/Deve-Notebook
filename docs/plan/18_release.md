@@ -378,9 +378,11 @@ tag 中唯一 `Deve-Acceptance-Aggregate-Run` trailer 显式绑定、
 或 GitHub Release 创建之前。producer
 失败、缺失、过期或平台不匹配均保持 fail-closed，禁止用空目录或跳过 job 伪装成功。
 
-当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 未启用；Docker、Desktop、Android、
-RemoteBrowser 仍需在合并后的 current HEAD 实际运行 candidate workflow 并生成 producer-bound receipts；首个版本、CHANGELOG 与 release set
-尚未冻结。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
+当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 必须由
+`github.pvr-enabled` 的 current-HEAD receipt 证明；Docker、Desktop、Android、
+RemoteBrowser 仍需在合并后的 current HEAD 实际运行 candidate workflow 并生成 producer-bound receipts；
+`v0.1.0 Public Preview` 与 release set 已由 `docs/registry/release-freeze.json` 冻结，
+CHANGELOG 仍未冻结。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
 但在 current HEAD 的成功 run/receipt 出现前仍不能声称签名或安装证据已满足。开源治理文件、ruleset、
 Dependabot/CodeQL/container scan、operator runbook 属 P1；`.editorconfig`、
 fuzz/performance/privacy policy 属 P2 advisory。Rust toolchain pin 由

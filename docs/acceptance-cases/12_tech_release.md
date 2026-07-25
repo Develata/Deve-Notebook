@@ -465,6 +465,8 @@
     - contract_assert: receipt_collection_rejects_inconsistent_execution_fields true
     - contract_assert: producer_finally_cleanup_is_execution_scoped_and_bounded true
     - contract_assert: one_producer_execution_atomically_emits_multiple_bound_receipts true
+    - contract_assert: github_pvr_receipt_uses_readonly_exact_repository_get true
+    - contract_assert: github_pvr_receipt_requires_enabled_true true
     - contract_assert: explicit_cross_workflow_run_ids_are_head_bound_before_collection true
     - contract_assert: candidate_and_receipt_source_runs_are_explicit_head_version_bound true
     - contract_assert: sealed_candidate_artifact_expiry_requires_full_regeneration true

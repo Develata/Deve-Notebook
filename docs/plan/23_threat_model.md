@@ -109,6 +109,12 @@ provider metadata、listing order、locator 与 remote path 都不是 authority�
 ## 7. Coordinated Vulnerability Disclosure {#coordinated-vulnerability-disclosure}
 
 - **入口**：`SECURITY.md` 声明私密报告渠道；不在公开 issue 讨论未披露漏洞。
+- **GitHub PVR**：公开仓库的 Private Vulnerability Reporting 启用状态是 GitHub
+  repository governance fact，不进入产品 runtime、Ledger、CLI 或 Web。first-tag
+  evidence 必须由只读 `github.pvr-enabled` producer 对精确
+  `Develata/Deve-Notebook` GET endpoint 取得，并且只有官方响应
+  `{"enabled":true}` 才能生成 current-HEAD receipt；producer 不拥有 PUT、DELETE
+  或其它 repository setting mutation 能力。
 - **Embargo**：修复就绪前对报告内容保密；高危漏洞优先 T1 处理（见 `22_reliability_observability` Alerting Tier）。
 - **SLA**：确认 / 初步评估 / 修复发布的目标时限在 `SECURITY.md` 声明。
 - **披露**：修复发布后公开致谢与 CVE/advisory（如适用）。
