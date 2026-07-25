@@ -20,6 +20,7 @@ assert_fails() {
 
 [[ "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_VERSION" == "2026.7.2" ]] || fail "cloudflared version drift"
 [[ "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_LINUX_AMD64_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "invalid pinned SHA-256"
+[[ "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_WINDOWS_AMD64_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "invalid Windows pinned SHA-256"
 remote_fixture_assert_https_origin "https://fixture.example.invalid"
 remote_fixture_assert_https_origin "https://fixture.example.invalid:8443"
 assert_fails remote_fixture_assert_https_origin "http://fixture.example.invalid"
@@ -68,10 +69,26 @@ esac
 sleep 60 &
 owned_pid="$!"
 token="$(remote_fixture_process_token "$owned_pid")"
+sleep 0.3
+[[ "$(remote_fixture_process_token "$owned_pid")" == "$token" ]] \
+  || fail "live process ownership token drifted"
 assert_fails remote_fixture_stop_pid test "$owned_pid" "wrong-token"
 kill -0 "$owned_pid" 2>/dev/null || fail "mismatched token stopped an unowned process"
 remote_fixture_stop_pid test "$owned_pid" "$token"
 kill -0 "$owned_pid" 2>/dev/null && fail "owned process survived cleanup"
+owned_pid=""
+
+node -e 'process.on("SIGTERM",()=>{});setInterval(()=>{},1000);' &
+owned_pid="$!"
+token=""
+for _ in $(seq 1 50); do
+  token="$(remote_fixture_process_token "$owned_pid" 2>/dev/null)" || token=""
+  [[ -n "$token" ]] && break
+  sleep 0.1
+done
+[[ -n "$token" ]] || fail "owned job token was unavailable"
+remote_fixture_stop_owned_job "TERM-resistant test" "$owned_pid" "$token"
+remote_fixture_pid_active "$owned_pid" && fail "owned job survived bounded cleanup"
 owned_pid=""
 
 remote_fixture_run_bounded "parallel drain test" 5 100000 \

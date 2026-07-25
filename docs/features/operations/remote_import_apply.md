@@ -26,6 +26,9 @@
 
 ## Notes
 
-- B4 已接入 Mounted product gate、current locator/ignore admission、Ledger-to-Projection rematerialization 与 typed product intent；B5 whole-session thin UI只消费backend blocker/outcome。ADR 0012 的 repo-local fault + receipt 原子 settlement保持不变。STORE-021 只保留 B6 fresh browser receipt 的真实 gap。
+- B4 已接入 Mounted product gate、current locator/ignore admission、Ledger-to-Projection
+  rematerialization 与 typed product intent；B5 whole-session thin UI只消费backend blocker/outcome。
+  ADR 0012 的 repo-local fault + receipt 原子 settlement保持不变。B6 已为 STORE-021 登记真实 browser
+  producer；最终 candidate current-HEAD receipt仍须重跑。
 - 响应丢失后，相同请求返回 stored receipt，不重复 append；terminal replay 不依赖当前远端 locator，Pending replay 只从 sealed artifacts + Ledger 幂等收敛 Projection。
 - Pending response 必须明确表示 Ledger 已提交且 Projection recovery 未完成，不能伪装成未提交。

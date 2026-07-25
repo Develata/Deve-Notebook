@@ -6,6 +6,7 @@
 
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_VERSION="2026.7.2"
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_LINUX_AMD64_SHA256="ec905ea7b7e327ff8abdde8cb64697a2152de74dbcdbf6aec9db8364eb3886cd"
+readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_WINDOWS_AMD64_SHA256="cdb5d4432f6ae1595654a692a51308b69d2bf7af961f5578d9391837cf072df9"
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECONDS="180"
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYTES="134217728"
 
@@ -88,6 +89,17 @@ remote_fixture_find_free_port() {
 
 remote_fixture_process_token() {
   local pid="$1"
+  if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* || "$(uname -s)" == CYGWIN* ]]; then
+    # MSYS synthesizes /proc start ticks from Windows data and the value can
+    # drift for a live process. Bind the stable native PID, start time, and
+    # executable path exposed by ps -W instead.
+    local token
+    token="$(ps -W 2>/dev/null | awk -v pid="$pid" \
+      'NR > 1 && $1 == pid { print $4 ":" $7 ":" $8; exit }')" || return 1
+    [[ -n "$token" ]] || return 1
+    printf '%s\n' "$token"
+    return 0
+  fi
   [[ -r "/proc/$pid/stat" ]] || return 1
   awk '{print $22}' "/proc/$pid/stat"
 }
@@ -95,9 +107,14 @@ remote_fixture_process_token() {
 remote_fixture_pid_active() {
   local pid="$1"
   kill -0 "$pid" 2>/dev/null || return 1
-  if [[ -r "/proc/$pid/stat" && "$(awk '{print $3}' "/proc/$pid/stat")" == "Z" ]]; then
-    return 1
-  fi
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *)
+      local state
+      state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null)" || return 1
+      [[ "$state" != "Z" ]] || return 1
+      ;;
+  esac
   return 0
 }
 
@@ -190,6 +207,33 @@ remote_fixture_stop_bounded_tree() {
     sleep 0.1
   done
   remote_fixture_fail "$label process tree survived bounded termination"
+}
+
+remote_fixture_stop_owned_job() {
+  local label="$1"
+  local pid="$2"
+  local expected_token="${3:-}"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+
+  if ! remote_fixture_job_active "$pid"; then
+    if ! remote_fixture_pid_active "$pid"; then
+      wait "$pid" 2>/dev/null || true
+      return 0
+    fi
+    local actual_token
+    actual_token="$(remote_fixture_process_token "$pid" || true)"
+    if [[ -z "$expected_token" || "$actual_token" != "$expected_token" ]]; then
+      remote_fixture_fail "refusing to stop reused or unowned $label PID $pid"
+      return 1
+    fi
+  fi
+
+  remote_fixture_stop_bounded_tree "$label" "$pid" 0 || return 1
+  wait "$pid" 2>/dev/null || true
+  if remote_fixture_pid_active "$pid" || remote_fixture_job_active "$pid"; then
+    remote_fixture_fail "$label job survived verified cleanup"
+    return 1
+  fi
 }
 
 remote_fixture_msys_descendants() {
@@ -308,13 +352,24 @@ remote_fixture_sha256() {
 remote_fixture_install_cloudflared() {
   local state_dir="$1"
   local supplied_path="${2:-}"
-  local executable="$state_dir/tools/cloudflared"
-  local expected="$DEVE_REMOTE_FIXTURE_CLOUDFLARED_LINUX_AMD64_SHA256"
-
-  if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
-    remote_fixture_fail "pinned cloudflared fixture currently supports Linux x86_64 only"
-    return 1
-  fi
+  local platform executable expected asset
+  platform="$(uname -s)"
+  case "$platform:$(uname -m)" in
+    Linux:x86_64)
+      executable="$state_dir/tools/cloudflared"
+      expected="$DEVE_REMOTE_FIXTURE_CLOUDFLARED_LINUX_AMD64_SHA256"
+      asset="cloudflared-linux-amd64"
+      ;;
+    MINGW*:x86_64 | MSYS*:x86_64 | CYGWIN*:x86_64)
+      executable="$state_dir/tools/cloudflared.exe"
+      expected="$DEVE_REMOTE_FIXTURE_CLOUDFLARED_WINDOWS_AMD64_SHA256"
+      asset="cloudflared-windows-amd64.exe"
+      ;;
+    *)
+      remote_fixture_fail "pinned cloudflared fixture supports Linux or Windows x86_64 only"
+      return 1
+      ;;
+  esac
   mkdir -p -- "$state_dir/tools"
   if [[ -n "$supplied_path" ]]; then
     if [[ ! -f "$supplied_path" || -L "$supplied_path" ]]; then
@@ -331,7 +386,7 @@ remote_fixture_install_cloudflared() {
     if ! curl --fail --silent --show-error --location \
       --max-time "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECONDS" \
       --max-filesize "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYTES" \
-      "https://github.com/cloudflare/cloudflared/releases/download/${DEVE_REMOTE_FIXTURE_CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
+      "https://github.com/cloudflare/cloudflared/releases/download/${DEVE_REMOTE_FIXTURE_CLOUDFLARED_VERSION}/${asset}" \
       --output "$executable.tmp"; then
       rm -f -- "$executable.tmp"
       remote_fixture_fail "cloudflared download failed within the configured time/size bounds"

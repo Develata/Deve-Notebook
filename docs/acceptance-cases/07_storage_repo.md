@@ -501,7 +501,7 @@
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
     - run: cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
-    - gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
+    - receipt: receipts/smoke.remote-import.prepare.json from producer `docker.remote-import-browser`
   assertions:
     - api_assert: remote_import_prepare_captures_deterministic_manifest_v1 true
     - api_assert: remote_import_prepare_writes_no_workspace_ledger_or_external_changes true
@@ -515,7 +515,7 @@
   steps:
     - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
-    - gap: B6 fresh Remote Import review/browser receipt is not sealed yet
+    - receipt: receipts/smoke.remote-import.review.json from producer `docker.remote-import-browser`
   assertions:
     - api_assert: remote_import_review_is_backend_owned true
     - api_assert: remote_import_review_exposes_no_locator_blob_digest_credential_or_raw_failure_detail true
@@ -530,7 +530,7 @@
     - run: cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
     - run: cargo test -p deve_core --lib remote_import::facade::tests -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
-    - gap: B6 fresh Remote Import apply/browser receipt is not sealed yet
+    - receipt: receipts/smoke.remote-import.apply.json from producer `docker.remote-import-browser`
   assertions:
     - api_assert: remote_import_apply_revalidates_session_revision_head_scope_and_overlap_in_one_transaction true
     - api_assert: remote_import_apply_failure_leaves_no_fact_prefix true
@@ -570,7 +570,7 @@
   steps:
     - run: cargo test -p deve_core --lib remote_import -- --nocapture
     - run: cargo test -p deve_web --bin deve_web runtime::remote_import_client::tests -- --nocapture
-    - gap: B6 fresh Remote Import manage/browser receipt is not sealed yet
+    - receipt: receipts/smoke.remote-import.manage.json from producer `docker.remote-import-browser`
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
     - cli_assert: remote_import_discard_and_repair_are_explicit true

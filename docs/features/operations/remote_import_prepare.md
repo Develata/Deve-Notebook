@@ -35,4 +35,5 @@
 
 ## Notes
 
-- B4 已接入 provider-bound product Prepare 并删除旧 pull；STORE-019 只保留 B6 fresh receipt 的真实 gap。
+- B4 已接入 provider-bound product Prepare 并删除旧 pull；B6 已为 STORE-019 登记真实
+  provider/browser receipt producer，最终 candidate current-HEAD receipt 仍须重跑。

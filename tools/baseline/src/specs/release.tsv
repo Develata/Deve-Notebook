@@ -527,7 +527,9 @@ contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR"
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_PLAYWRIGHT_REQUIRE_FROM="$PLAYWRIGHT_WORK_DIR/package.json"
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_EXPECTED_ORIGIN="$BASE_ORIGIN"
 contains	scripts/smoke-docker-multiclient.sh	base URL must use the container's loopback host port
-contains	scripts/smoke-docker-multiclient.sh	node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
+contains	scripts/smoke-docker-multiclient.sh	node --test \
+contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs" \
+contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/docker-multiclient-product-contract.test.mjs"
 contains	scripts/smoke-docker-multiclient.mjs	await browser.newContext()
 contains	scripts/smoke-docker-multiclient.mjs	createRequire(
 contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="create-doc"

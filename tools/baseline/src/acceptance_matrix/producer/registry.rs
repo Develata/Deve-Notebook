@@ -8,7 +8,8 @@ pub(super) use self::producer_validation::contract_fingerprint;
 use self::producer_validation::validate_producer;
 #[cfg(test)]
 use self::producer_validation::{
-    sensitive_env_name, valid_env_name, valid_identifier, validate_shell_invocation, validate_step,
+    artifact_location_allowed, sensitive_env_name, valid_env_name, valid_identifier,
+    validate_shell_invocation, validate_step,
 };
 use super::model::{PRODUCER_REGISTRY_PATH, Producer, ProducerRegistry};
 use crate::acceptance_matrix::model::MatrixRow;

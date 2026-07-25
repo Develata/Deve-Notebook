@@ -1,0 +1,194 @@
+# Remote Import B6 acceptance fixture.
+# Provider images are immutable multi-architecture manifests. Candidate services
+# always run the exact externally supplied release-candidate image.
+
+services:
+  webdav:
+    image: rclone/rclone@sha256:9ce0d49b611d3781233e25334e9e23d7af01e5546da7087f90d55f034ef13637
+    restart: "no"
+    command:
+      - serve
+      - webdav
+      - /fixture
+      - --addr
+      - :8080
+      - --read-only
+      - --vfs-cache-mode
+      - "off"
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_WEBDAV_PORT:?set WebDAV fixture port}:8080"
+    volumes:
+      - type: bind
+        source: ${DEVE_REMOTE_IMPORT_WEBDAV_FIXTURE:?set WebDAV fixture directory}
+        target: /fixture
+        read_only: true
+
+  webdav-failure:
+    image: rclone/rclone@sha256:9ce0d49b611d3781233e25334e9e23d7af01e5546da7087f90d55f034ef13637
+    restart: "no"
+    command:
+      - serve
+      - webdav
+      - /fixture
+      - --addr
+      - :8080
+      - --read-only
+      - --vfs-cache-mode
+      - "off"
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_PORT:?set failing WebDAV fixture port}:8080"
+    volumes:
+      - type: bind
+        source: ${DEVE_REMOTE_IMPORT_WEBDAV_FIXTURE:?set WebDAV fixture directory}
+        target: /fixture
+        read_only: true
+
+  minio:
+    image: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+    restart: "no"
+    command: ["server", "/data", "--address", ":9000"]
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_S3_PORT:?set S3 fixture port}:9000"
+    environment:
+      MINIO_ROOT_USER: ${DEVE_REMOTE_IMPORT_S3_ACCESS_KEY_ID:?set S3 access key}
+      MINIO_ROOT_PASSWORD: ${DEVE_REMOTE_IMPORT_S3_SECRET_ACCESS_KEY:?set S3 secret key}
+    volumes:
+      - remote-import-minio:/data
+
+  minio-seed:
+    image: minio/mc@sha256:95b5f3f7969a5c5a9f3a700ba72d5c84172819e13385aaf916e237cf111ab868
+    restart: "no"
+    depends_on:
+      - minio
+    environment:
+      MC_HOST_b6: http://${DEVE_REMOTE_IMPORT_S3_ACCESS_KEY_ID:?set S3 access key}:${DEVE_REMOTE_IMPORT_S3_SECRET_ACCESS_KEY:?set S3 secret key}@minio:9000
+      DEVE_REMOTE_IMPORT_S3_BUCKET: ${DEVE_REMOTE_IMPORT_S3_BUCKET:?set S3 bucket}
+      DEVE_REMOTE_IMPORT_S3_PREFIX: ${DEVE_REMOTE_IMPORT_S3_PREFIX:?set S3 prefix}
+    entrypoint: ["/bin/sh", "-eu", "-c"]
+    command:
+      - |
+        attempt=0
+        until mc ready b6 >/dev/null 2>&1; do
+          attempt=$$((attempt + 1))
+          if [ "$$attempt" -ge 120 ]; then
+            echo "MinIO did not become ready within 120 seconds" >&2
+            exit 1
+          fi
+          sleep 1
+        done
+        mc mb --ignore-existing "b6/$${DEVE_REMOTE_IMPORT_S3_BUCKET}"
+        printf '%s\n' '# S3 provider receipt' 'sealed-before-apply' |
+          mc pipe "b6/$${DEVE_REMOTE_IMPORT_S3_BUCKET}/$${DEVE_REMOTE_IMPORT_S3_PREFIX}/s3-applied.md"
+        printf '%s\n' '# Shared provider entry' 'backend-owned-diff' |
+          mc pipe "b6/$${DEVE_REMOTE_IMPORT_S3_BUCKET}/$${DEVE_REMOTE_IMPORT_S3_PREFIX}/nested/shared.md"
+
+  deve-webdav:
+    image: ${DEVE_RELEASE_CANDIDATE_IMAGE:?set exact candidate image}
+    pull_policy: never
+    restart: "no"
+    extra_hosts:
+      - "${DEVE_REMOTE_IMPORT_WEBDAV_HOST:?set WebDAV tunnel host}:${DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP:?set WebDAV tunnel edge IP}"
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_WEBDAV_APP_PORT:?set WebDAV app port}:3001"
+    environment:
+      DEVE_BIND_ADDR: 0.0.0.0:3001
+      DEVE_LEDGER_DIR: /data/ledger
+      DEVE_REMOTE_IMPORT_WEBDAV_LOCATOR: ${DEVE_REMOTE_IMPORT_WEBDAV_LOCATOR:?set WebDAV locator}
+      AUTH_SECRET: ${DEVE_REMOTE_IMPORT_AUTH_SECRET:?set auth secret}
+      AUTH_USER: ${DEVE_REMOTE_IMPORT_AUTH_USER:-admin}
+      AUTH_PASS: ${DEVE_REMOTE_IMPORT_AUTH_PASS:?set Argon2 PHC password hash}
+    volumes:
+      - remote-import-webdav-data:/data
+      - remote-import-webdav-notes:/notes
+    command:
+      - sh
+      - -eu
+      - -c
+      - |
+        if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
+          deve_cli init --repo default --projection-base /notes --path /data \
+            --repo-url "$${DEVE_REMOTE_IMPORT_WEBDAV_LOCATOR}"
+        fi
+        exec deve_cli serve --port 3001
+    mem_limit: 512m
+
+  deve-webdav-failure:
+    image: ${DEVE_RELEASE_CANDIDATE_IMAGE:?set exact candidate image}
+    pull_policy: never
+    restart: "no"
+    extra_hosts:
+      - "${DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_HOST:?set failing WebDAV tunnel host}:${DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_EDGE_IP:?set failing WebDAV tunnel edge IP}"
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_APP_PORT:?set failing WebDAV app port}:3001"
+    environment:
+      DEVE_BIND_ADDR: 0.0.0.0:3001
+      DEVE_LEDGER_DIR: /data/ledger
+      DEVE_REMOTE_IMPORT_WEBDAV_LOCATOR: ${DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_LOCATOR:?set failing WebDAV locator}
+      AUTH_SECRET: ${DEVE_REMOTE_IMPORT_AUTH_SECRET:?set auth secret}
+      AUTH_USER: ${DEVE_REMOTE_IMPORT_AUTH_USER:-admin}
+      AUTH_PASS: ${DEVE_REMOTE_IMPORT_AUTH_PASS:?set Argon2 PHC password hash}
+    volumes:
+      - remote-import-webdav-failure-data:/data
+      - remote-import-webdav-failure-notes:/notes
+    command:
+      - sh
+      - -eu
+      - -c
+      - |
+        if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
+          deve_cli init --repo default --projection-base /notes --path /data \
+            --repo-url "$${DEVE_REMOTE_IMPORT_WEBDAV_LOCATOR}"
+        fi
+        exec deve_cli serve --port 3001
+    mem_limit: 512m
+
+  deve-s3:
+    image: ${DEVE_RELEASE_CANDIDATE_IMAGE:?set exact candidate image}
+    pull_policy: never
+    restart: "no"
+    extra_hosts:
+      - "${DEVE_REMOTE_IMPORT_S3_HOST:?set S3 tunnel host}:${DEVE_REMOTE_IMPORT_S3_EDGE_IP:?set S3 tunnel edge IP}"
+    ports:
+      - "127.0.0.1:${DEVE_REMOTE_IMPORT_S3_APP_PORT:?set S3 app port}:3001"
+    environment:
+      DEVE_BIND_ADDR: 0.0.0.0:3001
+      DEVE_LEDGER_DIR: /data/ledger
+      DEVE_REMOTE_IMPORT_S3_LOCATOR: ${DEVE_REMOTE_IMPORT_S3_LOCATOR:?set S3 locator}
+      DEVE_REMOTE_IMPORT_S3_ORIGIN: ${DEVE_REMOTE_IMPORT_S3_ORIGIN:?set S3 HTTPS origin}
+      DEVE_REMOTE_IMPORT_S3_BUCKET: ${DEVE_REMOTE_IMPORT_S3_BUCKET:?set S3 bucket}
+      DEVE_REMOTE_IMPORT_S3_PREFIX: ${DEVE_REMOTE_IMPORT_S3_PREFIX:?set S3 prefix}
+      B6S3_ACCESS_KEY_ID: ${DEVE_REMOTE_IMPORT_S3_ACCESS_KEY_ID:?set S3 access key}
+      B6S3_SECRET_ACCESS_KEY: ${DEVE_REMOTE_IMPORT_S3_SECRET_ACCESS_KEY:?set S3 secret key}
+      AUTH_SECRET: ${DEVE_REMOTE_IMPORT_AUTH_SECRET:?set auth secret}
+      AUTH_USER: ${DEVE_REMOTE_IMPORT_AUTH_USER:-admin}
+      AUTH_PASS: ${DEVE_REMOTE_IMPORT_AUTH_PASS:?set Argon2 PHC password hash}
+    volumes:
+      - remote-import-s3-data:/data
+      - remote-import-s3-notes:/notes
+    command:
+      - sh
+      - -eu
+      - -c
+      - |
+        if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
+          deve_cli init --repo default --projection-base /notes --path /data \
+            --repo-url "$${DEVE_REMOTE_IMPORT_S3_LOCATOR}"
+          deve_cli projection-remote s3 profile put \
+            --profile b6-minio \
+            --endpoint-origin "$${DEVE_REMOTE_IMPORT_S3_ORIGIN}" \
+            --bucket "$${DEVE_REMOTE_IMPORT_S3_BUCKET}" \
+            --allowed-prefix "$${DEVE_REMOTE_IMPORT_S3_PREFIX}" \
+            --region us-east-1 \
+            --credential-env-prefix B6S3
+        fi
+        exec deve_cli serve --port 3001
+    mem_limit: 512m
+
+volumes:
+  remote-import-minio: {}
+  remote-import-webdav-data: {}
+  remote-import-webdav-notes: {}
+  remote-import-webdav-failure-data: {}
+  remote-import-webdav-failure-notes: {}
+  remote-import-s3-data: {}
+  remote-import-s3-notes: {}

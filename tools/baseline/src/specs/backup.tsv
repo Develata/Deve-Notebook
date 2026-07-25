@@ -19,11 +19,15 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_core --lib remote_import -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	cargo test -p deve_cli --lib source_acquisition_delivers_normalized_paths_in_order -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	gap: B6 fresh Remote Import review/browser receipt is not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-019	receipt: receipts/smoke.remote-import.prepare.json from producer `docker.remote-import-browser`
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-020	receipt: receipts/smoke.remote-import.review.json from producer `docker.remote-import-browser`
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	cargo test -p deve_core --lib remote_import::tests::apply -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	remote_import_fault_and_degraded_receipt_share_one_transaction true
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	gap: B6 fresh Remote Import apply/browser receipt is not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-021	receipt: receipts/smoke.remote-import.apply.json from producer `docker.remote-import-browser`
+absent	docs/acceptance-cases/07_storage_repo.md	gap: B6 provider-bound fresh Remote Import prepare receipt is not sealed yet
+absent	docs/acceptance-cases/07_storage_repo.md	gap: B6 fresh Remote Import review/browser receipt is not sealed yet
+absent	docs/acceptance-cases/07_storage_repo.md	gap: B6 fresh Remote Import apply/browser receipt is not sealed yet
+absent	docs/acceptance-cases/07_storage_repo.md	gap: B6 fresh Remote Import manage/browser receipt is not sealed yet
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn exact_replay_survives_cleanup_completion()
 contains	crates/core/src/remote_import/tests/apply/replay.rs	fn replay_rejects_corrupt_stored_receipt_core()
 contains	crates/core/src/remote_import/tests/apply/admission.rs	fn active_session_pointer_drift_rejects_without_facts()
@@ -32,7 +36,7 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_direct_push_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-022	cargo test -p deve_cli --lib s3_custom_https_endpoint_source_acquisition_fails_before_credentials_resolve -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	cargo test -p deve_core --lib remote_import -- --nocapture
-case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	gap: B6 fresh Remote Import manage/browser receipt is not sealed yet
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-023	receipt: receipts/smoke.remote-import.manage.json from producer `docker.remote-import-browser`
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_webdav_push_uses_webdav_provider_after_workspace_gate()
 contains	apps/cli/src/commands/projection_remote/tests/push.rs	fn run_s3_push_uses_s3_provider_after_workspace_gate()
 contains	apps/cli/src/remote_projection_transport/webdav/tests/collect.rs	fn collect_markdown_projection_files_uploads_only_markdown_projection_files()

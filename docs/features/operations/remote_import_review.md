@@ -55,4 +55,5 @@
 ## Notes
 
 - 无 checkbox、逐文件选择或前端 blocker 推理。
-- B4 backend/CLI review 与 B5 独立 thin client/sibling view 已激活，旧 External Changes/Source Control substitute 已删除；B6 producer/browser receipt 仍是明确缺口。
+- B4 backend/CLI review 与 B5 独立 thin client/sibling view 已激活，旧 External Changes/Source
+  Control substitute 已删除；B6 producer已登记，最终 candidate current-HEAD browser receipt仍是发布门。

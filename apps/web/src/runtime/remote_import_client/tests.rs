@@ -422,3 +422,33 @@ fn apply_receipt_is_exact_disables_repeat_and_requests_backend_state() {
         } if actual == session_id && actual_revision == revision
     ));
 }
+
+#[test]
+fn reconnect_projects_durable_apply_outcome_from_backend_session() {
+    let fixture = fixture();
+    let session_id = RemoteImportSessionId::new(Uuid::new_v4());
+    let revision = RemoteImportCandidateRevision::new(4);
+    fixture
+        .client
+        .show(session_id, Some(revision))
+        .expect("selection");
+    let show_request = take_remote_request(&fixture);
+    let mut applied = clean_ready_session(session_id, revision);
+    applied.state = RemoteImportState::Applied;
+    applied.projection_outcome = Some(RemoteImportProjectionOutcome::Written);
+    assert!(fixture.client.accept(RemoteImportResponse::Session {
+        context: response_context(&show_request, Some(session_id), Some(revision)),
+        session: applied,
+    }));
+
+    let projection = fixture.client.projection().get_untracked();
+    assert!(
+        projection
+            .apply_receipt_for(session_id, Some(revision))
+            .is_none()
+    );
+    assert_eq!(
+        projection.apply_outcome_for(session_id, Some(revision)),
+        Some(RemoteImportProjectionOutcome::Written)
+    );
+}

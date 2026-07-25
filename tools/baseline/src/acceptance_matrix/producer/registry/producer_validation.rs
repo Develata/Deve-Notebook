@@ -7,6 +7,7 @@ use crate::acceptance_matrix::producer::model::{Producer, ProducerArg, ProducerS
 use crate::acceptance_matrix::receipt_limits::MAX_EXECUTION_RECEIPTS;
 use anyhow::{Context, Result, bail};
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
 use std::path::{Component, Path};
 
 const ALLOWED_TIERS: [&str; 4] = ["ci", "full", "target-host", "tag-ready"];
@@ -259,20 +260,82 @@ fn validate_ci_cargo_target(
 }
 
 fn validate_artifact(root: &Path, producer: &Producer, artifact: &str) -> Result<()> {
-    let path = Path::new(artifact);
-    if !artifact.starts_with("scripts/")
-        || path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-        || !root.join(path).is_file()
-    {
+    if !artifact_location_allowed(artifact) || !artifact_file_is_owned(root, artifact) {
         bail!(
             "acceptance producers: {} has invalid or missing artifact {artifact}",
             producer.producer_id
         );
     }
     Ok(())
+}
+
+pub(super) fn artifact_location_allowed(artifact: &str) -> bool {
+    let path = Path::new(artifact);
+    let root_compose_manifest = path.components().count() == 1
+        && artifact.starts_with("docker-compose.")
+        && artifact.ends_with(".yml");
+    (artifact.starts_with("scripts/") || root_compose_manifest)
+        && !path.is_absolute()
+        && path
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
+}
+
+fn artifact_file_is_owned(root: &Path, artifact: &str) -> bool {
+    let candidate = root.join(artifact);
+    let Ok(metadata) = fs::symlink_metadata(&candidate) else {
+        return false;
+    };
+    if !metadata.is_file() || metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) {
+        return false;
+    }
+    let (Ok(canonical_root), Ok(canonical_candidate)) =
+        (fs::canonicalize(root), fs::canonicalize(candidate))
+    else {
+        return false;
+    };
+    canonical_candidate.starts_with(canonical_root)
+}
+
+#[cfg(windows)]
+fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    metadata.file_attributes() & 0x0400 != 0
+}
+
+#[cfg(not(windows))]
+fn metadata_is_reparse(_metadata: &fs::Metadata) -> bool {
+    false
+}
+
+#[cfg(all(test, unix))]
+mod artifact_identity_tests {
+    use super::artifact_file_is_owned;
+    use std::fs;
+    use std::os::unix::fs::symlink;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn artifact_identity_rejects_external_symlink_target() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos();
+        let base = std::env::temp_dir().join(format!(
+            "deve-baseline-artifact-{}-{nonce}",
+            std::process::id()
+        ));
+        let root = base.join("root");
+        fs::create_dir_all(&root).expect("artifact test root");
+        let outside = base.join("outside.yml");
+        fs::write(&outside, b"services: {}\n").expect("external artifact");
+        symlink(&outside, root.join("docker-compose.external.yml")).expect("artifact symlink");
+
+        let accepted = artifact_file_is_owned(&root, "docker-compose.external.yml");
+        fs::remove_dir_all(&base).expect("artifact test cleanup");
+
+        assert!(!accepted);
+    }
 }
 
 pub(super) fn validate_shell_invocation(

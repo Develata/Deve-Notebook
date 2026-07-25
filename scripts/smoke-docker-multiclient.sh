@@ -132,7 +132,9 @@ run_playwright() {
   local container_id
   container_id="$(docker_compose ps -q deve-server)"
   [[ -n "$container_id" ]] || fail "compose service container id is unavailable"
-  node --test "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs"
+  node --test \
+    "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs" \
+    "$ROOT_DIR/scripts/docker-multiclient-product-contract.test.mjs"
   mkdir -p "$PLAYWRIGHT_WORK_DIR"
   if [[ ! -f "$PLAYWRIGHT_WORK_DIR/package.json" ]]; then
     printf '{"private":true,"type":"module"}\n' >"$PLAYWRIGHT_WORK_DIR/package.json"

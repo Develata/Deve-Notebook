@@ -118,7 +118,7 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
-    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control、B5/B6 与其余 release gates 仍阻塞 tag
+    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control 与 B5 已实现，B6 producer 已登记；最终 candidate current-HEAD B6 receipts 与其余 release gates 仍阻塞 tag
     - release baseline 必须同时验证 approved target 与 current implementation，不得把 current 当作首发完成态
   steps:
     - run: rustup target add wasm32-unknown-unknown

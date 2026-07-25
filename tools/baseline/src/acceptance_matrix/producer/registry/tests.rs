@@ -1,6 +1,6 @@
 use super::{
-    sensitive_env_name, valid_env_name, valid_identifier, validate_dependencies, validate_producer,
-    validate_shell_invocation, validate_step,
+    artifact_location_allowed, sensitive_env_name, valid_env_name, valid_identifier,
+    validate_dependencies, validate_producer, validate_shell_invocation, validate_step,
 };
 use crate::acceptance_matrix::producer::model::{
     Producer, ProducerArg, ProducerRegistry, ProducerStep,
@@ -76,6 +76,18 @@ fn shell_invocation_accepts_direct_script_files() {
         })
         .collect::<Vec<_>>();
     assert!(validate_shell_invocation(&producer, "pwsh.exe", &powershell).is_ok());
+}
+
+#[test]
+fn producer_artifacts_admit_only_scripts_or_root_compose_manifests() {
+    assert!(artifact_location_allowed("scripts/hostname"));
+    assert!(artifact_location_allowed(
+        "docker-compose.remote-import.yml"
+    ));
+    assert!(!artifact_location_allowed("compose.yml"));
+    assert!(!artifact_location_allowed(
+        "scripts/../docker-compose.remote-import.yml"
+    ));
 }
 
 #[test]

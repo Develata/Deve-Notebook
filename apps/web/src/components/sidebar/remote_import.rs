@@ -107,6 +107,7 @@ fn remote_import_body(
         RemoteImportAvailability::Ready {
             workspace_ingestion_blocked,
         } => {
+            let error = projection.error;
             let sessions = if projection.sessions.is_empty() {
                 let copy = if projection.pending.list {
                     t::remote_import::request_pending(locale.get())
@@ -139,6 +140,11 @@ fn remote_import_body(
                             data-deve-remote-import-ingestion="unavailable"
                         >
                             {t::remote_import::workspace_ingestion_unavailable(locale.get())}
+                        </div>
+                    })}
+                    {error.map(|code| view! {
+                        <div class="border-b border-default px-3 py-2 text-[11px] text-danger" data-deve-remote-import-error="typed">
+                            {t::server_error::message(locale.get(), code)}
                         </div>
                     })}
                     {sessions}
@@ -232,7 +238,7 @@ fn selected_session_panel(
         && !workspace_ingestion_blocked
         && !projection.pending.apply
         && !projection.selected_apply_completed();
-    let apply_receipt = projection.apply_receipt_for(session_id, revision).cloned();
+    let apply_outcome = projection.apply_outcome_for(session_id, revision);
     let refresh_client = client.clone();
     let apply_client = client.clone();
     let discard_client = client.clone();
@@ -307,15 +313,9 @@ fn selected_session_panel(
                 </div>
             })}
 
-            {apply_receipt.map(|receipt| view! {
+            {apply_outcome.map(|projection_outcome| view! {
                 <div class="border-b border-default px-3 py-2 text-[11px]" data-deve-remote-import-apply-outcome="backend-typed">
-                    {t::remote_import::projection_outcome(locale.get(), receipt.projection_outcome)}
-                </div>
-            })}
-
-            {projection.error.map(|code| view! {
-                <div class="border-b border-default px-3 py-2 text-[11px] text-danger" data-deve-remote-import-error="typed">
-                    {t::server_error::message(locale.get(), code)}
+                    {t::remote_import::projection_outcome(locale.get(), projection_outcome)}
                 </div>
             })}
 

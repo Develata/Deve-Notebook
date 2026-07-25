@@ -6,8 +6,8 @@
 
 use deve_core::protocol::{
     RemoteImportApplyReceipt, RemoteImportCandidatePage, RemoteImportCandidateRevision,
-    RemoteImportCandidateView, RemoteImportPageCursor, RemoteImportSessionId,
-    RemoteImportSessionView, ServerErrorCode,
+    RemoteImportCandidateView, RemoteImportPageCursor, RemoteImportProjectionOutcome,
+    RemoteImportSessionId, RemoteImportSessionView, ServerErrorCode,
 };
 use deve_core::source_control::diff_projection::DiffProjection;
 use std::sync::Arc;
@@ -131,6 +131,23 @@ impl RemoteImportProjection {
         self.last_apply.as_ref().filter(|receipt| {
             receipt.session_id == session_id && Some(receipt.revision) == revision
         })
+    }
+
+    pub fn apply_outcome_for(
+        &self,
+        session_id: RemoteImportSessionId,
+        revision: Option<RemoteImportCandidateRevision>,
+    ) -> Option<RemoteImportProjectionOutcome> {
+        self.apply_receipt_for(session_id, revision)
+            .map(|receipt| receipt.projection_outcome)
+            .or_else(|| {
+                self.sessions
+                    .iter()
+                    .find(|session| {
+                        session.session_id == session_id && session.revision == revision
+                    })
+                    .and_then(|session| session.projection_outcome)
+            })
     }
 
     pub fn selected_apply_completed(&self) -> bool {

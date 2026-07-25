@@ -403,7 +403,7 @@
         {"program":"bash","args":["scripts/check-storage-repo-baseline.sh"]},
         {"program":"bash","args":["scripts/check-repo-file-ops-baseline.sh"]}
       ],
-      "note": "Execute the currently implemented Storage and Repository command groups; Remote Import gaps remain producer-free until B6"
+      "note": "Execute the currently implemented Storage and Repository command groups; Remote Import provider/browser evidence is owned separately by docker.remote-import-browser"
     },
     {
       "producer_id": "cli.repo-alias-transfer",
@@ -931,6 +931,131 @@
       "note": "Exercise packaged Windows RemoteBrowser and native-owned recovery to a fresh LocalBackend without remote IPC"
     },
     {
+      "producer_id": "docker.remote-import-browser",
+      "evidence_ids": [
+        "smoke.remote-import.prepare",
+        "smoke.remote-import.review",
+        "smoke.remote-import.apply",
+        "smoke.remote-import.manage"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "full",
+        "tag-ready"
+      ],
+      "host_os": [
+        "linux",
+        "windows"
+      ],
+      "timeout_seconds": 5400,
+      "required_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "bound_env": [
+        "DEVE_RELEASE_CANDIDATE_IMAGE",
+        "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+      ],
+      "environment": {
+        "DEVE_REMOTE_IMPORT_BROWSER_CLOSE_TIMEOUT_MS": "15000",
+        "DEVE_REMOTE_IMPORT_CHROME_CHECKPOINT": "0",
+        "DEVE_REMOTE_IMPORT_CHROME_WAIT_SECONDS": "600",
+        "DEVE_REMOTE_IMPORT_COMPOSE_FILE": "docker-compose.remote-import.yml",
+        "DEVE_REMOTE_IMPORT_DOCKER_BIN": "docker",
+        "DEVE_REMOTE_IMPORT_HEADLESS": "1",
+        "DEVE_REMOTE_IMPORT_PLAYWRIGHT_PACKAGE": "playwright@1.55.0",
+        "DEVE_REMOTE_IMPORT_TIMEOUT_MS": "90000"
+      },
+      "claims_env": {},
+      "artifacts": [
+        "docker-compose.remote-import.yml",
+        "scripts/smoke-docker-remote-import.sh",
+        "scripts/cleanup-docker-remote-import.sh",
+        "scripts/smoke-docker-remote-import.mjs",
+        "scripts/smoke-docker-remote-import.test.mjs",
+        "scripts/smoke-docker-remote-import.test.sh",
+        "scripts/lib/docker-remote-import-browser-cleanup.mjs",
+        "scripts/lib/docker-remote-import-chrome-checkpoint.sh",
+        "scripts/lib/docker-remote-import-edge.sh",
+        "scripts/lib/docker-remote-import-absence.sh",
+        "scripts/lib/docker-remote-import-fixture.sh",
+        "scripts/lib/docker-remote-import-runtime.mjs",
+        "scripts/lib/docker-remote-import-journeys.mjs",
+        "scripts/lib/docker-multiclient-runtime.mjs",
+        "scripts/lib/remote-browser-fixture.sh"
+      ],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "remote_import" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "remote_import" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "source_acquisition" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "runtime::remote_import_client::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "bash",
+          "args": [
+            { "literal": "scripts/smoke-docker-remote-import.sh" }
+          ]
+        }
+      ],
+      "finally_steps": [
+        {
+          "program": "bash",
+          "args": [
+            { "literal": "scripts/cleanup-docker-remote-import.sh" }
+          ]
+        }
+      ],
+      "note": "Atomically prove real WebDAV and S3-compatible provider Prepare, restart-safe Review/Diff, whole-session Apply/writeback, sealed Refresh/Discard, profile admission, and cross-repo isolation on the exact candidate image"
+    },
+    {
       "producer_id": "docker.multiclient-product",
       "evidence_ids": [
         "smoke.web.auth-session",
@@ -967,6 +1092,7 @@
         "scripts/smoke-docker-multiclient.sh",
         "scripts/smoke-docker-multiclient.mjs",
         "scripts/smoke-docker-multiclient.test.mjs",
+        "scripts/docker-multiclient-product-contract.test.mjs",
         "scripts/lib/docker-multiclient-product-journeys.mjs",
         "scripts/lib/docker-multiclient-runtime.mjs"
       ],

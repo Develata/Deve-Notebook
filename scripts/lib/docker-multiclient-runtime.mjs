@@ -67,6 +67,25 @@ function isExpectedRuntimeRequest(url, httpOrigin) {
   }
 }
 
+function isExpectedRestartProbeAbort(
+  url,
+  errorText,
+  responseStatus,
+  expectedOrigin,
+) {
+  if (errorText !== "net::ERR_ABORTED" || responseStatus !== undefined) {
+    return false;
+  }
+  try {
+    const expected = new URL(expectedOrigin);
+    const observed = new URL(url);
+    return observed.origin === expected.origin
+      && ["/api/auth/status", "/api/node/role"].includes(observed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function isExpectedRestartTransportError(
   message,
   expectedOrigin,
@@ -77,11 +96,12 @@ export function isExpectedRestartTransportError(
     return webSocketMatchesExpectedOrigin(socketUrl, expectedOrigin);
   }
   const errorText = message.match(
-    /net::(?:ERR_CONNECTION_(?:REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED)/u,
+    /net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE)/u,
   )?.[0];
   return Boolean(errorText)
     && requestFailures.some((failure) =>
       failure.duringHostRestart
+      && failure.responseStatus === undefined
       && failure.errorText === errorText
       && isExpectedRuntimeRequest(failure.url, expectedOrigin));
 }
@@ -188,8 +208,20 @@ export function relevantRequestFailures(diag) {
     }
     if (
       duringHostRestart
+      && isExpectedRestartProbeAbort(
+        url,
+        errorText,
+        responseStatus,
+        diag.expectedOrigin,
+      )
+    ) {
+      return false;
+    }
+    if (
+      duringHostRestart
+      && responseStatus === undefined
       && isExpectedRuntimeRequest(url, diag.expectedOrigin)
-      && /net::(?:ERR_CONNECTION_(?:REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED)/u.test(errorText)
+      && /net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE)/u.test(errorText)
     ) {
       return false;
     }
