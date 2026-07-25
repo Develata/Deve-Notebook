@@ -243,6 +243,7 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
             || line.rel == "crates/core/src/utils/fs/identity.rs"
             || line.rel == "crates/core/src/utils/fs/quarantine/windows.rs"
             || line.rel == "crates/core/src/remote_import/artifact/durability.rs"
+            || line.rel == "crates/core/tests/watcher_windows_overflow_support/mod.rs"
             || line.rel == "apps/desktop/src/process_runtime/process_group/windows.rs"
             || line
                 .rel
