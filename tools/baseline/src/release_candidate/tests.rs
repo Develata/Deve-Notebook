@@ -6,6 +6,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
+#[test]
+fn artifact_role_keys_match_manifest_serialization() {
+    for role in super::manifest::ArtifactRole::ALL {
+        let serialized = serde_json::to_value(role).expect("serialize artifact role");
+        assert_eq!(serialized.as_str(), Some(role.key()));
+    }
+}
+
 struct TestDir(PathBuf);
 
 impl TestDir {
@@ -53,8 +61,8 @@ fn assembles_and_verifies_exact_candidate() {
     );
     let checksums =
         fs::read_to_string(fixture.path().join("SHA256SUMS")).expect("read public checksums");
-    assert!(checksums.contains("  app.msi\n"));
-    assert!(!checksums.contains("  artifacts/app.msi\n"));
+    assert!(checksums.contains("  deve-notebook-0.1.0-windows-x64.msi\n"));
+    assert!(!checksums.contains("  artifacts/windows/"));
 }
 
 #[test]
@@ -64,7 +72,7 @@ fn verify_rejects_artifact_corruption() {
     fs::write(
         fixture
             .path()
-            .join("artifacts/deve-notebook-0.1.0-android-arm64.apk"),
+            .join("artifacts/android/deve-notebook-0.1.0-android-arm64.apk"),
         b"corrupt",
     )
     .expect("corrupt APK");
@@ -129,20 +137,44 @@ fn assemble_rejects_windows_absolute_path_on_every_host() {
 }
 
 #[test]
+fn assemble_rejects_non_frozen_windows_path() {
+    let fixture = fixture("non-frozen-windows");
+    let mut args = arguments(fixture.path(), "assemble");
+    replace_value(
+        &mut args,
+        "--windows-msi",
+        "other/deve-notebook-0.1.0-windows-x64.msi",
+    );
+
+    let error = run(&args).expect_err("must reject non-frozen Windows path");
+    assert!(format!("{error:#}").contains("does not match release freeze"));
+}
+
+#[test]
+fn assemble_rejects_non_frozen_macos_architecture() {
+    let fixture = fixture("non-frozen-macos");
+    let mut args = arguments(fixture.path(), "assemble");
+    replace_value(
+        &mut args,
+        "--macos-dmg",
+        "artifacts/macos/deve-notebook-0.1.0-macos-riscv64.dmg",
+    );
+
+    let error = run(&args).expect_err("must reject non-frozen macOS path");
+    assert!(format!("{error:#}").contains("host-architecture one-of"));
+}
+
+#[test]
 fn assemble_rejects_duplicate_release_asset_basename() {
     let fixture = fixture("duplicate-basename");
     fs::create_dir_all(fixture.path().join("other")).expect("create other directory");
     fs::write(
-        fixture.path().join("other/provenance.bundle.json"),
+        fixture.path().join("other/provenance.bundle"),
         br#"{"bundle":"duplicate"}"#,
     )
     .expect("write duplicate basename");
     let mut args = arguments(fixture.path(), "assemble");
-    replace_value(
-        &mut args,
-        "--docker-sbom-bundle",
-        "other/provenance.bundle.json",
-    );
+    replace_value(&mut args, "--docker-sbom-bundle", "other/provenance.bundle");
 
     let error = run(&args).expect_err("must reject duplicate basenames");
     assert!(format!("{error:#}").contains("unique case-insensitive basenames"));
@@ -170,7 +202,9 @@ fn assemble_rejects_reserved_control_basename_below_subdirectory() {
 #[test]
 fn assemble_rejects_symlinked_artifact() {
     let fixture = fixture("symlink");
-    let artifact = fixture.path().join("artifacts/app.msi");
+    let artifact = fixture
+        .path()
+        .join("artifacts/windows/deve-notebook-0.1.0-windows-x64.msi");
     fs::remove_file(&artifact).expect("remove real MSI");
     let target = fixture.path().join("outside.msi");
     fs::write(&target, b"outside").expect("write target");
@@ -186,7 +220,7 @@ fn assemble_rejects_symlinked_artifact() {
 fn assemble_accepts_github_jsonl_attestation_bundle() {
     let fixture = fixture("jsonl-attestation");
     fs::write(
-        fixture.path().join("artifacts/provenance.bundle.json"),
+        fixture.path().join("attestations/provenance.bundle"),
         b"{\"bundle\":1}\n{\"bundle\":2}\n",
     )
     .expect("write JSONL attestation");
@@ -196,7 +230,7 @@ fn assemble_accepts_github_jsonl_attestation_bundle() {
 #[test]
 fn assemble_rejects_oversized_attestation_before_json_parse() {
     let fixture = fixture("oversized-attestation");
-    let path = fixture.path().join("artifacts/provenance.bundle.json");
+    let path = fixture.path().join("attestations/provenance.bundle");
     fs::OpenOptions::new()
         .write(true)
         .open(&path)
@@ -229,7 +263,7 @@ fn verify_rejects_oversized_manifest_before_parse() {
 fn assemble_rejects_minimal_spdx_label_without_document_shape() {
     let fixture = fixture("invalid-spdx-shape");
     fs::write(
-        fixture.path().join("artifacts/deve-source.spdx.json"),
+        fixture.path().join("sbom/source.spdx.json"),
         br#"{"spdxVersion":"SPDX-2.3"}"#,
     )
     .expect("write invalid SPDX");
@@ -242,7 +276,7 @@ fn assemble_rejects_minimal_spdx_label_without_document_shape() {
 fn assemble_rejects_spdx_arrays_with_non_object_entries() {
     let fixture = fixture("invalid-spdx-array");
     fs::write(
-        fixture.path().join("artifacts/deve-source.spdx.json"),
+        fixture.path().join("sbom/source.spdx.json"),
         br#"{"spdxVersion":"SPDX-2.3","dataLicense":"CC0-1.0","SPDXID":"SPDXRef-DOCUMENT","name":"source","documentNamespace":"https://example.invalid/source","creationInfo":{"created":"2026-07-15T00:00:00Z","creators":["Tool: test"]},"packages":[null],"relationships":[null]}"#,
     )
     .expect("write malformed SPDX arrays");
@@ -278,34 +312,68 @@ fn preexisting_control_entry_is_rejected_before_assembly() {
 fn fixture(label: &str) -> TestDir {
     let fixture = TestDir::new(label);
     let artifacts = fixture.path().join("artifacts");
-    fs::create_dir_all(&artifacts).expect("create artifact directory");
-    fs::write(artifacts.join("app.msi"), b"msi").expect("write MSI");
-    fs::write(artifacts.join("app.exe"), b"nsis").expect("write NSIS");
-    fs::write(artifacts.join("app.dmg"), b"dmg").expect("write DMG");
+    for directory in [
+        artifacts.join("windows"),
+        artifacts.join("macos"),
+        artifacts.join("android"),
+        artifacts.join("docker"),
+        fixture.path().join("sbom"),
+        fixture.path().join("attestations"),
+    ] {
+        fs::create_dir_all(directory).expect("create candidate directory");
+    }
     fs::write(
-        artifacts.join("deve-notebook-0.1.0-android-arm64.apk"),
+        artifacts
+            .join("windows")
+            .join("deve-notebook-0.1.0-windows-x64.msi"),
+        b"msi",
+    )
+    .expect("write MSI");
+    fs::write(
+        artifacts
+            .join("windows")
+            .join("deve-notebook-0.1.0-windows-x64-setup.exe"),
+        b"nsis",
+    )
+    .expect("write NSIS");
+    fs::write(
+        artifacts
+            .join("macos")
+            .join("deve-notebook-0.1.0-macos-x64.dmg"),
+        b"dmg",
+    )
+    .expect("write DMG");
+    fs::write(
+        artifacts
+            .join("android")
+            .join("deve-notebook-0.1.0-android-arm64.apk"),
         b"signed-apk",
     )
     .expect("write APK");
-    fs::write(artifacts.join("deve-linux-amd64.tar"), b"docker-archive")
-        .expect("write Docker archive");
     fs::write(
-        artifacts.join("deve-source.spdx.json"),
+        artifacts
+            .join("docker")
+            .join("deve-notebook-0.1.0-linux-amd64.tar"),
+        b"docker-archive",
+    )
+    .expect("write Docker archive");
+    fs::write(
+        fixture.path().join("sbom/source.spdx.json"),
         spdx_fixture("source"),
     )
     .expect("write source SPDX");
     fs::write(
-        artifacts.join("deve-image.spdx.json"),
+        fixture.path().join("sbom/docker-image.spdx.json"),
         spdx_fixture("image"),
     )
     .expect("write image SPDX");
     fs::write(
-        artifacts.join("provenance.bundle.json"),
+        fixture.path().join("attestations/provenance.bundle"),
         br#"{"bundle":"fixture"}"#,
     )
     .expect("write attestation");
     fs::write(
-        artifacts.join("docker-sbom.bundle.json"),
+        fixture.path().join("attestations/docker-sbom.bundle"),
         br#"{"bundle":"docker-sbom-fixture"}"#,
     )
     .expect("write Docker SBOM attestation");
@@ -341,23 +409,23 @@ fn arguments(root: &Path, action: &str) -> Vec<String> {
         "--android-signer-sha256".into(),
         format!("sha256:{}", "b".repeat(64)),
         "--windows-msi".into(),
-        "artifacts/app.msi".into(),
+        "artifacts/windows/deve-notebook-0.1.0-windows-x64.msi".into(),
         "--windows-nsis".into(),
-        "artifacts/app.exe".into(),
+        "artifacts/windows/deve-notebook-0.1.0-windows-x64-setup.exe".into(),
         "--macos-dmg".into(),
-        "artifacts/app.dmg".into(),
+        "artifacts/macos/deve-notebook-0.1.0-macos-x64.dmg".into(),
         "--android-apk".into(),
-        "artifacts/deve-notebook-0.1.0-android-arm64.apk".into(),
+        "artifacts/android/deve-notebook-0.1.0-android-arm64.apk".into(),
         "--docker-archive".into(),
-        "artifacts/deve-linux-amd64.tar".into(),
+        "artifacts/docker/deve-notebook-0.1.0-linux-amd64.tar".into(),
         "--source-sbom".into(),
-        "artifacts/deve-source.spdx.json".into(),
+        "sbom/source.spdx.json".into(),
         "--image-sbom".into(),
-        "artifacts/deve-image.spdx.json".into(),
+        "sbom/docker-image.spdx.json".into(),
         "--provenance-bundle".into(),
-        "artifacts/provenance.bundle.json".into(),
+        "attestations/provenance.bundle".into(),
         "--docker-sbom-bundle".into(),
-        "artifacts/docker-sbom.bundle.json".into(),
+        "attestations/docker-sbom.bundle".into(),
     ]
     .into_iter()
     .collect()

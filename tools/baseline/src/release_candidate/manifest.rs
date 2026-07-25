@@ -31,6 +31,32 @@ pub(super) enum ArtifactRole {
 }
 
 impl ArtifactRole {
+    pub(super) const ALL: [Self; 9] = [
+        Self::WindowsMsi,
+        Self::WindowsNsis,
+        Self::MacosDmg,
+        Self::AndroidArm64Apk,
+        Self::DockerLinuxAmd64Archive,
+        Self::SourceSpdx,
+        Self::ImageSpdx,
+        Self::ProvenanceAttestation,
+        Self::DockerSbomAttestation,
+    ];
+
+    pub(super) const fn key(self) -> &'static str {
+        match self {
+            Self::WindowsMsi => "windows-msi",
+            Self::WindowsNsis => "windows-nsis",
+            Self::MacosDmg => "macos-dmg",
+            Self::AndroidArm64Apk => "android-arm64-apk",
+            Self::DockerLinuxAmd64Archive => "docker-linux-amd64-archive",
+            Self::SourceSpdx => "source-spdx",
+            Self::ImageSpdx => "image-spdx",
+            Self::ProvenanceAttestation => "provenance-attestation",
+            Self::DockerSbomAttestation => "docker-sbom-attestation",
+        }
+    }
+
     pub(super) fn is_public(self) -> bool {
         !matches!(self, Self::DockerLinuxAmd64Archive)
     }

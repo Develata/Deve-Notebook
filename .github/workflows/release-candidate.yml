@@ -74,6 +74,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/check-release-candidate-bundle.sh
           bash scripts/check-release-version-match.test.sh
+          cargo run --locked --quiet -p deve_baseline -- release-freeze verify
           cargo fmt --all -- --check
 
       - name: Install Web projection build tool
@@ -343,8 +344,10 @@ jobs:
           mapfile -d '' macos_matches < <(find "$macos" -type f -name "deve-notebook-${VERSION}-macos-*.dmg" -print0)
           [[ ${#macos_matches[@]} -eq 1 ]]
           macos_name="$(basename "${macos_matches[0]}")"
-          [[ "$macos_name" == "deve-notebook-${VERSION}-macos-x64.dmg" || \
-             "$macos_name" == "deve-notebook-${VERSION}-macos-arm64.dmg" ]]
+          case "$macos_name" in
+            "deve-notebook-${VERSION}-macos-x64.dmg"|"deve-notebook-${VERSION}-macos-arm64.dmg") ;;
+            *) echo "unsupported macOS candidate architecture: $macos_name" >&2; exit 1 ;;
+          esac
           cp -- "${macos_matches[0]}" "$CANDIDATE_DIR/artifacts/macos/$macos_name"
           printf 'artifacts/macos/%s\n' "$macos_name" >"$INCOMING_DIR/macos-relative.txt"
           require_one android-apk "$android" '*-android-arm64.apk' "$CANDIDATE_DIR/artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
@@ -403,10 +406,10 @@ jobs:
             --macos-dmg "$macos_path"
             --android-apk "artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
             --docker-archive "artifacts/docker/deve-notebook-${VERSION}-linux-amd64.tar"
-            --source-sbom sbom/source.spdx.json
-            --image-sbom sbom/docker-image.spdx.json
-            --provenance-bundle attestations/provenance.bundle
-            --docker-sbom-bundle attestations/docker-sbom.bundle
+            --source-sbom "sbom/source.spdx.json"
+            --image-sbom "sbom/docker-image.spdx.json"
+            --provenance-bundle "attestations/provenance.bundle"
+            --docker-sbom-bundle "attestations/docker-sbom.bundle"
           )
           target/debug/deve_baseline release-candidate assemble "${args[@]}"
           target/debug/deve_baseline release-candidate verify "${args[@]}"

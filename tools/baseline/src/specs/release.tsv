@@ -78,14 +78,10 @@ absent	.github/workflows/release-native.yml	mobile-ios:
 absent	.github/workflows/release-native.yml	deve-mobile-ios
 absent	.github/workflows/release-native.yml	DEVE_DESKTOP_PACKAGE_BUNDLES: deb,appimage
 absent	.github/workflows/release-native.yml	libwebkit2gtk-4.1-dev
-contains	apps/desktop/tauri.conf.json	"version": "0.1.0"
-contains	apps/mobile/tauri.conf.json	"version": "0.1.0"
-absent	apps/desktop/tauri.conf.json	"version": "0.0.1"
-absent	apps/mobile/tauri.conf.json	"version": "0.0.1"
-contains	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "0.1.0"
-absent	apps/mobile/gen/android/app/build.gradle.kts	tauri.android.versionName", "1.0"
+contains	docs/registry/release-freeze.json	"channel": "public-preview"
+contains	tools/baseline/src/main.rs	"release-freeze" => release_freeze::run(&command_args)
 contains	docs/plan/18_release.md	.github/workflows/release-native.yml
-contains	docs/features/15_release.md	Windows MSI/NSIS、macOS DMG 与已签名 Android ARM64 APK
+contains	docs/features/15_release.md	Windows x64 MSI/NSIS、恰好一个真实 host architecture 的 macOS DMG、已签名 Android ARM64 APK
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
 contains	.github/workflows/release-candidate.yml	workflow_dispatch:
 contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT

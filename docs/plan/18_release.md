@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-07-25`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -33,6 +33,15 @@
 | **Android** | `.apk` / `.aab`             | ARM64                | **Pending** (Not urgent) |
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
 | **CLI**     | `deve_cli` binary           | Host target          | Unsigned public preview  |
+
+`docs/registry/release-freeze.json` 是 first-tag version、tag、channel 与 artifact/control
+set 的唯一当前 authority。`deve_baseline release-freeze verify` 必须以 typed schema
+解析该 registry，并验证 workspace、Desktop、Mobile、Android fallback、candidate
+materialization、candidate assembler role/public policy 与 tag promotion allowlist
+全部一致。macOS DMG 必须在 `macos-x64` / `macos-arm64` 中恰好选择一个真实 host
+architecture；registry 未冻结的平台或 readiness claim 不得进入 candidate 或公开
+Release asset set。该 checker 只属于 developer/release tooling，不进入产品 CLI 或
+runtime authority。
 
 First formal tag scope note: Linux native Desktop artifacts (`.deb`, `.rpm`,
 `.AppImage`) are deferred until the native shell stack can move off the current
@@ -94,7 +103,7 @@ CI/CD 基于 GitHub Actions。
     5.  **Exact Candidate Evidence**: runtime/login、Playwright 双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须复用同一 candidate image；Desktop 必须安装并测试最终封存的 MSI/NSIS。LocalBackend、NoteGit 与 install/uninstall boundary 对两种 Windows installer 分别执行；RemoteBrowser/native-recovery journey 以 NSIS 安装面代表共享 Desktop runtime payload，不将该 receipt 扩张声明为 MSI installer-engine 的 RemoteBrowser 证明。GitHub x86_64 Android emulator 使用同一 HEAD 的 target-compatible x86_64 package 验证 LocalBackend/RemoteBrowser lifecycle，随后单独构建、签名并验证封存的 ARM64 APK；该 emulator receipt 不得冒充 ARM64 APK 的逐字节安装证据。smoke 禁止对 Docker/Desktop candidate 隐式 rebuild。
     6.  **Seal**: `deve_baseline release-candidate assemble/verify` 对下载容器与候选目录的精确 allowlist 执行规范相对路径、symlink/reparse、目录/文件总预算、结构文件大小上限、流式 SHA-256、HEAD、版本、workflow identity、Docker image ID 与 Android signer 校验，确定性生成 `release-candidate.json`、内部 candidate checksums 与公开 `SHA256SUMS`。公开 checksum 使用唯一 asset basename，以便直接验证 GitHub Release 扁平资产；内部 checksum 保留 candidate-relative path。source/workspace 与 exact Docker image 分别生成有完整 document/package/relationship 结构的 SPDX 2.3 JSON；source SBOM 不得冒充 MSI/DMG/APK 的逐字节 SBOM。实际制品和 SBOM 使用 GitHub artifact attestation 生成固定 provenance 与 Docker-SPDX bundle；个人仓库显式关闭 organization-only storage record，但保留 bundle 与 registry attestation。
     7.  **Aggregate**: `acceptance-aggregate.yml` 只接受显式 candidate/source run ID 与 attempt 1，先重算 candidate manifest/checksums、重新从 sealed APK 提取唯一 signer certificate，再使用封存 bundle、固定 signer workflow、source HEAD 与 SPDX predicate 验证 attestation，随后执行 receipt collect 与 tag-ready。成功后上传 sealed exact-HEAD candidate bundle；artifact 过期、HEAD 或版本变化必须整批重跑。
-    8.  **Promote**: `release.yml` 从 annotated tag trailer 显式绑定的成功 aggregate run 下载 sealed bundle并再次 verify；不得按“最新成功 run”自行选择。promotion 在 repository scope 串行，并在 draft upload、registry mutation 与公开 Release 前重复确认 remote annotated tag object 仍直接 peel 到 candidate HEAD。GitHub Release 与 GHCR 的存在性探测使用 `present / explicit HTTP 404 absent / error` 三态；鉴权、限流、网络或 5xx 一律 fail-closed，不得进入 create/push 分支。Docker archive load 后 image ID 必须匹配 manifest，随后才赋 version tag；stable release 仅在当前版本具有严格更高 SemVer precedence 且 prior latest tag commit 是当前 commit 祖先时更新 `latest`，prerelease 不更新 `latest`。SemVer build metadata 在 manifest/GitHub Release 中原样保留，并以无碰撞 `+` → `_build_` 映射形成 Docker-safe version tag。native assets 原样上传 draft Release，禁止重命名、重压缩或重新构建。
+    8.  **Promote**: `release.yml` 从 annotated tag trailer 显式绑定的成功 aggregate run 下载 sealed bundle并再次 verify；不得按“最新成功 run”自行选择。promotion 在 repository scope 串行，并在 draft upload、registry mutation 与公开 Release 前重复确认 remote annotated tag object 仍直接 peel 到 candidate HEAD。GitHub Release 与 GHCR 的存在性探测使用 `present / explicit HTTP 404 absent / error` 三态；鉴权、限流、网络或 5xx 一律 fail-closed，不得进入 create/push 分支。Docker archive load 后 image ID 必须匹配 manifest，随后才赋 version tag；stable release 仅在当前版本具有严格更高 SemVer precedence 且 prior latest tag commit 是当前 commit 祖先时更新 `latest`，prerelease 不更新 `latest`。first-tag registry 的 `public-preview` channel 必须标记为 GitHub prerelease，且即使版本是没有 SemVer prerelease 后缀的 `v0.1.0`，也绝不能更新 GitHub/GHCR `latest`。SemVer build metadata 在 manifest/GitHub Release 中原样保留，并以无碰撞 `+` → `_build_` 映射形成 Docker-safe version tag。native assets 原样上传 draft Release，禁止重命名、重压缩或重新构建。
     9.  **Remote Verify**: stable Docker version/latest 必须解析到同一 registry manifest digest并生成 registry digest attestation；已存在的 immutable version tag 只有在 pull 后 image ID 与 sealed candidate 完全一致时才允许恢复 partial run，否则 fail-closed。GitHub Release 远端资产名称与 SHA-256 必须与 sealed manifest 完全相等后才可公开。
         *   **Registry**: GHCR (`ghcr.io`).
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。

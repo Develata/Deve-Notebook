@@ -26,10 +26,31 @@ const MAX_CHECKSUM_BYTES: u64 = 256 * 1024;
 
 pub fn run(args: &[String]) -> Result<()> {
     let (action, args) = CandidateArgs::parse(args)?;
+    crate::release_freeze::validate_candidate_paths(
+        &args.version,
+        args.artifacts
+            .iter()
+            .map(|artifact| (artifact.role.key(), artifact.path.as_str())),
+    )?;
     match action {
         Action::Assemble => assemble(&args),
         Action::Verify => verify(&args),
     }
+}
+
+pub(crate) fn artifact_role_contract() -> BTreeMap<&'static str, bool> {
+    manifest::ArtifactRole::ALL
+        .into_iter()
+        .map(|role| (role.key(), role.is_public()))
+        .collect()
+}
+
+pub(crate) fn control_contract() -> BTreeMap<&'static str, bool> {
+    BTreeMap::from([
+        (INTERNAL_CHECKSUMS, false),
+        (PUBLIC_CHECKSUMS, true),
+        ("release-candidate.json", true),
+    ])
 }
 
 fn assemble(args: &CandidateArgs) -> Result<()> {

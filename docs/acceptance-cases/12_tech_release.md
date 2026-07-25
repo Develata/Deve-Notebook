@@ -53,6 +53,7 @@
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
+    - run: cargo run --locked -p deve_baseline -- release-freeze verify
     - run: scripts/check-release-version-match.test.sh
     - run: scripts/validate-release-image-tags.test.sh
     - run: cargo test --locked -p deve_baseline release_candidate -- --nocapture
@@ -88,6 +89,10 @@
     - release_assert: native_failure_creates_no_github_release true
     - release_assert: native_manifest_requires_exact_allowlisted_asset_set true
     - release_assert: native_manifest_rejects_extra_downloaded_files true
+    - release_assert: first_tag_version_channel_and_artifact_set_match_release_freeze_registry true
+    - release_assert: public_preview_channel_is_prerelease_and_never_updates_latest true
+    - release_assert: macos_candidate_selects_exactly_one_real_host_architecture true
+    - release_assert: candidate_assembler_and_promotion_allowlists_match_release_freeze true
     - release_assert: existing_public_release_rejected_before_asset_upload true
     - release_assert: github_release_remains_draft_until_remote_asset_manifest_matches true
     - security_assert: reusable_native_receives_only_android_signing_secrets true
@@ -124,6 +129,7 @@
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
     - run: cargo run -p deve_baseline -- release
+    - run: cargo run --locked -p deve_baseline -- release-freeze verify
     - run: cargo run -p deve_baseline -- all
     - run: cargo run -p deve_baseline -- full
     - run: cargo run -p deve_baseline -- local-quick-gate
@@ -156,6 +162,7 @@
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
     - release_assert: yanked_warnings_without_advisory_use_synthetic_registry_key true
     - release_assert: trunk_dev_index_rejected_by_static_delivery true
+    - release_assert: workspace_desktop_mobile_android_versions_match_release_freeze true
 
 - case_id: REL-003A
   goal: 首个公开 tag 前，release audit readiness 必须反映 ADR 0006 Route 2：Linux GTK3 native artifacts 不进入 release set。
@@ -190,6 +197,7 @@
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
+    - run: cargo run --locked -p deve_baseline -- release-freeze verify
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-native-process-adapter-gate.sh
@@ -236,6 +244,7 @@
     - release_assert: native_authority_writes_closed true
     - release_assert: first_tag_native_artifacts_windows_macos_android_only true
     - release_assert: linux_desktop_and_ios_artifacts_excluded_from_first_tag true
+    - release_assert: unfrozen_platforms_cannot_enter_candidate_or_release_assets true
     - release_assert: native_public_preview_signing_boundaries_explicit true
     - release_assert: sealed_native_artifacts_attach_to_github_release_only_during_tag_promotion true
     - release_assert: release_native_has_no_independent_tag_trigger true

@@ -126,6 +126,7 @@ jobs:
           export DEVE_RELEASE_DOCKER_SBOM_BUNDLE="$(artifact_path docker-sbom-attestation)"
           export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1
           cargo build --locked -p deve_baseline
+          target/debug/deve_baseline release-freeze verify
           bash scripts/check-release-candidate-bundle.sh
           cargo run --locked --quiet -p deve_baseline -- acceptance-matrix \
             --tag-ready "$DEVE_SEALED_ROOT/receipts"
@@ -178,11 +179,14 @@ jobs:
             if [[ "$draft" == false ]]; then
               already_published=1
               diff -u "$NAME_LIST" "$RUNNER_TEMP/existing-assets.txt"
-              expected_prerelease=false
-              version_without_build="${GITHUB_REF_NAME%%+*}"
-              [[ "$version_without_build" == *-* ]] && expected_prerelease=true
+              release_channel="$(jq -er .release.channel docs/registry/release-freeze.json)"
+              case "$release_channel" in
+                public-preview) expected_prerelease=true ;;
+                stable) expected_prerelease=false ;;
+                *) echo "unsupported release channel: $release_channel" >&2; exit 1 ;;
+              esac
               [[ "$(jq -er '.prerelease | if type == "boolean" then tostring else error("invalid prerelease") end' "$release_json")" == "$expected_prerelease" ]] || {
-                echo "published release prerelease classification does not match the sealed version" >&2
+                echo "published release prerelease classification does not match the frozen channel" >&2
                 exit 1
               }
               echo "published release already contains the exact sealed asset set; validating idempotent recovery"
@@ -195,6 +199,29 @@ jobs:
             exit 1
           fi
           if [[ "$already_published" == 0 ]]; then
+            artifact_path() {
+              jq -er --arg role "$1" '.artifacts[] | select(.role == $role) | .path' "$candidate/release-candidate.json"
+            }
+            export DEVE_BASELINE_BIN="$GITHUB_WORKSPACE/target/debug/deve_baseline"
+            export DEVE_RELEASE_CANDIDATE_DIR="$candidate"
+            export DEVE_RELEASE_CANDIDATE_HEAD="$GITHUB_SHA"
+            export DEVE_RELEASE_CANDIDATE_VERSION="${GITHUB_REF_NAME#v}"
+            export DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH=.github/workflows/release-candidate.yml
+            export DEVE_RELEASE_CANDIDATE_RUN_ID="$(jq -er .workflow.run_id "$candidate/release-candidate.json")"
+            export DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT="$(jq -er .workflow.run_attempt "$candidate/release-candidate.json")"
+            export DEVE_RELEASE_CANDIDATE_IMAGE_ID="$(jq -er .docker_image_id "$candidate/release-candidate.json")"
+            export DEVE_RELEASE_ANDROID_SIGNER_SHA256="$(jq -er .android_signer_sha256 "$candidate/release-candidate.json")"
+            export DEVE_RELEASE_WINDOWS_MSI="$(artifact_path windows-msi)"
+            export DEVE_RELEASE_WINDOWS_NSIS="$(artifact_path windows-nsis)"
+            export DEVE_RELEASE_MACOS_DMG="$(artifact_path macos-dmg)"
+            export DEVE_RELEASE_ANDROID_APK="$(artifact_path android-arm64-apk)"
+            export DEVE_RELEASE_DOCKER_ARCHIVE="$(artifact_path docker-linux-amd64-archive)"
+            export DEVE_RELEASE_SOURCE_SBOM="$(artifact_path source-spdx)"
+            export DEVE_RELEASE_IMAGE_SBOM="$(artifact_path image-spdx)"
+            export DEVE_RELEASE_PROVENANCE_BUNDLE="$(artifact_path provenance-attestation)"
+            export DEVE_RELEASE_DOCKER_SBOM_BUNDLE="$(artifact_path docker-sbom-attestation)"
+            export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1
+            bash scripts/check-release-candidate-bundle.sh
             upload=()
             while IFS= read -r relative; do upload+=("$candidate/$relative"); done <"$ASSET_LIST"
             gh release upload "$GITHUB_REF_NAME" --clobber "${upload[@]}"
@@ -246,7 +273,8 @@ jobs:
           latest_tag="ghcr.io/$repository:latest"
           args=("$version" "$version_tag")
           update_latest=0
-          if [[ "${version%%+*}" != *-* ]]; then
+          release_channel="$(jq -er .release.channel docs/registry/release-freeze.json)"
+          if [[ "$release_channel" == stable ]]; then
             args+=("$latest_tag")
             update_latest=1
             latest_release="$RUNNER_TEMP/latest-release.json"
@@ -279,6 +307,9 @@ jobs:
               echo "unexpected GitHub latest probe state: $latest_state" >&2
               exit 1
             fi
+          elif [[ "$release_channel" != public-preview ]]; then
+            echo "unsupported release channel: $release_channel" >&2
+            exit 1
           fi
           mapfile -t validated < <(bash scripts/validate-release-image-tags.sh "${args[@]}")
           [[ "${#validated[@]}" -eq "$((1 + update_latest))" ]] || { echo 'Docker tag validation failed' >&2; exit 1; }
@@ -352,10 +383,10 @@ jobs:
             echo "GitHub Release was already public; reapplying the idempotent release classification after sealed-state validation"
           fi
           args=(--draft=false)
-          version_without_build="${GITHUB_REF_NAME%%+*}"
-          if [[ "$version_without_build" == *-* ]]; then
-            args+=(--prerelease)
-          else
-            args+=(--prerelease=false --latest)
-          fi
+          release_channel="$(jq -er .release.channel docs/registry/release-freeze.json)"
+          case "$release_channel" in
+            public-preview) args+=(--prerelease) ;;
+            stable) args+=(--prerelease=false --latest) ;;
+            *) echo "unsupported release channel: $release_channel" >&2; exit 1 ;;
+          esac
           gh release edit "$GITHUB_REF_NAME" "${args[@]}"

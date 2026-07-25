@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "release": {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "channel": "public-preview"
+  },
+  "artifacts": {
+    "windows_x64_msi": {
+      "path": "artifacts/windows/deve-notebook-{version}-windows-x64.msi",
+      "public": true
+    },
+    "windows_x64_nsis": {
+      "path": "artifacts/windows/deve-notebook-{version}-windows-x64-setup.exe",
+      "public": true
+    },
+    "macos_host_dmg": {
+      "one_of": [
+        "artifacts/macos/deve-notebook-{version}-macos-x64.dmg",
+        "artifacts/macos/deve-notebook-{version}-macos-arm64.dmg"
+      ],
+      "public": true,
+      "universal": false
+    },
+    "android_arm64_apk": {
+      "path": "artifacts/android/deve-notebook-{version}-android-arm64.apk",
+      "public": true,
+      "signed": true
+    },
+    "docker_linux_amd64_archive": {
+      "path": "artifacts/docker/deve-notebook-{version}-linux-amd64.tar",
+      "public": false
+    },
+    "source_spdx": {
+      "path": "sbom/source.spdx.json",
+      "public": true,
+      "spdx_version": "SPDX-2.3"
+    },
+    "image_spdx": {
+      "path": "sbom/docker-image.spdx.json",
+      "public": true,
+      "spdx_version": "SPDX-2.3"
+    },
+    "provenance_bundle": {
+      "path": "attestations/provenance.bundle",
+      "public": true
+    },
+    "docker_sbom_bundle": {
+      "path": "attestations/docker-sbom.bundle",
+      "public": true
+    }
+  },
+  "controls": {
+    "release_candidate": {
+      "path": "release-candidate.json",
+      "public": true
+    },
+    "candidate_checksums": {
+      "path": "release-candidate-SHA256SUMS",
+      "public": false
+    },
+    "public_checksums": {
+      "path": "SHA256SUMS",
+      "public": true
+    }
+  },
+  "excluded": [
+    "linux-native-desktop",
+    "ios",
+    "standalone-cli",
+    "macos-universal",
+    "windows-macos-signed-notarized-claim",
+    "store-readiness",
+    "physical-device-readiness",
+    "stable-data-compatibility"
+  ]
+}
