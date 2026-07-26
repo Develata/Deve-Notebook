@@ -30,7 +30,7 @@ jobs:
           fallback: none
 
       - name: Verify cargo-audit version
-        run: test "$(cargo audit --version)" = "cargo-audit 0.22.2"
+        run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2"
 
       - name: Show Docker version
         run: docker version

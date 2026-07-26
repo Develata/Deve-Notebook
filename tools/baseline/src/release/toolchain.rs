@@ -9,6 +9,8 @@ use std::path::Path;
 const EXACT_TOOLCHAIN: &str = "1.97.0";
 const WORKSPACE_MSRV: &str = "1.97";
 const RUST_ACTION_REF: &str = "dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88";
+const CARGO_AUDIT_VERSION_PROBE: &str =
+    r#"run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2""#;
 const WORKFLOWS: [&str; 7] = [
     ".github/workflows/acceptance-aggregate.yml",
     ".github/workflows/check.yml",
@@ -17,6 +19,10 @@ const WORKFLOWS: [&str; 7] = [
     ".github/workflows/release-candidate.yml",
     ".github/workflows/release-native.yml",
     ".github/workflows/release.yml",
+];
+const CARGO_AUDIT_WORKFLOWS: [&str; 2] = [
+    ".github/workflows/docker-smoke.yml",
+    ".github/workflows/release-candidate.yml",
 ];
 const MEMBER_MANIFESTS: [&str; 6] = [
     "apps/cli/Cargo.toml",
@@ -31,6 +37,7 @@ pub(super) fn check(root: &Path) -> Result<()> {
     check_toolchain_file(root)?;
     check_cargo_metadata(root)?;
     check_workflows(root)?;
+    check_cargo_audit_probes(root)?;
     require_token(root, "Dockerfile", "FROM rust:1.97.0-bookworm AS build-env")?;
     require_token(
         root,
@@ -42,6 +49,26 @@ pub(super) fn check(root: &Path) -> Result<()> {
         "scripts/check-desktop-linux-apptainer-slurm.sh",
         "/.rustup/toolchains/1.97.0-x86_64-unknown-linux-gnu",
     )?;
+    Ok(())
+}
+
+fn check_cargo_audit_probes(root: &Path) -> Result<()> {
+    for workflow in CARGO_AUDIT_WORKFLOWS {
+        check_cargo_audit_probe_content(workflow, &read(root, workflow)?)?;
+    }
+    Ok(())
+}
+
+fn check_cargo_audit_probe_content(workflow: &str, content: &str) -> Result<()> {
+    let matches = content
+        .lines()
+        .filter(|line| line.trim() == CARGO_AUDIT_VERSION_PROBE)
+        .count();
+    if matches != 1 {
+        bail!(
+            "release-baseline-check: {workflow} must contain exactly one direct cargo-audit 0.22.2 version probe"
+        );
+    }
     Ok(())
 }
 
@@ -449,5 +476,22 @@ mod tests {
         assert!(!workflow_uses_rust_commands(
             "steps:\n  - name: Browser check\n    run: npm test\n"
         ));
+    }
+
+    #[test]
+    fn cargo_audit_probe_requires_the_direct_binary() {
+        check_cargo_audit_probe_content(
+            "fixture.yml",
+            &format!("      {CARGO_AUDIT_VERSION_PROBE}\n"),
+        )
+        .expect("direct cargo-audit probe");
+
+        let error = check_cargo_audit_probe_content(
+            "fixture.yml",
+            r#"      run: test "$(cargo audit --version)" = "cargo-audit 0.22.2"
+"#,
+        )
+        .expect_err("Cargo subcommand probe changes the version banner");
+        assert!(error.to_string().contains("direct cargo-audit 0.22.2"));
     }
 }

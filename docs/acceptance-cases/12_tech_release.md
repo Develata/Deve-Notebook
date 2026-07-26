@@ -383,6 +383,9 @@
     - native_assert: remote_browser_accepts_https_origin_only true
     - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true
     - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true
+    - native_assert: installed_desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+    - native_assert: installed_desktop_test_cdp_uses_exact_programmatic_assigned_port_marker true
+    - native_assert: installed_desktop_normal_startup_does_not_enable_cdp true
     - native_assert: desktop_installer_smoke_uses_local_bare_git_remote true
     - native_assert: desktop_installer_smoke_covers_notegit_commit_mirror_import_export_push true
     - native_assert: desktop_git_unavailable_does_not_rollback_notegit_commit true

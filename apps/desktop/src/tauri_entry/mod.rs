@@ -34,6 +34,14 @@ mod native_backend_commands;
 mod smoke;
 
 pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
+pub const DEVE_DESKTOP_WEBVIEW2_CDP_ENV: &str = "DEVE_DESKTOP_WEBVIEW2_CDP";
+#[cfg(any(target_os = "windows", test))]
+const DEVE_DESKTOP_WEBVIEW2_CDP_ASSIGNED_LOOPBACK: &str = "assigned-loopback";
+#[cfg(any(target_os = "windows", test))]
+const DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS: &str = concat!(
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection ",
+    "--remote-debugging-port=0"
+);
 
 use native_backend_commands::{desktop_local_backend_command_plugin, switch_to_local_backend};
 
@@ -307,10 +315,26 @@ fn create_desktop_main_window(
         );
     }
     let menu = build_desktop_menu(app, menu_policy)?;
-    WebviewWindowBuilder::from_config(app, &window_config)?
-        .menu(menu)
-        .build()?;
+    let mut builder = WebviewWindowBuilder::from_config(app, &window_config)?;
+    #[cfg(target_os = "windows")]
+    if let Some(arguments) =
+        desktop_webview2_cdp_browser_arguments(std::env::var_os(DEVE_DESKTOP_WEBVIEW2_CDP_ENV))
+    {
+        builder = builder.additional_browser_args(arguments);
+    }
+    builder.menu(menu).build()?;
     Ok(())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn desktop_webview2_cdp_browser_arguments(
+    marker: Option<std::ffi::OsString>,
+) -> Option<&'static str> {
+    (marker.as_deref()
+        == Some(std::ffi::OsStr::new(
+            DEVE_DESKTOP_WEBVIEW2_CDP_ASSIGNED_LOOPBACK,
+        )))
+    .then_some(DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS)
 }
 
 fn load_host_backend_preference(

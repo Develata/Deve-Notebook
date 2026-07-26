@@ -89,14 +89,15 @@ pub(super) fn delete_directory_pinned(identity: &HostPathIdentity) -> std::io::R
 }
 
 fn remove_children(directory: &File) -> std::io::Result<()> {
-    let duplicate = unsafe { libc::dup(directory.as_raw_fd()) };
+    let duplicate = unsafe { libc::fcntl(directory.as_raw_fd(), libc::F_DUPFD_CLOEXEC, 0) };
     if duplicate < 0 {
         return Err(std::io::Error::last_os_error());
     }
     let stream = unsafe { libc::fdopendir(duplicate) };
     if stream.is_null() {
+        let error = std::io::Error::last_os_error();
         unsafe { libc::close(duplicate) };
-        return Err(std::io::Error::last_os_error());
+        return Err(error);
     }
     let result = (|| {
         loop {
@@ -218,9 +219,14 @@ fn component_cstring(path: &Path) -> std::io::Result<CString> {
     .map_err(|_| invalid("quarantine file name contains NUL"))
 }
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_os = "linux")]
 fn clear_errno() {
     unsafe { *libc::__errno_location() = 0 };
+}
+
+#[cfg(target_os = "android")]
+fn clear_errno() {
+    unsafe { *libc::__errno() = 0 };
 }
 
 #[cfg(target_os = "macos")]
@@ -228,9 +234,14 @@ fn clear_errno() {
     unsafe { *libc::__error() = 0 };
 }
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_os = "linux")]
 fn current_errno() -> i32 {
     unsafe { *libc::__errno_location() }
+}
+
+#[cfg(target_os = "android")]
+fn current_errno() -> i32 {
+    unsafe { *libc::__errno() }
 }
 
 #[cfg(target_os = "macos")]

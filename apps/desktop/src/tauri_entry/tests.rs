@@ -181,6 +181,28 @@ fn desktop_tauri_main_window_creation_is_deferred_until_shell_mode_is_known() {
 }
 
 #[test]
+fn desktop_webview2_cdp_requires_exact_assigned_loopback_marker() {
+    assert_eq!(
+        desktop_webview2_cdp_browser_arguments(Some(
+            DEVE_DESKTOP_WEBVIEW2_CDP_ASSIGNED_LOOPBACK.into()
+        )),
+        Some(DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS)
+    );
+    for marker in [
+        None,
+        Some("".into()),
+        Some("assigned-loopback ".into()),
+        Some("--remote-debugging-port=9222".into()),
+    ] {
+        assert_eq!(desktop_webview2_cdp_browser_arguments(marker), None);
+    }
+    assert_eq!(
+        DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS,
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=0"
+    );
+}
+
+#[test]
 fn desktop_main_window_close_requests_process_exit() {
     assert!(desktop_main_window_close_exits_process(
         DESKTOP_TAURI_MAIN_WINDOW_LABEL

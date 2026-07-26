@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot "windows-process-cleanup.ps1")
+
 function Get-DeveWebView2ActivePortPath {
     param(
         [Parameter(Mandatory = $true)]
@@ -46,6 +48,94 @@ function Read-DeveWebView2ActivePort {
         Path = $path
         Port = $port
         BrowserTarget = $lines[1]
+    }
+}
+
+function Get-DeveWebView2Processes {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WebViewUserDataRoot
+    )
+
+    $root = [System.IO.Path]::GetFullPath((Join-Path $WebViewUserDataRoot "EBWebView"))
+    $argumentPattern =
+        '(?i)(?:^|\s)--user-data-dir(?:=|\s+)(?:"([^"]+)"|([^\s"]+))(?=\s|$)'
+    @(
+        Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" |
+            Where-Object {
+                if ($null -eq $_.CommandLine) {
+                    return $false
+                }
+                foreach ($match in [regex]::Matches($_.CommandLine, $argumentPattern)) {
+                    $value = if ($match.Groups[1].Success) {
+                        $match.Groups[1].Value
+                    } else {
+                        $match.Groups[2].Value
+                    }
+                    try {
+                        $candidate = [System.IO.Path]::GetFullPath($value)
+                    } catch {
+                        continue
+                    }
+                    if ([string]::Equals(
+                        $candidate,
+                        $root,
+                        [System.StringComparison]::OrdinalIgnoreCase
+                    )) {
+                        return $true
+                    }
+                }
+                return $false
+            }
+    )
+}
+
+function Stop-DeveProcessIfAlive {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$ProcessId,
+        [int]$TimeoutSeconds = 10,
+        [string]$Label = "process"
+    )
+
+    $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        return
+    }
+    Stop-Process -Id $ProcessId -Force -ErrorAction Stop
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        throw "webview2-cdp: $Label process $ProcessId remained alive after forced cleanup"
+    }
+}
+
+function Stop-DeveWebView2Processes {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WebViewUserDataRoot,
+        [int]$TimeoutSeconds = 10,
+        [string]$Label = "WebView2"
+    )
+
+    foreach ($process in @(Get-DeveWebView2Processes -WebViewUserDataRoot $WebViewUserDataRoot)) {
+        try {
+            Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop
+        } catch {
+            if ($null -ne (Get-Process -Id ([int]$process.ProcessId) -ErrorAction SilentlyContinue)) {
+                throw
+            }
+        }
+    }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (@(Get-DeveWebView2Processes -WebViewUserDataRoot $WebViewUserDataRoot).Count -eq 0) {
+            return
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    $remaining = @(Get-DeveWebView2Processes -WebViewUserDataRoot $WebViewUserDataRoot)
+    if ($remaining.Count -ne 0) {
+        throw "webview2-cdp: $Label cleanup left scoped processes: $($remaining.ProcessId -join ',')"
     }
 }
 
@@ -190,17 +280,8 @@ function Write-DeveWebView2CdpDiagnostics {
 
     $webViewProcessCount = $null
     try {
-        $root = [System.IO.Path]::GetFullPath($WebViewUserDataRoot)
-        $webViewProcessCount = @(
-            Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" |
-                Where-Object {
-                    $null -ne $_.CommandLine -and
-                    $_.CommandLine.IndexOf(
-                        $root,
-                        [System.StringComparison]::OrdinalIgnoreCase
-                    ) -ge 0
-                }
-        ).Count
+        $webViewProcessCount =
+            @(Get-DeveWebView2Processes -WebViewUserDataRoot $WebViewUserDataRoot).Count
     } catch {
         $webViewProcessCount = $null
     }

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-26`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -22,7 +22,7 @@
 *   Web 端大屏视口 **MUST** 映射到 Desktop 交互规范。
 *   Native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发有限平台事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
 *   默认构建 **MUST** 保持 no-Tauri skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
-*   `native-packaging` Desktop 默认模式是 `LocalBackend`；它 **MUST** 启动、持有或重启受控后端子进程，并在 app-private ledger/repo/projection 上自动初始化默认本地 workspace，不依赖 Docker、外部 CLI 或用户手工 init。
+*   `native-packaging` Desktop 默认模式是 `LocalBackend`；它 **MUST** 启动、持有或重启受控后端子进程，并在 app-private data root 初始化 zero-repo host registries，不依赖 Docker、外部 CLI 或用户手工 init。启动不得自动创建默认 repo/projection；首次 Create 才能经 server/core authority path 建立本地 workspace。
 *   `RemoteBrowser` **MUST** 显式选择，且只接受远端 `https://host[:port]` origin。URL 不得包含 userinfo、query、fragment 或业务子路径；壳层不得注入本地 endpoint/session bootstrap，不得启动本机 service。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；无效 endpoint 或 session-pending **MUST NOT** 退化为端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger / Projection Workspace authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。`LocalBackend` 只允许 native 壳启动/绑定本机 server full peer，不授予 shell 直接写 authority。
@@ -40,7 +40,7 @@ Desktop native adapter 是进程与平台壳层，不是业务 authority；第�
 *   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。server/CLI runtime 只初始化 host registries；零 repo 时不得自动创建隐藏或默认 repo。首次 Create 才建立 Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   Desktop host 若显式收到 `DEVE_GIT_EXECUTABLE`，必须先验证其为 absolute、存在的 ordinary file 并 canonicalize；显式值无效时不得回退。未显式配置时，host **MAY** 从自己的绝对 `PATH` entries 与 Windows `PATHEXT` 解析 Git。启动 sidecar 时必须二选一传递 canonical `DEVE_GIT_EXECUTABLE` 或内部 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不得把宿主完整 `PATH` / `PATHEXT` 加入 allowlist；unavailable 状态不得退回普通 executable search。
 *   Git 不可用不得阻断 `LocalBackend` service、native session 或 NoteGit ledger commit；Git mirror/import/export/push 只能进入 unavailable/out-of-sync 诊断。该绑定是 shell-to-sidecar process contract，不授予 Desktop shell `.git` 或 Source Control authority。
-*   Windows packaged UI gate 必须启动已安装的 Desktop binary，而不是仅探测 marker。gate 使用临时 app-private data root、隔离 WebView2 user-data 与随机 CDP port，必须通过真实 WebView 完成 native session、create/edit、NoteGit commit/history 和 Settings keyboard focus trap，并在窗口关闭后确认受控 sidecar 已退出。CDP 只驱动前端 intent；所有业务写入仍经过 server/core writer gate。
+*   Windows packaged UI gate 必须启动已安装的 Desktop binary，而不是仅探测 marker。gate 使用临时 app-private data root、隔离 WebView2 user-data 与 WebView2-assigned ephemeral CDP port，必须通过真实 WebView 完成 native session、create/edit、NoteGit commit/history 和 Settings keyboard focus trap，并在窗口关闭后确认受控 sidecar 已退出。为兼容 elevated target-host 忽略环境 browser flags 的平台行为，只有 exact diagnostic marker 才允许 Desktop host 以 programmatic WebView option 注入固定 `--remote-debugging-port=0`；不得接受任意 browser arguments，应用自身的普通启动路径不得启用 CDP。该约束不冒充对宿主 WebView2 policy 或进程外注入的屏蔽。CDP 只驱动前端 intent；所有业务写入仍经过 server/core writer gate。
 *   `RemoteBrowser { https_origin }` 是显式远端模式，Desktop 可通过启动参数 `--remote-url https://host[:port]` 或诊断/脚本环境变量 `DEVE_NATIVE_REMOTE_URL` 选择。壳层必须在创建主 WebView 前把已校验 origin 写入 native `WindowConfig`，不得靠远端页面执行 init-script redirect；后续 `/api` 与 `/ws` 均由浏览器同源规则解析。native 壳不提供本机 session cookie、端口、repo bootstrap、native bootstrap capability 或 Tauri command handler。
 *   Desktop Settings 只允许在可信 bundled `LocalBackend` origin 通过 native backend bridge 读写 host-local backend preference：默认 `local`；选择 `remote` 时必须先由 Desktop native 侧探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。bridge 只有在 typed bootstrap 明确声明 `backend_preference_control=true` 且 invoke runtime 存在时才能注册；不得把 `__TAURI_INTERNALS__` 存在视为 capability。
 *   Desktop `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。CLI `--remote-url` 与 `DEVE_NATIVE_REMOTE_URL` 仍只作为诊断/脚本覆盖项，优先于持久 preference，但不得回写 preference。

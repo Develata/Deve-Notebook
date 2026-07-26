@@ -22,6 +22,42 @@ function Invoke-Checked {
     return $output
 }
 
+function Invoke-RepoChecked {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [Parameter(Mandatory = $true)]
+        [string]$RepoSelector,
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$Arguments
+    )
+
+    $repoId = [guid]::Empty
+    if (-not [guid]::TryParse($RepoSelector, [ref]$repoId)) {
+        throw "repo-scoped command requires a UUID execution selector"
+    }
+    Invoke-Checked $FilePath @Arguments --repo $RepoSelector
+}
+
+function Read-IdentityUuid {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Identity,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("repo_id", "repo_name")]
+        [string]$Key,
+        [Parameter(Mandatory = $true)]
+        [string]$IdentityPath
+    )
+
+    $pattern = "(?m)^$Key\s*=\s*(['""])([0-9A-Fa-f-]+)\1\s*$"
+    $matches = [regex]::Matches($Identity, $pattern)
+    if ($matches.Count -ne 1) {
+        throw "initialized workspace identity must contain exactly one quoted ${Key}: $IdentityPath"
+    }
+    return $matches[0].Groups[2].Value
+}
+
 $desktop = (Resolve-Path -LiteralPath $DesktopBinary).Path
 $installDir = Split-Path -Parent $desktop
 $cli = Join-Path $installDir "deve_cli.exe"
@@ -56,6 +92,20 @@ try {
         throw "expected one projection workspace, found $($workspaces.Count)"
     }
     $workspace = $workspaces[0].FullName
+    $identityPath = Join-Path $workspace ".notegit\identity.toml"
+    if (-not (Test-Path -LiteralPath $identityPath -PathType Leaf)) {
+        throw "initialized workspace identity is missing: $identityPath"
+    }
+    $identity = Get-Content -Raw -LiteralPath $identityPath
+    $repoIdText = Read-IdentityUuid $identity "repo_id" $identityPath
+    $repoSelector = Read-IdentityUuid $identity "repo_name" $identityPath
+    $repoId = [guid]::Empty
+    if (
+        -not [guid]::TryParse($repoIdText, [ref]$repoId) -or
+        -not [string]::Equals($repoIdText, $repoSelector, [System.StringComparison]::Ordinal)
+    ) {
+        throw "initialized workspace identity does not bind one UUID execution selector: $identityPath"
+    }
 
     Invoke-Checked $git -C $workspace init | Out-Null
     Invoke-Checked $git -C $workspace config user.email deve-installer@example.invalid | Out-Null
@@ -63,18 +113,20 @@ try {
 
     Set-Content -LiteralPath (Join-Path $workspace "note.md") -Value "installed initial" -NoNewline
     Invoke-Checked $cli scan | Out-Null
-    Invoke-Checked $cli sc stage --repo default --all | Out-Null
-    Invoke-Checked $cli sc apply --repo default | Out-Null
-    Invoke-Checked $cli sc commit --repo default --message "installed NoteGit commit" | Out-Null
+    $initialStage = Invoke-RepoChecked $cli $repoSelector sc stage --all
+    $initialStage | Out-Null
+    $initialApply = Invoke-RepoChecked $cli $repoSelector sc apply
+    $initialApply | Out-Null
+    Invoke-RepoChecked $cli $repoSelector sc commit --message "installed NoteGit commit" | Out-Null
 
     $env:DEVE_GIT_EXECUTABLE = Join-Path $scenario "missing-git.exe"
-    $failureReport = (Invoke-Checked $cli ngit export --repo default) -join "`n"
+    $failureReport = (Invoke-RepoChecked $cli $repoSelector ngit export) -join "`n"
     if ($failureReport -notmatch "git executable is invalid") {
         throw "invalid trusted Git path did not fail closed with the expected diagnostic:`n$failureReport"
     }
 
     $env:DEVE_GIT_EXECUTABLE = $git
-    Invoke-Checked $cli ngit mirror --repo default --retry-out-of-sync | Out-Null
+    Invoke-RepoChecked $cli $repoSelector ngit mirror --retry-out-of-sync | Out-Null
     New-Item -ItemType Directory -Path $remote -Force | Out-Null
     Invoke-Checked $git -C $remote init --bare | Out-Null
     Invoke-Checked $git -C $workspace remote add origin $remote | Out-Null
@@ -82,15 +134,19 @@ try {
     if ([string]::IsNullOrWhiteSpace($branch)) {
         throw "exported Git mirror has no named branch"
     }
-    Invoke-Checked $cli ngit push --repo default --remote origin --branch $branch | Out-Null
+    $initialPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
+    $initialPush | Out-Null
 
     Set-Content -LiteralPath (Join-Path $workspace "note.md") -Value "installed import" -NoNewline
-    Invoke-Checked $cli ngit import --repo default --apply | Out-Null
-    Invoke-Checked $cli sc stage --repo default --all | Out-Null
-    Invoke-Checked $cli sc apply --repo default | Out-Null
-    Invoke-Checked $cli sc commit --repo default --message "installed imported commit" | Out-Null
-    Invoke-Checked $cli ngit export --repo default | Out-Null
-    Invoke-Checked $cli ngit push --repo default --remote origin --branch $branch | Out-Null
+    Invoke-RepoChecked $cli $repoSelector ngit import --apply | Out-Null
+    $importedStage = Invoke-RepoChecked $cli $repoSelector sc stage --all
+    $importedStage | Out-Null
+    $importedApply = Invoke-RepoChecked $cli $repoSelector sc apply
+    $importedApply | Out-Null
+    Invoke-RepoChecked $cli $repoSelector sc commit --message "installed imported commit" | Out-Null
+    Invoke-RepoChecked $cli $repoSelector ngit export | Out-Null
+    $importedPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
+    $importedPush | Out-Null
 
     $remoteBody = ((Invoke-Checked $git -C $remote show "refs/heads/${branch}:note.md") -join "`n").Trim()
     if ($remoteBody -ne "installed import") {

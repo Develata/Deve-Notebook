@@ -247,6 +247,26 @@ fn workflow_requires_remote_import_and_pvr_receipts_on_the_candidate_head() {
 }
 
 #[test]
+fn workflow_requires_direct_cargo_audit_version_probe() {
+    let registry = parse(registry_value());
+    let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");
+    let promotion = include_str!("../../../../.github/workflows/release.yml");
+    let mutated = candidate.replace(
+        r#"run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2""#,
+        r#"run: test "$(cargo audit --version)" = "cargo-audit 0.22.2""#,
+    );
+
+    assert_ne!(mutated, candidate);
+    let error = validate_workflow_texts(&mutated, promotion, &registry)
+        .expect_err("Cargo subcommand probe must not satisfy the candidate contract");
+    assert!(
+        error
+            .to_string()
+            .contains("candidate direct cargo-audit version verification")
+    );
+}
+
+#[test]
 fn workflow_requires_repository_linkage_and_anonymous_ghcr_pull() {
     let registry = parse(registry_value());
     let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");

@@ -819,6 +819,17 @@ one installed sibling sidecar while the app is alive and zero after exit before
 running the installer-specific uninstall path. It remains diagnostic-only unless
 `DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1` is set.
 
+The smoke sets the exact `DEVE_DESKTOP_WEBVIEW2_CDP=assigned-loopback` diagnostic
+marker. The Desktop host maps only that marker to a programmatic WebView2
+`--remote-debugging-port=0` option, including the Wry default disabled-feature
+arguments. This avoids relying on environment browser flags that elevated
+target-hosts may ignore. Arbitrary browser arguments are not accepted, and the
+application's normal startup path does not enable CDP. This evidence does not
+claim to override host WebView2 policy or out-of-process injection.
+The installer producer gives this smoke a 720-second outer command budget and
+passes fixed phase budgets whose conservative sum plus cleanup margin is smaller;
+an override that reverses that nesting fails before installation starts.
+
 The preference-driven RemoteBrowser gate is intentionally separate from CLI or
 environment overrides. Given an isolated installed Windows binary and a
 temporary HTTPS test origin, it pre-seeds only the host-local preference, drives

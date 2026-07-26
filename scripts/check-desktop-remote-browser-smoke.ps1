@@ -12,7 +12,8 @@ param(
     [string]$Password = $env:DEVE_DESKTOP_REMOTE_PASSWORD,
     [int]$StartupTimeoutSeconds = 60,
     [int]$ExitTimeoutSeconds = 15,
-    [int]$NpmTimeoutSeconds = 180
+    [int]$NpmTimeoutSeconds = 180,
+    [int]$JourneyTimeoutSeconds = 300
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,9 +49,16 @@ function Get-InstalledSidecars($ExecutablePath) {
     })
 }
 
-function Stop-ProcessIfAlive($ProcessId) {
-    if ($null -ne $ProcessId -and $null -ne (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
-        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+function Stop-InstalledSidecars($ExecutablePath, $TimeoutSeconds) {
+    foreach ($sidecar in @(Get-InstalledSidecars $ExecutablePath)) {
+        Stop-DeveProcessIfAlive `
+            -ProcessId ([int]$sidecar.ProcessId) `
+            -TimeoutSeconds $TimeoutSeconds `
+            -Label "installed sidecar"
+    }
+    $remaining = @(Get-InstalledSidecars $ExecutablePath)
+    if ($remaining.Count -ne 0) {
+        throw "installed sidecar cleanup left processes: $($remaining.ProcessId -join ',')"
     }
 }
 
@@ -145,16 +153,29 @@ function Invoke-UseLocalBackendMenu($Process, $Deadline) {
     Fail "native Use Local Backend menu item was not invokable"
 }
 
-function Find-ReplacementDesktop($ExecutablePath, $OldPid, $Deadline) {
+function Find-ReplacementDesktop($ExecutablePath, $OldPid, $NotBefore, $Deadline) {
     $expectedPath = [System.IO.Path]::GetFullPath($ExecutablePath)
     while ([DateTime]::UtcNow -lt $Deadline) {
-        $match = Get-CimInstance Win32_Process | Where-Object {
-            $_.ProcessId -ne $OldPid -and $null -ne $_.ExecutablePath -and
-            [System.IO.Path]::GetFullPath($_.ExecutablePath).Equals(
-                $expectedPath, [System.StringComparison]::OrdinalIgnoreCase
-            )
-        } | Select-Object -First 1
-        if ($null -ne $match) { return Get-Process -Id $match.ProcessId }
+        $matches = @(
+            Get-CimInstance Win32_Process |
+                Where-Object {
+                    $_.ProcessId -ne $OldPid -and $null -ne $_.ExecutablePath -and
+                    [System.IO.Path]::GetFullPath($_.ExecutablePath).Equals(
+                        $expectedPath, [System.StringComparison]::OrdinalIgnoreCase
+                    )
+                }
+        )
+        if ($matches.Count -gt 1) {
+            Fail "Desktop restart produced multiple replacement processes: $($matches.ProcessId -join ',')"
+        }
+        if ($matches.Count -eq 1) {
+            $match = $matches[0]
+            $createdAt = ([DateTime]$match.CreationDate).ToUniversalTime()
+            if ($createdAt -lt $NotBefore) {
+                Fail "Desktop replacement predates the native local-backend transition"
+            }
+            return Get-Process -Id $match.ProcessId -ErrorAction Stop
+        }
         Start-Sleep -Milliseconds 250
     }
     Fail "Desktop did not restart after native local-backend transition"
@@ -245,10 +266,13 @@ $psi.UseShellExecute = $false
 $psi.Environment["DEVE_DESKTOP_DATA_DIR"] = $dataRoot
 $psi.Environment.Remove("DEVE_NATIVE_REMOTE_URL") | Out-Null
 $psi.Environment["WEBVIEW2_USER_DATA_FOLDER"] = $webviewRoot
-$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=0"
+$psi.Environment.Remove("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS") | Out-Null
+$psi.Environment["DEVE_DESKTOP_WEBVIEW2_CDP"] = "assigned-loopback"
 $desktop = [System.Diagnostics.Process]::Start($psi)
 $replacement = $null
-$success = $false
+$journeyCompleted = $false
+$caughtError = $null
+$cleanupErrors = [System.Collections.Generic.List[string]]::new()
 
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
@@ -277,8 +301,11 @@ try {
         "Process"
     )
     try {
-        & $node (Join-Path $PSScriptRoot "smoke-desktop-remote-browser.mjs")
-        if ($LASTEXITCODE -ne 0) { Fail "RemoteBrowser WebView automation failed" }
+        Invoke-DeveNodeJourney `
+            -NodePath $node `
+            -ScriptPath (Join-Path $PSScriptRoot "smoke-desktop-remote-browser.mjs") `
+            -TimeoutSeconds $JourneyTimeoutSeconds `
+            -Label "RemoteBrowser WebView automation"
     } finally {
         Remove-Item Env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN -ErrorAction SilentlyContinue
         Remove-Item Env:DEVE_DESKTOP_REMOTE_USERNAME -ErrorAction SilentlyContinue
@@ -289,13 +316,18 @@ try {
     }
 
     $oldPid = $desktop.Id
+    $transitionStartedAt = [DateTime]::UtcNow
     $menuDeadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
     Invoke-UseLocalBackendMenu $desktop $menuDeadline
     if (-not $desktop.WaitForExit($ExitTimeoutSeconds * 1000)) {
         Fail "RemoteBrowser process did not exit for native mode transition"
     }
     $restartDeadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
-    $replacement = Find-ReplacementDesktop $desktopPath $oldPid $restartDeadline
+    $replacement = Find-ReplacementDesktop `
+        $desktopPath `
+        $oldPid `
+        $transitionStartedAt `
+        $restartDeadline
     try {
         $localCdp = Wait-DeveWebView2CdpEndpoint `
             -HostProcess $replacement `
@@ -331,8 +363,11 @@ try {
         "Process"
     )
     try {
-        & $node (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs")
-        if ($LASTEXITCODE -ne 0) { Fail "restarted LocalBackend WebView automation failed" }
+        Invoke-DeveNodeJourney `
+            -NodePath $node `
+            -ScriptPath (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs") `
+            -TimeoutSeconds $JourneyTimeoutSeconds `
+            -Label "restarted LocalBackend WebView automation"
     } finally {
         Restore-ProcessEnvironmentVariable `
             "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH" `
@@ -383,12 +418,13 @@ try {
         Start-Sleep -Milliseconds 250
     }
     if (@(Get-InstalledSidecars $sidecarPath).Count -ne 0) { Fail "orphaned sidecar after switch smoke" }
-    $success = $true
-    Write-Host "desktop-remote-browser-smoke: ok"
+    $journeyCompleted = $true
+} catch {
+    $caughtError = $_
 } finally {
     Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT -ErrorAction SilentlyContinue
     Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM -ErrorAction SilentlyContinue
-    if (-not $success) {
+    if (-not $journeyCompleted) {
         $diagnosticProcess = $desktop
         $diagnosticLabel = "RemoteBrowser"
         if ($null -ne $replacement) {
@@ -405,18 +441,56 @@ try {
             Write-Warning "desktop-remote-browser-smoke: failed to write sanitized CDP diagnostic: $($_.Exception.Message)"
         }
     }
-    Stop-ProcessIfAlive $desktop.Id
-    if ($null -ne $replacement) { Stop-ProcessIfAlive $replacement.Id }
-    try {
-        foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
-            Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
-        }
-    } catch {
-        Write-Warning "desktop-remote-browser-smoke: sidecar cleanup observation failed: $($_.Exception.Message)"
+    $cleanupSteps = [System.Collections.Generic.List[scriptblock]]::new()
+    $cleanupSteps.Add({
+        Stop-DeveProcessIfAlive `
+            -ProcessId $desktop.Id `
+            -TimeoutSeconds $ExitTimeoutSeconds `
+            -Label "RemoteBrowser Desktop"
+    })
+    if ($null -ne $replacement) {
+        $cleanupSteps.Add({
+            Stop-DeveProcessIfAlive `
+                -ProcessId $replacement.Id `
+                -TimeoutSeconds $ExitTimeoutSeconds `
+                -Label "restarted LocalBackend Desktop"
+        })
     }
-    if ($success -and (Test-Path -LiteralPath $runRoot)) {
-        Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction SilentlyContinue
-    } elseif (-not $success) {
+    $cleanupSteps.Add({
+        Stop-InstalledSidecars `
+            -ExecutablePath $sidecarPath `
+            -TimeoutSeconds $ExitTimeoutSeconds
+    })
+    $cleanupSteps.Add({
+        Stop-DeveWebView2Processes `
+            -WebViewUserDataRoot $webviewRoot `
+            -TimeoutSeconds $ExitTimeoutSeconds `
+            -Label "Desktop transition WebView2"
+    })
+    foreach ($cleanup in $cleanupSteps) {
+        try {
+            & $cleanup
+        } catch {
+            $cleanupErrors.Add($_.Exception.Message)
+        }
+    }
+    if ($journeyCompleted -and $cleanupErrors.Count -eq 0 -and (Test-Path -LiteralPath $runRoot)) {
+        try {
+            Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction Stop
+        } catch {
+            $cleanupErrors.Add("failed to remove successful run root: $($_.Exception.Message)")
+        }
+    }
+    if (-not $journeyCompleted -or $cleanupErrors.Count -ne 0) {
         Write-Warning "desktop-remote-browser-smoke: preserving failure evidence at $runRoot"
     }
 }
+
+if ($cleanupErrors.Count -ne 0) {
+    $primary = if ($null -eq $caughtError) { "none" } else { $caughtError.Exception.Message }
+    Fail "primary failure: $primary; cleanup failures: $($cleanupErrors -join '; ')"
+}
+if ($null -ne $caughtError) {
+    throw $caughtError
+}
+Write-Host "desktop-remote-browser-smoke: ok"

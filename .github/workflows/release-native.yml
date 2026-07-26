@@ -102,6 +102,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell WebView2 CDP regression failed' }
           pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
           if ($LASTEXITCODE -ne 0) { throw 'PowerShell WebView2 CDP regression failed' }
+          bash scripts/desktop-installer-windows.test.sh; if ($LASTEXITCODE -ne 0) { throw 'Windows installer registry regression failed' }
 
       - name: Run Windows cross-process repo lifecycle producer
         run: >-

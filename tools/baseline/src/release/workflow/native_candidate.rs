@@ -135,19 +135,79 @@ pub(super) fn check(root: &Path) -> Result<()> {
             .with_context(|| format!("read WebView2 CDP smoke {}", path.display()))?;
         validate_webview2_cdp_arguments(&script, relative)?;
     }
+    let desktop_entry_path = root.join("apps/desktop/src/tauri_entry/mod.rs");
+    let desktop_entry = fs::read_to_string(&desktop_entry_path)
+        .with_context(|| format!("read Desktop Tauri entry {}", desktop_entry_path.display()))?;
+    validate_programmatic_webview2_cdp(&desktop_entry)?;
     Ok(())
 }
 
 pub(super) fn validate_webview2_cdp_arguments(script: &str, label: &str) -> Result<()> {
-    const KEY: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+    const LEGACY_KEY: &str = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+    const MARKER_KEY: &str = "DEVE_DESKTOP_WEBVIEW2_CDP";
     const PORT: &str = "--remote-debugging-port=";
-    const ASSIGNMENT: &str = "$psi.Environment[\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\"] = \"--remote-debugging-port=0\"";
-    if script.lines().filter(|line| *line == ASSIGNMENT).count() != 1
-        || script.matches(KEY).count() != 1
-        || script.matches(PORT).count() != 1
+    const REMOVE_LEGACY: &str =
+        "$psi.Environment.Remove(\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\") | Out-Null";
+    const ASSIGNMENT: &str =
+        "$psi.Environment[\"DEVE_DESKTOP_WEBVIEW2_CDP\"] = \"assigned-loopback\"";
+    if script.lines().filter(|line| *line == REMOVE_LEGACY).count() != 1
+        || script.lines().filter(|line| *line == ASSIGNMENT).count() != 1
+        || script.matches(LEGACY_KEY).count() != 1
+        || script.matches(MARKER_KEY).count() != 1
+        || script.matches(PORT).count() != 0
     {
         bail!(
-            "release-baseline-check: {label} must set the exact WebView2-assigned CDP argument once"
+            "release-baseline-check: {label} must clear environment browser arguments and set the exact programmatic WebView2-assigned CDP marker once"
+        );
+    }
+    Ok(())
+}
+
+pub(super) fn validate_programmatic_webview2_cdp(source: &str) -> Result<()> {
+    const ENV_DEFINITION: &str =
+        "pub const DEVE_DESKTOP_WEBVIEW2_CDP_ENV: &str = \"DEVE_DESKTOP_WEBVIEW2_CDP\";";
+    const ARGUMENTS_DEFINITION: &str = r#"#[cfg(any(target_os = "windows", test))]
+const DEVE_DESKTOP_WEBVIEW2_CDP_ASSIGNED_LOOPBACK: &str = "assigned-loopback";
+#[cfg(any(target_os = "windows", test))]
+const DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS: &str = concat!(
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection ",
+    "--remote-debugging-port=0"
+);"#;
+    const GUARDED_INJECTION: &str = r#"    #[cfg(target_os = "windows")]
+    if let Some(arguments) =
+        desktop_webview2_cdp_browser_arguments(std::env::var_os(DEVE_DESKTOP_WEBVIEW2_CDP_ENV))
+    {
+        builder = builder.additional_browser_args(arguments);
+    }"#;
+    const MARKER_RESOLVER: &str = r#"#[cfg(any(target_os = "windows", test))]
+fn desktop_webview2_cdp_browser_arguments(
+    marker: Option<std::ffi::OsString>,
+) -> Option<&'static str> {
+    (marker.as_deref()
+        == Some(std::ffi::OsStr::new(
+            DEVE_DESKTOP_WEBVIEW2_CDP_ASSIGNED_LOOPBACK,
+        )))
+    .then_some(DEVE_DESKTOP_WEBVIEW2_CDP_BROWSER_ARGS)
+}"#;
+
+    for (label, exact) in [
+        ("diagnostic environment marker definition", ENV_DEFINITION),
+        ("fixed argument definition", ARGUMENTS_DEFINITION),
+        ("marker-guarded builder injection", GUARDED_INJECTION),
+        ("exact marker resolver", MARKER_RESOLVER),
+    ] {
+        if source.matches(exact).count() != 1 {
+            bail!(
+                "release-baseline-check: Desktop programmatic WebView2 CDP contract must contain exactly one {label}"
+            );
+        }
+    }
+    if source.contains("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS")
+        || source.matches("--remote-debugging-port=").count() != 1
+        || source.matches("additional_browser_args(").count() != 1
+    {
+        bail!(
+            "release-baseline-check: Desktop Tauri entry must expose only the exact marker-guarded programmatic WebView2 CDP arguments"
         );
     }
     Ok(())

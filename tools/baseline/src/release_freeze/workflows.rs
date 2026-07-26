@@ -18,6 +18,8 @@ const NATIVE_WORKFLOW: &str = ".github/workflows/release-native.yml";
 const PROMOTION_WORKFLOW: &str = ".github/workflows/release.yml";
 const FREEZE_VERIFY_CARGO: &str =
     "cargo run --locked --quiet -p deve_baseline -- release-freeze verify-candidate";
+const CARGO_AUDIT_VERSION_CHECK: &str =
+    r#"run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2""#;
 
 pub(super) fn validate_workflows(root: &Path, registry: &ReleaseFreeze) -> Result<()> {
     let candidate = read_text(root.join(CANDIDATE_WORKFLOW))?;
@@ -47,6 +49,12 @@ pub(super) fn validate_workflow_texts(
     promotion: &str,
     registry: &ReleaseFreeze,
 ) -> Result<()> {
+    let cargo_audit = step_block(candidate, "Verify cargo-audit version")?;
+    require_exact_line(
+        cargo_audit,
+        CARGO_AUDIT_VERSION_CHECK,
+        "candidate direct cargo-audit version verification",
+    )?;
     let candidate_verify = step_block(candidate, "Verify candidate scripts and formatting")?;
     require_exact_line(
         candidate_verify,

@@ -5,10 +5,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 STARTUP_TIMEOUT_SECS="${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-20}"
-INSTALLER_TIMEOUT_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS:-180}"
+INSTALLER_TIMEOUT_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS:-720}"
 TIMEOUT_KILL_AFTER_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_KILL_AFTER_SECS:-10}"
 WORK_ROOT="${DEVE_DESKTOP_INSTALLER_SMOKE_WORK_DIR:-$ROOT_DIR/target/desktop-installer-smoke}"
 SMOKE_ROOT_NAME="DeveNotebookInstallerSmoke"
+PACKAGED_UI_STARTUP_TIMEOUT_SECS=45
+PACKAGED_UI_EXIT_TIMEOUT_SECS=10
+PACKAGED_UI_NPM_TIMEOUT_SECS=180
+PACKAGED_UI_JOURNEY_TIMEOUT_SECS=300
+PACKAGED_UI_OUTER_MARGIN_SECS=60
+REGISTRY_OPERATION_TIMEOUT_SECS=15
 
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 run_deve_baseline "$ROOT_DIR" "desktop-installer-smoke" "desktop-installer-smoke-check"
@@ -21,18 +27,35 @@ failures=()
 windows_registry_snapshot=""
 windows_registry_cleanup_needed=0
 windows_registry_existed=0
-windows_install_registry_key='HKCU\Software\deve\Deve Notebook'
+windows_install_registry_subkey='Software\deve\Deve Notebook'
+windows_install_registry_key="HKCU\\$windows_install_registry_subkey"
 
 fail() {
   echo "desktop-installer-smoke-check: $*" >&2
   exit 1
 }
 
+packaged_ui_inner_budget="$((
+  PACKAGED_UI_NPM_TIMEOUT_SECS +
+    PACKAGED_UI_STARTUP_TIMEOUT_SECS +
+    PACKAGED_UI_JOURNEY_TIMEOUT_SECS +
+    5 * PACKAGED_UI_EXIT_TIMEOUT_SECS +
+    PACKAGED_UI_OUTER_MARGIN_SECS
+))"
+if [[ ! "$INSTALLER_TIMEOUT_SECS" =~ ^[1-9][0-9]*$ ]] ||
+  ((INSTALLER_TIMEOUT_SECS <= packaged_ui_inner_budget)); then
+  fail "installer timeout must exceed packaged UI inner budget ${packaged_ui_inner_budget}s"
+fi
+
 cleanup() {
+  local primary_status="$1"
+  local cleanup_failed=0
   local mount
   local path
 
-  restore_windows_install_registry
+  if ! restore_windows_install_registry; then
+    cleanup_failed=1
+  fi
   for mount in "${cleanup_mounts[@]:-}"; do
     if command -v hdiutil >/dev/null 2>&1; then
       run_bounded_command 15 hdiutil detach "$mount" >/dev/null 2>&1 || true
@@ -44,9 +67,21 @@ cleanup() {
     fi
     rm -rf "$path" >/dev/null 2>&1 || true
   done
+  if ((primary_status != 0)); then
+    return "$primary_status"
+  fi
+  return "$cleanup_failed"
 }
 
-trap cleanup EXIT
+on_exit() {
+  local primary_status=$?
+  trap - EXIT
+  set +e
+  cleanup "$primary_status"
+  exit $?
+}
+
+trap on_exit EXIT
 
 host_os() {
   uname -s 2>/dev/null || printf 'unknown'
@@ -264,7 +299,11 @@ run_installed_packaged_ui_smoke() {
     powershell.exe -NoProfile -ExecutionPolicy Bypass \
     -File "$(to_windows_path "$ROOT_DIR/scripts/check-desktop-packaged-ui-smoke.ps1")" \
     -DesktopBinary "$(to_windows_path "$desktop_binary")" \
-    -WorkRoot "$(to_windows_path "$WORK_ROOT")"
+    -WorkRoot "$(to_windows_path "$WORK_ROOT")" \
+    -StartupTimeoutSeconds "$PACKAGED_UI_STARTUP_TIMEOUT_SECS" \
+    -ExitTimeoutSeconds "$PACKAGED_UI_EXIT_TIMEOUT_SECS" \
+    -NpmTimeoutSeconds "$PACKAGED_UI_NPM_TIMEOUT_SECS" \
+    -JourneyTimeoutSeconds "$PACKAGED_UI_JOURNEY_TIMEOUT_SECS"
 }
 
 prepare_work_dir() {
@@ -349,207 +388,7 @@ smoke_macos_dmg_install() {
   return "$status"
 }
 
-to_windows_path() {
-  if command -v cygpath >/dev/null 2>&1; then
-    cygpath -w "$1"
-  else
-    printf '%s\n' "$1"
-  fi
-}
-
-snapshot_windows_install_registry() {
-  local snapshot_dir
-
-  is_windows_host || return 0
-  command -v reg.exe >/dev/null 2>&1 || return 0
-  ((windows_registry_cleanup_needed == 0)) || return 0
-
-  prepare_work_dir
-  snapshot_dir="$WORK_ROOT/windows-registry-snapshot"
-  mkdir -p "$snapshot_dir"
-  cleanup_paths+=("$snapshot_dir")
-  windows_registry_snapshot="$snapshot_dir/deve-notebook-install.reg"
-
-  if MSYS2_ARG_CONV_EXCL='*' reg.exe query "$windows_install_registry_key" >/dev/null 2>&1; then
-    windows_registry_existed=1
-    if ! MSYS2_ARG_CONV_EXCL='*' reg.exe export "$windows_install_registry_key" "$(to_windows_path "$windows_registry_snapshot")" /y >/dev/null 2>&1; then
-      fail "failed to snapshot Windows install registry key before installer smoke"
-    fi
-    if ! MSYS2_ARG_CONV_EXCL='*' reg.exe delete "$windows_install_registry_key" /f >/dev/null 2>&1; then
-      fail "failed to clear Windows install registry key before installer smoke"
-    fi
-  fi
-
-  echo "desktop-installer-smoke-check: isolating Windows install registry key $windows_install_registry_key"
-  windows_registry_cleanup_needed=1
-}
-
-restore_windows_install_registry() {
-  ((windows_registry_cleanup_needed == 1)) || return 0
-  is_windows_host || return 0
-  command -v reg.exe >/dev/null 2>&1 || return 0
-
-  MSYS2_ARG_CONV_EXCL='*' reg.exe delete "$windows_install_registry_key" /f >/dev/null 2>&1 || true
-  if ((windows_registry_existed == 1)) && [[ -f "$windows_registry_snapshot" ]]; then
-    MSYS2_ARG_CONV_EXCL='*' reg.exe import "$(to_windows_path "$windows_registry_snapshot")" >/dev/null 2>&1 || true
-  fi
-  windows_registry_cleanup_needed=0
-}
-
-find_desktop_exe() {
-  local root="$1"
-  first_match "$root" -type f \( -iname 'deve_desktop.exe' -o -iname 'Deve Notebook.exe' \)
-}
-
-smoke_windows_msi_install() {
-  local msi="$1"
-  local install_root
-  local install_dir
-  local install_log
-  local uninstall_log
-  local exe=""
-  local status=0
-
-  prepare_work_dir
-  install_root="$(mktemp -d "$WORK_ROOT/windows-msi.XXXXXX")"
-  cleanup_paths+=("$install_root")
-  install_dir="$install_root/$SMOKE_ROOT_NAME"
-  install_log="$install_root/msiexec-install.log"
-  uninstall_log="$install_root/msiexec-uninstall.log"
-
-  if ! run_windows_installer_command \
-    "msiexec.exe /i ${msi#"$ROOT_DIR"/} /qn /norestart ALLUSERS=2 MSIINSTALLPERUSER=1 APPLICATIONFOLDER=$(to_windows_path "$install_dir") INSTALLDIR=$(to_windows_path "$install_dir") /l*v $(to_windows_path "$install_log")" \
-    msiexec.exe /i "$(to_windows_path "$msi")" /qn /norestart \
-    ALLUSERS=2 \
-    MSIINSTALLPERUSER=1 \
-    "APPLICATIONFOLDER=$(to_windows_path "$install_dir")" \
-    "INSTALLDIR=$(to_windows_path "$install_dir")" \
-    /l*v "$(to_windows_path "$install_log")"; then
-    print_log_tail "$install_log"
-    preserve_failure_path "$install_root"
-    return 1
-  fi
-  sleep 3
-  exe="$(find_desktop_exe "$install_dir" || true)"
-  if [[ -z "$exe" ]]; then
-    echo "desktop-installer-smoke-check: MSI install completed but installed binary was not found under $install_dir" >&2
-    print_log_tail "$install_log"
-    preserve_failure_path "$install_root"
-    status=1
-  else
-    if ! run_startup_probe "$exe"; then
-      print_log_tail "$install_log"
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_git_unavailable_native_session_smoke "$exe"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_git_bridge_smoke "$exe" "$install_root"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_packaged_ui_smoke "$exe"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-  fi
-
-  if ! run_windows_installer_command \
-    "msiexec.exe /x ${msi#"$ROOT_DIR"/} /qn /norestart /l*v $(to_windows_path "$uninstall_log")" \
-    msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart \
-    /l*v "$(to_windows_path "$uninstall_log")"; then
-    print_log_tail "$uninstall_log"
-    preserve_failure_path "$install_root"
-    status=1
-  fi
-  sleep 3
-  if [[ -n "$exe" && -f "$exe" ]]; then
-    echo "desktop-installer-smoke-check: MSI uninstall completed but installed binary still exists: $exe" >&2
-    print_log_tail "$uninstall_log"
-    preserve_failure_path "$install_root"
-    status=1
-  fi
-  return "$status"
-}
-
-smoke_windows_nsis_install() {
-  local nsis="$1"
-  local install_root
-  local install_dir
-  local install_log
-  local uninstall_log
-  local exe
-  local uninstaller
-  local status=0
-
-  prepare_work_dir
-  install_root="$(mktemp -d "$WORK_ROOT/windows-nsis.XXXXXX")"
-  cleanup_paths+=("$install_root")
-  install_dir="$install_root/$SMOKE_ROOT_NAME"
-  install_log="$install_root/nsis-install.log"
-  uninstall_log="$install_root/nsis-uninstall.log"
-
-  if ! run_logged_windows_installer_command "$install_log" \
-    "${nsis#"$ROOT_DIR"/} /S /D=$(to_windows_path "$install_dir")" \
-    "$nsis" /S "/D=$(to_windows_path "$install_dir")"; then
-    print_log_tail "$install_log"
-    preserve_failure_path "$install_root"
-    return 1
-  fi
-  sleep 3
-  exe="$(find_desktop_exe "$install_dir" || true)"
-  if [[ -z "$exe" ]]; then
-    echo "desktop-installer-smoke-check: NSIS install completed but installed binary was not found" >&2
-    print_log_tail "$install_log"
-    preserve_failure_path "$install_root"
-    status=1
-  else
-    if ! run_startup_probe "$exe"; then
-      print_log_tail "$install_log"
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_git_unavailable_native_session_smoke "$exe"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_git_bridge_smoke "$exe" "$install_root"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    if ! run_installed_packaged_ui_smoke "$exe"; then
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-  fi
-
-  uninstaller="$(
-    first_match "$install_dir" -type f \( -iname 'uninstall.exe' -o -iname 'unins*.exe' \) || true
-  )"
-  if [[ -z "$uninstaller" ]]; then
-    echo "desktop-installer-smoke-check: NSIS uninstaller was not found" >&2
-    preserve_failure_path "$install_root"
-    status=1
-  else
-    if ! run_logged_windows_installer_command "$uninstall_log" \
-      "${uninstaller#"$ROOT_DIR"/} /S" \
-      "$uninstaller" /S; then
-      print_log_tail "$uninstall_log"
-      preserve_failure_path "$install_root"
-      status=1
-    fi
-    sleep 3
-  fi
-  if [[ -n "${exe:-}" && -f "$exe" ]]; then
-    echo "desktop-installer-smoke-check: NSIS uninstall completed but installed binary still exists: $exe" >&2
-    print_log_tail "$uninstall_log"
-    preserve_failure_path "$install_root"
-    status=1
-  fi
-  return "$status"
-}
+source "$ROOT_DIR/scripts/lib/desktop-installer-windows.sh"
 
 run_macos_smoke() {
   local app=""

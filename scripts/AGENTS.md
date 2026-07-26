@@ -68,10 +68,13 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-desktop-package-startup-smoke.sh` | Verifies target-host Desktop package artifacts expose a startup-probeable shell binary without opening process runtime or authority writes |
 | `check-desktop-native-session-package-smoke.sh` | Starts the bundled `deve_cli` with smoke state bound to a temporary `DEVE_DESKTOP_DATA_DIR`, verifies native-session cookie handoff, and requires cleanup before success |
 | `check-desktop-installer-smoke.sh` | Verifies target-host Desktop install/startup/real-WebView/NoteGit-Git/uninstall flow while keeping all writes behind the installed sidecar authority path |
-| `check-desktop-packaged-ui-smoke.ps1` | Starts an installed Windows Desktop package with isolated data/WebView2 roots and verifies real UI plus sidecar cleanup through a WebView2-assigned CDP endpoint |
+| `desktop-installer-windows.test.sh` | Injects Windows registry restore failure/success paths and verifies failure preservation plus cleanup-state transitions |
+| `lib/desktop-installer-windows.sh` | Owns Windows MSI/NSIS install, packaged-app journey, registry isolation, and uninstall helpers for the Desktop installer producer |
+| `check-desktop-packaged-ui-smoke.ps1` | Starts an installed Windows Desktop package with isolated data/WebView2 roots and verifies real UI plus sidecar cleanup through the exact programmatic WebView2-assigned CDP marker |
 | `smoke-desktop-packaged-ui.mjs` | Drives create/edit/commit/history and Settings focus trapping inside the installed native WebView without direct authority calls |
 | `check-desktop-remote-browser-smoke.ps1` | Runs an installed preference-driven RemoteBrowser, proves zero Web IPC/CSP leakage, invokes native local recovery, and verifies fresh LocalBackend restart plus sidecar cleanup |
-| `lib/webview2-cdp.ps1` | Discovers WebView2-assigned CDP endpoints from isolated `DevToolsActivePort` state, detects host exit, and writes sanitized diagnostics shared by Desktop smokes |
+| `lib/webview2-cdp.ps1` | Discovers programmatically enabled WebView2-assigned CDP endpoints from isolated `DevToolsActivePort` state, owns bounded Node/process-tree and exact-profile cleanup, detects host exit, and writes sanitized diagnostics shared by Desktop smokes |
+| `lib/windows-process-cleanup.ps1` | Owns bounded Node journey execution, creation-time-bound process-tree snapshots, taskkill deadlines, direct-child fallback, and residual identity checks |
 | `smoke-desktop-remote-browser.mjs` | Drives remote login/edit/commit/history through WebView2 CDP and records the no-facade/no-`ipc.localhost` browser contract |
 | `lib/desktop-webview-business-flow.mjs` | Shared UI-only create/edit/commit/history flow used by packaged LocalBackend and RemoteBrowser WebView smokes |
 | `check-desktop-target-host-preflight.sh` | Diagnoses macOS/Windows Desktop target-host prerequisites without claiming package readiness on the wrong host |

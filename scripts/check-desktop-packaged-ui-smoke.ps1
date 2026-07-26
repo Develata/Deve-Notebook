@@ -5,7 +5,8 @@ param(
     [string]$WorkRoot,
     [int]$StartupTimeoutSeconds = 45,
     [int]$ExitTimeoutSeconds = 10,
-    [int]$NpmTimeoutSeconds = 180
+    [int]$NpmTimeoutSeconds = 180,
+    [int]$JourneyTimeoutSeconds = 300
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +32,16 @@ function Get-InstalledSidecars($ExecutablePath) {
         })
 }
 
-function Stop-ProcessIfAlive($ProcessId) {
-    if ($null -ne $ProcessId -and $null -ne (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
-        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+function Stop-InstalledSidecars($ExecutablePath, $TimeoutSeconds) {
+    foreach ($sidecar in @(Get-InstalledSidecars $ExecutablePath)) {
+        Stop-DeveProcessIfAlive `
+            -ProcessId ([int]$sidecar.ProcessId) `
+            -TimeoutSeconds $TimeoutSeconds `
+            -Label "installed sidecar"
+    }
+    $remaining = @(Get-InstalledSidecars $ExecutablePath)
+    if ($remaining.Count -ne 0) {
+        throw "installed sidecar cleanup left processes: $($remaining.ProcessId -join ',')"
     }
 }
 
@@ -76,9 +84,12 @@ $psi.Arguments = "--local-backend"
 $psi.UseShellExecute = $false
 $psi.Environment["DEVE_DESKTOP_DATA_DIR"] = $dataRoot
 $psi.Environment["WEBVIEW2_USER_DATA_FOLDER"] = $webviewRoot
-$psi.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=0"
+$psi.Environment.Remove("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS") | Out-Null
+$psi.Environment["DEVE_DESKTOP_WEBVIEW2_CDP"] = "assigned-loopback"
 $desktop = [System.Diagnostics.Process]::Start($psi)
-$success = $false
+$journeyCompleted = $false
+$caughtError = $null
+$cleanupErrors = [System.Collections.Generic.List[string]]::new()
 
 try {
     $deadline = [DateTime]::UtcNow.AddSeconds($StartupTimeoutSeconds)
@@ -113,10 +124,11 @@ try {
     $env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT = $cdp.Endpoint
     $env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM = $packageJson
     try {
-        & $node (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs")
-        if ($LASTEXITCODE -ne 0) {
-            Fail "native WebView automation failed"
-        }
+        Invoke-DeveNodeJourney `
+            -NodePath $node `
+            -ScriptPath (Join-Path $PSScriptRoot "smoke-desktop-packaged-ui.mjs") `
+            -TimeoutSeconds $JourneyTimeoutSeconds `
+            -Label "packaged Desktop WebView automation"
     } finally {
         Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_CDP_ENDPOINT -ErrorAction SilentlyContinue
         Remove-Item Env:DEVE_DESKTOP_PACKAGED_UI_PLAYWRIGHT_REQUIRE_FROM -ErrorAction SilentlyContinue
@@ -140,10 +152,11 @@ try {
         Fail "installed deve_cli sidecars remained alive after packaged Desktop exit: $($orphanedSidecars.ProcessId -join ',')"
     }
 
-    $success = $true
-    Write-Host "desktop-packaged-ui-smoke: ok"
+    $journeyCompleted = $true
+} catch {
+    $caughtError = $_
 } finally {
-    if (-not $success) {
+    if (-not $journeyCompleted) {
         try {
             Write-DeveWebView2CdpDiagnostics `
                 -HostProcess $desktop `
@@ -154,17 +167,48 @@ try {
             Write-Warning "desktop-packaged-ui-smoke: failed to write sanitized CDP diagnostic: $($_.Exception.Message)"
         }
     }
-    Stop-ProcessIfAlive $desktop.Id
-    try {
-        foreach ($sidecar in @(Get-InstalledSidecars $sidecarPath)) {
-            Stop-ProcessIfAlive ([int]$sidecar.ProcessId)
+    foreach ($cleanup in @(
+        {
+            Stop-DeveProcessIfAlive `
+                -ProcessId $desktop.Id `
+                -TimeoutSeconds $ExitTimeoutSeconds `
+                -Label "packaged Desktop"
+        },
+        {
+            Stop-InstalledSidecars `
+                -ExecutablePath $sidecarPath `
+                -TimeoutSeconds $ExitTimeoutSeconds
+        },
+        {
+            Stop-DeveWebView2Processes `
+                -WebViewUserDataRoot $webviewRoot `
+                -TimeoutSeconds $ExitTimeoutSeconds `
+                -Label "packaged Desktop WebView2"
         }
-    } catch {
-        Write-Warning "desktop-packaged-ui-smoke: sidecar cleanup observation failed: $($_.Exception.Message)"
+    )) {
+        try {
+            & $cleanup
+        } catch {
+            $cleanupErrors.Add($_.Exception.Message)
+        }
     }
-    if ($success -and (Test-Path -LiteralPath $runRoot)) {
-        Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction SilentlyContinue
-    } elseif (-not $success) {
+    if ($journeyCompleted -and $cleanupErrors.Count -eq 0 -and (Test-Path -LiteralPath $runRoot)) {
+        try {
+            Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction Stop
+        } catch {
+            $cleanupErrors.Add("failed to remove successful run root: $($_.Exception.Message)")
+        }
+    }
+    if (-not $journeyCompleted -or $cleanupErrors.Count -ne 0) {
         Write-Warning "desktop-packaged-ui-smoke: preserving failure evidence at $runRoot"
     }
 }
+
+if ($cleanupErrors.Count -ne 0) {
+    $primary = if ($null -eq $caughtError) { "none" } else { $caughtError.Exception.Message }
+    Fail "primary failure: $primary; cleanup failures: $($cleanupErrors -join '; ')"
+}
+if ($null -ne $caughtError) {
+    throw $caughtError
+}
+Write-Host "desktop-packaged-ui-smoke: ok"

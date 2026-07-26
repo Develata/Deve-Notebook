@@ -1120,7 +1120,20 @@ contains	scripts/check-desktop-native-session-package-smoke.sh	source "$ROOT_DIR
 contains	scripts/check-desktop-native-session-package-smoke.sh	run_deve_baseline "$ROOT_DIR" "desktop-native-session-package-smoke" "desktop-native-session-package-smoke-check"
 contains	scripts/check-desktop-installer-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-desktop-installer-smoke.sh	run_deve_baseline "$ROOT_DIR" "desktop-installer-smoke" "desktop-installer-smoke-check"
+contains	scripts/check-desktop-installer-smoke.sh	source "$ROOT_DIR/scripts/lib/desktop-installer-windows.sh"
 absent	scripts/check-desktop-installer-smoke.sh	validate_bundles()
+contains	scripts/lib/desktop-installer-windows.sh	snapshot_windows_install_registry()
+contains	scripts/lib/desktop-installer-windows.sh	smoke_windows_msi_install()
+contains	scripts/lib/desktop-installer-windows.sh	smoke_windows_nsis_install()
+contains	scripts/lib/desktop-installer-windows.sh	run_installed_packaged_ui_smoke "$exe"
+contains	scripts/lib/desktop-installer-windows.sh	$subkey = [Console]::In.ReadToEnd()
+contains	scripts/lib/desktop-installer-windows.sh	run_bounded_command "$REGISTRY_OPERATION_TIMEOUT_SECS"
+contains	scripts/check-desktop-installer-smoke.sh	REGISTRY_OPERATION_TIMEOUT_SECS=15
+before	scripts/lib/desktop-installer-windows.sh	windows_registry_cleanup_needed=1	reg.exe delete "$windows_install_registry_key"
+absent	scripts/lib/desktop-installer-windows.sh	reg.exe query "$windows_install_registry_key"
+contains	scripts/desktop-installer-windows.test.sh	desktop-installer-windows-test: ok
+contains	.github/workflows/release-native.yml	bash scripts/desktop-installer-windows.test.sh
+contains	docs/registry/acceptance-producers.json	"scripts/lib/desktop-installer-windows.sh"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
 absent	scripts/check-mobile-android-emulator-install-startup-smoke.sh	assert_positive_integer()
@@ -1136,13 +1149,42 @@ contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_bridge_smoke
 contains	scripts/check-desktop-installer-smoke.sh	run_installed_git_unavailable_native_session_smoke
 contains	scripts/check-desktop-installer-smoke.sh	run_installed_packaged_ui_smoke
 contains	scripts/check-desktop-installer-smoke.sh	check-desktop-packaged-ui-smoke.ps1
+contains	scripts/check-desktop-installer-smoke.sh	INSTALLER_TIMEOUT_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS:-720}"
+contains	scripts/check-desktop-installer-smoke.sh	packaged_ui_inner_budget="$((
+contains	scripts/check-desktop-installer-smoke.sh	((INSTALLER_TIMEOUT_SECS <= packaged_ui_inner_budget))
+contains	scripts/check-desktop-installer-smoke.sh	-JourneyTimeoutSeconds "$PACKAGED_UI_JOURNEY_TIMEOUT_SECS"
 contains	scripts/check-desktop-local-backend-lifecycle.ps1	ForceGitUnavailable
 contains	scripts/check-desktop-installer-smoke.sh	check-desktop-installed-git-bridge-smoke.ps1
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	desktop-installed-git-bridge-smoke: ok
-contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$failureReport = (Invoke-Checked $cli ngit export --repo default)
-contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	ngit mirror --repo default --retry-out-of-sync
-contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit import --repo default --apply
-contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit push --repo default --remote origin --branch $branch
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	.notegit\identity.toml
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	[guid]::TryParse($repoIdText, [ref]$repoId)
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	[string]::Equals($repoIdText, $repoSelector, [System.StringComparison]::Ordinal)
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $FilePath @Arguments --repo $RepoSelector
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli sc stage
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli sc apply
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli sc commit
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit export
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit mirror
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit import
+absent	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-Checked $cli ngit push
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$initialStage = Invoke-RepoChecked $cli $repoSelector sc stage --all
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$importedStage = Invoke-RepoChecked $cli $repoSelector sc stage --all
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$initialApply = Invoke-RepoChecked $cli $repoSelector sc apply
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$importedApply = Invoke-RepoChecked $cli $repoSelector sc apply
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector sc commit --message "installed NoteGit commit"
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector sc commit --message "installed imported commit"
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$failureReport = (Invoke-RepoChecked $cli $repoSelector ngit export)
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector ngit mirror --retry-out-of-sync
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector ngit import --apply
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector ngit export | Out-Null
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$initialPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
+contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$importedPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_test_cdp_marker_injects_only_webview2_assigned_port_programmatically true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_normal_startup_does_not_enable_cdp true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_test_cdp_uses_exact_programmatic_assigned_port_marker true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_normal_startup_does_not_enable_cdp true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_installer_smoke_uses_local_bare_git_remote true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_git_unavailable_does_not_rollback_notegit_commit true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_packaged_ui_uses_installed_binary_and_real_webview true
@@ -1157,10 +1199,23 @@ contains	tools/baseline/src/release_version_order.rs	candidate release precedenc
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	desktop-packaged-ui-smoke: ok
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	Install-DevePlaywrightCore
 contains	scripts/check-desktop-remote-browser-smoke.ps1	Install-DevePlaywrightCore
-contains	scripts/check-desktop-packaged-ui-smoke.ps1	--remote-debugging-port=0
-contains	scripts/check-desktop-remote-browser-smoke.ps1	--remote-debugging-port=0
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	$psi.Environment.Remove("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS")
+contains	scripts/check-desktop-remote-browser-smoke.ps1	$psi.Environment.Remove("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS")
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	$psi.Environment["DEVE_DESKTOP_WEBVIEW2_CDP"] = "assigned-loopback"
+contains	scripts/check-desktop-remote-browser-smoke.ps1	$psi.Environment["DEVE_DESKTOP_WEBVIEW2_CDP"] = "assigned-loopback"
+contains	apps/desktop/src/tauri_entry/mod.rs	"--remote-debugging-port=0"
 contains	scripts/check-desktop-packaged-ui-smoke.ps1	Wait-DeveWebView2CdpEndpoint
 contains	scripts/check-desktop-remote-browser-smoke.ps1	Wait-DeveWebView2CdpEndpoint
+contains	scripts/check-desktop-packaged-ui-smoke.ps1	Invoke-DeveNodeJourney
+contains	scripts/check-desktop-remote-browser-smoke.ps1	Invoke-DeveNodeJourney
+contains	scripts/lib/webview2-cdp.ps1	. (Join-Path $PSScriptRoot "windows-process-cleanup.ps1")
+contains	scripts/lib/windows-process-cleanup.ps1	Get-CimInstance Win32_Process -OperationTimeoutSec 5
+contains	scripts/lib/windows-process-cleanup.ps1	Get-DeveProcessTreeSnapshot -RootProcessId $process.Id
+contains	scripts/lib/windows-process-cleanup.ps1	Test-DeveProcessIdentityAlive -Snapshot $_
+contains	scripts/lib/windows-process-cleanup.ps1	Invoke-DeveBoundedTaskkill -RootProcessId $process.Id
+contains	scripts/lib/windows-process-cleanup.ps1	taskkill exceeded its ${TimeoutSeconds}s operation timeout
+contains	scripts/lib/windows-process-cleanup.ps1	$cleanupFailures += "taskkill=$($_.Exception.Message)"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/windows-process-cleanup.ps1"
 absent	scripts/check-desktop-packaged-ui-smoke.ps1	Get-FreeLoopbackPort
 absent	scripts/check-desktop-remote-browser-smoke.ps1	Get-FreeLoopbackPort
 absent	scripts/check-desktop-packaged-ui-smoke.ps1	--remote-allow-origins

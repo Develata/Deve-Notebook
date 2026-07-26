@@ -826,9 +826,11 @@
       "artifacts": [
         "scripts/check-desktop-platform-package-build.sh",
         "scripts/check-desktop-installer-smoke.sh",
+        "scripts/lib/desktop-installer-windows.sh",
         "scripts/check-desktop-packaged-ui-smoke.ps1",
         "scripts/lib/playwright-core.ps1",
         "scripts/lib/webview2-cdp.ps1",
+        "scripts/lib/windows-process-cleanup.ps1",
         "scripts/smoke-desktop-packaged-ui.mjs",
         "scripts/lib/desktop-webview-business-flow.mjs"
       ],
@@ -885,6 +887,7 @@
         "scripts/lib/desktop-install-root.ps1",
         "scripts/lib/playwright-core.ps1",
         "scripts/lib/webview2-cdp.ps1",
+        "scripts/lib/windows-process-cleanup.ps1",
         "scripts/smoke-desktop-remote-browser.mjs",
         "scripts/smoke-desktop-packaged-ui.mjs",
         "scripts/lib/desktop-webview-business-flow.mjs"
