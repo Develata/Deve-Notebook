@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-07 | Updated: 2026-07-22 -->
+<!-- Generated: 2026-07-07 | Updated: 2026-07-26 -->
 
 # First-Tag Format Matrix
 
@@ -27,6 +27,10 @@ Implementation status after approved R0 target: Ledger payload v3、Redb schema 
 backend/CLI product wire、Mounted admission、post-commit writeback、immutable Projection
 Locator、host-local alias、F4/v5 Repo Control admission、zero-repo host、R4 ownership-aware lifecycle settlement、
 R5 single typed finalization/thin Web/normal offline-proxy CLI 与per-RepoId authority ownership已对齐；
-R6 Linux/Windows process与candidate/native browser producer topology已完成；同candidate HEAD的新鲜receipts仍是显式blocker；旧
+R6 Linux/Windows process与candidate/native browser producer topology已完成；STORE-007 已拆为
+Linux/Windows/browser receipts，仍须由同一最终 candidate HEAD 的新鲜 receipts 关闭；旧
 pull/continuation/External Changes bridge 与 name-only repo control 均已删除。B5 Remote Import typed
-client/sibling view已激活，B6 producer 已登记；最终 candidate current-HEAD B6 receipts 与 first-tag freshness evidence remain explicit blockers.
+client/sibling view已激活，B6 producer 已登记；最终 candidate current-HEAD B6 receipts 与 first-tag
+freshness evidence remain explicit blockers。STORE-016 继续是 required gap，仅在
+`v0.1.0 Public Preview` 由 typed release freeze 作为公开 accepted known limitation 精确列出；
+它不成为 receipt，`watcher_runtime` 继续“部分承载”。

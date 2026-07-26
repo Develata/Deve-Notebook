@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-26
+
 ### Added
 - **Projection Backup / S3-compatible**: CLI-only explicit Remote Projection profile slice for `s3+https://` custom endpoints, backed by host-local secret-free profile metadata and env-prefix credential refs; unbound or mismatched custom endpoints still fail closed before provider I/O and ambient AWS credential fallback.
 - **核心引擎**: Redb 追加日志存储、ledger-first authority、repo-scoped projection workspace
@@ -30,3 +32,9 @@
 
 ### Removed
 - **MCP runtime**: 移除产品内 MCP manager、client executor、plugin host tool 入口；后续工具扩展走 Skills + controlled CLI / Trusted CLI path。
+
+### Known limitations
+- **Windows 文件监听事件风暴**：短时间内对 Projection Workspace 执行数千个外部文件变更时，notify 8.2.0 可能丢失该批次的变化通知；极端情况下，后续外部变化也可能在重启前不再出现。
+  - 影响：目录树与 External Changes 可能暂时陈旧；若用户在 Deve 内继续修改同一文件，未被摄取的外部内容存在被后续 projection writeback 覆盖的风险。Ledger 既有事实不会因此损坏。
+  - 规避：执行数千文件规模的 Git checkout、解压、批量复制、重命名、删除或同步操作后，先重启 Deve，再继续编辑或提交。
+  - 退出条件：官方稳定 notify family 提供等价的 Windows overflow rescan/re-watch 修复、workspace 解析为单一 registry dependency identity，且三进程 exact-HEAD Windows receipt 通过后，整体删除本 accepted gap。

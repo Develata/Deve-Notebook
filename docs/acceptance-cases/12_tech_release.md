@@ -54,6 +54,7 @@
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
     - run: cargo run --locked -p deve_baseline -- release-freeze verify
+    - run: cargo run --locked -p deve_baseline -- release-freeze verify-candidate
     - run: scripts/check-release-version-match.test.sh
     - run: scripts/validate-release-image-tags.test.sh
     - run: cargo test --locked -p deve_baseline release_candidate -- --nocapture
@@ -91,6 +92,9 @@
     - release_assert: native_manifest_rejects_extra_downloaded_files true
     - release_assert: first_tag_version_channel_and_artifact_set_match_release_freeze_registry true
     - release_assert: public_preview_channel_is_prerelease_and_never_updates_latest true
+    - release_assert: public_preview_uses_frozen_changelog_release_notes true
+    - release_assert: exact_store_016_gap_is_visible_and_not_converted_to_receipt true
+    - release_assert: ghcr_version_is_anonymously_pullable_before_github_release_publication true
     - release_assert: macos_candidate_selects_exactly_one_real_host_architecture true
     - release_assert: candidate_assembler_and_promotion_allowlists_match_release_freeze true
     - release_assert: existing_public_release_rejected_before_asset_upload true
@@ -123,7 +127,7 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
-    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control 与 B5 已实现，B6 producer 已登记；最终 candidate current-HEAD B6 receipts 与其余 release gates 仍阻塞 tag
+    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control 与 B5 已实现，B6 producer 已登记；最终 candidate current-HEAD receipts 与其余 release gates 仍阻塞 tag，STORE-016 只按 v0.1.0 typed accepted gap 处理
     - release baseline 必须同时验证 approved target 与 current implementation，不得把 current 当作首发完成态
   steps:
     - run: rustup target add wasm32-unknown-unknown
@@ -470,5 +474,7 @@
     - contract_assert: explicit_cross_workflow_run_ids_are_head_bound_before_collection true
     - contract_assert: candidate_and_receipt_source_runs_are_explicit_head_version_bound true
     - contract_assert: sealed_candidate_artifact_expiry_requires_full_regeneration true
-    - release_assert: explicit_p0_gap_blocks_tag_ready true
+    - release_assert: unregistered_or_unconsumed_gap_blocks_tag_ready true
+    - release_assert: exact_version_store_016_accepted_gap_is_reported_not_faked_as_evidence true
+    - release_assert: store_007_requires_linux_windows_and_browser_receipts true
 ```

@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-26`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`, `apps/cli/src/watcher_runtime.rs`, `apps/cli/src/server/runtime/watcher_runtime.rs`
 
@@ -116,6 +116,10 @@ Starting(generation)
 - `[patch.crates-io]`、`Cargo.lock` 与 dependency source override 只有在取得可解析的真实 40 位 revision 后才可提交；禁止假 SHA、临时本地路径或不可重现 source。官方稳定版本满足同等行为后必须整体删除 override，不保留双轨或兼容分支。
 - Windows producer 必须由独立进程连续执行三次 `callback barrier + 2048 file burst`，每次同时证明：overflow 传播为 Rescan；rearm 后仍收到正常事件；成功 full reconcile 后 pending 集合与 producer 独立计算的 expected hash 完全一致。
 - receipt 必须绑定 dependency source/revision、Windows build、filesystem、当前精确 HEAD 与三次独立进程结果。`STORE-016` 在该 receipt 存在前保持 required gap，不得用普通 unit test 或 source-ref 代替 overflow 真实性。
+- `v0.1.0 Public Preview` 可以在 `18_release` 的 exact-version typed freeze 中把该
+  required gap 登记为 accepted known limitation，但不得改写矩阵 evidence kind、生成伪
+  receipt、关闭 STORE-016 或声称 watcher 已完整收敛。CHANGELOG 与 Release notes 必须明确
+  说明数千外部文件事件风暴的影响、重启规避和官方稳定 notify family + 三进程 receipt 的退出条件。
 
 ### 8.6 Owned Handle and Host Supervision
 
@@ -208,9 +212,9 @@ Stopping
 
 ### 8.12 Watcher Convergence Seal (W10)
 
-- W10 必须在同一精确 HEAD 封存 capture-first startup cut、typed Failed、E2 final-state shutdown、dynamic create/remove、server repo isolation、standalone fail-all 与 Windows overflow producer 证据。
-- Windows/Linux real-filesystem receipts 与 create/remove、repo-isolation Chrome receipts 必须绑定该同一 HEAD；alias independence 由独立 host-local runtime producer证明，不能冒充 watcher evidence。旧 HEAD、source-only、手工叙述或不同 artifact set 的结果不得拼接签署。
-- 只有 W9 overflow producer 和全部 watcher 合同检查通过后，runtime registry 的 `watcher_runtime` 才可改为 `已收敛`。否则必须保持 `部分承载`，`STORE-016` gap 与 tag-ready blocker 不得关闭。
+- W10 的 non-overflow seal 必须在同一精确 HEAD 封存 capture-first startup cut、typed Failed、E2 final-state shutdown、dynamic create/remove、server repo isolation 与 standalone fail-all。
+- Windows/Linux real-filesystem receipts 与 create/remove、repo-isolation browser receipts 必须绑定该同一 HEAD；alias independence 由独立 host-local runtime producer证明，不能冒充 watcher evidence。旧 HEAD、source-only、手工叙述或不同 artifact set 的结果不得拼接签署。该 non-overflow seal 关闭 STORE-007，但不能代替 STORE-016。
+- 只有 W9 overflow producer 和全部 watcher 合同检查通过后，runtime registry 的 `watcher_runtime` 才可改为 `已收敛`。`v0.1.0 Public Preview` 使用 exact accepted gap 时必须保持 `部分承载` 与 STORE-016 gap；后续版本在退出条件满足前仍不得复用该 accepted gap。
 
 ## 10. Forbidden Patterns（watcher）
 

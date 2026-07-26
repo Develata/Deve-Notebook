@@ -32,6 +32,8 @@ pub(super) fn validate(root: &Path, rows: &[MatrixRow], receipt_dir: &Path) -> R
     }
     let receipts = read_receipts(receipt_dir)?;
     let bindings = receipt_bindings(root, rows)?;
+    let mut accepted_gaps = crate::release_freeze::accepted_gap_bindings(root)?;
+    let mut accepted_gap_ids = BTreeSet::new();
     let mut blockers = Vec::new();
     if let Err(error) = validate_docker_candidate_identity(rows, &receipts) {
         blockers.push(format!("Docker candidate identity: {error}"));
@@ -41,10 +43,14 @@ pub(super) fn validate(root: &Path, rows: &[MatrixRow], receipt_dir: &Path) -> R
         .filter(|row| row.gate == "tag-ready" && row.requirement == "required")
     {
         if row.evidence_kind == "gap" {
-            blockers.push(format!(
-                "{} remains an explicit gap: {}",
-                row.requirement_id, row.note
-            ));
+            if let Some(accepted_gap_id) = consume_accepted_gap(row, &mut accepted_gaps) {
+                accepted_gap_ids.insert(accepted_gap_id);
+            } else {
+                blockers.push(format!(
+                    "{} remains an explicit gap: {}",
+                    row.requirement_id, row.note
+                ));
+            }
             continue;
         }
         if row.freshness == "source-bound"
@@ -73,8 +79,18 @@ pub(super) fn validate(root: &Path, rows: &[MatrixRow], receipt_dir: &Path) -> R
             blockers.push(format!("{}: {error}", row.requirement_id));
         }
     }
+    if let Err(error) = crate::release_freeze::reject_unconsumed(&accepted_gaps) {
+        blockers.push(error.to_string());
+    }
     if blockers.is_empty() {
-        println!("acceptance-matrix tag-ready: ok");
+        if accepted_gap_ids.is_empty() {
+            println!("acceptance-matrix tag-ready: ok");
+        } else {
+            println!(
+                "acceptance-matrix tag-ready: ok with accepted known limitation(s): {}",
+                accepted_gap_ids.into_iter().collect::<Vec<_>>().join(",")
+            );
+        }
         Ok(())
     } else {
         bail!(
@@ -83,6 +99,13 @@ pub(super) fn validate(root: &Path, rows: &[MatrixRow], receipt_dir: &Path) -> R
             blockers.join("\n- ")
         )
     }
+}
+
+fn consume_accepted_gap(
+    row: &MatrixRow,
+    accepted_gaps: &mut crate::release_freeze::AcceptedGapBindings,
+) -> Option<String> {
+    accepted_gaps.remove(&(row.requirement_id.clone(), row.evidence_id.clone()))
 }
 
 fn validate_receipt(

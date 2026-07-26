@@ -115,6 +115,8 @@
     - run: cargo test -p deve_cli standalone_watch -- --nocapture
     - run: cargo test -p deve_cli watcher_refresh_adapter_maps_all_domain_fields -- --nocapture
     - run: cargo test -p deve_cli server_shutdown_preserves_background_primary_and_watcher_failure -- --nocapture
+    - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --producer repo-lifecycle.process-linux --receipt-dir <external-receipt-root>
+    - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --producer repo-lifecycle.process-windows --receipt-dir <external-receipt-root>
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
@@ -141,6 +143,9 @@
     - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true
     - api_assert: watcher_refresh_adapter_maps_all_domain_fields true
     - api_assert: server_shutdown_preserves_background_primary_and_watcher_failure true
+    - release_assert: linux_and_windows_non_overflow_watcher_receipts_bind_same_candidate_head true
+    - release_assert: browser_repo_lifecycle_receipt_completes_w10_dynamic_lifecycle_surface true
+    - evidence_boundary: STORE-007 non-overflow seal does not satisfy STORE-016 Windows overflow receipt
 
 - case_id: STORE-008
   goal: 数据恢复策略。

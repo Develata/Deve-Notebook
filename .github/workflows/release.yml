@@ -126,7 +126,7 @@ jobs:
           export DEVE_RELEASE_DOCKER_SBOM_BUNDLE="$(artifact_path docker-sbom-attestation)"
           export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1
           cargo build --locked -p deve_baseline
-          target/debug/deve_baseline release-freeze verify
+          target/debug/deve_baseline release-freeze verify-candidate
           bash scripts/check-release-candidate-bundle.sh
           cargo run --locked --quiet -p deve_baseline -- acceptance-matrix \
             --tag-ready "$DEVE_SEALED_ROOT/receipts"
@@ -165,12 +165,21 @@ jobs:
           bash scripts/check-release-tag-binding.sh \
             "$GITHUB_REF_NAME" "$DEVE_RELEASE_TAG_OBJECT" "$GITHUB_SHA"
           candidate="$DEVE_SEALED_ROOT/candidate"
+          release_notes="$RUNNER_TEMP/release-notes.md"
+          target/debug/deve_baseline release-freeze release-notes >"$release_notes"
+          sed 's/\r$//' "$release_notes" >"$RUNNER_TEMP/release-notes.canonical.md"
           release_json="$RUNNER_TEMP/existing-release.json"
           release_state="$(bash scripts/probe-release-remote.sh \
             github-tag "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$release_json")"
           already_published=0
           if [[ "$release_state" == present ]]; then
             draft="$(jq -er '.draft | if type == "boolean" then tostring else error("invalid draft") end' "$release_json")"
+            jq -ej '.body | if type == "string" then . else error("invalid release body") end' \
+              "$release_json" >"$RUNNER_TEMP/existing-release-notes.raw.md"
+            sed 's/\r$//' "$RUNNER_TEMP/existing-release-notes.raw.md" \
+              >"$RUNNER_TEMP/existing-release-notes.canonical.md"
+            diff -u "$RUNNER_TEMP/release-notes.canonical.md" \
+              "$RUNNER_TEMP/existing-release-notes.canonical.md"
             jq -r '.assets[].name' "$release_json" | sort >"$RUNNER_TEMP/existing-assets.txt"
             comm -23 "$RUNNER_TEMP/existing-assets.txt" "$NAME_LIST" | grep -q . && {
               echo "existing release contains unexpected assets" >&2
@@ -192,7 +201,8 @@ jobs:
               echo "published release already contains the exact sealed asset set; validating idempotent recovery"
             fi
           elif [[ "$release_state" == absent ]]; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --generate-notes \
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --latest=false \
+              --notes-file "$release_notes" \
               --title "Deve Notebook $GITHUB_REF_NAME"
           else
             echo "unexpected GitHub Release probe state: $release_state" >&2
@@ -360,6 +370,13 @@ jobs:
               exit 1
             }
           fi
+          anonymous_config="$RUNNER_TEMP/deve-ghcr-anonymous"
+          mkdir "$anonymous_config"
+          DOCKER_CONFIG="$anonymous_config" docker pull "$VERSION_TAG" >/dev/null
+          [[ "$(docker image inspect --format '{{.Id}}' "$VERSION_TAG")" == "$IMAGE_ID" ]] || {
+            echo 'anonymous GHCR pull returned a different image identity' >&2
+            exit 1
+          }
           printf 'subject_name=%s\nsubject_digest=%s\n' "${VERSION_TAG%:*}" "$version_digest" >>"$GITHUB_OUTPUT"
 
       - name: Attest promoted registry manifest
@@ -385,8 +402,9 @@ jobs:
           args=(--draft=false)
           release_channel="$(jq -er .release.channel docs/registry/release-freeze.json)"
           case "$release_channel" in
-            public-preview) args+=(--prerelease) ;;
+            public-preview) args+=(--prerelease --latest=false) ;;
             stable) args+=(--prerelease=false --latest) ;;
             *) echo "unsupported release channel: $release_channel" >&2; exit 1 ;;
           esac
-          gh release edit "$GITHUB_REF_NAME" "${args[@]}"
+          gh release edit "$GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" "${args[@]}"

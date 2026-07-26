@@ -87,7 +87,7 @@
 - `Surface`: `github-actions`, `local-or-ci-script`
 - `Trigger`: branch CI validates structure; candidate/aggregate generate and validate fresh receipts; tag workflow revalidates the sealed receipt set
 - `Preconditions`: matrix authority, operation coverage, generated projection, and receipt directory are readable
-- `Immediate Result`: missing case/flow/journey relations block CI; missing, dirty, stale, wrong-platform, or failed required evidence blocks tag-ready
+- `Immediate Result`: missing case/flow/journey relations block CI; missing, dirty, stale, wrong-platform, or failed required evidence blocks tag-ready；仅 exact-version release freeze 登记并公开投影的 required gap 可作为 accepted known limitation，且不成为 receipt
 - `Application Entry`: `tools/baseline/src/acceptance_matrix/`, `scripts/check-acceptance-matrix.sh`
 
 ## Response Flow

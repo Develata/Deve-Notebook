@@ -32,14 +32,24 @@ test("Linux and Windows repo lifecycle producers own unique evidence identities"
   const windows = producer("repo-lifecycle.process-windows");
   assert.deepEqual(linux.host_os, ["linux"]);
   assert.deepEqual(windows.host_os, ["windows"]);
-  assert.deepEqual(linux.evidence_ids, ["smoke.repo-lifecycle.process-linux"]);
-  assert.deepEqual(windows.evidence_ids, ["smoke.repo-lifecycle.process-windows"]);
+  assert.deepEqual(linux.evidence_ids, [
+    "smoke.repo-lifecycle.process-linux",
+    "smoke.watcher.convergence-linux",
+  ]);
+  assert.deepEqual(windows.evidence_ids, [
+    "smoke.repo-lifecycle.process-windows",
+    "smoke.watcher.convergence-windows",
+  ]);
 
   const expectedFilters = [
     "repo_lifecycle_runtime::tests",
     "repo_lifecycle_job_runtime::tests::removal",
     "commands::repo_remove::output::tests::lifecycle_outcomes_cross_process_boundary",
     "--test repo_removal_cli_test",
+    "deve_core --lib watcher_",
+    "--test watcher_platform_fs",
+    "deve_cli --lib watcher_",
+    "deve_cli --lib standalone_watch",
   ];
   for (const current of [linux, windows]) {
     const filters = cargoFilters(current);

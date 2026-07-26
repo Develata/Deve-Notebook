@@ -2,9 +2,12 @@
 //!   - 18_release#artifact-identity-and-integrity
 //!   - 18_release#release-versioning
 
-use super::workflows::{step_block, validate_promotion_assets_step, validate_workflow_texts};
+use super::workflows::{
+    step_block, validate_outer_job_budgets, validate_promotion_assets_step, validate_workflow_texts,
+};
 use super::{
-    ReleaseFreeze, android_version_fallback, validate_candidate_contract, validate_registry,
+    ReleaseFreeze, accepted_gap_bindings, android_version_fallback, reject_unconsumed,
+    release_notes_root, validate_candidate_contract, validate_registry, verify_candidate_root,
     verify_root,
 };
 use serde_json::Value;
@@ -24,6 +27,7 @@ fn parse(value: Value) -> ReleaseFreeze {
 fn current_release_freeze_matches_workspace_and_workflows() {
     let root = crate::workspace_root::repo_root().expect("workspace root");
     verify_root(&root).expect("current release freeze");
+    verify_candidate_root(&root).expect("current candidate freeze");
 }
 
 #[test]
@@ -35,6 +39,90 @@ fn registry_rejects_unknown_fields() {
         .insert("shadow_authority".to_owned(), Value::Bool(true));
 
     assert!(serde_json::from_value::<ReleaseFreeze>(value).is_err());
+}
+
+#[test]
+fn registry_accepts_only_the_user_approved_store_016_gap() {
+    let root = crate::workspace_root::repo_root().expect("workspace root");
+    let bindings = accepted_gap_bindings(&root).expect("accepted gap bindings");
+    assert_eq!(
+        bindings.keys().collect::<Vec<_>>(),
+        vec![&(
+            "case.store-016".to_owned(),
+            "gap.watcher.windows-overflow-receipt".to_owned(),
+        )]
+    );
+
+    let mut value = registry_value();
+    value["accepted_gaps"][0]["bindings"][0]["requirement_id"] =
+        Value::String("case.store-007".to_owned());
+    let registry = parse(value);
+    let changelog = include_str!("../../../../CHANGELOG.md");
+    let error = super::known_limitations::validate(&registry, changelog)
+        .expect_err("STORE-007 must not be accepted");
+    assert!(
+        error
+            .to_string()
+            .contains("only the STORE-016 Windows overflow gap")
+    );
+    let error = reject_unconsumed(&bindings).expect_err("unconsumed accepted gap must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("accepted gaps do not match current required tag-ready gaps")
+    );
+}
+
+#[test]
+fn frozen_release_notes_are_derived_from_changelog_and_quantify_thousands() {
+    let root = crate::workspace_root::repo_root().expect("workspace root");
+    let notes = release_notes_root(&root).expect("frozen release notes");
+    assert!(notes.starts_with("## [0.1.0] - 2026-07-26\n"));
+    assert!(notes.contains("### Known limitations\n"));
+    assert!(notes.contains("数千个外部文件变更"));
+    assert!(!notes.contains("大量"));
+}
+
+#[test]
+fn changelog_rejects_an_unregistered_known_limitation() {
+    let registry = parse(registry_value());
+    let changelog = include_str!("../../../../CHANGELOG.md");
+    let mutated =
+        format!("{changelog}\n- **Unregistered limitation**: this is not in release-freeze.json\n");
+    let error = super::known_limitations::validate(&registry, &mutated)
+        .expect_err("extra known limitation must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("must exactly equal the accepted-gap projection")
+    );
+}
+
+#[test]
+fn accepted_gap_public_fields_reject_the_old_unquantified_wording() {
+    let mut value = registry_value();
+    value["accepted_gaps"][0]["impact"] = Value::String("大量外部变化可能使投影暂时陈旧。".into());
+    let registry = parse(value);
+    let changelog = include_str!("../../../../CHANGELOG.md");
+    let error = super::known_limitations::validate(&registry, changelog)
+        .expect_err("old unquantified wording must fail");
+    assert!(error.to_string().contains("impact"));
+}
+
+#[test]
+fn unreleased_content_is_allowed_by_history_check_but_rejected_for_a_candidate() {
+    let registry = parse(registry_value());
+    let changelog = include_str!("../../../../CHANGELOG.md");
+    let mutated = changelog.replace(
+        "## [Unreleased]\n",
+        "## [Unreleased]\n\n### Added\n- next development change\n",
+    );
+
+    super::known_limitations::validate(&registry, &mutated)
+        .expect("historical release freeze remains valid");
+    let error = super::known_limitations::validate_candidate(&registry, &mutated)
+        .expect_err("candidate must keep Unreleased empty");
+    assert!(error.to_string().contains("must be empty"));
 }
 
 #[test]
@@ -126,6 +214,70 @@ fn workflow_rejects_semver_only_latest_classification() {
     );
 
     assert!(validate_workflow_texts(candidate, &mutated, &registry).is_err());
+}
+
+#[test]
+fn workflow_rejects_generated_release_notes_instead_of_the_frozen_changelog() {
+    let registry = parse(registry_value());
+    let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");
+    let promotion = include_str!("../../../../.github/workflows/release.yml");
+    let mutated = promotion.replace(
+        r#"--notes-file "$release_notes" \"#,
+        r#"--generate-notes \"#,
+    );
+
+    assert_ne!(mutated, promotion);
+    assert!(validate_workflow_texts(candidate, &mutated, &registry).is_err());
+}
+
+#[test]
+fn workflow_requires_remote_import_and_pvr_receipts_on_the_candidate_head() {
+    let registry = parse(registry_value());
+    let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");
+    let promotion = include_str!("../../../../.github/workflows/release.yml");
+
+    for producer in ["docker.remote-import-browser", "github.pvr-enabled"] {
+        let mutated = candidate.replace(
+            &format!("--producer {producer}"),
+            "--producer omitted.from.candidate",
+        );
+        assert_ne!(mutated, candidate);
+        assert!(validate_workflow_texts(&mutated, promotion, &registry).is_err());
+    }
+}
+
+#[test]
+fn workflow_requires_repository_linkage_and_anonymous_ghcr_pull() {
+    let registry = parse(registry_value());
+    let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");
+    let promotion = include_str!("../../../../.github/workflows/release.yml");
+    let candidate_without_source = candidate.replace(
+        r#"--label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \"#,
+        r#"--label "org.opencontainers.image.description=missing-source" \"#,
+    );
+    assert_ne!(candidate_without_source, candidate);
+    assert!(validate_workflow_texts(&candidate_without_source, promotion, &registry).is_err());
+
+    let promotion_without_anonymous_pull = promotion.replace(
+        r#"DOCKER_CONFIG="$anonymous_config" docker pull "$VERSION_TAG" >/dev/null"#,
+        r#"docker pull "$VERSION_TAG" >/dev/null"#,
+    );
+    assert_ne!(promotion_without_anonymous_pull, promotion);
+    assert!(
+        validate_workflow_texts(candidate, &promotion_without_anonymous_pull, &registry).is_err()
+    );
+}
+
+#[test]
+fn workflow_outer_timeouts_cover_serial_producer_budgets() {
+    let candidate = include_str!("../../../../.github/workflows/release-candidate.yml");
+    let native = include_str!("../../../../.github/workflows/release-native.yml");
+    validate_outer_job_budgets(candidate, native).expect("current outer budgets");
+
+    let candidate_too_short = candidate.replace("timeout-minutes: 360", "timeout-minutes: 180");
+    assert!(validate_outer_job_budgets(&candidate_too_short, native).is_err());
+    let native_too_short = native.replacen("timeout-minutes: 300", "timeout-minutes: 150", 1);
+    assert!(validate_outer_job_budgets(candidate, &native_too_short).is_err());
 }
 
 #[test]

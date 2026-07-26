@@ -1,10 +1,29 @@
 {
-  "schema": 1,
+  "schema": 2,
   "release": {
     "version": "0.1.0",
     "tag": "v0.1.0",
-    "channel": "public-preview"
+    "channel": "public-preview",
+    "date": "2026-07-26"
   },
+  "accepted_gaps": [
+    {
+      "id": "known-limitation.windows-watcher-overflow",
+      "classification": "public-preview-known-limitation",
+      "approved_on": "2026-07-26",
+      "bindings": [
+        {
+          "requirement_id": "case.store-016",
+          "evidence_id": "gap.watcher.windows-overflow-receipt"
+        }
+      ],
+      "release_note_title": "Windows 文件监听事件风暴",
+      "user_visible_summary": "短时间内对 Projection Workspace 执行数千个外部文件变更时，notify 8.2.0 可能丢失该批次的变化通知；极端情况下，后续外部变化也可能在重启前不再出现。",
+      "impact": "目录树与 External Changes 可能暂时陈旧；若用户在 Deve 内继续修改同一文件，未被摄取的外部内容存在被后续 projection writeback 覆盖的风险。Ledger 既有事实不会因此损坏。",
+      "workaround": "执行数千文件规模的 Git checkout、解压、批量复制、重命名、删除或同步操作后，先重启 Deve，再继续编辑或提交。",
+      "exit_condition": "官方稳定 notify family 提供等价的 Windows overflow rescan/re-watch 修复、workspace 解析为单一 registry dependency identity，且三进程 exact-HEAD Windows receipt 通过后，整体删除本 accepted gap。"
+    }
+  ],
   "artifacts": {
     "windows_x64_msi": {
       "path": "artifacts/windows/deve-notebook-{version}-windows-x64.msi",

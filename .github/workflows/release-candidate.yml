@@ -74,7 +74,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/check-release-candidate-bundle.sh
           bash scripts/check-release-version-match.test.sh
-          cargo run --locked --quiet -p deve_baseline -- release-freeze verify
+          cargo run --locked --quiet -p deve_baseline -- release-freeze verify-candidate
           cargo fmt --all -- --check
 
       - name: Install Web projection build tool
@@ -109,7 +109,7 @@ jobs:
   docker-linux-amd64:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -155,6 +155,7 @@ jobs:
             --load \
             --platform linux/amd64 \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             --label "org.opencontainers.image.version=$VERSION" \
             --tag "$image" .
           image_id="$(docker image inspect --format '{{.Id}}' "$image")"
@@ -177,6 +178,13 @@ jobs:
           --producer docker.multiclient-product
           --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker-product"
 
+      - name: Run Remote Import provider and browser producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer docker.remote-import-browser
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-remote-import"
+
       - name: Run P2P gap and recovery against the same image
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run
@@ -190,6 +198,15 @@ jobs:
           --tier tag-ready
           --producer security.tag-ready-audit
           --receipt-dir "$RUNNER_TEMP/deve-acceptance-security"
+
+      - name: Prove Private Vulnerability Reporting is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer github.pvr-enabled
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-github-pvr"
 
       - name: Save the already-smoked image bytes
         env:

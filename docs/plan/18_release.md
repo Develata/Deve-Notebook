@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-25`
+- `Last Review`: `2026-07-26`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -34,14 +34,23 @@
 | **Web**     | PWA (Static)                | Universal            | HTTPS                    |
 | **CLI**     | `deve_cli` binary           | Host target          | Unsigned public preview  |
 
-`docs/registry/release-freeze.json` 是 first-tag version、tag、channel 与 artifact/control
-set 的唯一当前 authority。`deve_baseline release-freeze verify` 必须以 typed schema
+`docs/registry/release-freeze.json` 是 first-tag version、tag、channel、artifact/control
+set 与 exact-version accepted gap 的唯一当前 authority。`deve_baseline release-freeze verify` 必须以 typed schema
 解析该 registry，并验证 workspace、Desktop、Mobile、Android fallback、candidate
 materialization、candidate assembler role/public policy 与 tag promotion allowlist
 全部一致。macOS DMG 必须在 `macos-x64` / `macos-arm64` 中恰好选择一个真实 host
 architecture；registry 未冻结的平台或 readiness claim 不得进入 candidate 或公开
 Release asset set。该 checker 只属于 developer/release tooling，不进入产品 CLI 或
-runtime authority。
+runtime authority。accepted gap 只能用于一个精确 Public Preview 版本，必须绑定矩阵中
+真实存在的 `tag-ready/required/gap` requirement/evidence pair，并由冻结 CHANGELOG 与
+GitHub Release notes 显著投影；它不是 receipt、不得关闭原 gap 或升级 runtime convergence
+状态，stable channel 禁止 accepted gap。
+
+`deve_baseline release-freeze verify` 验证已经冻结的历史 release section、known limitation、
+版本 surface 与 workflow 投影，但不要求后续开发期 `[Unreleased]` 永久为空。
+`release-freeze verify-candidate` 在此基础上额外要求 `[Unreleased]` 为空；candidate workflow
+与 tag promotion 必须使用该严格入口。发布后无需改写 v0.1.0 历史 freeze 即可继续向
+`[Unreleased]` 添加下一版本内容，下一次 candidate 再由新的冻结工作清空并封存。
 
 First formal tag scope note: Linux native Desktop artifacts (`.deb`, `.rpm`,
 `.AppImage`) are deferred until the native shell stack can move off the current
@@ -53,7 +62,7 @@ users are expected to use Web / Server / Docker delivery rather than a Linux
 native Desktop package.
 
 ### 1.2 Release Channels (发布通道)
-1.  **Public Preview (公开预览)**: tag `v0.y.z`，用于 pre-1.0 阶段的首批公开验证；必须通过当前 release gate，但不得声明 stable data compatibility、签名 native release、store readiness 或 physical-device readiness。
+1.  **Public Preview (公开预览)**: tag `v0.y.z`，用于 pre-1.0 阶段的首批公开验证；必须通过当前 release gate。仅 `release-freeze` 对该精确版本登记、tag-ready 逐项匹配且公开 notes 可见的 accepted gap 可以作为已知限制通过；其它 gap 继续阻塞。Public Preview 不得声明 stable data compatibility、签名 native release、store readiness 或 physical-device readiness。
 2.  **Stable (稳定版)**: tag `v1.0.0`，仅在 Milestone 完成且测试通过后发布；产物包括二进制与 Docker Image (`latest`, `v1.0.0`)；适用于生产环境。
 3.  **Pre-release / Experimental (预发布 / 实验构建)**: tag `vX.Y.Z-rc.N` 或人工测试构建标识；按里程碑需要手动触发或本地构建；发布基线不要求独立 `nightly.yml` 工作流。
 
@@ -100,11 +109,11 @@ CI/CD 基于 GitHub Actions。
         public tag.
     3.  **Candidate Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。candidate workflow 只构建一次 `linux/amd64` image，并记录其 image ID；同一 run 还构建 Windows MSI/NSIS、按真实 host architecture 标记为 `macos-x64` 或 `macos-arm64` 的 DMG，以及已签名 Android ARM64 APK。不得把 host-only DMG 重命名为 universal。Android signing secrets 缺失、签名数不为一或 `apksigner verify` / certificate digest 复核失败时，candidate 必须失败，不能以 unsigned artifact 代替。
     4.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
-    5.  **Exact Candidate Evidence**: runtime/login、Playwright 双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须复用同一 candidate image；Desktop 必须安装并测试最终封存的 MSI/NSIS。LocalBackend、NoteGit 与 install/uninstall boundary 对两种 Windows installer 分别执行；RemoteBrowser/native-recovery journey 以 NSIS 安装面代表共享 Desktop runtime payload，不将该 receipt 扩张声明为 MSI installer-engine 的 RemoteBrowser 证明。GitHub x86_64 Android emulator 使用同一 HEAD 的 target-compatible x86_64 package 验证 LocalBackend/RemoteBrowser lifecycle，随后单独构建、签名并验证封存的 ARM64 APK；该 emulator receipt 不得冒充 ARM64 APK 的逐字节安装证据。smoke 禁止对 Docker/Desktop candidate 隐式 rebuild。
+    5.  **Exact Candidate Evidence**: runtime/login、Playwright 双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须复用同一 candidate image；该 image 必须携带 `org.opencontainers.image.source` 并绑定当前公开源码仓库。Desktop 必须安装并测试最终封存的 MSI/NSIS。LocalBackend、NoteGit 与 install/uninstall boundary 对两种 Windows installer 分别执行；RemoteBrowser/native-recovery journey 以 NSIS 安装面代表共享 Desktop runtime payload，不将该 receipt 扩张声明为 MSI installer-engine 的 RemoteBrowser 证明。GitHub x86_64 Android emulator 使用同一 HEAD 的 target-compatible x86_64 package 验证 LocalBackend/RemoteBrowser lifecycle，随后单独构建、签名并验证封存的 ARM64 APK；该 emulator receipt 不得冒充 ARM64 APK 的逐字节安装证据。smoke 禁止对 Docker/Desktop candidate 隐式 rebuild。
     6.  **Seal**: `deve_baseline release-candidate assemble/verify` 对下载容器与候选目录的精确 allowlist 执行规范相对路径、symlink/reparse、目录/文件总预算、结构文件大小上限、流式 SHA-256、HEAD、版本、workflow identity、Docker image ID 与 Android signer 校验，确定性生成 `release-candidate.json`、内部 candidate checksums 与公开 `SHA256SUMS`。公开 checksum 使用唯一 asset basename，以便直接验证 GitHub Release 扁平资产；内部 checksum 保留 candidate-relative path。source/workspace 与 exact Docker image 分别生成有完整 document/package/relationship 结构的 SPDX 2.3 JSON；source SBOM 不得冒充 MSI/DMG/APK 的逐字节 SBOM。实际制品和 SBOM 使用 GitHub artifact attestation 生成固定 provenance 与 Docker-SPDX bundle；个人仓库显式关闭 organization-only storage record，但保留 bundle 与 registry attestation。
     7.  **Aggregate**: `acceptance-aggregate.yml` 只接受显式 candidate/source run ID 与 attempt 1，先重算 candidate manifest/checksums、重新从 sealed APK 提取唯一 signer certificate，再使用封存 bundle、固定 signer workflow、source HEAD 与 SPDX predicate 验证 attestation，随后执行 receipt collect 与 tag-ready。成功后上传 sealed exact-HEAD candidate bundle；artifact 过期、HEAD 或版本变化必须整批重跑。
     8.  **Promote**: `release.yml` 从 annotated tag trailer 显式绑定的成功 aggregate run 下载 sealed bundle并再次 verify；不得按“最新成功 run”自行选择。promotion 在 repository scope 串行，并在 draft upload、registry mutation 与公开 Release 前重复确认 remote annotated tag object 仍直接 peel 到 candidate HEAD。GitHub Release 与 GHCR 的存在性探测使用 `present / explicit HTTP 404 absent / error` 三态；鉴权、限流、网络或 5xx 一律 fail-closed，不得进入 create/push 分支。Docker archive load 后 image ID 必须匹配 manifest，随后才赋 version tag；stable release 仅在当前版本具有严格更高 SemVer precedence 且 prior latest tag commit 是当前 commit 祖先时更新 `latest`，prerelease 不更新 `latest`。first-tag registry 的 `public-preview` channel 必须标记为 GitHub prerelease，且即使版本是没有 SemVer prerelease 后缀的 `v0.1.0`，也绝不能更新 GitHub/GHCR `latest`。SemVer build metadata 在 manifest/GitHub Release 中原样保留，并以无碰撞 `+` → `_build_` 映射形成 Docker-safe version tag。native assets 原样上传 draft Release，禁止重命名、重压缩或重新构建。
-    9.  **Remote Verify**: stable Docker version/latest 必须解析到同一 registry manifest digest并生成 registry digest attestation；已存在的 immutable version tag 只有在 pull 后 image ID 与 sealed candidate 完全一致时才允许恢复 partial run，否则 fail-closed。GitHub Release 远端资产名称与 SHA-256 必须与 sealed manifest 完全相等后才可公开。
+    9.  **Remote Verify**: GHCR version tag 必须在全新空 Docker credential context 中可匿名 pull，且 image ID 与 sealed candidate 完全一致；否则 GitHub Release 必须保持 draft。首次 package 默认 private 时，只能在显式、不可逆的 public visibility 授权后继续幂等 promotion。stable Docker version/latest 还必须解析到同一 registry manifest digest并生成 registry digest attestation；已存在的 immutable version tag 只有在 pull 后 image ID 与 sealed candidate 完全一致时才允许恢复 partial run，否则 fail-closed。GitHub Release 远端资产名称与 SHA-256 必须与 sealed manifest 完全相等后才可公开。
         *   **Registry**: GHCR (`ghcr.io`).
         *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: stable 使用 `latest` 与 Docker-safe version；prerelease 只有 Docker-safe version。Git tag / manifest version 仍保留完整 SemVer。
@@ -260,8 +269,10 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
   `external-state`、`gap`。路径、脚本和 test selector 必须可解析；Rust test selector
   必须绑定真实 workspace package、可解析 test target，且 filter 必须匹配该 package/target
   源码中定义的测试函数。
-  `receipt` locator 必须是规范相对 JSON 路径；`gap` 必须明确说明缺失事实，且不得满足
-  `tag-ready`。
+  `receipt` locator 必须是规范相对 JSON 路径；`gap` 必须明确说明缺失事实，默认不得满足
+  `tag-ready`。唯一例外是 `release-freeze` 对精确 Public Preview 版本登记的 accepted
+  gap：矩阵行仍保持 `required/gap`，tag-ready 必须按 requirement/evidence pair 精确
+  匹配并报告 limitation，不得生成伪 receipt、不得接受未登记或未消费的 binding。
 
 first-tag journey 集合固定覆盖：`auth-session`、`repo-lifecycle`、
 `edit-sync-offline-recovery`、`source-control`、`external-changes`、`notegit`、
@@ -297,9 +308,10 @@ readonly-negative、瞬态 probe failure、任意 exit-0 命令或未绑定 prod
 `deve_baseline acceptance-matrix --tag-ready <receipt-dir>` 只接受矩阵中 `required` 且
 `gate=tag-ready` 的新鲜证据：receipt 必须 `passed`、commit SHA 等于当前 HEAD、平台匹配、
 worktree clean，并满足 `current-head` / `target-host-30d` / `first-tag-once` 的时效语义。
-`source-bound` 由结构 checker 在当前源码上验证；`external-state` 与 `gap` 不得无 receipt
-地满足 tag-ready。普通 CI 只阻断结构漂移；正式 tag workflow 必须汇总各平台 receipts
-后再运行 tag-ready。
+`source-bound` 由结构 checker 在当前源码上验证；`external-state` 不得无 receipt 地满足
+tag-ready，`gap` 只按上一段的精确 Public Preview accepted-gap 例外处理。tag-ready
+还必须拒绝 registry 中无法匹配当前 required gap 的多余 binding。普通 CI 只阻断结构漂移；
+正式 tag workflow 必须汇总各平台 receipts 后再运行 tag-ready。
 
 `docs/registry/acceptance-producers.json` 是可执行 evidence producer 的唯一人工维护注册表。
 它登记 producer ID、覆盖的 `test` / `script` / `receipt` `evidence_id`、执行层级、适用 host OS、超时、必需环境变量、
@@ -378,11 +390,13 @@ tag 中唯一 `Deve-Acceptance-Aggregate-Run` trailer 显式绑定、
 或 GitHub Release 创建之前。producer
 失败、缺失、过期或平台不匹配均保持 fail-closed，禁止用空目录或跳过 job 伪装成功。
 
-当前 first-tag 必须如实保留以下 blocker：Private Vulnerability Reporting 必须由
-`github.pvr-enabled` 的 current-HEAD receipt 证明；Docker、Desktop、Android、
-RemoteBrowser 仍需在合并后的 current HEAD 实际运行 candidate workflow 并生成 producer-bound receipts；
-`v0.1.0 Public Preview` 与 release set 已由 `docs/registry/release-freeze.json` 冻结，
-CHANGELOG 仍未冻结。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
+当前 first-tag 必须如实保留以下 evidence gate：Private Vulnerability Reporting 必须由
+`github.pvr-enabled` 的 current-HEAD receipt 证明；Remote Import、Docker、Desktop、Android、
+RemoteBrowser 与 non-overflow watcher convergence 仍需在最终 candidate HEAD 实际运行
+candidate workflow 并生成 producer-bound receipts。`v0.1.0 Public Preview`、release set、
+CHANGELOG 与公开 known limitation 已由 `docs/registry/release-freeze.json` 冻结。STORE-016
+继续保持 required gap，只能作为该 exact version 的 accepted known limitation 被 tag-ready
+显式列出；`watcher_runtime` 继续部分承载。Android candidate workflow 已包含 secret-backed signing、单 signer 复验与 manifest binding，
 但在 current HEAD 的成功 run/receipt 出现前仍不能声称签名或安装证据已满足。开源治理文件、ruleset、
 Dependabot/CodeQL/container scan、operator runbook 属 P1；`.editorconfig`、
 fuzz/performance/privacy policy 属 P2 advisory。Rust toolchain pin 由
@@ -408,6 +422,12 @@ candidate checksum 还覆盖 Docker archive 和公开 checksum 文件。`verify`
 平台签名、Syft 扫描和 GitHub attestation 由窄 workflow action 执行；Rust 工具仍拥有
 subject allowlist、路径、identity、SPDX shape 与 digest policy，shell 只调用 `apksigner` / `gh`
 完成宿主签名解析和密码学 bundle 校验。
+
+冻结 CHANGELOG 中的精确版本段是 GitHub Release notes 的唯一公开正文投影。
+`deve_baseline release-freeze release-notes` 必须在 tag checkout 上先验证 typed registry、
+accepted gap 与 CHANGELOG 一致，再输出该版本段；promotion 禁止使用自动生成 notes，也必须在
+幂等恢复时逐字节复核已有 Release body。Public Preview 创建和发布都必须显式
+`latest=false`。
 
 ### 2.2 Deferred Workflows (推迟的工作流)
 
@@ -543,6 +563,8 @@ Web dashboard 通过 `SystemMetrics` 展示的 CPU / memory gauge 必须遵循
 
 - [ ] 所有 CI 测试通过 (Green).
 - [ ] `CHANGELOG.md` 已更新。
+- [ ] Public Preview accepted gap 若存在，typed freeze binding、required matrix gap、
+      CHANGELOG known limitation、Release body 与退出条件完全一致；未登记 gap 仍阻塞。
 - [ ] 关键依赖 (Dependencies) 无高危审计漏洞 (`cargo audit`, `npm audit`).
 - [ ] exact-HEAD pre-tag candidate bundle 已通过 Rust manifest/checksum 复核、SBOM 与
       provenance attestation 验证；tag promotion 未重新构建任何字节。

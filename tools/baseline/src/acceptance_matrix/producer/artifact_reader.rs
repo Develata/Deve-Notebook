@@ -63,7 +63,17 @@ impl ReceiptArtifactRoot {
 
     pub(in crate::acceptance_matrix) fn json_files(&self) -> Result<Vec<(String, PathBuf)>> {
         self.validate_root_identity()?;
-        let mut stack = vec![(self.root.clone(), 0usize)];
+        let receipts_root = self.root.join("receipts");
+        let receipts_metadata = fs::symlink_metadata(&receipts_root)
+            .context("acceptance receipts: inspect receipts directory")?;
+        if !receipts_metadata.is_dir() || is_reparse_or_symlink(&receipts_metadata) {
+            bail!("acceptance receipts: receipts directory must be a real directory");
+        }
+        self.validate_entry(&receipts_root)?;
+        let canonical_receipts = fs::canonicalize(&receipts_root)?;
+        let receipts_identity = FileIdentity::read(&canonical_receipts)?;
+
+        let mut stack = vec![(receipts_root.clone(), 0usize)];
         let mut files = Vec::new();
         let mut visited = 0usize;
         while let Some((directory, depth)) = stack.pop() {
@@ -100,6 +110,12 @@ impl ReceiptArtifactRoot {
             }
         }
         self.validate_root_identity()?;
+        self.validate_entry(&receipts_root)?;
+        if fs::canonicalize(&receipts_root)? != canonical_receipts
+            || FileIdentity::read(&canonical_receipts)? != receipts_identity
+        {
+            bail!("acceptance receipts: receipts directory identity changed");
+        }
         files.sort_by(|left, right| left.0.cmp(&right.0));
         Ok(files)
     }
@@ -209,13 +225,39 @@ mod tests {
     fn artifact_reader_lists_only_canonical_receipt_locators() {
         let root = temp_root();
         fs::create_dir_all(root.join("receipts/nested")).unwrap();
+        fs::create_dir_all(root.join("state/playwright/node_modules")).unwrap();
         fs::write(root.join("receipts/nested/one.json"), b"{}").unwrap();
         fs::write(root.join("receipts/ignored.txt"), b"ignored").unwrap();
+        fs::write(root.join("state/playwright/package.json"), b"{}").unwrap();
+        fs::write(
+            root.join("state/playwright/node_modules/metadata.json"),
+            b"{}",
+        )
+        .unwrap();
         let reader = ReceiptArtifactRoot::open(&root).unwrap();
 
         let files = reader.json_files().unwrap();
 
-        assert_eq!(files[0].0, "receipts/nested/one.json");
+        assert_eq!(
+            files
+                .iter()
+                .map(|(relative, _)| relative.as_str())
+                .collect::<Vec<_>>(),
+            ["receipts/nested/one.json"]
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn artifact_reader_requires_a_receipts_subtree() {
+        let root = temp_root();
+        fs::create_dir_all(root.join("state")).unwrap();
+        fs::write(root.join("state/package.json"), b"{}").unwrap();
+        let reader = ReceiptArtifactRoot::open(&root).unwrap();
+
+        let error = reader.json_files().unwrap_err();
+
+        assert!(error.to_string().contains("receipts directory"));
         let _ = fs::remove_dir_all(root);
     }
 

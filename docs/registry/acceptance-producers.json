@@ -940,7 +940,8 @@
     {
       "producer_id": "repo-lifecycle.process-linux",
       "evidence_ids": [
-        "smoke.repo-lifecycle.process-linux"
+        "smoke.repo-lifecycle.process-linux",
+        "smoke.watcher.convergence-linux"
       ],
       "dependencies": [],
       "tiers": [
@@ -949,7 +950,7 @@
       "host_os": [
         "linux"
       ],
-      "timeout_seconds": 1800,
+      "timeout_seconds": 2700,
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -994,6 +995,43 @@
           ]
         },
         {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--lib" },
+            { "literal": "watcher_" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--test" },
+            { "literal": "watcher_platform_fs" },
+            { "literal": "--" }, { "literal": "--nocapture" },
+            { "literal": "--test-threads=1" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "watcher_" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "standalone_watch" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
           "program": "node",
           "args": [
             { "literal": "--test" },
@@ -1001,12 +1039,13 @@
           ]
         }
       ],
-      "note": "Linux exact-HEAD producer combines host-owned secondary/last-repo runtime proof with real removal/repair children, lost-response replay, preservation, and exit 20/21/22"
+      "note": "Linux exact-HEAD producer combines repo lifecycle process proof with the non-overflow watcher startup, typed failure, final-state shutdown, standalone fail-all and real-filesystem W10 seal"
     },
     {
       "producer_id": "repo-lifecycle.process-windows",
       "evidence_ids": [
-        "smoke.repo-lifecycle.process-windows"
+        "smoke.repo-lifecycle.process-windows",
+        "smoke.watcher.convergence-windows"
       ],
       "dependencies": [],
       "tiers": [
@@ -1015,7 +1054,7 @@
       "host_os": [
         "windows"
       ],
-      "timeout_seconds": 1800,
+      "timeout_seconds": 2700,
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -1060,6 +1099,43 @@
           ]
         },
         {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--lib" },
+            { "literal": "watcher_" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_core" }, { "literal": "--test" },
+            { "literal": "watcher_platform_fs" },
+            { "literal": "--" }, { "literal": "--nocapture" },
+            { "literal": "--test-threads=1" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "watcher_" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" },
+            { "literal": "standalone_watch" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
           "program": "node",
           "args": [
             { "literal": "--test" },
@@ -1067,7 +1143,7 @@
           ]
         }
       ],
-      "note": "Windows exact-HEAD producer combines host-owned secondary/last-repo runtime proof with real removal/repair children, lost-response replay, preservation, and exit 20/21/22"
+      "note": "Windows exact-HEAD producer combines repo lifecycle process proof with the non-overflow watcher startup, typed failure, final-state shutdown, standalone fail-all and real-filesystem W10 seal; STORE-016 overflow remains separate"
     },
     {
       "producer_id": "docker.remote-import-browser",

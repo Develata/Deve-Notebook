@@ -12,6 +12,7 @@ use serde::Deserialize;
 pub(super) struct ReleaseFreeze {
     pub schema: u32,
     pub release: ReleaseIdentity,
+    pub accepted_gaps: Vec<AcceptedGap>,
     pub artifacts: ArtifactSet,
     pub controls: ControlSet,
     pub excluded: Vec<String>,
@@ -23,6 +24,28 @@ pub(super) struct ReleaseIdentity {
     pub version: String,
     pub tag: String,
     pub channel: String,
+    pub date: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AcceptedGap {
+    pub id: String,
+    pub classification: String,
+    pub approved_on: String,
+    pub bindings: Vec<AcceptedGapBinding>,
+    pub release_note_title: String,
+    pub user_visible_summary: String,
+    pub impact: String,
+    pub workaround: String,
+    pub exit_condition: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AcceptedGapBinding {
+    pub requirement_id: String,
+    pub evidence_id: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]

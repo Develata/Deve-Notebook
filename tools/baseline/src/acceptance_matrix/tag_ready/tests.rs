@@ -2,7 +2,8 @@
 //!   - 18_release#first-tag-acceptance-matrix
 
 use super::{
-    Receipt, ReceiptProducerBinding, ReceiptRecord, validate_execution_groups, validate_receipt,
+    Receipt, ReceiptProducerBinding, ReceiptRecord, consume_accepted_gap,
+    validate_execution_groups, validate_receipt,
 };
 use crate::acceptance_matrix::model::MatrixRow;
 use chrono::{Duration, Utc};
@@ -25,6 +26,31 @@ fn row() -> MatrixRow {
         freshness: "target-host-30d".into(),
         note: String::new(),
     }
+}
+
+#[test]
+fn accepted_gap_consumption_requires_the_exact_requirement_and_evidence_pair() {
+    let mut gap_row = row();
+    gap_row.requirement_id = "case.store-016".into();
+    gap_row.evidence_kind = "gap".into();
+    gap_row.evidence_id = "gap.watcher.windows-overflow-receipt".into();
+
+    let key = (gap_row.requirement_id.clone(), gap_row.evidence_id.clone());
+    let mut bindings = BTreeMap::from([(
+        key.clone(),
+        "known-limitation.windows-watcher-overflow".into(),
+    )]);
+    assert_eq!(
+        consume_accepted_gap(&gap_row, &mut bindings).as_deref(),
+        Some("known-limitation.windows-watcher-overflow")
+    );
+    assert!(bindings.is_empty());
+
+    let mut wrong_row = gap_row;
+    wrong_row.evidence_id = "gap.watcher.other".into();
+    let mut bindings = BTreeMap::from([(key, "known-limitation.windows-watcher-overflow".into())]);
+    assert_eq!(consume_accepted_gap(&wrong_row, &mut bindings), None);
+    assert_eq!(bindings.len(), 1);
 }
 
 fn binding() -> ReceiptProducerBinding {

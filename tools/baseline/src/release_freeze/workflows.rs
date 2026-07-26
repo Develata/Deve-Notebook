@@ -4,23 +4,42 @@
 //!
 //! Workflow projections of the typed release freeze.
 
+mod promotion;
+
 use super::candidate::{FrozenArtifactRef, fixed_artifacts};
 use super::{ReleaseFreeze, read_text};
 use anyhow::{Context, Result, ensure};
+#[cfg(test)]
+pub(super) use promotion::validate_promotion_assets_step;
 use std::path::Path;
 
 const CANDIDATE_WORKFLOW: &str = ".github/workflows/release-candidate.yml";
+const NATIVE_WORKFLOW: &str = ".github/workflows/release-native.yml";
 const PROMOTION_WORKFLOW: &str = ".github/workflows/release.yml";
 const FREEZE_VERIFY_CARGO: &str =
-    "cargo run --locked --quiet -p deve_baseline -- release-freeze verify";
-const FREEZE_VERIFY_BINARY: &str = "target/debug/deve_baseline release-freeze verify";
-const RELEASE_CHANNEL_LINE: &str =
-    r#"release_channel="$(jq -er .release.channel docs/registry/release-freeze.json)""#;
+    "cargo run --locked --quiet -p deve_baseline -- release-freeze verify-candidate";
 
 pub(super) fn validate_workflows(root: &Path, registry: &ReleaseFreeze) -> Result<()> {
     let candidate = read_text(root.join(CANDIDATE_WORKFLOW))?;
+    let native = read_text(root.join(NATIVE_WORKFLOW))?;
     let promotion = read_text(root.join(PROMOTION_WORKFLOW))?;
+    validate_outer_job_budgets(&candidate, &native)?;
     validate_workflow_texts(&candidate, &promotion, registry)
+}
+
+pub(super) fn validate_outer_job_budgets(candidate: &str, native: &str) -> Result<()> {
+    for (workflow, job, timeout, offset) in [
+        (candidate, "docker-linux-amd64:", "timeout-minutes: 360", 3),
+        (native, "desktop-windows:", "timeout-minutes: 300", 2),
+    ] {
+        let lines = active_lines(workflow);
+        let job_index = line_index(&lines, job)?;
+        ensure!(
+            lines.get(job_index + offset) == Some(&timeout),
+            "{job} outer timeout must contain the complete serial producer budget"
+        );
+    }
+    Ok(())
 }
 
 pub(super) fn validate_workflow_texts(
@@ -33,6 +52,26 @@ pub(super) fn validate_workflow_texts(
         candidate_verify,
         FREEZE_VERIFY_CARGO,
         "candidate freeze verification",
+    )?;
+    validate_candidate_receipt_producer(
+        candidate,
+        "Run Remote Import provider and browser producer",
+        "docker.remote-import-browser",
+        r#"--receipt-dir "$RUNNER_TEMP/deve-acceptance-remote-import""#,
+        None,
+    )?;
+    validate_candidate_receipt_producer(
+        candidate,
+        "Prove Private Vulnerability Reporting is enabled",
+        "github.pvr-enabled",
+        r#"--receipt-dir "$RUNNER_TEMP/deve-acceptance-github-pvr""#,
+        Some("GH_TOKEN: ${{ github.token }}"),
+    )?;
+    let docker_build = step_block(candidate, "Build linux/amd64 image once")?;
+    require_exact_line(
+        docker_build,
+        r#"--label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \"#,
+        "candidate Docker source repository label",
     )?;
     let materialize = step_block(candidate, "Materialize a strict candidate tree")?;
     let assemble = step_block(
@@ -80,60 +119,49 @@ pub(super) fn validate_workflow_texts(
         );
     }
 
-    let promotion_verify = step_block(
-        promotion,
-        "Verify candidate bytes, tag version, attestations, and receipts",
-    )?;
-    require_exact_line(
-        promotion_verify,
-        FREEZE_VERIFY_BINARY,
-        "promotion freeze verification",
-    )?;
-    let assets = step_block(promotion, "Stage unchanged public release assets")?;
-    validate_promotion_assets_step(assets, registry)?;
-    validate_upload_step(promotion)?;
-    validate_release_channel_projection(promotion)?;
+    promotion::validate(promotion, registry)?;
     Ok(())
 }
 
-pub(super) fn validate_promotion_assets_step(step: &str, registry: &ReleaseFreeze) -> Result<()> {
-    let controls = &registry.controls;
-    let expected = vec![
-        "- name: Stage unchanged public release assets".to_owned(),
-        "id: assets".to_owned(),
-        "shell: bash".to_owned(),
-        "run: |".to_owned(),
-        "set -euo pipefail".to_owned(),
-        r#"candidate="$DEVE_SEALED_ROOT/candidate""#.to_owned(),
-        r#"manifest="$candidate/release-candidate.json""#.to_owned(),
-        r#"asset_list="$RUNNER_TEMP/release-assets.txt""#.to_owned(),
-        r#"name_list="$RUNNER_TEMP/release-asset-names.txt""#.to_owned(),
-        r#"jq -er '.artifacts[] | select(.public == true) | .path' "$manifest" >"$asset_list""#
-            .to_owned(),
-        format!(
-            "printf '%s\\n' {} {} >>\"$asset_list\"",
-            controls.release_candidate.path, controls.public_checksums.path
-        ),
-        "while IFS= read -r relative; do".to_owned(),
-        r#"[[ -f "$candidate/$relative" ]] || { echo "missing release asset: $relative" >&2; exit 1; }"#
-            .to_owned(),
-        r#"basename "$relative""#.to_owned(),
-        r#"done <"$asset_list" | sort >"$name_list""#.to_owned(),
-        r#"[[ "$(sort -u "$name_list" | wc -l)" -eq "$(wc -l <"$name_list")" ]] || {"#
-            .to_owned(),
-        r#"echo "release assets contain duplicate basenames" >&2"#.to_owned(),
-        "exit 1".to_owned(),
-        "}".to_owned(),
-        r#"printf 'asset_list=%s\n' "$asset_list" >>"$GITHUB_OUTPUT""#.to_owned(),
-        r#"printf 'name_list=%s\n' "$name_list" >>"$GITHUB_OUTPUT""#.to_owned(),
-    ];
+fn validate_candidate_receipt_producer(
+    candidate: &str,
+    step_name: &str,
+    producer_id: &str,
+    receipt_line: &str,
+    required_environment: Option<&str>,
+) -> Result<()> {
+    let step = step_block(candidate, step_name)?;
+    require_exact_line(
+        step,
+        "cargo run --locked --quiet -p deve_baseline -- acceptance-run",
+        &format!("{producer_id} candidate runner"),
+    )?;
+    require_exact_line(
+        step,
+        "--tier tag-ready",
+        &format!("{producer_id} tag-ready tier"),
+    )?;
+    require_exact_line(
+        step,
+        &format!("--producer {producer_id}"),
+        &format!("{producer_id} producer identity"),
+    )?;
+    require_exact_line(step, receipt_line, &format!("{producer_id} receipt root"))?;
+    if let Some(environment) = required_environment {
+        require_exact_line(
+            step,
+            environment,
+            &format!("{producer_id} workflow environment"),
+        )?;
+    }
+    let producer_line = format!("--producer {producer_id}");
     ensure!(
-        active_lines_owned(step) == expected,
-        "promotion asset selection must be the exact frozen manifest-public/control projection"
-    );
-    ensure!(
-        !step.contains(&controls.candidate_checksums.path),
-        "promotion must not expose candidate-internal checksums"
+        active_lines(candidate)
+            .iter()
+            .filter(|line| **line == producer_line.as_str())
+            .count()
+            == 1,
+        "candidate workflow must execute {producer_id} exactly once"
     );
     Ok(())
 }
@@ -170,122 +198,7 @@ fn validate_candidate_artifact_lines(
     )
 }
 
-fn validate_upload_step(promotion: &str) -> Result<()> {
-    let upload = step_block(
-        promotion,
-        "Create or validate draft and upload unchanged assets",
-    )?;
-    require_exact_line(
-        upload,
-        "export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1",
-        "pre-upload attestation verification",
-    )?;
-    require_exact_line(
-        upload,
-        "bash scripts/check-release-candidate-bundle.sh",
-        "immediate pre-upload candidate verification",
-    )?;
-    require_exact_line(
-        upload,
-        r#"while IFS= read -r relative; do upload+=("$candidate/$relative"); done <"$ASSET_LIST""#,
-        "release upload list construction",
-    )?;
-    require_exact_line(
-        upload,
-        r#"gh release upload "$GITHUB_REF_NAME" --clobber "${upload[@]}""#,
-        "release upload command",
-    )?;
-    let lines = active_lines(upload);
-    let verify = line_index(&lines, "export DEVE_RELEASE_ATTESTATION_VERIFY_REQUIRED=1")?;
-    ensure!(
-        lines.get(verify + 1) == Some(&"bash scripts/check-release-candidate-bundle.sh")
-            && lines.get(verify + 2) == Some(&"upload=()")
-            && lines.get(verify + 3)
-                == Some(
-                    &r#"while IFS= read -r relative; do upload+=("$candidate/$relative"); done <"$ASSET_LIST""#,
-                )
-            && lines.get(verify + 4)
-                == Some(&r#"gh release upload "$GITHUB_REF_NAME" --clobber "${upload[@]}""#),
-        "candidate verification must be immediately followed by exact asset-list upload"
-    );
-    ensure!(
-        lines
-            .iter()
-            .filter(|line| line.contains("upload+=("))
-            .count()
-            == 1
-            && lines
-                .iter()
-                .filter(|line| line.contains("gh release upload"))
-                .count()
-                == 1,
-        "release upload step contains an additional asset injection path"
-    );
-    ensure!(
-        lines
-            .iter()
-            .filter(|line| line.contains("ASSET_LIST"))
-            .count()
-            == 3,
-        "release upload step mutates or rebinds the frozen asset list"
-    );
-    let workflow_lines = active_lines(promotion);
-    ensure!(
-        workflow_lines
-            .iter()
-            .filter(|line| line.contains("gh release upload"))
-            .count()
-            == 1
-            && workflow_lines
-                .iter()
-                .filter(|line| line.contains("gh release edit"))
-                .count()
-                == 1,
-        "promotion workflow must contain exactly one release upload and edit path"
-    );
-    Ok(())
-}
-
-fn validate_release_channel_projection(promotion: &str) -> Result<()> {
-    let existing = step_block(
-        promotion,
-        "Create or validate draft and upload unchanged assets",
-    )?;
-    let docker = step_block(promotion, "Load and validate sealed Docker archive")?;
-    let publish = step_block(promotion, "Publish verified GitHub Release")?;
-    for (label, step) in [
-        ("existing release classification", existing),
-        ("Docker latest classification", docker),
-        ("GitHub Release classification", publish),
-    ] {
-        require_exact_line(step, RELEASE_CHANNEL_LINE, label)?;
-    }
-    for expected in [
-        "public-preview) expected_prerelease=true ;;",
-        "stable) expected_prerelease=false ;;",
-    ] {
-        require_exact_line(existing, expected, "existing release channel case")?;
-    }
-    require_exact_line(
-        docker,
-        r#"if [[ "$release_channel" == stable ]]; then"#,
-        "stable-only latest gate",
-    )?;
-    require_exact_line(
-        docker,
-        r#"elif [[ "$release_channel" != public-preview ]]; then"#,
-        "public-preview no-latest gate",
-    )?;
-    for expected in [
-        "public-preview) args+=(--prerelease) ;;",
-        "stable) args+=(--prerelease=false --latest) ;;",
-    ] {
-        require_exact_line(publish, expected, "published release channel case")?;
-    }
-    Ok(())
-}
-
-fn require_exact_line(step: &str, expected: &str, label: &str) -> Result<()> {
+pub(super) fn require_exact_line(step: &str, expected: &str, label: &str) -> Result<()> {
     let matches = active_lines(step)
         .into_iter()
         .filter(|line| *line == expected)
@@ -297,7 +210,7 @@ fn require_exact_line(step: &str, expected: &str, label: &str) -> Result<()> {
     Ok(())
 }
 
-fn line_index(lines: &[&str], expected: &str) -> Result<usize> {
+pub(super) fn line_index(lines: &[&str], expected: &str) -> Result<usize> {
     lines
         .iter()
         .position(|line| *line == expected)
@@ -314,14 +227,14 @@ pub(super) fn step_block<'a>(workflow: &'a str, name: &str) -> Result<&'a str> {
     Ok(&workflow[start..start + marker.len() + end])
 }
 
-fn active_lines(step: &str) -> Vec<&str> {
+pub(super) fn active_lines(step: &str) -> Vec<&str> {
     step.lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .collect()
 }
 
-fn active_lines_owned(step: &str) -> Vec<String> {
+pub(super) fn active_lines_owned(step: &str) -> Vec<String> {
     active_lines(step).into_iter().map(str::to_owned).collect()
 }
 

@@ -7,12 +7,14 @@
 //! surfaces, candidate assembly, and tag promotion still project that authority.
 
 mod candidate;
+mod known_limitations;
 mod model;
 mod workflows;
 
 use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail, ensure};
 use candidate::{controls, fixed_artifacts, validate_candidate_contract};
+pub(crate) use known_limitations::{AcceptedGapBindings, reject_unconsumed};
 use model::{ArtifactPath, ReleaseFreeze};
 use regex::Regex;
 use semver::Version;
@@ -29,10 +31,16 @@ const MAX_TEXT_BYTES: u64 = 2 * 1024 * 1024;
 pub(crate) use candidate::validate_candidate_paths;
 
 pub fn run(args: &[String]) -> Result<()> {
-    if args != ["verify"] {
-        bail!("Usage: deve_baseline release-freeze verify");
+    match args {
+        [command] if command == "verify" => verify(),
+        [command] if command == "verify-candidate" => verify_candidate(),
+        [command] if command == "release-notes" => {
+            let ctx = BaselineContext::new("release-freeze-notes")?;
+            print!("{}", release_notes_root(ctx.root())?);
+            Ok(())
+        }
+        _ => bail!("Usage: deve_baseline release-freeze <verify|verify-candidate|release-notes>"),
     }
-    verify()
 }
 
 pub(crate) fn verify() -> Result<()> {
@@ -42,18 +50,31 @@ pub(crate) fn verify() -> Result<()> {
     Ok(())
 }
 
+fn verify_candidate() -> Result<()> {
+    let ctx = BaselineContext::new("release-freeze-candidate-check")?;
+    verify_candidate_root(ctx.root())?;
+    ctx.ok();
+    Ok(())
+}
+
 fn verify_root(root: &Path) -> Result<()> {
-    let registry_bytes = read_bounded(root.join(REGISTRY_PATH), MAX_TEXT_BYTES)?;
-    let registry: ReleaseFreeze =
-        serde_json::from_slice(&registry_bytes).context("parse typed release freeze registry")?;
+    let registry = load_registry(root)?;
     validate_registry(&registry)?;
+    validate_known_limitations(root, &registry)?;
     validate_version_surfaces(root, &registry)?;
     validate_candidate_contract(&registry)?;
     validate_workflows(root, &registry)
 }
 
+fn verify_candidate_root(root: &Path) -> Result<()> {
+    verify_root(root)?;
+    let registry = load_registry(root)?;
+    let changelog = read_text(root.join("CHANGELOG.md"))?;
+    known_limitations::validate_candidate(&registry, &changelog)
+}
+
 fn validate_registry(registry: &ReleaseFreeze) -> Result<()> {
-    ensure!(registry.schema == 1, "release freeze schema must be 1");
+    ensure!(registry.schema == 2, "release freeze schema must be 2");
     let version = Version::parse(&registry.release.version)
         .context("release freeze version must be valid SemVer")?;
     ensure!(
@@ -67,6 +88,10 @@ fn validate_registry(registry: &ReleaseFreeze) -> Result<()> {
     ensure!(
         registry.release.channel == "public-preview",
         "first release channel must be public-preview"
+    );
+    ensure!(
+        registry.release.date == "2026-07-26",
+        "first release date must remain the frozen UTC date 2026-07-26"
     );
 
     let artifacts = &registry.artifacts;
@@ -163,6 +188,31 @@ fn validate_registry(registry: &ReleaseFreeze) -> Result<()> {
         "release freeze exclusions are incomplete, duplicated, or unsupported"
     );
     Ok(())
+}
+
+pub(crate) fn accepted_gap_bindings(root: &Path) -> Result<AcceptedGapBindings> {
+    let registry = load_registry(root)?;
+    validate_registry(&registry)?;
+    let changelog = read_text(root.join("CHANGELOG.md"))?;
+    known_limitations::validate(&registry, &changelog)
+}
+
+fn release_notes_root(root: &Path) -> Result<String> {
+    let registry = load_registry(root)?;
+    validate_registry(&registry)?;
+    let changelog = read_text(root.join("CHANGELOG.md"))?;
+    known_limitations::release_notes(&registry, &changelog)
+}
+
+fn validate_known_limitations(root: &Path, registry: &ReleaseFreeze) -> Result<()> {
+    let changelog = read_text(root.join("CHANGELOG.md"))?;
+    known_limitations::validate(registry, &changelog)?;
+    Ok(())
+}
+
+fn load_registry(root: &Path) -> Result<ReleaseFreeze> {
+    let registry_bytes = read_bounded(root.join(REGISTRY_PATH), MAX_TEXT_BYTES)?;
+    serde_json::from_slice(&registry_bytes).context("parse typed release freeze registry")
 }
 
 fn validate_paths_and_basenames(registry: &ReleaseFreeze) -> Result<()> {
