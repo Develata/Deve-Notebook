@@ -4,7 +4,7 @@
 //!
 //! No-follow local authority resource opening and persistent owner locks.
 
-use super::{LocalAuthorityError, RepoAuthorityResources};
+use super::{LocalAuthorityError, RepoAuthorityLock};
 use crate::ledger::RepoManager;
 use crate::models::RepoId;
 use crate::utils::fs::{
@@ -14,10 +14,21 @@ use crate::utils::fs::{
     open_regular_file_lock_existing, open_regular_file_read,
 };
 use redb::Database;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const LOCK_DIRECTORY: &str = "repo-authority-locks";
+
+pub(super) struct RepoAuthorityResources {
+    // Field order is intentional: Redb and its witness close before the final
+    // owner lock releases.
+    pub(super) db: Database,
+    pub(super) db_witness: File,
+    pub(super) authority_lock: Arc<RepoAuthorityLock>,
+    pub(super) lock_path: PathBuf,
+    pub(super) db_path: PathBuf,
+}
 
 impl RepoAuthorityResources {
     pub(super) fn db(&self) -> &Database {
@@ -38,13 +49,8 @@ pub(super) fn open_resources(
     } else {
         open_regular_file_lock_existing(&lock_path, "local authority lock")?
     };
-    if let Err(error) = authority_lock.try_lock() {
-        return match error {
-            std::fs::TryLockError::WouldBlock => Err(LocalAuthorityError::Busy(repo_id)),
-            std::fs::TryLockError::Error(error) => Err(LocalAuthorityError::Io(error)),
-        };
-    }
-    ensure_open_file_matches_path(&authority_lock, &lock_path, "local authority lock")?;
+    let authority_lock = super::RepoAuthorityLock::acquire(authority_lock, repo_id)?;
+    ensure_open_file_matches_path(authority_lock.file(), &lock_path, "local authority lock")?;
     let authority_lock = Arc::new(authority_lock);
 
     let local_dir = RepoManager::checked_local_dir_for(ledger_dir, "opening local authority")?;
@@ -83,7 +89,7 @@ pub(super) fn validate_resource_identity(
     resources: &RepoAuthorityResources,
 ) -> Result<(), LocalAuthorityError> {
     ensure_open_file_matches_path(
-        &resources.authority_lock,
+        resources.authority_lock.file(),
         &resources.lock_path,
         "local authority lock",
     )?;
@@ -109,7 +115,7 @@ pub(super) fn open_reopening_lock(
     repo_id: RepoId,
     expected_lock: &HostPathIdentity,
     removed_database: &HostPathIdentity,
-) -> Result<Arc<std::fs::File>, LocalAuthorityError> {
+) -> Result<Arc<super::RepoAuthorityLock>, LocalAuthorityError> {
     let lock_dir = checked_lock_directory(ledger_dir, false)?;
     let lock_path = authority_lock_path(ledger_dir, repo_id);
     let db_path = database_path(ledger_dir, repo_id);
@@ -125,14 +131,9 @@ pub(super) fn open_reopening_lock(
 
     let authority_lock =
         open_regular_file_lock_existing(&lock_path, "retired local authority lock")?;
-    if let Err(error) = authority_lock.try_lock() {
-        return match error {
-            std::fs::TryLockError::WouldBlock => Err(LocalAuthorityError::Busy(repo_id)),
-            std::fs::TryLockError::Error(error) => Err(LocalAuthorityError::Io(error)),
-        };
-    }
+    let authority_lock = super::RepoAuthorityLock::acquire(authority_lock, repo_id)?;
     ensure_open_file_matches_identity(
-        &authority_lock,
+        authority_lock.file(),
         expected_lock,
         "retired local authority lock",
     )?;
@@ -147,12 +148,12 @@ pub(super) fn create_reopening_resources(
     repo_id: RepoId,
     expected_lock: &HostPathIdentity,
     removed_database: &HostPathIdentity,
-    authority_lock: Arc<std::fs::File>,
+    authority_lock: Arc<super::RepoAuthorityLock>,
 ) -> Result<RepoAuthorityResources, LocalAuthorityError> {
     let lock_path = authority_lock_path(ledger_dir, repo_id);
     let db_path = database_path(ledger_dir, repo_id);
     ensure_open_file_matches_identity(
-        &authority_lock,
+        authority_lock.file(),
         expected_lock,
         "retired local authority lock",
     )?;
@@ -217,7 +218,11 @@ pub(super) fn create_reopening_resources(
         db_path,
     };
     validate_resource_identity(&resources)?;
-    ensure_open_file_matches_identity(&resources.authority_lock, expected_lock, "retired lock")?;
+    ensure_open_file_matches_identity(
+        resources.authority_lock.file(),
+        expected_lock,
+        "retired lock",
+    )?;
     Ok(resources)
 }
 
@@ -242,7 +247,7 @@ fn checked_lock_directory(ledger_dir: &Path, create: bool) -> Result<PathBuf, Lo
 pub(super) fn open_committed_cleanup_lock(
     ledger_dir: &Path,
     snapshot: &super::RepoAuthorityRemovalSnapshot,
-) -> Result<(std::fs::File, PathBuf), LocalAuthorityError> {
+) -> Result<(super::RepoAuthorityLock, PathBuf), LocalAuthorityError> {
     let repo_id = snapshot.repo_id();
     let lock_dir = checked_lock_directory(ledger_dir, false)?;
     let lock_path = lock_dir.join(format!("{repo_id}.lock"));
@@ -260,14 +265,9 @@ pub(super) fn open_committed_cleanup_lock(
     }
     let authority_lock =
         open_regular_file_lock_existing(&lock_path, "local authority cleanup lock")?;
-    if let Err(error) = authority_lock.try_lock() {
-        return match error {
-            std::fs::TryLockError::WouldBlock => Err(LocalAuthorityError::Busy(repo_id)),
-            std::fs::TryLockError::Error(error) => Err(LocalAuthorityError::Io(error)),
-        };
-    }
+    let authority_lock = super::RepoAuthorityLock::acquire(authority_lock, repo_id)?;
     ensure_open_file_matches_identity(
-        &authority_lock,
+        authority_lock.file(),
         snapshot.authority_lock(),
         "local authority cleanup lock",
     )?;

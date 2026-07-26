@@ -206,7 +206,7 @@ impl PreparedRepoAuthority {
             "prepared local authority database",
         )?;
         crate::utils::fs::ensure_open_file_matches_identity(
-            &self.resources.authority_lock,
+            self.resources.authority_lock.file(),
             &authority_lock,
             "prepared local authority lock",
         )?;
@@ -258,7 +258,7 @@ impl PreparedRepoAuthority {
         };
         if let Some((expected_lock_identity, _)) = &reopening_identity
             && crate::utils::fs::ensure_open_file_matches_identity(
-                &self.resources.authority_lock,
+                self.resources.authority_lock.file(),
                 expected_lock_identity,
                 "reopened local authority lock",
             )
@@ -411,7 +411,7 @@ impl PreparedRepoAuthority {
             "prepared activation database",
         )?;
         crate::utils::fs::ensure_open_file_matches_identity(
-            &self.resources.authority_lock,
+            self.resources.authority_lock.file(),
             identity.authority_lock(),
             "prepared activation lock",
         )?;

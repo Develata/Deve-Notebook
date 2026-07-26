@@ -7,7 +7,10 @@ use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use std::time::{Duration, Instant};
 
 mod admission_error;
+#[cfg(unix)]
+mod owner_lock;
 mod reopening;
+mod retirement_release;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum RepoAuthoritySlotSnapshot {
@@ -19,6 +22,7 @@ pub(crate) enum RepoAuthoritySlotSnapshot {
     Active { generation: u64 },
     Quiescing { generation: u64 },
     CommittedCleanup { generation: u64 },
+    Retiring { generation: u64 },
     Retired { prior_generation: u64 },
 }
 

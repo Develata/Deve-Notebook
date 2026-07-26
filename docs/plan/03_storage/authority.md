@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-22`
+- `Last Review`: `2026-07-26`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`, `crates/core/src/remote_import/`
 
@@ -438,8 +438,11 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
   对应一个带 generation 的 `RepoAuthoritySlot`。首次 admission 在 durable Normal catalog cut 前只能走
   `Opening -> Preparing`；初始化失败、panic、prepared capability遗失或身份不明必须进入
   `RepairRequired`，不得被normal/default recovery观察。已admit incarnation的remove序列固定为
-  `Active -> Quiescing -> CommittedCleanup -> Retired`；`CommittedCleanup` 必须继续持有persistent
-  owner lock，只有显式完成owner cleanup与terminal settlement才能进入`Retired`。
+  `Active -> Quiescing -> CommittedCleanup -> Retiring -> Retired`；`CommittedCleanup` 必须继续持有persistent
+  owner lock。`Retiring` 只是terminal条件全部满足后的process-local释放reservation，不是durable
+  lifecycle fact；它拒绝ordinary admission，携带exact generation与既有lock/database identity，并在
+  OS unlock失败时继续保留不可导出的owner lock capability。
+  只有显式完成owner cleanup与terminal settlement才能进入`Retiring`。
   `RepoManager` 只能组合该 runtime 与其它 host registries，不得另持 bootstrap `local_db`、secondary
   DB map 或 runtime 外 cache authority。
 - 调用者只能取得不可 Clone 的 `RepoAuthorityLease`；lease 仅在其受控生命周期内借用
@@ -452,8 +455,11 @@ pending”的 typed outcome，不能伪装未提交。相同 session/revision/re
 - 成功 drain 后，runtime owner创建不可导出的 `RepoAuthorityRetirement` exclusive capability。它只允许
   exact pre-cut revalidation、DB close/eviction与retirement proof，不是普通读写lease，也不得传给
   lifecycle coordinator或其它runtime。per-RepoId OS lock handle必须保持到DB delete、owner cleanup、
-  catalog retirement和`TerminalCandidate(publication disabled)` fsync完成，再把当前slot incarnation置为Retired
-  并释放handle；durable terminal receipt只能在Retired之后原子启用publication，
+  catalog retirement和`TerminalCandidate(publication disabled)` fsync完成，再把当前slot incarnation置为
+  `Retiring`。runtime必须先释放map mutex，再释放最后一个OS lock handle，然后重新取得map mutex并对同一
+  generation/identity exact-CAS为`Retired`；不得在map mutex内执行unlock。unlock后发生mutex poison或
+  slot/invariant失配时必须保留不可ordinary-admission的`Retiring` repair debt，不得猜测性回到
+  `CommittedCleanup`或进入`Retired`。durable terminal receipt只能在Retired之后原子启用publication，
   session/network publication delivery不得延长lock生命周期；
   lock pathname本身永久保留。
 - later same-RepoId membership admission必须走two-stage owner-prepared reincarnation。`Retired`必须保留

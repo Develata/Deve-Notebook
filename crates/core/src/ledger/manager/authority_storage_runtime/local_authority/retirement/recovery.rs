@@ -4,7 +4,7 @@
 //!
 //! Cold-host recovery and terminal retirement proof for committed cleanup.
 
-use super::slot_generation;
+use super::completion::slot_generation;
 use crate::ledger::manager::authority_storage_runtime::local_authority::{
     LocalAuthorityError, LocalAuthorityRuntime, RepoAuthorityCleanupGuard,
     RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof, RepoAuthoritySlot,

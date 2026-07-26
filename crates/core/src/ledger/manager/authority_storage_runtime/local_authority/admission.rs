@@ -123,7 +123,8 @@ pub(super) fn lease_from_inner(
                 }
             }
             Some(RepoAuthoritySlot::Quiescing { .. })
-            | Some(RepoAuthoritySlot::CommittedCleanup { .. }) => {
+            | Some(RepoAuthoritySlot::CommittedCleanup { .. })
+            | Some(RepoAuthoritySlot::Retiring { .. }) => {
                 return Err(LocalAuthorityError::Quiescing(repo_id));
             }
             Some(RepoAuthoritySlot::Opening { .. }) | Some(RepoAuthoritySlot::Preparing { .. }) => {
@@ -182,7 +183,8 @@ fn admit_existing_from_inner_with_hook(
                 return Err(LocalAuthorityError::Busy(repo_id));
             }
             Some(RepoAuthoritySlot::Quiescing { .. })
-            | Some(RepoAuthoritySlot::CommittedCleanup { .. }) => {
+            | Some(RepoAuthoritySlot::CommittedCleanup { .. })
+            | Some(RepoAuthoritySlot::Retiring { .. }) => {
                 return Err(LocalAuthorityError::Quiescing(repo_id));
             }
             Some(RepoAuthoritySlot::RepairRequired { .. }) => {

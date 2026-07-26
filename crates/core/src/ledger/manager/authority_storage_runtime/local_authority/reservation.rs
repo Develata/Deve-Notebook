@@ -131,7 +131,7 @@ impl ReopeningReservation {
 
     pub(super) fn attach_lock(
         &self,
-        authority_lock: &Arc<std::fs::File>,
+        authority_lock: &Arc<super::RepoAuthorityLock>,
     ) -> Result<(), LocalAuthorityError> {
         let mut slots = self
             .inner

@@ -10,6 +10,7 @@ mod checkpoint;
 mod creation;
 mod drainage;
 mod inspection;
+mod owner_lock;
 mod prepared;
 mod reservation;
 mod resource;
@@ -22,9 +23,10 @@ use admission::{admit_existing_from_inner, lease_from_inner};
 pub use checkpoint::{
     RepoAuthorityDatabaseCheckpoint, RepoAuthorityRemovalSnapshot, RepoAuthorityRetirementProof,
 };
+use owner_lock::RepoAuthorityLock;
 use redb::Database;
+use resource::RepoAuthorityResources;
 use std::collections::HashMap;
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex, OnceLock, Weak};
 use thiserror::Error;
@@ -71,14 +73,6 @@ pub enum LocalAuthorityError {
     Other(#[from] anyhow::Error),
 }
 
-struct RepoAuthorityResources {
-    db: Database,
-    db_witness: File,
-    authority_lock: Arc<File>,
-    lock_path: PathBuf,
-    db_path: PathBuf,
-}
-
 #[allow(dead_code)] // R3/R4 consumes terminal generations outside test builds.
 enum RepoAuthoritySlot {
     Opening {
@@ -89,7 +83,7 @@ enum RepoAuthoritySlot {
         generation: u64,
         expected_lock_identity: HostPathIdentity,
         removed_database_identity: HostPathIdentity,
-        authority_lock: Option<Arc<File>>,
+        authority_lock: Option<Arc<RepoAuthorityLock>>,
         resources: Option<Arc<RepoAuthorityResources>>,
     },
     Preparing {
@@ -108,7 +102,7 @@ enum RepoAuthoritySlot {
         generation: u64,
         expected_lock_identity: HostPathIdentity,
         removed_database_identity: HostPathIdentity,
-        authority_lock: Option<Arc<File>>,
+        authority_lock: Option<Arc<RepoAuthorityLock>>,
         resources: Option<Arc<RepoAuthorityResources>>,
     },
     RepairRequired {
@@ -126,11 +120,17 @@ enum RepoAuthoritySlot {
     },
     CommittedCleanup {
         generation: u64,
-        authority_lock: Arc<File>,
+        authority_lock: Arc<RepoAuthorityLock>,
         expected_lock_identity: HostPathIdentity,
         removed_database_identity: HostPathIdentity,
         db_path: PathBuf,
         cleanup_capability_issued: bool,
+    },
+    Retiring {
+        generation: u64,
+        expected_lock_identity: HostPathIdentity,
+        removed_database_identity: HostPathIdentity,
+        authority_lock: Option<Arc<RepoAuthorityLock>>,
     },
     Retired {
         prior_generation: u64,
@@ -292,7 +292,7 @@ impl RepoAuthorityLease {
             "local authority database identity",
         )?;
         crate::utils::fs::ensure_open_file_matches_identity(
-            &self.resources.authority_lock,
+            self.resources.authority_lock.file(),
             &authority_lock,
             "local authority lock identity",
         )?;
@@ -483,6 +483,9 @@ impl LocalAuthorityRuntime {
                     generation: *generation,
                 }
             }
+            RepoAuthoritySlot::Retiring { generation, .. } => RepoAuthoritySlotSnapshot::Retiring {
+                generation: *generation,
+            },
             RepoAuthoritySlot::Retired {
                 prior_generation, ..
             } => RepoAuthoritySlotSnapshot::Retired {

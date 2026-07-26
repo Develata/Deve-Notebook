@@ -7,12 +7,13 @@
 use crate::models::RepoId;
 use crate::utils::fs::{HostPathIdentity, HostPathState, HostQuarantineCut, HostQuarantinePlan};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+
+use super::RepoAuthorityLock;
 
 /// Short-lived proof that terminal removal finalization re-acquired the
 /// persistent owner lock after authority retirement and revalidated absence.
 pub struct RepoAuthorityRetirementProof {
-    pub(super) _authority_lock: File,
+    pub(super) _authority_lock: RepoAuthorityLock,
     pub(super) repo_id: RepoId,
     pub(super) generation: u64,
 }

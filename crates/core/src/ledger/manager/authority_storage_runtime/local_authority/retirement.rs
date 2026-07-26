@@ -5,7 +5,10 @@
 //! Pre-commit quiescence and post-commit authority retirement capabilities.
 
 mod cleanup_drop;
+mod completion;
 mod recovery;
+
+use completion::slot_generation;
 
 use super::checkpoint::RepoAuthorityDatabaseCheckpointState;
 use super::{
@@ -54,7 +57,7 @@ impl RepoAuthorityQuiesceGuard {
         let removed_database_identity =
             HostPathIdentity::capture(&current_resources.db_path, HostPathKind::RegularFile)?;
         crate::utils::fs::ensure_open_file_matches_identity(
-            &current_resources.authority_lock,
+            current_resources.authority_lock.file(),
             &expected_lock_identity,
             "local authority retirement lock",
         )?;
@@ -379,90 +382,5 @@ impl RepoAuthorityCleanupGuard {
             return Err(LocalAuthorityError::CleanupIdentityChanged(self.repo_id));
         }
         Ok(())
-    }
-
-    /// Called only by the composed `RepoManager` after it has verified both
-    /// the owner-issued DB checkpoint and exact catalog tombstone retirement.
-    pub(crate) fn complete_inner(&mut self) -> Result<(), LocalAuthorityError> {
-        if self.settled {
-            return Ok(());
-        }
-        let mut slots = self
-            .inner
-            .slots
-            .lock()
-            .map_err(|_| LocalAuthorityError::Poisoned)?;
-        let Some(slot) = slots.remove(&self.repo_id) else {
-            return Err(LocalAuthorityError::Invariant(format!(
-                "RepoId {} committed-cleanup slot disappeared",
-                self.repo_id
-            )));
-        };
-        let RepoAuthoritySlot::CommittedCleanup {
-            generation,
-            authority_lock,
-            expected_lock_identity,
-            removed_database_identity,
-            db_path,
-            cleanup_capability_issued,
-        } = slot
-        else {
-            slots.insert(self.repo_id, slot);
-            return Err(LocalAuthorityError::Invariant(format!(
-                "RepoId {} is not committed-cleanup authority",
-                self.repo_id
-            )));
-        };
-        if generation != self.generation || db_path != self.db_path || !cleanup_capability_issued {
-            slots.insert(
-                self.repo_id,
-                RepoAuthoritySlot::CommittedCleanup {
-                    generation,
-                    authority_lock,
-                    expected_lock_identity,
-                    removed_database_identity,
-                    db_path,
-                    cleanup_capability_issued,
-                },
-            );
-            return Err(LocalAuthorityError::StaleGeneration {
-                repo_id: self.repo_id,
-                expected: self.generation,
-                actual: generation,
-            });
-        }
-        // Make `Retired` observable only after the last cleanup lock handle
-        // has been released. Holding the slot mutex across this in-memory drop
-        // prevents a valid readmission from seeing Retired and racing the old
-        // handle's unlock.
-        drop(authority_lock);
-        slots.insert(
-            self.repo_id,
-            RepoAuthoritySlot::Retired {
-                prior_generation: generation,
-                expected_lock_identity,
-                removed_database_identity,
-            },
-        );
-        drop(slots);
-        self.settled = true;
-        Ok(())
-    }
-}
-
-pub(super) fn slot_generation(slot: Option<&RepoAuthoritySlot>) -> Option<u64> {
-    match slot? {
-        RepoAuthoritySlot::Opening { .. } => None,
-        RepoAuthoritySlot::Reopening { generation, .. }
-        | RepoAuthoritySlot::Preparing { generation, .. }
-        | RepoAuthoritySlot::ReopeningPrepared { generation, .. }
-        | RepoAuthoritySlot::ReopeningRepairRequired { generation, .. }
-        | RepoAuthoritySlot::RepairRequired { generation }
-        | RepoAuthoritySlot::Active { generation, .. }
-        | RepoAuthoritySlot::Quiescing { generation, .. }
-        | RepoAuthoritySlot::CommittedCleanup { generation, .. } => Some(*generation),
-        RepoAuthoritySlot::Retired {
-            prior_generation, ..
-        } => Some(*prior_generation),
     }
 }
