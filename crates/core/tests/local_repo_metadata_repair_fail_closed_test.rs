@@ -6,6 +6,45 @@ use tempfile::TempDir;
 
 mod common;
 
+#[cfg(unix)]
+struct PermissionRestore {
+    path: std::path::PathBuf,
+    original: Option<std::fs::Permissions>,
+}
+
+#[cfg(unix)]
+impl PermissionRestore {
+    fn block(path: &std::path::Path) -> Self {
+        let original = std::fs::metadata(path).expect("metadata").permissions();
+        let mut blocked = original.clone();
+        blocked.set_mode(0o000);
+        std::fs::set_permissions(path, blocked).expect("chmod 000");
+        Self {
+            path: path.to_path_buf(),
+            original: Some(original),
+        }
+    }
+
+    fn restore(mut self) {
+        let original = self
+            .original
+            .as_ref()
+            .expect("armed permission guard")
+            .clone();
+        std::fs::set_permissions(&self.path, original).expect("restore perms");
+        self.original = None;
+    }
+}
+
+#[cfg(unix)]
+impl Drop for PermissionRestore {
+    fn drop(&mut self) {
+        if let Some(original) = self.original.take() {
+            let _ = std::fs::set_permissions(&self.path, original);
+        }
+    }
+}
+
 #[test]
 fn local_repo_listing_ignores_uncataloged_broken_artifact_and_repair_reports_it() {
     let dir = TempDir::new().expect("tempdir");
@@ -77,24 +116,27 @@ fn init_fails_closed_on_unstatable_local_db_path() {
         common::init_cataloged_repo_with_depth(&ledger_dir, &dir.path().join("notes"), 8)
             .expect("main");
     let local_dir = ledger_dir.join("local");
-    let original = std::fs::metadata(&local_dir)
-        .expect("metadata")
-        .permissions();
-    let mut perms = original.clone();
-    perms.set_mode(0o000);
     drop(repo);
-    std::fs::set_permissions(&local_dir, perms).expect("chmod 000");
+    let permissions = PermissionRestore::block(&local_dir);
 
-    let err = match RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")) {
+    let result = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main"));
+    permissions.restore();
+    let err = match result {
         Ok(_) => panic!("unstatable local db path must fail init"),
         Err(err) => err,
     };
 
-    std::fs::set_permissions(&local_dir, original).expect("restore perms");
+    let err_chain = format!("{err:#}");
     assert!(
         err.to_string()
-            .contains("Failed to stat local database path during init")
-            || err.to_string().contains("Permission denied")
+            .contains("Failed to stat durable Normal local RepoId during init"),
+        "{err:#}"
+    );
+    assert!(
+        err.chain().any(|cause| cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)),
+        "{err_chain}"
     );
 }
 
@@ -219,33 +261,23 @@ fn runtime_ignores_uncataloged_metadata_less_artifact_and_repair_reports_it() {
 
 #[cfg(unix)]
 #[test]
-fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
+fn repair_local_repo_catalog_does_not_depend_on_workspace_access() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let projection_base = dir.path().join("notes-base");
+    let projection_parent = dir.path().join("projection-parent");
+    let projection_base = projection_parent.join("notes-base");
     let (main, _main_id) =
         common::init_cataloged_repo_with_depth(&ledger_dir, &projection_base, 8).expect("main");
     common::add_cataloged_repo_with_url(&main, &projection_base, "urn:wiki")
         .expect("initialized wiki");
 
-    let original = std::fs::metadata(&projection_base)
-        .expect("metadata")
-        .permissions();
-    let mut blocked = original.clone();
-    blocked.set_mode(0o000);
-    std::fs::set_permissions(&projection_base, blocked).expect("chmod 000");
+    let permissions = PermissionRestore::block(&projection_parent);
 
-    let err = main
-        .repair_local_repo_catalog()
-        .expect_err("unstatable workspace root must fail closed");
+    let inaccessible = std::fs::metadata(&projection_base)
+        .expect_err("workspace must be inaccessible through the blocked parent");
+    assert_eq!(inaccessible.kind(), std::io::ErrorKind::PermissionDenied);
+    let result = main.repair_local_repo_catalog();
 
-    std::fs::set_permissions(&projection_base, original).expect("restore perms");
-    let err_text = err.to_string();
-    assert!(
-        err_text.contains("Failed to stat current workspace root while repairing local catalog")
-            || err_text
-                .contains("Failed to stat previous workspace root while repairing local catalog")
-            || err_text.contains("Permission denied"),
-        "{err_text}"
-    );
+    permissions.restore();
+    result.expect("catalog repair must not inspect projection workspace accessibility");
 }

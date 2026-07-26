@@ -8,11 +8,16 @@ use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+mod common;
+
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
-        .expect("projection locator");
+    let (repo, _repo_id) = common::init_cataloged_repo_with_depth(
+        &dir.path().join("ledger"),
+        &dir.path().join("notes"),
+        10,
+    )
+    .expect("init cataloged repo");
     (dir, Arc::new(repo))
 }
 
@@ -73,17 +78,17 @@ fn assert_workspace_ancestor_permission_denied(err: &anyhow::Error) {
 fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
     let (_dir, repo) = new_repo();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
-    repo.ensure_local_repo_workspace_identity("default")
+    repo.ensure_local_repo_workspace_identity(repo.local_repo_name())
         .expect("identity marker");
     let blocked = repo
-        .local_repo_workspace_path("default", "notes")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes")
         .expect("workspace path");
     let target = blocked.join("a.md");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    let result = sync.materialize_local_repo("default");
+    let result = sync.materialize_local_repo(repo.local_repo_name());
     std::fs::set_permissions(&blocked, original).expect("restore perms");
     let err = result.expect_err("unstatable workspace path must fail closed");
     assert_workspace_ancestor_permission_denied(&err);
@@ -99,7 +104,7 @@ fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() 
     let (_dir, repo) = new_repo();
     let doc_id = seed_file(repo.as_ref(), "notes/a.md", "ledger");
     let blocked = repo
-        .local_repo_workspace_path("default", "notes")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes")
         .expect("workspace path");
     let op_count_before = repo
         .get_local_ops_in_local_repo(repo.local_repo_name(), doc_id)
@@ -109,7 +114,7 @@ fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() 
     let original = block_dir(&blocked);
 
     let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
-    let result = sync.reconcile_doc_in_local_repo("default", doc_id);
+    let result = sync.reconcile_doc_in_local_repo(repo.local_repo_name(), doc_id);
     std::fs::set_permissions(&blocked, original).expect("restore perms");
     let err = result.expect_err("unstatable reconcile path must fail closed");
     assert_workspace_ancestor_permission_denied(&err);
@@ -128,7 +133,7 @@ fn bind_workspace_inode_fails_closed_when_workspace_path_is_unstatable() {
     let (_dir, repo) = new_repo();
     let doc_id = seed_file(repo.as_ref(), "notes/a.md", "ledger");
     let blocked = repo
-        .local_repo_workspace_path("default", "notes")
+        .local_repo_workspace_path(repo.local_repo_name(), "notes")
         .expect("workspace path");
     let inode_docids_before = repo
         .run_on_local_repo(
@@ -139,7 +144,8 @@ fn bind_workspace_inode_fails_closed_when_workspace_path_is_unstatable() {
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let result = repo.bind_workspace_inode_in_local_repo("default", "notes/a.md", doc_id);
+    let result =
+        repo.bind_workspace_inode_in_local_repo(repo.local_repo_name(), "notes/a.md", doc_id);
     std::fs::set_permissions(&blocked, original).expect("restore perms");
     let err = result.expect_err("unstatable workspace path must fail closed");
     assert_workspace_ancestor_permission_denied(&err);
