@@ -224,6 +224,13 @@ fn invalid(detail: &'static str) -> std::io::Error {
 mod tests {
     use super::{HostPathIdentity, HostPathKind, HostPathState};
 
+    fn replace_with_distinct_file(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+        let replacement = path.with_extension("replacement");
+        std::fs::write(&replacement, bytes)?;
+        std::fs::remove_file(path)?;
+        std::fs::rename(replacement, path)
+    }
+
     #[test]
     fn identity_detects_regular_file_replacement() -> std::io::Result<()> {
         let dir = tempfile::tempdir()?;
@@ -231,8 +238,7 @@ mod tests {
         std::fs::write(&path, b"first")?;
         let identity = HostPathIdentity::capture(&path, HostPathKind::RegularFile)?;
         assert!(identity.revalidate()?);
-        std::fs::remove_file(&path)?;
-        std::fs::write(&path, b"second")?;
+        replace_with_distinct_file(&path, b"second")?;
         assert!(!identity.revalidate()?);
         Ok(())
     }
@@ -252,10 +258,12 @@ mod tests {
         std::fs::write(&path, b"first")?;
         let identity = HostPathIdentity::capture(&path, HostPathKind::RegularFile)?;
 
+        let replacement = path.with_extension("replacement");
+        std::fs::write(&replacement, b"replacement")?;
         std::fs::remove_file(&path)?;
         assert_eq!(identity.classify()?, HostPathState::Missing);
 
-        std::fs::write(&path, b"replacement")?;
+        std::fs::rename(replacement, &path)?;
         assert_eq!(identity.classify()?, HostPathState::Changed);
         Ok(())
     }

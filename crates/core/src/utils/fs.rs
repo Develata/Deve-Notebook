@@ -473,8 +473,14 @@ mod tests {
         let path = dir.path().join("authority.lock");
         drop(create_regular_file_lock_new(&path, "test authority lock")?);
         let expected = HostPathIdentity::capture(&path, HostPathKind::RegularFile)?;
+        let replacement_path = dir.path().join("replacement.lock");
+        drop(create_regular_file_lock_new(
+            &replacement_path,
+            "replacement authority lock",
+        )?);
         std::fs::remove_file(&path)?;
-        let replacement = create_regular_file_lock_new(&path, "replacement authority lock")?;
+        std::fs::rename(&replacement_path, &path)?;
+        let replacement = open_regular_file_lock_existing(&path, "replacement authority lock")?;
 
         let error =
             ensure_open_file_matches_identity(&replacement, &expected, "test authority lock")

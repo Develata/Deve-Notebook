@@ -427,8 +427,10 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let root = std::fs::canonicalize(dir.path())?;
         let plan = file_plan(&root, "authority.redb")?;
+        let replacement = root.join("replacement.redb");
+        std::fs::write(&replacement, b"replacement")?;
         std::fs::remove_file(plan.original().path())?;
-        std::fs::write(plan.original().path(), b"replacement")?;
+        std::fs::rename(replacement, plan.original().path())?;
         let error = plan.cut().expect_err("source replacement must fail closed");
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
         assert_eq!(std::fs::read(plan.original().path())?, b"replacement");

@@ -95,7 +95,7 @@ fn reusable_cached_database_fails_closed_when_header_cannot_be_read() {
 
 #[cfg(unix)]
 #[test]
-fn local_catalog_validation_reuses_open_main_database() {
+fn local_catalog_validation_uses_authority_handle_without_global_cache() {
     let dir = tempfile::tempdir().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
@@ -103,19 +103,12 @@ fn local_catalog_validation_reuses_open_main_database() {
         .join("local")
         .join(format!("{}.redb", repo.local_repo_name()));
 
-    let stamp = {
-        let cache = OPENED_DBS.read().expect("cache");
-        cache
-            .get(&path)
-            .and_then(|entry| entry.stamp)
-            .expect("registered stamp")
-    };
     {
-        let mut cache = OPENED_DBS.write().expect("cache");
-        let entry = cache.get_mut(&path).expect("cached entry");
-        let mut stale = stamp;
-        stale.modified = None;
-        entry.stamp = Some(stale);
+        let cache = OPENED_DBS.read().expect("cache");
+        assert!(
+            !cache.contains_key(&path),
+            "local authority databases must not enter the shadow database cache"
+        );
     }
 
     let original = std::fs::metadata(&path).expect("metadata").permissions();
@@ -125,6 +118,13 @@ fn local_catalog_validation_reuses_open_main_database() {
 
     repo.refresh_local_repo_catalog()
         .expect("main repo validation must use the open database handle");
+    {
+        let cache = OPENED_DBS.read().expect("cache");
+        assert!(
+            !cache.contains_key(&path),
+            "catalog refresh must not register local authority in the shadow database cache"
+        );
+    }
 
     std::fs::set_permissions(&path, original).expect("restore perms");
     clear_temp_entries(dir.path());

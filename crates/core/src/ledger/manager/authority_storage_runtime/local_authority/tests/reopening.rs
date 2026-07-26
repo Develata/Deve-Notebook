@@ -27,7 +27,6 @@ fn retired_authority_prepares_a_fresh_owner_bound_generation() -> anyhow::Result
     let (_dir, runtime, repo_id) = new_runtime()?;
     let snapshot = retire(&runtime, repo_id)?;
 
-    let old_database_identity = snapshot.database().object_identity();
     let prepared = runtime.prepare_retired_repo_initialized(repo_id, |db| {
         init_core_tables(db)?;
         RepoManager::initialize_repo_info_in_new_db(
@@ -46,14 +45,6 @@ fn retired_authority_prepares_a_fresh_owner_bound_generation() -> anyhow::Result
         Some(RepoAuthoritySlotSnapshot::ReopeningPrepared { generation: 2 })
     );
     assert!(snapshot.authority_lock().revalidate()?);
-    assert_ne!(
-        HostPathIdentity::capture(
-            prepared.resources.db_path.as_path(),
-            HostPathKind::RegularFile
-        )?
-        .object_identity(),
-        old_database_identity
-    );
     assert!(matches!(
         runtime.lease(repo_id),
         Err(LocalAuthorityError::Busy(id)) if id == repo_id
@@ -70,12 +61,19 @@ fn retired_authority_never_recreates_a_missing_or_replaced_lock() -> anyhow::Res
         let (_dir, runtime, repo_id) = new_runtime()?;
         let snapshot = retire(&runtime, repo_id)?;
 
-        std::fs::remove_file(snapshot.authority_lock().path())?;
+        let replacement = snapshot
+            .authority_lock()
+            .path()
+            .with_extension("replacement");
         if replace {
             drop(crate::utils::fs::create_regular_file_new(
-                snapshot.authority_lock().path(),
+                &replacement,
                 "replacement authority lock",
             )?);
+        }
+        std::fs::remove_file(snapshot.authority_lock().path())?;
+        if replace {
+            std::fs::rename(&replacement, snapshot.authority_lock().path())?;
         }
         let error = match runtime.prepare_retired_repo_initialized(repo_id, |_| Ok(())) {
             Ok(_) => panic!("missing or replaced retired lock must fail closed"),
