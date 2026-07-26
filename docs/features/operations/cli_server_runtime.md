@@ -43,7 +43,7 @@
 - `Surface`: `cli`
 - `Trigger`: run `deve serve`
 - `Preconditions`: ledger host registries and server config are valid；each existing local repo is independently admitted when its authority identity and Projection Locator/workspace are valid
-- `Immediate Result`: Axum HTTP/WebSocket server starts after host runtime composition; zero-repo is healthy `NoScope`, while existing repo watcher failures remain typed readonly state
+- `Immediate Result`: Axum HTTP/WebSocket server starts after host runtime composition; zero-repo is healthy `BootstrapUnbound(scope_nonce=0)` without writer readiness, while existing repo watcher failures remain typed readonly state
 - `Partial Result`: repo-local watcher start failure leaves that repo readonly/diagnostic while other Mounted repos remain writable
 - `Failure Result`: only a typed host-fatal closes all started handles and exits non-zero；zero repo or zero Mounted repo-local outcomes remain a running readonly/diagnostic/Create-capable host
 - `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/server/`

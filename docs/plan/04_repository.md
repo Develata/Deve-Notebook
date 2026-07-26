@@ -250,6 +250,8 @@ Unmounted
 ### 4.2 Scope Binding
 
 ```text
+BootstrapUnbound(scope_nonce = 0)
+  -> SwitchingRepo(switch_nonce > 0)
 NoScope(scope_nonce)
   -> SwitchingRepo(switch_nonce)
 RepoBound(repo_id, branch, scope_nonce, catalog_membership_token)
@@ -264,6 +266,10 @@ SwitchingRepo | SwitchingBranch
 
 - repo switch 与 branch switch 只允许在解析成功后提交到 session。branch switch 的已知
   `RepoId` 只允许 exact target match，不使用 alias/URL/single-repo fallback。
+- 新连接尚未提交任何 scope epoch 时唯一允许 `BootstrapUnbound(scope_nonce = 0)`；
+  该哨兵态没有 repo identity、writer readiness 或 workspace authority，只保留 login、
+  diagnostic 与首个 Create。首个 Create 必须提交严格大于零的 switch nonce，不能把零值
+  当作已确认 `NoScope` 或 `RepoBound`。
 - `NoScope` 也是带 `scope_nonce` 的已确认 scope epoch；进入它必须提升 nonce，使旧 RepoBound 的延迟消息失效，不能用 `None` 或零值绕开 scope gate。
 - 每个 process-local `RepoBound` 必须保存当次 bind 的 `CatalogMembershipToken`。writer admission、new bind 与 scope publication 应用都必须 exact-compare 当前 per-repo membership generation；token 一旦被 durable membership cut 撤销，旧 binding 即使尚未收到 UI 消息也必须立即拒写。
 - 旧 scope 的延迟消息不得继续驱动新 scope。
@@ -488,7 +494,11 @@ ReadonlyDegraded
 - 坏 repo 必须显式标记 degraded/quarantined。
 - 被跳过的 repo 不得继续参与自动 scope 恢复。
 - watcher repo-local start failure 只记录该 repo `RepoMountState::Failed`；其它健康 repo 继续 mount。host-fatal 仅允许 supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed 分类。
-- bootstrap 允许零个 local repo；此时 watcher `expected=0` 是 healthy，server 进入 `NoScope` 并保留 login、diagnostic 与 Create。存在 local repo 但零个 Mounted 只表示 repo-local ingestion 不可用，不自动构成 host-fatal；只有 supervisor invariant、generation corruption、thread/resource exhaustion 或 runtime coordination failure 等 typed host-fatal 才终止 server。
+- bootstrap 允许零个 local repo；此时 watcher `expected=0` 是 healthy，新连接保持
+  `BootstrapUnbound(scope_nonce=0)` 并保留 login、diagnostic 与 Create，不得伪装成已确认
+  `NoScope` 或 writer-ready。存在 local repo 但零个 Mounted 只表示 repo-local ingestion 不可用，
+  不自动构成 host-fatal；只有 supervisor invariant、generation corruption、
+  thread/resource exhaustion 或 runtime coordination failure 等 typed host-fatal 才终止 server。
 
 ### 7.9 Repo Lifecycle Coordinator {#repo-lifecycle-coordinator}
 

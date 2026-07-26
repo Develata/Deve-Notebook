@@ -11,8 +11,11 @@ import {
 } from "./lib/docker-multiclient-product-journeys.mjs";
 import {
   attachDiagnostics,
+  beginHostRestart,
+  closeBrowserResources,
   delay,
   editorContentIncludes,
+  endHostRestart,
   isDirectInvocation,
   readNodeRole,
   relevantConsoleErrors,
@@ -419,18 +422,14 @@ async function main() {
       });
 
       const roleBeforeRestart = await readNodeRole(baseUrl);
-      for (const diag of [diagA, diagB, mobileDiag]) {
-        diag.hostRestart = true;
-      }
+      beginHostRestart([diagA, diagB, mobileDiag]);
       restartCandidateContainer();
       const roleAfterRestart = await waitForRestartedNodeRole({
         baseUrl,
         before: roleBeforeRestart,
         timeoutMs,
       });
-      for (const diag of [diagA, diagB, mobileDiag]) {
-        diag.hostRestart = false;
-      }
+      endHostRestart([diagA, diagB, mobileDiag]);
       await reopenNoScope(pageA, diagA);
       await reopenNoScope(pageB, diagB);
       await reopenNoScope(mobilePage, mobileDiag);
@@ -471,10 +470,7 @@ async function main() {
       ],
     }));
   } finally {
-    for (const context of contexts.reverse()) {
-      await context.close().catch(() => {});
-    }
-    await browser.close().catch(() => {});
+    await closeBrowserResources(contexts, browser);
   }
 }
 

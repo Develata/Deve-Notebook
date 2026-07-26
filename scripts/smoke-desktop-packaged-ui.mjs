@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   commitAndVerifyHistory,
+  createFirstRepoFromBootstrapUnbound,
   createAndEditDocument,
   delay,
   exerciseLastRepoRemoval,
@@ -91,8 +92,7 @@ async function main() {
     assert.deepEqual(errors, [], `${phase} emitted errors: ${JSON.stringify(errors)}`);
   };
 
-  console.log("desktop-packaged-ui-webview: waiting for native session");
-  await waitForReady(page);
+  console.log("desktop-packaged-ui-webview: validating native session and zero-repo startup");
   const nativeBootstrap = await page.evaluate(() => globalThis.__DEVE_NATIVE_BOOTSTRAP ?? null);
   assert.equal(nativeBootstrap?.capabilities?.backend_preference_control, true);
   assert.equal(nativeBootstrap?.session_bound, true);
@@ -100,14 +100,15 @@ async function main() {
   assert.equal(nativeEndpoint.protocol, "http:");
   assert.ok(["127.0.0.1", "localhost"].includes(nativeEndpoint.hostname));
   assert.ok(Number(nativeEndpoint.port) > 0, "LocalBackend must bind a fresh loopback port");
+  assert.equal(await page.locator("#login-username").count(), 0, "native session must bypass login UI");
+  const stamp = Date.now();
+  const firstRepo = await createFirstRepoFromBootstrapUnbound(page, `packaged-${stamp}`);
   const scope = await page.locator("[data-deve-sync-status]").first().evaluate((element) => ({
     repoId: element.getAttribute("data-deve-repo-id"),
     scopeNonce: Number(element.getAttribute("data-deve-scope-nonce")),
   }));
   assert.ok(scope.repoId, "LocalBackend must expose the backend-projected repo scope");
   assert.ok(Number.isInteger(scope.scopeNonce) && scope.scopeNonce > 0);
-  assert.equal(await page.locator("#login-username").count(), 0, "native session must bypass login UI");
-  const stamp = Date.now();
   console.log("desktop-packaged-ui-webview: creating and editing document");
   await createAndEditDocument(
     page,
@@ -128,10 +129,13 @@ async function main() {
       origin: new URL(page.url()).origin,
       httpBase: nativeBootstrap.http_base,
       sessionBound: nativeBootstrap.session_bound,
+      firstRepo,
       scope,
       repoLifecycle,
       journey: {
         loginOrNativeSession: true,
+        zeroRepoStartup: true,
+        firstRepoCreate: true,
         edit: true,
         commitHistory: true,
         repoRemovalNoScope: repoLifecycle.noScope,

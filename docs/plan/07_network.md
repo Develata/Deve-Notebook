@@ -178,7 +178,7 @@ enabled = true
 
 - 先冻结 expected set `E`：只包含需要 watcher 的 `RepoHealth::Healthy` local repo；remote shadow、removed、quarantined、repairing 与 durable degraded repo 不计入。
 - `expected = |E|`；`running` 只统计 `E` 中处于 `RepoMountState::Mounted` 的 repo，因此必须满足 `0 <= running <= expected`；`unavailable = expected - running`，包含 transition、failed 与其它未 mounted slot。
-- `status` 按固定优先级计算，不允许重叠解释：无法取得可信且完整的 `WatcherRuntimeView` 时为 `unknown`；否则，`E` 中存在 `Failed`、非 transition 的未 mounted slot或计数/slot 不变量破坏时为 `degraded`；否则，`E` 中至少一个 slot 为 `Transitioning` 时为 `transitioning`；其余情况为 `healthy`，即 `E` 全部 Mounted。`E` 为空时聚合与host bootstrap都合法healthy，server进入`NoScope`；不得把zero-repo误报为watcher failure。
+- `status` 按固定优先级计算，不允许重叠解释：无法取得可信且完整的 `WatcherRuntimeView` 时为 `unknown`；否则，`E` 中存在 `Failed`、非 transition 的未 mounted slot或计数/slot 不变量破坏时为 `degraded`；否则，`E` 中至少一个 slot 为 `Transitioning` 时为 `transitioning`；其余情况为 `healthy`，即 `E` 全部 Mounted。`E` 为空时聚合与host bootstrap都合法healthy，新连接保持`BootstrapUnbound(scope_nonce=0)`；不得把zero-repo误报为watcher failure，也不得把尚未提交epoch的零值哨兵伪装成已确认`NoScope`。
 - aggregate **MUST NOT** 暴露 repo 名、`RepoId`、generation、workspace path、failure phase/kind/detail 或 tracing 内容。
 
 ## 4. Transport and Message Contract

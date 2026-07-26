@@ -25,6 +25,7 @@ AUTH_PASSWORD="${DEVE_DOCKER_MULTI_AUTH_PASSWORD:-password}"
 PLAYWRIGHT_PACKAGE="${DEVE_DOCKER_MULTI_PLAYWRIGHT_PACKAGE:-playwright}"
 PLAYWRIGHT_WORK_DIR="${DEVE_DOCKER_MULTI_PLAYWRIGHT_WORK_DIR:-${TMPDIR:-/tmp}/deve-docker-multiclient-playwright}"
 NODE_SCRIPT="${DEVE_DOCKER_MULTI_NODE_SCRIPT:-$ROOT_DIR/scripts/smoke-docker-multiclient.mjs}"
+STATE_FILE="${DEVE_DOCKER_MULTI_STATE_FILE:-${DEVE_ACCEPTANCE_PRODUCER_STATE_DIR:-${TMPDIR:-/tmp}/deve-docker-multiclient-$$}/docker-multiclient/fixture-state}"
 
 run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-multiclient-smoke" "multiclient"
 
@@ -79,13 +80,33 @@ require_or_skip() {
   skip "$1"
 }
 
+write_cleanup_state() {
+  local temporary="$STATE_FILE.tmp.$$"
+  mkdir -p -- "$(dirname -- "$STATE_FILE")"
+  (umask 077; printf 'project=%s\ncompose_file=%s\n' "$PROJECT" "$COMPOSE_FILE" >"$temporary")
+  mv -f -- "$temporary" "$STATE_FILE"
+}
+
 cleanup() {
   if [[ "$KEEP" == "1" || "$KEEP" == "true" ]]; then
     echo "docker-multiclient-smoke: kept compose project '$PROJECT' at $BASE_URL"
     echo "docker-multiclient-smoke: cleanup with: $DOCKER_BIN compose -f $COMPOSE_FILE -p $PROJECT down -v --remove-orphans"
     return
   fi
-  docker_compose down -v --remove-orphans >/dev/null 2>&1 || true
+  DEVE_DOCKER_MULTI_STATE_FILE="$STATE_FILE" \
+    DEVE_DOCKER_BIN="$DOCKER_BIN" \
+    bash "$ROOT_DIR/scripts/cleanup-docker-multiclient.sh"
+}
+
+cleanup_on_exit() {
+  local status=$?
+  local cleanup_status=0
+  trap - EXIT
+  cleanup || cleanup_status=$?
+  if (( status != 0 )); then
+    exit "$status"
+  fi
+  exit "$cleanup_status"
 }
 
 diagnose() {
@@ -133,8 +154,10 @@ run_playwright() {
   container_id="$(docker_compose ps -q deve-server)"
   [[ -n "$container_id" ]] || fail "compose service container id is unavailable"
   node --test \
+    "$ROOT_DIR/scripts/docker-multiclient-runtime.test.mjs" \
     "$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs" \
     "$ROOT_DIR/scripts/docker-multiclient-product-contract.test.mjs"
+  bash "$ROOT_DIR/scripts/docker-multiclient-cleanup.test.sh"
   mkdir -p "$PLAYWRIGHT_WORK_DIR"
   if [[ ! -f "$PLAYWRIGHT_WORK_DIR/package.json" ]]; then
     printf '{"private":true,"type":"module"}\n' >"$PLAYWRIGHT_WORK_DIR/package.json"
@@ -165,7 +188,8 @@ docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachab
 [[ -f "$COMPOSE_FILE" ]] || fail "compose file not found: $COMPOSE_FILE"
 [[ -f "$NODE_SCRIPT" ]] || fail "Playwright script not found: $NODE_SCRIPT"
 
-trap cleanup EXIT
+write_cleanup_state
+trap cleanup_on_exit EXIT
 
 if [[ "$SKIP_BUILD" == "1" || "$SKIP_BUILD" == "true" ]]; then
   docker_cmd image inspect "$IMAGE" >/dev/null 2>&1 || fail "existing image not found: $IMAGE"

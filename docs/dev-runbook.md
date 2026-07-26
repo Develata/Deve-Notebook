@@ -202,7 +202,10 @@ Windows Docker results are valid development evidence, but Docker tag-ready
 receipts are intentionally Linux-host-bound. Windows is a supported Android
 target host: the LocalBackend producer builds the x86_64 APK, owns an API 37.1
 Google APIs AVD, records the current WebView provider and real Ed25519 probe,
-drives the writable lifecycle, and cleans the emulator. RemoteBrowser uses the
+requests a bounded 4096 MiB writable data partition with
+`DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB` constrained to `2048..8192`, then
+proves `/data` reaches 75% of that request with at least 1024 MiB free before
+install. It drives the writable lifecycle and cleans the emulator. RemoteBrowser uses the
 same emulator owner with `DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY=remote` and also
 requires an exact HTTPS origin plus temporary credentials.
 
@@ -813,8 +816,10 @@ runs LocalBackend lifecycle and local-bare-remote Git bridge checks. It also
 invokes `scripts/check-desktop-packaged-ui-smoke.ps1`, which starts the installed
 window with isolated data/WebView2 state and a WebView2-assigned ephemeral CDP
 endpoint discovered through the isolated `EBWebView/DevToolsActivePort`, and drives
-`scripts/smoke-desktop-packaged-ui.mjs` through native session, document edit,
-NoteGit commit/history, and Settings focus-trap flows. The gate requires exactly
+`scripts/smoke-desktop-packaged-ui.mjs` through native session, an exact zero-repo
+`BootstrapUnbound(scope_nonce=0)` startup check without writer readiness, the first repo Create
+through the Web/backend contract with a non-zero switch nonce,
+document edit, NoteGit commit/history, and Settings focus-trap flows. The gate requires exactly
 one installed sibling sidecar while the app is alive and zero after exit before
 running the installer-specific uninstall path. It remains diagnostic-only unless
 `DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1` is set.

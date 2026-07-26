@@ -11,7 +11,11 @@ import {
   runDocker,
   timeoutMs,
 } from "./docker-remote-import-runtime.mjs";
-import { waitUntil } from "./docker-multiclient-runtime.mjs";
+import {
+  beginHostRestart,
+  endHostRestart,
+  waitUntil,
+} from "./docker-multiclient-runtime.mjs";
 
 async function waitForHttp(url) {
   await waitUntil(
@@ -185,11 +189,11 @@ async function openEntryDiff(page, label) {
 }
 
 async function restartCandidate(page, diag, baseUrl, container) {
-  diag.hostRestart = true;
+  beginHostRestart([diag]);
   runDocker(["restart", container], { timeout: timeoutMs });
   await waitForHttp(`${baseUrl}/api/node/role`);
+  endHostRestart([diag]);
   await reopen(page, baseUrl);
-  diag.hostRestart = false;
 }
 
 export async function exerciseWebDavFailure(page) {

@@ -138,6 +138,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     errorText: "net::ERR_CONNECTION_REFUSED",
     duringHostRestart: true,
   };
+  const delayedFailure = { ...expectedFailure[0], duringHostRestart: false };
   assert.equal(
     isExpectedRestartTransportError(resourceMessage, expectedOrigin, [unexpectedFailure]),
     false,
@@ -165,16 +166,20 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     relevantConsoleErrors({
       expectedOrigin,
       requestFailures: expectedFailure,
-      consoleErrors: [{ message, duringOffline: false, duringHostRestart: false }],
+      consoleErrors: [
+        { message: resourceMessage, duringOffline: false, duringHostRestart: false },
+        { message, duringOffline: false, duringHostRestart: false },
+      ],
     }),
-    [{ message, duringOffline: false, duringHostRestart: false }],
+    [{ message: resourceMessage, duringOffline: false, duringHostRestart: false },
+      { message, duringOffline: false, duringHostRestart: false }],
   );
   assert.deepEqual(
     relevantRequestFailures({
       expectedOrigin,
-      requestFailures: [...expectedFailure, unexpectedFailure],
+      requestFailures: [...expectedFailure, delayedFailure, unexpectedFailure],
     }),
-    [unexpectedFailure],
+    [delayedFailure, unexpectedFailure],
   );
   const abortedFailure = {
     url: `${expectedOrigin}/api/node/role`,

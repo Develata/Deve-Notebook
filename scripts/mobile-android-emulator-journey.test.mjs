@@ -62,6 +62,13 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
   assert.match(orchestrator, /run bash "\$ROOT_DIR\/scripts\/smoke-mobile-android-remote-browser\.sh"/);
   assert.match(orchestrator, /trap cleanup_on_exit EXIT/);
   assert.match(orchestrator, /write_emulator_owner "\$EMULATOR_PID"/);
+  assert.match(orchestrator, /DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096/);
+  assert.match(orchestrator, /-partition-size "\$EMULATOR_PARTITION_MB"/);
+  assert.match(orchestrator, /EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192/);
+  assert.match(orchestrator, /shell df -k \/data/);
+  assert.match(orchestrator, /available_kib >= 1048576/);
+  assert.match(orchestrator, /wait_for_boot\s+verify_emulator_data_capacity/);
+  assert.match(orchestrator, /status != 0 && DIAGNOSTICS_PRINTED == 0/);
 });
 
 test("local and remote producers use separate claims outputs", () => {

@@ -36,7 +36,10 @@
 - CLI 命令是系统控制面的正式组成部分。
 - 它不只是调试工具，也服务于多端共享的 application/control 路径。
 - `deve watch` 是 standalone owned-watcher runtime：直接持有不可复制的 repo handle 集合；任一 worker terminal failure 都必须逆序显式 shutdown 全部 handle 并非零退出，不得依赖全局 registry 或 `Drop` 静默成功。每个 handle 的 shutdown 统一执行 producer stop/join、queued-hint discard、exact-root final reconcile 与至多一次 refresh，并保留 worker primary 与 cleanup diagnostics。
-- `deve serve` 由host `WatcherSupervisor`隔离repo-local ingestion failure；zero-repo host以`NoScope`正常启动且watcher expected=0为healthy。只有typed host-fatal才清理并非零退出；存在repo但全部watcher Failed时仍提供readonly/diagnostic/Create能力。
+- `deve serve` 由host `WatcherSupervisor`隔离repo-local ingestion failure；zero-repo host以
+  `BootstrapUnbound(scope_nonce=0)`正常启动且watcher expected=0为healthy，但不声称已确认
+  `NoScope`或writer readiness。只有typed host-fatal才清理并非零退出；存在repo但全部watcher
+  Failed时仍提供readonly/diagnostic/Create能力。
 - `deve repo remove --repo-id <uuid>`默认只执行backend Prepare并显示safe preview、preparation id与opaque token；
   `deve repo remove --repo-id <uuid> --apply --token <opaque>`才执行。server持有authority时两次调用都走
   authenticated loopback proxy，且在读取password前必须匹配ledger-local owner hint与server process incarnation；offline两次invocation绑定稳定authority-root/lock identity而不是短命process。

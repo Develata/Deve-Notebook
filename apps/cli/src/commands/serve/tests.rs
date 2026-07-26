@@ -1,5 +1,6 @@
 use super::{
-    ServeOptions, detect_main_node_role, detect_main_port, proxy_auth_config, proxy_node_role, run,
+    ServeOptions, detect_main_node_role, detect_main_port, proxy_auth_config, proxy_node_role,
+    resolve_repo_creation_projection_base, run,
 };
 use axum::{Json, Router, routing::get};
 use deve_core::config::{AppProfile, P2pConfig, RuntimeEnvironment, SyncMode};
@@ -16,6 +17,33 @@ fn free_port() -> u16 {
         .local_addr()
         .expect("read local addr")
         .port()
+}
+
+#[test]
+fn native_loopback_defaults_first_repo_projection_to_app_private_workspace() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    assert_eq!(
+        resolve_repo_creation_projection_base(&ledger_dir, true, None)
+            .expect("native projection base"),
+        Some(dir.path().join("workspace"))
+    );
+
+    let configured = dir.path().join("configured-notes");
+    assert_eq!(
+        resolve_repo_creation_projection_base(&ledger_dir, true, Some(configured.clone()))
+            .expect("configured projection base"),
+        Some(configured)
+    );
+    assert_eq!(
+        resolve_repo_creation_projection_base(&ledger_dir, false, None)
+            .expect("ordinary serve projection base"),
+        None
+    );
+    assert!(
+        !dir.path().join("workspace").exists(),
+        "resolving the first-Create base must not create a default projection"
+    );
 }
 
 async fn spawn_status_server(status: axum::http::StatusCode) -> SocketAddr {

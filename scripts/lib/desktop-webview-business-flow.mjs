@@ -47,11 +47,39 @@ export async function findBundledLocalPage(browser) {
 }
 
 export async function waitForReady(page) {
-  await page.waitForFunction(
-    () => document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready",
-    null,
-    { timeout: timeoutMs },
-  );
+  try {
+    await page.waitForFunction(
+      () => document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready",
+      null,
+      { timeout: timeoutMs },
+    );
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => {
+      const status = document.querySelector("[data-deve-sync-status]");
+      const bootstrap = globalThis.__DEVE_NATIVE_BOOTSTRAP;
+      return {
+        origin: location.origin,
+        readyState: document.readyState,
+        syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
+        repoId: status?.getAttribute("data-deve-repo-id") ?? null,
+        scopeNonce: status?.getAttribute("data-deve-scope-nonce") ?? null,
+        loginVisible: Boolean(document.querySelector("#login-username")),
+        repoSwitcherVisible: Boolean(document.querySelector("[data-deve-repo-switcher-trigger]")),
+        nativeBootstrap: bootstrap == null ? null : {
+          serviceState: bootstrap.service_state ?? null,
+          nodeRole: bootstrap.node_role ?? null,
+          sessionBound: bootstrap.session_bound === true,
+          backendPreferenceControl:
+            bootstrap.capabilities?.backend_preference_control === true,
+        },
+      };
+    }).catch((diagnosticError) => ({
+      diagnosticError: diagnosticError.message,
+    }));
+    throw new Error(
+      `native WebView did not become ready: ${error.message}; diagnostics=${JSON.stringify(diagnostics)}`,
+    );
+  }
 }
 
 export async function waitForWritableEditor(page) {
@@ -122,13 +150,64 @@ async function readScope(page) {
 }
 
 async function openRepoSwitcher(page) {
-  const trigger = page.locator("[data-deve-repo-switcher-trigger]").first();
+  let trigger = page.locator("[data-deve-repo-switcher-trigger]:visible").first();
+  if (await trigger.count() === 0) {
+    await page.locator("[data-deve-activity-more-button]:visible").click();
+    await page
+      .locator('[data-deve-activity-more-item="activity_more_item_explorer"]:visible')
+      .click();
+    trigger = page.locator("[data-deve-repo-switcher-trigger]:visible").first();
+  }
   await trigger.waitFor({ state: "visible", timeout: timeoutMs });
   await trigger.click();
-  await page.locator("[data-deve-repo-switcher-create]").waitFor({
+  await page.locator("[data-deve-repo-switcher-create]:visible").waitFor({
     state: "visible",
     timeout: timeoutMs,
   });
+}
+
+export async function createFirstRepoFromBootstrapUnbound(page, name) {
+  const initial = await waitUntil("initial zero-repo BootstrapUnbound", async () => {
+    const current = await readScope(page);
+    return current.repoId === ""
+      && Number.isInteger(current.scopeNonce)
+      && current.scopeNonce === 0
+      ? current
+      : null;
+  });
+  assert.notEqual(
+    initial.status,
+    "ready",
+    "zero-repo startup must not claim repo writer readiness",
+  );
+
+  await openRepoSwitcher(page);
+  assert.equal(
+    await page.locator("[data-deve-repo-switcher-item]").count(),
+    0,
+    "fresh LocalBackend must not auto-create a default repo",
+  );
+  await page.locator("[data-deve-repo-switcher-create]").click();
+  const input = page.locator("[data-deve-repo-switcher-create-input]");
+  await input.waitFor({ state: "visible", timeout: timeoutMs });
+  await input.fill(name);
+  await input.press("Enter");
+  await waitForReady(page);
+
+  const created = await readScope(page);
+  assert.ok(created.repoId, "first Create must bind the backend-projected repo scope");
+  assert.ok(
+    created.scopeNonce > initial.scopeNonce,
+    "first Create must advance the backend scope nonce",
+  );
+  await openRepoSwitcher(page);
+  assert.equal(
+    await page.locator(`[data-deve-repo-switcher-item-name="${name}"]`).count(),
+    1,
+    "first Create must publish the backend-owned display alias",
+  );
+  await page.locator("[data-deve-repo-switcher-backdrop]").click();
+  return { initial, created, name };
 }
 
 export async function exerciseLastRepoRemoval(page) {

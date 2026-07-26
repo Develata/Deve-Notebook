@@ -22,6 +22,14 @@ test("packaged smoke uses real UI intents for document and source-control flows"
   assert.match(businessFlowSource, /textarea\[name=\\?"commit-message\\?"\]/);
   assert.match(businessFlowSource, /data-deve-sc-panel-body=\\?"history\\?"/);
   assert.match(businessFlowSource, /data-deve-repo-switcher-remove/);
+  assert.match(businessFlowSource, /initial zero-repo BootstrapUnbound/);
+  assert.match(businessFlowSource, /current\.scopeNonce === 0/);
+  assert.match(businessFlowSource, /activity_more_item_explorer/);
+  assert.match(businessFlowSource, /data-deve-repo-switcher-trigger]:visible/);
+  assert.match(businessFlowSource, /fresh LocalBackend must not auto-create a default repo/);
+  assert.match(businessFlowSource, /first Create must advance the backend scope nonce/);
+  assert.match(source, /createFirstRepoFromBootstrapUnbound/);
+  assert.match(source, /firstRepoCreate/);
   assert.match(businessFlowSource, /data-deve-repo-removal-confirm/);
   assert.match(businessFlowSource, /last repo removal NoScope finalization/);
   assert.match(businessFlowSource, /noScope\.scopeNonce > before\.scopeNonce/);

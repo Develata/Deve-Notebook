@@ -17,10 +17,12 @@ PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-x86_64}"
 EMULATOR_PORT="${DEVE_MOBILE_ANDROID_EMULATOR_PORT:-5584}"
 EMULATOR_SERIAL="emulator-$EMULATOR_PORT"
 EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
+EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
 OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
 JOURNEY="${DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local}"
+DIAGNOSTICS_PRINTED=0
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
@@ -86,6 +88,9 @@ cleanup_on_exit() {
   local status=$?
   local cleanup_status=0
   trap - EXIT
+  if (( status != 0 && DIAGNOSTICS_PRINTED == 0 )); then
+    print_emulator_diagnostics >&2
+  fi
   cleanup || cleanup_status=$?
   if (( status != 0 )); then
     exit "$status"
@@ -105,12 +110,17 @@ write_emulator_owner() {
 }
 
 print_emulator_diagnostics() {
+  DIAGNOSTICS_PRINTED=1
   if command -v adb >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
     adb devices 2>&1 || true
   elif android_tool_path adb >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
     android_run_tool adb devices 2>&1 || true
+  fi
+  if command -v adb >/dev/null 2>&1 || android_tool_path adb >/dev/null 2>&1; then
+    echo "mobile-android-emulator-install-startup-smoke-check: emulator /data capacity:"
+    adb_cmd -s "$EMULATOR_SERIAL" shell df -k /data 2>&1 || true
   fi
   if command -v emulator >/dev/null 2>&1 || android_tool_path emulator >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: emulator AVD list:"
@@ -322,6 +332,31 @@ validate_emulator_ram() {
     || fail "DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB must be in 1536..4096"
 }
 
+validate_emulator_partition() {
+  [[ "$EMULATOR_PARTITION_MB" =~ ^[0-9]+$ ]] \
+    || fail "DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB must be an integer"
+  (( EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192 )) \
+    || fail "DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB must be in 2048..8192"
+}
+
+verify_emulator_data_capacity() {
+  local output total_kib available_kib minimum_total_kib=0
+  output="$(adb_cmd -s "$EMULATOR_SERIAL" shell df -k /data 2>&1)" \
+    || fail "Android emulator /data capacity probe failed"
+  printf '%s\n' "$output"
+  read -r total_kib available_kib < <(
+    printf '%s\n' "$output" | awk 'NR > 1 && $NF == "/data" { print $2, $4; exit }'
+  )
+  [[ "$total_kib" =~ ^[0-9]+$ && "$available_kib" =~ ^[0-9]+$ ]] \
+    || fail "Android emulator /data capacity probe returned an invalid row"
+  minimum_total_kib=$(( EMULATOR_PARTITION_MB * 1024 * 3 / 4 ))
+  (( total_kib >= minimum_total_kib )) \
+    || fail "Android emulator /data total capacity is below the requested partition floor"
+  (( available_kib >= 1048576 )) \
+    || fail "Android emulator /data has less than 1024 MiB available"
+  echo "mobile-android-emulator-install-startup-smoke-check: data_total_kib=$total_kib data_available_kib=$available_kib"
+}
+
 validate_lifecycle_timeout() {
   [[ "$LIFECYCLE_TIMEOUT_SECS" =~ ^[1-9][0-9]*$ ]] \
     || fail "DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS must be a positive integer"
@@ -361,6 +396,7 @@ verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
 validate_emulator_port
 validate_emulator_ram
+validate_emulator_partition
 validate_lifecycle_timeout
 
 case "$JOURNEY" in
@@ -370,7 +406,7 @@ esac
 
 if [[ "$REQUIRED" != "1" ]]; then
   echo "mobile-android-emulator-install-startup-smoke-check: emulator smoke not executed; set DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 on an Android target host"
-  echo "mobile-android-emulator-install-startup-smoke-check: api=$API_LEVEL target=$SYSTEM_TARGET arch=$ARCH avd=$AVD_NAME journey=$JOURNEY"
+  echo "mobile-android-emulator-install-startup-smoke-check: api=$API_LEVEL target=$SYSTEM_TARGET arch=$ARCH avd=$AVD_NAME partition_mb=$EMULATOR_PARTITION_MB journey=$JOURNEY"
   echo "mobile-android-emulator-install-startup-smoke-check: ok"
   exit 0
 fi
@@ -409,6 +445,7 @@ emulator_cmd \
   -avd "$AVD_NAME" \
   -port "$EMULATOR_PORT" \
   -memory "$EMULATOR_RAM_MB" \
+  -partition-size "$EMULATOR_PARTITION_MB" \
   -lowram \
   -no-window \
   -no-audio \
@@ -422,6 +459,7 @@ EMULATOR_PID="$!"
 write_emulator_owner "$EMULATOR_PID"
 
 wait_for_boot
+verify_emulator_data_capacity
 
 adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
 
@@ -449,5 +487,5 @@ else
   )
 fi
 
-echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL journey=$JOURNEY log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
+echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL partition_mb=$EMULATOR_PARTITION_MB journey=$JOURNEY log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
 echo "mobile-android-emulator-install-startup-smoke-check: ok"

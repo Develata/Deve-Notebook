@@ -852,7 +852,7 @@
           ]
         }
       ],
-      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend, backend-owned last-repo removal into NoScope, native session, NoteGit, Git bridge, and orphan cleanup"
+      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend zero-repo BootstrapUnbound(0), first Create with a non-zero switch nonce, backend-owned last-repo removal into non-zero NoScope, native session, NoteGit, Git bridge, and orphan cleanup"
     },
     {
       "producer_id": "desktop.remote-browser",
@@ -1310,6 +1310,9 @@
         "scripts/smoke-docker-multiclient.sh",
         "scripts/smoke-docker-multiclient.mjs",
         "scripts/smoke-docker-multiclient.test.mjs",
+        "scripts/docker-multiclient-runtime.test.mjs",
+        "scripts/cleanup-docker-multiclient.sh",
+        "scripts/docker-multiclient-cleanup.test.sh",
         "scripts/docker-multiclient-product-contract.test.mjs",
         "scripts/lib/docker-multiclient-product-journeys.mjs",
         "scripts/lib/docker-multiclient-runtime.mjs"
@@ -1320,6 +1323,16 @@
           "args": [
             {
               "literal": "scripts/smoke-docker-multiclient.sh"
+            }
+          ]
+        }
+      ],
+      "finally_steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/cleanup-docker-multiclient.sh"
             }
           ]
         }

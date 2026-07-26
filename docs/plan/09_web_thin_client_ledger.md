@@ -469,7 +469,8 @@ notice detail 的路径；B6 已登记独立 provider/browser producer，最终 
 - `RepoCreationSettledPublication` / `RepoRemovalSettledPublication` 的 mount、readonly、partial、repair
   分类完全由 backend outcome 决定。Web 不读取路径、marker、locator、watcher generation 或 raw error
   推断 cleanup、重启、fallback、NoScope 或 rollback。最后一个repo移除后只渲染backend提交的
-  zero-repo/NoScope状态与Create入口。
+  zero-repo `BootstrapUnbound(scope_nonce=0)` 状态与Create入口；已提交epoch后的正式
+  `NoScope`仍必须使用严格递增的非零nonce。
 - alias JSON import/export 只属于 CLI/operator surface；Web 不读取本地 JSON、不实现 warning/skip
   规则，也不拥有 alias store cache。
 - lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发

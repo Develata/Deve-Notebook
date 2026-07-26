@@ -727,6 +727,12 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-port "$EMULATOR_PORT"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-memory "$EMULATOR_RAM_MB"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-partition-size "$EMULATOR_PARTITION_MB"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minimum_total_kib=$(( EMULATOR_PARTITION_MB * 1024 * 3 / 4 ))
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status != 0 && DIAGNOSTICS_PRINTED == 0
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	LIFECYCLE_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-600}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-lowram
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	stop_android_gradle_daemon

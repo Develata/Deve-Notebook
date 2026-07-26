@@ -8,6 +8,7 @@
 //!   - 18_release#runtime-observability
 
 use crate::server;
+use anyhow::Context;
 use deve_core::config::{AppProfile, P2pConfig, RuntimeEnvironment, SyncMode};
 use deve_core::plugin::runtime::host;
 use deve_core::security::AuthConfig;
@@ -66,6 +67,11 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         return Ok(());
     }
 
+    let repo_creation_projection_base = resolve_repo_creation_projection_base(
+        ledger_dir,
+        native_loopback,
+        repo_creation_projection_base,
+    )?;
     let launch = if native_loopback {
         server::ServerLaunchOptions::native_loopback(port, false)
     } else if loopback_only {
@@ -103,6 +109,31 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
     )
     .await?;
     Ok(())
+}
+
+fn resolve_repo_creation_projection_base(
+    ledger_dir: &Path,
+    native_loopback: bool,
+    configured_base: Option<PathBuf>,
+) -> anyhow::Result<Option<PathBuf>> {
+    if configured_base.is_some() || !native_loopback {
+        return Ok(configured_base);
+    }
+
+    let ledger_dir = if ledger_dir.is_absolute() {
+        ledger_dir.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("Failed to resolve native loopback data root")?
+            .join(ledger_dir)
+    };
+    let data_root = ledger_dir.parent().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Native loopback ledger path has no app-private data root: {}",
+            ledger_dir.display()
+        )
+    })?;
+    Ok(Some(data_root.join("workspace")))
 }
 
 /// 代理模式: 检测已运行的主进程并以 plugin-host 方式启动

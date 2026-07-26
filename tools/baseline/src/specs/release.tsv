@@ -525,6 +525,12 @@ contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_EXPECTED_ORIGIN="
 contains	scripts/smoke-docker-multiclient.sh	base URL must use the container's loopback host port
 contains	scripts/smoke-docker-multiclient.sh	node --test \
 contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/smoke-docker-multiclient.test.mjs" \
+contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/docker-multiclient-runtime.test.mjs" \
+contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/docker-multiclient-cleanup.test.sh"
+contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_STATE_FILE
+contains	scripts/smoke-docker-multiclient.sh	trap cleanup_on_exit EXIT
+contains	scripts/cleanup-docker-multiclient.sh	label=com.docker.compose.project=$project
+contains	scripts/cleanup-docker-multiclient.sh	(( status == 0 )) || exit "$status"
 contains	scripts/smoke-docker-multiclient.sh	"$ROOT_DIR/scripts/docker-multiclient-product-contract.test.mjs"
 contains	scripts/smoke-docker-multiclient.mjs	await browser.newContext()
 contains	scripts/smoke-docker-multiclient.mjs	createRequire(
@@ -728,6 +734,12 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.ca
 contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-partition-size "$EMULATOR_PARTITION_MB"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell df -k /data
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status != 0 && DIAGNOSTICS_PRINTED == 0
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	print_emulator_diagnostics
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	ANDROID_AVD_HOME
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	avdmanager.log
@@ -1179,10 +1191,12 @@ contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	Invoke-RepoChecked $cli $repoSelector ngit export | Out-Null
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$initialPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
 contains	scripts/check-desktop-installed-git-bridge-smoke.ps1	$importedPush = Invoke-RepoChecked $cli $repoSelector ngit push --remote origin --branch $branch
-case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_zero_repo_bootstrap_unbound_nonce_zero_creates_no_default_repo_or_projection_or_writer_readiness true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_zero_repo_first_create_uses_nonzero_switch_nonce_and_reaches_ready_through_backend true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_test_cdp_marker_injects_only_webview2_assigned_port_programmatically true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_normal_startup_does_not_enable_cdp true
-case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_zero_repo_bootstrap_unbound_nonce_zero_creates_no_default_repo_or_projection_or_writer_readiness true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_first_create_uses_nonzero_switch_nonce_and_reaches_ready true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_test_cdp_uses_exact_programmatic_assigned_port_marker true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	installed_desktop_normal_startup_does_not_enable_cdp true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_installer_smoke_uses_local_bare_git_remote true

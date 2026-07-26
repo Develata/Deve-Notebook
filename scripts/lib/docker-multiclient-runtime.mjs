@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+const RESTART_CONSOLE_CORRELATION_MS = 5000;
+
 export function isDirectInvocation(argvPath, moduleUrl) {
   return Boolean(argvPath) && moduleUrl === pathToFileURL(resolve(argvPath)).href;
 }
@@ -67,6 +69,26 @@ function isExpectedRuntimeRequest(url, httpOrigin) {
   }
 }
 
+function restartGenerationOf(entry) {
+  if (Number.isSafeInteger(entry.restartGeneration) && entry.restartGeneration > 0) {
+    return entry.restartGeneration;
+  }
+  return entry.duringHostRestart ? 0 : null;
+}
+
+function restartResourceError(message) {
+  return message.match(
+    /^Failed to load resource: (net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE))$/u,
+  )?.[1];
+}
+
+function expectedRestartRequestFailure(failure, expectedOrigin, errorText) {
+  return restartGenerationOf(failure) !== null
+    && failure.responseStatus === undefined
+    && failure.errorText === errorText
+    && isExpectedRuntimeRequest(failure.url, expectedOrigin);
+}
+
 function isExpectedRestartProbeAbort(
   url,
   errorText,
@@ -100,14 +122,27 @@ export function isExpectedRestartTransportError(
   )?.[0];
   return Boolean(errorText)
     && requestFailures.some((failure) =>
-      failure.duringHostRestart
-      && failure.responseStatus === undefined
-      && failure.errorText === errorText
-      && isExpectedRuntimeRequest(failure.url, expectedOrigin));
+      expectedRestartRequestFailure(failure, expectedOrigin, errorText));
+}
+
+export function beginHostRestart(diags) {
+  for (const diag of diags) {
+    assert.equal(diag.hostRestart, false, `${diag.label} restart window is already active`);
+    diag.restartGeneration += 1;
+    diag.hostRestart = true;
+  }
+}
+
+export function endHostRestart(diags) {
+  for (const diag of diags) {
+    assert.equal(diag.hostRestart, true, `${diag.label} restart window is not active`);
+    diag.hostRestart = false;
+  }
 }
 
 export function attachDiagnostics(page, label, expectedOrigin) {
   const responseStatusByRequest = new WeakMap();
+  const requestScope = new WeakMap();
   const diag = {
     label,
     expectedOrigin,
@@ -118,8 +153,15 @@ export function attachDiagnostics(page, label, expectedOrigin) {
     pageErrors: [],
     offline: false,
     hostRestart: false,
+    restartGeneration: 0,
   };
 
+  page.on("request", (request) => {
+    requestScope.set(request, {
+      duringOffline: diag.offline,
+      restartGeneration: diag.hostRestart ? diag.restartGeneration : null,
+    });
+  });
   page.on("websocket", (ws) => {
     const socket = { url: ws.url(), frames: 0 };
     diag.sockets.push(socket);
@@ -135,12 +177,17 @@ export function attachDiagnostics(page, label, expectedOrigin) {
     }
   });
   page.on("requestfailed", (request) => {
+    const started = requestScope.get(request);
+    const restartGeneration = started?.restartGeneration
+      ?? (diag.hostRestart ? diag.restartGeneration : null);
     diag.requestFailures.push({
       url: request.url(),
       errorText: request.failure()?.errorText ?? "unknown",
-      duringOffline: diag.offline,
-      duringHostRestart: diag.hostRestart,
+      duringOffline: started?.duringOffline ?? diag.offline,
+      duringHostRestart: restartGeneration !== null,
+      restartGeneration,
       responseStatus: responseStatusByRequest.get(request),
+      observedAtMs: Date.now(),
     });
   });
   page.on("console", (msg) => {
@@ -150,6 +197,8 @@ export function attachDiagnostics(page, label, expectedOrigin) {
         message,
         duringOffline: diag.offline,
         duringHostRestart: diag.hostRestart,
+        restartGeneration: diag.hostRestart ? diag.restartGeneration : null,
+        observedAtMs: Date.now(),
       });
       if (!diag.offline && !diag.hostRestart) {
         console.error(`docker-multiclient-smoke: ${label} console error: ${message}`);
@@ -166,21 +215,38 @@ export function attachDiagnostics(page, label, expectedOrigin) {
 }
 
 export function relevantConsoleErrors(diag) {
-  return diag.consoleErrors.filter(({ message, duringOffline, duringHostRestart }) => {
+  const correlatedFailures = new Set();
+  return diag.consoleErrors.filter((entry) => {
+    const { message, duringOffline } = entry;
     if (message.includes("favicon.ico")) {
       return false;
     }
     if (duringOffline && message.includes("net::ERR_INTERNET_DISCONNECTED")) {
       return false;
     }
-    return !(
-      duringHostRestart
-      && isExpectedRestartTransportError(
-        message,
-        diag.expectedOrigin,
-        diag.requestFailures,
-      )
+    const expectedRestartTransport = isExpectedRestartTransportError(
+      message,
+      diag.expectedOrigin,
+      diag.requestFailures,
     );
+    if (restartGenerationOf(entry) !== null && expectedRestartTransport) {
+      return false;
+    }
+    const resourceError = restartResourceError(message);
+    if (!resourceError || !Number.isFinite(entry.observedAtMs)) {
+      return true;
+    }
+    const match = diag.requestFailures.findIndex((failure, index) =>
+      !correlatedFailures.has(index)
+      && expectedRestartRequestFailure(failure, diag.expectedOrigin, resourceError)
+      && Number.isFinite(failure.observedAtMs)
+      && Math.abs(entry.observedAtMs - failure.observedAtMs)
+        <= RESTART_CONSOLE_CORRELATION_MS);
+    if (match < 0) {
+      return true;
+    }
+    correlatedFailures.add(match);
+    return false;
   });
 }
 
@@ -190,8 +256,10 @@ export function relevantRequestFailures(diag) {
     errorText,
     duringOffline,
     duringHostRestart,
+    restartGeneration,
     responseStatus,
   }) => {
+    const duringRestart = restartGenerationOf({ duringHostRestart, restartGeneration }) !== null;
     if (
       responseStatus === 204
       && errorText === "net::ERR_ABORTED"
@@ -207,7 +275,7 @@ export function relevantRequestFailures(diag) {
       return false;
     }
     if (
-      duringHostRestart
+      duringRestart
       && isExpectedRestartProbeAbort(
         url,
         errorText,
@@ -218,7 +286,7 @@ export function relevantRequestFailures(diag) {
       return false;
     }
     if (
-      duringHostRestart
+      duringRestart
       && responseStatus === undefined
       && isExpectedRuntimeRequest(url, diag.expectedOrigin)
       && /net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE)/u.test(errorText)
@@ -227,6 +295,25 @@ export function relevantRequestFailures(diag) {
     }
     return true;
   });
+}
+
+export async function closeBrowserResources(contexts, browser) {
+  const errors = [];
+  for (const context of [...contexts].reverse()) {
+    try {
+      await context.close();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  try {
+    await browser.close();
+  } catch (error) {
+    errors.push(error);
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, "Docker multiclient browser cleanup failed");
+  }
 }
 
 export async function readNodeRole(baseUrl, timeoutMs = 2000) {

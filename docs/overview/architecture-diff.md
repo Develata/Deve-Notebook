@@ -36,7 +36,7 @@ Use one entry per divergent flow. Labels must match the flow registry.
 
 Active drift facts:
 
-1. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `NoScope`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation、R5 single typed finalization、thin Web确认面、normal offline/proxy CLI、explicit drift repair与distinct process exit status已实现；R6 fresh Windows/Linux及候选Desktop/Mobile证据仍未封存。
+1. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `BootstrapUnbound(scope_nonce=0)`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation、R5 single typed finalization、thin Web确认面、normal offline/proxy CLI、explicit drift repair与distinct process exit status已实现；R6 fresh Windows/Linux及候选Desktop/Mobile证据仍未封存。
 
 ## Flow Registry
 

@@ -238,6 +238,7 @@
     - release_assert: trunk_dev_index_not_served_as_release_frontend true
     - release_assert: api_only_does_not_prove_embedded_frontend_health true
     - release_assert: target_host_platform_evidence_runtime_boundary_current true
+    - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true
@@ -383,7 +384,8 @@
     - native_assert: remote_browser_accepts_https_origin_only true
     - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true
     - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true
-    - native_assert: installed_desktop_zero_repo_startup_creates_no_default_repo_or_projection true
+    - native_assert: installed_desktop_zero_repo_bootstrap_unbound_nonce_zero_creates_no_default_repo_or_projection_or_writer_readiness true
+    - native_assert: installed_desktop_first_create_uses_nonzero_switch_nonce_and_reaches_ready true
     - native_assert: installed_desktop_test_cdp_uses_exact_programmatic_assigned_port_marker true
     - native_assert: installed_desktop_normal_startup_does_not_enable_cdp true
     - native_assert: desktop_installer_smoke_uses_local_bare_git_remote true
