@@ -192,7 +192,7 @@ async function restartCandidate(page, diag, baseUrl, container) {
   beginHostRestart([diag]);
   runDocker(["restart", container], { timeout: timeoutMs });
   await waitForHttp(`${baseUrl}/api/node/role`);
-  endHostRestart([diag]);
+  await endHostRestart([diag]);
   await reopen(page, baseUrl);
 }
 

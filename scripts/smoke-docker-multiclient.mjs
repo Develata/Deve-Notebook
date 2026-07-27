@@ -429,7 +429,7 @@ async function main() {
         before: roleBeforeRestart,
         timeoutMs,
       });
-      endHostRestart([diagA, diagB, mobileDiag]);
+      await endHostRestart([diagA, diagB, mobileDiag]);
       await reopenNoScope(pageA, diagA);
       await reopenNoScope(pageB, diagB);
       await reopenNoScope(mobilePage, mobileDiag);

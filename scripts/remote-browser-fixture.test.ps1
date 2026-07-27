@@ -42,6 +42,24 @@ try {
         throw "argument/environment propagation changed: $argumentResult"
     }
 
+    $tunnelWriter = Join-Path $temporary "tunnel-writer.ps1"
+    $tunnelStdout = Join-Path $temporary "tunnel.stdout.log"
+    $tunnelStderr = Join-Path $temporary "tunnel.stderr.log"
+    Set-Content -LiteralPath $tunnelWriter -Encoding utf8 -Value @'
+Start-Sleep -Milliseconds 300
+Write-Output "https://fixture-race.trycloudflare.com"
+'@
+    $process = Start-RemoteFixtureProcess -FilePath (Get-Process -Id $PID).Path `
+        -ArgumentList @("-NoProfile", "-File", $tunnelWriter) `
+        -WorkingDirectory $temporary -StdoutPath $tunnelStdout -StderrPath $tunnelStderr
+    $origin = Wait-RemoteFixtureTunnelOrigin -Process $process -LogPaths @($tunnelStdout, $tunnelStderr)
+    if ($origin -ne "https://fixture-race.trycloudflare.com") {
+        throw "empty tunnel log race returned unexpected origin: $origin"
+    }
+    $process.WaitForExit()
+    if ($process.ExitCode -ne 0) { throw "tunnel log race fixture process failed" }
+    $process = $null
+
     $drainScript = Join-Path $temporary "bounded-drain.ps1"
     Set-Content -LiteralPath $drainScript -Encoding utf8 -Value @'
 [Console]::Out.Write(('o' * 32768))

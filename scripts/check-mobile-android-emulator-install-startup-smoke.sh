@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
@@ -340,13 +341,14 @@ validate_emulator_partition() {
 }
 
 verify_emulator_data_capacity() {
-  local output total_kib available_kib minimum_total_kib=0
+  local output parsed total_kib available_kib minimum_total_kib=0
   output="$(adb_cmd -s "$EMULATOR_SERIAL" shell df -k /data 2>&1)" \
     || fail "Android emulator /data capacity probe failed"
   printf '%s\n' "$output"
-  read -r total_kib available_kib < <(
-    printf '%s\n' "$output" | awk 'NR > 1 && $NF == "/data" { print $2, $4; exit }'
-  )
+  parsed="$(printf '%s\n' "$output" | parse_android_emulator_data_capacity)" \
+    || fail "Android emulator /data capacity probe returned an invalid row"
+  read -r total_kib available_kib <<<"$parsed" \
+    || fail "Android emulator /data capacity probe returned an invalid row"
   [[ "$total_kib" =~ ^[0-9]+$ && "$available_kib" =~ ^[0-9]+$ ]] \
     || fail "Android emulator /data capacity probe returned an invalid row"
   minimum_total_kib=$(( EMULATOR_PARTITION_MB * 1024 * 3 / 4 ))
@@ -391,6 +393,7 @@ run node --test "$ROOT_DIR/scripts/mobile-android-emulator-journey.test.mjs"
 run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
+run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
 verify_boot_completion_contract
 verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"

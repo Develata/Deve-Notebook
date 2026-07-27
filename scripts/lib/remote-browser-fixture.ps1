@@ -385,7 +385,9 @@ function Wait-RemoteFixtureTunnelOrigin {
     for ($attempt = 0; $attempt -lt 120; $attempt++) {
         foreach ($path in $LogPaths) {
             if (Test-Path -LiteralPath $path) {
-                $match = [regex]::Match((Get-Content -Raw -LiteralPath $path), $pattern)
+                $content = Get-Content -Raw -LiteralPath $path
+                if ([string]::IsNullOrEmpty($content)) { continue }
+                $match = [regex]::Match($content, $pattern)
                 if ($match.Success) {
                     Assert-RemoteFixtureHttpsOrigin $match.Value
                     return $match.Value

@@ -66,6 +66,9 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
   assert.match(orchestrator, /-partition-size "\$EMULATOR_PARTITION_MB"/);
   assert.match(orchestrator, /EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192/);
   assert.match(orchestrator, /shell df -k \/data/);
+  assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-capacity\.sh"/);
+  assert.match(orchestrator, /parse_android_emulator_data_capacity/);
+  assert.match(orchestrator, /android-emulator-capacity\.test\.sh/);
   assert.match(orchestrator, /available_kib >= 1048576/);
   assert.match(orchestrator, /wait_for_boot\s+verify_emulator_data_capacity/);
   assert.match(orchestrator, /status != 0 && DIAGNOSTICS_PRINTED == 0/);
@@ -114,7 +117,9 @@ test("Android producers own a bounded runner finally cleanup", () => {
       args: [{ literal: "scripts/cleanup-mobile-android-emulator.sh" }],
     }]);
     assert.ok(producer.artifacts.includes("scripts/cleanup-mobile-android-emulator.sh"));
+    assert.ok(producer.artifacts.includes("scripts/android-emulator-capacity.test.sh"));
     assert.ok(producer.artifacts.includes("scripts/android-emulator-cleanup.test.sh"));
+    assert.ok(producer.artifacts.includes("scripts/lib/android-emulator-capacity.sh"));
     assert.ok(producer.artifacts.includes("scripts/lib/android-emulator-owner.sh"));
     assert.ok(producer.artifacts.includes("scripts/lib/android-tools.sh"));
   }

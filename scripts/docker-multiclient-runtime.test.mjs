@@ -13,7 +13,7 @@ import {
 const expectedOrigin = "http://127.0.0.1:3101";
 const resourceMessage = "Failed to load resource: net::ERR_CONNECTION_REFUSED";
 
-test("request restart generation is captured when the request starts", () => {
+test("request restart generation is captured when the request starts", async () => {
   const page = new EventEmitter();
   const diag = attachDiagnostics(page, "generation-test", expectedOrigin);
   const request = {
@@ -23,17 +23,17 @@ test("request restart generation is captured when the request starts", () => {
 
   beginHostRestart([diag]);
   page.emit("request", request);
-  endHostRestart([diag]);
+  await endHostRestart([diag]);
   page.emit("requestfailed", request);
 
   assert.equal(diag.requestFailures.length, 1);
   assert.equal(diag.requestFailures[0].restartGeneration, 1);
   assert.equal(diag.requestFailures[0].duringHostRestart, true);
   assert.deepEqual(relevantRequestFailures(diag), []);
-  assert.throws(() => endHostRestart([diag]), /restart window is not active/);
+  await assert.rejects(endHostRestart([diag]), /restart window is not active/);
 });
 
-test("restart generation rejects nested windows and increments exactly once", () => {
+test("restart generation rejects nested windows and increments exactly once", async () => {
   const diag = {
     label: "window-test",
     hostRestart: false,
@@ -42,8 +42,62 @@ test("restart generation rejects nested windows and increments exactly once", ()
   beginHostRestart([diag]);
   assert.equal(diag.restartGeneration, 1);
   assert.throws(() => beginHostRestart([diag]), /restart window is already active/);
-  endHostRestart([diag]);
+  await endHostRestart([diag]);
   assert.equal(diag.hostRestart, false);
+});
+
+test("restart transitions validate every diagnostic before mutating any", async () => {
+  const valid = { label: "valid", hostRestart: false, restartGeneration: 0 };
+  const alreadyActive = { label: "active", hostRestart: true, restartGeneration: 3 };
+  assert.throws(
+    () => beginHostRestart([valid, alreadyActive]),
+    /restart window is already active/,
+  );
+  assert.deepEqual(valid, { label: "valid", hostRestart: false, restartGeneration: 0 });
+
+  const firstActive = { label: "first", hostRestart: true, restartGeneration: 1 };
+  const inactive = { label: "inactive", hostRestart: false, restartGeneration: 2 };
+  await assert.rejects(
+    endHostRestart([firstActive, inactive]),
+    /restart window is not active/,
+  );
+  assert.equal(firstActive.hostRestart, true);
+
+  const secondActive = { label: "second", hostRestart: true, restartGeneration: 1 };
+  const ending = endHostRestart([firstActive, secondActive]);
+  setTimeout(() => {
+    secondActive.hostRestart = false;
+  }, 0);
+  await assert.rejects(ending, /restart window ended during drain/);
+  assert.equal(firstActive.hostRestart, true);
+});
+
+test("restart end drains same-origin Chromium resource errors into the active generation", async () => {
+  const page = new EventEmitter();
+  const diag = attachDiagnostics(page, "drain-test", expectedOrigin);
+  beginHostRestart([diag]);
+
+  const ending = endHostRestart([diag]);
+  setTimeout(() => {
+    page.emit("console", {
+      type: () => "error",
+      text: () => "Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED",
+      location: () => ({ url: `${expectedOrigin}/api/node/role` }),
+    });
+  }, 0);
+  await ending;
+
+  assert.equal(diag.hostRestart, false);
+  assert.equal(diag.consoleErrors[0].restartGeneration, 1);
+  assert.deepEqual(relevantConsoleErrors(diag), []);
+
+  page.emit("console", {
+    type: () => "error",
+    text: () => "Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED",
+    location: () => ({ url: `${expectedOrigin}/api/node/role` }),
+  });
+  assert.equal(diag.consoleErrors[1].restartGeneration, null);
+  assert.deepEqual(relevantConsoleErrors(diag), [diag.consoleErrors[1]]);
 });
 
 test("delayed resource console correlation is bounded and one-to-one", () => {
@@ -57,6 +111,7 @@ test("delayed resource console correlation is bounded and one-to-one", () => {
   };
   const correlated = {
     message: resourceMessage,
+    locationUrl: "",
     duringOffline: false,
     duringHostRestart: false,
     restartGeneration: null,
@@ -77,6 +132,39 @@ test("delayed resource console correlation is bounded and one-to-one", () => {
       consoleErrors: [correlated, unpaired, outsideSocket, late],
     }),
     [unpaired, outsideSocket, late],
+  );
+});
+
+test("restart resource errors require both active generation and expected origin", () => {
+  const duringRestart = {
+    message: resourceMessage,
+    locationUrl: `${expectedOrigin}/api/node/role`,
+    duringOffline: false,
+    duringHostRestart: true,
+    restartGeneration: 1,
+    observedAtMs: 1000,
+  };
+  const postWindow = {
+    ...duringRestart,
+    duringHostRestart: false,
+    restartGeneration: null,
+  };
+  const outsideOrigin = {
+    ...duringRestart,
+    locationUrl: "https://example.invalid/resource",
+  };
+  const missingOrigin = {
+    ...duringRestart,
+    locationUrl: "",
+  };
+
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: [],
+      consoleErrors: [duringRestart, postWindow, outsideOrigin, missingOrigin],
+    }),
+    [postWindow, outsideOrigin, missingOrigin],
   );
 });
 

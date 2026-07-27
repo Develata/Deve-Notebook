@@ -16,10 +16,6 @@ import {
   waitForRenderedShell,
 } from "./smoke-docker-multiclient.mjs";
 import {
-  selectWorkspaceRoot,
-  validateWorkspaceIdentity,
-} from "./lib/docker-multiclient-product-journeys.mjs";
-import {
   isExpectedRestartTransportError,
   relevantRequestFailures,
 } from "./lib/docker-multiclient-runtime.mjs";
@@ -110,12 +106,20 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     url: `${expectedOrigin}/api/node/role`,
     errorText: "net::ERR_CONNECTION_REFUSED",
     duringHostRestart: true,
+    restartGeneration: 1,
   }];
   const resourceMessage = "Failed to load resource: net::ERR_CONNECTION_REFUSED";
   assert.equal(isExpectedRestartTransportError(message, expectedOrigin), true);
   assert.equal(
     isExpectedRestartTransportError(resourceMessage, expectedOrigin, expectedFailure),
     true,
+  );
+  assert.equal(
+    isExpectedRestartTransportError(resourceMessage, expectedOrigin, [{
+      ...expectedFailure[0],
+      restartGeneration: null,
+    }]),
+    false,
   );
   assert.equal(
     isExpectedRestartTransportError(resourceMessage, expectedOrigin, []),
@@ -137,8 +141,13 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     url: "https://elsewhere.invalid/api/data",
     errorText: "net::ERR_CONNECTION_REFUSED",
     duringHostRestart: true,
+    restartGeneration: 1,
   };
-  const delayedFailure = { ...expectedFailure[0], duringHostRestart: false };
+  const delayedFailure = {
+    ...expectedFailure[0],
+    duringHostRestart: false,
+    restartGeneration: null,
+  };
   assert.equal(
     isExpectedRestartTransportError(resourceMessage, expectedOrigin, [unexpectedFailure]),
     false,
@@ -158,7 +167,12 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     relevantConsoleErrors({
       expectedOrigin,
       requestFailures: expectedFailure,
-      consoleErrors: [{ message, duringOffline: false, duringHostRestart: true }],
+      consoleErrors: [{
+        message,
+        duringOffline: false,
+        duringHostRestart: true,
+        restartGeneration: 1,
+      }],
     }),
     [],
   );
@@ -185,6 +199,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     url: `${expectedOrigin}/api/node/role`,
     errorText: "net::ERR_CONNECTION_ABORTED",
     duringHostRestart: true,
+    restartGeneration: 1,
   };
   const abortedMessage = "Failed to load resource: net::ERR_CONNECTION_ABORTED";
   assert.equal(
@@ -199,6 +214,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
         message: abortedMessage,
         duringOffline: false,
         duringHostRestart: true,
+        restartGeneration: 1,
       }],
     }),
     [],
@@ -224,12 +240,14 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
           message: abortedMessage,
           duringOffline: false,
           duringHostRestart: true,
+          restartGeneration: 1,
         }],
       }),
       [{
         message: abortedMessage,
         duringOffline: false,
         duringHostRestart: true,
+        restartGeneration: 1,
       }],
     );
     assert.deepEqual(
@@ -252,6 +270,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
         message: "Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED",
         duringOffline: false,
         duringHostRestart: true,
+        restartGeneration: 1,
       }],
     }),
     [],
@@ -275,6 +294,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
         message: "Failed to load resource: net::ERR_EMPTY_RESPONSE",
         duringOffline: false,
         duringHostRestart: true,
+        restartGeneration: 1,
       }],
     }),
     [],
@@ -290,6 +310,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     url: `${expectedOrigin}/api/node/role`,
     errorText: "net::ERR_CERT_AUTHORITY_INVALID",
     duringHostRestart: true,
+    restartGeneration: 1,
   };
   assert.deepEqual(
     relevantRequestFailures({
@@ -303,6 +324,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
       url: `${expectedOrigin}/api/node/role`,
       errorText,
       duringHostRestart: true,
+      restartGeneration: 1,
     };
     assert.deepEqual(
       relevantRequestFailures({
@@ -317,6 +339,7 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
     errorText: "net::ERR_ABORTED",
     responseStatus: undefined,
     duringHostRestart: true,
+    restartGeneration: 1,
   };
   assert.deepEqual(
     relevantRequestFailures({
@@ -445,55 +468,4 @@ test("direct execution enters main instead of silently succeeding", () => {
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
-});
-
-test("product journey accepts one canonical projection workspace only", () => {
-  const bareLocator = `version = 2
-
-[[locators]]
-repo_id = "11111111-1111-4111-8111-111111111111"
-workspace_segment = "11111111-1111-4111-8111-111111111111"
-projection_base_abs = "/notes"
-canonicalized_at_unix_ms = 1
-`;
-  assert.equal(
-    selectWorkspaceRoot(
-      bareLocator,
-      "11111111-1111-4111-8111-111111111111",
-    ),
-    "/notes/11111111-1111-4111-8111-111111111111",
-  );
-  const aliasLocator = `version = 2
-
-[[locators]]
-repo_id = '11111111-1111-4111-8111-111111111111'
-workspace_segment = 'one--11111111-1111-4111-8111-111111111111'
-projection_base_abs = '/notes'
-canonicalized_at_unix_ms = 1
-
-[[locators]]
-repo_id = '22222222-2222-4222-8222-222222222222'
-workspace_segment = 'two--22222222-2222-4222-8222-222222222222'
-projection_base_abs = '/notes'
-canonicalized_at_unix_ms = 1
-`;
-  assert.equal(
-    selectWorkspaceRoot(
-      aliasLocator,
-      "22222222-2222-4222-8222-222222222222",
-    ),
-    "/notes/two--22222222-2222-4222-8222-222222222222",
-  );
-  assert.throws(() => selectWorkspaceRoot(
-    bareLocator.replace('projection_base_abs = "/notes"', 'projection_base_abs = "/tmp"'),
-    "11111111-1111-4111-8111-111111111111",
-  ));
-  validateWorkspaceIdentity(
-    'version = 1\nrepo_id = "11111111-1111-4111-8111-111111111111"\nrepo_name = "machine"\n',
-    "11111111-1111-4111-8111-111111111111",
-  );
-  assert.throws(() => validateWorkspaceIdentity(
-    'version = 1\nrepo_id = "22222222-2222-4222-8222-222222222222"\nrepo_name = "machine"\n',
-    "11111111-1111-4111-8111-111111111111",
-  ));
 });

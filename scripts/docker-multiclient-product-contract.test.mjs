@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import {
+  selectWorkspaceRoot,
+  validateWorkspaceIdentity,
+} from "./lib/docker-multiclient-product-journeys.mjs";
 
 test("tag-ready product journey covers destructive repo removal, typed diff, source control, and external apply", () => {
   const source = fs.readFileSync(
@@ -51,4 +55,55 @@ test("tag-ready product journey covers mobile last-repo NoScope, restart, and fi
     [...runner.matchAll(/assertRemovalPreservation\(/gu)].length >= 2,
     "the old workspace must be rechecked after restart and after same-host recreation",
   );
+});
+
+test("product journey accepts one canonical projection workspace only", () => {
+  const bareLocator = `version = 2
+
+[[locators]]
+repo_id = "11111111-1111-4111-8111-111111111111"
+workspace_segment = "11111111-1111-4111-8111-111111111111"
+projection_base_abs = "/notes"
+canonicalized_at_unix_ms = 1
+`;
+  assert.equal(
+    selectWorkspaceRoot(
+      bareLocator,
+      "11111111-1111-4111-8111-111111111111",
+    ),
+    "/notes/11111111-1111-4111-8111-111111111111",
+  );
+  const aliasLocator = `version = 2
+
+[[locators]]
+repo_id = '11111111-1111-4111-8111-111111111111'
+workspace_segment = 'one--11111111-1111-4111-8111-111111111111'
+projection_base_abs = '/notes'
+canonicalized_at_unix_ms = 1
+
+[[locators]]
+repo_id = '22222222-2222-4222-8222-222222222222'
+workspace_segment = 'two--22222222-2222-4222-8222-222222222222'
+projection_base_abs = '/notes'
+canonicalized_at_unix_ms = 1
+`;
+  assert.equal(
+    selectWorkspaceRoot(
+      aliasLocator,
+      "22222222-2222-4222-8222-222222222222",
+    ),
+    "/notes/two--22222222-2222-4222-8222-222222222222",
+  );
+  assert.throws(() => selectWorkspaceRoot(
+    bareLocator.replace('projection_base_abs = "/notes"', 'projection_base_abs = "/tmp"'),
+    "11111111-1111-4111-8111-111111111111",
+  ));
+  validateWorkspaceIdentity(
+    'version = 1\nrepo_id = "11111111-1111-4111-8111-111111111111"\nrepo_name = "machine"\n',
+    "11111111-1111-4111-8111-111111111111",
+  );
+  assert.throws(() => validateWorkspaceIdentity(
+    'version = 1\nrepo_id = "22222222-2222-4222-8222-222222222222"\nrepo_name = "machine"\n',
+    "11111111-1111-4111-8111-111111111111",
+  ));
 });

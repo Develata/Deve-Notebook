@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const RESTART_CONSOLE_CORRELATION_MS = 5000;
+const RESTART_EVENT_DRAIN_MS = 250;
 
 export function isDirectInvocation(argvPath, moduleUrl) {
   return Boolean(argvPath) && moduleUrl === pathToFileURL(resolve(argvPath)).href;
@@ -73,13 +74,24 @@ function restartGenerationOf(entry) {
   if (Number.isSafeInteger(entry.restartGeneration) && entry.restartGeneration > 0) {
     return entry.restartGeneration;
   }
-  return entry.duringHostRestart ? 0 : null;
+  return null;
 }
 
 function restartResourceError(message) {
   return message.match(
     /^Failed to load resource: (net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE))$/u,
   )?.[1];
+}
+
+function expectedScopedRestartResourceError(entry, expectedOrigin) {
+  if (restartGenerationOf(entry) === null || !restartResourceError(entry.message)) {
+    return false;
+  }
+  try {
+    return new URL(entry.locationUrl).origin === new URL(expectedOrigin).origin;
+  } catch {
+    return false;
+  }
 }
 
 function expectedRestartRequestFailure(failure, expectedOrigin, errorText) {
@@ -128,14 +140,25 @@ export function isExpectedRestartTransportError(
 export function beginHostRestart(diags) {
   for (const diag of diags) {
     assert.equal(diag.hostRestart, false, `${diag.label} restart window is already active`);
+  }
+  for (const diag of diags) {
     diag.restartGeneration += 1;
     diag.hostRestart = true;
   }
 }
 
-export function endHostRestart(diags) {
+export async function endHostRestart(diags) {
   for (const diag of diags) {
     assert.equal(diag.hostRestart, true, `${diag.label} restart window is not active`);
+  }
+  // Chromium may enqueue console events for restart-scoped requests just after
+  // the replacement runtime becomes observable. Drain that bounded queue while
+  // the generation is still active; subsequent events remain fail-closed.
+  await delay(RESTART_EVENT_DRAIN_MS);
+  for (const diag of diags) {
+    assert.equal(diag.hostRestart, true, `${diag.label} restart window ended during drain`);
+  }
+  for (const diag of diags) {
     diag.hostRestart = false;
   }
 }
@@ -193,8 +216,10 @@ export function attachDiagnostics(page, label, expectedOrigin) {
   page.on("console", (msg) => {
     if (msg.type() === "error") {
       const message = msg.text();
+      const locationUrl = msg.location?.().url ?? "";
       diag.consoleErrors.push({
         message,
+        locationUrl,
         duringOffline: diag.offline,
         duringHostRestart: diag.hostRestart,
         restartGeneration: diag.hostRestart ? diag.restartGeneration : null,
@@ -229,7 +254,13 @@ export function relevantConsoleErrors(diag) {
       diag.expectedOrigin,
       diag.requestFailures,
     );
-    if (restartGenerationOf(entry) !== null && expectedRestartTransport) {
+    if (
+      restartGenerationOf(entry) !== null
+      && (
+        expectedRestartTransport
+        || expectedScopedRestartResourceError(entry, diag.expectedOrigin)
+      )
+    ) {
       return false;
     }
     const resourceError = restartResourceError(message);
