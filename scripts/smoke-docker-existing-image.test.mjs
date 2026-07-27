@@ -12,6 +12,14 @@ const compose = fs.readFileSync(
   new URL("../docker-compose.multiclient.yml", import.meta.url),
   "utf8",
 );
+const meshCompose = fs.readFileSync(
+  new URL("../docker-compose.mesh.yml", import.meta.url),
+  "utf8",
+);
+const meshBootstrap = fs.readFileSync(
+  new URL("./docker-p2p-mesh-bootstrap.sh", import.meta.url),
+  "utf8",
+);
 const p2p = fs.readFileSync(new URL("./smoke-docker-p2p-mesh.sh", import.meta.url), "utf8");
 const releaseWorkflow = fs.readFileSync(
   new URL("../.github/workflows/release.yml", import.meta.url),
@@ -59,6 +67,24 @@ test("multiclient existing-image mode validates the image and prohibits compose 
 test("compose binds the explicitly selected candidate image", () => {
   assert.match(compose, /image: \$\{DEVE_DOCKER_MULTI_IMAGE:-deve-notebook:local-multiclient\}/);
   assert.match(multiclient, /DEVE_DOCKER_MULTI_IMAGE="\$IMAGE"/);
+});
+
+test("P2P compose installs the shared repo key at the locator-owned workspace", () => {
+  assert.match(meshCompose, /docker-p2p-mesh-bootstrap\.sh:ro/);
+  assert.match(meshCompose, /command: \*deve-p2p-mesh-command/g);
+  assert.match(meshBootstrap, /record_repo != repo_id/);
+  assert.match(meshBootstrap, /matches != 1/);
+  assert.match(meshBootstrap, /projection base mismatch/);
+  assert.match(meshBootstrap, /workspace_segment" != "\."/);
+  assert.match(meshBootstrap, /workspace identity mismatch/);
+  assert.match(meshBootstrap, /existing repo key mismatch/);
+  assert.match(meshBootstrap, /mktemp "\$key_dir\/\.repo\.key\.tmp\.XXXXXX"/);
+  assert.match(meshBootstrap, /trap cleanup_key_tmp EXIT/);
+  assert.match(meshBootstrap, /forward_signal TERM 143/);
+  assert.match(p2p, /docker-p2p-mesh-bootstrap\.test\.sh/);
+  assert.match(p2p, /docker-p2p-mesh-cleanup\.test\.sh/);
+  assert.match(p2p, /receipt project\/state override rejected/);
+  assert.doesNotMatch(meshCompose, /default--\$\$\{DEVE_DOCKER_P2P_MESH_REPO_ID\}/);
 });
 
 test("Docker acceptance smokes bind and revalidate one immutable candidate image ID", () => {

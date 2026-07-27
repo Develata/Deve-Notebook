@@ -13,6 +13,8 @@ ADB_SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
 readonly ADB_KILL_AFTER_SECS=5
 readonly INSTALL_RETRY_DEADLINE_SECS=180
+readonly PACKAGE_SERVICE_READY_ATTEMPTS=10
+readonly PACKAGE_SERVICE_READY_INTERVAL_SECS=2
 
 # This gate installs and launches only the Android WebView shell. It must not
 # imply release readiness, child-process runtime, backend process ownership, or
@@ -90,7 +92,49 @@ retryable_android_package_install_failure() {
   '
 }
 
+retryable_android_package_readiness_failure() {
+  local status="$1"
+  local output="$2"
+
+  (( status == 20 )) || return 1
+  printf '%s\n' "$output" | tr -d '\r' | awk '
+    /^[[:space:]]*$/ { next }
+    $0 == "cmd: Can'\''t find service: package" {
+      unavailable += 1
+      next
+    }
+    { unexpected = 1 }
+    END { exit !(unavailable == 1 && unexpected == 0) }
+  '
+}
+
+wait_for_android_package_service() {
+  local deadline="$1"
+  local attempt now output status
+
+  for ((attempt = 1; attempt <= PACKAGE_SERVICE_READY_ATTEMPTS; attempt += 1)); do
+    if output="$(adb_retry_timed "$deadline" shell cmd package list packages 2>&1)"; then
+      return 0
+    else
+      status=$?
+    fi
+    printf '%s\n' "$output" >&2
+    if ! retryable_android_package_readiness_failure "$status" "$output"; then
+      return "$status"
+    fi
+    if (( attempt == PACKAGE_SERVICE_READY_ATTEMPTS )); then
+      return "$status"
+    fi
+    now="$(install_retry_now)"
+    (( deadline - now > PACKAGE_SERVICE_READY_INTERVAL_SECS )) || return 124
+    echo "mobile-android-install-startup-smoke-check: waiting for package service (attempt $attempt/$PACKAGE_SERVICE_READY_ATTEMPTS)" >&2
+    sleep "$PACKAGE_SERVICE_READY_INTERVAL_SECS" || return $?
+  done
+}
+
 verify_install_retry_contract() {
+  local readiness_status
+
   retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipe (32)" \
     || fail "package-service Broken pipe must remain the only retryable install failure"
@@ -109,6 +153,19 @@ verify_install_retry_contract() {
   if retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: Failure [INSTALL_FAILED_INVALID_APK]"; then
     fail "non-transport Android install failures must remain fail-closed"
+  fi
+  retryable_android_package_readiness_failure 20 \
+    "cmd: Can't find service: package" \
+    || fail "package-service restart must remain the only retryable readiness failure"
+  for readiness_status in 124 130 143; do
+    if retryable_android_package_readiness_failure "$readiness_status" \
+      "cmd: Can't find service: package"; then
+      fail "timeout and interruption statuses must not be retried: $readiness_status"
+    fi
+  done
+  if retryable_android_package_readiness_failure 20 \
+    $'cmd: Can'\''t find service: package\nerror: device offline'; then
+    fail "mixed Android readiness failures must not be retried"
   fi
 }
 
@@ -134,9 +191,9 @@ install_apk() {
     echo "mobile-android-install-startup-smoke-check: retrying after package-service Broken pipe" >&2
     now="$(install_retry_now)"
     (( deadline - now > 2 )) || return 124
-    sleep 2
+    sleep 2 || return $?
     adb_retry_timed "$deadline" wait-for-device >/dev/null || return $?
-    adb_retry_timed "$deadline" shell cmd package list packages >/dev/null || return $?
+    wait_for_android_package_service "$deadline" || return $?
   done
 }
 

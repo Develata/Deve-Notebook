@@ -1376,7 +1376,12 @@
       },
       "claims_env": {},
       "artifacts": [
-        "scripts/smoke-docker-p2p-mesh.sh"
+        "scripts/smoke-docker-p2p-mesh.sh",
+        "scripts/docker-p2p-mesh-bootstrap.sh",
+        "scripts/docker-p2p-mesh-bootstrap.test.sh",
+        "scripts/cleanup-docker-p2p-mesh.sh",
+        "scripts/docker-p2p-mesh-cleanup.test.sh",
+        "docker-compose.mesh.yml"
       ],
       "steps": [
         {
@@ -1384,6 +1389,16 @@
           "args": [
             {
               "literal": "scripts/smoke-docker-p2p-mesh.sh"
+            }
+          ]
+        }
+      ],
+      "finally_steps": [
+        {
+          "program": "bash",
+          "args": [
+            {
+              "literal": "scripts/cleanup-docker-p2p-mesh.sh"
             }
           ]
         }

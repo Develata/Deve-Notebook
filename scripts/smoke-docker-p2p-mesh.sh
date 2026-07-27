@@ -3,12 +3,32 @@ set -euo pipefail
 
 # REL-010 smoke: build the local Docker image, run two isolated servers, and
 # verify static FullPeer /ws mesh admission plus handshake diagnostics.
+# Cohesion exception (>500 lines): the ordered online/offline/gap/recovery
+# journey shares one bounded fixture state machine. Bootstrap, cleanup, live
+# shadow verification, and contract tests remain separate responsibility units.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/baseline-wrapper.sh
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 COMPOSE_FILE="${DEVE_DOCKER_P2P_MESH_COMPOSE_FILE:-$ROOT_DIR/docker-compose.mesh.yml}"
-PROJECT="${DEVE_DOCKER_P2P_MESH_PROJECT:-deve-p2p-mesh-$$}"
+if [[ -n "${DEVE_ACCEPTANCE_PRODUCER_STATE_DIR:-}" ]]; then
+  if [[ -n "${DEVE_DOCKER_P2P_MESH_PROJECT:-}" \
+    || -n "${DEVE_DOCKER_P2P_MESH_STATE_FILE:-}" ]]; then
+    echo "docker-p2p-mesh-smoke: receipt project/state override rejected" >&2
+    exit 1
+  fi
+  if [[ -n "${DEVE_DOCKER_BIN:-}" && "$DEVE_DOCKER_BIN" != "docker" ]]; then
+    echo "docker-p2p-mesh-smoke: receipt Docker binary override rejected" >&2
+    exit 1
+  fi
+  state_digest="$(printf '%s' "$DEVE_ACCEPTANCE_PRODUCER_STATE_DIR" \
+    | sha256sum | cut -c1-16)"
+  PROJECT="deve-p2p-mesh-receipt-$state_digest"
+  STATE_FILE="$DEVE_ACCEPTANCE_PRODUCER_STATE_DIR/docker-p2p-mesh/fixture-state"
+else
+  PROJECT="${DEVE_DOCKER_P2P_MESH_PROJECT:-deve-p2p-mesh-$$}"
+  STATE_FILE="${DEVE_DOCKER_P2P_MESH_STATE_FILE:-${TMPDIR:-/tmp}/deve-docker-p2p-mesh-$$/docker-p2p-mesh/fixture-state}"
+fi
 PORT_A="${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}"
 PORT_B="${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}"
 REQUIRED="${DEVE_DOCKER_P2P_MESH_REQUIRED:-0}"
@@ -32,8 +52,8 @@ TOKEN_B="${DEVE_DOCKER_P2P_MESH_TOKEN_B:-deve_mesh_peer_b_token}"
 PEER_A_EXPECTED_ID="${DEVE_DOCKER_P2P_MESH_PEER_A_ID:-}"
 PEER_B_EXPECTED_ID="${DEVE_DOCKER_P2P_MESH_PEER_B_ID:-}"
 PYTHON_BIN="${DEVE_DOCKER_P2P_MESH_PYTHON_BIN:-}"
-COOKIE_A="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-a.cookie"
-COOKIE_B="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-b.cookie"
+COOKIE_A="$(dirname -- "$STATE_FILE")/peer-a.cookie"
+COOKIE_B="$(dirname -- "$STATE_FILE")/peer-b.cookie"
 DELEGATED_SC_HEADER_VALUE=""
 
 run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
@@ -218,7 +238,9 @@ cleanup() {
     echo "docker-p2p-mesh-smoke: cleanup by rerunning this script with DEVE_DOCKER_P2P_MESH_PROJECT='$PROJECT' and DEVE_DOCKER_P2P_MESH_KEEP=0"
     return
   fi
-  if ! docker_compose down -v --remove-orphans >/dev/null 2>&1; then
+  if ! DEVE_DOCKER_P2P_MESH_STATE_FILE="$STATE_FILE" \
+      DEVE_DOCKER_BIN="$DOCKER_BIN" \
+      bash "$ROOT_DIR/scripts/cleanup-docker-p2p-mesh.sh" >/dev/null; then
     echo "docker-p2p-mesh-smoke: warning: compose cleanup failed for project '$PROJECT'" >&2
     return 1
   fi
@@ -746,13 +768,22 @@ docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 find_python || require_or_skip "python3/python command not found"
 DELEGATED_SC_HEADER_VALUE="$(delegated_sc_header_value)" || fail "could not compute delegated source-control header"
+[[ "$PROJECT" =~ ^deve-p2p-mesh-[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] \
+  || fail "invalid P2P compose project identity"
 [[ ${#REPO_KEY} -eq 32 ]] || fail "DEVE_DOCKER_P2P_MESH_REPO_KEY must be exactly 32 ASCII bytes"
-docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 [[ -f "$COMPOSE_FILE" ]] || fail "compose file not found: $COMPOSE_FILE"
+[[ "$COMPOSE_FILE" == "$ROOT_DIR/docker-compose.mesh.yml" ]] \
+  || fail "P2P producer refuses an unbound compose override"
+bash "$ROOT_DIR/scripts/docker-p2p-mesh-bootstrap.test.sh"
+bash "$ROOT_DIR/scripts/docker-p2p-mesh-cleanup.test.sh"
+docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 preflight_port "$PORT_A"
 preflight_port "$PORT_B"
 
 trap cleanup EXIT
+DEVE_DOCKER_P2P_MESH_STATE_FILE="$STATE_FILE" \
+  bash "$ROOT_DIR/scripts/cleanup-docker-p2p-mesh.sh" \
+    write "$PROJECT" "$COMPOSE_FILE" "$COOKIE_A" "$COOKIE_B"
 
 if [[ "$SKIP_BUILD" != "1" && "$SKIP_BUILD" != "true" ]]; then
   docker_compose build peer-a

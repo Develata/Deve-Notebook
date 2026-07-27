@@ -2,6 +2,10 @@
 # Local-only test entry: build the Dockerfile, run two isolated servers, and
 # connect them through static FullPeer /ws mesh configuration.
 
+x-deve-p2p-mesh-command: &deve-p2p-mesh-command
+  - /bin/sh
+  - /usr/local/libexec/deve/docker-p2p-mesh-bootstrap.sh
+
 services:
   peer-a:
     image: ${DEVE_DOCKER_P2P_MESH_IMAGE:-deve-p2p-mesh-smoke:local}
@@ -9,21 +13,13 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: "no"
-    command: >
-      sh -c 'if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
-      deve_cli init --repo default --repo-id "$${DEVE_DOCKER_P2P_MESH_REPO_ID}"
-      --repo-url urn:mesh:default --projection-base /notes --path /data;
-      fi;
-      workspace="/notes/default--$${DEVE_DOCKER_P2P_MESH_REPO_ID}";
-      mkdir -p "$$workspace/.notegit/keys";
-      printf "%s" "$${DEVE_DOCKER_P2P_MESH_REPO_KEY}" > "$$workspace/.notegit/keys/repo.key";
-      chmod 600 "$$workspace/.notegit/keys/repo.key";
-      deve_cli serve --port 3001'
+    command: *deve-p2p-mesh-command
     ports:
       - "${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}:3001"
     volumes:
       - deve-mesh-peer-a-data:/data
       - deve-mesh-peer-a-notes:/notes
+      - ./scripts/docker-p2p-mesh-bootstrap.sh:/usr/local/libexec/deve/docker-p2p-mesh-bootstrap.sh:ro
     environment:
       DEVE_BIND_ADDR: 0.0.0.0:3001
       DEVE_LEDGER_DIR: /data/ledger
@@ -61,21 +57,13 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: "no"
-    command: >
-      sh -c 'if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
-      deve_cli init --repo default --repo-id "$${DEVE_DOCKER_P2P_MESH_REPO_ID}"
-      --repo-url urn:mesh:default --projection-base /notes --path /data;
-      fi;
-      workspace="/notes/default--$${DEVE_DOCKER_P2P_MESH_REPO_ID}";
-      mkdir -p "$$workspace/.notegit/keys";
-      printf "%s" "$${DEVE_DOCKER_P2P_MESH_REPO_KEY}" > "$$workspace/.notegit/keys/repo.key";
-      chmod 600 "$$workspace/.notegit/keys/repo.key";
-      deve_cli serve --port 3001'
+    command: *deve-p2p-mesh-command
     ports:
       - "${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}:3001"
     volumes:
       - deve-mesh-peer-b-data:/data
       - deve-mesh-peer-b-notes:/notes
+      - ./scripts/docker-p2p-mesh-bootstrap.sh:/usr/local/libexec/deve/docker-p2p-mesh-bootstrap.sh:ro
     environment:
       DEVE_BIND_ADDR: 0.0.0.0:3001
       DEVE_LEDGER_DIR: /data/ledger

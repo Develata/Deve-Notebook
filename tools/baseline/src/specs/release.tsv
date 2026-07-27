@@ -401,6 +401,19 @@ contains	docker-compose.mesh.yml	${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}:3001
 contains	docker-compose.mesh.yml	${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}:3001
 contains	docker-compose.mesh.yml	deve-mesh-peer-a-data:/data
 contains	docker-compose.mesh.yml	deve-mesh-peer-b-data:/data
+contains	docker-compose.mesh.yml	docker-p2p-mesh-bootstrap.sh:ro
+contains	scripts/docker-p2p-mesh-bootstrap.sh	projection-locators.toml
+contains	scripts/docker-p2p-mesh-bootstrap.sh	matches != 1
+contains	scripts/docker-p2p-mesh-bootstrap.sh	.repo.key.tmp.XXXXXX
+contains	scripts/docker-p2p-mesh-bootstrap.sh	workspace identity mismatch
+contains	scripts/docker-p2p-mesh-bootstrap.sh	existing repo key mismatch
+contains	scripts/docker-p2p-mesh-bootstrap.sh	forward_signal TERM 143
+contains	scripts/cleanup-docker-p2p-mesh.sh	--kill-after="${KILL_AFTER_SECONDS}s"
+contains	scripts/cleanup-docker-p2p-mesh.sh	cookie remains after cleanup
+contains	scripts/smoke-docker-p2p-mesh.sh	receipt project/state override rejected
+contains	scripts/smoke-docker-p2p-mesh.sh	docker-p2p-mesh-bootstrap.test.sh
+contains	scripts/smoke-docker-p2p-mesh.sh	docker-p2p-mesh-cleanup.test.sh
+absent	docker-compose.mesh.yml	default--$${DEVE_DOCKER_P2P_MESH_REPO_ID}
 contains	docker-compose.mesh.yml	DEVE_P2P_ENABLED: "true"
 contains	docker-compose.mesh.yml	DEVE_P2P_MESH_PEER_0_AUTH_TOKEN_ENV
 contains	docker-compose.mesh.yml	DEVE_P2P_INBOUND_TOKEN
