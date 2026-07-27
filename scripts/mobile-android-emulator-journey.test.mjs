@@ -191,7 +191,7 @@ test("Android emulator runtime tools are required after SDK package repair", () 
   );
 });
 
-test("Android APK install retries only the package-service Broken pipe", () => {
+test("Android APK install retries only exact package-service recovery failures", () => {
   assert.match(
     installSmoke,
     /timeout --kill-after="\$\{ADB_KILL_AFTER_SECS\}s"/,
@@ -201,6 +201,18 @@ test("Android APK install retries only the package-service Broken pipe", () => {
   assert.match(installSmoke, /PACKAGE_SERVICE_READY_INTERVAL_SECS=2/);
   assert.match(installSmoke, /wait_for_android_package_service "\$deadline"/);
   assert.match(installSmoke, /for attempt in 1 2 3/);
+  assert.match(
+    installSmoke,
+    /retryable_android_package_services_ready_install_failure/,
+  );
+  assert.match(installSmoke, /recovering_package_services == 1/);
+  assert.match(
+    installSmoke,
+    /PackageManagerInternal\.freeStorage\(java\.lang\.String, long, int\)/,
+  );
+  assert.match(installSmoke, /StorageManagerService\\\.allocateBytes/);
+  assert.match(installSmoke, /PackageInstallerSession\\\.doWriteInternal/);
+  assert.match(installSmoke, /streamed_install <= 1/);
   assert.ok(
     installSmoke.includes("Broken pipe \\(32\\)$/ {"),
     "retry classifier must anchor the exact Broken pipe (32) line",
@@ -234,4 +246,7 @@ test("Android APK install retries only the package-service Broken pipe", () => {
   assert.match(installRetryTest, /run_case timeout 124 1 1/);
   assert.match(installRetryTest, /run_case pipeline 1 1 1/);
   assert.match(installRetryTest, /run_case wait-fail 17 1 2/);
+  assert.match(installRetryTest, /run_case package-internal-recover 0 3 7 2/);
+  assert.match(installRetryTest, /run_case package-internal-first 1 1 1 0/);
+  assert.match(installRetryTest, /run_case package-internal-mixed 1 2 4 1/);
 });

@@ -743,6 +743,9 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR
 contains	scripts/check-mobile-android-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-install-startup-smoke" "mobile-android-install-startup-smoke-check"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	app-universal-debug.apk
 contains	scripts/check-mobile-android-install-startup-smoke.sh	adb_timed install -r
+contains	scripts/check-mobile-android-install-startup-smoke.sh	recovering_package_services == 1
+contains	scripts/check-mobile-android-install-startup-smoke.sh	PackageManagerInternal.freeStorage(java.lang.String, long, int)
+contains	scripts/android-install-retry.test.sh	run_case package-internal-recover 0 3 7 2
 contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.category.LAUNCHER
 contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED

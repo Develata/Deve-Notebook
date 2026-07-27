@@ -82,13 +82,63 @@ retryable_android_package_install_failure() {
   (( status == 1 )) || return 1
   printf '%s\n' "$output" | tr -d '\r' | awk '
     /^[[:space:]]*$/ { next }
-    $0 == "Performing Streamed Install" { next }
+    $0 == "Performing Streamed Install" {
+      streamed_install += 1
+      next
+    }
     /^adb: failed to install .+: cmd: Failure calling service package: Broken pipe \(32\)$/ {
       broken_pipe += 1
       next
     }
     { unexpected = 1 }
-    END { exit !(broken_pipe == 1 && unexpected == 0) }
+    END { exit !(broken_pipe == 1 && streamed_install <= 1 && unexpected == 0) }
+  '
+}
+
+retryable_android_package_services_ready_install_failure() {
+  local status="$1"
+  local output="$2"
+
+  (( status == 1 )) || return 1
+  printf '%s\n' "$output" | tr -d '\r' | awk '
+    /^[[:space:]]*$/ { next }
+    $0 == "Performing Streamed Install" {
+      streamed_install += 1
+      next
+    }
+    /^adb: failed to install .+:[[:space:]]*$/ {
+      install_header += 1
+      next
+    }
+    $0 == "Exception occurred while executing '\''install'\'':" {
+      exception_header += 1
+      next
+    }
+    $0 == "java.lang.NullPointerException: Attempt to invoke virtual method '\''void android.content.pm.PackageManagerInternal.freeStorage(java.lang.String, long, int)'\'' on a null object reference" {
+      package_internal_missing += 1
+      next
+    }
+    /^[[:space:]]+at / {
+      stack_frames += 1
+      if ($0 ~ /^[[:space:]]+at com\.android\.server\.StorageManagerService\.allocateBytes\(/) {
+        storage_allocate += 1
+      }
+      if ($0 ~ /^[[:space:]]+at com\.android\.server\.pm\.PackageInstallerSession\.doWriteInternal\(/) {
+        package_write += 1
+      }
+      next
+    }
+    { unexpected = 1 }
+    END {
+      exit !(install_header == 1 &&
+        exception_header == 1 &&
+        package_internal_missing == 1 &&
+        storage_allocate == 1 &&
+        package_write == 1 &&
+        stack_frames >= 2 &&
+        streamed_install <= 1 &&
+        unexpected == 0)
+    }
   '
 }
 
@@ -133,11 +183,13 @@ wait_for_android_package_service() {
 }
 
 verify_install_retry_contract() {
-  local readiness_status
+  local package_services_ready_failure readiness_status
+
+  package_services_ready_failure=$'Performing Streamed Install\nadb: failed to install candidate.apk:\nException occurred while executing \'install\':\njava.lang.NullPointerException: Attempt to invoke virtual method \'void android.content.pm.PackageManagerInternal.freeStorage(java.lang.String, long, int)\' on a null object reference\n\tat com.android.server.StorageManagerService.allocateBytes(StorageManagerService.java:4266)\n\tat com.android.server.pm.PackageInstallerSession.doWriteInternal(PackageInstallerSession.java:2314)'
 
   retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipe (32)" \
-    || fail "package-service Broken pipe must remain the only retryable install failure"
+    || fail "package-service Broken pipe must remain the only retryable initial install failure"
   if retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipeline (32)"; then
     fail "Broken pipeline must not be classified as Broken pipe"
@@ -151,8 +203,27 @@ verify_install_retry_contract() {
     fail "mixed Android install failures must not be retried"
   fi
   if retryable_android_package_install_failure 1 \
+    $'Performing Streamed Install\nPerforming Streamed Install\nadb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipe (32)'; then
+    fail "duplicate streamed-install Broken pipe prefixes must remain fail-closed"
+  fi
+  if retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: Failure [INSTALL_FAILED_INVALID_APK]"; then
     fail "non-transport Android install failures must remain fail-closed"
+  fi
+  retryable_android_package_services_ready_install_failure 1 \
+    "$package_services_ready_failure" \
+    || fail "the exact package-services-ready race must remain retryable only after Broken pipe"
+  if retryable_android_package_services_ready_install_failure 124 \
+    "$package_services_ready_failure"; then
+    fail "timed-out package-services-ready failures must not be retried"
+  fi
+  if retryable_android_package_services_ready_install_failure 1 \
+    "$package_services_ready_failure"$'\nFailure [INSTALL_FAILED_INVALID_APK]'; then
+    fail "mixed package-services-ready failures must remain fail-closed"
+  fi
+  if retryable_android_package_services_ready_install_failure 1 \
+    $'Performing Streamed Install\n'"$package_services_ready_failure"; then
+    fail "duplicate streamed-install prefixes must remain fail-closed"
   fi
   retryable_android_package_readiness_failure 20 \
     "cmd: Can't find service: package" \
@@ -170,8 +241,9 @@ verify_install_retry_contract() {
 }
 
 install_apk() {
-  local attempt now output status
+  local attempt now output retry_reason status
   local deadline
+  local recovering_package_services=0
   now="$(install_retry_now)"
   deadline=$((now + INSTALL_RETRY_DEADLINE_SECS))
 
@@ -184,11 +256,19 @@ install_apk() {
       status=$?
     fi
     printf '%s\n' "$output" >&2
-    if (( attempt == 3 )) \
-        || ! retryable_android_package_install_failure "$status" "$output"; then
+    if (( attempt == 3 )); then
       return "$status"
     fi
-    echo "mobile-android-install-startup-smoke-check: retrying after package-service Broken pipe" >&2
+    if retryable_android_package_install_failure "$status" "$output"; then
+      recovering_package_services=1
+      retry_reason="package-service Broken pipe"
+    elif (( recovering_package_services == 1 )) \
+        && retryable_android_package_services_ready_install_failure "$status" "$output"; then
+      retry_reason="package-services-ready race"
+    else
+      return "$status"
+    fi
+    echo "mobile-android-install-startup-smoke-check: retrying after $retry_reason" >&2
     now="$(install_retry_now)"
     (( deadline - now > 2 )) || return 124
     sleep 2 || return $?

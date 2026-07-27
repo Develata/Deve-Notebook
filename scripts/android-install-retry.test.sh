@@ -33,6 +33,16 @@ sleep() {
   fi
 }
 
+print_package_services_ready_failure() {
+  printf '%s\n' \
+    "Performing Streamed Install" \
+    "adb: failed to install $APK_PATH:" \
+    "Exception occurred while executing 'install':" \
+    "java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.pm.PackageManagerInternal.freeStorage(java.lang.String, long, int)' on a null object reference" \
+    $'\tat com.android.server.StorageManagerService.allocateBytes(StorageManagerService.java:4266)' \
+    $'\tat com.android.server.pm.PackageInstallerSession.doWriteInternal(PackageInstallerSession.java:2314)'
+}
+
 run_case() {
   local mode="$1"
   local expected_status="$2"
@@ -101,6 +111,32 @@ run_case() {
               return 1
             fi
             printf '%s\n' "Success"
+            ;;
+          package-internal-recover)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
+              return 1
+            fi
+            if (( install_count == 2 )); then
+              print_package_services_ready_failure
+              return 1
+            fi
+            printf '%s\n' "Success"
+            ;;
+          package-internal-first)
+            print_package_services_ready_failure
+            return 1
+            ;;
+          package-internal-mixed)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
+              return 1
+            fi
+            print_package_services_ready_failure
+            printf '%s\n' "Failure [INSTALL_FAILED_INVALID_APK]"
+            return 1
             ;;
           package-unavailable|package-timeout-status|package-deadline|readiness-sleep-fail)
             printf '%s\n' \
@@ -221,6 +257,9 @@ run_case pipeline 1 1 1 0
 run_case wait-fail 17 1 2 1
 run_case package-fail 18 1 3 1
 run_case package-recover 0 2 6 3
+run_case package-internal-recover 0 3 7 2
+run_case package-internal-first 1 1 1 0
+run_case package-internal-mixed 1 2 4 1
 run_case package-unavailable 20 1 12 10
 run_case package-timeout-status 124 1 3 1
 run_case package-deadline 124 1 3 1
