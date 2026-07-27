@@ -106,7 +106,7 @@ printf '%s\n' 'raw-password' >"$standalone_checkpoint_root/.auth-password"
 printf '%s\n' 'password-hash' >"$standalone_checkpoint_root/.auth-pass"
 touch "$standalone_checkpoint_root/chrome-checkpoint.release"
 DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$standalone_state_root" \
-  "$ROOT_DIR/scripts/cleanup-docker-remote-import.sh"
+  bash "$ROOT_DIR/scripts/cleanup-docker-remote-import.sh"
 [[ ! -e "$standalone_checkpoint_root/chrome-checkpoint.json" \
   && ! -e "$standalone_checkpoint_root/chrome-checkpoint.release" \
   && ! -e "$standalone_checkpoint_root/chrome-checkpoint.json.tmp-123" \

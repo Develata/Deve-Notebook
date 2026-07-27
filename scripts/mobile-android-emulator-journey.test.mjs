@@ -6,6 +6,14 @@ const orchestrator = fs.readFileSync(
   new URL("./check-mobile-android-emulator-install-startup-smoke.sh", import.meta.url),
   "utf8",
 );
+const installSmoke = fs.readFileSync(
+  new URL("./check-mobile-android-install-startup-smoke.sh", import.meta.url),
+  "utf8",
+);
+const installRetryTest = fs.readFileSync(
+  new URL("./android-install-retry.test.sh", import.meta.url),
+  "utf8",
+);
 const localSmoke = fs.readFileSync(
   new URL("./smoke-mobile-android-lifecycle.sh", import.meta.url),
   "utf8",
@@ -181,4 +189,46 @@ test("Android emulator runtime tools are required after SDK package repair", () 
     installPackages < requireAdb,
     "adb must be checked after the SDK package installer can repair platform-tools",
   );
+});
+
+test("Android APK install retries only the package-service Broken pipe", () => {
+  assert.match(
+    installSmoke,
+    /timeout --kill-after="\$\{ADB_KILL_AFTER_SECS\}s"/,
+  );
+  assert.match(installSmoke, /INSTALL_RETRY_DEADLINE_SECS=180/);
+  assert.match(installSmoke, /for attempt in 1 2 3/);
+  assert.ok(
+    installSmoke.includes("Broken pipe \\(32\\)$/ {"),
+    "retry classifier must anchor the exact Broken pipe (32) line",
+  );
+  assert.match(installSmoke, /adb_retry_timed "\$deadline" wait-for-device/);
+  assert.match(
+    installSmoke,
+    /adb_retry_timed "\$deadline" shell cmd package list packages/,
+  );
+  assert.match(
+    installSmoke,
+    /non-transport Android install failures must remain fail-closed/,
+  );
+  for (const producerId of ["android.local-backend", "android.remote-browser"]) {
+    const producer = producerRegistry.producers.find(
+      ({ producer_id: id }) => id === producerId,
+    );
+    assert.ok(
+      producer.artifacts.includes(
+        "scripts/check-mobile-android-install-startup-smoke.sh",
+      ),
+      `${producerId} receipt must bind the APK install retry implementation`,
+    );
+    assert.ok(
+      producer.artifacts.includes("scripts/android-install-retry.test.sh"),
+      `${producerId} receipt must bind the APK install retry state matrix`,
+    );
+  }
+  assert.match(installRetryTest, /run_case success-after-retry 0 2 4/);
+  assert.match(installRetryTest, /run_case always-broken 1 3 7/);
+  assert.match(installRetryTest, /run_case timeout 124 1 1/);
+  assert.match(installRetryTest, /run_case pipeline 1 1 1/);
+  assert.match(installRetryTest, /run_case wait-fail 17 1 2/);
 });

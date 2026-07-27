@@ -677,6 +677,8 @@
       },
       "artifacts": [
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/check-mobile-android-install-startup-smoke.sh",
+        "scripts/android-install-retry.test.sh",
         "scripts/android-emulator-capacity.test.sh",
         "scripts/android-emulator-cleanup.test.sh",
         "scripts/cleanup-mobile-android-emulator.sh",
@@ -757,6 +759,8 @@
       },
       "artifacts": [
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/check-mobile-android-install-startup-smoke.sh",
+        "scripts/android-install-retry.test.sh",
         "scripts/android-emulator-capacity.test.sh",
         "scripts/android-emulator-cleanup.test.sh",
         "scripts/cleanup-mobile-android-emulator.sh",

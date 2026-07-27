@@ -394,6 +394,7 @@ run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
 run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
+run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
 verify_boot_completion_contract
 verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
