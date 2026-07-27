@@ -90,8 +90,16 @@ retryable_android_package_install_failure() {
       broken_pipe += 1
       next
     }
+    /^adb: failed to install .+: cmd: Can'\''t find service: package$/ {
+      package_service_missing += 1
+      next
+    }
     { unexpected = 1 }
-    END { exit !(broken_pipe == 1 && streamed_install <= 1 && unexpected == 0) }
+    END {
+      exit !(broken_pipe + package_service_missing == 1 &&
+        streamed_install <= 1 &&
+        unexpected == 0)
+    }
   '
 }
 
@@ -189,7 +197,10 @@ verify_install_retry_contract() {
 
   retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipe (32)" \
-    || fail "package-service Broken pipe must remain the only retryable initial install failure"
+    || fail "the exact package-service Broken pipe must remain retryable"
+  retryable_android_package_install_failure 1 \
+    $'Performing Streamed Install\nadb: failed to install candidate.apk: cmd: Can'\''t find service: package' \
+    || fail "the exact missing package service must remain retryable"
   if retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipeline (32)"; then
     fail "Broken pipeline must not be classified as Broken pipe"
@@ -207,12 +218,24 @@ verify_install_retry_contract() {
     fail "duplicate streamed-install Broken pipe prefixes must remain fail-closed"
   fi
   if retryable_android_package_install_failure 1 \
+    $'Performing Streamed Install\nPerforming Streamed Install\nadb: failed to install candidate.apk: cmd: Can'\''t find service: package'; then
+    fail "duplicate streamed-install missing-service prefixes must remain fail-closed"
+  fi
+  if retryable_android_package_install_failure 1 \
+    $'adb: failed to install candidate.apk: cmd: Can'\''t find service: package\nFailure [INSTALL_FAILED_INVALID_APK]'; then
+    fail "mixed missing-service install failures must remain fail-closed"
+  fi
+  if retryable_android_package_install_failure 1 \
+    "adb: failed to install candidate.apk: cmd: Can't find service: activity"; then
+    fail "a missing non-package service must remain fail-closed"
+  fi
+  if retryable_android_package_install_failure 1 \
     "adb: failed to install candidate.apk: Failure [INSTALL_FAILED_INVALID_APK]"; then
     fail "non-transport Android install failures must remain fail-closed"
   fi
   retryable_android_package_services_ready_install_failure 1 \
     "$package_services_ready_failure" \
-    || fail "the exact package-services-ready race must remain retryable only after Broken pipe"
+    || fail "the exact package-services-ready race must remain retryable only after an admitted package-service bootstrap failure"
   if retryable_android_package_services_ready_install_failure 124 \
     "$package_services_ready_failure"; then
     fail "timed-out package-services-ready failures must not be retried"
@@ -261,7 +284,7 @@ install_apk() {
     fi
     if retryable_android_package_install_failure "$status" "$output"; then
       recovering_package_services=1
-      retry_reason="package-service Broken pipe"
+      retry_reason="package-service bootstrap"
     elif (( recovering_package_services == 1 )) \
         && retryable_android_package_services_ready_install_failure "$status" "$output"; then
       retry_reason="package-services-ready race"

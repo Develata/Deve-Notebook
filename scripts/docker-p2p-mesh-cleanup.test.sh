@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# This unit fixture owns synthetic state roots. The explicit override case
+# below reintroduces the acceptance-owned state root only for that assertion.
+unset DEVE_ACCEPTANCE_PRODUCER_STATE_DIR
 fixture="$(mktemp -d)"
 trap 'rm -rf -- "$fixture"' EXIT
 fake_docker="$fixture/docker"

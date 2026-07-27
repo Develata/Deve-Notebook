@@ -20,6 +20,10 @@ const meshBootstrap = fs.readFileSync(
   new URL("./docker-p2p-mesh-bootstrap.sh", import.meta.url),
   "utf8",
 );
+const meshCleanupTest = fs.readFileSync(
+  new URL("./docker-p2p-mesh-cleanup.test.sh", import.meta.url),
+  "utf8",
+);
 const p2p = fs.readFileSync(new URL("./smoke-docker-p2p-mesh.sh", import.meta.url), "utf8");
 const releaseWorkflow = fs.readFileSync(
   new URL("../.github/workflows/release.yml", import.meta.url),
@@ -85,6 +89,13 @@ test("P2P compose installs the shared repo key at the locator-owned workspace", 
   assert.match(p2p, /docker-p2p-mesh-cleanup\.test\.sh/);
   assert.match(p2p, /receipt project\/state override rejected/);
   assert.doesNotMatch(meshCompose, /default--\$\$\{DEVE_DOCKER_P2P_MESH_REPO_ID\}/);
+});
+
+test("P2P cleanup fixture does not inherit the producer-owned state root", () => {
+  const unsetState = meshCleanupTest.indexOf("unset DEVE_ACCEPTANCE_PRODUCER_STATE_DIR");
+  const firstCleanup = meshCleanupTest.indexOf('bash "$ROOT_DIR/scripts/cleanup-docker-p2p-mesh.sh"');
+  assert.ok(unsetState >= 0, "cleanup fixture must clear the outer receipt state root");
+  assert.ok(unsetState < firstCleanup, "receipt state must be cleared before fixture cleanup calls");
 });
 
 test("Docker acceptance smokes bind and revalidate one immutable candidate image ID", () => {

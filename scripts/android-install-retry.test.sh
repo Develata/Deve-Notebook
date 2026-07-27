@@ -75,6 +75,27 @@ run_case() {
             fi
             printf '%s\n' "Success"
             ;;
+          package-missing-recover)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "Performing Streamed Install" \
+                "adb: failed to install $APK_PATH: cmd: Can't find service: package"
+              return 1
+            fi
+            printf '%s\n' "Success"
+            ;;
+          package-missing-mixed)
+            printf '%s\n' \
+              "Performing Streamed Install" \
+              "adb: failed to install $APK_PATH: cmd: Can't find service: package" \
+              "Failure [INSTALL_FAILED_INVALID_APK]"
+            return 1
+            ;;
+          package-missing-other-service)
+            printf '%s\n' \
+              "adb: failed to install $APK_PATH: cmd: Can't find service: activity"
+            return 1
+            ;;
           always-broken)
             printf '%s\n' \
               "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
@@ -250,6 +271,9 @@ run_case() {
 
 verify_install_retry_contract
 run_case success-after-retry 0 2 4 1
+run_case package-missing-recover 0 2 4 1
+run_case package-missing-mixed 1 1 1 0
+run_case package-missing-other-service 1 1 1 0
 run_case always-broken 1 3 7 2
 run_case invalid 9 1 1 0
 run_case timeout 124 1 1 0

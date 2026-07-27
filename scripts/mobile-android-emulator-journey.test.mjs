@@ -217,6 +217,14 @@ test("Android APK install retries only exact package-service recovery failures",
     installSmoke.includes("Broken pipe \\(32\\)$/ {"),
     "retry classifier must anchor the exact Broken pipe (32) line",
   );
+  assert.ok(
+    installSmoke.includes("Can'\\''t find service: package$/ {"),
+    "retry classifier must anchor the exact missing package-service line",
+  );
+  assert.match(
+    installSmoke,
+    /broken_pipe \+ package_service_missing == 1/,
+  );
   assert.match(installSmoke, /adb_retry_timed "\$deadline" wait-for-device/);
   assert.match(
     installSmoke,
