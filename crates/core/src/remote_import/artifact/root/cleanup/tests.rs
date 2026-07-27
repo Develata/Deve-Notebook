@@ -73,13 +73,43 @@ fn invalidation_preserves_payload_and_the_single_owner_slot() -> anyhow::Result<
 
     let second = root.seal_repo_removal(repo_id)?;
     assert_ne!(first.logical_epoch, second.logical_epoch);
-    assert!(!RemoteImportArtifactRoot::revalidate_repo_removal(&first)?);
+    match RemoteImportArtifactRoot::revalidate_repo_removal(&first) {
+        Ok(false) => {}
+        // Unix inode numbers may be reused after the invalidated sidecar is
+        // atomically replaced. The digest check must still reject that ABA as
+        // changed content; it is a fail-closed stale-plan result, not a match.
+        Err(RemoteImportError::UnsafeArtifactRoot(detail))
+            if detail == "repo artifact removal inventory content changed" => {}
+        Ok(true) => anyhow::bail!("invalidated removal plan became exact after a new seal"),
+        Err(error) => return Err(error.into()),
+    }
     assert!(RemoteImportArtifactRoot::revalidate_repo_removal(&second)?);
     let sidecars = std::fs::read_dir(&root.path)?
         .filter_map(Result::ok)
         .filter(|entry| entry.file_name() == REMOVAL_PLAN_NAME)
         .count();
     assert_eq!(sidecars, 1);
+    Ok(())
+}
+
+#[test]
+fn recycled_inventory_identity_still_rejects_the_stale_plan_digest() -> anyhow::Result<()> {
+    let (_temp, repo_id, root) = fixture()?;
+    std::fs::write(root.path.join("payload"), b"captured")?;
+    let first = root.seal_repo_removal(repo_id)?;
+    RemoteImportArtifactRoot::invalidate_repo_removal(&first)?;
+    let second = root.seal_repo_removal(repo_id)?;
+
+    // Model a Unix (device, inode) ABA: the stale plan observes the current
+    // sidecar's numeric identity while retaining its old epoch and digest.
+    let mut recycled_identity = first.clone();
+    recycled_identity.inventory = second.inventory.clone();
+    assert!(matches!(
+        RemoteImportArtifactRoot::revalidate_repo_removal(&recycled_identity),
+        Err(RemoteImportError::UnsafeArtifactRoot(detail))
+            if detail == "repo artifact removal inventory content changed"
+    ));
+    assert!(RemoteImportArtifactRoot::revalidate_repo_removal(&second)?);
     Ok(())
 }
 
