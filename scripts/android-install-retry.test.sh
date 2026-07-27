@@ -31,6 +31,9 @@ sleep() {
   if [[ "$active_mode" == "readiness-sleep-fail" && "$count" == "2" ]]; then
     return 41
   fi
+  if [[ "$active_mode" == "launcher-sleep-fail" && "$count" == "1" ]]; then
+    return 42
+  fi
 }
 
 print_package_services_ready_failure() {
@@ -179,6 +182,9 @@ run_case() {
             printf '%s\n' "Failure [INSTALL_FAILED_INTERNAL_ERROR]"
             return 23
             ;;
+          launcher-delayed|launcher-mixed|launcher-other|launcher-timeout|launcher-unavailable|launcher-deadline|launcher-sleep-fail)
+            printf '%s\n' "Success"
+            ;;
           *)
             return 99
             ;;
@@ -188,37 +194,71 @@ run_case() {
         [[ "$mode" != "wait-fail" ]] || return 17
         ;;
       shell)
-        [[ "$*" == "shell cmd package list packages" ]] || return 98
-        case "$mode" in
-          package-fail)
-            printf '%s\n' "error: device offline"
-            return 18
-            ;;
-          package-recover)
-            package_count="$(grep -c '^shell cmd package list packages$' "$operations")"
-            if (( package_count < 3 )); then
+        if [[ "$*" == "shell cmd package list packages" ]]; then
+          case "$mode" in
+            package-fail)
+              printf '%s\n' "error: device offline"
+              return 18
+              ;;
+            package-recover)
+              package_count="$(grep -c '^shell cmd package list packages$' "$operations")"
+              if (( package_count < 3 )); then
+                printf '%s\n' "cmd: Can't find service: package"
+                return 20
+              fi
+              ;;
+            package-unavailable)
               printf '%s\n' "cmd: Can't find service: package"
               return 20
-            fi
-            ;;
-          package-unavailable)
-            printf '%s\n' "cmd: Can't find service: package"
-            return 20
-            ;;
-          package-timeout-status)
-            printf '%s\n' "cmd: Can't find service: package"
-            return 124
-            ;;
-          package-deadline)
-            printf '%s\n' "cmd: Can't find service: package"
-            printf '%s\n' "$INSTALL_RETRY_DEADLINE_SECS" >"$clock"
-            return 20
-            ;;
-          readiness-sleep-fail)
-            printf '%s\n' "cmd: Can't find service: package"
-            return 20
-            ;;
-        esac
+              ;;
+            package-timeout-status)
+              printf '%s\n' "cmd: Can't find service: package"
+              return 124
+              ;;
+            package-deadline)
+              printf '%s\n' "cmd: Can't find service: package"
+              printf '%s\n' "$INSTALL_RETRY_DEADLINE_SECS" >"$clock"
+              return 20
+              ;;
+            readiness-sleep-fail)
+              printf '%s\n' "cmd: Can't find service: package"
+              return 20
+              ;;
+          esac
+        elif [[ "$*" == "shell cmd package resolve-activity --components -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $APP_ID" ]]; then
+          case "$mode" in
+            launcher-delayed)
+              launcher_count="$(grep -c '^shell cmd package resolve-activity ' "$operations")"
+              if (( launcher_count < 3 )); then
+                printf '%s\n' "No activity found"
+                return 0
+              fi
+              ;;
+            launcher-mixed)
+              printf '%s\n' "No activity found" "unexpected launcher output"
+              return 0
+              ;;
+            launcher-other)
+              printf '%s\n' "com.example/.OtherActivity"
+              return 0
+              ;;
+            launcher-timeout)
+              return 124
+              ;;
+            launcher-unavailable|launcher-sleep-fail)
+              printf '%s\n' "No activity found"
+              return 0
+              ;;
+            launcher-deadline)
+              printf '%s\n' "No activity found"
+              printf '%s\n' "$INSTALL_RETRY_DEADLINE_SECS" >"$clock"
+              return 0
+              ;;
+          esac
+          printf '%s\n' "$APP_ID/.MainActivity"
+        else
+          return 98
+        fi
         ;;
       *)
         return 97
@@ -270,8 +310,8 @@ run_case() {
 }
 
 verify_install_retry_contract
-run_case success-after-retry 0 2 4 1
-run_case package-missing-recover 0 2 4 1
+run_case success-after-retry 0 2 5 1
+run_case package-missing-recover 0 2 5 1
 run_case package-missing-mixed 1 1 1 0
 run_case package-missing-other-service 1 1 1 0
 run_case always-broken 1 3 7 2
@@ -280,8 +320,8 @@ run_case timeout 124 1 1 0
 run_case pipeline 1 1 1 0
 run_case wait-fail 17 1 2 1
 run_case package-fail 18 1 3 1
-run_case package-recover 0 2 6 3
-run_case package-internal-recover 0 3 7 2
+run_case package-recover 0 2 7 3
+run_case package-internal-recover 0 3 8 2
 run_case package-internal-first 1 1 1 0
 run_case package-internal-mixed 1 2 4 1
 run_case package-unavailable 20 1 12 10
@@ -290,6 +330,13 @@ run_case package-deadline 124 1 3 1
 run_case readiness-sleep-fail 41 1 3 2
 run_case deadline 124 1 1 0
 run_case third-non-one 23 3 7 2
+run_case launcher-delayed 0 1 4 2
+run_case launcher-mixed 1 1 2 0
+run_case launcher-other 1 1 2 0
+run_case launcher-timeout 124 1 2 0
+run_case launcher-unavailable 1 1 11 9
+run_case launcher-deadline 124 1 2 0
+run_case launcher-sleep-fail 42 1 2 1
 
 verify_operation_timeout_cap() {
   local captured_timeout="$temporary/operation-timeout"

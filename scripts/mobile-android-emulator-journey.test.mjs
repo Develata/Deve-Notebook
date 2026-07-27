@@ -225,6 +225,15 @@ test("Android APK install retries only exact package-service recovery failures",
     installSmoke,
     /broken_pipe \+ package_service_missing == 1/,
   );
+  assert.match(
+    installSmoke,
+    /wait_for_android_launcher_activity "\$deadline"/,
+  );
+  assert.match(
+    installSmoke,
+    /cmd package resolve-activity[\s\S]*?--components[\s\S]*?android\.intent\.action\.MAIN[\s\S]*?android\.intent\.category\.LAUNCHER/,
+  );
+  assert.match(installSmoke, /\[\[ "\$output" == "No activity found" \]\] \|\| return 1/);
   assert.match(installSmoke, /adb_retry_timed "\$deadline" wait-for-device/);
   assert.match(
     installSmoke,
@@ -249,12 +258,19 @@ test("Android APK install retries only exact package-service recovery failures",
       `${producerId} receipt must bind the APK install retry state matrix`,
     );
   }
-  assert.match(installRetryTest, /run_case success-after-retry 0 2 4/);
+  assert.match(installRetryTest, /run_case success-after-retry 0 2 5/);
   assert.match(installRetryTest, /run_case always-broken 1 3 7/);
   assert.match(installRetryTest, /run_case timeout 124 1 1/);
   assert.match(installRetryTest, /run_case pipeline 1 1 1/);
   assert.match(installRetryTest, /run_case wait-fail 17 1 2/);
-  assert.match(installRetryTest, /run_case package-internal-recover 0 3 7 2/);
+  assert.match(installRetryTest, /run_case package-internal-recover 0 3 8 2/);
   assert.match(installRetryTest, /run_case package-internal-first 1 1 1 0/);
   assert.match(installRetryTest, /run_case package-internal-mixed 1 2 4 1/);
+  assert.match(installRetryTest, /run_case launcher-delayed 0 1 4 2/);
+  assert.match(installRetryTest, /run_case launcher-mixed 1 1 2 0/);
+  assert.match(installRetryTest, /run_case launcher-other 1 1 2 0/);
+  assert.match(installRetryTest, /run_case launcher-timeout 124 1 2 0/);
+  assert.match(installRetryTest, /run_case launcher-unavailable 1 1 11 9/);
+  assert.match(installRetryTest, /run_case launcher-deadline 124 1 2 0/);
+  assert.match(installRetryTest, /run_case launcher-sleep-fail 42 1 2 1/);
 });

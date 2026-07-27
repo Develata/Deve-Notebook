@@ -15,6 +15,8 @@ readonly ADB_KILL_AFTER_SECS=5
 readonly INSTALL_RETRY_DEADLINE_SECS=180
 readonly PACKAGE_SERVICE_READY_ATTEMPTS=10
 readonly PACKAGE_SERVICE_READY_INTERVAL_SECS=2
+readonly LAUNCHER_READY_ATTEMPTS=10
+readonly LAUNCHER_READY_INTERVAL_SECS=2
 
 # This gate installs and launches only the Android WebView shell. It must not
 # imply release readiness, child-process runtime, backend process ownership, or
@@ -190,6 +192,40 @@ wait_for_android_package_service() {
   done
 }
 
+wait_for_android_launcher_activity() {
+  local deadline="$1"
+  local attempt now output status
+  local expected_component="$APP_ID/.MainActivity"
+
+  for ((attempt = 1; attempt <= LAUNCHER_READY_ATTEMPTS; attempt += 1)); do
+    if output="$(adb_retry_timed "$deadline" shell cmd package resolve-activity \
+        --components \
+        -a android.intent.action.MAIN \
+        -c android.intent.category.LAUNCHER \
+        -p "$APP_ID" 2>&1)"; then
+      status=0
+    else
+      status=$?
+    fi
+    output="${output//$'\r'/}"
+    if (( status == 0 )) && [[ "$output" == "$expected_component" ]]; then
+      return 0
+    fi
+    printf '%s\n' "$output" >&2
+    if (( status != 0 )); then
+      return "$status"
+    fi
+    [[ "$output" == "No activity found" ]] || return 1
+    if (( attempt == LAUNCHER_READY_ATTEMPTS )); then
+      return 1
+    fi
+    now="$(install_retry_now)"
+    (( deadline - now > LAUNCHER_READY_INTERVAL_SECS )) || return 124
+    echo "mobile-android-install-startup-smoke-check: waiting for launcher activity (attempt $attempt/$LAUNCHER_READY_ATTEMPTS)" >&2
+    sleep "$LAUNCHER_READY_INTERVAL_SECS" || return $?
+  done
+}
+
 verify_install_retry_contract() {
   local package_services_ready_failure readiness_status
 
@@ -274,6 +310,7 @@ install_apk() {
     echo "+ adb_timed install -r $APK_PATH (attempt $attempt/3)"
     if output="$(adb_retry_timed "$deadline" install -r "$APK_PATH" 2>&1)"; then
       printf '%s\n' "$output"
+      wait_for_android_launcher_activity "$deadline" || return $?
       return 0
     else
       status=$?

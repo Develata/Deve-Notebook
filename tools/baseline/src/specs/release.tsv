@@ -746,8 +746,12 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	adb_timed install
 contains	scripts/check-mobile-android-install-startup-smoke.sh	recovering_package_services == 1
 contains	scripts/check-mobile-android-install-startup-smoke.sh	package_service_missing
 contains	scripts/check-mobile-android-install-startup-smoke.sh	PackageManagerInternal.freeStorage(java.lang.String, long, int)
-contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 0 2 4 1
-contains	scripts/android-install-retry.test.sh	run_case package-internal-recover 0 3 7 2
+contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 0 2 5 1
+contains	scripts/check-mobile-android-install-startup-smoke.sh	cmd package resolve-activity
+contains	scripts/android-install-retry.test.sh	run_case launcher-delayed 0 1 4 2
+contains	scripts/android-install-retry.test.sh	run_case launcher-deadline 124 1 2 0
+contains	scripts/android-install-retry.test.sh	run_case launcher-sleep-fail 42 1 2 1
+contains	scripts/android-install-retry.test.sh	run_case package-internal-recover 0 3 8 2
 contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.category.LAUNCHER
 contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
