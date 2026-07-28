@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-lifecycle-smoke"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED:-0}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
@@ -79,6 +80,29 @@ find_webview_socket() {
   printf '%s\n' "$sockets" | grep -E "(^|_)${pid}$" | head -n 1 || true
 }
 
+android_startup_diag_adb() {
+  adb_with_timeout "$@"
+}
+
+# Bounded evidence for a launched app whose debug WebView socket never
+# appears: the abstract-socket inventory separates "WebView never came up"
+# from "socket exists under an unexpected name", and the app process snapshot
+# plus a capped logcat tail record what the alive app was doing.
+report_missing_webview_socket() {
+  local pid="$1"
+  echo "mobile-android-lifecycle-smoke: webview_devtools sockets visible to adb:" >&2
+  adb_with_timeout 20 shell cat /proc/net/unix 2>/dev/null | tr -d '\r' \
+    | awk '$NF ~ /webview_devtools_remote/ { print "  " $NF }' >&2 || true
+  echo "mobile-android-lifecycle-smoke: app process snapshot:" >&2
+  adb_with_timeout 20 shell ps -A 2>/dev/null | tr -d '\r' \
+    | awk -v app="$APP_ID" 'NR == 1 || index($0, app) { print "  " $0 }' >&2 || true
+  echo "mobile-android-lifecycle-smoke: bounded app logcat tail:" >&2
+  adb_with_timeout 20 logcat -d -v threadtime 2>/dev/null | tr -d '\r' \
+    | grep -E "ActivityManager|AndroidRuntime|chromium|WebView|$APP_ID" \
+    | tail -n 200 >&2 || true
+  fail "debug WebView socket not found for pid $pid"
+}
+
 remaining_seconds() {
   local remaining=$((GLOBAL_DEADLINE - SECONDS))
   (( remaining > 0 )) || fail "global lifecycle smoke deadline exhausted"
@@ -128,6 +152,7 @@ TARGET_FACTS="$(
 echo "mobile-android-lifecycle-smoke: target_facts=$TARGET_FACTS"
 install_apk
 adb_cmd logcat -c
+android_startup_diagnostics_prepare "$APP_ID"
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
 
 deadline=$GLOBAL_DEADLINE
@@ -140,12 +165,24 @@ done
 [[ -n "$PID" ]] || fail "Android app did not remain running: $APP_ID"
 
 SOCKET=""
+CURRENT_PID="$PID"
 while (( SECONDS < deadline )); do
+  CURRENT_PID="$(app_pid || true)"
+  if [[ -z "$CURRENT_PID" ]]; then
+    android_startup_diagnostics_collect "$APP_ID" \
+      || echo "mobile-android-lifecycle-smoke: startup exit diagnostics collection failed" >&2
+    fail "Android app exited while waiting for its debug WebView socket (initial pid $PID)"
+  fi
+  if [[ "$CURRENT_PID" != "$PID" ]]; then
+    android_startup_diagnostics_collect "$APP_ID" \
+      || echo "mobile-android-lifecycle-smoke: startup exit diagnostics collection failed" >&2
+    fail "Android app restarted while waiting for its debug WebView socket (pid $PID -> $CURRENT_PID)"
+  fi
   SOCKET="$(find_webview_socket "$PID")"
   [[ -z "$SOCKET" ]] || break
   sleep 1
 done
-[[ -n "$SOCKET" ]] || fail "debug WebView socket not found for pid $PID"
+[[ -n "$SOCKET" ]] || report_missing_webview_socket "$PID"
 SOCKET="${SOCKET#@}"
 FORWARD_PORT="$(adb_cmd forward tcp:0 "localabstract:$SOCKET" | tr -d '\r')"
 [[ "$FORWARD_PORT" =~ ^[0-9]+$ ]] || fail "adb did not allocate a CDP forward port: $FORWARD_PORT"

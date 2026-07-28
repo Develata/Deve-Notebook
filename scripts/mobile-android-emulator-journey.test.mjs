@@ -195,6 +195,36 @@ test("Android emulator runtime tools are required after SDK package repair", () 
   );
 });
 
+test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics", () => {
+  assert.match(
+    localSmoke,
+    /source "\$ROOT_DIR\/scripts\/lib\/android-startup-diagnostics\.sh"/u,
+    "lifecycle smoke must load the bounded startup diagnostics library",
+  );
+  assert.match(localSmoke, /android_startup_diagnostics_prepare "\$APP_ID"/u);
+  assert.match(
+    localSmoke,
+    /exited while waiting for its debug WebView socket/u,
+    "socket wait must fail fast when the app process disappears",
+  );
+  assert.match(
+    localSmoke,
+    /restarted while waiting for its debug WebView socket/u,
+    "socket wait must fail fast when the app process is replaced",
+  );
+  assert.match(localSmoke, /android_startup_diagnostics_collect "\$APP_ID"/u);
+  assert.match(
+    localSmoke,
+    /webview_devtools sockets visible to adb/u,
+    "missing-socket failure must inventory visible WebView debug sockets",
+  );
+  assert.match(
+    localSmoke,
+    /report_missing_webview_socket "\$PID"/u,
+    "the socket deadline must route through the bounded diagnostics report",
+  );
+});
+
 test("Android APK install retries only exact package-service recovery failures", () => {
   assert.match(
     installSmoke,
