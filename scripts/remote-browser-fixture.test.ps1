@@ -173,7 +173,7 @@ Start-Sleep -Seconds 60
         if ($LASTEXITCODE -ne 0) { throw "child failed as expected" }
         throw "action unexpectedly succeeded"
     }
-    foreach ($leaked in @('.fixture-owner', 'fixture-state.json', 'fixture-env.json', 'credentials.json', '.password', '.backend.env')) {
+    foreach ($leaked in @('.fixture-owner', 'fixture-state.json', 'fixture-env.json', 'credentials.json', '.password', '.backend.env', 'startup-state.json', 'startup-state.json.tmp')) {
         if (Test-Path -LiteralPath (Join-Path $failureState $leaked)) { throw "failed start leaked $leaked" }
     }
 
@@ -248,5 +248,8 @@ Start-Sleep -Seconds 60
     if ($null -ne $secondaryProcess -and -not $secondaryProcess.HasExited) { $secondaryProcess.Kill($true) }
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+& pwsh -NoProfile -File (Join-Path $PSScriptRoot "remote-browser-fixture-bounded-start.test.ps1")
+if ($LASTEXITCODE -ne 0) { throw "bounded-start wrapper regression failed" }
 
 Write-Output "remote-browser-fixture.test: ok"

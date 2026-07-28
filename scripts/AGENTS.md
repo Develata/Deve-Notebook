@@ -51,7 +51,10 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `dispatch-native-target-host-workflow.sh` | Builds or explicitly dispatches the manual Native Target Host GitHub Actions workflow through GitHub CLI or token-backed API fallback |
 | `dispatch-native-target-host-workflow.test.sh` | Verifies RemoteBrowser dispatch fields, platform dependencies, API fallback parity, and absence of password dispatch inputs |
 | `remote-browser-fixture.{sh,ps1}` | Owns exact-HEAD loopback backend, random credentials, pinned HTTPS tunnel, and fail-closed cleanup for RemoteBrowser target-host evidence |
+| `remote-browser-fixture-bounded-start.ps1` | Runs the Windows fixture start worker under one total startup deadline and a worker output cap, relays allowlisted stage progress, and on timeout terminates the worker tree and recovers owned resources/secrets from the atomic startup state |
+| `lib/remote-browser-fixture-progress.ps1` | Atomic startup-state serialization plus the fixed nonsecret stage-name allowlist shared by the Windows fixture and its bounded-start watchdog |
 | `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, secret cleanup, PID ownership, and platform lifecycle invariants |
+| `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, corrupted-state fail-closed, bounded redacted failure output, and a real-worker integration failure path |
 | `lib/remote-browser-fixture-json.sh` | Serializes the fixed private fixture state/environment JSON schemas without owning lifecycle decisions |
 | `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |
 | `lib/desktop-install-root.ps1` | Canonical Win32 install-root validator shared by the packaged Desktop RemoteBrowser smoke and tests |

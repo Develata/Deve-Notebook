@@ -152,7 +152,7 @@ jobs:
           $headFile = Join-Path $env:RUNNER_TEMP 'deve-candidate-head.txt'
           [IO.File]::WriteAllText($headFile, $env:GITHUB_SHA, [Text.UTF8Encoding]::new($false))
           $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
-          $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture.ps1 start `
+          $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture-bounded-start.ps1 `
             --state-dir $stateRoot `
             --expected-head $env:GITHUB_SHA `
             --backend-executable (Resolve-Path target/release/deve_cli.exe).Path `

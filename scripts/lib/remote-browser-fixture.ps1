@@ -1,5 +1,13 @@
 Set-StrictMode -Version Latest
 
+# Single source for the fixed-name secret material a fixture run may leave in
+# its state directory; every cleanup path must consume this list instead of
+# hardcoding its own copy.
+$script:RemoteFixtureSecretFileNames = @(
+    ".password", ".password.hasher.stdout", ".password.hasher.stderr",
+    ".backend.env", "credentials.json", "fixture-env.json"
+)
+
 $script:RemoteFixtureCloudflaredVersion = "2026.7.2"
 $script:RemoteFixtureCloudflaredWindowsAmd64Sha256 = "CDB5D4432F6AE1595654A692A51308B69D2BF7AF961F5578D9391837CF072DF9"
 $script:RemoteFixtureCloudflaredDownloadTimeoutSeconds = 180
@@ -10,6 +18,13 @@ function New-RemoteFixtureRandomHex {
     $buffer = [byte[]]::new($Bytes)
     [Security.Cryptography.RandomNumberGenerator]::Fill($buffer)
     return [Convert]::ToHexString($buffer).ToLowerInvariant()
+}
+
+function Protect-RemoteFixturePath {
+    param([Parameter(Mandatory)][string]$Path)
+    $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    & icacls.exe $Path /inheritance:r /grant:r "*$sid`:(F)" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "failed to restrict ACL for $Path" }
 }
 
 function Resolve-RemoteFixtureStateDirectory {
@@ -163,6 +178,16 @@ function Stop-RemoteFixtureBoundedProcessTree {
     try {
         $Process.Kill($true)
     } catch {
+        # Kill(entireProcessTree) reports per-descendant failures through an
+        # AggregateException even when the root died; a partial tree kill must
+        # stay a failure instead of a silent all-clear.
+        $exception = $_.Exception
+        while ($null -ne $exception -and $exception -isnot [AggregateException]) {
+            $exception = $exception.InnerException
+        }
+        if ($null -ne $exception) {
+            throw "failed to terminate $Label process tree descendants: $($_.Exception.Message)"
+        }
         $Process.Refresh()
         if (-not $Process.HasExited) {
             throw "failed to terminate $Label process tree: $($_.Exception.Message)"
@@ -398,6 +423,22 @@ function Wait-RemoteFixtureTunnelOrigin {
         Start-Sleep -Milliseconds 250
     }
     throw "timed out waiting for cloudflared quick-tunnel origin"
+}
+
+# Removes an owned backend container only after proving the fixture owner
+# label matches, and only reports success once the container is gone. Shared
+# by the start failure path, the stop command, and the bounded-start recovery.
+function Remove-RemoteFixtureOwnedContainer {
+    param(
+        [Parameter(Mandatory)][string]$ContainerName,
+        [Parameter(Mandatory)][string]$FixtureId
+    )
+    if (Test-RemoteFixtureContainerExists $ContainerName) {
+        Assert-RemoteFixtureContainerOwner -ContainerName $ContainerName -FixtureId $FixtureId
+        & docker rm --force $ContainerName | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "failed to remove owned backend container" }
+    }
+    if (Test-RemoteFixtureContainerExists $ContainerName) { throw "owned backend container survived cleanup" }
 }
 
 function Assert-RemoteFixtureContainerOwner {

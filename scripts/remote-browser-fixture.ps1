@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $RootDirectory = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 . (Join-Path $PSScriptRoot "lib/remote-browser-fixture.ps1")
+. (Join-Path $PSScriptRoot "lib/remote-browser-fixture-progress.ps1")
 
 function Get-ParsedRemoteFixtureArguments {
     param([string[]]$Arguments)
@@ -43,13 +44,6 @@ function Get-ParsedRemoteFixtureArguments {
         }
     }
     return $result
-}
-
-function Protect-RemoteFixturePath {
-    param([Parameter(Mandatory)][string]$Path)
-    $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    & icacls.exe $Path /inheritance:r /grant:r "*$sid`:(F)" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "failed to restrict ACL for $Path" }
 }
 
 function Invoke-RemoteFixturePasswordHasher {
@@ -100,6 +94,7 @@ function Start-RemoteBrowserFixture {
     if (-not $Options.StateDirectory -or -not $Options.ExpectedHead) {
         throw "start requires --state-dir and --expected-head"
     }
+    Write-RemoteFixtureStageLine "validate-head"
     Assert-RemoteFixtureExpectedHead -RepoRoot $Options.RepoRoot -ExpectedHead $Options.ExpectedHead
     $stateDirectory = Resolve-RemoteFixtureStateDirectory $Options.StateDirectory
     Protect-RemoteFixturePath $stateDirectory
@@ -114,14 +109,16 @@ function Start-RemoteBrowserFixture {
     $fixtureId = New-RemoteFixtureRandomHex -Bytes 16
     Set-Content -LiteralPath $ownerFile -Value $fixtureId -NoNewline -Encoding utf8
     Protect-RemoteFixturePath $ownerFile
+    Initialize-RemoteFixtureStartupState -StateDirectory $stateDirectory -FixtureId $fixtureId
+    Update-RemoteFixtureStartupState -Stage "secure-state-directory" -Resources @{
+        credentials_file = $credentialsFile; environment_file = $environmentFile
+    }
     $backendProcess = $null
     $tunnelProcess = $null
     $backendToken = $null
     $tunnelToken = $null
     $containerName = $null
     $passwordFile = Join-Path $stateDirectory ".password"
-    $passwordHasherStdout = "$passwordFile.hasher.stdout"
-    $passwordHasherStderr = "$passwordFile.hasher.stderr"
     $dockerEnvFile = Join-Path $stateDirectory ".backend.env"
     $sourceKind = $null
     $origin = $null
@@ -164,6 +161,7 @@ function Start-RemoteBrowserFixture {
                 auth_secret = $null
             } | ConvertTo-Json | Set-Content -LiteralPath $credentialsFile -Encoding utf8
             Protect-RemoteFixturePath $credentialsFile
+            Update-RemoteFixtureStartupState -Stage "wait-public-health" -Resources @{ source_kind = "external" }
             Invoke-WebRequest -Uri "$($Options.ExternalOrigin)/api/node/role" -TimeoutSec 10 -UseBasicParsing | Out-Null
             $sourceKind = "external"
             $origin = $Options.ExternalOrigin
@@ -174,11 +172,13 @@ function Start-RemoteBrowserFixture {
             if ([bool]$Options.BackendExecutable -eq [bool]$Options.BackendContainerImage) {
                 throw "select exactly one internal backend source"
             }
+            Update-RemoteFixtureStartupState -Stage "generate-credentials"
             $username = "deve-ci-$(New-RemoteFixtureRandomHex -Bytes 8)"
             $password = New-RemoteFixtureRandomHex -Bytes 24
             $authSecret = New-RemoteFixtureRandomHex -Bytes 48
             Set-Content -LiteralPath $passwordFile -Value $password -NoNewline -Encoding utf8
             Protect-RemoteFixturePath $passwordFile
+            Update-RemoteFixtureStartupState -Stage "hash-password"
             $authPass = Invoke-RemoteFixturePasswordHasher -Executable $Options.PasswordHasher -Arguments $Options.PasswordHasherArguments -PasswordFile $passwordFile
             @{ username = $username; password = $password; auth_secret = $authSecret } |
                 ConvertTo-Json | Set-Content -LiteralPath $credentialsFile -Encoding utf8
@@ -205,6 +205,9 @@ function Start-RemoteBrowserFixture {
                 @("AUTH_USER=$username", "AUTH_PASS=$authPass", "AUTH_SECRET=$authSecret") |
                     Set-Content -LiteralPath $dockerEnvFile -Encoding utf8
                 Protect-RemoteFixturePath $dockerEnvFile
+                Update-RemoteFixtureStartupState -Stage "start-backend" -Resources @{
+                    source_kind = "container"; container_name = $containerName
+                }
                 & docker run --detach --name $containerName `
                     --label "deve.remote-fixture-id=$fixtureId" `
                     --publish "127.0.0.1`:$port`:3001" `
@@ -223,17 +226,23 @@ function Start-RemoteBrowserFixture {
                     (Get-Content -Raw -LiteralPath $headProof.FullName).Trim() -ine $Options.ExpectedHead) {
                     throw "backend executable or build HEAD proof is unsafe or mismatched"
                 }
+                Update-RemoteFixtureStartupState -Stage "initialize-backend" -Resources @{ source_kind = "executable" }
                 Invoke-RemoteFixtureBackendInit -Executable $backend.FullName -RuntimeDirectory $runtimeDirectory -Environment $backendEnvironment
                 $arguments = @("serve", "--port", "{port}", "--loopback-only")
                 $arguments = @($arguments | ForEach-Object { $_.Replace("{port}", [string]$port).Replace("{data_dir}", $runtimeDirectory) })
+                Update-RemoteFixtureStartupState -Stage "start-backend"
                 $backendProcess = Start-RemoteFixtureProcess -FilePath $backend.FullName -ArgumentList $arguments `
                     -WorkingDirectory $runtimeDirectory -Environment $backendEnvironment `
                     -StdoutPath (Join-Path $stateDirectory "backend.stdout.log") `
                     -StderrPath (Join-Path $stateDirectory "backend.stderr.log")
                 $backendToken = Get-RemoteFixtureProcessToken $backendProcess.Id
+                Update-RemoteFixtureStartupState -Stage "start-backend" -Resources @{
+                    backend_pid = $backendProcess.Id; backend_process_token = $backendToken
+                }
             }
 
             $backendHealth = "http://127.0.0.1:$port/api/node/role"
+            Update-RemoteFixtureStartupState -Stage "wait-backend-health"
             if ($containerName) {
                 for ($attempt = 0; $attempt -lt 120; $attempt++) {
                     try { Invoke-WebRequest -Uri $backendHealth -TimeoutSec 2 -UseBasicParsing | Out-Null; break } catch {
@@ -247,17 +256,25 @@ function Start-RemoteBrowserFixture {
                 Wait-RemoteFixtureHttp -Url $backendHealth -Process $backendProcess -LogPath (Join-Path $stateDirectory "backend.stderr.log")
             }
 
+            Update-RemoteFixtureStartupState -Stage "prepare-cloudflared"
             $cloudflared = Install-RemoteFixtureCloudflared -StateDirectory $stateDirectory -SuppliedPath $Options.CloudflaredExecutable
             $tunnelStdout = Join-Path $stateDirectory "cloudflared.stdout.log"
             $tunnelStderr = Join-Path $stateDirectory "cloudflared.stderr.log"
+            Update-RemoteFixtureStartupState -Stage "start-tunnel"
             $tunnelProcess = Start-RemoteFixtureProcess -FilePath $cloudflared `
                 -ArgumentList @("tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:$port") `
                 -WorkingDirectory $stateDirectory -StdoutPath $tunnelStdout -StderrPath $tunnelStderr
             $tunnelToken = Get-RemoteFixtureProcessToken $tunnelProcess.Id
+            Update-RemoteFixtureStartupState -Stage "start-tunnel" -Resources @{
+                tunnel_pid = $tunnelProcess.Id; tunnel_process_token = $tunnelToken
+            }
+            Update-RemoteFixtureStartupState -Stage "wait-tunnel-origin"
             $origin = Wait-RemoteFixtureTunnelOrigin -Process $tunnelProcess -LogPaths @($tunnelStdout, $tunnelStderr)
+            Update-RemoteFixtureStartupState -Stage "wait-public-health"
             Wait-RemoteFixtureHttp -Url "$origin/api/node/role" -Process $tunnelProcess -LogPath $tunnelStderr
         }
 
+        Update-RemoteFixtureStartupState -Stage "publish-ready-state"
         $environment = [ordered]@{
             https_origin = $origin
             credentials_file = $credentialsFile
@@ -282,11 +299,9 @@ function Start-RemoteBrowserFixture {
     } finally {
         if (-not $complete) {
             $cleanupErrors = [Collections.Generic.List[string]]::new()
-            foreach ($secretPath in @(
-                $passwordFile, $passwordHasherStdout, $passwordHasherStderr,
-                $dockerEnvFile, $credentialsFile, $environmentFile
-            )) {
+            foreach ($secretName in $script:RemoteFixtureSecretFileNames) {
                 try {
+                    $secretPath = Join-Path $stateDirectory $secretName
                     if (Test-Path -LiteralPath $secretPath) {
                         Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
                     }
@@ -300,12 +315,7 @@ function Start-RemoteBrowserFixture {
             }
             if ($containerName) {
                 try {
-                    if (Test-RemoteFixtureContainerExists $containerName) {
-                        Assert-RemoteFixtureContainerOwner -ContainerName $containerName -FixtureId $fixtureId
-                        & docker rm --force $containerName | Out-Null
-                        if ($LASTEXITCODE -ne 0) { throw "failed to remove owned backend container" }
-                    }
-                    if (Test-RemoteFixtureContainerExists $containerName) { throw "owned backend container survived cleanup" }
+                    Remove-RemoteFixtureOwnedContainer -ContainerName $containerName -FixtureId $fixtureId
                 } catch {
                     $cleanupErrors.Add($_.Exception.Message)
                 }
@@ -329,6 +339,7 @@ function Start-RemoteBrowserFixture {
                 }
                 throw "fixture startup cleanup failed; ownership state was preserved: $($cleanupErrors -join '; ')"
             }
+            Remove-RemoteFixtureStartupState -StateDirectory $stateDirectory
             Remove-Item -LiteralPath $stateFile, $ownerFile -Force -ErrorAction SilentlyContinue
         }
     }
@@ -348,13 +359,9 @@ function Stop-RemoteBrowserFixture {
         throw "fixture owner marker does not match state"
     }
     $cleanupErrors = [Collections.Generic.List[string]]::new()
-    foreach ($secretPath in @(
-        (Join-Path $stateDirectory ".password"),
-        (Join-Path $stateDirectory ".password.hasher.stdout"),
-        (Join-Path $stateDirectory ".password.hasher.stderr"),
-        (Join-Path $stateDirectory ".backend.env")
-    )) {
+    foreach ($secretName in $script:RemoteFixtureSecretFileNames) {
         try {
+            $secretPath = Join-Path $stateDirectory $secretName
             if (Test-Path -LiteralPath $secretPath) {
                 Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
             }
@@ -380,12 +387,7 @@ function Stop-RemoteBrowserFixture {
     try { Stop-RemoteFixtureProcess -Label "backend" -ProcessId $state.backend_pid -ExpectedToken $state.backend_process_token } catch { $cleanupErrors.Add($_.Exception.Message) }
     if ($state.container_name) {
         try {
-            if (Test-RemoteFixtureContainerExists $state.container_name) {
-                Assert-RemoteFixtureContainerOwner -ContainerName $state.container_name -FixtureId $state.fixture_id
-                & docker rm --force $state.container_name | Out-Null
-                if ($LASTEXITCODE -ne 0) { throw "failed to remove owned backend container" }
-            }
-            if (Test-RemoteFixtureContainerExists $state.container_name) { throw "owned backend container survived cleanup" }
+            Remove-RemoteFixtureOwnedContainer -ContainerName $state.container_name -FixtureId $state.fixture_id
         } catch {
             $cleanupErrors.Add($_.Exception.Message)
         }
@@ -398,6 +400,9 @@ function Stop-RemoteBrowserFixture {
     if ($cleanupErrors.Count -gt 0) {
         throw "fixture cleanup failed; ownership state was preserved: $($cleanupErrors -join '; ')"
     }
+    Remove-RemoteFixtureStartupState -StateDirectory $stateDirectory
+    Remove-Item -LiteralPath (Join-Path $stateDirectory ".bounded-start.stdout.log"), `
+        (Join-Path $stateDirectory ".bounded-start.stderr.log") -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $stateFile, $ownerFile -Force
     Set-Content -LiteralPath (Join-Path $stateDirectory ".fixture-stopped") -Value "stopped" -NoNewline
 }
