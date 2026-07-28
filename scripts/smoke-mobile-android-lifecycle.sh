@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
+ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-lifecycle-smoke"
+source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED:-0}"
+ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
 SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
@@ -33,6 +36,19 @@ adb_cmd() {
     (( limit > 0 )) || fail "global lifecycle smoke deadline exhausted before adb $*"
   fi
   timeout "$limit" "$(adb_bin)" "${args[@]}" "$@"
+}
+
+adb_with_timeout() {
+  local timeout_secs="$1"
+  local args=() remaining
+  shift
+  [[ -z "$SERIAL" ]] || args=(-s "$SERIAL")
+  if [[ -n "${GLOBAL_DEADLINE:-}" ]]; then
+    remaining=$((GLOBAL_DEADLINE - SECONDS))
+    (( remaining > 0 )) || fail "global lifecycle smoke deadline exhausted before adb $*"
+    (( timeout_secs <= remaining )) || timeout_secs="$remaining"
+  fi
+  timeout "$timeout_secs" "$(adb_bin)" "${args[@]}" "$@"
 }
 
 app_pid() {
@@ -110,7 +126,7 @@ TARGET_FACTS="$(
   node "$ROOT_DIR/scripts/inspect-android-target-capability.mjs"
 )" || fail "Android target does not satisfy the requested evidence mode"
 echo "mobile-android-lifecycle-smoke: target_facts=$TARGET_FACTS"
-adb_cmd install -r "$APK_PATH" >/dev/null
+install_apk
 adb_cmd logcat -c
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
 

@@ -14,6 +14,10 @@ const installRetryTest = fs.readFileSync(
   new URL("./android-install-retry.test.sh", import.meta.url),
   "utf8",
 );
+const installRetryLib = fs.readFileSync(
+  new URL("./lib/android-install-retry.sh", import.meta.url),
+  "utf8",
+);
 const localSmoke = fs.readFileSync(
   new URL("./smoke-mobile-android-lifecycle.sh", import.meta.url),
   "utf8",
@@ -196,53 +200,77 @@ test("Android APK install retries only exact package-service recovery failures",
     installSmoke,
     /timeout --kill-after="\$\{ADB_KILL_AFTER_SECS\}s"/,
   );
-  assert.match(installSmoke, /INSTALL_RETRY_DEADLINE_SECS=180/);
-  assert.match(installSmoke, /PACKAGE_SERVICE_READY_ATTEMPTS=10/);
-  assert.match(installSmoke, /PACKAGE_SERVICE_READY_INTERVAL_SECS=2/);
-  assert.match(installSmoke, /wait_for_android_package_service "\$deadline"/);
-  assert.match(installSmoke, /for attempt in 1 2 3/);
+  assert.match(installRetryLib, /INSTALL_RETRY_DEADLINE_SECS=180/);
+  assert.match(installRetryLib, /PACKAGE_SERVICE_READY_ATTEMPTS=10/);
+  assert.match(installRetryLib, /PACKAGE_SERVICE_READY_INTERVAL_SECS=2/);
+  assert.match(installRetryLib, /wait_for_android_package_service "\$deadline"/);
+  assert.match(installRetryLib, /for attempt in 1 2 3/);
   assert.match(
-    installSmoke,
+    installRetryLib,
     /retryable_android_package_services_ready_install_failure/,
   );
-  assert.match(installSmoke, /recovering_package_services == 1/);
+  assert.match(installRetryLib, /recovering_package_services == 1/);
   assert.match(
-    installSmoke,
+    installRetryLib,
     /PackageManagerInternal\.freeStorage\(java\.lang\.String, long, int\)/,
   );
-  assert.match(installSmoke, /StorageManagerService\\\.allocateBytes/);
-  assert.match(installSmoke, /PackageInstallerSession\\\.doWriteInternal/);
-  assert.match(installSmoke, /streamed_install <= 1/);
+  assert.match(installRetryLib, /StorageManagerService\\\.allocateBytes/);
+  assert.match(installRetryLib, /PackageInstallerSession\\\.doWriteInternal/);
+  assert.match(installRetryLib, /streamed_install <= 1/);
   assert.ok(
-    installSmoke.includes("Broken pipe \\(32\\)$/ {"),
+    installRetryLib.includes("Broken pipe \\(32\\)$/ {"),
     "retry classifier must anchor the exact Broken pipe (32) line",
   );
   assert.ok(
-    installSmoke.includes("Can'\\''t find service: package$/ {"),
+    installRetryLib.includes("Can'\\''t find service: package$/ {"),
     "retry classifier must anchor the exact missing package-service line",
   );
   assert.match(
-    installSmoke,
+    installRetryLib,
     /broken_pipe \+ package_service_missing == 1/,
   );
   assert.match(
-    installSmoke,
+    installRetryLib,
     /wait_for_android_launcher_activity "\$deadline"/,
   );
   assert.match(
-    installSmoke,
+    installRetryLib,
     /cmd package resolve-activity[\s\S]*?--components[\s\S]*?android\.intent\.action\.MAIN[\s\S]*?android\.intent\.category\.LAUNCHER/,
   );
-  assert.match(installSmoke, /\[\[ "\$output" == "No activity found" \]\] \|\| return 1/);
-  assert.match(installSmoke, /adb_retry_timed "\$deadline" wait-for-device/);
+  assert.match(installRetryLib, /\[\[ "\$output" == "No activity found" \]\] \|\| return 1/);
+  assert.match(installRetryLib, /adb_retry_timed "\$deadline" wait-for-device/);
   assert.match(
-    installSmoke,
+    installRetryLib,
     /adb_retry_timed "\$deadline" shell cmd package list packages/,
   );
   assert.match(
-    installSmoke,
+    installRetryLib,
     /non-transport Android install failures must remain fail-closed/,
   );
+  for (const [hostName, host, expectedPrefix] of [
+    ["install-startup smoke", installSmoke, "mobile-android-install-startup-smoke-check"],
+    ["local lifecycle smoke", localSmoke, "mobile-android-lifecycle-smoke"],
+    ["remote-browser smoke", remoteSmoke, "mobile-android-remote-browser-smoke"],
+  ]) {
+    assert.match(
+      host,
+      /source "\$ROOT_DIR\/scripts\/lib\/android-install-retry\.sh"/,
+      `${hostName} must source the shared install retry library`,
+    );
+    assert.ok(
+      host.includes(`ANDROID_INSTALL_RETRY_LOG_PREFIX="${expectedPrefix}"`),
+      `${hostName} must attribute install retry progress to its own log prefix`,
+    );
+    assert.match(
+      host,
+      /^(run )?install_apk$/m,
+      `${hostName} must install through the bounded retry entry point`,
+    );
+    assert.ok(
+      !/adb_cmd install -r/.test(host),
+      `${hostName} must not install the APK outside the bounded retry path`,
+    );
+  }
   for (const producerId of ["android.local-backend", "android.remote-browser"]) {
     const producer = producerRegistry.producers.find(
       ({ producer_id: id }) => id === producerId,
@@ -256,6 +284,10 @@ test("Android APK install retries only exact package-service recovery failures",
     assert.ok(
       producer.artifacts.includes("scripts/android-install-retry.test.sh"),
       `${producerId} receipt must bind the APK install retry state matrix`,
+    );
+    assert.ok(
+      producer.artifacts.includes("scripts/lib/android-install-retry.sh"),
+      `${producerId} receipt must bind the shared install retry library`,
     );
   }
   assert.match(installRetryTest, /run_case success-after-retry 0 2 5/);

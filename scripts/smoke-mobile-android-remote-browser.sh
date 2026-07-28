@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
+ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-remote-browser-smoke"
+source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED:-0}"
+ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
 SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
@@ -24,6 +27,15 @@ adb_cmd() {
   local limit=$((GLOBAL_DEADLINE - SECONDS))
   (( limit > 0 )) || fail "global deadline exhausted before adb $*"
   timeout "$limit" "$(adb_bin)" -s "$SERIAL" "$@"
+}
+
+adb_with_timeout() {
+  local timeout_secs="$1" remaining
+  shift
+  remaining=$((GLOBAL_DEADLINE - SECONDS))
+  (( remaining > 0 )) || fail "global deadline exhausted before adb $*"
+  (( timeout_secs <= remaining )) || timeout_secs="$remaining"
+  timeout "$timeout_secs" "$(adb_bin)" -s "$SERIAL" "$@"
 }
 
 adb_cleanup_cmd() {
@@ -72,7 +84,7 @@ DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=1 \
 DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
 node "$ROOT_DIR/scripts/inspect-android-target-capability.mjs" >/dev/null
 
-adb_cmd install -r "$APK_PATH" >/dev/null
+install_apk
 PREFERENCE_JSON="$(node -e 'process.stdout.write(JSON.stringify({mode:"remote",remote_url:process.argv[1]}))' "$REMOTE_ORIGIN")"
 PREFERENCE_BASE64="$(printf '%s' "$PREFERENCE_JSON" | base64 | tr -d '\r\n')"
 adb_cmd shell run-as "$APP_ID" sh -c \

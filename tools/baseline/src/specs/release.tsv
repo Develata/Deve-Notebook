@@ -742,12 +742,18 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	DEVE_MOBILE_ANDRO
 contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-install-startup-smoke" "mobile-android-install-startup-smoke-check"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	app-universal-debug.apk
-contains	scripts/check-mobile-android-install-startup-smoke.sh	adb_timed install -r
-contains	scripts/check-mobile-android-install-startup-smoke.sh	recovering_package_services == 1
-contains	scripts/check-mobile-android-install-startup-smoke.sh	package_service_missing
-contains	scripts/check-mobile-android-install-startup-smoke.sh	PackageManagerInternal.freeStorage(java.lang.String, long, int)
+contains	scripts/lib/android-install-retry.sh	adb_timed install -r
+contains	scripts/lib/android-install-retry.sh	recovering_package_services == 1
+contains	scripts/lib/android-install-retry.sh	package_service_missing
+contains	scripts/lib/android-install-retry.sh	PackageManagerInternal.freeStorage(java.lang.String, long, int)
 contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 0 2 5 1
-contains	scripts/check-mobile-android-install-startup-smoke.sh	cmd package resolve-activity
+contains	scripts/lib/android-install-retry.sh	cmd package resolve-activity
+contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+contains	scripts/check-mobile-android-install-startup-smoke.sh	install_apk
+contains	scripts/smoke-mobile-android-lifecycle.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+contains	scripts/smoke-mobile-android-lifecycle.sh	install_apk
+contains	scripts/smoke-mobile-android-remote-browser.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+contains	scripts/smoke-mobile-android-remote-browser.sh	install_apk
 contains	scripts/android-install-retry.test.sh	run_case launcher-delayed 0 1 4 2
 contains	scripts/android-install-retry.test.sh	run_case launcher-deadline 124 1 2 0
 contains	scripts/android-install-retry.test.sh	run_case launcher-sleep-fail 42 1 2 1
