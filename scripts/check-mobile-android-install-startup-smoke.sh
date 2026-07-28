@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
+source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
@@ -347,6 +348,21 @@ app_pid() {
   adb_timed shell ps -A 2>/dev/null | tr -d '\r' | awk -v app="$APP_ID" 'index($0, app) { print $2; exit }'
 }
 
+android_startup_diag_adb() {
+  adb_with_timeout "$@"
+}
+
+# Keeps the primary process-exit failure authoritative: diagnostics run only
+# when the app process is missing, and a diagnostics failure never replaces it.
+require_app_running_after_launch() {
+  APP_RUNNING_PID="$(app_pid)"
+  if [[ -z "$APP_RUNNING_PID" ]]; then
+    android_startup_diagnostics_collect "$APP_ID" \
+      || echo "mobile-android-install-startup-smoke-check: startup exit diagnostics collection failed" >&2
+    fail "Android app did not remain running after launch: $APP_ID"
+  fi
+}
+
 cleanup() {
   [[ "$UNINSTALL_AFTER" == "1" ]] || return 0
   adb_timed uninstall "$APP_ID" >/dev/null 2>&1 || true
@@ -383,12 +399,12 @@ run adb_timed wait-for-device
 trap cleanup EXIT
 
 run install_apk
+android_startup_diagnostics_prepare "$APP_ID"
 run adb_timed shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
 sleep "$STARTUP_WAIT_SECS"
 
-pid="$(app_pid)"
-[[ -n "$pid" ]] || fail "Android app did not remain running after launch: $APP_ID"
+require_app_running_after_launch
 
-echo "mobile-android-install-startup-smoke-check: app_id=$APP_ID pid=$pid"
+echo "mobile-android-install-startup-smoke-check: app_id=$APP_ID pid=$APP_RUNNING_PID"
 echo "mobile-android-install-startup-smoke-check: serial=${ADB_SERIAL:-<default adb target>}"
 echo "mobile-android-install-startup-smoke-check: ok"

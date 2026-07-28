@@ -81,6 +81,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Owns an Android emulator target lifecycle, builds a debug WebView shell APK, and selects an explicit LocalBackend or RemoteBrowser writable journey before bounded cleanup |
+| `lib/android-startup-diagnostics.sh` | Bounded, app-specific startup exit diagnostics (exit-info, crash/runtime logcat, process state) collected only when the launched app process is missing; never replaces the primary startup failure |
+| `android-startup-diagnostics.test.sh` | Mocked tests proving diagnostics run only on process exit, stay time/output bounded, keep unsupported exit-info nonfatal, and never mask the primary failure or print secret-like values |
 | `android-emulator-cleanup.test.sh` | Exercises emulator cleanup ownership rejection and the verified `emu kill` shutdown transition without touching ambient ADB targets |
 | `cleanup-mobile-android-emulator.sh` | Uses the runner-scoped serial plus exact AVD identity to request Android emulator shutdown; recorded PID is observation-only outside the owning shell, and cleanup waits for disappearance before evidence publication |
 | `lib/android-emulator-owner.sh` | Canonicalizes the runner-owned emulator state path and rejects ambient owner-file overrides that escape the current execution directory |
