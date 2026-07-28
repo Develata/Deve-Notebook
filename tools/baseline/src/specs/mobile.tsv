@@ -714,8 +714,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"

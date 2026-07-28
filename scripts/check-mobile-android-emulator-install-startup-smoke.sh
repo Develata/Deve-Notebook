@@ -6,8 +6,8 @@ source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
-API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.1}"
-SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis_ps16k}"
+API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 ARCH="${DEVE_MOBILE_ANDROID_EMULATOR_ARCH:-x86_64}"
 AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke-api${API_LEVEL}-${SYSTEM_TARGET}-${ARCH}}"
 DEVICE_PROFILE="${DEVE_MOBILE_ANDROID_EMULATOR_DEVICE:-pixel_2}"
@@ -289,31 +289,31 @@ verify_sdk_package_reuse_contract() {
   mkdir -p \
     "$fixture/platform-tools" \
     "$fixture/emulator" \
-    "$fixture/platforms/android-37.1" \
-    "$fixture/system-images/android-37.1/google_apis_ps16k/x86_64"
+    "$fixture/platforms/android-37.0" \
+    "$fixture/system-images/android-37.0/google_apis/x86_64"
   touch \
     "$fixture/platform-tools/adb.exe" \
     "$fixture/emulator/emulator.exe" \
-    "$fixture/platforms/android-37.1/source.properties" \
-    "$fixture/platforms/android-37.1/android.jar" \
-    "$fixture/system-images/android-37.1/google_apis_ps16k/x86_64/source.properties" \
-    "$fixture/system-images/android-37.1/google_apis_ps16k/x86_64/system.img" \
-    "$fixture/system-images/android-37.1/google_apis_ps16k/x86_64/ramdisk.img"
+    "$fixture/platforms/android-37.0/source.properties" \
+    "$fixture/platforms/android-37.0/android.jar" \
+    "$fixture/system-images/android-37.0/google_apis/x86_64/source.properties" \
+    "$fixture/system-images/android-37.0/google_apis/x86_64/system.img" \
+    "$fixture/system-images/android-37.0/google_apis/x86_64/ramdisk.img"
 
   android_sdk_package_complete "$fixture" "platform-tools" \
     || fail "complete local platform-tools fixture must be reusable"
   android_sdk_package_complete "$fixture" "emulator" \
     || fail "complete local emulator fixture must be reusable"
-  android_sdk_package_complete "$fixture" "platforms;android-37.1" \
+  android_sdk_package_complete "$fixture" "platforms;android-37.0" \
     || fail "complete local platform fixture must be reusable"
   android_sdk_package_complete \
     "$fixture" \
-    "system-images;android-37.1;google_apis_ps16k;x86_64" \
+    "system-images;android-37.0;google_apis;x86_64" \
     || fail "complete local system-image fixture must be reusable"
-  rm "$fixture/system-images/android-37.1/google_apis_ps16k/x86_64/system.img"
+  rm "$fixture/system-images/android-37.0/google_apis/x86_64/system.img"
   if android_sdk_package_complete \
     "$fixture" \
-    "system-images;android-37.1;google_apis_ps16k;x86_64"; then
+    "system-images;android-37.0;google_apis;x86_64"; then
     fail "incomplete local system-image fixture must require sdkmanager repair"
   fi
   rm -rf "$fixture"

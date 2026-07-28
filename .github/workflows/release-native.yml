@@ -387,8 +387,8 @@ jobs:
 
       - name: Run API 29+ WebView 137+ LocalBackend writable lifecycle
         env:
-          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.1"
-          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis_ps16k
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.0"
+          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
         run: >-
           cargo run --locked -p deve_baseline -- acceptance-run
@@ -413,8 +413,8 @@ jobs:
 
       - name: Run RemoteBrowser writable lifecycle and native local recovery
         env:
-          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.1"
-          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis_ps16k
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.0"
+          DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
         run: |
           set -euo pipefail
