@@ -74,6 +74,12 @@ test("fixture lifecycle is explicit and browser contexts close in finally", () =
   assert.match(edge, /--http1\.1/u);
   assert.match(edge, /--resolve "\$host:443:\$candidate_ip"/u);
   assert.match(edge, /probe_attempt in 1 2 3 4 5/u);
+  assert.match(edge, /DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS/u);
+  assert.match(edge, /waiting for %s tunnel edge route propagation \(sweep %s\)/u);
+  assert.ok(
+    edge.includes('[[ "$status" =~ ^2[0-9][0-9]$ ]]'),
+    "edge probe acceptance must stay pinned to exact-candidate 2xx",
+  );
   assert.match(edge, /Content-Type: application\/xml; charset=utf-8/u);
   assert.match(edge, /d:resourcetype/u);
   assert.match(lifecycle, /Content-Type: application\/xml; charset=utf-8/u);

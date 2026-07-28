@@ -177,6 +177,22 @@ if [[ "${1:-}" == "exec" ]]; then
   fi
   exit 0
 fi
+if [[ "${1:-}" == "run" ]]; then
+  : "${CAPTURE_EDGE_PROBE_SUCCESS_AT:=999999}"
+  count=0
+  [[ ! -f "$CAPTURE_EDGE_PROBE_COUNT" ]] || count="$(<"$CAPTURE_EDGE_PROBE_COUNT")"
+  count=$((count + 1))
+  printf '%s\n' "$count" >"$CAPTURE_EDGE_PROBE_COUNT"
+  if ((count >= CAPTURE_EDGE_PROBE_SUCCESS_AT)); then
+    printf '%s' "200"
+  else
+    printf '%s' "530"
+  fi
+  exit 0
+fi
+if [[ "${1:-}" == "rm" || "${1:-}" == "container" ]]; then
+  exit 0
+fi
 if [[ "${1:-}" == "compose" ]]; then
   printf '%s\n' "${DEVE_REMOTE_IMPORT_AUTH_USER:-}" >"$CAPTURE_AUTH_USER"
 fi
@@ -185,6 +201,7 @@ chmod +x "$temporary/bin/docker"
 export CAPTURE_ARGS="$temporary/args"
 export CAPTURE_AUTH_USER="$temporary/auth-user"
 export CAPTURE_STATUS_COUNT="$temporary/status-count"
+export CAPTURE_EDGE_PROBE_COUNT="$temporary/edge-probe-count"
 probe_state="$temporary/probe-state"
 mkdir -p -- "$probe_state/docker-remote-import"
 DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
@@ -192,6 +209,56 @@ DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
   deve-webdav test-tunnel https://fixture.invalid/ 5 3 PROPFIND
 [[ "$(<"$CAPTURE_STATUS_COUNT")" == "5" ]] \
   || fail "candidate network probe did not reset its stability window"
+
+# Bounded edge-route propagation window: re-sweeps must reuse the exact probe
+# acceptance criterion and stay fail-closed once the window is exhausted.
+[[ "$(DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS=banana \
+  remote_import_edge_propagation_window_secs 2>/dev/null)" == "180" ]] \
+  || fail "invalid propagation window must fall back to 180s"
+[[ "$(DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS=601 \
+  remote_import_edge_propagation_window_secs 2>/dev/null)" == "180" ]] \
+  || fail "oversized propagation window must fall back to 180s"
+edge_stderr="$temporary/edge-select.stderr"
+export DEVE_RELEASE_CANDIDATE_IMAGE_ID="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+export DEVE_REMOTE_IMPORT_DOCKER_BIN="$temporary/bin/docker"
+remote_import_edge_ipv4_candidates() {
+  printf '%s\n' "edge-window.trycloudflare.com 198.51.100.7"
+}
+rm -f -- "$CAPTURE_EDGE_PROBE_COUNT"
+export CAPTURE_EDGE_PROBE_SUCCESS_AT=6
+edge_mapping="$(
+  DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
+  DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS=120 \
+  remote_import_edge_select_ipv4 edge-window \
+    "https://edge-window.trycloudflare.com" \
+    "https://edge-window.trycloudflare.com/probe/" PROPFIND 2>"$edge_stderr"
+)" || fail "propagation window did not recover an edge that answered after re-sweep"
+[[ "$edge_mapping" == "edge-window.trycloudflare.com 198.51.100.7" ]] \
+  || fail "re-sweep selection returned an unexpected edge mapping"
+[[ "$(<"$CAPTURE_EDGE_PROBE_COUNT")" == "6" ]] \
+  || fail "re-sweep did not preserve the exact bounded probe sequence"
+grep -Fq "waiting for edge-window tunnel edge route propagation (sweep 1)" "$edge_stderr" \
+  || fail "re-sweep did not report bounded propagation waiting"
+rm -f -- "$CAPTURE_EDGE_PROBE_COUNT"
+export CAPTURE_EDGE_PROBE_SUCCESS_AT=999999
+if DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
+  DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS=0 \
+  remote_import_edge_select_ipv4 edge-window \
+    "https://edge-window.trycloudflare.com" \
+    "https://edge-window.trycloudflare.com/probe/" PROPFIND \
+    >/dev/null 2>"$edge_stderr"; then
+  fail "exhausted propagation window must remain fail-closed"
+fi
+[[ "$(<"$CAPTURE_EDGE_PROBE_COUNT")" == "5" ]] \
+  || fail "zero propagation window must keep the single-sweep probe budget"
+grep -Fq "no tunnel edge passed the exact-candidate PROPFIND probe for edge-window" "$edge_stderr" \
+  || fail "window exhaustion lost the fail-closed terminal error"
+grep -Fq "waiting for edge-window tunnel edge route propagation" "$edge_stderr" \
+  && fail "zero propagation window must not report a re-sweep"
+unset CAPTURE_EDGE_PROBE_SUCCESS_AT
+unset DEVE_RELEASE_CANDIDATE_IMAGE_ID
+unset -f remote_import_edge_ipv4_candidates
+
 PATH="$temporary/bin:$PATH" remote_import_fixture_cleanup "$state_file"
 expected_compose="$(
   node -e '
