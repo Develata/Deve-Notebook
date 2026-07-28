@@ -433,9 +433,17 @@ async function editorContent(page) {
     : null);
 }
 
-async function applyExternalChange(page, peerPage, repoId, path, externalContent) {
-  const before = await editorContent(page);
-  const peerBefore = await editorContent(peerPage);
+async function applyExternalChange(page, peerPage, repoId, path, externalContent, expectedContent) {
+  // The preceding Source Control commit broadcast makes both clients re-open
+  // the doc; sampling the authority baseline mid-rehydration reads an empty
+  // editor and fakes a ledger bypass. Anchor the baseline to the known
+  // document content instead of trusting a racy snapshot.
+  await waitUntil("first client editor settled before external mutation", async () =>
+    (await editorContent(page)) === expectedContent);
+  await waitUntil("peer editor settled before external mutation", async () =>
+    (await editorContent(peerPage)) === expectedContent);
+  const before = expectedContent;
+  const peerBefore = expectedContent;
   mutateWorkspaceFile(repoId, path, externalContent);
   await delay(500);
   assert.equal(await editorContent(page), before, "external workspace mutation must not bypass ledger authority");
@@ -496,6 +504,6 @@ export async function exerciseSourceControlAndExternalChanges({
   const commitMessage = `docker browser commit ${Date.now()}`;
   await commitAndVerifyHistory(page, path, commitMessage);
   const externalContent = `${currentContent}\nexternal projection ${Date.now()}\n`;
-  await applyExternalChange(page, peerPage, repoId, path, externalContent);
+  await applyExternalChange(page, peerPage, repoId, path, externalContent, currentContent);
   return { commitMessage, externalContent };
 }

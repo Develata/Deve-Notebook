@@ -24,6 +24,13 @@ test("tag-ready product journey covers destructive repo removal, typed diff, sou
   assert.match(source, /data-deve-external-section-body=\\?"pending/);
   assert.match(source, /data-deve-external-apply=\\?"true/);
   assert.match(source, /external workspace mutation must not bypass ledger authority/);
+  assert.match(source, /first client editor settled before external mutation/);
+  assert.match(source, /peer editor settled before external mutation/);
+  assert.match(
+    source,
+    /settled before external mutation[\s\S]*?mutateWorkspaceFile\(repoId, path, externalContent\)/,
+    "the authority baseline must settle before the external workspace mutation",
+  );
 });
 
 test("tag-ready product journey covers mobile last-repo NoScope, restart, and first create", () => {
