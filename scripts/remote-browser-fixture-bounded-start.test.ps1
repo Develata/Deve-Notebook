@@ -80,6 +80,7 @@ function Write-MockStartupState {
 $temporary = Join-Path ([IO.Path]::GetTempPath()) "deve-bounded-start-test-$(New-RemoteFixtureRandomHex -Bytes 8)"
 New-Item -ItemType Directory -Force $temporary | Out-Null
 $decoy = $null
+$survivor = $null
 try {
     # Progress library strictness: unknown stages and non-allowlisted state
     # fields are rejected, so the stage/state channel cannot carry secrets.
@@ -130,6 +131,56 @@ exit 0
     if ($result.Stderr -match 'not-an-allowlisted-stage') {
         throw "wrapper relayed a non-allowlisted stage line"
     }
+
+    # Production-shaped success: a step-level caller captures wrapper stdout
+    # through a pipe while the worker leaves a long-lived detached child (the
+    # fixture backend analogue) running. Std-handle inheritance hygiene in
+    # Start-RemoteFixtureProcess must keep that survivor from holding the
+    # capture pipe open — otherwise the caller blocks on read-to-EOF until job
+    # timeout — and wrapper success must leave the survivor running.
+    $surviveDirectory = Join-Path $temporary "survive"
+    New-Item -ItemType Directory -Force $surviveDirectory | Out-Null
+    Set-Content -LiteralPath (Join-Path $surviveDirectory "fixture-env.json") -Value "{}" -Encoding utf8
+    $surviveWorker = Join-Path $temporary "survive-worker.ps1"
+    Set-Content -LiteralPath $surviveWorker -Encoding utf8 -Value @'
+param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+$stateDirectory = $env:DEVE_TEST_STATE_DIR
+$child = Start-Process -FilePath (Get-Process -Id $PID).Path `
+    -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 120') `
+    -RedirectStandardOutput (Join-Path $stateDirectory "survivor.out.log") `
+    -RedirectStandardError (Join-Path $stateDirectory "survivor.err.log") `
+    -WindowStyle Hidden -PassThru
+Set-Content -LiteralPath (Join-Path $stateDirectory "survivor.pid") -Value $child.Id -NoNewline
+[Console]::Error.WriteLine("deve-remote-fixture-stage: publish-ready-state")
+Write-Output (Join-Path $stateDirectory "fixture-env.json")
+exit 0
+'@
+    $surviveCaptured = Join-Path $temporary "survive-captured.txt"
+    $surviveCaller = Join-Path $temporary "survive-caller.ps1"
+    Set-Content -LiteralPath $surviveCaller -Encoding utf8 -Value @"
+`$captured = & pwsh -NoProfile -File '$Wrapper' --state-dir '$surviveDirectory' --worker-script '$surviveWorker' --total-deadline-seconds 60
+[IO.File]::WriteAllText('$surviveCaptured', "exit=`$LASTEXITCODE captured=`$captured")
+"@
+    $caller = Start-RemoteFixtureProcess -FilePath (Get-Process -Id $PID).Path `
+        -ArgumentList @("-NoProfile", "-File", $surviveCaller) `
+        -WorkingDirectory $temporary `
+        -Environment @{ DEVE_REMOTE_FIXTURE_TEST_WORKER = "1"; DEVE_TEST_STATE_DIR = $surviveDirectory } `
+        -StdoutPath (Join-Path $temporary "survive-caller.out.log") `
+        -StderrPath (Join-Path $temporary "survive-caller.err.log")
+    if (-not $caller.WaitForExit(60000)) {
+        $caller.Kill($true)
+        throw "captured wrapper invocation did not return while the fixture survivor ran: std-handle inheritance hygiene regressed"
+    }
+    $survivorPidPath = Join-Path $surviveDirectory "survivor.pid"
+    if (-not (Test-Path -LiteralPath $survivorPidPath)) { throw "survivor worker did not record its child PID" }
+    $survivor = Get-Process -Id ([int](Get-Content -Raw -LiteralPath $survivorPidPath)) -ErrorAction SilentlyContinue
+    if ($null -eq $survivor) { throw "wrapper success terminated the fixture's long-lived child" }
+    $capturedResult = Get-Content -Raw -LiteralPath $surviveCaptured
+    if ($capturedResult -ne "exit=0 captured=$(Join-Path $surviveDirectory 'fixture-env.json')") {
+        throw "production-shaped capture did not deliver the environment-file path: $capturedResult"
+    }
+    $survivor.Kill($true)
+    $survivor = $null
 
     # Timeout: worker tree (child + grandchild) is terminated at the total
     # deadline, owned state and secrets are removed, and the final error names
@@ -391,6 +442,7 @@ exit 0
     }
 } finally {
     if ($null -ne $decoy -and -not $decoy.HasExited) { $decoy.Kill($true) }
+    if ($null -ne $survivor -and -not $survivor.HasExited) { $survivor.Kill($true) }
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue
 }
 

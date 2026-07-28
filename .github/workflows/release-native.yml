@@ -152,7 +152,7 @@ jobs:
           $headFile = Join-Path $env:RUNNER_TEMP 'deve-candidate-head.txt'
           [IO.File]::WriteAllText($headFile, $env:GITHUB_SHA, [Text.UTF8Encoding]::new($false))
           $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
-          $envFile = & pwsh -NoProfile -File scripts/remote-browser-fixture-bounded-start.ps1 `
+          & pwsh -NoProfile -File scripts/remote-browser-fixture-bounded-start.ps1 `
             --state-dir $stateRoot `
             --expected-head $env:GITHUB_SHA `
             --backend-executable (Resolve-Path target/release/deve_cli.exe).Path `
@@ -160,7 +160,7 @@ jobs:
             --password-hasher (Resolve-Path target/debug/deve_baseline.exe).Path `
             --password-hasher-arg remote-fixture-password-hash
           if ($LASTEXITCODE -ne 0) { throw 'RemoteBrowser fixture failed to start' }
-          $fixture = Get-Content -Raw -LiteralPath $envFile.Trim() | ConvertFrom-Json
+          $fixture = Get-Content -Raw -LiteralPath (Join-Path $stateRoot 'fixture-env.json') | ConvertFrom-Json
           $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
           Write-Output "::add-mask::$($credentials.username)"
           Write-Output "::add-mask::$($credentials.password)"

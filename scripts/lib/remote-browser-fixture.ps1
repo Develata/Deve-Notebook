@@ -101,6 +101,31 @@ function ConvertTo-RemoteFixtureWindowsArgument {
     return $builder.ToString()
 }
 
+# Children spawned with redirected stdio inherit every inheritable handle of
+# this process (CreateProcess bInheritHandles), including our own stdout and
+# stderr endpoints when a caller captures us through a pipe. A long-lived
+# descendant (fixture backend, tunnel) then keeps that pipe open and blocks the
+# caller's read-to-EOF long after this process exits — on CI that turned a
+# finished fixture start into a job-timeout hang. Clearing HANDLE_FLAG_INHERIT
+# on our stdout/stderr before each spawn keeps those endpoints with us alone.
+function Clear-RemoteFixtureStdHandleInheritance {
+    if (-not ("DeveFixture.NativeStdHandles" -as [type])) {
+        Add-Type -Namespace DeveFixture -Name NativeStdHandles -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true)]
+public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)]
+public static extern bool SetHandleInformation(IntPtr hObject, uint dwMask, uint dwFlags);
+'@
+    }
+    foreach ($slot in @(-11, -12)) {
+        $handle = [DeveFixture.NativeStdHandles]::GetStdHandle($slot)
+        if ($handle -eq [IntPtr]::Zero -or $handle -eq [IntPtr]::new(-1)) { continue }
+        if (-not [DeveFixture.NativeStdHandles]::SetHandleInformation($handle, 1, 0)) {
+            [Console]::Error.WriteLine("remote-browser-fixture: warning: could not clear std-handle inheritance for slot $slot")
+        }
+    }
+}
+
 function Start-RemoteFixtureProcess {
     param(
         [Parameter(Mandatory)][string]$FilePath,
@@ -110,6 +135,7 @@ function Start-RemoteFixtureProcess {
         [Parameter(Mandatory)][string]$StderrPath,
         [Parameter()][hashtable]$Environment = @{}
     )
+    Clear-RemoteFixtureStdHandleInheritance
     $encodedArguments = @($ArgumentList | ForEach-Object { ConvertTo-RemoteFixtureWindowsArgument $_ }) -join ' '
     $parameters = @{
         FilePath = $FilePath
