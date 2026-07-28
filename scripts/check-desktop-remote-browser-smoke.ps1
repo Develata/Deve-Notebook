@@ -353,7 +353,14 @@ try {
     if ($sidecars.Count -ne 1) { Fail "local restart did not own exactly one sidecar" }
     $preference = Get-Content -Raw -LiteralPath (Join-Path $dataRoot "native-backend.json") |
         ConvertFrom-Json
-    if ($preference.mode -ne "local" -or $null -ne $preference.remote_url) {
+    # remote_url is legitimately absent after the local transition, and this
+    # script runs under StrictMode inherited from lib/desktop-install-root.ps1,
+    # so touching the property directly would throw on the success shape.
+    $preferenceRemoteUrl = $preference.PSObject.Properties['remote_url']
+    if (
+        $preference.mode -ne "local" -or
+        ($null -ne $preferenceRemoteUrl -and $null -ne $preferenceRemoteUrl.Value)
+    ) {
         Fail "native local transition did not persist canonical local preference"
     }
 
