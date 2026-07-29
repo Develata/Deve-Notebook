@@ -87,8 +87,17 @@ node "$ROOT_DIR/scripts/inspect-android-target-capability.mjs" >/dev/null
 install_apk
 PREFERENCE_JSON="$(node -e 'process.stdout.write(JSON.stringify({mode:"remote",remote_url:process.argv[1]}))' "$REMOTE_ORIGIN")"
 PREFERENCE_BASE64="$(printf '%s' "$PREFERENCE_JSON" | base64 | tr -d '\r\n')"
-adb_cmd shell run-as "$APP_ID" sh -c \
-  "echo '$PREFERENCE_BASE64' | base64 -d > native-backend.json"
+# Single quoted remote command: adb shell flattens multiple arguments without
+# re-quoting, so a bare sh -c payload runs its pipe/redirect in the device
+# outer shell (read-only /) instead of inside run-as. run-as starts in the
+# package data dir (Tauri app_data_dir -> Context.dataDir), so the relative
+# path stays correct for any device user. The read-back guards against silent
+# injection failure on targets that do not propagate remote exit codes.
+[[ "$APP_ID" =~ ^[A-Za-z0-9._]+$ ]] || fail "APP_ID must be a plain package id"
+adb_cmd shell "run-as $APP_ID sh -c 'echo $PREFERENCE_BASE64 | base64 -d > native-backend.json'" \
+  || fail "RemoteBrowser preference injection failed"
+adb_cmd shell "run-as $APP_ID cat native-backend.json" | grep -qF '"remote"' \
+  || fail "RemoteBrowser preference did not land in the app data dir"
 adb_cmd logcat -c
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
 
@@ -101,7 +110,9 @@ done
 [[ -n "$PID" ]] || fail "Android RemoteBrowser app did not remain running"
 SOCKET=""
 while (( SECONDS < GLOBAL_DEADLINE )); do
-  SOCKET="$(adb_cmd shell cat /proc/net/unix 2>/dev/null | tr -d '\r' | awk -v pid="$PID" '$NF ~ /webview_devtools_remote/ && $NF ~ pid"$" {print $NF; exit}')"
+  # Quoted remote command: Git Bash (MSYS) path-converts a bare /proc/... arg
+  # into a Windows host path on Windows target hosts.
+  SOCKET="$(adb_cmd shell "cat /proc/net/unix" 2>/dev/null | tr -d '\r' | awk -v pid="$PID" '$NF ~ /webview_devtools_remote/ && $NF ~ pid"$" {print $NF; exit}')"
   [[ -z "$SOCKET" ]] || break
   sleep 1
 done

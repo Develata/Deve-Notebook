@@ -37,6 +37,13 @@ test("Android RemoteBrowser host smoke is preference-driven and target-qualified
   assert.match(hostSource, /native-backend\.json/);
   assert.match(hostSource, /inspect-android-target-capability\.mjs/);
   assert.match(hostSource, /run-as/);
+  // The injection must be ONE quoted remote command: adb shell flattens
+  // multiple arguments without re-quoting, which runs the pipe/redirect in
+  // the device outer shell instead of inside run-as.
+  assert.match(
+    hostSource,
+    /shell "run-as \$APP_ID sh -c 'echo \$PREFERENCE_BASE64 \| base64 -d > native-backend\.json'"/,
+  );
   assert.match(hostSource, /recovered to fresh LocalBackend runtime/);
   assert.doesNotMatch(hostSource, /--remote-url/);
 });
