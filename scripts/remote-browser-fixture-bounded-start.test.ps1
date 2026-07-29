@@ -240,7 +240,6 @@ Start-Sleep -Seconds 120
     if (($result.Stdout + $result.Stderr).Contains($SecretSentinel)) {
         throw "timeout output exposed an injected credential value"
     }
-
     # Cleanup failure: a recorded PID with a mismatched process token is never
     # killed, the recovery state is preserved, and the wrapper fails closed.
     $decoy = Start-Process -FilePath (Get-Process -Id $PID).Path `
@@ -251,10 +250,13 @@ Start-Sleep -Seconds 120
     Set-Content -LiteralPath $mismatchWorker -Encoding utf8 -Value @'
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
 [Console]::Error.WriteLine("deve-remote-fixture-stage: start-backend")
+$fixtureId = "feedfacefeedfacefeedfacefeedface"
+Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR ".fixture-owner") -Value $fixtureId -NoNewline
+Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR "credentials.json") -Value "{}"
 $state = [ordered]@{
-    schema = 1; fixture_id = "feedfacefeedfacefeedfacefeedface"; stage = "start-backend"
+    schema = 1; fixture_id = $fixtureId; stage = "start-backend"
     updated_at = [DateTimeOffset]::UtcNow.ToString("O"); source_kind = "executable"
-    backend_pid = [int]$env:DEVE_TEST_DECOY_PID; backend_process_token = "mismatched-token"
+    backend_pid = [int]$env:DEVE_TEST_DECOY_PID; backend_process_token = "1"
     tunnel_pid = $null; tunnel_process_token = $null; container_name = $null
     credentials_file = $null; environment_file = $null
 }
@@ -273,9 +275,11 @@ Start-Sleep -Seconds 120
     if (-not (Test-Path -LiteralPath (Join-Path $mismatchDirectory "startup-state.json"))) {
         throw "failed recovery removed the preserved startup state"
     }
+    if (-not (Test-Path -LiteralPath (Join-Path $mismatchDirectory "credentials.json"))) {
+        throw "owner mismatch deleted fixed-name secret material without cleanup authority"
+    }
     $decoy.Kill($true)
     $decoy = $null
-
     # Container owner mismatch: an unowned container is never removed.
     $containerDirectory = Join-Path $temporary "container"
     New-Item -ItemType Directory -Force $containerDirectory | Out-Null
@@ -292,8 +296,9 @@ Start-Sleep -Seconds 120
     Set-Content -LiteralPath $containerWorker -Encoding utf8 -Value @'
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
 [Console]::Error.WriteLine("deve-remote-fixture-stage: start-backend")
+$fixtureId = "feedfacefeedfacefeedfacefeedface"; Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR ".fixture-owner") -Value $fixtureId -NoNewline; Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR "credentials.json") -Value "{}"
 $state = [ordered]@{
-    schema = 1; fixture_id = "feedfacefeedfacefeedfacefeedface"; stage = "start-backend"
+    schema = 1; fixture_id = $fixtureId; stage = "start-backend"
     updated_at = [DateTimeOffset]::UtcNow.ToString("O"); source_kind = "container"
     backend_pid = $null; backend_process_token = $null
     tunnel_pid = $null; tunnel_process_token = $null; container_name = "deve-remote-fixture-decoy"
@@ -315,7 +320,9 @@ Start-Sleep -Seconds 120
     if (-not (Test-Path -LiteralPath (Join-Path $containerDirectory "startup-state.json"))) {
         throw "failed container recovery removed the preserved startup state"
     }
-
+    if (-not (Test-Path -LiteralPath (Join-Path $containerDirectory "credentials.json"))) {
+        throw "container owner mismatch deleted secret material before resource admission"
+    }
     # Partial or corrupted startup state is never consumed as valid state.
     $partialDirectory = Join-Path $temporary "partial"
     New-Item -ItemType Directory -Force $partialDirectory | Out-Null
@@ -335,6 +342,27 @@ Start-Sleep -Seconds 120
     }
     if (-not (Test-Path -LiteralPath (Join-Path $partialDirectory "startup-state.json"))) {
         throw "corrupted startup state evidence was deleted"
+    }
+    # Existence alone never makes a partial final state the stop authority.
+    $partialFinalDirectory = Join-Path $temporary "partial-final"
+    New-Item -ItemType Directory -Force $partialFinalDirectory | Out-Null
+    $partialFinalWorker = Join-Path $temporary "partial-final-worker.ps1"
+    Set-Content -LiteralPath $partialFinalWorker -Encoding utf8 -Value @'
+param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+[Console]::Error.WriteLine("deve-remote-fixture-stage: publish-ready-state")
+Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR ".fixture-owner") -Value ("f" * 32) -NoNewline
+Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR "credentials.json") -Value "{}"
+Set-Content -LiteralPath (Join-Path $env:DEVE_TEST_STATE_DIR "fixture-state.json") -Value '{"schema":1,"fixture_id":"ffffffffffffffffffffffffffffffff","truncated' -Encoding utf8
+Start-Sleep -Seconds 120
+'@
+    $result = Invoke-Wrapper -CaseDirectory $partialFinalDirectory `
+        -Arguments @("--state-dir", $partialFinalDirectory, "--worker-script", $partialFinalWorker, "--total-deadline-seconds", "3") `
+        -Environment @{ DEVE_TEST_STATE_DIR = $partialFinalDirectory }
+    if ($result.ExitCode -eq 0 -or $result.Stderr -notmatch "published fixture state is invalid") {
+        throw "partial final state was treated as cleanup authority"
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $partialFinalDirectory "credentials.json"))) {
+        throw "partial final state deleted secret material"
     }
 
     # Failure output stays bounded and redacts injected credential values.
@@ -372,6 +400,28 @@ exit 0
     if ($result.ExitCode -eq 0) { throw "oversized success output was accepted" }
     if (($result.Stdout.Length + $result.Stderr.Length) -gt 16384) {
         throw "wrapper output was not bounded on oversized worker output"
+    }
+
+    # Fast process exit cannot bypass the combined stdout/stderr budget,
+    # regardless of whether the worker reports success or failure.
+    foreach ($fastExitCode in @(0, 9)) {
+        $fastDirectory = Join-Path $temporary "fast-stderr-$fastExitCode"
+        New-Item -ItemType Directory -Force $fastDirectory | Out-Null
+        $fastWorker = Join-Path $temporary "fast-stderr-$fastExitCode-worker.ps1"
+        Set-Content -LiteralPath $fastWorker -Encoding utf8 -Value @"
+param([Parameter(ValueFromRemainingArguments = `$true)][string[]]`$Arguments)
+[Console]::Error.Write(('e' * 9437184))
+exit $fastExitCode
+"@
+        $result = Invoke-Wrapper -CaseDirectory $fastDirectory `
+            -Arguments @("--state-dir", $fastDirectory, "--worker-script", $fastWorker, "--total-deadline-seconds", "60")
+        if ($result.ExitCode -eq 0) { throw "fast stderr exit $fastExitCode bypassed the output limit" }
+        if ($result.Stderr -notmatch 'exceeded the 8388608 byte output limit') {
+            throw "fast stderr exit $fastExitCode lost the total output-limit failure"
+        }
+        if (($result.Stdout.Length + $result.Stderr.Length) -gt 16384) {
+            throw "fast stderr exit $fastExitCode leaked unbounded worker output"
+        }
     }
 
     # A worker that fails after deleting its own credential files (the real

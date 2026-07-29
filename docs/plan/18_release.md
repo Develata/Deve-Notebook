@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-26`
+- `Last Review`: `2026-07-29`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -219,6 +219,17 @@ password 与 auth secret 只能存在于进程级环境或受限临时文件，�
 environment；启动、子命令或清理任一步失败都必须 best-effort 回收全部 owned process、
 container 与 tunnel，并在无法证明资源已消失时保留 owner/state 供重试。外部 staging
 只能用于诊断，不能满足 first-tag receipt。
+
+Windows fixture 的 state publication 必须使用同目录原子 replace；bounded recovery 消费最终
+`fixture-state.json` 时，只有 `ready|recovery` lifecycle kind 能完整解析且 owner marker、execution
+identity、source/resource shape 与仍存活资源的 owner token/label 一致时才可据此回收或删除
+secret。worker 中断后消费原子 startup ownership state 时也必须先完成同等的 source/resource
+shape、live process token 与 container label 预检，再删除任何固定名 secret。缺失、截断、损坏或
+owner mismatch 的 state 不能授予固定文件名删除权限，
+必须保留现场并 fail-closed。fixture 主路径失败后 cleanup 也失败时，最终错误必须同时保留主失败
+与 cleanup failure，不能由 `finally` 覆盖原始根因。stdout/stderr 总输出预算在 child 活动和
+退出后都必须检查，快速退出不能绕过限制。Windows pipe handle inheritance 清除失败必须携带
+Win32 error fail-closed，不能只记录 warning 后继续启动可能继承控制 handle 的 child。
 
 ### 2.1.1 Developer Baseline Checkers {#developer-baseline-checkers}
 

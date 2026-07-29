@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-22`
+- `Last Review`: `2026-07-29`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -203,6 +203,14 @@ enabled = true
 - token 比对失败必须在 WebSocket upgrade 前返回结构化 unauthorized response，不能进入普通 sync handler。
 - FullPeer connector 必须把 WebSocket `Ping` / `Pong` 作为 transport control frame 处理：`Ping` 需回应 `Pong`，
   `Pong` 需忽略；二者不得被解释为 sync protocol frame，也不得中断 `SyncHello` handshake。
+- FullPeer connector 的 handshake deadline 只能由有效 `SyncHello` 关闭；handshake 后的 exchange idle
+  deadline 只能由已经通过 repo/source/proof 校验的 `SyncHello`、`SyncRequest`、
+  `SyncSnapshotRequest`、`SyncPush` 或 `SyncPushSnapshot` 更新。`SystemMetrics`、browser/host-local
+  projection、WebSocket transport control frame 与其它非 sync message 不得延长 exchange，也不得阻止
+  connector 结束本轮并建立新的 authenticated handshake。
+- `SystemMetrics` 属于 host-local browser 观测投影，server outbound broadcast filter 必须阻止其进入
+  FullPeer session。connector 仍必须对意外收到的非 sync frame保持有界忽略，不能把 filter 当作唯一
+  正确性边界。
 - FullPeer connector 在同一个 WebSocket exchange 中只能接受一次 `SyncHello`；重复 `SyncHello` 必须 fail-closed，
   不得重置已认证 peer、repo route 或本次 handshake 的 source offer/request 集合；诊断必须暴露 `duplicate_sync_hello`
   并停止把该状态机错误当作普通断线持续重连。断线重连必须建立新的 WebSocket。

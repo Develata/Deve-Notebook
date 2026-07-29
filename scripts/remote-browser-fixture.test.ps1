@@ -26,6 +26,72 @@ New-Item -ItemType Directory -Force $temporary | Out-Null
 $process = $null
 $secondaryProcess = $null
 try {
+    try {
+        Clear-RemoteFixtureStdHandleInheritance `
+            -GetStdHandle { param($slot) [IntPtr]::new(123) } `
+            -SetHandleInformation { param($handle, $mask, $flags) $false } `
+            -GetLastError { 5 }
+        throw "std-handle failure injection unexpectedly succeeded"
+    } catch {
+        if ($_.Exception.Message -eq "std-handle failure injection unexpectedly succeeded" -or
+            $_.Exception.Message -notmatch 'Win32 error 5') {
+            throw
+        }
+    }
+
+    $atomicDirectory = Join-Path $temporary "atomic-json"
+    New-Item -ItemType Directory -Force $atomicDirectory | Out-Null
+    $atomicPath = Join-Path $atomicDirectory "fixture-state.json"
+    Write-RemoteFixtureJsonAtomic -Path $atomicPath -Value ([ordered]@{ schema = 1; value = "complete" })
+    $atomicState = Get-Content -Raw -LiteralPath $atomicPath | ConvertFrom-Json
+    if ($atomicState.value -ne "complete") { throw "atomic JSON writer published wrong content" }
+    if (Get-ChildItem -LiteralPath $atomicDirectory -Filter '*.tmp' -Force) {
+        throw "atomic JSON writer left a temporary file"
+    }
+
+    $dualFailureDirectory = Join-Path $temporary "dual-failure"
+    New-Item -ItemType Directory -Force (Join-Path $dualFailureDirectory ".password") | Out-Null
+    Set-Content -LiteralPath (Join-Path $dualFailureDirectory ".password/blocker") -Value "block cleanup"
+    $head = (& git -C $RootDirectory rev-parse HEAD).Trim()
+    $dualFailureOutput = & pwsh -NoProfile -File (Join-Path $PSScriptRoot "remote-browser-fixture.ps1") `
+        start --state-dir $dualFailureDirectory --expected-head $head `
+        --external-origin "https://fixture.example.invalid" 2>&1 | Out-String
+    if ($LASTEXITCODE -eq 0) { throw "dual startup/cleanup failure unexpectedly succeeded" }
+    if ($dualFailureOutput -notmatch 'external override requires origin' -or
+        $dualFailureOutput -notmatch 'fixture startup cleanup failed') {
+        throw "dual failure did not retain both causes: $dualFailureOutput"
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $dualFailureDirectory ".fixture-owner")) -or
+        -not (Test-Path -LiteralPath (Join-Path $dualFailureDirectory "fixture-state.json"))) {
+        throw "dual failure did not preserve owner and recovery state"
+    }
+
+    $ownerMismatchDirectory = Join-Path $temporary "owner-mismatch-final"
+    New-Item -ItemType Directory -Force $ownerMismatchDirectory | Out-Null
+    $finalFixtureId = New-RemoteFixtureRandomHex -Bytes 16
+    Set-Content -LiteralPath (Join-Path $ownerMismatchDirectory ".fixture-owner") -Value ("0" * 32) -NoNewline
+    Set-Content -LiteralPath (Join-Path $ownerMismatchDirectory "credentials.json") -Value "{}"
+    Set-Content -LiteralPath (Join-Path $ownerMismatchDirectory "fixture-env.json") -Value "{}"
+    $ownerMismatchState = [ordered]@{
+        schema = 1; state_kind = "ready"
+        fixture_id = $finalFixtureId; expected_head = $head; source_kind = "external"
+        https_origin = "https://fixture.example.invalid"
+        credentials_file = Join-Path $ownerMismatchDirectory "credentials.json"
+        environment_file = Join-Path $ownerMismatchDirectory "fixture-env.json"
+        backend_pid = $null; backend_process_token = $null
+        tunnel_pid = $null; tunnel_process_token = $null
+        container_name = $null; created_at = [DateTimeOffset]::UtcNow.ToString("O")
+    }
+    Write-RemoteFixtureJsonAtomic -Path (Join-Path $ownerMismatchDirectory "fixture-state.json") -Value $ownerMismatchState
+    & pwsh -NoProfile -File (Join-Path $PSScriptRoot "remote-browser-fixture.ps1") `
+        stop --state-dir $ownerMismatchDirectory 2>$null
+    if ($LASTEXITCODE -eq 0) { throw "owner-mismatched final state unexpectedly authorized cleanup" }
+    foreach ($preserved in @("credentials.json", "fixture-env.json", "fixture-state.json", ".fixture-owner")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ownerMismatchDirectory $preserved))) {
+            throw "owner mismatch deleted unowned fixture material: $preserved"
+        }
+    }
+
     $argumentDirectory = Join-Path $temporary "argument space"
     New-Item -ItemType Directory -Force $argumentDirectory | Out-Null
     $childScript = Join-Path $argumentDirectory "child.ps1"
@@ -155,7 +221,8 @@ Start-Sleep -Seconds 60
     if ($source -notmatch 'Invoke-RemoteFixtureBoundedProcess -Label "password hasher"') { throw "password hasher must use bounded process infra" }
     if ($source -notmatch 'Invoke-RemoteFixtureBoundedProcess -Label "exact-HEAD backend init"') { throw "backend init must use bounded process infra" }
     $librarySource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "lib/remote-browser-fixture.ps1")
-    if ($librarySource -notmatch 'Invoke-RemoteFixtureBoundedDownload -Url \$url') { throw "cloudflared download must use bounded streaming infra" }
+    $cloudflaredSource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "lib/remote-browser-fixture-cloudflared.ps1")
+    if ($cloudflaredSource -notmatch 'Invoke-RemoteFixtureBoundedDownload -Url \$url') { throw "cloudflared download must use bounded streaming infra" }
 
     $failureState = Join-Path $temporary "failed-start"
     $headProof = Join-Path $temporary "head-proof.txt"
@@ -192,7 +259,8 @@ Start-Sleep -Seconds 60
         -WorkingDirectory $multiState -StdoutPath (Join-Path $multiState 'tunnel.out') `
         -StderrPath (Join-Path $multiState 'tunnel.err')
     $state = [ordered]@{
-        schema = 1; fixture_id = $fixtureId; expected_head = ('a' * 40); source_kind = 'test'
+        schema = 1; state_kind = "recovery"
+        fixture_id = $fixtureId; expected_head = ('a' * 40); source_kind = 'executable'
         https_origin = 'https://fixture.example.invalid'
         credentials_file = Join-Path $multiState 'credentials.json'
         environment_file = Join-Path $multiState 'fixture-env.json'
@@ -208,15 +276,17 @@ Start-Sleep -Seconds 60
     }
     $process.Refresh()
     $secondaryProcess.Refresh()
-    if (-not $process.HasExited) { throw 'later owned backend cleanup was skipped' }
-    $process = $null
+    if ($process.HasExited) { throw 'resource mismatch allowed partial backend cleanup' }
     if ($secondaryProcess.HasExited) { throw 'mismatched first resource was unexpectedly stopped' }
     if (-not (Test-Path (Join-Path $multiState '.fixture-owner')) -or -not (Test-Path (Join-Path $multiState 'fixture-state.json'))) {
         throw 'failed multi-resource cleanup removed ownership state'
     }
-    if ((Test-Path (Join-Path $multiState 'credentials.json')) -or (Test-Path (Join-Path $multiState 'fixture-env.json'))) {
-        throw 'normal stop did not remove fixed secret files first'
+    if (-not (Test-Path (Join-Path $multiState 'credentials.json')) -or
+        -not (Test-Path (Join-Path $multiState 'fixture-env.json'))) {
+        throw 'resource mismatch authorized secret deletion'
     }
+    $process.Kill($true)
+    $process = $null
     $secondaryProcess.Kill($true)
     $secondaryProcess = $null
 
@@ -249,7 +319,9 @@ Start-Sleep -Seconds 60
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-& pwsh -NoProfile -File (Join-Path $PSScriptRoot "remote-browser-fixture-bounded-start.test.ps1")
-if ($LASTEXITCODE -ne 0) { throw "bounded-start wrapper regression failed" }
+$boundedStartOutput = & pwsh -NoProfile -File (Join-Path $PSScriptRoot "remote-browser-fixture-bounded-start.test.ps1") 2>&1 | Out-String
+$boundedStartStatus = $LASTEXITCODE
+if ($boundedStartStatus -ne 0) { throw "bounded-start wrapper regression failed: $boundedStartOutput" }
+Write-Output $boundedStartOutput.Trim()
 
 Write-Output "remote-browser-fixture.test: ok"

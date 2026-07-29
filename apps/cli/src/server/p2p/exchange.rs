@@ -27,6 +27,12 @@ const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(5);
 const EXCHANGE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 pub(super) const MAX_EXCHANGE_FRAMES: usize = 64;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum ExchangeProgress {
+    Sync,
+    Ignored,
+}
+
 pub(super) async fn drive_sync_exchange<S>(
     peer: &P2pPeerConfig,
     repo_id: RepoId,
@@ -65,6 +71,7 @@ where
     let mut stats = ExchangeStats::default();
     let handshake_deadline = Instant::now() + handshake_timeout;
     let mut exchange_idle_deadline = None;
+    let mut ignored_frames = 0_u64;
     for frame_index in 0..MAX_EXCHANGE_FRAMES {
         let read_deadline = exchange_idle_deadline.unwrap_or(handshake_deadline);
         let frame = match timeout_at(read_deadline, socket.next()).await {
@@ -72,7 +79,20 @@ where
             Ok(Some(Err(err))) => return Err(err).context("P2P peer returned websocket error"),
             Ok(None) if stats.saw_hello => return Ok(stats),
             Ok(None) => return Err(anyhow!("P2P peer closed websocket during handshake")),
-            Err(_) if stats.saw_hello => return Ok(stats),
+            Err(_) if stats.saw_hello => {
+                tracing::debug!(
+                    peer_label = %peer.label,
+                    peer_id = %peer.peer_id,
+                    repo_id = %repo_id,
+                    ignored_frames,
+                    sent_pushes = stats.sent_pushes,
+                    sent_snapshots = stats.sent_snapshots,
+                    applied_pushes = stats.applied_pushes,
+                    applied_snapshots = stats.applied_snapshots,
+                    "P2P sync exchange idle window completed"
+                );
+                return Ok(stats);
+            }
             Err(_) => return Err(anyhow!("P2P handshake timed out")),
         };
         let Some(frame) = handle_transport_control_frame(socket, frame).await? else {
@@ -80,9 +100,12 @@ where
         };
         let message = decode_server_message(frame)
             .with_context(|| format!("Failed to decode P2P server frame {frame_index}"))?;
-        handle_server_message(peer, repo_id, &state, socket, message, &mut stats).await?;
-        if stats.saw_hello {
+        let progress =
+            handle_server_message(peer, repo_id, &state, socket, message, &mut stats).await?;
+        if progress == ExchangeProgress::Sync {
             exchange_idle_deadline = Some(Instant::now() + exchange_idle_timeout);
+        } else {
+            ignored_frames = ignored_frames.saturating_add(1);
         }
     }
     if stats.saw_hello {
@@ -99,7 +122,7 @@ pub(super) async fn handle_server_message<S>(
     socket: &mut S,
     message: ServerMessage,
     stats: &mut ExchangeStats,
-) -> Result<()>
+) -> Result<ExchangeProgress>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
 {
@@ -148,7 +171,15 @@ where
             stats.requested_import_sources = source_sets.requested_import_sources;
             stats.authenticated_peer_id = Some(peer_id);
             stats.saw_hello = true;
-            Ok(())
+            tracing::debug!(
+                peer_label = %peer.label,
+                peer_id = %stats.authenticated_peer_id.as_ref().expect("authenticated peer set"),
+                repo_id = %repo_id,
+                allowed_export_sources = stats.allowed_export_sources.len(),
+                requested_import_sources = stats.requested_import_sources.len(),
+                "P2P SyncHello accepted"
+            );
+            Ok(ExchangeProgress::Sync)
         }
         ServerMessage::SyncRequest {
             repo_id: frame_repo_id,
@@ -163,7 +194,7 @@ where
                 requests.iter().map(|(peer_id, _)| peer_id),
             )?;
             send_requested_ops(state, socket, frame_repo_id, requests, stats).await?;
-            Ok(())
+            Ok(ExchangeProgress::Sync)
         }
         ServerMessage::SyncSnapshotRequest {
             source_peer_id,
@@ -180,7 +211,7 @@ where
             )?;
             send_requested_snapshot(state, socket, source_peer_id, frame_repo_id, reason, stats)
                 .await?;
-            Ok(())
+            Ok(ExchangeProgress::Sync)
         }
         ServerMessage::SyncPush {
             source_peer_id,
@@ -209,7 +240,7 @@ where
                 encrypted_payload,
             )?;
             stats.applied_pushes += u64::from(count > 0);
-            Ok(())
+            Ok(ExchangeProgress::Sync)
         }
         ServerMessage::SyncPushSnapshot {
             source_peer_id,
@@ -237,11 +268,11 @@ where
             let count =
                 receive_remote_snapshot(state, source_peer_id, frame_repo_id, waterline, payload)?;
             stats.applied_snapshots += u64::from(count > 0);
-            Ok(())
+            Ok(ExchangeProgress::Sync)
         }
         ServerMessage::ProtocolError { error, .. } => {
             Err(anyhow!("P2P peer returned protocol error: {:?}", error))
         }
-        _ => Ok(()),
+        _ => Ok(ExchangeProgress::Ignored),
     }
 }

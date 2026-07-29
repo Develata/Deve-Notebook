@@ -123,6 +123,7 @@ function Start-RemoteBrowserFixture {
     $sourceKind = $null
     $origin = $null
     $complete = $false
+    $primaryFailure = $null
 
     try {
         if ($Options.ExternalOrigin -or $Options.ExternalHeadProofUrl -or $Options.ExternalCredentialsFile) {
@@ -283,7 +284,8 @@ function Start-RemoteBrowserFixture {
         $environment | ConvertTo-Json | Set-Content -LiteralPath $environmentFile -Encoding utf8
         Protect-RemoteFixturePath $environmentFile
         $state = [ordered]@{
-            schema = 1; fixture_id = $fixtureId; expected_head = $Options.ExpectedHead
+            schema = 1; state_kind = "ready"
+            fixture_id = $fixtureId; expected_head = $Options.ExpectedHead
             source_kind = $sourceKind; https_origin = $origin
             credentials_file = $credentialsFile; environment_file = $environmentFile
             backend_pid = if ($backendProcess) { $backendProcess.Id } else { $null }
@@ -292,10 +294,12 @@ function Start-RemoteBrowserFixture {
             tunnel_process_token = $tunnelToken
             container_name = $containerName; created_at = [DateTimeOffset]::UtcNow.ToString("O")
         }
-        $state | ConvertTo-Json | Set-Content -LiteralPath $stateFile -Encoding utf8
-        Protect-RemoteFixturePath $stateFile
+        Write-RemoteFixtureJsonAtomic -Path $stateFile -Value $state
         $complete = $true
         return $environmentFile
+    } catch {
+        $primaryFailure = $_.Exception.Message
+        throw
     } finally {
         if (-not $complete) {
             $cleanupErrors = [Collections.Generic.List[string]]::new()
@@ -322,7 +326,8 @@ function Start-RemoteBrowserFixture {
             }
             if ($cleanupErrors.Count -gt 0) {
                 $recoveryState = [ordered]@{
-                    schema = 1; fixture_id = $fixtureId; expected_head = $Options.ExpectedHead
+                    schema = 1; state_kind = "recovery"
+                    fixture_id = $fixtureId; expected_head = $Options.ExpectedHead
                     source_kind = $sourceKind; https_origin = $origin
                     credentials_file = $credentialsFile; environment_file = $environmentFile
                     backend_pid = if ($backendProcess) { $backendProcess.Id } else { $null }
@@ -332,12 +337,16 @@ function Start-RemoteBrowserFixture {
                     container_name = $containerName; created_at = [DateTimeOffset]::UtcNow.ToString("O")
                 }
                 try {
-                    $recoveryState | ConvertTo-Json | Set-Content -LiteralPath $stateFile -Encoding utf8
-                    Protect-RemoteFixturePath $stateFile
+                    Write-RemoteFixtureJsonAtomic -Path $stateFile -Value $recoveryState
                 } catch {
                     $cleanupErrors.Add("failed to preserve recovery state: $($_.Exception.Message)")
                 }
-                throw "fixture startup cleanup failed; ownership state was preserved: $($cleanupErrors -join '; ')"
+                $failurePrefix = if ($primaryFailure) {
+                    "fixture startup failed: $primaryFailure; "
+                } else {
+                    ""
+                }
+                throw "${failurePrefix}fixture startup cleanup failed; ownership state was preserved: $($cleanupErrors -join '; ')"
             }
             Remove-RemoteFixtureStartupState -StateDirectory $stateDirectory
             Remove-Item -LiteralPath $stateFile, $ownerFile -Force -ErrorAction SilentlyContinue
@@ -350,14 +359,7 @@ function Stop-RemoteBrowserFixture {
     $stateDirectory = Resolve-RemoteFixtureStateDirectory $StateDirectory
     $stateFile = Join-Path $stateDirectory "fixture-state.json"
     $ownerFile = Join-Path $stateDirectory ".fixture-owner"
-    foreach ($path in @($stateFile, $ownerFile)) {
-        $item = Get-Item -LiteralPath $path -Force
-        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "unsafe fixture state path: $path" }
-    }
-    $state = Get-Content -Raw -LiteralPath $stateFile | ConvertFrom-Json
-    if ((Get-Content -Raw -LiteralPath $ownerFile).Trim() -ne $state.fixture_id) {
-        throw "fixture owner marker does not match state"
-    }
+    $state = Read-RemoteFixtureFinalState -StateDirectory $stateDirectory
     $cleanupErrors = [Collections.Generic.List[string]]::new()
     foreach ($secretName in $script:RemoteFixtureSecretFileNames) {
         try {
@@ -367,21 +369,12 @@ function Stop-RemoteBrowserFixture {
             }
         } catch { $cleanupErrors.Add($_.Exception.Message) }
     }
-    $expectedCredentials = [IO.Path]::GetFullPath((Join-Path $stateDirectory "credentials.json"))
-    $expectedEnvironment = [IO.Path]::GetFullPath((Join-Path $stateDirectory "fixture-env.json"))
-    if (
-        [IO.Path]::GetFullPath([string]$state.credentials_file) -ne $expectedCredentials -or
-        [IO.Path]::GetFullPath([string]$state.environment_file) -ne $expectedEnvironment
-    ) {
-        $cleanupErrors.Add("refusing to remove fixture files outside fixture state directory")
-    } else {
-        foreach ($secretPath in @($state.credentials_file, $state.environment_file)) {
-            try {
-                if (Test-Path -LiteralPath $secretPath) {
-                    Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
-                }
-            } catch { $cleanupErrors.Add($_.Exception.Message) }
-        }
+    foreach ($secretPath in @($state.credentials_file, $state.environment_file)) {
+        try {
+            if (Test-Path -LiteralPath $secretPath) {
+                Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
+            }
+        } catch { $cleanupErrors.Add($_.Exception.Message) }
     }
     try { Stop-RemoteFixtureProcess -Label "tunnel" -ProcessId $state.tunnel_pid -ExpectedToken $state.tunnel_process_token } catch { $cleanupErrors.Add($_.Exception.Message) }
     try { Stop-RemoteFixtureProcess -Label "backend" -ProcessId $state.backend_pid -ExpectedToken $state.backend_process_token } catch { $cleanupErrors.Add($_.Exception.Message) }

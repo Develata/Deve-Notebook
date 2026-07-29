@@ -168,7 +168,15 @@ function Write-BoundedStartRedactedTail {
 # fails; the startup state and owner marker are then preserved.
 function Invoke-BoundedStartRecovery {
     param([Parameter(Mandatory)][string]$StateDirectory)
-    if (Test-Path -LiteralPath (Join-Path $StateDirectory "fixture-state.json") -PathType Leaf) { return "deferred" }
+    $finalStatePath = Join-Path $StateDirectory "fixture-state.json"
+    if (Test-Path -LiteralPath $finalStatePath -PathType Leaf) {
+        try {
+            [void](Read-RemoteFixtureFinalState -StateDirectory $StateDirectory)
+            return "deferred"
+        } catch {
+            throw "published fixture state is invalid; ownership state was preserved: $($_.Exception.Message)"
+        }
+    }
     $cleanupErrors = [Collections.Generic.List[string]]::new()
     $ownerPath = Join-Path $StateDirectory ".fixture-owner"
     $state = $null
@@ -177,19 +185,38 @@ function Invoke-BoundedStartRecovery {
     } catch {
         $cleanupErrors.Add($_.Exception.Message)
     }
-    if ($null -ne $state -and (Test-Path -LiteralPath $ownerPath -PathType Leaf) -and
-        (Get-Content -Raw -LiteralPath $ownerPath).Trim() -ne $state.fixture_id) {
-        # A stale prior-round state must not drive this round's cleanup.
-        $cleanupErrors.Add("fixture owner marker does not match startup state")
-        $state = $null
+    if ($null -ne $state) {
+        if (-not (Test-Path -LiteralPath $ownerPath -PathType Leaf)) {
+            $cleanupErrors.Add("fixture owner marker is missing for startup state")
+            $state = $null
+        } elseif ((Get-Content -Raw -LiteralPath $ownerPath).Trim() -ne $state.fixture_id) {
+            # A stale prior-round state must not drive this round's cleanup.
+            $cleanupErrors.Add("fixture owner marker does not match startup state")
+            $state = $null
+        }
+    } elseif (Test-Path -LiteralPath $ownerPath -PathType Leaf) {
+        $cleanupErrors.Add("fixture owner marker exists without valid startup state")
     }
-    foreach ($secretName in $script:RemoteFixtureSecretFileNames) {
+    if ($null -ne $state) {
         try {
-            $secretPath = Join-Path $StateDirectory $secretName
-            if (Test-Path -LiteralPath $secretPath) {
-                Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
-            }
-        } catch { $cleanupErrors.Add($_.Exception.Message) }
+            Assert-RemoteFixtureStartupRecoveryAuthority -State $state
+        } catch {
+            $cleanupErrors.Add($_.Exception.Message)
+            $state = $null
+        }
+    }
+    $ownedSecretPaths = @($script:RemoteFixtureSecretFileNames | ForEach-Object { Join-Path $StateDirectory $_ })
+    if ($null -eq $state -and ($ownedSecretPaths | Where-Object { Test-Path -LiteralPath $_ })) {
+        $cleanupErrors.Add("secret material exists without matching startup ownership state")
+    }
+    if ($null -ne $state) {
+        foreach ($secretPath in $ownedSecretPaths) {
+            try {
+                if (Test-Path -LiteralPath $secretPath) {
+                    Remove-Item -LiteralPath $secretPath -Force -ErrorAction Stop
+                }
+            } catch { $cleanupErrors.Add($_.Exception.Message) }
+        }
     }
     if ($null -ne $state) {
         try { Stop-RemoteFixtureProcess -Label "tunnel" -ProcessId $state.tunnel_pid -ExpectedToken $state.tunnel_process_token } catch { $cleanupErrors.Add($_.Exception.Message) }
@@ -267,6 +294,23 @@ try {
     }
 
     $worker.WaitForExit()
+    $postExitOutputBytes = Get-RemoteFixtureOutputBytes -Paths @($workerStdout, $workerStderr)
+    if ($postExitOutputBytes -gt $WorkerOutputLimitBytes) {
+        Limit-RemoteFixtureOutputFiles -Paths @($workerStdout, $workerStderr) -CombinedLimitBytes $WorkerOutputLimitBytes
+        $failure = "fixture start worker exceeded the $WorkerOutputLimitBytes byte output limit at stage '$lastStage'"
+        $recoveryFailure = $null
+        $recovery = $null
+        try {
+            $recovery = Invoke-BoundedStartRecovery -StateDirectory $stateDirectory
+        } catch {
+            $recoveryFailure = $_.Exception.Message
+        }
+        if ($recoveryFailure) { Exit-BoundedStartFailure "$failure; $recoveryFailure" }
+        if ($recovery -eq "deferred") {
+            Exit-BoundedStartFailure "$failure; fixture-state.json was already published, so cleanup is deferred to the fixture stop command"
+        }
+        Exit-BoundedStartFailure "$failure; owned processes, containers, and secret material were cleaned up"
+    }
     if ($worker.ExitCode -ne 0) {
         $secrets = Get-BoundedStartSecretValues -StateDirectory $stateDirectory
         $recoveryFailure = $null

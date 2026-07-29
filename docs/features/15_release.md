@@ -28,6 +28,8 @@
 - Docker release image 在 candidate workflow 只构建一次，并以 `org.opencontainers.image.source` 绑定公开源码仓库；runtime/login、双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须运行该 exact image。候选封存 Docker archive SHA-256 与 image ID；tag 后 load 同一 archive，成功后才 push Docker-safe version tag。stable 只有在 SemVer 与 Git ancestry 均前进时才更新 `latest`，prerelease 不更新；冻结为 `public-preview` 的 `v0.1.0` 必须发布为 GitHub prerelease，且不得更新 GitHub/GHCR `latest`。GHCR version tag 必须在空 Docker credential context 中可匿名 pull 且 image ID 不变，随后才能公开 GitHub Release；首次 package 默认 private 时 promotion 应保持 draft 并等待显式 public visibility 操作。stable 的两个远端 tag 必须解析到同一 manifest digest并生成 registry digest attestation。
 - Windows/macOS public-preview packages 可以 unsigned；Android 缺 signing secret 时的 unsigned APK 只能作为非候选诊断产物，绝不能进入 candidate allowlist或替代 signed ARM64 APK。任何这些 artifacts 都不等于 notarization、store 或 physical-device readiness。
 - Android GitHub target-host lifecycle 运行同一 HEAD 的 x86_64 emulator package；封存的 ARM64 APK 另经严格签名与 signer 复核。前者证明功能与 WebCrypto capability，后者证明候选字节和签名身份，不能把 x86_64 receipt 写成 ARM64 逐字节安装证据。
+- Android target-host gate 只接受有界 canonical emulator binary identity 与实际 renderer 日志证据；
+  启动参数本身不证明 renderer，松散 version/build token 也不证明 emulator binary。
 - 后端不会把仍含 Trunk development live-reload 标记的 `index.html` 当作 release 前端服务。显式 `DEVE_STATIC_DIR` 命中该类文件时启动应 fail-closed；嵌入式前端命中该类文件时应退回非前端交付形态，并由浏览器 smoke 证明真实 release frontend 是否可用。
 - 其它客户端交付形态可以存在，但成熟度应明确。
 - 首个公开 tag 不发布 Linux GTK3/WebKitGTK 4.x native artifacts；Linux 用户使用 Web / Server / Docker 交付面。
@@ -43,6 +45,12 @@
 - candidate、普通 CI、Docker builder 与 native target-host jobs 必须使用根 `rust-toolchain.toml` 规定的精确 Rust 1.97.0；浮动 `stable`、minor-only pin 或与 Cargo MSRV 不一致的 job 必须在构建前失败。
 - Windows packaged UI gate 必须驱动已安装 Desktop 的真实 WebView，覆盖 native session、创建/编辑、commit/history、Settings focus trap 与关闭后 sidecar 清理；快速 marker startup probe 仍保留，但不能单独证明 UI 可用。
 - Windows LocalBackend、NoteGit 与安装/卸载 smoke 分别覆盖 MSI 和 NSIS；RemoteBrowser/native recovery 在共享 Desktop runtime payload 上由 NSIS 安装面执行一次，其证据不扩张为 MSI installer-engine 的 RemoteBrowser 声明。
+- Windows RemoteBrowser fixture 的最终 state 必须原子发布，清理权限来自可解析且 owner/execution
+  identity、lifecycle kind 和登记资源实时 owner 匹配的 state；worker 中断后的 startup ownership
+  state 也必须先证明 source/resource shape、live process token 与 container label。两种预检都必须
+  先于 secret 删除。主失败与
+  cleanup failure 必须同时报告，stdout/stderr 退出后仍受总预算，
+  pipe handle inheritance 清除失败必须 fail-closed。
 - Native build、manifest、draft upload 或 API 复核失败时不得把不完整状态报告为已发布版本；失败产生的 draft 只作为显式恢复对象。若公开 mutation 已成功但 runner 未能确认，同一 candidate 的重跑必须先复核完整远端状态。
 - 同一 tag 的 workflow rerun 只允许复用 byte-identical draft、image-ID 相同的 immutable version tag，或 tag、完整资产名称/摘要、prerelease 分类与 registry identity 都精确匹配的已公开 Release。任何 remote probe 只有明确 HTTP 404 才表示不存在；网络、认证、限流和 5xx 均 fail-closed，且 registry version 指向其它 image identity 时禁止覆盖。
 

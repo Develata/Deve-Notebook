@@ -109,6 +109,61 @@ async fn p2p_exchange_transport_ping_does_not_extend_application_idle_deadline()
 }
 
 #[tokio::test(start_paused = true)]
+async fn p2p_exchange_system_metrics_does_not_extend_application_idle_deadline()
+-> anyhow::Result<()> {
+    let identity = Arc::new(IdentityKeyPair::generate());
+    let (_dir, state) = test_state_with_dir(identity)?;
+    let repo_id = state
+        .repo
+        .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+        .expect("repo info")
+        .uuid;
+    let remote = IdentityKeyPair::generate();
+    let remote_peer = remote.peer_id();
+    let hello = Message::Binary(encode_server_binary(&signed_server_hello(
+        &remote,
+        repo_id,
+        VersionVector::new(),
+    ))?);
+    let metrics = Message::Binary(encode_server_binary(&ServerMessage::SystemMetrics {
+        cpu_usage_percent: 1.0,
+        memory_used_mb: 2,
+        active_connections: 3,
+        ops_processed: 4,
+        uptime_secs: 5,
+        db_size_bytes: 6,
+        doc_count: 7,
+    })?);
+    let mut socket = DelayedSocket::new(vec![
+        DelayedFrame::Ready(hello),
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(metrics.clone()),
+        },
+        DelayedFrame::AfterPoll {
+            delay: Duration::from_millis(30),
+            sleep: None,
+            message: Some(metrics),
+        },
+    ]);
+
+    let stats = drive_sync_exchange_with_timeouts(
+        &peer_with_id(repo_id, remote_peer.as_str()),
+        repo_id,
+        state,
+        &mut socket,
+        Duration::from_millis(50),
+        Duration::from_millis(50),
+    )
+    .await?;
+
+    assert!(stats.saw_hello);
+    assert!(socket.sent.is_empty());
+    Ok(())
+}
+
+#[tokio::test(start_paused = true)]
 async fn p2p_exchange_transport_ping_does_not_extend_handshake_deadline() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let (_dir, state) = test_state_with_dir(identity)?;

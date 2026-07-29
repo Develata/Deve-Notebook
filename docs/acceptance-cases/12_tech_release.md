@@ -370,6 +370,7 @@
     - run: node --test scripts/smoke-desktop-remote-browser.test.mjs
     - run: pwsh -NoProfile -File scripts/desktop-install-root.test.ps1
     - run: pwsh -NoProfile -File scripts/remote-browser-fixture.test.ps1
+    - run: pwsh -NoProfile -File scripts/remote-browser-fixture-bounded-start.test.ps1
     - run: bash scripts/remote-browser-fixture.test.sh
     - run: cargo test -p deve_core native_adapter -- --nocapture
     - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
@@ -394,6 +395,11 @@
     - native_assert: desktop_packaged_ui_uses_installed_binary_and_real_webview true
     - native_assert: desktop_packaged_ui_covers_create_edit_commit_history_and_settings_focus_trap true
     - native_assert: desktop_packaged_ui_exit_leaves_no_orphan_sidecar true
+    - native_assert: windows_remote_fixture_state_publish_is_atomic_and_owner_bound true
+    - native_assert: windows_remote_fixture_resource_owner_preflight_precedes_secret_cleanup true
+    - native_assert: windows_remote_fixture_startup_state_preflight_precedes_secret_cleanup true
+    - native_assert: windows_remote_fixture_preserves_primary_and_cleanup_failures true
+    - native_assert: windows_remote_fixture_fast_exit_output_and_pipe_handles_fail_closed true
     - evidence_boundary: startup_marker_probe_is_not_packaged_ui_readiness
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

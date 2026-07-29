@@ -10,6 +10,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/baseline-wrapper.sh
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+source "$ROOT_DIR/scripts/lib/docker-p2p-mesh-diagnostics.sh"
 COMPOSE_FILE="${DEVE_DOCKER_P2P_MESH_COMPOSE_FILE:-$ROOT_DIR/docker-compose.mesh.yml}"
 if [[ -n "${DEVE_ACCEPTANCE_PRODUCER_STATE_DIR:-}" ]]; then
   if [[ -n "${DEVE_DOCKER_P2P_MESH_PROJECT:-}" \
@@ -247,15 +248,7 @@ cleanup() {
 }
 
 diagnose() {
-  local logs
-  echo "docker-p2p-mesh-smoke: collecting compose diagnostics" >&2
-  docker_compose ps >&2 || true
-  logs="$(docker_compose logs --no-color 2>/dev/null || true)"
-  if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
-    echo "docker-p2p-mesh-smoke: compose logs suppressed because token material was detected" >&2
-    return
-  fi
-  printf '%s\n' "$logs" >&2
+  docker_p2p_mesh_diagnose
 }
 
 wait_for_peer() {
@@ -776,6 +769,7 @@ DELEGATED_SC_HEADER_VALUE="$(delegated_sc_header_value)" || fail "could not comp
   || fail "P2P producer refuses an unbound compose override"
 bash "$ROOT_DIR/scripts/docker-p2p-mesh-bootstrap.test.sh"
 bash "$ROOT_DIR/scripts/docker-p2p-mesh-cleanup.test.sh"
+bash "$ROOT_DIR/scripts/docker-p2p-mesh-diagnostics.test.sh"
 docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 preflight_port "$PORT_A"
 preflight_port "$PORT_B"

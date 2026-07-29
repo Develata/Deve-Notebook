@@ -44,6 +44,13 @@ pub(super) fn spawn_mesh_connectors(
                     break;
                 }
                 let attempt = p2p_status::record_attempt(&peer);
+                tracing::debug!(
+                    peer_label = %peer.label,
+                    peer_id = %peer.peer_id,
+                    repo_id = %peer.repo_id,
+                    attempt,
+                    "P2P mesh connector attempt started"
+                );
                 let exchange = tokio::select! {
                     changed = shutdown.changed() => {
                         if changed.is_err() || *shutdown.borrow() {

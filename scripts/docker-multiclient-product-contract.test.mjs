@@ -7,27 +7,35 @@ import {
 } from "./lib/docker-multiclient-product-journeys.mjs";
 
 test("tag-ready product journey covers destructive repo removal, typed diff, source control, and external apply", () => {
-  const source = fs.readFileSync(
-    new URL("./lib/docker-multiclient-product-journeys.mjs", import.meta.url),
+  const lifecycle = fs.readFileSync(
+    new URL("./lib/docker-multiclient-repo-lifecycle.mjs", import.meta.url),
     "utf8",
   );
-  assert.match(source, /data-deve-repo-switcher-create-input/);
-  assert.match(source, /data-deve-repo-switcher-remove/);
-  assert.match(source, /data-deve-repo-removal-confirm/);
-  assert.match(source, /fallback repository ready after removal/);
-  assert.match(source, /assertRemovalPreservation/);
-  assert.match(source, /sha256sum/);
-  assert.match(source, /test ! -e "\$root\/\.notegit"/);
-  assert.match(source, /test -f "\$root\/\.git\/config"/);
-  assert.match(source, /data-deve-diff-projection=\\?"backend-typed/);
-  assert.match(source, /textarea\[name=\\?"commit-message/);
-  assert.match(source, /data-deve-external-section-body=\\?"pending/);
-  assert.match(source, /data-deve-external-apply=\\?"true/);
-  assert.match(source, /external workspace mutation must not bypass ledger authority/);
-  assert.match(source, /first client editor settled before external mutation/);
-  assert.match(source, /peer editor settled before external mutation/);
+  const workspace = fs.readFileSync(
+    new URL("./lib/docker-multiclient-workspace.mjs", import.meta.url),
+    "utf8",
+  );
+  const sourceControl = fs.readFileSync(
+    new URL("./lib/docker-multiclient-source-control.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(lifecycle, /data-deve-repo-switcher-create-input/);
+  assert.match(lifecycle, /data-deve-repo-switcher-remove/);
+  assert.match(lifecycle, /data-deve-repo-removal-confirm/);
+  assert.match(lifecycle, /fallback repository ready after removal/);
+  assert.match(lifecycle, /assertRemovalPreservation/);
+  assert.match(workspace, /sha256sum/);
+  assert.match(workspace, /test ! -e "\$root\/\.notegit"/);
+  assert.match(workspace, /test -f "\$root\/\.git\/config"/);
+  assert.match(sourceControl, /data-deve-diff-projection=\\?"backend-typed/);
+  assert.match(sourceControl, /textarea\[name=\\?"commit-message/);
+  assert.match(sourceControl, /data-deve-external-section-body=\\?"pending/);
+  assert.match(sourceControl, /data-deve-external-apply=\\?"true/);
+  assert.match(sourceControl, /external workspace mutation must not bypass ledger authority/);
+  assert.match(sourceControl, /first client editor settled before external mutation/);
+  assert.match(sourceControl, /peer editor settled before external mutation/);
   assert.match(
-    source,
+    sourceControl,
     /settled before external mutation[\s\S]*?mutateWorkspaceFile\(repoId, path, externalContent\)/,
     "the authority baseline must settle before the external workspace mutation",
   );
@@ -35,7 +43,11 @@ test("tag-ready product journey covers destructive repo removal, typed diff, sou
 
 test("tag-ready product journey covers mobile last-repo NoScope, restart, and first create", () => {
   const journey = fs.readFileSync(
-    new URL("./lib/docker-multiclient-product-journeys.mjs", import.meta.url),
+    new URL("./lib/docker-multiclient-repo-lifecycle.mjs", import.meta.url),
+    "utf8",
+  );
+  const workspace = fs.readFileSync(
+    new URL("./lib/docker-multiclient-workspace.mjs", import.meta.url),
     "utf8",
   );
   const runner = fs.readFileSync(
@@ -43,7 +55,7 @@ test("tag-ready product journey covers mobile last-repo NoScope, restart, and fi
     "utf8",
   );
   assert.match(journey, /exerciseLastRepoNoScope/);
-  assert.match(journey, /repo_creation_projection_base/);
+  assert.match(workspace, /repo_creation_projection_base/);
   assert.match(journey, /assertNoScope/);
   assert.match(journey, /restartCandidateContainer/);
   assert.match(journey, /createFirstRepoFromNoScope/);

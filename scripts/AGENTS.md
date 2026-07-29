@@ -52,9 +52,12 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `dispatch-native-target-host-workflow.test.sh` | Verifies RemoteBrowser dispatch fields, platform dependencies, API fallback parity, and absence of password dispatch inputs |
 | `remote-browser-fixture.{sh,ps1}` | Owns exact-HEAD loopback backend, random credentials, pinned HTTPS tunnel, and fail-closed cleanup for RemoteBrowser target-host evidence |
 | `remote-browser-fixture-bounded-start.ps1` | Runs the Windows fixture start worker under one total startup deadline and a worker output cap, relays allowlisted stage progress, and on timeout terminates the worker tree and recovers owned resources/secrets from the atomic startup state |
+| `lib/remote-browser-fixture-cloudflared.ps1` | Owns the checksum-pinned Windows cloudflared download/install path used by the RemoteBrowser fixture |
+| `lib/remote-browser-fixture-state.ps1` | Atomically publishes ready/recovery state and preflights source/resource/live-owner identity before any Windows fixture secret cleanup |
+| `lib/desktop-remote-browser-native-recovery.ps1` | Owns Win32 native-menu discovery/dispatch and replacement-process proof for the Desktop RemoteBrowser-to-LocalBackend recovery journey |
 | `lib/remote-browser-fixture-progress.ps1` | Atomic startup-state serialization plus the fixed nonsecret stage-name allowlist shared by the Windows fixture and its bounded-start watchdog |
-| `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, secret cleanup, PID ownership, and platform lifecycle invariants |
-| `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, a pipe-captured success return while fixture survivors keep running (std-handle inheritance hygiene), deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, corrupted-state fail-closed, bounded redacted failure output, and a real-worker integration failure path |
+| `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, atomic final state, dual-failure preservation, secret cleanup, PID/owner identity, and platform lifecycle invariants |
+| `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, a pipe-captured success return while fixture survivors keep running (std-handle inheritance hygiene), deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, partial/corrupted state fail-closed, fast-exit combined output limits, bounded redacted failure output, and a real-worker integration failure path |
 | `lib/remote-browser-fixture-json.sh` | Serializes the fixed private fixture state/environment JSON schemas without owning lifecycle decisions |
 | `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |
 | `lib/desktop-install-root.ps1` | Canonical Win32 install-root validator shared by the packaged Desktop RemoteBrowser smoke and tests |
@@ -84,6 +87,9 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Owns an Android emulator target lifecycle, builds a debug WebView shell APK, and selects an explicit LocalBackend or RemoteBrowser writable journey before bounded cleanup |
+| `lib/android-emulator-pin.sh` / `android-emulator-pin.test.sh` | Resolves the checksum-pinned emulator binary, serializes same-build cache publication, and proves its canonical version/build banner under independent time/output bounds |
+| `lib/android-emulator-renderer.sh` / `android-emulator-renderer.test.sh` | Parses every renderer selection in a bounded owned-emulator log prefix and fail-closes missing, conflicting, unapproved, or legacy evidence |
+| `lib/android-emulator-diagnostics.sh` | Bounded target-emulator diagnostics extracted from the lifecycle orchestrator so failure reporting remains cohesive |
 | `lib/android-install-retry.sh` | Bounded APK install recovery shared by every Android install host: retries only the exact package-service bootstrap / package-services-ready failure signatures under one absolute deadline, waits for package-service and launcher-activity readiness, and stays fail-closed for timeouts and mixed failures |
 | `lib/android-startup-diagnostics.sh` | Bounded, app-specific startup exit diagnostics (exit-info, crash/runtime logcat, process state) collected only when the launched app process is missing; never replaces the primary startup failure |
 | `android-startup-diagnostics.test.sh` | Mocked tests proving diagnostics run only on process exit, stay time/output bounded, keep unsupported exit-info nonfatal, and never mask the primary failure or print secret-like values |
@@ -119,7 +125,11 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke, or verifies an explicitly supplied existing candidate image without rebuilding |
 | `smoke-docker-multiclient.sh` | Builds or reuses one Docker candidate image, then drives isolated Playwright clients; the required product tier also proves repo lifecycle, typed diff, Source Control, and External Changes |
-| `lib/docker-multiclient-product-journeys.mjs` | Docker product-journey helper for UI intent, candidate-container setup/restart, and container-side removal preservation assertions |
+| `lib/docker-p2p-mesh-diagnostics.sh` / `docker-p2p-mesh-diagnostics.test.sh` | Bounded, token-redacted node-role/container-health/resource diagnostics for FullPeer mesh failures |
+| `lib/docker-multiclient-product-journeys.mjs` | Stable re-export boundary for Docker product journeys |
+| `lib/docker-multiclient-repo-lifecycle.mjs` | Repo create/switch/removal, last-repo NoScope, restart, and cross-client recreation journey |
+| `lib/docker-multiclient-workspace.mjs` | Candidate-container projection locator, identity, mutation, and removal-preservation fixture boundary |
+| `lib/docker-multiclient-source-control.mjs` | Typed diff, Source Control commit/history, and ledger-gated External Changes journey |
 | `lib/docker-multiclient-runtime.mjs` | Browser diagnostics, shell probes, exact runtime-incarnation restart proof, and narrow restart transport-error classification for Docker multiclient evidence |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
 | `lib/android-tools.sh` | Shared Android SDK / Android Studio JBR discovery helpers for local and target-host Android gates |

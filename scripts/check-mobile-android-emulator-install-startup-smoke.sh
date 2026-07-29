@@ -6,6 +6,7 @@ source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
@@ -28,10 +29,10 @@ DIAGNOSTICS_PRINTED=0
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-diagnostics.sh"
 
 # This gate owns only target-host emulator orchestration. It delegates package
 # build and install/startup checks to the narrower Android shell gates.
-
 fail() {
   echo "mobile-android-emulator-install-startup-smoke-check: $*" >&2
   print_emulator_diagnostics >&2
@@ -111,33 +112,6 @@ write_emulator_owner() {
   printf 'launch_state=%s\nemulator_pid=%s\nemulator_serial=%s\navd_name=%s\n' \
     "$launch_state" "$pid" "$EMULATOR_SERIAL" "$AVD_NAME" >"$temporary"
   mv -f -- "$temporary" "$OWNER_FILE"
-}
-
-print_emulator_diagnostics() {
-  DIAGNOSTICS_PRINTED=1
-  if command -v adb >/dev/null 2>&1; then
-    echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
-    adb devices 2>&1 || true
-  elif android_tool_path adb >/dev/null 2>&1; then
-    echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
-    android_run_tool adb devices 2>&1 || true
-  fi
-  if command -v adb >/dev/null 2>&1 || android_tool_path adb >/dev/null 2>&1; then
-    echo "mobile-android-emulator-install-startup-smoke-check: emulator /data capacity:"
-    adb_cmd -s "$EMULATOR_SERIAL" shell "df -k /data" 2>&1 || true
-  fi
-  if command -v emulator >/dev/null 2>&1 || android_tool_path emulator >/dev/null 2>&1; then
-    echo "mobile-android-emulator-install-startup-smoke-check: emulator AVD list:"
-    android_run_tool emulator -list-avds 2>&1 || true
-  fi
-  if [[ -f "$LOG_DIR/avdmanager.log" ]]; then
-    echo "mobile-android-emulator-install-startup-smoke-check: avdmanager.log tail:"
-    tail -n 120 "$LOG_DIR/avdmanager.log" || true
-  fi
-  if [[ -f "$LOG_DIR/emulator.log" ]]; then
-    echo "mobile-android-emulator-install-startup-smoke-check: emulator.log tail:"
-    tail -n 120 "$LOG_DIR/emulator.log" || true
-  fi
 }
 
 install_sdk_packages() {
@@ -417,6 +391,8 @@ run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
 run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
 run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
 run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"
+run bash "$ROOT_DIR/scripts/android-emulator-pin.test.sh"
+run bash "$ROOT_DIR/scripts/android-emulator-renderer.test.sh"
 verify_boot_completion_contract
 verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
@@ -448,7 +424,6 @@ install_sdk_packages
 PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)" \
   || fail "pinned Android emulator $ANDROID_EMULATOR_PIN_VERSION (build $ANDROID_EMULATOR_PIN_BUILD_ID) could not be resolved"
 echo "mobile-android-emulator-install-startup-smoke-check: pinned emulator: $PINNED_EMULATOR_BIN"
-echo "mobile-android-emulator-install-startup-smoke-check: emulator version: $("$PINNED_EMULATOR_BIN" -version 2>&1 | grep -a -m 1 'Android emulator version' || true)"
 require_android_tool adb
 ensure_avd
 
@@ -490,7 +465,9 @@ write_emulator_owner "$EMULATOR_PID"
 wait_for_boot
 verify_emulator_data_capacity
 echo "mobile-android-emulator-install-startup-smoke-check: emulator renderer selection:"
-grep -aE "vulkan_mode_selected|gles_mode_selected|setCurrentRenderer" "$LOG_DIR/emulator.log" | head -n 4 || true
+android_emulator_renderer_verify "$LOG_DIR/emulator.log" \
+  || fail "Android emulator renderer proof failed: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE"
+echo "mobile-android-emulator-install-startup-smoke-check: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE"
 
 adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
 

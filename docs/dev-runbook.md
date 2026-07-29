@@ -533,6 +533,11 @@ restart. The script does not execute an explicit merge or expose live vector
 equality; use the NET-015 targeted merge test and NET-017 vector monotonicity
 tests for those contracts.
 
+The FullPeer exchange idle window advances only on accepted sync protocol
+frames. Host-local `SystemMetrics`, Ping/Pong, and other non-sync traffic do
+not keep an exchange alive; the next connector round therefore performs a
+fresh authenticated hello even while host metrics continue to publish.
+
 For Windows/WSL stability, the smoke builds a single shared local image
 serially and defaults `DEVE_DOCKER_P2P_MESH_BUILDKIT=0`; set it to `1` only
 when the local Docker build context handles extended attributes reliably.
@@ -1222,7 +1227,15 @@ image (`system-images;android-37.0;google_apis;x86_64`) with the `-gpu swangle`
 renderer, 4096 MiB guest RAM, and a pinned stable emulator binary (36.6.11.0,
 build 15507667, resolved fail-closed by
 `scripts/lib/android-emulator-pin.sh`). The renderer and binary pins are
-load-bearing: under the legacy `swiftshader_indirect` translator path the
+load-bearing. The binary probe is time/output bounded and accepts only the
+canonical version/build banner. Concurrent downloads publish one build under
+a bounded build-scoped cache lock and recheck an existing binary while holding
+that lock. An existing entry that fails the canonical probe is preserved and
+fails closed instead of being replaced while it may still be in use. Runtime renderer proof consumes every matching selection in the
+owned emulator's bounded log prefix: current `-gpu swangle` emits the complete
+`vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader` pair, while
+missing, conflicting, or legacy `swiftshader_indirect` evidence fails before
+APK installation. Under the legacy `swiftshader_indirect` translator path the
 37.0 image's guest surfaceflinger aborts (`hasReadColorBufferDma` goldfish
 mapper assert on the RegionSampling thread) spontaneously within minutes of
 boot — before any APK is installed — then crash-loops and takes

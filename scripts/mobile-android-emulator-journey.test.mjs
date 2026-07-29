@@ -62,6 +62,18 @@ const emulatorPin = fs.readFileSync(
   new URL("./lib/android-emulator-pin.sh", import.meta.url),
   "utf8",
 );
+const emulatorPinTest = fs.readFileSync(
+  new URL("./android-emulator-pin.test.sh", import.meta.url),
+  "utf8",
+);
+const emulatorRenderer = fs.readFileSync(
+  new URL("./lib/android-emulator-renderer.sh", import.meta.url),
+  "utf8",
+);
+const emulatorRendererTest = fs.readFileSync(
+  new URL("./android-emulator-renderer.test.sh", import.meta.url),
+  "utf8",
+);
 const producerRegistry = JSON.parse(fs.readFileSync(
   new URL("../docs/registry/acceptance-producers.json", import.meta.url),
   "utf8",
@@ -362,21 +374,34 @@ test("emulator gate pins the exact stable emulator build fail-closed", () => {
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_BUILD_ID="15507667"/);
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_LINUX="[0-9a-f]{64}"/);
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_WINDOWS="[0-9a-f]{64}"/);
-  // checksum precedes extraction, and extraction lands via atomic rename
+  // checksum precedes extraction, then one build-scoped publisher owns rename
   assert.match(emulatorPin, /sha256sum -c --quiet -/);
   assert.match(
     emulatorPin,
-    /sha256sum[\s\S]*unzip[\s\S]*mv -f -- "\$extracted" "\$cache_root\/\$ANDROID_EMULATOR_PIN_BUILD_ID"/,
+    /sha256sum[\s\S]*unzip[\s\S]*android_emulator_pin_publish_extracted "\$cache_root" "\$staging" "\$extracted"/,
   );
+  assert.match(emulatorPin, /\.publish-\$ANDROID_EMULATOR_PIN_BUILD_ID\.lock/);
+  assert.match(emulatorPin, /android_emulator_pin_acquire_publish_lock[\s\S]*ln -- "\$owner_file" "\$lock_file"/);
+  assert.match(
+    emulatorPin,
+    /android_emulator_pin_acquire_publish_lock "\$lock_file" "\$owner_file" "\$owner_token"[\s\S]*android_emulator_pin_owns_publish_lock[\s\S]*android_emulator_pin_matches "\$binary"/,
+  );
+  assert.match(emulatorPinTest, /publisher_pids/);
+  assert.match(emulatorPinTest, /acquisition-window signal leaked the build lock/);
   // every resolution path re-asserts the version banner; no silent fallback
   assert.match(emulatorPin, /android_emulator_pin_matches "\$binary"/);
   assert.match(emulatorPin, /does not match pin \$ANDROID_EMULATOR_PIN_VERSION/);
   assert.match(emulatorPin, /downloaded emulator does not match pin/);
-  // identity comes from banner tokens, never from the probe's exit status,
-  // and every mismatch reports what the candidate binary actually printed
-  assert.match(emulatorPin, /rc=\$\?/);
+  // identity comes from a bounded canonical banner, not loose tokens or exit
+  // status, and every mismatch reports a bounded diagnostic.
+  assert.match(emulatorPin, /timeout --signal=TERM --kill-after=5s/);
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_PROBE_MAX_BYTES/);
+  assert.match(emulatorPin, /Android emulator version \[0-9\]/);
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_LAST_PROBE/);
-  assert.doesNotMatch(emulatorPin, /head -n 1/);
+  assert.match(emulatorPinTest, /expect_match nonzero-canonical/);
+  assert.match(emulatorPinTest, /expect_reject loose-tokens/);
+  assert.match(emulatorPinTest, /expect_reject timeout/);
+  assert.match(emulatorPinTest, /expect_reject oversized/);
   // the shared SDK is never mutated: installs go to the private cache root
   assert.match(emulatorPin, /DEVE_MOBILE_ANDROID_EMULATOR_PIN_DIR:-\$HOME\/\.cache\/deve-android-emulator-pin/);
   // the lib only queries the SDK path read-only; it never runs SDK tools
@@ -388,6 +413,11 @@ test("emulator orchestrator launches only the resolved pinned binary", () => {
   assert.match(orchestrator, /PINNED_EMULATOR_BIN="\$\(android_resolve_pinned_emulator\)"/);
   assert.match(orchestrator, /pinned Android emulator was not resolved before emulator_cmd/);
   assert.match(orchestrator, /pinned emulator: \$PINNED_EMULATOR_BIN/);
+  assert.doesNotMatch(
+    orchestrator,
+    /\$PINNED_EMULATOR_BIN" -version/,
+    "the orchestrator must not repeat the bounded identity probe without its limits",
+  );
   // diagnostics may list AVDs via the SDK binary; the launch path must
   // only ever exec the resolved pin
   assert.match(orchestrator, /"\$PINNED_EMULATOR_BIN" "\$@"/);
@@ -399,11 +429,18 @@ test("emulator gate pins the API 37.0 image with swangle and 4096 MiB", () => {
   assert.match(orchestrator, /-gpu swangle/);
   // the legacy translator path aborts guest surfaceflinger on this image
   assert.doesNotMatch(orchestrator, /swiftshader_indirect/);
-  // actual renderer/ICD selection is recorded as gate evidence
-  assert.match(orchestrator, /vulkan_mode_selected\|gles_mode_selected\|setCurrentRenderer/);
+  // actual renderer/ICD selection must be proven from a bounded log prefix
+  assert.match(orchestrator, /android_emulator_renderer_verify/);
+  assert.match(emulatorRenderer, /ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES/);
+  assert.match(emulatorRenderer, /swiftshader_indirect/);
+  assert.match(emulatorRenderer, /vulkan_mode_selected/);
+  assert.doesNotMatch(emulatorRenderer, /grep -aE -m 16/);
+  assert.match(emulatorRendererTest, /conflicting renderer evidence/);
+  assert.match(emulatorRendererTest, /for _ in \{1\.\.16\}/);
+  assert.match(emulatorRendererTest, /selection beyond bounded log prefix/);
 });
 
-test("android producers bind the emulator pin library", () => {
+test("android producers bind the emulator pin and renderer proof", () => {
   for (const producerId of ["android.local-backend", "android.remote-browser"]) {
     const producer = producerRegistry.producers.find(
       (candidate) => candidate.producer_id === producerId,
@@ -413,5 +450,16 @@ test("android producers bind the emulator pin library", () => {
       producer.artifacts.includes("scripts/lib/android-emulator-pin.sh"),
       `${producerId} receipt must bind the emulator pin library`,
     );
+    for (const artifact of [
+      "scripts/android-emulator-pin.test.sh",
+      "scripts/android-emulator-renderer.test.sh",
+      "scripts/lib/android-emulator-renderer.sh",
+      "scripts/lib/android-emulator-diagnostics.sh",
+    ]) {
+      assert.ok(
+        producer.artifacts.includes(artifact),
+        `${producerId} receipt must bind ${artifact}`,
+      );
+    }
   }
 });

@@ -12,6 +12,7 @@ $script:RemoteFixtureCloudflaredVersion = "2026.7.2"
 $script:RemoteFixtureCloudflaredWindowsAmd64Sha256 = "CDB5D4432F6AE1595654A692A51308B69D2BF7AF961F5578D9391837CF072DF9"
 $script:RemoteFixtureCloudflaredDownloadTimeoutSeconds = 180
 $script:RemoteFixtureCloudflaredDownloadLimitBytes = 134217728
+. (Join-Path $PSScriptRoot "remote-browser-fixture-cloudflared.ps1")
 
 function New-RemoteFixtureRandomHex {
     param([Parameter(Mandatory)][int]$Bytes)
@@ -26,6 +27,7 @@ function Protect-RemoteFixturePath {
     & icacls.exe $Path /inheritance:r /grant:r "*$sid`:(F)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "failed to restrict ACL for $Path" }
 }
+. (Join-Path $PSScriptRoot "remote-browser-fixture-state.ps1")
 
 function Resolve-RemoteFixtureStateDirectory {
     param([Parameter(Mandatory)][string]$Path)
@@ -109,7 +111,13 @@ function ConvertTo-RemoteFixtureWindowsArgument {
 # finished fixture start into a job-timeout hang. Clearing HANDLE_FLAG_INHERIT
 # on our stdout/stderr before each spawn keeps those endpoints with us alone.
 function Clear-RemoteFixtureStdHandleInheritance {
-    if (-not ("DeveFixture.NativeStdHandles" -as [type])) {
+    param(
+        [scriptblock]$GetStdHandle,
+        [scriptblock]$SetHandleInformation,
+        [scriptblock]$GetLastError
+    )
+    if ((-not $GetStdHandle -or -not $SetHandleInformation) -and
+        -not ("DeveFixture.NativeStdHandles" -as [type])) {
         Add-Type -Namespace DeveFixture -Name NativeStdHandles -MemberDefinition @'
 [DllImport("kernel32.dll", SetLastError = true)]
 public static extern IntPtr GetStdHandle(int nStdHandle);
@@ -118,10 +126,24 @@ public static extern bool SetHandleInformation(IntPtr hObject, uint dwMask, uint
 '@
     }
     foreach ($slot in @(-11, -12)) {
-        $handle = [DeveFixture.NativeStdHandles]::GetStdHandle($slot)
+        $handle = if ($GetStdHandle) {
+            & $GetStdHandle $slot
+        } else {
+            [DeveFixture.NativeStdHandles]::GetStdHandle($slot)
+        }
         if ($handle -eq [IntPtr]::Zero -or $handle -eq [IntPtr]::new(-1)) { continue }
-        if (-not [DeveFixture.NativeStdHandles]::SetHandleInformation($handle, 1, 0)) {
-            [Console]::Error.WriteLine("remote-browser-fixture: warning: could not clear std-handle inheritance for slot $slot")
+        $cleared = if ($SetHandleInformation) {
+            [bool](& $SetHandleInformation $handle 1 0)
+        } else {
+            [DeveFixture.NativeStdHandles]::SetHandleInformation($handle, 1, 0)
+        }
+        if (-not $cleared) {
+            $errorCode = if ($GetLastError) {
+                [int](& $GetLastError)
+            } else {
+                [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            }
+            throw "could not clear std-handle inheritance for slot $slot (Win32 error $errorCode)"
         }
     }
 }
@@ -277,70 +299,6 @@ function Invoke-RemoteFixtureBoundedProcess {
     }
 }
 
-function Invoke-RemoteFixtureBoundedDownload {
-    param(
-        [Parameter(Mandatory)][string]$Url,
-        [Parameter(Mandatory)][string]$Destination,
-        [ValidateRange(1, 3600)][int]$TimeoutSeconds = $script:RemoteFixtureCloudflaredDownloadTimeoutSeconds,
-        [ValidateRange(1024, 1073741824)][long]$MaximumBytes = $script:RemoteFixtureCloudflaredDownloadLimitBytes
-    )
-    Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
-    $handler = [Net.Http.HttpClientHandler]::new()
-    $handler.AllowAutoRedirect = $true
-    $handler.MaxAutomaticRedirections = 5
-    $client = [Net.Http.HttpClient]::new($handler)
-    $client.Timeout = [Threading.Timeout]::InfiniteTimeSpan
-    $cancellation = [Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds($TimeoutSeconds))
-    $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $Url)
-    $response = $null
-    $inputStream = $null
-    $outputStream = $null
-    try {
-        $response = $client.SendAsync(
-            $request,
-            [Net.Http.HttpCompletionOption]::ResponseHeadersRead,
-            $cancellation.Token
-        ).GetAwaiter().GetResult()
-        [void]$response.EnsureSuccessStatusCode()
-        $contentLength = $response.Content.Headers.ContentLength
-        if ($null -ne $contentLength -and [long]$contentLength -gt $MaximumBytes) {
-            throw "cloudflared download exceeds the $MaximumBytes byte limit"
-        }
-        $inputStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-        $outputStream = [IO.File]::Open(
-            $Destination,
-            [IO.FileMode]::CreateNew,
-            [IO.FileAccess]::Write,
-            [IO.FileShare]::None
-        )
-        $buffer = [byte[]]::new(65536)
-        [long]$written = 0
-        while (($read = $inputStream.ReadAsync($buffer, 0, $buffer.Length, $cancellation.Token).GetAwaiter().GetResult()) -gt 0) {
-            $written += $read
-            if ($written -gt $MaximumBytes) {
-                throw "cloudflared download exceeds the $MaximumBytes byte limit"
-            }
-            $outputStream.Write($buffer, 0, $read)
-        }
-        $outputStream.Flush($true)
-    } catch [OperationCanceledException] {
-        throw "cloudflared download timed out after $TimeoutSeconds seconds"
-    } catch [AggregateException] {
-        if ($_.Exception.GetBaseException() -is [OperationCanceledException]) {
-            throw "cloudflared download timed out after $TimeoutSeconds seconds"
-        }
-        throw
-    } finally {
-        if ($outputStream) { $outputStream.Dispose() }
-        if ($inputStream) { $inputStream.Dispose() }
-        if ($response) { $response.Dispose() }
-        $request.Dispose()
-        $cancellation.Dispose()
-        $client.Dispose()
-        $handler.Dispose()
-    }
-}
-
 function Get-RemoteFixtureProcessToken {
     param([Parameter(Mandatory)][int]$ProcessId)
     $process = Get-Process -Id $ProcessId -ErrorAction Stop
@@ -363,47 +321,6 @@ function Stop-RemoteFixtureProcess {
     $process.Kill($true)
     if (-not $process.WaitForExit(7000)) {
         throw "$Label PID $ProcessId survived bounded cleanup"
-    }
-}
-
-function Install-RemoteFixtureCloudflared {
-    param(
-        [Parameter(Mandatory)][string]$StateDirectory,
-        [string]$SuppliedPath
-    )
-    if (-not [Environment]::Is64BitOperatingSystem) {
-        throw "pinned cloudflared fixture currently supports Windows amd64 only"
-    }
-    $tools = Join-Path $StateDirectory "tools"
-    New-Item -ItemType Directory -Force $tools | Out-Null
-    $target = Join-Path $tools "cloudflared.exe"
-    $temporary = "$target.tmp"
-    $completed = $false
-    try {
-        if ($SuppliedPath) {
-            $item = Get-Item -LiteralPath $SuppliedPath -Force
-            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $item.PSIsContainer) {
-                throw "supplied cloudflared must be a regular non-reparse file"
-            }
-            if ($item.Length -gt $script:RemoteFixtureCloudflaredDownloadLimitBytes) {
-                throw "supplied cloudflared exceeds the $script:RemoteFixtureCloudflaredDownloadLimitBytes byte limit"
-            }
-            Copy-Item -LiteralPath $item.FullName -Destination $temporary -Force
-        } else {
-            $url = "https://github.com/cloudflare/cloudflared/releases/download/$script:RemoteFixtureCloudflaredVersion/cloudflared-windows-amd64.exe"
-            Invoke-RemoteFixtureBoundedDownload -Url $url -Destination $temporary
-        }
-        $observed = (Get-FileHash -Algorithm SHA256 -LiteralPath $temporary).Hash
-        if ($observed -ne $script:RemoteFixtureCloudflaredWindowsAmd64Sha256) {
-            throw "cloudflared checksum mismatch: expected $script:RemoteFixtureCloudflaredWindowsAmd64Sha256, observed $observed"
-        }
-        Move-Item -LiteralPath $temporary -Destination $target -Force
-        $completed = $true
-        return $target
-    } finally {
-        if (-not $completed) {
-            Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
-        }
     }
 }
 

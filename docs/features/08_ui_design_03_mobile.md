@@ -74,6 +74,13 @@
 - Android 正式支持/可写 evidence baseline 为 Android 10/API 29+ 与当前 WebView provider 137+；版本事实只用于 support/receipt，真实 non-extractable Ed25519 probe 仍是 writer gate 的最终判据。
 - WebCrypto Ed25519 不可用时，横幅会提示更新浏览器或 Android System WebView；target-host smoke 记录 API、provider、AVD/设备标识并先验证真实 key generation，再执行创建、编辑、提交与 lifecycle 流程。低于支持基线或 probe 失败只能产生只读负向证据。
 - Android target-host smoke 先构建 APK 并释放 Gradle daemon，再以 low-RAM 模式、有界 RAM 和默认 `4096 MiB`（允许 `2048..8192 MiB`）的受控 writable data partition request 启动绑定本次进程的专用 emulator serial 与 AVD；它兼容目标镜像发布的 `sys.boot_completed` / `dev.bootcomplete` 完成信号，在 package manager ready 后解析 `/data`，证明总容量达到 request 的四分之三且安装前至少有 `1024 MiB` 可用空间。首次创建文档时会立即向当前 CodeMirror host 输入文本；同 breakpoint 的真实键盘 viewport resize 必须保持同一 host 与 OpenDoc request；跨 generation pending 通过暂停并丢弃旧 transport 的 outbound edit frame 证明，只有 replacement generation 的产品 replay 能让后端首次看到该文本。editor mount 以 host owner 隔离，旧 surface 的迟到 cleanup 不会销毁新 editor 或吞掉第一笔输入；提交必须在 NoteGit history 中出现对应 message 后才算成功。
+- Android emulator pin 必须从有界 `-version` probe 的 canonical banner 识别精确 version/build，
+  不能接受只碰巧包含两个 token 的任意文本；同一 build 的 checksum-pinned cache publication
+  由有界 build lock 串行化并在锁内复核现有 binary；既存 invalid entry 保留并 fail-closed，不自动
+  删除一个可能正在使用的 build。renderer 也必须从本次 owned emulator 的有界
+  日志前缀内全部 selection 证明实际使用批准的 `swangle`/software path。`-gpu swangle` 当前投影出的完整
+  `vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader` pair 属于有效 swangle 证据；
+  缺失、冲突或 `swiftshader_indirect` 证据会在安装 APK 和执行业务 journey 前失败。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标

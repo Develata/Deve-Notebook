@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-07-29`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -93,6 +93,20 @@ MobileColdStart
 *   Android 正式支持与可写 evidence baseline 是 Android 10 / API 29+ 且当前 WebView provider major 137+。该版本基线只决定 support/receipt 资格，不得替代真实 capability probe，也不得在前端解析 UA 或硬编码 OS gate。
 *   Android 可写 target-host gate 必须在业务步骤前记录 API level、WebView provider package/version、AVD/system-image 或真实设备标识，并执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。只有版本基线与 probe 同时满足才可生成 writable receipt；不满足时必须输出结构化 blocker、证明编辑器保持只读并停止可写业务步骤。
 *   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式、有界 RAM 和 `2048..8192 MiB` 的受控 writable data partition request（默认 `4096 MiB`）启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后仍须确认 package manager 可用，并在安装前 fail-closed 解析 `/data` 容量，证明总容量不低于 request 的四分之三且可用空间至少 `1024 MiB`。不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
+*   Android emulator binary identity probe 必须有独立的单调时间与输出字节上限，只接受 canonical
+    `Android emulator version <version> (build_id <id>)` banner 的逐字段匹配；单独出现 version/build
+    token、空输出、超时或超限输出都必须 fail-closed。若 emulator wrapper 在输出完整 canonical banner
+    后以 non-zero 退出，identity 可成立，但 probe 的退出状态仍须进入诊断，不能由松散 token grep
+    冒充 binary identity。checksum-pinned emulator cache 的同一 build publication 必须由 build-scoped
+    bounded lock 串行化，并在 lock 内重新校验现有 canonical binary；并发 producer 不得删除另一个
+    producer 已发布或正在使用的有效 build。已存在但无法通过 canonical probe 的 cache entry 必须
+    保留并 fail-closed，不能自动替换一个可能仍被运行中 emulator 使用的目录。
+*   Android emulator renderer receipt 必须根据本次 owned emulator 的实际 bounded log 证明启动走入
+    批准的 `swangle`/software renderer path；当前 emulator 对 `-gpu swangle` 的 canonical runtime
+    projection 是 `vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader`，该完整 pair 可作为
+    swangle 实现证据，但 legacy `swiftshader_indirect` 不可接受。bounded prefix 内全部 renderer
+    selection 都必须参与一致性判断；证据缺失、冲突或落入未批准 path 必须在 APK 安装与业务
+    journey 前 fail-closed。命令行参数只是 intent，不能替代 runtime evidence。
 *   Android lifecycle gate 必须在首次文档 editor host 进入当前 generation 的可写状态后立即注入第一笔真实输入并证明内容与 pending 链均保留。跨 transport generation 的 pending 证据必须在旧 generation 暂停一笔真实 outbound edit frame、确认前端 pending 非空、随后丢弃旧 frame 后取得；replacement generation 只能依靠产品 pending replay 使后端首次看到该唯一文本，不能用已写入服务端的 Snapshot 替代 pending 保留证明。CodeMirror mount/cleanup 必须服从 `10_rendering#document-authority-bridge` 的 owner-scoped 生命周期；迟到 cleanup 不得销毁新 WebView editor。
 
 **Offline/background semantics**:

@@ -199,6 +199,26 @@ fn rejects_host_local_repo_projections_for_full_peer() {
 }
 
 #[test]
+fn full_peer_filter_rejects_host_local_system_metrics() {
+    let metrics = ServerMessage::SystemMetrics {
+        cpu_usage_percent: 1.0,
+        memory_used_mb: 2,
+        active_connections: 3,
+        ops_processed: 4,
+        uptime_secs: 5,
+        db_size_bytes: 6,
+        doc_count: 7,
+    };
+    let full_peer = BroadcastFilter::for_session(&WsSession::new());
+    assert!(!full_peer.should_forward(&metrics));
+
+    let mut browser_session = WsSession::new();
+    browser_session.mark_browser_session();
+    let browser = BroadcastFilter::for_session(&browser_session);
+    assert!(browser.should_forward(&metrics));
+}
+
+#[test]
 fn projection_recovery_requires_exact_repo_branch_and_scope_nonce() {
     let repo_id = uuid::Uuid::new_v4();
     let mut session = WsSession::new();

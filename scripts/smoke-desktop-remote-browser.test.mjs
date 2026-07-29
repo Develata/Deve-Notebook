@@ -7,6 +7,10 @@ const hostSource = readFileSync(
   new URL("./check-desktop-remote-browser-smoke.ps1", import.meta.url),
   "utf8",
 );
+const nativeRecoverySource = readFileSync(
+  new URL("./lib/desktop-remote-browser-native-recovery.ps1", import.meta.url),
+  "utf8",
+);
 const installRootSource = readFileSync(
   new URL("./lib/desktop-install-root.ps1", import.meta.url),
   "utf8",
@@ -31,10 +35,11 @@ test("RemoteBrowser WebView proof covers facade, IPC, CSP, and real business UI"
 
 test("host smoke enters remote mode by preference and returns through the native window menu", () => {
   assert.match(hostSource, /native-backend\.json/);
-  assert.match(hostSource, /Use Local Backend/);
-  assert.match(hostSource, /GetMenuItemID/);
-  assert.match(hostSource, /PostMessage/);
-  assert.match(hostSource, /0x0111, # WM_COMMAND/);
+  assert.match(hostSource, /desktop-remote-browser-native-recovery\.ps1/);
+  assert.match(nativeRecoverySource, /Use Local Backend/);
+  assert.match(nativeRecoverySource, /GetMenuItemID/);
+  assert.match(nativeRecoverySource, /PostMessage/);
+  assert.match(nativeRecoverySource, /0x0111, # WM_COMMAND/);
   assert.match(hostSource, /RemoteBrowser started a local sidecar/);
   assert.match(hostSource, /local restart did not own exactly one sidecar/);
   assert.match(hostSource, /fresh endpoint\/session\/scope evidence/);

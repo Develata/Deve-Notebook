@@ -561,8 +561,8 @@ contains	scripts/smoke-docker-multiclient.test.mjs	rendered shell requires a log
 contains	scripts/smoke-docker-multiclient.test.mjs	direct execution enters main instead of silently succeeding
 contains	scripts/smoke-docker-multiclient.test.mjs	editor content wait treats an unready bridge as pending
 contains	scripts/smoke-docker-multiclient.test.mjs	offline recovery attempts input before asserting local pending and peer immutability
-contains	scripts/lib/docker-multiclient-product-journeys.mjs	/data/ledger/.host/projection-locators.toml
-contains	scripts/lib/docker-multiclient-product-journeys.mjs	validateWorkspaceIdentity(identityContent, repoId)
+contains	scripts/lib/docker-multiclient-workspace.mjs	/data/ledger/.host/projection-locators.toml
+contains	scripts/lib/docker-multiclient-workspace.mjs	validateWorkspaceIdentity(identityContent, repoId)
 contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
 contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED
