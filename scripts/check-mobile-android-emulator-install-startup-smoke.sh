@@ -6,7 +6,7 @@ source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
-API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-36.1}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 ARCH="${DEVE_MOBILE_ANDROID_EMULATOR_ARCH:-x86_64}"
 AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke-api${API_LEVEL}-${SYSTEM_TARGET}-${ARCH}}"
@@ -121,7 +121,7 @@ print_emulator_diagnostics() {
   fi
   if command -v adb >/dev/null 2>&1 || android_tool_path adb >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: emulator /data capacity:"
-    adb_cmd -s "$EMULATOR_SERIAL" shell df -k /data 2>&1 || true
+    adb_cmd -s "$EMULATOR_SERIAL" shell "df -k /data" 2>&1 || true
   fi
   if command -v emulator >/dev/null 2>&1 || android_tool_path emulator >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: emulator AVD list:"
@@ -216,6 +216,7 @@ ensure_avd() {
   local system_image="system-images;android-$API_LEVEL;$SYSTEM_TARGET;$ARCH"
 
   if emulator_cmd -list-avds | grep -Fx -- "$AVD_NAME" >/dev/null; then
+    ensure_avd_data_partition
     return 0
   fi
 
@@ -229,6 +230,21 @@ ensure_avd() {
 
   emulator_cmd -list-avds | grep -Fx -- "$AVD_NAME" >/dev/null \
     || fail "Android AVD was not visible to emulator after creation: $AVD_NAME"
+  ensure_avd_data_partition
+}
+
+# The emulator -partition-size flag is rejected (>2047 MB) for the pinned
+# android-36.1 image, so the bounded /data request is written into the owned
+# AVD's config.ini instead; verify_emulator_data_capacity stays the proof.
+ensure_avd_data_partition() {
+  local config_file="$AVD_HOME/$AVD_NAME.avd/config.ini"
+  local temporary="$config_file.tmp.$$"
+
+  [[ -f "$config_file" ]] \
+    || fail "Android AVD config is missing for data partition sizing: $config_file"
+  grep -v '^disk\.dataPartition\.size=' "$config_file" >"$temporary" || true
+  printf 'disk.dataPartition.size=%sM\n' "$EMULATOR_PARTITION_MB" >>"$temporary"
+  mv -f -- "$temporary" "$config_file"
 }
 
 wait_for_boot() {
@@ -289,31 +305,31 @@ verify_sdk_package_reuse_contract() {
   mkdir -p \
     "$fixture/platform-tools" \
     "$fixture/emulator" \
-    "$fixture/platforms/android-37.0" \
-    "$fixture/system-images/android-37.0/google_apis/x86_64"
+    "$fixture/platforms/android-36.1" \
+    "$fixture/system-images/android-36.1/google_apis/x86_64"
   touch \
     "$fixture/platform-tools/adb.exe" \
     "$fixture/emulator/emulator.exe" \
-    "$fixture/platforms/android-37.0/source.properties" \
-    "$fixture/platforms/android-37.0/android.jar" \
-    "$fixture/system-images/android-37.0/google_apis/x86_64/source.properties" \
-    "$fixture/system-images/android-37.0/google_apis/x86_64/system.img" \
-    "$fixture/system-images/android-37.0/google_apis/x86_64/ramdisk.img"
+    "$fixture/platforms/android-36.1/source.properties" \
+    "$fixture/platforms/android-36.1/android.jar" \
+    "$fixture/system-images/android-36.1/google_apis/x86_64/source.properties" \
+    "$fixture/system-images/android-36.1/google_apis/x86_64/system.img" \
+    "$fixture/system-images/android-36.1/google_apis/x86_64/ramdisk.img"
 
   android_sdk_package_complete "$fixture" "platform-tools" \
     || fail "complete local platform-tools fixture must be reusable"
   android_sdk_package_complete "$fixture" "emulator" \
     || fail "complete local emulator fixture must be reusable"
-  android_sdk_package_complete "$fixture" "platforms;android-37.0" \
+  android_sdk_package_complete "$fixture" "platforms;android-36.1" \
     || fail "complete local platform fixture must be reusable"
   android_sdk_package_complete \
     "$fixture" \
-    "system-images;android-37.0;google_apis;x86_64" \
+    "system-images;android-36.1;google_apis;x86_64" \
     || fail "complete local system-image fixture must be reusable"
-  rm "$fixture/system-images/android-37.0/google_apis/x86_64/system.img"
+  rm "$fixture/system-images/android-36.1/google_apis/x86_64/system.img"
   if android_sdk_package_complete \
     "$fixture" \
-    "system-images;android-37.0;google_apis;x86_64"; then
+    "system-images;android-36.1;google_apis;x86_64"; then
     fail "incomplete local system-image fixture must require sdkmanager repair"
   fi
   rm -rf "$fixture"
@@ -342,7 +358,9 @@ validate_emulator_partition() {
 
 verify_emulator_data_capacity() {
   local output parsed total_kib available_kib minimum_total_kib=0
-  output="$(adb_cmd -s "$EMULATOR_SERIAL" shell df -k /data 2>&1)" \
+  # Quoted remote command: Git Bash (MSYS) path-converts a bare /data arg
+  # into a Windows host path on Windows target hosts.
+  output="$(adb_cmd -s "$EMULATOR_SERIAL" shell "df -k /data" 2>&1)" \
     || fail "Android emulator /data capacity probe failed"
   printf '%s\n' "$output"
   parsed="$(printf '%s\n' "$output" | parse_android_emulator_data_capacity)" \
@@ -450,7 +468,6 @@ emulator_cmd \
   -avd "$AVD_NAME" \
   -port "$EMULATOR_PORT" \
   -memory "$EMULATOR_RAM_MB" \
-  -partition-size "$EMULATOR_PARTITION_MB" \
   -lowram \
   -no-window \
   -no-audio \

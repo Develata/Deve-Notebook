@@ -714,7 +714,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-36.1}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
@@ -727,7 +727,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-port "$EMULATOR_PORT"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-memory "$EMULATOR_RAM_MB"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-partition-size "$EMULATOR_PARTITION_MB"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	disk.dataPartition.size=%sM
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minimum_total_kib=$(( EMULATOR_PARTITION_MB * 1024 * 3 / 4 ))

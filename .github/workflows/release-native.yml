@@ -387,7 +387,7 @@ jobs:
 
       - name: Run API 29+ WebView 137+ LocalBackend writable lifecycle
         env:
-          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.0"
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "36.1"
           DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
         run: >-
@@ -413,7 +413,7 @@ jobs:
 
       - name: Run RemoteBrowser writable lifecycle and native local recovery
         env:
-          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.0"
+          DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "36.1"
           DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
         run: |

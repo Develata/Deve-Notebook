@@ -76,7 +76,9 @@ cleanup() {
 find_webview_socket() {
   local pid="$1"
   local sockets
-  sockets="$(adb_cmd shell cat /proc/net/unix 2>/dev/null | tr -d '\r' | awk '$NF ~ /webview_devtools_remote/ { print $NF }')"
+  # Quoted remote command: Git Bash (MSYS) path-converts a bare /proc/... arg
+  # into a Windows host path on Windows target hosts.
+  sockets="$(adb_cmd shell "cat /proc/net/unix" 2>/dev/null | tr -d '\r' | awk '$NF ~ /webview_devtools_remote/ { print $NF }')"
   printf '%s\n' "$sockets" | grep -E "(^|_)${pid}$" | head -n 1 || true
 }
 
@@ -91,7 +93,7 @@ android_startup_diag_adb() {
 report_missing_webview_socket() {
   local pid="$1"
   echo "mobile-android-lifecycle-smoke: webview_devtools sockets visible to adb:" >&2
-  adb_with_timeout 20 shell cat /proc/net/unix 2>/dev/null | tr -d '\r' \
+  adb_with_timeout 20 shell "cat /proc/net/unix" 2>/dev/null | tr -d '\r' \
     | awk '$NF ~ /webview_devtools_remote/ { print "  " $NF }' >&2 || true
   echo "mobile-android-lifecycle-smoke: app process snapshot:" >&2
   adb_with_timeout 20 shell ps -A 2>/dev/null | tr -d '\r' \

@@ -200,7 +200,7 @@ cargo run --locked -p deve_baseline -- acceptance-run --tier ci
 
 Windows Docker results are valid development evidence, but Docker tag-ready
 receipts are intentionally Linux-host-bound. Windows is a supported Android
-target host: the LocalBackend producer builds the x86_64 APK, owns an API 37.0
+target host: the LocalBackend producer builds the x86_64 APK, owns an API 36.1
 Google APIs AVD, records the current WebView provider and real Ed25519 probe,
 requests a bounded 4096 MiB writable data partition with
 `DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB` constrained to `2048..8192`, then
@@ -1217,14 +1217,23 @@ through a no-argument Tauri command backed by Android CookieManager because the
 current Wry Android `set_cookie` surface is unsupported; cookie material never
 enters JavaScript or command arguments.
 
-The emulator gate defaults to the Android 17 / API 37.0 Google APIs x86_64
-image (`system-images;android-37.0;google_apis;x86_64`) as the current
-target-host candidate. The prior 16 KB page-size `android-37.1` `ps16k` image
-was retired after its emulator graphics stack crashed surfaceflinger during
-candidate runs; hosts that created the old
-`deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` AVD can reclaim it with
-`avdmanager delete avd -n <name>` plus
-`sdkmanager --uninstall "system-images;android-37.1;google_apis_ps16k;x86_64"`.
+The emulator gate defaults to the stable Android 16 / API 36.1 Google APIs
+x86_64 image (`system-images;android-36.1;google_apis;x86_64`) as the current
+target-host candidate. Two prior images were retired for emulator guest
+graphics-stack instability during candidate runs: the 16 KB page-size
+`android-37.1` `ps16k` image crashed surfaceflinger, and the Android 17
+developer `android-37.0` image aborted surfaceflinger
+(`hasReadColorBufferDma` goldfish mapper assert) as soon as an app rendered
+its first frames, killing system_server and the app with it. Hosts that
+created the old `deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or
+`deve-mobile-smoke-api37.0-google_apis-x86_64` AVDs can reclaim them with
+`avdmanager delete avd -n <name>` plus `sdkmanager --uninstall` of the
+matching system image. The bounded writable data partition is applied by
+rewriting `disk.dataPartition.size` in the owned AVD's `config.ini` before
+launch, not with the emulator `-partition-size` flag: that flag caps at
+2047 MB on the android-36.1 image and aborts the launch, while the post-boot
+`/data` capacity probe remains the fail-closed proof that the requested size
+took effect.
 That default is only a reproducible input:
 the lifecycle harness still proves non-extractable Ed25519 key generation at
 runtime before any create/edit/commit step. Override the image when needed;

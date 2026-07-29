@@ -763,9 +763,9 @@ contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process run
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-partition-size "$EMULATOR_PARTITION_MB"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	disk.dataPartition.size=%sM
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell df -k /data
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell "df -k /data"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status != 0 && DIAGNOSTICS_PRINTED == 0
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	print_emulator_diagnostics
@@ -1140,8 +1140,8 @@ contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID
 contains	tools/baseline/src/script_gate_preflight/android.rs	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
 contains	tools/baseline/src/script_gate_preflight/android.rs	unsupported Android target
 contains	tools/baseline/src/script_gate_preflight/android.rs	"google_apis",
-contains	tools/baseline/src/script_gate_preflight/android.rs	"deve-mobile-smoke-api37.0-google_apis-x86_64",
-contains	tools/baseline/src/script_gate_preflight/android.rs	validate_android_api_level("37.0")
+contains	tools/baseline/src/script_gate_preflight/android.rs	"deve-mobile-smoke-api36.1-google_apis-x86_64",
+contains	tools/baseline/src/script_gate_preflight/android.rs	validate_android_api_level("36.1")
 contains	scripts/check-local-quick-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-local-quick-gate.sh	run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
 contains	scripts/check-local-quick-gate.sh	LOCAL_CARGO_TARGET_DIR="${DEVE_LOCAL_QUICK_GATE_TARGET_DIR:-target/local-quick-gate}"

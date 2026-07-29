@@ -75,9 +75,11 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
   assert.match(orchestrator, /trap cleanup_on_exit EXIT/);
   assert.match(orchestrator, /write_emulator_owner "\$EMULATOR_PID"/);
   assert.match(orchestrator, /DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096/);
-  assert.match(orchestrator, /-partition-size "\$EMULATOR_PARTITION_MB"/);
+  assert.match(orchestrator, /disk\.dataPartition\.size=%sM/);
+  assert.doesNotMatch(orchestrator, /^\s*-partition-size /m);
   assert.match(orchestrator, /EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192/);
-  assert.match(orchestrator, /shell df -k \/data/);
+  assert.match(orchestrator, /shell "df -k \/data"/);
+  assert.doesNotMatch(orchestrator, /shell df -k \/data/);
   assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-capacity\.sh"/);
   assert.match(orchestrator, /parse_android_emulator_data_capacity/);
   assert.match(orchestrator, /android-emulator-capacity\.test\.sh/);
@@ -223,6 +225,18 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
     /report_missing_webview_socket "\$PID"/u,
     "the socket deadline must route through the bounded diagnostics report",
   );
+  for (const [name, script] of [["local", localSmoke], ["remote", remoteSmoke]]) {
+    assert.match(
+      script,
+      /shell "cat \/proc\/net\/unix"/u,
+      `${name} socket read must quote the remote command against MSYS path conversion`,
+    );
+    assert.doesNotMatch(
+      script,
+      /shell cat \/proc\/net\/unix/u,
+      `${name} socket read must not pass a bare /proc path through Git Bash`,
+    );
+  }
 });
 
 test("Android APK install retries only exact package-service recovery failures", () => {
