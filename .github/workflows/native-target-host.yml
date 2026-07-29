@@ -634,12 +634,9 @@ jobs:
           DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
         run: scripts/check-mobile-android-shell-package-build.sh
 
-      - name: Enable Android emulator KVM access
+      - name: Prepare Android emulator host
         if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+        run: bash scripts/prepare-android-emulator-host.sh
 
       - name: Mobile Android emulator install/startup smoke
         id: mobile_android_install_startup_smoke

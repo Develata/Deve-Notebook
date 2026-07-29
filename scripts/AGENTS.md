@@ -87,6 +87,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Owns an Android emulator target lifecycle, builds a debug WebView shell APK, and selects an explicit LocalBackend or RemoteBrowser writable journey before bounded cleanup |
+| `prepare-android-emulator-host.sh` | Installs the explicit Ubuntu emulator runtime prerequisite and configures KVM access shared by Android target-host workflows |
 | `lib/android-emulator-pin.sh` / `android-emulator-pin.test.sh` | Resolves the checksum-pinned emulator binary, serializes same-build cache publication, and proves its canonical version/build banner under independent time/output bounds |
 | `lib/android-emulator-renderer.sh` / `android-emulator-renderer.test.sh` | Parses every renderer selection in a bounded owned-emulator log prefix and fail-closes missing, conflicting, unapproved, or legacy evidence |
 | `lib/android-emulator-diagnostics.sh` | Bounded target-emulator diagnostics extracted from the lifecycle orchestrator so failure reporting remains cohesive |

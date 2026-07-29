@@ -676,6 +676,7 @@
         "smoke.android.local-backend": "DEVE_MOBILE_ANDROID_LOCAL_EVIDENCE_PATH"
       },
       "artifacts": [
+        "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-install-retry.test.sh",
@@ -766,6 +767,7 @@
         "smoke.android.remote-browser": "DEVE_MOBILE_ANDROID_REMOTE_EVIDENCE_PATH"
       },
       "artifacts": [
+        "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-install-retry.test.sh",

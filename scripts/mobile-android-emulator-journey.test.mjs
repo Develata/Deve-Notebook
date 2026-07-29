@@ -74,6 +74,18 @@ const emulatorRendererTest = fs.readFileSync(
   new URL("./android-emulator-renderer.test.sh", import.meta.url),
   "utf8",
 );
+const releaseNativeWorkflow = fs.readFileSync(
+  new URL("../.github/workflows/release-native.yml", import.meta.url),
+  "utf8",
+);
+const nativeTargetHostWorkflow = fs.readFileSync(
+  new URL("../.github/workflows/native-target-host.yml", import.meta.url),
+  "utf8",
+);
+const emulatorHostPreparation = fs.readFileSync(
+  new URL("./prepare-android-emulator-host.sh", import.meta.url),
+  "utf8",
+);
 const producerRegistry = JSON.parse(fs.readFileSync(
   new URL("../docs/registry/acceptance-producers.json", import.meta.url),
   "utf8",
@@ -406,6 +418,28 @@ test("emulator gate pins the exact stable emulator build fail-closed", () => {
   assert.match(emulatorPin, /DEVE_MOBILE_ANDROID_EMULATOR_PIN_DIR:-\$HOME\/\.cache\/deve-android-emulator-pin/);
   // the lib only queries the SDK path read-only; it never runs SDK tools
   assert.doesNotMatch(emulatorPin, /android_run_tool|sdkmanager_cmd/);
+});
+
+test("Android target-host workflows share the pinned emulator host preparation", () => {
+  const mobileAndroidJob = releaseNativeWorkflow.slice(
+    releaseNativeWorkflow.indexOf("  mobile-android:"),
+  );
+  const nativeAndroidJob = nativeTargetHostWorkflow.slice(
+    nativeTargetHostWorkflow.indexOf("  mobile-android:"),
+    nativeTargetHostWorkflow.indexOf("\n  mobile-ios:"),
+  );
+  assert.ok(mobileAndroidJob.startsWith("  mobile-android:"));
+  assert.ok(nativeAndroidJob.startsWith("  mobile-android:"));
+  assert.match(mobileAndroidJob, /run: bash scripts\/prepare-android-emulator-host\.sh/);
+  assert.match(nativeAndroidJob, /if: \$\{\{ inputs\.run_mobile_android_package_build && inputs\.run_mobile_android_install_startup_smoke \}\}\n        run: bash scripts\/prepare-android-emulator-host\.sh/);
+  assert.match(emulatorHostPreparation, /set -euo pipefail/);
+  assert.match(emulatorHostPreparation, /sudo apt-get update/);
+  assert.match(emulatorHostPreparation, /sudo apt-get install -y --no-install-recommends libpulse0/);
+  assert.match(emulatorHostPreparation, /ldconfig -p \| grep -F 'libpulse\.so\.0'/);
+  assert.match(emulatorHostPreparation, /99-kvm4all\.rules[\s\S]*udevadm trigger --name-match=kvm/);
+  const android = producerRegistry.producers.filter(({ producer_id }) =>
+    ["android.local-backend", "android.remote-browser"].includes(producer_id));
+  assert.ok(android.every(({ artifacts }) => artifacts.includes("scripts/prepare-android-emulator-host.sh")));
 });
 
 test("emulator orchestrator launches only the resolved pinned binary", () => {
