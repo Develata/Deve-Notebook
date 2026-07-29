@@ -7,8 +7,9 @@ use super::RepoCatalogError;
 use super::model::{CATALOG_RECORD_MAX_BYTES, RepoCatalogMembershipRecord};
 use crate::models::RepoId;
 use crate::utils::fs::{
-    create_atomic_replace_temp, ensure_open_file_matches_path, open_regular_file_lock,
-    open_regular_file_read, replace_file_atomically, sync_directory,
+    FileTryLockError, create_atomic_replace_temp, ensure_open_file_matches_path,
+    open_regular_file_lock, open_regular_file_read, replace_file_atomically, sync_directory,
+    try_lock_file_exclusive, unlock_file,
 };
 use crate::utils::notegit;
 use std::fs::File;
@@ -78,19 +79,19 @@ impl RepoCatalogStore {
     }
 
     pub(super) fn lock(&self) -> Result<RepoCatalogStoreGuard<'_>, RepoCatalogError> {
-        match self.lock_file.try_lock() {
+        match try_lock_file_exclusive(&self.lock_file) {
             Ok(()) => {}
-            Err(std::fs::TryLockError::WouldBlock) => {
+            Err(FileTryLockError::WouldBlock) => {
                 return Err(RepoCatalogError::AuthorityBusy);
             }
-            Err(std::fs::TryLockError::Error(error)) => return Err(error.into()),
+            Err(FileTryLockError::Error(error)) => return Err(error.into()),
         }
         if let Err(error) = ensure_open_file_matches_path(
             &self.lock_file,
             &self.lock_path,
             "repo catalog authority lock",
         ) {
-            let _ = self.lock_file.unlock();
+            let _ = unlock_file(&self.lock_file);
             return Err(error.into());
         }
         Ok(RepoCatalogStoreGuard {
@@ -302,7 +303,7 @@ pub(super) struct RepoCatalogStoreGuard<'a> {
 
 impl Drop for RepoCatalogStoreGuard<'_> {
     fn drop(&mut self) {
-        if let Err(error) = self.file.unlock() {
+        if let Err(error) = unlock_file(self.file) {
             tracing::error!(%error, "failed to unlock repo catalog authority file");
         }
     }

@@ -6,8 +6,8 @@ use super::model::{
 };
 use crate::models::RepoId;
 use crate::utils::fs::{
-    create_atomic_replace_temp, ensure_open_file_matches_path, open_regular_file_lock,
-    open_regular_file_read, replace_file_atomically, sync_directory,
+    create_atomic_replace_temp, ensure_open_file_matches_path, lock_file_exclusive,
+    open_regular_file_lock, open_regular_file_read, replace_file_atomically, sync_directory,
 };
 use crate::utils::notegit;
 use serde::{Deserialize, Serialize};
@@ -217,7 +217,7 @@ impl AliasStoreGuard {
         let path = host_dir.join(LOCK_FILE);
         let file = open_regular_file_lock(&path, "host repo alias lock")
             .map_err(|error| HostRepoAliasError::StoreInvalid(error.to_string()))?;
-        file.lock()?;
+        lock_file_exclusive(&file)?;
         ensure_open_file_matches_path(&file, &path, "host repo alias lock")
             .map_err(|error| HostRepoAliasError::StoreInvalid(error.to_string()))?;
         Ok(Self { _file: file })

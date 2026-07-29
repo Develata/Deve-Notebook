@@ -4,7 +4,8 @@
 //! Persistent per-RepoId owner lock with explicit final release.
 
 use super::{LocalAuthorityError, RepoId};
-use std::fs::{File, TryLockError};
+use crate::utils::fs::{FileTryLockError, try_lock_file_exclusive, unlock_file};
+use std::fs::File;
 
 pub(super) struct RepoAuthorityLock {
     file: File,
@@ -14,14 +15,14 @@ pub(super) struct RepoAuthorityLock {
 
 impl RepoAuthorityLock {
     pub(super) fn acquire(file: File, repo_id: RepoId) -> Result<Self, LocalAuthorityError> {
-        match file.try_lock() {
+        match try_lock_file_exclusive(&file) {
             Ok(()) => Ok(Self {
                 file,
                 repo_id,
                 locked: true,
             }),
-            Err(TryLockError::WouldBlock) => Err(LocalAuthorityError::Busy(repo_id)),
-            Err(TryLockError::Error(error)) => Err(LocalAuthorityError::Io(error)),
+            Err(FileTryLockError::WouldBlock) => Err(LocalAuthorityError::Busy(repo_id)),
+            Err(FileTryLockError::Error(error)) => Err(LocalAuthorityError::Io(error)),
         }
     }
 
@@ -30,7 +31,7 @@ impl RepoAuthorityLock {
     }
 
     pub(super) fn release(mut self) -> Result<(), (Self, std::io::Error)> {
-        match self.file.unlock() {
+        match unlock_file(&self.file) {
             Ok(()) => {
                 self.locked = false;
                 Ok(())
@@ -43,7 +44,7 @@ impl RepoAuthorityLock {
 impl Drop for RepoAuthorityLock {
     fn drop(&mut self) {
         if self.locked
-            && let Err(error) = self.file.unlock()
+            && let Err(error) = unlock_file(&self.file)
         {
             tracing::error!(
                 repo_id = %self.repo_id,

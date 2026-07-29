@@ -133,13 +133,13 @@ fn explicit_cleanup_retires_without_ordinary_reopen() -> anyhow::Result<()> {
         snapshot.authority_lock().path(),
         "retired local authority lock",
     )?;
-    reopened_lock.try_lock()?;
+    crate::utils::fs::try_lock_file_exclusive(&reopened_lock)?;
     crate::utils::fs::ensure_open_file_matches_identity(
         &reopened_lock,
         snapshot.authority_lock(),
         "retired local authority lock",
     )?;
-    reopened_lock.unlock()?;
+    crate::utils::fs::unlock_file(&reopened_lock)?;
     Ok(())
 }
 

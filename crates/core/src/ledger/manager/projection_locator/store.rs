@@ -32,7 +32,7 @@ impl ProjectionLocatorMapGuard {
         std::fs::create_dir_all(&host_dir)?;
         let path = host_dir.join(LOCATOR_LOCK_FILE);
         let file = crate::utils::fs::open_regular_file_lock(&path, "projection locator map lock")?;
-        file.lock()
+        crate::utils::fs::lock_file_exclusive(&file)
             .context("Failed to lock projection locator map")?;
         crate::utils::fs::ensure_open_file_matches_path(
             &file,

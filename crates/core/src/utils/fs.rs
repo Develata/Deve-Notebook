@@ -1,6 +1,7 @@
 //! plan_ref: infra
 
 mod authority;
+mod file_lock;
 mod identity;
 mod quarantine;
 
@@ -9,6 +10,7 @@ pub(crate) use authority::{
     create_regular_file_lock_new, ensure_open_file_matches_identity,
     open_regular_file_lock_existing,
 };
+pub use file_lock::{FileTryLockError, lock_file_exclusive, try_lock_file_exclusive, unlock_file};
 pub use identity::{HostFileIdentity, HostPathIdentity, HostPathKind, HostPathState};
 #[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
 pub(crate) use quarantine::{HostQuarantineCut, HostQuarantinePlan, delete_pinned_identity};
