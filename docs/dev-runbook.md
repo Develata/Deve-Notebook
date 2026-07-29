@@ -200,7 +200,7 @@ cargo run --locked -p deve_baseline -- acceptance-run --tier ci
 
 Windows Docker results are valid development evidence, but Docker tag-ready
 receipts are intentionally Linux-host-bound. Windows is a supported Android
-target host: the LocalBackend producer builds the x86_64 APK, owns an API 36.1
+target host: the LocalBackend producer builds the x86_64 APK, owns an API 37.0
 Google APIs AVD, records the current WebView provider and real Ed25519 probe,
 requests a bounded 4096 MiB writable data partition with
 `DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB` constrained to `2048..8192`, then
@@ -1217,23 +1217,31 @@ through a no-argument Tauri command backed by Android CookieManager because the
 current Wry Android `set_cookie` surface is unsupported; cookie material never
 enters JavaScript or command arguments.
 
-The emulator gate defaults to the stable Android 16 / API 36.1 Google APIs
-x86_64 image (`system-images;android-36.1;google_apis;x86_64`) as the current
-target-host candidate. Two prior images were retired for emulator guest
-graphics-stack instability during candidate runs: the 16 KB page-size
-`android-37.1` `ps16k` image crashed surfaceflinger, and the Android 17
-developer `android-37.0` image aborted surfaceflinger
-(`hasReadColorBufferDma` goldfish mapper assert) as soon as an app rendered
-its first frames, killing system_server and the app with it. Hosts that
-created the old `deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or
-`deve-mobile-smoke-api37.0-google_apis-x86_64` AVDs can reclaim them with
+The emulator gate defaults to the Android 17 / API 37.0 Google APIs x86_64
+image (`system-images;android-37.0;google_apis;x86_64`) with the `-gpu swangle`
+renderer, 4096 MiB guest RAM, and a pinned stable emulator binary (36.6.11.0,
+build 15507667, resolved fail-closed by
+`scripts/lib/android-emulator-pin.sh`). The renderer and binary pins are
+load-bearing: under the legacy `swiftshader_indirect` translator path the
+37.0 image's guest surfaceflinger aborts (`hasReadColorBufferDma` goldfish
+mapper assert on the RegionSampling thread) spontaneously within minutes of
+boot — before any APK is installed — then crash-loops and takes
+system_server down; emulator-matrix evidence showed the abort is
+renderer-path-bound (the `swangle` and `software` paths survive with proven
+rendered frames) and the `-feature` switches do not remove the guest
+capability. The 16 KB page-size `android-37.1` `ps16k` image remains retired
+for the same instability class. Hosts that created the old
+`deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or
+`deve-mobile-smoke-api36.1-google_apis-x86_64` AVDs can reclaim them with
 `avdmanager delete avd -n <name>` plus `sdkmanager --uninstall` of the
-matching system image. The bounded writable data partition is applied by
-rewriting `disk.dataPartition.size` in the owned AVD's `config.ini` before
-launch, not with the emulator `-partition-size` flag: that flag caps at
-2047 MB on the android-36.1 image and aborts the launch, while the post-boot
-`/data` capacity probe remains the fail-closed proof that the requested size
-took effect.
+matching system image. Rollback is a single revert restoring the API 36.1
+configuration; a missing 36.1 image reinstalls through the existing
+sdkmanager path (do not assume CI runners cache it). The bounded writable
+data partition is applied by rewriting `disk.dataPartition.size` in the
+owned AVD's `config.ini` before launch, not with the emulator
+`-partition-size` flag: that flag caps at 2047 MB and aborts the launch,
+while the post-boot `/data` capacity probe remains the fail-closed proof
+that the requested size took effect.
 That default is only a reproducible input:
 the lifecycle harness still proves non-extractable Ed25519 key generation at
 runtime before any create/edit/commit step. Override the image when needed;

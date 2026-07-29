@@ -5,8 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
-API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-36.1}"
+API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 ARCH="${DEVE_MOBILE_ANDROID_EMULATOR_ARCH:-x86_64}"
 AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke-api${API_LEVEL}-${SYSTEM_TARGET}-${ARCH}}"
@@ -17,7 +18,7 @@ LIFECYCLE_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-600}"
 PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-x86_64}"
 EMULATOR_PORT="${DEVE_MOBILE_ANDROID_EMULATOR_PORT:-5584}"
 EMULATOR_SERIAL="emulator-$EMULATOR_PORT"
-EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-3072}"
+EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096}"
 EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
 OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
@@ -65,7 +66,9 @@ avdmanager_cmd() {
 }
 
 emulator_cmd() {
-  android_run_tool emulator "$@"
+  [[ -n "${PINNED_EMULATOR_BIN:-}" ]] \
+    || fail "pinned Android emulator was not resolved before emulator_cmd"
+  "$PINNED_EMULATOR_BIN" "$@"
 }
 
 adb_cmd() {
@@ -233,8 +236,8 @@ ensure_avd() {
   ensure_avd_data_partition
 }
 
-# The emulator -partition-size flag is rejected (>2047 MB) for the pinned
-# android-36.1 image, so the bounded /data request is written into the owned
+# The emulator -partition-size flag is rejected (>2047 MB), observed on the
+# retired android-36.1 image, so the bounded /data request is written into the owned
 # AVD's config.ini instead; verify_emulator_data_capacity stays the proof.
 ensure_avd_data_partition() {
   local config_file="$AVD_HOME/$AVD_NAME.avd/config.ini"
@@ -442,7 +445,10 @@ mkdir -p "$LOG_DIR" "$AVD_HOME"
 export ANDROID_AVD_HOME="$AVD_HOME"
 
 install_sdk_packages
-require_android_tool emulator
+PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)" \
+  || fail "pinned Android emulator $ANDROID_EMULATOR_PIN_VERSION (build $ANDROID_EMULATOR_PIN_BUILD_ID) could not be resolved"
+echo "mobile-android-emulator-install-startup-smoke-check: pinned emulator: $PINNED_EMULATOR_BIN"
+echo "mobile-android-emulator-install-startup-smoke-check: emulator version: $("$PINNED_EMULATOR_BIN" -version 2>/dev/null | head -n 1)"
 require_android_tool adb
 ensure_avd
 
@@ -472,7 +478,8 @@ emulator_cmd \
   -no-window \
   -no-audio \
   -no-boot-anim \
-  -gpu swiftshader_indirect \
+  -gpu swangle \
+  -verbose \
   -no-snapshot \
   -no-snapshot-save \
   -wipe-data \
@@ -482,6 +489,8 @@ write_emulator_owner "$EMULATOR_PID"
 
 wait_for_boot
 verify_emulator_data_capacity
+echo "mobile-android-emulator-install-startup-smoke-check: emulator renderer selection:"
+grep -aE "vulkan_mode_selected|gles_mode_selected|setCurrentRenderer" "$LOG_DIR/emulator.log" | head -n 4 || true
 
 adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
 

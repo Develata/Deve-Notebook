@@ -58,6 +58,10 @@ const packageBuilder = fs.readFileSync(
   new URL("./check-mobile-android-shell-package-build.sh", import.meta.url),
   "utf8",
 );
+const emulatorPin = fs.readFileSync(
+  new URL("./lib/android-emulator-pin.sh", import.meta.url),
+  "utf8",
+);
 const producerRegistry = JSON.parse(fs.readFileSync(
   new URL("../docs/registry/acceptance-producers.json", import.meta.url),
   "utf8",
@@ -184,12 +188,14 @@ test("Android package build creates the current Web dist before native preflight
 
 test("Android emulator runtime tools are required after SDK package repair", () => {
   const installPackages = orchestrator.lastIndexOf("install_sdk_packages");
-  const requireEmulator = orchestrator.lastIndexOf("require_android_tool emulator");
+  const requireEmulator = orchestrator.lastIndexOf(
+    'PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)"',
+  );
   const requireAdb = orchestrator.lastIndexOf("require_android_tool adb");
   assert.ok(installPackages >= 0, "emulator orchestration must install missing SDK packages");
   assert.ok(
     installPackages < requireEmulator,
-    "the emulator binary must be checked after the SDK package installer can repair it",
+    "the pinned emulator must be resolved after the SDK package installer can repair it",
   );
   assert.ok(
     installPackages < requireAdb,
@@ -349,4 +355,58 @@ test("Android APK install retries only exact package-service recovery failures",
   assert.match(installRetryTest, /run_case launcher-unavailable 1 1 11 9/);
   assert.match(installRetryTest, /run_case launcher-deadline 124 1 2 0/);
   assert.match(installRetryTest, /run_case launcher-sleep-fail 42 1 2 1/);
+});
+
+test("emulator gate pins the exact stable emulator build fail-closed", () => {
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_VERSION="36\.6\.11\.0"/);
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_BUILD_ID="15507667"/);
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_LINUX="[0-9a-f]{64}"/);
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_WINDOWS="[0-9a-f]{64}"/);
+  // checksum precedes extraction, and extraction lands via atomic rename
+  assert.match(emulatorPin, /sha256sum -c --quiet -/);
+  assert.match(
+    emulatorPin,
+    /sha256sum[\s\S]*unzip[\s\S]*mv -f -- "\$extracted" "\$cache_root\/\$ANDROID_EMULATOR_PIN_BUILD_ID"/,
+  );
+  // every resolution path re-asserts the version banner; no silent fallback
+  assert.match(emulatorPin, /android_emulator_pin_matches "\$binary"/);
+  assert.match(emulatorPin, /does not match pin \$ANDROID_EMULATOR_PIN_VERSION/);
+  assert.match(emulatorPin, /downloaded emulator does not match pin/);
+  // the shared SDK is never mutated: installs go to the private cache root
+  assert.match(emulatorPin, /DEVE_MOBILE_ANDROID_EMULATOR_PIN_DIR:-\$HOME\/\.cache\/deve-android-emulator-pin/);
+  // the lib only queries the SDK path read-only; it never runs SDK tools
+  assert.doesNotMatch(emulatorPin, /android_run_tool|sdkmanager_cmd/);
+});
+
+test("emulator orchestrator launches only the resolved pinned binary", () => {
+  assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-pin\.sh"/);
+  assert.match(orchestrator, /PINNED_EMULATOR_BIN="\$\(android_resolve_pinned_emulator\)"/);
+  assert.match(orchestrator, /pinned Android emulator was not resolved before emulator_cmd/);
+  assert.match(orchestrator, /pinned emulator: \$PINNED_EMULATOR_BIN/);
+  // diagnostics may list AVDs via the SDK binary; the launch path must
+  // only ever exec the resolved pin
+  assert.match(orchestrator, /"\$PINNED_EMULATOR_BIN" "\$@"/);
+});
+
+test("emulator gate pins the API 37.0 image with swangle and 4096 MiB", () => {
+  assert.match(orchestrator, /API_LEVEL="\$\{DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37\.0\}"/);
+  assert.match(orchestrator, /EMULATOR_RAM_MB="\$\{DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096\}"/);
+  assert.match(orchestrator, /-gpu swangle/);
+  // the legacy translator path aborts guest surfaceflinger on this image
+  assert.doesNotMatch(orchestrator, /swiftshader_indirect/);
+  // actual renderer/ICD selection is recorded as gate evidence
+  assert.match(orchestrator, /vulkan_mode_selected\|gles_mode_selected\|setCurrentRenderer/);
+});
+
+test("android producers bind the emulator pin library", () => {
+  for (const producerId of ["android.local-backend", "android.remote-browser"]) {
+    const producer = producerRegistry.producers.find(
+      (candidate) => candidate.producer_id === producerId,
+    );
+    assert.ok(producer, `${producerId} must exist in the producer registry`);
+    assert.ok(
+      producer.artifacts.includes("scripts/lib/android-emulator-pin.sh"),
+      `${producerId} receipt must bind the emulator pin library`,
+    );
+  }
 });

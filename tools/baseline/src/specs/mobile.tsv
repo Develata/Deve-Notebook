@@ -714,7 +714,13 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-36.1}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)"
+contains	scripts/lib/android-emulator-pin.sh	ANDROID_EMULATOR_PIN_VERSION="36.6.11.0"
+contains	scripts/lib/android-emulator-pin.sh	ANDROID_EMULATOR_PIN_BUILD_ID="15507667"
+contains	scripts/lib/android-emulator-pin.sh	sha256sum -c --quiet -
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"

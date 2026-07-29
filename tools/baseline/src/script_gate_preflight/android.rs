@@ -29,7 +29,7 @@ pub fn run_mobile_android_emulator_install_startup_smoke() -> Result<()> {
     non_empty_string_from_env(
         ANDROID_EMULATOR_LABEL,
         "DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME",
-        "deve-mobile-smoke-api36.1-google_apis-x86_64",
+        "deve-mobile-smoke-api37.0-google_apis-x86_64",
     )?;
     non_empty_string_from_env(
         ANDROID_EMULATOR_LABEL,
@@ -58,7 +58,7 @@ pub fn run_mobile_android_emulator_install_startup_smoke() -> Result<()> {
 fn android_api_level_from_env() -> Result<String> {
     match env::var("DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL") {
         Ok(value) => validate_android_api_level(&value),
-        Err(env::VarError::NotPresent) => validate_android_api_level("36.1"),
+        Err(env::VarError::NotPresent) => validate_android_api_level("37.0"),
         Err(env::VarError::NotUnicode(_)) => bail!(
             "{ANDROID_EMULATOR_LABEL}: DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL must be valid Unicode"
         ),
