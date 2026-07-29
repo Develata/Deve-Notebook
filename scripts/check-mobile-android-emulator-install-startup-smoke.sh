@@ -448,7 +448,7 @@ install_sdk_packages
 PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)" \
   || fail "pinned Android emulator $ANDROID_EMULATOR_PIN_VERSION (build $ANDROID_EMULATOR_PIN_BUILD_ID) could not be resolved"
 echo "mobile-android-emulator-install-startup-smoke-check: pinned emulator: $PINNED_EMULATOR_BIN"
-echo "mobile-android-emulator-install-startup-smoke-check: emulator version: $("$PINNED_EMULATOR_BIN" -version 2>/dev/null | head -n 1)"
+echo "mobile-android-emulator-install-startup-smoke-check: emulator version: $("$PINNED_EMULATOR_BIN" -version 2>&1 | grep -a -m 1 'Android emulator version' || true)"
 require_android_tool adb
 ensure_avd
 

@@ -23,12 +23,26 @@ android_emulator_pin_error() {
   return 1
 }
 
+android_emulator_pin_note() {
+  printf 'android-emulator-pin: %s\n' "$1" >&2
+}
+
+# Last -version probe result, recorded so mismatch paths can report what the
+# candidate binary actually printed instead of failing blind.
+ANDROID_EMULATOR_PIN_LAST_PROBE=""
+
+# Matches when the -version output contains the pinned version and build id.
+# Deliberately independent of the probe's exit status and line layout: the
+# launcher delegates -version to the bundled qemu engine, whose exit code and
+# log prefacing vary by host environment. Identity comes from the banner
+# tokens alone; downloaded archives are additionally SHA-256 bound.
 android_emulator_pin_matches() {
   local binary="$1"
-  local banner
-  banner="$("$binary" -version 2>/dev/null | head -n 1)" || return 1
-  [[ "$banner" == *"version $ANDROID_EMULATOR_PIN_VERSION"* ]] || return 1
-  [[ "$banner" == *"build_id $ANDROID_EMULATOR_PIN_BUILD_ID"* ]] || return 1
+  local output="" rc=0
+  output="$("$binary" -version 2>&1)" || rc=$?
+  ANDROID_EMULATOR_PIN_LAST_PROBE="exit=$rc first-lines: $(printf '%s' "$output" | head -n 3 | tr '\n' '|')"
+  [[ "$output" == *"version $ANDROID_EMULATOR_PIN_VERSION"* ]] || return 1
+  [[ "$output" == *"build_id $ANDROID_EMULATOR_PIN_BUILD_ID"* ]] || return 1
 }
 
 android_emulator_pin_archive_name() {
@@ -110,25 +124,30 @@ android_resolve_pinned_emulator() {
   if [[ -n "${DEVE_MOBILE_ANDROID_EMULATOR_BIN:-}" ]]; then
     binary="${DEVE_MOBILE_ANDROID_EMULATOR_BIN}"
     android_emulator_pin_matches "$binary" \
-      || { android_emulator_pin_error "override DEVE_MOBILE_ANDROID_EMULATOR_BIN does not match pin $ANDROID_EMULATOR_PIN_VERSION build $ANDROID_EMULATOR_PIN_BUILD_ID"; return 1; }
+      || { android_emulator_pin_note "override probe: $ANDROID_EMULATOR_PIN_LAST_PROBE"; android_emulator_pin_error "override DEVE_MOBILE_ANDROID_EMULATOR_BIN does not match pin $ANDROID_EMULATOR_PIN_VERSION build $ANDROID_EMULATOR_PIN_BUILD_ID"; return 1; }
     printf '%s\n' "$binary"
     return 0
   fi
 
-  if binary="$(android_tool_path emulator)" && android_emulator_pin_matches "$binary"; then
-    printf '%s\n' "$binary"
-    return 0
+  if binary="$(android_tool_path emulator)"; then
+    if android_emulator_pin_matches "$binary"; then
+      printf '%s\n' "$binary"
+      return 0
+    fi
+    android_emulator_pin_note "SDK emulator at $binary did not match pin ($ANDROID_EMULATOR_PIN_LAST_PROBE); falling back to pinned download"
   fi
 
   cache_root="$(android_emulator_pin_cache_root)"
-  if binary="$(android_emulator_pin_binary_in "$cache_root/$ANDROID_EMULATOR_PIN_BUILD_ID")" \
-      && android_emulator_pin_matches "$binary"; then
-    printf '%s\n' "$binary"
-    return 0
+  if binary="$(android_emulator_pin_binary_in "$cache_root/$ANDROID_EMULATOR_PIN_BUILD_ID")"; then
+    if android_emulator_pin_matches "$binary"; then
+      printf '%s\n' "$binary"
+      return 0
+    fi
+    android_emulator_pin_note "cached emulator at $binary did not match pin ($ANDROID_EMULATOR_PIN_LAST_PROBE); re-downloading"
   fi
 
   binary="$(android_emulator_pin_download)" || return 1
   android_emulator_pin_matches "$binary" \
-    || { android_emulator_pin_error "downloaded emulator does not match pin $ANDROID_EMULATOR_PIN_VERSION build $ANDROID_EMULATOR_PIN_BUILD_ID"; return 1; }
+    || { android_emulator_pin_note "download probe: $ANDROID_EMULATOR_PIN_LAST_PROBE"; android_emulator_pin_error "downloaded emulator does not match pin $ANDROID_EMULATOR_PIN_VERSION build $ANDROID_EMULATOR_PIN_BUILD_ID"; return 1; }
   printf '%s\n' "$binary"
 }

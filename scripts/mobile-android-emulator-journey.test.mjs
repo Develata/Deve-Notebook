@@ -372,6 +372,11 @@ test("emulator gate pins the exact stable emulator build fail-closed", () => {
   assert.match(emulatorPin, /android_emulator_pin_matches "\$binary"/);
   assert.match(emulatorPin, /does not match pin \$ANDROID_EMULATOR_PIN_VERSION/);
   assert.match(emulatorPin, /downloaded emulator does not match pin/);
+  // identity comes from banner tokens, never from the probe's exit status,
+  // and every mismatch reports what the candidate binary actually printed
+  assert.match(emulatorPin, /rc=\$\?/);
+  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_LAST_PROBE/);
+  assert.doesNotMatch(emulatorPin, /head -n 1/);
   // the shared SDK is never mutated: installs go to the private cache root
   assert.match(emulatorPin, /DEVE_MOBILE_ANDROID_EMULATOR_PIN_DIR:-\$HOME\/\.cache\/deve-android-emulator-pin/);
   // the lib only queries the SDK path read-only; it never runs SDK tools
