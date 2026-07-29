@@ -27,15 +27,27 @@ expect_reject() {
   fi
 }
 
-printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader\n' >"$log"
+printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_selected:swangle\n' >"$log"
 expect_match
-[[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == "vulkan/gles=swiftshader swiftshader" ]] \
-  || fail_test "approved renderer evidence was not recorded"
+[[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == "vulkan/gles=swiftshader swangle" ]] \
+  || fail_test "canonical swangle renderer evidence was not recorded"
 
-printf '%s\n' \
-  'INFO | emuglConfig_init: vulkan_mode_selected:swangle gles_mode_selected:swangle' \
-  'INFO | emuglConfig_init: vulkan_mode_selected:swangle gles_mode_selected:swangle' >"$log"
-expect_match
+printf 'INFO | emuglConfig_init: vulkan_mode_selected:swangle gles_mode_selected:swiftshader\n' >"$log"
+expect_reject
+[[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == unapproved* ]] \
+  || fail_test "reversed renderer pair was not rejected"
+
+for unapproved_pair in \
+  "swiftshader swiftshader" \
+  "swangle swangle" \
+  "software software"; do
+  read -r vulkan_mode gles_mode <<<"$unapproved_pair"
+  printf 'INFO | emuglConfig_init: vulkan_mode_selected:%s gles_mode_selected:%s\n' \
+    "$vulkan_mode" "$gles_mode" >"$log"
+  expect_reject
+  [[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == unapproved* ]] \
+    || fail_test "former fallback renderer pair was not rejected: $unapproved_pair"
+done
 
 printf 'INFO | emulator started without a renderer selection\n' >"$log"
 expect_reject
@@ -48,6 +60,12 @@ printf '%s\n' \
 expect_reject
 [[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == conflicting* ]] \
   || fail_test "conflicting renderer evidence was not reported"
+
+printf '%s\n' \
+  'INFO | emuglConfig_init: vulkan_mode_selected:host gles_mode_selected:host vulkan_mode_selected:swiftshader gles_mode_selected:swangle' >"$log"
+expect_reject
+[[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == conflicting* ]] \
+  || fail_test "same-line conflicting renderer evidence was not reported"
 
 for _ in {1..16}; do
   printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader\n'

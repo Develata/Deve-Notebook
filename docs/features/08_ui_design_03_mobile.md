@@ -79,8 +79,10 @@
   由有界 build lock 串行化并在锁内复核现有 binary；既存 invalid entry 保留并 fail-closed，不自动
   删除一个可能正在使用的 build。renderer 也必须从本次 owned emulator 的有界
   日志前缀内全部 selection 证明实际使用批准的 `swangle`/software path。`-gpu swangle` 当前投影出的完整
-  `vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader` pair 属于有效 swangle 证据；
-  缺失、冲突或 `swiftshader_indirect` 证据会在安装 APK 和执行业务 journey 前失败。
+  `vulkan_mode_selected:swiftshader gles_mode_selected:swangle` 有序 pair 表示 Vulkan 由 SwiftShader、
+  GLES 由 ANGLE-on-SwiftShader（SwANGLE）提供，是当前 pin 唯一批准的 swangle 证据；其它 software
+  token pair 不能作为兼容回退。缺失、冲突、未批准 pair 或 `swiftshader_indirect` 证据会在安装 APK
+  和执行业务 journey 前失败；未来 pin/rollback 的不同 pair 必须先由新的 target-host evidence 批准。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标

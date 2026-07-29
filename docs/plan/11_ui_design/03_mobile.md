@@ -103,10 +103,13 @@ MobileColdStart
     保留并 fail-closed，不能自动替换一个可能仍被运行中 emulator 使用的目录。
 *   Android emulator renderer receipt 必须根据本次 owned emulator 的实际 bounded log 证明启动走入
     批准的 `swangle`/software renderer path；当前 emulator 对 `-gpu swangle` 的 canonical runtime
-    projection 是 `vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader`，该完整 pair 可作为
-    swangle 实现证据，但 legacy `swiftshader_indirect` 不可接受。bounded prefix 内全部 renderer
-    selection 都必须参与一致性判断；证据缺失、冲突或落入未批准 path 必须在 APK 安装与业务
-    journey 前 fail-closed。命令行参数只是 intent，不能替代 runtime evidence。
+    projection 是 `vulkan_mode_selected:swiftshader gles_mode_selected:swangle`：Vulkan 由
+    SwiftShader 提供，GLES 由 ANGLE-on-SwiftShader（SwANGLE）提供。当前 pin 只批准这一个有序完整
+    pair 作为 swangle 实现证据；`swiftshader/swiftshader`、`swangle/swangle`、`software/software`
+    或任意其它 software token 组合都不能冒充等价证据，而 legacy `swiftshader_indirect` 不可接受。
+    bounded prefix 内全部 renderer selection 都必须参与一致性判断；证据缺失、冲突或落入未批准 path
+    必须在 APK 安装与业务 journey 前 fail-closed。命令行参数只是 intent，不能替代 runtime
+    evidence；未来 pin 或 rollback 若产生不同 pair，必须先取得新的 target-host 证据并显式更新合同。
 *   Android lifecycle gate 必须在首次文档 editor host 进入当前 generation 的可写状态后立即注入第一笔真实输入并证明内容与 pending 链均保留。跨 transport generation 的 pending 证据必须在旧 generation 暂停一笔真实 outbound edit frame、确认前端 pending 非空、随后丢弃旧 frame 后取得；replacement generation 只能依靠产品 pending replay 使后端首次看到该唯一文本，不能用已写入服务端的 Snapshot 替代 pending 保留证明。CodeMirror mount/cleanup 必须服从 `10_rendering#document-authority-bridge` 的 owner-scoped 生命周期；迟到 cleanup 不得销毁新 WebView editor。
 
 **Offline/background semantics**:

@@ -6,7 +6,7 @@ ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE=""
 
 android_emulator_renderer_verify() {
   local log_file="$1"
-  local selected="" modes="" distinct_count=0
+  local scan="" modes="" distinct_count=0
 
   ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE=""
   if ! [[ "$ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES" =~ ^[1-9][0-9]*$ ]] \
@@ -17,26 +17,48 @@ android_emulator_renderer_verify() {
   [[ -f "$log_file" ]] \
     || { ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="renderer log is missing"; return 1; }
 
-  if grep -aE -m 1 'swiftshader_indirect' \
-      < <(head -c "$ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES" "$log_file") >/dev/null; then
+  if ! scan="$(
+    head -c "$ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES" "$log_file" \
+      | awk '
+          {
+            remaining = $0
+            if (remaining ~ /swiftshader_indirect/) {
+              legacy = 1
+            }
+            while (match(remaining, /vulkan_mode_selected:[^[:space:]]+[[:space:]]+gles_mode_selected:[^[:space:]]+/)) {
+              match_start = RSTART
+              match_length = RLENGTH
+              pair = substr(remaining, match_start, match_length)
+              sub(/^vulkan_mode_selected:/, "", pair)
+              sub(/[[:space:]]+gles_mode_selected:/, " ", pair)
+              print "pair:" pair
+              remaining = substr(remaining, match_start + match_length)
+            }
+          }
+          END {
+            if (legacy) {
+              print "legacy"
+            }
+          }
+        '
+  )"; then
+    ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="renderer log bounded scan failed"
+    return 1
+  fi
+
+  if printf '%s\n' "$scan" | grep -qx 'legacy'; then
     ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="legacy swiftshader_indirect selected"
     return 1
   fi
 
-  selected="$(grep -aE \
-    'vulkan_mode_selected:[^[:space:]]+[[:space:]]+gles_mode_selected:[^[:space:]]+' \
-    < <(head -c "$ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES" "$log_file") \
-    || true)"
-  [[ -n "$selected" ]] \
-    || { ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="renderer selection is missing within bounded log prefix"; return 1; }
-  modes="$(printf '%s\n' "$selected" \
-    | sed -n 's/.*vulkan_mode_selected:\([^[:space:]]*\)[[:space:]]*gles_mode_selected:\([^[:space:]]*\).*/\1 \2/p' \
-    | sort -u)"
+  modes="$(printf '%s\n' "$scan" | sed -n 's/^pair://p' | sort -u)"
   distinct_count="$(printf '%s\n' "$modes" | sed '/^$/d' | wc -l | tr -d '[:space:]')"
+  [[ "$distinct_count" != "0" ]] \
+    || { ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="renderer selection is missing within bounded log prefix"; return 1; }
   [[ "$distinct_count" == "1" ]] \
     || { ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="conflicting renderer selections: $(printf '%s' "$modes" | tr '\n' '|')"; return 1; }
   case "$modes" in
-    "swiftshader swiftshader" | "swangle swangle" | "software software")
+    "swiftshader swangle")
       ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE="vulkan/gles=$modes"
       return 0
       ;;
