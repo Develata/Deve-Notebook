@@ -741,16 +741,22 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status !
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	LIFECYCLE_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS:-600}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-lowram
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	stop_android_gradle_daemon
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	emu avd name
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_boot_avd_identity_matches
 before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	check-mobile-android-shell-package-build.sh	emulator_cmd \
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_boot_properties_ready
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"
 before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"	check-mobile-android-install-startup-smoke.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-boot-readiness.test.sh
+contains	scripts/lib/android-emulator-boot-readiness.sh	emu avd name
+contains	scripts/lib/android-emulator-boot-readiness.sh	android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"
+contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_CAPTURE_STATUS="$status"
 contains	scripts/lib/android-emulator-boot-readiness.sh	shell cmd package list packages
 contains	scripts/lib/android-emulator-boot-readiness.sh	shell settings get global device_provisioned
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_KILL_AFTER_SECS=2
+contains	scripts/android-emulator-boot-readiness.test.sh	timed-out device line was admitted
+contains	scripts/android-emulator-boot-readiness.test.sh	timed-out AVD identity was admitted
+contains	scripts/android-emulator-boot-readiness.test.sh	timed-out boot property was admitted
 contains	scripts/android-emulator-boot-readiness.test.sh	Cannot access system provider: 'settings' before system providers are installed!
 contains	scripts/lib/android-install-retry.sh	wait_for_android_settings_provider "$deadline"
 contains	scripts/lib/android-install-retry.sh	retryable_android_settings_provider_install_failure "$status" "$output"

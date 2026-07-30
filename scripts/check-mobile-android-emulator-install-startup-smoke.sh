@@ -227,48 +227,22 @@ ensure_avd_data_partition() {
 
 wait_for_boot() {
   local deadline=$((SECONDS + BOOT_TIMEOUT_SECS))
-  local devices_output=""
-  local sys_boot_completed=""
-  local dev_boot_complete=""
+
+  android_emulator_wait_for_device_state \
+      "$EMULATOR_SERIAL" "$deadline" ensure_emulator_process_alive \
+    || fail "Android emulator did not reach adb device state within ${BOOT_TIMEOUT_SECS}s: $ANDROID_EMULATOR_BOOT_DEVICE_STATE_LAST_EVIDENCE"
+
+  android_emulator_boot_avd_identity_matches \
+      "$EMULATOR_SERIAL" "$AVD_NAME" "$deadline" \
+    || fail "Android emulator AVD identity rejected within boot deadline: $ANDROID_EMULATOR_BOOT_AVD_IDENTITY_LAST_EVIDENCE"
 
   while (( SECONDS < deadline )); do
     ensure_emulator_process_alive
-    devices_output="$(android_emulator_boot_probe_until "$deadline" devices 2>/dev/null \
-      | head -c 4096 || true)"
-    if awk -v serial="$EMULATOR_SERIAL" \
-        '$1 == serial { found = 1 } END { exit !found }' <<<"$devices_output"; then
-      break
-    fi
-    android_emulator_boot_poll_sleep "$deadline" 2 || break
-  done
-
-  [[ -n "${EMULATOR_SERIAL:-}" ]] \
-    || fail "Android emulator serial did not appear within ${BOOT_TIMEOUT_SECS}s"
-
-  android_emulator_boot_probe_until "$deadline" \
-      -s "$EMULATOR_SERIAL" wait-for-device >/dev/null \
-    || fail "Android emulator did not reach adb device state within ${BOOT_TIMEOUT_SECS}s"
-
-  local observed_avd
-  observed_avd="$(android_emulator_boot_probe_until "$deadline" \
-    -s "$EMULATOR_SERIAL" emu avd name 2>/dev/null \
-    | tr -d '\r' | head -c 128 | head -n 1 || true)"
-  [[ "$observed_avd" == "$AVD_NAME" ]] \
-    || fail "Android emulator serial $EMULATOR_SERIAL belongs to '$observed_avd', expected '$AVD_NAME'"
-
-  while (( SECONDS < deadline )); do
-    ensure_emulator_process_alive
-    sys_boot_completed="$(android_emulator_boot_probe_until "$deadline" \
-      -s "$EMULATOR_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | head -c 16 || true)"
-    dev_boot_complete="$(android_emulator_boot_probe_until "$deadline" \
-      -s "$EMULATOR_SERIAL" shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r' | head -c 16 || true)"
-    if android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"; then
+    if android_emulator_boot_properties_ready "$EMULATOR_SERIAL" "$deadline"; then
       if android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"; then
         echo "mobile-android-emulator-install-startup-smoke-check: boot readiness: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
         return 0
       fi
-    else
-      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="boot-properties=not-ready sys=${sys_boot_completed:-missing} dev=${dev_boot_complete:-missing}"
     fi
     android_emulator_boot_poll_sleep "$deadline" 5 || break
   done
