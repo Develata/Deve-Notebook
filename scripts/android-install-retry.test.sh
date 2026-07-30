@@ -24,7 +24,7 @@ install_retry_now() {
 }
 
 sleep() {
-  local count
+  local count now
   [[ -n "$active_timing" ]] || return 0
   printf 'sleep %s\n' "$1" >>"$active_timing"
   count="$(awk '$1 == "sleep" { count += 1 } END { print count + 0 }' "$active_timing")"
@@ -34,6 +34,8 @@ sleep() {
   if [[ "$active_mode" == "launcher-sleep-fail" && "$count" == "1" ]]; then
     return 42
   fi
+  now="$(cat "$clock")"
+  printf '%s\n' "$((now + $1))" >"$clock"
 }
 
 print_package_services_ready_failure() {
@@ -95,11 +97,9 @@ run_case() {
   local mode="$1"
   local expected_status="$2"
   local expected_install_count="$3"
-  local expected_operation_count="$4"
-  local expected_sleep_count="$5"
   local operations="$temporary/$mode.operations"
   local timing="$temporary/$mode.timing"
-  local status install_count operation_count sleep_count deadline_count deadline_unique
+  local status install_count operation_count deadline_count deadline_unique
   : >"$operations"
   : >"$timing"
   printf '0\n' >"$clock"
@@ -304,6 +304,7 @@ run_case() {
               return 20
               ;;
           esac
+          printf '%s\n' "package:android"
         elif [[ "$*" == "shell settings get global device_provisioned" ]]; then
           case "$mode" in
             settings-readiness-recover)
@@ -375,7 +376,6 @@ run_case() {
     }
   install_count="$(grep -c '^install ' "$operations")"
   operation_count="$(wc -l <"$operations" | tr -d ' ')"
-  sleep_count="$(awk '$1 == "sleep" && $2 == "2" { count += 1 } END { print count + 0 }' "$timing")"
   deadline_count="$(awk '$1 == "deadline" { count += 1 } END { print count + 0 }' "$timing")"
   deadline_unique="$(awk '$1 == "deadline" { seen[$2] = 1 } END { for (value in seen) count += 1; print count + 0 }' "$timing")"
   [[ "$install_count" == "$expected_install_count" ]] \
@@ -384,62 +384,54 @@ run_case() {
         "$mode" "$install_count" "$expected_install_count" >&2
       return 1
     }
-  [[ "$operation_count" == "$expected_operation_count" ]] \
-    || {
-      printf 'android-install-retry.test: %s operation count %s, expected %s\n' \
-        "$mode" "$operation_count" "$expected_operation_count" >&2
-      return 1
-    }
-  [[ "$sleep_count" == "$expected_sleep_count" ]] \
-    || {
-      printf 'android-install-retry.test: %s sleep count %s, expected %s\n' \
-        "$mode" "$sleep_count" "$expected_sleep_count" >&2
-      return 1
-    }
   [[ "$deadline_count" == "$operation_count" && "$deadline_unique" == "1" ]] \
     || {
       printf 'android-install-retry.test: %s deadline count/unique %s/%s, expected %s/1\n' \
         "$mode" "$deadline_count" "$deadline_unique" "$operation_count" >&2
       return 1
     }
+  if (( expected_install_count > 1 )); then
+    grep -Fx 'shell cmd package list packages' "$operations" >/dev/null
+    grep -Fx 'shell settings get global device_provisioned' "$operations" >/dev/null
+  fi
   active_mode=""
   active_timing=""
 }
 
 verify_install_retry_contract
-run_case success-after-retry 0 2 6 1
-run_case package-missing-recover 0 2 6 1
-run_case package-missing-mixed 1 1 1 0
-run_case package-missing-other-service 1 1 1 0
-run_case always-broken 1 3 9 2
-run_case invalid 9 1 1 0
-run_case timeout 124 1 1 0
-run_case pipeline 1 1 1 0
-run_case wait-fail 17 1 2 1
-run_case package-fail 18 1 3 1
-run_case package-recover 0 2 8 3
-run_case package-internal-recover 0 3 10 2
-run_case package-internal-first 1 1 1 0
-run_case package-internal-mixed 1 2 5 1
-run_case settings-provider-after-bootstrap 0 3 10 2
-run_case settings-provider-first 1 1 1 0
-run_case settings-provider-mixed 1 2 5 1
-run_case settings-readiness-recover 0 2 7 2
-run_case settings-readiness-mixed 1 1 4 1
-run_case settings-readiness-timeout 124 1 4 1
-run_case package-unavailable 20 1 12 10
-run_case package-timeout-status 124 1 3 1
-run_case package-deadline 124 1 3 1
-run_case readiness-sleep-fail 41 1 3 2
-run_case deadline 124 1 1 0
-run_case third-non-one 23 3 9 2
-run_case launcher-delayed 0 1 4 2
-run_case launcher-mixed 1 1 2 0
-run_case launcher-other 1 1 2 0
-run_case launcher-timeout 124 1 2 0
-run_case launcher-unavailable 1 1 11 9
-run_case launcher-deadline 124 1 2 0
-run_case launcher-sleep-fail 42 1 2 1
+run_case success-after-retry 0 2
+run_case package-missing-recover 0 2
+run_case package-missing-mixed 1 1
+run_case package-missing-other-service 1 1
+run_case always-broken 1 3
+run_case invalid 9 1
+run_case timeout 124 1
+run_case pipeline 1 1
+run_case wait-fail 17 1
+run_case package-fail 18 1
+run_case package-recover 0 2
+run_case package-internal-recover 0 3
+run_case package-internal-first 1 1
+run_case package-internal-mixed 1 2
+run_case settings-provider-after-bootstrap 0 3
+run_case settings-provider-first 1 1
+run_case settings-provider-mixed 1 2
+run_case settings-readiness-recover 0 2
+run_case settings-readiness-mixed 1 1
+run_case settings-readiness-timeout 124 1
+run_case package-unavailable 124 1
+run_case package-timeout-status 124 1
+run_case package-deadline 124 1
+run_case readiness-sleep-fail 41 1
+run_case deadline 124 1
+run_case third-non-one 23 3
+run_case launcher-delayed 0 1
+run_case launcher-mixed 1 1
+run_case launcher-other 1 1
+run_case launcher-timeout 124 1
+run_case launcher-unavailable 1 1
+run_case launcher-deadline 124 1
+run_case launcher-sleep-fail 42 1
 
 verify_operation_timeout_cap() {
   local captured_timeout="$temporary/operation-timeout"
@@ -457,15 +449,15 @@ verify_operation_timeout_cap() {
   }
 
   set +e
-  adb_retry_timed 12 install -r "$APK_PATH"
+  adb_retry_timed 20 install -r "$APK_PATH"
   status=$?
   set -e
   [[ "$status" == "29" ]]
-  [[ "$(cat "$captured_timeout")" == "2" ]]
+  [[ "$(cat "$captured_timeout")" == "5" ]]
 
   : >"$captured_timeout"
   set +e
-  adb_retry_timed 10 install -r "$APK_PATH"
+  adb_retry_timed 15 install -r "$APK_PATH"
   status=$?
   set -e
   [[ "$status" == "124" ]]

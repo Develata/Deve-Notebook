@@ -2,94 +2,33 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const orchestrator = fs.readFileSync(
-  new URL("./check-mobile-android-emulator-install-startup-smoke.sh", import.meta.url),
-  "utf8",
+const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
+const orchestrator = read("./check-mobile-android-emulator-install-startup-smoke.sh");
+const installSmoke = read("./check-mobile-android-install-startup-smoke.sh");
+const installRetryTest = read("./android-install-retry.test.sh");
+const installRetryLib = read("./lib/android-install-retry.sh");
+const guestReadinessTest = read("./android-guest-service-readiness.test.sh");
+const guestReadinessLib = read("./lib/android-guest-service-readiness.sh");
+const localSmoke = read("./smoke-mobile-android-lifecycle.sh");
+const localJourney = read("./smoke-mobile-android-lifecycle.mjs");
+const remoteSmoke = read("./smoke-mobile-android-remote-browser.sh");
+const remoteJourney = read("./smoke-mobile-android-remote-browser.mjs");
+const businessFlow = read("./lib/android-business-flow.mjs");
+const writableEvidence = read("./lib/android-writable-evidence.mjs");
+const cleanup = read("./cleanup-mobile-android-emulator.sh");
+const cleanupTest = read("./android-emulator-cleanup.test.sh");
+const ownerLibrary = read("./lib/android-emulator-owner.sh");
+const packageBuilder = read("./check-mobile-android-shell-package-build.sh");
+const emulatorPin = read("./lib/android-emulator-pin.sh");
+const emulatorPinTest = read("./android-emulator-pin.test.sh");
+const emulatorRenderer = read("./lib/android-emulator-renderer.sh");
+const emulatorRendererTest = read("./android-emulator-renderer.test.sh");
+const releaseNativeWorkflow = read("../.github/workflows/release-native.yml");
+const nativeTargetHostWorkflow = read("../.github/workflows/native-target-host.yml");
+const emulatorHostPreparation = read("./prepare-android-emulator-host.sh");
+const producerRegistry = JSON.parse(
+  read("../docs/registry/acceptance-producers.json"),
 );
-const installSmoke = fs.readFileSync(
-  new URL("./check-mobile-android-install-startup-smoke.sh", import.meta.url),
-  "utf8",
-);
-const installRetryTest = fs.readFileSync(
-  new URL("./android-install-retry.test.sh", import.meta.url),
-  "utf8",
-);
-const installRetryLib = fs.readFileSync(
-  new URL("./lib/android-install-retry.sh", import.meta.url),
-  "utf8",
-);
-const localSmoke = fs.readFileSync(
-  new URL("./smoke-mobile-android-lifecycle.sh", import.meta.url),
-  "utf8",
-);
-const localJourney = fs.readFileSync(
-  new URL("./smoke-mobile-android-lifecycle.mjs", import.meta.url),
-  "utf8",
-);
-const remoteSmoke = fs.readFileSync(
-  new URL("./smoke-mobile-android-remote-browser.sh", import.meta.url),
-  "utf8",
-);
-const remoteJourney = fs.readFileSync(
-  new URL("./smoke-mobile-android-remote-browser.mjs", import.meta.url),
-  "utf8",
-);
-const businessFlow = fs.readFileSync(
-  new URL("./lib/android-business-flow.mjs", import.meta.url),
-  "utf8",
-);
-const writableEvidence = fs.readFileSync(
-  new URL("./lib/android-writable-evidence.mjs", import.meta.url),
-  "utf8",
-);
-const cleanup = fs.readFileSync(
-  new URL("./cleanup-mobile-android-emulator.sh", import.meta.url),
-  "utf8",
-);
-const cleanupTest = fs.readFileSync(
-  new URL("./android-emulator-cleanup.test.sh", import.meta.url),
-  "utf8",
-);
-const ownerLibrary = fs.readFileSync(
-  new URL("./lib/android-emulator-owner.sh", import.meta.url),
-  "utf8",
-);
-const packageBuilder = fs.readFileSync(
-  new URL("./check-mobile-android-shell-package-build.sh", import.meta.url),
-  "utf8",
-);
-const emulatorPin = fs.readFileSync(
-  new URL("./lib/android-emulator-pin.sh", import.meta.url),
-  "utf8",
-);
-const emulatorPinTest = fs.readFileSync(
-  new URL("./android-emulator-pin.test.sh", import.meta.url),
-  "utf8",
-);
-const emulatorRenderer = fs.readFileSync(
-  new URL("./lib/android-emulator-renderer.sh", import.meta.url),
-  "utf8",
-);
-const emulatorRendererTest = fs.readFileSync(
-  new URL("./android-emulator-renderer.test.sh", import.meta.url),
-  "utf8",
-);
-const releaseNativeWorkflow = fs.readFileSync(
-  new URL("../.github/workflows/release-native.yml", import.meta.url),
-  "utf8",
-);
-const nativeTargetHostWorkflow = fs.readFileSync(
-  new URL("../.github/workflows/native-target-host.yml", import.meta.url),
-  "utf8",
-);
-const emulatorHostPreparation = fs.readFileSync(
-  new URL("./prepare-android-emulator-host.sh", import.meta.url),
-  "utf8",
-);
-const producerRegistry = JSON.parse(fs.readFileSync(
-  new URL("../docs/registry/acceptance-producers.json", import.meta.url),
-  "utf8",
-));
 
 test("emulator orchestrator owns both local and remote target lifecycles", () => {
   assert.match(orchestrator, /DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local/);
@@ -269,16 +208,19 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
   }
 });
 
-test("Android APK install retries only exact package/settings recovery failures", () => {
+test("Android APK install retries only after stable package/settings admission", () => {
   assert.match(
     installSmoke,
     /timeout --kill-after="\$\{ADB_KILL_AFTER_SECS\}s"/,
   );
   assert.match(installRetryLib, /INSTALL_RETRY_DEADLINE_SECS=180/);
-  assert.match(installRetryLib, /PACKAGE_SERVICE_READY_ATTEMPTS=10/);
-  assert.match(installRetryLib, /PACKAGE_SERVICE_READY_INTERVAL_SECS=2/);
-  assert.match(installRetryLib, /wait_for_android_package_service "\$deadline"/);
-  assert.match(installRetryLib, /wait_for_android_settings_provider "\$deadline"/);
+  assert.match(guestReadinessLib, /ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10/);
+  assert.match(guestReadinessLib, /ANDROID_GUEST_SERVICE_POLL_INTERVAL_SECS=2/);
+  assert.match(guestReadinessLib, /platform_package == 1/);
+  assert.match(guestReadinessLib, /stable_since=""/);
+  assert.match(guestReadinessLib, /stable-window=reset/);
+  assert.match(installRetryLib, /wait_for_android_guest_services_stable "\$deadline"/);
+  assert.match(installRetryLib, /android_guest_services_wait_stable/);
   assert.match(installRetryLib, /retryable_android_settings_provider_install_failure/);
   assert.match(installRetryLib, /for attempt in 1 2 3/);
   assert.match(
@@ -313,9 +255,12 @@ test("Android APK install retries only exact package/settings recovery failures"
   assert.match(installRetryLib, /\[\[ "\$output" == "No activity found" \]\] \|\| return 1/);
   assert.match(installRetryLib, /adb_retry_timed "\$deadline" wait-for-device/);
   assert.match(
-    installRetryLib,
-    /adb_retry_timed "\$deadline" shell cmd package list packages/,
+    guestReadinessLib,
+    /shell cmd package list packages/,
   );
+  assert.match(guestReadinessLib, /shell settings get global device_provisioned/);
+  assert.match(orchestrator, /android_emulator_wait_for_guest_services_stable/);
+  assert.match(orchestrator, /android-guest-service-readiness\.test\.sh/);
   assert.match(
     installRetryLib,
     /non-transport Android install failures must remain fail-closed/,
@@ -362,22 +307,32 @@ test("Android APK install retries only exact package/settings recovery failures"
       producer.artifacts.includes("scripts/lib/android-install-retry.sh"),
       `${producerId} receipt must bind the shared install retry library`,
     );
+    assert.ok(
+      producer.artifacts.includes("scripts/android-guest-service-readiness.test.sh"),
+      `${producerId} receipt must bind the stable guest-service state matrix`,
+    );
+    assert.ok(
+      producer.artifacts.includes("scripts/lib/android-guest-service-readiness.sh"),
+      `${producerId} receipt must bind the stable guest-service boundary`,
+    );
   }
-  assert.match(installRetryTest, /run_case success-after-retry 0 2 6/);
-  assert.match(installRetryTest, /run_case always-broken 1 3 9/);
-  assert.match(installRetryTest, /run_case timeout 124 1 1/);
-  assert.match(installRetryTest, /run_case pipeline 1 1 1/);
-  assert.match(installRetryTest, /run_case wait-fail 17 1 2/);
-  assert.match(installRetryTest, /run_case package-internal-recover 0 3 10 2/);
-  assert.match(installRetryTest, /run_case package-internal-first 1 1 1 0/);
-  assert.match(installRetryTest, /run_case package-internal-mixed 1 2 5 1/);
-  assert.match(installRetryTest, /run_case launcher-delayed 0 1 4 2/);
-  assert.match(installRetryTest, /run_case launcher-mixed 1 1 2 0/);
-  assert.match(installRetryTest, /run_case launcher-other 1 1 2 0/);
-  assert.match(installRetryTest, /run_case launcher-timeout 124 1 2 0/);
-  assert.match(installRetryTest, /run_case launcher-unavailable 1 1 11 9/);
-  assert.match(installRetryTest, /run_case launcher-deadline 124 1 2 0/);
-  assert.match(installRetryTest, /run_case launcher-sleep-fail 42 1 2 1/);
+  assert.match(installRetryTest, /run_case success-after-retry 0 2/);
+  assert.match(installRetryTest, /run_case always-broken 1 3/);
+  assert.match(installRetryTest, /run_case timeout 124 1/);
+  assert.match(installRetryTest, /run_case package-internal-recover 0 3/);
+  assert.match(installRetryTest, /run_case package-internal-first 1 1/);
+  assert.match(installRetryTest, /run_case launcher-delayed 0 1/);
+  assert.match(installRetryTest, /run_case launcher-deadline 124 1/);
+  assert.match(installRetryTest, /run_case launcher-sleep-fail 42 1/);
+  assert.match(guestReadinessTest, /expect_stable package-reset 14 8 7 1/);
+  assert.match(guestReadinessTest, /expect_stable settings-reset 14 8 8 1/);
+  assert.match(guestReadinessTest, /package-timeout 30 124/);
+  assert.match(guestReadinessTest, /package-ready-then-timeout 30 124/);
+  assert.match(guestReadinessTest, /settings-ready-then-timeout 30 124/);
+  assert.match(guestReadinessTest, /guard-fail 30 23/);
+  assert.match(guestReadinessTest, /guard-final-fail 30 23/);
+  assert.match(guestReadinessTest, /package-success-mixed 30 1/);
+  assert.match(installRetryLib, /remaining > kill_after_secs/);
 });
 
 test("emulator gate pins the exact stable emulator build fail-closed", () => {

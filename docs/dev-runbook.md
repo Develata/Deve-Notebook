@@ -1241,11 +1241,18 @@ are not compatibility fallbacks. Missing, conflicting, unapproved, or legacy
 rollback needs fresh target-host evidence before approving a different pair.
 After either boot-complete property appears, the gate still waits under the
 same boot deadline for bounded read-only package-manager and settings-provider
-probes. `settings get global device_provisioned` must return exactly `0` or `1`
-before installation. An admitted package-service bootstrap/race failure also
-repeats both probes under the existing absolute install deadline before another
-install attempt; missing providers, non-canonical output, mixed failures, and
-timeouts remain fail-closed rather than being covered by a fixed sleep.
+probes. Both services must remain ready for one continuous `10s` window, and
+every successful package-manager sample must contain only canonical
+`package:<name>` lines with exactly one `package:android`.
+`settings get global device_provisioned` must return exactly `0` or `1` on
+every sample before installation. An admitted bootstrap transient resets the
+window; unknown, mixed, timeout, interruption, and process-guard failures stop
+fail-closed, and the owned-emulator process guard is checked again immediately
+before admission. An admitted package-service bootstrap/race failure also
+repeats the same stable admission under the existing absolute install deadline
+before another install attempt. Timeout probes reserve their kill grace from
+the remaining deadline. The gate does not add install attempts or cover
+readiness with a fixed sleep.
 Under the legacy `swiftshader_indirect` translator path the
 37.0 image's guest surfaceflinger aborts (`hasReadColorBufferDma` goldfish
 mapper assert on the RegionSampling thread) spontaneously within minutes of

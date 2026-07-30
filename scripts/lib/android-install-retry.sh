@@ -15,20 +15,20 @@
 #   set it to their own log prefix so remote logs attribute the recovery.
 # - `install_apk` performs at most 3 install attempts under one absolute
 #   deadline, admits only exact package/settings bootstrap-race failure lines,
-#   re-admits both package and settings-provider readiness between attempts,
-#   and requires the launcher activity to resolve before reporting success.
-#   Timeouts and mixed failures never retry.
+#   re-enters the shared continuous package/settings stable-admission window
+#   between attempts, and requires the launcher activity to resolve before
+#   reporting success. Timeouts and mixed failures never retry.
 
 if [[ -n "${ANDROID_INSTALL_RETRY_LOADED:-}" ]]; then
   return 0
 fi
 ANDROID_INSTALL_RETRY_LOADED=1
 
+android_install_retry_library_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$android_install_retry_library_dir/android-guest-service-readiness.sh"
+unset android_install_retry_library_dir
+
 readonly INSTALL_RETRY_DEADLINE_SECS=180
-readonly PACKAGE_SERVICE_READY_ATTEMPTS=10
-readonly PACKAGE_SERVICE_READY_INTERVAL_SECS=2
-readonly SETTINGS_PROVIDER_READY_ATTEMPTS=10
-readonly SETTINGS_PROVIDER_READY_INTERVAL_SECS=2
 readonly LAUNCHER_READY_ATTEMPTS=10
 readonly LAUNCHER_READY_INTERVAL_SECS=2
 
@@ -42,12 +42,15 @@ install_retry_now() {
 
 adb_retry_timed() {
   local deadline="$1"
-  local now remaining operation_timeout
+  local now remaining operation_timeout kill_after_secs
   shift
 
   now="$(install_retry_now)"
   remaining=$((deadline - now))
-  (( remaining > 0 )) || return 124
+  kill_after_secs="${ADB_KILL_AFTER_SECS:-0}"
+  [[ "$kill_after_secs" =~ ^[0-9]+$ ]] || return 1
+  (( remaining > kill_after_secs )) || return 124
+  remaining=$((remaining - kill_after_secs))
   operation_timeout="$ADB_TIMEOUT_SECS"
   (( operation_timeout <= remaining )) || operation_timeout="$remaining"
   adb_with_timeout "$operation_timeout" "$@"
@@ -183,116 +186,15 @@ retryable_android_settings_provider_install_failure() {
   '
 }
 
-retryable_android_package_readiness_failure() {
-  local status="$1"
-  local output="$2"
-
-  (( status == 20 )) || return 1
-  printf '%s\n' "$output" | tr -d '\r' | awk '
-    /^[[:space:]]*$/ { next }
-    $0 == "cmd: Can'\''t find service: package" {
-      unavailable += 1
-      next
-    }
-    { unexpected = 1 }
-    END { exit !(unavailable == 1 && unexpected == 0) }
-  '
-}
-
-retryable_android_settings_provider_readiness_failure() {
-  local status="$1"
-  local output="$2"
-
-  if (( status == 0 )); then
-    [[ -z "$output" || "$output" == "null" ]]
-    return
-  fi
-  if (( status == 20 )); then
-    [[ "$output" == "cmd: Can't find service: settings" ]]
-    return
-  fi
-  (( status == 1 )) || return 1
-  printf '%s\n' "$output" | tr -d '\r' | awk '
-    /^[[:space:]]*$/ { next }
-    $0 == "java.lang.IllegalStateException: Cannot access system provider: '\''settings'\'' before system providers are installed!" {
-      provider_uninstalled += 1
-      next
-    }
-    /^[[:space:]]+at / {
-      stack_frames += 1
-      if ($0 ~ /^[[:space:]]+at com\.android\.server\.am\.ContentProviderHelper\.getContentProviderImpl\(/) {
-        provider_lookup += 1
-      }
-      if ($0 ~ /^[[:space:]]+at android\.provider\.Settings\$NameValueCache\.getStringForUser\(/) {
-        settings_lookup += 1
-      }
-      next
-    }
-    { unexpected = 1 }
-    END {
-      exit !(provider_uninstalled == 1 &&
-        provider_lookup == 1 &&
-        settings_lookup == 1 &&
-        stack_frames >= 2 &&
-        unexpected == 0)
-    }
-  '
-}
-
-wait_for_android_package_service() {
+wait_for_android_guest_services_stable() {
   local deadline="$1"
-  local attempt now output status
 
-  for ((attempt = 1; attempt <= PACKAGE_SERVICE_READY_ATTEMPTS; attempt += 1)); do
-    if output="$(adb_retry_timed "$deadline" shell cmd package list packages 2>&1)"; then
-      return 0
-    else
-      status=$?
-    fi
-    printf '%s\n' "$output" >&2
-    if ! retryable_android_package_readiness_failure "$status" "$output"; then
-      return "$status"
-    fi
-    if (( attempt == PACKAGE_SERVICE_READY_ATTEMPTS )); then
-      return "$status"
-    fi
-    now="$(install_retry_now)"
-    (( deadline - now > PACKAGE_SERVICE_READY_INTERVAL_SECS )) || return 124
-    android_install_retry_log "waiting for package service (attempt $attempt/$PACKAGE_SERVICE_READY_ATTEMPTS)"
-    sleep "$PACKAGE_SERVICE_READY_INTERVAL_SECS" || return $?
-  done
-}
-
-wait_for_android_settings_provider() {
-  local deadline="$1"
-  local attempt now output status
-
-  for ((attempt = 1; attempt <= SETTINGS_PROVIDER_READY_ATTEMPTS; attempt += 1)); do
-    if output="$(adb_retry_timed "$deadline" \
-        shell settings get global device_provisioned 2>&1)"; then
-      status=0
-    else
-      status=$?
-    fi
-    output="${output//$'\r'/}"
-    if (( status == 0 )) && [[ "$output" == "0" || "$output" == "1" ]]; then
-      return 0
-    fi
-    printf '%s\n' "$output" >&2
-    if ! retryable_android_settings_provider_readiness_failure "$status" "$output"; then
-      (( status != 0 )) && return "$status"
-      return 1
-    fi
-    if (( attempt == SETTINGS_PROVIDER_READY_ATTEMPTS )); then
-      (( status != 0 )) && return "$status"
-      return 1
-    fi
-    now="$(install_retry_now)"
-    (( deadline - now > SETTINGS_PROVIDER_READY_INTERVAL_SECS )) || return 124
+  android_guest_services_wait_stable \
+    "$deadline" \
+    adb_retry_timed \
+    install_retry_now \
     android_install_retry_log \
-      "waiting for settings provider (attempt $attempt/$SETTINGS_PROVIDER_READY_ATTEMPTS)"
-    sleep "$SETTINGS_PROVIDER_READY_INTERVAL_SECS" || return $?
-  done
+    :
 }
 
 wait_for_android_launcher_activity() {
@@ -387,16 +289,16 @@ verify_install_retry_contract() {
     $'Performing Streamed Install\n'"$package_services_ready_failure"; then
     fail "duplicate streamed-install prefixes must remain fail-closed"
   fi
-  retryable_android_package_readiness_failure 20 \
+  android_guest_service_retryable_package_failure 20 \
     "cmd: Can't find service: package" \
-    || fail "package-service restart must remain the only retryable readiness failure"
+    || fail "the exact package-service bootstrap transient must remain retryable"
   for readiness_status in 124 130 143; do
-    if retryable_android_package_readiness_failure "$readiness_status" \
+    if android_guest_service_retryable_package_failure "$readiness_status" \
       "cmd: Can't find service: package"; then
       fail "timeout and interruption statuses must not be retried: $readiness_status"
     fi
   done
-  if retryable_android_package_readiness_failure 20 \
+  if android_guest_service_retryable_package_failure 20 \
     $'cmd: Can'\''t find service: package\nerror: device offline'; then
     fail "mixed Android readiness failures must not be retried"
   fi
@@ -439,7 +341,6 @@ install_apk() {
     (( deadline - now > 2 )) || return 124
     sleep 2 || return $?
     adb_retry_timed "$deadline" wait-for-device >/dev/null || return $?
-    wait_for_android_package_service "$deadline" || return $?
-    wait_for_android_settings_provider "$deadline" || return $?
+    wait_for_android_guest_services_stable "$deadline" || return $?
   done
 }

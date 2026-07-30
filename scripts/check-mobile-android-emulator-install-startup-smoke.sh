@@ -227,6 +227,7 @@ ensure_avd_data_partition() {
 
 wait_for_boot() {
   local deadline=$((SECONDS + BOOT_TIMEOUT_SECS))
+  local boot_properties_ready=0
 
   android_emulator_wait_for_device_state \
       "$EMULATOR_SERIAL" "$deadline" ensure_emulator_process_alive \
@@ -239,15 +240,19 @@ wait_for_boot() {
   while (( SECONDS < deadline )); do
     ensure_emulator_process_alive
     if android_emulator_boot_properties_ready "$EMULATOR_SERIAL" "$deadline"; then
-      if android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"; then
-        echo "mobile-android-emulator-install-startup-smoke-check: boot readiness: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
-        return 0
-      fi
+      boot_properties_ready=1
+      break
     fi
     android_emulator_boot_poll_sleep "$deadline" 5 || break
   done
 
-  fail "Android emulator did not satisfy boot readiness within ${BOOT_TIMEOUT_SECS}s: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
+  (( boot_properties_ready == 1 )) \
+    || fail "Android emulator did not satisfy boot-property readiness within ${BOOT_TIMEOUT_SECS}s: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
+
+  android_emulator_wait_for_guest_services_stable \
+      "$EMULATOR_SERIAL" "$deadline" ensure_emulator_process_alive \
+    || fail "Android emulator guest services did not remain stable within ${BOOT_TIMEOUT_SECS}s: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
+  echo "mobile-android-emulator-install-startup-smoke-check: boot readiness: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
 }
 
 verify_sdk_package_reuse_contract() {
@@ -364,6 +369,7 @@ run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
 run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
+run bash "$ROOT_DIR/scripts/android-guest-service-readiness.test.sh"
 run bash "$ROOT_DIR/scripts/android-emulator-boot-readiness.test.sh"
 run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
 run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"

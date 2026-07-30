@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Read-only Android guest-service admission used after a boot-complete property
-# appears and before any APK install. Every probe is independently time
-# bounded; this library only accepts a package manager response plus a
-# canonical settings-provider value.
+# Bounded Android device-state, AVD identity, and boot-property readiness.
+# Package/settings stability is delegated to the shared guest-service
+# admission boundary under the same absolute boot deadline.
 
 if [[ -n "${ANDROID_EMULATOR_BOOT_READINESS_LOADED:-}" ]]; then
   return 0
 fi
 ANDROID_EMULATOR_BOOT_READINESS_LOADED=1
+
+android_emulator_boot_library_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$android_emulator_boot_library_dir/android-guest-service-readiness.sh"
+unset android_emulator_boot_library_dir
 
 readonly ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10
 readonly ANDROID_EMULATOR_BOOT_PROBE_KILL_AFTER_SECS=2
@@ -195,44 +198,19 @@ android_emulator_boot_properties_ready() {
   return 1
 }
 
-android_emulator_guest_services_ready() {
+android_emulator_wait_for_guest_services_stable() {
   local serial="$1"
   local deadline="$2"
-  local output status
+  local process_guard="${3:-:}"
+  local status=0
 
-  if android_emulator_boot_probe_until "$deadline" \
-      -s "$serial" shell cmd package list packages >/dev/null 2>&1; then
-    :
-  else
-    status=$?
-    ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="package-manager=unavailable status=$status"
-    return 1
-  fi
-
-  if output="$(android_emulator_boot_probe_until "$deadline" \
-      -s "$serial" shell settings get global device_provisioned 2>&1 | head -c 128)"; then
-    :
-  else
-    status=$?
-    ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="settings-provider=unavailable status=$status"
-    return 1
-  fi
-  output="${output//$'\r'/}"
-
-  case "$output" in
-    0 | 1)
-      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="package-manager=ready settings-provider=ready device_provisioned=$output"
-      return 0
-      ;;
-    *$'\n'*)
-      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="settings-provider=invalid device_provisioned=multiline"
-      ;;
-    "")
-      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="settings-provider=invalid device_provisioned=empty"
-      ;;
-    *)
-      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="settings-provider=invalid device_provisioned=scalar"
-      ;;
-  esac
-  return 1
+  android_guest_services_wait_stable \
+    "$deadline" \
+    android_emulator_boot_probe_until \
+    android_emulator_boot_now \
+    : \
+    "$process_guard" \
+    -s "$serial" || status=$?
+  ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="$ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE"
+  return "$status"
 }
