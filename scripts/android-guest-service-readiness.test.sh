@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/lib/android-guest-service-readiness.sh"
+readonly PRODUCTION_REJECTED_RESPONSE_DIAGNOSTIC="$(
+  declare -f android_guest_service_rejected_response_diagnostic
+)"
 
 temporary="$(mktemp -d)"
 cleanup() {
@@ -244,6 +247,46 @@ expect_failure() {
   [[ "$ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE" == "$expected_evidence" ]]
 }
 
+expect_bounded_rejected_response_diagnostic() {
+  local boundary_output multibyte_output="" diagnostic index
+  printf -v boundary_output '%0159d' 0
+  diagnostic="$(android_guest_service_rejected_response_diagnostic "$boundary_output")"
+  [[ "$diagnostic" == \
+    "response_prefix_bytes=159 response_sample_lines=1 response_truncated=false response_shape=[0]" ]]
+  printf -v boundary_output '%0160d' 0
+  diagnostic="$(android_guest_service_rejected_response_diagnostic "$boundary_output")"
+  [[ "$diagnostic" == \
+    "response_prefix_bytes=160 response_sample_lines=1 response_truncated=false response_shape=[0]" ]]
+  printf -v boundary_output '%0161d' 0
+  diagnostic="$(android_guest_service_rejected_response_diagnostic "$boundary_output")"
+  [[ "$diagnostic" == \
+    "response_prefix_bytes=160 response_sample_lines=1 response_truncated=true response_shape=[0]" ]]
+  for (( index = 0; index < 200; index += 1 )); do
+    multibyte_output+="界"
+  done
+  diagnostic="$(android_guest_service_rejected_response_diagnostic "$multibyte_output")"
+  [[ "$diagnostic" == \
+    "response_prefix_bytes=160 response_sample_lines=1 response_truncated=true response_shape=[?]" ]]
+}
+
+expect_sanitized_rejected_response_diagnostic() {
+  local diagnostic
+  diagnostic="$(
+    android_guest_service_rejected_response_diagnostic \
+      $'first\r\nsecond\t\033third'
+  )"
+  [[ "$diagnostic" == \
+    "response_prefix_bytes=19 response_sample_lines=2 response_truncated=false response_shape=[a a ?a]" ]]
+  [[ "$diagnostic" != *$'\n'* && "$diagnostic" != *$'\r'* && "$diagnostic" != *$'\033'* ]]
+}
+
+package_binder_mismatch_output="cmd: Can't find service: package"
+package_binder_mixed_output=$'cmd: Failure calling service package: Broken pipe (32)\nunexpected package output'
+settings_binder_mismatch_output="cmd: Can't find service: settings"
+settings_binder_mixed_output=$'cmd: Failure calling service settings: Broken pipe (32)\nunexpected settings output'
+
+expect_bounded_rejected_response_diagnostic
+expect_sanitized_rejected_response_diagnostic
 expect_stable stable 10 6 6 1
 expect_stable stable-zero 10 6 6 0
 expect_stable package-reset 14 8 7 1
@@ -276,10 +319,10 @@ expect_failure \
   "package-manager=unavailable status=20"
 expect_failure \
   package-binder-epipe-mismatch 30 224 \
-  "package-manager=unavailable status=224"
+  "package-manager=unavailable status=224 $(android_guest_service_rejected_response_diagnostic "$package_binder_mismatch_output")"
 expect_failure \
   package-binder-epipe-mixed 30 224 \
-  "package-manager=unavailable status=224"
+  "package-manager=unavailable status=224 $(android_guest_service_rejected_response_diagnostic "$package_binder_mixed_output")"
 expect_failure \
   settings-null 30 124 \
   "poll-sleep=failed status=124 after=settings-provider-transient"
@@ -291,10 +334,10 @@ expect_failure \
   "settings-provider=unavailable status=124"
 expect_failure \
   settings-binder-epipe-mismatch 30 224 \
-  "settings-provider=unavailable status=224"
+  "settings-provider=unavailable status=224 $(android_guest_service_rejected_response_diagnostic "$settings_binder_mismatch_output")"
 expect_failure \
   settings-binder-epipe-mixed 30 224 \
-  "settings-provider=unavailable status=224"
+  "settings-provider=unavailable status=224 $(android_guest_service_rejected_response_diagnostic "$settings_binder_mixed_output")"
 expect_failure \
   stable 10 124 \
   "poll-sleep=failed status=124 after=stabilizing"
@@ -307,6 +350,17 @@ expect_failure \
 expect_failure \
   package-log-fail 30 42 \
   "logger=failed status=42 after=package-manager-transient"
+
+android_guest_service_rejected_response_diagnostic() {
+  return 43
+}
+expect_failure \
+  package-binder-epipe-mismatch 30 224 \
+  "package-manager=unavailable status=224"
+expect_failure \
+  settings-binder-epipe-mismatch 30 224 \
+  "settings-provider=unavailable status=224"
+eval "$PRODUCTION_REJECTED_RESPONSE_DIAGNOSTIC"
 expect_failure \
   settings-log-fail 30 42 \
   "logger=failed status=42 after=settings-provider-transient"

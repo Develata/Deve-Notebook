@@ -652,6 +652,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_repla
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_same_repo_session_restore_rebinds_pending_scope true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_keyboard_resize_preserves_host_and_open_request true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_binder_epipe_exit_224_requires_exact_broken_pipe_signature true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_rejected_exit_224_diagnostic_is_bounded_sanitized_and_non_admitting true
+contains	docs/features/08_ui_design_03_mobile.md	alphanumeric run 已折叠的 ASCII structural preview
 contains	docs/plan/11_ui_design/03_mobile.md	`MobileEmbeddedBackendSupervisor` 必须持有唯一 process-scoped `EmbeddedServerRuntime`
 contains	docs/features/08_ui_design_03_mobile.md	LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`
 contains	apps/cli/src/native_runtime.rs	start_native_loopback_backend_with_listener_until_shutdown
@@ -764,6 +766,8 @@ contains	scripts/lib/android-guest-service-readiness.sh	platform_package == 1
 contains	scripts/lib/android-guest-service-readiness.sh	stable-window=reset
 contains	scripts/lib/android-guest-service-readiness.sh	binder_epipe_status && broken_pipe == 1 && missing == 0
 contains	scripts/lib/android-guest-service-readiness.sh	[[ "$output" == "cmd: Failure calling service settings: Broken pipe (32)" ]]
+contains	scripts/lib/android-guest-service-readiness.sh	ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES=160
+contains	scripts/lib/android-guest-service-readiness.sh	response_sample_lines=%s response_truncated=%s response_shape=[%s]
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable package-reset 14 8 7 1
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable settings-reset 14 8 8 1
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable package-binder-epipe-reset 14 8 7 1
@@ -772,6 +776,10 @@ contains	scripts/android-guest-service-readiness.test.sh	package-binder-epipe-mi
 contains	scripts/android-guest-service-readiness.test.sh	settings-binder-epipe-mismatch 30 224
 contains	scripts/android-guest-service-readiness.test.sh	package-binder-epipe-mixed 30 224
 contains	scripts/android-guest-service-readiness.test.sh	settings-binder-epipe-mixed 30 224
+contains	scripts/android-guest-service-readiness.test.sh	expect_bounded_rejected_response_diagnostic
+contains	scripts/android-guest-service-readiness.test.sh	expect_sanitized_rejected_response_diagnostic
+contains	scripts/android-guest-service-readiness.test.sh	PRODUCTION_REJECTED_RESPONSE_DIAGNOSTIC
+contains	scripts/android-guest-service-readiness.test.sh	response_prefix_bytes=160 response_sample_lines=1 response_truncated=true response_shape=[0]
 contains	scripts/android-guest-service-readiness.test.sh	package-timeout 30 124
 contains	scripts/android-guest-service-readiness.test.sh	package-ready-then-timeout 30 124
 contains	scripts/android-guest-service-readiness.test.sh	settings-ready-then-timeout 30 124

@@ -642,6 +642,8 @@ contains	docs/acceptance-cases/12_tech_release.md	target_host_platform_evidence_
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_settings_provider_readiness_precedes_install true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_guest_service_readiness_requires_stable_window true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
+contains	docs/acceptance-cases/12_tech_release.md	android_emulator_rejected_exit_224_diagnostic_preserves_primary_failure true
+contains	docs/features/08_ui_design_03_mobile.md	alphanumeric run 已折叠的 ASCII structural preview
 contains	docs/acceptance-cases/12_tech_release.md	signed_release_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	store_distribution_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	physical_device_readiness_not_claimed true
@@ -784,6 +786,8 @@ contains	scripts/lib/android-guest-service-readiness.sh	shell settings get globa
 contains	scripts/lib/android-guest-service-readiness.sh	platform_package == 1
 contains	scripts/lib/android-guest-service-readiness.sh	binder_epipe_status && broken_pipe == 1 && missing == 0
 contains	scripts/lib/android-guest-service-readiness.sh	[[ "$output" == "cmd: Failure calling service settings: Broken pipe (32)" ]]
+contains	scripts/lib/android-guest-service-readiness.sh	ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES=160
+contains	scripts/lib/android-guest-service-readiness.sh	response_sample_lines=%s response_truncated=%s response_shape=[%s]
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable package-reset 14 8 7 1
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable settings-reset 14 8 8 1
 contains	scripts/android-guest-service-readiness.test.sh	expect_stable package-binder-epipe-reset 14 8 7 1
@@ -792,6 +796,10 @@ contains	scripts/android-guest-service-readiness.test.sh	package-binder-epipe-mi
 contains	scripts/android-guest-service-readiness.test.sh	settings-binder-epipe-mismatch 30 224
 contains	scripts/android-guest-service-readiness.test.sh	package-binder-epipe-mixed 30 224
 contains	scripts/android-guest-service-readiness.test.sh	settings-binder-epipe-mixed 30 224
+contains	scripts/android-guest-service-readiness.test.sh	expect_bounded_rejected_response_diagnostic
+contains	scripts/android-guest-service-readiness.test.sh	expect_sanitized_rejected_response_diagnostic
+contains	scripts/android-guest-service-readiness.test.sh	PRODUCTION_REJECTED_RESPONSE_DIAGNOSTIC
+contains	scripts/android-guest-service-readiness.test.sh	response_prefix_bytes=160 response_sample_lines=1 response_truncated=true response_shape=[0]
 contains	scripts/android-guest-service-readiness.test.sh	package-ready-then-timeout 30 124
 contains	scripts/android-guest-service-readiness.test.sh	settings-ready-then-timeout 30 124
 contains	scripts/android-guest-service-readiness.test.sh	guard-final-fail 30 23

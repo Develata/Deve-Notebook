@@ -243,6 +243,7 @@
     - release_assert: android_emulator_settings_provider_readiness_precedes_install true
     - release_assert: android_emulator_guest_service_readiness_requires_stable_window true
     - release_assert: android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
+    - release_assert: android_emulator_rejected_exit_224_diagnostic_preserves_primary_failure true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

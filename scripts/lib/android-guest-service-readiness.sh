@@ -21,7 +21,68 @@ ANDROID_GUEST_SERVICE_READINESS_LOADED=1
 
 readonly ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10
 readonly ANDROID_GUEST_SERVICE_POLL_INTERVAL_SECS=2
+readonly ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES=160
 ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="not-probed"
+
+android_guest_service_rejected_response_diagnostic() {
+  local LC_ALL=C
+  local prefix="${1:0:$((ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES + 1))}"
+  local truncated="false"
+  local shape="" previous_class="" mapped class char
+  local prefix_bytes line_count index
+
+  if (( ${#prefix} > ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES )); then
+    truncated="true"
+    prefix="${prefix:0:ANDROID_GUEST_SERVICE_DIAGNOSTIC_PREVIEW_BYTES}"
+  fi
+  prefix="${prefix//$'\r'/}"
+  prefix_bytes="${#prefix}"
+  if (( prefix_bytes == 0 )); then
+    line_count=0
+  else
+    line_count=1
+  fi
+
+  for (( index = 0; index < prefix_bytes; index += 1 )); do
+    char="${prefix:index:1}"
+    case "$char" in
+      $'\n')
+        line_count=$((line_count + 1))
+        mapped=" "
+        class="space"
+        ;;
+      $'\t' | " ")
+        mapped=" "
+        class="space"
+        ;;
+      [A-Za-z])
+        mapped="a"
+        class="alpha"
+        ;;
+      [0-9])
+        mapped="0"
+        class="digit"
+        ;;
+      "." | "," | ":" | ";" | "_" | "(" | ")" | "/" | "=" | "-")
+        mapped="$char"
+        class=""
+        ;;
+      *)
+        mapped="?"
+        class="other"
+        ;;
+    esac
+    if [[ -n "$class" && "$class" == "$previous_class" ]]; then
+      continue
+    fi
+    shape+="$mapped"
+    previous_class="$class"
+  done
+
+  [[ -n "$shape" ]] || shape="empty"
+  printf 'response_prefix_bytes=%s response_sample_lines=%s response_truncated=%s response_shape=[%s]\n' \
+    "$prefix_bytes" "$line_count" "$truncated" "$shape"
+}
 
 # AOSP cmd returns a negative Binder status directly. EPIPE (-32) is observed
 # by a POSIX host shell as 224, so that status is admitted only when canonical
@@ -172,6 +233,7 @@ android_guest_services_wait_stable() {
   local stable_since=""
   local elapsed=0
   local now output package_status settings_status guard_status sleep_status
+  local response_diagnostic
   local provisioned=""
 
   while :; do
@@ -206,7 +268,14 @@ android_guest_services_wait_stable() {
     else
       if ! android_guest_service_retryable_package_failure \
           "$package_status" "$output"; then
-        ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="package-manager=unavailable status=$package_status"
+        if (( package_status == 224 )) \
+            && response_diagnostic="$(
+              android_guest_service_rejected_response_diagnostic "$output"
+            )"; then
+          ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="package-manager=unavailable status=$package_status $response_diagnostic"
+        else
+          ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="package-manager=unavailable status=$package_status"
+        fi
         return "$package_status"
       fi
       stable_since=""
@@ -253,7 +322,14 @@ android_guest_services_wait_stable() {
         ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="settings-provider=invalid device_provisioned=noncanonical"
         return 1
       fi
-      ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="settings-provider=unavailable status=$settings_status"
+      if (( settings_status == 224 )) \
+          && response_diagnostic="$(
+            android_guest_service_rejected_response_diagnostic "$output"
+          )"; then
+        ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="settings-provider=unavailable status=$settings_status $response_diagnostic"
+      else
+        ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="settings-provider=unavailable status=$settings_status"
+      fi
       return "$settings_status"
     fi
 
