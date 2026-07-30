@@ -188,13 +188,22 @@ retryable_android_settings_provider_install_failure() {
 
 wait_for_android_guest_services_stable() {
   local deadline="$1"
+  local status
 
-  android_guest_services_wait_stable \
-    "$deadline" \
-    adb_retry_timed \
-    install_retry_now \
-    android_install_retry_log \
-    :
+  if android_guest_services_wait_stable \
+      "$deadline" \
+      adb_retry_timed \
+      install_retry_now \
+      android_install_retry_log \
+      :; then
+    return 0
+  else
+    status=$?
+  fi
+  android_install_retry_log \
+    "guest-service admission failed: $ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE" \
+    || true
+  return "$status"
 }
 
 wait_for_android_launcher_activity() {
@@ -292,6 +301,20 @@ verify_install_retry_contract() {
   android_guest_service_retryable_package_failure 20 \
     "cmd: Can't find service: package" \
     || fail "the exact package-service bootstrap transient must remain retryable"
+  android_guest_service_retryable_package_failure 224 \
+    "cmd: Failure calling service package: Broken pipe (32)" \
+    || fail "AOSP Binder EPIPE status must remain retryable with its exact package output"
+  if android_guest_service_retryable_package_failure 224 \
+      "cmd: Can't find service: package"; then
+    fail "AOSP Binder EPIPE status must not admit a mismatched package failure"
+  fi
+  android_guest_service_retryable_settings_failure 224 \
+    "cmd: Failure calling service settings: Broken pipe (32)" \
+    || fail "AOSP Binder EPIPE status must remain retryable with its exact settings output"
+  if android_guest_service_retryable_settings_failure 224 \
+      "cmd: Can't find service: settings"; then
+    fail "AOSP Binder EPIPE status must not admit a mismatched settings failure"
+  fi
   for readiness_status in 124 130 143; do
     if android_guest_service_retryable_package_failure "$readiness_status" \
       "cmd: Can't find service: package"; then

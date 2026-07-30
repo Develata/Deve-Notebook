@@ -23,12 +23,15 @@ readonly ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10
 readonly ANDROID_GUEST_SERVICE_POLL_INTERVAL_SECS=2
 ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="not-probed"
 
+# AOSP cmd returns a negative Binder status directly. EPIPE (-32) is observed
+# by a POSIX host shell as 224, so that status is admitted only when canonical
+# output independently proves the matching Broken pipe condition.
 android_guest_service_retryable_package_failure() {
   local status="$1"
   local output="$2"
 
-  (( status == 1 || status == 20 )) || return 1
-  printf '%s\n' "$output" | tr -d '\r' | awk '
+  (( status == 1 || status == 20 || status == 224 )) || return 1
+  printf '%s\n' "$output" | tr -d '\r' | awk -v observed_status="$status" '
     /^[[:space:]]*$/ { next }
     $0 == "cmd: Can'\''t find service: package" {
       missing += 1
@@ -40,7 +43,11 @@ android_guest_service_retryable_package_failure() {
     }
     { unexpected = 1 }
     END {
-      exit !(missing + broken_pipe == 1 && unexpected == 0)
+      ordinary_status = observed_status == 1 || observed_status == 20
+      binder_epipe_status = observed_status == 224
+      exit !(unexpected == 0 &&
+        ((ordinary_status && missing + broken_pipe == 1) ||
+         (binder_epipe_status && broken_pipe == 1 && missing == 0)))
     }
   '
 }
@@ -72,6 +79,10 @@ android_guest_service_retryable_settings_failure() {
 
   if (( status == 0 )); then
     [[ -z "$output" || "$output" == "null" ]]
+    return
+  fi
+  if (( status == 224 )); then
+    [[ "$output" == "cmd: Failure calling service settings: Broken pipe (32)" ]]
     return
   fi
   if (( status == 1 || status == 20 )); then

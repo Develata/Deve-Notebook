@@ -281,7 +281,11 @@ run_case() {
               ;;
             package-recover)
               package_count="$(grep -c '^shell cmd package list packages$' "$operations")"
-              if (( package_count < 3 )); then
+              if (( package_count == 1 )); then
+                printf '%s\n' "cmd: Failure calling service package: Broken pipe (32)"
+                return 224
+              fi
+              if (( package_count == 2 )); then
                 printf '%s\n' "cmd: Can't find service: package"
                 return 20
               fi
@@ -394,6 +398,11 @@ run_case() {
     grep -Fx 'shell cmd package list packages' "$operations" >/dev/null
     grep -Fx 'shell settings get global device_provisioned' "$operations" >/dev/null
   fi
+  if [[ "$mode" == "package-timeout-status" ]]; then
+    grep -Fx \
+      "mobile-android-install-startup-smoke-check: guest-service admission failed: package-manager=unavailable status=124" \
+      "$temporary/$mode.stderr" >/dev/null
+  fi
   active_mode=""
   active_timing=""
 }
@@ -432,6 +441,26 @@ run_case launcher-timeout 124 1
 run_case launcher-unavailable 1 1
 run_case launcher-deadline 124 1
 run_case launcher-sleep-fail 42 1
+
+verify_admission_log_failure_preserves_status() {
+  local expected status
+  android_guest_services_wait_stable() {
+    ANDROID_GUEST_SERVICE_READINESS_LAST_EVIDENCE="forced-status=$expected"
+    return "$expected"
+  }
+  android_install_retry_log() {
+    return 42
+  }
+  for expected in 124 224; do
+    set +e
+    wait_for_android_guest_services_stable 180
+    status=$?
+    set -e
+    [[ "$status" == "$expected" ]]
+  done
+}
+
+verify_admission_log_failure_preserves_status
 
 verify_operation_timeout_cap() {
   local captured_timeout="$temporary/operation-timeout"

@@ -84,6 +84,22 @@ fake_probe() {
             return 1
           fi
           ;;
+        package-binder-epipe-reset)
+          if (( count == 2 )); then
+            printf '%s\n' "cmd: Failure calling service package: Broken pipe (32)"
+            return 224
+          fi
+          ;;
+        package-binder-epipe-mismatch)
+          printf '%s\n' "cmd: Can't find service: package"
+          return 224
+          ;;
+        package-binder-epipe-mixed)
+          printf '%s\n' \
+            "cmd: Failure calling service package: Broken pipe (32)" \
+            "unexpected package output"
+          return 224
+          ;;
         package-persistent)
           printf '%s\n' "cmd: Can't find service: package"
           return 20
@@ -132,6 +148,22 @@ fake_probe() {
             printf '%s\n' "cmd: Failure calling service settings: Broken pipe (32)"
             return 20
           fi
+          ;;
+        settings-binder-epipe-reset)
+          if (( count == 2 )); then
+            printf '%s\n' "cmd: Failure calling service settings: Broken pipe (32)"
+            return 224
+          fi
+          ;;
+        settings-binder-epipe-mismatch)
+          printf '%s\n' "cmd: Can't find service: settings"
+          return 224
+          ;;
+        settings-binder-epipe-mixed)
+          printf '%s\n' \
+            "cmd: Failure calling service settings: Broken pipe (32)" \
+            "unexpected settings output"
+          return 224
           ;;
         settings-null)
           printf '%s\n' "null"
@@ -216,8 +248,10 @@ expect_stable stable 10 6 6 1
 expect_stable stable-zero 10 6 6 0
 expect_stable package-reset 14 8 7 1
 expect_stable package-broken-pipe-reset 14 8 7 1
+expect_stable package-binder-epipe-reset 14 8 7 1
 expect_stable settings-reset 14 8 8 1
 expect_stable settings-broken-pipe-reset 14 8 8 1
+expect_stable settings-binder-epipe-reset 14 8 8 1
 
 expect_failure \
   package-persistent 6 124 \
@@ -241,6 +275,12 @@ expect_failure \
   package-mixed 30 20 \
   "package-manager=unavailable status=20"
 expect_failure \
+  package-binder-epipe-mismatch 30 224 \
+  "package-manager=unavailable status=224"
+expect_failure \
+  package-binder-epipe-mixed 30 224 \
+  "package-manager=unavailable status=224"
+expect_failure \
   settings-null 30 124 \
   "poll-sleep=failed status=124 after=settings-provider-transient"
 expect_failure \
@@ -249,6 +289,12 @@ expect_failure \
 expect_failure \
   settings-ready-then-timeout 30 124 \
   "settings-provider=unavailable status=124"
+expect_failure \
+  settings-binder-epipe-mismatch 30 224 \
+  "settings-provider=unavailable status=224"
+expect_failure \
+  settings-binder-epipe-mixed 30 224 \
+  "settings-provider=unavailable status=224"
 expect_failure \
   stable 10 124 \
   "poll-sleep=failed status=124 after=stabilizing"
