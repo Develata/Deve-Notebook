@@ -2,6 +2,7 @@
 //!   - 18_release#first-tag-acceptance-matrix
 
 mod aggregate;
+mod android_admission;
 mod candidate;
 mod native_candidate;
 mod promotion;
@@ -20,6 +21,7 @@ pub(super) const ANDROID_SIGNING_SECRETS: [&str; 4] = [
 
 pub(super) fn check(root: &Path) -> Result<()> {
     promotion::require_single_tag_entry(root)?;
+    android_admission::check(root)?;
     candidate::check(root)?;
     native_candidate::check(root)?;
     aggregate::check(root)?;

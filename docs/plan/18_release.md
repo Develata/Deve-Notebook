@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-29`
+- `Last Review`: `2026-07-30`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -193,6 +193,20 @@ Android writable target-host receipt 必须同时记录 Android API level、当�
 正式支持基线为 API 29+ / provider major 137+；低于基线或 probe 失败只能生成不满足
 tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、WASM fallback 或
 软件密钥降级来满足该 receipt。
+
+Android emulator admission 可使用独立的手动 diagnostic workflow 对候选配置做单变量
+比较：从 exact dispatch HEAD 构建一次同源 x86_64 debug APK，并在隔离 runner 上分别改变
+emulator binary source 或 system image，固定重复三次 cold boot、连续 guest-service admission、
+APK install、launcher resolve、post-install admission 与 `system_server` PID 连续性检查。
+该 workflow 必须复用正式 gate 的 owner、readiness、install-retry 与 cleanup 边界，固定
+每个 variant 的日志/时间/输出预算；主日志单文件不得超过 128 KiB，variant 可上传诊断
+总量不得超过 4 MiB。结果 summary 必须合取同一 APK SHA-256、同 API system-image revision
+与同 pinned emulator version/build/probe identity，且所有 matrix 结果完整后才可推荐一个配置。
+diagnostic artifact 不是 acceptance receipt、candidate artifact、签名证据或 tag-ready 输入；
+它不得读取 signing secret、不得 dispatch candidate/aggregate、不得修改 release freeze，
+也不得自动改变正式 gate。若没有至少一个 variant 在不少于三次 cold boot 中全部通过，
+诊断必须 fail-closed；若有稳定 variant，正式 gate 的配置变更仍须单独 review、提交并由新的
+exact-HEAD candidate 证明。
 
 任何 candidate / target-host producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行
 任何启用 `native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri

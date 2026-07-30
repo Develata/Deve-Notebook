@@ -194,7 +194,7 @@
 - case_id: REL-005
   goal: Docker、Compose、release tag orchestrator、reusable native workflow 与 target-host platform evidence 保持当前 embedded frontend / native runtime 发布边界。
   preconditions:
-    - Dockerfile、docker-compose.yml、.github/workflows/release.yml、.github/workflows/release-native.yml 与 .github/workflows/native-target-host.yml 可读
+    - Dockerfile、docker-compose.yml、.github/workflows/release.yml、.github/workflows/release-native.yml、.github/workflows/native-target-host.yml 与 .github/workflows/android-emulator-admission.yml 可读
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
     - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
     - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
@@ -226,6 +226,8 @@
     - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
     - run: scripts/android-guest-service-readiness.test.sh
     - run: scripts/android-emulator-boot-readiness.test.sh
+    - run: scripts/android-emulator-admission-result.test.sh
+    - run: node --test scripts/android-emulator-admission-summary.test.mjs
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-install-startup-smoke.sh
@@ -244,6 +246,10 @@
     - release_assert: android_emulator_guest_service_readiness_requires_stable_window true
     - release_assert: android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
     - release_assert: android_emulator_rejected_exit_224_diagnostic_preserves_primary_failure true
+    - release_assert: android_emulator_admission_matrix_is_manual_diagnostic_only true
+    - release_assert: android_emulator_admission_reuses_exact_apk_and_shared_recovery_boundaries true
+    - release_assert: android_emulator_admission_requires_complete_three_cycle_results true
+    - release_assert: android_emulator_admission_identity_and_log_budgets_fail_closed true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

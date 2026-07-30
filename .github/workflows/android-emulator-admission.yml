@@ -1,0 +1,190 @@
+name: Android Emulator Admission Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-admission-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
+    steps:
+      - name: Checkout exact diagnostic HEAD
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact diagnostic identity
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'Android admission diagnostics require a fresh dispatch instead of a rerun' >&2
+            exit 1
+          }
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown,x86_64-linux-android
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Install Java 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install native packaging tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
+        run: scripts/install-native-target-host-tools.sh
+
+      - name: Build exact x86_64 diagnostic APK once
+        env:
+          DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_DEBUG: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+          DEVE_MOBILE_ANDROID_PACKAGE_APK: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_AAB: "0"
+        run: |
+          set -euo pipefail
+          scripts/check-mobile-android-shell-package-build.sh
+          apk="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+          [[ -f "$apk" ]]
+          mkdir -p target/android-admission-apk
+          cp -- "$apk" target/android-admission-apk/app-universal-debug.apk
+
+      - name: Upload exact diagnostic APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-android-admission-apk-${{ github.sha }}
+          path: target/android-admission-apk/app-universal-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  admission:
+    needs: build-apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - variant: current-pinned-api37
+            emulator_source: pinned
+            api_level: "37.0"
+          - variant: sdk-api37
+            emulator_source: sdk
+            api_level: "37.0"
+          - variant: pinned-api36-1
+            emulator_source: pinned
+            api_level: "36.1"
+    steps:
+      - name: Checkout exact diagnostic HEAD
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install Java 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Prepare Android emulator host
+        run: bash scripts/prepare-android-emulator-host.sh
+
+      - name: Download exact diagnostic APK
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-android-admission-apk-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-android-admission-apk
+
+      - name: Run bounded cold-boot admission cycles
+        env:
+          DEVE_ANDROID_ADMISSION_DIAGNOSTIC_REQUIRED: "1"
+          DEVE_ANDROID_ADMISSION_VARIANT_ID: ${{ matrix.variant }}
+          DEVE_ANDROID_ADMISSION_EMULATOR_SOURCE: ${{ matrix.emulator_source }}
+          DEVE_ANDROID_ADMISSION_API_LEVEL: ${{ matrix.api_level }}
+          DEVE_ANDROID_ADMISSION_SYSTEM_TARGET: google_apis
+          DEVE_ANDROID_ADMISSION_ARCHITECTURE: x86_64
+          DEVE_ANDROID_ADMISSION_CYCLES: "3"
+          DEVE_ANDROID_ADMISSION_HEAD_SHA: ${{ github.sha }}
+          DEVE_ANDROID_ADMISSION_APK_PATH: ${{ runner.temp }}/deve-android-admission-apk/app-universal-debug.apk
+          DEVE_ANDROID_ADMISSION_RESULT_DIR: ${{ runner.temp }}/deve-android-admission-${{ matrix.variant }}
+          DEVE_ANDROID_ADMISSION_AVD_HOME: ${{ runner.temp }}/deve-android-admission-avd-${{ matrix.variant }}
+        run: bash scripts/diagnose-android-emulator-admission.sh
+
+      - name: Upload bounded variant result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-android-admission-result-${{ matrix.variant }}-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-android-admission-${{ matrix.variant }}/${{ matrix.variant }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload bounded variant logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-android-admission-logs-${{ matrix.variant }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/deve-android-admission-${{ matrix.variant }}/avdmanager.log
+            ${{ runner.temp }}/deve-android-admission-${{ matrix.variant }}/sdkmanager-attempt-*.log
+            ${{ runner.temp }}/deve-android-admission-${{ matrix.variant }}/cycle-[0-9]*
+          if-no-files-found: warn
+          retention-days: 7
+
+  summarize:
+    if: ${{ always() }}
+    needs:
+      - build-apk
+      - admission
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact diagnostic HEAD
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Download complete admission matrix
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: deve-android-admission-result-*-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-android-admission-results
+          merge-multiple: true
+
+      - name: Validate matrix and recommend the least-divergent stable variant
+        id: summary
+        run: >-
+          node scripts/android-emulator-admission-summary.mjs
+          --results-dir "${{ runner.temp }}/deve-android-admission-results"
+          --expected-head "$GITHUB_SHA"
+          --expected-cycles "3"

@@ -27,6 +27,7 @@ workflows are not required repo metadata.
 | `workflows/release-native.yml` | Reusable Windows/macOS/Android build and target-host smoke track; never publishes |
 | `workflows/docker-smoke.yml` | Optional manual Docker release smoke on a GitHub-hosted Linux runner |
 | `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |
+| `workflows/android-emulator-admission.yml` | Manual exact-HEAD Android emulator/system-image admission matrix; diagnostic artifacts only |
 | `workflows/acceptance-aggregate.yml` | Manual exact-HEAD candidate/receipt verifier and sealed tag-ready bundle producer |
 
 ## For AI Agents
