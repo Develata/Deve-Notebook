@@ -46,6 +46,51 @@ print_package_services_ready_failure() {
     $'\tat com.android.server.pm.PackageInstallerSession.doWriteInternal(PackageInstallerSession.java:2314)'
 }
 
+print_settings_provider_ready_failure() {
+  printf '%s\n' \
+    "Performing Streamed Install" \
+    "adb: failed to install $APK_PATH:" \
+    "Exception occurred while executing 'install':" \
+    "java.lang.IllegalStateException: Cannot access system provider: 'settings' before system providers are installed!" \
+    $'\tat com.android.server.am.ContentProviderHelper.getContentProviderImpl(ContentProviderHelper.java:423)' \
+    $'\tat com.android.server.am.ContentProviderHelper.getContentProvider(ContentProviderHelper.java:151)' \
+    $'\tat com.android.server.am.ActivityManagerService.getContentProvider(ActivityManagerService.java:7846)' \
+    $'\tat android.app.ActivityThread.acquireProvider(ActivityThread.java:8702)' \
+    $'\tat android.app.ContextImpl$ApplicationContentResolver.acquireProvider(ContextImpl.java:4057)' \
+    $'\tat android.content.ContentResolver.acquireProvider(ContentResolver.java:2610)' \
+    $'\tat android.provider.Settings$ContentProviderHolder.getProvider(Settings.java:3666)' \
+    $'\tat android.provider.Settings$NameValueCache.getStringForUser(Settings.java:3930)' \
+    $'\tat android.provider.Settings$Global.getStringForUser(Settings.java:19681)' \
+    $'\tat android.provider.Settings$Global.getString(Settings.java:19664)' \
+    $'\tat android.provider.Settings$Global.getInt(Settings.java:19886)' \
+    $'\tat com.android.internal.content.InstallLocationUtils$1.getForceAllowOnExternalSetting(InstallLocationUtils.java:118)' \
+    $'\tat com.android.internal.content.InstallLocationUtils.resolveInstallVolume(InstallLocationUtils.java:197)' \
+    $'\tat com.android.internal.content.InstallLocationUtils.resolveInstallVolume(InstallLocationUtils.java:157)' \
+    $'\tat com.android.internal.content.InstallLocationUtils.resolveInstallVolume(InstallLocationUtils.java:172)' \
+    $'\tat com.android.server.pm.PackageInstallerService.createSessionInternal(PackageInstallerService.java:1064)' \
+    $'\tat com.android.server.pm.PackageInstallerService.createSession(PackageInstallerService.java:758)' \
+    $'\tat com.android.server.pm.PackageManagerShellCommand.doCreateSession(PackageManagerShellCommand.java:4119)' \
+    $'\tat com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1641)' \
+    $'\tat com.android.server.pm.PackageManagerShellCommand.runInstall(PackageManagerShellCommand.java:1577)' \
+    $'\tat com.android.server.pm.PackageManagerShellCommand.onCommand(PackageManagerShellCommand.java:249)' \
+    $'\tat com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)' \
+    $'\tat android.os.ShellCommand.exec(ShellCommand.java:39)' \
+    $'\tat com.android.server.pm.PackageManagerService$IPackageManagerImpl.onShellCommand(PackageManagerService.java:7069)' \
+    $'\tat android.os.Binder.shellCommand(Binder.java:1088)' \
+    $'\tat android.os.Binder.onTransact(Binder.java:946)' \
+    $'\tat android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:4786)' \
+    $'\tat com.android.server.pm.PackageManagerService$IPackageManagerImpl.onTransact(PackageManagerService.java:7053)' \
+    $'\tat android.os.Binder.execTransactInternal(Binder.java:1369)' \
+    $'\tat android.os.Binder.execTransact(Binder.java:1323)'
+}
+
+print_settings_provider_probe_failure() {
+  printf '%s\n' \
+    "java.lang.IllegalStateException: Cannot access system provider: 'settings' before system providers are installed!" \
+    $'\tat com.android.server.am.ContentProviderHelper.getContentProviderImpl(ContentProviderHelper.java:423)' \
+    $'\tat android.provider.Settings$NameValueCache.getStringForUser(Settings.java:3930)'
+}
+
 run_case() {
   local mode="$1"
   local expected_status="$2"
@@ -162,6 +207,40 @@ run_case() {
             printf '%s\n' "Failure [INSTALL_FAILED_INVALID_APK]"
             return 1
             ;;
+          settings-provider-after-bootstrap)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
+              return 1
+            fi
+            if (( install_count == 2 )); then
+              print_settings_provider_ready_failure
+              return 1
+            fi
+            printf '%s\n' "Success"
+            ;;
+          settings-provider-first)
+            print_settings_provider_ready_failure
+            return 1
+            ;;
+          settings-provider-mixed)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
+              return 1
+            fi
+            print_settings_provider_ready_failure
+            printf '%s\n' "Failure [INSTALL_FAILED_INVALID_APK]"
+            return 1
+            ;;
+          settings-readiness-recover|settings-readiness-mixed|settings-readiness-timeout)
+            if (( install_count == 1 )); then
+              printf '%s\n' \
+                "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
+              return 1
+            fi
+            printf '%s\n' "Success"
+            ;;
           package-unavailable|package-timeout-status|package-deadline|readiness-sleep-fail)
             printf '%s\n' \
               "adb: failed to install $APK_PATH: cmd: Failure calling service package: Broken pipe (32)"
@@ -225,6 +304,24 @@ run_case() {
               return 20
               ;;
           esac
+        elif [[ "$*" == "shell settings get global device_provisioned" ]]; then
+          case "$mode" in
+            settings-readiness-recover)
+              settings_count="$(grep -c '^shell settings get global device_provisioned$' "$operations")"
+              if (( settings_count == 1 )); then
+                print_settings_provider_probe_failure
+                return 1
+              fi
+              ;;
+            settings-readiness-mixed)
+              printf '%s\n' "null" "unexpected settings output"
+              return 0
+              ;;
+            settings-readiness-timeout)
+              return 124
+              ;;
+          esac
+          printf '%s\n' "1"
         elif [[ "$*" == "shell cmd package resolve-activity --components -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $APP_ID" ]]; then
           case "$mode" in
             launcher-delayed)
@@ -310,26 +407,32 @@ run_case() {
 }
 
 verify_install_retry_contract
-run_case success-after-retry 0 2 5 1
-run_case package-missing-recover 0 2 5 1
+run_case success-after-retry 0 2 6 1
+run_case package-missing-recover 0 2 6 1
 run_case package-missing-mixed 1 1 1 0
 run_case package-missing-other-service 1 1 1 0
-run_case always-broken 1 3 7 2
+run_case always-broken 1 3 9 2
 run_case invalid 9 1 1 0
 run_case timeout 124 1 1 0
 run_case pipeline 1 1 1 0
 run_case wait-fail 17 1 2 1
 run_case package-fail 18 1 3 1
-run_case package-recover 0 2 7 3
-run_case package-internal-recover 0 3 8 2
+run_case package-recover 0 2 8 3
+run_case package-internal-recover 0 3 10 2
 run_case package-internal-first 1 1 1 0
-run_case package-internal-mixed 1 2 4 1
+run_case package-internal-mixed 1 2 5 1
+run_case settings-provider-after-bootstrap 0 3 10 2
+run_case settings-provider-first 1 1 1 0
+run_case settings-provider-mixed 1 2 5 1
+run_case settings-readiness-recover 0 2 7 2
+run_case settings-readiness-mixed 1 1 4 1
+run_case settings-readiness-timeout 124 1 4 1
 run_case package-unavailable 20 1 12 10
 run_case package-timeout-status 124 1 3 1
 run_case package-deadline 124 1 3 1
 run_case readiness-sleep-fail 41 1 3 2
 run_case deadline 124 1 1 0
-run_case third-non-one 23 3 7 2
+run_case third-non-one 23 3 9 2
 run_case launcher-delayed 0 1 4 2
 run_case launcher-mixed 1 1 2 0
 run_case launcher-other 1 1 2 0

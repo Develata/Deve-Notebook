@@ -744,7 +744,17 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	stop_and
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	emu avd name
 before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	check-mobile-android-shell-package-build.sh	emulator_cmd \
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	cmd package list packages
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"
+before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"	check-mobile-android-install-startup-smoke.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-boot-readiness.test.sh
+contains	scripts/lib/android-emulator-boot-readiness.sh	shell cmd package list packages
+contains	scripts/lib/android-emulator-boot-readiness.sh	shell settings get global device_provisioned
+contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_KILL_AFTER_SECS=2
+contains	scripts/android-emulator-boot-readiness.test.sh	Cannot access system provider: 'settings' before system providers are installed!
+contains	scripts/lib/android-install-retry.sh	wait_for_android_settings_provider "$deadline"
+contains	scripts/lib/android-install-retry.sh	retryable_android_settings_provider_install_failure "$status" "$output"
+contains	scripts/android-install-retry.test.sh	run_case settings-readiness-recover 0 2 7 2
 contains	scripts/lib/android-tools.sh	android_boot_properties_complete()
 contains	scripts/lib/android-tools.sh	if sdk="$(android_sdk_root)"; then
 contains	apps/web/js/editor_lifecycle.test.mjs	stale cleanup cannot destroy a replacement editor mount

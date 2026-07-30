@@ -224,6 +224,7 @@
     - run: scripts/check-mobile-android-shell-package-build.sh
     - run: cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
     - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
+    - run: scripts/android-emulator-boot-readiness.test.sh
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-install-startup-smoke.sh
@@ -238,6 +239,7 @@
     - release_assert: trunk_dev_index_not_served_as_release_frontend true
     - release_assert: api_only_does_not_prove_embedded_frontend_health true
     - release_assert: target_host_platform_evidence_runtime_boundary_current true
+    - release_assert: android_emulator_settings_provider_readiness_precedes_install true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

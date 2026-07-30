@@ -14,10 +14,10 @@
 # - `ANDROID_INSTALL_RETRY_LOG_PREFIX` labels retry progress messages; hosts
 #   set it to their own log prefix so remote logs attribute the recovery.
 # - `install_apk` performs at most 3 install attempts under one absolute
-#   deadline, admits only the exact package-service bootstrap and
-#   package-services-ready failure lines, waits for the package service to
-#   return between attempts, and requires the launcher activity to resolve
-#   before reporting success. Timeouts and mixed failures never retry.
+#   deadline, admits only exact package/settings bootstrap-race failure lines,
+#   re-admits both package and settings-provider readiness between attempts,
+#   and requires the launcher activity to resolve before reporting success.
+#   Timeouts and mixed failures never retry.
 
 if [[ -n "${ANDROID_INSTALL_RETRY_LOADED:-}" ]]; then
   return 0
@@ -27,6 +27,8 @@ ANDROID_INSTALL_RETRY_LOADED=1
 readonly INSTALL_RETRY_DEADLINE_SECS=180
 readonly PACKAGE_SERVICE_READY_ATTEMPTS=10
 readonly PACKAGE_SERVICE_READY_INTERVAL_SECS=2
+readonly SETTINGS_PROVIDER_READY_ATTEMPTS=10
+readonly SETTINGS_PROVIDER_READY_INTERVAL_SECS=2
 readonly LAUNCHER_READY_ATTEMPTS=10
 readonly LAUNCHER_READY_INTERVAL_SECS=2
 
@@ -126,6 +128,61 @@ retryable_android_package_services_ready_install_failure() {
   '
 }
 
+retryable_android_settings_provider_install_failure() {
+  local status="$1"
+  local output="$2"
+
+  (( status == 1 )) || return 1
+  printf '%s\n' "$output" | tr -d '\r' | awk '
+    /^[[:space:]]*$/ { next }
+    $0 == "Performing Streamed Install" {
+      streamed_install += 1
+      next
+    }
+    /^adb: failed to install .+:[[:space:]]*$/ {
+      install_header += 1
+      next
+    }
+    $0 == "Exception occurred while executing '\''install'\'':" {
+      exception_header += 1
+      next
+    }
+    $0 == "java.lang.IllegalStateException: Cannot access system provider: '\''settings'\'' before system providers are installed!" {
+      provider_uninstalled += 1
+      next
+    }
+    /^[[:space:]]+at / {
+      stack_frames += 1
+      if ($0 ~ /^[[:space:]]+at com\.android\.server\.am\.ContentProviderHelper\.getContentProviderImpl\(/) {
+        provider_lookup += 1
+      }
+      if ($0 ~ /^[[:space:]]+at android\.provider\.Settings\$NameValueCache\.getStringForUser\(/) {
+        settings_lookup += 1
+      }
+      if ($0 ~ /^[[:space:]]+at com\.android\.internal\.content\.InstallLocationUtils\.resolveInstallVolume\(/) {
+        install_volume += 1
+      }
+      if ($0 ~ /^[[:space:]]+at com\.android\.server\.pm\.PackageInstallerService\.createSessionInternal\(/) {
+        create_session += 1
+      }
+      next
+    }
+    { unexpected = 1 }
+    END {
+      exit !(install_header == 1 &&
+        exception_header == 1 &&
+        provider_uninstalled == 1 &&
+        provider_lookup == 1 &&
+        settings_lookup == 1 &&
+        install_volume >= 1 &&
+        create_session == 1 &&
+        stack_frames >= 4 &&
+        streamed_install <= 1 &&
+        unexpected == 0)
+    }
+  '
+}
+
 retryable_android_package_readiness_failure() {
   local status="$1"
   local output="$2"
@@ -139,6 +196,46 @@ retryable_android_package_readiness_failure() {
     }
     { unexpected = 1 }
     END { exit !(unavailable == 1 && unexpected == 0) }
+  '
+}
+
+retryable_android_settings_provider_readiness_failure() {
+  local status="$1"
+  local output="$2"
+
+  if (( status == 0 )); then
+    [[ -z "$output" || "$output" == "null" ]]
+    return
+  fi
+  if (( status == 20 )); then
+    [[ "$output" == "cmd: Can't find service: settings" ]]
+    return
+  fi
+  (( status == 1 )) || return 1
+  printf '%s\n' "$output" | tr -d '\r' | awk '
+    /^[[:space:]]*$/ { next }
+    $0 == "java.lang.IllegalStateException: Cannot access system provider: '\''settings'\'' before system providers are installed!" {
+      provider_uninstalled += 1
+      next
+    }
+    /^[[:space:]]+at / {
+      stack_frames += 1
+      if ($0 ~ /^[[:space:]]+at com\.android\.server\.am\.ContentProviderHelper\.getContentProviderImpl\(/) {
+        provider_lookup += 1
+      }
+      if ($0 ~ /^[[:space:]]+at android\.provider\.Settings\$NameValueCache\.getStringForUser\(/) {
+        settings_lookup += 1
+      }
+      next
+    }
+    { unexpected = 1 }
+    END {
+      exit !(provider_uninstalled == 1 &&
+        provider_lookup == 1 &&
+        settings_lookup == 1 &&
+        stack_frames >= 2 &&
+        unexpected == 0)
+    }
   '
 }
 
@@ -163,6 +260,38 @@ wait_for_android_package_service() {
     (( deadline - now > PACKAGE_SERVICE_READY_INTERVAL_SECS )) || return 124
     android_install_retry_log "waiting for package service (attempt $attempt/$PACKAGE_SERVICE_READY_ATTEMPTS)"
     sleep "$PACKAGE_SERVICE_READY_INTERVAL_SECS" || return $?
+  done
+}
+
+wait_for_android_settings_provider() {
+  local deadline="$1"
+  local attempt now output status
+
+  for ((attempt = 1; attempt <= SETTINGS_PROVIDER_READY_ATTEMPTS; attempt += 1)); do
+    if output="$(adb_retry_timed "$deadline" \
+        shell settings get global device_provisioned 2>&1)"; then
+      status=0
+    else
+      status=$?
+    fi
+    output="${output//$'\r'/}"
+    if (( status == 0 )) && [[ "$output" == "0" || "$output" == "1" ]]; then
+      return 0
+    fi
+    printf '%s\n' "$output" >&2
+    if ! retryable_android_settings_provider_readiness_failure "$status" "$output"; then
+      (( status != 0 )) && return "$status"
+      return 1
+    fi
+    if (( attempt == SETTINGS_PROVIDER_READY_ATTEMPTS )); then
+      (( status != 0 )) && return "$status"
+      return 1
+    fi
+    now="$(install_retry_now)"
+    (( deadline - now > SETTINGS_PROVIDER_READY_INTERVAL_SECS )) || return 124
+    android_install_retry_log \
+      "waiting for settings provider (attempt $attempt/$SETTINGS_PROVIDER_READY_ATTEMPTS)"
+    sleep "$SETTINGS_PROVIDER_READY_INTERVAL_SECS" || return $?
   done
 }
 
@@ -299,6 +428,9 @@ install_apk() {
     elif (( recovering_package_services == 1 )) \
         && retryable_android_package_services_ready_install_failure "$status" "$output"; then
       retry_reason="package-services-ready race"
+    elif (( recovering_package_services == 1 )) \
+        && retryable_android_settings_provider_install_failure "$status" "$output"; then
+      retry_reason="settings-provider-ready race"
     else
       return "$status"
     fi
@@ -308,5 +440,6 @@ install_apk() {
     sleep 2 || return $?
     adb_retry_timed "$deadline" wait-for-device >/dev/null || return $?
     wait_for_android_package_service "$deadline" || return $?
+    wait_for_android_settings_provider "$deadline" || return $?
   done
 }

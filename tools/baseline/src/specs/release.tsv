@@ -639,6 +639,7 @@ contains	docs/dev-runbook.md	cargo test -p deve_mobile --features native-packagi
 absent	docs/dev-runbook.md	native-packaging native_authority
 absent	docs/dev-runbook.md	native-packaging embedded_service
 contains	docs/acceptance-cases/12_tech_release.md	target_host_platform_evidence_runtime_boundary_current true
+contains	docs/acceptance-cases/12_tech_release.md	android_emulator_settings_provider_readiness_precedes_install true
 contains	docs/acceptance-cases/12_tech_release.md	signed_release_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	store_distribution_readiness_not_claimed true
 contains	docs/acceptance-cases/12_tech_release.md	physical_device_readiness_not_claimed true
@@ -669,6 +670,7 @@ contains	docs/dev-runbook.md	DEVE_DESKTOP_TARGET_HOSTS=macos
 contains	docs/dev-runbook.md	DEVE_DESKTOP_TARGET_HOSTS=windows
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_NO_SIGN=1
+contains	docs/dev-runbook.md	settings get global device_provisioned
 contains	docs/dev-runbook.md	cargo tauri build --features native-packaging
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=exe
@@ -746,7 +748,7 @@ contains	scripts/lib/android-install-retry.sh	adb_timed install -r
 contains	scripts/lib/android-install-retry.sh	recovering_package_services == 1
 contains	scripts/lib/android-install-retry.sh	package_service_missing
 contains	scripts/lib/android-install-retry.sh	PackageManagerInternal.freeStorage(java.lang.String, long, int)
-contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 0 2 5 1
+contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 0 2 6 1
 contains	scripts/lib/android-install-retry.sh	cmd package resolve-activity
 contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	install_apk
@@ -757,13 +759,23 @@ contains	scripts/smoke-mobile-android-remote-browser.sh	install_apk
 contains	scripts/android-install-retry.test.sh	run_case launcher-delayed 0 1 4 2
 contains	scripts/android-install-retry.test.sh	run_case launcher-deadline 124 1 2 0
 contains	scripts/android-install-retry.test.sh	run_case launcher-sleep-fail 42 1 2 1
-contains	scripts/android-install-retry.test.sh	run_case package-internal-recover 0 3 8 2
+contains	scripts/android-install-retry.test.sh	run_case package-internal-recover 0 3 10 2
+contains	scripts/android-install-retry.test.sh	run_case settings-provider-after-bootstrap 0 3 10 2
+contains	scripts/android-install-retry.test.sh	run_case settings-provider-first 1 1 1 0
+contains	scripts/android-install-retry.test.sh	run_case settings-provider-mixed 1 2 5 1
+contains	scripts/android-install-retry.test.sh	run_case settings-readiness-recover 0 2 7 2
+contains	scripts/android-install-retry.test.sh	run_case settings-readiness-mixed 1 1 4 1
+contains	scripts/android-install-retry.test.sh	run_case settings-readiness-timeout 124 1 4 1
 contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.category.LAUNCHER
 contains	scripts/check-mobile-android-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	disk.dataPartition.size=%sM
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-boot-readiness.test.sh
+contains	scripts/lib/android-emulator-boot-readiness.sh	shell settings get global device_provisioned
+contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10
+contains	scripts/android-emulator-boot-readiness.test.sh	settings-provider-uninstalled
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell "df -k /data"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576

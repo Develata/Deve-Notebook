@@ -5,9 +5,9 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-29`
+- `Last Review`: `2026-07-30`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
-- `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
+- `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本章定义 Mobile content-first 适配策略。规范性用语继承 `01_terminology.md`。
@@ -92,7 +92,7 @@ MobileColdStart
 *   bundled Web shell 仍是 WebLightPeer，repo-scoped browser identity 必须满足 `03_storage/index#browser-storage-layering` 的 IndexedDB + non-extractable WebCrypto Ed25519 合同。Android System WebView 不支持 Ed25519 时必须保持 storage-limited 只读；LocalBackend/native session 不得伪造 browser key、跳过签名或转授 host writer authority。
 *   Android 正式支持与可写 evidence baseline 是 Android 10 / API 29+ 且当前 WebView provider major 137+。该版本基线只决定 support/receipt 资格，不得替代真实 capability probe，也不得在前端解析 UA 或硬编码 OS gate。
 *   Android 可写 target-host gate 必须在业务步骤前记录 API level、WebView provider package/version、AVD/system-image 或真实设备标识，并执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。只有版本基线与 probe 同时满足才可生成 writable receipt；不满足时必须输出结构化 blocker、证明编辑器保持只读并停止可写业务步骤。
-*   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式、有界 RAM 和 `2048..8192 MiB` 的受控 writable data partition request（默认 `4096 MiB`）启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后仍须确认 package manager 可用，并在安装前 fail-closed 解析 `/data` 容量，证明总容量不低于 request 的四分之三且可用空间至少 `1024 MiB`。不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
+*   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式、有界 RAM 和 `2048..8192 MiB` 的受控 writable data partition request（默认 `4096 MiB`）启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后，仍须在同一 boot deadline 内通过短时有界、只读 probe 确认 package manager 可用且 `settings get global device_provisioned` 返回规范 `0` / `1`，再在安装前 fail-closed 解析 `/data` 容量，证明总容量不低于 request 的四分之三且可用空间至少 `1024 MiB`。APK install 若命中已准入的 package-service bootstrap/race signature，下一次 install attempt 前必须在同一 absolute install deadline 内重新通过 package manager 与上述 settings-provider probe；只有 bootstrap 恢复链中的精确 provider-race signature 可进入下一轮重新准入，首次出现、混合输出、未知错误或超时仍立即 fail-closed。缺失 `settings` service、system provider 尚未安装、非规范输出、单次 probe 超时或总 deadline 到期都不得准入 APK 安装；不得用固定 sleep 代替 readiness。不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
 *   Android emulator binary identity probe 必须有独立的单调时间与输出字节上限，只接受 canonical
     `Android emulator version <version> (build_id <id>)` banner 的逐字段匹配；单独出现 version/build
     token、空输出、超时或超限输出都必须 fail-closed。若 emulator wrapper 在输出完整 canonical banner

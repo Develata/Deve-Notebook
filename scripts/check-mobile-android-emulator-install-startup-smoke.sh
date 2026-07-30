@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
@@ -226,53 +227,53 @@ ensure_avd_data_partition() {
 
 wait_for_boot() {
   local deadline=$((SECONDS + BOOT_TIMEOUT_SECS))
+  local devices_output=""
   local sys_boot_completed=""
   local dev_boot_complete=""
-  local remaining=0
 
   while (( SECONDS < deadline )); do
     ensure_emulator_process_alive
-    if adb_cmd devices | awk -v serial="$EMULATOR_SERIAL" '$1 == serial { found = 1 } END { exit !found }'; then
+    devices_output="$(android_emulator_boot_probe_until "$deadline" devices 2>/dev/null \
+      | head -c 4096 || true)"
+    if awk -v serial="$EMULATOR_SERIAL" \
+        '$1 == serial { found = 1 } END { exit !found }' <<<"$devices_output"; then
       break
     fi
-    sleep 2
+    android_emulator_boot_poll_sleep "$deadline" 2 || break
   done
 
   [[ -n "${EMULATOR_SERIAL:-}" ]] \
     || fail "Android emulator serial did not appear within ${BOOT_TIMEOUT_SECS}s"
 
-  remaining=$((deadline - SECONDS))
-  (( remaining > 0 )) || fail "Android emulator serial appeared after boot deadline"
-  timeout "$remaining" "$(android_tool_path adb)" -s "$EMULATOR_SERIAL" wait-for-device \
+  android_emulator_boot_probe_until "$deadline" \
+      -s "$EMULATOR_SERIAL" wait-for-device >/dev/null \
     || fail "Android emulator did not reach adb device state within ${BOOT_TIMEOUT_SECS}s"
 
   local observed_avd
-  observed_avd="$(adb_cmd -s "$EMULATOR_SERIAL" emu avd name 2>/dev/null | tr -d '\r' | head -n 1 || true)"
+  observed_avd="$(android_emulator_boot_probe_until "$deadline" \
+    -s "$EMULATOR_SERIAL" emu avd name 2>/dev/null \
+    | tr -d '\r' | head -c 128 | head -n 1 || true)"
   [[ "$observed_avd" == "$AVD_NAME" ]] \
     || fail "Android emulator serial $EMULATOR_SERIAL belongs to '$observed_avd', expected '$AVD_NAME'"
 
   while (( SECONDS < deadline )); do
     ensure_emulator_process_alive
-    sys_boot_completed="$(adb_cmd -s "$EMULATOR_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-    dev_boot_complete="$(adb_cmd -s "$EMULATOR_SERIAL" shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r' || true)"
-    if android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete" \
-        && adb_cmd -s "$EMULATOR_SERIAL" shell cmd package list packages >/dev/null 2>&1; then
-      return 0
+    sys_boot_completed="$(android_emulator_boot_probe_until "$deadline" \
+      -s "$EMULATOR_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' | head -c 16 || true)"
+    dev_boot_complete="$(android_emulator_boot_probe_until "$deadline" \
+      -s "$EMULATOR_SERIAL" shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r' | head -c 16 || true)"
+    if android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"; then
+      if android_emulator_guest_services_ready "$EMULATOR_SERIAL" "$deadline"; then
+        echo "mobile-android-emulator-install-startup-smoke-check: boot readiness: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
+        return 0
+      fi
+    else
+      ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE="boot-properties=not-ready sys=${sys_boot_completed:-missing} dev=${dev_boot_complete:-missing}"
     fi
-    sleep 5
+    android_emulator_boot_poll_sleep "$deadline" 5 || break
   done
 
-  fail "Android emulator did not finish booting within ${BOOT_TIMEOUT_SECS}s"
-}
-
-verify_boot_completion_contract() {
-  android_boot_properties_complete "1" "" \
-    || fail "sys.boot_completed=1 must satisfy the emulator boot property gate"
-  android_boot_properties_complete "" "1" \
-    || fail "dev.bootcomplete=1 must satisfy the emulator boot property gate"
-  if android_boot_properties_complete "" ""; then
-    fail "missing Android boot completion properties must fail closed"
-  fi
+  fail "Android emulator did not satisfy boot readiness within ${BOOT_TIMEOUT_SECS}s: $ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE"
 }
 
 verify_sdk_package_reuse_contract() {
@@ -389,11 +390,11 @@ run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
 run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
+run bash "$ROOT_DIR/scripts/android-emulator-boot-readiness.test.sh"
 run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
 run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"
 run bash "$ROOT_DIR/scripts/android-emulator-pin.test.sh"
 run bash "$ROOT_DIR/scripts/android-emulator-renderer.test.sh"
-verify_boot_completion_contract
 verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
 validate_emulator_port

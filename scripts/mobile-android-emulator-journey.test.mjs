@@ -269,7 +269,7 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
   }
 });
 
-test("Android APK install retries only exact package-service recovery failures", () => {
+test("Android APK install retries only exact package/settings recovery failures", () => {
   assert.match(
     installSmoke,
     /timeout --kill-after="\$\{ADB_KILL_AFTER_SECS\}s"/,
@@ -278,6 +278,8 @@ test("Android APK install retries only exact package-service recovery failures",
   assert.match(installRetryLib, /PACKAGE_SERVICE_READY_ATTEMPTS=10/);
   assert.match(installRetryLib, /PACKAGE_SERVICE_READY_INTERVAL_SECS=2/);
   assert.match(installRetryLib, /wait_for_android_package_service "\$deadline"/);
+  assert.match(installRetryLib, /wait_for_android_settings_provider "\$deadline"/);
+  assert.match(installRetryLib, /retryable_android_settings_provider_install_failure/);
   assert.match(installRetryLib, /for attempt in 1 2 3/);
   assert.match(
     installRetryLib,
@@ -299,10 +301,7 @@ test("Android APK install retries only exact package-service recovery failures",
     installRetryLib.includes("Can'\\''t find service: package$/ {"),
     "retry classifier must anchor the exact missing package-service line",
   );
-  assert.match(
-    installRetryLib,
-    /broken_pipe \+ package_service_missing == 1/,
-  );
+  assert.match(installRetryLib, /broken_pipe \+ package_service_missing == 1/);
   assert.match(
     installRetryLib,
     /wait_for_android_launcher_activity "\$deadline"/,
@@ -364,14 +363,14 @@ test("Android APK install retries only exact package-service recovery failures",
       `${producerId} receipt must bind the shared install retry library`,
     );
   }
-  assert.match(installRetryTest, /run_case success-after-retry 0 2 5/);
-  assert.match(installRetryTest, /run_case always-broken 1 3 7/);
+  assert.match(installRetryTest, /run_case success-after-retry 0 2 6/);
+  assert.match(installRetryTest, /run_case always-broken 1 3 9/);
   assert.match(installRetryTest, /run_case timeout 124 1 1/);
   assert.match(installRetryTest, /run_case pipeline 1 1 1/);
   assert.match(installRetryTest, /run_case wait-fail 17 1 2/);
-  assert.match(installRetryTest, /run_case package-internal-recover 0 3 8 2/);
+  assert.match(installRetryTest, /run_case package-internal-recover 0 3 10 2/);
   assert.match(installRetryTest, /run_case package-internal-first 1 1 1 0/);
-  assert.match(installRetryTest, /run_case package-internal-mixed 1 2 4 1/);
+  assert.match(installRetryTest, /run_case package-internal-mixed 1 2 5 1/);
   assert.match(installRetryTest, /run_case launcher-delayed 0 1 4 2/);
   assert.match(installRetryTest, /run_case launcher-mixed 1 1 2 0/);
   assert.match(installRetryTest, /run_case launcher-other 1 1 2 0/);

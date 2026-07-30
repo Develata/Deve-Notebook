@@ -1239,6 +1239,13 @@ This is the only approved pair for the current pin; other software-token pairs
 are not compatibility fallbacks. Missing, conflicting, unapproved, or legacy
 `swiftshader_indirect` evidence fails before APK installation. A future pin or
 rollback needs fresh target-host evidence before approving a different pair.
+After either boot-complete property appears, the gate still waits under the
+same boot deadline for bounded read-only package-manager and settings-provider
+probes. `settings get global device_provisioned` must return exactly `0` or `1`
+before installation. An admitted package-service bootstrap/race failure also
+repeats both probes under the existing absolute install deadline before another
+install attempt; missing providers, non-canonical output, mixed failures, and
+timeouts remain fail-closed rather than being covered by a fixed sleep.
 Under the legacy `swiftshader_indirect` translator path the
 37.0 image's guest surfaceflinger aborts (`hasReadColorBufferDma` goldfish
 mapper assert on the RegionSampling thread) spontaneously within minutes of
