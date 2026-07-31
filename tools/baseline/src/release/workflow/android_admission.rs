@@ -127,10 +127,16 @@ fn validate_worker(
         "install_apk",
         "android_emulator_wait_for_guest_services_stable",
         "\"$system_pid_before\" == \"$system_pid_after\"",
+        "    set +e\n    run_cycle \"$cycle\" >\"$RESULT_DIR/cycle-$cycle/cycle.log\" 2>&1\n    cycle_status=$?\n    set -e",
         "DEVE_ANDROID_ADMISSION_CYCLES:-3",
         "cold-boot cycles must be exactly 3",
     ] {
         require_text(worker, expected, "Android admission worker")?;
+    }
+    if worker.contains("if run_cycle ") {
+        bail!(
+            "release-baseline-check: Android admission worker must not suppress cycle errexit through a conditional function invocation"
+        );
     }
     if worker.contains("adb install") || worker.contains(" install -r ") {
         bail!(
@@ -178,10 +184,18 @@ fn validate_worker(
 
 #[cfg(test)]
 mod tests {
-    use super::validate_workflow;
+    use super::{validate_worker, validate_workflow};
 
     const VALID: &str =
         include_str!("../../../../../.github/workflows/android-emulator-admission.yml");
+    const WORKER: &str =
+        include_str!("../../../../../scripts/diagnose-android-emulator-admission.sh");
+    const RESULT_SUPPORT: &str =
+        include_str!("../../../../../scripts/lib/android-admission-diagnostic-result.sh");
+    const LIFECYCLE: &str =
+        include_str!("../../../../../scripts/lib/android-admission-emulator-lifecycle.sh");
+    const SUMMARY: &str =
+        include_str!("../../../../../scripts/android-emulator-admission-summary.mjs");
 
     #[test]
     fn admission_workflow_is_manual_and_diagnostic_only() {
@@ -206,5 +220,20 @@ mod tests {
                 "invalid admission workflow unexpectedly passed"
             );
         }
+    }
+
+    #[test]
+    fn admission_worker_rejects_conditional_cycle_invocation() {
+        validate_worker(WORKER, RESULT_SUPPORT, LIFECYCLE, SUMMARY)
+            .expect("valid Android admission worker");
+
+        let invalid = WORKER.replace(
+            "    set +e\n    run_cycle ",
+            "    set +e\n    if run_cycle ",
+        );
+        assert!(
+            validate_worker(&invalid, RESULT_SUPPORT, LIFECYCLE, SUMMARY).is_err(),
+            "conditional cycle invocation unexpectedly passed"
+        );
     }
 }

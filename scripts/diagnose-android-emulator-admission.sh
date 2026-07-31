@@ -402,7 +402,7 @@ run_cycle() (
 )
 
 main() {
-  local cycle passed=0
+  local cycle cycle_status passed=0
   CURRENT_PHASE="input-validation"
   validate_inputs
   require_command jq
@@ -430,7 +430,15 @@ main() {
   for ((cycle = 1; cycle <= REQUESTED_CYCLES; cycle += 1)); do
     log "starting cold-boot cycle $cycle/$REQUESTED_CYCLES"
     mkdir -p "$RESULT_DIR/cycle-$cycle"
-    if run_cycle "$cycle" >"$RESULT_DIR/cycle-$cycle/cycle.log" 2>&1; then
+    # A Bash function invoked directly by `if` inherits an ignored errexit
+    # context, even when the function enables `set -e` itself. Invoke the
+    # cycle as a simple command while the caller temporarily tolerates its
+    # status so every failing adb/admission command remains fail-closed.
+    set +e
+    run_cycle "$cycle" >"$RESULT_DIR/cycle-$cycle/cycle.log" 2>&1
+    cycle_status=$?
+    set -e
+    if (( cycle_status == 0 )); then
       passed=$((passed + 1))
     fi
     android_admission_bound_cycle_logs "$RESULT_DIR/cycle-$cycle"

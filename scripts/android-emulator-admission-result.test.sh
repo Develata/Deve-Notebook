@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORKSPACE_ROOT="$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/android-admission-diagnostic-result.sh"
 source "$ROOT_DIR/scripts/lib/android-admission-emulator-lifecycle.sh"
 
@@ -106,5 +107,26 @@ if android_admission_cleanup_emulator "$owner_file" "$fixture" "$emulator_pid"; 
 fi
 android_admission_direct_child_alive "$emulator_pid" \
   && fail "direct-child fallback left the emulator process running"
+
+worker="$WORKSPACE_ROOT/scripts/diagnose-android-emulator-admission.sh"
+grep -Fq 'run_cycle "$cycle" >"$RESULT_DIR/cycle-$cycle/cycle.log" 2>&1' "$worker" \
+  || fail "worker no longer invokes a direct cycle command"
+grep -Fq 'cycle_status=$?' "$worker" \
+  || fail "worker no longer captures the direct cycle status"
+grep -Fq 'if run_cycle ' "$worker" \
+  && fail "conditional function invocation would suppress cycle errexit"
+
+errexit_marker="$fixture/errexit-was-suppressed"
+failing_cycle_probe() (
+  set -euo pipefail
+  false
+  printf 'unreachable\n' >"$errexit_marker"
+)
+set +e
+failing_cycle_probe
+probe_status=$?
+set -e
+(( probe_status != 0 )) || fail "direct cycle invocation hid a failing command"
+[[ ! -e "$errexit_marker" ]] || fail "direct cycle invocation suppressed subshell errexit"
 
 echo "android-emulator-admission-result-test: ok"
