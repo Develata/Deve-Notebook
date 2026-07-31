@@ -1232,11 +1232,15 @@ canonical version/build banner. Concurrent downloads publish one build under
 a bounded build-scoped cache lock and recheck an existing binary while holding
 that lock. An existing entry that fails the canonical probe is preserved and
 fails closed instead of being replaced while it may still be in use. Runtime renderer proof consumes every matching selection in the
-owned emulator's bounded log prefix: current `-gpu swangle` emits the complete
+owned emulator's bounded log prefix: current `-gpu swangle` has emitted the complete
 ordered `vulkan_mode_selected:swiftshader gles_mode_selected:swangle` pair,
 meaning Vulkan uses SwiftShader while GLES uses ANGLE-on-SwiftShader (SwANGLE).
-This is the only approved pair for the current pin; other software-token pairs
-are not compatibility fallbacks. Missing, conflicting, unapproved, or legacy
+The formal gate still requires this configured pair for the current pin; that
+identity check is not evidence that the renderer is stable. The exact-HEAD
+manual admission run `30603301298` observed 0/3 stable cold boots for this
+configuration, so a renderer-only diagnostic must finish before changing the
+gate. Other software-token pairs are not compatibility fallbacks. Missing,
+conflicting, unapproved, or legacy
 `swiftshader_indirect` evidence fails before APK installation. A future pin or
 rollback needs fresh target-host evidence before approving a different pair.
 After either boot-complete property appears, the gate still waits under the
@@ -1258,9 +1262,12 @@ Under the legacy `swiftshader_indirect` translator path the
 mapper assert on the RegionSampling thread) spontaneously within minutes of
 boot — before any APK is installed — then crash-loops and takes
 system_server down; emulator-matrix evidence showed the abort is
-renderer-path-bound (the `swangle` and `software` paths survive with proven
-rendered frames) and the `-feature` switches do not remove the guest
-capability. The 16 KB page-size `android-37.1` `ps16k` image remains retired
+renderer-path-bound, but the newer exact-HEAD admission also observed the same
+`hasReadColorBufferDma` failure class under `swangle`. Therefore no renderer
+alternative currently has stable three-cycle evidence; `software` and
+`swiftshader` remain diagnostic variants rather than approved fallbacks. The
+`-feature` switches do not remove the guest capability. The 16 KB page-size
+`android-37.1` `ps16k` image remains retired
 for the same instability class. Hosts that created the old
 `deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or
 `deve-mobile-smoke-api36.1-google_apis-x86_64` AVDs can reclaim them with

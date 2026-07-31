@@ -16,11 +16,12 @@ fixture="$(mktemp -d)"
 trap 'rm -rf -- "$fixture"' EXIT
 
 RESULT_DIR="$fixture/result"
-RESULT_PATH="$RESULT_DIR/sdk-api37.json"
+RESULT_PATH="$RESULT_DIR/pinned-api37-software.json"
 CYCLE_RESULT_DIR="$RESULT_DIR/cycle-results"
 EXPECTED_HEAD="0123456789abcdef0123456789abcdef01234567"
-VARIANT_ID="sdk-api37"
-EMULATOR_SOURCE="sdk"
+VARIANT_ID="pinned-api37-software"
+EMULATOR_SOURCE="pinned"
+GPU_MODE="software"
 EMULATOR_VERSION="36.7.0.0"
 EMULATOR_BUILD_ID="15600000"
 EMULATOR_PROBE_STATUS="0"
@@ -44,7 +45,8 @@ for cycle in 1 2 3; do
       cleanupStatus: 0,
       failureClass: null,
       systemServerPidBefore: "123",
-      systemServerPidAfter: "123"
+      systemServerPidAfter: "123",
+      rendererPair: "swiftshader swiftshader"
     }' >"$CYCLE_RESULT_DIR/cycle-$cycle.json"
 done
 
@@ -55,7 +57,9 @@ jq -e \
     and .complete == true
     and .stable == true
     and .harnessError == null
-    and .variantId == "sdk-api37"
+    and .variantId == "pinned-api37-software"
+    and .gpuMode == "software"
+    and ([.cycles[].rendererPair] | unique) == ["swiftshader swiftshader"]
     and (.cycles | length == 3)' \
   "$RESULT_PATH" >/dev/null \
   || fail "atomic summary result did not preserve the expected schema"
@@ -76,6 +80,9 @@ printf '%s\n' "unrecognized failure" >"$failure_log"
 [[ "$(android_admission_classify_cycle_failure "$failure_log" post-install-admission)" \
     == "post_install_instability" ]] \
   || fail "post-install classification drifted"
+[[ "$(android_admission_classify_cycle_failure "$failure_log" renderer-admission)" \
+    == "renderer_identity" ]] \
+  || fail "renderer-identity classification drifted"
 
 oversized_log="$fixture/oversized.log"
 head -c $((ANDROID_ADMISSION_LOG_FILE_BUDGET_BYTES + 4096)) /dev/zero \
@@ -115,6 +122,12 @@ grep -Fq 'cycle_status=$?' "$worker" \
   || fail "worker no longer captures the direct cycle status"
 grep -Fq 'if run_cycle ' "$worker" \
   && fail "conditional function invocation would suppress cycle errexit"
+grep -Fq -- '-gpu "$GPU_MODE"' "$worker" \
+  || fail "worker no longer passes the admitted renderer mode to the emulator"
+grep -Fq 'android_emulator_renderer_wait \' "$worker" \
+  || fail "worker no longer proves the actual renderer before boot admission"
+(( $(grep -Fc 'android_emulator_renderer_observe "$cycle_dir/emulator.log"' "$worker") == 1 )) \
+  || fail "worker no longer revalidates the complete renderer log during finalization"
 
 errexit_marker="$fixture/errexit-was-suppressed"
 failing_cycle_probe() (

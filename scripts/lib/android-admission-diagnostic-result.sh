@@ -5,7 +5,7 @@
 #
 # Summary globals:
 # RESULT_DIR, RESULT_PATH, CYCLE_RESULT_DIR, EXPECTED_HEAD, VARIANT_ID,
-# EMULATOR_SOURCE, EMULATOR_VERSION, EMULATOR_BUILD_ID,
+# EMULATOR_SOURCE, GPU_MODE, EMULATOR_VERSION, EMULATOR_BUILD_ID,
 # EMULATOR_PROBE_STATUS, SDK_EMULATOR_REVISION, API_LEVEL, SYSTEM_TARGET,
 # SYSTEM_IMAGE_REVISION, ARCHITECTURE, APK_SHA256, REQUESTED_CYCLES.
 #
@@ -74,6 +74,7 @@ android_admission_write_summary_result() {
     --arg headSha "$EXPECTED_HEAD" \
     --arg variantId "$VARIANT_ID" \
     --arg emulatorSource "$EMULATOR_SOURCE" \
+    --arg gpuMode "$GPU_MODE" \
     --arg emulatorVersion "$EMULATOR_VERSION" \
     --arg emulatorBuildId "$EMULATOR_BUILD_ID" \
     --arg emulatorProbeStatus "$EMULATOR_PROBE_STATUS" \
@@ -92,6 +93,7 @@ android_admission_write_summary_result() {
       headSha: $headSha,
       variantId: $variantId,
       emulatorSource: $emulatorSource,
+      gpuMode: $gpuMode,
       emulatorVersion: $emulatorVersion,
       emulatorBuildId: $emulatorBuildId,
       emulatorProbeStatus: $emulatorProbeStatus,
@@ -165,6 +167,8 @@ android_admission_classify_cycle_failure() {
     printf 'emulator_process_exit\n'
   elif [[ "$phase" == boot* ]]; then
     printf 'boot_or_guest_admission\n'
+  elif [[ "$phase" == renderer* ]]; then
+    printf 'renderer_identity\n'
   elif [[ "$phase" == install* ]]; then
     printf 'install_unclassified\n'
   elif [[ "$phase" == post-install* ]]; then

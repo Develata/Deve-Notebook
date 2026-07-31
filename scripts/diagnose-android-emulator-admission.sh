@@ -7,14 +7,16 @@ source "$ROOT_DIR/scripts/lib/android-emulator-owner.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 source "$ROOT_DIR/scripts/lib/android-admission-diagnostic-result.sh"
 source "$ROOT_DIR/scripts/lib/android-admission-emulator-lifecycle.sh"
 
 REQUIRED="${DEVE_ANDROID_ADMISSION_DIAGNOSTIC_REQUIRED:-0}"
-VARIANT_ID="${DEVE_ANDROID_ADMISSION_VARIANT_ID:-current-pinned-api37}"
+VARIANT_ID="${DEVE_ANDROID_ADMISSION_VARIANT_ID:-pinned-api37-swangle}"
 EMULATOR_SOURCE="${DEVE_ANDROID_ADMISSION_EMULATOR_SOURCE:-pinned}"
 API_LEVEL="${DEVE_ANDROID_ADMISSION_API_LEVEL:-37.0}"
+GPU_MODE="${DEVE_ANDROID_ADMISSION_GPU_MODE:-swangle}"
 SYSTEM_TARGET="${DEVE_ANDROID_ADMISSION_SYSTEM_TARGET:-google_apis}"
 ARCHITECTURE="${DEVE_ANDROID_ADMISSION_ARCHITECTURE:-x86_64}"
 REQUESTED_CYCLES="${DEVE_ANDROID_ADMISSION_CYCLES:-3}"
@@ -111,6 +113,10 @@ validate_inputs() {
   case "$EMULATOR_SOURCE" in
     pinned | sdk) ;;
     *) fail "emulator source must be pinned or sdk" ;;
+  esac
+  case "$GPU_MODE" in
+    swangle | software | swiftshader) ;;
+    *) fail "GPU mode must be swangle, software, or swiftshader" ;;
   esac
   [[ "$API_LEVEL" =~ ^[0-9]{2}([.][0-9])?$ ]] || fail "API level is invalid"
   [[ "$SYSTEM_TARGET" =~ ^[a-z0-9_]+$ ]] || fail "system target is invalid"
@@ -291,6 +297,7 @@ run_cycle() (
   local owner_file
   local started_at completed_at status primary_status cleanup_status=0 failure_class=""
   local system_pid_before="" system_pid_after=""
+  local renderer_pair=""
   local cycle_phase="launch"
   local emulator_pid=""
   local temporary
@@ -313,6 +320,16 @@ run_cycle() (
       status=1
       cycle_phase="cleanup"
     fi
+    if android_emulator_renderer_observe "$cycle_dir/emulator.log"; then
+      renderer_pair="$ANDROID_EMULATOR_RENDERER_LAST_MODE"
+    else
+      renderer_pair=""
+      if (( status == 0 )); then
+        status=1
+        cycle_phase="renderer-finalization"
+      fi
+      echo "final renderer observation failed: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" >&2
+    fi
     completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     if (( status != 0 )); then
       if (( primary_status == 0 && cleanup_status != 0 )); then
@@ -333,6 +350,7 @@ run_cycle() (
       --arg completedAt "$completed_at" \
       --arg systemServerPidBefore "$system_pid_before" \
       --arg systemServerPidAfter "$system_pid_after" \
+      --arg rendererPair "$renderer_pair" \
       '{
         cycle: $cycle,
         outcome: $outcome,
@@ -343,7 +361,8 @@ run_cycle() (
         startedAt: $startedAt,
         completedAt: $completedAt,
         systemServerPidBefore: (if $systemServerPidBefore == "" then null else $systemServerPidBefore end),
-        systemServerPidAfter: (if $systemServerPidAfter == "" then null else $systemServerPidAfter end)
+        systemServerPidAfter: (if $systemServerPidAfter == "" then null else $systemServerPidAfter end),
+        rendererPair: (if $rendererPair == "" then null else $rendererPair end)
       }' >"$temporary"
     mv -f -- "$temporary" "$CYCLE_RESULT_DIR/$VARIANT_ID-cycle-$cycle.json"
     exit "$status"
@@ -365,7 +384,7 @@ run_cycle() (
     -no-window \
     -no-audio \
     -no-boot-anim \
-    -gpu swangle \
+    -gpu "$GPU_MODE" \
     -verbose \
     -no-snapshot \
     -no-snapshot-save \
@@ -376,6 +395,13 @@ run_cycle() (
   export EMULATOR_PID
   android_admission_write_emulator_owner "$owner_file" "$emulator_pid"
 
+  cycle_phase="renderer-admission"
+  android_emulator_renderer_wait \
+    "$cycle_dir/emulator.log" 30 ensure_cycle_process_alive || {
+    echo "Android emulator renderer observation failed: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" >&2
+    exit 1
+  }
+  renderer_pair="$ANDROID_EMULATOR_RENDERER_LAST_MODE"
   cycle_phase="boot-admission"
   wait_for_cycle_boot
   printf '%s\n' "$ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE" \

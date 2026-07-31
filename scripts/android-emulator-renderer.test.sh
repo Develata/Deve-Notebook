@@ -21,6 +21,11 @@ expect_match() {
     || fail_test "expected match: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE"
 }
 
+expect_observe() {
+  android_emulator_renderer_observe "$log" \
+    || fail_test "expected observation: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE"
+}
+
 expect_reject() {
   if android_emulator_renderer_verify "$log"; then
     fail_test "expected fail-closed renderer result"
@@ -31,6 +36,24 @@ printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_sele
 expect_match
 [[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == "vulkan/gles=swiftshader swangle" ]] \
   || fail_test "canonical swangle renderer evidence was not recorded"
+
+printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader\n' >"$log"
+expect_observe
+[[ "$ANDROID_EMULATOR_RENDERER_LAST_MODE" == "swiftshader swiftshader" ]] \
+  || fail_test "neutral renderer observer did not retain the actual pair"
+renderer_process_alive() {
+  return 0
+}
+android_emulator_renderer_wait "$log" 1 renderer_process_alive \
+  || fail_test "bounded renderer wait rejected an existing observation"
+printf 'INFO | emuglConfig_init: vulkan_mode_selected:host gles_mode_selected:host\n' >>"$log"
+if android_emulator_renderer_observe "$log"; then
+  fail_test "final observation accepted a renderer pair appended after initial admission"
+fi
+[[ "$ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" == conflicting* ]] \
+  || fail_test "late renderer conflict was not retained"
+printf 'INFO | emuglConfig_init: vulkan_mode_selected:swiftshader gles_mode_selected:swiftshader\n' >"$log"
+expect_reject
 
 printf 'INFO | emuglConfig_init: vulkan_mode_selected:swangle gles_mode_selected:swiftshader\n' >"$log"
 expect_reject

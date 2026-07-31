@@ -12,7 +12,7 @@ import {
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const APK_SHA256 = "a".repeat(64);
 
-function cycle(cycleNumber, outcome = "passed") {
+function cycle(cycleNumber, outcome = "passed", rendererPair = "swiftshader swangle") {
   return {
     cycle: cycleNumber,
     outcome,
@@ -22,12 +22,16 @@ function cycle(cycleNumber, outcome = "passed") {
     failureClass: outcome === "passed" ? null : "binder_epipe",
     systemServerPidBefore: "123",
     systemServerPidAfter: outcome === "passed" ? "123" : null,
+    rendererPair,
   };
 }
 
 function result(variantId, { stable = false, headSha = HEAD, cycles = 3 } = {}) {
   const variant = ADMISSION_VARIANTS.find((candidate) => candidate.id === variantId);
   assert.ok(variant);
+  const rendererPair = variant.gpuMode === "swangle"
+    ? "swiftshader swangle"
+    : "swiftshader swiftshader";
   return {
     schemaVersion: 1,
     kind: "android-emulator-admission-diagnostic",
@@ -35,13 +39,14 @@ function result(variantId, { stable = false, headSha = HEAD, cycles = 3 } = {}) 
     headSha,
     variantId,
     emulatorSource: variant.emulatorSource,
-    emulatorVersion: variant.emulatorSource === "pinned" ? "36.2.12.0" : "36.3.10.0",
-    emulatorBuildId: variant.emulatorSource === "pinned" ? "14394846" : "15000000",
+    gpuMode: variant.gpuMode,
+    emulatorVersion: "36.2.12.0",
+    emulatorBuildId: "14394846",
     emulatorProbeStatus: "0",
     sdkEmulatorRevision: "36.3.10",
     apiLevel: variant.apiLevel,
     systemTarget: "google_apis",
-    systemImageRevision: variant.apiLevel === "37.0" ? "2" : "1",
+    systemImageRevision: "2",
     architecture: "x86_64",
     apkSha256: APK_SHA256,
     requestedCycles: cycles,
@@ -49,7 +54,11 @@ function result(variantId, { stable = false, headSha = HEAD, cycles = 3 } = {}) 
     harnessError: null,
     cycles: Array.from(
       { length: cycles },
-      (_, index) => cycle(index + 1, stable ? "passed" : index === 0 ? "failed" : "passed"),
+      (_, index) => cycle(
+        index + 1,
+        stable ? "passed" : index === 0 ? "failed" : "passed",
+        rendererPair,
+      ),
     ),
   };
 }
@@ -71,40 +80,67 @@ function withResults(results, callback) {
 
 test("recommends the least-divergent complete stable variant", () => {
   withResults([
-    result("current-pinned-api37"),
-    result("sdk-api37", { stable: true }),
-    result("pinned-api36-1", { stable: true }),
+    result("pinned-api37-swangle"),
+    result("pinned-api37-software", { stable: true }),
+    result("pinned-api37-swiftshader", { stable: true }),
   ], (rootDir) => {
     const summary = summarizeAdmissionResults({
       rootDir,
       expectedHead: HEAD,
       expectedCycles: 3,
     });
-    assert.deepEqual(summary.stableVariantIds, ["sdk-api37", "pinned-api36-1"]);
-    assert.equal(summary.recommendedVariantId, "sdk-api37");
-    assert.match(summary.markdown, /\| sdk-api37 \| sdk \| 37\.0 \| 3\/3 \| stable \|/);
+    assert.deepEqual(
+      summary.stableVariantIds,
+      ["pinned-api37-software", "pinned-api37-swiftshader"],
+    );
+    assert.equal(summary.recommendedVariantId, "pinned-api37-software");
+    assert.match(
+      summary.markdown,
+      /\| pinned-api37-software \| software \| swiftshader swiftshader \| 3\/3 \| stable \|/,
+    );
   });
 });
 
 test("prefers the unchanged control when it is stable", () => {
   withResults([
-    result("current-pinned-api37", { stable: true }),
-    result("sdk-api37", { stable: true }),
-    result("pinned-api36-1"),
+    result("pinned-api37-swangle", { stable: true }),
+    result("pinned-api37-software", { stable: true }),
+    result("pinned-api37-swiftshader"),
   ], (rootDir) => {
     const summary = summarizeAdmissionResults({
       rootDir,
       expectedHead: HEAD,
       expectedCycles: 3,
     });
-    assert.equal(summary.recommendedVariantId, "current-pinned-api37");
+    assert.equal(summary.recommendedVariantId, "pinned-api37-swangle");
+  });
+});
+
+test("does not recommend a stable alias of the unstable control renderer", () => {
+  const entries = [
+    result("pinned-api37-swangle"),
+    result("pinned-api37-software", { stable: true }),
+    result("pinned-api37-swiftshader", { stable: true }),
+  ];
+  for (const entry of entries.slice(1)) {
+    for (const cycleResult of entry.cycles) {
+      cycleResult.rendererPair = "swiftshader swangle";
+    }
+  }
+  withResults(entries, (rootDir) => {
+    const summary = summarizeAdmissionResults({
+      rootDir,
+      expectedHead: HEAD,
+      expectedCycles: 3,
+    });
+    assert.equal(summary.recommendedVariantId, null);
   });
 });
 
 test("rejects missing, duplicate, or identity-drifted matrix results", () => {
   withResults([
-    result("current-pinned-api37"),
-    result("sdk-api37"),
+    result("pinned-api37-swangle"),
+    result("pinned-api37-software"),
   ], (rootDir) => {
     assert.throws(
       () => summarizeAdmissionResults({
@@ -117,9 +153,9 @@ test("rejects missing, duplicate, or identity-drifted matrix results", () => {
   });
 
   withResults([
-    result("current-pinned-api37"),
-    result("sdk-api37", { headSha: "f".repeat(40) }),
-    result("pinned-api36-1"),
+    result("pinned-api37-swangle"),
+    result("pinned-api37-software", { headSha: "f".repeat(40) }),
+    result("pinned-api37-swiftshader"),
   ], (rootDir) => {
     assert.throws(
       () => summarizeAdmissionResults({
@@ -133,11 +169,11 @@ test("rejects missing, duplicate, or identity-drifted matrix results", () => {
 });
 
 test("rejects incomplete cycles, false stable claims, and harness errors", () => {
-  const incomplete = result("sdk-api37");
+  const incomplete = result("pinned-api37-software");
   incomplete.cycles.pop();
-  const falseStable = result("pinned-api36-1");
+  const falseStable = result("pinned-api37-swiftshader");
   falseStable.stable = true;
-  const harnessError = result("current-pinned-api37");
+  const harnessError = result("pinned-api37-swangle");
   harnessError.complete = false;
   harnessError.harnessError = "sdk install failed";
 
@@ -173,32 +209,53 @@ test("requires exactly three cold-boot cycles", () => {
 test("rejects missing or drifted experiment identities", () => {
   const cases = [
     {
-      variantId: "sdk-api37",
+      variantId: "pinned-api37-software",
       mutate(entry) {
         delete entry.apkSha256;
       },
       pattern: /apkSha256/,
     },
     {
-      variantId: "sdk-api37",
+      variantId: "pinned-api37-software",
       mutate(entry) {
         entry.apkSha256 = "b".repeat(64);
       },
       pattern: /APK identity drifted/,
     },
     {
-      variantId: "pinned-api36-1",
+      variantId: "pinned-api37-swiftshader",
       mutate(entry) {
         entry.emulatorBuildId = "99999999";
       },
       pattern: /pinned emulator identity drifted/,
     },
     {
-      variantId: "sdk-api37",
+      variantId: "pinned-api37-software",
       mutate(entry) {
         entry.systemImageRevision = "99";
       },
-      pattern: /API 37 system-image identity drifted/,
+      pattern: /API 37 system-image identity drifted across renderer variants/,
+    },
+    {
+      variantId: "pinned-api37-swiftshader",
+      mutate(entry) {
+        entry.gpuMode = "software";
+      },
+      pattern: /gpuMode mismatch/,
+    },
+    {
+      variantId: "pinned-api37-software",
+      mutate(entry) {
+        entry.cycles[1].rendererPair = "swiftshader swangle";
+      },
+      pattern: /renderer identity drifted across cycles/,
+    },
+    {
+      variantId: "pinned-api37-software",
+      mutate(entry) {
+        delete entry.cycles[1].rendererPair;
+      },
+      pattern: /rendererPair is invalid/,
     },
   ];
   for (const { variantId, mutate, pattern } of cases) {

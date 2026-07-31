@@ -4,19 +4,22 @@ import { pathToFileURL } from "node:url";
 
 export const ADMISSION_VARIANTS = Object.freeze([
   Object.freeze({
-    id: "current-pinned-api37",
+    id: "pinned-api37-swangle",
     emulatorSource: "pinned",
     apiLevel: "37.0",
+    gpuMode: "swangle",
   }),
   Object.freeze({
-    id: "sdk-api37",
-    emulatorSource: "sdk",
-    apiLevel: "37.0",
-  }),
-  Object.freeze({
-    id: "pinned-api36-1",
+    id: "pinned-api37-software",
     emulatorSource: "pinned",
-    apiLevel: "36.1",
+    apiLevel: "37.0",
+    gpuMode: "software",
+  }),
+  Object.freeze({
+    id: "pinned-api37-swiftshader",
+    emulatorSource: "pinned",
+    apiLevel: "37.0",
+    gpuMode: "swiftshader",
   }),
 ]);
 
@@ -52,6 +55,10 @@ function validateCycle(entry, expectedCycle) {
     `cycle ${expectedCycle} cleanupStatus must be a non-negative integer`,
   );
   requireValue(typeof entry.phase === "string" && entry.phase.length > 0, `cycle ${expectedCycle} phase is missing`);
+  requireValue(
+    /^[a-z0-9_-]+ [a-z0-9_-]+$/.test(entry.rendererPair),
+    `cycle ${expectedCycle} rendererPair is invalid`,
+  );
   if (entry.outcome === "passed") {
     requireValue(entry.exitStatus === 0, `passed cycle ${expectedCycle} must have exitStatus 0`);
     requireValue(entry.phase === "complete", `passed cycle ${expectedCycle} must finish at complete`);
@@ -87,6 +94,7 @@ function validateResult(result, variant, expectedHead, expectedCycles, file) {
     `${scope} emulatorSource mismatch`,
   );
   requireValue(result.apiLevel === variant.apiLevel, `${scope} apiLevel mismatch`);
+  requireValue(result.gpuMode === variant.gpuMode, `${scope} gpuMode mismatch`);
   requireValue(result.systemTarget === "google_apis", `${scope} systemTarget mismatch`);
   requireValue(result.architecture === "x86_64", `${scope} architecture mismatch`);
   requireValue(
@@ -117,22 +125,27 @@ function validateResult(result, variant, expectedHead, expectedCycles, file) {
     `${scope} expected ${expectedCycles} cycles, found ${result.cycles.length}`,
   );
   result.cycles.forEach((entry, index) => validateCycle(entry, index + 1));
+  const rendererPairs = new Set(result.cycles.map((entry) => entry.rendererPair));
+  requireValue(
+    rendererPairs.size === 1,
+    `${scope} renderer identity drifted across cycles`,
+  );
   const computedStable = result.cycles.every((entry) => entry.outcome === "passed");
   requireValue(result.stable === computedStable, `${scope} stable claim disagrees with cycles`);
-  return result;
+  return { ...result, observedRendererPair: [...rendererPairs][0] };
 }
 
 function renderMarkdown(results, stableVariantIds, recommendedVariantId) {
   const lines = [
     "## Android emulator admission diagnostic",
     "",
-    "| Variant | Emulator source | API | Passed cycles | Result |",
-    "|---|---|---:|---:|---|",
+    "| Variant | Requested GPU | Observed Vulkan/GLES | Passed cycles | Result |",
+    "|---|---|---|---:|---|",
   ];
   for (const result of results) {
     const passed = result.cycles.filter((entry) => entry.outcome === "passed").length;
     lines.push(
-      `| ${result.variantId} | ${result.emulatorSource} | ${result.apiLevel} | `
+      `| ${result.variantId} | ${result.gpuMode} | ${result.observedRendererPair} | `
       + `${passed}/${result.requestedCycles} | ${result.stable ? "stable" : "unstable"} |`,
     );
   }
@@ -183,24 +196,25 @@ export function summarizeAdmissionResults({ rootDir, expectedHead, expectedCycle
     new Set(results.map((result) => result.apkSha256)).size === 1,
     "matrix APK identity drifted across variants",
   );
-  const pinnedResults = results.filter((result) => result.emulatorSource === "pinned");
   requireValue(
-    new Set(pinnedResults.map((result) => (
+    new Set(results.map((result) => (
       `${result.emulatorVersion}/${result.emulatorBuildId}/${result.emulatorProbeStatus}`
     ))).size === 1,
-    "pinned emulator identity drifted across API variants",
+    "pinned emulator identity drifted across renderer variants",
   );
-  const api37Results = results.filter((result) => result.apiLevel === "37.0");
   requireValue(
-    new Set(api37Results.map((result) => result.systemImageRevision)).size === 1,
-    "API 37 system-image identity drifted across emulator variants",
+    new Set(results.map((result) => result.systemImageRevision)).size === 1,
+    "API 37 system-image identity drifted across renderer variants",
   );
   const stableVariantIds = results
     .filter((result) => result.stable)
     .map((result) => result.variantId);
-  const recommendedVariantId = ADMISSION_VARIANTS
-    .map((variant) => variant.id)
-    .find((variantId) => stableVariantIds.includes(variantId)) ?? null;
+  const control = results[0];
+  const recommendedVariantId = control.stable
+    ? control.variantId
+    : results.find((result) => (
+      result.stable && result.observedRendererPair !== control.observedRendererPair
+    ))?.variantId ?? null;
   return {
     results,
     stableVariantIds,
