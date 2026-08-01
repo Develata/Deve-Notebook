@@ -5,7 +5,7 @@
 #
 # Summary globals:
 # RESULT_DIR, RESULT_PATH, CYCLE_RESULT_DIR, EXPECTED_HEAD, VARIANT_ID,
-# EMULATOR_SOURCE, GPU_MODE, EMULATOR_VERSION, EMULATOR_BUILD_ID,
+# EMULATOR_SOURCE, GPU_MODE, FEATURE_POLICY, EMULATOR_VERSION, EMULATOR_BUILD_ID,
 # EMULATOR_PROBE_STATUS, SDK_EMULATOR_REVISION, API_LEVEL, SYSTEM_TARGET,
 # SYSTEM_IMAGE_REVISION, ARCHITECTURE, APK_SHA256, REQUESTED_CYCLES.
 #
@@ -89,6 +89,7 @@ android_admission_write_summary_result() {
     --arg variantId "$VARIANT_ID" \
     --arg emulatorSource "$EMULATOR_SOURCE" \
     --arg gpuMode "$GPU_MODE" \
+    --arg featurePolicy "$FEATURE_POLICY" \
     --arg emulatorVersion "$EMULATOR_VERSION" \
     --arg emulatorBuildId "$EMULATOR_BUILD_ID" \
     --arg emulatorProbeStatus "$EMULATOR_PROBE_STATUS" \
@@ -101,13 +102,14 @@ android_admission_write_summary_result() {
     --argjson requestedCycles "$REQUESTED_CYCLES" \
     --argjson cycles "$cycles_json" \
     '{
-      schemaVersion: 1,
+      schemaVersion: 2,
       kind: "android-emulator-admission-diagnostic",
       complete: $complete,
       headSha: $headSha,
       variantId: $variantId,
       emulatorSource: $emulatorSource,
       gpuMode: $gpuMode,
+      featurePolicy: $featurePolicy,
       emulatorVersion: $emulatorVersion,
       emulatorBuildId: $emulatorBuildId,
       emulatorProbeStatus: $emulatorProbeStatus,
@@ -183,6 +185,8 @@ android_admission_classify_cycle_failure() {
     printf 'boot_or_guest_admission\n'
   elif [[ "$phase" == renderer* ]]; then
     printf 'renderer_identity\n'
+  elif [[ "$phase" == feature* ]]; then
+    printf 'feature_identity\n'
   elif [[ "$phase" == install* ]]; then
     printf 'install_unclassified\n'
   elif [[ "$phase" == post-install* ]]; then

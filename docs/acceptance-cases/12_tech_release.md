@@ -227,6 +227,7 @@
     - run: scripts/android-guest-service-readiness.test.sh
     - run: scripts/android-emulator-boot-readiness.test.sh
     - run: scripts/android-emulator-admission-result.test.sh
+    - run: scripts/android-emulator-feature-policy.test.sh
     - run: node --test scripts/android-emulator-admission-summary.test.mjs
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh
@@ -249,9 +250,10 @@
     - release_assert: android_emulator_admission_matrix_is_manual_diagnostic_only true
     - release_assert: android_emulator_admission_reuses_exact_apk_and_shared_recovery_boundaries true
     - release_assert: android_emulator_admission_requires_complete_three_cycle_results true
-    - release_assert: android_emulator_admission_renderer_is_only_matrix_variable true
+    - release_assert: android_emulator_admission_gfxstream_feature_policy_is_only_matrix_variable true
     - release_assert: android_emulator_admission_observes_actual_renderer_each_cycle true
-    - release_assert: android_emulator_admission_rejects_unstable_control_renderer_alias true
+    - release_assert: android_emulator_admission_observes_actual_gfxstream_features_each_cycle true
+    - release_assert: android_emulator_admission_requires_dma_feature_conjunction_for_recommendation true
     - release_assert: android_emulator_admission_identity_and_log_budgets_fail_closed true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true

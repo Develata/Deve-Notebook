@@ -61,3 +61,10 @@ A renderer may be proposed for the formal gate only after all three of its cold
 boots pass guest-service admission, APK install, post-install admission and
 `system_server` PID continuity. A formal gate change and candidate dispatch
 remain separate exact-HEAD work.
+
+## Outcome
+
+Exact-HEAD run `30690812038` completed this renderer cut and found no stable
+variant. All three renderer paths retained the same gfxstream feature-negotiation
+failure class. The later evidence and next diagnostic cut are recorded in
+`docs/report/android-emulator-admission-feature-negotiation-evidence-2026-08-01.md`.

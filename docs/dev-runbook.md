@@ -1236,10 +1236,14 @@ owned emulator's bounded log prefix: current `-gpu swangle` has emitted the comp
 ordered `vulkan_mode_selected:swiftshader gles_mode_selected:swangle` pair,
 meaning Vulkan uses SwiftShader while GLES uses ANGLE-on-SwiftShader (SwANGLE).
 The formal gate still requires this configured pair for the current pin; that
-identity check is not evidence that the renderer is stable. The exact-HEAD
-manual admission run `30603301298` observed 0/3 stable cold boots for this
-configuration, so a renderer-only diagnostic must finish before changing the
-gate. Other software-token pairs are not compatibility fallbacks. Missing,
+identity check is not evidence that the emulator is stable. Exact-HEAD manual
+admission runs `30603301298` and `30690812038` rejected emulator/API and renderer
+selection as sufficient fixes. The latter observed `GlDirectMem=0` and
+`HasSharedSlotsHostMemoryAllocator=0` in every bounded emulator log; the guest
+mapper then aborted because the resulting host extension set did not admit its
+required DMA read path. The next diagnostic therefore fixes `swangle` and varies
+only that two-feature negotiation policy. Other software-token pairs are not
+compatibility fallbacks. Missing,
 conflicting, unapproved, or legacy
 `swiftshader_indirect` evidence fails before APK installation. A future pin or
 rollback needs fresh target-host evidence before approving a different pair.
@@ -1262,11 +1266,13 @@ Under the legacy `swiftshader_indirect` translator path the
 mapper assert on the RegionSampling thread) spontaneously within minutes of
 boot — before any APK is installed — then crash-loops and takes
 system_server down; emulator-matrix evidence showed the abort is
-renderer-path-bound, but the newer exact-HEAD admission also observed the same
-`hasReadColorBufferDma` failure class under `swangle`. Therefore no renderer
-alternative currently has stable three-cycle evidence; `software` and
-`swiftshader` remain diagnostic variants rather than approved fallbacks. The
-`-feature` switches do not remove the guest capability. The 16 KB page-size
+renderer-path-bound, but newer exact-HEAD admission observed the same failure
+under `swangle`, `software` and `swiftshader`. Therefore no renderer alternative
+has stable three-cycle evidence. The current feature diagnostic compares the
+unchanged disabled/disabled control, `GlDirectMem` alone, and the exact
+`GlDirectMem + HasSharedSlotsHostMemoryAllocator` conjunction that upstream
+gfxstream requires before advertising `ANDROID_EMU_read_color_buffer_dma`; no
+feature policy is approved until three cold boots pass. The 16 KB page-size
 `android-37.1` `ps16k` image remains retired
 for the same instability class. Hosts that created the old
 `deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or

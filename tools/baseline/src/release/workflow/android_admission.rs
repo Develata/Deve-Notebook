@@ -13,9 +13,12 @@ use std::path::Path;
 
 const WORKFLOW: &str = "android-emulator-admission.yml";
 const VARIANTS: [(&str, &str); 3] = [
-    ("pinned-api37-swangle", "swangle"),
-    ("pinned-api37-software", "software"),
-    ("pinned-api37-swiftshader", "swiftshader"),
+    ("pinned-api37-features-default", "default"),
+    ("pinned-api37-direct-memory", "direct-memory"),
+    (
+        "pinned-api37-direct-memory-shared-slots",
+        "direct-memory-shared-slots",
+    ),
 ];
 
 pub(super) fn check(root: &Path) -> Result<()> {
@@ -25,8 +28,16 @@ pub(super) fn check(root: &Path) -> Result<()> {
     let result_support = read(root, "scripts/lib/android-admission-diagnostic-result.sh")?;
     let lifecycle = read(root, "scripts/lib/android-admission-emulator-lifecycle.sh")?;
     let renderer = read(root, "scripts/lib/android-emulator-renderer.sh")?;
+    let feature_policy = read(root, "scripts/lib/android-emulator-feature-policy.sh")?;
     let summary = read(root, "scripts/android-emulator-admission-summary.mjs")?;
-    validate_worker(&worker, &result_support, &lifecycle, &renderer, &summary)
+    validate_worker(
+        &worker,
+        &result_support,
+        &lifecycle,
+        &renderer,
+        &feature_policy,
+        &summary,
+    )
 }
 
 fn read(root: &Path, relative: &str) -> Result<String> {
@@ -132,11 +143,12 @@ fn validate_workflow(content: &str) -> Result<()> {
             entries.len()
         );
     }
-    for ((variant, gpu_mode), entry) in VARIANTS.into_iter().zip(entries) {
+    for ((variant, feature_policy), entry) in VARIANTS.into_iter().zip(entries) {
         let expected = BTreeMap::from([
             ("api_level".to_owned(), "\"37.0\"".to_owned()),
             ("emulator_source".to_owned(), "pinned".to_owned()),
-            ("gpu_mode".to_owned(), gpu_mode.to_owned()),
+            ("feature_policy".to_owned(), feature_policy.to_owned()),
+            ("gpu_mode".to_owned(), "swangle".to_owned()),
             ("variant".to_owned(), variant.to_owned()),
         ]);
         if entry != expected {
@@ -147,9 +159,15 @@ fn validate_workflow(content: &str) -> Result<()> {
     }
     require_count(content, "emulator_source: pinned", 3, WORKFLOW)?;
     require_count(content, "api_level: \"37.0\"", 3, WORKFLOW)?;
+    require_count(content, "gpu_mode: swangle", 3, WORKFLOW)?;
     require_text(
         content,
         "DEVE_ANDROID_ADMISSION_GPU_MODE: ${{ matrix.gpu_mode }}",
+        WORKFLOW,
+    )?;
+    require_text(
+        content,
+        "DEVE_ANDROID_ADMISSION_FEATURE_POLICY: ${{ matrix.feature_policy }}",
         WORKFLOW,
     )?;
     require_text(content, "timeout-minutes: 120", WORKFLOW)?;
@@ -186,12 +204,14 @@ fn validate_worker(
     result_support: &str,
     lifecycle: &str,
     renderer: &str,
+    feature_policy: &str,
     summary: &str,
 ) -> Result<()> {
     for expected in [
         "source \"$ROOT_DIR/scripts/lib/android-emulator-owner.sh\"",
         "source \"$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh\"",
         "source \"$ROOT_DIR/scripts/lib/android-emulator-renderer.sh\"",
+        "source \"$ROOT_DIR/scripts/lib/android-emulator-feature-policy.sh\"",
         "source \"$ROOT_DIR/scripts/lib/android-install-retry.sh\"",
         "source \"$ROOT_DIR/scripts/lib/android-admission-diagnostic-result.sh\"",
         "source \"$ROOT_DIR/scripts/lib/android-admission-emulator-lifecycle.sh\"",
@@ -201,11 +221,14 @@ fn validate_worker(
         "    set +e\n    run_cycle \"$cycle\" >\"$RESULT_DIR/cycle-$cycle/cycle.log\" 2>&1\n    cycle_status=$?\n    set -e",
         "DEVE_ANDROID_ADMISSION_CYCLES:-3",
         "cold-boot cycles must be exactly 3",
-        "swangle | software | swiftshader",
+        "diagnostic GPU mode must be swangle",
         "-gpu \"$GPU_MODE\"",
+        "\"${ANDROID_EMULATOR_FEATURE_ARGS[@]}\"",
         "android_emulator_renderer_wait",
         "android_emulator_renderer_observe \"$cycle_dir/emulator.log\"",
+        "android_emulator_feature_policy_wait",
         "rendererPair: (if $rendererPair == \"\" then null else $rendererPair end)",
+        "featurePair: (if $featurePair == \"\" then null else $featurePair end)",
         "run_cycle() (",
         "  cycle=\"$1\"",
         "  cycle_dir=\"$RESULT_DIR/cycle-$cycle\"",
@@ -245,7 +268,9 @@ fn validate_worker(
         worker,
         &[
             "-gpu \"$GPU_MODE\"",
+            "\"${ANDROID_EMULATOR_FEATURE_ARGS[@]}\"",
             "android_emulator_renderer_wait",
+            "android_emulator_feature_policy_wait",
             "cycle_phase=\"boot-admission\"",
             "wait_for_cycle_boot",
         ],
@@ -256,6 +281,7 @@ fn validate_worker(
         &[
             "android_admission_cleanup_emulator",
             "android_emulator_renderer_observe \"$cycle_dir/emulator.log\"",
+            "android_emulator_feature_policy_observe",
             "completed_at=",
         ],
         "Android admission renderer finalization",
@@ -275,7 +301,9 @@ fn validate_worker(
         "android-emulator-admission-diagnostic",
         "cycle result set is incomplete: expected exact cycles 1..$REQUESTED_CYCLES",
         "gpuMode: $gpuMode",
+        "featurePolicy: $featurePolicy",
         "renderer_identity",
+        "feature_identity",
     ] {
         require_text(
             result_support,
@@ -302,16 +330,37 @@ fn validate_worker(
         require_text(renderer, expected, "Android emulator renderer support")?;
     }
     for expected in [
+        "android_emulator_feature_policy_configure()",
+        "android_emulator_feature_policy_observe()",
+        "android_emulator_feature_policy_wait()",
+        "-feature GLDirectMem",
+        "-feature HasSharedSlotsHostMemoryAllocator",
+        "gfxstreamFeature:GlDirectMem",
+        "gfxstreamFeature:HasSharedSlotsHostMemoryAllocator",
+        "ANDROID_EMULATOR_FEATURE_POLICY_LAST_PAIR=\"$pair\"",
+    ] {
+        require_text(
+            feature_policy,
+            expected,
+            "Android emulator feature policy support",
+        )?;
+    }
+    for expected in [
         "expectedCycles === 3",
         "result.harnessError === null",
         "entry.systemServerPidBefore === entry.systemServerPidAfter",
+        "entry.cleanupStatus === 0",
         "matrix APK identity drifted across variants",
         "result.gpuMode === variant.gpuMode",
+        "result.featurePolicy === variant.featurePolicy",
         "entry.rendererPair",
+        "entry.featurePair",
         "renderer identity drifted across cycles",
-        "result.observedRendererPair !== control.observedRendererPair",
-        "pinned emulator identity drifted across renderer variants",
-        "API 37 system-image identity drifted across renderer variants",
+        "gfxstream feature identity drifted across cycles",
+        "result.observedFeaturePair === \"1/1\"",
+        "pinned emulator identity drifted across feature variants",
+        "API 37 system-image identity drifted across feature variants",
+        "renderer identity drifted across feature variants",
         "recommendedVariantId",
         "not acceptance receipts",
     ] {
@@ -333,6 +382,8 @@ mod tests {
     const LIFECYCLE: &str =
         include_str!("../../../../../scripts/lib/android-admission-emulator-lifecycle.sh");
     const RENDERER: &str = include_str!("../../../../../scripts/lib/android-emulator-renderer.sh");
+    const FEATURE_POLICY: &str =
+        include_str!("../../../../../scripts/lib/android-emulator-feature-policy.sh");
     const SUMMARY: &str =
         include_str!("../../../../../scripts/android-emulator-admission-summary.mjs");
 
@@ -351,14 +402,14 @@ mod tests {
                 "  build-apk:\n    permissions:\n      packages: write\n",
             ),
             VALID.replace("continue-on-error: true", "continue-on-error: false"),
-            VALID.replace("          - variant: pinned-api37-software\n", ""),
+            VALID.replace("          - variant: pinned-api37-direct-memory\n", ""),
             VALID.replace(
-                "            gpu_mode: software",
-                "            gpu_mode: swangle",
+                "            feature_policy: direct-memory",
+                "            feature_policy: default",
             ),
             VALID.replace(
-                "            gpu_mode: software",
-                "            gpu_mode: software\n            ram_mb: 2048",
+                "            feature_policy: direct-memory",
+                "            feature_policy: direct-memory\n            ram_mb: 2048",
             ),
             format!("{VALID}\n# secrets.ANDROID_KEYSTORE\n"),
         ] {
@@ -371,15 +422,30 @@ mod tests {
 
     #[test]
     fn admission_worker_rejects_conditional_cycle_invocation() {
-        validate_worker(WORKER, RESULT_SUPPORT, LIFECYCLE, RENDERER, SUMMARY)
-            .expect("valid Android admission worker");
+        validate_worker(
+            WORKER,
+            RESULT_SUPPORT,
+            LIFECYCLE,
+            RENDERER,
+            FEATURE_POLICY,
+            SUMMARY,
+        )
+        .expect("valid Android admission worker");
 
         let invalid = WORKER.replace(
             "    set +e\n    run_cycle ",
             "    set +e\n    if run_cycle ",
         );
         assert!(
-            validate_worker(&invalid, RESULT_SUPPORT, LIFECYCLE, RENDERER, SUMMARY).is_err(),
+            validate_worker(
+                &invalid,
+                RESULT_SUPPORT,
+                LIFECYCLE,
+                RENDERER,
+                FEATURE_POLICY,
+                SUMMARY,
+            )
+            .is_err(),
             "conditional cycle invocation unexpectedly passed"
         );
 
@@ -402,7 +468,15 @@ mod tests {
             WORKER.replace("  trap cycle_finish EXIT\n", ""),
         ] {
             assert!(
-                validate_worker(&invalid, RESULT_SUPPORT, LIFECYCLE, RENDERER, SUMMARY).is_err(),
+                validate_worker(
+                    &invalid,
+                    RESULT_SUPPORT,
+                    LIFECYCLE,
+                    RENDERER,
+                    FEATURE_POLICY,
+                    SUMMARY,
+                )
+                .is_err(),
                 "invalid finalizer contract unexpectedly passed"
             );
         }

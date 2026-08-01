@@ -88,18 +88,21 @@ jobs:
       max-parallel: 3
       matrix:
         include:
-          - variant: pinned-api37-swangle
+          - variant: pinned-api37-features-default
             emulator_source: pinned
             api_level: "37.0"
             gpu_mode: swangle
-          - variant: pinned-api37-software
+            feature_policy: default
+          - variant: pinned-api37-direct-memory
             emulator_source: pinned
             api_level: "37.0"
-            gpu_mode: software
-          - variant: pinned-api37-swiftshader
+            gpu_mode: swangle
+            feature_policy: direct-memory
+          - variant: pinned-api37-direct-memory-shared-slots
             emulator_source: pinned
             api_level: "37.0"
-            gpu_mode: swiftshader
+            gpu_mode: swangle
+            feature_policy: direct-memory-shared-slots
     steps:
       - name: Checkout exact diagnostic HEAD
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -129,6 +132,7 @@ jobs:
           DEVE_ANDROID_ADMISSION_EMULATOR_SOURCE: ${{ matrix.emulator_source }}
           DEVE_ANDROID_ADMISSION_API_LEVEL: ${{ matrix.api_level }}
           DEVE_ANDROID_ADMISSION_GPU_MODE: ${{ matrix.gpu_mode }}
+          DEVE_ANDROID_ADMISSION_FEATURE_POLICY: ${{ matrix.feature_policy }}
           DEVE_ANDROID_ADMISSION_SYSTEM_TARGET: google_apis
           DEVE_ANDROID_ADMISSION_ARCHITECTURE: x86_64
           DEVE_ANDROID_ADMISSION_CYCLES: "3"

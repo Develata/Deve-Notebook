@@ -4,22 +4,28 @@ import { pathToFileURL } from "node:url";
 
 export const ADMISSION_VARIANTS = Object.freeze([
   Object.freeze({
-    id: "pinned-api37-swangle",
+    id: "pinned-api37-features-default",
     emulatorSource: "pinned",
     apiLevel: "37.0",
     gpuMode: "swangle",
+    featurePolicy: "default",
+    expectedFeaturePair: "0/0",
   }),
   Object.freeze({
-    id: "pinned-api37-software",
+    id: "pinned-api37-direct-memory",
     emulatorSource: "pinned",
     apiLevel: "37.0",
-    gpuMode: "software",
+    gpuMode: "swangle",
+    featurePolicy: "direct-memory",
+    expectedFeaturePair: "1/0",
   }),
   Object.freeze({
-    id: "pinned-api37-swiftshader",
+    id: "pinned-api37-direct-memory-shared-slots",
     emulatorSource: "pinned",
     apiLevel: "37.0",
-    gpuMode: "swiftshader",
+    gpuMode: "swangle",
+    featurePolicy: "direct-memory-shared-slots",
+    expectedFeaturePair: "1/1",
   }),
 ]);
 
@@ -59,8 +65,10 @@ function validateCycle(entry, expectedCycle) {
     /^[a-z0-9_-]+ [a-z0-9_-]+$/.test(entry.rendererPair),
     `cycle ${expectedCycle} rendererPair is invalid`,
   );
+  requireValue(/^[01]\/[01]$/.test(entry.featurePair), `cycle ${expectedCycle} featurePair is invalid`);
   if (entry.outcome === "passed") {
     requireValue(entry.exitStatus === 0, `passed cycle ${expectedCycle} must have exitStatus 0`);
+    requireValue(entry.cleanupStatus === 0, `passed cycle ${expectedCycle} must have cleanupStatus 0`);
     requireValue(entry.phase === "complete", `passed cycle ${expectedCycle} must finish at complete`);
     requireValue(entry.failureClass === null, `passed cycle ${expectedCycle} cannot have a failure class`);
     requireValue(
@@ -80,7 +88,7 @@ function validateCycle(entry, expectedCycle) {
 function validateResult(result, variant, expectedHead, expectedCycles, file) {
   const scope = path.basename(file);
   requireValue(result && typeof result === "object", `${scope} must contain a JSON object`);
-  requireValue(result.schemaVersion === 1, `${scope} schemaVersion must be 1`);
+  requireValue(result.schemaVersion === 2, `${scope} schemaVersion must be 2`);
   requireValue(
     result.kind === "android-emulator-admission-diagnostic",
     `${scope} has unexpected kind`,
@@ -95,6 +103,10 @@ function validateResult(result, variant, expectedHead, expectedCycles, file) {
   );
   requireValue(result.apiLevel === variant.apiLevel, `${scope} apiLevel mismatch`);
   requireValue(result.gpuMode === variant.gpuMode, `${scope} gpuMode mismatch`);
+  requireValue(
+    result.featurePolicy === variant.featurePolicy,
+    `${scope} featurePolicy mismatch`,
+  );
   requireValue(result.systemTarget === "google_apis", `${scope} systemTarget mismatch`);
   requireValue(result.architecture === "x86_64", `${scope} architecture mismatch`);
   requireValue(
@@ -130,22 +142,36 @@ function validateResult(result, variant, expectedHead, expectedCycles, file) {
     rendererPairs.size === 1,
     `${scope} renderer identity drifted across cycles`,
   );
+  const featurePairs = new Set(result.cycles.map((entry) => entry.featurePair));
+  requireValue(
+    featurePairs.size === 1,
+    `${scope} gfxstream feature identity drifted across cycles`,
+  );
+  const observedFeaturePair = [...featurePairs][0];
+  requireValue(
+    observedFeaturePair === variant.expectedFeaturePair,
+    `${scope} expected feature pair ${variant.expectedFeaturePair}, found ${observedFeaturePair}`,
+  );
   const computedStable = result.cycles.every((entry) => entry.outcome === "passed");
   requireValue(result.stable === computedStable, `${scope} stable claim disagrees with cycles`);
-  return { ...result, observedRendererPair: [...rendererPairs][0] };
+  return {
+    ...result,
+    observedRendererPair: [...rendererPairs][0],
+    observedFeaturePair,
+  };
 }
 
 function renderMarkdown(results, stableVariantIds, recommendedVariantId) {
   const lines = [
     "## Android emulator admission diagnostic",
     "",
-    "| Variant | Requested GPU | Observed Vulkan/GLES | Passed cycles | Result |",
-    "|---|---|---|---:|---|",
+    "| Variant | Feature policy | Observed features | Vulkan/GLES | Passed cycles | Result |",
+    "|---|---|---|---|---:|---|",
   ];
   for (const result of results) {
     const passed = result.cycles.filter((entry) => entry.outcome === "passed").length;
     lines.push(
-      `| ${result.variantId} | ${result.gpuMode} | ${result.observedRendererPair} | `
+      `| ${result.variantId} | ${result.featurePolicy} | ${result.observedFeaturePair} | ${result.observedRendererPair} | `
       + `${passed}/${result.requestedCycles} | ${result.stable ? "stable" : "unstable"} |`,
     );
   }
@@ -200,21 +226,24 @@ export function summarizeAdmissionResults({ rootDir, expectedHead, expectedCycle
     new Set(results.map((result) => (
       `${result.emulatorVersion}/${result.emulatorBuildId}/${result.emulatorProbeStatus}`
     ))).size === 1,
-    "pinned emulator identity drifted across renderer variants",
+    "pinned emulator identity drifted across feature variants",
   );
   requireValue(
     new Set(results.map((result) => result.systemImageRevision)).size === 1,
-    "API 37 system-image identity drifted across renderer variants",
+    "API 37 system-image identity drifted across feature variants",
+  );
+  requireValue(
+    new Set(results.map((result) => result.observedRendererPair)).size === 1,
+    "renderer identity drifted across feature variants",
   );
   const stableVariantIds = results
     .filter((result) => result.stable)
     .map((result) => result.variantId);
   const control = results[0];
+  const requiredDma = results.find((result) => result.observedFeaturePair === "1/1");
   const recommendedVariantId = control.stable
     ? control.variantId
-    : results.find((result) => (
-      result.stable && result.observedRendererPair !== control.observedRendererPair
-    ))?.variantId ?? null;
+    : requiredDma?.stable ? requiredDma.variantId : null;
   return {
     results,
     stableVariantIds,

@@ -196,16 +196,20 @@ tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、W
 
 Android emulator admission 可使用独立的手动 diagnostic workflow 对候选配置做单变量
 比较：从 exact dispatch HEAD 构建一次同源 x86_64 debug APK，在隔离 runner 上固定 pinned
-emulator binary、API 37 `google_apis` x86_64 system image 与其余启动参数，只分别改变 renderer
-mode（`swangle / software / swiftshader`），并固定重复三次 cold boot、连续 guest-service
-admission、APK install、launcher resolve、post-install admission 与 `system_server` PID 连续性检查。
+emulator binary、API 37 `google_apis` x86_64 system image、`swangle` renderer 与其余启动参数，
+只逐级改变 gfxstream host/guest memory feature policy（默认值、仅 `GlDirectMem`、
+`GlDirectMem + HasSharedSlotsHostMemoryAllocator`），并固定重复三次 cold boot、连续
+guest-service admission、APK install、launcher resolve、post-install admission 与
+`system_server` PID 连续性检查。
 该 workflow 必须复用正式 gate 的 owner、readiness、install-retry 与 cleanup 边界，固定
 每个 variant 的日志/时间/输出预算；主日志单文件不得超过 128 KiB，variant 可上传诊断
 总量不得超过 4 MiB。结果 summary 必须合取同一 APK SHA-256、同 API system-image revision、
-同 pinned emulator version/build/probe identity、各 variant 声明的 exact renderer mode，以及
-每次 cold boot 从有界 emulator 日志解析出的唯一实际 Vulkan/GLES renderer pair。同一 variant
-三次观测必须一致；若 control 不稳定，推荐项的实际 pair 必须与 control 不同，所有 matrix 结果
-完整后才可推荐一个配置。
+同 pinned emulator version/build/probe identity、同 `swangle` renderer mode，以及每次 cold boot
+从有界 emulator 日志解析出的唯一实际 Vulkan/GLES renderer pair 和唯一
+`GlDirectMem/HasSharedSlotsHostMemoryAllocator` 状态。renderer pair 必须跨全部 variants 一致；
+同一 variant 的三次 feature 状态必须一致并精确匹配其声明 policy。若 control 不稳定，只有实际
+feature 状态为 exact `1/1` 且三次全部稳定的完整 conjunction 才可推荐；`1/0` 只作为隔离
+负对照，不得成为正式 gate 建议。所有 matrix 结果完整后才可推荐一个配置。
 diagnostic artifact 不是 acceptance receipt、candidate artifact、签名证据或 tag-ready 输入；
 它不得读取 signing secret、不得 dispatch candidate/aggregate、不得修改 release freeze，
 也不得自动改变正式 gate。若没有至少一个 variant 在不少于三次 cold boot 中全部通过，

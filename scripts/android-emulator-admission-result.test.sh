@@ -16,12 +16,13 @@ fixture="$(mktemp -d)"
 trap 'rm -rf -- "$fixture"' EXIT
 
 RESULT_DIR="$fixture/result"
-RESULT_PATH="$RESULT_DIR/pinned-api37-software.json"
+RESULT_PATH="$RESULT_DIR/pinned-api37-direct-memory-shared-slots.json"
 CYCLE_RESULT_DIR="$RESULT_DIR/cycle-results"
 EXPECTED_HEAD="0123456789abcdef0123456789abcdef01234567"
-VARIANT_ID="pinned-api37-software"
+VARIANT_ID="pinned-api37-direct-memory-shared-slots"
 EMULATOR_SOURCE="pinned"
-GPU_MODE="software"
+GPU_MODE="swangle"
+FEATURE_POLICY="direct-memory-shared-slots"
 EMULATOR_VERSION="36.7.0.0"
 EMULATOR_BUILD_ID="15600000"
 EMULATOR_PROBE_STATUS="0"
@@ -46,20 +47,23 @@ for cycle in 1 2 3; do
       failureClass: null,
       systemServerPidBefore: "123",
       systemServerPidAfter: "123",
-      rendererPair: "swiftshader swiftshader"
+      rendererPair: "swiftshader swangle",
+      featurePair: "1/1"
     }' >"$CYCLE_RESULT_DIR/cycle-$cycle.json"
 done
 
 android_admission_write_summary_result true true ""
 jq -e \
-  '.schemaVersion == 1
+  '.schemaVersion == 2
     and .kind == "android-emulator-admission-diagnostic"
     and .complete == true
     and .stable == true
     and .harnessError == null
-    and .variantId == "pinned-api37-software"
-    and .gpuMode == "software"
-    and ([.cycles[].rendererPair] | unique) == ["swiftshader swiftshader"]
+    and .variantId == "pinned-api37-direct-memory-shared-slots"
+    and .gpuMode == "swangle"
+    and .featurePolicy == "direct-memory-shared-slots"
+    and ([.cycles[].rendererPair] | unique) == ["swiftshader swangle"]
+    and ([.cycles[].featurePair] | unique) == ["1/1"]
     and (.cycles | length == 3)' \
   "$RESULT_PATH" >/dev/null \
   || fail "atomic summary result did not preserve the expected schema"
@@ -96,6 +100,9 @@ printf '%s\n' "unrecognized failure" >"$failure_log"
 [[ "$(android_admission_classify_cycle_failure "$failure_log" renderer-admission)" \
     == "renderer_identity" ]] \
   || fail "renderer-identity classification drifted"
+[[ "$(android_admission_classify_cycle_failure "$failure_log" feature-admission)" \
+    == "feature_identity" ]] \
+  || fail "feature-identity classification drifted"
 
 oversized_log="$fixture/oversized.log"
 head -c $((ANDROID_ADMISSION_LOG_FILE_BUDGET_BYTES + 4096)) /dev/zero \
@@ -153,8 +160,12 @@ grep -Fq 'if run_cycle ' "$worker" \
   && fail "conditional function invocation would suppress cycle errexit"
 grep -Fq -- '-gpu "$GPU_MODE"' "$worker" \
   || fail "worker no longer passes the admitted renderer mode to the emulator"
+grep -Fq '"${ANDROID_EMULATOR_FEATURE_ARGS[@]}"' "$worker" \
+  || fail "worker no longer passes the admitted gfxstream feature policy"
 grep -Fq 'android_emulator_renderer_wait \' "$worker" \
   || fail "worker no longer proves the actual renderer before boot admission"
+grep -Fq 'android_emulator_feature_policy_observe' "$worker" \
+  || fail "worker no longer proves the actual gfxstream feature state"
 (( $(grep -Fc 'android_emulator_renderer_observe "$cycle_dir/emulator.log"' "$worker") == 1 )) \
   || fail "worker no longer revalidates the complete renderer log during finalization"
 

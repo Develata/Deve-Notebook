@@ -8,15 +8,17 @@ source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-feature-policy.sh"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 source "$ROOT_DIR/scripts/lib/android-admission-diagnostic-result.sh"
 source "$ROOT_DIR/scripts/lib/android-admission-emulator-lifecycle.sh"
 
 REQUIRED="${DEVE_ANDROID_ADMISSION_DIAGNOSTIC_REQUIRED:-0}"
-VARIANT_ID="${DEVE_ANDROID_ADMISSION_VARIANT_ID:-pinned-api37-swangle}"
+VARIANT_ID="${DEVE_ANDROID_ADMISSION_VARIANT_ID:-pinned-api37-features-default}"
 EMULATOR_SOURCE="${DEVE_ANDROID_ADMISSION_EMULATOR_SOURCE:-pinned}"
 API_LEVEL="${DEVE_ANDROID_ADMISSION_API_LEVEL:-37.0}"
 GPU_MODE="${DEVE_ANDROID_ADMISSION_GPU_MODE:-swangle}"
+FEATURE_POLICY="${DEVE_ANDROID_ADMISSION_FEATURE_POLICY:-default}"
 SYSTEM_TARGET="${DEVE_ANDROID_ADMISSION_SYSTEM_TARGET:-google_apis}"
 ARCHITECTURE="${DEVE_ANDROID_ADMISSION_ARCHITECTURE:-x86_64}"
 REQUESTED_CYCLES="${DEVE_ANDROID_ADMISSION_CYCLES:-3}"
@@ -47,21 +49,17 @@ SDK_EMULATOR_REVISION=""
 SYSTEM_IMAGE_REVISION=""
 APK_SHA256=""
 ADB_BIN=""
-
 log() {
   printf 'android-emulator-admission[%s]: %s\n' "$VARIANT_ID" "$*"
 }
-
 fail() {
   HARNESS_ERROR="$*"
   printf 'android-emulator-admission[%s]: %s\n' "$VARIANT_ID" "$*" >&2
   exit 1
 }
-
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "$1 is required"
 }
-
 sdkmanager_cmd() {
   android_prepare_java_home || fail "Java 17+ is required for sdkmanager"
   android_run_tool sdkmanager "$@"
@@ -115,9 +113,11 @@ validate_inputs() {
     *) fail "emulator source must be pinned or sdk" ;;
   esac
   case "$GPU_MODE" in
-    swangle | software | swiftshader) ;;
-    *) fail "GPU mode must be swangle, software, or swiftshader" ;;
+    swangle) ;;
+    *) fail "diagnostic GPU mode must be swangle" ;;
   esac
+  android_emulator_feature_policy_configure "$FEATURE_POLICY" \
+    || fail "$ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE"
   [[ "$API_LEVEL" =~ ^[0-9]{2}([.][0-9])?$ ]] || fail "API level is invalid"
   [[ "$SYSTEM_TARGET" =~ ^[a-z0-9_]+$ ]] || fail "system target is invalid"
   [[ "$ARCHITECTURE" == "x86_64" ]] || fail "diagnostic architecture must be x86_64"
@@ -298,14 +298,12 @@ run_cycle() (
   cycle_log="$cycle_dir/cycle.log"
   owner_file=""
   started_at="" completed_at="" status=0 primary_status=0 cleanup_status=0 failure_class=""
-  system_pid_before="" system_pid_after="" renderer_pair=""
+  system_pid_before="" system_pid_after="" renderer_pair="" feature_pair=""
   cycle_phase="launch" emulator_pid="" temporary=""
-
   mkdir -p "$cycle_dir"
   owner_file="$(DEVE_MOBILE_ANDROID_EMULATOR_OWNER_FILE= \
     android_emulator_owner_file "$cycle_dir")"
   started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
   cycle_finish() {
     primary_status=$?
     trap - EXIT INT TERM
@@ -329,6 +327,12 @@ run_cycle() (
       fi
       echo "final renderer observation failed: $ANDROID_EMULATOR_RENDERER_LAST_EVIDENCE" >&2
     fi
+    if android_emulator_feature_policy_observe "$cycle_dir/emulator.log" "$FEATURE_POLICY"; then
+      feature_pair="$ANDROID_EMULATOR_FEATURE_POLICY_LAST_PAIR"
+    else
+      if (( status == 0 )); then status=1; cycle_phase="feature-finalization"; fi
+      echo "final feature observation failed: $ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE" >&2
+    fi
     completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     if (( status != 0 )); then
       if (( primary_status == 0 && cleanup_status != 0 )); then
@@ -350,6 +354,7 @@ run_cycle() (
       --arg systemServerPidBefore "$system_pid_before" \
       --arg systemServerPidAfter "$system_pid_after" \
       --arg rendererPair "$renderer_pair" \
+      --arg featurePair "$feature_pair" \
       '{
         cycle: $cycle,
         outcome: $outcome,
@@ -361,7 +366,8 @@ run_cycle() (
         completedAt: $completedAt,
         systemServerPidBefore: (if $systemServerPidBefore == "" then null else $systemServerPidBefore end),
         systemServerPidAfter: (if $systemServerPidAfter == "" then null else $systemServerPidAfter end),
-        rendererPair: (if $rendererPair == "" then null else $rendererPair end)
+        rendererPair: (if $rendererPair == "" then null else $rendererPair end),
+        featurePair: (if $featurePair == "" then null else $featurePair end)
       }' >"$temporary"
     mv -f -- "$temporary" "$CYCLE_RESULT_DIR/$VARIANT_ID-cycle-$cycle.json"
     exit "$status"
@@ -369,13 +375,11 @@ run_cycle() (
   trap cycle_finish EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
-
   if adb_with_timeout 10 devices | awk -v serial="$EMULATOR_SERIAL" \
       '$1 == serial { found = 1 } END { exit !found }'; then
     echo "dedicated emulator serial is already in use: $EMULATOR_SERIAL" >&2
     exit 1
   fi
-
   android_admission_write_emulator_owner "$owner_file"
   "$EMULATOR_BIN" \
     -avd "$AVD_NAME" \
@@ -386,6 +390,7 @@ run_cycle() (
     -no-audio \
     -no-boot-anim \
     -gpu "$GPU_MODE" \
+    "${ANDROID_EMULATOR_FEATURE_ARGS[@]}" \
     -verbose \
     -no-snapshot \
     -no-snapshot-save \
@@ -395,7 +400,6 @@ run_cycle() (
   EMULATOR_PID="$emulator_pid"
   export EMULATOR_PID
   android_admission_write_emulator_owner "$owner_file" "$emulator_pid"
-
   cycle_phase="renderer-admission"
   android_emulator_renderer_wait \
     "$cycle_dir/emulator.log" 30 ensure_cycle_process_alive || {
@@ -403,18 +407,23 @@ run_cycle() (
     exit 1
   }
   renderer_pair="$ANDROID_EMULATOR_RENDERER_LAST_MODE"
+  cycle_phase="feature-admission"
+  android_emulator_feature_policy_wait \
+    "$cycle_dir/emulator.log" "$FEATURE_POLICY" 30 ensure_cycle_process_alive || {
+    echo "Android emulator feature observation failed: $ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE" >&2
+    exit 1
+  }
+  feature_pair="$ANDROID_EMULATOR_FEATURE_POLICY_LAST_PAIR"
   cycle_phase="boot-admission"
   wait_for_cycle_boot
   printf '%s\n' "$ANDROID_EMULATOR_BOOT_READINESS_LAST_EVIDENCE" \
     >"$cycle_dir/boot-readiness.txt"
   verify_data_capacity
   system_pid_before="$(system_server_pid)"
-
   cycle_phase="install"
   ANDROID_INSTALL_RETRY_LOG_PREFIX="android-emulator-admission[$VARIANT_ID cycle=$cycle]"
   export ANDROID_INSTALL_RETRY_LOG_PREFIX
   install_apk
-
   cycle_phase="post-install-admission"
   android_emulator_wait_for_guest_services_stable \
     "$EMULATOR_SERIAL" \
@@ -437,14 +446,12 @@ main() {
   require_command sha256sum
   mkdir -p "$RESULT_DIR" "$CYCLE_RESULT_DIR" "$AVD_HOME"
   APK_SHA256="$(sha256sum "$APK_PATH" | awk '{print $1}')"
-
   if [[ "$REQUIRED" != "1" ]]; then
     log "diagnostic not executed; set DEVE_ANDROID_ADMISSION_DIAGNOSTIC_REQUIRED=1"
     android_admission_write_summary_result false false "diagnostic execution was not required"
     RESULT_WRITTEN=1
     return 0
   fi
-
   CURRENT_PHASE="sdk-install"
   install_sdk_packages
   ADB_BIN="$(android_tool_path adb)" || fail "adb is unavailable after SDK installation"
