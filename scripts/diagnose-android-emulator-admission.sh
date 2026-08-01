@@ -291,16 +291,15 @@ system_server_pid() {
 
 run_cycle() (
   set -euo pipefail
-  local cycle="$1"
-  local cycle_dir="$RESULT_DIR/cycle-$cycle"
-  local cycle_log="$cycle_dir/cycle.log"
-  local owner_file
-  local started_at completed_at status primary_status cleanup_status=0 failure_class=""
-  local system_pid_before="" system_pid_after=""
-  local renderer_pair=""
-  local cycle_phase="launch"
-  local emulator_pid=""
-  local temporary
+  # Implicit errexit unwinds function locals before the subshell EXIT trap.
+  # Keep finalizer context private to this already-isolated subshell instead.
+  cycle="$1"
+  cycle_dir="$RESULT_DIR/cycle-$cycle"
+  cycle_log="$cycle_dir/cycle.log"
+  owner_file=""
+  started_at="" completed_at="" status=0 primary_status=0 cleanup_status=0 failure_class=""
+  system_pid_before="" system_pid_after="" renderer_pair=""
+  cycle_phase="launch" emulator_pid="" temporary=""
 
   mkdir -p "$cycle_dir"
   owner_file="$(DEVE_MOBILE_ANDROID_EMULATOR_OWNER_FILE= \
@@ -309,8 +308,8 @@ run_cycle() (
 
   cycle_finish() {
     primary_status=$?
+    trap - EXIT INT TERM
     status="$primary_status"
-    trap - EXIT
     if (( status != 0 )); then
       android_admission_capture_cycle_diagnostics "$cycle_dir/diagnostics" || true
     fi
@@ -368,6 +367,8 @@ run_cycle() (
     exit "$status"
   }
   trap cycle_finish EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   if adb_with_timeout 10 devices | awk -v serial="$EMULATOR_SERIAL" \
       '$1 == serial { found = 1 } END { exit !found }'; then

@@ -57,6 +57,7 @@ android_admission_write_summary_result() {
   local stable="$2"
   local harness_error="$3"
   local cycles_json="[]"
+  local cycle_set_complete=false
   local temporary="$RESULT_PATH.tmp.$$"
   local -a cycle_files=()
 
@@ -66,6 +67,19 @@ android_admission_write_summary_result() {
   shopt -u nullglob
   if (( ${#cycle_files[@]} > 0 )); then
     cycles_json="$(jq -s 'sort_by(.cycle)' "${cycle_files[@]}")"
+  fi
+  if jq -e \
+      --argjson expected "$REQUESTED_CYCLES" \
+      '[.[].cycle] == [range(1; $expected + 1)]' \
+      <<<"$cycles_json" >/dev/null; then
+    cycle_set_complete=true
+  fi
+  if [[ "$complete" != true || "$cycle_set_complete" != true ]]; then
+    complete=false
+    stable=false
+    if [[ "$cycle_set_complete" != true && -z "$harness_error" ]]; then
+      harness_error="cycle result set is incomplete: expected exact cycles 1..$REQUESTED_CYCLES"
+    fi
   fi
   jq -n \
     --argjson complete "$complete" \

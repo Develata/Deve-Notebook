@@ -206,6 +206,13 @@ fn validate_worker(
         "android_emulator_renderer_wait",
         "android_emulator_renderer_observe \"$cycle_dir/emulator.log\"",
         "rendererPair: (if $rendererPair == \"\" then null else $rendererPair end)",
+        "run_cycle() (",
+        "  cycle=\"$1\"",
+        "  cycle_dir=\"$RESULT_DIR/cycle-$cycle\"",
+        "    trap - EXIT INT TERM",
+        "  trap cycle_finish EXIT",
+        "  trap 'exit 130' INT",
+        "  trap 'exit 143' TERM",
     ] {
         require_text(worker, expected, "Android admission worker")?;
     }
@@ -214,6 +221,26 @@ fn validate_worker(
             "release-baseline-check: Android admission worker must not suppress cycle errexit through a conditional function invocation"
         );
     }
+    let cycle_body = worker
+        .split_once("run_cycle() (")
+        .and_then(|(_, rest)| rest.split_once("\nmain() {").map(|(body, _)| body))
+        .context("release-baseline-check: Android admission run_cycle boundary is missing")?;
+    for declaration in ["local", "declare", "typeset"] {
+        if cycle_body.lines().any(|line| {
+            let line = line.trim_start();
+            line == declaration || line.starts_with(&format!("{declaration} "))
+        }) {
+            bail!(
+                "release-baseline-check: Android admission EXIT finalizer context must not use function-local {declaration} declarations"
+            );
+        }
+    }
+    require_count(
+        worker,
+        "  trap cycle_finish EXIT",
+        1,
+        "Android admission worker",
+    )?;
     require_ordered_text(
         worker,
         &[
@@ -246,6 +273,7 @@ fn validate_worker(
         "logcat -b system -b crash",
         "dumpsys activity services",
         "android-emulator-admission-diagnostic",
+        "cycle result set is incomplete: expected exact cycles 1..$REQUESTED_CYCLES",
         "gpuMode: $gpuMode",
         "renderer_identity",
     ] {
@@ -354,5 +382,29 @@ mod tests {
             validate_worker(&invalid, RESULT_SUPPORT, LIFECYCLE, RENDERER, SUMMARY).is_err(),
             "conditional cycle invocation unexpectedly passed"
         );
+
+        for invalid in [
+            WORKER.replace("  cycle=\"$1\"", "  local cycle=\"$1\""),
+            WORKER.replace("  owner_file=\"\"", "  declare owner_file=\"\""),
+            WORKER.replace("  cycle_log=", "  typeset cycle_log="),
+            WORKER.replace(
+                "  cycle_dir=\"$RESULT_DIR/cycle-$cycle\"",
+                "  local cycle_dir;\n  cycle_dir=\"$RESULT_DIR/cycle-$cycle\"",
+            ),
+            WORKER.replace(
+                "  mkdir -p \"$cycle_dir\"",
+                "  mkdir -p \"$cycle_dir\"\n  local owner_file=\"$owner_file\"",
+            ),
+            WORKER.replace(
+                "  trap cycle_finish EXIT",
+                "  local cycle_phase=\"$cycle_phase\"\n  trap cycle_finish EXIT",
+            ),
+            WORKER.replace("  trap cycle_finish EXIT\n", ""),
+        ] {
+            assert!(
+                validate_worker(&invalid, RESULT_SUPPORT, LIFECYCLE, RENDERER, SUMMARY).is_err(),
+                "invalid finalizer contract unexpectedly passed"
+            );
+        }
     }
 }

@@ -66,6 +66,19 @@ jq -e \
 compgen -G "$RESULT_PATH.tmp.*" >/dev/null \
   && fail "temporary result file survived atomic publication"
 
+rm -f -- "$CYCLE_RESULT_DIR/cycle-1.json"
+cp -- "$CYCLE_RESULT_DIR/cycle-2.json" "$CYCLE_RESULT_DIR/cycle-duplicate.json"
+android_admission_write_summary_result true false ""
+jq -e \
+  '.complete == false
+    and .stable == false
+    and .harnessError == "cycle result set is incomplete: expected exact cycles 1..3"
+    and ([.cycles[].cycle] == [2, 2, 3])' \
+  "$RESULT_PATH" >/dev/null \
+  || fail "incomplete cycle set was not published as a fail-closed harness error"
+compgen -G "$RESULT_PATH.tmp.*" >/dev/null \
+  && fail "incomplete result left a temporary file behind"
+
 failure_log="$fixture/failure.log"
 printf '%s\n' \
   'adb: failed to install candidate.apk: cmd: Failure calling service package: Broken pipe (32)' \
@@ -116,6 +129,22 @@ android_admission_direct_child_alive "$emulator_pid" \
   && fail "direct-child fallback left the emulator process running"
 
 worker="$WORKSPACE_ROOT/scripts/diagnose-android-emulator-admission.sh"
+run_cycle_source="$(sed -n '/^run_cycle() (/,/^main() {/p' "$worker")"
+run_cycle_context="$(sed -n '/^run_cycle() (/,/^  mkdir -p /p' "$worker")"
+grep -Fq 'run_cycle() (' "$worker" \
+  || fail "worker cycle is no longer isolated in a subshell"
+grep -Fq '  cycle="$1"' <<<"$run_cycle_context" \
+  || fail "worker finalizer context is not retained at subshell scope"
+grep -Eq '^[[:space:]]*(local|declare|typeset)([[:space:]]|$)' <<<"$run_cycle_source" \
+  && fail "function-local context disappears before an implicit-errexit EXIT trap"
+(( $(grep -Fc '  trap cycle_finish EXIT' <<<"$run_cycle_source") == 1 )) \
+  || fail "worker must register exactly one cycle EXIT finalizer"
+grep -Fq "  trap 'exit 130' INT" <<<"$run_cycle_source" \
+  || fail "worker no longer maps cycle interruption to exit 130"
+grep -Fq "  trap 'exit 143' TERM" <<<"$run_cycle_source" \
+  || fail "worker no longer maps cycle termination to exit 143"
+grep -Fq '    trap - EXIT INT TERM' <<<"$run_cycle_source" \
+  || fail "worker finalizer no longer prevents signal-trap reentry"
 grep -Fq 'run_cycle "$cycle" >"$RESULT_DIR/cycle-$cycle/cycle.log" 2>&1' "$worker" \
   || fail "worker no longer invokes a direct cycle command"
 grep -Fq 'cycle_status=$?' "$worker" \
@@ -141,5 +170,75 @@ probe_status=$?
 set -e
 (( probe_status != 0 )) || fail "direct cycle invocation hid a failing command"
 [[ ! -e "$errexit_marker" ]] || fail "direct cycle invocation suppressed subshell errexit"
+
+finalizer_contract_probe() (
+  set -euo pipefail
+  probe_mode="$1"
+  probe_result="$2"
+  probe_owner="$3"
+  probe_child_file="$4"
+  probe_context="retained-after-errexit"
+  probe_child_pid=""
+  probe_cleanup_status=0
+  probe_temporary="$probe_result.tmp.$$"
+  probe_finish() {
+    probe_status=$?
+    trap - EXIT INT TERM
+    android_admission_cleanup_emulator \
+      "$probe_owner" "$(dirname "$probe_result")" "$probe_child_pid" \
+      || probe_cleanup_status=$?
+    jq -n \
+      --argjson exitStatus "$probe_status" \
+      --argjson cleanupStatus "$probe_cleanup_status" \
+      --arg context "$probe_context" \
+      '{exitStatus: $exitStatus, cleanupStatus: $cleanupStatus, context: $context}' \
+      >"$probe_temporary"
+    mv -f -- "$probe_temporary" "$probe_result"
+    exit "$probe_status"
+  }
+  trap probe_finish EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  android_admission_write_emulator_owner "$probe_owner"
+  sleep 300 &
+  probe_child_pid="$!"
+  printf '%s\n' "$probe_child_pid" >"$probe_child_file"
+  android_admission_write_emulator_owner "$probe_owner" "$probe_child_pid"
+  case "$probe_mode" in
+    failure) bash -c 'exit 42' ;;
+    int) kill -INT "$BASHPID" ;;
+    term) kill -TERM "$BASHPID" ;;
+    *) exit 99 ;;
+  esac
+)
+
+run_finalizer_contract_probe() {
+  local mode="$1"
+  local expected_status="$2"
+  local result="$fixture/finalizer-$mode.json"
+  local owner="$fixture/finalizer-$mode.owner"
+  local child_file="$fixture/finalizer-$mode.child"
+  local child_pid status
+  set +e
+  finalizer_contract_probe "$mode" "$result" "$owner" "$child_file"
+  status=$?
+  set -e
+  (( status == expected_status )) \
+    || fail "$mode finalizer replaced status $expected_status with $status"
+  jq -e \
+    --argjson expected "$expected_status" \
+    '.exitStatus == $expected and .context == "retained-after-errexit"' \
+    "$result" >/dev/null \
+    || fail "$mode finalizer did not atomically publish its exact status and context"
+  compgen -G "$result.tmp.*" >/dev/null \
+    && fail "$mode finalizer left a temporary result behind"
+  child_pid="$(cat "$child_file")"
+  ! kill -0 "$child_pid" >/dev/null 2>&1 \
+    || fail "$mode finalizer left its direct child running"
+}
+
+run_finalizer_contract_probe failure 42
+run_finalizer_contract_probe int 130
+run_finalizer_contract_probe term 143
 
 echo "android-emulator-admission-result-test: ok"
