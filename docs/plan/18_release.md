@@ -197,8 +197,8 @@ tag-ready 的只读/unsupported evidence。不得引入 native crypto bridge、W
 Android emulator admission 可使用独立的手动 diagnostic workflow 对候选配置做单变量
 比较：从 exact dispatch HEAD 构建一次同源 x86_64 debug APK，在隔离 runner 上固定 pinned
 emulator binary、API 37 `google_apis` x86_64 system image、`swangle` renderer 与其余启动参数，
-只逐级改变 gfxstream host/guest memory feature policy（默认值、仅 `GlDirectMem`、
-`GlDirectMem + HasSharedSlotsHostMemoryAllocator`），并固定重复三次 cold boot、连续
+只逐级改变 gfxstream host/guest memory feature policy（默认值、仅 CLI `GLDirectMem`、
+CLI `GLDirectMem + HasSharedSlotsHostMemoryAllocator`），并固定重复三次 cold boot、连续
 guest-service admission、APK install、launcher resolve、post-install admission 与
 `system_server` PID 连续性检查。
 该 workflow 必须复用正式 gate 的 owner、readiness、install-retry 与 cleanup 边界，固定
@@ -215,6 +215,17 @@ diagnostic artifact 不是 acceptance receipt、candidate artifact、签名证�
 也不得自动改变正式 gate。若没有至少一个 variant 在不少于三次 cold boot 中全部通过，
 诊断必须 fail-closed；若有稳定 variant，正式 gate 的配置变更仍须单独 review、提交并由新的
 exact-HEAD candidate 证明。
+
+Exact-HEAD 手动 admission run `30694491880` 在 pinned emulator `36.6.11.0`
+build `15507667`、API 37 revision 6、同一 APK 与实际 `swiftshader/swangle`
+renderer 下，分别得到默认 `0/0` 为 0/3、仅 `GLDirectMem` 的 `1/0` 为 0/3、
+完整 `GLDirectMem + HasSharedSlotsHostMemoryAllocator` 的 `1/1` 为 3/3。由此正式
+Android emulator target-host gate 必须固定启用该完整 conjunction，并在进入 boot
+admission 或 APK install 前，从 owned emulator 的有界日志解析唯一实际 `1/1` 状态；
+缺失、冲突、被忽略或不等于 `1/1` 都必须 fail-closed。启动参数本身不是证据，正式 gate
+仍须独立验证 pinned binary、system image、实际 renderer、guest-service 连续稳定、安装、
+业务 journey、进程连续性与清理。后续 emulator pin、system image 或 renderer 变化必须重新
+取得不少于三次 cold boot 的 admission 证据，不得把本次结论外推到不同 runtime identity。
 
 任何 candidate / target-host producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行
 任何启用 `native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri

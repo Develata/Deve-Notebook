@@ -23,6 +23,7 @@ const emulatorPin = read("./lib/android-emulator-pin.sh");
 const emulatorPinTest = read("./android-emulator-pin.test.sh");
 const emulatorRenderer = read("./lib/android-emulator-renderer.sh");
 const emulatorRendererTest = read("./android-emulator-renderer.test.sh");
+const emulatorFeaturePolicy = read("./lib/android-emulator-feature-policy.sh");
 const releaseNativeWorkflow = read("../.github/workflows/release-native.yml");
 const nativeTargetHostWorkflow = read("../.github/workflows/native-target-host.yml");
 const emulatorHostPreparation = read("./prepare-android-emulator-host.sh");
@@ -428,7 +429,17 @@ test("emulator gate pins the API 37.0 image with swangle and 4096 MiB", () => {
   assert.match(emulatorRendererTest, /selection beyond bounded log prefix/);
 });
 
-test("android producers bind the emulator pin and renderer proof", () => {
+test("formal emulator gate requires the observed DMA feature conjunction", () => {
+  assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-feature-policy\.sh"/);
+  assert.match(orchestrator, /FORMAL_FEATURE_POLICY="direct-memory-shared-slots"/);
+  assert.match(orchestrator, /"\$\{ANDROID_EMULATOR_FEATURE_ARGS\[@\]\}"/);
+  assert.match(orchestrator, /android_emulator_feature_policy_wait[\s\S]*wait_for_boot/);
+  assert.match(orchestrator, /ensure_emulator_process_alive\s+android_emulator_feature_policy_observe[\s\S]*ensure_emulator_process_alive\s+echo "mobile-android-emulator-install-startup-smoke-check: serial=/);
+  assert.match(emulatorFeaturePolicy, /-feature GLDirectMem[\s\S]*-feature HasSharedSlotsHostMemoryAllocator/);
+  assert.match(emulatorFeaturePolicy, /ANDROID_EMULATOR_FEATURE_POLICY_EXPECTED_PAIR="1\/1"/);
+});
+
+test("android producers bind emulator pin, renderer, and feature proof", () => {
   for (const producerId of ["android.local-backend", "android.remote-browser"]) {
     const producer = producerRegistry.producers.find(
       (candidate) => candidate.producer_id === producerId,
@@ -441,7 +452,9 @@ test("android producers bind the emulator pin and renderer proof", () => {
     for (const artifact of [
       "scripts/android-emulator-pin.test.sh",
       "scripts/android-emulator-renderer.test.sh",
+      "scripts/android-emulator-feature-policy.test.sh",
       "scripts/lib/android-emulator-renderer.sh",
+      "scripts/lib/android-emulator-feature-policy.sh",
       "scripts/lib/android-emulator-diagnostics.sh",
     ]) {
       assert.ok(

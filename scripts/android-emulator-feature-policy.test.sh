@@ -53,12 +53,22 @@ done
 write_log 0 0
 android_emulator_feature_policy_observe "$log_file" direct-memory \
   && fail "policy mismatch was accepted"
+android_emulator_feature_policy_wait "$log_file" direct-memory 3 always_alive \
+  && fail "feature wait retried an immediate policy mismatch"
+[[ "$ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE" \
+    == "gfxstream feature policy direct-memory expected 1/0, observed 0/0" ]] \
+  || fail "feature wait lost its policy-mismatch evidence"
 printf '%s\n' 'DEBUG | gfxstreamFeature:GlDirectMem = 1' >>"$log_file"
 android_emulator_feature_policy_wait "$log_file" default 3 always_alive \
   && fail "conflicting feature state was accepted"
 printf '%s\n' 'unrelated log' >"$log_file"
 android_emulator_feature_policy_observe "$log_file" default \
   && fail "missing feature state was accepted"
+android_emulator_feature_policy_wait "$log_file" default 1 always_alive \
+  && fail "feature wait accepted permanently missing feature state"
+[[ "$ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE" \
+    == "feature observation timed out: gfxstream feature observation is missing" ]] \
+  || fail "feature wait lost its timeout evidence"
 android_emulator_feature_policy_wait "$log_file" default 3 already_dead \
   && fail "feature wait ignored an exited emulator process"
 [[ "$ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE" \

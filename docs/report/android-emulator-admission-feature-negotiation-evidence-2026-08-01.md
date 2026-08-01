@@ -98,3 +98,25 @@ negative control even if it happens not to crash during three cycles; only a
 stable exact `1/1` conjunction may be proposed when the default control is
 unstable. Formal gate modification and a fresh exact-HEAD candidate remain
 separate steps.
+
+## Completed feature-policy cut
+
+The follow-up manual diagnostic completed successfully as run `30694491880`,
+attempt `1`, on exact HEAD `cd715336943efd4c42b1cc629e99cda510ca40fc`.
+Every variant used APK SHA-256
+`73d98035af9c2a4df21664d2230658d704a7f3c1c268c59a78f7d37575c8e35d`,
+pinned emulator `36.6.11.0` build `15507667`, API 37 image revision `6`, and
+the actual `swiftshader/swangle` renderer pair. All cleanup statuses were zero.
+
+| Feature policy | Actual pair | Stable cycles | Outcome |
+|---|---:|---:|---|
+| default | `0/0` | 0/3 | negative control failed |
+| `GLDirectMem` | `1/0` | 0/3 | isolation control failed |
+| `GLDirectMem + HasSharedSlotsHostMemoryAllocator` | `1/1` | 3/3 | recommended |
+
+All three `1/1` cycles completed boot admission, install, post-install
+admission and preserved `system_server` PID continuity (`635`, `644`, and
+`659`, respectively). This closes the diagnostic selection step for the exact
+runtime identity above. It does not itself create acceptance evidence: the
+formal target-host gate must separately configure the conjunction, verify the
+actual log state fail-closed, and pass on a new exact candidate HEAD.

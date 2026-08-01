@@ -641,6 +641,7 @@ absent	docs/dev-runbook.md	native-packaging embedded_service
 contains	docs/acceptance-cases/12_tech_release.md	target_host_platform_evidence_runtime_boundary_current true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_settings_provider_readiness_precedes_install true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_guest_service_readiness_requires_stable_window true
+contains	docs/acceptance-cases/12_tech_release.md	android_emulator_formal_gate_requires_observed_dma_feature_conjunction true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
 contains	docs/acceptance-cases/12_tech_release.md	android_emulator_rejected_exit_224_diagnostic_preserves_primary_failure true
 contains	docs/features/08_ui_design_03_mobile.md	alphanumeric run 已折叠的 ASCII structural preview
@@ -779,6 +780,8 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_T
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	disk.dataPartition.size=%sM
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-boot-readiness.test.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-feature-policy.test.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10
 contains	scripts/lib/android-guest-service-readiness.sh	ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10

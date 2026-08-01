@@ -255,6 +255,7 @@
     - release_assert: android_emulator_admission_observes_actual_gfxstream_features_each_cycle true
     - release_assert: android_emulator_admission_requires_dma_feature_conjunction_for_recommendation true
     - release_assert: android_emulator_admission_identity_and_log_budgets_fail_closed true
+    - release_assert: android_emulator_formal_gate_requires_observed_dma_feature_conjunction true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

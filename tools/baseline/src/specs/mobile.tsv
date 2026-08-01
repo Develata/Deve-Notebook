@@ -719,6 +719,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_feature_policy_wait
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_feature_policy_observe
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)"
 contains	scripts/lib/android-emulator-pin.sh	ANDROID_EMULATOR_PIN_VERSION="36.6.11.0"
 contains	scripts/lib/android-emulator-pin.sh	ANDROID_EMULATOR_PIN_BUILD_ID="15507667"

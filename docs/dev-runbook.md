@@ -1241,10 +1241,14 @@ admission runs `30603301298` and `30690812038` rejected emulator/API and rendere
 selection as sufficient fixes. The latter observed `GlDirectMem=0` and
 `HasSharedSlotsHostMemoryAllocator=0` in every bounded emulator log; the guest
 mapper then aborted because the resulting host extension set did not admit its
-required DMA read path. The next diagnostic therefore fixes `swangle` and varies
-only that two-feature negotiation policy. Other software-token pairs are not
-compatibility fallbacks. Missing,
-conflicting, unapproved, or legacy
+required DMA read path. Exact-HEAD admission run `30694491880` then kept the APK,
+pin, API 37 revision 6 and actual `swiftshader/swangle` renderer fixed: the default
+`0/0` and `GLDirectMem`-only `1/0` variants were both 0/3, while the complete
+`GLDirectMem + HasSharedSlotsHostMemoryAllocator` `1/1` variant was 3/3. The
+formal gate therefore passes both exact CLI features and, before boot admission
+or APK installation, parses the owned emulator log to require a unique actual
+`1/1`; the arguments alone are never treated as proof. Other software-token
+pairs are not compatibility fallbacks. Missing, conflicting, ignored, or legacy
 `swiftshader_indirect` evidence fails before APK installation. A future pin or
 rollback needs fresh target-host evidence before approving a different pair.
 After either boot-complete property appears, the gate still waits under the
@@ -1268,11 +1272,12 @@ boot — before any APK is installed — then crash-loops and takes
 system_server down; emulator-matrix evidence showed the abort is
 renderer-path-bound, but newer exact-HEAD admission observed the same failure
 under `swangle`, `software` and `swiftshader`. Therefore no renderer alternative
-has stable three-cycle evidence. The current feature diagnostic compares the
-unchanged disabled/disabled control, `GlDirectMem` alone, and the exact
-`GlDirectMem + HasSharedSlotsHostMemoryAllocator` conjunction that upstream
-gfxstream requires before advertising `ANDROID_EMU_read_color_buffer_dma`; no
-feature policy is approved until three cold boots pass. The 16 KB page-size
+has stable three-cycle evidence. The feature diagnostic compared the unchanged
+disabled/disabled control, `GLDirectMem` alone, and the exact
+`GLDirectMem + HasSharedSlotsHostMemoryAllocator` conjunction that upstream
+gfxstream requires before advertising `ANDROID_EMU_read_color_buffer_dma`; run
+`30694491880` approved only the observed `1/1` conjunction for the current
+runtime identity after three cold boots passed. The 16 KB page-size
 `android-37.1` `ps16k` image remains retired
 for the same instability class. Hosts that created the old
 `deve-mobile-smoke-api37.1-google_apis_ps16k-x86_64` or

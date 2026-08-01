@@ -8,6 +8,7 @@ source "$ROOT_DIR/scripts/lib/android-emulator-capacity.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
+source "$ROOT_DIR/scripts/lib/android-emulator-feature-policy.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
@@ -355,7 +356,7 @@ ensure_emulator_serial_available() {
 ensure_emulator_process_alive() {
   if [[ -n "${EMULATOR_PID:-}" ]] && ! kill -0 "$EMULATOR_PID" >/dev/null 2>&1; then
     wait "$EMULATOR_PID" >/dev/null 2>&1 || true
-    fail "Android emulator process exited before boot completed"
+    fail "owned Android emulator process exited unexpectedly"
   fi
 }
 
@@ -375,6 +376,7 @@ run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
 run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"
 run bash "$ROOT_DIR/scripts/android-emulator-pin.test.sh"
 run bash "$ROOT_DIR/scripts/android-emulator-renderer.test.sh"
+run bash "$ROOT_DIR/scripts/android-emulator-feature-policy.test.sh"
 verify_sdk_package_reuse_contract
 run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
 validate_emulator_port
@@ -426,6 +428,10 @@ fi
 trap cleanup_on_exit EXIT
 write_emulator_owner
 
+FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
+android_emulator_feature_policy_configure "$FORMAL_FEATURE_POLICY" \
+  || fail "$ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE"
+
 emulator_cmd \
   -avd "$AVD_NAME" \
   -port "$EMULATOR_PORT" \
@@ -435,6 +441,7 @@ emulator_cmd \
   -no-audio \
   -no-boot-anim \
   -gpu swangle \
+  "${ANDROID_EMULATOR_FEATURE_ARGS[@]}" \
   -verbose \
   -no-snapshot \
   -no-snapshot-save \
@@ -442,6 +449,11 @@ emulator_cmd \
   >"$LOG_DIR/emulator.log" 2>&1 &
 EMULATOR_PID="$!"
 write_emulator_owner "$EMULATOR_PID"
+
+android_emulator_feature_policy_wait \
+    "$LOG_DIR/emulator.log" "$FORMAL_FEATURE_POLICY" 30 ensure_emulator_process_alive \
+  || fail "Android emulator feature proof failed: $ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE"
+echo "mobile-android-emulator-install-startup-smoke-check: gfxstream features: $ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE"
 
 wait_for_boot
 verify_emulator_data_capacity
@@ -475,6 +487,11 @@ else
     run bash "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.sh"
   )
 fi
+
+ensure_emulator_process_alive
+android_emulator_feature_policy_observe "$LOG_DIR/emulator.log" "$FORMAL_FEATURE_POLICY" \
+  || fail "Android emulator final feature proof failed: $ANDROID_EMULATOR_FEATURE_POLICY_LAST_EVIDENCE"
+ensure_emulator_process_alive
 
 echo "mobile-android-emulator-install-startup-smoke-check: serial=$EMULATOR_SERIAL partition_mb=$EMULATOR_PARTITION_MB journey=$JOURNEY log=${LOG_DIR#"$ROOT_DIR"/}/emulator.log"
 echo "mobile-android-emulator-install-startup-smoke-check: ok"
