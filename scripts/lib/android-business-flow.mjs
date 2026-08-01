@@ -116,14 +116,23 @@ export function commitAndroidChange(page, message, { waitUntil, delay }) {
 }
 
 async function readRepoScope(page) {
-  return page.call(() => {
+  const raw = await page.call(() => {
     const status = document.querySelector("[data-deve-sync-status]");
     return {
       status: status?.getAttribute("data-deve-sync-status") ?? null,
-      repoId: status?.getAttribute("data-deve-repo-id") ?? "",
-      scopeNonce: Number(status?.getAttribute("data-deve-scope-nonce")),
+      repoIdRaw: status?.getAttribute("data-deve-repo-id") ?? null,
+      scopeNonceRaw: status?.getAttribute("data-deve-scope-nonce") ?? null,
     };
   });
+  const scopeNonce = typeof raw.scopeNonceRaw === "string"
+    && /^(0|[1-9][0-9]*)$/.test(raw.scopeNonceRaw)
+    ? Number(raw.scopeNonceRaw)
+    : null;
+  return {
+    ...raw,
+    repoId: raw.repoIdRaw,
+    scopeNonce: Number.isSafeInteger(scopeNonce) ? scopeNonce : null,
+  };
 }
 
 async function openRepoSwitcher(page, waitUntil) {
@@ -138,6 +147,76 @@ async function openRepoSwitcher(page, waitUntil) {
   await clickVisible(page, "[data-deve-repo-switcher-trigger]");
   await waitUntil("Android repo switcher", () => page.call(() =>
     Boolean(globalThis.__deveVisibleElement("[data-deve-repo-switcher-create]"))));
+}
+
+export async function createFirstAndroidRepoFromBootstrapUnbound(
+  page,
+  name,
+  { waitUntil },
+) {
+  const initial = await waitUntil("initial zero-repo BootstrapUnbound", async () => {
+    const current = await readRepoScope(page);
+    return current.status === "handshaking-repo"
+      && current.repoIdRaw === ""
+      && current.scopeNonceRaw === "0"
+      && current.scopeNonce === 0
+      ? current
+      : null;
+  });
+  assert.notEqual(
+    initial.status,
+    "ready",
+    "zero-repo startup must not claim repo writer readiness",
+  );
+
+  await openRepoSwitcher(page, waitUntil);
+  const existing = await page.call(() =>
+    document.querySelectorAll("[data-deve-repo-switcher-item]").length);
+  assert.equal(existing, 0, "fresh LocalBackend must not auto-create a default repo");
+  await clickVisible(page, "[data-deve-repo-switcher-create]");
+  await waitUntil("Android first repo create input", () => page.call(() =>
+    Boolean(globalThis.__deveVisibleElement("[data-deve-repo-switcher-create-input]"))));
+  await fillVisible(page, "[data-deve-repo-switcher-create-input]", name);
+  const submitted = await page.call(() => {
+    const input = globalThis.__deveVisibleElement("[data-deve-repo-switcher-create-input]");
+    const submit = input?.closest("form")?.querySelector('button[type="submit"]');
+    if (!(submit instanceof HTMLButtonElement) || submit.disabled) return false;
+    submit.click();
+    return true;
+  });
+  assert.equal(submitted, true, "first Create must use the visible repo switcher form");
+
+  const created = await waitUntil("first Android repo writer readiness", async () => {
+    const current = await readRepoScope(page);
+    return current.status === "ready"
+      && typeof current.repoIdRaw === "string"
+      && current.repoIdRaw !== ""
+      && current.scopeNonceRaw !== null
+      && Number.isInteger(current.scopeNonce)
+      && current.scopeNonce > initial.scopeNonce
+      ? current
+      : null;
+  }, 60000);
+  assert.ok(created.repoId, "first Create must bind the backend-projected repo scope");
+  assert.ok(
+    created.scopeNonce > initial.scopeNonce,
+    "first Create must advance the backend scope nonce",
+  );
+
+  await openRepoSwitcher(page, waitUntil);
+  const aliases = await page.call((expected) =>
+    [...document.querySelectorAll("[data-deve-repo-switcher-item]")]
+      .filter((item) => item.getAttribute("data-deve-repo-switcher-item-name") === expected)
+      .length, name);
+  assert.equal(aliases, 1, "first Create must publish the backend-owned display alias");
+  await clickVisible(page, "[data-deve-repo-switcher-backdrop]");
+  return {
+    initial,
+    created,
+    name,
+    defaultRepoAbsent: existing === 0,
+    aliasCount: aliases,
+  };
 }
 
 export async function exerciseAndroidLastRepoRemoval(page, { waitUntil }) {

@@ -19,6 +19,7 @@ import {
 } from "./lib/mobile-webview-interaction.mjs";
 import {
   commitAndroidChange,
+  createFirstAndroidRepoFromBootstrapUnbound,
   createAndroidDocument,
   dispatchWebViewText,
   exerciseAndroidLastRepoRemoval,
@@ -117,11 +118,6 @@ async function inputAndroidEditorText(content, point, page) {
   await dispatchWebViewText(page, content);
 }
 
-async function waitForReady(page) {
-  await waitUntil("ready sync status", () => page.call(() =>
-    document.querySelector("[data-deve-sync-status]")?.getAttribute("data-deve-sync-status") === "ready"), 60000);
-}
-
 async function waitForWritableEditor(page, timeout = 30000) {
   return waitForWritableAndroidEditor(page, waitUntil, timeout);
 }
@@ -154,6 +150,36 @@ function editorDiagnostics(page) {
   }));
 }
 
+function localBootstrapProjection(page) {
+  return page.call(() => {
+    const status = document.querySelector("[data-deve-sync-status]");
+    const bootstrap = globalThis.__DEVE_NATIVE_BOOTSTRAP;
+    const repoIdRaw = status?.getAttribute("data-deve-repo-id") ?? null;
+    const scopeNonceRaw = status?.getAttribute("data-deve-scope-nonce") ?? null;
+    const parsedScopeNonce = typeof scopeNonceRaw === "string"
+      && /^(0|[1-9][0-9]*)$/.test(scopeNonceRaw)
+      ? Number(scopeNonceRaw)
+      : null;
+    let nativeSessionInstalled = false;
+    try {
+      nativeSessionInstalled = sessionStorage.getItem("__DEVE_NATIVE_SESSION_INSTALLED__")
+        === bootstrap?.http_base;
+    } catch {}
+    return {
+      readyState: document.readyState,
+      syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
+      repoIdRaw,
+      scopeNonceRaw,
+      scopeNonce: Number.isSafeInteger(parsedScopeNonce) ? parsedScopeNonce : null,
+      loginVisible: Boolean(globalThis.__deveVisibleElement("#login-username")),
+      bootstrapSessionBound: bootstrap?.session_bound === true,
+      bootstrapServiceState: bootstrap?.service_state ?? null,
+      bootstrapBlockedReason: bootstrap?.blocked_reason ?? null,
+      nativeSessionInstalled,
+    };
+  });
+}
+
 async function nativeInvoke(page, command, args = {}) {
   const outcome = await page.call(async (invokeCommand, invokeArgs) => {
     try {
@@ -178,6 +204,38 @@ async function nativeInvoke(page, command, args = {}) {
     throw new Error(`native command ${command} failed: ${JSON.stringify(outcome.error)}`);
   }
   return outcome.value;
+}
+
+async function waitForLocalBackendBootstrapUnbound(page) {
+  try {
+    return await waitUntil("native LocalBackend BootstrapUnbound", async () => {
+      const [projection, service] = await Promise.all([
+        localBootstrapProjection(page),
+        nativeInvoke(page, "native_backend_get_service_state"),
+      ]);
+      return projection.syncStatus === "handshaking-repo"
+        && projection.repoIdRaw === ""
+        && projection.scopeNonceRaw === "0"
+        && projection.scopeNonce === 0
+        && projection.loginVisible === false
+        && projection.bootstrapSessionBound
+        && projection.nativeSessionInstalled
+        && service?.backend_running === true
+        && service.service_state === "endpoint_session_ready"
+        ? { projection, service }
+        : null;
+    }, 60000);
+  } catch (error) {
+    const projection = await localBootstrapProjection(page).catch(
+      (projectionError) => ({ error: projectionError.message }),
+    );
+    const service = await nativeInvoke(page, "native_backend_get_service_state").catch(
+      (nativeError) => ({ error: nativeError.message }),
+    );
+    throw new Error(
+      `${error.message}; native LocalBackend bootstrap diagnostics=${JSON.stringify({ projection, service })}`,
+    );
+  }
 }
 
 async function requestGracefulNativeExit(page) {
@@ -211,7 +269,9 @@ async function main() {
   const page = await findStableAppPage({ cdpEndpoint, withDeadline, waitUntil });
   await reloadWithWebSocketDeliveryGate(page);
 
-  console.log("mobile-android-lifecycle: waiting for native session");
+  console.log("mobile-android-lifecycle: waiting for zero-repo native bootstrap");
+  await waitForLocalBackendBootstrapUnbound(page);
+  console.log("mobile-android-lifecycle: zero-repo native bootstrap ready");
   const identityCapability = await verifyAndroidIdentityCapability(page, {
     expectWritable,
     withDeadline,
@@ -240,10 +300,16 @@ async function main() {
     return;
   }
   console.log("mobile-android-lifecycle: WebCrypto capability accepted");
-  await waitForReady(page);
-  console.log("mobile-android-lifecycle: native session ready");
   assert.equal(await page.call(() => document.querySelectorAll("#login-username").length), 0,
     "native session must bypass login");
+  const firstRepo = await createFirstAndroidRepoFromBootstrapUnbound(
+    page,
+    `android-local-${Date.now()}`,
+    { waitUntil },
+  );
+  console.log(
+    `mobile-android-lifecycle: first repo ready scope_nonce=${firstRepo.created.scopeNonce}`,
+  );
 
   const stamp = Date.now();
   const initial = `Android lifecycle smoke ${stamp}`;
@@ -385,6 +451,18 @@ async function main() {
     repoLifecycle,
     journey: {
       loginOrNativeSession: true,
+      bootstrapUnbound: {
+        syncStatus: firstRepo.initial.status,
+        repoIdEmpty: firstRepo.initial.repoIdRaw === "",
+        scopeNonce: firstRepo.initial.scopeNonce,
+        defaultRepoAbsent: firstRepo.defaultRepoAbsent,
+      },
+      firstCreate: {
+        writerReady: firstRepo.created.status === "ready",
+        repoIdBound: Boolean(firstRepo.created.repoId),
+        scopeNonce: firstRepo.created.scopeNonce,
+        aliasCount: firstRepo.aliasCount,
+      },
       edit: true,
       commitHistory: true,
       backgroundResume: true,

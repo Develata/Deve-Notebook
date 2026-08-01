@@ -399,6 +399,8 @@
     - native_assert: desktop_native_session_smoke_uses_temporary_data_root true
     - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true
     - native_assert: mobile_embedded_backend_uses_typed_runtime_auth_material true
+    - native_assert: mobile_local_backend_zero_repo_bootstrap_unbound_nonce_zero_creates_no_default_repo_or_writer_readiness true
+    - native_assert: mobile_local_backend_first_create_uses_nonzero_switch_nonce_and_reaches_ready true
     - dependency_assert: mobile_android_ios_bridge_dependencies_are_target_scoped_optional_and_native_packaging_only true
     - native_assert: remote_browser_accepts_https_origin_only true
     - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true

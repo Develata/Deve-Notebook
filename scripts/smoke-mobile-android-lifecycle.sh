@@ -83,7 +83,11 @@ find_webview_socket() {
 }
 
 android_startup_diag_adb() {
-  adb_with_timeout "$@"
+  local timeout_secs="$1"
+  local args=()
+  shift
+  [[ -z "$SERIAL" ]] || args=(-s "$SERIAL")
+  timeout "$timeout_secs" "$(adb_bin)" "${args[@]}" "$@"
 }
 
 # Bounded evidence for a launched app whose debug WebView socket never
@@ -103,6 +107,14 @@ report_missing_webview_socket() {
     | grep -E "ActivityManager|AndroidRuntime|chromium|WebView|$APP_ID" \
     | tail -n 200 >&2 || true
   fail "debug WebView socket not found for pid $pid"
+}
+
+report_lifecycle_harness_failure() {
+  local pid=""
+  pid="$(android_startup_diag_adb 10 shell pidof "$APP_ID" 2>/dev/null \
+    | tr -d '\r' | awk '{ print $1; exit }' || true)"
+  echo "mobile-android-lifecycle-smoke: lifecycle harness failed; app_pid=${pid:-absent}" >&2
+  android_startup_diagnostics_collect "$APP_ID"
 }
 
 remaining_seconds() {
@@ -189,6 +201,7 @@ SOCKET="${SOCKET#@}"
 FORWARD_PORT="$(adb_cmd forward tcp:0 "localabstract:$SOCKET" | tr -d '\r')"
 [[ "$FORWARD_PORT" =~ ^[0-9]+$ ]] || fail "adb did not allocate a CDP forward port: $FORWARD_PORT"
 
+set +e
 DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
 DEVE_MOBILE_ANDROID_ADB_BIN="$(adb_bin)" \
 DEVE_MOBILE_ANDROID_SERIAL="$SERIAL" \
@@ -198,6 +211,12 @@ DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
 DEVE_MOBILE_ANDROID_EVIDENCE_PATH="$EVIDENCE_PATH" \
 DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS="$(($(remaining_seconds) * 1000))" \
 timeout "$(remaining_seconds)" node "$NODE_SCRIPT"
+NODE_STATUS=$?
+set -e
+if (( NODE_STATUS != 0 )); then
+  report_lifecycle_harness_failure
+  exit "$NODE_STATUS"
+fi
 
 for _ in $(seq 1 30); do
   [[ -z "$(app_pid || true)" ]] && break

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-30`
+- `Last Review`: `2026-08-01`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -22,7 +22,7 @@
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
 *   Mobile native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
 *   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；`tauri` / `tauri-build` dependency 只能作为 `apps/mobile` 的 optional dependency 挂在 `native-packaging` feature 后。
-*   `native-packaging` Android/Mobile 默认模式是 `LocalBackend`；Mobile v1 full peer 不使用子进程，而是启动 in-process embedded loopback service，并在 app-private ledger/repo/projection 上自动初始化默认本地 workspace，不依赖 Docker、外部 CLI 或用户手工 init。
+*   `native-packaging` Android/Mobile 默认模式是 `LocalBackend`；Mobile v1 full peer 不使用子进程，而是启动 in-process embedded loopback service，并在 app-private data root 初始化 zero-repo host registries，不依赖 Docker、外部 CLI 或用户手工 init。启动不得自动创建默认 repo/projection；首次 Create 才能经 server/core authority path 建立本地 workspace。
 *   `RemoteBrowser` **MUST** 显式选择，且只接受远端 `https://host[:port]` origin。URL 不得包含 userinfo、query、fragment 或业务子路径；壳层不得注入本地 endpoint/session bootstrap，不得启动 embedded service。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger / Projection Workspace authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。`LocalBackend` 只允许 native 壳启动/绑定本机 embedded full peer service，不授予 shell 直接写 authority。

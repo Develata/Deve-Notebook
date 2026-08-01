@@ -75,6 +75,16 @@ test("both Android writable journeys remove the last repo through backend previe
   assert.match(writableEvidence, /if \(repoLifecycle\) evidence\.repoLifecycle = repoLifecycle/);
 });
 
+test("Android LocalBackend creates the first repo from zero-repo BootstrapUnbound", () => {
+  assert.match(businessFlow, /createFirstAndroidRepoFromBootstrapUnbound/);
+  assert.match(businessFlow, /initial zero-repo BootstrapUnbound/);
+  assert.match(businessFlow, /scopeNonce === 0/);
+  assert.match(businessFlow, /zero-repo startup must not claim repo writer readiness/);
+  assert.match(businessFlow, /first Create must advance the backend scope nonce/);
+  assert.match(localJourney, /createFirstAndroidRepoFromBootstrapUnbound/);
+  assert.match(localJourney, /native LocalBackend bootstrap diagnostics/);
+});
+
 test("every RemoteBrowser page generation rechecks network, CSP, and native bridge isolation", () => {
   assert.equal(
     [...remoteJourney.matchAll(/await observeRemoteGeneration\(page, observations\);/g)].length,
@@ -195,6 +205,9 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
     /report_missing_webview_socket "\$PID"/u,
     "the socket deadline must route through the bounded diagnostics report",
   );
+  assert.match(localSmoke, /report_lifecycle_harness_failure/u);
+  assert.match(localSmoke, /android_startup_diagnostics_collect "\$APP_ID"/u);
+  assert.match(localSmoke, /if \(\( NODE_STATUS != 0 \)\); then[\s\S]*report_lifecycle_harness_failure/u);
   for (const [name, script] of [["local", localSmoke], ["remote", remoteSmoke]]) {
     assert.match(
       script,

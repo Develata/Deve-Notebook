@@ -740,7 +740,7 @@
           ]
         }
       ],
-      "note": "Build and run the Android LocalBackend writable lifecycle on an API 29+ WebView 137+ target"
+      "note": "Build and run the Android LocalBackend writable lifecycle on an API 29+ WebView 137+ target, proving zero-repo BootstrapUnbound(0), first Create with a non-zero switch nonce, and backend-projected writer readiness"
     },
     {
       "producer_id": "android.remote-browser",
