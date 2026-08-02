@@ -404,11 +404,11 @@ stop_fixture() {
       cleanup_failed=1
     fi
   fi
-  if [[ -n "$backend_pid" ]] && kill -0 "$backend_pid" 2>/dev/null; then
+  if [[ -n "$backend_pid" ]] && remote_fixture_pid_active "$backend_pid"; then
     remote_fixture_fail "owned backend process survived cleanup"
     cleanup_failed=1
   fi
-  if [[ -n "$tunnel_pid" ]] && kill -0 "$tunnel_pid" 2>/dev/null; then
+  if [[ -n "$tunnel_pid" ]] && remote_fixture_pid_active "$tunnel_pid"; then
     remote_fixture_fail "owned tunnel process survived cleanup"
     cleanup_failed=1
   fi

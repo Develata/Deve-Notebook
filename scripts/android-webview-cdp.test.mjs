@@ -237,6 +237,36 @@ test("stable discovery retires a target that navigates away before accepting its
   assert.equal(stable, second);
   assert.equal(connections, 2);
   assert.equal(first.closed, 1);
+  assert.equal(first.visibleHelperInstalled, 0);
+});
+
+test("stable discovery reconnects a transiently blank snapshot for the same target", async () => {
+  const clock = fakeClock();
+  const first = mockPage([pageSnapshot({
+    marker: false,
+    locationHref: "about:blank",
+  })]);
+  const second = mockPage([pageSnapshot({ marker: true })]);
+  const pages = [first, second];
+  let connections = 0;
+
+  const stable = await findStableAppPage(discoveryArgs({
+    ...clock,
+    listTargets: async () => target("same-renderer"),
+    connectPage: async () => {
+      connections += 1;
+      return pages.shift();
+    },
+    pollIntervalMs: 100,
+    generationTimeoutMs: 500,
+    stableTimeoutMs: 1_000,
+  }));
+
+  assert.equal(stable, second);
+  assert.equal(connections, 2);
+  assert.equal(first.closed, 1);
+  assert.equal(first.visibleHelperInstalled, 0);
+  assert.equal(second.visibleHelperInstalled, 1);
 });
 
 test("renderer generation lease cannot be renewed by reconnecting the same target", async () => {
@@ -250,7 +280,10 @@ test("renderer generation lease cannot be renewed by reconnecting the same targe
       listTargets: async () => target("same-renderer"),
       connectPage: async () => {
         connections += 1;
-        const page = mockPage([pageSnapshot()]);
+        const page = mockPage([pageSnapshot({
+          marker: false,
+          locationHref: "about:blank",
+        })]);
         pages.push(page);
         return page;
       },
@@ -261,8 +294,39 @@ test("renderer generation lease cannot be renewed by reconnecting the same targe
     /renderer generation lease expired/,
   );
 
-  assert.equal(connections, 1);
-  assert.equal(pages[0].closed, 1);
+  assert.equal(connections, 2);
+  assert.equal(pages.every(({ closed }) => closed === 1), true);
+  assert.equal(pages.every(({ visibleHelperInstalled }) => visibleHelperInstalled === 0), true);
+});
+
+test("interleaved targets cannot renew a previously observed renderer generation", async () => {
+  const clock = fakeClock();
+  const firstA = mockPage([pageSnapshot({ marker: false, locationHref: "about:blank" })]);
+  const firstB = mockPage([pageSnapshot({ marker: false, locationHref: "about:blank" })]);
+  const renewedA = mockPage([pageSnapshot({ marker: true })]);
+  const pages = [firstA, firstB, renewedA];
+  const targetIds = ["renderer-a", "renderer-b", "renderer-a"];
+  let connections = 0;
+
+  await assert.rejects(
+    findStableAppPage(discoveryArgs({
+      ...clock,
+      listTargets: async () => target(targetIds.shift() ?? "renderer-a"),
+      connectPage: async () => {
+        connections += 1;
+        return pages.shift();
+      },
+      pollIntervalMs: 100,
+      generationTimeoutMs: 150,
+      stableTimeoutMs: 500,
+    })),
+    /renderer generation lease expired/,
+  );
+
+  assert.equal(connections, 2);
+  assert.equal(firstA.closed, 1);
+  assert.equal(firstB.closed, 1);
+  assert.equal(renewedA.visibleHelperInstalled, 0);
 });
 
 test("stable discovery rejects a marker that arrives after its absolute deadline", async () => {
@@ -286,6 +350,30 @@ test("stable discovery rejects a marker that arrives after its absolute deadline
 
   assert.equal(page.closed, 1);
   assert.equal(page.visibleHelperInstalled, 0);
+});
+
+test("stable discovery rejects helper installation that completes after its absolute deadline", async () => {
+  const clock = fakeClock();
+  const page = mockPage([pageSnapshot({ marker: true })]);
+  page.evaluate = async function evaluateAfterDeadline() {
+    this.visibleHelperInstalled += 1;
+    clock.advance(101);
+  };
+
+  await assert.rejects(
+    findStableAppPage(discoveryArgs({
+      ...clock,
+      listTargets: async () => target(),
+      connectPage: async () => page,
+      pollIntervalMs: 10,
+      generationTimeoutMs: 500,
+      stableTimeoutMs: 100,
+    })),
+    /stable Android WebView discovery deadline expired/,
+  );
+
+  assert.equal(page.closed, 1);
+  assert.equal(page.visibleHelperInstalled, 1);
 });
 
 test("stable discovery closes a page connection that completes after its absolute deadline", async () => {

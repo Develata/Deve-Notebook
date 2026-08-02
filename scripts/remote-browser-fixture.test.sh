@@ -30,9 +30,11 @@ assert_fails remote_fixture_assert_https_origin "https://user@fixture.example.in
 temporary="$(mktemp -d)"
 owned_pid=""
 secondary_pid=""
+zombie_parent_pid=""
 cleanup() {
   [[ -z "$owned_pid" ]] || kill -KILL "$owned_pid" 2>/dev/null || true
   [[ -z "$secondary_pid" ]] || kill -KILL "$secondary_pid" 2>/dev/null || true
+  [[ -z "$zombie_parent_pid" ]] || kill -KILL "$zombie_parent_pid" 2>/dev/null || true
   rm -rf -- "$temporary"
 }
 trap cleanup EXIT
@@ -136,6 +138,46 @@ grep -Fq -- '--max-time "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECON
 grep -Fq -- '--max-filesize "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYTES"' \
   "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh" \
   || fail "cloudflared download must have a bounded size"
+grep -Fq -- '[[ -n "$backend_pid" ]] && remote_fixture_pid_active "$backend_pid"' \
+  "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+  || fail "final backend cleanup proof must use the shared active-process classifier"
+grep -Fq -- '[[ -n "$tunnel_pid" ]] && remote_fixture_pid_active "$tunnel_pid"' \
+  "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+  || fail "final tunnel cleanup proof must use the shared active-process classifier"
+
+if [[ -r /proc/self/stat ]] && command -v python3 >/dev/null 2>&1 \
+  && python3 -c 'import os, sys; sys.exit(0 if hasattr(os, "fork") else 1)'; then
+  zombie_pid_file="$temporary/zombie.pid"
+  python3 - "$zombie_pid_file" <<'PY' &
+import os
+import pathlib
+import sys
+import time
+
+child = os.fork()
+if child == 0:
+    os._exit(0)
+pathlib.Path(sys.argv[1]).write_text(str(child), encoding="ascii")
+time.sleep(30)
+PY
+  zombie_parent_pid="$!"
+  for _ in $(seq 1 50); do
+    [[ -s "$zombie_pid_file" ]] || { sleep 0.1; continue; }
+    zombie_pid="$(<"$zombie_pid_file")"
+    [[ -r "/proc/$zombie_pid/stat" ]] || { sleep 0.1; continue; }
+    [[ "$(awk '{print $3}' "/proc/$zombie_pid/stat")" == "Z" ]] && break
+    sleep 0.1
+  done
+  [[ -n "${zombie_pid:-}" && -r "/proc/$zombie_pid/stat" \
+    && "$(awk '{print $3}' "/proc/$zombie_pid/stat")" == "Z" ]] \
+    || fail "zombie classifier fixture did not reach zombie state"
+  kill -0 "$zombie_pid" 2>/dev/null || fail "zombie fixture did not retain a process-table entry"
+  remote_fixture_pid_active "$zombie_pid" \
+    && fail "zombie process-table entry was classified as an active owned process"
+  kill -TERM "$zombie_parent_pid" 2>/dev/null || true
+  wait "$zombie_parent_pid" 2>/dev/null || true
+  zombie_parent_pid=""
+fi
 
 bash "$ROOT_DIR/scripts/remote-browser-fixture-http.test.sh"
 bash "$ROOT_DIR/scripts/remote-browser-fixture-start-supervisor.test.sh"

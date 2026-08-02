@@ -227,6 +227,9 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, expectedOri
         }
         const targetKey = targetGenerationKey(target);
         if (targetKey !== activeTargetKey) {
+          // Superseding a renderer is one-way: an older key cannot return later
+          // and acquire a fresh lease through an A -> B -> A target sequence.
+          if (activeTargetKey) retiredTargetKeys.add(activeTargetKey);
           activeTargetKey = targetKey;
           generationStartedAt = now();
           generation += 1;
@@ -248,7 +251,11 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, expectedOri
       lastPageSnapshot = snapshot;
       if (!snapshotMatchesOrigin(snapshot, expectedOrigin)) {
         lastPageFailure = "Android WebView target navigated away from the expected origin";
-        await retirePage({ retireGeneration: true });
+        // The target list and the attached Runtime snapshot are not atomic. Close
+        // this connection, but keep the target-bound generation lease so the same
+        // renderer can be rediscovered if a transient blank navigation settles.
+        // Exact-origin and marker checks still run again before helpers are installed.
+        await retirePage();
       } else if (now() - generationStartedAt >= generationTimeoutMs) {
         lastPageFailure = `renderer generation lease expired after ${generationTimeoutMs}ms`;
         await retirePage({ retireGeneration: true });

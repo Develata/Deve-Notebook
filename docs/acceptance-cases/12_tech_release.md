@@ -259,7 +259,9 @@
     - release_assert: android_emulator_formal_gate_requires_observed_dma_feature_conjunction true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
     - release_assert: android_webview_cdp_keeps_healthy_generation_and_preserves_sanitized_failure_snapshot true
+    - release_assert: android_webview_cdp_same_target_transient_origin_race_reconnects_without_installing_helpers true
     - release_assert: android_webview_cdp_same_target_reconnect_cannot_renew_generation_lease true
+    - release_assert: android_webview_cdp_interleaved_targets_cannot_renew_generation_lease true
     - release_assert: android_webview_cdp_absolute_deadline_rejects_late_marker true
     - release_assert: android_webview_cdp_failure_snapshot_excludes_free_text_and_location_material true
     - release_assert: signed_release_readiness_not_claimed true
@@ -431,6 +433,7 @@
     - native_assert: unix_remote_fixture_failed_start_cleanup_runs_before_local_scope_unwind true
     - native_assert: unix_remote_fixture_usage_failure_precedes_owner_admission true
     - native_assert: unix_remote_fixture_signal_ready_cancel_rolls_back_successful_publication true
+    - native_assert: unix_remote_fixture_final_process_proof_uses_zombie_aware_active_classifier true
     - evidence_boundary: startup_marker_probe_is_not_packaged_ui_readiness
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

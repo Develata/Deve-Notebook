@@ -50,7 +50,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `collect-native-target-host-evidence.sh` | Downloads Native Target Host workflow evidence artifacts through GitHub CLI or token-backed API fallback and validates each report |
 | `dispatch-native-target-host-workflow.sh` | Builds or explicitly dispatches the manual Native Target Host GitHub Actions workflow through GitHub CLI or token-backed API fallback |
 | `dispatch-native-target-host-workflow.test.sh` | Verifies RemoteBrowser dispatch fields, platform dependencies, API fallback parity, and absence of password dispatch inputs |
-| `remote-browser-fixture.{sh,ps1}` | Owns exact-HEAD loopback backend, random credentials, pinned HTTPS tunnel, and fail-closed cleanup for RemoteBrowser target-host evidence |
+| `remote-browser-fixture.{sh,ps1}` | Owns exact-HEAD loopback backend, random credentials, pinned HTTPS tunnel, and fail-closed cleanup for RemoteBrowser target-host evidence; Unix final cleanup shares the zombie-aware active-process classifier used by bounded termination |
 | `remote-browser-fixture-bounded-start.ps1` | Runs the Windows fixture start worker under one total startup deadline and a worker output cap, relays allowlisted stage progress, and on timeout terminates the worker tree and recovers owned resources/secrets from the atomic startup state |
 | `lib/remote-browser-fixture-cloudflared.ps1` | Owns the checksum-pinned Windows cloudflared download/install path used by the RemoteBrowser fixture |
 | `lib/remote-browser-fixture-state.ps1` | Atomically publishes ready/recovery state and preflights source/resource/live-owner identity before any Windows fixture secret cleanup |
@@ -58,7 +58,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `lib/remote-browser-fixture-start-supervisor.sh` | Owns signal-ready Unix startup supervision and cancellation cleanup |
 | `lib/desktop-remote-browser-native-recovery.ps1` | Owns Win32 native-menu discovery/dispatch and replacement-process proof for the Desktop RemoteBrowser-to-LocalBackend recovery journey |
 | `lib/remote-browser-fixture-progress.ps1` | Atomic startup-state serialization plus the fixed nonsecret stage-name allowlist shared by the Windows fixture and its bounded-start watchdog |
-| `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, atomic final state, dual-failure preservation, secret cleanup, PID/owner identity, and platform lifecycle invariants |
+| `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, atomic final state, dual-failure preservation, secret cleanup, PID/owner identity, zombie-aware final cleanup, and platform lifecycle invariants |
 | `remote-browser-fixture-http.test.sh` | Exercises bounded quick-tunnel readiness, exact role endpoint, process identity, deadline, and redacted failure diagnostics |
 | `remote-browser-fixture-start-supervisor.test.sh` | Exercises pending-signal handoff and successful-publication rollback at cancellation boundaries |
 | `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, a pipe-captured success return while fixture survivors keep running (std-handle inheritance hygiene), deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, partial/corrupted state fail-closed, fast-exit combined output limits, bounded redacted failure output, and a real-worker integration failure path |
@@ -114,7 +114,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `android-target-capability.test.mjs` | Regression tests for Android target-fact parsing, support qualification, and writable-versus-read-only evidence modes |
 | `lib/mobile-webview-interaction.mjs` | Focus, text-input failure diagnostics, and mobile drawer navigation helpers for the Android WebView lifecycle harness |
 | `lib/mobile-source-control-interaction.mjs` | Source Control open, confirmed-row commit acknowledgement, history proof, and failure diagnostics for the Android WebView lifecycle harness |
-| `lib/android-webview-cdp.mjs`; `lib/android-webview-cdp-client.mjs`; `android-webview-cdp.test.mjs` | Raw Android WebView page-target discovery, bounded CDP transport client, sanitized diagnostics, and generation-aware reconnect regressions for native lifecycle smoke |
+| `lib/android-webview-cdp.mjs`; `lib/android-webview-cdp-client.mjs`; `android-webview-cdp.test.mjs` | Raw Android WebView page-target discovery, bounded CDP transport client, sanitized diagnostics, and generation-aware reconnect regressions including target-list/snapshot origin races without lease renewal |
 | `lib/websocket-delivery-gate.mjs` | CDP-installed, smoke-only outbound WebSocket gate; discards an old-generation edit frame so only product pending replay can deliver it after Android transport replacement |
 | `lib/webcrypto-capability.mjs` | Shared target-host probe for non-extractable WebCrypto Ed25519 capability; returns stable fail-closed blocker facts only |
 | `webcrypto-capability.test.mjs` | Verifies the Android/WebView probe requests non-extractable Ed25519 signing keys and rejects unsupported or extractable results |
