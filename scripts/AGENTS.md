@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-22 | Updated: 2026-07-16 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-08-02 -->
 
 # scripts
 
@@ -110,7 +110,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `android-target-capability.test.mjs` | Regression tests for Android target-fact parsing, support qualification, and writable-versus-read-only evidence modes |
 | `lib/mobile-webview-interaction.mjs` | Focus, text-input failure diagnostics, and mobile drawer navigation helpers for the Android WebView lifecycle harness |
 | `lib/mobile-source-control-interaction.mjs` | Source Control open, confirmed-row commit acknowledgement, history proof, and failure diagnostics for the Android WebView lifecycle harness |
-| `lib/android-webview-cdp.mjs` | Raw Android WebView page-target discovery, CDP request routing, evaluation, and bounded reconnect helpers for native lifecycle smoke |
+| `lib/android-webview-cdp.mjs`; `lib/android-webview-cdp-client.mjs`; `android-webview-cdp.test.mjs` | Raw Android WebView page-target discovery, bounded CDP transport client, sanitized diagnostics, and generation-aware reconnect regressions for native lifecycle smoke |
 | `lib/websocket-delivery-gate.mjs` | CDP-installed, smoke-only outbound WebSocket gate; discards an old-generation edit frame so only product pending replay can deliver it after Android transport replacement |
 | `lib/webcrypto-capability.mjs` | Shared target-host probe for non-extractable WebCrypto Ed25519 capability; returns stable fail-closed blocker facts only |
 | `webcrypto-capability.test.mjs` | Verifies the Android/WebView probe requests non-extractable Ed25519 signing keys and rejects unsupported or extractable results |

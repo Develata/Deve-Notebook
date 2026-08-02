@@ -266,7 +266,7 @@ async function main() {
   if (!cdpEndpoint || !adb || !serial) {
     throw new Error("CDP endpoint, adb path, and emulator serial are required");
   }
-  const page = await findStableAppPage({ cdpEndpoint, withDeadline, waitUntil });
+  const page = await findStableAppPage({ cdpEndpoint, withDeadline });
   await reloadWithWebSocketDeliveryGate(page);
 
   console.log("mobile-android-lifecycle: waiting for zero-repo native bootstrap");

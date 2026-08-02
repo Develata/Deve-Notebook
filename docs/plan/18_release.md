@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-31`
+- `Last Review`: `2026-08-02`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -233,10 +233,18 @@ compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依�
 旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
 真实 package build 前失败。
 
-Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、DOM probe 与诊断读取
-限制为短时单命令窗口，并在超时后移除 pending waiter、关闭旧连接后重试。单个冷启动
-renderer（包括系统 low-memory 回收后正在重建的 renderer）不得占满整个 lifecycle deadline；
-但总 journey deadline、WebCrypto probe 与业务断言不得因此放宽。
+Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、单次 DOM probe 与诊断读取
+限制为短时单命令窗口，并在命令超时后移除 pending waiter、关闭旧连接后重试。健康且仍可响应
+短探测的同一 page target 必须在其有界 renderer generation lease 内继续 condition-based DOM
+readiness 探测；marker 暂未出现本身不得每轮关闭并重连 socket。socket close、target navigation /
+retirement、命令超时或 generation lease 到期才允许退休旧连接并重新 discovery。generation lease
+必须绑定 target generation identity；重新连接同一 target 不得刷新 lease。稳定页 discovery 的绝对
+deadline 必须约束 target discovery、socket open、DOM probe 和 helper installation，deadline 后到达的
+marker 不得冒充成功。单个冷启动 renderer（包括系统 low-memory 回收后正在重建的 renderer）不得占满
+整个 lifecycle deadline；但总 journey deadline、WebCrypto probe 与业务断言不得因此放宽。最终失败
+必须保留最后一份有界脱敏页面快照与 allowlisted inner failure class；快照只允许来源分类、枚举、布尔值
+和计数，不得输出 raw location/title/body text、query/fragment、input value、bootstrap endpoint、session
+或 credential material。
 
 Mobile graceful-exit smoke 可以把 exit command 后立即发生的 CDP target retirement 视为
 “响应可能被进程退出截断”，但不得仅凭该 transport error 宣布成功。外层 target-host gate

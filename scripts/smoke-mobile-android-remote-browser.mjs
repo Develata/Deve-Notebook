@@ -90,7 +90,6 @@ async function attachRemotePage() {
     cdpEndpoint,
     expectedOrigin: remoteOrigin,
     withDeadline,
-    waitUntil,
   });
   await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
   return page;
@@ -101,7 +100,6 @@ async function attachLocalPage() {
     cdpEndpoint,
     expectedOrigin: undefined,
     withDeadline,
-    waitUntil,
   });
   await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
   return page;

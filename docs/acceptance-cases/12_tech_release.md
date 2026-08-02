@@ -224,6 +224,7 @@
     - run: scripts/check-mobile-android-shell-package-build.sh
     - run: cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
     - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
+    - run: node --test scripts/android-webview-cdp.test.mjs
     - run: scripts/android-guest-service-readiness.test.sh
     - run: scripts/android-emulator-boot-readiness.test.sh
     - run: scripts/android-emulator-admission-result.test.sh
@@ -257,6 +258,10 @@
     - release_assert: android_emulator_admission_identity_and_log_budgets_fail_closed true
     - release_assert: android_emulator_formal_gate_requires_observed_dma_feature_conjunction true
     - release_assert: android_emulator_partition_request_and_free_capacity_are_fail_closed true
+    - release_assert: android_webview_cdp_keeps_healthy_generation_and_preserves_sanitized_failure_snapshot true
+    - release_assert: android_webview_cdp_same_target_reconnect_cannot_renew_generation_lease true
+    - release_assert: android_webview_cdp_absolute_deadline_rejects_late_marker true
+    - release_assert: android_webview_cdp_failure_snapshot_excludes_free_text_and_location_material true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true
