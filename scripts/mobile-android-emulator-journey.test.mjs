@@ -137,6 +137,17 @@ test("RemoteBrowser receipt binds only its public HTTPS target", () => {
   assert.deepEqual(remote.bound_env, ["DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN"]);
   assert.ok(!remote.bound_env.includes("DEVE_MOBILE_ANDROID_REMOTE_USERNAME"));
   assert.ok(!remote.bound_env.includes("DEVE_MOBILE_ANDROID_REMOTE_PASSWORD"));
+  const fixtureArtifacts = remote.artifacts.filter((artifact) =>
+    artifact === "scripts/remote-browser-fixture.sh"
+      || artifact === "scripts/lib/remote-browser-fixture.sh"
+      || artifact.startsWith("scripts/lib/remote-browser-fixture-"));
+  assert.deepEqual(fixtureArtifacts, [
+    "scripts/remote-browser-fixture.sh",
+    "scripts/lib/remote-browser-fixture.sh",
+    "scripts/lib/remote-browser-fixture-http.sh",
+    "scripts/lib/remote-browser-fixture-json.sh",
+    "scripts/lib/remote-browser-fixture-start-supervisor.sh",
+  ]);
 });
 
 test("runner-owned Android owner paths reject ambient override escape", () => {

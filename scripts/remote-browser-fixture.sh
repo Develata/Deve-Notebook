@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh"
 # shellcheck source=scripts/lib/remote-browser-fixture-json.sh
 source "$ROOT_DIR/scripts/lib/remote-browser-fixture-json.sh"
+# shellcheck source=scripts/lib/remote-browser-fixture-start-supervisor.sh
+source "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-supervisor.sh"
 
 usage() {
   cat >&2 <<'EOF'
@@ -34,7 +36,8 @@ EOF
   exit 2
 }
 
-start_fixture() {
+start_fixture_worker() {
+  set -Eeuo pipefail
   local state_dir=""
   local expected_head=""
   local repo_root="$ROOT_DIR"
@@ -69,6 +72,13 @@ start_fixture() {
   done
 
   [[ -n "$state_dir" && -n "$expected_head" ]] || usage
+  if [[ -n "$external_origin" || -n "$external_head_proof_url" || -n "$external_credentials" ]]; then
+    [[ -n "$external_origin" && -n "$external_head_proof_url" && -n "$external_credentials" ]] || usage
+    [[ -z "$backend_executable" && -z "$backend_container_image" && -z "$password_hasher" ]] || usage
+  else
+    [[ -z "$backend_executable" || -z "$backend_container_image" ]] || usage
+    [[ -n "$backend_executable" || -n "$backend_container_image" ]] || usage
+  fi
   remote_fixture_require_command git
   remote_fixture_require_command node
   remote_fixture_require_command curl
@@ -84,9 +94,6 @@ start_fixture() {
   fi
 
   local fixture_id="$(remote_fixture_random_hex 16)"
-  printf '%s\n' "$fixture_id" >"$owner_file"
-  chmod 0600 "$owner_file"
-
   local source_kind=""
   local https_origin=""
   local backend_pid=""
@@ -105,7 +112,7 @@ start_fixture() {
   cleanup_failed_start() {
     local original_status="${1:-1}"
     [[ "$start_complete" == "1" ]] && return "$original_status"
-    trap - ERR EXIT INT TERM
+    trap - ERR RETURN INT TERM
     set +e
     local cleanup_failed=0
 
@@ -149,12 +156,19 @@ start_fixture() {
     fi
     exit "$original_status"
   }
-  trap 'cleanup_failed_start $?' ERR EXIT
-  trap 'cleanup_failed_start 130' INT TERM
+  # ERR covers command failures while this local ownership scope is active;
+  # RETURN covers explicit non-zero returns without deferring cleanup to EXIT.
+  trap 'cleanup_failed_start $?' ERR RETURN
+  trap 'cleanup_failed_start 130' INT
+  trap 'cleanup_failed_start 143' TERM
+  if ! kill -s USR1 -- "${DEVE_REMOTE_FIXTURE_START_PARENT_PID:?}" 2>/dev/null; then
+    remote_fixture_fail "startup supervisor disappeared before ownership admission"
+    return 1
+  fi
+  printf '%s\n' "$fixture_id" >"$owner_file"
+  chmod 0600 "$owner_file"
 
   if [[ -n "$external_origin" || -n "$external_head_proof_url" || -n "$external_credentials" ]]; then
-    [[ -n "$external_origin" && -n "$external_head_proof_url" && -n "$external_credentials" ]] || usage
-    [[ -z "$backend_executable" && -z "$backend_container_image" && -z "$password_hasher" ]] || usage
     remote_fixture_assert_https_origin "$external_origin"
     if ! node -e 'const origin=new URL(process.argv[1]);const proof=new URL(process.argv[2]);if(origin.protocol!=="https:"||proof.protocol!=="https:"||origin.origin!==proof.origin)process.exit(1);' "$external_origin" "$external_head_proof_url"; then
       remote_fixture_fail "external HEAD proof URL must use the RemoteBrowser HTTPS origin"
@@ -197,9 +211,6 @@ NODE
       remote_fixture_fail "internal fixture requires an executable --password-hasher"
       return 1
     fi
-    if [[ -n "$backend_executable" && -n "$backend_container_image" ]]; then usage; fi
-    [[ -n "$backend_executable" || -n "$backend_container_image" ]] || usage
-
     printf 'deve-ci-%s\n' "$(remote_fixture_random_hex 8)" >"$username_file"
     remote_fixture_random_hex 24 >"$password_file"; printf '\n' >>"$password_file"
     remote_fixture_random_hex 48 >"$auth_secret_file"; printf '\n' >>"$auth_secret_file"
@@ -307,7 +318,9 @@ NODE
     tunnel_pid="$!"
     tunnel_token="$(remote_fixture_process_token "$tunnel_pid")"
     https_origin="$(remote_fixture_wait_tunnel_origin "$tunnel_pid" "$state_dir/cloudflared.stdout.log" "$state_dir/cloudflared.stderr.log")"
-    remote_fixture_wait_http "$https_origin/api/node/role" "$tunnel_pid" "$state_dir/cloudflared.stderr.log"
+    remote_fixture_wait_tunnel_http \
+      "$https_origin/api/node/role" "$tunnel_pid" "$tunnel_token" \
+      "$state_dir/cloudflared.stderr.log"
   fi
 
   remote_fixture_write_environment "$environment_file" "$https_origin" "$credentials_file" "$state_file"
@@ -316,7 +329,7 @@ NODE
     BACKEND_PID="$backend_pid" BACKEND_TOKEN="$backend_token" TUNNEL_PID="$tunnel_pid" TUNNEL_TOKEN="$tunnel_token" \
     CONTAINER_NAME="$container_name" remote_fixture_write_state "$state_file"
   start_complete=1
-  trap - ERR EXIT INT TERM
+  trap - ERR RETURN INT TERM
   printf '%s\n' "$environment_file"
 }
 

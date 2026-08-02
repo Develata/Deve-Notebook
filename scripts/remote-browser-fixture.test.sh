@@ -137,6 +137,185 @@ grep -Fq -- '--max-filesize "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYT
   "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh" \
   || fail "cloudflared download must have a bounded size"
 
+bash "$ROOT_DIR/scripts/remote-browser-fixture-http.test.sh"
+bash "$ROOT_DIR/scripts/remote-browser-fixture-start-supervisor.test.sh"
+
+scope_fake_bin="$temporary/scope-fake-bin"
+scope_state="$temporary/scope-failed-start"
+scope_pids="$temporary/scope-pids"
+mkdir -p -- "$scope_fake_bin" "$scope_state" "$scope_pids"
+cat >"$scope_fake_bin/backend" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  init) exit 0 ;;
+  serve)
+    printf '%s\n' "$$" >"${DEVE_REMOTE_FIXTURE_FAKE_PID_DIR:?}/backend.pid"
+    exec sleep 60
+    ;;
+  *) exit 2 ;;
+esac
+SH
+cat >"$scope_fake_bin/password-hasher" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' '$argon2id$v=19$m=8,t=1,p=1$YQ$YQ'
+SH
+cat >"$scope_fake_bin/cloudflared" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$$" >"${DEVE_REMOTE_FIXTURE_FAKE_PID_DIR:?}/tunnel.pid"
+printf '%s\n' 'INF https://fixture-scope.trycloudflare.com' >&2
+exec sleep 60
+SH
+cat >"$scope_fake_bin/sha256sum" <<'SH'
+#!/usr/bin/env bash
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) checksum='cdb5d4432f6ae1595654a692a51308b69d2bf7af961f5578d9391837cf072df9' ;;
+  *) checksum='ec905ea7b7e327ff8abdde8cb64697a2152de74dbcdbf6aec9db8364eb3886cd' ;;
+esac
+printf '%s  %s\n' "$checksum" "${@: -1}"
+SH
+cat >"$scope_fake_bin/curl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+url="${@: -1}"
+if [[ "$url" == http://127.0.0.1:* ]]; then
+  printf '200'
+  exit 0
+fi
+printf '530'
+exit 22
+SH
+chmod +x "$scope_fake_bin/backend" "$scope_fake_bin/password-hasher" \
+  "$scope_fake_bin/cloudflared" "$scope_fake_bin/sha256sum" "$scope_fake_bin/curl"
+printf '%s' "$(git -C "$ROOT_DIR" rev-parse HEAD)" >"$temporary/scope-head-proof"
+
+usage_state="$temporary/usage-failed-start"
+mkdir -p -- "$usage_state"
+usage_status=0
+bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+  --state-dir "$usage_state" \
+  --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+  --external-origin "https://fixture.example.invalid" \
+  >/dev/null 2>&1 || usage_status=$?
+[[ "$usage_status" == "2" ]] || fail "partial external usage returned $usage_status instead of 2"
+[[ ! -e "$usage_state/.fixture-owner" && ! -e "$usage_state/fixture-state.json" ]] \
+  || fail "usage failure admitted fixture ownership"
+
+scope_status=0
+DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$scope_pids" \
+DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=1 \
+PATH="$scope_fake_bin:$PATH" \
+  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+    --state-dir "$scope_state" \
+    --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+    --backend-executable "$scope_fake_bin/backend" \
+    --backend-head-file "$temporary/scope-head-proof" \
+    --password-hasher "$scope_fake_bin/password-hasher" \
+    --cloudflared-executable "$scope_fake_bin/cloudflared" \
+    >"$temporary/scope-start.stdout" 2>"$temporary/scope-start.stderr" || scope_status=$?
+[[ "$scope_status" != "0" ]] || fail "unready tunnel fixture unexpectedly started"
+if [[ ! -f "$scope_pids/backend.pid" || ! -f "$scope_pids/tunnel.pid" ]]; then
+  sed -n '1,80p' "$temporary/scope-start.stderr" >&2 || true
+  fail "failed-start scope fixture did not launch both owned processes"
+fi
+owned_pid="$(<"$scope_pids/backend.pid")"
+secondary_pid="$(<"$scope_pids/tunnel.pid")"
+grep -Fq 'last_status=530' "$temporary/scope-start.stderr" \
+  || fail "failed-start fixture lost its primary tunnel status"
+if grep -Fq 'trycloudflare.com' "$temporary/scope-start.stderr"; then
+  fail "failed-start fixture exposed its ephemeral tunnel origin"
+fi
+if grep -Fq 'unbound variable' "$temporary/scope-start.stderr"; then
+  fail "failed-start cleanup ran after its ownership scope was unwound"
+fi
+remote_fixture_pid_active "$owned_pid" && { sed -n '1,120p' "$temporary/scope-start.stderr" >&2; fail "failed-start fixture left its backend alive"; }
+remote_fixture_pid_active "$secondary_pid" && { sed -n '1,120p' "$temporary/scope-start.stderr" >&2; fail "failed-start fixture left its tunnel alive"; }
+owned_pid=""
+secondary_pid=""
+for leaked in .fixture-owner fixture-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+  [[ ! -e "$scope_state/$leaked" ]] || fail "failed-start scope cleanup leaked $leaked"
+done
+
+signal_state="$temporary/signal-failed-start"
+signal_pids="$temporary/signal-pids"
+mkdir -p -- "$signal_state" "$signal_pids"
+DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$signal_pids" \
+DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=30 \
+PATH="$scope_fake_bin:$PATH" \
+  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+    --state-dir "$signal_state" \
+    --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+    --backend-executable "$scope_fake_bin/backend" \
+    --backend-head-file "$temporary/scope-head-proof" \
+    --password-hasher "$scope_fake_bin/password-hasher" \
+    --cloudflared-executable "$scope_fake_bin/cloudflared" \
+    >"$temporary/signal-start.stdout" 2>"$temporary/signal-start.stderr" &
+owned_pid="$!"
+for _ in $(seq 1 120); do
+  [[ -f "$signal_pids/backend.pid" && -f "$signal_pids/tunnel.pid" ]] && break
+  remote_fixture_pid_active "$owned_pid" || break
+  sleep 0.1
+done
+[[ -f "$signal_pids/backend.pid" && -f "$signal_pids/tunnel.pid" ]] \
+  || fail "signal fixture did not launch both owned processes"
+kill -TERM "$owned_pid"
+signal_status=0
+wait "$owned_pid" || signal_status=$?
+[[ "$signal_status" == "143" ]] || fail "parent-only TERM returned $signal_status instead of 143"
+owned_pid=""
+signal_backend_pid="$(<"$signal_pids/backend.pid")"
+signal_tunnel_pid="$(<"$signal_pids/tunnel.pid")"
+remote_fixture_pid_active "$signal_backend_pid" && { sed -n '1,120p' "$temporary/signal-start.stderr" >&2; fail "parent-only TERM left its backend alive"; }
+remote_fixture_pid_active "$signal_tunnel_pid" && { sed -n '1,120p' "$temporary/signal-start.stderr" >&2; fail "parent-only TERM left its tunnel alive"; }
+if grep -Fq 'unbound variable' "$temporary/signal-start.stderr"; then
+  fail "parent-only TERM unwound ownership scope before cleanup"
+fi
+for leaked in .fixture-owner fixture-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+  [[ ! -e "$signal_state/$leaked" ]] || fail "parent-only TERM cleanup leaked $leaked"
+done
+
+cleanup_failure_bin="$temporary/cleanup-failure-bin"
+cleanup_failure_state="$temporary/cleanup-failure-state"
+cleanup_failure_pids="$temporary/cleanup-failure-pids"
+mkdir -p -- "$cleanup_failure_bin" "$cleanup_failure_state" "$cleanup_failure_pids"
+cat >"$cleanup_failure_bin/rm" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+for argument in "$@"; do
+  [[ "$argument" != */credentials.json ]] || exit 55
+done
+exec "${DEVE_REMOTE_FIXTURE_REAL_RM:?}" "$@"
+SH
+chmod +x "$cleanup_failure_bin/rm"
+cleanup_failure_status=0
+DEVE_REMOTE_FIXTURE_REAL_RM="$(command -v rm)" \
+DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$cleanup_failure_pids" \
+DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=1 \
+PATH="$cleanup_failure_bin:$scope_fake_bin:$PATH" \
+  "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+    --state-dir "$cleanup_failure_state" \
+    --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+    --backend-executable "$scope_fake_bin/backend" \
+    --backend-head-file "$temporary/scope-head-proof" \
+    --password-hasher "$scope_fake_bin/password-hasher" \
+    --cloudflared-executable "$scope_fake_bin/cloudflared" \
+    >"$temporary/cleanup-failure.stdout" 2>"$temporary/cleanup-failure.stderr" \
+    || cleanup_failure_status=$?
+[[ "$cleanup_failure_status" != "0" ]] || fail "cleanup-failure fixture unexpectedly started"
+grep -Fq 'last_status=530' "$temporary/cleanup-failure.stderr" \
+  || fail "cleanup failure replaced the primary tunnel failure"
+grep -Fq 'startup failed and at least one owned resource survived cleanup' \
+  "$temporary/cleanup-failure.stderr" \
+  || fail "cleanup failure was not reported alongside the primary failure"
+[[ -f "$cleanup_failure_state/.fixture-owner" && -f "$cleanup_failure_state/fixture-state.json" ]] \
+  || fail "cleanup failure removed ownership state"
+cleanup_failure_backend_pid="$(<"$cleanup_failure_pids/backend.pid")"
+cleanup_failure_tunnel_pid="$(<"$cleanup_failure_pids/tunnel.pid")"
+remote_fixture_pid_active "$cleanup_failure_backend_pid" && fail "cleanup failure left its backend alive"
+remote_fixture_pid_active "$cleanup_failure_tunnel_pid" && fail "cleanup failure left its tunnel alive"
+"$ROOT_DIR/scripts/remote-browser-fixture.sh" stop --state-dir "$cleanup_failure_state" >/dev/null
+
 failure_state="$temporary/failed-start"
 mkdir -p -- "$failure_state"
 printf '%s' "$(git -C "$ROOT_DIR" rev-parse HEAD)" >"$temporary/head-proof"

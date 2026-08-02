@@ -788,6 +788,11 @@
         "scripts/android-emulator-capacity.test.sh",
         "scripts/android-emulator-cleanup.test.sh",
         "scripts/cleanup-mobile-android-emulator.sh",
+        "scripts/remote-browser-fixture.sh",
+        "scripts/lib/remote-browser-fixture.sh",
+        "scripts/lib/remote-browser-fixture-http.sh",
+        "scripts/lib/remote-browser-fixture-json.sh",
+        "scripts/lib/remote-browser-fixture-start-supervisor.sh",
         "scripts/lib/android-emulator-capacity.sh",
         "scripts/lib/android-emulator-owner.sh",
         "scripts/lib/android-guest-service-readiness.sh",
@@ -1249,7 +1254,8 @@
         "scripts/lib/docker-remote-import-runtime.mjs",
         "scripts/lib/docker-remote-import-journeys.mjs",
         "scripts/lib/docker-multiclient-runtime.mjs",
-        "scripts/lib/remote-browser-fixture.sh"
+        "scripts/lib/remote-browser-fixture.sh",
+        "scripts/lib/remote-browser-fixture-http.sh"
       ],
       "steps": [
         {

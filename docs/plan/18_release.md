@@ -261,6 +261,18 @@ environment；启动、子命令或清理任一步失败都必须 best-effort �
 container 与 tunnel，并在无法证明资源已消失时保留 owner/state 供重试。外部 staging
 只能用于诊断，不能满足 first-tag receipt。
 
+Account-less quick tunnel 发布 HTTPS origin 只表示入口名称已分配，不能单独证明 edge route
+已传播或 exact backend 已可达。Linux/Android fixture 必须在总启动时限内使用不放宽的
+`GET /api/node/role -> 2xx` 条件探测等待 route propagation；默认传播窗口为 180 秒且配置上限
+为 600 秒。重试不得接受 3xx/4xx/5xx、替换 endpoint 或绕过公开 CA origin。最终失败诊断只可
+保留 allowlisted HTTP status / transport class 与受限日志路径，不得输出 response body、cookie、
+credential 或 session material；2xx 只有在进程 identity 后检且返回时刻仍未越过传播 deadline 时
+才能被接纳。Unix fixture 必须先完成无副作用的参数组合校验，再通过 signal-ready handshake 开放
+owned-resource admission；父层取消若撞上成功 publication，必须立即走正式 Stop 回滚，不能同时返回
+取消并遗留可用 fixture。failed-start cleanup 必须在启动局部 ownership 变量仍存活的作用域内执行；
+主失败和 cleanup failure 均须保留，不能因 shell scope unwind 退化为未绑定变量，也不能依赖 CI runner
+的 orphan-process sweep 代替 fixture 自有回收。
+
 Windows fixture 的 state publication 必须使用同目录原子 replace；bounded recovery 消费最终
 `fixture-state.json` 时，只有 `ready|recovery` lifecycle kind 能完整解析且 owner marker、execution
 identity、source/resource shape 与仍存活资源的 owner token/label 一致时才可据此回收或删除

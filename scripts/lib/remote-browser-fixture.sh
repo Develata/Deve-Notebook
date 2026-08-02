@@ -405,45 +405,6 @@ remote_fixture_install_cloudflared() {
   printf '%s\n' "$executable"
 }
 
-remote_fixture_wait_http() {
-  local url="$1"
-  local pid="$2"
-  local log_path="$3"
-  local attempt
-  for attempt in $(seq 1 120); do
-    if curl --fail --silent --show-error --max-time 2 "$url" >/dev/null 2>&1; then
-      return 0
-    fi
-    if ! kill -0 "$pid" 2>/dev/null; then
-      remote_fixture_fail "process exited before health check succeeded; log: $log_path"
-      return 1
-    fi
-    sleep 0.25
-  done
-  remote_fixture_fail "timed out waiting for $url; log: $log_path"
-}
-
-remote_fixture_wait_tunnel_origin() {
-  local pid="$1"
-  local stdout_log="$2"
-  local stderr_log="$3"
-  local attempt origin
-  for attempt in $(seq 1 120); do
-    origin="$(sed -nE 's#.*(https://[A-Za-z0-9-]+\.trycloudflare\.com).*#\1#p' "$stdout_log" "$stderr_log" 2>/dev/null | head -n 1)"
-    if [[ -n "$origin" ]]; then
-      remote_fixture_assert_https_origin "$origin"
-      printf '%s\n' "$origin"
-      return 0
-    fi
-    if ! kill -0 "$pid" 2>/dev/null; then
-      remote_fixture_fail "cloudflared exited before publishing an HTTPS origin"
-      return 1
-    fi
-    sleep 0.25
-  done
-  remote_fixture_fail "timed out waiting for cloudflared quick-tunnel origin"
-}
-
 remote_fixture_write_credentials() {
   local destination="$1"
   local username_file="$2"
@@ -493,3 +454,6 @@ remote_fixture_container_presence() {
   remote_fixture_fail "Docker returned an ambiguous exact-name result for: $container"
   return 2
 }
+
+# shellcheck source=scripts/lib/remote-browser-fixture-http.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/remote-browser-fixture-http.sh"

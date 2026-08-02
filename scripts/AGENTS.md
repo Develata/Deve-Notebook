@@ -54,9 +54,13 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `remote-browser-fixture-bounded-start.ps1` | Runs the Windows fixture start worker under one total startup deadline and a worker output cap, relays allowlisted stage progress, and on timeout terminates the worker tree and recovers owned resources/secrets from the atomic startup state |
 | `lib/remote-browser-fixture-cloudflared.ps1` | Owns the checksum-pinned Windows cloudflared download/install path used by the RemoteBrowser fixture |
 | `lib/remote-browser-fixture-state.ps1` | Atomically publishes ready/recovery state and preflights source/resource/live-owner identity before any Windows fixture secret cleanup |
+| `lib/remote-browser-fixture-http.sh` | Owns bounded Linux/Android loopback readiness, quick-tunnel origin discovery, exact public role probes, propagation timing, and allowlisted HTTP diagnostics |
+| `lib/remote-browser-fixture-start-supervisor.sh` | Owns signal-ready Unix startup supervision and cancellation cleanup |
 | `lib/desktop-remote-browser-native-recovery.ps1` | Owns Win32 native-menu discovery/dispatch and replacement-process proof for the Desktop RemoteBrowser-to-LocalBackend recovery journey |
 | `lib/remote-browser-fixture-progress.ps1` | Atomic startup-state serialization plus the fixed nonsecret stage-name allowlist shared by the Windows fixture and its bounded-start watchdog |
 | `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, atomic final state, dual-failure preservation, secret cleanup, PID/owner identity, and platform lifecycle invariants |
+| `remote-browser-fixture-http.test.sh` | Exercises bounded quick-tunnel readiness, exact role endpoint, process identity, deadline, and redacted failure diagnostics |
+| `remote-browser-fixture-start-supervisor.test.sh` | Exercises pending-signal handoff and successful-publication rollback at cancellation boundaries |
 | `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, a pipe-captured success return while fixture survivors keep running (std-handle inheritance hygiene), deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, partial/corrupted state fail-closed, fast-exit combined output limits, bounded redacted failure output, and a real-worker integration failure path |
 | `lib/remote-browser-fixture-json.sh` | Serializes the fixed private fixture state/environment JSON schemas without owning lifecycle decisions |
 | `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |

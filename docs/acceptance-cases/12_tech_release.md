@@ -425,6 +425,12 @@
     - native_assert: windows_remote_fixture_startup_state_preflight_precedes_secret_cleanup true
     - native_assert: windows_remote_fixture_preserves_primary_and_cleanup_failures true
     - native_assert: windows_remote_fixture_fast_exit_output_and_pipe_handles_fail_closed true
+    - native_assert: unix_remote_fixture_origin_publication_requires_bounded_exact_role_probe true
+    - native_assert: unix_remote_fixture_role_probe_rejects_post_deadline_2xx true
+    - native_assert: unix_remote_fixture_failure_reports_allowlisted_status_without_response_body true
+    - native_assert: unix_remote_fixture_failed_start_cleanup_runs_before_local_scope_unwind true
+    - native_assert: unix_remote_fixture_usage_failure_precedes_owner_admission true
+    - native_assert: unix_remote_fixture_signal_ready_cancel_rolls_back_successful_publication true
     - evidence_boundary: startup_marker_probe_is_not_packaged_ui_readiness
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
