@@ -686,6 +686,11 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	smoke-mo
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_CDP_ENDPOINT
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_EXPECT_WRITABLE
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_app_process_wait_stable "$deadline" app_pid lifecycle_clock
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_app_process_observe_anchored "$PID" app_pid
+contains	scripts/smoke-mobile-android-remote-browser.sh	android_app_process_wait_stable "$GLOBAL_DEADLINE" app_pid remote_browser_clock
+contains	scripts/smoke-mobile-android-remote-browser.sh	android_app_process_observe_anchored "$PID" app_pid
+contains	scripts/android-app-process-readiness.test.sh	transient empty pid sample must not reject a stable launch
 contains	scripts/inspect-android-target-capability.mjs	supportBaseline
 contains	scripts/lib/android-target-capability.mjs	providerMajor >= 137
 contains	scripts/lib/android-target-capability.mjs	sdkLevel >= 29
@@ -757,6 +762,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_
 before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_wait_for_guest_services_stable	check-mobile-android-install-startup-smoke.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-boot-readiness.test.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
 contains	scripts/lib/android-emulator-boot-readiness.sh	emu avd name
 contains	scripts/lib/android-emulator-boot-readiness.sh	android_boot_properties_complete "$sys_boot_completed" "$dev_boot_complete"
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_CAPTURE_STATUS="$status"

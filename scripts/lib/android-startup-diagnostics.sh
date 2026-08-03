@@ -10,10 +10,11 @@
 #   (non-destructive default) or falls back to clearing the relevant logcat
 #   buffers, reports setup failure, and always returns 0 so it can never
 #   replace the primary startup result.
-# - `android_startup_diagnostics_collect <app_id>` runs only when the launched
-#   app process is missing. Every command is time bounded, combined output is
-#   capped by an explicit byte budget, and the function always returns 0 so a
-#   diagnostic failure can never hide the primary process-exit failure.
+# - `android_startup_diagnostics_collect <app_id>` runs only after the caller
+#   identifies a startup-process failure (missing/replaced identity or a failed
+#   bounded readiness probe). Every command is time bounded, combined output
+#   is capped by an explicit byte budget, and the function always returns 0 so
+#   a diagnostic failure can never hide the primary process failure.
 # - Diagnostics stay app-specific (exit-info, crash buffer, ActivityManager /
 #   AndroidRuntime / DEBUG / libc / package lines, app process state). No
 #   environment dumps, no credentials, no unbounded dumpsys.
@@ -110,7 +111,7 @@ android_startup_diagnostics_collect() {
   local app_id="$1"
   _android_startup_diag_validate_config
   _android_startup_diag_used=0
-  echo "android-startup-diagnostics: collecting bounded startup exit evidence for $app_id" >&2
+  echo "android-startup-diagnostics: collecting bounded startup process evidence for $app_id" >&2
   _android_startup_diag_section "activity exit-info" \
     android_startup_diag_adb "$ANDROID_STARTUP_DIAG_CMD_TIMEOUT_SECS" \
     shell dumpsys activity exit-info "$app_id"

@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-remote-browser-smoke"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
+source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED:-0}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
@@ -42,7 +44,11 @@ adb_cleanup_cmd() {
   timeout 10 "$(adb_bin)" -s "$SERIAL" "$@" >/dev/null 2>&1 || true
 }
 
-app_pid() { adb_cmd shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' | awk '{print $1; exit}'; }
+app_pid() { android_app_process_pidof_probe adb_cmd "$APP_ID"; }
+
+remote_browser_clock() { printf '%s\n' "$SECONDS"; }
+
+android_startup_diag_adb() { adb_with_timeout "$@"; }
 
 cleanup() {
   [[ -z "${FORWARD_PORT:-}" ]] || adb_cleanup_cmd forward --remove "tcp:$FORWARD_PORT"
@@ -99,17 +105,33 @@ adb_cmd shell "run-as $APP_ID sh -c 'echo $PREFERENCE_BASE64 | base64 -d > nativ
 adb_cmd shell "run-as $APP_ID cat native-backend.json" | grep -qF '"remote"' \
   || fail "RemoteBrowser preference did not land in the app data dir"
 adb_cmd logcat -c
+android_startup_diagnostics_prepare "$APP_ID"
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
 
-PID=""
-while (( SECONDS < GLOBAL_DEADLINE )); do
-  PID="$(app_pid || true)"
-  [[ -z "$PID" ]] || break
-  sleep 1
-done
-[[ -n "$PID" ]] || fail "Android RemoteBrowser app did not remain running"
+if android_app_process_wait_stable "$GLOBAL_DEADLINE" app_pid remote_browser_clock; then
+  PID="$ANDROID_APP_PROCESS_STABLE_PID"
+else
+  PID_STATUS=$?
+  PID_EVIDENCE="$ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE"
+  android_startup_diagnostics_collect "$APP_ID" \
+    || echo "mobile-android-remote-browser-smoke: startup readiness diagnostics collection failed" >&2
+  fail "Android RemoteBrowser app did not remain running (process readiness: $PID_EVIDENCE status=$PID_STATUS)"
+fi
 SOCKET=""
 while (( SECONDS < GLOBAL_DEADLINE )); do
+  if android_app_process_observe_anchored "$PID" app_pid; then
+    CURRENT_PID="$ANDROID_APP_PROCESS_CURRENT_PID"
+  else
+    PROCESS_STATUS=$?
+    PROCESS_EVIDENCE="$ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE"
+    android_startup_diagnostics_collect "$APP_ID" \
+      || echo "mobile-android-remote-browser-smoke: startup exit diagnostics collection failed" >&2
+    fail "Android RemoteBrowser app process failed while waiting for its WebView socket ($PROCESS_EVIDENCE status=$PROCESS_STATUS)"
+  fi
+  if [[ -z "$CURRENT_PID" ]]; then
+    sleep 1
+    continue
+  fi
   # Quoted remote command: Git Bash (MSYS) path-converts a bare /proc/... arg
   # into a Windows host path on Windows target hosts.
   SOCKET="$(adb_cmd shell "cat /proc/net/unix" 2>/dev/null | tr -d '\r' | awk -v pid="$PID" '$NF ~ /webview_devtools_remote/ && $NF ~ pid"$" {print $NF; exit}')"

@@ -762,6 +762,9 @@ contains	scripts/lib/android-install-retry.sh	cmd package resolve-activity
 contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	install_apk
 contains	scripts/smoke-mobile-android-lifecycle.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
+contains	scripts/smoke-mobile-android-lifecycle.sh	source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
+contains	scripts/smoke-mobile-android-remote-browser.sh	source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
+contains	scripts/android-app-process-readiness.test.sh	launch race did not re-admit the anchored PID after one empty sample
 contains	scripts/smoke-mobile-android-lifecycle.sh	install_apk
 contains	scripts/smoke-mobile-android-remote-browser.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 contains	scripts/smoke-mobile-android-remote-browser.sh	install_apk
@@ -785,6 +788,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-emulator-feature-policy.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10
 contains	scripts/lib/android-guest-service-readiness.sh	ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10
 contains	scripts/lib/android-guest-service-readiness.sh	shell settings get global device_provisioned

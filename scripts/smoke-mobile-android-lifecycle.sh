@@ -6,6 +6,7 @@ source "$ROOT_DIR/scripts/lib/android-tools.sh"
 ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-lifecycle-smoke"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
+source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED:-0}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
@@ -53,7 +54,11 @@ adb_with_timeout() {
 }
 
 app_pid() {
-  adb_cmd shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' | awk '{ print $1; exit }'
+  android_app_process_pidof_probe adb_cmd "$APP_ID"
+}
+
+lifecycle_clock() {
+  printf '%s\n' "$SECONDS"
 }
 
 adb_cleanup_cmd() {
@@ -170,27 +175,41 @@ android_startup_diagnostics_prepare "$APP_ID"
 adb_cmd shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
 
 deadline=$GLOBAL_DEADLINE
-PID=""
-while (( SECONDS < deadline )); do
-  PID="$(app_pid || true)"
-  [[ -z "$PID" ]] || break
-  sleep 1
-done
-[[ -n "$PID" ]] || fail "Android app did not remain running: $APP_ID"
+if android_app_process_wait_stable "$deadline" app_pid lifecycle_clock; then
+  PID="$ANDROID_APP_PROCESS_STABLE_PID"
+else
+  PID_STATUS=$?
+  PID_EVIDENCE="$ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE"
+  android_startup_diagnostics_collect "$APP_ID" \
+    || echo "mobile-android-lifecycle-smoke: startup readiness diagnostics collection failed" >&2
+  fail "Android app did not remain running: $APP_ID (process readiness: $PID_EVIDENCE status=$PID_STATUS)"
+fi
 
 SOCKET=""
 CURRENT_PID="$PID"
 while (( SECONDS < deadline )); do
-  CURRENT_PID="$(app_pid || true)"
-  if [[ -z "$CURRENT_PID" ]]; then
+  if android_app_process_observe_anchored "$PID" app_pid; then
+    CURRENT_PID="$ANDROID_APP_PROCESS_CURRENT_PID"
+  else
+    PROCESS_STATUS=$?
+    PROCESS_EVIDENCE="$ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE"
     android_startup_diagnostics_collect "$APP_ID" \
       || echo "mobile-android-lifecycle-smoke: startup exit diagnostics collection failed" >&2
-    fail "Android app exited while waiting for its debug WebView socket (initial pid $PID)"
+    case "$PROCESS_EVIDENCE" in
+      process=replaced*)
+        fail "Android app restarted while waiting for its debug WebView socket (pid $PID; $PROCESS_EVIDENCE)"
+        ;;
+      process=absent*)
+        fail "Android app exited while waiting for its debug WebView socket (initial pid $PID; $PROCESS_EVIDENCE)"
+        ;;
+      *)
+        fail "Android app process probe failed while waiting for its debug WebView socket ($PROCESS_EVIDENCE status=$PROCESS_STATUS)"
+        ;;
+    esac
   fi
-  if [[ "$CURRENT_PID" != "$PID" ]]; then
-    android_startup_diagnostics_collect "$APP_ID" \
-      || echo "mobile-android-lifecycle-smoke: startup exit diagnostics collection failed" >&2
-    fail "Android app restarted while waiting for its debug WebView socket (pid $PID -> $CURRENT_PID)"
+  if [[ -z "$CURRENT_PID" ]]; then
+    sleep 1
+    continue
   fi
   SOCKET="$(find_webview_socket "$PID")"
   [[ -z "$SOCKET" ]] || break
