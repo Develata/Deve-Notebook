@@ -4,8 +4,11 @@ import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
 import { writeAndroidWritableEvidence } from "./lib/android-writable-evidence.mjs";
 import {
+  fetchCdpTargets,
   findStableAppPage,
   isExpectedCdpTargetRetirement,
+  reloadPageAndWaitForNewMainDocument,
+  remoteEntrySurfacePresent,
   visibleElement,
 } from "./lib/android-webview-cdp.mjs";
 import {
@@ -89,6 +92,7 @@ async function attachRemotePage() {
   const page = await findStableAppPage({
     cdpEndpoint,
     expectedOrigin: remoteOrigin,
+    requiredSurface: "remote-entry",
     withDeadline,
   });
   await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
@@ -114,9 +118,12 @@ async function observeRemoteGeneration(page, observations) {
   });
   await page.send("Network.enable");
   await page.send("Log.enable");
-  await page.send("Page.reload", { ignoreCache: true });
-  await waitUntil("RemoteBrowser DOM reload", () => page.call(() =>
-    Boolean(document.querySelector("[data-deve-sync-status]"))), 30000);
+  await reloadPageAndWaitForNewMainDocument(page, withDeadline, 30000);
+  await waitUntil(
+    "RemoteBrowser DOM reload",
+    () => page.call(remoteEntrySurfacePresent, remoteOrigin),
+    30000,
+  );
   await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
   await assertRemoteBridgeIsolation(page);
 }
@@ -132,13 +139,7 @@ async function assertRemoteBridgeIsolation(page) {
 }
 
 async function listCdpTargets() {
-  const response = await withDeadline(
-    "Android WebView target discovery",
-    fetch(`${cdpEndpoint}/json`),
-    10000,
-  );
-  if (!response.ok) throw new Error(`CDP target discovery returned ${response.status}`);
-  return response.json();
+  return fetchCdpTargets(cdpEndpoint, withDeadline, 10000);
 }
 
 async function readScope(page) {
@@ -204,7 +205,7 @@ async function main() {
     30000,
   );
   evaluateWritableProbeExpectation(true, capability);
-  await loginAndroidRemote(page, username, password, waitUntil);
+  await loginAndroidRemote(page, remoteOrigin, username, password, waitUntil);
   const stamp = Date.now();
   await createAndroidDocument(
     page,
@@ -229,7 +230,7 @@ async function main() {
   adbCommand("shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1");
   page = await attachRemotePage();
   await observeRemoteGeneration(page, observations);
-  await loginAndroidRemote(page, username, password, waitUntil);
+  await loginAndroidRemote(page, remoteOrigin, username, password, waitUntil);
   await assertRemoteBridgeIsolation(page);
   assert.equal(new URL(await page.call(() => location.href)).origin, new URL(remoteOrigin).origin);
   const remoteScope = await readScope(page);

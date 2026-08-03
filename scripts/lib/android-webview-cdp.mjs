@@ -13,6 +13,7 @@ export {
 const STABLE_PAGE_TIMEOUT_MS = 60_000;
 const PAGE_GENERATION_TIMEOUT_MS = 30_000;
 const DISCOVERY_POLL_INTERVAL_MS = 250;
+const REQUIRED_PAGE_SURFACES = new Set(["sync", "remote-entry"]);
 const DOCUMENT_READY_STATES = new Set(["loading", "interactive", "complete"]);
 const SYNC_STATUS_VALUES = new Set([
   "session-expired",
@@ -70,6 +71,72 @@ function readPageSnapshot() {
   };
 }
 
+export function remoteEntrySurfacePresent(expectedOrigin) {
+  try {
+    return location.origin === new URL(expectedOrigin).origin
+      && Boolean(document.querySelector("[data-deve-sync-status], #login-username"));
+  } catch {
+    return false;
+  }
+}
+
+export async function reloadPageAndWaitForNewMainDocument(
+  page,
+  withDeadline,
+  timeoutMs = 30_000,
+) {
+  await page.send("Page.enable", {}, timeoutMs);
+  const frameTree = await page.send("Page.getFrameTree", {}, timeoutMs);
+  const initialFrame = frameTree?.frameTree?.frame;
+  if (typeof initialFrame?.id !== "string" || typeof initialFrame?.loaderId !== "string") {
+    throw new Error("Android WebView main document identity unavailable before reload");
+  }
+
+  let removeListener = () => {};
+  let cancelNextDocument = () => {};
+  const nextDocument = new Promise((resolve) => {
+    cancelNextDocument = () => resolve(null);
+    removeListener = page.on("Page.frameNavigated", ({ frame }) => {
+      if (frame?.id === initialFrame.id
+        && !frame.parentId
+        && typeof frame.loaderId === "string"
+        && frame.loaderId !== initialFrame.loaderId) {
+        resolve(frame);
+      }
+    });
+  });
+  let boundedNextDocument;
+  try {
+    boundedNextDocument = Promise.resolve().then(() => withDeadline(
+      "Android WebView new main document",
+      nextDocument,
+      timeoutMs,
+    ));
+    const [, nextFrame] = await Promise.all([
+      page.send("Page.reload", { ignoreCache: true, loaderId: initialFrame.loaderId }, timeoutMs),
+      boundedNextDocument,
+    ]);
+    return nextFrame;
+  } finally {
+    removeListener();
+    cancelNextDocument();
+    await boundedNextDocument?.catch(() => {});
+  }
+}
+
+export async function fetchCdpTargets(cdpEndpoint, withDeadline, timeoutMs) {
+  const controller = new AbortController();
+  try {
+    return await withDeadline("Android WebView target discovery", (async () => {
+      const response = await fetch(`${cdpEndpoint}/json`, { signal: controller.signal });
+      if (!response.ok) throw new Error(`CDP target discovery returned ${response.status}`);
+      return response.json();
+    })(), timeoutMs);
+  } finally {
+    controller.abort();
+  }
+}
+
 function allowlistedEnum(value, allowed) {
   if (value == null) return null;
   return allowed.has(value) ? value : "unknown";
@@ -119,6 +186,11 @@ function snapshotMatchesOrigin(snapshot, expectedOrigin) {
   return snapshot.locationClass === (expectedOrigin ? "expected-origin" : "bundled-local");
 }
 
+function snapshotMatchesRequiredSurface(snapshot, requiredSurface) {
+  if (requiredSurface === "sync") return snapshot.syncMarkerPresent;
+  return snapshot.syncMarkerPresent || snapshot.loginMarkerPresent;
+}
+
 function retryableDiscoveryError(error) {
   const message = String(error?.message ?? error);
   return /CDP socket (closed|failed)|Inspected target navigated or closed|Android WebView target unavailable/i
@@ -155,7 +227,16 @@ function stableDeadlineError() {
   return error;
 }
 
-export async function findStableAppPage({ cdpEndpoint, withDeadline, expectedOrigin, testing }) {
+export async function findStableAppPage({
+  cdpEndpoint,
+  withDeadline,
+  expectedOrigin,
+  requiredSurface = "sync",
+  testing,
+}) {
+  if (!REQUIRED_PAGE_SURFACES.has(requiredSurface)) {
+    throw new Error(`unsupported Android WebView required surface: ${requiredSurface}`);
+  }
   const hooks = testing ?? {};
   const now = hooks.now ?? (() => performance.now());
   const sleep = hooks.sleep
@@ -165,11 +246,7 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, expectedOri
   const stableTimeoutMs = hooks.stableTimeoutMs ?? STABLE_PAGE_TIMEOUT_MS;
   const listTargets = async (timeoutMs) => {
     if (hooks.listTargets) return hooks.listTargets(timeoutMs);
-    return withDeadline("Android WebView target discovery", (async () => {
-      const response = await fetch(`${cdpEndpoint}/json`);
-      if (!response.ok) throw new Error(`CDP target discovery returned ${response.status}`);
-      return response.json();
-    })(), timeoutMs);
+    return fetchCdpTargets(cdpEndpoint, withDeadline, timeoutMs);
   };
 
   const deadline = now() + stableTimeoutMs;
@@ -259,13 +336,14 @@ export async function findStableAppPage({ cdpEndpoint, withDeadline, expectedOri
       } else if (now() - generationStartedAt >= generationTimeoutMs) {
         lastPageFailure = `renderer generation lease expired after ${generationTimeoutMs}ms`;
         await retirePage({ retireGeneration: true });
-      } else if (snapshot.syncMarkerPresent) {
+      } else if (snapshotMatchesRequiredSurface(snapshot, requiredSurface)) {
         await completeWithinDeadline((timeoutMs) => page.evaluate(
           `globalThis.__deveVisibleElement = ${visibleElement.toString()}`, timeoutMs,
         ));
         return page;
       } else {
-        lastPageFailure = `sync marker absent while document.readyState=${snapshot.readyState ?? "unknown"}`;
+        const marker = requiredSurface === "remote-entry" ? "remote entry marker" : "sync marker";
+        lastPageFailure = `${marker} absent while document.readyState=${snapshot.readyState ?? "unknown"}`;
       }
     } catch (error) {
       if (error?.code === "DEVE_ANDROID_CDP_STABLE_DEADLINE") {

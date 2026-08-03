@@ -42,6 +42,7 @@ function fakeClock() {
 
 function pageSnapshot({
   marker = false,
+  loginMarker = false,
   locationHref = "http://tauri.localhost/?token=secret-value#private",
   injectShortSecrets = false,
 } = {}) {
@@ -52,7 +53,7 @@ function pageSnapshot({
     title: "private note title",
     syncMarkerPresent: marker,
     syncStatus: injectShortSecrets ? "short-session" : marker ? "handshaking-repo" : null,
-    loginMarkerPresent: false,
+    loginMarkerPresent: loginMarker,
     nativeBootstrap: {
       present: true,
       serviceState: injectShortSecrets ? "tiny-token" : "endpoint_session_ready",
@@ -101,12 +102,12 @@ function discoveryArgs(testing) {
   };
 }
 
-function target(id = "page") {
+function target(id = "page", url = "http://tauri.localhost/") {
   return [{
     id,
     type: "page",
     title: "private target title",
-    url: "http://tauri.localhost/",
+    url,
     webSocketDebuggerUrl: `ws://android.test/${id}`,
   }];
 }
@@ -186,6 +187,53 @@ test("stable discovery keeps one healthy slow page generation attached", async (
   assert.equal(connections, 1);
   assert.equal(page.closed, 0);
   assert.equal(page.visibleHelperInstalled, 1);
+});
+
+test("login page admission requires the explicit RemoteBrowser entry surface", async () => {
+  await assert.rejects(
+    findStableAppPage({ ...discoveryArgs({}), requiredSurface: "login-only" }),
+    /unsupported Android WebView required surface/,
+  );
+
+  const rejectedClock = fakeClock();
+  const rejected = mockPage([pageSnapshot({
+    loginMarker: true,
+    locationHref: "https://remote.test/",
+  })]);
+  await assert.rejects(
+    findStableAppPage({
+      ...discoveryArgs({
+        ...rejectedClock,
+        listTargets: async () => target("remote-login", "https://remote.test/"),
+        connectPage: async () => rejected,
+        pollIntervalMs: 100,
+        generationTimeoutMs: 200,
+        stableTimeoutMs: 500,
+      }),
+      expectedOrigin: "https://remote.test",
+    }),
+    /renderer generation lease expired/,
+  );
+
+  const acceptedClock = fakeClock();
+  const accepted = mockPage([pageSnapshot({
+    loginMarker: true,
+    locationHref: "https://remote.test/",
+  })]);
+  const stable = await findStableAppPage({
+    ...discoveryArgs({
+      ...acceptedClock,
+      listTargets: async () => target("remote-login", "https://remote.test/"),
+      connectPage: async () => accepted,
+      pollIntervalMs: 100,
+      generationTimeoutMs: 200,
+      stableTimeoutMs: 500,
+    }),
+    expectedOrigin: "https://remote.test",
+    requiredSurface: "remote-entry",
+  });
+  assert.equal(stable, accepted);
+  assert.equal(accepted.visibleHelperInstalled, 1);
 });
 
 test("stable discovery retires a closed target and attaches its replacement", async () => {

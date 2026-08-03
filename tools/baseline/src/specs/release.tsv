@@ -789,6 +789,9 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/smoke-mobile-android-remote-browser.mjs	requiredSurface: "remote-entry"
+contains	scripts/smoke-mobile-android-remote-browser.mjs	page.call(remoteEntrySurfacePresent, remoteOrigin)
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10
 contains	scripts/lib/android-guest-service-readiness.sh	ANDROID_GUEST_SERVICE_STABLE_WINDOW_SECS=10
 contains	scripts/lib/android-guest-service-readiness.sh	shell settings get global device_provisioned

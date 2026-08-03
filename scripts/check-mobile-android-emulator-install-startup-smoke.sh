@@ -359,12 +359,11 @@ ensure_emulator_process_alive() {
     fail "owned Android emulator process exited unexpectedly"
   fi
 }
-
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 run node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 run node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
-run node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs"
+run node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
 run node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
 run node --test "$ROOT_DIR/scripts/mobile-android-emulator-journey.test.mjs"
 run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"

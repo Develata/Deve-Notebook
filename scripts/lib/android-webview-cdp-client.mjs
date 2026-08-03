@@ -76,6 +76,12 @@ export class CdpPage {
     const listeners = this.listeners.get(method) ?? [];
     listeners.push(listener);
     this.listeners.set(method, listeners);
+    return () => {
+      const current = this.listeners.get(method) ?? [];
+      const remaining = current.filter((candidate) => candidate !== listener);
+      if (remaining.length === 0) this.listeners.delete(method);
+      else this.listeners.set(method, remaining);
+    };
   }
 
   async evaluate(expression, timeoutMs) {
