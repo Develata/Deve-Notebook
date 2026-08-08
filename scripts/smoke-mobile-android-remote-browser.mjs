@@ -211,12 +211,13 @@ async function nativeInvoke(page, command, args = {}) {
   return outcome.value;
 }
 
-async function inputAndroidEditorText(content, _point, page) {
+async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
     delay,
-    waitForWritableEditor: (editorPage) =>
-      waitForWritableAndroidEditor(editorPage, waitUntil),
+    waitForWritableEditor: (editorPage, requiredDocId) =>
+      waitForWritableAndroidEditor(editorPage, waitUntil, 30000, requiredDocId),
     inputText: (value) => dispatchWebViewText(page, value),
+    expectedDocId,
   });
 }
 

@@ -68,13 +68,32 @@ export async function clickWebViewPoint(page, point) {
   });
 }
 
-export async function readEditorMountObservation(page) {
-  return page.call(() => {
-    const host = globalThis.__deveVisibleElement("[data-deve-editor-host=true]");
-    const codeHost = globalThis.__deveVisibleElement(
-      "[data-deve-editor-codemirror-host=true]",
-    );
-    const editor = globalThis.__deveVisibleElement(".cm-content");
+export async function readEditorMountObservation(page, expectedDocId = null) {
+  return page.call((requiredDocId) => {
+    const isVisible = (element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
+      .filter(isVisible);
+    const candidates = requiredDocId === null
+      ? visibleHosts
+      : visibleHosts.filter((candidate) =>
+        candidate.getAttribute("data-deve-editor-doc-id") === requiredDocId);
+    const host = candidates.length === 1
+      && (requiredDocId === null || visibleHosts.length === 1)
+      ? candidates[0]
+      : null;
+    const codeHost = host
+      ? [...host.querySelectorAll("[data-deve-editor-codemirror-host=true]")].find(isVisible)
+      : null;
+    const editor = codeHost
+      ? [...codeHost.querySelectorAll(".cm-content")].find(isVisible)
+      : null;
     const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
     const registry = globalThis.__deveSmokeEditorHostRegistry ??= {
       ids: new WeakMap(),
@@ -88,6 +107,8 @@ export async function readEditorMountObservation(page) {
     const rect = editor?.getBoundingClientRect();
     return {
       hostId,
+      docId: host?.getAttribute("data-deve-editor-doc-id") ?? null,
+      visibleHostCount: visibleHosts.length,
       openRequestId: host?.getAttribute("data-deve-editor-open-request-id") ?? null,
       point: rect
         ? {
@@ -102,7 +123,7 @@ export async function readEditorMountObservation(page) {
       bridgeReady: bootstrap?.editorBridgeReady === true,
       activeHostMatchesVisible: bootstrap?.activeHost === codeHost,
     };
-  });
+  }, expectedDocId);
 }
 
 export function sameEditorLoadSession(before, after) {
@@ -142,10 +163,39 @@ export async function proveSameBreakpointKeyboardResize(
   return { baseline, resized };
 }
 
-export async function focusEditor(page, { writable = true, requireFocused = true } = {}) {
-  const point = await page.call(() => {
-    const editor = globalThis.__deveVisibleElement(".cm-content");
+export async function focusEditor(
+  page,
+  { writable = true, requireFocused = true, expectedDocId = null } = {},
+) {
+  const point = await page.call((requiredDocId) => {
+    const isVisible = (element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
+      .filter(isVisible);
+    const candidates = requiredDocId === null
+      ? visibleHosts
+      : visibleHosts.filter((host) =>
+        host.getAttribute("data-deve-editor-doc-id") === requiredDocId);
+    if (candidates.length !== 1 || (requiredDocId !== null && visibleHosts.length !== 1)) {
+      return null;
+    }
+    const codeHost = [...candidates[0].querySelectorAll(
+      "[data-deve-editor-codemirror-host=true]",
+    )].find(isVisible);
+    const editor = codeHost
+      ? [...codeHost.querySelectorAll(".cm-content")].find(isVisible)
+      : null;
     if (!editor) return null;
+    if (requiredDocId !== null) {
+      const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
+      if (bootstrap?.editorBridgeReady !== true || bootstrap?.activeHost !== codeHost) return null;
+    }
     editor.focus();
     const selection = getSelection();
     const range = document.createRange();
@@ -160,20 +210,50 @@ export async function focusEditor(page, { writable = true, requireFocused = true
       devicePixelRatio: window.devicePixelRatio || 1,
       rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
     };
-  });
-  if (!point) throw new Error("visible CodeMirror editor not found");
-  const focusState = await page.call(() => ({
-    tag: document.activeElement?.tagName ?? null,
-    className: document.activeElement?.className ?? null,
-    contentEditable: document.activeElement?.getAttribute("contenteditable") ?? null,
-    activeEditor: document.activeElement?.classList?.contains("cm-content") ?? false,
-    visualViewportHeight: window.visualViewport?.height ?? null,
-  }));
+  }, expectedDocId);
+  if (!point) {
+    throw new Error(
+      expectedDocId === null
+        ? "visible CodeMirror editor not found"
+        : "exact document CodeMirror editor not admitted",
+    );
+  }
+  const focusState = await page.call((requiredDocId) => {
+    const active = document.activeElement;
+    const activeHost = active?.closest?.("[data-deve-editor-host=true]") ?? null;
+    const activeCodeHost = active?.closest?.("[data-deve-editor-codemirror-host=true]") ?? null;
+    const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
+    const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
+      .filter((host) => {
+        const style = getComputedStyle(host);
+        const rect = host.getBoundingClientRect();
+        return style.display !== "none"
+          && style.visibility !== "hidden"
+          && rect.width > 0
+          && rect.height > 0;
+      });
+    return {
+      tag: active?.tagName ?? null,
+      className: active?.className ?? null,
+      contentEditable: active?.getAttribute("contenteditable") ?? null,
+      activeEditor: active?.classList?.contains("cm-content") ?? false,
+      identityMatched: requiredDocId === null || (
+        visibleHosts.length === 1
+        && activeHost === visibleHosts[0]
+        && activeHost?.getAttribute("data-deve-editor-doc-id") === requiredDocId
+        && bootstrap?.editorBridgeReady === true
+        && bootstrap?.activeHost === activeCodeHost
+      ),
+      visualViewportHeight: window.visualViewport?.height ?? null,
+    };
+  }, expectedDocId);
   console.log(`mobile-android-webview: editor focus ${JSON.stringify({ point, focusState })}`);
-  if (requireFocused && !editorFocusMatchesMode(
-    focusState.contentEditable,
-    writable,
-    focusState.activeEditor,
+  if (requireFocused && (
+    !editorFocusMatchesMode(
+      focusState.contentEditable,
+      writable,
+      focusState.activeEditor,
+    ) || (expectedDocId !== null && !focusState.identityMatched)
   )) {
     throw new Error(
       `android_webview_editor_focus_mode_mismatch: ${JSON.stringify({ writable, focusState })}`,
@@ -189,12 +269,13 @@ export async function focusAndroidEditorInputConnection(
     delay,
     waitForWritableEditor,
     observeEditor = readEditorMountObservation,
+    expectedDocId = null,
   },
 ) {
   let lastFocusError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await waitForWritableEditor(page);
-    const before = await observeEditor(page);
+    await waitForWritableEditor(page, expectedDocId);
+    const before = await observeEditor(page, expectedDocId);
     if (!before?.point || !before.bridgeReady || !before.activeHostMatchesVisible) {
       lastFocusError = new Error(
         `android_webview_editor_input_session_unready: ${JSON.stringify({
@@ -207,8 +288,8 @@ export async function focusAndroidEditorInputConnection(
     }
     await tap(page, before.point);
     await delay(250);
-    await waitForWritableEditor(page);
-    const after = await observeEditor(page);
+    await waitForWritableEditor(page, expectedDocId);
+    const after = await observeEditor(page, expectedDocId);
     if (!sameEditorLoadSession(before, after)) {
       lastFocusError = new Error(
         `android_webview_editor_input_session_changed: ${JSON.stringify({
@@ -223,8 +304,15 @@ export async function focusAndroidEditorInputConnection(
       continue;
     }
     try {
-      await focusEditor(page);
-      return;
+      await focusEditor(page, { expectedDocId });
+      const focused = await observeEditor(page, expectedDocId);
+      if (!sameEditorLoadSession(after, focused)
+        || !focused?.activeEditor
+        || !focused.bridgeReady
+        || !focused.activeHostMatchesVisible) {
+        throw new Error("exact editor session changed while establishing focus");
+      }
+      return focused;
     } catch (error) {
       lastFocusError = error;
       await delay(250);
@@ -242,45 +330,91 @@ export async function typeAndroidEditorText(
     waitForWritableEditor,
     inputText,
     observeEditor = readEditorMountObservation,
+    expectedDocId = null,
   },
 ) {
-  await focusAndroidEditorInputConnection(page, {
-    tap,
-    delay,
-    waitForWritableEditor,
-    observeEditor,
-  });
-  // Android WebView can report DOM focus before its native input connection
-  // has settled after a real pointer gesture.
-  await delay(300);
+  let settled = false;
+  for (let attempt = 0; attempt < 2 && !settled; attempt += 1) {
+    const focused = await focusAndroidEditorInputConnection(page, {
+      tap,
+      delay,
+      waitForWritableEditor,
+      observeEditor,
+      expectedDocId,
+    });
+    // Android WebView can report DOM focus before its native input connection
+    // has settled after a real pointer gesture.
+    await delay(300);
+    await waitForWritableEditor(page, expectedDocId);
+    const afterSettle = await observeEditor(page, expectedDocId);
+    settled = sameEditorLoadSession(focused, afterSettle)
+      && afterSettle?.activeEditor
+      && afterSettle.bridgeReady
+      && afterSettle.activeHostMatchesVisible;
+  }
+  if (!settled) throw new Error("exact editor input session changed before text insertion");
   await inputText(content);
 }
 
-export async function typeEditor(page, content, waitUntil, inputText) {
-  const point = await focusEditor(page, { requireFocused: typeof inputText !== "function" });
+export async function typeEditor(
+  page,
+  content,
+  waitUntil,
+  inputText,
+  expectedDocId = null,
+) {
   if (typeof inputText === "function") {
-    await inputText(content, point, page);
+    // The native driver owns bounded focus/remount recovery. A redundant
+    // one-shot DOM focus here would fail before that recovery can run.
+    await inputText(content, null, page, expectedDocId);
   } else {
+    await focusEditor(page, { expectedDocId });
     await page.send("Input.insertText", { text: content });
   }
   return waitUntil("editor input", () => page.call(
-    (expected) => {
+    (expected, requiredDocId) => {
+      if (requiredDocId !== null) {
+        const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
+          .filter((host) => {
+            const style = getComputedStyle(host);
+            const rect = host.getBoundingClientRect();
+            return style.display !== "none"
+              && style.visibility !== "hidden"
+              && rect.width > 0
+              && rect.height > 0;
+          });
+        const host = visibleHosts.length === 1
+          && visibleHosts[0].getAttribute("data-deve-editor-doc-id") === requiredDocId
+          ? visibleHosts[0]
+          : null;
+        const codeHost = host?.querySelector("[data-deve-editor-codemirror-host=true]");
+        const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
+        if (!host || bootstrap?.editorBridgeReady !== true || bootstrap?.activeHost !== codeHost) {
+          return null;
+        }
+      }
       const observed = window.getEditorContent?.();
       return observed?.includes(expected) ? observed : null;
     },
     content,
+    expectedDocId,
   ), 5000).catch(async (error) => {
-    const observed = await page.call(() => ({
-      bridge: window.getEditorContent?.() ?? null,
-      dom: globalThis.__deveVisibleElement?.(".cm-content")?.textContent ?? null,
-      activeClass: document.activeElement?.className ?? null,
-      activeEditable: document.activeElement?.getAttribute?.("contenteditable") ?? null,
-      activeHostConnected: globalThis.__deveWebBridge
-        ?.get?.("__deveEditorBootstrap")?.activeHost?.isConnected ?? null,
-      activeHostMatchesVisible: globalThis.__deveWebBridge
-        ?.get?.("__deveEditorBootstrap")?.activeHost
-        === globalThis.__deveVisibleElement?.("[data-deve-editor-codemirror-host=true]"),
-    })).catch(() => null);
+    const observed = await page.call((requiredDocId) => {
+      const active = document.activeElement;
+      const activeHost = active?.closest?.("[data-deve-editor-host=true]") ?? null;
+      const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
+      return {
+        bridge: window.getEditorContent?.() ?? null,
+        dom: activeHost?.querySelector(".cm-content")?.textContent ?? null,
+        activeClass: active?.className ?? null,
+        activeEditable: active?.getAttribute?.("contenteditable") ?? null,
+        activeHostConnected: bootstrap?.activeHost?.isConnected ?? null,
+        activeDocIdMatched: requiredDocId === null
+          || activeHost?.getAttribute("data-deve-editor-doc-id") === requiredDocId,
+        activeHostMatchesVisible: bootstrap?.activeHost
+          === active?.closest?.("[data-deve-editor-codemirror-host=true]"),
+      };
+    }, expectedDocId).catch(() => null);
     throw new Error(
       `android_webview_input_injection_unavailable: ${error.message}; observed=${JSON.stringify(observed)}`,
     );

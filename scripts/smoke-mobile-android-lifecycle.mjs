@@ -100,16 +100,23 @@ async function focusWebViewEditorAtPoint(_point, page) {
   });
 }
 
-async function inputAndroidEditorText(content, _point, page) {
+async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
     delay,
     waitForWritableEditor,
     inputText: (value) => dispatchWebViewText(page, value),
+    expectedDocId,
   });
 }
 
-async function waitForWritableEditor(page, timeout = 30000) {
-  return waitForWritableAndroidEditor(page, waitUntil, timeout);
+async function waitForWritableEditor(page, expectedDocIdOrTimeout = null, timeout = 30000) {
+  const expectedDocId = typeof expectedDocIdOrTimeout === "string"
+    ? expectedDocIdOrTimeout
+    : null;
+  const deadline = typeof expectedDocIdOrTimeout === "number"
+    ? expectedDocIdOrTimeout
+    : timeout;
+  return waitForWritableAndroidEditor(page, waitUntil, deadline, expectedDocId);
 }
 
 async function reloadWithWebSocketDeliveryGate(page) {

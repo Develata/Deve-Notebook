@@ -172,8 +172,9 @@ test("WebView point click dispatches one complete primary-button gesture", async
   ]);
 });
 
-test("Android editor input establishes the native input connection before typing", async () => {
+test("Android editor input binds expected doc-id through native input connection", async () => {
   const point = { x: 24, y: 32 };
+  const expectedDocId = "00000000-0000-0000-0000-000000000007";
   const order = [];
   let callCount = 0;
   const page = {
@@ -186,6 +187,7 @@ test("Android editor input establishes the native input connection before typing
         className: "cm-content",
         contentEditable: "true",
         activeEditor: true,
+        identityMatched: true,
         visualViewportHeight: 600,
       };
     },
@@ -197,6 +199,7 @@ test("Android editor input establishes the native input connection before typing
     point,
     bridgeReady: true,
     activeHostMatchesVisible: true,
+    activeEditor: true,
   };
 
   await typeAndroidEditorText(page, "Android input", {
@@ -205,12 +208,17 @@ test("Android editor input establishes the native input connection before typing
       order.push("tap");
     },
     delay: async (milliseconds) => order.push(`delay:${milliseconds}`),
-    waitForWritableEditor: async (observedPage) => {
+    waitForWritableEditor: async (observedPage, requiredDocId) => {
       assert.equal(observedPage, page);
+      assert.equal(requiredDocId, expectedDocId);
       order.push("writable");
     },
-    observeEditor: async () => observation,
+    observeEditor: async (_page, requiredDocId) => {
+      assert.equal(requiredDocId, expectedDocId);
+      return observation;
+    },
     inputText: async (value) => order.push(`input:${value}`),
+    expectedDocId,
   });
 
   assert.deepEqual(order, [
@@ -220,6 +228,7 @@ test("Android editor input establishes the native input connection before typing
     "writable",
     "focus",
     "delay:300",
+    "writable",
     "input:Android input",
   ]);
 });
@@ -292,6 +301,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       point: newPoint,
       bridgeReady: true,
       activeHostMatchesVisible: true,
+      activeEditor: true,
     },
     {
       hostId: 8,
@@ -299,6 +309,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       point: newPoint,
       bridgeReady: true,
       activeHostMatchesVisible: true,
+      activeEditor: true,
     },
     {
       hostId: 8,
@@ -306,6 +317,23 @@ test("Android editor input reacquires a remounted editor before typing once", as
       point: newPoint,
       bridgeReady: true,
       activeHostMatchesVisible: true,
+      activeEditor: true,
+    },
+    {
+      hostId: 8,
+      openRequestId: "12",
+      point: newPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+      activeEditor: true,
+    },
+    {
+      hostId: 8,
+      openRequestId: "12",
+      point: newPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+      activeEditor: true,
     },
   ];
   const taps = [];

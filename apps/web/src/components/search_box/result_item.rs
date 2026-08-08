@@ -64,6 +64,8 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
     let action_clone = item.action.clone();
     let detail_clone = item.detail.clone();
     let action_marker = search_action_marker(&item.action);
+    let create_target_marker = search_action_create_target(&item.action);
+    let doc_id_marker = search_action_doc_id(&item.action);
     let title_marker = item.title.clone();
 
     view! {
@@ -76,6 +78,8 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
             )
             data-deve-search-result="true"
             data-deve-search-result-action=action_marker
+            data-deve-search-result-create-target=create_target_marker
+            data-deve-search-result-doc-id=doc_id_marker
             data-deve-search-result-title=title_marker
             on:click=move |_| {
                 if !is_selectable {
@@ -132,5 +136,47 @@ fn search_action_marker(action: &SearchAction) -> &'static str {
         SearchAction::FileOp(_) => "file-op",
         SearchAction::InsertQuery(_) => "insert-query",
         SearchAction::Noop => "noop",
+    }
+}
+
+fn search_action_create_target(action: &SearchAction) -> Option<String> {
+    match action {
+        SearchAction::CreateDoc(path) => Some(path.clone()),
+        _ => None,
+    }
+}
+
+fn search_action_doc_id(action: &SearchAction) -> Option<String> {
+    match action {
+        SearchAction::OpenDoc(doc_id) => Some(doc_id.to_string()),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{search_action_create_target, search_action_doc_id};
+    use crate::components::search_box::types::SearchAction;
+    use deve_core::models::DocId;
+
+    #[test]
+    fn search_action_identity_markers_follow_typed_action_payloads() {
+        let doc_id = DocId::from_u128(7);
+        assert_eq!(
+            search_action_create_target(&SearchAction::CreateDoc("notes/exact.md".into())),
+            Some("notes/exact.md".into())
+        );
+        assert_eq!(
+            search_action_doc_id(&SearchAction::OpenDoc(doc_id)),
+            Some(doc_id.to_string())
+        );
+        assert_eq!(
+            search_action_create_target(&SearchAction::OpenDoc(doc_id)),
+            None
+        );
+        assert_eq!(
+            search_action_doc_id(&SearchAction::CreateDoc("notes/exact.md".into())),
+            None
+        );
     }
 }

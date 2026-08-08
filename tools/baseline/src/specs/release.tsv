@@ -789,7 +789,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
 contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation exceeded the
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed

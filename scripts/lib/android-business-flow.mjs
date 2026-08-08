@@ -5,6 +5,7 @@ import {
   typeEditor,
 } from "./mobile-webview-interaction.mjs";
 import { commitSourceControlChange } from "./mobile-source-control-interaction.mjs";
+import { createAndSelectAndroidDocument } from "./android-document-create-flow.mjs";
 
 export async function dispatchWebViewText(page, value) {
   if (!/^[A-Za-z0-9 _-]+$/.test(value)) {
@@ -48,20 +49,50 @@ export async function fillVisible(page, selector, value) {
   if (!filled) throw new Error(`visible form field not found: ${selector}`);
 }
 
-export async function waitForWritableEditor(page, waitUntil, timeout = 30000) {
-  await waitUntil("visible Android editor", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement("[data-deve-editor-host=true]"))), timeout);
-  await waitUntil("writable Android editor", () => page.call(() => {
-    const host = globalThis.__deveVisibleElement("[data-deve-editor-host=true]");
-    const codeHost = globalThis.__deveVisibleElement("[data-deve-editor-codemirror-host=true]");
-    const content = globalThis.__deveVisibleElement(".cm-content");
+export async function waitForWritableEditor(
+  page,
+  waitUntil,
+  timeout = 30000,
+  expectedDocId = null,
+) {
+  const readAdmission = (requiredDocId) => {
+    const isVisible = (element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
+      .filter(isVisible);
+    const candidates = requiredDocId === null
+      ? visibleHosts
+      : visibleHosts.filter((host) =>
+        host.getAttribute("data-deve-editor-doc-id") === requiredDocId);
+    if (candidates.length !== 1 || (requiredDocId !== null && visibleHosts.length !== 1)) {
+      return { visible: false, writable: false };
+    }
+    const host = candidates[0];
+    const codeHost = [...host.querySelectorAll("[data-deve-editor-codemirror-host=true]")]
+      .find(isVisible);
+    const content = codeHost
+      ? [...codeHost.querySelectorAll(".cm-content")].find(isVisible)
+      : null;
     const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
-    return host?.getAttribute("data-deve-editor-readonly") === "false"
+    return {
+      visible: true,
+      writable: host.getAttribute("data-deve-editor-readonly") === "false"
       && content?.getAttribute("contenteditable") === "true"
       && codeHost?.isConnected === true
       && bootstrap?.editorBridgeReady === true
-      && bootstrap?.activeHost === codeHost;
-  }), timeout);
+      && bootstrap?.activeHost === codeHost,
+    };
+  };
+  await waitUntil("visible Android editor", async () =>
+    (await page.call(readAdmission, expectedDocId)).visible, timeout);
+  await waitUntil("writable Android editor", async () =>
+    (await page.call(readAdmission, expectedDocId)).writable, timeout);
 }
 
 export function readRemoteEntryState(expectedOrigin) {
@@ -177,25 +208,21 @@ export async function createAndroidDocument(
   content,
   { waitUntil, inputEditorText },
 ) {
-  const mobile = await page.call(() =>
-    Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
-  if (mobile) {
-    await openMobileSidebarView(page, "explorer", {
-      click: clickVisible,
-      waitUntil,
-    });
-  }
-  await clickVisible(page, "[data-deve-new-doc-button=true]");
-  await waitUntil("new document input", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement("[data-deve-search-input=true]"))));
-  await fillVisible(page, "[data-deve-search-input=true]", `+${path}`);
-  await waitUntil("create document action", () => page.call(() =>
-    Boolean(globalThis.__deveVisibleElement('[data-deve-search-result-action="create-doc"]'))));
-  await clickVisible(page, '[data-deve-search-result-action="create-doc"]');
-  await waitForWritableEditor(page, waitUntil);
+  const selected = await createAndSelectAndroidDocument(page, path, {
+    waitUntil,
+    click: clickVisible,
+    fill: fillVisible,
+  });
+  await waitForWritableEditor(page, waitUntil, 30000, selected.docId);
   await waitUntil("editor bridge", () => page.call(() =>
     typeof window.getEditorContent === "function" && typeof window.getEditorContent() === "string"));
-  const observedContent = await typeEditor(page, content, waitUntil, inputEditorText);
+  const observedContent = await typeEditor(
+    page,
+    content,
+    waitUntil,
+    inputEditorText,
+    selected.docId,
+  );
   await waitUntil("Android edit ack", async () => (await readPendingAckCount(page)) === 0);
   return observedContent;
 }

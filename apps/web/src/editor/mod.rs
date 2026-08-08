@@ -102,6 +102,7 @@ pub fn Editor(
                 <div
                     data-deve-desktop-col="3-editor"
                     data-deve-editor-host="true"
+                    data-deve-editor-doc-id=doc_id.to_string()
                     data-deve-editor-readonly=move || editor_readonly.get().to_string()
                     data-deve-editor-open-request-id=move || open_request_id.get().to_string()
                     class="flex-1 relative border-r border-[var(--border-default)] bg-[var(--bg-editor)] shadow-sm overflow-hidden"
