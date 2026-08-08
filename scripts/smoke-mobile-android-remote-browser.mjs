@@ -24,6 +24,7 @@ import {
   probeAndroidAppProcess,
   waitForAnchoredAndroidAppProcessExit,
 } from "./lib/android-app-process-observation.mjs";
+import { androidLogcatContains } from "./lib/android-logcat-observation.mjs";
 import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
@@ -66,6 +67,15 @@ function appPid(probeTimeoutMs = remainingMs()) {
     serial,
     appId,
     timeoutMs: Math.min(remainingMs(), probeTimeoutMs),
+  });
+}
+
+function logcatContains(pattern) {
+  return androidLogcatContains({
+    adb,
+    serial,
+    pattern,
+    timeoutMs: Math.min(remainingMs(), 10_000),
   });
 }
 
@@ -271,10 +281,9 @@ async function main() {
     probe: appPid,
     delay,
   });
-  const preRecoveryLog = adbOutput("logcat", "-d");
-  assert.doesNotMatch(
-    preRecoveryLog,
-    /deve_mobile .*LocalBackend/,
+  assert.equal(
+    await logcatContains(/deve_mobile .*LocalBackend/),
+    false,
     "preference-driven RemoteBrowser must not start LocalBackend before native intent",
   );
   tapNativeRecoveryControl();
@@ -335,6 +344,11 @@ async function main() {
   assert.equal(transition.localWindowCreated, true);
   assert.equal(transition.activeRuntimeOwners, 1);
   assert.equal(transition.lastError, null);
+  assert.equal(
+    await logcatContains(/deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime/),
+    true,
+    "native recovery must emit its bounded LocalBackend completion diagnostic",
+  );
   const localPid = await observeAnchoredAndroidAppProcess(expectedAppPid, {
     probe: appPid,
     delay,

@@ -47,6 +47,9 @@ test("Android RemoteBrowser smoke proves business flow, zero IPC, and native loc
   assert.match(browserSource, /page\.call\(remoteEntrySurfacePresent, remoteOrigin\)/);
   assert.match(browserSource, /reloadPageAndWaitForNewMainDocument/);
   assert.match(browserSource, /typeAndroidEditorText/);
+  assert.match(browserSource, /androidLogcatContains/);
+  assert.match(browserSource, /RemoteBrowser recovered to fresh LocalBackend runtime/);
+  assert.doesNotMatch(browserSource, /adbOutput\("logcat", "-d"\)/);
   assert.match(
     browserSource,
     /inputEditorText:\s*inputAndroidEditorText/,
@@ -65,7 +68,7 @@ test("Android RemoteBrowser host smoke is preference-driven and target-qualified
     hostSource,
     /shell "run-as \$APP_ID sh -c 'echo \$PREFERENCE_BASE64 \| base64 -d > native-backend\.json'"/,
   );
-  assert.match(hostSource, /recovered to fresh LocalBackend runtime/);
+  assert.doesNotMatch(hostSource, /LOGCAT="\$\(adb_cmd logcat -d/);
   assert.match(hostSource, /DEVE_MOBILE_ANDROID_EXPECTED_APP_PID="\$PID"/);
   assert.match(
     hostSource,

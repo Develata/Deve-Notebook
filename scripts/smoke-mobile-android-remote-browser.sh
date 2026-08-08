@@ -164,9 +164,5 @@ else
   exit "$JOURNEY_STATUS"
 fi
 
-LOGCAT="$(adb_cmd logcat -d 2>/dev/null | tr -d '\r')"
-printf '%s\n' "$LOGCAT" \
-  | grep -F "deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime" >/dev/null \
-  || fail "native recovery did not establish a fresh LocalBackend runtime"
 echo "mobile-android-remote-browser-smoke: app_id=$APP_ID serial=$SERIAL pid=$PID"
 echo "mobile-android-remote-browser-smoke: ok"
