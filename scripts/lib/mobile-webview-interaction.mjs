@@ -74,6 +74,7 @@ export async function readEditorMountObservation(page) {
     const codeHost = globalThis.__deveVisibleElement(
       "[data-deve-editor-codemirror-host=true]",
     );
+    const editor = globalThis.__deveVisibleElement(".cm-content");
     const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
     const registry = globalThis.__deveSmokeEditorHostRegistry ??= {
       ids: new WeakMap(),
@@ -84,9 +85,16 @@ export async function readEditorMountObservation(page) {
       hostId = registry.ids.get(host) ?? registry.nextId++;
       registry.ids.set(host, hostId);
     }
+    const rect = editor?.getBoundingClientRect();
     return {
       hostId,
       openRequestId: host?.getAttribute("data-deve-editor-open-request-id") ?? null,
+      point: rect
+        ? {
+            x: rect.left + Math.min(24, rect.width / 2),
+            y: rect.top + Math.min(24, rect.height / 2),
+          }
+        : null,
       viewportWidth: window.innerWidth,
       innerHeight: window.innerHeight,
       visualViewportHeight: window.visualViewport?.height ?? window.innerHeight,
@@ -161,7 +169,7 @@ export async function focusEditor(page, { writable = true, requireFocused = true
     activeEditor: document.activeElement?.classList?.contains("cm-content") ?? false,
     visualViewportHeight: window.visualViewport?.height ?? null,
   }));
-  console.log(`mobile-android-lifecycle: editor focus ${JSON.stringify({ point, focusState })}`);
+  console.log(`mobile-android-webview: editor focus ${JSON.stringify({ point, focusState })}`);
   if (requireFocused && !editorFocusMatchesMode(
     focusState.contentEditable,
     writable,
@@ -172,6 +180,80 @@ export async function focusEditor(page, { writable = true, requireFocused = true
     );
   }
   return point;
+}
+
+export async function focusAndroidEditorInputConnection(
+  page,
+  {
+    tap = clickWebViewPoint,
+    delay,
+    waitForWritableEditor,
+    observeEditor = readEditorMountObservation,
+  },
+) {
+  let lastFocusError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await waitForWritableEditor(page);
+    const before = await observeEditor(page);
+    if (!before?.point || !before.bridgeReady || !before.activeHostMatchesVisible) {
+      lastFocusError = new Error(
+        `android_webview_editor_input_session_unready: ${JSON.stringify({
+          hostId: before?.hostId ?? null,
+          openRequestId: before?.openRequestId ?? null,
+        })}`,
+      );
+      await delay(250);
+      continue;
+    }
+    await tap(page, before.point);
+    await delay(250);
+    await waitForWritableEditor(page);
+    const after = await observeEditor(page);
+    if (!sameEditorLoadSession(before, after)) {
+      lastFocusError = new Error(
+        `android_webview_editor_input_session_changed: ${JSON.stringify({
+          before: { hostId: before.hostId, openRequestId: before.openRequestId },
+          after: {
+            hostId: after?.hostId ?? null,
+            openRequestId: after?.openRequestId ?? null,
+          },
+        })}`,
+      );
+      await delay(250);
+      continue;
+    }
+    try {
+      await focusEditor(page);
+      return;
+    } catch (error) {
+      lastFocusError = error;
+      await delay(250);
+    }
+  }
+  throw lastFocusError;
+}
+
+export async function typeAndroidEditorText(
+  page,
+  content,
+  {
+    tap = clickWebViewPoint,
+    delay,
+    waitForWritableEditor,
+    inputText,
+    observeEditor = readEditorMountObservation,
+  },
+) {
+  await focusAndroidEditorInputConnection(page, {
+    tap,
+    delay,
+    waitForWritableEditor,
+    observeEditor,
+  });
+  // Android WebView can report DOM focus before its native input connection
+  // has settled after a real pointer gesture.
+  await delay(300);
+  await inputText(content);
 }
 
 export async function typeEditor(page, content, waitUntil, inputText) {

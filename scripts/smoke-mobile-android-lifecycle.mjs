@@ -11,10 +11,11 @@ import {
   visibleElement,
 } from "./lib/android-webview-cdp.mjs";
 import {
-  clickWebViewPoint,
+  focusAndroidEditorInputConnection,
   focusEditor,
   proveSameBreakpointKeyboardResize,
   readPendingAckCount,
+  typeAndroidEditorText,
   typeEditor,
 } from "./lib/mobile-webview-interaction.mjs";
 import {
@@ -92,30 +93,19 @@ function adbCommand(...args) {
   });
 }
 
-async function focusWebViewEditorAtPoint(point, page) {
-  let lastFocusError;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await clickWebViewPoint(page, point);
-    await delay(250);
-    await waitForWritableEditor(page);
-    try {
-      await focusEditor(page);
-      lastFocusError = null;
-      break;
-    } catch (error) {
-      lastFocusError = error;
-      await delay(250);
-    }
-  }
-  if (lastFocusError) throw lastFocusError;
+async function focusWebViewEditorAtPoint(_point, page) {
+  return focusAndroidEditorInputConnection(page, {
+    delay,
+    waitForWritableEditor,
+  });
 }
 
-async function inputAndroidEditorText(content, point, page) {
-  await focusWebViewEditorAtPoint(point, page);
-  // Android WebView can report DOM focus before its input connection has
-  // settled after an adb tap. Let it settle, then dispatch keyboard characters.
-  await delay(300);
-  await dispatchWebViewText(page, content);
+async function inputAndroidEditorText(content, _point, page) {
+  return typeAndroidEditorText(page, content, {
+    delay,
+    waitForWritableEditor,
+    inputText: (value) => dispatchWebViewText(page, value),
+  });
 }
 
 async function waitForWritableEditor(page, timeout = 30000) {

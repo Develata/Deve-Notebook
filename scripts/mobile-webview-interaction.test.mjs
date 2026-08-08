@@ -9,6 +9,7 @@ import {
   sameEditorLoadSession,
   sourceControlCommitAcknowledged,
   sourceControlCommitReady,
+  typeAndroidEditorText,
   typeAndroidTextField,
 } from "./lib/mobile-webview-interaction.mjs";
 import { focusEditor } from "./lib/mobile-webview-interaction.mjs";
@@ -169,6 +170,173 @@ test("WebView point click dispatches one complete primary-button gesture", async
       params: { type: "mouseReleased", x: 24, y: 32, button: "left", clickCount: 1 },
     },
   ]);
+});
+
+test("Android editor input establishes the native input connection before typing", async () => {
+  const point = { x: 24, y: 32 };
+  const order = [];
+  let callCount = 0;
+  const page = {
+    async call() {
+      callCount += 1;
+      if (callCount === 1) return point;
+      order.push("focus");
+      return {
+        tag: "DIV",
+        className: "cm-content",
+        contentEditable: "true",
+        activeEditor: true,
+        visualViewportHeight: 600,
+      };
+    },
+  };
+
+  const observation = {
+    hostId: 7,
+    openRequestId: "11",
+    point,
+    bridgeReady: true,
+    activeHostMatchesVisible: true,
+  };
+
+  await typeAndroidEditorText(page, "Android input", {
+    tap: async (_page, observedPoint) => {
+      assert.deepEqual(observedPoint, point);
+      order.push("tap");
+    },
+    delay: async (milliseconds) => order.push(`delay:${milliseconds}`),
+    waitForWritableEditor: async (observedPage) => {
+      assert.equal(observedPage, page);
+      order.push("writable");
+    },
+    observeEditor: async () => observation,
+    inputText: async (value) => order.push(`input:${value}`),
+  });
+
+  assert.deepEqual(order, [
+    "writable",
+    "tap",
+    "delay:250",
+    "writable",
+    "focus",
+    "delay:300",
+    "input:Android input",
+  ]);
+});
+
+test("Android editor input fails closed after bounded focus retries", async () => {
+  const point = { x: 24, y: 32 };
+  let callCount = 0;
+  let taps = 0;
+  let writableChecks = 0;
+  let inputs = 0;
+  const page = {
+    async call() {
+      callCount += 1;
+      return callCount % 2 === 1
+        ? point
+        : {
+            tag: "BODY",
+            className: "",
+            contentEditable: null,
+            activeEditor: false,
+            visualViewportHeight: 600,
+          };
+    },
+  };
+
+  const observation = {
+    hostId: 7,
+    openRequestId: "11",
+    point,
+    bridgeReady: true,
+    activeHostMatchesVisible: true,
+  };
+
+  await assert.rejects(
+    typeAndroidEditorText(page, "must not type", {
+      tap: async () => {
+        taps += 1;
+      },
+      delay: async () => {},
+      waitForWritableEditor: async () => {
+        writableChecks += 1;
+      },
+      observeEditor: async () => observation,
+      inputText: async () => {
+        inputs += 1;
+      },
+    }),
+    /android_webview_editor_focus_mode_mismatch/,
+  );
+
+  assert.equal(taps, 3);
+  assert.equal(writableChecks, 6);
+  assert.equal(inputs, 0);
+});
+
+test("Android editor input reacquires a remounted editor before typing once", async () => {
+  const oldPoint = { x: 24, y: 32 };
+  const newPoint = { x: 48, y: 64 };
+  const observations = [
+    {
+      hostId: 7,
+      openRequestId: "11",
+      point: oldPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+    },
+    {
+      hostId: 8,
+      openRequestId: "12",
+      point: newPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+    },
+    {
+      hostId: 8,
+      openRequestId: "12",
+      point: newPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+    },
+    {
+      hostId: 8,
+      openRequestId: "12",
+      point: newPoint,
+      bridgeReady: true,
+      activeHostMatchesVisible: true,
+    },
+  ];
+  const taps = [];
+  const inputs = [];
+  let callCount = 0;
+  const page = {
+    async call() {
+      callCount += 1;
+      return callCount === 1
+        ? newPoint
+        : {
+            tag: "DIV",
+            className: "cm-content",
+            contentEditable: "true",
+            activeEditor: true,
+            visualViewportHeight: 600,
+          };
+    },
+  };
+
+  await typeAndroidEditorText(page, "after remount", {
+    tap: async (_page, point) => taps.push(point),
+    delay: async () => {},
+    waitForWritableEditor: async () => {},
+    observeEditor: async () => observations.shift(),
+    inputText: async (value) => inputs.push(value),
+  });
+
+  assert.deepEqual(taps, [oldPoint, newPoint]);
+  assert.deepEqual(inputs, ["after remount"]);
+  assert.equal(observations.length, 0);
 });
 
 test("Android text field can delegate insertion to a WebView input driver", async () => {

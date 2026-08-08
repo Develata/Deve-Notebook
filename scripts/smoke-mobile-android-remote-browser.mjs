@@ -17,7 +17,9 @@ import {
   dispatchWebViewText,
   exerciseAndroidLastRepoRemoval,
   loginAndroidRemote,
+  waitForWritableEditor as waitForWritableAndroidEditor,
 } from "./lib/android-business-flow.mjs";
+import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
@@ -191,6 +193,15 @@ async function nativeInvoke(page, command, args = {}) {
   return outcome.value;
 }
 
+async function inputAndroidEditorText(content, _point, page) {
+  return typeAndroidEditorText(page, content, {
+    delay,
+    waitForWritableEditor: (editorPage) =>
+      waitForWritableAndroidEditor(editorPage, waitUntil),
+    inputText: (value) => dispatchWebViewText(page, value),
+  });
+}
+
 async function main() {
   if (!cdpEndpoint || !remoteOrigin || !username || !password || !adb || !serial) {
     throw new Error("CDP endpoint, remote origin, credentials, adb, and serial are required");
@@ -213,7 +224,7 @@ async function main() {
     `Android RemoteBrowser smoke ${stamp}`,
     {
       waitUntil,
-      inputEditorText: async (content) => dispatchWebViewText(page, content),
+      inputEditorText: inputAndroidEditorText,
     },
   );
   await commitAndroidChange(page, `android remote smoke ${stamp}`, { waitUntil, delay });

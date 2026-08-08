@@ -46,6 +46,12 @@ test("Android RemoteBrowser smoke proves business flow, zero IPC, and native loc
   assert.match(browserSource, /requiredSurface:\s*"remote-entry"/);
   assert.match(browserSource, /page\.call\(remoteEntrySurfacePresent, remoteOrigin\)/);
   assert.match(browserSource, /reloadPageAndWaitForNewMainDocument/);
+  assert.match(browserSource, /typeAndroidEditorText/);
+  assert.match(
+    browserSource,
+    /inputEditorText:\s*inputAndroidEditorText/,
+    "RemoteBrowser must establish the same native editor input connection as LocalBackend",
+  );
 });
 
 test("Android RemoteBrowser host smoke is preference-driven and target-qualified", () => {
