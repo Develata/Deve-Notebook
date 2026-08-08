@@ -789,7 +789,9 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
+contains	scripts/android-app-process-observation.test.mjs	anchored Android process observation samples twice before continued-absence failure
 contains	scripts/smoke-mobile-android-remote-browser.mjs	requiredSurface: "remote-entry"
 contains	scripts/smoke-mobile-android-remote-browser.mjs	page.call(remoteEntrySurfacePresent, remoteOrigin)
 contains	scripts/lib/android-emulator-boot-readiness.sh	ANDROID_EMULATOR_BOOT_PROBE_MAX_SECS=10

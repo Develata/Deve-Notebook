@@ -142,17 +142,27 @@ done
 FORWARD_PORT="$(adb_cmd forward tcp:0 "localabstract:${SOCKET#@}" | tr -d '\r')"
 [[ "$FORWARD_PORT" =~ ^[0-9]+$ ]] || fail "adb did not allocate a CDP port"
 
-DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
+if DEVE_MOBILE_ANDROID_CDP_ENDPOINT="http://127.0.0.1:$FORWARD_PORT" \
 DEVE_MOBILE_ANDROID_ADB_BIN="$(adb_bin)" \
 DEVE_MOBILE_ANDROID_SERIAL="$SERIAL" \
 DEVE_MOBILE_ANDROID_APP_ID="$APP_ID" \
+DEVE_MOBILE_ANDROID_EXPECTED_APP_PID="$PID" \
 DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$REMOTE_ORIGIN" \
 DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$USERNAME" \
 DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$PASSWORD" \
 DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
 DEVE_MOBILE_ANDROID_EVIDENCE_PATH="$EVIDENCE_PATH" \
 DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS="$(((GLOBAL_DEADLINE - SECONDS) * 1000))" \
-timeout "$((GLOBAL_DEADLINE - SECONDS))" node "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.mjs"
+timeout "$((GLOBAL_DEADLINE - SECONDS))" \
+  node "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.mjs"; then
+  :
+else
+  JOURNEY_STATUS=$?
+  android_startup_diagnostics_collect "$APP_ID" \
+    || echo "mobile-android-remote-browser-smoke: journey diagnostics collection failed" >&2
+  echo "mobile-android-remote-browser-smoke: journey failed with status $JOURNEY_STATUS" >&2
+  exit "$JOURNEY_STATUS"
+fi
 
 LOGCAT="$(adb_cmd logcat -d 2>/dev/null | tr -d '\r')"
 printf '%s\n' "$LOGCAT" \

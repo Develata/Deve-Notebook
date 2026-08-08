@@ -19,6 +19,11 @@ import {
   loginAndroidRemote,
   waitForWritableEditor as waitForWritableAndroidEditor,
 } from "./lib/android-business-flow.mjs";
+import {
+  observeAnchoredAndroidAppProcess,
+  probeAndroidAppProcess,
+  waitForAnchoredAndroidAppProcessExit,
+} from "./lib/android-app-process-observation.mjs";
 import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
@@ -31,6 +36,7 @@ const evidencePath = process.env.DEVE_MOBILE_ANDROID_EVIDENCE_PATH;
 const adb = process.env.DEVE_MOBILE_ANDROID_ADB_BIN;
 const serial = process.env.DEVE_MOBILE_ANDROID_SERIAL;
 const appId = process.env.DEVE_MOBILE_ANDROID_APP_ID ?? "dev.deve.notebook.mobile";
+const expectedAppPid = process.env.DEVE_MOBILE_ANDROID_EXPECTED_APP_PID;
 const deadline = Date.now() + timeoutMs;
 
 function remainingMs() {
@@ -54,11 +60,13 @@ function adbOutput(...args) {
   }).replaceAll("\r", "");
 }
 
-function appPid() {
-  return adbOutput("shell", "sh", "-c", `pidof ${appId} 2>/dev/null || true`)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)[0] ?? "";
+function appPid(probeTimeoutMs = remainingMs()) {
+  return probeAndroidAppProcess({
+    adb,
+    serial,
+    appId,
+    timeoutMs: Math.min(remainingMs(), probeTimeoutMs),
+  });
 }
 
 async function withDeadline(label, promise, limit = remainingMs()) {
@@ -203,8 +211,11 @@ async function inputAndroidEditorText(content, _point, page) {
 }
 
 async function main() {
-  if (!cdpEndpoint || !remoteOrigin || !username || !password || !adb || !serial) {
-    throw new Error("CDP endpoint, remote origin, credentials, adb, and serial are required");
+  if (!cdpEndpoint || !remoteOrigin || !username || !password || !adb || !serial
+    || !/^[1-9][0-9]*$/.test(expectedAppPid ?? "")) {
+    throw new Error(
+      "CDP endpoint, remote origin, credentials, adb, serial, and admitted app PID are required",
+    );
   }
   assert.equal(new URL(remoteOrigin).protocol, "https:");
   const observations = { requests: [], consoleErrors: [] };
@@ -256,8 +267,10 @@ async function main() {
   assert.deepEqual(ipcRequests, []);
   assert.deepEqual(ipcCspErrors, []);
 
-  const remotePid = appPid();
-  assert.ok(remotePid, "RemoteBrowser process must remain running before local recovery");
+  const remotePid = await observeAnchoredAndroidAppProcess(expectedAppPid, {
+    probe: appPid,
+    delay,
+  });
   const preRecoveryLog = adbOutput("logcat", "-d");
   assert.doesNotMatch(
     preRecoveryLog,
@@ -322,7 +335,10 @@ async function main() {
   assert.equal(transition.localWindowCreated, true);
   assert.equal(transition.activeRuntimeOwners, 1);
   assert.equal(transition.lastError, null);
-  const localPid = appPid();
+  const localPid = await observeAnchoredAndroidAppProcess(expectedAppPid, {
+    probe: appPid,
+    delay,
+  });
   assert.equal(localPid, remotePid, "mobile recovery must not orphan or replace the app process");
   assert.notEqual(localRuntime.origin, remoteRuntime.origin);
   const authorityTupleChanged = remoteRuntime.origin !== localRuntime.origin
@@ -334,10 +350,13 @@ async function main() {
     if (!isExpectedCdpTargetRetirement(error)) throw error;
   });
   await page.close().catch(() => {});
-  const processExitedAfterGracefulShutdown = await waitUntil(
-    "Mobile LocalBackend graceful process exit",
-    () => appPid() === "",
-    30000,
+  const processExitedAfterGracefulShutdown = await waitForAnchoredAndroidAppProcessExit(
+    expectedAppPid,
+    {
+      probe: appPid,
+      delay,
+      timeoutMs: Math.min(remainingMs(), 30000),
+    },
   );
   const recovery = {
     transition,

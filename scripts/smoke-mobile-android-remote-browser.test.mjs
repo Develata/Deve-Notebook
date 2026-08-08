@@ -66,6 +66,11 @@ test("Android RemoteBrowser host smoke is preference-driven and target-qualified
     /shell "run-as \$APP_ID sh -c 'echo \$PREFERENCE_BASE64 \| base64 -d > native-backend\.json'"/,
   );
   assert.match(hostSource, /recovered to fresh LocalBackend runtime/);
+  assert.match(hostSource, /DEVE_MOBILE_ANDROID_EXPECTED_APP_PID="\$PID"/);
+  assert.match(
+    hostSource,
+    /node "\$ROOT_DIR\/scripts\/smoke-mobile-android-remote-browser\.mjs"; then[\s\S]*?JOURNEY_STATUS=\$\?[\s\S]*?android_startup_diagnostics_collect "\$APP_ID"[\s\S]*?diagnostics collection failed[\s\S]*?exit "\$JOURNEY_STATUS"/,
+  );
   assert.doesNotMatch(hostSource, /--remote-url/);
 });
 
