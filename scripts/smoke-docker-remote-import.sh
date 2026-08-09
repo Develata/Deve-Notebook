@@ -10,6 +10,8 @@ source "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh"
 source "$ROOT_DIR/scripts/lib/docker-remote-import-fixture.sh"
 # shellcheck source=scripts/lib/docker-remote-import-edge.sh
 source "$ROOT_DIR/scripts/lib/docker-remote-import-edge.sh"
+# shellcheck source=scripts/lib/docker-remote-import-stable-edge.sh
+source "$ROOT_DIR/scripts/lib/docker-remote-import-stable-edge.sh"
 # shellcheck source=scripts/lib/docker-remote-import-chrome-checkpoint.sh
 source "$ROOT_DIR/scripts/lib/docker-remote-import-chrome-checkpoint.sh"
 
@@ -214,12 +216,11 @@ DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_APP_CONTAINER="$(
 )"
 export DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_BASE_URL="http://127.0.0.1:$DEVE_REMOTE_IMPORT_WEBDAV_FAILURE_APP_PORT"
 
-remote_import_fixture_compose up -d deve-webdav
-remote_import_fixture_verify_candidate_container deve-webdav
-remote_import_fixture_wait_url webdav-candidate \
-  "http://127.0.0.1:$DEVE_REMOTE_IMPORT_WEBDAV_APP_PORT/api/node/role" 180
-remote_import_fixture_wait_container_url deve-webdav webdav-tunnel \
-  "$DEVE_REMOTE_IMPORT_WEBDAV_ORIGIN/$WEBDAV_PREFIX/" 240 60 PROPFIND
+remote_import_fixture_admit_stable_edge deve-webdav webdav \
+  "$DEVE_REMOTE_IMPORT_WEBDAV_ORIGIN" \
+  "$DEVE_REMOTE_IMPORT_WEBDAV_ORIGIN/$WEBDAV_PREFIX/" PROPFIND \
+  DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+  "http://127.0.0.1:$DEVE_REMOTE_IMPORT_WEBDAV_APP_PORT/api/node/role"
 
 export DEVE_REMOTE_IMPORT_WEBDAV_APP_CONTAINER
 DEVE_REMOTE_IMPORT_WEBDAV_APP_CONTAINER="$(remote_import_fixture_container_id deve-webdav)"
@@ -230,12 +231,11 @@ remote_import_fixture_stop_tunnel webdav_failure "$STATE_FILE"
 node "$ROOT_DIR/scripts/smoke-docker-remote-import.mjs" webdav
 remote_import_fixture_stop_tunnel webdav "$STATE_FILE"
 
-remote_import_fixture_compose up -d deve-s3
-remote_import_fixture_verify_candidate_container deve-s3
-remote_import_fixture_wait_url s3-candidate \
-  "http://127.0.0.1:$DEVE_REMOTE_IMPORT_S3_APP_PORT/api/node/role" 180
-remote_import_fixture_wait_container_url deve-s3 s3-tunnel \
-  "$DEVE_REMOTE_IMPORT_S3_ORIGIN/minio/health/live" 240 60
+remote_import_fixture_admit_stable_edge deve-s3 s3 \
+  "$DEVE_REMOTE_IMPORT_S3_ORIGIN" \
+  "$DEVE_REMOTE_IMPORT_S3_ORIGIN/minio/health/live" GET \
+  DEVE_REMOTE_IMPORT_S3_HOST DEVE_REMOTE_IMPORT_S3_EDGE_IP \
+  "http://127.0.0.1:$DEVE_REMOTE_IMPORT_S3_APP_PORT/api/node/role"
 export DEVE_REMOTE_IMPORT_S3_APP_CONTAINER
 DEVE_REMOTE_IMPORT_S3_APP_CONTAINER="$(remote_import_fixture_container_id deve-s3)"
 export DEVE_REMOTE_IMPORT_S3_BASE_URL="http://127.0.0.1:$DEVE_REMOTE_IMPORT_S3_APP_PORT"

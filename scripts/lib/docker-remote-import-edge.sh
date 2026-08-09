@@ -125,11 +125,24 @@ remote_import_edge_propagation_window_secs() {
   printf '%s\n' "$window"
 }
 
+remote_import_edge_is_excluded() {
+  local candidate_ip="$1"
+  local excluded_csv="${2:-}"
+  local excluded_ip
+  local -a excluded_ips=()
+  IFS=',' read -r -a excluded_ips <<<"$excluded_csv"
+  for excluded_ip in "${excluded_ips[@]}"; do
+    [[ -z "$excluded_ip" || "$candidate_ip" != "$excluded_ip" ]] || return 0
+  done
+  return 1
+}
+
 remote_import_edge_select_ipv4() {
   local label="$1"
   local origin="$2"
   local probe_url="$3"
   local method="$4"
+  local excluded_csv="${5:-}"
   local host
   host="$(remote_import_edge_validate_probe "$origin" "$probe_url" "$method")" \
     || return 1
@@ -151,6 +164,11 @@ remote_import_edge_select_ipv4() {
     sweep=$((sweep + 1))
     while read -r candidate_host candidate_ip; do
       [[ "$candidate_host" == "$host" && -n "$candidate_ip" ]] || continue
+      if remote_import_edge_is_excluded "$candidate_ip" "$excluded_csv"; then
+        printf 'docker-remote-import: skipping failed %s edge ip=%s\n' \
+          "$label" "$candidate_ip" >&2
+        continue
+      fi
       local -a curl_args=(
         --silent
         --show-error
@@ -180,11 +198,15 @@ remote_import_edge_select_ipv4() {
           || run_status=$?
         "$DEVE_REMOTE_IMPORT_DOCKER_BIN" rm -f "$probe_container" \
           >/dev/null 2>&1 || true
-        remaining="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" container ls -aq \
-          --filter "name=^${probe_container}$")" \
-          || remote_import_edge_fail "could not verify edge probe container cleanup"
-        [[ -z "$remaining" ]] \
-          || remote_import_edge_fail "edge probe container remained after cleanup"
+        if ! remaining="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" container ls -aq \
+          --filter "name=^${probe_container}$")"; then
+          remote_import_edge_fail "could not verify edge probe container cleanup"
+          return 1
+        fi
+        if [[ -n "$remaining" ]]; then
+          remote_import_edge_fail "edge probe container remained after cleanup"
+          return 1
+        fi
         status=""
         [[ ! -f "$probe_stdout" ]] || status="$(<"$probe_stdout")"
         if ((run_status == 0)) && [[ "$status" =~ ^2[0-9][0-9]$ ]]; then

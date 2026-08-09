@@ -170,22 +170,32 @@ remote_import_fixture_compose() {
 
 remote_import_fixture_verify_candidate() {
   local observed
-  observed="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" image inspect --format '{{.Id}}' "$DEVE_RELEASE_CANDIDATE_IMAGE")" \
-    || remote_import_fixture_fail "candidate image is unavailable"
-  [[ "$observed" == "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]] \
-    || remote_import_fixture_fail \
+  if ! observed="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" image inspect --format '{{.Id}}' "$DEVE_RELEASE_CANDIDATE_IMAGE")"; then
+    remote_import_fixture_fail "candidate image is unavailable"
+    return 1
+  fi
+  if [[ "$observed" != "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]]; then
+    remote_import_fixture_fail \
       "candidate image mismatch: expected=$DEVE_RELEASE_CANDIDATE_IMAGE_ID observed=$observed"
+    return 1
+  fi
 }
 
 remote_import_fixture_verify_candidate_container() {
   local service="$1"
   local container observed
-  container="$(remote_import_fixture_container_id "$service")"
-  observed="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" inspect --format '{{.Image}}' "$container")" \
-    || remote_import_fixture_fail "candidate container image is unavailable for $service"
-  [[ "$observed" == "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]] \
-    || remote_import_fixture_fail \
+  if ! container="$(remote_import_fixture_container_id "$service")"; then
+    return 1
+  fi
+  if ! observed="$("$DEVE_REMOTE_IMPORT_DOCKER_BIN" inspect --format '{{.Image}}' "$container")"; then
+    remote_import_fixture_fail "candidate container image is unavailable for $service"
+    return 1
+  fi
+  if [[ "$observed" != "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]]; then
+    remote_import_fixture_fail \
       "$service container image mismatch: expected=$DEVE_RELEASE_CANDIDATE_IMAGE_ID observed=$observed"
+    return 1
+  fi
 }
 
 remote_import_fixture_start_tunnel() {
@@ -340,6 +350,8 @@ remote_import_fixture_wait_container_url() {
   [[ "$method" == "GET" || "$method" == "PROPFIND" ]] \
     || remote_import_fixture_fail "candidate network probe method is invalid"
   local container probe_error status consecutive_successes=0
+  local longest_successes=0 success_samples=0 failure_samples=0
+  local status_530_samples=0 status_000_samples=0 other_failure_samples=0
   container="$(remote_import_fixture_container_id "$service")"
   probe_error="$(dirname -- "$(remote_import_fixture_state_file)")/${label}-probe.stderr.log"
   for _ in $(seq 1 "$attempts"); do
@@ -363,23 +375,40 @@ remote_import_fixture_wait_container_url() {
       "${curl_args[@]}" "$url" 2>"$probe_error" || true)"
     if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
       ((consecutive_successes += 1))
+      ((success_samples += 1))
       if ((consecutive_successes >= required_successes)); then
         rm -f -- "$probe_error"
         return 0
       fi
     else
+      ((consecutive_successes > longest_successes)) \
+        && longest_successes=$consecutive_successes
       consecutive_successes=0
+      ((failure_samples += 1))
+      case "$status" in
+        530) ((status_530_samples += 1)) ;;
+        000|"") ((status_000_samples += 1)) ;;
+        *) ((other_failure_samples += 1)) ;;
+      esac
     fi
     sleep 0.5
   done
+  ((consecutive_successes > longest_successes)) \
+    && longest_successes=$consecutive_successes
   remote_import_fixture_fail \
-    "timed out waiting for stable $label $method from candidate network (last HTTP status: ${status:-none}; consecutive successes: $consecutive_successes/$required_successes)"
+    "timed out waiting for stable $label $method from candidate network (last HTTP status: ${status:-none}; consecutive successes: $consecutive_successes/$required_successes; longest: $longest_successes; samples: 2xx=$success_samples failed=$failure_samples 530=$status_530_samples 000=$status_000_samples other=$other_failure_samples)"
 }
 
 remote_import_fixture_container_id() {
   local service="$1"
   local id
-  id="$(remote_import_fixture_compose ps -q "$service")"
-  [[ -n "$id" ]] || remote_import_fixture_fail "container id unavailable for $service"
+  if ! id="$(remote_import_fixture_compose ps -q "$service")"; then
+    remote_import_fixture_fail "container lookup failed for $service"
+    return 1
+  fi
+  if [[ -z "$id" ]]; then
+    remote_import_fixture_fail "container id unavailable for $service"
+    return 1
+  fi
   printf '%s\n' "$id"
 }

@@ -82,9 +82,29 @@ export function armExactCreateDocumentClickObservation(expectedPath, point) {
   }
   const previous = globalThis.__deveAndroidCreatePointerObservation;
   const token = Number.isSafeInteger(previous?.token) ? previous.token + 1 : 1;
-  const observation = { token, clicked: false, clickState: null, target, listener: null };
-  const listener = () => {
+  const observation = {
+    token,
+    expectedPath,
+    clicked: false,
+    blocked: false,
+    clickState: null,
+    documentRoot: document,
+    listener: null,
+  };
+  const listener = (event) => {
     if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    const clickTarget = event.target
+      ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+    const currentExactTargets = [...document.querySelectorAll(
+      '[data-deve-search-result-action="create-doc"]',
+    )].filter((element) =>
+      element.getAttribute("data-deve-search-result-create-target") === expectedPath);
+    if (currentExactTargets.length !== 1 || currentExactTargets[0] !== clickTarget) {
+      observation.blocked = true;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     const status = document.querySelector("[data-deve-sync-status]");
     observation.clicked = true;
     observation.clickState = {
@@ -95,18 +115,35 @@ export function armExactCreateDocumentClickObservation(expectedPath, point) {
   };
   observation.listener = listener;
   globalThis.__deveAndroidCreatePointerObservation = observation;
-  target.addEventListener("click", listener, { capture: true, once: true });
+  document.addEventListener("click", listener, { capture: true, once: true });
   return { kind: "armed", token };
 }
 
 export function consumeExactCreateDocumentClickObservation(token) {
   const observation = globalThis.__deveAndroidCreatePointerObservation;
   if (!observation || observation.token !== token) return { kind: "missing", clicked: false };
-  observation.target.removeEventListener("click", observation.listener, { capture: true });
+  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
   delete globalThis.__deveAndroidCreatePointerObservation;
   return {
     kind: "observed",
     clicked: observation.clicked,
+    blocked: observation.blocked,
+    clickState: observation.clickState,
+  };
+}
+
+export function consumeExactCreateDocumentClickObservationByPath(expectedPath) {
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (!observation) return { kind: "missing", clicked: false };
+  if (observation.expectedPath !== expectedPath) {
+    return { kind: "path-mismatch", clicked: false };
+  }
+  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+  delete globalThis.__deveAndroidCreatePointerObservation;
+  return {
+    kind: "observed",
+    clicked: observation.clicked,
+    blocked: observation.blocked,
     clickState: observation.clickState,
   };
 }
@@ -121,21 +158,44 @@ export async function clickExactCreateDocument(page, path, tap = clickWebViewPoi
   try {
     await tap(page, target.point, {
       beforePress: async () => {
+        const refreshed = await page.call(readExactCreateDocumentPointer, path);
+        if (refreshed?.kind !== "ready" || refreshed.count !== 1 || !refreshed.point) {
+          throw new Error(
+            `exact Create target was not stable after pointer move: ${JSON.stringify(refreshed)}`,
+          );
+        }
         armed = await page.call(
           armExactCreateDocumentClickObservation,
           path,
-          target.point,
+          refreshed.point,
         );
         if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token)) {
           throw new Error("exact Create target changed after pointer move");
         }
+        return refreshed.point;
       },
     });
   } catch (error) {
     pointerError = error;
   }
   if (armed?.kind !== "armed") {
-    if (pointerError) throw pointerError;
+    let cleanup;
+    try {
+      cleanup = await page.call(
+        consumeExactCreateDocumentClickObservationByPath,
+        path,
+      );
+    } catch (cleanupError) {
+      throw new Error(
+        `${pointerError?.message ?? "Create pointer arm was not acknowledged"}; `
+          + `unconfirmed_arm_cleanup=${cleanupError.message}`,
+      );
+    }
+    if (pointerError) {
+      throw new Error(
+        `${pointerError.message}; unconfirmed_arm_cleanup=${JSON.stringify(cleanup)}`,
+      );
+    }
     throw new Error("Create pointer driver skipped before-press identity admission");
   }
   let observation;

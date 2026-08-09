@@ -72,3 +72,44 @@ test("WebView point click revalidates after move and stops on every failed stage
     assert.deepEqual(sent, ["mouseMoved", "mousePressed", "mouseReleased"].slice(0, failedIndex + 1));
   }
 });
+
+test("WebView point click presses a canonical point reacquired after hover", async () => {
+  const sent = [];
+  const page = {
+    async send(_method, params) {
+      sent.push({ type: params.type, x: params.x, y: params.y });
+    },
+  };
+
+  await clickWebViewPoint(
+    page,
+    { x: 24, y: 32 },
+    { beforePress: async () => ({ x: 124, y: 132 }) },
+  );
+
+  assert.deepEqual(sent, [
+    { type: "mouseMoved", x: 24, y: 32 },
+    { type: "mousePressed", x: 124, y: 132 },
+    { type: "mouseReleased", x: 124, y: 132 },
+  ]);
+});
+
+test("WebView point click rejects invalid initial and replacement points before press", async () => {
+  const sent = [];
+  const page = { send: async (_method, params) => sent.push(params.type) };
+  await assert.rejects(
+    clickWebViewPoint(page, { x: Number.NaN, y: 32 }),
+    /invalid initial point/,
+  );
+  assert.deepEqual(sent, []);
+
+  await assert.rejects(
+    clickWebViewPoint(
+      page,
+      { x: 24, y: 32 },
+      { beforePress: async () => ({ x: Number.POSITIVE_INFINITY, y: 132 }) },
+    ),
+    /invalid point/,
+  );
+  assert.deepEqual(sent, ["mouseMoved"]);
+});

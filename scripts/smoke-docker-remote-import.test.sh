@@ -8,6 +8,8 @@ source "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh"
 source "$ROOT_DIR/scripts/lib/docker-remote-import-fixture.sh"
 # shellcheck source=scripts/lib/docker-remote-import-edge.sh
 source "$ROOT_DIR/scripts/lib/docker-remote-import-edge.sh"
+# shellcheck source=scripts/lib/docker-remote-import-stable-edge.sh
+source "$ROOT_DIR/scripts/lib/docker-remote-import-stable-edge.sh"
 # shellcheck source=scripts/lib/docker-remote-import-chrome-checkpoint.sh
 source "$ROOT_DIR/scripts/lib/docker-remote-import-chrome-checkpoint.sh"
 
@@ -33,6 +35,7 @@ for file in \
   scripts/cleanup-docker-remote-import.sh \
   scripts/lib/docker-remote-import-chrome-checkpoint.sh \
   scripts/lib/docker-remote-import-edge.sh \
+  scripts/lib/docker-remote-import-stable-edge.sh \
   scripts/lib/docker-remote-import-fixture.sh; do
   bash -n "$ROOT_DIR/$file"
 done
@@ -177,6 +180,10 @@ if [[ "${1:-}" == "exec" ]]; then
   fi
   exit 0
 fi
+if [[ "${1:-}" == "inspect" && "$*" == *"State.Running"* ]]; then
+  printf '%s' "${CAPTURE_RUNTIME_IDENTITY:-}"
+  exit 0
+fi
 if [[ "${1:-}" == "run" ]]; then
   : "${CAPTURE_EDGE_PROBE_SUCCESS_AT:=999999}"
   count=0
@@ -191,6 +198,7 @@ if [[ "${1:-}" == "run" ]]; then
   exit 0
 fi
 if [[ "${1:-}" == "rm" || "${1:-}" == "container" ]]; then
+  [[ "${1:-}" != "container" ]] || printf '%s' "${CAPTURE_EDGE_REMAINING:-}"
   exit 0
 fi
 if [[ "${1:-}" == "compose" ]]; then
@@ -209,6 +217,178 @@ DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
   deve-webdav test-tunnel https://fixture.invalid/ 5 3 PROPFIND
 [[ "$(<"$CAPTURE_STATUS_COUNT")" == "5" ]] \
   || fail "candidate network probe did not reset its stability window"
+rm -f -- "$CAPTURE_STATUS_COUNT"
+stable_failure="$temporary/stable-failure.stderr"
+if DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
+  PATH="$temporary/bin:$PATH" remote_import_fixture_wait_container_url \
+  deve-webdav test-tunnel https://fixture.invalid/ 5 5 PROPFIND \
+  2>"$stable_failure"; then
+  fail "candidate network stability failure returned success"
+fi
+grep -Fq 'longest: 3; samples: 2xx=4 failed=1 530=1 000=0 other=0' \
+  "$stable_failure" || fail "candidate network failure lost bounded status evidence"
+export DEVE_RELEASE_CANDIDATE_IMAGE_ID="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+# The real classifier, not a test double, must reject every candidate-side
+# failure before the helper is allowed to replace an edge mapping.
+(
+  export DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state"
+  export DEVE_REMOTE_IMPORT_DOCKER_BIN="$temporary/bin/docker"
+  remote_import_fixture_container_id() { printf '%s\n' "${CAPTURE_CURRENT_CONTAINER:-}"; }
+  remote_import_fixture_wait_url() { [[ "${CAPTURE_APP_READY:-0}" == "1" ]]; }
+  remote_fixture_run_bounded() { [[ "${CAPTURE_LOGS_READY:-0}" == "1" ]]; }
+  expect_classifier_failure() {
+    export CAPTURE_CURRENT_CONTAINER="$1"
+    export CAPTURE_RUNTIME_IDENTITY="$2"
+    export CAPTURE_APP_READY="$3"
+    export CAPTURE_LOGS_READY="$4"
+    if remote_import_fixture_verify_retryable_edge_failure \
+      deve-webdav stable-container webdav "http://127.0.0.1:3101/api/node/role" 1 \
+      >/dev/null 2>&1; then
+      return 1
+    fi
+  }
+  export CAPTURE_CURRENT_CONTAINER="stable-container"
+  export CAPTURE_RUNTIME_IDENTITY="true $DEVE_RELEASE_CANDIDATE_IMAGE_ID"
+  export CAPTURE_APP_READY=1 CAPTURE_LOGS_READY=1
+  if ! remote_import_fixture_verify_retryable_edge_failure \
+    deve-webdav stable-container webdav "http://127.0.0.1:3101/api/node/role" 1; then
+    exit 1
+  fi
+  expect_classifier_failure changed-container \
+    "true $DEVE_RELEASE_CANDIDATE_IMAGE_ID" 1 1 || exit 1
+  expect_classifier_failure stable-container \
+    "false $DEVE_RELEASE_CANDIDATE_IMAGE_ID" 1 1 || exit 1
+  expect_classifier_failure stable-container \
+    "true sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" 1 1 \
+    || exit 1
+  expect_classifier_failure stable-container \
+    "true $DEVE_RELEASE_CANDIDATE_IMAGE_ID" 0 1 || exit 1
+  expect_classifier_failure stable-container \
+    "true $DEVE_RELEASE_CANDIDATE_IMAGE_ID" 1 0 || exit 1
+) || fail "candidate-side edge failure classifier lost a fail-closed branch"
+
+# Stable admission keeps the 60-sample candidate-network gate, replaces one
+# failed edge with a distinct mapping, and force-recreates the candidate so its
+# extra_hosts binding cannot retain the rejected IP.
+stable_calls="$temporary/stable-calls"
+(
+  export DEVE_REMOTE_IMPORT_WEBDAV_HOST="stable.trycloudflare.com"
+  export DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP="198.51.100.1"
+  attempt=0
+  remote_import_fixture_compose() { printf 'compose %s\n' "$*" >>"$stable_calls"; }
+  remote_import_fixture_verify_candidate_container() { printf 'verify %s\n' "$*" >>"$stable_calls"; }
+  remote_import_fixture_wait_url() { printf 'ready %s\n' "$*" >>"$stable_calls"; }
+  remote_import_fixture_container_id() { printf '%s\n' "stable-container"; }
+  remote_import_fixture_verify_retryable_edge_failure() {
+    printf 'retryable %s\n' "$*" >>"$stable_calls"
+  }
+  remote_import_fixture_wait_container_url() {
+    printf 'stable %s\n' "$*" >>"$stable_calls"
+    attempt=$((attempt + 1))
+    ((attempt == 2))
+  }
+  remote_import_edge_select_ipv4() {
+    [[ "${5:-}" == "198.51.100.1" ]] || return 1
+    printf '%s\n' "stable.trycloudflare.com 198.51.100.2"
+  }
+  remote_import_fixture_admit_stable_edge deve-webdav webdav \
+    "https://stable.trycloudflare.com" \
+    "https://stable.trycloudflare.com/import/" PROPFIND \
+    DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+    "http://127.0.0.1:3101/api/node/role"
+  [[ "$DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP" == "198.51.100.2" ]]
+) || fail "stable edge admission did not recover through one distinct edge"
+[[ "$(grep -Fc 'compose up -d --force-recreate deve-webdav' "$stable_calls")" == "2" ]] \
+  || fail "stable edge recovery did not force-recreate the candidate twice"
+[[ "$(grep -Fc 'verify deve-webdav' "$stable_calls")" == "2" ]] \
+  || fail "stable edge recovery did not verify exact candidate identity twice"
+[[ "$(grep -Fc 'ready webdav-candidate' "$stable_calls")" == "2" ]] \
+  || fail "stable edge recovery did not verify app readiness twice"
+[[ "$(grep -Fc 'retryable deve-webdav stable-container' "$stable_calls")" == "1" ]] \
+  || fail "stable edge recovery did not prove the first candidate stayed healthy"
+grep -Fq 'stable deve-webdav webdav-tunnel https://stable.trycloudflare.com/import/ 240 60 PROPFIND' \
+  "$stable_calls" || fail "stable edge recovery weakened the exact 60-sample PROPFIND gate"
+(
+  export DEVE_REMOTE_IMPORT_WEBDAV_HOST="stable.trycloudflare.com"
+  export DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP="198.51.100.1"
+  remote_import_fixture_compose() { :; }
+  remote_import_fixture_verify_candidate_container() { :; }
+  remote_import_fixture_wait_url() { :; }
+  remote_import_fixture_container_id() { printf '%s\n' "stable-container"; }
+  remote_import_fixture_verify_retryable_edge_failure() { :; }
+  remote_import_fixture_wait_container_url() { return 1; }
+  remote_import_edge_select_ipv4() {
+    [[ "${5:-}" == "198.51.100.1" ]] || return 1
+    printf '%s\n' "stable.trycloudflare.com 198.51.100.2"
+  }
+  if remote_import_fixture_admit_stable_edge deve-webdav webdav \
+    "https://stable.trycloudflare.com" \
+    "https://stable.trycloudflare.com/import/" PROPFIND \
+    DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+    "http://127.0.0.1:3101/api/node/role" >/dev/null 2>&1; then
+    exit 1
+  fi
+) || fail "exhausted stable edge admission did not remain fail-closed"
+
+for failed_stage in compose verify ready; do
+  (
+    export DEVE_REMOTE_IMPORT_WEBDAV_HOST="stable.trycloudflare.com"
+    export DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP="198.51.100.1"
+    remote_import_fixture_compose() { [[ "$failed_stage" != "compose" ]]; }
+    remote_import_fixture_verify_candidate_container() { [[ "$failed_stage" != "verify" ]]; }
+    remote_import_fixture_wait_url() { [[ "$failed_stage" != "ready" ]]; }
+    remote_import_fixture_container_id() { printf '%s\n' "stable-container"; }
+    remote_import_fixture_wait_container_url() { return 0; }
+    if remote_import_fixture_admit_stable_edge deve-webdav webdav \
+      "https://stable.trycloudflare.com" \
+      "https://stable.trycloudflare.com/import/" PROPFIND \
+      DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+      "http://127.0.0.1:3101/api/node/role" >/dev/null 2>&1; then
+      exit 1
+    fi
+  ) || fail "stable edge admission swallowed a $failed_stage failure"
+done
+
+(
+  export DEVE_REMOTE_IMPORT_WEBDAV_HOST="stable.trycloudflare.com"
+  export DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP="198.51.100.1"
+  remote_import_fixture_compose() { :; }
+  remote_import_fixture_verify_candidate_container() { :; }
+  remote_import_fixture_wait_url() { :; }
+  remote_import_fixture_container_id() { printf '%s\n' "stable-container"; }
+  remote_import_fixture_wait_container_url() { return 1; }
+  remote_import_fixture_verify_retryable_edge_failure() { return 1; }
+  remote_import_edge_select_ipv4() { exit 99; }
+  if remote_import_fixture_admit_stable_edge deve-webdav webdav \
+    "https://stable.trycloudflare.com" \
+    "https://stable.trycloudflare.com/import/" PROPFIND \
+    DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+    "http://127.0.0.1:3101/api/node/role" >/dev/null 2>&1; then
+    exit 1
+  fi
+) || fail "candidate-side failure was misclassified as retryable edge instability"
+
+(
+  export DEVE_REMOTE_IMPORT_WEBDAV_HOST="stable.trycloudflare.com"
+  export DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP="198.51.100.1"
+  remote_import_fixture_compose() { :; }
+  remote_import_fixture_verify_candidate_container() { :; }
+  remote_import_fixture_wait_url() { :; }
+  remote_import_fixture_container_id() { printf '%s\n' "stable-container"; }
+  remote_import_fixture_wait_container_url() { return 1; }
+  remote_import_fixture_verify_retryable_edge_failure() { :; }
+  remote_import_edge_select_ipv4() {
+    printf '%s\n' "stable.trycloudflare.com 198.51.100.1"
+  }
+  if remote_import_fixture_admit_stable_edge deve-webdav webdav \
+    "https://stable.trycloudflare.com" \
+    "https://stable.trycloudflare.com/import/" PROPFIND \
+    DEVE_REMOTE_IMPORT_WEBDAV_HOST DEVE_REMOTE_IMPORT_WEBDAV_EDGE_IP \
+    "http://127.0.0.1:3101/api/node/role" >/dev/null 2>&1; then
+    exit 1
+  fi
+) || fail "stable edge admission accepted a previously failed IP"
 
 # Bounded edge-route propagation window: re-sweeps must reuse the exact probe
 # acceptance criterion and stay fail-closed once the window is exhausted.
@@ -219,7 +399,6 @@ DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
   remote_import_edge_propagation_window_secs 2>/dev/null)" == "180" ]] \
   || fail "oversized propagation window must fall back to 180s"
 edge_stderr="$temporary/edge-select.stderr"
-export DEVE_RELEASE_CANDIDATE_IMAGE_ID="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 export DEVE_REMOTE_IMPORT_DOCKER_BIN="$temporary/bin/docker"
 remote_import_edge_ipv4_candidates() {
   printf '%s\n' "edge-window.trycloudflare.com 198.51.100.7"
@@ -255,6 +434,22 @@ grep -Fq "no tunnel edge passed the exact-candidate PROPFIND probe for edge-wind
   || fail "window exhaustion lost the fail-closed terminal error"
 grep -Fq "waiting for edge-window tunnel edge route propagation" "$edge_stderr" \
   && fail "zero propagation window must not report a re-sweep"
+rm -f -- "$CAPTURE_EDGE_PROBE_COUNT"
+export CAPTURE_EDGE_PROBE_SUCCESS_AT=1
+export CAPTURE_EDGE_REMAINING="leftover-probe"
+leftover_mapping=""
+if leftover_mapping="$(
+  DEVE_ACCEPTANCE_PRODUCER_STATE_DIR="$probe_state" \
+  DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS=0 \
+  remote_import_edge_select_ipv4 edge-window \
+    "https://edge-window.trycloudflare.com" \
+    "https://edge-window.trycloudflare.com/probe/" PROPFIND 2>"$edge_stderr"
+)"; then
+  fail "edge selector accepted a probe container that remained after cleanup"
+fi
+[[ -z "$leftover_mapping" ]] \
+  || fail "edge selector published a mapping before cleanup was proven"
+unset CAPTURE_EDGE_REMAINING
 unset CAPTURE_EDGE_PROBE_SUCCESS_AT
 unset DEVE_RELEASE_CANDIDATE_IMAGE_ID
 unset -f remote_import_edge_ipv4_candidates

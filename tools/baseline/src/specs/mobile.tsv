@@ -747,7 +747,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_T
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
 contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation exceeded the
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
@@ -837,14 +837,18 @@ contains	scripts/android-document-create-flow.test.mjs	Android document create c
 contains	scripts/android-document-create-flow.test.mjs	Android document create fails closed when the exact projection never arrives
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects duplicate exact-path OpenDoc projections
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects an old writable editor after OpenDoc acknowledgement
-contains	scripts/android-document-create-flow.test.mjs	exact Create pointer ignores a stale result and requires a stable hit-tested target
-contains	scripts/android-document-create-flow.test.mjs	changed after pointer move
-contains	scripts/android-document-create-flow.test.mjs	exact Create production wiring emits the complete CDP pointer gesture
-contains	scripts/android-document-create-flow.test.mjs	exact Create pointer cleans observation after a committed-unknown release
+contains	scripts/android-document-create-pointer.test.mjs	exact Create pointer ignores a stale result and requires a stable hit-tested target
+contains	scripts/android-document-create-pointer.test.mjs	changed after pointer move
+contains	scripts/android-document-create-pointer.test.mjs	exact Create production wiring emits the complete CDP pointer gesture
+contains	scripts/android-document-create-pointer.test.mjs	exact Create cleans a committed-unknown arm and release observation
 contains	scripts/android-document-create-flow.test.mjs	exact OpenDoc selection returns one typed doc identity atomically
 contains	scripts/android-business-flow.test.mjs	Android repo writer admission resets its quiet window after a scope change
 contains	scripts/mobile-webview-interaction.test.mjs	Android editor input binds expected doc-id through native input connection
 contains	scripts/android-webview-pointer.test.mjs	WebView point click revalidates after move and stops on every failed stage
+contains	scripts/android-webview-pointer.test.mjs	WebView point click presses a canonical point reacquired after hover
+contains	scripts/android-webview-pointer.test.mjs	WebView point click rejects invalid initial and replacement points before press
+contains	scripts/android-document-create-pointer.test.mjs	exact Create accepts a same-path remount after hover and presses its new point
+contains	scripts/android-document-create-pointer.test.mjs	exact Create capture guard blocks a different target after admission
 contains	scripts/android-webview-cdp.test.mjs	stable discovery retires a target that navigates away before accepting its replacement
 contains	scripts/android-webview-cdp.test.mjs	stable discovery reconnects a transiently blank snapshot for the same target
 contains	scripts/android-webview-cdp.test.mjs	renderer generation lease cannot be renewed by reconnecting the same target

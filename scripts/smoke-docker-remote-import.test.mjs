@@ -42,6 +42,7 @@ test("fixture lifecycle is explicit and browser contexts close in finally", () =
   const shellTest = read("scripts/smoke-docker-remote-import.test.sh");
   const lifecycle = read("scripts/lib/docker-remote-import-fixture.sh");
   const edge = read("scripts/lib/docker-remote-import-edge.sh");
+  const stableEdge = read("scripts/lib/docker-remote-import-stable-edge.sh");
   const browser = read("scripts/smoke-docker-remote-import.mjs");
   const journeys = read("scripts/lib/docker-remote-import-journeys.mjs");
   const browserCleanup = read(
@@ -75,6 +76,12 @@ test("fixture lifecycle is explicit and browser contexts close in finally", () =
   assert.match(edge, /--resolve "\$host:443:\$candidate_ip"/u);
   assert.match(edge, /probe_attempt in 1 2 3 4 5/u);
   assert.match(edge, /DEVE_REMOTE_IMPORT_EDGE_PROPAGATION_WINDOW_SECS/u);
+  assert.match(edge, /remote_import_edge_is_excluded/u);
+  assert.match(stableEdge, /for edge_attempt in 1 2/u);
+  assert.match(stableEdge, /--force-recreate/u);
+  assert.match(stableEdge, /240 60 "\$method"/u);
+  assert.match(stableEdge, /verify_retryable_edge_failure/u);
+  assert.match(stableEdge, /State\.Running/u);
   assert.match(edge, /waiting for %s tunnel edge route propagation \(sweep %s\)/u);
   assert.ok(
     edge.includes('[[ "$status" =~ ^2[0-9][0-9]$ ]]'),
@@ -88,8 +95,8 @@ test("fixture lifecycle is explicit and browser contexts close in finally", () =
   assert.match(edge, /container ls -aq/u);
   assert.match(lifecycle, /--protocol http2/u);
   assert.match(lifecycle, /consecutive_successes=0/u);
-  assert.match(shell, /webdav-tunnel[\s\S]*240 60 PROPFIND/u);
-  assert.match(shell, /s3-tunnel[\s\S]*240 60/u);
+  assert.match(shell, /admit_stable_edge deve-webdav webdav[\s\S]*PROPFIND/u);
+  assert.match(shell, /admit_stable_edge deve-s3 s3[\s\S]*GET/u);
   assert.match(browser, /finally \{/u);
   assert.match(browser, /closeBrowserResources\(context, browser\)/u);
   assert.match(browserCleanup, /resource\.close\(\)/u);
@@ -183,6 +190,7 @@ test("new handwritten files remain below the hard fuse", () => {
     "scripts/lib/docker-remote-import-browser-cleanup.mjs",
     "scripts/lib/docker-remote-import-chrome-checkpoint.sh",
     "scripts/lib/docker-remote-import-edge.sh",
+    "scripts/lib/docker-remote-import-stable-edge.sh",
     "scripts/lib/docker-remote-import-absence.sh",
     "scripts/lib/docker-remote-import-fixture.sh",
     "scripts/lib/docker-remote-import-runtime.mjs",
