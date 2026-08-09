@@ -24,7 +24,15 @@ import {
   probeAndroidAppProcess,
   waitForAnchoredAndroidAppProcessExit,
 } from "./lib/android-app-process-observation.mjs";
-import { androidLogcatContains } from "./lib/android-logcat-observation.mjs";
+import {
+  androidLogcatContains,
+  androidLogcatMatchStates,
+} from "./lib/android-logcat-observation.mjs";
+import {
+  ANDROID_EMBEDDED_BACKEND_STARTED_MARKER,
+  ANDROID_REMOTE_BROWSER_MODE_MARKER,
+  requireAndroidRemoteBrowserModeEvidence,
+} from "./lib/android-native-mode-evidence.mjs";
 import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
@@ -75,6 +83,18 @@ function logcatContains(pattern) {
     adb,
     serial,
     pattern,
+    timeoutMs: Math.min(remainingMs(), 10_000),
+  });
+}
+
+function logcatModeMatchStates() {
+  return androidLogcatMatchStates({
+    adb,
+    serial,
+    patterns: [
+      ANDROID_REMOTE_BROWSER_MODE_MARKER,
+      ANDROID_EMBEDDED_BACKEND_STARTED_MARKER,
+    ],
     timeoutMs: Math.min(remainingMs(), 10_000),
   });
 }
@@ -282,11 +302,7 @@ async function main() {
     probe: appPid,
     delay,
   });
-  assert.equal(
-    await logcatContains(/deve_mobile .*LocalBackend/),
-    false,
-    "preference-driven RemoteBrowser must not start LocalBackend before native intent",
-  );
+  requireAndroidRemoteBrowserModeEvidence(await logcatModeMatchStates());
   tapNativeRecoveryControl();
   await page.close().catch(() => {});
   const remoteSurfaceRetired = await waitUntil("RemoteBrowser CDP target retirement", async () => {

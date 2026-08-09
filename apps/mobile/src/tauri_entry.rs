@@ -85,6 +85,9 @@ struct MobileTauriModeResolution {
     native_local_recovery_control: bool,
 }
 
+const MOBILE_REMOTE_BROWSER_MODE_MARKER: &str =
+    "deve_mobile native shell mode=RemoteBrowser embedded_backend=absent";
+
 impl MobileTauriModeResolution {
     fn local() -> Self {
         Self {
@@ -225,6 +228,10 @@ pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOption
             let backend_recovery_state =
                 std::sync::Arc::new(MobileBackendRecoveryState::default());
             app.manage(backend_recovery_state.clone());
+
+            if mode.remote_target.is_some() {
+                eprintln!("{MOBILE_REMOTE_BROWSER_MODE_MARKER}");
+            }
 
             if mode.remote_target.is_none() && options.local_backend != Some(false) {
                 let app_data_dir = match app_data_dir_result {

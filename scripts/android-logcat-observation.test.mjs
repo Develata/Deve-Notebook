@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import test from "node:test";
-import { androidLogcatContains } from "./lib/android-logcat-observation.mjs";
+import {
+  androidLogcatContains,
+  androidLogcatMatchStates,
+} from "./lib/android-logcat-observation.mjs";
 
 function fixtureSpawn(source, observed) {
   return (program, args, options) => {
@@ -68,6 +71,46 @@ test("Android logcat observation streams past the execFileSync default buffer", 
 test("Android logcat observation returns false when the marker is absent", async () => {
   const { result } = probe(`process.stdout.write("ordinary log line\\n");`);
   assert.equal(await result, false);
+});
+
+test("Android logcat mode evidence ignores LocalBackend wording outside exact runtime markers", async () => {
+  const observed = [];
+  const matches = await androidLogcatMatchStates({
+    adb: "/synthetic/adb",
+    serial: "emulator-5584",
+    patterns: [
+      /^deve_mobile native shell mode=RemoteBrowser embedded_backend=absent$/,
+      /^deve_mobile native embedded backend supervisor=started$/,
+    ],
+    timeoutMs: 5_000,
+    spawnProcess: fixtureSpawn(`
+      process.stdout.write("deve_mobile native LocalBackend recovery control failed closed: synthetic\\n");
+      process.stdout.write("deve_mobile native shell mode=RemoteBrowser embedded_backend=absent\\n");
+    `, observed),
+  });
+
+  assert.deepEqual(matches, [true, false]);
+  assert.equal(observed.length, 1, "mode ownership evidence must come from one log snapshot");
+});
+
+test("Android logcat mode evidence recognizes the forbidden supervisor marker", async () => {
+  const observed = [];
+  const matches = await androidLogcatMatchStates({
+    adb: "/synthetic/adb",
+    serial: "emulator-5584",
+    patterns: [
+      /^deve_mobile native shell mode=RemoteBrowser embedded_backend=absent$/,
+      /^deve_mobile native embedded backend supervisor=started$/,
+    ],
+    timeoutMs: 5_000,
+    spawnProcess: fixtureSpawn(`
+      process.stdout.write("deve_mobile native shell mode=RemoteBrowser embedded_backend=absent\\n");
+      process.stdout.write("deve_mobile native embedded backend supervisor=started\\n");
+    `, observed),
+  });
+
+  assert.deepEqual(matches, [true, true]);
+  assert.equal(observed.length, 1);
 });
 
 test("Android logcat observation returns false after large marker-free output", async () => {
@@ -140,6 +183,23 @@ test("Android logcat timeout stays bounded when the child never closes", async (
   );
   assert.deepEqual(child.killCalls, ["SIGKILL"]);
   assert.ok(Date.now() - startedAt < 500);
+});
+
+test("Android logcat failure waits for bounded child retirement after a late error", async () => {
+  const child = inertChild();
+  const startedAt = Date.now();
+  const { result } = probe("", {
+    timeoutMs: 20,
+    terminationGraceMs: 40,
+    spawnProcess: () => child,
+  });
+  setTimeout(() => child.emit("error", new Error("synthetic post-timeout child error")), 30);
+
+  await assert.rejects(
+    result,
+    /timed out after 20 ms; child termination was not accepted; child did not close within 40 ms/,
+  );
+  assert.ok(Date.now() - startedAt >= 45, "late child error must not bypass termination grace");
 });
 
 test("Android logcat observation fails closed on total output overflow", async () => {

@@ -13,6 +13,11 @@ import {
   readRemoteReadyState,
   submitRemoteLogin,
 } from "./lib/android-business-flow.mjs";
+import {
+  ANDROID_EMBEDDED_BACKEND_STARTED_MARKER,
+  ANDROID_REMOTE_BROWSER_MODE_MARKER,
+  requireAndroidRemoteBrowserModeEvidence,
+} from "./lib/android-native-mode-evidence.mjs";
 
 const browserSource = readFileSync(
   new URL("./smoke-mobile-android-remote-browser.mjs", import.meta.url),
@@ -48,12 +53,49 @@ test("Android RemoteBrowser smoke proves business flow, zero IPC, and native loc
   assert.match(browserSource, /reloadPageAndWaitForNewMainDocument/);
   assert.match(browserSource, /typeAndroidEditorText/);
   assert.match(browserSource, /androidLogcatContains/);
+  assert.match(browserSource, /androidLogcatMatchStates/);
+  assert.match(browserSource, /ANDROID_REMOTE_BROWSER_MODE_MARKER/);
+  assert.match(browserSource, /ANDROID_EMBEDDED_BACKEND_STARTED_MARKER/);
+  assert.match(browserSource, /requireAndroidRemoteBrowserModeEvidence\(await logcatModeMatchStates\(\)\)/);
+  assert.doesNotMatch(browserSource, /deve_mobile \.\*LocalBackend/);
   assert.match(browserSource, /RemoteBrowser recovered to fresh LocalBackend runtime/);
   assert.doesNotMatch(browserSource, /adbOutput\("logcat", "-d"\)/);
   assert.match(
     browserSource,
     /inputEditorText:\s*inputAndroidEditorText/,
     "RemoteBrowser must establish the same native editor input connection as LocalBackend",
+  );
+});
+
+test("RemoteBrowser native mode evidence accepts only remote-without-supervisor", () => {
+  assert.doesNotThrow(() => requireAndroidRemoteBrowserModeEvidence([true, false]));
+  assert.throws(
+    () => requireAndroidRemoteBrowserModeEvidence([false, false]),
+    /publish its exact native mode admission/,
+  );
+  assert.throws(
+    () => requireAndroidRemoteBrowserModeEvidence([true, true]),
+    /must not start LocalBackend before native intent/,
+  );
+  assert.throws(
+    () => requireAndroidRemoteBrowserModeEvidence([false, true]),
+    /publish its exact native mode admission/,
+  );
+  assert.throws(
+    () => requireAndroidRemoteBrowserModeEvidence([true]),
+    /exactly two booleans/,
+  );
+  assert.equal(
+    ANDROID_REMOTE_BROWSER_MODE_MARKER.test(
+      "deve_mobile native shell mode=RemoteBrowser embedded_backend=absent",
+    ),
+    true,
+  );
+  assert.equal(
+    ANDROID_EMBEDDED_BACKEND_STARTED_MARKER.test(
+      "deve_mobile native embedded backend supervisor=started",
+    ),
+    true,
   );
 });
 

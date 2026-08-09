@@ -19,10 +19,18 @@ function boundedStderrPreview(current, chunk) {
   return `${current}${chunk.subarray(0, remaining).toString("utf8")}`;
 }
 
-export function androidLogcatContains({
+export async function androidLogcatContains({ pattern, ...options }) {
+  const [matched] = await androidLogcatMatchStates({
+    ...options,
+    patterns: [pattern],
+  });
+  return matched;
+}
+
+export function androidLogcatMatchStates({
   adb,
   serial,
-  pattern,
+  patterns,
   timeoutMs,
   maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
   maxLineBytes = DEFAULT_MAX_LINE_BYTES,
@@ -35,8 +43,9 @@ export function androidLogcatContains({
   if (typeof serial !== "string" || serial.length === 0) {
     throw new Error("Android logcat observation requires a device serial");
   }
-  if (!(pattern instanceof RegExp)) {
-    throw new Error("Android logcat observation requires a RegExp pattern");
+  if (!Array.isArray(patterns) || patterns.length === 0
+    || patterns.some((pattern) => !(pattern instanceof RegExp))) {
+    throw new Error("Android logcat observation requires one or more RegExp patterns");
   }
   const boundedTimeoutMs = positiveInteger(timeoutMs, "Android logcat timeout");
   const boundedOutputBytes = positiveInteger(
@@ -51,7 +60,8 @@ export function androidLogcatContains({
   if (boundedLineBytes > boundedOutputBytes) {
     throw new Error("Android logcat line limit cannot exceed the output limit");
   }
-  const matcher = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
+  const matchers = patterns.map((pattern) =>
+    new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")));
 
   return new Promise((resolve, reject) => {
     let child;
@@ -70,7 +80,7 @@ export function androidLogcatContains({
     let observedBytes = 0;
     let lineBuffer = "";
     let stderrPreview = "";
-    let matched = false;
+    const matched = matchers.map(() => false);
     let failure = null;
     let settled = false;
     let timer;
@@ -111,7 +121,9 @@ export function androidLogcatContains({
           ));
           return;
         }
-        if (matcher.test(line)) matched = true;
+        matchers.forEach((matcher, index) => {
+          if (matcher.test(line)) matched[index] = true;
+        });
       }
       if (Buffer.byteLength(lineBuffer, "utf8") > boundedLineBytes) {
         stopWith(new Error(
@@ -146,14 +158,17 @@ export function androidLogcatContains({
       stderrPreview = boundedStderrPreview(stderrPreview, chunk).replaceAll("\r", "");
     });
     child.once("error", (error) => {
-      settle(failure ?? new Error(
-        `Android logcat observation failed to start: ${error.message}`,
-      ));
+      if (failure) return;
+      settle(new Error(`Android logcat observation failed to start: ${error.message}`));
     });
     child.once("close", (code, signal) => {
       if (!failure) {
         lineBuffer += decoder.end().replaceAll("\r", "");
-        if (lineBuffer.length > 0 && matcher.test(lineBuffer)) matched = true;
+        if (lineBuffer.length > 0) {
+          matchers.forEach((matcher, index) => {
+            if (matcher.test(lineBuffer)) matched[index] = true;
+          });
+        }
         if (Buffer.byteLength(lineBuffer, "utf8") > boundedLineBytes) {
           failure = new Error(
             `Android logcat observation line exceeded the ${boundedLineBytes} byte limit`,
@@ -172,7 +187,7 @@ export function androidLogcatContains({
         ));
         return;
       }
-      settle(null, matched);
+      settle(null, [...matched]);
     });
   });
 }

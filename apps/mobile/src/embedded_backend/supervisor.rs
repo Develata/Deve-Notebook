@@ -103,31 +103,30 @@ impl MobileEmbeddedBackendSupervisor {
         };
         let bootstrap = probed.bootstrap.clone();
         let native_session_cookie = bootstrap.script.native_session_cookie.clone();
-        Ok((
-            Self {
-                app_data_dir,
-                inner: Mutex::new(BackendGeneration {
-                    runtime: Some(runtime),
-                    plan: prepared.plan,
-                    native_session_cookie,
-                    task: Some(task),
-                    shutdown_sender: Some(shutdown_sender),
-                    transport_stopping: false,
-                    runtime_restart_required: false,
-                    probe_cancel: None,
-                    shell: probed.shell,
-                    session_generation: 1,
-                    transition_token: 0,
-                    service_state: MobileEmbeddedBackendServiceState::EndpointSessionReady,
-                    last_error: None,
-                    last_error_transition_token: None,
-                }),
-                active_resumes: AtomicUsize::new(0),
-                resumes_idle: Notify::new(),
-                resume_gate: tokio::sync::Mutex::new(()),
-            },
-            bootstrap,
-        ))
+        let supervisor = Self {
+            app_data_dir,
+            inner: Mutex::new(BackendGeneration {
+                runtime: Some(runtime),
+                plan: prepared.plan,
+                native_session_cookie,
+                task: Some(task),
+                shutdown_sender: Some(shutdown_sender),
+                transport_stopping: false,
+                runtime_restart_required: false,
+                probe_cancel: None,
+                shell: probed.shell,
+                session_generation: 1,
+                transition_token: 0,
+                service_state: MobileEmbeddedBackendServiceState::EndpointSessionReady,
+                last_error: None,
+                last_error_transition_token: None,
+            }),
+            active_resumes: AtomicUsize::new(0),
+            resumes_idle: Notify::new(),
+            resume_gate: tokio::sync::Mutex::new(()),
+        };
+        eprintln!("deve_mobile native embedded backend supervisor=started");
+        Ok((supervisor, bootstrap))
     }
 
     pub fn snapshot(

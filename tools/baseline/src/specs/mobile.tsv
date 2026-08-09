@@ -751,6 +751,12 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_uses_one_pointer_intent_and_exact_doc_id_editor_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_lookup_reopens_explorer_and_requires_stable_writer_action_admission true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_browser_requires_exact_native_mode_and_runtime_ownership_markers true
+contains	apps/mobile/src/tauri_entry.rs	deve_mobile native shell mode=RemoteBrowser embedded_backend=absent
+contains	apps/mobile/src/embedded_backend/supervisor.rs	deve_mobile native embedded backend supervisor=started
+contains	scripts/lib/android-native-mode-evidence.mjs	requireAndroidRemoteBrowserModeEvidence
+contains	scripts/smoke-mobile-android-remote-browser.mjs	requireAndroidRemoteBrowserModeEvidence(await logcatModeMatchStates())
+contains	scripts/smoke-mobile-android-remote-browser.test.mjs	RemoteBrowser native mode evidence accepts only remote-without-supervisor
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
