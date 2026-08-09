@@ -1,4 +1,5 @@
 import { tapWebViewPoint } from "./android-webview-pointer.mjs";
+import { clickAndroidNewDocumentActionWhenAdmitted } from "./android-document-search-admission.mjs";
 import {
   closeMobileSidebar,
   openMobileSidebarView,
@@ -262,8 +263,13 @@ export function readAndroidDocumentCreateSurface(expectedPath, expectedDocId = n
     exactOpenResultCount: exactOpenResults.length,
     exactOpenDocIdCount: new Set(exactOpenResults.map((element) =>
       element.getAttribute("data-deve-search-result-doc-id")).filter(Boolean)).size,
+    newDocumentActionVisible: Boolean(
+      globalThis.__deveVisibleElement("[data-deve-new-doc-button=true]"),
+    ),
     mobileDrawerOpen: document.querySelector('[data-deve-mobile-drawer="left"]')
       ?.getAttribute("data-deve-mobile-drawer-open") ?? null,
+    mobileExplorerActive: document.querySelector('[data-deve-mobile-sidebar-tab="explorer"]')
+      ?.getAttribute("data-deve-mobile-sidebar-tab-active") ?? null,
     editorHostCount: editorHosts.length,
     visibleEditorHostCount: visibleEditorHosts.length,
     exactEditorHostCount: exactEditorHosts.length,
@@ -355,6 +361,28 @@ async function throwDocumentCreateFailure(page, path, phase, error, docId = null
   );
 }
 
+async function openAndroidDocumentSearch(page, path, mobile, phase, options) {
+  const { waitUntil, openSidebar } = options;
+  if (mobile) {
+    await openSidebar(page, "explorer", options).catch(
+      (error) => throwDocumentCreateFailure(page, path, `${phase}_sidebar`, error),
+    );
+  }
+  await waitUntil(
+    `${phase} new document action admission`,
+    async () => {
+      const state = await page.call(clickAndroidNewDocumentActionWhenAdmitted);
+      return state.clicked ? state : null;
+    },
+    30000,
+  ).catch((error) => throwDocumentCreateFailure(page, path, `${phase}_admission`, error));
+  await waitUntil(
+    `${phase} document input`,
+    () => page.call(readAndroidSearchVisible),
+    10000,
+  ).catch((error) => throwDocumentCreateFailure(page, path, `${phase}_input`, error));
+}
+
 export async function createAndSelectAndroidDocument(
   page,
   path,
@@ -369,11 +397,8 @@ export async function createAndSelectAndroidDocument(
   },
 ) {
   const mobile = await page.call(readAndroidMobileLayout);
-  if (mobile) {
-    await openSidebar(page, "explorer", { click, waitUntil });
-  }
-  await click(page, "[data-deve-new-doc-button=true]");
-  await waitUntil("new document input", () => page.call(readAndroidSearchVisible));
+  const searchOptions = { waitUntil, click, openSidebar };
+  await openAndroidDocumentSearch(page, path, mobile, "create", searchOptions);
   await fill(page, "[data-deve-search-input=true]", `+${path}`);
   await waitUntil(
     "exact Create document action",
@@ -399,8 +424,7 @@ export async function createAndSelectAndroidDocument(
 
   // Never repeat Create. Wait for the backend projection, then issue OpenDoc
   // for the one exact path and carry its typed doc identity into editor admission.
-  await click(page, "[data-deve-new-doc-button=true]");
-  await waitUntil("created document lookup input", () => page.call(readAndroidSearchVisible));
+  await openAndroidDocumentSearch(page, path, mobile, "lookup", searchOptions);
   await fill(page, "[data-deve-search-input=true]", path);
   const projection = await waitUntil(
     "exact created document projection",

@@ -723,6 +723,7 @@ contains	scripts/lib/android-business-flow.mjs	await createAndSelectAndroidDocum
 contains	scripts/lib/android-document-create-flow.mjs	create document action acknowledgement
 contains	scripts/lib/android-document-create-flow.mjs	exact created document projection
 contains	scripts/lib/android-document-create-flow.mjs	data-deve-search-result-create-target
+contains	scripts/lib/android-document-search-admission.mjs	clickAndroidNewDocumentActionWhenAdmitted
 contains	scripts/lib/mobile-webview-interaction.mjs	expectedDocId
 contains	apps/web/src/components/search_box/result_item.rs	data-deve-search-result-create-target
 contains	apps/web/src/components/search_box/result_item.rs	data-deve-search-result-doc-id
@@ -749,6 +750,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_uses_one_pointer_intent_and_exact_doc_id_editor_admission true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_lookup_reopens_explorer_and_requires_stable_writer_action_admission true
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
@@ -851,6 +853,9 @@ contains	scripts/smoke-mobile-android-remote-browser.test.mjs	RemoteBrowser logi
 contains	scripts/android-document-create-flow.test.mjs	Android document create binds one Create through doc-id to the exact editor
 contains	scripts/android-document-create-flow.test.mjs	Android document create does not retry Create without an action acknowledgement
 contains	scripts/android-document-create-flow.test.mjs	Android document create closes the mobile drawer before editor admission
+contains	scripts/android-document-create-flow.test.mjs	Android document create reopens Explorer and waits for post-Create lookup admission
+contains	scripts/android-document-create-flow.test.mjs	Android document create fails closed when post-Create lookup admission never returns
+contains	scripts/android-document-create-flow.test.mjs	Android New Document admission clicks only one stable action in active mobile Explorer
 contains	scripts/android-document-create-flow.test.mjs	Android document create fails closed when the exact projection never arrives
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects duplicate exact-path OpenDoc projections
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects an old writable editor after OpenDoc acknowledgement
