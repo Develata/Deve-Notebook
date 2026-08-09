@@ -72,6 +72,9 @@ const TAURI_IMPORT_ALLOWED: &[&str] = &[
     "apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs",
     "apps/mobile/src/tauri_entry/backend_recovery/ios.rs",
     "apps/mobile/src/tauri_lifecycle.rs",
+    // Android CookieManager session handoff split from the already admitted
+    // embedded_backend/cookie.rs adapter; keep this an exact path.
+    "apps/mobile/src/embedded_backend/android_cookie.rs",
     "apps/mobile/src/embedded_backend/mod.rs",
     "apps/mobile/src/embedded_backend/cookie.rs",
     "apps/mobile/src/embedded_backend/generation.rs",

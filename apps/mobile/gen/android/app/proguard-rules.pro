@@ -19,3 +19,12 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Rust calls these platform-owned MainActivity methods by exact JNI name.
+-keepclassmembers class dev.deve.notebook.mobile.MainActivity {
+    public boolean installNativeSessionCookie(long, android.webkit.WebView, java.lang.String, java.lang.String, java.lang.String);
+    private native void nativeSessionCookieInstallCompleted(long, int);
+    public boolean installUseLocalBackendControl();
+    public boolean resetUseLocalBackendControl();
+    public boolean removeUseLocalBackendControl();
+}

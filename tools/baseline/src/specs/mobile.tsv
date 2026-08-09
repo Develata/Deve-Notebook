@@ -617,6 +617,8 @@ contains	docs/plan/11_ui_design/03_mobile.md	Font Size：移动端编辑器默�
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-020	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-020	cli_assert: mobile_editor_font_size_16px true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging mobile_embedded_backend_supervisor -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging android_native_session_cookie -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging android_cookie_callback -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging stale_resume -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging lifecycle_fault_injection -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging failed_transport_retirement -- --nocapture
@@ -629,6 +631,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-target-capability.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_remains_storage_limited_readonly true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_shows_update_guidance true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_writable_smoke_probes_real_nonextractable_ed25519_before_business_flow true
@@ -668,8 +672,20 @@ contains	apps/mobile/src/embedded_backend/supervisor_shutdown.rs	pub async fn sh
 contains	apps/mobile/src/embedded_backend/supervisor_webview.rs	resume_and_complete_on_webview
 contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
 contains	apps/mobile/src/embedded_backend/supervisor_types.rs	replacement_source
-contains	apps/mobile/src/embedded_backend/cookie.rs	setAcceptThirdPartyCookies
+contains	apps/mobile/src/embedded_backend/android_cookie.rs	installNativeSessionCookie
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	android_native_cookie_callback_timeout
+contains	apps/mobile/src/embedded_backend/cookie.rs	fn android_native_session_cookie_waits_for_platform_completion_before_verification()
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn cancellation_rejects_late_completion()
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn concurrent_registration_fails_closed_without_replacing_first_waiter()
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn dropped_undispatched_registration_cancels_waiter()
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn dropped_dispatched_registration_preserves_tombstone_until_late_completion()
+contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	setCookie(installUrl, setCookie) { accepted ->
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	nativeSessionCookieInstallCompleted
+contains	apps/mobile/gen/android/app/proguard-rules.pro	public boolean installNativeSessionCookie(long, android.webkit.WebView, java.lang.String, java.lang.String, java.lang.String);
+contains	apps/mobile/gen/android/app/proguard-rules.pro	private native void nativeSessionCookieInstallCompleted(long, int);
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	native_backend_prepare_webview_session
+contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve_mobile initial native session handoff failed closed: native_session_handoff_failed
 contains	apps/mobile/src/tauri_entry.rs	mobile_local_backend_command_plugin()
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve-native-backend-commands
 absent	apps/mobile/src/tauri_entry/native_backend_commands.rs	switchLocal

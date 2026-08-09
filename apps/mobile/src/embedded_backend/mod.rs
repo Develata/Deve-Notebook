@@ -16,6 +16,10 @@ use thiserror::Error;
 
 use crate::{MobileBootstrap, MobileShellError};
 
+#[cfg(target_os = "android")]
+mod android_cookie;
+#[cfg(any(target_os = "android", test))]
+mod android_cookie_callback;
 mod cookie;
 mod generation;
 mod http;

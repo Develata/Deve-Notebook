@@ -79,10 +79,13 @@ async fn native_backend_prepare_webview_session(
         .ok_or_else(|| "mobile main WebView unavailable".to_string())?;
     #[cfg(mobile)]
     {
-        state
-            .prepare_initial_webview_session(&webview)
-            .await
-            .map_err(|error| error.to_string())
+        let result = state.prepare_initial_webview_session(&webview).await;
+        if result.is_err() {
+            eprintln!(
+                "deve_mobile initial native session handoff failed closed: native_session_handoff_failed"
+            );
+        }
+        result.map_err(|_| "mobile WebView session preparation failed".to_string())
     }
     #[cfg(not(mobile))]
     {

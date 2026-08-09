@@ -175,6 +175,7 @@ contains	apps/desktop/src/shell_test/policy.rs	CURRENT_NATIVE_PACKAGING_DEPENDEN
 contains	apps/desktop/src/shell_test/policy.rs	CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
 contains	apps/mobile/src/lib.rs	#[cfg(feature = "native-packaging")]
 contains	apps/mobile/src/lib.rs	mod embedded_backend;
+contains	tools/baseline/src/native_track_boundary.rs	"apps/mobile/src/embedded_backend/android_cookie.rs",
 contains	apps/mobile/src/packaging.rs	runtime_crate: "tauri"
 contains	apps/mobile/src/packaging.rs	build_crate: "tauri-build"
 contains	apps/mobile/src/packaging.rs	status: "dependency-spike-open"

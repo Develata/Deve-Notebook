@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
+import android.webkit.CookieManager
+import android.webkit.WebView
 import android.widget.Button
 import android.widget.FrameLayout
 import androidx.activity.enableEdgeToEdge
@@ -11,6 +13,14 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class MainActivity : TauriActivity() {
+  private companion object {
+    const val NATIVE_COOKIE_RETAINED = 1
+    const val NATIVE_COOKIE_REJECTED = 2
+    const val NATIVE_COOKIE_NOT_RETAINED = 3
+    const val NATIVE_COOKIE_VERIFICATION_FAILED = 4
+    const val NATIVE_COOKIE_SETUP_FAILED = 5
+  }
+
   private var useLocalBackendButton: Button? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +80,80 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  fun installNativeSessionCookie(
+    requestId: Long,
+    webView: WebView,
+    installUrl: String,
+    verificationUrl: String,
+    setCookie: String,
+  ): Boolean {
+    return try {
+      if (Looper.myLooper() == Looper.getMainLooper()) {
+        beginNativeSessionCookieInstall(
+          requestId,
+          webView,
+          installUrl,
+          verificationUrl,
+          setCookie,
+        )
+      } else {
+        runOnUiThread {
+          if (!beginNativeSessionCookieInstall(
+              requestId,
+              webView,
+              installUrl,
+              verificationUrl,
+              setCookie,
+            )) {
+            nativeSessionCookieInstallCompleted(requestId, NATIVE_COOKIE_SETUP_FAILED)
+          }
+        }
+        true
+      }
+    } catch (_error: RuntimeException) {
+      false
+    }
+  }
+
+  private fun beginNativeSessionCookieInstall(
+    requestId: Long,
+    webView: WebView,
+    installUrl: String,
+    verificationUrl: String,
+    setCookie: String,
+  ): Boolean {
+    return try {
+      val manager = CookieManager.getInstance()
+      manager.setAcceptCookie(true)
+      manager.setAcceptThirdPartyCookies(webView, true)
+      val expectedPair = setCookie.substringBefore(';').trim()
+      manager.setCookie(installUrl, setCookie) { accepted ->
+        val completion = if (accepted != true) {
+          NATIVE_COOKIE_REJECTED
+        } else {
+          try {
+            val retained = manager.getCookie(verificationUrl)
+              ?.split(';')
+              ?.map { it.trim() }
+              ?.any { it == expectedPair } == true
+            if (retained) {
+              manager.flush()
+              NATIVE_COOKIE_RETAINED
+            } else {
+              NATIVE_COOKIE_NOT_RETAINED
+            }
+          } catch (_error: RuntimeException) {
+            NATIVE_COOKIE_VERIFICATION_FAILED
+          }
+        }
+        nativeSessionCookieInstallCompleted(requestId, completion)
+      }
+      true
+    } catch (_error: RuntimeException) {
+      false
+    }
+  }
+
   private fun onUiThreadConfirmed(action: () -> Boolean): Boolean {
     if (Looper.myLooper() == Looper.getMainLooper()) return action()
     val latch = CountDownLatch(1)
@@ -82,4 +166,5 @@ class MainActivity : TauriActivity() {
   }
 
   private external fun requestUseLocalBackend(): Boolean
+  private external fun nativeSessionCookieInstallCompleted(requestId: Long, completion: Int)
 }
