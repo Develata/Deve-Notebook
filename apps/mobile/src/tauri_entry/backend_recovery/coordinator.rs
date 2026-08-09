@@ -12,18 +12,19 @@ use tauri::{AppHandle, Manager, Wry};
 use thiserror::Error;
 
 use crate::MobileNativeBackendState;
-use crate::embedded_backend::{
-    MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT, MobileEmbeddedBackendSupervisor,
-    mobile_embedded_backend_plugin,
-};
+use crate::embedded_backend::{MobileEmbeddedBackendSupervisor, mobile_embedded_backend_plugin};
 
-use super::super::{
-    MOBILE_TAURI_MAIN_WINDOW_LABEL, create_mobile_main_window, mobile_local_backend_command_plugin,
+use super::super::{MOBILE_TAURI_MAIN_WINDOW_LABEL, mobile_local_backend_command_plugin};
+use super::cleanup::{
+    retire_and_confirm_recovery_anchor, shutdown_candidate, shutdown_managed_supervisor,
+    wait_for_window_retirement,
 };
 use super::state::{MobileBackendRecoveryPhase, MobileBackendRecoveryState};
-use super::{remove_platform_recovery_control, reset_platform_recovery_control};
-
-const REMOTE_WINDOW_RETIRE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+use super::{
+    PlatformColdRestartSource, PlatformRecoveryAnchor, create_platform_local_main_window,
+    create_platform_recovery_anchor, remove_platform_recovery_control,
+    request_platform_cold_restart, reset_platform_recovery_control, retire_platform_remote_surface,
+};
 
 #[derive(Debug, Error)]
 enum MobileBackendRecoveryError {
@@ -41,8 +42,10 @@ enum MobileBackendRecoveryError {
     RemoteWindowUnavailable,
     #[error("mobile native recovery control retirement failed: {0}")]
     NativeControlRetire(String),
-    #[error("mobile RemoteBrowser WebView destruction failed: {0}")]
-    RemoteWindowDestroy(String),
+    #[error("mobile Android recovery lifecycle anchor creation failed: {0}")]
+    RecoveryAnchorCreate(String),
+    #[error("mobile RemoteBrowser surface retirement failed: {0}")]
+    RemoteSurfaceRetire(String),
     #[error("mobile RemoteBrowser WebView did not retire before the timeout")]
     RemoteWindowRetireTimeout,
     #[error("mobile LocalBackend command plugin registration failed: {0}")]
@@ -53,6 +56,8 @@ enum MobileBackendRecoveryError {
     SupervisorAlreadyManaged,
     #[error("mobile LocalBackend WebView creation failed: {0}")]
     LocalWindowCreate(String),
+    #[error("mobile Android recovery lifecycle anchor did not retire")]
+    RecoveryAnchorRetire,
     #[error("mobile LocalBackend recovery transition state failed: {0}")]
     TransitionState(String),
 }
@@ -60,6 +65,7 @@ enum MobileBackendRecoveryError {
 struct RecoveryFailure {
     error: MobileBackendRecoveryError,
     restart_required: bool,
+    restart_source: PlatformColdRestartSource,
     active_runtime_owners: u8,
 }
 
@@ -68,6 +74,7 @@ impl RecoveryFailure {
         Self {
             error,
             restart_required: false,
+            restart_source: PlatformColdRestartSource::Main,
             active_runtime_owners: 0,
         }
     }
@@ -76,6 +83,19 @@ impl RecoveryFailure {
         Self {
             error,
             restart_required: true,
+            restart_source: PlatformColdRestartSource::RecoveryAnchor,
+            active_runtime_owners,
+        }
+    }
+
+    fn after_retirement_from_main(
+        error: MobileBackendRecoveryError,
+        active_runtime_owners: u8,
+    ) -> Self {
+        Self {
+            error,
+            restart_required: true,
+            restart_source: PlatformColdRestartSource::Main,
             active_runtime_owners,
         }
     }
@@ -116,8 +136,17 @@ impl MobileBackendRecoveryCoordinator {
                 Ok(()) => {
                     if let Err(error) = coordinator.recovery.finish_success(recovery_id) {
                         eprintln!("deve_mobile native recovery completion failed closed: {error}");
+                        if !shutdown_managed_supervisor(&coordinator.app).await {
+                            eprintln!(
+                                "deve_mobile managed LocalBackend shutdown remained unconfirmed before forced retirement"
+                            );
+                        }
                         coordinator.recovery.force_inactive();
-                        coordinator.app.request_restart();
+                        request_platform_cold_restart(
+                            &coordinator.app,
+                            PlatformColdRestartSource::Main,
+                        )
+                        .await;
                     }
                 }
                 Err(mut failure) => {
@@ -155,7 +184,8 @@ impl MobileBackendRecoveryCoordinator {
                         failure.restart_required = true;
                     }
                     if failure.restart_required {
-                        coordinator.app.request_restart();
+                        request_platform_cold_restart(&coordinator.app, failure.restart_source)
+                            .await;
                     }
                 }
             }
@@ -214,138 +244,180 @@ impl MobileBackendRecoveryCoordinator {
             return Err(RecoveryFailure {
                 error,
                 restart_required: active_runtime_owners != 0,
+                restart_source: PlatformColdRestartSource::Main,
                 active_runtime_owners,
             });
         }
 
+        let recovery_anchor = match create_platform_recovery_anchor(&self.app, &remote_window) {
+            Ok(anchor) => anchor,
+            Err(error) => {
+                let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
+                return Err(RecoveryFailure {
+                    error: MobileBackendRecoveryError::RecoveryAnchorCreate(error),
+                    // Android Activity creation can commit after the builder's
+                    // bounded acknowledgement wait. Never reopen the remote
+                    // control from this committed-unknown state.
+                    restart_required: true,
+                    restart_source: PlatformColdRestartSource::Main,
+                    active_runtime_owners,
+                });
+            }
+        };
+
         if let Err(error) = remove_platform_recovery_control(&remote_window).await {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure {
-                error: MobileBackendRecoveryError::NativeControlRetire(error),
-                restart_required: active_runtime_owners != 0,
-                active_runtime_owners,
-            });
+            return Err(failure_before_remote_retirement(
+                &self.app,
+                MobileBackendRecoveryError::NativeControlRetire(error),
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
         if let Err(error) = self.record(
             recovery_id,
             MobileBackendRecoveryPhase::NativeControlRetired,
         ) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure {
+            return Err(failure_before_remote_retirement(
+                &self.app,
                 error,
-                restart_required: active_runtime_owners != 0,
-                active_runtime_owners,
-            });
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
 
-        if let Err(error) = remote_window.destroy() {
-            let reset_failed = reset_platform_recovery_control(&remote_window)
-                .await
-                .is_err();
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure {
-                error: MobileBackendRecoveryError::RemoteWindowDestroy(error.to_string()),
-                restart_required: reset_failed || active_runtime_owners != 0,
-                active_runtime_owners,
-            });
-        }
-        if !wait_for_remote_window_retirement(&self.app).await {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+        let retire_dispatch_error = retire_platform_remote_surface(&remote_window).await.err();
+        if !wait_for_window_retirement(&self.app, MOBILE_TAURI_MAIN_WINDOW_LABEL).await {
+            let error = retire_dispatch_error.map_or(
                 MobileBackendRecoveryError::RemoteWindowRetireTimeout,
-                active_runtime_owners,
-            ));
+                MobileBackendRecoveryError::RemoteSurfaceRetire,
+            );
+            return Err(failure_after_remote_retirement(
+                &self.app,
+                error,
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
+        }
+        if retire_dispatch_error.is_some() {
+            eprintln!(
+                "deve_mobile remote surface retirement committed despite an unconfirmed dispatch"
+            );
         }
         if let Err(error) = self.record(
             recovery_id,
             MobileBackendRecoveryPhase::RemoteSurfaceRetired,
         ) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 error,
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
 
         if let Err(error) = self
             .preference
             .save_preference(NativeBackendPreference::local())
         {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 MobileBackendRecoveryError::PreferenceWrite(error.to_string()),
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
         if let Err(error) =
             self.record(recovery_id, MobileBackendRecoveryPhase::PreferenceCommitted)
         {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 error,
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
 
         if let Err(error) = self.app.plugin(mobile_local_backend_command_plugin()) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 MobileBackendRecoveryError::CommandPlugin(error.to_string()),
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
         if let Err(error) = self
             .app
             .plugin(mobile_embedded_backend_plugin(&bootstrap.script))
         {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 MobileBackendRecoveryError::BootstrapPlugin(error.to_string()),
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
         if let Err(error) = self.record(
             recovery_id,
             MobileBackendRecoveryPhase::LocalPluginsRegistered,
         ) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 error,
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &candidate,
+            )
+            .await);
         }
 
         let supervisor = Arc::new(candidate);
         if !self.app.manage(supervisor.clone()) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 MobileBackendRecoveryError::SupervisorAlreadyManaged,
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &supervisor,
+            )
+            .await);
         }
         if let Err(error) = self.record(recovery_id, MobileBackendRecoveryPhase::SupervisorManaged)
         {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 error,
-                active_runtime_owners,
-            ));
+                &recovery_anchor,
+                &supervisor,
+            )
+            .await);
         }
 
-        if let Err(error) = create_mobile_main_window(&self.app, None) {
-            let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
-            return Err(RecoveryFailure::after_retirement(
+        if let Err(error) = create_platform_local_main_window(&self.app, &recovery_anchor) {
+            return Err(failure_after_remote_retirement(
+                &self.app,
                 MobileBackendRecoveryError::LocalWindowCreate(error),
+                &recovery_anchor,
+                &supervisor,
+            )
+            .await);
+        }
+        if !retire_and_confirm_recovery_anchor(&self.app, &recovery_anchor).await {
+            let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
+            return Err(RecoveryFailure::after_retirement_from_main(
+                MobileBackendRecoveryError::RecoveryAnchorRetire,
                 active_runtime_owners,
             ));
         }
         if let Err(error) = self.record(recovery_id, MobileBackendRecoveryPhase::LocalWindowCreated)
         {
-            if let Some(window) = self.app.get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL) {
-                let _ = window.destroy();
-            }
             let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
-            return Err(RecoveryFailure::after_retirement(
+            return Err(RecoveryFailure::after_retirement_from_main(
                 error,
                 active_runtime_owners,
             ));
@@ -367,31 +439,28 @@ impl MobileBackendRecoveryCoordinator {
     }
 }
 
-async fn shutdown_candidate(supervisor: &MobileEmbeddedBackendSupervisor) -> bool {
-    match supervisor
-        .shutdown(MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT)
-        .await
-    {
-        Ok(()) => true,
-        Err(error) => {
-            eprintln!("deve_mobile candidate LocalBackend shutdown failed closed: {error}");
-            false
-        }
+async fn failure_before_remote_retirement(
+    app: &AppHandle<Wry>,
+    error: MobileBackendRecoveryError,
+    recovery_anchor: &PlatformRecoveryAnchor,
+    supervisor: &MobileEmbeddedBackendSupervisor,
+) -> RecoveryFailure {
+    let anchor_retired = retire_and_confirm_recovery_anchor(app, recovery_anchor).await;
+    let active_runtime_owners = u8::from(!shutdown_candidate(supervisor).await);
+    RecoveryFailure {
+        error,
+        restart_required: !anchor_retired || active_runtime_owners != 0,
+        restart_source: PlatformColdRestartSource::Main,
+        active_runtime_owners,
     }
 }
 
-async fn wait_for_remote_window_retirement(app: &AppHandle<Wry>) -> bool {
-    let deadline = tokio::time::Instant::now() + REMOTE_WINDOW_RETIRE_TIMEOUT;
-    loop {
-        if app
-            .get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL)
-            .is_none()
-        {
-            return true;
-        }
-        if tokio::time::Instant::now() >= deadline {
-            return false;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-    }
+async fn failure_after_remote_retirement(
+    _app: &AppHandle<Wry>,
+    error: MobileBackendRecoveryError,
+    _recovery_anchor: &PlatformRecoveryAnchor,
+    supervisor: &MobileEmbeddedBackendSupervisor,
+) -> RecoveryFailure {
+    let active_runtime_owners = u8::from(!shutdown_candidate(supervisor).await);
+    RecoveryFailure::after_retirement(error, active_runtime_owners)
 }

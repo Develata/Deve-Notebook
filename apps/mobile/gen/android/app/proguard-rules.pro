@@ -27,4 +27,9 @@
     public boolean installUseLocalBackendControl();
     public boolean resetUseLocalBackendControl();
     public boolean removeUseLocalBackendControl();
+    public boolean scheduleBackendRecoveryColdStart();
+}
+
+-keepclassmembers class dev.deve.notebook.mobile.RecoveryAnchorActivity {
+    public boolean scheduleBackendRecoveryColdStart();
 }

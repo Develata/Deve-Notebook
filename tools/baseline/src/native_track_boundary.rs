@@ -69,6 +69,9 @@ const TAURI_IMPORT_ALLOWED: &[&str] = &[
     "apps/mobile/src/tauri_entry/native_backend_commands.rs",
     "apps/mobile/src/tauri_entry/backend_recovery/mod.rs",
     "apps/mobile/src/tauri_entry/backend_recovery/android.rs",
+    // Process-local window and supervisor cleanup for the admitted native
+    // recovery coordinator; keep this an exact path.
+    "apps/mobile/src/tauri_entry/backend_recovery/cleanup.rs",
     "apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs",
     "apps/mobile/src/tauri_entry/backend_recovery/ios.rs",
     "apps/mobile/src/tauri_lifecycle.rs",
@@ -90,6 +93,8 @@ const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
     "apps/desktop/src/process_runtime/process_group.rs",
     "apps/desktop/src/process_runtime/process_group/windows.rs",
 ];
+
+const ANDROID_SELF_RETIRE_ADAPTER: &str = "apps/mobile/src/tauri_entry/backend_recovery/android.rs";
 
 pub fn run() -> Result<()> {
     let ctx = BaselineContext::new(LABEL)?;
@@ -285,12 +290,19 @@ fn check_no_process_runtime_leak(root: &Path) -> Result<()> {
     let process_regex =
         Regex::new(r"(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()")
             .with_context(|| format!("{LABEL}: invalid process runtime regex"))?;
+    let mut android_self_retire_calls = 0_u8;
     for line in matching_lines(
         root,
         &["apps/desktop/src", "apps/mobile/src"],
         &Scan::new(),
         &process_regex,
     )? {
+        if line.rel == ANDROID_SELF_RETIRE_ADAPTER
+            && line.text.trim() == "std::process::exit(exit_code)"
+        {
+            android_self_retire_calls = android_self_retire_calls.saturating_add(1);
+            continue;
+        }
         if PROCESS_RUNTIME_ALLOWED.contains(&line.rel.as_str()) {
             continue;
         }
@@ -298,6 +310,28 @@ fn check_no_process_runtime_leak(root: &Path) -> Result<()> {
             "native process runtime is only allowed in the Desktop post-gate runtime spike: {}",
             line.display()
         ));
+    }
+    if android_self_retire_calls != 1 {
+        return fail(format!(
+            "Android recovery self-retirement must have exactly one exact adapter call, found {android_self_retire_calls}"
+        ));
+    }
+
+    let android_retire_call_regex = Regex::new(r"android::retire_process\(")
+        .with_context(|| format!("{LABEL}: invalid Android retire call regex"))?;
+    let android_retire_calls = matching_lines(
+        root,
+        &["apps/mobile/src"],
+        &Scan::new(),
+        &android_retire_call_regex,
+    )?;
+    if android_retire_calls.len() != 1
+        || android_retire_calls[0].rel != "apps/mobile/src/tauri_entry/backend_recovery/mod.rs"
+        || android_retire_calls[0].text.trim() != "android::retire_process(exit_code);"
+    {
+        return fail(
+            "Android recovery self-retirement must have one exact coordinator-to-adapter call",
+        );
     }
 
     if root.join("apps/mobile/src/process_runtime.rs").exists() {

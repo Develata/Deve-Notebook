@@ -391,5 +391,34 @@ fn create_mobile_main_window<R: tauri::Runtime>(
         .map_err(|error| error.to_string())
 }
 
+#[cfg(target_os = "android")]
+fn create_mobile_main_window_from_android_activity(
+    app: &impl Manager<tauri::Wry>,
+    activity_name: &str,
+    created_by_activity_name: &str,
+) -> Result<tauri::WebviewWindow<tauri::Wry>, String> {
+    if app
+        .get_webview_window(MOBILE_TAURI_MAIN_WINDOW_LABEL)
+        .is_some()
+    {
+        return Err("deve_mobile stale main window blocked Android recovery".to_string());
+    }
+    let Some(window_config) = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == MOBILE_TAURI_MAIN_WINDOW_LABEL)
+    else {
+        return Err("deve_mobile Tauri config is missing main window".to_string());
+    };
+    WebviewWindowBuilder::from_config(app, window_config)
+        .map_err(|_| "deve_mobile Android local main window config failed".to_string())?
+        .activity_name(activity_name)
+        .created_by_activity_name(created_by_activity_name)
+        .build()
+        .map_err(|_| "deve_mobile Android local main Activity creation failed".to_string())
+}
+
 #[cfg(test)]
 mod tests;

@@ -80,6 +80,8 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  fun scheduleBackendRecoveryColdStart(): Boolean = scheduleDeveColdStart()
+
   fun installNativeSessionCookie(
     requestId: Long,
     webView: WebView,

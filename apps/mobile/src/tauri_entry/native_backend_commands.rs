@@ -11,6 +11,8 @@ use crate::{MobileNativeBackendState, probe_mobile_native_remote_backend};
 use deve_core::native_adapter::{NativeBackendPreference, NativeBackendValidationResult};
 use tauri::{AppHandle, Manager, State, WebviewWindow, Wry};
 
+use super::backend_recovery::{PlatformColdRestartSource, request_platform_cold_restart};
+
 const MOBILE_MAIN_WINDOW_LABEL: &str = "main";
 const UNTRUSTED_ORIGIN: &str = "native backend command requires bundled LocalBackend origin";
 
@@ -163,10 +165,10 @@ async fn native_backend_save_remote(
     shutdown_mobile_backend_before_restart(&app).await?;
     if let Err(error) = state.save_preference(NativeBackendPreference::remote(origin)) {
         // The persisted preference is still local; restart restores the retired runtime.
-        app.request_restart();
+        request_platform_cold_restart(&app, PlatformColdRestartSource::Main).await;
         return Err(error.to_string());
     }
-    app.request_restart();
+    request_platform_cold_restart(&app, PlatformColdRestartSource::Main).await;
     Ok(result)
 }
 

@@ -24,6 +24,21 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:excludeFromRecents="true"
+            android:name=".RecoveryAnchorActivity"
+            android:exported="false" />
+
+        <activity
+            android:excludeFromRecents="true"
+            android:name=".BackendRecoveryRestartActivity"
+            android:noHistory="true"
+            android:process=":backend_recovery_restart"
+            android:taskAffinity="${applicationId}.backend_recovery_restart"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
+
         <provider
           android:name="androidx.core.content.FileProvider"
           android:authorities="${applicationId}.fileprovider"

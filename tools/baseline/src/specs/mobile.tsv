@@ -744,7 +744,29 @@ contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	remove_plat
 contains	apps/mobile/src/tauri_entry/backend_recovery/state.rs	MobileBackendRecoveryState
 contains	apps/mobile/src/tauri_entry/backend_recovery/state.rs	active_runtime_owners
 contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	installUseLocalBackendControl
+contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	ANDROID_RECOVERY_ANCHOR_ACTIVITY
+contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	.created_by_activity_name(&main_activity_name)
+contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	scheduleBackendRecoveryColdStart
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	create_platform_recovery_anchor
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	retire_and_confirm_recovery_anchor
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	request_platform_cold_restart
+contains	apps/mobile/src/tauri_entry/backend_recovery/coordinator.rs	shutdown_managed_supervisor
+contains	apps/mobile/src/tauri_entry/backend_recovery/android.rs	std::process::exit(exit_code)
+contains	apps/mobile/src/tauri_entry/backend_recovery/mod.rs	android::retire_process(exit_code)
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:name=".RecoveryAnchorActivity"
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:exported="false"
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/RecoveryAnchorActivity.kt	class RecoveryAnchorActivity : TauriActivity()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/RecoveryAnchorActivity.kt	BackendRecoveryRestartActivity::class.java
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/RecoveryAnchorActivity.kt	addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/BackendRecoveryRestartActivity.kt	class BackendRecoveryRestartActivity : Activity()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/BackendRecoveryRestartActivity.kt	activityManager.runningAppProcesses
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/BackendRecoveryRestartActivity.kt	REQUIRED_ABSENT_SAMPLES = 2
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/BackendRecoveryRestartActivity.kt	Intent.makeRestartActivityTask(component)
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:process=":backend_recovery_restart"
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:taskAffinity="${applicationId}.backend_recovery_restart"
+contains	apps/mobile/gen/android/app/proguard-rules.pro	class dev.deve.notebook.mobile.RecoveryAnchorActivity
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	removeUseLocalBackendControl
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	scheduleBackendRecoveryColdStart
 contains	apps/mobile/src/tauri_lifecycle.rs	MobileBackendRecoveryState
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-remote-browser.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging backend_recovery -- --nocapture
@@ -752,6 +774,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_uses_one_pointer_intent_and_exact_doc_id_editor_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_lookup_reopens_explorer_and_requires_stable_writer_action_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_browser_requires_exact_native_mode_and_runtime_ownership_markers true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_remote_to_local_uses_capability_free_lifecycle_anchor true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: cold-restart relaunch is a package/static contract here; this successful journey does not claim forced-restart runtime evidence
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_cold_restart_package_contract_uses_platform_task_relaunch true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_remote_to_local_retires_lifecycle_anchor_after_fresh_local_surface true
 contains	apps/mobile/src/tauri_entry.rs	deve_mobile native shell mode=RemoteBrowser embedded_backend=absent
 contains	apps/mobile/src/embedded_backend/supervisor.rs	deve_mobile native embedded backend supervisor=started
 contains	scripts/lib/android-native-mode-evidence.mjs	requireAndroidRemoteBrowserModeEvidence

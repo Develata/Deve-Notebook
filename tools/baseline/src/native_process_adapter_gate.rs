@@ -23,6 +23,8 @@ const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
     "apps/desktop/src/process_runtime/process_group/windows.rs",
 ];
 
+const ANDROID_SELF_RETIRE_ADAPTER: &str = "apps/mobile/src/tauri_entry/backend_recovery/android.rs";
+
 const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
     CargoTest {
         package: "deve_core",
@@ -138,6 +140,13 @@ fn check_no_process_runtime_leak(root: &Path) -> Result<()> {
         &Scan::new().skip_dirs(&["gen", "target", "node_modules", "dist"]),
         &process_regex,
     )? {
+        // native-track-boundary runs first and proves this exact self-retire
+        // line and its coordinator call are each unique.
+        if line.rel == ANDROID_SELF_RETIRE_ADAPTER
+            && line.text.trim() == "std::process::exit(exit_code)"
+        {
+            continue;
+        }
         if PROCESS_RUNTIME_ALLOWED.contains(&line.rel.as_str()) {
             continue;
         }
