@@ -752,7 +752,7 @@ contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation e
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
 contains	scripts/android-app-process-observation.test.mjs	Android graceful exit rejects a sample that returns after its deadline
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp-client.mjs"
@@ -826,6 +826,7 @@ contains	scripts/lib/android-tools.sh	if sdk="$(android_sdk_root)"; then
 contains	apps/web/js/editor_lifecycle.test.mjs	stale cleanup cannot destroy a replacement editor mount
 contains	apps/web/js/editor_lifecycle.js	destroyOwnedEditorMount
 contains	scripts/mobile-webview-interaction.test.mjs	read-only editor focus rejects a writable CodeMirror surface
+contains	scripts/android-webview-pointer.test.mjs	WebView point click dispatches one complete primary-button gesture
 contains	scripts/android-webview-cdp.test.mjs	stable discovery keeps one healthy slow page generation attached
 contains	scripts/android-webview-cdp.test.mjs	login page admission requires the explicit RemoteBrowser entry surface
 contains	scripts/smoke-mobile-android-remote-browser.test.mjs	RemoteBrowser reload waits for a new main-document loader
@@ -837,9 +838,13 @@ contains	scripts/android-document-create-flow.test.mjs	Android document create f
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects duplicate exact-path OpenDoc projections
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects an old writable editor after OpenDoc acknowledgement
 contains	scripts/android-document-create-flow.test.mjs	exact Create pointer ignores a stale result and requires a stable hit-tested target
-contains	scripts/android-document-create-flow.test.mjs	changed before native pointer dispatch
+contains	scripts/android-document-create-flow.test.mjs	changed after pointer move
+contains	scripts/android-document-create-flow.test.mjs	exact Create production wiring emits the complete CDP pointer gesture
+contains	scripts/android-document-create-flow.test.mjs	exact Create pointer cleans observation after a committed-unknown release
 contains	scripts/android-document-create-flow.test.mjs	exact OpenDoc selection returns one typed doc identity atomically
+contains	scripts/android-business-flow.test.mjs	Android repo writer admission resets its quiet window after a scope change
 contains	scripts/mobile-webview-interaction.test.mjs	Android editor input binds expected doc-id through native input connection
+contains	scripts/android-webview-pointer.test.mjs	WebView point click revalidates after move and stops on every failed stage
 contains	scripts/android-webview-cdp.test.mjs	stable discovery retires a target that navigates away before accepting its replacement
 contains	scripts/android-webview-cdp.test.mjs	stable discovery reconnects a transiently blank snapshot for the same target
 contains	scripts/android-webview-cdp.test.mjs	renderer generation lease cannot be renewed by reconnecting the same target

@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  armExactCreateDocumentClickObservation,
   clickExactCreateDocument,
   clickExactCreatedDocumentAction,
+  consumeExactCreateDocumentClickObservation,
   createAndSelectAndroidDocument,
   readAndroidDocumentCreateSurface,
   readAndroidMobileLayout,
   readAndroidSearchVisible,
-  readExactCreateDocumentHitAtPoint,
   readExactCreateDocumentPointer,
   readExactCreatedEditorAdmission,
 } from "./lib/android-document-create-flow.mjs";
@@ -192,11 +193,14 @@ function withCreateDom(elements, hit, run) {
     getComputedStyle: globalThis.getComputedStyle,
     window: globalThis.window,
     requestAnimationFrame: globalThis.requestAnimationFrame,
+    __deveAndroidCreatePointerObservation:
+      globalThis.__deveAndroidCreatePointerObservation,
   };
   globalThis.getComputedStyle = () => ({ display: "block", visibility: "visible" });
   globalThis.window = { innerWidth: 400, innerHeight: 800 };
   globalThis.requestAnimationFrame = (callback) => setImmediate(callback);
   globalThis.document = {
+    querySelector: () => null,
     querySelectorAll: () => elements,
     elementFromPoint: () => hit,
   };
@@ -209,10 +213,20 @@ function withCreateDom(elements, hit, run) {
 }
 
 function createResult(target, { left = 10 } = {}) {
+  const listeners = new Set();
   const element = {
     getAttribute: (name) => name === "data-deve-search-result-create-target" ? target : null,
     getBoundingClientRect: () => ({ left, top: 20, right: left + 100, bottom: 64, width: 100, height: 44 }),
     contains: () => false,
+    addEventListener: (type, listener) => {
+      if (type === "click") listeners.add(listener);
+    },
+    removeEventListener: (type, listener) => {
+      if (type === "click") listeners.delete(listener);
+    },
+    emitClick: () => {
+      for (const listener of [...listeners]) listener();
+    },
   };
   element.closest = () => element;
   return element;
@@ -225,10 +239,6 @@ test("exact Create pointer ignores a stale result and requires a stable hit-test
     assert.deepEqual(
       await readExactCreateDocumentPointer(exactPath),
       { kind: "ready", count: 1, point: { x: 34, y: 42 } },
-    );
-    assert.equal(
-      readExactCreateDocumentHitAtPoint(exactPath, { x: 34, y: 42 }),
-      true,
     );
   });
   await withCreateDom([exact, createResult(exactPath)], exact, async () => {
@@ -248,17 +258,23 @@ test("exact Create pointer ignores a stale result and requires a stable hit-test
 test("exact Create pointer sends one native gesture only after identity admission", async () => {
   const page = {
     async call(fn, path) {
-      assert.equal(path, exactPath);
       if (fn === readExactCreateDocumentPointer) {
+        assert.equal(path, exactPath);
         return { kind: "ready", count: 1, point: { x: 17, y: 23 } };
       }
-      assert.equal(fn, readExactCreateDocumentHitAtPoint);
-      return true;
+      if (fn === armExactCreateDocumentClickObservation) {
+        assert.equal(path, exactPath);
+        return { kind: "armed", token: 7 };
+      }
+      assert.equal(fn, consumeExactCreateDocumentClickObservation);
+      assert.equal(path, 7);
+      return { kind: "observed", clicked: true, clickState: null };
     },
   };
   const taps = [];
-  await clickExactCreateDocument(page, exactPath, async (tapPage, point) => {
+  await clickExactCreateDocument(page, exactPath, async (tapPage, point, { beforePress }) => {
     taps.push({ tapPage, point });
+    await beforePress();
   });
   assert.deepEqual(taps, [{ tapPage: page, point: { x: 17, y: 23 } }]);
 
@@ -266,14 +282,72 @@ test("exact Create pointer sends one native gesture only after identity admissio
     async call(fn) {
       return fn === readExactCreateDocumentPointer
         ? { kind: "ready", count: 1, point: { x: 17, y: 23 } }
-        : false;
+        : { kind: "changed" };
     },
   };
   await assert.rejects(
-    clickExactCreateDocument(changedPage, exactPath, async () => taps.push("unexpected")),
-    /changed before native pointer dispatch/,
+    clickExactCreateDocument(
+      changedPage,
+      exactPath,
+      async (_tapPage, _point, { beforePress }) => beforePress(),
+    ),
+    /changed after pointer move/,
   );
   assert.equal(taps.includes("unexpected"), false);
+});
+
+test("exact Create production wiring emits the complete CDP pointer gesture", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    const sent = [];
+    const page = {
+      async call(fn, ...args) {
+        return fn(...args);
+      },
+      async send(method, params) {
+        sent.push({ method, params });
+        if (params.type === "mouseReleased") exact.emitClick();
+      },
+    };
+
+    const observation = await clickExactCreateDocument(page, exactPath);
+
+    assert.equal(observation.clicked, true);
+    assert.deepEqual(
+      sent.map(({ params }) => ({
+        type: params.type,
+        button: params.button,
+        buttons: params.buttons,
+      })),
+      [
+        { type: "mouseMoved", button: "none", buttons: 0 },
+        { type: "mousePressed", button: "left", buttons: 1 },
+        { type: "mouseReleased", button: "left", buttons: 0 },
+      ],
+    );
+  });
+});
+
+test("exact Create pointer cleans observation after a committed-unknown release", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    const page = {
+      async call(fn, ...args) {
+        return fn(...args);
+      },
+      async send(_method, params) {
+        if (params.type !== "mouseReleased") return;
+        exact.emitClick();
+        throw new Error("release response lost");
+      },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath),
+      /release response lost; click_observation=.*"clicked":true/,
+    );
+    assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
+  });
 });
 
 test("exact OpenDoc selection returns one typed doc identity atomically", () => {

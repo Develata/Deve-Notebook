@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  clickWebViewPoint,
   editorFocusMatchesMode,
   parsePendingAckCount,
   readSourceControlCommitState,
@@ -148,28 +147,6 @@ test("Android text field input retries remounted fields before inserting", async
 
   assert.equal(taps.length, 2);
   assert.deepEqual(sends, [{ method: "Input.insertText", params: { text: "commit" } }]);
-});
-
-test("WebView point click dispatches one complete primary-button gesture", async () => {
-  const sent = [];
-  const page = {
-    async send(method, params) {
-      sent.push({ method, params });
-    },
-  };
-
-  await clickWebViewPoint(page, { x: 24, y: 32 });
-
-  assert.deepEqual(sent, [
-    {
-      method: "Input.dispatchMouseEvent",
-      params: { type: "mousePressed", x: 24, y: 32, button: "left", clickCount: 1 },
-    },
-    {
-      method: "Input.dispatchMouseEvent",
-      params: { type: "mouseReleased", x: 24, y: 32, button: "left", clickCount: 1 },
-    },
-  ]);
 });
 
 test("Android editor input binds expected doc-id through native input connection", async () => {

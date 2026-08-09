@@ -1,5 +1,5 @@
+import { clickWebViewPoint } from "./android-webview-pointer.mjs";
 import {
-  clickWebViewPoint,
   closeMobileSidebar,
   openMobileSidebarView,
   readSourceControlCommitState,

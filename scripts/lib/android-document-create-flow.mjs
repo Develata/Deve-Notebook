@@ -1,5 +1,5 @@
+import { clickWebViewPoint } from "./android-webview-pointer.mjs";
 import {
-  clickWebViewPoint,
   closeMobileSidebar,
   openMobileSidebarView,
 } from "./mobile-webview-interaction.mjs";
@@ -67,16 +67,48 @@ export async function readExactCreateDocumentPointer(expectedPath) {
     : { kind: "moving", count: 1 };
 }
 
-export function readExactCreateDocumentHitAtPoint(expectedPath, point) {
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+export function armExactCreateDocumentClickObservation(expectedPath, point) {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    return { kind: "changed" };
+  }
   const hit = document.elementFromPoint(point.x, point.y);
   const target = hit?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
-  if (target?.getAttribute("data-deve-search-result-create-target") !== expectedPath) return false;
   const exactTargets = [...document.querySelectorAll(
     '[data-deve-search-result-action="create-doc"]',
   )].filter((element) =>
     element.getAttribute("data-deve-search-result-create-target") === expectedPath);
-  return exactTargets.length === 1 && exactTargets[0] === target;
+  if (exactTargets.length !== 1 || exactTargets[0] !== target) {
+    return { kind: "changed" };
+  }
+  const previous = globalThis.__deveAndroidCreatePointerObservation;
+  const token = Number.isSafeInteger(previous?.token) ? previous.token + 1 : 1;
+  const observation = { token, clicked: false, clickState: null, target, listener: null };
+  const listener = () => {
+    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    const status = document.querySelector("[data-deve-sync-status]");
+    observation.clicked = true;
+    observation.clickState = {
+      syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
+      repoIdPresent: Boolean(status?.getAttribute("data-deve-repo-id")),
+      scopeNonceRaw: status?.getAttribute("data-deve-scope-nonce") ?? null,
+    };
+  };
+  observation.listener = listener;
+  globalThis.__deveAndroidCreatePointerObservation = observation;
+  target.addEventListener("click", listener, { capture: true, once: true });
+  return { kind: "armed", token };
+}
+
+export function consumeExactCreateDocumentClickObservation(token) {
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (!observation || observation.token !== token) return { kind: "missing", clicked: false };
+  observation.target.removeEventListener("click", observation.listener, { capture: true });
+  delete globalThis.__deveAndroidCreatePointerObservation;
+  return {
+    kind: "observed",
+    clicked: observation.clicked,
+    clickState: observation.clickState,
+  };
 }
 
 export async function clickExactCreateDocument(page, path, tap = clickWebViewPoint) {
@@ -84,9 +116,49 @@ export async function clickExactCreateDocument(page, path, tap = clickWebViewPoi
   if (target?.kind !== "ready" || target.count !== 1 || !target.point) {
     throw new Error(`exact Create target is not stable and visible: ${JSON.stringify(target)}`);
   }
-  const stillExact = await page.call(readExactCreateDocumentHitAtPoint, path, target.point);
-  if (!stillExact) throw new Error("exact Create target changed before native pointer dispatch");
-  await tap(page, target.point);
+  let armed = null;
+  let pointerError = null;
+  try {
+    await tap(page, target.point, {
+      beforePress: async () => {
+        armed = await page.call(
+          armExactCreateDocumentClickObservation,
+          path,
+          target.point,
+        );
+        if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token)) {
+          throw new Error("exact Create target changed after pointer move");
+        }
+      },
+    });
+  } catch (error) {
+    pointerError = error;
+  }
+  if (armed?.kind !== "armed") {
+    if (pointerError) throw pointerError;
+    throw new Error("Create pointer driver skipped before-press identity admission");
+  }
+  let observation;
+  try {
+    observation = await page.call(
+      consumeExactCreateDocumentClickObservation,
+      armed.token,
+    );
+  } catch (cleanupError) {
+    throw new Error(
+      `${pointerError?.message ?? "Create pointer observation cleanup failed"}; `
+        + `observation_cleanup=${cleanupError.message}`,
+    );
+  }
+  if (pointerError) {
+    throw new Error(
+      `${pointerError.message}; click_observation=${JSON.stringify(observation)}`,
+    );
+  }
+  if (observation?.kind !== "observed" || observation.clicked !== true) {
+    throw new Error(`exact Create pointer did not produce a DOM click: ${JSON.stringify(observation)}`);
+  }
+  return observation;
 }
 
 export function readAndroidDocumentCreateSurface(expectedPath, expectedDocId = null) {
@@ -251,14 +323,19 @@ export async function createAndSelectAndroidDocument(
     },
     10000,
   ).catch((error) => throwDocumentCreateFailure(page, path, "create_identity", error));
-  await clickCreate(page, path).catch(
+  const pointerObservation = await clickCreate(page, path).catch(
     (error) => throwDocumentCreateFailure(page, path, "create_pointer", error),
   );
   await waitUntil(
     "create document action acknowledgement",
     async () => !(await page.call(readAndroidSearchVisible)),
     10000,
-  ).catch((error) => throwDocumentCreateFailure(page, path, "action_ack", error));
+  ).catch((error) => throwDocumentCreateFailure(
+    page,
+    path,
+    "action_ack",
+    new Error(`${error.message}; pointer=${JSON.stringify(pointerObservation)}`),
+  ));
 
   // Never repeat Create. Wait for the backend projection, then issue OpenDoc
   // for the one exact path and carry its typed doc identity into editor admission.

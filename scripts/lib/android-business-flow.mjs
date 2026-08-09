@@ -256,6 +256,40 @@ async function readRepoScope(page) {
   };
 }
 
+export async function waitForStableAndroidRepoScope(
+  page,
+  waitUntil,
+  {
+    expectedRepoId,
+    minimumScopeNonce,
+    quietMs = 1000,
+    now = Date.now,
+  },
+) {
+  let candidate = null;
+  let stableSince = null;
+  return waitUntil("stable Android repo writer scope", async () => {
+    const current = await readRepoScope(page);
+    const valid = current.status === "ready"
+      && current.repoId === expectedRepoId
+      && Number.isInteger(current.scopeNonce)
+      && current.scopeNonce >= minimumScopeNonce;
+    if (!valid) {
+      candidate = null;
+      stableSince = null;
+      return null;
+    }
+    const identity = `${current.repoId}\u0000${current.scopeNonce}`;
+    const observedAt = now();
+    if (candidate !== identity) {
+      candidate = identity;
+      stableSince = observedAt;
+      return quietMs === 0 ? current : null;
+    }
+    return observedAt - stableSince >= quietMs ? current : null;
+  }, 30000);
+}
+
 async function openRepoSwitcher(page, waitUntil) {
   const mobile = await page.call(() =>
     Boolean(globalThis.__deveVisibleElement('[data-deve-layout-mode="mobile"]')));
@@ -273,7 +307,7 @@ async function openRepoSwitcher(page, waitUntil) {
 export async function createFirstAndroidRepoFromBootstrapUnbound(
   page,
   name,
-  { waitUntil },
+  { waitUntil, stableQuietMs = 1000, stableNow = Date.now },
 ) {
   const initial = await waitUntil("initial zero-repo BootstrapUnbound", async () => {
     const current = await readRepoScope(page);
@@ -307,7 +341,7 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
   });
   assert.equal(submitted, true, "first Create must use the visible repo switcher form");
 
-  const created = await waitUntil("first Android repo writer readiness", async () => {
+  const firstReady = await waitUntil("first Android repo writer readiness", async () => {
     const current = await readRepoScope(page);
     return current.status === "ready"
       && typeof current.repoIdRaw === "string"
@@ -318,9 +352,9 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
       ? current
       : null;
   }, 60000);
-  assert.ok(created.repoId, "first Create must bind the backend-projected repo scope");
+  assert.ok(firstReady.repoId, "first Create must bind the backend-projected repo scope");
   assert.ok(
-    created.scopeNonce > initial.scopeNonce,
+    firstReady.scopeNonce > initial.scopeNonce,
     "first Create must advance the backend scope nonce",
   );
 
@@ -331,6 +365,12 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
       .length, name);
   assert.equal(aliases, 1, "first Create must publish the backend-owned display alias");
   await clickVisible(page, "[data-deve-repo-switcher-backdrop]");
+  const created = await waitForStableAndroidRepoScope(page, waitUntil, {
+    expectedRepoId: firstReady.repoId,
+    minimumScopeNonce: firstReady.scopeNonce,
+    quietMs: stableQuietMs,
+    now: stableNow,
+  });
   return {
     initial,
     created,

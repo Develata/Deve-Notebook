@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createFirstAndroidRepoFromBootstrapUnbound } from "./lib/android-business-flow.mjs";
+import {
+  createFirstAndroidRepoFromBootstrapUnbound,
+  waitForStableAndroidRepoScope,
+} from "./lib/android-business-flow.mjs";
 
 class FakeElement {
   constructor(onClick = () => {}) {
@@ -139,6 +142,7 @@ const waitUntil = async (label, predicate) => {
   if (value) return value;
   throw new Error(`timeout waiting for ${label}`);
 };
+const repoCreateOptions = { waitUntil, stableQuietMs: 0 };
 
 async function withFakeDom(options, action) {
   const fixture = installFakeDom(options);
@@ -154,7 +158,7 @@ test("first Android repo transitions from explicit BootstrapUnbound(0) to writer
     const result = await createFirstAndroidRepoFromBootstrapUnbound(
       page,
       "first-repo",
-      { waitUntil },
+      repoCreateOptions,
     );
     assert.equal(result.initial.repoIdRaw, "");
     assert.equal(result.initial.scopeNonceRaw, "0");
@@ -174,7 +178,7 @@ for (const [label, options] of [
   test(`BootstrapUnbound fails closed for ${label}`, async () => {
     await withFakeDom(options, async () => {
       await assert.rejects(
-        createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", { waitUntil }),
+        createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", repoCreateOptions),
         /timeout waiting for initial zero-repo BootstrapUnbound/,
       );
     });
@@ -184,7 +188,7 @@ for (const [label, options] of [
 test("first Android repo fails closed when the visible submit is disabled", async () => {
   await withFakeDom({ submitDisabled: true }, async () => {
     await assert.rejects(
-      createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", { waitUntil }),
+      createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", repoCreateOptions),
       /first Create must use the visible repo switcher form/,
     );
   });
@@ -193,8 +197,45 @@ test("first Android repo fails closed when the visible submit is disabled", asyn
 test("first Android repo fails closed when backend writer readiness never arrives", async () => {
   await withFakeDom({ becomeReady: false }, async () => {
     await assert.rejects(
-      createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", { waitUntil }),
+      createFirstAndroidRepoFromBootstrapUnbound(page, "first-repo", repoCreateOptions),
       /timeout waiting for first Android repo writer readiness/,
     );
   });
+});
+
+test("Android repo writer admission resets its quiet window after a scope change", async () => {
+  const observations = [
+    { status: "ready", repoIdRaw: "repo-1", scopeNonceRaw: "2" },
+    { status: "ready", repoIdRaw: "repo-1", scopeNonceRaw: "3" },
+    { status: "ready", repoIdRaw: "repo-1", scopeNonceRaw: "3" },
+    { status: "ready", repoIdRaw: "repo-1", scopeNonceRaw: "3" },
+  ];
+  let now = 0;
+  const observationPage = {
+    async call() {
+      return observations.shift() ?? {
+        status: "ready",
+        repoIdRaw: "repo-1",
+        scopeNonceRaw: "3",
+      };
+    },
+  };
+  const pollingWait = async (_label, predicate) => {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const value = await predicate();
+      if (value) return value;
+      now += 500;
+    }
+    throw new Error("stable scope not observed");
+  };
+
+  const stable = await waitForStableAndroidRepoScope(observationPage, pollingWait, {
+    expectedRepoId: "repo-1",
+    minimumScopeNonce: 2,
+    quietMs: 1000,
+    now: () => now,
+  });
+
+  assert.equal(stable.scopeNonce, 3);
+  assert.equal(now, 1500);
 });

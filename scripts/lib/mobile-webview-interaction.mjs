@@ -1,3 +1,5 @@
+import { clickWebViewPoint } from "./android-webview-pointer.mjs";
+
 export function editorFocusMatchesMode(contentEditable, writable, activeEditor = true) {
   if (!activeEditor) return false;
   return writable ? contentEditable === "true" : contentEditable !== "true";
@@ -49,23 +51,6 @@ export function sourceControlCommitReady(state, expectedMessage) {
 
 export function sourceControlCommitAcknowledged(state) {
   return state?.confirmedCount === 0 && state.message === "";
-}
-
-export async function clickWebViewPoint(page, point) {
-  await page.send("Input.dispatchMouseEvent", {
-    type: "mousePressed",
-    x: point.x,
-    y: point.y,
-    button: "left",
-    clickCount: 1,
-  });
-  await page.send("Input.dispatchMouseEvent", {
-    type: "mouseReleased",
-    x: point.x,
-    y: point.y,
-    button: "left",
-    clickCount: 1,
-  });
 }
 
 export async function readEditorMountObservation(page, expectedDocId = null) {
