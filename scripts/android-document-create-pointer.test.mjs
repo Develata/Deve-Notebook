@@ -8,6 +8,7 @@ import {
   consumeExactCreateDocumentClickObservationByPath,
   readExactCreateDocumentPointer,
 } from "./lib/android-document-create-flow.mjs";
+import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
 
 const exactPath = "notes/exact.md";
 
@@ -123,13 +124,13 @@ test("exact Create pointer sends one native gesture only after identity admissio
     },
   };
   const taps = [];
-  await clickExactCreateDocument(page, exactPath, async (tapPage, point, { beforePress }) => {
-    taps.push({ tapPage, point, pressPoint: await beforePress() });
+  await clickExactCreateDocument(page, exactPath, async (tapPage, point, { beforeContact }) => {
+    taps.push({ tapPage, point, contactPoint: await beforeContact() });
   });
   assert.deepEqual(taps, [{
     tapPage: page,
     point: { x: 17, y: 23 },
-    pressPoint: { x: 17, y: 23 },
+    contactPoint: { x: 17, y: 23 },
   }]);
 
   const changedPage = {
@@ -147,9 +148,9 @@ test("exact Create pointer sends one native gesture only after identity admissio
     clickExactCreateDocument(
       changedPage,
       exactPath,
-      async (_tapPage, _point, { beforePress }) => beforePress(),
+      async (_tapPage, _point, { beforeContact }) => beforeContact(),
     ),
-    /changed after pointer move/,
+    /changed before native touch contact/,
   );
 });
 
@@ -161,7 +162,7 @@ test("exact Create production wiring emits the complete CDP pointer gesture", as
       async call(fn, ...args) { return fn(...args); },
       async send(method, params) {
         sent.push({ method, params });
-        if (params.type === "mouseReleased") exact.emitClick();
+        if (params.type === "touchEnd") exact.emitClick();
       },
     };
 
@@ -169,14 +170,13 @@ test("exact Create production wiring emits the complete CDP pointer gesture", as
 
     assert.equal(observation.clicked, true);
     assert.deepEqual(sent.map(({ params }) => params.type), [
-      "mouseMoved",
-      "mousePressed",
-      "mouseReleased",
+      "touchStart",
+      "touchEnd",
     ]);
   });
 });
 
-test("exact Create accepts a same-path remount after hover and presses its new point", async () => {
+test("exact Create accepts a same-path remount before touch and contacts its new point", async () => {
   let committed = 0;
   const elements = [createResult(exactPath)];
   await withCreateDom(
@@ -187,22 +187,28 @@ test("exact Create accepts a same-path remount after hover and presses its new p
       const page = {
         async call(fn, ...args) { return fn(...args); },
         async send(_method, params) {
-          sent.push({ type: params.type, x: params.x });
-          if (params.type === "mouseMoved") elements[0].setLeft(110);
-          if (params.type === "mousePressed") {
-            elements[0] = createResult(exactPath, { left: 110, onCommit: () => { committed += 1; } });
-          }
-          if (params.type === "mouseReleased") elements[0].emitClick();
+          sent.push({ type: params.type, x: params.touchPoints[0]?.x ?? null });
+          if (params.type === "touchEnd") elements[0].emitClick();
         },
       };
 
-      await clickExactCreateDocument(page, exactPath);
+      await clickExactCreateDocument(
+        page,
+        exactPath,
+        async (tapPage, _point, { beforeContact }) => {
+          elements[0] = createResult(exactPath, {
+            left: 110,
+            onCommit: () => { committed += 1; },
+          });
+          const contactPoint = await beforeContact();
+          await tapWebViewPoint(tapPage, contactPoint);
+        },
+      );
 
       assert.equal(committed, 1);
       assert.deepEqual(sent, [
-        { type: "mouseMoved", x: 34 },
-        { type: "mousePressed", x: 134 },
-        { type: "mouseReleased", x: 134 },
+        { type: "touchStart", x: 134 },
+        { type: "touchEnd", x: null },
       ]);
     },
   );
@@ -217,8 +223,8 @@ test("exact Create capture guard blocks a different target after admission", asy
     const page = {
       async call(fn, ...args) { return fn(...args); },
       async send(_method, params) {
-        if (params.type === "mousePressed") elements[0] = wrong;
-        if (params.type === "mouseReleased") wrong.emitClick();
+        if (params.type === "touchStart") elements[0] = wrong;
+        if (params.type === "touchEnd") wrong.emitClick();
       },
     };
 
@@ -248,7 +254,7 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
       clickExactCreateDocument(
         armLostPage,
         exactPath,
-        async (_page, _point, { beforePress }) => beforePress(),
+        async (_page, _point, { beforeContact }) => beforeContact(),
       ),
       /arm response lost; unconfirmed_arm_cleanup=.*"kind":"observed"/,
     );
@@ -257,14 +263,14 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
     const releaseLostPage = {
       async call(fn, ...args) { return fn(...args); },
       async send(_method, params) {
-        if (params.type !== "mouseReleased") return;
+        if (params.type !== "touchEnd") return;
         exact.emitClick();
         throw new Error("release response lost");
       },
     };
     await assert.rejects(
       clickExactCreateDocument(releaseLostPage, exactPath),
-      /release response lost; click_observation=.*"clicked":true/,
+      /release response lost; touch_cancel=confirmed; click_observation=.*"clicked":true/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
   });

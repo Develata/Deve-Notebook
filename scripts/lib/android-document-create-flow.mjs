@@ -1,4 +1,4 @@
-import { clickWebViewPoint } from "./android-webview-pointer.mjs";
+import { tapWebViewPoint } from "./android-webview-pointer.mjs";
 import {
   closeMobileSidebar,
   openMobileSidebarView,
@@ -148,7 +148,7 @@ export function consumeExactCreateDocumentClickObservationByPath(expectedPath) {
   };
 }
 
-export async function clickExactCreateDocument(page, path, tap = clickWebViewPoint) {
+export async function clickExactCreateDocument(page, path, tap = tapWebViewPoint) {
   const target = await page.call(readExactCreateDocumentPointer, path);
   if (target?.kind !== "ready" || target.count !== 1 || !target.point) {
     throw new Error(`exact Create target is not stable and visible: ${JSON.stringify(target)}`);
@@ -157,11 +157,11 @@ export async function clickExactCreateDocument(page, path, tap = clickWebViewPoi
   let pointerError = null;
   try {
     await tap(page, target.point, {
-      beforePress: async () => {
+      beforeContact: async () => {
         const refreshed = await page.call(readExactCreateDocumentPointer, path);
         if (refreshed?.kind !== "ready" || refreshed.count !== 1 || !refreshed.point) {
           throw new Error(
-            `exact Create target was not stable after pointer move: ${JSON.stringify(refreshed)}`,
+            `exact Create target was not stable before native touch contact: ${JSON.stringify(refreshed)}`,
           );
         }
         armed = await page.call(
@@ -170,7 +170,7 @@ export async function clickExactCreateDocument(page, path, tap = clickWebViewPoi
           refreshed.point,
         );
         if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token)) {
-          throw new Error("exact Create target changed after pointer move");
+          throw new Error("exact Create target changed before native touch contact");
         }
         return refreshed.point;
       },
@@ -196,7 +196,7 @@ export async function clickExactCreateDocument(page, path, tap = clickWebViewPoi
         `${pointerError.message}; unconfirmed_arm_cleanup=${JSON.stringify(cleanup)}`,
       );
     }
-    throw new Error("Create pointer driver skipped before-press identity admission");
+    throw new Error("Create pointer driver skipped before-contact identity admission");
   }
   let observation;
   try {
