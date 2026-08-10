@@ -173,7 +173,11 @@ fn validate_remote_recovery(claims: &Value) -> Result<()> {
     let transition = recovery
         .get("transition")
         .context("Android RemoteBrowser recovery transition is missing")?;
-    if transition.get("phase").and_then(Value::as_str) != Some("local_window_created")
+    if transition
+        .get("recoveryId")
+        .and_then(Value::as_u64)
+        .is_none_or(|recovery_id| recovery_id == 0)
+        || transition.get("phase").and_then(Value::as_str) != Some("local_window_created")
         || transition
             .get("remoteSurfaceRetired")
             .and_then(Value::as_bool)
@@ -200,7 +204,6 @@ fn validate_remote_recovery(claims: &Value) -> Result<()> {
         bail!("Android RemoteBrowser recovery transition observations are incomplete");
     }
     for observation in [
-        "remoteTargetRetired",
         "authorityTupleChanged",
         "appPidStable",
         "processExitedAfterGracefulShutdown",

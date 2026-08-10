@@ -231,6 +231,7 @@ fn android_remote_fixture(
     });
     claims["recovery"] = json!({
         "transition": {
+            "recoveryId": 1,
             "phase": "local_window_created",
             "remoteSurfaceRetired": true,
             "preferenceCommittedAfterRemoteRetirement": true,
@@ -240,7 +241,6 @@ fn android_remote_fixture(
             "activeRuntimeOwners": 1,
             "lastError": null
         },
-        "remoteTargetRetired": true,
         "authorityTupleChanged": true,
         "appPidStable": true,
         "processExitedAfterGracefulShutdown": true,
@@ -341,6 +341,36 @@ fn android_remote_receipt_requires_repo_removal_no_scope_claim() {
         .and_then(|journey| journey.as_object_mut())
         .expect("remote journey claims")
         .remove("repoRemovalNoScope");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+}
+
+#[test]
+fn android_remote_receipt_requires_observed_retirement_and_bundled_local_target() {
+    let now = Utc::now();
+    let (row, binding, mut record) = android_remote_fixture(now);
+    assert!(validate_fixture(&record, &row, &binding).is_ok());
+
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["transition"]
+        .as_object_mut()
+        .expect("transition")
+        .remove("recoveryId");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["transition"]["recoveryId"] =
+        json!(0);
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["transition"]["remoteSurfaceRetired"] =
+        json!(false);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["remoteTargetRetired"] =
+        json!(true);
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["local"]["origin"] =
+        json!("https://stale-remote.example.test");
     assert!(validate_fixture(&record, &row, &binding).is_err());
 }
 

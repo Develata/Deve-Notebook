@@ -4,7 +4,6 @@ import { probeWebCryptoEd25519 } from "./lib/webcrypto-capability.mjs";
 import { evaluateWritableProbeExpectation } from "./lib/android-target-capability.mjs";
 import { writeAndroidWritableEvidence } from "./lib/android-writable-evidence.mjs";
 import {
-  fetchCdpTargets,
   findStableAppPage,
   isExpectedCdpTargetRetirement,
   reloadPageAndWaitForNewMainDocument,
@@ -143,6 +142,7 @@ async function attachLocalPage() {
   const page = await findStableAppPage({
     cdpEndpoint,
     expectedOrigin: undefined,
+    requiredSurface: "sync",
     withDeadline,
   });
   await page.evaluate(`globalThis.__deveVisibleElement = ${visibleElement.toString()}`);
@@ -176,10 +176,6 @@ async function assertRemoteBridgeIsolation(page) {
     directFacade: Boolean(globalThis.__DEVE_NATIVE_BACKEND_CONFIG__),
   }));
   assert.deepEqual(bridge, { capability: false, facade: false, directFacade: false });
-}
-
-async function listCdpTargets() {
-  return fetchCdpTargets(cdpEndpoint, withDeadline, 10000);
 }
 
 async function readScope(page) {
@@ -305,17 +301,11 @@ async function main() {
   requireAndroidRemoteBrowserModeEvidence(await logcatModeMatchStates());
   tapNativeRecoveryControl();
   await page.close().catch(() => {});
-  const remoteSurfaceRetired = await waitUntil("RemoteBrowser CDP target retirement", async () => {
-    const targets = await listCdpTargets();
-    return !targets.some((target) => {
-      try {
-        return target.type === "page"
-          && new URL(target.url).origin === new URL(remoteOrigin).origin;
-      } catch {
-        return false;
-      }
-    });
-  }, 30000);
+  // Android owns Activity retirement; Chromium may keep a destroyed WebView's
+  // discovery target cached after Wry has removed the corresponding window.
+  // Admit only the fresh bundled-local target, then verify the ordered native
+  // transition snapshot instead of treating debugger-cache lifetime as product
+  // lifecycle authority.
   page = await attachLocalPage();
   const localRuntime = await waitUntil("fresh LocalBackend bootstrap", async () => {
     const runtime = await page.call(() => ({
@@ -353,6 +343,10 @@ async function main() {
       : null;
   }, 60000);
   const transition = await nativeInvoke(page, "native_backend_get_recovery_state");
+  assert.ok(
+    Number.isSafeInteger(transition.recoveryId) && transition.recoveryId > 0,
+    "native recovery transition must bind a positive coordinator attempt ID",
+  );
   assert.equal(transition.phase, "local_window_created");
   assert.equal(transition.remoteSurfaceRetired, true);
   assert.equal(transition.preferenceCommittedAfterRemoteRetirement, true);
@@ -403,7 +397,6 @@ async function main() {
       repoId: localScope.repoId,
       scopeNonce: localScope.scopeNonce,
     },
-    remoteTargetRetired: remoteSurfaceRetired,
     authorityTupleChanged,
     appPidStable: localPid === remotePid,
     processExitedAfterGracefulShutdown,
@@ -416,8 +409,7 @@ async function main() {
     repoRemovalNoScope: repoLifecycle.noScope,
     zeroNativeIpc: ipcRequests.length === 0 && ipcCspErrors.length === 0,
     nativeLocalRecovery: transition.phase === "local_window_created",
-    remoteSurfaceDestroyedBeforeLocalIpc: remoteSurfaceRetired
-      && transition.remoteSurfaceRetired
+    remoteSurfaceDestroyedBeforeLocalIpc: transition.remoteSurfaceRetired
       && transition.localPluginsRegisteredAfterRemoteRetirement,
     freshLocalEndpointSessionScope: Boolean(localScope.repoId)
       && localScope.scopeNonce > 0

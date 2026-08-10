@@ -18,6 +18,7 @@ test("request restart generation is captured when the request starts", async () 
   const diag = attachDiagnostics(page, "generation-test", expectedOrigin);
   const request = {
     url: () => `${expectedOrigin}/api/node/role`,
+    method: () => "GET",
     failure: () => ({ errorText: "net::ERR_CONNECTION_REFUSED" }),
   };
 
@@ -135,6 +136,43 @@ test("delayed resource console correlation is bounded and one-to-one", () => {
   );
 });
 
+test("active console errors require a request failure from the same restart generation", () => {
+  const historicalFailure = {
+    url: `${expectedOrigin}/api/node/role`,
+    method: "GET",
+    errorText: "net::ERR_CONNECTION_REFUSED",
+    duringHostRestart: true,
+    restartGeneration: 1,
+    responseStatus: undefined,
+    observedAtMs: 1000,
+  };
+  const currentConsole = {
+    message: resourceMessage,
+    locationUrl: "",
+    duringOffline: false,
+    duringHostRestart: true,
+    restartGeneration: 2,
+    observedAtMs: 1001,
+  };
+
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: [historicalFailure],
+      consoleErrors: [currentConsole],
+    }),
+    [currentConsole],
+  );
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: [{ ...historicalFailure, restartGeneration: 2 }],
+      consoleErrors: [currentConsole],
+    }),
+    [],
+  );
+});
+
 test("restart resource errors require both active generation and expected origin", () => {
   const duringRestart = {
     message: resourceMessage,
@@ -165,6 +203,60 @@ test("restart resource errors require both active generation and expected origin
       consoleErrors: [duringRestart, postWindow, outsideOrigin, missingOrigin],
     }),
     [postWindow, outsideOrigin, missingOrigin],
+  );
+});
+
+test("network-changed resources are accepted only inside the exact restart generation", () => {
+  const scopedConsole = {
+    message: "Failed to load resource: net::ERR_NETWORK_CHANGED",
+    locationUrl: `${expectedOrigin}/assets/editor.css`,
+    duringOffline: false,
+    duringHostRestart: true,
+    restartGeneration: 1,
+    observedAtMs: 1000,
+  };
+  const postRestartConsole = {
+    ...scopedConsole,
+    duringHostRestart: false,
+    restartGeneration: null,
+  };
+  const scopedRequest = {
+    url: `${expectedOrigin}/assets/editor.css`,
+    method: "GET",
+    errorText: "net::ERR_NETWORK_CHANGED",
+    duringOffline: false,
+    duringHostRestart: true,
+    restartGeneration: 1,
+    responseStatus: undefined,
+  };
+  const foreignRequest = {
+    ...scopedRequest,
+    url: "https://example.invalid/assets/editor.css",
+  };
+  const mutationRequest = {
+    ...scopedRequest,
+    url: `${expectedOrigin}/api/repos/remove`,
+    method: "POST",
+  };
+  const completedRequest = {
+    ...scopedRequest,
+    responseStatus: 200,
+  };
+
+  assert.deepEqual(
+    relevantConsoleErrors({
+      expectedOrigin,
+      requestFailures: [],
+      consoleErrors: [scopedConsole, postRestartConsole],
+    }),
+    [postRestartConsole],
+  );
+  assert.deepEqual(
+    relevantRequestFailures({
+      expectedOrigin,
+      requestFailures: [scopedRequest, foreignRequest, mutationRequest, completedRequest],
+    }),
+    [foreignRequest, mutationRequest, completedRequest],
   );
 });
 

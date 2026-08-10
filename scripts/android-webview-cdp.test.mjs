@@ -178,15 +178,31 @@ test("stable discovery keeps one healthy slow page generation attached", async (
       connections += 1;
       return page;
     },
-    pollIntervalMs: 100,
-    generationTimeoutMs: 500,
-    stableTimeoutMs: 1_000,
   }));
 
   assert.equal(stable, page);
   assert.equal(connections, 1);
   assert.equal(page.closed, 0);
   assert.equal(page.visibleHelperInstalled, 1);
+});
+
+test("bundled-local discovery skips stale remote and recovery-anchor targets", async () => {
+  const localPage = mockPage([pageSnapshot({ marker: true })]);
+  const stable = await findStableAppPage(discoveryArgs({
+    ...fakeClock(),
+    listTargets: async () => [
+      ...target("stale-remote", "https://remote.test/"), ...target("recovery-anchor", "about:blank"),
+      ...target("fresh-local", "http://tauri.localhost/"),
+    ],
+    connectPage: async (webSocketDebuggerUrl) => {
+      assert.equal(webSocketDebuggerUrl, "ws://android.test/fresh-local");
+      return localPage;
+    },
+    pollIntervalMs: 100,
+    generationTimeoutMs: 500,
+    stableTimeoutMs: 1_000,
+  }));
+  assert.equal(stable, localPage);
 });
 
 test("login page admission requires the explicit RemoteBrowser entry surface", async () => {

@@ -383,6 +383,17 @@ test("controlled host restart ignores only restart-scoped transport errors", () 
   );
 });
 
+test("controlled restart remains active until every client reopens", () => {
+  const source = fs.readFileSync(
+    new URL("./smoke-docker-multiclient.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /beginHostRestart\(\[diagA, diagB, mobileDiag\]\)[\s\S]*?restartCandidateContainer\(\)[\s\S]*?await reopenNoScope\(pageA, diagA\)[\s\S]*?await reopenNoScope\(pageB, diagB\)[\s\S]*?await reopenNoScope\(mobilePage, mobileDiag\)[\s\S]*?await endHostRestart\(\[diagA, diagB, mobileDiag\]\)/,
+  );
+});
+
 test("a fully authoritative 204 may end with Chromium abort but other aborts fail", () => {
   const expectedOrigin = "http://127.0.0.1:3101";
   const noContentAbort = {

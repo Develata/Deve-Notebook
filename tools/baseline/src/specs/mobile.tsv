@@ -735,7 +735,8 @@ contains	scripts/smoke-mobile-android-remote-browser.mjs	freshLocalEndpointSessi
 contains	scripts/smoke-mobile-android-remote-browser.mjs	remoteAuthorityNotReused
 contains	scripts/smoke-mobile-android-remote-browser.mjs	native_backend_get_service_state
 contains	scripts/smoke-mobile-android-remote-browser.mjs	native_backend_get_recovery_state
-contains	scripts/smoke-mobile-android-remote-browser.mjs	RemoteBrowser CDP target retirement
+contains	scripts/smoke-mobile-android-remote-browser.mjs	Number.isSafeInteger(transition.recoveryId)
+contains	scripts/smoke-mobile-android-remote-browser.mjs	requiredSurface: "sync"
 contains	scripts/smoke-mobile-android-remote-browser.mjs	processExitedAfterGracefulShutdown
 contains	scripts/smoke-mobile-android-remote-browser.mjs	requiredSurface: "remote-entry"
 contains	scripts/smoke-mobile-android-remote-browser.mjs	page.call(remoteEntrySurfacePresent, remoteOrigin)
@@ -774,6 +775,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_uses_one_pointer_intent_and_exact_doc_id_editor_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_lookup_reopens_explorer_and_requires_stable_writer_action_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_browser_requires_exact_native_mode_and_runtime_ownership_markers true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_recovery_admits_fresh_bundled_local_target_without_trusting_stale_debug_target_lifetime true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_remote_to_local_uses_capability_free_lifecycle_anchor true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: cold-restart relaunch is a package/static contract here; this successful journey does not claim forced-restart runtime evidence
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_cold_restart_package_contract_uses_platform_task_relaunch true

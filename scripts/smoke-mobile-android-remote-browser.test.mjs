@@ -42,7 +42,9 @@ test("Android RemoteBrowser smoke proves business flow, zero IPC, and native loc
   assert.match(browserSource, /Use Local Backend/);
   assert.match(browserSource, /native_backend_get_service_state/);
   assert.match(browserSource, /native_backend_get_recovery_state/);
-  assert.match(browserSource, /RemoteBrowser CDP target retirement/);
+  assert.match(browserSource, /expectedOrigin:\s*undefined/);
+  assert.match(browserSource, /requiredSurface:\s*"sync"/);
+  assert.doesNotMatch(browserSource, /RemoteBrowser CDP target retirement/);
   assert.match(browserSource, /processExitedAfterGracefulShutdown/);
   assert.match(browserSource, /authorityTupleChanged/);
   assert.match(browserSource, /freshLocalEndpointSessionScope/);

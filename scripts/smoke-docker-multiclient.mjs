@@ -429,10 +429,10 @@ async function main() {
         before: roleBeforeRestart,
         timeoutMs,
       });
-      await endHostRestart([diagA, diagB, mobileDiag]);
       await reopenNoScope(pageA, diagA);
       await reopenNoScope(pageB, diagB);
       await reopenNoScope(mobilePage, mobileDiag);
+      await endHostRestart([diagA, diagB, mobileDiag]);
       assertRemovalPreservation(
         lastRepoEvidence.removedRepoId,
         lastRepoEvidence.preservation,

@@ -79,8 +79,16 @@ function restartGenerationOf(entry) {
 
 function restartResourceError(message) {
   return message.match(
-    /^Failed to load resource: (net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE))$/u,
+    /^Failed to load resource: (net::(?:ERR_CONNECTION_(?:ABORTED|REFUSED|RESET)|ERR_SOCKET_NOT_CONNECTED|ERR_EMPTY_RESPONSE|ERR_NETWORK_CHANGED))$/u,
   )?.[1];
+}
+
+function isExpectedOriginResource(url, expectedOrigin) {
+  try {
+    return new URL(url).origin === new URL(expectedOrigin).origin;
+  } catch {
+    return false;
+  }
 }
 
 function expectedScopedRestartResourceError(entry, expectedOrigin) {
@@ -94,8 +102,15 @@ function expectedScopedRestartResourceError(entry, expectedOrigin) {
   }
 }
 
-function expectedRestartRequestFailure(failure, expectedOrigin, errorText) {
-  return restartGenerationOf(failure) !== null
+function expectedRestartRequestFailure(
+  failure,
+  expectedOrigin,
+  errorText,
+  expectedGeneration = null,
+) {
+  const generation = restartGenerationOf(failure);
+  return generation !== null
+    && (expectedGeneration === null || generation === expectedGeneration)
     && failure.responseStatus === undefined
     && failure.errorText === errorText
     && isExpectedRuntimeRequest(failure.url, expectedOrigin);
@@ -124,6 +139,7 @@ export function isExpectedRestartTransportError(
   message,
   expectedOrigin,
   requestFailures = [],
+  expectedGeneration = null,
 ) {
   const socketUrl = message.match(/WebSocket connection to ['"]?([^'"\s]+)['"]? failed/u)?.[1];
   if (socketUrl) {
@@ -134,7 +150,12 @@ export function isExpectedRestartTransportError(
   )?.[0];
   return Boolean(errorText)
     && requestFailures.some((failure) =>
-      expectedRestartRequestFailure(failure, expectedOrigin, errorText));
+      expectedRestartRequestFailure(
+        failure,
+        expectedOrigin,
+        errorText,
+        expectedGeneration,
+      ));
 }
 
 export function beginHostRestart(diags) {
@@ -205,6 +226,7 @@ export function attachDiagnostics(page, label, expectedOrigin) {
       ?? (diag.hostRestart ? diag.restartGeneration : null);
     diag.requestFailures.push({
       url: request.url(),
+      method: request.method(),
       errorText: request.failure()?.errorText ?? "unknown",
       duringOffline: started?.duringOffline ?? diag.offline,
       duringHostRestart: restartGeneration !== null,
@@ -243,6 +265,7 @@ export function relevantConsoleErrors(diag) {
   const correlatedFailures = new Set();
   return diag.consoleErrors.filter((entry) => {
     const { message, duringOffline } = entry;
+    const entryGeneration = restartGenerationOf(entry);
     if (message.includes("favicon.ico")) {
       return false;
     }
@@ -253,15 +276,22 @@ export function relevantConsoleErrors(diag) {
       message,
       diag.expectedOrigin,
       diag.requestFailures,
+      entryGeneration,
     );
     if (
-      restartGenerationOf(entry) !== null
+      entryGeneration !== null
       && (
         expectedRestartTransport
         || expectedScopedRestartResourceError(entry, diag.expectedOrigin)
       )
     ) {
       return false;
+    }
+    // An active-generation entry may only use exact-generation evidence above.
+    // The bounded timestamp correlation below exists solely for console events
+    // delivered after their restart window has closed.
+    if (entryGeneration !== null) {
+      return true;
     }
     const resourceError = restartResourceError(message);
     if (!resourceError || !Number.isFinite(entry.observedAtMs)) {
@@ -284,6 +314,7 @@ export function relevantConsoleErrors(diag) {
 export function relevantRequestFailures(diag) {
   return diag.requestFailures.filter(({
     url,
+    method,
     errorText,
     duringOffline,
     duringHostRestart,
@@ -313,6 +344,15 @@ export function relevantRequestFailures(diag) {
         responseStatus,
         diag.expectedOrigin,
       )
+    ) {
+      return false;
+    }
+    if (
+      duringRestart
+      && responseStatus === undefined
+      && errorText === "net::ERR_NETWORK_CHANGED"
+      && ["GET", "HEAD"].includes(method)
+      && isExpectedOriginResource(url, diag.expectedOrigin)
     ) {
       return false;
     }
