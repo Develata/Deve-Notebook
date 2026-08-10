@@ -46,8 +46,45 @@ fn test_supervisor(generation: BackendGeneration) -> MobileEmbeddedBackendSuperv
         inner: Mutex::new(generation),
         active_resumes: AtomicUsize::new(0),
         resumes_idle: Notify::new(),
-        resume_gate: tokio::sync::Mutex::new(()),
+        webview_handoff_gate: tokio::sync::Mutex::new(()),
     }
+}
+
+#[tokio::test]
+async fn android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate() {
+    let supervisor = std::sync::Arc::new(test_supervisor(test_generation(None)));
+    let first_handoff = supervisor.webview_handoff_gate.lock().await;
+    let (entered_sender, mut entered_receiver) = tokio::sync::mpsc::channel(1);
+    let concurrent = supervisor.clone();
+    let waiter = tokio::spawn(async move {
+        let _handoff = concurrent.webview_handoff_gate.lock().await;
+        entered_sender.send(()).await.expect("handoff admitted");
+    });
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), entered_receiver.recv())
+            .await
+            .is_err(),
+        "a concurrent WebView handoff bypassed the process-local gate"
+    );
+    drop(first_handoff);
+    tokio::time::timeout(Duration::from_secs(1), entered_receiver.recv())
+        .await
+        .expect("handoff admission timeout")
+        .expect("handoff channel closed");
+    waiter.await.expect("handoff waiter");
+}
+
+#[test]
+fn android_initial_and_resume_handoff_production_wiring_uses_shared_gate() {
+    let source = include_str!("supervisor_webview.rs");
+    assert_eq!(
+        source
+            .matches("let _handoff_gate = self.webview_handoff_gate.lock().await;")
+            .count(),
+        2,
+        "initial prepare and resume must both acquire the shared WebView handoff gate"
+    );
 }
 
 #[test]

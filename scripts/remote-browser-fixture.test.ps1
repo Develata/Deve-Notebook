@@ -13,13 +13,118 @@ function Assert-Throws {
     }
 }
 
+function Stop-RemoteFixtureTestProcess {
+    param([Parameter(Mandatory)][Diagnostics.Process]$Process)
+    try {
+        $Process.Refresh()
+        if (-not $Process.HasExited) { $Process.Kill($true) }
+        if (-not $Process.WaitForExit(5000)) { throw "test process did not exit during cleanup" }
+    } finally {
+        $Process.Dispose()
+    }
+}
+
 if ($script:RemoteFixtureCloudflaredVersion -ne "2026.7.2") { throw "cloudflared version drift" }
 if ($script:RemoteFixtureCloudflaredWindowsAmd64Sha256 -notmatch '^[0-9A-F]{64}$') { throw "invalid pinned SHA-256" }
+if ($script:RemoteFixtureBackendHealthTimeoutSeconds -ne 30) { throw "backend health timeout drift" }
+if ($script:RemoteFixturePublicHealthTimeoutSeconds -ne 180) { throw "public health timeout drift" }
+$fixtureScript = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "remote-browser-fixture.ps1")
+if ($fixtureScript -notmatch '(?s)-LogPath \(Join-Path \$stateDirectory "backend\.stderr\.log"\).*?-TimeoutSeconds \$script:RemoteFixtureBackendHealthTimeoutSeconds') {
+    throw "backend health call is not bound to the 30-second constant"
+}
+if ($fixtureScript -notmatch '(?s)-LogPath \$tunnelStderr -TimeoutSeconds \$script:RemoteFixturePublicHealthTimeoutSeconds') {
+    throw "public health call is not bound to the 180-second constant"
+}
 Assert-RemoteFixtureHttpsOrigin "https://fixture.example.invalid"
 Assert-RemoteFixtureHttpsOrigin "https://fixture.example.invalid:8443"
 Assert-Throws { Assert-RemoteFixtureHttpsOrigin "http://fixture.example.invalid" }
 Assert-Throws { Assert-RemoteFixtureHttpsOrigin "https://fixture.example.invalid/path" }
 Assert-Throws { Assert-RemoteFixtureHttpsOrigin "https://user@fixture.example.invalid" }
+
+$redirectProbe = @{ now = [DateTimeOffset]::Parse("2026-08-10T00:00:00Z"); requests = 0 }
+Wait-RemoteFixtureHttp -Url "https://fixture.example.invalid/api/node/role" -Process $null `
+    -LogPath "fixture.log" -TimeoutSeconds 3 -RequestTimeoutSeconds 1 `
+    -Request {
+        param($url, $timeoutSeconds)
+        $redirectProbe.requests++
+        if ($redirectProbe.requests -eq 1) { return [pscustomobject]@{ StatusCode = 302 } }
+        [pscustomobject]@{ StatusCode = 204 }
+    } `
+    -UtcNow { $redirectProbe.now } `
+    -Delay { param($milliseconds) $redirectProbe.now = $redirectProbe.now.AddMilliseconds($milliseconds) }
+if ($redirectProbe.requests -ne 2) { throw "redirect was accepted instead of exact 2xx" }
+
+$lateSuccessProbe = @{ now = [DateTimeOffset]::Parse("2026-08-10T00:00:00Z") }
+Assert-Throws {
+    Wait-RemoteFixtureHttp -Url "https://fixture.example.invalid/api/node/role" -Process $null `
+        -LogPath "fixture.log" -TimeoutSeconds 3 -RequestTimeoutSeconds 1 `
+        -Request {
+            param($url, $timeoutSeconds)
+            $lateSuccessProbe.now = $lateSuccessProbe.now.AddSeconds(4)
+            [pscustomobject]@{ StatusCode = 204 }
+        } `
+        -UtcNow { $lateSuccessProbe.now } `
+        -Delay { param($milliseconds) $lateSuccessProbe.now = $lateSuccessProbe.now.AddMilliseconds($milliseconds) }
+}
+
+$failedProbe = @{ now = [DateTimeOffset]::Parse("2026-08-10T00:00:00Z"); requests = 0 }
+$failedProbeMessage = $null
+try {
+    Wait-RemoteFixtureHttp -Url "https://fixture.example.invalid/api/node/role" -Process $null `
+        -LogPath "fixture.log" -TimeoutSeconds 3 -RequestTimeoutSeconds 1 `
+        -Request {
+            param($url, $timeoutSeconds)
+            $failedProbe.requests++
+            if (($failedProbe.requests % 2) -eq 1) {
+                return [pscustomobject]@{ StatusCode = 530 }
+            }
+            throw "secret-response-body-must-not-be-reported"
+        } `
+        -UtcNow { $failedProbe.now } `
+        -Delay { param($milliseconds) $failedProbe.now = $failedProbe.now.AddSeconds(1) }
+    throw "failing public probe unexpectedly succeeded"
+} catch {
+    if ($_.Exception.Message -eq "failing public probe unexpectedly succeeded") { throw }
+    $failedProbeMessage = $_.Exception.Message
+}
+if ($failedProbeMessage -notmatch 'http_530=[1-9]' -or
+    $failedProbeMessage -notmatch 'transport=[1-9]') {
+    throw "failure histogram omitted allowlisted classes: $failedProbeMessage"
+}
+if ($failedProbeMessage -match 'secret-response-body') {
+    throw "failure histogram leaked exception content"
+}
+
+$exitedProbeProcess = Start-Process -FilePath (Get-Process -Id $PID).Path `
+    -ArgumentList @('-NoProfile', '-Command', 'exit 0') -WindowStyle Hidden -PassThru
+try {
+    if (-not $exitedProbeProcess.WaitForExit(5000)) { throw "pre-exited test process did not exit" }
+    Assert-Throws {
+        Wait-RemoteFixtureHttp -Url "https://fixture.example.invalid/api/node/role" `
+            -Process $exitedProbeProcess -LogPath "fixture.log" -TimeoutSeconds 3 `
+            -Request { [pscustomobject]@{ StatusCode = 204 } }
+    }
+} finally {
+    Stop-RemoteFixtureTestProcess $exitedProbeProcess
+}
+
+$exitAfterResponseProcess = Start-Process -FilePath (Get-Process -Id $PID).Path `
+    -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 60') -WindowStyle Hidden -PassThru
+try {
+    Assert-Throws {
+        Wait-RemoteFixtureHttp -Url "https://fixture.example.invalid/api/node/role" `
+            -Process $exitAfterResponseProcess -LogPath "fixture.log" -TimeoutSeconds 3 `
+            -Request {
+                $exitAfterResponseProcess.Kill($true)
+                if (-not $exitAfterResponseProcess.WaitForExit(5000)) {
+                    throw "post-response test process did not exit"
+                }
+                [pscustomobject]@{ StatusCode = 204 }
+            }
+    }
+} finally {
+    Stop-RemoteFixtureTestProcess $exitAfterResponseProcess
+}
 
 $temporary = Join-Path ([IO.Path]::GetTempPath()) "deve-remote-fixture-test-$(New-RemoteFixtureRandomHex -Bytes 8)"
 New-Item -ItemType Directory -Force $temporary | Out-Null

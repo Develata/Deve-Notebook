@@ -15,6 +15,35 @@ use super::backend_recovery::{PlatformColdRestartSource, request_platform_cold_r
 
 const MOBILE_MAIN_WINDOW_LABEL: &str = "main";
 const UNTRUSTED_ORIGIN: &str = "native backend command requires bundled LocalBackend origin";
+#[cfg(any(mobile, test))]
+const INITIAL_NATIVE_SESSION_HANDOFF_FAILURE_CATEGORIES: &[&str] = &[
+    "android_native_cookie_callback_rejected",
+    "android_native_cookie_not_retained",
+    "android_native_cookie_verification_failed",
+    "android_native_cookie_callback_invalid",
+    "android_native_cookie_jni_setup_failed",
+    "android_native_cookie_callback_already_pending",
+    "android_native_cookie_request_id_exhausted",
+    "android_native_cookie_callback_channel_closed",
+    "android_native_cookie_callback_timeout",
+    "android_native_cookie_callback_registry_poisoned",
+    "android_native_cookie_webview_dispatch_failed",
+];
+
+#[cfg(any(mobile, test))]
+fn initial_native_session_handoff_failure_category(
+    error: &crate::embedded_backend::MobileEmbeddedBackendError,
+) -> &'static str {
+    let crate::embedded_backend::MobileEmbeddedBackendError::WebviewInstallFailed(source) = error
+    else {
+        return "native_session_handoff_failed";
+    };
+    INITIAL_NATIVE_SESSION_HANDOFF_FAILURE_CATEGORIES
+        .iter()
+        .copied()
+        .find(|category| *category == source.as_str())
+        .unwrap_or("native_session_handoff_failed")
+}
 
 fn is_bundled_local_url(url: &tauri::Url) -> bool {
     url.port().is_none()
@@ -82,10 +111,9 @@ async fn native_backend_prepare_webview_session(
     #[cfg(mobile)]
     {
         let result = state.prepare_initial_webview_session(&webview).await;
-        if result.is_err() {
-            eprintln!(
-                "deve_mobile initial native session handoff failed closed: native_session_handoff_failed"
-            );
+        if let Err(error) = &result {
+            let category = initial_native_session_handoff_failure_category(error);
+            eprintln!("deve_mobile initial native session handoff failed closed: {category}");
         }
         result.map_err(|_| "mobile WebView session preparation failed".to_string())
     }
@@ -189,7 +217,8 @@ pub(super) fn mobile_local_backend_command_plugin() -> tauri::plugin::TauriPlugi
 
 #[cfg(test)]
 mod tests {
-    use super::is_bundled_local_url;
+    use super::{initial_native_session_handoff_failure_category, is_bundled_local_url};
+    use crate::embedded_backend::MobileEmbeddedBackendError;
 
     #[test]
     fn mobile_local_commands_accept_only_bundled_origins() {
@@ -203,5 +232,23 @@ mod tests {
                 &tauri::Url::parse(origin).expect("remote origin")
             ));
         }
+    }
+
+    #[test]
+    fn android_native_session_handoff_failure_logs_fixed_category_without_secret() {
+        let secret = "secret-sentinel-must-not-reach-diagnostics";
+        assert_eq!(
+            initial_native_session_handoff_failure_category(
+                &MobileEmbeddedBackendError::WebviewInstallFailed(
+                    "android_native_cookie_callback_timeout".to_string()
+                )
+            ),
+            "android_native_cookie_callback_timeout"
+        );
+        let unknown = initial_native_session_handoff_failure_category(
+            &MobileEmbeddedBackendError::WebviewInstallFailed(secret.to_string()),
+        );
+        assert_eq!(unknown, "native_session_handoff_failed");
+        assert!(!unknown.contains(secret));
     }
 }

@@ -427,6 +427,7 @@
     - native_assert: windows_remote_fixture_startup_state_preflight_precedes_secret_cleanup true
     - native_assert: windows_remote_fixture_preserves_primary_and_cleanup_failures true
     - native_assert: windows_remote_fixture_fast_exit_output_and_pipe_handles_fail_closed true
+    - native_assert: windows_remote_fixture_public_role_probe_uses_180_second_exact_2xx_deadline_and_allowlisted_failures true
     - native_assert: unix_remote_fixture_origin_publication_requires_bounded_exact_role_probe true
     - native_assert: unix_remote_fixture_role_probe_rejects_post_deadline_2xx true
     - native_assert: unix_remote_fixture_failure_reports_allowlisted_status_without_response_body true

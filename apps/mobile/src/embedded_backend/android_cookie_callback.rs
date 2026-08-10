@@ -11,6 +11,8 @@ use std::sync::{Mutex, OnceLock};
 use tokio::sync::oneshot;
 use tokio::time::{Duration, timeout};
 
+pub(super) const ANDROID_COOKIE_CALLBACK_TIMEOUT: Duration = Duration::from_secs(15);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum AndroidCookieCompletion {
     Retained,
@@ -191,6 +193,11 @@ pub(super) fn cancel_android_cookie_callback(request_id: i64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn android_cookie_completion_wait_is_bounded_for_slow_emulator_callback() {
+        assert_eq!(ANDROID_COOKIE_CALLBACK_TIMEOUT, Duration::from_secs(15));
+    }
 
     fn global_registry_test_lock() -> &'static tokio::sync::Mutex<()> {
         static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();

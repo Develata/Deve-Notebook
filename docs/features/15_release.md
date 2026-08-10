@@ -52,7 +52,7 @@
   state 也必须先证明 source/resource shape、live process token 与 container label。两种预检都必须
   先于 secret 删除。主失败与
   cleanup failure 必须同时报告，stdout/stderr 退出后仍受总预算，
-  pipe handle inheritance 清除失败必须 fail-closed。
+  pipe handle inheritance 清除失败必须 fail-closed。Account-less quick-tunnel 分配 origin 不等于 route ready；Windows fixture 必须在 180 秒传播窗口内等待 exact `GET /api/node/role -> 2xx`，拒绝 redirect/4xx/5xx，最终诊断只保留 allowlisted HTTP status/transport class 与受限日志路径，不得输出 response body 或 credential/session material。
 - Native build、manifest、draft upload 或 API 复核失败时不得把不完整状态报告为已发布版本；失败产生的 draft 只作为显式恢复对象。若公开 mutation 已成功但 runner 未能确认，同一 candidate 的重跑必须先复核完整远端状态。
 - 同一 tag 的 workflow rerun 只允许复用 byte-identical draft、image-ID 相同的 immutable version tag，或 tag、完整资产名称/摘要、prerelease 分类与 registry identity 都精确匹配的已公开 Release。任何 remote probe 只有明确 HTTP 404 才表示不存在；网络、认证、限流和 5xx 均 fail-closed，且 registry version 指向其它 image identity 时禁止覆盖。
 

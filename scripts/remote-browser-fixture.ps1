@@ -254,7 +254,9 @@ function Start-RemoteBrowserFixture {
                 }
                 Invoke-WebRequest -Uri $backendHealth -TimeoutSec 2 -UseBasicParsing | Out-Null
             } else {
-                Wait-RemoteFixtureHttp -Url $backendHealth -Process $backendProcess -LogPath (Join-Path $stateDirectory "backend.stderr.log")
+                Wait-RemoteFixtureHttp -Url $backendHealth -Process $backendProcess `
+                    -LogPath (Join-Path $stateDirectory "backend.stderr.log") `
+                    -TimeoutSeconds $script:RemoteFixtureBackendHealthTimeoutSeconds
             }
 
             Update-RemoteFixtureStartupState -Stage "prepare-cloudflared"
@@ -272,7 +274,8 @@ function Start-RemoteBrowserFixture {
             Update-RemoteFixtureStartupState -Stage "wait-tunnel-origin"
             $origin = Wait-RemoteFixtureTunnelOrigin -Process $tunnelProcess -LogPaths @($tunnelStdout, $tunnelStderr)
             Update-RemoteFixtureStartupState -Stage "wait-public-health"
-            Wait-RemoteFixtureHttp -Url "$origin/api/node/role" -Process $tunnelProcess -LogPath $tunnelStderr
+            Wait-RemoteFixtureHttp -Url "$origin/api/node/role" -Process $tunnelProcess `
+                -LogPath $tunnelStderr -TimeoutSeconds $script:RemoteFixturePublicHealthTimeoutSeconds
         }
 
         Update-RemoteFixtureStartupState -Stage "publish-ready-state"

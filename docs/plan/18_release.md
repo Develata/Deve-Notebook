@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-08-02`
+- `Last Review`: `2026-08-10`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -262,7 +262,7 @@ container 与 tunnel，并在无法证明资源已消失时保留 owner/state �
 只能用于诊断，不能满足 first-tag receipt。
 
 Account-less quick tunnel 发布 HTTPS origin 只表示入口名称已分配，不能单独证明 edge route
-已传播或 exact backend 已可达。Linux/Android fixture 必须在总启动时限内使用不放宽的
+已传播或 exact backend 已可达。Linux/Android/Windows fixture 必须在总启动时限内使用不放宽的
 `GET /api/node/role -> 2xx` 条件探测等待 route propagation；默认传播窗口为 180 秒且配置上限
 为 600 秒。重试不得接受 3xx/4xx/5xx、替换 endpoint 或绕过公开 CA origin。最终失败诊断只可
 保留 allowlisted HTTP status / transport class 与受限日志路径，不得输出 response body、cookie、

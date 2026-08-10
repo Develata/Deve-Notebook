@@ -12,6 +12,8 @@ $script:RemoteFixtureCloudflaredVersion = "2026.7.2"
 $script:RemoteFixtureCloudflaredWindowsAmd64Sha256 = "CDB5D4432F6AE1595654A692A51308B69D2BF7AF961F5578D9391837CF072DF9"
 $script:RemoteFixtureCloudflaredDownloadTimeoutSeconds = 180
 $script:RemoteFixtureCloudflaredDownloadLimitBytes = 134217728
+$script:RemoteFixtureBackendHealthTimeoutSeconds = 30
+$script:RemoteFixturePublicHealthTimeoutSeconds = 180
 . (Join-Path $PSScriptRoot "remote-browser-fixture-cloudflared.ps1")
 
 function New-RemoteFixtureRandomHex {
@@ -324,24 +326,97 @@ function Stop-RemoteFixtureProcess {
     }
 }
 
+function Get-RemoteFixtureHttpFailureClass {
+    param([Parameter(Mandatory)][Management.Automation.ErrorRecord]$ErrorRecord)
+    try {
+        $status = [int]$ErrorRecord.Exception.Response.StatusCode
+        if ($status -ge 100 -and $status -le 599) { return "http_$status" }
+    } catch {}
+
+    $current = $ErrorRecord.Exception
+    while ($null -ne $current) {
+        if ($current -is [TimeoutException] -or $current -is [Threading.Tasks.TaskCanceledException]) {
+            return "timeout"
+        }
+        if ($current -is [Net.WebException] -and $current.Status -eq [Net.WebExceptionStatus]::Timeout) {
+            return "timeout"
+        }
+        $current = $current.InnerException
+    }
+    return "transport"
+}
+
+function Add-RemoteFixtureHttpFailure {
+    param(
+        [Parameter(Mandatory)][hashtable]$Failures,
+        [Parameter(Mandatory)][string]$Class
+    )
+    if ($Failures.ContainsKey($Class)) { $Failures[$Class]++ } else { $Failures[$Class] = 1 }
+}
+
+function Format-RemoteFixtureHttpFailures {
+    param([Parameter(Mandatory)][hashtable]$Failures)
+    if ($Failures.Count -eq 0) { return "none" }
+    return (($Failures.GetEnumerator() | Sort-Object Name | ForEach-Object {
+        "$($_.Name)=$($_.Value)"
+    }) -join ',')
+}
+
 function Wait-RemoteFixtureHttp {
     param(
         [Parameter(Mandatory)][string]$Url,
         [AllowNull()][Diagnostics.Process]$Process,
-        [Parameter(Mandatory)][string]$LogPath
+        [Parameter(Mandatory)][string]$LogPath,
+        [ValidateRange(1, 600)][int]$TimeoutSeconds = 30,
+        [ValidateRange(1, 30)][int]$RequestTimeoutSeconds = 2,
+        [scriptblock]$Request = {
+            param($requestUrl, $requestTimeoutSeconds)
+            Invoke-WebRequest -Uri $requestUrl -Method Get -TimeoutSec $requestTimeoutSeconds `
+                -UseBasicParsing -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction Stop
+        },
+        [scriptblock]$UtcNow = { [DateTimeOffset]::UtcNow },
+        [scriptblock]$Delay = { param($milliseconds) Start-Sleep -Milliseconds $milliseconds }
     )
-    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+    $deadline = ([DateTimeOffset](& $UtcNow)).AddSeconds($TimeoutSeconds)
+    $failures = @{}
+    while ([DateTimeOffset](& $UtcNow) -lt $deadline) {
+        if ($null -ne $Process) {
+            $Process.Refresh()
+            if ($Process.HasExited) {
+                throw "process exited before health check succeeded; log: $LogPath"
+            }
+        }
         try {
-            Invoke-WebRequest -Uri $Url -Method Get -TimeoutSec 2 -UseBasicParsing | Out-Null
-            return
+            $response = & $Request $Url $RequestTimeoutSeconds
+            $status = 0
+            try { $status = [int]$response.StatusCode } catch {}
+            if ($status -ge 200 -and $status -le 299) {
+                if ($null -ne $Process) {
+                    $Process.Refresh()
+                    if ($Process.HasExited) {
+                        throw "process exited before health check succeeded; log: $LogPath"
+                    }
+                }
+                if ([DateTimeOffset](& $UtcNow) -le $deadline) { return }
+                break
+            }
+            if ($status -ge 100 -and $status -le 599) {
+                Add-RemoteFixtureHttpFailure -Failures $failures -Class "http_$status"
+            } else {
+                Add-RemoteFixtureHttpFailure -Failures $failures -Class "transport"
+            }
         } catch {
             if ($null -ne $Process -and $Process.HasExited) {
                 throw "process exited before health check succeeded; log: $LogPath"
             }
-            Start-Sleep -Milliseconds 250
+            Add-RemoteFixtureHttpFailure -Failures $failures `
+                -Class (Get-RemoteFixtureHttpFailureClass -ErrorRecord $_)
         }
+        if ([DateTimeOffset](& $UtcNow) -ge $deadline) { break }
+        & $Delay 250
     }
-    throw "timed out waiting for $Url; log: $LogPath"
+    $histogram = Format-RemoteFixtureHttpFailures -Failures $failures
+    throw "timed out after $TimeoutSeconds seconds waiting for exact 2xx from $Url; failures=$histogram; log: $LogPath"
 }
 
 function Wait-RemoteFixtureTunnelOrigin {

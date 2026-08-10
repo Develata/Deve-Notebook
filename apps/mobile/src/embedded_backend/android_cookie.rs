@@ -8,11 +8,10 @@
 use jni::objects::{JObject, JValue};
 
 use super::android_cookie_callback::{
-    AndroidCookieCompletion, complete_android_cookie_callback, register_android_cookie_callback,
+    ANDROID_COOKIE_CALLBACK_TIMEOUT, AndroidCookieCompletion, complete_android_cookie_callback,
+    register_android_cookie_callback,
 };
 use super::cookie::MobileNativeSessionCookie;
-
-const ANDROID_COOKIE_CALLBACK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
 pub(super) async fn install_native_session_cookie_confirmed<R: tauri::Runtime>(
     webview: &tauri::WebviewWindow<R>,

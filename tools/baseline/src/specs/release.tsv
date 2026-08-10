@@ -82,6 +82,7 @@ contains	docs/registry/release-freeze.json	"channel": "public-preview"
 contains	tools/baseline/src/main.rs	"release-freeze" => release_freeze::run(&command_args)
 contains	docs/plan/18_release.md	.github/workflows/release-native.yml
 contains	docs/features/15_release.md	Windows x64 MSI/NSIS、恰好一个真实 host architecture 的 macOS DMG、已签名 Android ARM64 APK
+contains	docs/features/15_release.md	Windows fixture 必须在 180 秒传播窗口内等待 exact `GET /api/node/role -> 2xx`
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
 contains	.github/workflows/release-candidate.yml	workflow_dispatch:
 contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT
@@ -615,6 +616,7 @@ contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-011
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	scripts/check-desktop-native-session-package-smoke.sh
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_native_session_smoke_stops_local_service_after_probe true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_native_session_smoke_uses_temporary_data_root true
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	windows_remote_fixture_public_role_probe_uses_180_second_exact_2xx_deadline_and_allowlisted_failures true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	delivery_eq_embedded_frontend true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	local_repo_count_at_least_one true
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-002	production_login_succeeds true

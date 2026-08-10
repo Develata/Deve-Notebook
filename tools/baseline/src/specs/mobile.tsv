@@ -633,6 +633,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_cookie_completion_wait_is_bounded_for_slow_emulator_callback true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_handoff_failure_logs_fixed_category_without_secret true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_startup_diagnostics_capture_fixed_native_session_handoff_category true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_remains_storage_limited_readonly true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_missing_webcrypto_ed25519_shows_update_guidance true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_writable_smoke_probes_real_nonextractable_ed25519_before_business_flow true
@@ -667,7 +671,7 @@ contains	apps/cli/src/server/start.rs	.with_graceful_shutdown(shutdown)
 contains	apps/cli/src/server/ws/transport.rs	pub(crate) struct WsTransportRuntime
 contains	apps/mobile/src/embedded_backend/supervisor.rs	pub struct MobileEmbeddedBackendSupervisor
 contains	apps/mobile/src/embedded_backend/supervisor.rs	MobileEmbeddedBackendServiceState::ForegroundReprobe
-contains	apps/mobile/src/embedded_backend/supervisor.rs	resume_gate: tokio::sync::Mutex<()>
+contains	apps/mobile/src/embedded_backend/supervisor.rs	webview_handoff_gate: tokio::sync::Mutex<()>
 contains	apps/mobile/src/embedded_backend/supervisor_shutdown.rs	pub async fn shutdown
 contains	apps/mobile/src/embedded_backend/supervisor_webview.rs	resume_and_complete_on_webview
 contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
@@ -685,7 +689,7 @@ contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/Main
 contains	apps/mobile/gen/android/app/proguard-rules.pro	public boolean installNativeSessionCookie(long, android.webkit.WebView, java.lang.String, java.lang.String, java.lang.String);
 contains	apps/mobile/gen/android/app/proguard-rules.pro	private native void nativeSessionCookieInstallCompleted(long, int);
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	native_backend_prepare_webview_session
-contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve_mobile initial native session handoff failed closed: native_session_handoff_failed
+contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve_mobile initial native session handoff failed closed: {category}
 contains	apps/mobile/src/tauri_entry.rs	mobile_local_backend_command_plugin()
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	deve-native-backend-commands
 absent	apps/mobile/src/tauri_entry/native_backend_commands.rs	switchLocal

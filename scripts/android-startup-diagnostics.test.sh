@@ -72,7 +72,11 @@ android_startup_diag_adb() {
       case "$MOCK_DIAG_MODE" in
         all-fail) printf 'adb: device offline\n'; return 7 ;;
         oversized) emit_bytes 8192 ;;
-        *) printf 'ActivityManager: Process dev.deve.notebook.mobile has died\n' ;;
+        *)
+          printf 'ActivityManager: Process dev.deve.notebook.mobile has died\n'
+          printf 'deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout\n'
+          printf 'deve_mobile initial native session handoff failed closed: %s\n' "$SECRET_SENTINEL"
+          ;;
       esac
       return 0
       ;;
@@ -133,6 +137,11 @@ grep -Fq -- "--- crash buffer logcat" "$stderr_file" || test_fail "crash buffer 
 grep -Fq -- "--- recent runtime logcat" "$stderr_file" || test_fail "runtime logcat section missing"
 grep -Fq -- "--- app process state" "$stderr_file" || test_fail "process state section missing"
 grep -Fq "ApplicationExitInfo reason=CRASH" "$stderr_file" || test_fail "exit-info evidence missing"
+grep -Fq "deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout" "$stderr_file" \
+  || test_fail "fixed native session handoff category missing from bounded diagnostics"
+if grep -Fq "$SECRET_SENTINEL" "$stderr_file"; then
+  test_fail "unknown native session handoff suffix leaked through bounded diagnostics"
+fi
 expected_calls="$(grep -c '^cmd ' "$operations")"
 [[ "$expected_calls" == "4" ]] || test_fail "expected 4 diagnostic commands, got $expected_calls"
 

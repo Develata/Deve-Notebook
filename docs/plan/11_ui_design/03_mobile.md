@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-01`
+- `Last Review`: `2026-08-10`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -40,7 +40,7 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 
 *   `LocalBackend` 是 native-packaging Android/Mobile 默认模式。Mobile 壳层只负责 embedded loopback lifecycle、endpoint/session bootstrap、foreground reprobe、readiness 展示与失败恢复。
 *   `LocalBackend` 的本地数据根位于 app-private data root；server/CLI runtime 只初始化 host registries；零 repo 时不得自动创建隐藏或默认 repo。首次 Create 才建立 Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
-*   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
+*   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。初次 WebView session prepare 与 resume/replacement handoff 必须共享同一个 process-local single-flight gate；同 generation 的重复 prepare 只能串行复核，不能并发竞争 Android `CookieManager` completion registry。已提交的平台写入若超时，仍须保留 fail-closed tombstone 直至迟到 callback 到达或进程重启。
 *   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff 与 bootstrap plugin 注册之后创建；不得先创建无 endpoint/session bootstrap 的主 WebView。Android Wry 不实现 `WebView::set_cookie`，因此 Android 必须在 WebView 已登记后通过无参数 native command 调用系统 `CookieManager` 安装 HttpOnly cookie，确认成功后才 reload 一次并进入 authenticated runtime；cookie/token/secret 不得进入 command 参数、JavaScript 或 bootstrap payload。
 *   `RemoteBrowser { https_origin }` 是显式远端模式。壳层必须在创建主 WebView 前把已校验 origin 写入 native `WindowConfig`，不得靠远端页面执行 init-script redirect；后续 `/api` 与 `/ws` 均由浏览器同源规则解析。native 壳不提供本机 session cookie、端口、repo bootstrap、native bootstrap capability 或 Tauri command handler。
 *   Mobile Settings 只允许在可信 bundled `LocalBackend` origin 使用 native backend preference bridge：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。bridge capability 必须来自 typed native bootstrap，不得由 `__TAURI_INTERNALS__` 推断。

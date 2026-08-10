@@ -15,6 +15,7 @@ impl MobileEmbeddedBackendSupervisor {
         &self,
         webview: &tauri::WebviewWindow<R>,
     ) -> Result<(), MobileEmbeddedBackendError> {
+        let _handoff_gate = self.webview_handoff_gate.lock().await;
         let cookie = self.lock_inner()?.native_session_cookie.clone();
         install_native_session_cookie_confirmed(webview, &cookie)
             .await
@@ -27,7 +28,7 @@ impl MobileEmbeddedBackendSupervisor {
         resumed_event: &str,
         error_event: &str,
     ) -> Result<(), MobileEmbeddedBackendError> {
-        let _resume_gate = self.resume_gate.lock().await;
+        let _handoff_gate = self.webview_handoff_gate.lock().await;
         let _activity = super::ResumeActivity::new(self);
         let result = self
             .resume_and_install_current(webview, resumed_event)

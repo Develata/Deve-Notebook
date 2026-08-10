@@ -53,10 +53,12 @@ _android_startup_diag_logcat() {
 _android_startup_diag_runtime_logcat() {
   local app_id="$1"
   local escaped_app_id
+  local native_handoff_category
   escaped_app_id="$(printf '%s' "$app_id" | sed 's/[][\.*^$]/\\&/g')"
+  native_handoff_category='(android_native_cookie_callback_rejected|android_native_cookie_not_retained|android_native_cookie_verification_failed|android_native_cookie_callback_invalid|android_native_cookie_jni_setup_failed|android_native_cookie_callback_already_pending|android_native_cookie_request_id_exhausted|android_native_cookie_callback_channel_closed|android_native_cookie_callback_timeout|android_native_cookie_callback_registry_poisoned|android_native_cookie_webview_dispatch_failed|native_session_handoff_failed)'
   # `grep` exit 1 only means no matching lines; keep real grep errors visible.
   _android_startup_diag_logcat main,system \
-    | { grep -E "ActivityManager|AndroidRuntime|DEBUG|libc|$escaped_app_id" || [[ $? -eq 1 ]]; }
+    | { grep -E "ActivityManager|AndroidRuntime|DEBUG|libc|$escaped_app_id|deve_mobile initial native session handoff failed closed: $native_handoff_category$" || [[ $? -eq 1 ]]; }
 }
 
 # Runs one diagnostic command, truncates its combined output to the remaining

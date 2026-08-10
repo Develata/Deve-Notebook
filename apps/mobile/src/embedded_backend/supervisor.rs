@@ -58,7 +58,7 @@ pub struct MobileEmbeddedBackendSupervisor {
     inner: Mutex<BackendGeneration>,
     active_resumes: AtomicUsize,
     resumes_idle: Notify,
-    resume_gate: tokio::sync::Mutex<()>,
+    webview_handoff_gate: tokio::sync::Mutex<()>,
 }
 
 impl fmt::Debug for MobileEmbeddedBackendSupervisor {
@@ -123,7 +123,7 @@ impl MobileEmbeddedBackendSupervisor {
             }),
             active_resumes: AtomicUsize::new(0),
             resumes_idle: Notify::new(),
-            resume_gate: tokio::sync::Mutex::new(()),
+            webview_handoff_gate: tokio::sync::Mutex::new(()),
         };
         eprintln!("deve_mobile native embedded backend supervisor=started");
         Ok((supervisor, bootstrap))

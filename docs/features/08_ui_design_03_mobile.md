@@ -50,7 +50,7 @@
 ### 5. Native 双模式
 
 - Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、zero-repo host registry 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复；不得为启动成功而自动创建默认 repo/projection。
-- `LocalBackend` 必须在主 WebView 创建前完成 native session handoff 与 bootstrap 注入。Android 因 Wry cookie API 不受支持，必须在 WebView 登记后以无参数 native command 调用系统 CookieManager 安装 HttpOnly cookie；同名 cookie 替换必须等待系统 completion callback 成功并复核当前精确 cookie，不能把旧进程遗留值或写入尚未完成误判为成功。已提交的平台写入若超时，必须在迟到 callback 到达前拒绝新的写入；callback 永不到达时要求重启进程，不能让不可取消的旧写入与新 generation 竞态。确认后只 reload 一次；cookie/secret 不得进入 JS 或 command 参数。
+- `LocalBackend` 必须在主 WebView 创建前完成 native session handoff 与 bootstrap 注入。Android 因 Wry cookie API 不受支持，必须在 WebView 登记后以无参数 native command 调用系统 CookieManager 安装 HttpOnly cookie；初次 prepare 与 resume/replacement 共用同一个 process-local WebView handoff single-flight gate，同 generation 重复 prepare 串行复核而不并发竞争 completion registry。同名 cookie 替换必须等待系统 completion callback 成功并复核当前精确 cookie，不能把旧进程遗留值或写入尚未完成误判为成功。已提交的平台写入若超时，必须在迟到 callback 到达前拒绝新的写入；callback 永不到达时要求重启进程，不能让不可取消的旧写入与新 generation 竞态。确认后只 reload 一次；cookie/secret 不得进入 JS、command 参数或失败诊断。
 - Mobile v1 不使用 child process。
 - Mobile 可从可信 bundled `LocalBackend` Settings 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
