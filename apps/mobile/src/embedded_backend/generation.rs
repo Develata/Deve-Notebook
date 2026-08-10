@@ -102,6 +102,7 @@ pub(super) fn started_shell() -> MobileShell {
 fn probe_transport(
     plan: MobileEmbeddedBackendPlan,
     native_session_secret: String,
+    session_install_id: String,
     mut shell: MobileShell,
     cancelled: Option<&AtomicBool>,
 ) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
@@ -112,7 +113,7 @@ fn probe_transport(
     shell.bind_endpoint(endpoint)?;
     shell.bind_session(MobileSessionMaterial::bound())?;
     let bootstrap = shell.bootstrap_for_web()?;
-    let script = mobile_embedded_backend_script(bootstrap, cookie)?;
+    let script = mobile_embedded_backend_script(bootstrap, cookie, &session_install_id)?;
     Ok(ProbedTransport {
         shell,
         bootstrap: MobileEmbeddedBackendBootstrap { plan, script },
@@ -122,11 +123,18 @@ fn probe_transport(
 pub(super) async fn probe_transport_async(
     plan: MobileEmbeddedBackendPlan,
     native_session_secret: String,
+    session_install_id: String,
     shell: MobileShell,
     cancelled: Arc<AtomicBool>,
 ) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
     tokio::task::spawn_blocking(move || {
-        probe_transport(plan, native_session_secret, shell, Some(&cancelled))
+        probe_transport(
+            plan,
+            native_session_secret,
+            session_install_id,
+            shell,
+            Some(&cancelled),
+        )
     })
     .await
     .map_err(|error| MobileEmbeddedBackendError::TaskJoinFailed(error.to_string()))?
@@ -135,14 +143,16 @@ pub(super) async fn probe_transport_async(
 pub(super) fn probe_transport_initial(
     plan: MobileEmbeddedBackendPlan,
     native_session_secret: String,
+    session_install_id: String,
     shell: MobileShell,
 ) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
-    probe_transport(plan, native_session_secret, shell, None)
+    probe_transport(plan, native_session_secret, session_install_id, shell, None)
 }
 
 pub(super) async fn probe_existing_transport_async(
     plan: MobileEmbeddedBackendPlan,
     native_session_cookie: MobileNativeSessionCookie,
+    session_install_id: String,
     shell: MobileShell,
     cancelled: Arc<AtomicBool>,
 ) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
@@ -155,7 +165,8 @@ pub(super) async fn probe_existing_transport_async(
         shell.bind_endpoint(endpoint)?;
         shell.bind_session(MobileSessionMaterial::bound())?;
         let bootstrap = shell.bootstrap_for_web()?;
-        let script = mobile_embedded_backend_script(bootstrap, native_session_cookie)?;
+        let script =
+            mobile_embedded_backend_script(bootstrap, native_session_cookie, &session_install_id)?;
         Ok(ProbedTransport {
             shell,
             bootstrap: MobileEmbeddedBackendBootstrap { plan, script },

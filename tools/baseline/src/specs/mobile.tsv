@@ -624,16 +624,23 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging failed_transport_retirement -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli native_loopback_graceful_shutdown -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_web foreground_reprobe -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_web native_session_invalid_event -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_web native_resume_requests_dynamic_endpoint_rebind_without_old_endpoint_probe -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli --test native_embedded_runtime_restart_test -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_cli edit_rejects_stale_message_scope_at_writer_gate -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-lifecycle.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/mobile-android-emulator-journey.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-native-bootstrap-script.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-target-capability.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_install_marker_rejects_stale_process_bootstrap_on_reused_endpoint true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_storage_failure_does_not_invoke_or_reload true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_session_invalid_recovery_projection_marks_unauthorized true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_cookie_completion_wait_is_bounded_for_slow_emulator_callback true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_handoff_failure_logs_fixed_category_without_secret true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_startup_diagnostics_capture_fixed_native_session_handoff_category true
@@ -679,6 +686,7 @@ contains	apps/mobile/src/embedded_backend/supervisor_types.rs	replacement_source
 contains	apps/mobile/src/embedded_backend/android_cookie.rs	installNativeSessionCookie
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	android_native_cookie_callback_timeout
 contains	apps/mobile/src/embedded_backend/cookie.rs	fn android_native_session_cookie_waits_for_platform_completion_before_verification()
+contains	apps/mobile/src/embedded_backend/bootstrap_script_tests.rs	fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_process_identity()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn cancellation_rejects_late_completion()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn concurrent_registration_fails_closed_without_replacing_first_waiter()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn dropped_undispatched_registration_cancels_waiter()
@@ -721,6 +729,10 @@ contains	scripts/lib/android-identity-capability.mjs	probeWebCryptoEd25519
 contains	scripts/lib/android-identity-capability.mjs	evaluateWritableProbeExpectation
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/mobile-webview-interaction.mjs
 contains	scripts/smoke-mobile-android-lifecycle.mjs	./lib/android-business-flow.mjs
+contains	scripts/smoke-mobile-android-lifecycle.mjs	__DEVE_NATIVE_SESSION_INSTALL_ID
+contains	scripts/mobile-android-emulator-journey.test.mjs	envelope\?\.session_install_id === currentInstallId
+contains	scripts/android-native-bootstrap-script.test.mjs	storage admission failure does not invoke or reload
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn native_session_invalid_event_uses_typed_unauthorized_projection()
 contains	scripts/lib/android-business-flow.mjs	./mobile-source-control-interaction.mjs
 contains	scripts/lib/android-business-flow.mjs	./android-document-create-flow.mjs
 contains	scripts/lib/android-business-flow.mjs	await createAndSelectAndroidDocument(page, path

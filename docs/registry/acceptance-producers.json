@@ -734,6 +734,7 @@
         "scripts/lib/android-identity-capability.mjs",
         "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/android-native-bootstrap-script.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
       ],
@@ -830,6 +831,7 @@
         "scripts/smoke-mobile-android-remote-browser.mjs",
         "scripts/smoke-mobile-android-remote-browser.test.mjs",
         "scripts/smoke-mobile-android-lifecycle.sh",
+        "scripts/smoke-mobile-android-lifecycle.mjs",
         "scripts/inspect-android-target-capability.mjs",
         "scripts/webcrypto-capability.test.mjs",
         "scripts/lib/webcrypto-capability.mjs",
@@ -851,6 +853,7 @@
         "scripts/android-document-create-pointer.test.mjs",
         "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/android-native-bootstrap-script.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
       ],

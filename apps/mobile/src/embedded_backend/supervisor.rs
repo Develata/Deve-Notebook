@@ -55,6 +55,7 @@ struct ResumePlan {
 
 pub struct MobileEmbeddedBackendSupervisor {
     app_data_dir: PathBuf,
+    webview_process_install_id: String,
     inner: Mutex<BackendGeneration>,
     active_resumes: AtomicUsize,
     resumes_idle: Notify,
@@ -75,6 +76,7 @@ impl MobileEmbeddedBackendSupervisor {
         app_data_dir: impl Into<PathBuf>,
     ) -> Result<(Self, MobileEmbeddedBackendBootstrap), MobileEmbeddedBackendError> {
         let app_data_dir = app_data_dir.into();
+        let webview_process_install_id = super::generate_session_install_id()?;
         let mut prepared = prepare_transport(&app_data_dir)?;
         let runtime = tauri::async_runtime::block_on(NativeEmbeddedServerRuntime::initialize(
             &prepared.options,
@@ -86,6 +88,7 @@ impl MobileEmbeddedBackendSupervisor {
         let probed = match probe_transport_initial(
             prepared.plan.clone(),
             prepared.native_session_secret.clone(),
+            webview_process_install_id.clone(),
             shell,
         ) {
             Ok(probed) => probed,
@@ -105,6 +108,7 @@ impl MobileEmbeddedBackendSupervisor {
         let native_session_cookie = bootstrap.script.native_session_cookie.clone();
         let supervisor = Self {
             app_data_dir,
+            webview_process_install_id,
             inner: Mutex::new(BackendGeneration {
                 runtime: Some(runtime),
                 plan: prepared.plan,
@@ -257,6 +261,7 @@ impl MobileEmbeddedBackendSupervisor {
         let probed = probe_existing_transport_async(
             plan.plan.clone(),
             plan.native_session_cookie.clone(),
+            self.webview_process_install_id.clone(),
             plan.shell,
             plan.probe_cancel.clone(),
         )
@@ -317,6 +322,7 @@ impl MobileEmbeddedBackendSupervisor {
         let probed = probe_transport_async(
             prepared.plan.clone(),
             prepared.native_session_secret.clone(),
+            self.webview_process_install_id.clone(),
             started_shell(),
             plan.probe_cancel.clone(),
         )

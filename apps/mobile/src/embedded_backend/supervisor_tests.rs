@@ -43,6 +43,7 @@ fn test_generation(task: Option<BackendTask>) -> BackendGeneration {
 fn test_supervisor(generation: BackendGeneration) -> MobileEmbeddedBackendSupervisor {
     MobileEmbeddedBackendSupervisor {
         app_data_dir: generation.plan.app_data_dir.clone(),
+        webview_process_install_id: "test-process-session".to_string(),
         inner: Mutex::new(generation),
         active_resumes: AtomicUsize::new(0),
         resumes_idle: Notify::new(),

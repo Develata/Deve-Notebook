@@ -83,6 +83,10 @@ test("Android LocalBackend creates the first repo from zero-repo BootstrapUnboun
   assert.match(businessFlow, /first Create must advance the backend scope nonce/);
   assert.match(localJourney, /createFirstAndroidRepoFromBootstrapUnbound/);
   assert.match(localJourney, /native LocalBackend bootstrap diagnostics/);
+  assert.match(localJourney, /__DEVE_NATIVE_SESSION_INSTALL_ID/);
+  assert.match(localJourney, /__DEVE_NATIVE_SESSION_STORAGE_READY === true/);
+  assert.match(localJourney, /envelope\?\.session_install_id === currentInstallId/);
+  assert.doesNotMatch(localJourney, /__DEVE_NATIVE_SESSION_INSTALLED__"\)\s*=== bootstrap\?\.http_base/);
 });
 
 test("every RemoteBrowser page generation rechecks network, CSP, and native bridge isolation", () => {

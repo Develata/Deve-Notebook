@@ -157,10 +157,21 @@ function localBootstrapProjection(page) {
       && /^(0|[1-9][0-9]*)$/.test(scopeNonceRaw)
       ? Number(scopeNonceRaw)
       : null;
-    let nativeSessionInstalled = false;
+    let nativeSessionState = "storage-error";
     try {
-      nativeSessionInstalled = sessionStorage.getItem("__DEVE_NATIVE_SESSION_INSTALLED__")
-        === bootstrap?.http_base;
+      const currentInstallId = globalThis.__DEVE_NATIVE_SESSION_INSTALL_ID;
+      const installedMarker = sessionStorage.getItem("__DEVE_NATIVE_SESSION_INSTALLED__");
+      const envelopeRaw = sessionStorage.getItem("__DEVE_NATIVE_BOOTSTRAP_CURRENT__");
+      const envelope = envelopeRaw ? JSON.parse(envelopeRaw) : null;
+      const storageReady = globalThis.__DEVE_NATIVE_SESSION_STORAGE_READY === true;
+      const identityValid = typeof currentInstallId === "string" && /^[0-9a-f]{32}$/.test(currentInstallId);
+      const markerCurrent = installedMarker === currentInstallId;
+      const envelopeCurrent = envelope?.session_install_id === currentInstallId;
+      const bootstrapCurrent = envelope?.bootstrap?.http_base === bootstrap?.http_base
+        && envelope?.bootstrap?.ws_base === bootstrap?.ws_base;
+      nativeSessionState = !storageReady ? "storage-unavailable"
+        : !identityValid ? "identity-invalid" : !markerCurrent ? "marker-stale"
+          : !envelopeCurrent ? "envelope-stale" : !bootstrapCurrent ? "bootstrap-stale" : "installed";
     } catch {}
     return {
       readyState: document.readyState,
@@ -172,7 +183,8 @@ function localBootstrapProjection(page) {
       bootstrapSessionBound: bootstrap?.session_bound === true,
       bootstrapServiceState: bootstrap?.service_state ?? null,
       bootstrapBlockedReason: bootstrap?.blocked_reason ?? null,
-      nativeSessionInstalled,
+      nativeSessionInstalled: nativeSessionState === "installed",
+      nativeSessionState,
     };
   });
 }

@@ -114,6 +114,10 @@ pub(super) fn read_native_bootstrap() -> NativeBootstrapState {
     NativeBootstrapState::Absent
 }
 
+pub(crate) fn current_native_bootstrap_blocked_status() -> Option<ConnectionStatus> {
+    read_native_bootstrap().blocked_status()
+}
+
 #[cfg(target_arch = "wasm32")]
 fn js_string_field(value: &wasm_bindgen::JsValue, key: &str) -> Option<String> {
     use js_sys::Reflect;

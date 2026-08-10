@@ -3,8 +3,8 @@
 //!   - 09_web_thin_client_ledger#write-readiness
 //!
 use crate::api::{
-    AuthProbe, ConnectionStatus, WsService, http_base_from_ws_url,
-    probe_auth_status_with_http_base, probe_node_role_for_http_base,
+    AuthProbe, ConnectionStatus, WsService, current_native_bootstrap_blocked_status,
+    http_base_from_ws_url, probe_auth_status_with_http_base, probe_node_role_for_http_base,
 };
 use crate::hooks::use_core::types::HandshakeSignals;
 use leptos::prelude::GetUntracked;
@@ -66,13 +66,21 @@ pub(super) fn mount_foreground_reprobe_listener(
 
     let ws_error = ws.clone();
     let error_callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-        ws_error.mark_native_service_offline();
+        handle_native_service_error(&ws_error, current_native_bootstrap_blocked_status());
     }) as Box<dyn FnMut(_)>);
     let _ = window.add_event_listener_with_callback(
         "deve-native-service-error",
         error_callback.as_ref().unchecked_ref(),
     );
     error_callback.forget();
+}
+
+fn handle_native_service_error(ws: &WsService, projected_status: Option<ConnectionStatus>) {
+    if projected_status == Some(ConnectionStatus::Unauthorized) {
+        ws.mark_unauthorized();
+    } else {
+        ws.mark_native_service_offline();
+    }
 }
 
 fn handle_page_activity_change(
@@ -282,6 +290,24 @@ mod tests {
             ConnectionStatus::NativeReprobeRequired
         );
         assert_eq!(ws.drain_connection_controls_for_test().len(), 1);
+    }
+
+    #[test]
+    fn native_session_invalid_event_uses_typed_unauthorized_projection() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+
+        handle_native_service_error(&ws, Some(ConnectionStatus::Unauthorized));
+
+        assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
+
+        let offline = WsService::new_for_test(ConnectionStatus::Connected);
+        handle_native_service_error(&offline, None);
+        assert_eq!(
+            offline.status.get_untracked(),
+            ConnectionStatus::NativeServiceOffline
+        );
     }
 
     fn test_handshake_signals() -> HandshakeSignals {

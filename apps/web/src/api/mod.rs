@@ -57,6 +57,7 @@ pub(crate) use self::native_backend_bridge::{
     NativeBackendConfig, NativeBackendValidation, get_native_backend_config,
     save_native_backend_remote,
 };
+pub(crate) use self::native_bootstrap::current_native_bootstrap_blocked_status;
 pub(crate) use self::native_http::api_url;
 pub use self::service::WsService;
 pub(crate) use self::service::is_current_connection_message;

@@ -20,11 +20,18 @@ use crate::{MobileBootstrap, MobileShellError};
 mod android_cookie;
 #[cfg(any(target_os = "android", test))]
 mod android_cookie_callback;
+#[cfg(test)]
+mod bootstrap_script_tests;
 mod cookie;
 mod generation;
 mod http;
 mod supervisor;
 mod supervisor_types;
+
+const WEBVIEW_BOOTSTRAP_INIT_SOURCE: &str = include_str!("webview_bootstrap_init.js");
+#[cfg(any(target_os = "android", test))]
+const ANDROID_INITIAL_SESSION_PREPARE_SOURCE: &str =
+    include_str!("android_initial_session_prepare.js");
 
 use cookie::MobileNativeSessionCookie;
 pub use supervisor::{MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT, MobileEmbeddedBackendSupervisor};
@@ -81,6 +88,8 @@ pub enum MobileEmbeddedBackendError {
     PortAllocationFailed(#[source] std::io::Error),
     #[error("failed to generate mobile native session material")]
     SecretGenerationFailed,
+    #[error("failed to generate mobile WebView session install identity")]
+    SessionInstallIdGenerationFailed,
     #[error("failed to generate mobile native auth material")]
     AuthMaterialGenerationFailed,
     #[error("mobile LocalBackend probe URL is invalid")]
@@ -180,17 +189,18 @@ pub fn mobile_embedded_backend_plugin<R: tauri::Runtime>(
 fn mobile_embedded_backend_script(
     bootstrap: MobileBootstrap,
     native_session_cookie: MobileNativeSessionCookie,
+    session_install_id: &str,
 ) -> Result<MobileEmbeddedBackendScript, MobileEmbeddedBackendError> {
     let payload = serde_json::to_string(&bootstrap)?;
+    let session_install_id_json = serde_json::to_string(session_install_id)?;
+    let init = WEBVIEW_BOOTSTRAP_INIT_SOURCE;
     let source = format!(
-        "(()=>{{const k='__DEVE_NATIVE_BOOTSTRAP_CURRENT__';const fallback={payload};let current=fallback;try{{const saved=window.sessionStorage.getItem(k);if(saved){{current=JSON.parse(saved);}}else{{window.sessionStorage.setItem(k,JSON.stringify(fallback));}}}}catch(_error){{}}window.__DEVE_NATIVE_BOOTSTRAP=current;}})();"
+        "(()=>{{const init={init};init(window,{payload},{session_install_id_json},false);}})();"
     );
     #[cfg(target_os = "android")]
-    let source = format!(
-        "{source}(()=>{{const k='__DEVE_NATIVE_SESSION_INSTALLED__';const current=window.__DEVE_NATIVE_BOOTSTRAP;let installed=false;try{{installed=window.sessionStorage.getItem(k)===current.http_base;}}catch(_error){{}}if(installed)return;queueMicrotask(()=>Promise.resolve().then(()=>window.__TAURI_INTERNALS__.invoke('plugin:deve-native-backend-commands|native_backend_prepare_webview_session')).then(()=>{{try{{window.sessionStorage.setItem(k,current.http_base);}}catch(_error){{}}window.location.reload();}}).catch(()=>{{window.__DEVE_NATIVE_BOOTSTRAP={{...current,session_bound:false,blocked_reason:'session_invalid'}};window.dispatchEvent(new Event('deve-native-service-error'));}}));}})();"
-    );
+    let source = android_initial_session_prepare_source(source, session_install_id)?;
     let replacement_source = format!(
-        "(()=>{{const k='__DEVE_NATIVE_BOOTSTRAP_CURRENT__';const current={payload};try{{window.sessionStorage.setItem(k,JSON.stringify(current));}}catch(_error){{}}window.__DEVE_NATIVE_BOOTSTRAP=current;}})();"
+        "(()=>{{const init={init};init(window,{payload},{session_install_id_json},true);}})();"
     );
     validate_mobile_embedded_script_source(&source)?;
     validate_mobile_embedded_script_source(&replacement_source)?;
@@ -199,6 +209,18 @@ fn mobile_embedded_backend_script(
         replacement_source,
         native_session_cookie,
     })
+}
+
+#[cfg(any(target_os = "android", test))]
+fn android_initial_session_prepare_source(
+    source: String,
+    session_install_id: &str,
+) -> Result<String, MobileEmbeddedBackendError> {
+    let session_install_id = serde_json::to_string(session_install_id)?;
+    let prepare = ANDROID_INITIAL_SESSION_PREPARE_SOURCE;
+    Ok(format!(
+        "{source}(()=>{{const prepare={prepare};prepare(window,{session_install_id});}})();"
+    ))
 }
 
 fn validate_mobile_embedded_script_source(source: &str) -> Result<(), MobileEmbeddedBackendError> {
@@ -268,6 +290,13 @@ fn generate_secret() -> Result<String, MobileEmbeddedBackendError> {
     Ok(hex_encode(&bytes))
 }
 
+fn generate_session_install_id() -> Result<String, MobileEmbeddedBackendError> {
+    let mut bytes = [0u8; 16];
+    getrandom::fill(&mut bytes)
+        .map_err(|_| MobileEmbeddedBackendError::SessionInstallIdGenerationFailed)?;
+    Ok(hex_encode(&bytes))
+}
+
 fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
@@ -330,6 +359,7 @@ mod tests {
                 capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
             },
             cookie,
+            "process-session-a",
         )
         .expect("script");
 
@@ -337,13 +367,13 @@ mod tests {
         assert!(
             script
                 .source()
-                .contains("window.__DEVE_NATIVE_BOOTSTRAP=current")
+                .contains("root.__DEVE_NATIVE_BOOTSTRAP = current")
         );
-        assert!(script.source().contains("window.sessionStorage.getItem"));
+        assert!(script.source().contains("root.sessionStorage.getItem"));
         assert!(
             script
                 .replacement_source()
-                .contains("window.sessionStorage.setItem")
+                .contains("root.sessionStorage.setItem")
         );
         assert!(script.source().contains("http://127.0.0.1:40123"));
         assert!(!script.source().contains("secret"));
