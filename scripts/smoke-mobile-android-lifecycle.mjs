@@ -449,8 +449,11 @@ async function main() {
   await typeEditor(page, resumedText, waitUntil, inputAndroidEditorText);
   await waitUntil("resumed edit ack", async () => (await readPendingAckCount(page)) === 0);
   await commit(page, `android lifecycle resumed ${stamp}`);
-  const repoLifecycle = await exerciseAndroidLastRepoRemoval(page, { waitUntil });
-
+  const repoLifecycle = await exerciseAndroidLastRepoRemoval(page, {
+    waitUntil,
+    expectedRepoId: firstRepo.created.repoId,
+    minimumScopeNonce: firstRepo.created.scopeNonce,
+  });
   writeAndroidWritableEvidence({
     evidencePath,
     targetFactsPath,

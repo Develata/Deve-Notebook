@@ -286,7 +286,11 @@ async function main() {
   assert.equal(remoteScope.status, "ready");
   assert.ok(remoteScope.repoId, "RemoteBrowser must expose a repo-scoped ready handshake");
   assert.ok(Number.isInteger(remoteScope.scopeNonce) && remoteScope.scopeNonce > 0);
-  const repoLifecycle = await exerciseAndroidLastRepoRemoval(page, { waitUntil });
+  const repoLifecycle = await exerciseAndroidLastRepoRemoval(page, {
+    waitUntil,
+    expectedRepoId: remoteScope.repoId,
+    minimumScopeNonce: remoteScope.scopeNonce,
+  });
 
   const ipcRequests = observations.requests.filter((url) => url.includes("ipc.localhost"));
   const ipcCspErrors = observations.consoleErrors.filter((message) =>

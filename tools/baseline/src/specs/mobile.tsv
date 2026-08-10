@@ -665,6 +665,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: mobile_lifecy
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_pending_fault_gate_discards_old_generation_outbound_write true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_replacement_generation_requires_product_pending_replay true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_same_repo_session_restore_rebinds_pending_scope true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_last_repo_removal_waits_for_stable_expected_writer_scope true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_keyboard_resize_preserves_host_and_open_request true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_binder_epipe_exit_224_requires_exact_broken_pipe_signature true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_rejected_exit_224_diagnostic_is_bounded_sanitized_and_non_admitting true
@@ -915,6 +916,11 @@ contains	scripts/android-document-create-pointer.test.mjs	exact Create productio
 contains	scripts/android-document-create-pointer.test.mjs	exact Create cleans a committed-unknown arm and release observation
 contains	scripts/android-document-create-flow.test.mjs	exact OpenDoc selection returns one typed doc identity atomically
 contains	scripts/android-business-flow.test.mjs	Android repo writer admission resets its quiet window after a scope change
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal waits through snapshot loading for the expected writer scope
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal keeps every intent closed while snapshot loading persists
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal revalidates scope before preview intent
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal revalidates exact scope before execute intent
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal rejects a different backend repo scope
 contains	scripts/mobile-webview-interaction.test.mjs	Android editor input binds expected doc-id through native input connection
 contains	scripts/android-webview-pointer.test.mjs	WebView point click revalidates after move and stops on every failed stage
 contains	scripts/android-webview-pointer.test.mjs	WebView point click presses a canonical point reacquired after hover

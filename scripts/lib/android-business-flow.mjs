@@ -30,6 +30,28 @@ export async function clickVisible(page, selector) {
   if (!clicked) throw new Error(`visible click target not found: ${selector}`);
 }
 
+async function clickVisibleInExactRepoScope(page, selector, expected, label) {
+  const outcome = await page.call((target, identity) => {
+    const status = document.querySelector("[data-deve-sync-status]");
+    if (status?.getAttribute("data-deve-sync-status") !== "ready") {
+      return "status-not-ready";
+    }
+    if (status.getAttribute("data-deve-repo-id") !== identity.repoId) {
+      return "repo-identity-mismatch";
+    }
+    if (status.getAttribute("data-deve-scope-nonce") !== String(identity.scopeNonce)) {
+      return "scope-nonce-mismatch";
+    }
+    const element = globalThis.__deveVisibleElement(target);
+    if (!element) return "target-unavailable";
+    element.click();
+    return "clicked";
+  }, selector, expected);
+  if (outcome !== "clicked") {
+    throw new Error(`${label} rejected: ${outcome}`);
+  }
+}
+
 export async function fillVisible(page, selector, value) {
   const filled = await page.call((target, nextValue) => {
     const element = globalThis.__deveVisibleElement(target);
@@ -263,9 +285,11 @@ export async function waitForStableAndroidRepoScope(
     expectedRepoId,
     minimumScopeNonce,
     quietMs = 1000,
-    now = Date.now,
+    now = () => globalThis.performance.now(),
   },
 ) {
+  assert.ok(Number.isFinite(quietMs) && quietMs >= 0, "stable scope quiet window is invalid");
+  assert.equal(typeof now, "function", "stable scope clock is invalid");
   let candidate = null;
   let stableSince = null;
   return waitUntil("stable Android repo writer scope", async () => {
@@ -281,6 +305,7 @@ export async function waitForStableAndroidRepoScope(
     }
     const identity = `${current.repoId}\u0000${current.scopeNonce}`;
     const observedAt = now();
+    assert.ok(Number.isFinite(observedAt) && observedAt >= 0, "stable scope clock failed");
     if (candidate !== identity) {
       candidate = identity;
       stableSince = observedAt;
@@ -307,7 +332,7 @@ async function openRepoSwitcher(page, waitUntil) {
 export async function createFirstAndroidRepoFromBootstrapUnbound(
   page,
   name,
-  { waitUntil, stableQuietMs = 1000, stableNow = Date.now },
+  { waitUntil, stableQuietMs = 1000, stableNow = () => globalThis.performance.now() },
 ) {
   const initial = await waitUntil("initial zero-repo BootstrapUnbound", async () => {
     const current = await readRepoScope(page);
@@ -380,11 +405,27 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
   };
 }
 
-export async function exerciseAndroidLastRepoRemoval(page, { waitUntil }) {
-  const before = await readRepoScope(page);
-  assert.equal(before.status, "ready");
-  assert.ok(before.repoId, "Android repo removal requires a selected repo");
-  assert.ok(Number.isInteger(before.scopeNonce) && before.scopeNonce > 0);
+export async function exerciseAndroidLastRepoRemoval(
+  page,
+  {
+    waitUntil,
+    expectedRepoId,
+    minimumScopeNonce,
+    stableQuietMs = 1000,
+    stableNow = () => globalThis.performance.now(),
+  },
+) {
+  assert.ok(expectedRepoId, "Android repo removal requires an expected repo identity");
+  assert.ok(
+    Number.isInteger(minimumScopeNonce) && minimumScopeNonce > 0,
+    "Android repo removal requires a positive minimum scope nonce",
+  );
+  const before = await waitForStableAndroidRepoScope(page, waitUntil, {
+    expectedRepoId,
+    minimumScopeNonce,
+    quietMs: stableQuietMs,
+    now: stableNow,
+  });
 
   await openRepoSwitcher(page, waitUntil);
   const row = await page.call(() => {
@@ -403,20 +444,36 @@ export async function exerciseAndroidLastRepoRemoval(page, { waitUntil }) {
   assert.equal(row.count, 1, "Android repo removal requires exactly one local repo");
   assert.equal(row.actions, true, "Android repo row must expose actions");
   assert.ok(row.alias, "Android last repo must expose a backend-projected alias");
-  await clickVisible(page, "[data-deve-repo-switcher-remove]");
+  await clickVisibleInExactRepoScope(
+    page,
+    "[data-deve-repo-switcher-remove]",
+    before,
+    "Android repo removal preview intent",
+  );
   await waitUntil("Android repo removal preview", () => page.call(() => {
     const dialog = globalThis.__deveVisibleElement('[data-deve-repo-removal-dialog="visible"]');
     const preserved = dialog?.querySelector("#repo-removal-preserved-heading");
     const confirm = dialog?.querySelector('[data-deve-repo-removal-confirm="true"]');
     return dialog && preserved && confirm instanceof HTMLButtonElement && !confirm.disabled;
   }));
-  await clickVisible(page, '[data-deve-repo-removal-confirm="true"]');
+  await clickVisibleInExactRepoScope(
+    page,
+    '[data-deve-repo-removal-confirm="true"]',
+    before,
+    "Android repo removal execute intent",
+  );
   const noScope = await waitUntil("Android last repo NoScope finalization", async () => {
     const current = await readRepoScope(page);
-    return current.repoId === "" ? current : null;
+    return current.status === "handshaking-repo"
+      && current.repoId === ""
+      && Number.isInteger(current.scopeNonce)
+      && current.scopeNonce > before.scopeNonce
+      ? current
+      : null;
   });
+  assert.equal(noScope.status, "handshaking-repo");
   assert.ok(
-    Number.isInteger(noScope.scopeNonce) && noScope.scopeNonce > before.scopeNonce,
+    noScope.scopeNonce > before.scopeNonce,
     "Android last repo removal must advance the backend scope nonce",
   );
   await openRepoSwitcher(page, waitUntil);

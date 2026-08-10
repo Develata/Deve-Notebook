@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createFirstAndroidRepoFromBootstrapUnbound,
+  exerciseAndroidLastRepoRemoval,
   waitForStableAndroidRepoScope,
 } from "./lib/android-business-flow.mjs";
 
@@ -238,4 +239,221 @@ test("Android repo writer admission resets its quiet window after a scope change
 
   assert.equal(stable.scopeNonce, 3);
   assert.equal(now, 1500);
+});
+
+function installRemovalDom({
+  scopeSamples = [
+    { status: "snapshot-loading", repoId: "repo-1", scopeNonce: "3" },
+    { status: "ready", repoId: "repo-1", scopeNonce: "3" },
+  ],
+} = {}) {
+  const original = {
+    document: globalThis.document,
+    visible: globalThis.__deveVisibleElement,
+    HTMLElement: globalThis.HTMLElement,
+    HTMLButtonElement: globalThis.HTMLButtonElement,
+  };
+  const state = {
+    sample: 0,
+    actionsOpen: false,
+    removalPreview: false,
+    noScope: false,
+  };
+  const status = {
+    getAttribute(attribute) {
+      const sample = state.noScope
+        ? { status: "handshaking-repo", repoId: "", scopeNonce: "4" }
+        : scopeSamples[Math.min(state.sample, scopeSamples.length - 1)];
+      const value = {
+        "data-deve-sync-status": sample.status,
+        "data-deve-repo-id": sample.repoId,
+        "data-deve-scope-nonce": sample.scopeNonce,
+      }[attribute] ?? null;
+      if (attribute === "data-deve-scope-nonce" && !state.noScope) state.sample += 1;
+      return value;
+    },
+  };
+  const actions = new FakeElement(() => {
+    state.actionsOpen = true;
+  });
+  const item = {
+    parentElement: { querySelector: () => actions },
+    getAttribute: (attribute) => attribute === "data-deve-repo-switcher-item-name"
+      ? "only-repo"
+      : null,
+  };
+  const confirm = new FakeButton(() => {
+    state.removalPreview = false;
+    state.noScope = true;
+  });
+  const dialog = {
+    querySelector(selector) {
+      if (selector === "#repo-removal-preserved-heading") return new FakeElement();
+      if (selector === '[data-deve-repo-removal-confirm="true"]') return confirm;
+      return null;
+    },
+  };
+  const trigger = new FakeButton();
+  const create = new FakeButton();
+  const remove = new FakeButton(() => {
+    state.removalPreview = true;
+  });
+  const backdrop = new FakeButton();
+
+  globalThis.HTMLElement = FakeElement;
+  globalThis.HTMLButtonElement = FakeButton;
+  globalThis.document = {
+    querySelector: (selector) => selector === "[data-deve-sync-status]" ? status : null,
+    querySelectorAll: (selector) => selector === "[data-deve-repo-switcher-item]" && !state.noScope
+      ? [item]
+      : [],
+  };
+  globalThis.__deveVisibleElement = (selector) => ({
+    '[data-deve-layout-mode="mobile"]': null,
+    "[data-deve-repo-switcher-trigger]": trigger,
+    "[data-deve-repo-switcher-create]": create,
+    "[data-deve-repo-switcher-remove]": state.actionsOpen ? remove : null,
+    '[data-deve-repo-removal-dialog="visible"]': state.removalPreview ? dialog : null,
+    '[data-deve-repo-removal-confirm="true"]': state.removalPreview ? confirm : null,
+    "[data-deve-repo-switcher-backdrop]": backdrop,
+  })[selector] ?? null;
+
+  return {
+    state,
+    restore() {
+      for (const [name, value] of Object.entries(original)) {
+        const target = name === "visible" ? "__deveVisibleElement" : name;
+        if (value === undefined) delete globalThis[target];
+        else globalThis[target] = value;
+      }
+    },
+  };
+}
+
+test("Android last-repo removal waits through snapshot loading for the expected writer scope", async () => {
+  const fixture = installRemovalDom();
+  let observedAt = -500;
+  const pollingWait = async (label, predicate) => {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const value = await predicate();
+      if (value) return value;
+    }
+    throw new Error(`timeout waiting for ${label}`);
+  };
+  try {
+    const result = await exerciseAndroidLastRepoRemoval(page, {
+      waitUntil: pollingWait,
+      expectedRepoId: "repo-1",
+      minimumScopeNonce: 3,
+      stableNow: () => (observedAt += 500),
+    });
+    assert.equal(result.removedRepoId, "repo-1");
+    assert.equal(result.scopeNonceBeforeRemoval, 3);
+    assert.equal(result.scopeNonceAfterRemoval, 4);
+    assert.equal(observedAt, 1000);
+    assert.equal(fixture.state.sample >= 2, true);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test("Android last-repo removal keeps every intent closed while snapshot loading persists", async () => {
+  const fixture = installRemovalDom({
+    scopeSamples: [{ status: "snapshot-loading", repoId: "repo-1", scopeNonce: "3" }],
+  });
+  const boundedWait = async (label, predicate) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) await predicate();
+    throw new Error(`timeout waiting for ${label}`);
+  };
+  try {
+    await assert.rejects(
+      exerciseAndroidLastRepoRemoval(page, {
+        waitUntil: boundedWait,
+        expectedRepoId: "repo-1",
+        minimumScopeNonce: 3,
+        stableQuietMs: 0,
+      }),
+      /timeout waiting for stable Android repo writer scope/,
+    );
+    assert.equal(fixture.state.actionsOpen, false);
+    assert.equal(fixture.state.removalPreview, false);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test("Android last-repo removal revalidates scope before preview intent", async () => {
+  const fixture = installRemovalDom({
+    scopeSamples: [
+      { status: "ready", repoId: "repo-1", scopeNonce: "3" },
+      { status: "snapshot-loading", repoId: "repo-1", scopeNonce: "3" },
+    ],
+  });
+  try {
+    await assert.rejects(
+      exerciseAndroidLastRepoRemoval(page, {
+        waitUntil,
+        expectedRepoId: "repo-1",
+        minimumScopeNonce: 3,
+        stableQuietMs: 0,
+      }),
+      /Android repo removal preview intent rejected: status-not-ready/,
+    );
+    assert.equal(fixture.state.actionsOpen, true);
+    assert.equal(fixture.state.removalPreview, false);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test("Android last-repo removal revalidates exact scope before execute intent", async () => {
+  const fixture = installRemovalDom({
+    scopeSamples: [
+      { status: "ready", repoId: "repo-1", scopeNonce: "3" },
+      { status: "ready", repoId: "repo-1", scopeNonce: "3" },
+      { status: "ready", repoId: "repo-1", scopeNonce: "4" },
+    ],
+  });
+  try {
+    await assert.rejects(
+      exerciseAndroidLastRepoRemoval(page, {
+        waitUntil,
+        expectedRepoId: "repo-1",
+        minimumScopeNonce: 3,
+        stableQuietMs: 0,
+      }),
+      /Android repo removal execute intent rejected: scope-nonce-mismatch/,
+    );
+    assert.equal(fixture.state.removalPreview, true);
+    assert.equal(fixture.state.noScope, false);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test("Android last-repo removal rejects a different backend repo scope", async () => {
+  const fixture = installRemovalDom({
+    scopeSamples: [{ status: "ready", repoId: "repo-2", scopeNonce: "9" }],
+  });
+  const boundedWait = async (label, predicate) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await predicate()) throw new Error("unexpected destructive admission");
+    }
+    throw new Error(`timeout waiting for ${label}`);
+  };
+  try {
+    await assert.rejects(
+      exerciseAndroidLastRepoRemoval(page, {
+        waitUntil: boundedWait,
+        expectedRepoId: "repo-1",
+        minimumScopeNonce: 3,
+        stableQuietMs: 0,
+      }),
+      /timeout waiting for stable Android repo writer scope/,
+    );
+    assert.equal(fixture.state.actionsOpen, false);
+    assert.equal(fixture.state.removalPreview, false);
+  } finally {
+    fixture.restore();
+  }
 });
