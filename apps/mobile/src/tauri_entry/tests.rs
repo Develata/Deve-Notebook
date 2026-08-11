@@ -156,7 +156,7 @@ fn mobile_tauri_main_window_creation_is_deferred_until_bootstrap() {
 }
 
 #[test]
-fn android_remote_recovery_uses_capability_free_activity_anchor_in_contract_order() {
+fn android_backend_recovery_uses_capability_free_activity_anchor_in_contract_order() {
     let manifest = include_str!("../../gen/android/app/src/main/AndroidManifest.xml");
     let anchor_activity = include_str!(
         "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/RecoveryAnchorActivity.kt"
@@ -263,7 +263,14 @@ fn android_remote_recovery_uses_capability_free_activity_anchor_in_contract_orde
     let local_record = flow
         .find("MobileBackendRecoveryPhase::LocalWindowCreated")
         .expect("local record");
+    let handoff_defer = flow
+        .find("defer_initial_webview_session_for_recovery")
+        .expect("WebView handoff admission defer");
+    let handoff_admit = flow
+        .find("admit_initial_webview_session_after_recovery")
+        .expect("WebView handoff admission grant");
 
+    assert!(handoff_defer < anchor_create);
     assert!(anchor_create < control_retire);
     assert!(control_retire < remote_retire);
     assert!(remote_retire < preference_commit);
@@ -271,4 +278,5 @@ fn android_remote_recovery_uses_capability_free_activity_anchor_in_contract_orde
     assert!(plugin_registration < local_create);
     assert!(local_create < anchor_retire);
     assert!(anchor_retire < local_record);
+    assert!(local_record < handoff_admit);
 }

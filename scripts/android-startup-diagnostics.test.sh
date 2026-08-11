@@ -75,6 +75,7 @@ android_startup_diag_adb() {
         *)
           printf 'ActivityManager: Process dev.deve.notebook.mobile has died\n'
           printf 'deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout\n'
+          printf 'deve_mobile initial native session handoff failed closed: android_initial_webview_admission_timeout\n'
           printf 'deve_mobile initial native session handoff failed closed: %s\n' "$SECRET_SENTINEL"
           ;;
       esac
@@ -139,6 +140,8 @@ grep -Fq -- "--- app process state" "$stderr_file" || test_fail "process state s
 grep -Fq "ApplicationExitInfo reason=CRASH" "$stderr_file" || test_fail "exit-info evidence missing"
 grep -Fq "deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout" "$stderr_file" \
   || test_fail "fixed native session handoff category missing from bounded diagnostics"
+grep -Fq "deve_mobile initial native session handoff failed closed: android_initial_webview_admission_timeout" "$stderr_file" \
+  || test_fail "fixed WebView admission category missing from bounded diagnostics"
 if grep -Fq "$SECRET_SENTINEL" "$stderr_file"; then
   test_fail "unknown native session handoff suffix leaked through bounded diagnostics"
 fi

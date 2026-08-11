@@ -632,12 +632,16 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/mobile-android-emulator-journey.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-native-bootstrap-script.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_mobile --features native-packaging webview_admission -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts/android-target-capability.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_webview_handoff_waits_for_native_surface_admission true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: admission timeout and supervisor shutdown cancel all waiters and reject a late recovery grant
+contains	apps/mobile/src/embedded_backend/webview_admission.rs	fn android_recovery_webview_handoff_waits_for_native_surface_admission()
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_install_marker_rejects_stale_process_bootstrap_on_reused_endpoint true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_storage_failure_does_not_invoke_or_reload true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_session_invalid_recovery_projection_marks_unauthorized true

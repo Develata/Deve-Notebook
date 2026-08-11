@@ -14,6 +14,12 @@ use super::{MobileEmbeddedBackendSupervisor, await_transport_task};
 impl MobileEmbeddedBackendSupervisor {
     pub async fn shutdown(&self, timeout: Duration) -> Result<(), MobileEmbeddedBackendError> {
         let deadline = tokio::time::Instant::now() + timeout;
+        self.initial_webview_session_admission.cancel();
+        let (handoff_guard, mut result) =
+            match tokio::time::timeout_at(deadline, self.webview_handoff_gate.lock()).await {
+                Ok(guard) => (Some(guard), Ok(())),
+                Err(_) => (None, Err(MobileEmbeddedBackendError::ShutdownTimeout)),
+            };
         let (task, runtime) = {
             let mut inner = self.lock_inner()?;
             if inner.service_state == MobileEmbeddedBackendServiceState::Stopped {
@@ -34,8 +40,13 @@ impl MobileEmbeddedBackendSupervisor {
             inner.transport_stopping = true;
             (inner.task.take(), inner.runtime.take())
         };
+        drop(handoff_guard);
 
-        let mut result = self.wait_for_resumes(deadline).await;
+        if let Err(error) = self.wait_for_resumes(deadline).await
+            && result.is_ok()
+        {
+            result = Err(error);
+        }
         if let Some(task) = task
             && let Err(error) = await_transport_task(task, deadline).await
             && result.is_ok()
@@ -83,6 +94,7 @@ impl MobileEmbeddedBackendSupervisor {
 
 impl Drop for MobileEmbeddedBackendSupervisor {
     fn drop(&mut self) {
+        self.initial_webview_session_admission.cancel();
         if let Ok(inner) = self.inner.get_mut() {
             inner.transition_token = inner.transition_token.saturating_add(1);
             if let Some(sender) = inner.shutdown_sender.take() {

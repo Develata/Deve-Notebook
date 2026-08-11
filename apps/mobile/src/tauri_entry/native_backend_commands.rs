@@ -34,9 +34,18 @@ const INITIAL_NATIVE_SESSION_HANDOFF_FAILURE_CATEGORIES: &[&str] = &[
 fn initial_native_session_handoff_failure_category(
     error: &crate::embedded_backend::MobileEmbeddedBackendError,
 ) -> &'static str {
-    let crate::embedded_backend::MobileEmbeddedBackendError::WebviewInstallFailed(source) = error
-    else {
-        return "native_session_handoff_failed";
+    let source = match error {
+        crate::embedded_backend::MobileEmbeddedBackendError::InitialWebviewSessionAdmissionInvalid => {
+            return "android_initial_webview_admission_invalid";
+        }
+        crate::embedded_backend::MobileEmbeddedBackendError::InitialWebviewSessionAdmissionTimeout => {
+            return "android_initial_webview_admission_timeout";
+        }
+        crate::embedded_backend::MobileEmbeddedBackendError::InitialWebviewSessionAdmissionCancelled => {
+            return "android_initial_webview_admission_cancelled";
+        }
+        crate::embedded_backend::MobileEmbeddedBackendError::WebviewInstallFailed(source) => source,
+        _ => return "native_session_handoff_failed",
     };
     INITIAL_NATIVE_SESSION_HANDOFF_FAILURE_CATEGORIES
         .iter()
@@ -250,5 +259,24 @@ mod tests {
         );
         assert_eq!(unknown, "native_session_handoff_failed");
         assert!(!unknown.contains(secret));
+        for (error, expected) in [
+            (
+                MobileEmbeddedBackendError::InitialWebviewSessionAdmissionInvalid,
+                "android_initial_webview_admission_invalid",
+            ),
+            (
+                MobileEmbeddedBackendError::InitialWebviewSessionAdmissionTimeout,
+                "android_initial_webview_admission_timeout",
+            ),
+            (
+                MobileEmbeddedBackendError::InitialWebviewSessionAdmissionCancelled,
+                "android_initial_webview_admission_cancelled",
+            ),
+        ] {
+            assert_eq!(
+                initial_native_session_handoff_failure_category(&error),
+                expected
+            );
+        }
     }
 }

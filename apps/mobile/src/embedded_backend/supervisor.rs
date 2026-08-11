@@ -60,6 +60,7 @@ pub struct MobileEmbeddedBackendSupervisor {
     active_resumes: AtomicUsize,
     resumes_idle: Notify,
     webview_handoff_gate: tokio::sync::Mutex<()>,
+    initial_webview_session_admission: super::webview_admission::InitialWebviewSessionAdmission,
 }
 
 impl fmt::Debug for MobileEmbeddedBackendSupervisor {
@@ -128,6 +129,8 @@ impl MobileEmbeddedBackendSupervisor {
             active_resumes: AtomicUsize::new(0),
             resumes_idle: Notify::new(),
             webview_handoff_gate: tokio::sync::Mutex::new(()),
+            initial_webview_session_admission:
+                super::webview_admission::InitialWebviewSessionAdmission::new(),
         };
         eprintln!("deve_mobile native embedded backend supervisor=started");
         Ok((supervisor, bootstrap))
@@ -138,6 +141,18 @@ impl MobileEmbeddedBackendSupervisor {
     ) -> Result<MobileEmbeddedBackendSupervisorSnapshot, MobileEmbeddedBackendError> {
         let inner = self.lock_inner()?;
         Ok(snapshot_from_generation(&inner))
+    }
+
+    pub(crate) fn defer_initial_webview_session_for_recovery(
+        &self,
+    ) -> Result<(), MobileEmbeddedBackendError> {
+        self.initial_webview_session_admission.defer_for_recovery()
+    }
+
+    pub(crate) fn admit_initial_webview_session_after_recovery(
+        &self,
+    ) -> Result<(), MobileEmbeddedBackendError> {
+        self.initial_webview_session_admission.admit_recovery()
     }
 
     pub fn suspend(&self) -> Result<u64, MobileEmbeddedBackendError> {

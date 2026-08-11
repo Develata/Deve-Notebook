@@ -27,6 +27,7 @@ mod generation;
 mod http;
 mod supervisor;
 mod supervisor_types;
+mod webview_admission;
 
 const WEBVIEW_BOOTSTRAP_INIT_SOURCE: &str = include_str!("webview_bootstrap_init.js");
 #[cfg(any(target_os = "android", test))]
@@ -144,6 +145,12 @@ pub enum MobileEmbeddedBackendError {
     WebviewInstallFailed(String),
     #[error("mobile LocalBackend main WebView is unavailable")]
     WebviewUnavailable,
+    #[error("mobile initial WebView session admission transition is invalid")]
+    InitialWebviewSessionAdmissionInvalid,
+    #[error("mobile initial WebView session admission timed out")]
+    InitialWebviewSessionAdmissionTimeout,
+    #[error("mobile initial WebView session admission was cancelled")]
+    InitialWebviewSessionAdmissionCancelled,
 }
 
 pub fn plan_mobile_embedded_backend(

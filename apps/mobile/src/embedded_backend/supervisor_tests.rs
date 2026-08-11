@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -48,6 +49,8 @@ fn test_supervisor(generation: BackendGeneration) -> MobileEmbeddedBackendSuperv
         active_resumes: AtomicUsize::new(0),
         resumes_idle: Notify::new(),
         webview_handoff_gate: tokio::sync::Mutex::new(()),
+        initial_webview_session_admission:
+            crate::embedded_backend::webview_admission::InitialWebviewSessionAdmission::new(),
     }
 }
 
@@ -86,6 +89,18 @@ fn android_initial_and_resume_handoff_production_wiring_uses_shared_gate() {
         2,
         "initial prepare and resume must both acquire the shared WebView handoff gate"
     );
+    assert_eq!(
+        source
+            .matches("self.initial_webview_session_admission.wait().await?;")
+            .count(),
+        2,
+        "initial prepare and resume must both await native surface admission"
+    );
+    assert_eq!(
+        source.matches(".ensure_handoff_allowed()?").count(),
+        2,
+        "initial prepare and resume must recheck admission inside the handoff gate"
+    );
 }
 
 #[test]
@@ -119,6 +134,10 @@ async fn mobile_embedded_backend_supervisor_shutdown_is_bounded_and_owned() {
         .shutdown(Duration::from_secs(1))
         .await
         .expect("shutdown");
+    assert!(matches!(
+        supervisor.initial_webview_session_admission.wait().await,
+        Err(MobileEmbeddedBackendError::InitialWebviewSessionAdmissionCancelled)
+    ));
     assert!(probe_cancel.load(Ordering::Acquire));
     let snapshot = supervisor.snapshot().expect("snapshot");
     assert_eq!(
@@ -126,6 +145,32 @@ async fn mobile_embedded_backend_supervisor_shutdown_is_bounded_and_owned() {
         MobileEmbeddedBackendServiceState::Stopped
     );
     assert!(!snapshot.backend_running);
+}
+
+#[tokio::test]
+async fn mobile_embedded_backend_supervisor_shutdown_drains_webview_handoff_gate() {
+    let supervisor = Arc::new(test_supervisor(test_generation(None)));
+    let handoff = supervisor.webview_handoff_gate.lock().await;
+    let stopping = supervisor.clone();
+    let mut shutdown = tokio::spawn(async move { stopping.shutdown(Duration::from_secs(1)).await });
+
+    tokio::task::yield_now().await;
+    assert!(matches!(
+        supervisor.initial_webview_session_admission.wait().await,
+        Err(MobileEmbeddedBackendError::InitialWebviewSessionAdmissionCancelled)
+    ));
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut shutdown)
+            .await
+            .is_err(),
+        "shutdown completed before the in-flight WebView handoff gate drained"
+    );
+    drop(handoff);
+    tokio::time::timeout(Duration::from_secs(1), shutdown)
+        .await
+        .expect("shutdown drain timeout")
+        .expect("shutdown task")
+        .expect("shutdown result");
 }
 
 #[test]

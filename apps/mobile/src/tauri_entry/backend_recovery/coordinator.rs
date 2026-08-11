@@ -56,6 +56,8 @@ enum MobileBackendRecoveryError {
     SupervisorAlreadyManaged,
     #[error("mobile LocalBackend WebView creation failed: {0}")]
     LocalWindowCreate(String),
+    #[error("mobile LocalBackend WebView handoff admission failed closed")]
+    WebviewHandoffAdmission,
     #[error("mobile Android recovery lifecycle anchor did not retire")]
     RecoveryAnchorRetire,
     #[error("mobile LocalBackend recovery transition state failed: {0}")]
@@ -239,6 +241,18 @@ impl MobileBackendRecoveryCoordinator {
                 error.to_string(),
             ))
         })?;
+        if candidate
+            .defer_initial_webview_session_for_recovery()
+            .is_err()
+        {
+            let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
+            return Err(RecoveryFailure {
+                error: MobileBackendRecoveryError::WebviewHandoffAdmission,
+                restart_required: active_runtime_owners != 0,
+                restart_source: PlatformColdRestartSource::Main,
+                active_runtime_owners,
+            });
+        }
         if let Err(error) = self.record(recovery_id, MobileBackendRecoveryPhase::CandidateStarted) {
             let active_runtime_owners = u8::from(!shutdown_candidate(&candidate).await);
             return Err(RecoveryFailure {
@@ -419,6 +433,16 @@ impl MobileBackendRecoveryCoordinator {
             let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
             return Err(RecoveryFailure::after_retirement_from_main(
                 error,
+                active_runtime_owners,
+            ));
+        }
+        if supervisor
+            .admit_initial_webview_session_after_recovery()
+            .is_err()
+        {
+            let active_runtime_owners = u8::from(!shutdown_candidate(&supervisor).await);
+            return Err(RecoveryFailure::after_retirement_from_main(
+                MobileBackendRecoveryError::WebviewHandoffAdmission,
                 active_runtime_owners,
             ));
         }
