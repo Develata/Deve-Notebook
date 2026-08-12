@@ -95,15 +95,18 @@ impl MobileNativeSessionCookie {
     #[cfg(any(target_os = "android", test))]
     pub(super) fn android_install_url(&self) -> String {
         // Android CookieManager applies normal Set-Cookie validation to this
-        // URL. Use the secure loopback origin for installation so the required
-        // Secure/SameSite=None cookie is accepted; the host-only cookie remains
-        // available to Chromium's potentially-trustworthy HTTP loopback origin.
+        // URL. Use the secure loopback origin so the required
+        // Secure/SameSite=None cookie is accepted.
         format!("https://{}/", self.domain)
     }
 
     #[cfg(any(target_os = "android", test))]
     pub(super) fn android_verification_url(&self) -> String {
-        format!("http://{}/", self.domain)
+        // CookieManager::getCookie applies the request URL's scheme and cookie
+        // security attributes. Verify retention against the same secure origin
+        // used for installation; the post-reload auth probe separately proves
+        // that the bundled HTTP loopback page can use the session.
+        self.android_install_url()
     }
 
     #[cfg(any(target_os = "android", test))]
@@ -193,7 +196,8 @@ mod tests {
     }
 
     #[test]
-    fn android_native_session_cookie_is_host_only_for_loopback_ip() {
+    fn mobile_embedded_backend_android_native_session_cookie_retention_uses_same_secure_install_origin()
+     {
         let cookie = MobileNativeSessionCookie::from_set_cookie(
             "token=cookie-value; Path=/; HttpOnly; Secure; SameSite=None",
             "127.0.0.1",
@@ -201,7 +205,11 @@ mod tests {
         .expect("cookie");
 
         assert_eq!(cookie.android_install_url(), "https://127.0.0.1/");
-        assert_eq!(cookie.android_verification_url(), "http://127.0.0.1/");
+        assert_eq!(cookie.android_verification_url(), "https://127.0.0.1/");
+        assert_eq!(
+            cookie.android_verification_url(),
+            cookie.android_install_url()
+        );
         let value = cookie.android_set_cookie_value();
         assert!(value.starts_with("token=cookie-value; Path=/"));
         assert!(!value.to_ascii_lowercase().contains("domain="));

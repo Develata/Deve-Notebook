@@ -2,6 +2,7 @@ package dev.deve.notebook.mobile
 
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -19,6 +20,7 @@ class MainActivity : TauriActivity() {
     const val NATIVE_COOKIE_NOT_RETAINED = 3
     const val NATIVE_COOKIE_VERIFICATION_FAILED = 4
     const val NATIVE_COOKIE_SETUP_FAILED = 5
+    const val NATIVE_COOKIE_LOG_TAG = "DeveMobile"
   }
 
   private var useLocalBackendButton: Button? = null
@@ -107,7 +109,7 @@ class MainActivity : TauriActivity() {
               verificationUrl,
               setCookie,
             )) {
-            nativeSessionCookieInstallCompleted(requestId, NATIVE_COOKIE_SETUP_FAILED)
+            completeNativeSessionCookieInstall(requestId, NATIVE_COOKIE_SETUP_FAILED)
           }
         }
         true
@@ -148,12 +150,30 @@ class MainActivity : TauriActivity() {
             NATIVE_COOKIE_VERIFICATION_FAILED
           }
         }
-        nativeSessionCookieInstallCompleted(requestId, completion)
+        completeNativeSessionCookieInstall(requestId, completion)
       }
       true
     } catch (_error: RuntimeException) {
       false
     }
+  }
+
+  private fun completeNativeSessionCookieInstall(requestId: Long, completion: Int) {
+    val category = when (completion) {
+      NATIVE_COOKIE_RETAINED -> null
+      NATIVE_COOKIE_REJECTED -> "android_native_cookie_callback_rejected"
+      NATIVE_COOKIE_NOT_RETAINED -> "android_native_cookie_not_retained"
+      NATIVE_COOKIE_VERIFICATION_FAILED -> "android_native_cookie_verification_failed"
+      NATIVE_COOKIE_SETUP_FAILED -> "android_native_cookie_jni_setup_failed"
+      else -> "android_native_cookie_callback_invalid"
+    }
+    if (category != null) {
+      Log.e(
+        NATIVE_COOKIE_LOG_TAG,
+        "deve_mobile native session cookie handoff failed closed: $category",
+      )
+    }
+    nativeSessionCookieInstallCompleted(requestId, completion)
   }
 
   private fun onUiThreadConfirmed(action: () -> Boolean): Boolean {

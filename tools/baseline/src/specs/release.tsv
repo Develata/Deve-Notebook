@@ -8,6 +8,12 @@ contains	Cargo.toml	rust-version = "1.97"
 contains	Dockerfile	FROM rust:1.97.0-bookworm AS build-env
 contains	docs/plan/17_tech_stack.md	#canonical-rust-toolchain
 contains	docs/registry/acceptance-matrix.tsv	source.toolchain-pins
+contains	crates/core/Cargo.toml	default = []
+contains	apps/cli/Cargo.toml	default = []
+contains	Dockerfile	cargo build --release --locked --package deve_cli --bin deve_cli
+contains	.github/workflows/release-native.yml	cargo build --locked --release -p deve_cli
+regex_absent	Dockerfile	cargo (build|tauri)[^\r\n]*(--features([ =]|$)|--all-features)
+regex_absent	.github/workflows/release-native.yml	cargo (build|tauri)[^\r\n]*(--features([ =]|$)|--all-features)
 absent	Cargo.lock	name = "bincode"
 absent	Cargo.toml	bincode
 regex_absent_tree_ext	crates	rs	\bbincode\b
@@ -607,6 +613,7 @@ absent	docs/acceptance-cases/12_tech_release.md	run: ls dist
 absent	docs/acceptance-cases/12_tech_release.md	stdout_contains: "v1.0.0"
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release-audit-gate
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-003	first_tag_product_builds_keep_optional_search_disabled true
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-006
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-007
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-008

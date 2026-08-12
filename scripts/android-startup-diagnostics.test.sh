@@ -76,7 +76,10 @@ android_startup_diag_adb() {
           printf 'ActivityManager: Process dev.deve.notebook.mobile has died\n'
           printf 'deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout\n'
           printf 'deve_mobile initial native session handoff failed closed: android_initial_webview_admission_timeout\n'
+          printf 'deve_mobile native session cookie handoff failed closed: android_native_cookie_not_retained\n'
           printf 'deve_mobile initial native session handoff failed closed: %s\n' "$SECRET_SENTINEL"
+          printf 'deve_mobile native session cookie handoff failed closed: %s\n' "$SECRET_SENTINEL"
+          printf 'dev.deve.notebook.mobile deve_mobile native session cookie handoff failed closed: %s\n' "$SECRET_SENTINEL"
           ;;
       esac
       return 0
@@ -142,6 +145,8 @@ grep -Fq "deve_mobile initial native session handoff failed closed: android_nati
   || test_fail "fixed native session handoff category missing from bounded diagnostics"
 grep -Fq "deve_mobile initial native session handoff failed closed: android_initial_webview_admission_timeout" "$stderr_file" \
   || test_fail "fixed WebView admission category missing from bounded diagnostics"
+grep -Fq "deve_mobile native session cookie handoff failed closed: android_native_cookie_not_retained" "$stderr_file" \
+  || test_fail "fixed platform cookie category missing from bounded diagnostics"
 if grep -Fq "$SECRET_SENTINEL" "$stderr_file"; then
   test_fail "unknown native session handoff suffix leaked through bounded diagnostics"
 fi

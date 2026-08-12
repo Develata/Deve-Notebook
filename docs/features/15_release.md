@@ -94,6 +94,9 @@
   `tag_blocker=yes` 的 warning 会 fail-closed。当前 GTK3/glib warning 依据 ADR
   0006 Route 2 重新归类为非 blocker，因为 Linux GTK3 native artifacts 不进入
   first-tag release set。
+- warning 的非阻塞理由若依赖可选 feature 未进入首发制品，release baseline 必须
+  同时锁定该构建前提；首发 Docker/native 构建保持 `deve_core`、`deve_cli`
+  空 default feature，并且不得启用可选 `search` 或 `--all-features`。
 - 首个公开 tag 的 Ledger / Redb / WS protocol / Projection Locator /
   Remote Projection / Remote Import 当前格式必须能在 `docs/registry/first-tag-format-matrix.md`
   中查到，并由 release baseline 钉住对应 plan 与代码常量；未登记的格式变更不能声明 tag-ready。

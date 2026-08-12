@@ -637,6 +637,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: node --test scripts
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID_EXPECT_WRITABLE=0 scripts/smoke-mobile-android-lifecycle.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_retention_uses_same_secure_install_origin true
+contains	apps/mobile/src/embedded_backend/cookie.rs	fn mobile_embedded_backend_android_native_session_cookie_retention_uses_same_secure_install_origin()
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_webview_handoff_waits_for_native_surface_admission true
@@ -699,6 +701,7 @@ contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn dropped_
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	setCookie(installUrl, setCookie) { accepted ->
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	nativeSessionCookieInstallCompleted
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	deve_mobile native session cookie handoff failed closed: $category
 contains	apps/mobile/gen/android/app/proguard-rules.pro	public boolean installNativeSessionCookie(long, android.webkit.WebView, java.lang.String, java.lang.String, java.lang.String);
 contains	apps/mobile/gen/android/app/proguard-rules.pro	private native void nativeSessionCookieInstallCompleted(long, int);
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	native_backend_prepare_webview_session

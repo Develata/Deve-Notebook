@@ -165,6 +165,7 @@
     - release_assert: cargo_audit_warnings_match_registry true
     - release_assert: audit_warning_registry_has_rationale_or_replacement_route true
     - release_assert: yanked_warnings_without_advisory_use_synthetic_registry_key true
+    - release_assert: first_tag_product_builds_keep_optional_search_disabled true
     - release_assert: trunk_dev_index_rejected_by_static_delivery true
     - release_assert: workspace_desktop_mobile_android_versions_match_release_freeze true
 

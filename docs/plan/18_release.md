@@ -106,7 +106,11 @@ CI/CD 基于 GitHub Actions。
         cargo-audit yanked warnings without a RustSec advisory id), crate,
         warning kind, rationale, replacement route, and whether first-tag
         readiness requires a separate USER decision or replacement before
-        public tag.
+        public tag. When a non-blocking warning rationale depends on an optional
+        feature being absent from the first-tag artifacts, the release baseline
+        **MUST** bind that premise mechanically: `deve_core` and `deve_cli`
+        keep empty default feature sets, and Docker/native product build commands
+        must not enable the optional `search` feature or `--all-features`.
     3.  **Candidate Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。candidate workflow 只构建一次 `linux/amd64` image，并记录其 image ID；同一 run 还构建 Windows MSI/NSIS、按真实 host architecture 标记为 `macos-x64` 或 `macos-arm64` 的 DMG，以及已签名 Android ARM64 APK。不得把 host-only DMG 重命名为 universal。Android signing secrets 缺失、签名数不为一或 `apksigner verify` / certificate digest 复核失败时，candidate 必须失败，不能以 unsigned artifact 代替。
     4.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
     5.  **Exact Candidate Evidence**: runtime/login、Playwright 双客户端、离线恢复、Source Control、External Changes 与 P2P gap/recovery 必须复用同一 candidate image；该 image 必须携带 `org.opencontainers.image.source` 并绑定当前公开源码仓库。Desktop 必须安装并测试最终封存的 MSI/NSIS。LocalBackend、NoteGit 与 install/uninstall boundary 对两种 Windows installer 分别执行；RemoteBrowser/native-recovery journey 以 NSIS 安装面代表共享 Desktop runtime payload，不将该 receipt 扩张声明为 MSI installer-engine 的 RemoteBrowser 证明。GitHub x86_64 Android emulator 使用同一 HEAD 的 target-compatible x86_64 package 验证 LocalBackend/RemoteBrowser lifecycle，随后单独构建、签名并验证封存的 ARM64 APK；该 emulator receipt 不得冒充 ARM64 APK 的逐字节安装证据。smoke 禁止对 Docker/Desktop candidate 隐式 rebuild。
