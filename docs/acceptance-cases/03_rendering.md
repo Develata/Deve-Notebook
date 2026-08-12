@@ -203,23 +203,30 @@
     - ui_assert: source_contains "- [x] task"
 
 - case_id: RENDER-RICH-003
-  goal: 移动工具栏创建的空任务项第一次 Enter 继续列表，之后保留标准空列表退出语义。
+  goal: 移动工具栏创建的空任务项第一次 Enter 继续列表，第二次在新空项 Enter 立即退出。
   preconditions:
     - 当前文档可写
     - 移动 Markdown 辅助工具栏可见
   steps:
     - run: node --test apps/web/js/extensions/mobile_task_item.test.mjs
     - ui_click: "mobile-toolbar-task"
-    - ui_insert_unrelated_change_before_task_marker: true
     - ui_keypress: "Enter"
     - ui_keypress: "Enter"
+    - ui_repeat_scenario_with_unrelated_prefix_change: "# intro\n"
   assertions:
     - ui_assert: source_after_first_enter "- [ ] \n- [ ] "
-    - ui_assert: subsequent_enter_matches_codemirror_default true
+    - ui_assert: source_after_second_enter "- [ ] \n"
+    - ui_assert: source_after_unrelated_change_first_enter "# intro\n- [ ] \n- [ ] "
+    - ui_assert: source_after_unrelated_change_second_enter "# intro\n- [ ] \n"
+    - ui_assert: third_enter_not_required true
     - ui_assert: source_contains_no_zero_width_char true
     - ui_assert: ordinary_empty_task_keeps_codemirror_default true
     - ui_assert: toolbar_task_marker_maps_across_unrelated_transaction true
-    - ui_assert: toolbar_task_marker_retires_when_task_line_changes true
+    - ui_assert: toolbar_task_marker_maps_through_transaction_filter true
+    - ui_assert: toolbar_task_marker_retires_when_selection_leaves true
+    - ui_assert: toolbar_task_marker_retires_without_collapsing_multiple_selections true
+    - ui_assert: toolbar_task_intent_rejects_nonempty_or_multiple_selections true
+    - ui_assert: toolbar_task_marker_retires_when_task_line_changes_or_is_filled true
 
 - case_id: RENDER-RICH-002
   goal: Frontmatter 样式与揭示。

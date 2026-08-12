@@ -309,7 +309,9 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 撤销与重做属于高频恢复操作，**MUST** 保持在移动工具栏前段，390px 宽度下无需横向滚动即可看到。
 Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。
 Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 intent；第一次 Enter 继续任务项，
-后续空任务项仍保留标准退出列表行为，不得插入零宽字符或改写全局 Enter keymap。
+第二次在该 continuation 生成的新空任务项上按 Enter 必须立即退出列表，不得要求第三次 Enter；
+该行为只能由 intent-local 两阶段 marker 实现，不得插入零宽字符、改写全局 Enter keymap，或改变
+普通键盘输入创建的空任务项行为。
 
 ### 3.4 手势系统 (Gesture System)
 仅支持轻量级 Edge Swipe，参数定义如下：

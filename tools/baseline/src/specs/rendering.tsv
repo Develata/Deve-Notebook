@@ -375,11 +375,35 @@ absent	docs/features/03_rendering.md	rendering settings 的完整 GUI 持久化�
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-RICH-003
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	node --test apps/web/js/extensions/mobile_task_item.test.mjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_first_enter "- [ ] \n- [ ] "
-case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: subsequent_enter_matches_codemirror_default true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_second_enter "- [ ] \n"
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_unrelated_change_first_enter "# intro\n- [ ] \n- [ ] "
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_unrelated_change_second_enter "# intro\n- [ ] \n"
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: third_enter_not_required true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_contains_no_zero_width_char true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: ordinary_empty_task_keeps_codemirror_default true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_maps_across_unrelated_transaction true
-case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_when_task_line_changes true
-contains	apps/web/js/extensions/mobile_task_item.test.mjs	unrelated changes before the task map the one-shot marker
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_maps_through_transaction_filter true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_when_selection_leaves true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_without_collapsing_multiple_selections true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_intent_rejects_nonempty_or_multiple_selections true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_when_task_line_changes_or_is_filled true
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	toolbar task Enter continues once, then the generated empty item exits immediately
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	ordinary keyboard-created empty task keeps CodeMirror default Enter behavior
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	unrelated changes map the exit-ready item without broadening Enter semantics
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	filling the generated item retires exit-ready behavior
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	selection leaving either phase retires toolbar-specific Enter behavior
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	transaction filters map a newly installed marker into the final document
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	multiple selections retire toolbar-specific Enter behavior without collapsing ranges
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	task intent rejects a nonempty selection without replacing content
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	task intent rejects preexisting multiple selections without collapsing them
 contains	apps/web/js/extensions/mobile_task_item.test.mjs	rewriting the task line retires the mapped marker
+contains	apps/web/js/extensions/mobile_task_item.js	const CONTINUE_READY = "continue-ready"
+contains	apps/web/js/extensions/mobile_task_item.js	const EXIT_READY = "exit-ready"
+contains	apps/web/js/extensions/mobile_task_item.js	changes.mapPos(marker.pos, 1)
+contains	apps/web/js/extensions/mobile_task_item.js	transaction.newSelection.ranges.length !== 1
 contains	apps/web/js/extensions/mobile_task_item.js	Prec.highest(keymap.of([{ key: "Enter", run: continueToolbarTaskItem }]))
+contains	docs/plan/10_rendering.md	`InsertTaskItem` 可以在当前 `EditorView` 内建立一次性的两阶段 projection marker
+contains	docs/plan/10_rendering.md	再次按 Enter 必须删除该空任务项标记并退出列表
+contains	docs/plan/11_ui_design/03_mobile.md	第二次在该 continuation 生成的新空任务项上按 Enter 必须立即退出列表
+contains	docs/features/03_rendering.md	也不得要求第三次 Enter
 contains	apps/web/src/components/mobile_layout/toolbar.rs	ffi::mobile_insert_task_item

@@ -2,13 +2,22 @@ import { Prec, StateEffect, StateField } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 
 const TASK_PREFIX = "- [ ] ";
-const setToolbarTaskMarker = StateEffect.define();
+const CONTINUE_READY = "continue-ready";
+const EXIT_READY = "exit-ready";
+const setToolbarTaskMarker = StateEffect.define({
+  map(marker, changes) {
+    return marker === null
+      ? null
+      : { ...marker, pos: changes.mapPos(marker.pos, 1) };
+  },
+});
 
 export const toolbarTaskMarkerField = StateField.define({
   create() {
     return null;
   },
   update(marker, transaction) {
+    const previousMarker = marker;
     let markerEffectSeen = false;
     for (const effect of transaction.effects) {
       if (effect.is(setToolbarTaskMarker)) {
@@ -16,11 +25,10 @@ export const toolbarTaskMarkerField = StateField.define({
         markerEffectSeen = true;
       }
     }
-    if (markerEffectSeen) return marker;
     if (marker === null) return null;
 
-    if (transaction.docChanged) {
-      const taskLine = transaction.startState.doc.lineAt(marker);
+    if (!markerEffectSeen && transaction.docChanged) {
+      const taskLine = transaction.startState.doc.lineAt(previousMarker.pos);
       let taskLineChanged = false;
       transaction.changes.iterChangedRanges((fromA, toA) => {
         if (fromA <= taskLine.to && toA >= taskLine.from) {
@@ -28,13 +36,20 @@ export const toolbarTaskMarkerField = StateField.define({
         }
       });
       if (taskLineChanged) return null;
-      marker = transaction.changes.mapPos(marker, 1);
+      marker = {
+        ...marker,
+        pos: transaction.changes.mapPos(marker.pos, 1),
+      };
     }
 
     const selection = transaction.newSelection.main;
-    if (!selection.empty || selection.head !== marker) return null;
-    const line = transaction.newDoc.lineAt(marker);
-    return marker === line.to && /^\s*[-+*]\s+\[[ xX]\]\s*$/.test(line.text)
+    if (
+      transaction.newSelection.ranges.length !== 1
+      || !selection.empty
+      || selection.head !== marker.pos
+    ) return null;
+    const line = transaction.newDoc.lineAt(marker.pos);
+    return marker.pos === line.to && /^\s*[-+*]\s+\[[ xX]\]\s*$/.test(line.text)
       ? marker
       : null;
   },
@@ -51,19 +66,34 @@ export function continueToolbarTaskItem(view) {
   const selection = view.state.selection.main;
   if (
     marker === null
-    || selection.head !== marker
-    || !isEmptyTaskAtMarker(view.state, marker)
+    || view.state.selection.ranges.length !== 1
+    || selection.head !== marker.pos
+    || !isEmptyTaskAtMarker(view.state, marker.pos)
   ) {
     return false;
   }
 
-  const line = view.state.doc.lineAt(marker);
+  const line = view.state.doc.lineAt(marker.pos);
+  if (marker.phase === EXIT_READY) {
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert: "" },
+      selection: { anchor: line.from },
+      effects: setToolbarTaskMarker.of(null),
+      userEvent: "input.type",
+    });
+    return true;
+  }
+  if (marker.phase !== CONTINUE_READY) return false;
+
   const indentation = line.text.match(/^\s*/)?.[0] || "";
   const insert = `\n${indentation}${TASK_PREFIX}`;
   view.dispatch({
-    changes: { from: marker, insert },
-    selection: { anchor: marker + insert.length },
-    effects: setToolbarTaskMarker.of(null),
+    changes: { from: marker.pos, insert },
+    selection: { anchor: marker.pos + insert.length },
+    effects: setToolbarTaskMarker.of({
+      pos: marker.pos + insert.length,
+      phase: EXIT_READY,
+    }),
     userEvent: "input.type",
   });
   return true;
@@ -72,11 +102,12 @@ export function continueToolbarTaskItem(view) {
 export function insertToolbarTaskItem(view) {
   if (!view || view.state?.readOnly) return false;
   const selection = view.state.selection.main;
+  if (view.state.selection.ranges.length !== 1 || !selection.empty) return false;
   const marker = selection.from + TASK_PREFIX.length;
   view.dispatch({
     changes: { from: selection.from, to: selection.to, insert: TASK_PREFIX },
     selection: { anchor: marker },
-    effects: setToolbarTaskMarker.of(marker),
+    effects: setToolbarTaskMarker.of({ pos: marker, phase: CONTINUE_READY }),
     userEvent: "input.type",
   });
   view.focus();

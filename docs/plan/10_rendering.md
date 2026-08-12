@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-08-12`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -253,12 +253,15 @@ Baseline contract 的行内支持集合：
 - 但 widget 本身不是 authority；它只能经 editor delta 路径回到源码。
 - 移动工具栏的 Task 动作必须发送 `InsertTaskItem` 语义 intent，不得把 `- [ ] ` 当作普通文本
   直接插入后交给 Markdown Enter 规则猜测来源。
-- `InsertTaskItem` 可以在当前 `EditorView` 内建立一次性的 projection marker：在刚创建的空任务项上
-  第一次按 Enter 时继续生成下一条 `- [ ] `；该次 continuation 完成后，新生成的空任务项仍服从
-  CodeMirror 的标准空列表退出语义。
+- `InsertTaskItem` 可以在当前 `EditorView` 内建立一次性的两阶段 projection marker：`continue-ready`
+  阶段在刚创建的空任务项上第一次按 Enter 时继续生成下一条 `- [ ] `；随后 marker 只跟随该次
+  continuation 生成的新空任务项进入 `exit-ready`，再次按 Enter 必须删除该空任务项标记并退出列表，
+  不得要求第三次 Enter。
 - 该 marker 仅属于 editor session-local projection state，必须随 transaction position mapping，并在
-  selection 离开、非匹配文档变更或 editor 销毁时清理；不得通过零宽字符、隐藏 Markdown 字节、
-  browser storage 或 ledger fact 持久化。
+  selection 离开、对应任务项被填写或发生非匹配文档变更、或 editor 销毁时清理；不得通过零宽字符、
+  隐藏 Markdown 字节、browser storage 或 ledger fact 持久化。该窄状态机不得改写普通键盘输入创建的
+  空列表项或全局 Markdown Enter 语义。该 intent 只接受单一空 caret；多 selection 或非空 selection
+  必须 fail-closed 地退休 marker，并保留原 selection 交给既有编辑器命令处理。
 
 ## 6. Rendering Capabilities
 
