@@ -200,6 +200,22 @@ contains	.github/workflows/native-target-host.yml	libwebkit2gtk-4.1-dev
 contains	.github/workflows/native-target-host.yml	libgtk-3-dev
 contains	.github/workflows/native-target-host.yml	librsvg2-dev
 before	.github/workflows/native-target-host.yml	Install Mobile Linux native-packaging test dependencies	DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: "0"
+absent	apps/mobile/src/tauri_entry/tests.rs	generated/WryActivity.kt
+contains	apps/mobile/src/tauri_entry/tests.rs	android_release_shrinker_rule_keeps_wry_activity_jni_id_getter
+contains	apps/mobile/src/tauri_entry/tests.rs	class dev.deve.notebook.mobile.WryActivity
+contains	apps/mobile/src/tauri_entry/tests.rs	android_release_variant_enables_minification_and_proguard_rules
+contains	apps/mobile/gen/android/app/build.gradle.kts	isMinifyEnabled = true
+contains	apps/mobile/gen/android/app/build.gradle.kts	proguard-android-optimize.txt
+contains	docs/plan/18_release.md	Mobile pre-package compile/test gate 必须只读取 clean checkout 中受版本控制的源码与配置
+contains	docs/features/15_release.md	Mobile pre-package compile/test 只能读取 clean checkout 中受版本控制的输入
+contains	docs/acceptance-cases/12_tech_release.md	mobile_pre_package_tests_use_only_versioned_sources_and_do_not_include_ignored_android_generated_kotlin true
+contains	docs/acceptance-cases/12_tech_release.md	wry_generated_class_r8_jni_integration_requires_same_exact_head_minified_release_variant_install_and_startup
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"
+before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"	DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral-diagnostic
+contains	scripts/sign-mobile-android-target-host-release-apk.sh	must never be accepted as a release signer
 contains	.github/workflows/native-target-host.yml	actions/checkout@v6
 contains	.github/workflows/native-target-host.yml	actions/setup-node@v6
 contains	.github/workflows/native-target-host.yml	node-version: 24

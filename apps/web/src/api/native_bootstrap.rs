@@ -10,6 +10,7 @@ use super::ConnectionStatus;
 
 #[cfg(target_arch = "wasm32")]
 const NATIVE_BOOTSTRAP_GLOBAL: &str = "__DEVE_NATIVE_BOOTSTRAP";
+#[cfg(any(target_arch = "wasm32", test))]
 const NATIVE_PLATFORM_LIFECYCLE_AUTHORITY: &str = "native";
 
 #[cfg(target_arch = "wasm32")]
@@ -184,6 +185,7 @@ pub(crate) fn current_bundled_local_backend() -> bool {
     false
 }
 
+#[cfg(any(target_arch = "wasm32", test))]
 fn bundled_local_backend_presentation(
     hostname: &str,
     protocol: &str,
@@ -192,6 +194,7 @@ fn bundled_local_backend_presentation(
     is_native_shell_origin(hostname, protocol) && backend_preference_control == Some(true)
 }
 
+#[cfg(any(target_arch = "wasm32", test))]
 fn native_platform_lifecycle_authority(
     hostname: &str,
     protocol: &str,

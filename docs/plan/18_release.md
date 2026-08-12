@@ -242,6 +242,15 @@ Linux-hosted Android target-host diagnostics 在执行 Mobile `native-packaging`
 compile/test gate，不得被解释为恢复 Linux Desktop artifact，也不得通过关闭 Mobile
 `native-packaging` 测试来绕过缺失的 runner dependency。
 
+Mobile pre-package compile/test gate 必须只读取 clean checkout 中受版本控制的源码与配置，
+不得在 Tauri/Gradle package build 之前 `include` 或假定存在 `.gitignore` 排除的 Android
+generated source。pre-package 单元合同只校验仓库拥有的 ProGuard/JNI keep rule，不得复制、
+提交或伪造 generator-owned Kotlin 输出以使 clean runner 通过。Wry/Tauri 生成类与 R8/JNI
+的联合有效性必须由同一 exact-HEAD、同一 target architecture 的 minified release-variant APK
+在 owned emulator 上真实安装并保持启动来证明；该 APK 只允许使用运行后立即销毁的
+ephemeral diagnostic signer，且不得冒充候选签名身份。debug APK 可在 release startup proof
+之后继续承担 CDP writable journey，但其启动不得替代 minified release-variant 证据。
+
 Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、单次 DOM probe 与诊断读取
 限制为短时单命令窗口，并在命令超时后移除 pending waiter、关闭旧连接后重试。健康且仍可响应
 短探测的同一 page target 必须在其有界 renderer generation lease 内继续 condition-based DOM

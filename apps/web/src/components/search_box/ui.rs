@@ -136,7 +136,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                     }
                 >
                     {move || ui_sheet::drag_handle(ui_mode.get()).into_any()}
-                    {ui_sections::header(
+                    {ui_sections::header(ui_sections::SearchHeaderView {
                         query,
                         set_query,
                         set_selected_index,
@@ -146,7 +146,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                         set_show,
                         close_ref,
                         locale,
-                    )}
+                    })}
                     {ui_sections::results_panel(ui_sections::SearchResultsPanelView {
                         providers_results,
                         selected_index,

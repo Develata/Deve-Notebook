@@ -24,6 +24,9 @@ EMULATOR_SERIAL="emulator-$EMULATOR_PORT"
 EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096}"
 EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
+ANDROID_BUILD_TOOLS_VERSION="${DEVE_MOBILE_ANDROID_BUILD_TOOLS_VERSION:-36.0.0}"
+TARGET_HOST_RELEASE_UNSIGNED_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+TARGET_HOST_RELEASE_APK="$LOG_DIR/app-universal-release-target-host-test-signed.apk"
 OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
 JOURNEY="${DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local}"
@@ -80,9 +83,15 @@ adb_cmd() {
 
 cleanup() {
   local cleanup_status=0
+  local emulator_cleanup_status=0
+  rm -f -- "$TARGET_HOST_RELEASE_APK" "${TARGET_HOST_RELEASE_APK}.idsig" \
+    || cleanup_status=$?
   DEVE_MOBILE_ANDROID_EMULATOR_OWNER_FILE="$OWNER_FILE" \
     bash "$ROOT_DIR/scripts/cleanup-mobile-android-emulator.sh" \
-    || cleanup_status=$?
+    || emulator_cleanup_status=$?
+  if (( cleanup_status == 0 && emulator_cleanup_status != 0 )); then
+    cleanup_status="$emulator_cleanup_status"
+  fi
   if (( cleanup_status != 0 )) \
       && [[ -n "${EMULATOR_PID:-}" ]] \
       && jobs -pr | grep -Fx -- "$EMULATOR_PID" >/dev/null 2>&1; then
@@ -105,6 +114,15 @@ cleanup_on_exit() {
   exit "$cleanup_status"
 }
 
+cleanup_prelaunch_failure() {
+  local status=$?
+  trap - EXIT
+  if (( status != 0 )); then
+    rm -f -- "$TARGET_HOST_RELEASE_APK" "${TARGET_HOST_RELEASE_APK}.idsig"
+  fi
+  exit "$status"
+}
+
 write_emulator_owner() {
   local pid="${1:-}"
   local launch_state="reserved"
@@ -122,6 +140,7 @@ install_sdk_packages() {
   local packages=(
     "platform-tools"
     "emulator"
+    "build-tools;$ANDROID_BUILD_TOOLS_VERSION"
     "platforms;android-$API_LEVEL"
     "$system_image"
   )
@@ -172,6 +191,12 @@ android_sdk_package_complete() {
       ;;
     emulator)
       [[ -f "$sdk/emulator/emulator" || -f "$sdk/emulator/emulator.exe" ]]
+      ;;
+    build-tools\;*)
+      platform="${package#build-tools;}"
+      [[ -f "$sdk/build-tools/$platform/lib/apksigner.jar" \
+        && ( -x "$sdk/build-tools/$platform/zipalign" \
+          || -x "$sdk/build-tools/$platform/zipalign.exe" ) ]]
       ;;
     platforms\;*)
       platform="${package#platforms;}"
@@ -404,6 +429,7 @@ require_android_tool avdmanager
 
 mkdir -p "$LOG_DIR" "$AVD_HOME"
 export ANDROID_AVD_HOME="$AVD_HOME"
+trap cleanup_prelaunch_failure EXIT
 
 install_sdk_packages
 PINNED_EMULATOR_BIN="$(android_resolve_pinned_emulator)" \
@@ -412,8 +438,16 @@ echo "mobile-android-emulator-install-startup-smoke-check: pinned emulator: $PIN
 require_android_tool adb
 ensure_avd
 
-# Build the exact package before reserving several GiB for the emulator. This
-# keeps the target-host gate viable on the project's low-memory Windows host.
+# Build both exact variants before reserving several GiB for the emulator. The
+# minified release variant proves R8/JNI startup; the debuggable variant owns
+# CDP business journeys. Neither diagnostic signer nor debug APK is a release
+# candidate identity.
+(
+  export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
+  export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0
+  export DEVE_MOBILE_ANDROID_PACKAGE_TARGET="$PACKAGE_TARGET"
+  run "$ROOT_DIR/scripts/check-mobile-android-shell-package-build.sh"
+)
 (
   export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
   export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
@@ -429,6 +463,15 @@ if [[ -f "$OWNER_FILE" ]]; then
 fi
 trap cleanup_on_exit EXIT
 write_emulator_owner
+
+(
+  export DEVE_MOBILE_ANDROID_TARGET_HOST_RELEASE_SIGN_REQUIRED=1
+  export DEVE_MOBILE_ANDROID_BUILD_TOOLS_VERSION="$ANDROID_BUILD_TOOLS_VERSION"
+  export DEVE_MOBILE_ANDROID_UNSIGNED_APK_PATH="$TARGET_HOST_RELEASE_UNSIGNED_APK"
+  export DEVE_MOBILE_ANDROID_SIGNED_APK_PATH="$TARGET_HOST_RELEASE_APK"
+  export DEVE_MOBILE_ANDROID_DIAGNOSTIC_ROOT="$LOG_DIR"
+  run bash "$ROOT_DIR/scripts/sign-mobile-android-target-host-release-apk.sh"
+)
 
 FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 android_emulator_feature_policy_configure "$FORMAL_FEATURE_POLICY" \
@@ -466,8 +509,21 @@ echo "mobile-android-emulator-install-startup-smoke-check: $ANDROID_EMULATOR_REN
 
 adb_cmd -s "$EMULATOR_SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
 
+echo "mobile-android-emulator-install-startup-smoke-check: minified release startup begin"
 (
   export DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1
+  export DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"
+  export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+  export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
+  export DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=1
+  run "$ROOT_DIR/scripts/check-mobile-android-install-startup-smoke.sh"
+)
+rm -f -- "$TARGET_HOST_RELEASE_APK" "${TARGET_HOST_RELEASE_APK}.idsig"
+echo "mobile-android-emulator-install-startup-smoke-check: minified release startup ok"
+
+(
+  export DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1
+  export DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
   export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
   export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
   export DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=0

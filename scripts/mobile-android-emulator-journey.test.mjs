@@ -19,6 +19,7 @@ const cleanup = read("./cleanup-mobile-android-emulator.sh");
 const cleanupTest = read("./android-emulator-cleanup.test.sh");
 const ownerLibrary = read("./lib/android-emulator-owner.sh");
 const packageBuilder = read("./check-mobile-android-shell-package-build.sh");
+const targetHostReleaseSigner = read("./sign-mobile-android-target-host-release-apk.sh");
 const emulatorPin = read("./lib/android-emulator-pin.sh");
 const emulatorPinTest = read("./android-emulator-pin.test.sh");
 const emulatorRenderer = read("./lib/android-emulator-renderer.sh");
@@ -54,6 +55,28 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
   assert.match(orchestrator, /available_kib >= 1048576/);
   assert.match(orchestrator, /wait_for_boot\s+verify_emulator_data_capacity/);
   assert.match(orchestrator, /status != 0 && DIAGNOSTICS_PRINTED == 0/);
+});
+
+test("minified release startup precedes the debuggable CDP journey", () => {
+  const releaseBuild = orchestrator.indexOf("DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0");
+  const debugBuild = orchestrator.indexOf("DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1");
+  const diagnosticSign = orchestrator.indexOf("sign-mobile-android-target-host-release-apk.sh");
+  const releaseInstall = orchestrator.indexOf('DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"');
+  const debugInstall = orchestrator.indexOf('DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"');
+  const localJourney = orchestrator.indexOf('if [[ "$JOURNEY" == "local" ]]');
+  assert.ok(releaseBuild >= 0 && releaseBuild < debugBuild);
+  assert.ok(debugBuild < diagnosticSign && diagnosticSign < releaseInstall);
+  assert.ok(releaseInstall < debugInstall && debugInstall < localJourney);
+  assert.match(orchestrator, /DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=1/);
+  assert.match(orchestrator, /trap cleanup_prelaunch_failure EXIT/);
+  assert.match(orchestrator, /run bash "\$ROOT_DIR\/scripts\/sign-mobile-android-target-host-release-apk\.sh"/);
+  assert.match(targetHostReleaseSigner, /diagnostic root must stay within the repository target directory/);
+  assert.match(targetHostReleaseSigner, /signed output must stay within the owned diagnostic root/);
+  assert.match(targetHostReleaseSigner, /signing_complete=1/);
+  assert.match(targetHostReleaseSigner, /rm -f -- "\$signed_apk" "\$\{signed_apk\}\.idsig"/);
+  assert.match(targetHostReleaseSigner, /--out "\$temporary_signed_apk"/);
+  assert.match(targetHostReleaseSigner, /mv -- "\$temporary_signed_apk" "\$signed_apk"/);
+  assert.match(orchestrator, /rm -f -- "\$TARGET_HOST_RELEASE_APK" "\$\{TARGET_HOST_RELEASE_APK\}\.idsig"/);
 });
 
 test("local and remote producers use separate claims outputs", () => {
@@ -113,6 +136,7 @@ test("Android producers own a bounded runner finally cleanup", () => {
       args: [{ literal: "scripts/cleanup-mobile-android-emulator.sh" }],
     }]);
     assert.ok(producer.artifacts.includes("scripts/cleanup-mobile-android-emulator.sh"));
+    assert.ok(producer.artifacts.includes("scripts/sign-mobile-android-target-host-release-apk.sh"));
     assert.ok(producer.artifacts.includes("scripts/android-emulator-capacity.test.sh"));
     assert.ok(producer.artifacts.includes("scripts/android-emulator-cleanup.test.sh"));
     assert.ok(producer.artifacts.includes("scripts/lib/android-emulator-capacity.sh"));

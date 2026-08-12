@@ -14,17 +14,30 @@ use std::sync::Arc;
 
 use super::logic::search_surface_mode;
 
-pub fn header(
-    query: Signal<String>,
-    set_query: WriteSignal<String>,
-    set_selected_index: WriteSignal<usize>,
-    placeholder_text: Memo<String>,
-    input_ref: NodeRef<leptos::html::Input>,
-    ui_mode: Signal<SearchUiMode>,
-    set_show: WriteSignal<bool>,
-    close_ref: NodeRef<leptos::html::Button>,
-    locale: RwSignal<Locale>,
-) -> impl IntoView {
+pub struct SearchHeaderView {
+    pub query: Signal<String>,
+    pub set_query: WriteSignal<String>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub placeholder_text: Memo<String>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+    pub ui_mode: Signal<SearchUiMode>,
+    pub set_show: WriteSignal<bool>,
+    pub close_ref: NodeRef<leptos::html::Button>,
+    pub locale: RwSignal<Locale>,
+}
+
+pub fn header(view: SearchHeaderView) -> impl IntoView {
+    let SearchHeaderView {
+        query,
+        set_query,
+        set_selected_index,
+        placeholder_text,
+        input_ref,
+        ui_mode,
+        set_show,
+        close_ref,
+        locale,
+    } = view;
     let header_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => {
             "px-3 py-2 border-b border-default flex items-center gap-2 bg-sidebar"

@@ -332,16 +332,24 @@ fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
 }
 
 #[test]
-fn android_release_shrinker_preserves_wry_activity_jni_id_getter() {
-    let activity = include_str!(
-        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/generated/WryActivity.kt"
-    );
+fn android_release_shrinker_rule_keeps_wry_activity_jni_id_getter() {
     let proguard = include_str!("../../gen/android/app/proguard-rules.pro");
 
-    assert!(activity.contains("abstract class WryActivity"));
-    assert!(activity.contains("var id: Int"));
     assert!(proguard.contains("class dev.deve.notebook.mobile.WryActivity"));
     assert!(proguard.contains("public int getId();"));
+}
+
+#[test]
+fn android_release_variant_enables_minification_and_proguard_rules() {
+    let gradle = include_str!("../../gen/android/app/build.gradle.kts");
+    let release = gradle
+        .split_once("getByName(\"release\")")
+        .expect("Android release build type")
+        .1;
+
+    assert!(release.contains("isMinifyEnabled = true"));
+    assert!(release.contains("proguardFiles("));
+    assert!(release.contains("proguard-android-optimize.txt"));
 }
 
 #[test]

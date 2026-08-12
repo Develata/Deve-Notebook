@@ -114,6 +114,9 @@ fn execute_refresh_work(
     coordinator: &ProjectionRefreshCoordinator,
     runtime_lifetime: BrowserRuntimeLifetime,
 ) {
+    if !runtime_lifetime.is_active() {
+        return;
+    }
     if evaluate_recovery(&work.required, &recovery_scope(signals)).is_none() {
         return;
     }

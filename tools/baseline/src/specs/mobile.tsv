@@ -817,6 +817,13 @@ contains	scripts/smoke-mobile-android-remote-browser.mjs	requireAndroidRemoteBro
 contains	scripts/smoke-mobile-android-remote-browser.test.mjs	RemoteBrowser native mode evidence accepts only remote-without-supervisor
 contains	scripts/lib/mobile-webview-interaction.mjs	android_webview_input_injection_unavailable
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	ANDROID_BUILD_TOOLS_VERSION="${DEVE_MOBILE_ANDROID_BUILD_TOOLS_VERSION:-36.0.0}"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	TARGET_HOST_RELEASE_UNSIGNED_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	sign-mobile-android-target-host-release-apk.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minified release startup ok
+before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minified release startup ok	smoke-mobile-android-lifecycle.sh
+contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral-diagnostic
+contains	docs/registry/acceptance-producers.json	scripts/sign-mobile-android-target-host-release-apk.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_feature_policy_wait

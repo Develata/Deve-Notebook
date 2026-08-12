@@ -678,6 +678,7 @@
       "artifacts": [
         "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/sign-mobile-android-target-host-release-apk.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-guest-service-readiness.test.sh",
         "scripts/android-emulator-boot-readiness.test.sh",
@@ -793,6 +794,7 @@
       "artifacts": [
         "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/sign-mobile-android-target-host-release-apk.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-guest-service-readiness.test.sh",
         "scripts/android-emulator-boot-readiness.test.sh",

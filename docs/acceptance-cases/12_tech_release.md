@@ -246,6 +246,9 @@
     - release_assert: api_only_does_not_prove_embedded_frontend_health true
     - release_assert: target_host_platform_evidence_runtime_boundary_current true
     - dependency_assert: android_target_host_installs_linux_native_packaging_build_dependencies_before_process_gate true
+    - release_assert: mobile_pre_package_tests_use_only_versioned_sources_and_do_not_include_ignored_android_generated_kotlin true
+    - release_assert: mobile_target_host_diagnostic_signer_is_ephemeral_and_never_claims_candidate_signing_identity true
+    - evidence_boundary: wry_generated_class_r8_jni_integration_requires_same_exact_head_minified_release_variant_install_and_startup
     - release_assert: android_emulator_settings_provider_readiness_precedes_install true
     - release_assert: android_emulator_guest_service_readiness_requires_stable_window true
     - release_assert: android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
