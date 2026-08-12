@@ -4,7 +4,8 @@
 //!
 use crate::api::{
     AuthProbe, ConnectionStatus, WsService, current_native_bootstrap_blocked_status,
-    http_base_from_ws_url, probe_auth_status_with_http_base, probe_node_role_for_http_base,
+    current_native_platform_lifecycle_authority, http_base_from_ws_url,
+    probe_auth_status_with_http_base, probe_node_role_for_http_base,
 };
 use crate::hooks::use_core::types::HandshakeSignals;
 use leptos::prelude::GetUntracked;
@@ -13,6 +14,25 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::state::reset_handshake_attempt;
+
+#[derive(Clone, Copy)]
+enum ForegroundReprobeSource {
+    PageVisibility,
+    PageFocus,
+    NativeSuspend,
+    NativeResume,
+}
+
+impl ForegroundReprobeSource {
+    fn category(self) -> &'static str {
+        match self {
+            Self::PageVisibility => "page-visibility",
+            Self::PageFocus => "page-focus",
+            Self::NativeSuspend => "native-suspend",
+            Self::NativeResume => "native-resume",
+        }
+    }
+}
 
 pub(super) fn mount_foreground_reprobe_listener(
     ws: WsService,
@@ -28,23 +48,38 @@ pub(super) fn mount_foreground_reprobe_listener(
         return;
     };
 
+    let native_lifecycle_authority = current_native_platform_lifecycle_authority();
     let last_active = Rc::new(Cell::new(current_page_active()));
-    let mount_listener = |target: &web_sys::EventTarget, event_name: &str| {
-        let ws = ws.clone();
-        let last_mode = last_mode.clone();
-        let last_active = last_active.clone();
-        let callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-            handle_page_activity_change(&ws, signals, &last_mode, &last_active);
-        }) as Box<dyn FnMut(_)>);
-        let _ =
-            target.add_event_listener_with_callback(event_name, callback.as_ref().unchecked_ref());
-        // Web app 每页只持有一个 WsService；这里的监听器随页面生命周期存在。
-        callback.forget();
-    };
+    let mount_listener =
+        |target: &web_sys::EventTarget, event_name: &str, source: ForegroundReprobeSource| {
+            let ws = ws.clone();
+            let last_mode = last_mode.clone();
+            let last_active = last_active.clone();
+            let callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+                handle_page_activity_change(
+                    &ws,
+                    signals,
+                    &last_mode,
+                    &last_active,
+                    native_lifecycle_authority,
+                    source,
+                );
+            }) as Box<dyn FnMut(_)>);
+            let _ = target
+                .add_event_listener_with_callback(event_name, callback.as_ref().unchecked_ref());
+            // Web app 每页只持有一个 WsService；这里的监听器随页面生命周期存在。
+            callback.forget();
+        };
 
-    mount_listener(document.as_ref(), "visibilitychange");
-    mount_listener(window.as_ref(), "focus");
-    mount_listener(window.as_ref(), "blur");
+    if page_lifecycle_listeners_enabled(native_lifecycle_authority) {
+        mount_listener(
+            document.as_ref(),
+            "visibilitychange",
+            ForegroundReprobeSource::PageVisibility,
+        );
+        mount_listener(window.as_ref(), "focus", ForegroundReprobeSource::PageFocus);
+        mount_listener(window.as_ref(), "blur", ForegroundReprobeSource::PageFocus);
+    }
 
     let mount_native_listener = |event_name: &str, suspended: bool| {
         let ws = ws.clone();
@@ -88,20 +123,60 @@ fn handle_page_activity_change(
     signals: HandshakeSignals,
     last_mode: &Rc<RefCell<Option<String>>>,
     last_active: &Cell<bool>,
+    native_lifecycle_authority: bool,
+    source: ForegroundReprobeSource,
 ) {
     let active = current_page_active();
-    if should_force_foreground_reprobe(last_active.get(), active, ws.status.get_untracked()) {
-        reset_foreground_reprobe_state(ws, signals, last_mode);
+    if apply_page_activity_transition(
+        ws,
+        signals,
+        last_mode,
+        last_active,
+        native_lifecycle_authority,
+        active,
+        source,
+    ) {
         spawn_foreground_reprobe(ws.clone());
     }
+}
+
+fn apply_page_activity_transition(
+    ws: &WsService,
+    signals: HandshakeSignals,
+    last_mode: &Rc<RefCell<Option<String>>>,
+    last_active: &Cell<bool>,
+    native_lifecycle_authority: bool,
+    active: bool,
+    source: ForegroundReprobeSource,
+) -> bool {
+    if native_lifecycle_authority {
+        return false;
+    }
+    let should_reprobe =
+        should_force_foreground_reprobe(last_active.get(), active, ws.status.get_untracked());
+    if should_reprobe {
+        reset_foreground_reprobe_state(ws, signals, last_mode, source);
+    }
     last_active.set(active);
+    should_reprobe
+}
+
+fn page_lifecycle_listeners_enabled(native_lifecycle_authority: bool) -> bool {
+    !native_lifecycle_authority
 }
 
 fn reset_foreground_reprobe_state(
     ws: &WsService,
     signals: HandshakeSignals,
     last_mode: &Rc<RefCell<Option<String>>>,
+    source: ForegroundReprobeSource,
 ) {
+    leptos::logging::log!(
+        "deve_lifecycle_checkpoint category=foreground_reprobe source={} connection_epoch={} scope_nonce={}",
+        source.category(),
+        ws.connection_epoch.get_untracked(),
+        signals.current_scope_nonce.get_untracked(),
+    );
     ws.begin_foreground_reprobe();
     reset_handshake_attempt(last_mode, ws, signals);
 }
@@ -113,7 +188,12 @@ fn handle_native_suspend(
     last_active: &Cell<bool>,
 ) {
     if matches!(ws.status.get_untracked(), ConnectionStatus::Connected) {
-        reset_foreground_reprobe_state(ws, signals, last_mode);
+        reset_foreground_reprobe_state(
+            ws,
+            signals,
+            last_mode,
+            ForegroundReprobeSource::NativeSuspend,
+        );
     }
     last_active.set(false);
 }
@@ -124,7 +204,12 @@ fn handle_native_resume(
     last_mode: &Rc<RefCell<Option<String>>>,
     last_active: &Cell<bool>,
 ) {
-    reset_foreground_reprobe_state(ws, signals, last_mode);
+    reset_foreground_reprobe_state(
+        ws,
+        signals,
+        last_mode,
+        ForegroundReprobeSource::NativeResume,
+    );
     ws.request_native_endpoint_rebind();
     last_active.set(true);
 }
@@ -193,6 +278,43 @@ mod tests {
     use leptos::prelude::{Set, signal};
 
     #[test]
+    fn android_keyboard_focus_change_does_not_trigger_foreground_reprobe() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.set_node_role_for_test("main");
+        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        let signals = test_handshake_signals();
+        signals.set_handshake_ready.set(true);
+        signals.set_handshake_scope_nonce.set(Some(7));
+        let last_mode = Rc::new(RefCell::new(Some("ready-mode".to_string())));
+        let last_active = Cell::new(false);
+
+        assert!(!page_lifecycle_listeners_enabled(true));
+        assert!(!apply_page_activity_transition(
+            &ws,
+            signals,
+            &last_mode,
+            &last_active,
+            true,
+            true,
+            ForegroundReprobeSource::PageFocus,
+        ));
+
+        assert_eq!(ws.status.get_untracked(), ConnectionStatus::Connected);
+        assert!(ws.writer_ready_for(Some("repo-a"), Some(7)));
+        assert_eq!(signals.handshake_scope_nonce.get_untracked(), Some(7));
+        assert_eq!(last_mode.borrow().as_deref(), Some("ready-mode"));
+        assert!(!last_active.get());
+        assert!(ws.drain_connection_controls_for_test().is_empty());
+    }
+
+    #[test]
+    fn browser_page_lifecycle_listeners_remain_enabled() {
+        assert!(page_lifecycle_listeners_enabled(false));
+    }
+
+    #[test]
     fn foreground_reprobe_only_runs_on_connected_foreground_transition() {
         assert!(should_force_foreground_reprobe(
             false,
@@ -234,7 +356,12 @@ mod tests {
         signals.set_handshake_scope_nonce.set(Some(7));
         let last_mode = Rc::new(RefCell::new(Some("stale-mode".to_string())));
 
-        reset_foreground_reprobe_state(&ws, signals, &last_mode);
+        reset_foreground_reprobe_state(
+            &ws,
+            signals,
+            &last_mode,
+            ForegroundReprobeSource::PageVisibility,
+        );
 
         assert!(last_mode.borrow().is_none());
         assert_eq!(

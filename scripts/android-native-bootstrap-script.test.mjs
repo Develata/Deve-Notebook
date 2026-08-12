@@ -14,6 +14,7 @@ const fallback = {
   ws_base: "ws://127.0.0.1:40123",
   node_role: "main",
   session_bound: true,
+  platform_lifecycle_authority: "native",
   capabilities: { backend_preference_control: true },
 };
 
@@ -62,6 +63,8 @@ for (const [name, raw] of [
   ["boolean bootstrap", envelope(true)],
   ["wrong ready state", envelope({ ...fallback, session_bound: false })],
   ["wrong role", envelope({ ...fallback, node_role: "peer" })],
+  ["missing lifecycle authority", envelope({ ...fallback, platform_lifecycle_authority: undefined })],
+  ["wrong lifecycle authority", envelope({ ...fallback, platform_lifecycle_authority: "browser" })],
   ["wrong capability", envelope({ ...fallback, capabilities: { backend_preference_control: false } })],
   ["extra field", envelope({ ...fallback, session_material: "must-not-project" })],
   ["outer extra field", JSON.stringify({
@@ -110,6 +113,7 @@ for (const [operation, behavior] of [["read", { getThrows: true }], ["write", { 
     assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, false);
     assert.deepEqual(harness.root.__DEVE_NATIVE_BOOTSTRAP, {
       service_state: "session_invalid",
+      platform_lifecycle_authority: "native",
       capabilities: fallback.capabilities,
     });
     assert.deepEqual(harness.events, ["deve-native-service-error"]);
@@ -156,6 +160,7 @@ test("storage admission failure does not invoke or reload", () => {
   });
   assert.deepEqual(harness.root.__DEVE_NATIVE_BOOTSTRAP, {
     service_state: "session_invalid",
+    platform_lifecycle_authority: "native",
     capabilities: fallback.capabilities,
   });
 });

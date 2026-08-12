@@ -23,6 +23,7 @@ impl MobileShell {
             ws_base: endpoint.ws_base.clone(),
             node_role: endpoint.node_role.clone(),
             session_bound: endpoint.session_bound,
+            platform_lifecycle_authority: "native",
             capabilities: NativeShellCapabilities::local_backend(),
         })
     }
@@ -32,16 +33,19 @@ impl MobileShell {
             MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline => {
                 Some(MobileRecoveryBootstrap {
                     service_state: "service_offline",
+                    platform_lifecycle_authority: "native",
                     capabilities: NativeShellCapabilities::local_backend(),
                 })
             }
             MobileServiceState::SessionInvalid => Some(MobileRecoveryBootstrap {
                 service_state: "session_invalid",
+                platform_lifecycle_authority: "native",
                 capabilities: NativeShellCapabilities::local_backend(),
             }),
             MobileServiceState::ForegroundReprobe | MobileServiceState::BackgroundSuspended => {
                 Some(MobileRecoveryBootstrap {
                     service_state: "foreground_reprobe",
+                    platform_lifecycle_authority: "native",
                     capabilities: NativeShellCapabilities::local_backend(),
                 })
             }

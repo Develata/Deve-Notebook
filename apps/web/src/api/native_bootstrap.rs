@@ -10,6 +10,7 @@ use super::ConnectionStatus;
 
 #[cfg(target_arch = "wasm32")]
 const NATIVE_BOOTSTRAP_GLOBAL: &str = "__DEVE_NATIVE_BOOTSTRAP";
+const NATIVE_PLATFORM_LIFECYCLE_AUTHORITY: &str = "native";
 
 #[cfg(target_arch = "wasm32")]
 const FORBIDDEN_NATIVE_BOOTSTRAP_FIELDS: &[&str] = &[
@@ -116,6 +117,46 @@ pub(super) fn read_native_bootstrap() -> NativeBootstrapState {
 
 pub(crate) fn current_native_bootstrap_blocked_status() -> Option<ConnectionStatus> {
     read_native_bootstrap().blocked_status()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn current_native_platform_lifecycle_authority() -> bool {
+    use js_sys::Reflect;
+    use wasm_bindgen::JsValue;
+
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let location = window.location();
+    let Ok(hostname) = location.hostname() else {
+        return false;
+    };
+    let Ok(protocol) = location.protocol() else {
+        return false;
+    };
+    let Ok(value) = Reflect::get(window.as_ref(), &JsValue::from_str(NATIVE_BOOTSTRAP_GLOBAL))
+    else {
+        return false;
+    };
+    native_platform_lifecycle_authority(
+        &hostname,
+        &protocol,
+        js_string_field(&value, "platform_lifecycle_authority").as_deref(),
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn current_native_platform_lifecycle_authority() -> bool {
+    false
+}
+
+fn native_platform_lifecycle_authority(
+    hostname: &str,
+    protocol: &str,
+    authority: Option<&str>,
+) -> bool {
+    is_native_shell_origin(hostname, protocol)
+        && authority == Some(NATIVE_PLATFORM_LIFECYCLE_AUTHORITY)
 }
 
 #[cfg(target_arch = "wasm32")]

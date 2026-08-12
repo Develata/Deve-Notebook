@@ -28,10 +28,13 @@
     && typeof bootstrap === "object"
     && !Array.isArray(bootstrap)
     && Object.keys(bootstrap).sort().join(",")
-      === "capabilities,http_base,node_role,session_bound,ws_base"
+      === "capabilities,http_base,node_role,platform_lifecycle_authority,session_bound,ws_base"
     && localBase(bootstrap.http_base, "http:")
     && localBase(bootstrap.ws_base, "ws:")
     && bootstrap.node_role === fallback.node_role
+    && bootstrap.platform_lifecycle_authority === "native"
+    && bootstrap.platform_lifecycle_authority
+      === fallback.platform_lifecycle_authority
     && bootstrap.session_bound === true
     && bootstrap.capabilities
     && typeof bootstrap.capabilities === "object"
@@ -48,6 +51,7 @@
   const fail = () => {
     root.__DEVE_NATIVE_BOOTSTRAP = {
       service_state: "session_invalid",
+      platform_lifecycle_authority: "native",
       capabilities: fallback.capabilities,
     };
     root.dispatchEvent(new root.Event("deve-native-service-error"));

@@ -673,6 +673,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_repla
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_same_repo_session_restore_rebinds_pending_scope true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_last_repo_removal_waits_for_stable_expected_writer_scope true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_keyboard_resize_preserves_host_and_open_request true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	ui_assert: android_keyboard_focus_change_does_not_trigger_foreground_reprobe true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_binder_epipe_exit_224_requires_exact_broken_pipe_signature true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_emulator_rejected_exit_224_diagnostic_is_bounded_sanitized_and_non_admitting true
 contains	docs/features/08_ui_design_03_mobile.md	alphanumeric run 已折叠的 ASCII structural preview
@@ -694,6 +695,8 @@ contains	apps/mobile/src/embedded_backend/android_cookie.rs	installNativeSession
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	android_native_cookie_callback_timeout
 contains	apps/mobile/src/embedded_backend/cookie.rs	fn android_native_session_cookie_waits_for_platform_completion_before_verification()
 contains	apps/mobile/src/embedded_backend/bootstrap_script_tests.rs	fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_process_identity()
+contains	apps/mobile/src/embedded_backend/webview_bootstrap_init.js	platform_lifecycle_authority === "native"
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn android_keyboard_focus_change_does_not_trigger_foreground_reprobe()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn cancellation_rejects_late_completion()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn concurrent_registration_fails_closed_without_replacing_first_waiter()
 contains	apps/mobile/src/embedded_backend/android_cookie_callback.rs	fn dropped_undispatched_registration_cancels_waiter()

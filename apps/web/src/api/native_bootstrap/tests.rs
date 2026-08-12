@@ -120,6 +120,30 @@ fn browser_origin_without_bootstrap_remains_absent() {
 }
 
 #[test]
+fn mobile_native_lifecycle_authority_requires_typed_native_shell_marker() {
+    assert!(native_platform_lifecycle_authority(
+        "tauri.localhost",
+        "http:",
+        Some("native"),
+    ));
+    assert!(!native_platform_lifecycle_authority(
+        "tauri.localhost",
+        "http:",
+        None,
+    ));
+    assert!(!native_platform_lifecycle_authority(
+        "example.test",
+        "https:",
+        Some("native"),
+    ));
+    assert!(!native_platform_lifecycle_authority(
+        "tauri.localhost",
+        "http:",
+        Some("browser"),
+    ));
+}
+
+#[test]
 fn maps_native_service_offline_to_blocked_state() {
     assert_eq!(
         parse_native_bootstrap_fields(

@@ -5,6 +5,7 @@
   const fail = () => {
     root.__DEVE_NATIVE_BOOTSTRAP = {
       service_state: "session_invalid",
+      platform_lifecycle_authority: "native",
       capabilities: current?.capabilities,
     };
     root.dispatchEvent(new root.Event("deve-native-service-error"));

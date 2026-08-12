@@ -85,6 +85,7 @@ pub struct MobileBootstrap {
     pub ws_base: String,
     pub node_role: String,
     pub session_bound: bool,
+    pub platform_lifecycle_authority: &'static str,
     pub capabilities: NativeShellCapabilities,
 }
 
@@ -100,6 +101,7 @@ impl MobileBootstrap {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MobileRecoveryBootstrap {
     pub service_state: &'static str,
+    pub platform_lifecycle_authority: &'static str,
     pub capabilities: NativeShellCapabilities,
 }
 

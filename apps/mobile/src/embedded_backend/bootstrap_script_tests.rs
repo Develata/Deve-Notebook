@@ -12,6 +12,7 @@ fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_proce
         ws_base: "ws://127.0.0.1:40123".to_string(),
         node_role: "main".to_string(),
         session_bound: true,
+        platform_lifecycle_authority: "native",
         capabilities: deve_core::native_adapter::NativeShellCapabilities::local_backend(),
     };
     let cookie = MobileNativeSessionCookie::from_set_cookie(
@@ -53,6 +54,11 @@ fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_proce
             .contains("Object.keys(bootstrap).sort().join")
     );
     assert!(first.source().contains("bootstrap.session_bound === true"));
+    assert!(
+        first
+            .source()
+            .contains("bootstrap.platform_lifecycle_authority === \"native\"")
+    );
     assert!(
         first
             .source()
