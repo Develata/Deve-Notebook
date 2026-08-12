@@ -55,6 +55,10 @@ pub(super) fn repo_switcher_after_item_click() -> bool {
     false
 }
 
+pub(super) fn repo_switcher_should_reset_transient_state(menu_open: bool) -> bool {
+    !menu_open
+}
+
 pub(super) fn repo_switcher_create_button_marker() -> &'static str {
     "repo-switcher-create"
 }

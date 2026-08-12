@@ -4,6 +4,7 @@
 //!   - 13_i18n#i18n-resource-management
 
 use crate::components::focus_scope;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::BranchContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -16,6 +17,15 @@ pub(super) fn RepoRemovalDialog(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let panel_ref = NodeRef::<leptos::html::Div>::new();
     let cancel_button_ref = NodeRef::<leptos::html::Button>::new();
+    let ui_back = expect_context::<UiBackCoordinator>();
+    let core_for_back = core.clone();
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if let Some(preview) = core_for_back.removal_preview.try_get_untracked().flatten() {
+            core_for_back.on_cancel_remove_repo.run(preview.repo_id);
+            return true;
+        }
+        false
+    });
     focus_scope::attach_modal_focus_restore_effect_with_fallback(
         move || core.removal_preview.get().is_some(),
         cancel_button_ref,

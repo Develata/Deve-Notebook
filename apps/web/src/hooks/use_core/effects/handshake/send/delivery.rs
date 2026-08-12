@@ -29,7 +29,7 @@ pub(super) async fn deliver_signed_handshake(
     identity: &StoredPeerIdentity,
     signature: Vec<u8>,
 ) {
-    if ctx.handshake_attempt.get() != next_attempt {
+    if !ctx.runtime_lifetime.is_active() || ctx.handshake_attempt.get() != next_attempt {
         leptos::logging::log!("忽略过期握手结果: scope 已变更");
         return;
     }
@@ -37,7 +37,13 @@ pub(super) async fn deliver_signed_handshake(
     match uuid::Uuid::parse_str(&identity.repo_id) {
         Ok(repo_id) => {
             persist_repo_vector(&identity.repo_id, &ctx.vector).await;
+            if !ctx.runtime_lifetime.is_active() || ctx.handshake_attempt.get() != next_attempt {
+                return;
+            }
             let _ = note_handshake(&identity.repo_id).await;
+            if !ctx.runtime_lifetime.is_active() || ctx.handshake_attempt.get() != next_attempt {
+                return;
+            }
             let writer_peer_id = peer_id.clone();
             ctx.ws.send(ClientMessage::SyncHello {
                 peer_id,

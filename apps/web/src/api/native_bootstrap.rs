@@ -150,6 +150,48 @@ pub(crate) fn current_native_platform_lifecycle_authority() -> bool {
     false
 }
 
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn current_bundled_local_backend() -> bool {
+    use js_sys::Reflect;
+    use wasm_bindgen::JsValue;
+
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let location = window.location();
+    let Ok(hostname) = location.hostname() else {
+        return false;
+    };
+    let Ok(protocol) = location.protocol() else {
+        return false;
+    };
+    let Ok(bootstrap) = Reflect::get(window.as_ref(), &JsValue::from_str(NATIVE_BOOTSTRAP_GLOBAL))
+    else {
+        return false;
+    };
+    let capabilities = Reflect::get(&bootstrap, &JsValue::from_str("capabilities")).ok();
+    bundled_local_backend_presentation(
+        &hostname,
+        &protocol,
+        capabilities
+            .as_ref()
+            .and_then(|value| js_bool_field(value, "backend_preference_control")),
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn current_bundled_local_backend() -> bool {
+    false
+}
+
+fn bundled_local_backend_presentation(
+    hostname: &str,
+    protocol: &str,
+    backend_preference_control: Option<bool>,
+) -> bool {
+    is_native_shell_origin(hostname, protocol) && backend_preference_control == Some(true)
+}
+
 fn native_platform_lifecycle_authority(
     hostname: &str,
     protocol: &str,

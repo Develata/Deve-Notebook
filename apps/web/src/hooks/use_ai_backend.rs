@@ -9,6 +9,7 @@ use crate::api::{
     resolve_backend_for_effective_state,
 };
 use crate::i18n::{Locale, t};
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -43,9 +44,14 @@ pub fn use_ai_backend_capabilities_with_fallback(
 
 fn use_ai_backend_capabilities() -> ReadSignal<AiBackendCapabilities> {
     let (capabilities, set_capabilities) = signal(AiBackendCapabilities::default());
+    let runtime_lifetime = expect_context::<BrowserRuntimeLifetime>().child_scope();
     Effect::new(move |_| {
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
-            set_capabilities.set(fetch_ai_backend_capabilities().await);
+            let fetched = fetch_ai_backend_capabilities().await;
+            if runtime_lifetime.is_active() {
+                set_capabilities.set(fetched);
+            }
         });
     });
     capabilities
@@ -114,6 +120,22 @@ mod tests {
     use super::{BackendFallback, latest_message_is_notice, select_backend_fallback};
     use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
     use crate::runtime::domain::ChatMessage;
+
+    #[test]
+    fn capability_completion_checks_owner_before_signal_write() {
+        let source = include_str!("use_ai_backend.rs");
+        let completion = source
+            .find("fetch_ai_backend_capabilities().await")
+            .unwrap();
+        let guard = source[completion..]
+            .find("runtime_lifetime.is_active()")
+            .unwrap();
+        let write = source[completion..]
+            .find("set_capabilities.set(fetched)")
+            .unwrap();
+
+        assert!(guard < write);
+    }
 
     #[test]
     fn trusted_cli_falls_back_to_native_when_policy_blocks_it() {

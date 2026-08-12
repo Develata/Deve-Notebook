@@ -7,6 +7,7 @@ use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{try_get_editor_content, try_get_editor_selection};
 use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::document_client::DocumentClient;
 use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
@@ -35,6 +36,7 @@ pub struct ChatSendControls {
 }
 
 pub fn make_send_text(runtime: ChatSendRuntime, controls: ChatSendControls) -> Callback<String> {
+    let runtime_lifetime = expect_context::<BrowserRuntimeLifetime>().child_scope();
     let ChatSendControls {
         is_streaming,
         locale,
@@ -64,8 +66,12 @@ pub fn make_send_text(runtime: ChatSendRuntime, controls: ChatSendControls) -> C
         let runtime_for_send = runtime.clone();
         let on_user_text = on_user_text.clone();
         let on_req_id = on_req_id.clone();
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             let cap = fetch_ai_backend_capabilities().await;
+            if !runtime_lifetime.is_active() {
+                return;
+            }
             let decision = resolve_backend_for_send(
                 runtime_for_send.chat.ai_mode.get_untracked().as_str(),
                 &cap,

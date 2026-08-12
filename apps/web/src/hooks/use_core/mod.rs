@@ -55,10 +55,13 @@ use self::state_build::build_core_state;
 use self::status_text::build_status_text;
 use self::storage_runtime::init_storage_runtime;
 use crate::i18n::Locale;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::repo_control_client::RepoControlClient;
 
 /// 初始化核心状态钩子。
 pub fn use_core() -> CoreState {
+    let runtime_lifetime = BrowserRuntimeLifetime::new();
+    provide_context(runtime_lifetime.clone());
     let ws = WsService::new();
     provide_context(ws.clone());
 
@@ -72,7 +75,7 @@ pub fn use_core() -> CoreState {
     // 浏览器 peer identity 现在必须经由 storage_runtime 间接初始化：
     // `localStorage` 只允许承载 UI 偏好，而 repo-scoped identity 需要走
     // `WebCrypto + IndexedDB`，这样才能满足 T3 定义的存储分层与降级语义。
-    let (identity, repo_vector) = init_storage_runtime(&signals);
+    let (identity, repo_vector) = init_storage_runtime(&signals, runtime_lifetime.clone());
 
     effects::setup_handshake_effect(
         &ws,
@@ -96,6 +99,7 @@ pub fn use_core() -> CoreState {
             set_tree_request_id: signals.set_tree_request_id,
             set_handshake_ready: signals.set_handshake_ready,
         },
+        runtime_lifetime.clone(),
     );
     let repo_control = RepoControlClient::default();
     let callbacks = build_callbacks(&ws, &signals, repo_control.clone());
@@ -106,6 +110,7 @@ pub fn use_core() -> CoreState {
         callbacks,
         locale,
         repo_control.clone(),
+        runtime_lifetime.clone(),
     );
     effects::setup_message_effect(
         &state.ws,
@@ -117,6 +122,7 @@ pub fn use_core() -> CoreState {
             .clone(),
         state.runtime_clients.repo_control.clone(),
         state.runtime_clients.remote_import.clone(),
+        runtime_lifetime,
     );
 
     provide_context(state.clone());

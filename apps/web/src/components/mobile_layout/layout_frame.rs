@@ -19,6 +19,7 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
 };
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::EditorContext;
 #[cfg(test)]
 use crate::hooks::use_core::source_control_notice::{SourceControlNotice, is_local_command_notice};
@@ -97,6 +98,7 @@ pub fn MobileLayoutFrame(
     let scope = expect_context::<ScopeClient>();
     let session = expect_context::<SessionClient>();
     let rendering = expect_context::<RenderingClient>();
+    let ui_back = expect_context::<UiBackCoordinator>();
     let current_doc = document.current_doc;
     let diff_content = source_control.diff_content;
     let current_editor_doc = create_current_editor_doc(&document, &editor);
@@ -144,6 +146,18 @@ pub fn MobileLayoutFrame(
         Signal::derive(move || pending_repo_switch.get().is_some()),
         set_surface_switcher_open,
     );
+    let set_diff_content_for_back = source_control.set_diff_content;
+    ui_back.register(UiBackLayer::TransientSheet, move || {
+        if surface_switcher_open.try_get_untracked() == Some(true) {
+            set_surface_switcher_open.set(false);
+            return true;
+        }
+        if diff_content.try_get_untracked().flatten().is_some() {
+            set_diff_content_for_back.set(None);
+            return true;
+        }
+        false
+    });
 
     view! {
         <div

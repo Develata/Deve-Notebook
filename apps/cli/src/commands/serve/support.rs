@@ -4,6 +4,7 @@
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 19_plugins#plugin-runtime-boundary
 //!
 use deve_core::ledger::RepoManager;
@@ -36,9 +37,39 @@ pub(super) fn load_plugins()
 -> anyhow::Result<Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>> {
     let plugin_dir = resolve_plugin_dir()?;
     let loader = PluginLoader::new(plugin_dir.clone());
-    let plugins = loader.load_all_strict()?;
+    let mut external_plugins = loader.load_all_strict()?;
+    if is_builtin_source_plugin_dir(&plugin_dir) && !explicit_plugin_dir_selected(&plugin_dir) {
+        external_plugins.retain(|plugin| plugin.manifest().id != "ai-chat");
+    }
+    let plugins = crate::server::ai_chat::assemble_runtime_plugins(external_plugins)?;
     tracing::info!(?plugin_dir, "Loaded {} plugins.", plugins.len());
     Ok(plugins)
+}
+
+fn is_builtin_source_plugin_dir(plugin_dir: &Path) -> bool {
+    let builtin_source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("plugins");
+    let Ok(plugin_dir) = plugin_dir.canonicalize() else {
+        return false;
+    };
+    builtin_source
+        .canonicalize()
+        .is_ok_and(|builtin_source| plugin_dir == builtin_source)
+}
+
+fn explicit_plugin_dir_selected(plugin_dir: &Path) -> bool {
+    let Some(configured) = std::env::var_os(DEVE_PLUGIN_DIR_ENV).filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    let Ok(configured) = PathBuf::from(configured).canonicalize() else {
+        return false;
+    };
+    plugin_dir
+        .canonicalize()
+        .is_ok_and(|plugin_dir| plugin_dir == configured)
 }
 
 fn resolve_plugin_dir() -> anyhow::Result<PathBuf> {
@@ -94,7 +125,9 @@ pub(super) fn find_free_port(start: u16, span: u16) -> Option<u16> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEVE_PLUGIN_DIR_ENV, default_plugin_dir_candidates_for, resolve_plugin_dir};
+    use super::{
+        DEVE_PLUGIN_DIR_ENV, default_plugin_dir_candidates_for, load_plugins, resolve_plugin_dir,
+    };
     use std::ffi::{OsStr, OsString};
     use std::path::Path;
     use std::sync::{LazyLock, Mutex};
@@ -177,5 +210,34 @@ mod tests {
             "missing DEVE_PLUGIN_DIR should fall back to bundled ai-chat: {:?}",
             plugin_dir
         );
+    }
+
+    #[test]
+    fn serve_loader_registers_builtin_ai_without_external_plugins() {
+        let _lock = ENV_LOCK.lock().expect("plugin env lock");
+        let empty_plugins = tempfile::tempdir().expect("empty plugin dir");
+        let _env = EnvVarGuard::set(DEVE_PLUGIN_DIR_ENV, empty_plugins.path().as_os_str());
+
+        let plugins = load_plugins().expect("serve plugins");
+
+        assert_eq!(plugins.len(), 1);
+        assert_eq!(plugins[0].manifest().id, "ai-chat");
+    }
+
+    #[test]
+    fn serve_loader_rejects_explicit_external_ai_chat_duplicate() {
+        let _lock = ENV_LOCK.lock().expect("plugin env lock");
+        let source_plugins = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("plugins");
+        let _env = EnvVarGuard::set(DEVE_PLUGIN_DIR_ENV, source_plugins.as_os_str());
+
+        let error = match load_plugins() {
+            Ok(_) => panic!("explicit duplicate ai-chat must fail closed"),
+            Err(error) => error,
+        };
+
+        assert!(error.to_string().contains("Duplicate plugin id 'ai-chat'"));
     }
 }

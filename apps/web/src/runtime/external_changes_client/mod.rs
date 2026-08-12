@@ -12,6 +12,7 @@ use crate::api::{
     ExternalChangesMutationError, ExternalChangesTargetOp, WsService, fetch_external_changes,
     mutate_external_change_target,
 };
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -63,9 +64,13 @@ pub fn create_external_changes_refresh_callback(
     set_staged_changes: WriteSignal<Vec<ChangeEntry>>,
     set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
     on_error: Callback<ExternalChangesMutationError>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> Callback<()> {
     let latest_request_generation = Arc::new(AtomicU64::new(0u64));
     Callback::new(move |()| {
+        if !runtime_lifetime.is_active() {
+            return;
+        }
         let request_generation = latest_request_generation
             .fetch_add(1, Ordering::Relaxed)
             .wrapping_add(1)
@@ -74,13 +79,16 @@ pub fn create_external_changes_refresh_callback(
         let request_scope = capture_scope(scope);
         let repo_id = request_scope.repo_id.clone();
         let scope_nonce = request_scope.scope_nonce;
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             match fetch_external_changes(repo_id, scope_nonce).await {
                 Ok(snapshot) => {
-                    if !request_is_current(
-                        response_generation.load(Ordering::Relaxed),
-                        request_generation,
-                    ) || !scope_is_current(scope, &request_scope)
+                    if !runtime_lifetime.is_active()
+                        || !request_is_current(
+                            response_generation.load(Ordering::Relaxed),
+                            request_generation,
+                        )
+                        || !scope_is_current(scope, &request_scope)
                     {
                         return;
                     }
@@ -88,10 +96,12 @@ pub fn create_external_changes_refresh_callback(
                     set_unstaged_changes.set(snapshot.unstaged);
                 }
                 Err(error) => {
-                    if request_is_current(
-                        response_generation.load(Ordering::Relaxed),
-                        request_generation,
-                    ) && scope_is_current(scope, &request_scope)
+                    if runtime_lifetime.is_active()
+                        && request_is_current(
+                            response_generation.load(Ordering::Relaxed),
+                            request_generation,
+                        )
+                        && scope_is_current(scope, &request_scope)
                     {
                         on_error.run(error);
                     }
@@ -106,6 +116,7 @@ pub fn create_external_changes_mutation_callbacks(
     ws: WsService,
     on_refresh: Callback<()>,
     on_error: Callback<ExternalChangesMutationError>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> ExternalChangesMutationCallbacks {
     ExternalChangesMutationCallbacks {
         on_stage_file: target_callback(
@@ -113,32 +124,37 @@ pub fn create_external_changes_mutation_callbacks(
             scope,
             on_refresh.clone(),
             on_error.clone(),
+            runtime_lifetime.clone(),
         ),
         on_stage_files: targets_callback(
             ExternalChangesTargetOp::Stage,
             scope,
             on_refresh.clone(),
             on_error.clone(),
+            runtime_lifetime.clone(),
         ),
         on_unstage_file: target_callback(
             ExternalChangesTargetOp::Unstage,
             scope,
             on_refresh.clone(),
             on_error.clone(),
+            runtime_lifetime.clone(),
         ),
         on_unstage_files: targets_callback(
             ExternalChangesTargetOp::Unstage,
             scope,
             on_refresh.clone(),
             on_error.clone(),
+            runtime_lifetime.clone(),
         ),
         on_discard_file: target_callback(
             ExternalChangesTargetOp::Discard,
             scope,
             on_refresh.clone(),
             on_error.clone(),
+            runtime_lifetime.clone(),
         ),
-        on_apply_to_ledger: apply_callback(scope, ws),
+        on_apply_to_ledger: apply_callback(scope, ws, runtime_lifetime),
     }
 }
 
@@ -147,20 +163,25 @@ fn target_callback(
     scope: ExternalChangesHttpScope,
     on_refresh: Callback<()>,
     on_error: Callback<ExternalChangesMutationError>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> Callback<ChangeEntry> {
     Callback::new(move |entry: ChangeEntry| {
+        if !runtime_lifetime.is_active() {
+            return;
+        }
         let request_scope = capture_scope(scope);
         let repo_id = request_scope.repo_id.clone();
         let scope_nonce = request_scope.scope_nonce;
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             match mutate_external_change_target(op, repo_id, scope_nonce, entry).await {
                 Ok(()) => {
-                    if scope_is_current(scope, &request_scope) {
+                    if runtime_lifetime.is_active() && scope_is_current(scope, &request_scope) {
                         on_refresh.run(());
                     }
                 }
                 Err(error) => {
-                    if scope_is_current(scope, &request_scope) {
+                    if runtime_lifetime.is_active() && scope_is_current(scope, &request_scope) {
                         on_error.run(error);
                     }
                 }
@@ -174,37 +195,46 @@ fn targets_callback(
     scope: ExternalChangesHttpScope,
     on_refresh: Callback<()>,
     on_error: Callback<ExternalChangesMutationError>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> Callback<Vec<ChangeEntry>> {
     Callback::new(move |entries: Vec<ChangeEntry>| {
-        if entries.is_empty() {
+        if !runtime_lifetime.is_active() || entries.is_empty() {
             return;
         }
         let request_scope = capture_scope(scope);
         let repo_id = request_scope.repo_id.clone();
         let scope_nonce = request_scope.scope_nonce;
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             for entry in entries {
-                if !scope_is_current(scope, &request_scope) {
+                if !runtime_lifetime.is_active() || !scope_is_current(scope, &request_scope) {
                     return;
                 }
                 if let Err(error) =
                     mutate_external_change_target(op, repo_id.clone(), scope_nonce, entry).await
                 {
-                    if scope_is_current(scope, &request_scope) {
+                    if runtime_lifetime.is_active() && scope_is_current(scope, &request_scope) {
                         on_error.run(error);
                     }
                     return;
                 }
             }
-            if scope_is_current(scope, &request_scope) {
+            if runtime_lifetime.is_active() && scope_is_current(scope, &request_scope) {
                 on_refresh.run(());
             }
         });
     })
 }
 
-fn apply_callback(scope: ExternalChangesHttpScope, ws: WsService) -> Callback<()> {
+fn apply_callback(
+    scope: ExternalChangesHttpScope,
+    ws: WsService,
+    runtime_lifetime: BrowserRuntimeLifetime,
+) -> Callback<()> {
     Callback::new(move |()| {
+        if !runtime_lifetime.is_active() {
+            return;
+        }
         if scope.current_repo_id.get_untracked().is_none() {
             return;
         }

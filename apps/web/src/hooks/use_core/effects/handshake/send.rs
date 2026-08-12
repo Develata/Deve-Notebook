@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::storage::DegradedSyncMode;
 use crate::storage::identity::{StoredPeerIdentity, sign_sync_hello};
 use deve_core::models::{PeerId, VersionVector};
@@ -29,12 +30,16 @@ pub(super) struct HandshakeAttemptCtx {
     pub should_restore: bool,
     pub handshake_attempt: Rc<Cell<u64>>,
     pub failure_last_mode: Rc<RefCell<Option<String>>>,
+    pub runtime_lifetime: BrowserRuntimeLifetime,
 }
 
 pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
     let next_attempt = ctx.handshake_attempt.get().saturating_add(1);
     ctx.handshake_attempt.set(next_attempt);
     spawn_local(async move {
+        if !ctx.runtime_lifetime.is_active() {
+            return;
+        }
         if let Some(mode) = ctx.maybe_mode {
             leptos::logging::warn!(
                 "Storage degraded; skipping handshake: {}",
@@ -76,9 +81,15 @@ pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
 
         match sign_sync_hello(identity, &msg).await {
             Ok(signature) => {
+                if !ctx.runtime_lifetime.is_active() {
+                    return;
+                }
                 delivery::deliver_signed_handshake(&ctx, next_attempt, identity, signature).await;
             }
             Err(err) => {
+                if !ctx.runtime_lifetime.is_active() {
+                    return;
+                }
                 leptos::logging::error!("WebCrypto 握手签名失败: {}", err);
                 reset_handshake_attempt(&ctx.failure_last_mode, &ctx.ws, ctx.signals);
             }

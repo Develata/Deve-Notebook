@@ -259,6 +259,7 @@ mod tests {
         assert!(callback.contains("android_native_cookie_callback_channel_closed"));
 
         let shrinker = include_str!("../../gen/android/app/proguard-rules.pro");
+        assert!(kotlin.contains("android_native_cookie_retained"));
         assert!(shrinker.contains(
             "public boolean installNativeSessionCookie(long, android.webkit.WebView, java.lang.String, java.lang.String, java.lang.String);"
         ));

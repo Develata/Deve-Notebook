@@ -13,6 +13,7 @@
 //! These modules are Flow Coordination / Object Plane adapters only; they never
 //! own ledger, projection, or source-control authority.
 
+pub(crate) mod browser_runtime_lifetime;
 pub mod document;
 pub mod document_client;
 pub mod domain;

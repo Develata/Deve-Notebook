@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use leptos::prelude::*;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -66,14 +67,19 @@ pub(super) fn should_suspend_handshake(
 }
 
 /// 设置握手 Effect。
-pub fn setup(ws: &WsService, signals: HandshakeSignals) {
+pub fn setup(ws: &WsService, signals: HandshakeSignals, runtime_lifetime: BrowserRuntimeLifetime) {
     let ws_clone = ws.clone();
     let status_signal = ws.status;
     let endpoint_signal = ws.endpoint;
     let last_mode = Rc::new(RefCell::new(None::<String>));
     let handshake_attempt = Rc::new(Cell::new(0u64));
     let last_manual_retry = Rc::new(Cell::new(signals.handshake_retry_nonce.get_untracked()));
-    mount_foreground_reprobe_listener(ws.clone(), signals, last_mode.clone());
+    mount_foreground_reprobe_listener(
+        ws.clone(),
+        signals,
+        last_mode.clone(),
+        runtime_lifetime.clone(),
+    );
 
     Effect::new(move |_| {
         let manual_retry_nonce = signals.handshake_retry_nonce.get();
@@ -91,6 +97,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             signals,
             &last_mode,
             &handshake_attempt,
+            runtime_lifetime.clone(),
         );
     });
 }

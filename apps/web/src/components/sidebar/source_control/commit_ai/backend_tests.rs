@@ -75,3 +75,18 @@ fn source_control_commit_ai_maps_trusted_cli_to_agent_bridge() {
         }
     );
 }
+#[test]
+fn commit_ai_completion_checks_owner_before_signal_runner() {
+    let source = include_str!("../commit_ai.rs");
+    let completion = source
+        .find("fetch_ai_backend_capabilities().await")
+        .unwrap();
+    let guard = source[completion..]
+        .find("!runtime_lifetime.is_active()")
+        .unwrap();
+    let runner = source[completion..]
+        .find("CommitAiSignalEffectRunner")
+        .unwrap();
+
+    assert!(guard < runner);
+}

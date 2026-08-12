@@ -278,7 +278,6 @@ NODE
         cd -- "$runtime_dir"
         export AUTH_USER="$username" AUTH_PASS="$auth_pass" AUTH_SECRET="$auth_secret"
         export DEVE_ENV=production DEVE_LEDGER_DIR="$runtime_dir/ledger"
-        export DEVE_PLUGIN_DIR="$repo_root/plugins"
         remote_fixture_run_bounded "exact-HEAD backend init" 60 4194304 \
           "$state_dir/backend-init.stdout.log" "$state_dir/backend-init.stderr.log" -- \
           "$backend_executable" init --repo default --projection-base "$runtime_dir/notes" --path "$runtime_dir"
@@ -287,7 +286,6 @@ NODE
         cd -- "$runtime_dir"
         export AUTH_USER="$username" AUTH_PASS="$auth_pass" AUTH_SECRET="$auth_secret"
         export DEVE_ENV=production DEVE_LEDGER_DIR="$runtime_dir/ledger"
-        export DEVE_PLUGIN_DIR="$repo_root/plugins"
         exec "$backend_executable" "${backend_args[@]}"
       ) >"$state_dir/backend.stdout.log" 2>"$state_dir/backend.stderr.log" &
       backend_pid="$!"

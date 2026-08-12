@@ -5,6 +5,7 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
 use crate::components::main_layout::SearchControl;
 use crate::components::mobile_layout::source_control_notice::clear_mobile_source_control_notice_for_view;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer, close_signal_projection};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::html;
@@ -46,6 +47,9 @@ pub(super) fn LeftDrawerTabs(
     let more_menu_ref = NodeRef::<html::Div>::new();
     let source_control = use_context::<SourceControlContext>();
     let search_control = expect_context::<SearchControl>();
+    expect_context::<UiBackCoordinator>().register(UiBackLayer::Overlay, move || {
+        close_signal_projection(show_more, set_show_more)
+    });
     let select_view = Callback::new(move |view: SidebarView| {
         if should_close_search_overlay_for_view(view) {
             search_control.set_show.set(false);

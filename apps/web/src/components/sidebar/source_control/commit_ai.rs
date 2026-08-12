@@ -8,6 +8,7 @@ use super::commit_ai_runtime::{
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::hooks::use_core::{ChatContext, SourceControlContext};
 use crate::i18n::{Locale, t};
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::domain::{AiBackendMode, ChatMessage};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -20,6 +21,7 @@ pub fn build_generate_callback(
     saw_streaming: RwSignal<bool>,
     set_is_generating: WriteSignal<bool>,
 ) -> Callback<()> {
+    let runtime_lifetime = expect_context::<BrowserRuntimeLifetime>().child_scope();
     Callback::new(move |_| {
         if !core.can_write.get_untracked() || core.confirmed_changes.get_untracked().is_empty() {
             return;
@@ -46,8 +48,12 @@ pub fn build_generate_callback(
         set_is_generating.set(true);
         chat_ctx.set_is_streaming.set(true);
         let chat_ctx_for_send = chat_ctx.clone();
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             let cap = fetch_ai_backend_capabilities().await;
+            if !runtime_lifetime.is_active() {
+                return;
+            }
             let decision =
                 resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
             let plan = plan_commit_ai_runtime(decision);

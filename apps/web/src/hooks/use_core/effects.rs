@@ -40,6 +40,7 @@ mod message_sync;
 mod message_sync_dispatch;
 
 use crate::api::WsService;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::remote_import_client::RemoteImportClient;
 use crate::runtime::repo_control_client::RepoControlClient;
 
@@ -47,8 +48,12 @@ use super::state::CoreSignals;
 use super::types::HandshakeSignals;
 
 /// 设置握手 Effect。
-pub fn setup_handshake_effect(ws: &WsService, signals: HandshakeSignals) {
-    handshake::setup(ws, signals);
+pub fn setup_handshake_effect(
+    ws: &WsService,
+    signals: HandshakeSignals,
+    runtime_lifetime: BrowserRuntimeLifetime,
+) {
+    handshake::setup(ws, signals, runtime_lifetime);
 }
 
 /// 设置消息处理 Effect。
@@ -58,6 +63,7 @@ pub fn setup_message_effect(
     external_changes_refresh: leptos::prelude::Callback<()>,
     repo_control: RepoControlClient,
     remote_import: RemoteImportClient,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     message::setup(
         ws,
@@ -65,5 +71,6 @@ pub fn setup_message_effect(
         external_changes_refresh,
         repo_control,
         remote_import,
+        runtime_lifetime,
     );
 }

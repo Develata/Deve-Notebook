@@ -638,6 +638,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: DEVE_MOBILE_ANDROID
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_uses_confirmed_system_cookie_manager_handoff true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_waits_for_completion_before_exact_retention_verification true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_retention_uses_same_secure_install_origin true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_release_cleartext_is_scoped_to_exact_loopback_destinations true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_release_local_backend_auth_request_is_not_blocked_as_cleartext true
+contains	apps/mobile/src/tauri_entry/tests.rs	fn android_release_cleartext_is_scoped_to_exact_loopback_destinations()
 contains	apps/mobile/src/embedded_backend/cookie.rs	fn mobile_embedded_backend_android_native_session_cookie_retention_uses_same_secure_install_origin()
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
@@ -962,3 +965,43 @@ contains	scripts/check-mobile-android-shell-package-build.sh	RUST_TOOLCHAIN="${D
 contains	scripts/check-mobile-android-shell-package-build.sh	CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
 contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-GEN-005
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	cargo test -p deve_web action_visibility -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: explorer_create_visible_without_hover true
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: document_overflow_visible_without_hover true
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: persistent_action_mobile_touch_target_min_size "44x44"
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: persistent_action_768px_and_coarse_pointer_min_size "44x44"
+case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: persistent_action_accessible_name_present true
+contains	apps/web/src/components/action_visibility.rs	fn primary_actions_are_not_hover_gated_on_any_port()
+contains	apps/web/src/components/action_visibility.rs	fn persistent_actions_keep_mobile_touch_size_and_desktop_density()
+contains	apps/web/style/_widgets.css	@media (hover: hover) and (pointer: fine)
+contains	apps/web/src/components/sidebar/explorer/header.rs	data-deve-action-visibility="persistent"
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-025
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	cargo test -p deve_web search_sheet_initial_focus -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	cargo test -p deve_web overlay_lifecycle -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_click: "mobile-search"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_click: "mobile-command"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_assert: overlay_close_button_text "×"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_assert: overlay_close_button_min_size "44x44"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_assert: overlay_close_button_aria_label_present true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-025	ui_assert: close_sources_share_transition true
+contains	apps/web/src/components/search_box/ui_sections.rs	data-deve-search-close="true"
+contains	apps/web/src/components/search_box/ui_sections.rs	overlay_lifecycle::close_from_control
+contains	apps/web/src/components/command_palette/ui.rs	data-deve-command-palette-close="true"
+contains	apps/web/src/components/command_palette/ui.rs	overlay_lifecycle::close_from_control
+contains	apps/web/src/components/command_palette/ui.rs	overlay_lifecycle::run_action_from_control
+contains	apps/web/src/components/overlay_lifecycle.rs	fn explicit_overlay_close_controls_use_shared_transition()
+contains	apps/web/src/components/overlay_lifecycle.rs	fn close_transition_stops_delegated_propagation_before_unmount()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-026
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	cargo test -p deve_web ui_back -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	cargo test -p deve_mobile --features native-packaging android_back_dispatch -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: activity_exits_only_after_matching_unhandled_ack true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: webview_go_back_not_used true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	ui_assert: left_drawer_more_first_back_keeps_drawer_open true
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	UiBackLayer::Overlay
+contains	apps/web/src/components/activity_bar/mod.rs	UiBackLayer::Overlay
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	uiBackDispatcher.install()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	ACK_TIMEOUT_MS
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	webViewGeneration
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	requestIsCurrent
+absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	webView.goBack()

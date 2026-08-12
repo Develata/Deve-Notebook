@@ -40,6 +40,7 @@ pub struct NativeLocalBackendOptions {
     pub session_bound: bool,
     pub auth_material: Option<NativeLoopbackAuthMaterial>,
     pub prewarm_enabled: bool,
+    pub native_ai_enabled: bool,
 }
 
 #[derive(Debug)]
@@ -116,6 +117,7 @@ impl NativeLocalBackendOptions {
             session_bound: false,
             auth_material: None,
             prewarm_enabled: true,
+            native_ai_enabled: deve_core::config::Config::load().ai.native_enabled,
         }
     }
 
@@ -222,8 +224,12 @@ where
 
 impl NativeEmbeddedServerRuntime {
     pub async fn initialize(options: &NativeLocalBackendOptions) -> anyhow::Result<Self> {
+        let mut config = deve_core::config::Config::load();
+        config.ai.native_enabled = options.native_ai_enabled;
+        crate::server::ai_chat::init_from_config(&config);
+        crate::server::agent_bridge::init_from_config(&config);
         let (repo, _) = init_default_native_backend(&options.app_data_dir, options.snapshot_depth)?;
-        let plugins = load_native_plugins()?;
+        let plugins = load_native_plugins(&options.app_data_dir, options.native_ai_enabled)?;
         let launch = native_server_launch_options(options);
         let runtime = EmbeddedServerRuntime::initialize(
             repo,
@@ -314,20 +320,31 @@ fn bind_loopback_listener_on_port(port: u16) -> std::io::Result<NativeLoopbackLi
     Ok(NativeLoopbackListener { listener, port })
 }
 
-pub fn load_native_plugins() -> anyhow::Result<Vec<Box<dyn PluginRuntime>>> {
-    let plugin_dir = resolve_native_plugin_dir()?;
+pub fn load_native_plugins(
+    app_data_dir: &Path,
+    native_ai_enabled: bool,
+) -> anyhow::Result<Vec<Box<dyn PluginRuntime>>> {
+    let plugin_dir = resolve_native_plugin_dir(app_data_dir)?;
     let loader = PluginLoader::new(plugin_dir.clone());
-    let plugins = loader.load_all_strict()?;
-    tracing::info!(?plugin_dir, "Loaded {} native plugins.", plugins.len());
+    let external_plugins = loader.load_all_strict()?;
+    let plugins = crate::server::ai_chat::assemble_runtime_plugins_with_policy(
+        external_plugins,
+        native_ai_enabled,
+    )?;
+    tracing::info!(
+        ?plugin_dir,
+        "Registered {} native plugin runtimes.",
+        plugins.len()
+    );
     Ok(plugins)
 }
 
-fn resolve_native_plugin_dir() -> anyhow::Result<PathBuf> {
+fn resolve_native_plugin_dir(app_data_dir: &Path) -> anyhow::Result<PathBuf> {
     let mut candidates = Vec::new();
     if let Some(value) = std::env::var_os(DEVE_PLUGIN_DIR_ENV).filter(|value| !value.is_empty()) {
         candidates.push(PathBuf::from(value));
     }
-    candidates.extend(default_native_plugin_dir_candidates());
+    candidates.extend(default_native_plugin_dir_candidates(app_data_dir));
 
     for candidate in candidates {
         if candidate.try_exists().map_err(|source| {
@@ -340,11 +357,11 @@ fn resolve_native_plugin_dir() -> anyhow::Result<PathBuf> {
         }
     }
 
-    Ok(PathBuf::from("plugins"))
+    Ok(app_data_dir.join("plugins"))
 }
 
-fn default_native_plugin_dir_candidates() -> Vec<PathBuf> {
-    let mut candidates = vec![PathBuf::from("plugins")];
+fn default_native_plugin_dir_candidates(app_data_dir: &Path) -> Vec<PathBuf> {
+    let mut candidates = vec![app_data_dir.join("plugins")];
     if let Some(exe_parent) = std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.to_path_buf()))
@@ -352,12 +369,6 @@ fn default_native_plugin_dir_candidates() -> Vec<PathBuf> {
         candidates.push(exe_parent.join("plugins"));
         candidates.push(exe_parent.join("..").join("..").join("plugins"));
     }
-    candidates.push(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("..")
-            .join("plugins"),
-    );
     candidates
 }
 
@@ -365,7 +376,7 @@ fn default_native_plugin_dir_candidates() -> Vec<PathBuf> {
 mod tests {
     use super::{
         NativeLocalBackendOptions, bind_native_loopback_listener,
-        bind_native_loopback_listener_exact, init_default_native_backend,
+        bind_native_loopback_listener_exact, init_default_native_backend, load_native_plugins,
     };
 
     #[test]
@@ -422,6 +433,23 @@ mod tests {
         assert!(options.auth_material.is_none());
         assert!(options.prewarm_enabled);
         assert!(!options.p2p.enabled);
+    }
+
+    #[test]
+    fn native_ai_builtin_loads_without_external_plugin_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let plugins = load_native_plugins(dir.path(), true).expect("native plugins");
+
+        assert_eq!(plugins.len(), 1);
+        assert_eq!(plugins[0].manifest().id, "ai-chat");
+    }
+
+    #[test]
+    fn native_ai_disabled_omits_builtin_runtime() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let plugins = load_native_plugins(dir.path(), false).expect("native plugins");
+
+        assert!(plugins.is_empty());
     }
 
     #[test]

@@ -126,3 +126,15 @@
     pointer-events: auto;
   }
 }
+
+.deve-persistent-action {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .deve-persistent-action {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+}

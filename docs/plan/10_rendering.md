@@ -251,6 +251,14 @@ Baseline contract 的行内支持集合：
 
 - Checkbox 点击可以生成源码变更。
 - 但 widget 本身不是 authority；它只能经 editor delta 路径回到源码。
+- 移动工具栏的 Task 动作必须发送 `InsertTaskItem` 语义 intent，不得把 `- [ ] ` 当作普通文本
+  直接插入后交给 Markdown Enter 规则猜测来源。
+- `InsertTaskItem` 可以在当前 `EditorView` 内建立一次性的 projection marker：在刚创建的空任务项上
+  第一次按 Enter 时继续生成下一条 `- [ ] `；该次 continuation 完成后，新生成的空任务项仍服从
+  CodeMirror 的标准空列表退出语义。
+- 该 marker 仅属于 editor session-local projection state，必须随 transaction position mapping，并在
+  selection 离开、非匹配文档变更或 editor 销毁时清理；不得通过零宽字符、隐藏 Markdown 字节、
+  browser storage 或 ledger fact 持久化。
 
 ## 6. Rendering Capabilities
 
@@ -372,6 +380,7 @@ Baseline contract 的行内支持集合：
 - `UpdateEditorSelection`
 - `TogglePreviewProjection`
 - `RequestOutlineRefresh`
+- `InsertTaskItem`
 
 ### 8.2 Outputs
 

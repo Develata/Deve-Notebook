@@ -70,6 +70,13 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 *   产品后端名称是 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 这类兼容 plugin id 只是内部 routing detail，必须经过显式转换层。
 *   同步 `PluginResponse` text 或 error **MUST** 完成对应 chat request；缺 API key、Trusted CLI 被禁用或 policy error **MUST NOT** 让 UI 无限 streaming/loading。
 *   `ai.native_enabled = false` **MUST** 同时禁用 server provider registration 与 public `ai-chat` RPC；backend capabilities endpoint **MUST** 暴露该状态，让 Web UI 禁用或回退 Native backend。
+*   第一方 Native AI runtime 的 manifest 与受控 Rhai script 必须作为编译期资源嵌入 server/native
+    binary；外部 `plugins/` 目录只承载可选插件，Android/Desktop bundle 不得依赖运行目录恰好存在
+    `plugins/ai-chat`。
+*   内建 runtime 与外部 runtime 必须进入同一注册表；相同 plugin id 出现两次时启动 fail-closed，
+    不允许以加载顺序静默覆盖。嵌入资源不得包含 API key、cookie、session 或其他 secret。
+*   backend capabilities 的 `native_available` 必须由有效配置与当前 runtime 注册结果共同决定；仅有
+    `ai.native_enabled = true` 但内建注册失败时必须报告不可用，不能让 UI 进入必然失败的发送路径。
 
 ### 原生模式定义
 

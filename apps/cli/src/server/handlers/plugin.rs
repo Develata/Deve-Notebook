@@ -77,7 +77,10 @@ async fn handle_plugin_call_with_plugins_and_scope(
         crate::server::agent_bridge::handle_agent_chat(ch, req_id, args).await;
         return;
     }
-    if plugin_id == "ai-chat" && !crate::server::ai_chat::is_native_ai_enabled() {
+    if plugin_id == "ai-chat"
+        && (!crate::server::ai_chat::is_native_ai_enabled()
+            || !crate::server::ai_chat::is_native_ai_runtime_registered())
+    {
         send_plugin_capability_denied(
             ch,
             &req_id,

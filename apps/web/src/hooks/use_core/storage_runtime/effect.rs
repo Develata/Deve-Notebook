@@ -2,6 +2,7 @@
 //!   - 03_storage/index#browser-storage-layering
 //!   - 04_repository#repo-scope-runtime
 //!
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::storage::DegradedSyncMode;
 use crate::storage::identity::StoredPeerIdentity;
 use deve_core::models::VersionVector;
@@ -32,6 +33,7 @@ pub(super) fn run_storage_runtime_cycle(
     set_sync_banner: WriteSignal<Option<String>>,
     set_identity: WriteSignal<Option<StoredPeerIdentity>>,
     set_repo_vector: WriteSignal<VersionVector>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     let current_scope = current_repo_id.get();
     let Some(repo_id) = repo::repo_scope(current_scope) else {
@@ -52,11 +54,17 @@ pub(super) fn run_storage_runtime_cycle(
         let bootstrap = match bootstrap::bootstrap_repo_storage(&repo_id).await {
             Ok(bootstrap) => bootstrap,
             Err(mode) => {
+                if !runtime_lifetime.is_active() {
+                    return;
+                }
                 set_degraded(set_degraded_sync_mode, mode);
                 return;
             }
         };
 
+        if !runtime_lifetime.is_active() {
+            return;
+        }
         if repo::repo_scope(current_repo_id.get_untracked()).as_deref() != Some(repo_id.as_str()) {
             return;
         }

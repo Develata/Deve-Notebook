@@ -11,6 +11,7 @@ case.ai-006.flow.flow-settings-runtime-feedback	none	flow.settings.runtime-feedb
 case.ai-007.flow.flow-sc-commit	none	flow.sc.commit	AI-007	web	browser	ci	required	document	doc.ai-007	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.ai-008.flow.flow-ai-chat	none	flow.ai.chat	AI-008	web	browser	ci	required	document	doc.ai-008	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.ai-009.flow.flow-ai-chat	none	flow.ai.chat	AI-009	web	browser	ci	required	document	doc.ai-009	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
+case.ai-010	none	none	AI-010	native	multi-platform	ci	required	source-ref	source.ai-010	apps/cli/src/server/ai_chat/builtin_runtime.rs	source-bound	built-in Native AI registration and duplicate-id fail-closed contract
 case.ai-feat-01.flow.flow-ai-chat	none	flow.ai.chat	AI-FEAT-01	web	browser	ci	required	document	doc.ai-feat-01	docs/features/10_ai_agent.md	source-bound	feature or operation walkthrough evidence contract
 case.auth-001.flow.flow-auth-login	none	flow.auth.login	AUTH-001	web	browser	ci	required	document	doc.auth-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.auth-002.flow.flow-auth-session-unauthorized	none	flow.auth.session-unauthorized	AUTH-002	web	browser	ci	required	document	doc.auth-002	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
@@ -31,6 +32,7 @@ case.auth-014	none	none	AUTH-014	web	browser	ci	required	source-ref	source.auth-
 case.auth-015	none	none	AUTH-015	web	browser	ci	required	document	doc.auth-015	docs/features/09_auth.md	source-bound	migrated manual evidence contract
 case.auth-016	none	none	AUTH-016	web	browser	ci	required	document	doc.auth-016	SECURITY.md	source-bound	migrated manual evidence contract
 case.auth-017	none	none	AUTH-017	native	multi-platform	ci	required	script	smoke.auth-native-ipc-isolation	scripts/smoke-desktop-remote-browser.test.mjs	source-bound	remote browser authentication never grants host IPC capability
+case.auth-018	none	none	AUTH-018	web	browser	ci	required	source-ref	source.auth-018	apps/web/src/runtime/browser_runtime_lifetime.rs	source-bound	component-owned browser callbacks and mode-aware logout projection
 case.cmd-001.flow.flow-cli-control-commands	none	flow.cli.control-commands	CMD-001	cli	command	ci	required	document	doc.cmd-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.cmd-001.flow.flow-cli-empty-command-guidance	none	flow.cli.empty-command-guidance	CMD-001	cli	command	ci	required	document	doc.cmd-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.cmd-001.flow.flow-cli-export-inspect	none	flow.cli.export-inspect	CMD-001	cli	command	ci	required	document	doc.cmd-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
@@ -227,6 +229,7 @@ case.render-outline-001.flow.flow-rendering-outline-navigation	none	flow.renderi
 case.render-rich-001.flow.flow-rendering-checkbox-writeback	none	flow.rendering.checkbox-writeback	RENDER-RICH-001	web	browser	ci	required	document	doc.render-rich-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.render-rich-002.flow.flow-rendering-cursor-reveal	none	flow.rendering.cursor-reveal	RENDER-RICH-002	web	browser	ci	required	document	doc.render-rich-002	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.render-rich-002.flow.flow-rendering-inline-source-reveal	none	flow.rendering.inline-source-reveal	RENDER-RICH-002	web	browser	ci	required	document	doc.render-rich-002	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
+case.render-rich-003	none	none	RENDER-RICH-003	android	webview	ci	required	source-ref	source.render-rich-003	apps/web/js/extensions/mobile_task_item.test.mjs	source-bound	semantic mobile task insertion and one-shot Enter continuation contract
 case.render-whitelist-001	none	none	RENDER-WHITELIST-001	web	browser	ci	required	document	doc.render-whitelist-001	docs/features/03_rendering.md	source-bound	migrated manual evidence contract
 case.repo-feat-01.flow.flow-commands-surface-action-routing	none	flow.commands.surface-action-routing	REPO-FEAT-01	web	browser	ci	required	document	doc.repo-feat-01	docs/features/06_repository.md	source-bound	feature or operation walkthrough evidence contract
 case.repo-feat-01.flow.flow-repo-file-op-shell-routing	none	flow.repo.file-op-shell-routing	REPO-FEAT-01	web	browser	ci	required	document	doc.repo-feat-01	docs/features/06_repository.md	source-bound	feature or operation walkthrough evidence contract
@@ -350,6 +353,7 @@ case.ui-gen-001	none	none	UI-GEN-001	web	browser	ci	required	document	doc.ui-gen
 case.ui-gen-002.flow.flow-ui-command-palette	none	flow.ui.command-palette	UI-GEN-002	web	browser	ci	required	document	doc.ui-gen-002	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.ui-gen-003.flow.flow-ui-command-palette	none	flow.ui.command-palette	UI-GEN-003	web	browser	ci	required	document	doc.ui-gen-003	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.ui-gen-004	none	none	UI-GEN-004	web	browser	ci	required	document	doc.ui-gen-004	docs/features/08_ui_design.md	source-bound	migrated manual evidence contract
+case.ui-gen-005	none	none	UI-GEN-005	web	browser	ci	required	source-ref	source.ui-gen-005	apps/web/src/components/action_visibility.rs	source-bound	cross-port persistent primary action visibility contract
 case.ui-mob-001	none	none	UI-MOB-001	android	webview	ci	required	document	doc.ui-mob-001	docs/features/08_ui_design_03_mobile.md	source-bound	migrated manual evidence contract
 case.ui-mob-002	none	none	UI-MOB-002	android	webview	ci	required	document	doc.ui-mob-002	docs/features/08_ui_design_03_mobile.md	source-bound	migrated manual evidence contract
 case.ui-mob-003	none	none	UI-MOB-003	android	webview	ci	required	document	doc.ui-mob-003	docs/features/08_ui_design_03_mobile.md	source-bound	migrated manual evidence contract
@@ -374,6 +378,8 @@ case.ui-mob-021	none	none	UI-MOB-021	android	webview	ci	required	document	doc.ui
 case.ui-mob-022	none	none	UI-MOB-022	android	webview	ci	required	document	doc.ui-mob-022	docs/features/08_ui_design_03_mobile.md	source-bound	migrated manual evidence contract
 case.ui-mob-023	none	none	UI-MOB-023	android	webview	ci	required	document	doc.ui-mob-023	docs/features/08_ui_design_03_mobile.md	source-bound	migrated manual evidence contract
 case.ui-mob-024.flow.flow-external-changes	none	flow.external-changes	UI-MOB-024	android	webview	ci	required	document	doc.ui-mob-024	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
+case.ui-mob-025	none	none	UI-MOB-025	android	webview	ci	required	source-ref	source.ui-mob-025	apps/web/src/components/overlay_lifecycle.rs	source-bound	mobile sheet focus and delegated explicit close ordering contract
+case.ui-mob-026	none	none	UI-MOB-026	android	webview	ci	required	source-ref	source.ui-mob-026	apps/mobile/src/tauri_entry/tests.rs	source-bound	typed Android back request acknowledgement and fail-closed timeout contract
 case.ui-mob-chat-reg-001	none	none	UI-MOB-CHAT-REG-001	android	webview	ci	required	document	doc.ui-mob-chat-reg-001	docs/features/10_ai_agent.md	source-bound	migrated manual evidence contract
 case.ui-mob-chat-reg-002	none	none	UI-MOB-CHAT-REG-002	android	webview	ci	required	document	doc.ui-mob-chat-reg-002	docs/features/10_ai_agent.md	source-bound	migrated manual evidence contract
 case.ui-mob-chat-reg-003	none	none	UI-MOB-CHAT-REG-003	android	webview	ci	required	document	doc.ui-mob-chat-reg-003	docs/features/10_ai_agent.md	source-bound	migrated manual evidence contract

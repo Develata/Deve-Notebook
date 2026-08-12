@@ -40,6 +40,7 @@ struct WorkspaceIngestionBlocker {
 
 #[derive(Clone)]
 pub struct WsService {
+    lifecycle: ConnectionLifecycle,
     pub status: ReadSignal<ConnectionStatus>,
     set_status: WriteSignal<ConnectionStatus>,
     pub writer_ready_repo_id: ReadSignal<Option<String>>,
@@ -116,7 +117,7 @@ impl WsService {
             rx,
             connection_control_rx,
             ConnectionManagerSignals {
-                lifecycle,
+                lifecycle: lifecycle.clone(),
                 current_status: status,
                 set_status,
                 set_msg_seq,
@@ -137,6 +138,7 @@ impl WsService {
         spawn_ping_loop(status, tx.clone());
 
         Self {
+            lifecycle,
             status,
             set_status,
             writer_ready_repo_id,
@@ -191,6 +193,17 @@ impl WsService {
             leptos::logging::error!("Native endpoint rebind request failed: {error:?}");
             self.mark_native_service_offline();
         }
+    }
+
+    pub(crate) fn is_active(&self) -> bool {
+        self.lifecycle.is_active()
+    }
+
+    pub(crate) fn active_endpoint_epoch(&self) -> Option<(String, u64)> {
+        Some((
+            self.lifecycle.try_get(self.endpoint)?,
+            self.lifecycle.try_get(self.connection_epoch)?,
+        ))
     }
 
     pub(crate) fn messages_since(&self, after_seq: u64) -> IncomingBatch {

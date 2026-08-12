@@ -44,8 +44,6 @@ pub(super) fn RepoSwitcherMenu(
             data-deve-repo-switcher-backdrop=repo_switcher_backdrop_marker()
             on:click=move |_| {
                 set_show_menu.set(repo_switcher_after_outside_click());
-                set_action_repo.set(None);
-                set_renaming_repo.set(None);
             }
         ></div>
         <div

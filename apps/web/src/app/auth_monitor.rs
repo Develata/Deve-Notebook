@@ -3,7 +3,7 @@
 //!
 
 use crate::components::login::AuthState;
-use leptos::prelude::{RwSignal, Set};
+use leptos::prelude::*;
 
 pub fn current_page_active() -> bool {
     let Some(document) = web_sys::window().and_then(|window| window.document()) else {
@@ -27,8 +27,22 @@ pub fn mount_visibility_listener(page_active: RwSignal<bool>) {
     }) as Box<dyn FnMut(_)>);
     let _ = document
         .add_event_listener_with_callback("visibilitychange", callback.as_ref().unchecked_ref());
-    // App mounts once per page load, so a single leaked listener is acceptable here.
-    callback.forget();
+    let cleanup_document = StoredValue::new_local(Some(document));
+    let cleanup_callback = StoredValue::new_local(Some(callback));
+    on_cleanup(move || {
+        if let Some(document) = cleanup_document.try_get_value().flatten() {
+            cleanup_callback.with_value(|callback| {
+                if let Some(callback) = callback {
+                    let _ = document.remove_event_listener_with_callback(
+                        "visibilitychange",
+                        callback.as_ref().unchecked_ref(),
+                    );
+                }
+            });
+        }
+        cleanup_callback.update_value(|callback| drop(callback.take()));
+        cleanup_document.update_value(|document| drop(document.take()));
+    });
 }
 
 #[cfg(test)]

@@ -2,6 +2,9 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
+use crate::components::action_visibility::{
+    persistent_action_button_class, persistent_action_visibility_class,
+};
 use crate::components::icons::Plus;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
@@ -61,11 +64,15 @@ pub(super) fn ExplorerHeader(
                     &editor_for_write,
                 ) && !is_readonly.get()
             }>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class=format!(
+                    "flex items-center gap-1 {}",
+                    persistent_action_visibility_class(),
+                ) data-deve-action-visibility="persistent">
                     <button
                         type="button"
-                        class="p-1 rounded hover:bg-hover text-secondary"
+                        class=persistent_action_button_class()
                         title=move || t::sidebar::new_doc(locale.get())
+                        aria-label=move || t::sidebar::new_doc(locale.get())
                         data-deve-new-doc-button="true"
                         on:click=move |_| request_create.run(None)
                     >

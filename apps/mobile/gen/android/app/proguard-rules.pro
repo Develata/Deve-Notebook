@@ -30,6 +30,12 @@
     public boolean scheduleBackendRecoveryColdStart();
 }
 
+# Tao/Wry resolves the Kotlin `id` property getter by its exact JNI name.
+# R8 cannot see that Rust-side lookup and otherwise removes getId() in release builds.
+-keepclassmembers class dev.deve.notebook.mobile.WryActivity {
+    public int getId();
+}
+
 -keepclassmembers class dev.deve.notebook.mobile.RecoveryAnchorActivity {
     public boolean scheduleBackendRecoveryColdStart();
 }

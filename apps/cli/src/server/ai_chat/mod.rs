@@ -16,6 +16,7 @@
 //! - 全局 HTTP 客户端单例 (复用 TCP 连接池)
 //! - 强类型 SSE 解析 (避免 serde_json::Value)
 
+mod builtin_runtime;
 mod config;
 mod sse_parser;
 mod stream;
@@ -30,7 +31,7 @@ use deve_core::plugin::runtime::provider::register_provider;
 use serde_json::{Value, json};
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use stream::execute_stream;
 
@@ -38,6 +39,66 @@ const NATIVE_AI_TOOLS_DISABLED_ERROR: &str = "Native AI Chat tools are disabled 
 pub const NATIVE_AI_DISABLED_ERROR: &str = "Native AI Chat disabled by config";
 
 static NATIVE_AI_ENABLED: AtomicBool = AtomicBool::new(true);
+static NATIVE_AI_RUNTIME_REGISTRATIONS: AtomicUsize = AtomicUsize::new(0);
+
+pub(crate) struct NativeAiRuntimeRegistration {
+    registered: bool,
+}
+
+impl NativeAiRuntimeRegistration {
+    pub(crate) fn from_plugins(
+        plugins: &[Box<dyn deve_core::plugin::runtime::PluginRuntime>],
+    ) -> Self {
+        let registered = plugins
+            .iter()
+            .any(|plugin| plugin.manifest().id == builtin_runtime::NATIVE_AI_PLUGIN_ID);
+        if registered {
+            NATIVE_AI_RUNTIME_REGISTRATIONS.fetch_add(1, Ordering::AcqRel);
+        }
+        Self { registered }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn is_registered(&self) -> bool {
+        self.registered
+    }
+
+    #[cfg(test)]
+    fn registered_for_test() -> Self {
+        NATIVE_AI_RUNTIME_REGISTRATIONS.fetch_add(1, Ordering::AcqRel);
+        Self { registered: true }
+    }
+}
+
+impl Drop for NativeAiRuntimeRegistration {
+    fn drop(&mut self) {
+        if self.registered {
+            NATIVE_AI_RUNTIME_REGISTRATIONS.fetch_sub(1, Ordering::AcqRel);
+        }
+    }
+}
+
+pub(crate) fn assemble_runtime_plugins(
+    external_plugins: Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>,
+) -> Result<Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>> {
+    builtin_runtime::assemble_runtime_plugins(external_plugins, is_native_ai_enabled())
+}
+
+pub(crate) fn assemble_runtime_plugins_with_policy(
+    external_plugins: Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>,
+    native_ai_enabled: bool,
+) -> Result<Vec<Box<dyn deve_core::plugin::runtime::PluginRuntime>>> {
+    builtin_runtime::assemble_runtime_plugins(external_plugins, native_ai_enabled)
+}
+
+pub(crate) fn is_native_ai_runtime_registered() -> bool {
+    NATIVE_AI_RUNTIME_REGISTRATIONS.load(Ordering::Acquire) > 0
+}
+
+#[cfg(test)]
+pub(crate) fn register_native_ai_runtime_for_test() -> NativeAiRuntimeRegistration {
+    NativeAiRuntimeRegistration::registered_for_test()
+}
 
 pub fn init_from_config(config: &deve_core::config::Config) {
     NATIVE_AI_ENABLED.store(config.ai.native_enabled, Ordering::Relaxed);

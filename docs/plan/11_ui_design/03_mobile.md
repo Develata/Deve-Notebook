@@ -42,6 +42,7 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 *   `LocalBackend` 的本地数据根位于 app-private data root；server/CLI runtime 只初始化 host registries；零 repo 时不得自动创建隐藏或默认 repo。首次 Create 才建立 Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
 *   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。初次 WebView session prepare 与 resume/replacement handoff 必须共享同一个 process-local single-flight gate；同 generation 的重复 prepare 只能串行复核，不能并发竞争 Android `CookieManager` completion registry。用于阻止页面 reload 重复 prepare 的 browser marker 必须绑定当前 process/session 的非敏感安装身份；不得只绑定可能被新进程复用的 loopback endpoint，也不得让旧进程保存的 bootstrap 覆盖当前 fallback。保存的 bootstrap 必须通过 ready-shape、loopback endpoint 与稳定 capability 校验；同一 WebView process 后续 generation 的 endpoint 只能由 supervisor 的 replacement source 覆写，页面 reload 必须优先采用该同 process 保存值而不是 init script 中已过时的首 generation fallback。browser storage 不可读写或 marker 写后读不一致时必须直接投影 `session_invalid`，不得调用 native handoff 或 reload。已提交的平台写入若超时，仍须保留 fail-closed tombstone 直至迟到 callback 到达或进程重启。
 *   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff 与 bootstrap plugin 注册之后创建；不得先创建无 endpoint/session bootstrap 的主 WebView。Android Wry 不实现 `WebView::set_cookie`，因此 Android 必须在 WebView 已登记后通过无参数 native command 调用系统 `CookieManager` 安装 HttpOnly cookie，确认成功后才 reload 一次并进入 authenticated runtime；`Secure` cookie 的 retention 复核必须使用与 `setCookie` 相同的 HTTPS secure loopback origin，不得用 HTTP URL 的发送资格过滤误判已完成的平台写入，真实 HTTP loopback session 可用性仍必须由 reload 后的 auth/readiness 闭环证明。cookie/token/secret 不得进入 command 参数、JavaScript 或 bootstrap payload。`RemoteBrowser -> LocalBackend` 新建的 WebView 在调用该 command 或执行 resume handoff 前，还必须等待 native coordinator 确认新 `main` 已登记、recovery anchor 已退休且 `LocalWindowCreated` 已记录；该一次性 admission 只能由 backend/native lifecycle 打开，Web 不得自行推断 Activity 稳定性。
+*   Android release 网络安全配置必须保持全局 cleartext fail-closed，只对精确 `127.0.0.1` / `localhost` LocalBackend loopback destination 放行 HTTP；不得为 LocalBackend 开启全局明文、通配域名或 RemoteBrowser HTTP。debug source set 的开发连接策略不构成 release authority。
 *   恢复 admission timeout 必须覆盖平台 Activity acknowledgement 与 anchor manager retirement 的完整上限并保留调度余量；timeout 或 supervisor shutdown 必须进入不可迟到放行的 terminal failure、取消所有 waiter。coordinator 的迟到 grant 必须失败并按 post-retirement cold-restart 路径收敛。
 *   `RemoteBrowser { https_origin }` 是显式远端模式。壳层必须在创建主 WebView 前把已校验 origin 写入 native `WindowConfig`，不得靠远端页面执行 init-script redirect；后续 `/api` 与 `/ws` 均由浏览器同源规则解析。native 壳不提供本机 session cookie、端口、repo bootstrap、native bootstrap capability 或 Tauri command handler。
 *   Mobile Settings 只允许在可信 bundled `LocalBackend` origin 使用 native backend preference bridge：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。bridge capability 必须来自 typed native bootstrap，不得由 `__TAURI_INTERNALS__` 推断。
@@ -307,6 +308,8 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 撤销与重做按钮 **MUST** 与其它写动作共用 repo writer gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑器 history action。
 撤销与重做属于高频恢复操作，**MUST** 保持在移动工具栏前段，390px 宽度下无需横向滚动即可看到。
 Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。
+Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 intent；第一次 Enter 继续任务项，
+后续空任务项仍保留标准退出列表行为，不得插入零宽字符或改写全局 Enter keymap。
 
 ### 3.4 手势系统 (Gesture System)
 仅支持轻量级 Edge Swipe，参数定义如下：
@@ -403,6 +406,18 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
 1. 点击 Search -> Top Sheet 自上而下展开。
 2. 选择结果 -> 自动关闭并跳转。
 3. 关闭手势以顶部拖拽上滑为主（避免与结果列表滚动冲突）。
+
+补充约束：
+
+*   Sheet 必须提供黑色文本字符 `×` 的显式关闭按钮，触控区至少 44×44 CSS px，并带可访问名称；
+    不得使用彩色 emoji 代替。
+*   移动 Sheet 打开时初始焦点进入 dialog/关闭按钮，不得自动聚焦搜索输入框或主动弹出 IME；
+    只有用户明确点击输入框后才请求输入焦点。Desktop overlay 仍可按桌面合同 autofocus。
+*   `×`、外部点击、上滑、`Escape` 与选中结果必须汇入同一个 overlay close transition，关闭后恢复
+    到仍可聚焦的触发控件。
+*   Android system back 必须委派给 `index.md#overlay-back-coordination` 的 `UiBackCoordinator`：先关闭
+    最上层 presentation surface，再经过 document pending-edit guard；只有 typed `Unhandled` ack 才可
+    退出 Activity。不得直接调用 `WebView.goBack()`，也不得在 ack 超时后猜测退出。
 
 ## 7. Performance & Size
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。

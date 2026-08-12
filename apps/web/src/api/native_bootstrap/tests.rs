@@ -144,6 +144,30 @@ fn mobile_native_lifecycle_authority_requires_typed_native_shell_marker() {
 }
 
 #[test]
+fn bundled_local_backend_presentation_requires_trusted_origin_and_capability() {
+    assert!(bundled_local_backend_presentation(
+        "tauri.localhost",
+        "http:",
+        Some(true),
+    ));
+    assert!(bundled_local_backend_presentation(
+        "localhost",
+        "tauri:",
+        Some(true),
+    ));
+    assert!(!bundled_local_backend_presentation(
+        "tauri.localhost",
+        "http:",
+        None,
+    ));
+    assert!(!bundled_local_backend_presentation(
+        "example.test",
+        "https:",
+        Some(true),
+    ));
+}
+
+#[test]
 fn maps_native_service_offline_to_blocked_state() {
     assert_eq!(
         parse_native_bootstrap_fields(

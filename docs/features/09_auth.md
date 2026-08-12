@@ -22,6 +22,9 @@
 - 登录失败时显示明确失败结果。
 - 登出后不应继续保留受保护写态。
 - 每次登录建立独立 browser auth session；即使同一用户在同一秒内重复登录，也不得复用同一个可写 session 身份。
+- Web 与 RemoteBrowser 保留真实登出；bundled LocalBackend 在尚无可靠 native session rotation/lock
+  恢复路径时不显示通用“退出登录”，避免清 Cookie 后把当前本地会话留在不可恢复态。
+- 登出或 session expiry 卸载工作区时，页面不得因迟到监听器、timer 或异步回调访问已销毁状态而 panic。
 
 ### 2. 会话失效
 

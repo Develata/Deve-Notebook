@@ -19,6 +19,7 @@ async fn backend_capabilities_http_reports_trusted_cli_fallback_to_native() {
     config.ai.agent_bridge.enabled = false;
     config.ai.agent_bridge.trusted = false;
     init_from_config(&config);
+    let _runtime = crate::server::ai_chat::register_native_ai_runtime_for_test();
 
     let json = get_capabilities_json().await;
 
@@ -42,6 +43,7 @@ async fn backend_capabilities_http_reports_trusted_cli_when_policy_is_satisfied(
     config.ai.agent_bridge.enabled = true;
     config.ai.agent_bridge.trusted = true;
     init_from_config(&config);
+    let _runtime = crate::server::ai_chat::register_native_ai_runtime_for_test();
 
     let json = get_capabilities_json().await;
 
@@ -61,6 +63,7 @@ async fn backend_capabilities_http_reports_none_when_native_is_disabled() {
     config.ai.agent_bridge.enabled = false;
     config.ai.agent_bridge.trusted = false;
     init_from_config(&config);
+    let _runtime = crate::server::ai_chat::register_native_ai_runtime_for_test();
 
     let json = get_capabilities_json().await;
 
@@ -84,6 +87,7 @@ async fn backend_capabilities_http_does_not_promote_native_mode_to_trusted_cli()
     config.ai.agent_bridge.enabled = true;
     config.ai.agent_bridge.trusted = true;
     init_from_config(&config);
+    let _runtime = crate::server::ai_chat::register_native_ai_runtime_for_test();
 
     let json = get_capabilities_json().await;
 

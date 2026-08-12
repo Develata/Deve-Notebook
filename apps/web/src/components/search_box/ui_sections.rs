@@ -3,6 +3,7 @@
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use crate::components::icons::{GitBranch, Search, Terminal};
+use crate::components::overlay_lifecycle;
 use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::result_item::{SearchResultItemView, result_item};
 use crate::components::search_box::runtime::SearchRuntime;
@@ -20,6 +21,9 @@ pub fn header(
     placeholder_text: Memo<String>,
     input_ref: NodeRef<leptos::html::Input>,
     ui_mode: Signal<SearchUiMode>,
+    set_show: WriteSignal<bool>,
+    close_ref: NodeRef<leptos::html::Button>,
+    locale: RwSignal<Locale>,
 ) -> impl IntoView {
     let header_class = move || match ui_mode.get() {
         SearchUiMode::Sheet => {
@@ -49,6 +53,19 @@ pub fn header(
                     set_selected_index.set(0);
                 }
             />
+            <button
+                node_ref=close_ref
+                type="button"
+                data-deve-search-close="true"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-2xl leading-none text-primary hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title=move || t::common::close(locale.get())
+                aria-label=move || t::common::close(locale.get())
+                on:click=move |event| {
+                    overlay_lifecycle::close_from_control(event, set_show)
+                }
+            >
+                "×"
+            </button>
         </div>
     }
 }

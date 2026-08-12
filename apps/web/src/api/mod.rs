@@ -58,7 +58,8 @@ pub(crate) use self::native_backend_bridge::{
     save_native_backend_remote,
 };
 pub(crate) use self::native_bootstrap::{
-    current_native_bootstrap_blocked_status, current_native_platform_lifecycle_authority,
+    current_bundled_local_backend, current_native_bootstrap_blocked_status,
+    current_native_platform_lifecycle_authority,
 };
 pub(crate) use self::native_http::api_url;
 pub use self::service::WsService;

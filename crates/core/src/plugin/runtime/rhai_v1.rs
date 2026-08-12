@@ -1,5 +1,6 @@
 // crates\core\src\plugin\runtime\rhai_v1.rs
 //! plan_ref:
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # Rhai Runtime Implementation
@@ -43,6 +44,19 @@ impl RhaiRuntime {
     /// - `manifest`: 插件清单
     /// - `_base_dir`: 插件根目录路径，用于解析非 WASM 目标的 import 语句
     pub fn new(manifest: PluginManifest, _base_dir: PathBuf) -> Self {
+        Self::new_with_module_root(manifest, Some(_base_dir))
+    }
+
+    /// Create a runtime for a compile-time embedded script.
+    ///
+    /// Embedded first-party scripts have no filesystem module resolver, so an
+    /// `import` added later cannot silently turn the binary asset back into a
+    /// runtime-directory dependency.
+    pub fn new_embedded(manifest: PluginManifest) -> Self {
+        Self::new_with_module_root(manifest, None)
+    }
+
+    fn new_with_module_root(manifest: PluginManifest, _base_dir: Option<PathBuf>) -> Self {
         let mut engine = Engine::new();
         engine.set_max_expr_depths(128, 128);
         engine.set_max_operations(MAX_RHAI_OPERATIONS);
@@ -50,8 +64,8 @@ impl RhaiRuntime {
 
         // 配置模块解析器 (仅非 WASM 环境支持文件系统)
         #[cfg(not(target_arch = "wasm32"))]
-        {
-            let resolver = GuardedFileModuleResolver::new(_base_dir);
+        if let Some(base_dir) = _base_dir {
+            let resolver = GuardedFileModuleResolver::new(base_dir);
             engine.set_module_resolver(resolver);
         }
 
@@ -157,6 +171,23 @@ mod tests {
             .unwrap();
         let res = runtime.call("add", vec![1.into(), 2.into()]).unwrap();
         assert_eq!(res.as_int().unwrap(), 3);
+    }
+
+    #[test]
+    fn embedded_rhai_runtime_does_not_resolve_filesystem_modules() {
+        let manifest = PluginManifest {
+            id: "embedded-test".into(),
+            name: "Embedded Test".into(),
+            version: "0.1".into(),
+            entry: "main.rhai".into(),
+            capabilities: Default::default(),
+        };
+        let mut runtime = RhaiRuntime::new_embedded(manifest.clone());
+        let error = runtime
+            .load(manifest, "import \"missing\" as missing;")
+            .expect_err("embedded runtime must not resolve filesystem modules");
+
+        assert!(error.to_string().contains("Failed to initialize plugin"));
     }
 
     #[test]

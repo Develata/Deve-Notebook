@@ -169,6 +169,8 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `11_ui_design/index#ui-runtime-boundary` | `## 10. Runtime Boundary` | view/control/runtime 依赖方向与薄前端壳层边界 |
 | `11_ui_design/index#editor-group-tabstrip` | `### 3.6 Editor Group Tabs` | 主编辑区 doc/diff tab strip 的 view-local 状态、切换、关闭与 authority 边界 |
 | `11_ui_design/index#context-action-surface` | `### 3.3.1 Context Action Surface` | file tree/menu/command/shortcut 的 ContextAction 投影、执行边界与 external action provenance 合同 |
+| `11_ui_design/index#overlay-back-coordination` | `### 5.3.1 Overlay Close / Back Coordination` | overlay/sheet/drawer/document 的统一 close transition、typed native back request/ack 与 fail-closed 超时合同 |
+| `11_ui_design/index#action-visibility-contract` | `### 7.6 Action Visibility Contract` | Explorer 创建与文档 overflow 动作的跨端常显、权限不扩张与触控目标合同 |
 | `11_ui_design/index#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
 | `11_ui_design/index#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
 | `11_ui_design/01_web#single-binary-distribution` | `## 1. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
@@ -203,8 +205,10 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `08_auth#localhost-dev-policy` | `### 6.8 Localhost / Dev Policy` | localhost/dev 例外、匿名访问与 loopback 限定规则 |
 | `08_auth#local-cli-proxy-authority` | `### 6.11 Local CLI Proxy Authority` | server-held DB 的 loopback-only JWT admission 与 exact Remote Import capability |
 | `08_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
+| `08_auth#browser-auth-state` | `### 3.2 Browser Auth State` | MainLayout/use_core listener、timer、异步完成的 component owner 与 generation 生命周期合同 |
 | `08_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
 | `08_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
+| `08_auth#mode-aware-logout-projection` | `### 9.5 Mode-aware Logout Projection` | Web/RemoteBrowser 真实 logout 与 bundled LocalBackend 隐藏不可恢复通用登出的投影边界 |
 | `08_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |
 | `16_ai_agent#native-ai-chat-runtime` | `## 2. Native AI Chat` | Native AI Chat server/UI/streaming bridge 的 read-first 运行时合同 |
 | `16_ai_agent#trusted-agent-bridge` | `## 3. Trusted External Agent Bridge` | Trusted CLI Agent 的 default-off、policy-gated 桥接合同 |

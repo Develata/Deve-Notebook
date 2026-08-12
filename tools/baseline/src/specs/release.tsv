@@ -233,6 +233,8 @@ contains	scripts/remote-browser-fixture.sh	serve --port '{port}' --loopback-only
 contains	scripts/remote-browser-fixture.sh	[[ -n "$backend_pid" ]] && remote_fixture_pid_active "$backend_pid"
 contains	scripts/remote-browser-fixture.test.sh	final backend cleanup proof must use the shared active-process classifier
 contains	scripts/remote-browser-fixture.ps1	"--loopback-only"
+absent	scripts/remote-browser-fixture.ps1	DEVE_PLUGIN_DIR
+absent	scripts/remote-browser-fixture.sh	DEVE_PLUGIN_DIR
 contains	docs/registry/acceptance-producers.json	"DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN"
 contains	docs/registry/acceptance-producers.json	"scripts/lib/desktop-install-root.ps1"
 contains	docs/registry/acceptance-producers.json	"scripts/lib/webview2-cdp.ps1"

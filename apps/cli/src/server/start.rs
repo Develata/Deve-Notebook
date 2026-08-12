@@ -63,6 +63,7 @@ impl std::error::Error for ServerTransportServeError {}
 
 pub(crate) struct EmbeddedServerRuntime {
     transport: ServerTransportRuntime,
+    _native_ai_registration: super::ai_chat::NativeAiRuntimeRegistration,
     background_tasks: Option<runtime::BackgroundRuntimeTasks>,
     watcher_supervisor: Option<Arc<runtime::watcher_runtime::WatcherSupervisor>>,
     repo_lifecycle_jobs: Option<Arc<runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>>,
@@ -122,6 +123,8 @@ impl EmbeddedServerRuntime {
                 .repo_creation_projection_base()
                 .map(std::path::Path::to_path_buf),
         })?;
+        let native_ai_registration =
+            super::ai_chat::NativeAiRuntimeRegistration::from_plugins(&app_state.plugins);
         #[cfg(not(test))]
         deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
             crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
@@ -142,6 +145,7 @@ impl EmbeddedServerRuntime {
                 host_dir: Arc::new(host_dir),
                 p2p_inbound_token_env,
             },
+            _native_ai_registration: native_ai_registration,
             background_tasks: Some(background_tasks),
             watcher_supervisor: Some(watcher_supervisor),
             repo_lifecycle_jobs: Some(repo_lifecycle_jobs),

@@ -9,6 +9,7 @@
 
 use crate::components::icons::{Book, Home, Terminal};
 use crate::i18n::{Locale, t};
+use crate::runtime::session_client::SessionPresentationPolicy;
 use leptos::prelude::*;
 
 #[component]
@@ -20,6 +21,7 @@ pub fn Header(
     on_logout: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let show_logout = SessionPresentationPolicy::current().show_logout();
 
     view! {
         <header class="w-full h-12 bg-panel border-b border-default flex items-center justify-between px-4 shadow-sm z-[var(--z-chrome)]">
@@ -67,13 +69,15 @@ pub fn Header(
                     <Terminal class="w-[18px] h-[18px]"/>
                 </button>
 
-                <button
-                    class="px-2 py-1 text-xs text-secondary hover:bg-hover rounded transition-colors"
-                    title=move || t::header::logout(locale.get())
-                    on:click=move |_| on_logout.run(())
-                >
-                    {move || t::header::logout(locale.get())}
-                </button>
+                {show_logout.then(|| view! {
+                    <button
+                        class="px-2 py-1 text-xs text-secondary hover:bg-hover rounded transition-colors"
+                        title=move || t::header::logout(locale.get())
+                        on:click=move |_| on_logout.run(())
+                    >
+                        {move || t::header::logout(locale.get())}
+                    </button>
+                })}
             </div>
         </header>
     }

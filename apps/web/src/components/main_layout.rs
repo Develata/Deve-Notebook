@@ -15,6 +15,7 @@ pub use crate::components::layout_context::{
     ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl,
 };
 use crate::components::main_layout_runtime::MainLayoutRuntime;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
 use crate::hooks::use_layout::use_layout;
@@ -67,6 +68,42 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
         core.pending_local_edits,
         core.set_pending_navigation,
     );
+    let ui_back = UiBackCoordinator::provide();
+    ui_back.install_native_bridge();
+
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if search.show_search.try_get_untracked() == Some(true) {
+            search.set_show_search.set(false);
+            return true;
+        }
+        if sidebar.show_settings.try_get_untracked() == Some(true) {
+            sidebar.set_show_settings.set(false);
+            return true;
+        }
+        if core
+            .pending_navigation
+            .try_get_untracked()
+            .flatten()
+            .is_some()
+        {
+            core.set_pending_navigation.set(None);
+            return true;
+        }
+        false
+    });
+
+    let on_home_for_back = on_home;
+    ui_back.register(UiBackLayer::Document, move || {
+        if core.diff_content.try_get_untracked().flatten().is_some() {
+            core.set_diff_content.set(None);
+            return true;
+        }
+        if core.current_doc.try_get_untracked().flatten().is_some() {
+            on_home_for_back.run(());
+            return true;
+        }
+        false
+    });
 
     view! {
         <MainLayoutRuntime

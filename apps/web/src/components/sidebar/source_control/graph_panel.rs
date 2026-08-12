@@ -10,6 +10,7 @@ use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::SourceControlContext;
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use deve_core::graph::GraphProjection;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -32,6 +33,7 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let fetch_state = RwSignal::new(GraphProjectionFetchState::Idle);
+    let runtime_lifetime = expect_context::<BrowserRuntimeLifetime>().child_scope();
 
     Effect::new(move |_| {
         if !expanded.get() {
@@ -53,8 +55,12 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
         }
 
         fetch_state.set(GraphProjectionFetchState::Loading);
+        let runtime_lifetime = runtime_lifetime.clone();
         spawn_local(async move {
             let fetched = fetch_graph_projection(repo_id.clone()).await;
+            if !runtime_lifetime.is_active() {
+                return;
+            }
             let still_current = expanded.get_untracked()
                 && core.current_repo_id.get_untracked() == repo_id
                 && core.active_branch.get_untracked().is_none()

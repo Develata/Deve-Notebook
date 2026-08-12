@@ -372,3 +372,14 @@ contains	docs/report/rendering-interaction-spot-smoke-2026-05-13.md	cm-blockquot
 absent	docs/features/03_rendering.md	完整 preview mode 已实现
 absent	docs/features/03_rendering.md	完整 virtual rendering 已实现
 absent	docs/features/03_rendering.md	rendering settings 的完整 GUI 持久化已实现
+contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-RICH-003
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	node --test apps/web/js/extensions/mobile_task_item.test.mjs
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_first_enter "- [ ] \n- [ ] "
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: subsequent_enter_matches_codemirror_default true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_contains_no_zero_width_char true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_maps_across_unrelated_transaction true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_when_task_line_changes true
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	unrelated changes before the task map the one-shot marker
+contains	apps/web/js/extensions/mobile_task_item.test.mjs	rewriting the task line retires the mapped marker
+contains	apps/web/js/extensions/mobile_task_item.js	Prec.highest(keymap.of([{ key: "Enter", run: continueToolbarTaskItem }]))
+contains	apps/web/src/components/mobile_layout/toolbar.rs	ffi::mobile_insert_task_item

@@ -180,7 +180,7 @@
     - run: cargo test -p deve_web message_dispatch_runtime -- --nocapture
     - run: cargo test -p deve_web source_control_commit_ai -- --nocapture
   assertions:
-    - http_assert: native_available_matches_config true
+    - http_assert: native_available_matches_config_and_runtime_registration true
     - http_assert: trusted_cli_available_matches_policy true
     - http_assert: effective_backend_in ["native", "trusted-cli", "none"]
     - ui_assert: unavailable_backend_disabled true
@@ -188,6 +188,30 @@
     - server_assert: native_disabled_blocks_ai_chat_rpc true
     - ui_assert: backend_fallback_reason_visible true
     - ui_assert: chat_streaming_stopped_after_plugin_error true
+
+- case_id: AI-010
+  goal: Native AI 作为编译期内建 runtime 注册，不依赖 Android/Desktop 运行目录中的插件文件。
+  preconditions:
+    - `ai.native_enabled = true`
+    - 外部 plugins 目录不存在或为空
+  steps:
+    - run: cargo test -p deve_cli native_ai_builtin -- --nocapture
+    - run: cargo test -p deve_cli serve_loader_registers_builtin_ai_without_external_plugins -- --nocapture
+    - run: cargo test -p deve_cli serve_loader_rejects_explicit_external_ai_chat_duplicate -- --nocapture
+    - run: cargo test -p deve_cli native_ai_disabled_omits_builtin_runtime -- --nocapture
+    - run: cargo test -p deve_cli proxy_host_owns_builtin_ai_registration_for_its_lifetime -- --nocapture
+    - run: cargo test -p deve_cli backend_capabilities_http -- --nocapture
+    - http_get: "/api/ai/backend-capabilities"
+    - server_call: "ai-chat.chat"
+  assertions:
+    - cli_assert: builtin_ai_registered_without_plugin_directory true
+    - cli_assert: ordinary_serve_uses_shared_builtin_assembly true
+    - cli_assert: proxy_host_retains_builtin_runtime_registration true
+    - cli_assert: builtin_ai_assets_contain_no_secret true
+    - cli_assert: duplicate_external_ai_plugin_fails_closed true
+    - http_assert: native_available true
+    - server_assert: ai_chat_plugin_not_found_absent true
+    - server_assert: native_disabled_still_blocks_ai_chat_rpc true
 
 - case_id: PLUG-001
   goal: Trusted External Agent 仅保留接口位，不要求当前 release 完整实现。

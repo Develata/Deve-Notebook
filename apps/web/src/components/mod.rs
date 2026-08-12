@@ -23,6 +23,7 @@ pub mod sidebar;
 pub mod sidebar_menu;
 pub mod touch_feedback;
 
+pub(crate) mod action_visibility;
 pub mod activity_bar;
 pub mod branch_label;
 pub mod branch_switcher;
@@ -34,9 +35,11 @@ pub mod main_layout;
 pub mod merge_modal;
 pub mod merge_modal_slot;
 pub mod merge_panel;
+pub(crate) mod overlay_lifecycle;
 pub mod pending_navigation_modal;
 pub mod search_box;
 pub mod spectator_overlay;
+pub(crate) mod ui_back;
 pub(crate) mod workspace_ingestion_blocker;
 
 pub mod dashboard;

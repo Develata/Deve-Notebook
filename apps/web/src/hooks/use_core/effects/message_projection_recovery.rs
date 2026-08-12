@@ -5,6 +5,7 @@
 //! Hooks adapter that executes backend-specified projection refresh intents.
 
 use crate::api::WsService;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::runtime::domain::LoadPhase;
 use crate::runtime::projection_recovery::{
     ProjectionRecoveryScope, ProjectionRefreshCoordinator, ProjectionRefreshResponse,
@@ -28,6 +29,7 @@ pub(super) fn handle_required(
     signals: CoreSignals,
     external_changes_refresh: Callback<()>,
     coordinator: &ProjectionRefreshCoordinator,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     let Some(decision) = evaluate_recovery(&required, &recovery_scope(signals)) else {
         return;
@@ -40,7 +42,14 @@ pub(super) fn handle_required(
         return;
     }
     if let Some(work) = coordinator.begin(required, decision.plan) {
-        execute_refresh_work(work, ws, signals, external_changes_refresh, coordinator);
+        execute_refresh_work(
+            work,
+            ws,
+            signals,
+            external_changes_refresh,
+            coordinator,
+            runtime_lifetime,
+        );
     }
 }
 
@@ -65,9 +74,17 @@ pub(super) fn response_completed(
     signals: CoreSignals,
     external_changes_refresh: Callback<()>,
     coordinator: &ProjectionRefreshCoordinator,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     if let Some(work) = coordinator.complete_response(response, request_id) {
-        execute_refresh_work(work, ws, signals, external_changes_refresh, coordinator);
+        execute_refresh_work(
+            work,
+            ws,
+            signals,
+            external_changes_refresh,
+            coordinator,
+            runtime_lifetime,
+        );
     }
 }
 
@@ -95,6 +112,7 @@ fn execute_refresh_work(
     signals: CoreSignals,
     external_changes_refresh: Callback<()>,
     coordinator: &ProjectionRefreshCoordinator,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     if evaluate_recovery(&work.required, &recovery_scope(signals)).is_none() {
         return;
@@ -129,13 +147,26 @@ fn execute_refresh_work(
         external_changes_refresh.run(());
     }
     #[cfg(target_arch = "wasm32")]
-    schedule_refresh_timeout(work.flight_id, ws, signals, coordinator);
+    schedule_refresh_timeout(
+        work.flight_id,
+        ws,
+        signals,
+        coordinator,
+        runtime_lifetime.clone(),
+    );
     if let Some(trailing) = coordinator.register_requests(
         work.flight_id,
         doc_list_request_id,
         source_control_request_id,
     ) {
-        execute_refresh_work(trailing, ws, signals, external_changes_refresh, coordinator);
+        execute_refresh_work(
+            trailing,
+            ws,
+            signals,
+            external_changes_refresh,
+            coordinator,
+            runtime_lifetime,
+        );
     }
 }
 
@@ -145,12 +176,16 @@ fn schedule_refresh_timeout(
     ws: &WsService,
     signals: CoreSignals,
     coordinator: &ProjectionRefreshCoordinator,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     let ws = ws.clone();
     let coordinator = coordinator.clone();
     let connection_epoch = ws.connection_epoch.get_untracked();
     spawn_local(async move {
         TimeoutFuture::new(PROJECTION_REFRESH_TIMEOUT_MS).await;
+        if !runtime_lifetime.is_active() {
+            return;
+        }
         if coordinator.retire(flight_id) {
             signals.set_load_state.set(LoadPhase::Resyncing);
             ws.request_reconnect_for_resync(connection_epoch);

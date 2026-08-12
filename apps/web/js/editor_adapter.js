@@ -42,6 +42,10 @@ import { blockquoteBorderPlugin } from "./extensions/blockquote_border.js";
 import { codeToolbarPlugin } from "./extensions/code_toolbar.js"; // [NEW]
 import { hyperlinkClickPlugin } from "./extensions/hyperlink_click.js"; // [NEW] Ctrl+Click 链接跳转
 import { gutterDiffExtension, updateGutterDiff } from "./extensions/gutter_diff.js";
+import {
+  insertToolbarTaskItem,
+  mobileTaskItemExtension,
+} from "./extensions/mobile_task_item.js";
 
 // --- 共享状态与远程操作 (从子模块导入) ---
 import { ctx } from "./editor_state.js";
@@ -135,6 +139,7 @@ export function initCodeMirror(element, onDelta) {
               codeLanguages: languages,
               extensions: [GFM],
             }),
+            mobileTaskItemExtension,
             renderRangeIndexField,
             renderThemeObserver,
             hybridPlugin,
@@ -207,6 +212,10 @@ export function mobileInsertText(text) {
   });
   view.focus();
   return true;
+}
+
+export function mobileInsertTaskItem() {
+  return insertToolbarTaskItem(activeWritableMobileView());
 }
 
 export function mobileWrapSelection(prefix, suffix) {
@@ -288,6 +297,10 @@ registerBrowserBridgeGlobal("getEditorSelection", getEditorSelection, { role: "w
 registerBrowserBridgeGlobal("mobileInsertText", mobileInsertText, {
   runtime: "widget_bridge_runtime",
   role: "wasm-editor-mobile-input",
+});
+registerBrowserBridgeGlobal("mobileInsertTaskItem", mobileInsertTaskItem, {
+  runtime: "widget_bridge_runtime",
+  role: "wasm-editor-mobile-semantic-intent",
 });
 registerBrowserBridgeGlobal("mobileWrapSelection", mobileWrapSelection, {
   runtime: "widget_bridge_runtime",

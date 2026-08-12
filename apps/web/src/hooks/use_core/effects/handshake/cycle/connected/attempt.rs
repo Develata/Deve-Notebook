@@ -4,6 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::types::HandshakeSignals;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use crate::storage::DegradedSyncMode;
 use crate::storage::identity::StoredPeerIdentity;
 use deve_core::models::{PeerId, VersionVector};
@@ -28,6 +29,7 @@ pub(super) struct ConnectedHandshakeAttemptInput<'a> {
     pub branch: Option<PeerId>,
     pub current_scope_nonce: u64,
     pub should_restore: bool,
+    pub runtime_lifetime: BrowserRuntimeLifetime,
 }
 
 pub(super) fn start_connected_handshake_attempt(input: ConnectedHandshakeAttemptInput<'_>) {
@@ -63,5 +65,6 @@ pub(super) fn start_connected_handshake_attempt(input: ConnectedHandshakeAttempt
         should_restore: input.should_restore,
         handshake_attempt: input.handshake_attempt.clone(),
         failure_last_mode: input.last_mode.clone(),
+        runtime_lifetime: input.runtime_lifetime,
     });
 }

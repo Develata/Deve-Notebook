@@ -193,7 +193,6 @@ function Start-RemoteBrowserFixture {
             $backendEnvironment = @{
                 AUTH_USER = $username; AUTH_PASS = $authPass; AUTH_SECRET = $authSecret
                 DEVE_ENV = "production"; DEVE_LEDGER_DIR = (Join-Path $runtimeDirectory "ledger")
-                DEVE_PLUGIN_DIR = (Join-Path $Options.RepoRoot "plugins")
             }
 
             if ($Options.BackendContainerImage) {

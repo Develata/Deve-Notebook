@@ -5,6 +5,7 @@
 use super::types::Command;
 use crate::components::focus_scope;
 use crate::components::icons::{ArrowRight, Search, Zap};
+use crate::components::overlay_lifecycle;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -77,6 +78,18 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                             }
                             autofocus
                         />
+                        <button
+                            type="button"
+                            data-deve-command-palette-close="true"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-2xl leading-none text-primary hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                            title=move || t::common::close(locale.get())
+                            aria-label=move || t::common::close(locale.get())
+                            on:click=move |event| {
+                                overlay_lifecycle::close_from_control(event, set_show)
+                            }
+                        >
+                            "×"
+                        </button>
                     </div>
 
                     <div class="overflow-y-auto p-2">
@@ -125,7 +138,12 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                                                         )
                                                         aria-disabled=if is_unavailable { "true" } else { "false" }
                                                         data-deve-command-unavailable=unavailable_attr
-                                                        on:click=move |_| cmd.action.run(())
+                                                        on:click=move |event| {
+                                                            overlay_lifecycle::run_action_from_control(
+                                                                event,
+                                                                || cmd.action.run(()),
+                                                            )
+                                                        }
                                                         on:mousemove=move |_| set_selected_index.set(idx)
                                                     >
                                                         <div class=format!("flex-none {}", if is_sel && !is_unavailable { "text-accent" } else { "text-muted" })>

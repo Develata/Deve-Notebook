@@ -280,3 +280,95 @@ fn android_backend_recovery_uses_capability_free_activity_anchor_in_contract_ord
     assert!(anchor_retire < local_record);
     assert!(local_record < handoff_admit);
 }
+
+#[test]
+fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
+    let activity = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"
+    );
+    let back_dispatcher = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt"
+    );
+
+    assert!(activity.contains("uiBackDispatcher.install()"));
+    assert!(activity.contains("uiBackDispatcher.attach(webView)"));
+    assert!(back_dispatcher.contains("OnBackPressedCallback(true)"));
+    assert!(back_dispatcher.contains("requestUiBack()"));
+    assert!(back_dispatcher.contains("deve-native-back-request"));
+    assert!(back_dispatcher.contains("const detail = { requestId:"));
+    assert!(back_dispatcher.contains("listenerSeen: false"));
+    assert!(back_dispatcher.contains("ack.optString(\"requestId\") != requestId.toString()"));
+    assert!(back_dispatcher.contains("\"Unhandled\" ->"));
+    assert!(back_dispatcher.contains("activeRequestId == requestId"));
+    assert!(back_dispatcher.contains("activeRequestId = null"));
+    assert!(back_dispatcher.contains("webViewGeneration"));
+    assert!(back_dispatcher.contains("requestIsCurrent"));
+    assert!(back_dispatcher.contains("retireActiveRequest()"));
+    assert!(back_dispatcher.contains("android_ui_back_handled"));
+    assert!(back_dispatcher.contains("android_ui_back_unhandled"));
+    assert!(back_dispatcher.contains("android_ui_back_ack_timeout"));
+    assert!(back_dispatcher.contains("android_ui_back_listener_missing"));
+    assert!(!back_dispatcher.contains("webView.goBack()"));
+    assert!(!back_dispatcher.contains("webView.canGoBack()"));
+
+    let timeout = &back_dispatcher[back_dispatcher
+        .find("val timeout = Runnable")
+        .expect("back acknowledgement timeout")..];
+    let evaluate = timeout
+        .find("webView.evaluateJavascript")
+        .expect("typed WebView dispatch");
+    assert!(!timeout[..evaluate].contains("finish()"));
+
+    let matching_ack = &back_dispatcher[back_dispatcher
+        .find("ack.optString(\"requestId\") != requestId.toString()")
+        .expect("matching acknowledgement guard")..];
+    let unhandled = matching_ack
+        .find("\"Unhandled\" ->")
+        .expect("Unhandled acknowledgement");
+    let finish = matching_ack[unhandled..]
+        .find("finish()")
+        .expect("Activity finish after matching Unhandled acknowledgement");
+    assert!(finish > 0);
+}
+
+#[test]
+fn android_release_shrinker_preserves_wry_activity_jni_id_getter() {
+    let activity = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/generated/WryActivity.kt"
+    );
+    let proguard = include_str!("../../gen/android/app/proguard-rules.pro");
+
+    assert!(activity.contains("abstract class WryActivity"));
+    assert!(activity.contains("var id: Int"));
+    assert!(proguard.contains("class dev.deve.notebook.mobile.WryActivity"));
+    assert!(proguard.contains("public int getId();"));
+}
+
+#[test]
+fn android_release_cleartext_is_scoped_to_exact_loopback_destinations() {
+    let main_manifest = include_str!("../../gen/android/app/src/main/AndroidManifest.xml");
+    let release_manifest = include_str!("../../gen/android/app/src/release/AndroidManifest.xml");
+    let network_security =
+        include_str!("../../gen/android/app/src/release/res/xml/network_security_config.xml");
+
+    assert!(main_manifest.contains("android:usesCleartextTraffic=\"${usesCleartextTraffic}\""));
+    assert!(
+        release_manifest.contains("android:networkSecurityConfig=\"@xml/network_security_config\"")
+    );
+    assert!(network_security.contains("<base-config cleartextTrafficPermitted=\"false\" />"));
+    assert!(network_security.contains("<domain includeSubdomains=\"false\">127.0.0.1</domain>"));
+    assert!(network_security.contains("<domain includeSubdomains=\"false\">localhost</domain>"));
+    assert_eq!(
+        network_security
+            .matches("cleartextTrafficPermitted=\"true\"")
+            .count(),
+        1
+    );
+    assert_eq!(
+        network_security
+            .matches("includeSubdomains=\"false\"")
+            .count(),
+        2
+    );
+    assert!(!network_security.contains("includeSubdomains=\"true\""));
+}

@@ -5,6 +5,7 @@
 use crate::components::sidebar::source_control::commit_actions::CommitActions;
 use crate::components::sidebar::source_control::commit_controller::use_commit_controller;
 use crate::components::sidebar::source_control::commit_message_box::CommitMessageBox;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::{ChatContext, SourceControlContext};
 use crate::i18n::Locale;
 use leptos::prelude::*;
@@ -15,6 +16,15 @@ pub fn Commit() -> impl IntoView {
     let chat_ctx = expect_context::<ChatContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let controller = use_commit_controller(core, chat_ctx, locale);
+    let ui_back = expect_context::<UiBackCoordinator>();
+    let dropdown_open_for_back = controller.dropdown_open;
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if dropdown_open_for_back.try_get_untracked() == Some(true) {
+            dropdown_open_for_back.set(false);
+            return true;
+        }
+        false
+    });
 
     view! {
         <div class="border-t border-default px-2 py-2">

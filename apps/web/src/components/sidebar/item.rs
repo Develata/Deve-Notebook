@@ -98,11 +98,10 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     is_expanded=is_expanded
                 />
                 <span class="truncate flex-1">{node.name.clone()}</span>
-                // Actions (Visible on Hover via Opacity)
+                // Actions remain visible across touch, keyboard, and pointer ports.
                 <crate::components::sidebar::components::ItemActions
                     is_folder=is_folder
                     is_readonly=is_readonly
-                    is_menu_open=is_menu_open
                     on_menu=Callback::new(trigger_menu)
                     on_create=Callback::new(trigger_create)
                 />

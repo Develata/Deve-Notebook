@@ -8,6 +8,7 @@ use crate::api::{
     probe_auth_status_with_http_base, probe_node_role_for_http_base,
 };
 use crate::hooks::use_core::types::HandshakeSignals;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use leptos::prelude::GetUntracked;
 use leptos::task::spawn_local;
 use std::cell::{Cell, RefCell};
@@ -38,9 +39,8 @@ pub(super) fn mount_foreground_reprobe_listener(
     ws: WsService,
     signals: HandshakeSignals,
     last_mode: Rc<RefCell<Option<String>>>,
+    lifetime: BrowserRuntimeLifetime,
 ) {
-    use wasm_bindgen::{JsCast, closure::Closure};
-
     let Some(window) = web_sys::window() else {
         return;
     };
@@ -50,26 +50,25 @@ pub(super) fn mount_foreground_reprobe_listener(
 
     let native_lifecycle_authority = current_native_platform_lifecycle_authority();
     let last_active = Rc::new(Cell::new(current_page_active()));
-    let mount_listener =
-        |target: &web_sys::EventTarget, event_name: &str, source: ForegroundReprobeSource| {
-            let ws = ws.clone();
-            let last_mode = last_mode.clone();
-            let last_active = last_active.clone();
-            let callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-                handle_page_activity_change(
-                    &ws,
-                    signals,
-                    &last_mode,
-                    &last_active,
-                    native_lifecycle_authority,
-                    source,
-                );
-            }) as Box<dyn FnMut(_)>);
-            let _ = target
-                .add_event_listener_with_callback(event_name, callback.as_ref().unchecked_ref());
-            // Web app 每页只持有一个 WsService；这里的监听器随页面生命周期存在。
-            callback.forget();
-        };
+    let mount_listener = |target: &web_sys::EventTarget,
+                          event_name: &'static str,
+                          source: ForegroundReprobeSource| {
+        let ws = ws.clone();
+        let last_mode = last_mode.clone();
+        let last_active = last_active.clone();
+        let event_lifetime = lifetime.clone();
+        lifetime.register_event_listener(target, event_name, move |_event| {
+            handle_page_activity_change(
+                &ws,
+                signals,
+                &last_mode,
+                &last_active,
+                native_lifecycle_authority,
+                source,
+                event_lifetime.clone(),
+            );
+        });
+    };
 
     if page_lifecycle_listeners_enabled(native_lifecycle_authority) {
         mount_listener(
@@ -81,33 +80,29 @@ pub(super) fn mount_foreground_reprobe_listener(
         mount_listener(window.as_ref(), "blur", ForegroundReprobeSource::PageFocus);
     }
 
-    let mount_native_listener = |event_name: &str, suspended: bool| {
+    let mount_native_listener = |event_name: &'static str, suspended: bool| {
         let ws = ws.clone();
         let last_mode = last_mode.clone();
         let last_active = last_active.clone();
-        let callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+        lifetime.register_event_listener(window.as_ref(), event_name, move |_event| {
             if suspended {
                 handle_native_suspend(&ws, signals, &last_mode, &last_active);
             } else {
                 handle_native_resume(&ws, signals, &last_mode, &last_active);
             }
-        }) as Box<dyn FnMut(_)>);
-        let _ =
-            window.add_event_listener_with_callback(event_name, callback.as_ref().unchecked_ref());
-        callback.forget();
+        });
     };
     mount_native_listener("deve-native-suspended", true);
     mount_native_listener("deve-native-resumed", false);
 
     let ws_error = ws.clone();
-    let error_callback = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-        handle_native_service_error(&ws_error, current_native_bootstrap_blocked_status());
-    }) as Box<dyn FnMut(_)>);
-    let _ = window.add_event_listener_with_callback(
+    lifetime.register_event_listener(
+        window.as_ref(),
         "deve-native-service-error",
-        error_callback.as_ref().unchecked_ref(),
+        move |_event| {
+            handle_native_service_error(&ws_error, current_native_bootstrap_blocked_status());
+        },
     );
-    error_callback.forget();
 }
 
 fn handle_native_service_error(ws: &WsService, projected_status: Option<ConnectionStatus>) {
@@ -125,6 +120,7 @@ fn handle_page_activity_change(
     last_active: &Cell<bool>,
     native_lifecycle_authority: bool,
     source: ForegroundReprobeSource,
+    lifetime: BrowserRuntimeLifetime,
 ) {
     let active = current_page_active();
     if apply_page_activity_transition(
@@ -136,7 +132,7 @@ fn handle_page_activity_change(
         active,
         source,
     ) {
-        spawn_foreground_reprobe(ws.clone());
+        spawn_foreground_reprobe(ws.clone(), lifetime);
     }
 }
 
@@ -214,9 +210,10 @@ fn handle_native_resume(
     last_active.set(true);
 }
 
-fn spawn_foreground_reprobe(ws: WsService) {
-    let endpoint = ws.endpoint.get_untracked();
-    let connection_epoch = ws.connection_epoch.get_untracked();
+fn spawn_foreground_reprobe(ws: WsService, lifetime: BrowserRuntimeLifetime) {
+    let Some((endpoint, connection_epoch)) = ws.active_endpoint_epoch() else {
+        return;
+    };
     if endpoint.trim().is_empty() {
         ws.fail_foreground_node_role_reprobe();
         return;
@@ -224,7 +221,14 @@ fn spawn_foreground_reprobe(ws: WsService) {
 
     let http_base = http_base_from_ws_url(&endpoint);
     spawn_local(async move {
-        match probe_auth_status_with_http_base(Some(&http_base)).await {
+        if !ws.is_active() {
+            return;
+        }
+        let auth_probe = probe_auth_status_with_http_base(Some(&http_base)).await;
+        if !lifetime.is_active() {
+            return;
+        }
+        match auth_probe {
             AuthProbe::Valid => {}
             AuthProbe::Invalid => {
                 ws.mark_unauthorized();
@@ -236,9 +240,13 @@ fn spawn_foreground_reprobe(ws: WsService) {
             }
         }
         let result = probe_node_role_for_http_base(http_base).await;
-        if ws.endpoint.get_untracked() != endpoint
-            || ws.connection_epoch.get_untracked() != connection_epoch
-        {
+        if !lifetime.is_active() {
+            return;
+        }
+        let Some((current_endpoint, current_connection_epoch)) = ws.active_endpoint_epoch() else {
+            return;
+        };
+        if current_endpoint != endpoint || current_connection_epoch != connection_epoch {
             return;
         }
         match result {

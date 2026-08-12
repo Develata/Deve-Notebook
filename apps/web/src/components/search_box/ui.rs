@@ -27,6 +27,8 @@ pub struct SearchOverlayView {
     pub set_selected_index: WriteSignal<usize>,
     pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
     pub input_ref: NodeRef<leptos::html::Input>,
+    pub panel_ref: NodeRef<leptos::html::Div>,
+    pub close_ref: NodeRef<leptos::html::Button>,
     pub runtime: SearchRuntime,
     pub locale: RwSignal<Locale>,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
@@ -47,6 +49,8 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
         set_selected_index,
         active_index,
         input_ref,
+        panel_ref,
+        close_ref,
         runtime,
         locale,
         set_recent_move_dirs,
@@ -55,7 +59,6 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
     let handle_keydown_closure = handle_keydown.clone();
     let active_index_closure = active_index.clone();
     let results_ref = NodeRef::<leptos::html::Div>::new();
-    let panel_ref = NodeRef::<leptos::html::Div>::new();
     let (touch_start_x, set_touch_start_x) = signal(0i32);
     let (touch_start_y, set_touch_start_y) = signal(0i32);
     let (touch_start_at, set_touch_start_at) = signal(0.0f64);
@@ -140,6 +143,9 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                         placeholder_text,
                         input_ref,
                         ui_mode,
+                        set_show,
+                        close_ref,
+                        locale,
                     )}
                     {ui_sections::results_panel(ui_sections::SearchResultsPanelView {
                         providers_results,

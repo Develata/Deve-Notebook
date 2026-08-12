@@ -9,6 +9,7 @@
 //! 从底部状态栏或分支切换器触发。
 
 use crate::components::focus_scope;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::SyncMergeContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -19,6 +20,14 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let panel_ref = NodeRef::<leptos::html::Div>::new();
     let close_button_ref = NodeRef::<leptos::html::Button>::new();
+    let ui_back = expect_context::<UiBackCoordinator>();
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if show.try_get_untracked() == Some(true) {
+            set_show.set(false);
+            return true;
+        }
+        false
+    });
     focus_scope::attach_modal_focus_restore_effect(move || show.get(), close_button_ref);
 
     let confirm_merge = move |_| {

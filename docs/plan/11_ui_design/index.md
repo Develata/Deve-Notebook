@@ -405,6 +405,18 @@ ChatSheetOpen
 - drawer 关闭必须清理 gesture capture。
 - 移动端的更多菜单、repo switcher 与 source control menu 必须是 typed button semantics，而不是普通 div 点击。
 
+### 5.3.1 Overlay Close / Back Coordination {#overlay-back-coordination}
+
+- command/search sheet、菜单、modal 与 drawer 的关闭必须进入 UI shell 唯一的 close transition；
+  `Escape`、外部点击、关闭手势和显式 `×` 只是同一 transition 的不同 intent source。
+- `UiBackCoordinator` 只拥有瞬态 presentation state，不得绕过 document pending-edit guard、repo writer
+  gate 或 backend authority。处理顺序固定为：最上层 overlay/menu/sheet，drawer/outline/panel，当前
+  diff/document surface 的受保护导航，最后 `Unhandled`。
+- native shell 的平台返回键必须发送带单调 request id 的 typed back request，并只接受同 id 的
+  `Handled` / `Unhandled` ack；迟到或重复 ack 必须丢弃。Android 仅在收到 `Unhandled` 时允许结束
+  Activity，ack 超时或 bridge failure 必须保持 Activity 存活并输出固定、无敏感信息的诊断类别。
+- `WebView.goBack()` 不得作为应用导航或 pending-edit guard 的替代。
+
 ### 5.4 Activity Bar / Menu State
 
 ```text
@@ -499,6 +511,14 @@ PinnedSetChanged
   - command palette trigger
 - 这三个入口最终必须映射到同一 `CommandId` / application control。
 - file tree context menu trigger 属于同一 command/control 投影；新增 action 时必须先进入 `ContextActionDescriptor`，再由具体 surface 过滤展示。
+
+### 7.6 Action Visibility Contract {#action-visibility-contract}
+
+- Explorer 的主创建动作与文档行 overflow 动作在 Web、Desktop、Mobile 上必须持续可见并预留稳定
+  布局宽度；hover/focus 只能改变颜色或强调态，不得决定控件是否存在或可见。
+- visibility 规则只属于共享 presentation policy；permission、capability、writer gate 与 disabled/hidden
+  业务语义仍由各自 application control 决定，不得因“常显”而扩大权限。
+- 触控 surface 上的动作必须满足最小 44×44 CSS px target，并保留 button/aria semantics。
 
 ## 8. Failure / Recovery
 

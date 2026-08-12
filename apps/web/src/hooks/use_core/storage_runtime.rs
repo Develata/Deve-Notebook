@@ -11,6 +11,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::state::CoreSignals;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 
 mod bootstrap;
 mod effect;
@@ -20,6 +21,7 @@ mod repo;
 /// 仅当 repo_id 是有效 UUID 时才执行，避免使用 "default" 等字符串。
 pub fn init_storage_runtime(
     signals: &CoreSignals,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> (
     ReadSignal<Option<StoredPeerIdentity>>,
     ReadSignal<VersionVector>,
@@ -39,6 +41,7 @@ pub fn init_storage_runtime(
             set_sync_banner,
             set_identity,
             set_repo_vector,
+            runtime_lifetime.clone(),
         );
     });
 

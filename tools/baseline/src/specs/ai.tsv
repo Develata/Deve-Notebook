@@ -130,3 +130,16 @@ contains	apps/web/src/components/settings_sections_policy/tests.rs	trusted_cli_d
 contains	apps/web/src/components/settings_sections_policy/tests.rs	ai_backend_buttons_disable_only_unavailable_backends
 contains	apps/web/src/components/settings_sections_policy/tests.rs	ai_backend_buttons_show_disabled_reason_only_for_disabled_native
 contains	apps/web/src/hooks/use_ai_backend.rs	backend: AI_BACKEND_NATIVE
+contains	docs/acceptance-cases/10_plugins.md	case_id: AI-010
+case_contains	docs/acceptance-cases/10_plugins.md	AI-010	cargo test -p deve_cli native_ai_builtin -- --nocapture
+case_contains	docs/acceptance-cases/10_plugins.md	AI-010	http_assert: native_available true
+case_contains	docs/acceptance-cases/10_plugins.md	AI-010	server_assert: ai_chat_plugin_not_found_absent true
+case_contains	docs/acceptance-cases/10_plugins.md	AI-010	cargo test -p deve_cli native_ai_disabled_omits_builtin_runtime -- --nocapture
+case_contains	docs/acceptance-cases/10_plugins.md	AI-010	cargo test -p deve_cli proxy_host_owns_builtin_ai_registration_for_its_lifetime -- --nocapture
+contains	apps/cli/src/commands/serve/support.rs	serve_loader_registers_builtin_ai_without_external_plugins
+contains	apps/cli/src/commands/serve/support.rs	serve_loader_rejects_explicit_external_ai_chat_duplicate
+contains	apps/cli/src/native_runtime.rs	native_ai_disabled_omits_builtin_runtime
+contains	apps/cli/src/server/plugin_host/mod.rs	proxy_host_owns_builtin_ai_registration_for_its_lifetime
+contains	apps/cli/src/server/ai_chat/builtin_runtime.rs	include_str!("../../../../../plugins/ai-chat/manifest.json")
+contains	apps/cli/src/server/ai_chat/builtin_runtime.rs	include_str!("../../../../../plugins/ai-chat/main.rhai")
+contains	apps/cli/src/server/agent_bridge/policy.rs	is_native_ai_runtime_registered()

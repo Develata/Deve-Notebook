@@ -7,6 +7,22 @@ use deve_core::graph::{GraphNode, GraphProjection};
 use deve_core::models::DocId;
 
 #[test]
+fn graph_completion_checks_owner_before_projection_signals() {
+    let source = include_str!("../graph_panel.rs");
+    let completion = source
+        .find("fetch_graph_projection(repo_id.clone()).await")
+        .unwrap();
+    let guard = source[completion..]
+        .find("!runtime_lifetime.is_active()")
+        .unwrap();
+    let access = source[completion..]
+        .find("expanded.get_untracked()")
+        .unwrap();
+
+    assert!(guard < access);
+}
+
+#[test]
 fn graph_panel_copy_handles_all_fetch_states() {
     for state in [
         GraphProjectionFetchState::Idle,

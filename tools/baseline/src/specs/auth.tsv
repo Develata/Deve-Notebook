@@ -128,3 +128,20 @@ contains	apps/web/src/api/auth_probe.rs	matches!(status, 401 | 403) || has_auth_
 contains	apps/web/src/api/connection.rs	try_set_connection_status(&signals, ConnectionStatus::Unauthorized)
 contains	apps/web/src/api/connection.rs	set_status_and_revoke_writer_ready(
 contains	apps/web/src/components/disconnect_overlay.rs	ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-018
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	cargo test -p deve_web browser_runtime_lifetime -- --nocapture
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	cargo test -p deve_web logout_projection -- --nocapture
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	ui_assert: bundled_local_backend_logout_hidden true
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	ui_assert: component_listeners_removed_on_cleanup true
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	ui_assert: component_timers_cancelled_on_cleanup true
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-018	ui_assert: late_async_generation_rejected true
+contains	apps/web/src/runtime/browser_runtime_lifetime.rs	remove_event_listener_with_callback
+contains	apps/web/src/runtime/browser_runtime_lifetime.rs	late_async_completion_is_rejected_before_disposed_signal_access
+contains	apps/web/src/runtime/browser_runtime_lifetime.rs	child_scope_retires_with_child_owner_while_root_remains_active
+contains	apps/web/src/runtime/browser_runtime_lifetime.rs	child_scope_rejects_completion_when_root_retires
+contains	apps/web/src/runtime/browser_runtime_lifetime.rs	timeout.cancel()
+contains	apps/web/src/hooks/use_ai_backend.rs	capability_completion_checks_owner_before_signal_write
+contains	apps/web/src/components/chat/actions/send/tests.rs	chat_capability_completion_checks_owner_before_context_access
+contains	apps/web/src/components/sidebar/source_control/commit_ai/backend_tests.rs	commit_ai_completion_checks_owner_before_signal_runner
+contains	apps/web/src/components/sidebar/source_control/graph_panel/tests.rs	graph_completion_checks_owner_before_projection_signals
+contains	apps/web/src/runtime/session_client/mod.rs	Self::BundledLocalBackend

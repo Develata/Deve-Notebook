@@ -143,3 +143,18 @@ fn bounded_history_limits_message_count() {
     assert_eq!(history[0]["content"], "m4");
     assert_eq!(history[7]["content"], "m11");
 }
+#[test]
+fn chat_capability_completion_checks_owner_before_context_access() {
+    let source = include_str!("../send.rs");
+    let completion = source
+        .find("fetch_ai_backend_capabilities().await")
+        .unwrap();
+    let guard = source[completion..]
+        .find("!runtime_lifetime.is_active()")
+        .unwrap();
+    let access = source[completion..]
+        .find("runtime_for_send.chat.ai_mode.get_untracked()")
+        .unwrap();
+
+    assert!(guard < access);
+}

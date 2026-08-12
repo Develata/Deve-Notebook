@@ -101,6 +101,10 @@ pub fn mobile_insert_text(text: &str) {
     let _ = bridge_call1("mobileInsertText", &JsValue::from_str(text));
 }
 
+pub fn mobile_insert_task_item() {
+    let _ = bridge_call0("mobileInsertTaskItem");
+}
+
 pub fn mobile_wrap_selection(prefix: &str, suffix: &str) {
     let prefix = JsValue::from_str(prefix);
     let suffix = JsValue::from_str(suffix);
@@ -182,6 +186,7 @@ mod tests {
         assert!(source.contains("bridge_call1(\"applyRemoteOpsBatch\""));
         assert!(source.contains("bridge_call0(\"syncEditorStateToRust\""));
         assert!(source.contains("bridge_call1(\"mobileInsertText\""));
+        assert!(source.contains("bridge_call0(\"mobileInsertTaskItem\""));
         assert!(source.contains("bridge_call2(\"mobileWrapSelection\""));
         assert!(source.contains("fn bridge_call3("));
         assert!(source.contains("bridge_call0(\"mobileUndo\""));
@@ -200,6 +205,7 @@ mod tests {
             "applyRemoteOpsBatch",
             "syncEditorStateToRust",
             "mobileInsertText",
+            "mobileInsertTaskItem",
             "mobileWrapSelection",
             "mobileUndo",
             "mobileRedo",

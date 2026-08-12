@@ -7,6 +7,7 @@
 
 use crate::components::icons::{Book, Home, Terminal};
 use crate::i18n::{Locale, t};
+use crate::runtime::session_client::SessionPresentationPolicy;
 use leptos::prelude::*;
 
 pub(super) fn topbar_button_class() -> &'static str {
@@ -23,6 +24,7 @@ pub fn MobileHeader(
     on_logout: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let show_logout = SessionPresentationPolicy::current().show_logout();
     view! {
         <div
             class="flex items-center justify-between px-2 py-1 bg-panel border-b border-default"
@@ -73,16 +75,18 @@ pub fn MobileHeader(
                 >
                     <Terminal class="w-[18px] h-[18px]"/>
                 </button>
-                <button
-                    type="button"
-                    data-deve-mobile-touch-target="topbar_buttons"
-                    class=topbar_button_class()
-                    title=move || t::header::logout(locale.get())
-                    aria-label=move || t::header::logout(locale.get())
-                    on:click=move |_| on_logout.run(())
-                >
-                    {move || t::header::logout(locale.get())}
-                </button>
+                {show_logout.then(|| view! {
+                    <button
+                        type="button"
+                        data-deve-mobile-touch-target="topbar_buttons"
+                        class=topbar_button_class()
+                        title=move || t::header::logout(locale.get())
+                        aria-label=move || t::header::logout(locale.get())
+                        on:click=move |_| on_logout.run(())
+                    >
+                        {move || t::header::logout(locale.get())}
+                    </button>
+                })}
             </div>
         </div>
     }

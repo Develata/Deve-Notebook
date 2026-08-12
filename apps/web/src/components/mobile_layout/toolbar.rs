@@ -56,7 +56,7 @@ pub fn MobileAccessoryToolbar(
         run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("- "));
     });
     let on_task = Callback::new(move |_| {
-        run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("- [ ] "));
+        run_mobile_toolbar_action(readonly, ffi::mobile_insert_task_item);
     });
     let on_bold = Callback::new(move |_| {
         run_mobile_toolbar_action(readonly, || ffi::mobile_wrap_selection("**", "**"));

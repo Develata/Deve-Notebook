@@ -9,7 +9,7 @@ use leptos::prelude::{Set, signal};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use super::super::connection::ConnectionControl;
+use super::super::connection::{ConnectionControl, ConnectionLifecycle};
 use super::{ConnectionStatus, WsService};
 use crate::api::WatcherHealthSnapshot;
 
@@ -47,6 +47,7 @@ impl WsService {
         let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
 
         Self {
+            lifecycle: ConnectionLifecycle::new(),
             status,
             set_status,
             writer_ready_repo_id,

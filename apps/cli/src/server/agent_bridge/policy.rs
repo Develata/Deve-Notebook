@@ -46,15 +46,30 @@ impl AgentBridgePolicy {
     }
 
     pub fn capabilities(&self) -> AgentBridgeCapabilities {
+        self.capabilities_with_registration(
+            crate::server::ai_chat::is_native_ai_runtime_registered(),
+        )
+    }
+
+    pub(crate) fn capabilities_with_registration(
+        &self,
+        native_runtime_registered: bool,
+    ) -> AgentBridgeCapabilities {
         let trusted_cli_reason = self.spawn_path().err();
         let trusted_cli_available = trusted_cli_reason.is_none();
-        let native_reason =
-            (!self.native_enabled).then(|| "native AI disabled by config".to_string());
+        let native_available = self.native_enabled && native_runtime_registered;
+        let native_reason = if !self.native_enabled {
+            Some("native AI disabled by config".to_string())
+        } else if !native_runtime_registered {
+            Some("native AI runtime unavailable".to_string())
+        } else {
+            None
+        };
         let (effective_backend, effective_backend_reason) = if self.requested_mode == "trusted-cli"
         {
             if trusted_cli_available {
                 ("trusted-cli".to_string(), None)
-            } else if self.native_enabled {
+            } else if native_available {
                 ("native".to_string(), trusted_cli_reason.clone())
             } else {
                 (
@@ -66,17 +81,14 @@ impl AgentBridgePolicy {
                     ),
                 )
             }
-        } else if self.native_enabled {
+        } else if native_available {
             ("native".to_string(), None)
         } else {
-            (
-                "none".to_string(),
-                Some("native AI disabled by config".to_string()),
-            )
+            ("none".to_string(), native_reason.clone())
         };
 
         AgentBridgeCapabilities {
-            native_available: self.native_enabled,
+            native_available,
             native_reason,
             trusted_cli_available,
             trusted_cli_reason,

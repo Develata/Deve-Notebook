@@ -104,6 +104,12 @@
 - 仅在按住 `Ctrl/Cmd` 时，链接才转为可点击状态。
 - 细粒度操作示例：[`operations/rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md)
 
+### 7.1 移动任务项输入
+
+- 点击移动工具栏的任务项按钮后，第一次按 Enter 应继续生成下一条空任务项，而不是删除当前行。
+- 再次在未填写的新空任务项上按 Enter 时，仍按标准 Markdown 列表语义退出列表。
+- 该行为不得向文档写入不可见字符，也不得改变键盘输入创建的普通空任务项行为。
+
 ### 8. 长文档体验
 
 - 本功能篇只验收批量应用与渐进调度基础设施，不宣称完整 virtual rendering。

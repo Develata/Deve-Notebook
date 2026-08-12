@@ -31,6 +31,7 @@ mod toolbar;
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::main_layout::SearchControl;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::editor::ffi::try_get_editor_content;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::Locale;
@@ -73,6 +74,7 @@ pub fn MobileLayout(
     let source_control_for_drawer = source_control_context.clone();
     let source_control_for_active_view = source_control_context.clone();
     let search_control = expect_context::<SearchControl>();
+    let ui_back = expect_context::<UiBackCoordinator>();
 
     let title = build_mobile_title(document.clone());
     let (content_signal, set_outline_content) = resolve_content_signal();
@@ -113,6 +115,24 @@ pub fn MobileLayout(
     );
 
     let on_doc_select = build_doc_select_callback(document.on_doc_select, close_drawers);
+
+    ui_back.register(UiBackLayer::TransientSheet, move || {
+        if chat_expanded.try_get_untracked() == Some(true) {
+            set_chat_expanded.set(false);
+            return true;
+        }
+        false
+    });
+    ui_back.register(UiBackLayer::Drawer, move || {
+        let sidebar_open = show_sidebar.try_get_untracked() == Some(true);
+        let outline_open = show_outline.try_get_untracked() == Some(true);
+        if sidebar_open || outline_open {
+            set_show_sidebar.set(false);
+            set_show_outline.set(false);
+            return true;
+        }
+        false
+    });
 
     apply_body_scroll_lock(drawer_open);
     apply_visual_viewport_offset(set_keyboard_offset);

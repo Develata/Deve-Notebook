@@ -2,7 +2,7 @@
 //!   - 07_network#web-ws-runtime
 //!
 #[cfg(not(all(test, not(target_arch = "wasm32"))))]
-use gloo_timers::callback::Timeout;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use leptos::prelude::*;
 
 pub(crate) fn show_sync_banner(set_sync_banner: WriteSignal<Option<String>>, message: String) {
@@ -22,12 +22,12 @@ pub(crate) fn show_temporary_sync_banner(
     set_sync_banner.set(Some(message.clone()));
     #[cfg(not(all(test, not(target_arch = "wasm32"))))]
     {
-        Timeout::new(1800, move || {
-            if sync_banner.get_untracked().as_deref() == Some(message.as_str()) {
-                set_sync_banner.set(None);
+        let runtime_lifetime = expect_context::<BrowserRuntimeLifetime>();
+        runtime_lifetime.schedule_timeout(1800, move || {
+            if sync_banner.try_get_untracked().flatten().as_deref() == Some(message.as_str()) {
+                let _ = set_sync_banner.try_set(None);
             }
-        })
-        .forget();
+        });
     }
     #[cfg(all(test, not(target_arch = "wasm32")))]
     let _ = sync_banner;

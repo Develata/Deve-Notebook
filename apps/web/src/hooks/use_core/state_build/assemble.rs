@@ -6,6 +6,7 @@ use crate::api::{ExternalChangesMutationError, WsService};
 use crate::i18n::{Locale, t};
 use crate::runtime::{
     CoreRuntimeClients,
+    browser_runtime_lifetime::BrowserRuntimeLifetime,
     document_client::DocumentClient,
     external_changes_client::{
         ExternalChangesClient, ExternalChangesHttpScope,
@@ -37,6 +38,7 @@ pub(super) fn assemble_core_state(
     switch: SwitchCallbacks,
     locale: RwSignal<Locale>,
     repo_control: RepoControlClient,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) -> CoreState {
     let on_retry_peer_registration = build_retry_peer_registration_callback(
         ws.clone(),
@@ -89,12 +91,14 @@ pub(super) fn assemble_core_state(
         set_external_staged_changes,
         set_external_unstaged_changes,
         external_changes_error.clone(),
+        runtime_lifetime.clone(),
     );
     let external_changes_mutations = create_external_changes_mutation_callbacks(
         external_changes_scope,
         ws.clone(),
         external_changes_refresh.clone(),
         external_changes_error,
+        runtime_lifetime,
     );
     let remote_import = RemoteImportClient::new(
         ws.clone(),

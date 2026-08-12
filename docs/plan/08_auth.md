@@ -62,7 +62,7 @@ LoggedOut
   -> SessionExpired | LoggedOut
 ```
 
-### 3.2 Browser Auth State
+### 3.2 Browser Auth State {#browser-auth-state}
 
 ```text
 Unknown
@@ -76,6 +76,10 @@ Unknown
 - `Unauthorized` 不得退化成普通断网态。
 - `/api/auth/status` 是安静 session probe，不得承担 peer identity 探测职责。
 - `/api/auth/me` 只返回当前 user/session payload，不用于首屏未登录探测。
+- Browser session runtime 必须拥有 MainLayout/use_core 范围内的全局监听器、timer 与异步完成；owner
+  cleanup 必须先移除监听器、取消 timer 并使 generation/lifetime token 失效，之后才能释放响应式状态。
+- 任一迟到异步完成必须先验证 owner generation；不得访问已 dispose signal，也不得用 `forget()`
+  延长 component-scoped callback 的寿命。
 
 ### 3.3 WS Entry Auth
 
@@ -415,6 +419,17 @@ provider/session/Ledger/removal owner I/O前返回既有结构化`AUTH_*`结果�
   - 撤销当前连接派生的写态
   - 允许自动重连
   - 重连后重新执行 session probe + repo handshake
+
+### 9.5 Mode-aware Logout Projection {#mode-aware-logout-projection}
+
+- Web 与 RemoteBrowser 的用户会话支持真实 logout：清除当前 browser auth cookie、撤销写态并进入
+  `LoggedOut` / `Unauthorized` 投影。
+- bundled native `LocalBackend` 使用一次性 native session handoff；在 typed session rotation 或本地锁定
+  恢复路径完成前，v0.1 shell 必须隐藏通用“退出登录”，不得只清 cookie 后把当前 WebView 留在不可恢复态。
+- 该投影必须由可信 bundled-local runtime marker/typed bootstrap 决定，不得通过 viewport、user agent、
+  localhost URL 或 `__TAURI_INTERNALS__` 猜测。
+- 隐藏 logout 只改变 shell presentation，不延长 session 权威；真实 session expiry/invalid 仍必须撤销
+  writer-ready、清理 browser runtime owner 并进入 fail-closed recovery surface。
 
 ## 10. Forbidden Patterns
 

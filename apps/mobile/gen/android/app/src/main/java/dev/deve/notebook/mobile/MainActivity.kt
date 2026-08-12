@@ -24,10 +24,17 @@ class MainActivity : TauriActivity() {
   }
 
   private var useLocalBackendButton: Button? = null
+  private val uiBackDispatcher = UiBackDispatcher(this)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    uiBackDispatcher.install()
+  }
+
+  override fun onWebViewCreate(webView: WebView) {
+    super.onWebViewCreate(webView)
+    uiBackDispatcher.attach(webView)
   }
 
   fun installUseLocalBackendControl(): Boolean {
@@ -160,14 +167,19 @@ class MainActivity : TauriActivity() {
 
   private fun completeNativeSessionCookieInstall(requestId: Long, completion: Int) {
     val category = when (completion) {
-      NATIVE_COOKIE_RETAINED -> null
+      NATIVE_COOKIE_RETAINED -> "android_native_cookie_retained"
       NATIVE_COOKIE_REJECTED -> "android_native_cookie_callback_rejected"
       NATIVE_COOKIE_NOT_RETAINED -> "android_native_cookie_not_retained"
       NATIVE_COOKIE_VERIFICATION_FAILED -> "android_native_cookie_verification_failed"
       NATIVE_COOKIE_SETUP_FAILED -> "android_native_cookie_jni_setup_failed"
       else -> "android_native_cookie_callback_invalid"
     }
-    if (category != null) {
+    if (completion == NATIVE_COOKIE_RETAINED) {
+      Log.i(
+        NATIVE_COOKIE_LOG_TAG,
+        "deve_mobile native session cookie checkpoint: $category",
+      )
+    } else {
       Log.e(
         NATIVE_COOKIE_LOG_TAG,
         "deve_mobile native session cookie handoff failed closed: $category",

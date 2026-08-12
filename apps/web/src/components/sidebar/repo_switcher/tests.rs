@@ -6,7 +6,8 @@ use super::logic::{
     repo_switcher_create_input_marker, repo_switcher_item_marker, repo_switcher_menu_marker,
     repo_switcher_remove_button_marker, repo_switcher_rename_button_marker,
     repo_switcher_rename_input_marker, repo_switcher_row_is_active, repo_switcher_row_is_renaming,
-    repo_switcher_rows, repo_switcher_switch_target, repo_switcher_trigger_marker,
+    repo_switcher_rows, repo_switcher_should_reset_transient_state, repo_switcher_switch_target,
+    repo_switcher_trigger_marker,
 };
 use deve_core::protocol::{RepoListEntry, RepoReadiness};
 
@@ -59,6 +60,12 @@ fn repo_switcher_outside_click_closes_menu() {
 #[test]
 fn repo_switcher_item_click_closes_menu() {
     assert!(!repo_switcher_after_item_click());
+}
+
+#[test]
+fn repo_switcher_closed_projection_retires_all_transient_state() {
+    assert!(repo_switcher_should_reset_transient_state(false));
+    assert!(!repo_switcher_should_reset_transient_state(true));
 }
 
 #[test]

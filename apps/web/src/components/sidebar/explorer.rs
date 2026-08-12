@@ -10,6 +10,7 @@
 
 use crate::api::{copy_host_file_absolute_path_to_clipboard, reveal_host_file_in_system_explorer};
 use crate::components::sidebar::types::FileActionsContext;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::context_action::{ContextActionReadiness, ContextActionScope};
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_core::{DocContext, EditorContext};
@@ -102,6 +103,15 @@ pub fn ExplorerView(
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
     let (menu_anchor, set_menu_anchor) = signal(None::<AnchorRect>);
+    let ui_back = expect_context::<UiBackCoordinator>();
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if active_menu.try_get_untracked().flatten().is_some() {
+            set_active_menu.set(None);
+            set_menu_anchor.set(None);
+            return true;
+        }
+        false
+    });
 
     // 回调函数
     let search_control = expect_context::<crate::components::main_layout::SearchControl>();

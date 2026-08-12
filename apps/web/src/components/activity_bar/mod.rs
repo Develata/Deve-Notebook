@@ -12,6 +12,7 @@ mod types;
 pub use types::SidebarView;
 
 use crate::components::icons::MoreHorizontal;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer, close_signal_projection};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use popup_menu::{ViewPopupMenu, activity_more_after_item_click, toggle_activity_more_pin};
@@ -30,6 +31,9 @@ pub fn ActivityBar(
     let (show_more, set_show_more) = signal(false);
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let search_control = expect_context::<crate::components::main_layout::SearchControl>();
+    expect_context::<UiBackCoordinator>().register(UiBackLayer::Overlay, move || {
+        close_signal_projection(show_more, set_show_more)
+    });
 
     let backdrop = move || {
         if show_more.get() {

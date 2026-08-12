@@ -50,6 +50,7 @@ use self::graph_panel::GraphPanel;
 use self::header::SourceControlHeader;
 use self::history::History;
 use self::status_notice::StatusNotice;
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::{
     SourceControlContext,
     source_control_notice::{SourceControlNotice, is_local_command_notice},
@@ -79,6 +80,14 @@ pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) 
     let show_history = RwSignal::new(true);
 
     let show_menu = RwSignal::new(false);
+    let ui_back = expect_context::<UiBackCoordinator>();
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if show_menu.try_get_untracked() == Some(true) {
+            show_menu.set(false);
+            return true;
+        }
+        false
+    });
 
     Effect::new(move |_| {
         let notice = notice_guard.notice.get();

@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::runtime::browser_runtime_lifetime::BrowserRuntimeLifetime;
 use leptos::prelude::Get;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -22,6 +23,7 @@ pub(super) fn run_connected_handshake_cycle(
     signals: HandshakeSignals,
     last_mode: &Rc<RefCell<Option<String>>>,
     handshake_attempt: &Rc<Cell<u64>>,
+    runtime_lifetime: BrowserRuntimeLifetime,
 ) {
     let maybe_mode = signals.degraded.get();
     let maybe_identity = signals.identity.get();
@@ -105,5 +107,6 @@ pub(super) fn run_connected_handshake_cycle(
         branch,
         current_scope_nonce,
         should_restore,
+        runtime_lifetime,
     });
 }

@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-selector-resolution-contract
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
+use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
 use crate::hooks::use_core::BranchContext;
 use crate::i18n::Locale;
 use deve_core::models::RepoId;
@@ -18,6 +19,7 @@ mod trigger;
 #[cfg(test)]
 mod tests;
 
+use self::logic::repo_switcher_should_reset_transient_state;
 use self::menu::RepoSwitcherMenu;
 use self::removal_dialog::RepoRemovalDialog;
 use self::trigger::RepoSwitcherTrigger;
@@ -33,6 +35,23 @@ pub fn RepoSwitcher() -> impl IntoView {
     let (renaming_repo, set_renaming_repo) = signal(None::<RepoId>);
     let (rename_name, set_rename_name) = signal(String::new());
     let trigger_ref = NodeRef::<leptos::html::Button>::new();
+    let ui_back = expect_context::<UiBackCoordinator>();
+    Effect::new(move |_| {
+        if repo_switcher_should_reset_transient_state(show_menu.get()) {
+            set_show_create.set(false);
+            set_repo_name.set(String::new());
+            set_action_repo.set(None);
+            set_renaming_repo.set(None);
+            set_rename_name.set(String::new());
+        }
+    });
+    ui_back.register(UiBackLayer::Overlay, move || {
+        if show_menu.try_get_untracked() == Some(true) {
+            set_show_menu.set(false);
+            return true;
+        }
+        false
+    });
 
     view! {
         <div class="relative">

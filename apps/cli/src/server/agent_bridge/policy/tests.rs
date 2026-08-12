@@ -88,7 +88,7 @@ fn trusted_cli_untrusted_policy_falls_back_to_native_without_spawn_path() {
         "trusted mode required"
     );
 
-    let capabilities = policy.capabilities();
+    let capabilities = policy.capabilities_with_registration(true);
     assert!(capabilities.native_available);
     assert!(!capabilities.trusted_cli_available);
     assert_eq!(
@@ -241,7 +241,7 @@ fn capabilities_fall_back_to_native_when_trusted_cli_is_unavailable() {
         timeout_ms: 30_000,
     };
 
-    let capabilities = policy.capabilities();
+    let capabilities = policy.capabilities_with_registration(true);
 
     assert!(capabilities.native_available);
     assert!(!capabilities.trusted_cli_available);
@@ -263,7 +263,7 @@ fn capabilities_report_no_backend_when_native_and_trusted_cli_are_unavailable() 
         timeout_ms: 30_000,
     };
 
-    let capabilities = policy.capabilities();
+    let capabilities = policy.capabilities_with_registration(true);
 
     assert!(!capabilities.native_available);
     assert!(!capabilities.trusted_cli_available);
@@ -271,6 +271,31 @@ fn capabilities_report_no_backend_when_native_and_trusted_cli_are_unavailable() 
     assert_eq!(
         capabilities.native_reason.as_deref(),
         Some("native AI disabled by config")
+    );
+}
+
+#[test]
+fn capabilities_report_runtime_unavailable_when_registration_is_missing() {
+    let policy = AgentBridgePolicy {
+        enabled: false,
+        trusted: false,
+        native_enabled: true,
+        requested_mode: "native".to_string(),
+        cli_path: None,
+        timeout_ms: 30_000,
+    };
+
+    let capabilities = policy.capabilities_with_registration(false);
+
+    assert!(!capabilities.native_available);
+    assert_eq!(capabilities.effective_backend, "none");
+    assert_eq!(
+        capabilities.native_reason.as_deref(),
+        Some("native AI runtime unavailable")
+    );
+    assert_eq!(
+        capabilities.effective_backend_reason.as_deref(),
+        Some("native AI runtime unavailable")
     );
 }
 
@@ -289,7 +314,7 @@ fn capabilities_do_not_promote_native_mode_to_trusted_cli_when_native_is_disable
         timeout_ms: 30_000,
     };
 
-    let capabilities = policy.capabilities();
+    let capabilities = policy.capabilities_with_registration(true);
 
     assert!(!capabilities.native_available);
     assert!(capabilities.trusted_cli_available);
@@ -312,7 +337,7 @@ fn capabilities_keep_requested_trusted_cli_reason_when_policy_blocks_it() {
         timeout_ms: 30_000,
     };
 
-    let capabilities = policy.capabilities();
+    let capabilities = policy.capabilities_with_registration(true);
 
     assert!(capabilities.native_available);
     assert!(!capabilities.trusted_cli_available);
