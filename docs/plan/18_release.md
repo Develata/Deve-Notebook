@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-08-10`
+- `Last Review`: `2026-08-12`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -236,6 +236,11 @@ admission 或 APK install 前，从 owned emulator 的有界日志解析唯一�
 compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的
 旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
 真实 package build 前失败。
+
+Linux-hosted Android target-host diagnostics 在执行 Mobile `native-packaging` 宿主测试前，必须显式
+安装当前 Tauri/Wry 编译链要求的 GTK3、WebKitGTK 4.1 与 Rsvg 开发依赖。该依赖物化只服务于
+compile/test gate，不得被解释为恢复 Linux Desktop artifact，也不得通过关闭 Mobile
+`native-packaging` 测试来绕过缺失的 runner dependency。
 
 Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、单次 DOM probe 与诊断读取
 限制为短时单命令窗口，并在命令超时后移除 pending waiter、关闭旧连接后重试。健康且仍可响应

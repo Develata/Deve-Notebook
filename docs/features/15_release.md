@@ -110,6 +110,7 @@
 - 矩阵允许诚实显示 PVR、候选交付面 receipts 与 Android signing target-host evidence 等 blocker；版本、release set 与 v0.1.0 CHANGELOG 已由 typed freeze registry 关闭。PVR 只能由对精确 GitHub 仓库执行只读 GET、严格接受 `{"enabled":true}` 的 current-HEAD producer receipt 关闭；SBOM/checksum/provenance 只能由 exact candidate producer receipt 关闭，不能改成 source-ref。未登记 gap 必须阻止正式 tag；唯一 STORE-016 accepted gap 仍在矩阵中保持 required/gap，并由公开 known limitation 投影。
 - Receipt 同时绑定 evidence locator、surface/mode、target OS 与命令前后 clean HEAD；平台 producer/聚合尚未闭环时，tag workflow 必须在任何公开发布前明确失败。producer 超时清理必须只终止经隔离校验的 child process group，不能误伤 CI runner 或宿主父进程组；主动脱离该 group 的宿主资源必须预先登记 ownership 并由显式 finally step 回收，Windows tree cleanup 未验证成功时也必须 fail-closed。
 - 普通 CI 必须实际执行 producer registry 中全部适用的 required test/script evidence，不能只打印 plan；候选聚合 workflow 必须验证显式 source run 与当前 HEAD 相同，Rust collector/tag-ready 通过后，tag workflow 才能进入任何公开发布步骤。
+- Android target-host 的 Linux runner 在执行 Mobile `native-packaging` 宿主测试前，必须准备 GTK3、WebKitGTK 4.1 与 Rsvg 开发依赖；这些包只证明测试可编译，不代表 Linux Desktop artifact 已恢复，也不能用跳过该宿主测试替代依赖安装。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 
 ## 非目标

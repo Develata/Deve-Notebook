@@ -245,6 +245,7 @@
     - release_assert: trunk_dev_index_not_served_as_release_frontend true
     - release_assert: api_only_does_not_prove_embedded_frontend_health true
     - release_assert: target_host_platform_evidence_runtime_boundary_current true
+    - dependency_assert: android_target_host_installs_linux_native_packaging_build_dependencies_before_process_gate true
     - release_assert: android_emulator_settings_provider_readiness_precedes_install true
     - release_assert: android_emulator_guest_service_readiness_requires_stable_window true
     - release_assert: android_emulator_binder_epipe_exit_224_is_exact_signature_bound true
