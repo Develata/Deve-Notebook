@@ -822,6 +822,8 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	TARGET_H
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	sign-mobile-android-target-host-release-apk.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minified release startup ok
 before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minified release startup ok	smoke-mobile-android-lifecycle.sh
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	debug CDP journey begin
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	export DEVE_MOBILE_ANDROID_APK_PATH="$DEBUG_APK"
 contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral-diagnostic
 contains	docs/registry/acceptance-producers.json	scripts/sign-mobile-android-target-host-release-apk.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
@@ -909,6 +911,8 @@ contains	scripts/lib/android-install-retry.sh	retryable_android_settings_provide
 contains	scripts/android-install-retry.test.sh	run_case package-recover 0 2
 contains	scripts/android-install-retry.test.sh	guest-service admission failed: package-manager=unavailable status=124
 contains	scripts/android-install-retry.test.sh	verify_admission_log_failure_preserves_status
+contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case retired 0
+contains	scripts/android-install-retry.test.sh	verify_cleanup_status_precedence
 contains	scripts/android-install-retry.test.sh	run_case settings-readiness-recover 0 2
 contains	scripts/lib/android-tools.sh	android_boot_properties_complete()
 contains	scripts/lib/android-tools.sh	if sdk="$(android_sdk_root)"; then

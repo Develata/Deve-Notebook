@@ -84,8 +84,46 @@ require_app_running_after_launch() {
 }
 
 cleanup() {
+  local package_listing=""
+  local launcher_resolution=""
+  local process_listing=""
+
   [[ "$UNINSTALL_AFTER" == "1" ]] || return 0
-  adb_timed uninstall "$APP_ID" >/dev/null 2>&1 || true
+  adb_timed uninstall "$APP_ID" >/dev/null 2>&1 \
+    || { echo "mobile-android-install-startup-smoke-check: Android package uninstall failed: $APP_ID" >&2; return 1; }
+
+  package_listing="$(adb_timed shell pm list packages "$APP_ID" 2>/dev/null | tr -d '\r')" \
+    || { echo "mobile-android-install-startup-smoke-check: Android package retirement probe failed: $APP_ID" >&2; return 1; }
+  if printf '%s\n' "$package_listing" | grep -Fxq "package:$APP_ID"; then
+    echo "mobile-android-install-startup-smoke-check: Android package remained installed after cleanup: $APP_ID" >&2
+    return 1
+  fi
+
+  launcher_resolution="$(adb_timed shell cmd package resolve-activity --brief \
+    -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$APP_ID" 2>/dev/null | tr -d '\r')" \
+    || { echo "mobile-android-install-startup-smoke-check: Android launcher retirement probe failed: $APP_ID" >&2; return 1; }
+  if [[ -n "$launcher_resolution" && "$launcher_resolution" != "No activity found" ]]; then
+    echo "mobile-android-install-startup-smoke-check: Android launcher remained resolvable after cleanup: $APP_ID" >&2
+    return 1
+  fi
+
+  process_listing="$(adb_timed shell ps -A 2>/dev/null | tr -d '\r')" \
+    || { echo "mobile-android-install-startup-smoke-check: Android process retirement probe failed: $APP_ID" >&2; return 1; }
+  if printf '%s\n' "$process_listing" | awk -v app="$APP_ID" '$NF == app { found = 1 } END { exit !found }'; then
+    echo "mobile-android-install-startup-smoke-check: Android app process remained after cleanup: $APP_ID" >&2
+    return 1
+  fi
+}
+
+cleanup_on_exit() {
+  local status=$?
+  local cleanup_status=0
+  trap - EXIT
+  cleanup || cleanup_status=$?
+  if (( status != 0 )); then
+    exit "$status"
+  fi
+  exit "$cleanup_status"
 }
 
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
@@ -116,7 +154,7 @@ fi
 
 run adb_timed start-server
 run adb_timed wait-for-device
-trap cleanup EXIT
+trap cleanup_on_exit EXIT
 
 run install_apk
 android_startup_diagnostics_prepare "$APP_ID"

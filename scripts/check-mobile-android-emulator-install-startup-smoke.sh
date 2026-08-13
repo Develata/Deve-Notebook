@@ -27,6 +27,7 @@ LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android
 ANDROID_BUILD_TOOLS_VERSION="${DEVE_MOBILE_ANDROID_BUILD_TOOLS_VERSION:-36.0.0}"
 TARGET_HOST_RELEASE_UNSIGNED_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
 TARGET_HOST_RELEASE_APK="$LOG_DIR/app-universal-release-target-host-test-signed.apk"
+DEBUG_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
 OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
 JOURNEY="${DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local}"
@@ -521,30 +522,27 @@ echo "mobile-android-emulator-install-startup-smoke-check: minified release star
 rm -f -- "$TARGET_HOST_RELEASE_APK" "${TARGET_HOST_RELEASE_APK}.idsig"
 echo "mobile-android-emulator-install-startup-smoke-check: minified release startup ok"
 
-(
-  export DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1
-  export DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
-  export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
-  export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
-  export DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=0
-  run "$ROOT_DIR/scripts/check-mobile-android-install-startup-smoke.sh"
-)
-
+echo "mobile-android-emulator-install-startup-smoke-check: debug CDP journey begin"
 if [[ "$JOURNEY" == "local" ]]; then
   (
     export DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1
+    export DEVE_MOBILE_ANDROID_APK_PATH="$DEBUG_APK"
     export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+    export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
     export DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_SECS="$LIFECYCLE_TIMEOUT_SECS"
     run bash "$ROOT_DIR/scripts/smoke-mobile-android-lifecycle.sh"
   )
 else
   (
     export DEVE_MOBILE_ANDROID_REMOTE_SMOKE_REQUIRED=1
+    export DEVE_MOBILE_ANDROID_APK_PATH="$DEBUG_APK"
     export DEVE_MOBILE_ANDROID_SERIAL="$EMULATOR_SERIAL"
+    export DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS="$ADB_TIMEOUT_SECS"
     export DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_SECS="$LIFECYCLE_TIMEOUT_SECS"
     run bash "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.sh"
   )
 fi
+echo "mobile-android-emulator-install-startup-smoke-check: debug CDP journey ok"
 
 ensure_emulator_process_alive
 android_emulator_feature_policy_observe "$LOG_DIR/emulator.log" "$FORMAL_FEATURE_POLICY" \

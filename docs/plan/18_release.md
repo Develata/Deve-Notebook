@@ -249,7 +249,13 @@ generated source。pre-package 单元合同只校验仓库拥有的 ProGuard/JNI
 的联合有效性必须由同一 exact-HEAD、同一 target architecture 的 minified release-variant APK
 在 owned emulator 上真实安装并保持启动来证明；该 APK 只允许使用运行后立即销毁的
 ephemeral diagnostic signer，且不得冒充候选签名身份。debug APK 可在 release startup proof
-之后继续承担 CDP writable journey，但其启动不得替代 minified release-variant 证据。
+之后继续承担 CDP writable journey，但其启动不得替代 minified release-variant 证据。选中的
+LocalBackend 或 RemoteBrowser journey 必须单独拥有 debug APK 的唯一安装与首次启动；外层 emulator
+orchestrator 不得在 journey 前再经通用 startup gate 预装或启动同一 debug APK。否则随后的
+`adb install -r` package replacement 会在已存在的 Activity/WebView task 上制造第二个进程与
+renderer generation，并可能使一次性 native session handoff 失效；该状态不得通过延时或重试掩盖。
+release startup proof 返回成功前必须 fail-closed 地完成卸载，并验证 package、launcher resolution 与
+app process 均已退役；任何残留都必须阻止 debug journey 开始。
 
 Android WebView CDP discovery 必须把 socket open、`Runtime.enable`、单次 DOM probe 与诊断读取
 限制为短时单命令窗口，并在命令超时后移除 pending waiter、关闭旧连接后重试。健康且仍可响应

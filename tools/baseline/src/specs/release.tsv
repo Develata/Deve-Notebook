@@ -210,10 +210,16 @@ contains	docs/plan/18_release.md	Mobile pre-package compile/test gate 必须只�
 contains	docs/features/15_release.md	Mobile pre-package compile/test 只能读取 clean checkout 中受版本控制的输入
 contains	docs/acceptance-cases/12_tech_release.md	mobile_pre_package_tests_use_only_versioned_sources_and_do_not_include_ignored_android_generated_kotlin true
 contains	docs/acceptance-cases/12_tech_release.md	wry_generated_class_r8_jni_integration_requires_same_exact_head_minified_release_variant_install_and_startup
+contains	docs/plan/18_release.md	LocalBackend 或 RemoteBrowser journey 必须单独拥有 debug APK 的唯一安装与首次启动
+contains	docs/features/15_release.md	LocalBackend 或 RemoteBrowser journey 唯一负责安装并首次启动 debug APK
+contains	docs/acceptance-cases/12_tech_release.md	android_debug_apk_install_and_launch_has_one_selected_writable_journey_owner true
+contains	docs/acceptance-cases/12_tech_release.md	android_release_startup_package_launcher_and_process_retire_before_debug_journey true
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"
-before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"	DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+before	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"	debug CDP journey begin
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEBUG_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	export DEVE_MOBILE_ANDROID_APK_PATH="$DEBUG_APK"
 contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral-diagnostic
 contains	scripts/sign-mobile-android-target-host-release-apk.sh	must never be accepted as a release signer
 contains	.github/workflows/native-target-host.yml	actions/checkout@v6
@@ -796,6 +802,10 @@ contains	scripts/android-install-retry.test.sh	run_case package-missing-recover 
 contains	scripts/lib/android-install-retry.sh	cmd package resolve-activity
 contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	install_apk
+contains	scripts/check-mobile-android-install-startup-smoke.sh	trap cleanup_on_exit EXIT
+contains	scripts/check-mobile-android-install-startup-smoke.sh	shell pm list packages "$APP_ID"
+contains	scripts/check-mobile-android-install-startup-smoke.sh	shell cmd package resolve-activity --brief
+contains	scripts/check-mobile-android-install-startup-smoke.sh	shell ps -A
 contains	scripts/smoke-mobile-android-lifecycle.sh	source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 contains	scripts/smoke-mobile-android-lifecycle.sh	source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
 contains	scripts/smoke-mobile-android-remote-browser.sh	source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
@@ -861,6 +871,11 @@ contains	scripts/lib/android-install-retry.sh	remaining > kill_after_secs
 contains	scripts/android-install-retry.test.sh	run_case package-recover 0 2
 contains	scripts/android-install-retry.test.sh	guest-service admission failed: package-manager=unavailable status=124
 contains	scripts/android-install-retry.test.sh	verify_admission_log_failure_preserves_status
+contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case retired 0
+contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case package-remains 1
+contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case launcher-remains 1
+contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case process-remains 1
+contains	scripts/android-install-retry.test.sh	verify_cleanup_status_precedence
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell "df -k /data"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576

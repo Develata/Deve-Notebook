@@ -60,14 +60,41 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
 test("minified release startup precedes the debuggable CDP journey", () => {
   const releaseBuild = orchestrator.indexOf("DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0");
   const debugBuild = orchestrator.indexOf("DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1");
+  const staleOwnerCleanup = orchestrator.indexOf('if [[ -f "$OWNER_FILE" ]]');
+  const finalCleanupTrap = orchestrator.indexOf("trap cleanup_on_exit EXIT");
   const diagnosticSign = orchestrator.indexOf("sign-mobile-android-target-host-release-apk.sh");
   const releaseInstall = orchestrator.indexOf('DEVE_MOBILE_ANDROID_APK_PATH="$TARGET_HOST_RELEASE_APK"');
-  const debugInstall = orchestrator.indexOf('DEVE_MOBILE_ANDROID_APK_PATH="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"');
+  const debugJourney = orchestrator.indexOf("debug CDP journey begin");
   const localJourney = orchestrator.indexOf('if [[ "$JOURNEY" == "local" ]]');
   assert.ok(releaseBuild >= 0 && releaseBuild < debugBuild);
-  assert.ok(debugBuild < diagnosticSign && diagnosticSign < releaseInstall);
-  assert.ok(releaseInstall < debugInstall && debugInstall < localJourney);
+  assert.ok(debugBuild < staleOwnerCleanup && staleOwnerCleanup < finalCleanupTrap);
+  assert.ok(finalCleanupTrap < diagnosticSign && diagnosticSign < releaseInstall);
+  assert.ok(releaseInstall < debugJourney && debugJourney < localJourney);
+  assert.equal(
+    orchestrator.match(/check-mobile-android-install-startup-smoke\.sh/g)?.length,
+    1,
+    "the generic startup gate must install only the release APK",
+  );
+  assert.equal(
+    orchestrator.match(/export DEVE_MOBILE_ANDROID_APK_PATH="\$DEBUG_APK"/g)?.length,
+    2,
+    "each selected writable journey must receive the exact debug APK",
+  );
+  for (const [name, journey] of [["LocalBackend", localSmoke], ["RemoteBrowser", remoteSmoke]]) {
+    assert.equal(journey.match(/^install_apk$/gm)?.length, 1, `${name} must install the debug APK once`);
+    assert.equal(
+      journey.match(/shell monkey -p "\$APP_ID" -c android\.intent\.category\.LAUNCHER 1/g)?.length,
+      1,
+      `${name} must own the first debug Activity launch`,
+    );
+  }
+  assert.match(orchestrator, /DEBUG_APK="apps\/mobile\/gen\/android\/app\/build\/outputs\/apk\/universal\/debug\/app-universal-debug\.apk"/);
   assert.match(orchestrator, /DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=1/);
+  assert.match(installSmoke, /trap cleanup_on_exit EXIT/);
+  assert.doesNotMatch(installSmoke, /uninstall "\$APP_ID"[^\n]*\|\| true/);
+  assert.match(installSmoke, /shell pm list packages "\$APP_ID"/);
+  assert.match(installSmoke, /shell cmd package resolve-activity --brief/);
+  assert.match(installSmoke, /shell ps -A/);
   assert.match(orchestrator, /trap cleanup_prelaunch_failure EXIT/);
   assert.match(orchestrator, /run bash "\$ROOT_DIR\/scripts\/sign-mobile-android-target-host-release-apk\.sh"/);
   assert.match(targetHostReleaseSigner, /diagnostic root must stay within the repository target directory/);

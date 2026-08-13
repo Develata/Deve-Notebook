@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/check-mobile-android-install-startup-smoke.sh
 source "$ROOT_DIR/scripts/check-mobile-android-install-startup-smoke.sh"
 readonly PRODUCTION_ADB_RETRY_TIMED="$(declare -f adb_retry_timed)"
+readonly PRODUCTION_INSTALL_STARTUP_CLEANUP="$(declare -f cleanup)"
 
 temporary="$(mktemp -d)"
 cleanup() {
@@ -376,6 +377,7 @@ run_case() {
     || {
       printf 'android-install-retry.test: %s status %s, expected %s\n' \
         "$mode" "$status" "$expected_status" >&2
+      sed -n '1,80p' "$temporary/$mode.stderr" >&2
       return 1
     }
   install_count="$(grep -c '^install ' "$operations")"
@@ -494,5 +496,85 @@ verify_operation_timeout_cap() {
 }
 
 verify_operation_timeout_cap
+
+verify_install_startup_cleanup_case() (
+  local mode="$1"
+  local expected="$2"
+  local status
+  UNINSTALL_AFTER=1
+  eval "$PRODUCTION_INSTALL_STARTUP_CLEANUP"
+
+  adb_timed() {
+    case "$*" in
+      "uninstall $APP_ID")
+        [[ "$mode" != "uninstall-fail" ]]
+        ;;
+      "shell pm list packages $APP_ID")
+        [[ "$mode" != "package-probe-fail" ]] || return 19
+        [[ "$mode" != "package-remains" ]] || printf 'package:%s\n' "$APP_ID"
+        return 0
+        ;;
+      "shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $APP_ID")
+        if [[ "$mode" == "launcher-remains" ]]; then
+          printf '%s/.MainActivity\n' "$APP_ID"
+        else
+          printf 'No activity found\n'
+        fi
+        return 0
+        ;;
+      "shell ps -A")
+        printf 'USER PID PPID VSZ RSS WCHAN ADDR S NAME\n'
+        [[ "$mode" != "process-remains" ]] \
+          || printf 'u0_a1 123 1 0 0 0 0 S %s\n' "$APP_ID"
+        return 0
+        ;;
+      *)
+        return 97
+        ;;
+    esac
+  }
+
+  set +e
+  cleanup >/dev/null 2>&1
+  status=$?
+  set -e
+  [[ "$status" == "$expected" ]] \
+    || { printf 'android-install-retry.test: cleanup %s status %s, expected %s\n' \
+      "$mode" "$status" "$expected" >&2; return 1; }
+)
+
+verify_install_startup_cleanup_case retired 0
+verify_install_startup_cleanup_case uninstall-fail 1
+verify_install_startup_cleanup_case package-probe-fail 1
+verify_install_startup_cleanup_case package-remains 1
+verify_install_startup_cleanup_case launcher-remains 1
+verify_install_startup_cleanup_case process-remains 1
+
+verify_cleanup_status_precedence() {
+  local status
+  set +e
+  (
+    cleanup() { return 42; }
+    trap cleanup_on_exit EXIT
+    exit 17
+  )
+  status=$?
+  set -e
+  [[ "$status" == "17" ]] \
+    || { printf 'android-install-retry.test: primary cleanup status %s, expected 17\n' "$status" >&2; return 1; }
+
+  set +e
+  (
+    cleanup() { return 42; }
+    trap cleanup_on_exit EXIT
+    exit 0
+  )
+  status=$?
+  set -e
+  [[ "$status" == "42" ]] \
+    || { printf 'android-install-retry.test: success cleanup status %s, expected 42\n' "$status" >&2; return 1; }
+}
+
+verify_cleanup_status_precedence
 
 echo "android-install-retry.test: ok"
