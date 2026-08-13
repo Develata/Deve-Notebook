@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import {
   proveAndroidReadonlyMutationRejected,
   verifyAndroidIdentityCapability,
@@ -18,6 +17,12 @@ import {
   typeAndroidEditorText,
   typeEditor,
 } from "./lib/mobile-webview-interaction.mjs";
+import { proveAndroidImeBackPriority } from "./lib/mobile-ime-back-proof.mjs";
+import {
+  proveAndroidDrawerGesturesAfterReload,
+  waitForAcceptedAndroidPresentation,
+} from "./lib/android-presentation-proof.mjs";
+import { createAndroidLifecycleHarness } from "./lib/android-lifecycle-harness.mjs";
 import {
   commitAndroidChange,
   createFirstAndroidRepoFromBootstrapUnbound,
@@ -41,64 +46,17 @@ const appId = process.env.DEVE_MOBILE_ANDROID_APP_ID ?? "dev.deve.notebook.mobil
 const expectWritable = process.env.DEVE_MOBILE_ANDROID_EXPECT_WRITABLE !== "0";
 const targetFactsPath = process.env.DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH;
 const evidencePath = process.env.DEVE_MOBILE_ANDROID_EVIDENCE_PATH;
-const harnessDeadline = Date.now() + timeoutMs;
-
-function remainingMs() {
-  const remaining = harnessDeadline - Date.now();
-  if (remaining <= 0) throw new Error("Android lifecycle harness deadline exhausted");
-  return remaining;
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function withDeadline(label, promise, limit = remainingMs()) {
-  let timer;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`timeout during ${label}`)), Math.min(limit, remainingMs()));
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function waitUntil(label, predicate, timeout = Math.min(timeoutMs, 30000)) {
-  const deadline = Math.min(Date.now() + timeout, harnessDeadline);
-  let lastError;
-  while (Date.now() < deadline) {
-    try {
-      const value = await withDeadline(
-        `${label} predicate`,
-        Promise.resolve().then(predicate),
-        Math.max(1, deadline - Date.now()),
-      );
-      if (value) return value;
-    } catch (error) {
-      lastError = error;
-    }
-    await delay(Math.min(250, Math.max(1, deadline - Date.now())));
-  }
-  throw new Error(`timeout waiting for ${label}${lastError ? `: ${lastError.message}` : ""}`);
-}
-
-function adbCommand(...args) {
-  execFileSync(adb, ["-s", serial, ...args], {
-    stdio: "inherit",
-    timeout: remainingMs(),
-  });
-}
-
-async function focusWebViewEditorAtPoint(_point, page) {
-  return focusAndroidEditorInputConnection(page, {
-    delay,
-    waitForWritableEditor,
-  });
-}
+const {
+  remainingMs,
+  delay,
+  withDeadline,
+  waitUntil,
+  adbCommand,
+  adbOutput,
+  tapAndroidEditor: focusWebViewEditorAtPoint,
+  proveAndroidRootBackBackground,
+  waitForAndroidRootReentry,
+} = createAndroidLifecycleHarness({ timeoutMs, adb, serial });
 
 async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
@@ -278,6 +236,17 @@ async function main() {
   const page = await findStableAppPage({ cdpEndpoint, withDeadline });
   await reloadWithWebSocketDeliveryGate(page);
 
+  const drawerGestureProof = await proveAndroidDrawerGesturesAfterReload(page, {
+    adbCommand,
+    adbOutput,
+    appId,
+    waitUntil,
+  });
+  const nativePresentation = drawerGestureProof.presentation;
+  console.log(
+    `mobile-android-lifecycle: system gesture presentation ${JSON.stringify(nativePresentation)}`,
+  );
+
   console.log("mobile-android-lifecycle: waiting for zero-repo native bootstrap");
   await waitForLocalBackendBootstrapUnbound(page);
   console.log("mobile-android-lifecycle: zero-repo native bootstrap ready");
@@ -339,6 +308,14 @@ async function main() {
   });
   console.log(
     `mobile-android-lifecycle: keyboard resize ${JSON.stringify(keyboardResize)}`,
+  );
+  const imeBackPriority = await proveAndroidImeBackPriority(page, {
+    waitUntil,
+    platformBack: () => adbCommand("shell", "input", "keyevent", "4"),
+    activateKeyboard: focusWebViewEditorAtPoint,
+  });
+  console.log(
+    `mobile-android-lifecycle: IME Back priority ${JSON.stringify(imeBackPriority)}`,
   );
 
   await pauseWebSocketDelivery(page);
@@ -454,6 +431,21 @@ async function main() {
     expectedRepoId: firstRepo.created.repoId,
     minimumScopeNonce: firstRepo.created.scopeNonce,
   });
+  const presentationBeforeRootBack = await waitForAcceptedAndroidPresentation(page, waitUntil);
+  const rootBackProof = await proveAndroidRootBackBackground(appId, () =>
+    waitForAndroidRootReentry(async () => {
+      const [state, projection, presentation] = await Promise.all([
+        nativeInvoke(page, "native_backend_get_service_state"),
+        localBootstrapProjection(page),
+        page.call(() => {
+          const value = window.__DEVE_ANDROID_PRESENTATION__;
+          const accepted = document.querySelector("[data-deve-native-presentation]")
+            ?.getAttribute("data-deve-native-presentation") === "ready";
+          return accepted ? value ?? null : null;
+        }),
+      ]);
+      return { state, projection, presentation };
+    }, presentationBeforeRootBack));
   writeAndroidWritableEvidence({
     evidencePath,
     targetFactsPath,
@@ -480,7 +472,16 @@ async function main() {
       backgroundResume: true,
       staleScopeRejected: true,
       pendingPreserved: true,
+      nativeSystemGestureInsetsAcceptedAfterReload: true,
+      nativeDrawerGesturesAfterReload: drawerGestureProof.leftDrawerOpened
+        && drawerGestureProof.rightDrawerOpened
+        && drawerGestureProof.pidStable,
+      imeBackPreservedEditorSession: true,
+      imeRetapReopenedKeyboard: true,
       repoRemovalNoScope: repoLifecycle.noScope,
+      rootBackBackgroundsTaskWithStablePid: rootBackProof.rootBackBackgrounded
+        && rootBackProof.pidStable
+        && rootBackProof.reentryReady,
       writableLifecycleComplete: true,
     },
   });

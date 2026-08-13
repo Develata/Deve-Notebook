@@ -3,6 +3,9 @@ package dev.deve.notebook.mobile
 import android.util.Log
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -25,7 +28,7 @@ internal class UiBackDispatcher(private val activity: MainActivity) {
   fun install() {
     activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {
       override fun handleOnBackPressed() {
-        requestUiBack()
+        if (!dismissVisibleIme()) requestUiBack()
       }
     })
   }
@@ -34,6 +37,31 @@ internal class UiBackDispatcher(private val activity: MainActivity) {
     retireActiveRequest()
     webViewGeneration += 1
     this.webView = webView
+  }
+
+  fun detach() {
+    retireActiveRequest()
+    webView = null
+  }
+
+  private fun dismissVisibleIme(): Boolean {
+    val decorView = activity.window.decorView
+    val insets = ViewCompat.getRootWindowInsets(decorView) ?: run {
+      Log.w(
+        LOG_TAG,
+        "deve_mobile ui back checkpoint: android_ui_back_ime_visibility_unavailable",
+      )
+      return true
+    }
+    if (!insets.isVisible(WindowInsetsCompat.Type.ime())) return false
+    val controller = WindowCompat.getInsetsController(activity.window, decorView)
+    try {
+      controller.hide(WindowInsetsCompat.Type.ime())
+      Log.i(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_ime_dismissed")
+    } catch (_error: RuntimeException) {
+      Log.w(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_ime_dismiss_failed")
+    }
+    return true
   }
 
   private fun retireActiveRequest() {
@@ -97,8 +125,11 @@ internal class UiBackDispatcher(private val activity: MainActivity) {
         }
         when (ack.optString("outcome")) {
           "Unhandled" -> {
-            Log.i(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_unhandled")
-            activity.finish()
+            if (activity.moveTaskToBack(true)) {
+              Log.i(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_root_backgrounded")
+            } else {
+              Log.w(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_background_failed")
+            }
           }
           "Handled" -> Log.i(LOG_TAG, "deve_mobile ui back checkpoint: android_ui_back_handled")
           else -> if (!ack.optBoolean("listenerSeen", false)) {

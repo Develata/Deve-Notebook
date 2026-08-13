@@ -7,7 +7,8 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::TouchEvent;
 
-const EDGE_ZONE: i32 = 20;
+const APP_EDGE_ZONE: i32 = 20;
+const ANDROID_SYSTEM_GESTURE_SAFE_FLOOR_CSS: i32 = 24;
 const SWIPE_THRESHOLD: i32 = 50;
 pub(super) const EDGE_SWIPE_BLOCKING_SELECTOR: &str =
     "button, a, input, textarea, select, summary, [role='button'], [data-no-edge-swipe]";
@@ -16,6 +17,35 @@ pub(super) const EDGE_SWIPE_BLOCKING_SELECTOR: &str =
 pub(super) struct TouchPoint {
     pub x: i32,
     pub y: i32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SystemGestureInsets {
+    generation: u64,
+    left_css: i32,
+    right_css: i32,
+}
+
+impl SystemGestureInsets {
+    pub(super) const fn web_default() -> Self {
+        Self {
+            generation: 0,
+            left_css: 0,
+            right_css: 0,
+        }
+    }
+
+    pub(super) fn is_native(self) -> bool {
+        self.generation > 0
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct EdgeActivationBands {
+    pub(super) left_start: i32,
+    pub(super) left_end: i32,
+    pub(super) right_start: i32,
+    pub(super) right_end: i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,6 +80,7 @@ pub(super) enum SwipeOutcome {
 pub fn build_touch_start(
     show_sidebar: ReadSignal<bool>,
     show_outline: ReadSignal<bool>,
+    system_gesture_insets: ReadSignal<Option<SystemGestureInsets>>,
     set_swipe_session: WriteSignal<Option<SwipeSession>>,
 ) -> Callback<TouchEvent> {
     Callback::new(move |ev: TouchEvent| {
@@ -65,6 +96,7 @@ pub fn build_touch_start(
             show_outline.get_untracked(),
             is_interactive_target(&ev),
             ev.touches().length(),
+            system_gesture_insets.get_untracked(),
         );
         set_swipe_session.set(session);
     })
@@ -111,6 +143,7 @@ pub(super) fn resolve_swipe_start(
     show_outline: bool,
     interactive_target: bool,
     touch_count: u32,
+    system_gesture_insets: Option<SystemGestureInsets>,
 ) -> Option<SwipeSession> {
     if interactive_target || touch_count != 1 {
         return None;
@@ -119,14 +152,85 @@ pub(super) fn resolve_swipe_start(
         Some(SwipeTarget::CloseLeft)
     } else if show_outline {
         Some(SwipeTarget::CloseRight)
-    } else if start.x <= EDGE_ZONE {
-        Some(SwipeTarget::OpenLeft)
-    } else if width > 0 && start.x >= width - EDGE_ZONE {
-        Some(SwipeTarget::OpenRight)
     } else {
-        None
+        let bands = edge_activation_bands(width, system_gesture_insets)?;
+        if (bands.left_start..=bands.left_end).contains(&start.x) {
+            Some(SwipeTarget::OpenLeft)
+        } else if (bands.right_start..=bands.right_end).contains(&start.x) {
+            Some(SwipeTarget::OpenRight)
+        } else {
+            None
+        }
     };
     target.map(|target| SwipeSession::new(target, start))
+}
+
+pub(super) fn normalize_native_gesture_insets(
+    generation: u64,
+    width_px: f64,
+    left_px: f64,
+    right_px: f64,
+    density: f64,
+    viewport_width_css: i32,
+) -> Option<SystemGestureInsets> {
+    if generation == 0
+        || viewport_width_css <= 0
+        || !width_px.is_finite()
+        || !left_px.is_finite()
+        || !right_px.is_finite()
+        || !density.is_finite()
+        || width_px <= 0.0
+        || left_px < 0.0
+        || right_px < 0.0
+        || !(0.5..=8.0).contains(&density)
+        || left_px + right_px >= width_px
+    {
+        return None;
+    }
+    let projected_width = width_px / density;
+    if (projected_width - f64::from(viewport_width_css)).abs() > 2.0 {
+        return None;
+    }
+    let left_css = ((left_px / density).ceil() as i32).max(ANDROID_SYSTEM_GESTURE_SAFE_FLOOR_CSS);
+    let right_css = ((right_px / density).ceil() as i32).max(ANDROID_SYSTEM_GESTURE_SAFE_FLOOR_CSS);
+    let insets = SystemGestureInsets {
+        generation,
+        left_css,
+        right_css,
+    };
+    edge_activation_bands(viewport_width_css, Some(insets))?;
+    Some(insets)
+}
+
+pub(super) fn edge_activation_bands(
+    width: i32,
+    system_gesture_insets: Option<SystemGestureInsets>,
+) -> Option<EdgeActivationBands> {
+    let insets = system_gesture_insets?;
+    if width <= 0 || insets.left_css < 0 || insets.right_css < 0 {
+        return None;
+    }
+    let native_guard = i32::from(insets.generation > 0);
+    let left_start = insets.left_css.checked_add(native_guard)?;
+    let left_end = left_start.checked_add(APP_EDGE_ZONE)?;
+    let right_end = width
+        .checked_sub(insets.right_css)?
+        .checked_sub(native_guard)?;
+    let right_start = right_end.checked_sub(APP_EDGE_ZONE)?;
+    if left_start < 0
+        || right_end > width
+        || left_end >= right_start
+        || right_start < 0
+        || right_end <= 0
+    {
+        return None;
+    }
+    Some(EdgeActivationBands {
+        left_start,
+        left_end,
+        right_start,
+        right_end,
+    })
 }
 
 pub(super) fn resolve_swipe_outcome(

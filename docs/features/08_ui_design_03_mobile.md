@@ -14,7 +14,7 @@
 
 - 用户应能通过 top bar 打开文件树或命令入口。
 - 左/右 drawer 应可打开、关闭、切换，并且与主内容区配合清晰。
-- 从屏幕左边缘向右滑应打开文件树；从屏幕右边缘向左滑应打开当前 Markdown 的逐级标题大纲。该手势可从编辑器边缘开始，但短拖动、纵向滚动、多指操作和靠边按钮点击不能误开 drawer。
+- 从左侧系统返回手势区的内侧向右滑应打开文件树；从右侧系统返回手势区的内侧向左滑应打开当前 Markdown 的逐级标题大纲。普通移动 Web 仍从屏幕边缘起算；若 OEM 把标准系统手势 Insets 错报为零，Android native 使用 24 CSS px 的跨密度保守安全下限。每次页面重载或远程导航都必须重新取得当代 Android presentation hint 后才开放该激活带。该手势可从编辑器边缘开始，但绝对系统边缘继续归 Android Back，短拖动、纵向滚动、多指操作和靠边按钮点击不能误开 drawer。
 
 ### 2. 移动端核心面板
 
@@ -41,6 +41,7 @@
 - bottom bar 在窄屏下应可折叠/展开，不应挤压主内容区到不可用。
 - 移动辅助键盘栏必须服从完整 repo write gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑、撤销或重做。
 - 软键盘导致 viewport resize 时，只要宽度没有跨越 mobile breakpoint，就必须保留当前编辑器 mount、projection load session 与输入焦点，不得重新发送 OpenDoc 或用 Snapshot 打断正在进行的输入。
+- Android 在首次进入或从后台返回时会先恢复 WebView 的原生输入焦点，但不会自动弹键盘；键盘可见时执行系统返回只关闭键盘，不关闭当前文档，再次点击同一可写编辑器必须重新弹出键盘。
 
 ### 4. 搜索与 Sheet
 
@@ -48,7 +49,7 @@
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 - Sheet 打开时不得自动聚焦输入框或弹出软键盘；初始焦点进入面板或 44×44 的 `×` 关闭按钮。
 - 用户可通过 `×`、外部点击、上滑或系统返回关闭最上层 surface。
-- Android 返回键先关闭 overlay、drawer、outline 或受保护文档 surface；只有没有可处理 surface 时才退出应用。
+- Android 返回键先关闭可见键盘，再关闭 overlay、drawer、outline 或受保护文档 surface；根界面返回只把任务退到后台，不结束 Activity，重新进入后恢复当前 runtime。
 
 ### 5. Native 双模式
 

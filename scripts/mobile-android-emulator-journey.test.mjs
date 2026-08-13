@@ -11,6 +11,7 @@ const guestReadinessTest = read("./android-guest-service-readiness.test.sh");
 const guestReadinessLib = read("./lib/android-guest-service-readiness.sh");
 const localSmoke = read("./smoke-mobile-android-lifecycle.sh");
 const localJourney = read("./smoke-mobile-android-lifecycle.mjs");
+const lifecycleHarness = read("./lib/android-lifecycle-harness.mjs");
 const remoteSmoke = read("./smoke-mobile-android-remote-browser.sh");
 const remoteJourney = read("./smoke-mobile-android-remote-browser.mjs");
 const businessFlow = read("./lib/android-business-flow.mjs");
@@ -20,14 +21,6 @@ const cleanupTest = read("./android-emulator-cleanup.test.sh");
 const ownerLibrary = read("./lib/android-emulator-owner.sh");
 const packageBuilder = read("./check-mobile-android-shell-package-build.sh");
 const targetHostReleaseSigner = read("./sign-mobile-android-target-host-release-apk.sh");
-const emulatorPin = read("./lib/android-emulator-pin.sh");
-const emulatorPinTest = read("./android-emulator-pin.test.sh");
-const emulatorRenderer = read("./lib/android-emulator-renderer.sh");
-const emulatorRendererTest = read("./android-emulator-renderer.test.sh");
-const emulatorFeaturePolicy = read("./lib/android-emulator-feature-policy.sh");
-const releaseNativeWorkflow = read("../.github/workflows/release-native.yml");
-const nativeTargetHostWorkflow = read("../.github/workflows/native-target-host.yml");
-const emulatorHostPreparation = read("./prepare-android-emulator-host.sh");
 const producerRegistry = JSON.parse(
   read("../docs/registry/acceptance-producers.json"),
 );
@@ -288,6 +281,18 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
   }
 });
 
+test("local lifecycle proves root Back backgrounds and rebinds the same app process", () => {
+  assert.match(localJourney, /proveAndroidRootBackBackground\(appId/);
+  assert.match(localJourney, /rootBackBackgroundsTaskWithStablePid/);
+  assert.match(localJourney, /data-deve-native-presentation/);
+  assert.match(localJourney, /waitForAndroidRootReentry/);
+  assert.match(lifecycleHarness, /root Back lifecycle rebind/);
+  assert.match(lifecycleHarness, /state\.service_state === "endpoint_session_ready"/);
+  assert.match(lifecycleHarness, /projection\.bootstrapSessionBound/);
+  assert.match(lifecycleHarness, /projection\.nativeSessionInstalled/);
+  assert.match(lifecycleHarness, /presentation\.epoch > presentationBeforeRootBack\.epoch/);
+});
+
 test("Android APK install retries only after stable package/settings admission", () => {
   assert.match(
     installSmoke,
@@ -413,133 +418,4 @@ test("Android APK install retries only after stable package/settings admission",
   assert.match(guestReadinessTest, /guard-final-fail 30 23/);
   assert.match(guestReadinessTest, /package-success-mixed 30 1/);
   assert.match(installRetryLib, /remaining > kill_after_secs/);
-});
-
-test("emulator gate pins the exact stable emulator build fail-closed", () => {
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_VERSION="36\.6\.11\.0"/);
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_BUILD_ID="15507667"/);
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_LINUX="[0-9a-f]{64}"/);
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_SHA256_WINDOWS="[0-9a-f]{64}"/);
-  // checksum precedes extraction, then one build-scoped publisher owns rename
-  assert.match(emulatorPin, /sha256sum -c --quiet -/);
-  assert.match(
-    emulatorPin,
-    /sha256sum[\s\S]*unzip[\s\S]*android_emulator_pin_publish_extracted "\$cache_root" "\$staging" "\$extracted"/,
-  );
-  assert.match(emulatorPin, /\.publish-\$ANDROID_EMULATOR_PIN_BUILD_ID\.lock/);
-  assert.match(emulatorPin, /android_emulator_pin_acquire_publish_lock[\s\S]*ln -- "\$owner_file" "\$lock_file"/);
-  assert.match(
-    emulatorPin,
-    /android_emulator_pin_acquire_publish_lock "\$lock_file" "\$owner_file" "\$owner_token"[\s\S]*android_emulator_pin_owns_publish_lock[\s\S]*android_emulator_pin_matches "\$binary"/,
-  );
-  assert.match(emulatorPinTest, /publisher_pids/);
-  assert.match(emulatorPinTest, /acquisition-window signal leaked the build lock/);
-  // every resolution path re-asserts the version banner; no silent fallback
-  assert.match(emulatorPin, /android_emulator_pin_matches "\$binary"/);
-  assert.match(emulatorPin, /does not match pin \$ANDROID_EMULATOR_PIN_VERSION/);
-  assert.match(emulatorPin, /downloaded emulator does not match pin/);
-  // identity comes from a bounded canonical banner, not loose tokens or exit
-  // status, and every mismatch reports a bounded diagnostic.
-  assert.match(emulatorPin, /timeout --signal=TERM --kill-after=5s/);
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_PROBE_MAX_BYTES/);
-  assert.match(emulatorPin, /Android emulator version \[0-9\]/);
-  assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_LAST_PROBE/);
-  assert.match(emulatorPinTest, /expect_match nonzero-canonical/);
-  assert.match(emulatorPinTest, /expect_reject loose-tokens/);
-  assert.match(emulatorPinTest, /expect_reject timeout/);
-  assert.match(emulatorPinTest, /expect_reject oversized/);
-  // the shared SDK is never mutated: installs go to the private cache root
-  assert.match(emulatorPin, /DEVE_MOBILE_ANDROID_EMULATOR_PIN_DIR:-\$HOME\/\.cache\/deve-android-emulator-pin/);
-  // the lib only queries the SDK path read-only; it never runs SDK tools
-  assert.doesNotMatch(emulatorPin, /android_run_tool|sdkmanager_cmd/);
-});
-
-test("Android target-host workflows share the pinned emulator host preparation", () => {
-  const mobileAndroidJob = releaseNativeWorkflow.slice(
-    releaseNativeWorkflow.indexOf("  mobile-android:"),
-  );
-  const nativeAndroidJob = nativeTargetHostWorkflow.slice(
-    nativeTargetHostWorkflow.indexOf("  mobile-android:"),
-    nativeTargetHostWorkflow.indexOf("\n  mobile-ios:"),
-  );
-  assert.ok(mobileAndroidJob.startsWith("  mobile-android:"));
-  assert.ok(nativeAndroidJob.startsWith("  mobile-android:"));
-  assert.match(mobileAndroidJob, /run: bash scripts\/prepare-android-emulator-host\.sh/);
-  assert.match(nativeAndroidJob, /if: \$\{\{ inputs\.run_mobile_android_package_build && inputs\.run_mobile_android_install_startup_smoke \}\}\n        run: bash scripts\/prepare-android-emulator-host\.sh/);
-  assert.match(emulatorHostPreparation, /set -euo pipefail/);
-  assert.match(emulatorHostPreparation, /sudo apt-get update/);
-  assert.match(emulatorHostPreparation, /sudo apt-get install -y --no-install-recommends libpulse0/);
-  assert.match(emulatorHostPreparation, /ldconfig -p \| grep -F 'libpulse\.so\.0'/);
-  assert.match(emulatorHostPreparation, /99-kvm4all\.rules[\s\S]*udevadm trigger --name-match=kvm/);
-  const android = producerRegistry.producers.filter(({ producer_id }) =>
-    ["android.local-backend", "android.remote-browser"].includes(producer_id));
-  assert.ok(android.every(({ artifacts }) => artifacts.includes("scripts/prepare-android-emulator-host.sh")));
-});
-
-test("emulator orchestrator launches only the resolved pinned binary", () => {
-  assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-pin\.sh"/);
-  assert.match(orchestrator, /PINNED_EMULATOR_BIN="\$\(android_resolve_pinned_emulator\)"/);
-  assert.match(orchestrator, /pinned Android emulator was not resolved before emulator_cmd/);
-  assert.match(orchestrator, /pinned emulator: \$PINNED_EMULATOR_BIN/);
-  assert.doesNotMatch(
-    orchestrator,
-    /\$PINNED_EMULATOR_BIN" -version/,
-    "the orchestrator must not repeat the bounded identity probe without its limits",
-  );
-  // diagnostics may list AVDs via the SDK binary; the launch path must
-  // only ever exec the resolved pin
-  assert.match(orchestrator, /"\$PINNED_EMULATOR_BIN" "\$@"/);
-});
-
-test("emulator gate pins the API 37.0 image with swangle and 4096 MiB", () => {
-  assert.match(orchestrator, /API_LEVEL="\$\{DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37\.0\}"/);
-  assert.match(orchestrator, /EMULATOR_RAM_MB="\$\{DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096\}"/);
-  assert.match(orchestrator, /-gpu swangle/);
-  // the legacy translator path aborts guest surfaceflinger on this image
-  assert.doesNotMatch(orchestrator, /swiftshader_indirect/);
-  // actual renderer/ICD selection must be proven from a bounded log prefix
-  assert.match(orchestrator, /android_emulator_renderer_verify/);
-  assert.match(emulatorRenderer, /ANDROID_EMULATOR_RENDERER_LOG_READ_BYTES/);
-  assert.match(emulatorRenderer, /swiftshader_indirect/);
-  assert.match(emulatorRenderer, /vulkan_mode_selected/);
-  assert.doesNotMatch(emulatorRenderer, /grep -aE -m 16/);
-  assert.match(emulatorRendererTest, /conflicting renderer evidence/);
-  assert.match(emulatorRendererTest, /for _ in \{1\.\.16\}/);
-  assert.match(emulatorRendererTest, /selection beyond bounded log prefix/);
-});
-
-test("formal emulator gate requires the observed DMA feature conjunction", () => {
-  assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-feature-policy\.sh"/);
-  assert.match(orchestrator, /FORMAL_FEATURE_POLICY="direct-memory-shared-slots"/);
-  assert.match(orchestrator, /"\$\{ANDROID_EMULATOR_FEATURE_ARGS\[@\]\}"/);
-  assert.match(orchestrator, /android_emulator_feature_policy_wait[\s\S]*wait_for_boot/);
-  assert.match(orchestrator, /ensure_emulator_process_alive\s+android_emulator_feature_policy_observe[\s\S]*ensure_emulator_process_alive\s+echo "mobile-android-emulator-install-startup-smoke-check: serial=/);
-  assert.match(emulatorFeaturePolicy, /-feature GLDirectMem[\s\S]*-feature HasSharedSlotsHostMemoryAllocator/);
-  assert.match(emulatorFeaturePolicy, /ANDROID_EMULATOR_FEATURE_POLICY_EXPECTED_PAIR="1\/1"/);
-});
-
-test("android producers bind emulator pin, renderer, and feature proof", () => {
-  for (const producerId of ["android.local-backend", "android.remote-browser"]) {
-    const producer = producerRegistry.producers.find(
-      (candidate) => candidate.producer_id === producerId,
-    );
-    assert.ok(producer, `${producerId} must exist in the producer registry`);
-    assert.ok(
-      producer.artifacts.includes("scripts/lib/android-emulator-pin.sh"),
-      `${producerId} receipt must bind the emulator pin library`,
-    );
-    for (const artifact of [
-      "scripts/android-emulator-pin.test.sh",
-      "scripts/android-emulator-renderer.test.sh",
-      "scripts/android-emulator-feature-policy.test.sh",
-      "scripts/lib/android-emulator-renderer.sh",
-      "scripts/lib/android-emulator-feature-policy.sh",
-      "scripts/lib/android-emulator-diagnostics.sh",
-    ]) {
-      assert.ok(
-        producer.artifacts.includes(artifact),
-        `${producerId} receipt must bind ${artifact}`,
-      );
-    }
-  }
 });

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-08-13`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -412,9 +412,11 @@ ChatSheetOpen
 - `UiBackCoordinator` 只拥有瞬态 presentation state，不得绕过 document pending-edit guard、repo writer
   gate 或 backend authority。处理顺序固定为：最上层 overlay/menu/sheet，drawer/outline/panel，当前
   diff/document surface 的受保护导航，最后 `Unhandled`。
-- native shell 的平台返回键必须发送带单调 request id 的 typed back request，并只接受同 id 的
-  `Handled` / `Unhandled` ack；迟到或重复 ack 必须丢弃。Android 仅在收到 `Unhandled` 时允许结束
-  Activity，ack 超时或 bridge failure 必须保持 Activity 存活并输出固定、无敏感信息的诊断类别。
+- native shell 的平台返回键必须先把当前可见 IME 作为最上层 presentation surface 关闭；IME visibility
+  暂时不可观测时必须保持当前 editor/Activity 并输出固定诊断，不得向下推断为 hidden；IME 已明确隐藏时，
+  才发送带单调 request id 的 typed back request，并只接受同 id 的 `Handled` / `Unhandled` ack；迟到或
+  重复 ack 必须丢弃。Android 收到 `Unhandled` 时只允许把 root task 移到后台，不得 `finish()` Activity；
+  ack 超时、bridge failure 或 task-background 失败必须保持 Activity 存活并输出固定、无敏感信息的诊断类别。
 - `WebView.goBack()` 不得作为应用导航或 pending-edit guard 的替代。
 
 ### 5.4 Activity Bar / Menu State

@@ -88,6 +88,7 @@ pub fn MobileLayoutFrame(
     on_doc_select: Callback<deve_core::models::DocId>,
     on_close_drawers: Callback<()>,
     content_signal: Option<ReadSignal<String>>,
+    native_presentation_ready: Signal<bool>,
     on_touch_start: Callback<TouchEvent>,
     on_touch_end: Callback<TouchEvent>,
     on_touch_cancel: Callback<()>,
@@ -162,6 +163,9 @@ pub fn MobileLayoutFrame(
     view! {
         <div
             data-deve-layout-mode="mobile"
+            data-deve-native-presentation=move || {
+                if native_presentation_ready.get() { "ready" } else { "pending" }
+            }
             data-deve-mobile-pending-ack-count=move || mobile_pending_ack_count.get().to_string()
             class="flex flex-col flex-1 overflow-hidden bg-sidebar"
             style="touch-action: pan-y;"

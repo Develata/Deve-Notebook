@@ -90,20 +90,33 @@ export async function readEditorMountObservation(page, expectedDocId = null) {
       registry.ids.set(host, hostId);
     }
     const rect = editor?.getBoundingClientRect();
+    const codeHostRect = codeHost?.getBoundingClientRect();
+    const hostRect = host?.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const point = rect && codeHostRect && hostRect
+      ? (() => {
+          const left = Math.max(0, rect.left, codeHostRect.left, hostRect.left);
+          const right = Math.min(window.innerWidth, rect.right, codeHostRect.right, hostRect.right);
+          const top = Math.max(0, rect.top, codeHostRect.top, hostRect.top);
+          const bottom = Math.min(viewportHeight, rect.bottom, codeHostRect.bottom, hostRect.bottom);
+          return right > left && bottom > top
+            ? {
+                x: left + Math.min(24, (right - left) / 2),
+                y: top + Math.min(24, (bottom - top) / 2),
+                devicePixelRatio: window.devicePixelRatio || 1,
+              }
+            : null;
+        })()
+      : null;
     return {
       hostId,
       docId: host?.getAttribute("data-deve-editor-doc-id") ?? null,
       visibleHostCount: visibleHosts.length,
       openRequestId: host?.getAttribute("data-deve-editor-open-request-id") ?? null,
-      point: rect
-        ? {
-            x: rect.left + Math.min(24, rect.width / 2),
-            y: rect.top + Math.min(24, rect.height / 2),
-          }
-        : null,
+      point,
       viewportWidth: window.innerWidth,
       innerHeight: window.innerHeight,
-      visualViewportHeight: window.visualViewport?.height ?? window.innerHeight,
+      visualViewportHeight: viewportHeight,
       activeEditor: document.activeElement?.classList?.contains("cm-content") ?? false,
       bridgeReady: bootstrap?.editorBridgeReady === true,
       activeHostMatchesVisible: bootstrap?.activeHost === codeHost,

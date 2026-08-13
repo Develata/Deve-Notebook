@@ -1,7 +1,8 @@
 use super::edge_swipe_left_drawer_view;
 use super::gesture::{
-    EDGE_SWIPE_BLOCKING_SELECTOR, SwipeOutcome, SwipeSession, SwipeTarget, TouchPoint,
-    clear_swipe_session, resolve_swipe_outcome, resolve_swipe_start, resolve_touch_end_outcome,
+    EDGE_SWIPE_BLOCKING_SELECTOR, SwipeOutcome, SwipeSession, SwipeTarget, SystemGestureInsets,
+    TouchPoint, clear_swipe_session, edge_activation_bands, normalize_native_gesture_insets,
+    resolve_swipe_outcome, resolve_swipe_start, resolve_touch_end_outcome,
 };
 use crate::components::activity_bar::SidebarView;
 
@@ -11,7 +12,15 @@ fn point(x: i32, y: i32) -> TouchPoint {
 
 #[test]
 fn mobile_drawer_edge_swipe_opens_left_from_left_edge() {
-    let session = resolve_swipe_start(point(10, 200), 500, false, false, false, 1);
+    let session = resolve_swipe_start(
+        point(10, 200),
+        500,
+        false,
+        false,
+        false,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(
         session.map(|value| value.target),
         Some(SwipeTarget::OpenLeft)
@@ -29,7 +38,15 @@ fn mobile_drawer_edge_swipe_opens_file_tree_instead_of_previous_left_view() {
 
 #[test]
 fn mobile_drawer_edge_swipe_opens_right_from_right_edge() {
-    let session = resolve_swipe_start(point(490, 200), 500, false, false, false, 1);
+    let session = resolve_swipe_start(
+        point(490, 200),
+        500,
+        false,
+        false,
+        false,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(
         session.map(|value| value.target),
         Some(SwipeTarget::OpenRight)
@@ -74,10 +91,11 @@ fn mobile_drawer_edge_swipe_ignores_short_drags() {
 
 #[test]
 fn mobile_drawer_edge_swipe_uses_exact_edge_and_distance_boundaries() {
-    assert!(resolve_swipe_start(point(20, 200), 500, false, false, false, 1).is_some());
-    assert!(resolve_swipe_start(point(21, 200), 500, false, false, false, 1).is_none());
-    assert!(resolve_swipe_start(point(480, 200), 500, false, false, false, 1).is_some());
-    assert!(resolve_swipe_start(point(479, 200), 500, false, false, false, 1).is_none());
+    let web = Some(SystemGestureInsets::web_default());
+    assert!(resolve_swipe_start(point(20, 200), 500, false, false, false, 1, web).is_some());
+    assert!(resolve_swipe_start(point(21, 200), 500, false, false, false, 1, web).is_none());
+    assert!(resolve_swipe_start(point(480, 200), 500, false, false, false, 1, web).is_some());
+    assert!(resolve_swipe_start(point(479, 200), 500, false, false, false, 1, web).is_none());
 
     let session = Some(SwipeSession::new(SwipeTarget::OpenLeft, point(10, 200)));
     assert_eq!(
@@ -101,13 +119,29 @@ fn mobile_drawer_edge_swipe_ignores_vertical_and_diagonal_drags() {
 
 #[test]
 fn mobile_drawer_edge_swipe_ignores_interactive_targets() {
-    let session = resolve_swipe_start(point(490, 200), 500, false, false, true, 1);
+    let session = resolve_swipe_start(
+        point(490, 200),
+        500,
+        false,
+        false,
+        true,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(session, None);
 }
 
 #[test]
 fn mobile_drawer_edge_swipe_still_opens_outline_on_bare_edge_drag() {
-    let session = resolve_swipe_start(point(490, 200), 500, false, false, false, 1);
+    let session = resolve_swipe_start(
+        point(490, 200),
+        500,
+        false,
+        false,
+        false,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(
         session.map(|value| value.target),
         Some(SwipeTarget::OpenRight)
@@ -120,12 +154,28 @@ fn mobile_drawer_edge_swipe_allows_editor_content_start() {
     assert!(EDGE_SWIPE_BLOCKING_SELECTOR.contains("button"));
     assert!(EDGE_SWIPE_BLOCKING_SELECTOR.contains("data-no-edge-swipe"));
 
-    let session = resolve_swipe_start(point(10, 200), 500, false, false, false, 1);
+    let session = resolve_swipe_start(
+        point(10, 200),
+        500,
+        false,
+        false,
+        false,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(
         session.map(|value| value.target),
         Some(SwipeTarget::OpenLeft)
     );
-    let session = resolve_swipe_start(point(490, 200), 500, false, false, false, 1);
+    let session = resolve_swipe_start(
+        point(490, 200),
+        500,
+        false,
+        false,
+        false,
+        1,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(
         session.map(|value| value.target),
         Some(SwipeTarget::OpenRight)
@@ -134,8 +184,60 @@ fn mobile_drawer_edge_swipe_allows_editor_content_start() {
 
 #[test]
 fn mobile_drawer_edge_swipe_rejects_multitouch_start() {
-    let session = resolve_swipe_start(point(10, 200), 500, false, false, false, 2);
+    let session = resolve_swipe_start(
+        point(10, 200),
+        500,
+        false,
+        false,
+        false,
+        2,
+        Some(SystemGestureInsets::web_default()),
+    );
     assert_eq!(session, None);
+}
+
+#[test]
+fn mobile_drawer_edge_swipe_native_system_gesture_insets_shift_activation_bands_inward() {
+    let native = normalize_native_gesture_insets(7, 1080.0, 62.0, 62.0, 2.75, 393)
+        .expect("valid Xiaomi gesture insets");
+    let bands = edge_activation_bands(393, Some(native)).expect("activation bands");
+
+    assert_eq!(bands.left_start, 25);
+    assert_eq!(bands.left_end, 45);
+    assert_eq!(bands.right_start, 348);
+    assert_eq!(bands.right_end, 368);
+    assert!(
+        resolve_swipe_start(point(29, 200), 393, false, false, false, 1, Some(native)).is_some()
+    );
+    assert!(
+        resolve_swipe_start(point(370, 200), 393, false, false, false, 1, Some(native)).is_none()
+    );
+}
+
+#[test]
+fn mobile_drawer_edge_swipe_native_zero_reported_insets_use_safe_floor() {
+    let native = normalize_native_gesture_insets(8, 1080.0, 0.0, 0.0, 2.75, 393)
+        .expect("OEM zero insets remain a valid presentation fact");
+    let bands = edge_activation_bands(393, Some(native)).expect("safe-floor activation bands");
+
+    assert_eq!(bands.left_start, 25);
+    assert_eq!(bands.left_end, 45);
+    assert_eq!(bands.right_start, 348);
+    assert_eq!(bands.right_end, 368);
+    assert!(
+        resolve_swipe_start(point(30, 200), 393, false, false, false, 1, Some(native),).is_some()
+    );
+    assert!(
+        resolve_swipe_start(point(20, 200), 393, false, false, false, 1, Some(native),).is_none()
+    );
+}
+
+#[test]
+fn mobile_drawer_edge_swipe_native_system_gesture_insets_fail_closed_until_valid_hint() {
+    assert!(resolve_swipe_start(point(10, 200), 393, false, false, false, 1, None).is_none());
+    assert!(normalize_native_gesture_insets(0, 1080.0, 62.0, 62.0, 2.75, 393).is_none());
+    assert!(normalize_native_gesture_insets(1, 1080.0, 600.0, 600.0, 2.75, 393).is_none());
+    assert!(normalize_native_gesture_insets(1, 1080.0, 62.0, 62.0, 1.0, 393).is_none());
 }
 
 #[test]

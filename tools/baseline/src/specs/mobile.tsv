@@ -16,6 +16,7 @@ contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	f
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_mobile --features native-packaging android_system_gesture_insets -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_threshold_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_axis_lock_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_editor_edge_reachable_bound true
@@ -27,7 +28,14 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: right_drawer_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: vertical_and_short_gestures_leave_drawers_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: edge_button_action_not_replaced_by_drawer true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: editor_content_and_pending_unchanged true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: generation_bound_system_gesture_insets_projected true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: zero_reported_insets_use_24css_safe_floor true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activation_bands_begin_inside_system_gesture_insets true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: inner_left_and_right_swipes_open_expected_drawers true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: inner_swipes_keep_pid_and_emit_no_android_ui_back true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: absolute_system_edge_remains_android_back true
 contains	apps/web/src/components/mobile_layout/gesture.rs	pub(super) fn resolve_swipe_outcome(
+contains	apps/web/src/components/mobile_layout/gesture.rs	pub(super) fn normalize_native_gesture_insets(
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_left_from_left_edge()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_file_tree_instead_of_previous_left_view()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_right_from_right_edge()
@@ -40,6 +48,32 @@ contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_touch_cancel_clears_capture()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_ignores_interactive_targets()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_touch_end_with_remaining_touches_clears_capture()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_system_gesture_insets_shift_activation_bands_inward()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_system_gesture_insets_fail_closed_until_valid_hint()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_zero_reported_insets_use_safe_floor()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WindowInsetsCompat.Type.systemGestures()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	activity.window.decorView
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	android_system_gesture_insets_ready
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WebViewCompat.addDocumentStartJavaScript(
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WebViewCompat.addWebMessageListener(
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	android_system_gesture_insets_unavailable
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	__DEVE_ANDROID_PRESENTATION_PENDING__
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	widthPx:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	leftPx:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	rightPx:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	source.isFocusableInTouchMode = true
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	source.requestFocus()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	android_webview_input_focus_unavailable
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	ViewConfiguration.get(webView.context).scaledTouchSlop
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	MotionEvent.ACTION_CANCEL
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	android_webview_ime_show_failed
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	system-gesture-insets-pending
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	ViewCompat.setOnApplyWindowInsetsListener(observer)
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-presentation.test.mjs
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-emulator-host.test.mjs
+contains	scripts/smoke-mobile-android-lifecycle.mjs	rootBackBackgroundsTaskWithStablePid
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	document.elementFromPoint($xCss, $yCss)
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	.show(WindowInsetsCompat.Type.ime())
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer="left"
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-drawer="right"
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer-open=move || open.get().to_string()
@@ -55,6 +89,9 @@ absent_tree	apps/web/src/components/mobile_layout	resizer-handle
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-004
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_web mobile_toolbar_keyboard -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_mobile --features native-packaging android_back_dispatch -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_mobile --features native-packaging android_webview_input_focus -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: node --test scripts/mobile-webview-interaction.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_focus_editor: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_wait_keyboard: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_measure: "mobile_toolbar_history_actions"
@@ -66,10 +103,28 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_not_o
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoint_keyboard_resize_preserves_editor_mount true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoint_keyboard_resize_does_not_resend_open_doc true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: mobile_toolbar_history_actions_visible_at_390px true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ime_back_dismisses_keyboard_before_ui_back true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: ime_visibility_unavailable_does_not_dispatch_ui_back true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ime_back_preserves_editor_host_and_open_request true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: retap_same_editor_reopens_ime true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: foreground_reentry_restores_webview_native_input_focus true
 contains	docs/plan/11_ui_design/03_mobile.md	必须使用 `visualViewport` API 监听键盘高度变化
 contains	apps/web/src/components/mobile_layout/effects.rs	visual_viewport_keyboard_offset(
 contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()
 contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()
+contains	apps/web/src/components/mobile_layout/native_presentation.rs	pub(super) fn apply_android_presentation_insets(
+contains	apps/web/src/components/mobile_layout/native_presentation.rs	__DEVE_ANDROID_PRESENTATION_PENDING__
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation=move ||
+contains	scripts/lib/mobile-ime-back-proof.mjs	export async function proveAndroidImeBackPriority(
+contains	scripts/lib/mobile-webview-interaction.mjs	const top = Math.max(0, rect.top, codeHostRect.top, hostRect.top);
+contains	scripts/lib/android-lifecycle-harness.mjs	export function createAndroidLifecycleHarness(
+contains	scripts/lib/android-lifecycle-harness.mjs	"shell", "input", "tap",
+contains	scripts/smoke-mobile-android-lifecycle.mjs	imeBackPreservedEditorSession: true
+contains	scripts/lib/android-presentation-proof.mjs	export async function proveAndroidDrawerGesturesAfterReload(
+contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-presentation
+contains	scripts/mobile-android-presentation.test.mjs	native presentation is re-admitted after same-WebView reload before drawer gestures
+contains	scripts/smoke-mobile-android-lifecycle.mjs	nativeDrawerGesturesAfterReload:
+contains	scripts/smoke-mobile-android-remote-browser.mjs	nativeSystemGestureInsetsAcceptedAfterReload: true
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar="accessory"
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar-history-target=TOOLBAR_HISTORY_TARGET
@@ -826,6 +881,11 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	debug CD
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	export DEVE_MOBILE_ANDROID_APK_PATH="$DEBUG_APK"
 contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral-diagnostic
 contains	docs/registry/acceptance-producers.json	scripts/sign-mobile-android-target-host-release-apk.sh
+contains	docs/registry/acceptance-producers.json	scripts/mobile-android-emulator-host.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/mobile-android-presentation.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/lib/android-lifecycle-harness.mjs
+contains	docs/registry/acceptance-producers.json	scripts/lib/android-presentation-proof.mjs
+contains	docs/registry/acceptance-producers.json	scripts/lib/mobile-ime-back-proof.mjs
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-gpu swangle
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_emulator_feature_policy_wait
@@ -1006,13 +1066,20 @@ contains	apps/web/src/components/overlay_lifecycle.rs	fn close_transition_stops_
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-026
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	cargo test -p deve_web ui_back -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	cargo test -p deve_mobile --features native-packaging android_back_dispatch -- --nocapture
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: activity_exits_only_after_matching_unhandled_ack true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: ime_visible_back_does_not_dispatch_ui_back true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: activity_backgrounds_only_after_matching_unhandled_ack true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: stale_ack_and_timeout_do_not_background_or_exit_activity true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: root_back_keeps_pid_and_reentry_completes_lifecycle_rebind true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: webview_go_back_not_used true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	ui_assert: left_drawer_more_first_back_keeps_drawer_open true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	android_wait_root_surface: true
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	UiBackLayer::Overlay
 contains	apps/web/src/components/activity_bar/mod.rs	UiBackLayer::Overlay
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	uiBackDispatcher.install()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	ACK_TIMEOUT_MS
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	webViewGeneration
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	requestIsCurrent
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	WindowInsetsCompat.Type.ime()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	activity.moveTaskToBack(true)
+absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	finish()
 absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	webView.goBack()

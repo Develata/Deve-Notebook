@@ -23,6 +23,7 @@ mod layout_backdrop;
 mod layout_banner;
 mod layout_frame;
 mod layout_runtime;
+mod native_presentation;
 mod outline_button;
 mod source_control_notice;
 mod surface_runtime;
@@ -36,12 +37,12 @@ use crate::editor::ffi::try_get_editor_content;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::Locale;
 use crate::runtime::document_client::DocumentClient;
-use effects::apply_body_scroll_lock;
-use effects::apply_visual_viewport_offset;
+use effects::{apply_body_scroll_lock, apply_visual_viewport_offset};
 use gesture::{build_touch_end, build_touch_start, clear_swipe_session};
 use layout_frame::MobileLayoutFrame;
 use layout_runtime::{build_doc_select_callback, build_mobile_title, resolve_content_signal};
 use leptos::prelude::*;
+use native_presentation::apply_android_presentation_insets;
 use source_control_notice::{
     clear_mobile_source_control_notice_for_active_view, clear_mobile_source_control_notice_for_view,
 };
@@ -68,6 +69,7 @@ pub fn MobileLayout(
     let (show_outline, set_show_outline) = signal(false);
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());
     let (swipe_session, set_swipe_session) = signal(None::<gesture::SwipeSession>);
+    let (system_gesture_insets, set_system_gesture_insets) = signal(None);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (chat_expanded, set_chat_expanded) = signal(false);
     let source_control_context = use_context::<SourceControlContext>();
@@ -104,7 +106,12 @@ pub fn MobileLayout(
         set_show_sidebar.set(false);
     });
 
-    let on_touch_start = build_touch_start(show_sidebar, show_outline, set_swipe_session);
+    let on_touch_start = build_touch_start(
+        show_sidebar,
+        show_outline,
+        system_gesture_insets,
+        set_swipe_session,
+    );
     let on_touch_end = build_touch_end(
         swipe_session,
         open_file_tree_drawer,
@@ -136,6 +143,7 @@ pub fn MobileLayout(
 
     apply_body_scroll_lock(drawer_open);
     apply_visual_viewport_offset(set_keyboard_offset);
+    apply_android_presentation_insets(set_system_gesture_insets);
 
     Effect::new(move |_| {
         clear_mobile_source_control_notice_for_active_view(
@@ -166,6 +174,11 @@ pub fn MobileLayout(
             show_outline=show_outline
             set_show_outline=set_show_outline
             drawer_open=drawer_open
+            native_presentation_ready=Signal::derive(move || {
+                system_gesture_insets
+                    .get()
+                    .is_some_and(gesture::SystemGestureInsets::is_native)
+            })
             keyboard_offset=keyboard_offset
             chat_expanded=chat_expanded
             set_chat_expanded=set_chat_expanded

@@ -25,6 +25,8 @@ class MainActivity : TauriActivity() {
 
   private var useLocalBackendButton: Button? = null
   private val uiBackDispatcher = UiBackDispatcher(this)
+  private val nativePresentationDispatcher = NativePresentationDispatcher(this)
+  private val webViewInputCoordinator = WebViewInputCoordinator(this)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
@@ -35,6 +37,21 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     uiBackDispatcher.attach(webView)
+    nativePresentationDispatcher.attach(webView)
+    webViewInputCoordinator.attach(webView)
+  }
+
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+    nativePresentationDispatcher.onWindowFocusChanged(hasFocus)
+    webViewInputCoordinator.onWindowFocusChanged(hasFocus)
+  }
+
+  override fun onDestroy() {
+    nativePresentationDispatcher.detach()
+    webViewInputCoordinator.detach()
+    uiBackDispatcher.detach()
+    super.onDestroy()
   }
 
   fun installUseLocalBackendControl(): Boolean {

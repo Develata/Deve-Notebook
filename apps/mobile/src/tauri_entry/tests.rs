@@ -282,7 +282,7 @@ fn android_backend_recovery_uses_capability_free_activity_anchor_in_contract_ord
 }
 
 #[test]
-fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
+fn android_back_dispatch_prioritizes_ime_and_backgrounds_only_after_matching_unhandled_ack() {
     let activity = include_str!(
         "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"
     );
@@ -292,7 +292,13 @@ fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
 
     assert!(activity.contains("uiBackDispatcher.install()"));
     assert!(activity.contains("uiBackDispatcher.attach(webView)"));
+    assert!(activity.contains("uiBackDispatcher.detach()"));
     assert!(back_dispatcher.contains("OnBackPressedCallback(true)"));
+    assert!(back_dispatcher.contains("if (!dismissVisibleIme()) requestUiBack()"));
+    assert!(back_dispatcher.contains("WindowInsetsCompat.Type.ime()"));
+    assert!(back_dispatcher.contains("android_ui_back_ime_dismissed"));
+    assert!(back_dispatcher.contains("android_ui_back_ime_dismiss_failed"));
+    assert!(back_dispatcher.contains("android_ui_back_ime_visibility_unavailable"));
     assert!(back_dispatcher.contains("requestUiBack()"));
     assert!(back_dispatcher.contains("deve-native-back-request"));
     assert!(back_dispatcher.contains("const detail = { requestId:"));
@@ -305,9 +311,12 @@ fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
     assert!(back_dispatcher.contains("requestIsCurrent"));
     assert!(back_dispatcher.contains("retireActiveRequest()"));
     assert!(back_dispatcher.contains("android_ui_back_handled"));
-    assert!(back_dispatcher.contains("android_ui_back_unhandled"));
+    assert!(back_dispatcher.contains("android_ui_back_root_backgrounded"));
+    assert!(back_dispatcher.contains("android_ui_back_background_failed"));
     assert!(back_dispatcher.contains("android_ui_back_ack_timeout"));
     assert!(back_dispatcher.contains("android_ui_back_listener_missing"));
+    assert!(back_dispatcher.contains("activity.moveTaskToBack(true)"));
+    assert!(!back_dispatcher.contains("finish()"));
     assert!(!back_dispatcher.contains("webView.goBack()"));
     assert!(!back_dispatcher.contains("webView.canGoBack()"));
 
@@ -325,10 +334,99 @@ fn android_back_dispatch_exits_only_after_matching_unhandled_ack() {
     let unhandled = matching_ack
         .find("\"Unhandled\" ->")
         .expect("Unhandled acknowledgement");
-    let finish = matching_ack[unhandled..]
-        .find("finish()")
-        .expect("Activity finish after matching Unhandled acknowledgement");
-    assert!(finish > 0);
+    let background = matching_ack[unhandled..]
+        .find("moveTaskToBack(true)")
+        .expect("root task background after matching Unhandled acknowledgement");
+    assert!(background > 0);
+}
+
+#[test]
+fn android_system_gesture_insets_are_generation_bound_presentation_only_hints() {
+    let activity = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"
+    );
+    let presentation = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt"
+    );
+
+    assert!(activity.contains("nativePresentationDispatcher.attach(webView)"));
+    assert!(activity.contains("nativePresentationDispatcher.onWindowFocusChanged(hasFocus)"));
+    assert!(activity.contains("nativePresentationDispatcher.detach()"));
+    assert!(presentation.contains("WindowInsetsCompat.Type.systemGestures()"));
+    assert!(presentation.contains("activity.window.decorView"));
+    assert!(presentation.contains("deve-native-presentation-change"));
+    assert!(presentation.contains("__DEVE_ANDROID_PRESENTATION__"));
+    assert!(presentation.contains("__DEVE_ANDROID_PRESENTATION_PENDING__"));
+    assert!(presentation.contains("WebViewCompat.addDocumentStartJavaScript("));
+    assert!(presentation.contains("WebViewCompat.addWebMessageListener("));
+    assert!(presentation.contains("WebViewCompat.removeWebMessageListener("));
+    assert!(presentation.contains("WebViewFeature.DOCUMENT_START_SCRIPT"));
+    assert!(presentation.contains("WebViewFeature.WEB_MESSAGE_LISTENER"));
+    assert!(presentation.contains("isMainFrame && view === webView"));
+    assert!(presentation.contains("message.data == DOCUMENT_MESSAGE"));
+    assert!(presentation.contains("kind: \"system-gesture-insets\""));
+    assert!(presentation.contains("kind: \"system-gesture-insets-pending\""));
+    assert!(presentation.contains("epoch: $epoch"));
+    assert!(presentation.contains("widthPx: $widthPx"));
+    assert!(presentation.contains("leftPx: $leftPx"));
+    assert!(presentation.contains("rightPx: $rightPx"));
+    assert!(presentation.contains("webViewGeneration"));
+    assert!(presentation.contains("publishEpoch"));
+    assert!(presentation.contains("isCurrent(source, generation, epoch)"));
+    assert!(presentation.contains("ViewCompat.setOnApplyWindowInsetsListener(observer)"));
+    assert!(presentation.contains("root.addView(observer, FrameLayout.LayoutParams(0, 0))"));
+    assert!(presentation.contains("listenerSeen: false"));
+    assert!(presentation.contains("android_system_gesture_insets_ready"));
+    assert!(presentation.contains("android_system_gesture_insets_unavailable"));
+    assert!(!presentation.contains("DOCUMENT_PROBE_INTERVAL_MS"));
+    assert!(!presentation.contains("cookie"));
+    assert!(!presentation.contains("session"));
+    assert!(!presentation.contains("endpoint"));
+}
+
+#[test]
+fn android_webview_input_focus_and_trusted_editor_tap_are_generation_owned() {
+    let activity = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"
+    );
+    let coordinator = include_str!(
+        "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt"
+    );
+
+    assert!(activity.contains("webViewInputCoordinator.attach(webView)"));
+    assert!(activity.contains("webViewInputCoordinator.onWindowFocusChanged(hasFocus)"));
+    assert!(activity.contains("webViewInputCoordinator.detach()"));
+    assert!(!activity.contains("override fun dispatchTouchEvent(event: MotionEvent)"));
+    assert!(coordinator.contains("webView.setOnTouchListener { view, event ->"));
+    assert!(coordinator.contains("if (view === this.webView) onWebViewTouchEvent(event)"));
+    assert!(coordinator.contains("webView?.setOnTouchListener(null)"));
+    assert!(coordinator.contains("source.isFocusableInTouchMode = true"));
+    assert!(coordinator.contains("!source.hasFocus() && !source.requestFocus()"));
+    assert!(coordinator.contains("android_webview_input_focus_unavailable"));
+    assert!(coordinator.contains("MotionEvent.ACTION_DOWN -> beginTapCandidate(event)"));
+    assert!(
+        coordinator.contains("MotionEvent.ACTION_MOVE -> retainTapCandidateIfStationary(event)")
+    );
+    assert!(coordinator.contains("MotionEvent.ACTION_UP -> completeTapCandidate(event)"));
+    assert!(coordinator.contains("MotionEvent.ACTION_CANCEL"));
+    assert!(coordinator.contains("MotionEvent.ACTION_POINTER_DOWN"));
+    assert!(coordinator.contains("ViewConfiguration.get(webView.context).scaledTouchSlop"));
+    assert!(!coordinator.contains("private val touchSlop = ViewConfiguration.get(activity)"));
+    assert!(coordinator.contains(
+        "event.eventTime - candidate.downTime >= ViewConfiguration.getLongPressTimeout()"
+    ));
+    assert!(coordinator.contains("document.elementFromPoint($xCss, $yCss)"));
+    assert!(coordinator.contains(".cm-content[contenteditable=\"true\"]"));
+    assert!(coordinator.contains("document.activeElement === editor"));
+    assert!(coordinator.contains("webViewGeneration != generation"));
+    assert!(
+        coordinator.contains(
+            "!activity.hasWindowFocus() || !source.isAttachedToWindow || !source.isShown"
+        )
+    );
+    assert!(coordinator.contains(".show(WindowInsetsCompat.Type.ime())"));
+    assert!(coordinator.contains("android_webview_ime_show_failed"));
+    assert!(!coordinator.contains("showSoftInput"));
 }
 
 #[test]

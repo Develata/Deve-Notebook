@@ -33,6 +33,7 @@ import {
   requireAndroidRemoteBrowserModeEvidence,
 } from "./lib/android-native-mode-evidence.mjs";
 import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
+import { waitForAcceptedAndroidPresentation } from "./lib/android-presentation-proof.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
@@ -255,6 +256,10 @@ async function main() {
   );
   evaluateWritableProbeExpectation(true, capability);
   await loginAndroidRemote(page, remoteOrigin, username, password, waitUntil);
+  const nativePresentation = await waitForAcceptedAndroidPresentation(page, waitUntil);
+  console.log(
+    `mobile-android-remote-browser: system gesture presentation ${JSON.stringify(nativePresentation)}`,
+  );
   const stamp = Date.now();
   await createAndroidDocument(
     page,
@@ -410,6 +415,7 @@ async function main() {
     edit: true,
     commitHistory: true,
     backgroundResume: true,
+    nativeSystemGestureInsetsAcceptedAfterReload: true,
     repoRemovalNoScope: repoLifecycle.noScope,
     zeroNativeIpc: ipcRequests.length === 0 && ipcCspErrors.length === 0,
     nativeLocalRecovery: transition.phase === "local_window_created",

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-12`
+- `Last Review`: `2026-08-13`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -20,7 +20,7 @@
 ## 1. 原生适配器边界 {#mobile-current-native-boundary}
 
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
-*   Mobile native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
+*   Mobile native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域、系统手势保留区与软键盘等有限平台 presentation 事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
 *   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；`tauri` / `tauri-build` dependency 只能作为 `apps/mobile` 的 optional dependency 挂在 `native-packaging` feature 后。
 *   `native-packaging` Android/Mobile 默认模式是 `LocalBackend`；Mobile v1 full peer 不使用子进程，而是启动 in-process embedded loopback service，并在 app-private data root 初始化 zero-repo host registries，不依赖 Docker、外部 CLI 或用户手工 init。启动不得自动创建默认 repo/projection；首次 Create 才能经 server/core authority path 建立本地 workspace。
 *   `RemoteBrowser` **MUST** 显式选择，且只接受远端 `https://host[:port]` origin。URL 不得包含 userinfo、query、fragment 或业务子路径；壳层不得注入本地 endpoint/session bootstrap，不得启动 embedded service。
@@ -305,6 +305,21 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 **Technical Constraint**:
 必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
 软键盘引发的 viewport resize 在宽度仍处于同一 responsive breakpoint 时 **MUST NOT** 重建 MobileLayout 或 Editor；breakpoint 状态只允许在实际跨越阈值时更新，当前 editor mount、projection load session 与键盘焦点必须保持不变。
+Android adapter 必须在 WebView attach 与 Activity 重新取得 window focus 时恢复 current-generation Wry WebView
+的 native View focus，使后续真实编辑器触摸能够建立受系统服务的 input connection；该操作不得改变 DOM selection、
+主动弹出 IME 或绕过 editor readonly/writer gate。不得用 JavaScript 定时重复 `focus()` / `showSoftInput()` 掩盖
+native View 未被 InputMethodManager served 的问题；恢复失败必须输出固定 `android_webview_input_focus_unavailable`。
+当用户以同一 pointer 的真实 `ACTION_DOWN` / `ACTION_UP` 轻触序列再次点击同一已聚焦的可写 `.cm-content` 时，
+Android adapter 还必须在 current WebView generation 内先按平台 `touchSlop`、长按阈值、pointer 数量、cancel/outside
+与 WebView 可见边界排除滚动、拖动、长按和多指手势，再以抬手坐标和 `elementFromPoint` 复核触点确实属于
+active editable editor 后请求 IME show；
+这样关闭 IME 不必通过 blur/re-focus 改写 CodeMirror selection。非 editor 触点、synthetic Web event、只读 editor、
+迟到 WebView callback、Activity 已失焦、WebView 已 detached/hidden 与无效几何均不得弹出 IME；平台 show
+异常必须收敛为固定 `android_webview_ime_show_failed` 诊断，不得导致 Activity 退出。
+Android 平台 Back 在 IME 可见时 **MUST** 只关闭 IME，不得同时向 `UiBackCoordinator` 发送文档/抽屉返回；
+关闭后必须保留当前可写 CodeMirror host、OpenDoc request 与 DOM focus，使用户再次点击同一编辑器时可重新建立
+原生 input connection 并唤起 IME。若平台暂时无法取得 root Insets，必须记录固定
+`android_ui_back_ime_visibility_unavailable` 并保持 editor/Activity，不得把 unknown 当作 hidden 后继续关闭文档。
 撤销与重做按钮 **MUST** 与其它写动作共用 repo writer gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑器 history action。
 撤销与重做属于高频恢复操作，**MUST** 保持在移动工具栏前段，390px 宽度下无需横向滚动即可看到。
 Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。
@@ -315,12 +330,34 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
 
 ### 3.4 手势系统 (Gesture System)
 仅支持轻量级 Edge Swipe，参数定义如下：
-*   $Zone_{edge} = 20px$ (从屏幕边缘起算的响应区)。
+*   $Zone_{app} = 20\text{ CSS px}$。普通 Web 从屏幕边缘起算；Android native 必须从
+    `WindowInsets.Type.systemGestures()` 的左右系统保留区内侧起算。考虑 OEM 可能用独立系统
+    Gesture Stub 拦截边缘、却把标准 Insets 错报为零，归一化安全宽度为
+    $S_L = \max(\lceil I_L / density\rceil, 24\text{ CSS px})$、右侧对称；左侧激活带为
+    $[S_L + 1,\ S_L + 1 + Zone_{app}]$。24 CSS px 是 Android native 的跨密度保守安全下限，
+    不是设备物理像素常量；非零标准 Insets 大于该下限时必须以标准 Insets 为准。
+    应用不得在系统保留区内抢占触摸，也不得把激活带扩大到全屏。
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
 *   **Direction**: 左边缘向右滑打开 Sidebar / File Tree；右边缘向左滑打开 Outline。Drawer 已打开时，反向滑动只关闭当前 Drawer，不得在同一手势中串联打开另一侧。
 *   **Axis Lock**: 只接受单指、水平位移达到阈值且水平位移绝对值大于垂直位移绝对值的手势；短拖动、纵向滚动、斜向滚动、多指手势与取消事件不得改变 Drawer 状态。
 *   **Editor Reachability**: CodeMirror 编辑内容区可以作为边缘手势起点；手势识别只产生 typed Drawer intent，不读取、修改或提交 Markdown 内容，也不得改变 pending / writer gate / repo scope。
 *   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。识别器在手势达到阈值前不得 `preventDefault` 或触发 Drawer intent；button、link、input、select 及显式 `data-no-edge-swipe` target 必须被排除。
+*   **Typed Presentation Hint**: Android adapter 必须按 WebView generation 发布固定、无敏感信息的
+    JavaScript wire event
+    `deve-native-presentation-change { generation, epoch, widthPx, leftPx, rightPx, density }`。每轮 Insets 读取必须先发送
+    同 order 的 `system-gesture-insets-pending` 撤销旧激活带；Web 必须校验 generation/epoch、有限数值与几何边界后
+    换算为 CSS px；bundled native 在首个有效 hint 前及任何 current pending/invalid hint 后 fail-closed，不得退回
+    与系统 Back 重叠的绝对边缘。该 hint 只选择 presentation geometry，不授予 endpoint、session、writer 或
+    业务 authority；WebView replacement 的迟到 hint 必须丢弃。
+*   **Document Lifecycle**: Android adapter 必须以 `DOCUMENT_START_SCRIPT` + main-frame message bridge 为每个
+    新 document（包含同一 WebView 的 reload 与 RemoteBrowser navigation）设置独立的
+    `__DEVE_ANDROID_PRESENTATION_PENDING__` presentation marker，并请求 current-generation snapshot。该 bridge
+    只能请求 presentation，不能携带 endpoint/session/cookie；旧 document、subframe 与 replacement WebView
+    的消息必须丢弃。普通 Web 未看到 marker 时立即使用普通边缘语义；任何 native marker 或 event 都只允许
+    valid hint 解锁激活带，invalid/missing hint 必须保持 fail-closed。delivery 重试耗尽必须输出固定、无敏感信息的
+    `android_system_gesture_insets_unavailable`，等待下一个 document/focus/layout/Insets 生命周期入口重试。
+    Insets 观察必须由 adapter 自有、零尺寸且不接收触摸的 observer 承载，不得覆盖 Wry/WebView 既有 listener；
+    不得用永久轮询代替 document 生命周期。
 
 ## 4. Visual Adaptations
 
@@ -417,9 +454,11 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
     只有用户明确点击输入框后才请求输入焦点。Desktop overlay 仍可按桌面合同 autofocus。
 *   `×`、外部点击、上滑、`Escape` 与选中结果必须汇入同一个 overlay close transition，关闭后恢复
     到仍可聚焦的触发控件。
-*   Android system back 必须委派给 `index.md#overlay-back-coordination` 的 `UiBackCoordinator`：先关闭
-    最上层 presentation surface，再经过 document pending-edit guard；只有 typed `Unhandled` ack 才可
-    退出 Activity。不得直接调用 `WebView.goBack()`，也不得在 ack 超时后猜测退出。
+*   Android system back 必须先关闭可见 IME；IME 已隐藏时才委派给
+    `index.md#overlay-back-coordination` 的 `UiBackCoordinator`：先关闭最上层 presentation surface，再经过
+    document pending-edit guard。typed `Unhandled` ack 只把 root task 移到后台，Activity/PID 不得由该路径
+    主动结束；重新进入后仍必须完成 native lifecycle rebind。不得直接调用 `WebView.goBack()`，也不得在 ack
+    超时后猜测退出或后台化。
 
 ## 7. Performance & Size
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。

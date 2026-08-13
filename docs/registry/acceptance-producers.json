@@ -735,6 +735,11 @@
         "scripts/lib/android-identity-capability.mjs",
         "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/mobile-android-emulator-host.test.mjs",
+        "scripts/mobile-android-presentation.test.mjs",
+        "scripts/lib/android-lifecycle-harness.mjs",
+        "scripts/lib/android-presentation-proof.mjs",
+        "scripts/lib/mobile-ime-back-proof.mjs",
         "scripts/android-native-bootstrap-script.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
@@ -855,6 +860,11 @@
         "scripts/android-document-create-pointer.test.mjs",
         "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
+        "scripts/mobile-android-emulator-host.test.mjs",
+        "scripts/mobile-android-presentation.test.mjs",
+        "scripts/lib/android-lifecycle-harness.mjs",
+        "scripts/lib/android-presentation-proof.mjs",
+        "scripts/lib/mobile-ime-back-proof.mjs",
         "scripts/android-native-bootstrap-script.test.mjs",
         "scripts/websocket-delivery-gate.test.mjs",
         "scripts/lib/websocket-delivery-gate.mjs"
