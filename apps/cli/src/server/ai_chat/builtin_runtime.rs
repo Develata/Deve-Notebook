@@ -46,7 +46,7 @@ fn builtin_native_ai_runtime() -> anyhow::Result<Box<dyn PluginRuntime>> {
     if manifest.id != NATIVE_AI_PLUGIN_ID || manifest.entry != "main.rhai" {
         bail!("Invalid built-in Native AI manifest identity");
     }
-    let mut runtime = RhaiRuntime::new_embedded(manifest.clone());
+    let mut runtime = RhaiRuntime::new_embedded_native_ai(manifest.clone());
     runtime
         .load(manifest, BUILTIN_SCRIPT)
         .context("Failed to load built-in Native AI runtime")?;

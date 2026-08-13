@@ -123,7 +123,8 @@ pub fn bind_global_shortcuts(
         outline.set_visible,
         sidebar.set_visible,
     );
-    window_event_listener(leptos::ev::keydown, handle_keydown);
+    let listener = window_event_listener(leptos::ev::keydown, handle_keydown);
+    on_cleanup(move || listener.remove());
 }
 
 fn use_sidebar_visibility() -> (ReadSignal<bool>, WriteSignal<bool>) {

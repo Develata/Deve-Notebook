@@ -53,6 +53,7 @@
   assertions:
     - header_not_contains: "Access-Control-Allow-Origin: *"
     - config_assert: ALLOWED_ORIGINS="*" fails closed with "Wildcard CORS origin is forbidden"
+    - cors_assert: credentialed_native_put_preflight_allows_exact_origin_and_put true
 
 - case_id: AUTH-005
   goal: 精确 Cookie 名称匹配 (M1 收口)。

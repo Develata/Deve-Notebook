@@ -18,6 +18,13 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}
       AUTH_USER: ${AUTH_USER:-admin}
       AUTH_PASS: ${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     mem_limit: 512m
     deploy:
       resources:

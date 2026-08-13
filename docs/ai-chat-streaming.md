@@ -2,7 +2,7 @@
 
 ## Overview
 This document specifies the AI chat streaming bridge that connects the Rhai
-plugin runtime with the server-side OpenAI-compatible SSE implementation.
+compatibility runtime with the server-owned multi-provider SSE implementation.
 
 ## Constraints
 - Target environment: 768MB VPS.
@@ -15,7 +15,8 @@ plugin runtime with the server-side OpenAI-compatible SSE implementation.
    - Stores a global handler (OnceLock).
    - Uses a thread-local sink scope for per-request routing.
 
-2. **Server Runtime** (`apps/cli/src/server/ai_chat.rs`)
+2. **Server Runtime** (`apps/cli/src/server/ai_chat/`)
+   - Owns the redacted provider settings snapshot and three protocol adapters.
    - Implements `ChatStreamHandler` using `reqwest-eventsource`.
    - Streams SSE deltas into `ServerMessage::ChatChunk` via the sink.
 
@@ -30,7 +31,7 @@ plugin runtime with the server-side OpenAI-compatible SSE implementation.
 ## Data Flow
 1. Web client invokes plugin call for `ai-chat::chat`.
 2. Server sets a `ChatStreamScope` and calls `plugin.call`.
-3. Rhai script calls `ai_chat_stream` with `req_id`, config, and history.
+3. Rhai script calls `ai_chat_stream` with `req_id` and history only; it has no provider secret or network authority.
 4. Core bridge routes the request to the server handler.
 5. Handler performs SSE stream and emits `ChatChunk` updates.
 6. Client assembles deltas into the final assistant message.
@@ -41,7 +42,8 @@ plugin runtime with the server-side OpenAI-compatible SSE implementation.
 - Client streaming ends when `finish_reason` is received.
 
 ## Security
-- Network requests are domain-validated against plugin capabilities.
+- Provider URL and authentication are validated and owned by the server settings runtime.
+- Raw API keys never cross into Rhai, Web responses, logs, or browser storage.
 - External PluginCall access for bundled Native AI is `ai-chat::chat` only.
 - The handler never exposes raw HTTP response data to plugins.
 

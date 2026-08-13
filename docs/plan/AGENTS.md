@@ -222,6 +222,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `14_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
 | `15_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
 | `15_settings#native-host-local-backend-preference` | `### 2.2.2 Native Host-local Backend Preference` | Desktop/Mobile native backend preference 的 host-local JSON 持久化、local/remote 模式与敏感数据禁止边界 |
+| `15_settings#native-ai-provider-settings` | `### 2.3.1 Native AI Provider Settings` | Native AI provider 的环境只读覆盖、data/ai.env authority、脱敏 HTTP API 与热更新合同 |
 | `15_settings#keyboard-shortcuts` | `## 3. Keyboard Shortcuts` | 用户可见快捷键映射合同 |
 | `15_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
 | `17_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |

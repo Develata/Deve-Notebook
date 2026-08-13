@@ -294,7 +294,7 @@
     - config_assert: existing_invalid_runtime_config_rejected_without_rewrite true
 
 - case_id: SET-007
-  goal: Server-backed Settings API 仍按 future 边界处理。
+  goal: 通用 Server-backed Settings API 仍按 future 边界处理，只有 Native AI provider 专用 route 例外。
   preconditions:
     - docs/plan/15_settings.md 仍标记 Settings API 为 future work
   steps:
@@ -304,6 +304,41 @@
   assertions:
     - route_absent: "/api/settings"
     - unsupported_key_rejected: "server.settings.api_enabled"
+
+- case_id: SET-009
+  goal: Native AI provider Settings 使用脱敏 server authority 与 data/ai.env 原子持久化。
+  preconditions:
+    - 已认证用户打开 Settings
+    - canonical AI 环境变量未设置
+  steps:
+    - ui_command: "AI: Settings"
+    - http_get: "/api/ai/settings"
+    - ui_set: "provider" = "openai-responses"
+    - ui_set_secret: "api_key" = "fixture-secret"
+    - ui_save: true
+    - ui_clear_key_on_save: true
+    - ui_undo_pending_key_clear: true
+    - run: cargo test -p deve_cli ai_settings -- --nocapture
+    - run: cargo test -p deve_web ai_settings -- --nocapture
+    - run: scripts/check-ai-baseline.sh
+    - run: scripts/check-cli-settings-baseline.sh
+  assertions:
+    - ui_assert: ai_settings_section_focused true
+    - ui_assert: repeated_ai_settings_command_refocuses_section true
+    - ui_assert: key_clear_is_pending_until_save true
+    - http_assert: raw_api_key_absent true
+    - http_assert: key_configured true
+    - file_assert: data_ai_env_allowlist_only true
+    - file_assert: data_ai_env_atomic_replace true
+    - android_assert: app_private_files_ai_env_preserves_path_identity true
+    - runtime_assert: anthropic_alias_selects_anthropic_protocol_and_endpoint true
+    - runtime_assert: ambiguous_provider_key_aliases_fail_closed true
+    - http_assert: unknown_put_fields_rejected true
+    - runtime_assert: post_replace_durability_uncertain_seals_until_reload true
+    - runtime_assert: new_requests_use_incremented_revision true
+    - runtime_assert: in_flight_request_keeps_admission_snapshot true
+    - ui_assert: environment_managed_is_read_only true
+    - browser_storage_absent: "AI_API_KEY"
 
 - case_id: SET-007A
   goal: Native backend preference 是 host-local shell 配置，不是 browser 或 server-backed Settings。

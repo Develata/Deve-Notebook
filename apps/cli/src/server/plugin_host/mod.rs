@@ -20,19 +20,28 @@ pub struct PluginHostState {
     pub plugins: Arc<Vec<Box<dyn PluginRuntime>>>,
     pub tx: broadcast::Sender<ServerMessage>,
     _native_ai_registration: Arc<crate::server::ai_chat::NativeAiRuntimeRegistration>,
+    _ai_provider_settings_registration:
+        Arc<crate::server::ai_chat::settings::ProviderSettingsRegistration>,
 }
 
 fn build_plugin_host_state(
     plugins: Vec<Box<dyn PluginRuntime>>,
     tx: broadcast::Sender<ServerMessage>,
-) -> Arc<PluginHostState> {
+) -> anyhow::Result<Arc<PluginHostState>> {
     let native_ai_registration =
         Arc::new(crate::server::ai_chat::NativeAiRuntimeRegistration::from_plugins(&plugins));
-    Arc::new(PluginHostState {
+    let provider_settings = Arc::new(
+        crate::server::ai_chat::settings::NativeAiProviderSettingsRuntime::environment_only()?,
+    );
+    let provider_settings_registration = Arc::new(crate::server::ai_chat::settings::register(
+        provider_settings,
+    )?);
+    Ok(Arc::new(PluginHostState {
         plugins: Arc::new(plugins),
         tx,
         _native_ai_registration: native_ai_registration,
-    })
+        _ai_provider_settings_registration: provider_settings_registration,
+    }))
 }
 
 pub async fn start_plugin_host_only(
@@ -41,7 +50,7 @@ pub async fn start_plugin_host_only(
 ) -> anyhow::Result<()> {
     crate::server::ai_chat::init_chat_stream_handler()?;
     let (tx, _rx) = broadcast::channel(100);
-    let state = build_plugin_host_state(plugins, tx);
+    let state = build_plugin_host_state(plugins, tx)?;
 
     let app = routes::build_router(state);
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
@@ -61,7 +70,7 @@ mod tests {
             crate::server::ai_chat::assemble_runtime_plugins_with_policy(Vec::new(), true)
                 .expect("built-in runtime");
         let (tx, _) = tokio::sync::broadcast::channel(1);
-        let state = build_plugin_host_state(plugins, tx);
+        let state = build_plugin_host_state(plugins, tx).expect("plugin host state");
 
         assert!(state._native_ai_registration.is_registered());
         assert!(

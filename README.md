@@ -46,7 +46,7 @@ The current release does not claim:
 
 - hosted multi-tenant SaaS;
 - browser offline-first full local ledger;
-- server-backed Settings API;
+- general-purpose server-backed Settings API beyond the scoped Native AI provider surface;
 - default full-text indexing;
 - high-performance graph rendering;
 - product runtime MCP integration;
@@ -304,6 +304,12 @@ DEVE_DOCKER_SMOKE_REQUIRED=1 bash scripts/smoke-docker-release.sh
 The image serves a single embedded frontend binary and stores runtime data under
 mounted `/data` and `/notes` paths. Projection roots are still configured
 through Projection Locators; `/notes` is not global authority.
+
+Native AI provider settings can be configured after login through
+`AI: Settings`; this writes only `/data/ai.env`. To manage AI settings through
+the project-root `.env` instead, set `AI_PROVIDER`, `AI_BASE_URL`, `AI_API_KEY`,
+`AI_MODEL`, or `AI_MAX_TOKENS` and restart Compose. Any such non-empty override
+makes the in-app provider section read-only; the app never rewrites root `.env`.
 
 ## Verification
 

@@ -5,17 +5,10 @@
     "engine": "rhai-v1",
     "entry": "main.rhai",
     "capabilities": {
-        "allow_net": ["api.openai.com", "api.anthropic.com", "localhost", "127.0.0.1"],
+        "allow_net": [],
         "allow_fs_read": [],
         "allow_fs_write": [],
-        "allow_env": [
-            "AI_BASE_URL",
-            "AI_API_KEY",
-            "AI_MODEL",
-            "AI_MAX_TOKENS",
-            "OPENAI_API_KEY",
-            "ANTHROPIC_API_KEY"
-        ],
+        "allow_env": [],
         "allow_source_control": false
     }
 }

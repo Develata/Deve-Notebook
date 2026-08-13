@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-22`
+- `Last Review`: `2026-08-13`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -187,6 +187,9 @@ scan bridge 已由 B4 一次删除。它们不是 deprecated alias，也不属�
     *   底部状态栏仅展示 AI 模式与基础统计。
 
 *   **AI**:
+    *   `AI: Settings`（CommandId=`ai.settings`）：打开现有 Settings modal 并聚焦 Native AI Provider
+        section。Command Palette 与 Unified Search 必须共用该 entry；命令本身不读取/保存 secret，保存只
+        能经过 `15_settings#native-ai-provider-settings` 的 authenticated server intent。
     *   `AI: Open Chat`: 打开统一 AI 面板。
     *   `AI: Retry Last Request`: 重试上一条失败请求。
     *   `AI: Switch Backend`: 在 Native AI Chat 与 Trusted CLI Agent（仅在显式启用且满足 trusted 条件时）之间切换。

@@ -46,22 +46,34 @@ impl AgentBridgePolicy {
     }
 
     pub fn capabilities(&self) -> AgentBridgeCapabilities {
-        self.capabilities_with_registration(
+        self.capabilities_with_runtime(
             crate::server::ai_chat::is_native_ai_runtime_registered(),
+            crate::server::ai_chat::is_native_ai_provider_ready(),
         )
     }
 
+    #[cfg(test)]
     pub(crate) fn capabilities_with_registration(
         &self,
         native_runtime_registered: bool,
     ) -> AgentBridgeCapabilities {
+        self.capabilities_with_runtime(native_runtime_registered, true)
+    }
+
+    fn capabilities_with_runtime(
+        &self,
+        native_runtime_registered: bool,
+        provider_ready: bool,
+    ) -> AgentBridgeCapabilities {
         let trusted_cli_reason = self.spawn_path().err();
         let trusted_cli_available = trusted_cli_reason.is_none();
-        let native_available = self.native_enabled && native_runtime_registered;
+        let native_available = self.native_enabled && native_runtime_registered && provider_ready;
         let native_reason = if !self.native_enabled {
             Some("native AI disabled by config".to_string())
         } else if !native_runtime_registered {
             Some("native AI runtime unavailable".to_string())
+        } else if !provider_ready {
+            Some("native AI API key is not configured".to_string())
         } else {
             None
         };

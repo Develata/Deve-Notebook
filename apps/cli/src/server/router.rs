@@ -80,6 +80,14 @@ pub fn build_app_with_native_session_and_p2p(
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
     let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
 
+    const AI_SETTINGS_BODY_LIMIT: usize = 16 * 1024;
+    let ai_settings = Router::new()
+        .route(
+            "/api/ai/settings",
+            get(super::ai_chat::settings::http::get).put(super::ai_chat::settings::http::replace),
+        )
+        .layer(DefaultBodyLimit::max(AI_SETTINGS_BODY_LIMIT));
+
     let protected = Router::new()
         .route(
             "/api/sc/pending",
@@ -151,6 +159,7 @@ pub fn build_app_with_native_session_and_p2p(
         )
         .route("/api/admin/sc-status", get(handlers::admin::sc_status))
         .route("/api/admin/git-status", get(handlers::admin::git_status))
+        .merge(ai_settings)
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
 
     let delegated = Router::new()

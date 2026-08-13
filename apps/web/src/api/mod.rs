@@ -7,6 +7,7 @@
 //! 本模块提供 `WsService` 用于与后端进行 WebSocket 通信。
 
 mod ai_backend;
+mod ai_settings;
 mod auth_login;
 mod auth_probe;
 mod backoff;
@@ -33,6 +34,10 @@ pub use self::ai_backend::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
     AiBackendCapabilities, BackendSendDecision, ai_backend_to_plugin_id,
     fetch_ai_backend_capabilities, resolve_backend_for_effective_state, resolve_backend_for_send,
+};
+pub(crate) use self::ai_settings::{
+    AiProviderProtocol, AiProviderSettings, AiSettingsApiError, ReplaceAiProviderSettings,
+    fetch_ai_provider_settings, replace_ai_provider_settings,
 };
 pub(crate) use self::auth_login::{LoginAttemptError, LoginTransportError, attempt_login, logout};
 pub(crate) use self::auth_probe::probe_auth_status_with_http_base;

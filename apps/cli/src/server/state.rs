@@ -66,6 +66,16 @@ static TEST_SOURCE_CONTROL_WRITE_GRANTS: std::sync::OnceLock<
     std::sync::Mutex<std::collections::HashMap<usize, Arc<SourceControlWriteGrants>>>,
 > = std::sync::OnceLock::new();
 
+#[cfg(test)]
+static TEST_AI_PROVIDER_SETTINGS: std::sync::OnceLock<
+    std::sync::Mutex<
+        std::collections::HashMap<
+            usize,
+            Arc<super::ai_chat::settings::NativeAiProviderSettingsRuntime>,
+        >,
+    >,
+> = std::sync::OnceLock::new();
+
 pub struct AppState {
     pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
@@ -94,9 +104,42 @@ pub struct AppState {
         Arc<super::runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>,
     #[cfg(not(test))]
     pub(crate) repo_creation_projection_base: Option<Arc<PathBuf>>,
+    #[cfg(not(test))]
+    pub(crate) ai_provider_settings: Arc<super::ai_chat::settings::NativeAiProviderSettingsRuntime>,
 }
 
 impl AppState {
+    #[cfg(not(test))]
+    pub(crate) fn ai_provider_settings(
+        &self,
+    ) -> Arc<super::ai_chat::settings::NativeAiProviderSettingsRuntime> {
+        self.ai_provider_settings.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn ai_provider_settings(
+        &self,
+    ) -> Arc<super::ai_chat::settings::NativeAiProviderSettingsRuntime> {
+        let key = self as *const Self as usize;
+        let runtimes = TEST_AI_PROVIDER_SETTINGS
+            .get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+        let mut runtimes = runtimes.lock().expect("test AI provider settings");
+        runtimes
+            .entry(key)
+            .or_insert_with(|| {
+                Arc::new(
+                    super::ai_chat::settings::NativeAiProviderSettingsRuntime::from_data_root(
+                        self.repo
+                            .ledger_dir()
+                            .parent()
+                            .expect("test ledger has data root"),
+                    )
+                    .expect("create test AI provider settings"),
+                )
+            })
+            .clone()
+    }
+
     #[cfg(not(test))]
     pub(crate) fn repo_creation_projection_base(&self) -> Option<&Path> {
         self.repo_creation_projection_base

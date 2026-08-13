@@ -19,9 +19,11 @@ use crate::i18n::{Locale, t};
 use crate::runtime::domain::AiBackendMode;
 use leptos::prelude::*;
 
+mod ai_provider;
 mod local_prefs;
 mod native_backend;
 
+pub use ai_provider::AiProviderSettingsSection;
 pub use local_prefs::{AppearanceSection, EditorBasicsSection, RuntimeDiagnosticsSection};
 pub use native_backend::NativeBackendSection;
 

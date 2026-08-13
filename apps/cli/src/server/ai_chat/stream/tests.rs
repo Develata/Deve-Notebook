@@ -3,12 +3,7 @@ use deve_core::plugin::runtime::chat_stream::ToolCallInfo;
 use deve_core::protocol::ServerMessage;
 use std::sync::{Arc, Mutex};
 
-fn provider_request_builder() -> reqwest::RequestBuilder {
-    reqwest::Client::new()
-        .post("https://api.example.test/v1/chat/completions")
-        .bearer_auth("api-key")
-        .json(&serde_json::json!({ "model": "test" }))
-}
+mod provider_fixture_tests;
 
 #[test]
 fn native_ai_http_client_creation_is_result_based() {
@@ -16,48 +11,52 @@ fn native_ai_http_client_creation_is_result_based() {
     let _ = client.clone();
 }
 
-#[test]
-fn configured_headers_reject_reserved_request_headers() {
-    let mut headers = std::collections::HashMap::new();
-    headers.insert("Authorization".to_string(), "Bearer injected".to_string());
+fn provider_settings(provider: ProviderProtocol) -> ProviderSettingsSnapshot {
+    ProviderSettingsSnapshot {
+        provider,
+        base_url: "https://provider.example/v1".to_string(),
+        api_key: "fixture-secret".to_string(),
+        model: "model-a".to_string(),
+        max_tokens: 1024,
+        revision: 1,
+    }
+}
 
-    let err = apply_configured_headers(provider_request_builder(), &headers)
-        .expect_err("configured authorization header must fail closed");
-
-    assert_eq!(
-        err.to_string(),
-        "AI custom headers must not include authorization, host, content-length, or transfer-encoding"
-    );
+fn prepared(protocol: ProviderProtocol) -> PreparedProviderRequest {
+    PreparedProviderRequest {
+        endpoint: "https://provider.example/v1/stream".to_string(),
+        body: serde_json::json!({"stream": true}),
+        protocol,
+    }
 }
 
 #[test]
-fn configured_headers_keep_provider_metadata_and_bearer_auth() {
-    let mut headers = std::collections::HashMap::new();
-    headers.insert("OpenAI-Organization".to_string(), "org_test".to_string());
-    headers.insert("X-Provider-Beta".to_string(), "enabled".to_string());
-
-    let request = apply_configured_headers(provider_request_builder(), &headers)
-        .expect("provider metadata headers should be accepted")
+fn openai_provider_request_owns_bearer_auth() {
+    let client = reqwest::Client::new();
+    let settings = provider_settings(ProviderProtocol::OpenaiResponses);
+    let request = build_provider_request(&client, &settings, &prepared(settings.provider))
         .build()
-        .expect("request should remain buildable");
-
+        .unwrap();
     assert_eq!(
-        request
-            .headers()
-            .get("OpenAI-Organization")
-            .unwrap()
-            .to_str()
-            .unwrap(),
-        "org_test"
+        request.headers()[reqwest::header::AUTHORIZATION],
+        "Bearer fixture-secret"
     );
-    assert_eq!(
-        request
+    assert!(!request.headers().contains_key("x-api-key"));
+}
+
+#[test]
+fn anthropic_provider_request_owns_exact_auth_headers() {
+    let client = reqwest::Client::new();
+    let settings = provider_settings(ProviderProtocol::AnthropicMessages);
+    let request = build_provider_request(&client, &settings, &prepared(settings.provider))
+        .build()
+        .unwrap();
+    assert_eq!(request.headers()["x-api-key"], "fixture-secret");
+    assert_eq!(request.headers()["anthropic-version"], "2023-06-01");
+    assert!(
+        !request
             .headers()
-            .get(reqwest::header::AUTHORIZATION)
-            .unwrap()
-            .to_str()
-            .unwrap(),
-        "Bearer api-key"
+            .contains_key(reqwest::header::AUTHORIZATION)
     );
 }
 
@@ -144,7 +143,7 @@ fn provider_tool_call_payload_is_rejected_before_content_chunk() {
     let sink = ChatStreamSink::new(move |msg| {
         sent_for_sink.lock().unwrap().push(msg);
     });
-    let event = parse_sse_message(
+    let event = crate::server::ai_chat::sse_parser::parse_sse_message(
         r#"{"choices":[{"delta":{"content":"unsafe partial","tool_calls":[{"index":0}]}}]}"#,
     )
     .expect("tool call payload should parse");
@@ -186,4 +185,16 @@ fn plain_text_finish_sends_finish_chunk_after_validation() {
             finish_reason: Some(reason),
         }] if req_id == "req-1" && reason == "stop"
     ));
+}
+
+#[test]
+fn missing_provider_terminal_event_is_rejected() {
+    let sink = ChatStreamSink::new(|_| {});
+    let error = finish_stream_response("req-1", "partial".to_string(), vec![], None, &sink)
+        .expect_err("an incomplete provider stream must not become a successful response");
+
+    assert_eq!(
+        error.to_string(),
+        "Native AI provider stream ended before a valid terminal event"
+    );
 }

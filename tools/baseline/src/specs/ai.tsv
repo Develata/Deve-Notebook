@@ -35,8 +35,8 @@ contains	docs/acceptance-cases/10_plugins.md	case_id: AI-001
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_core --test ai_chat_plugin_test -- --nocapture
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web chat_context -- --nocapture
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web plugin_text_response -- --nocapture
-contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_reaches_stream_bridge
-contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_accepts_empty_string_context_as_no_context
+contains	crates/core/tests/ai_chat_plugin_test.rs	external_ai_chat_context_builds_before_stream_authority_denial
+contains	crates/core/tests/ai_chat_plugin_test.rs	external_ai_chat_empty_context_still_has_no_stream_authority
 contains	apps/web/src/components/chat/actions/send/tests.rs	chat_context_includes_current_doc_markdown_selection_and_mode
 contains	apps/web/src/components/chat/actions/send.rs	chat.on_plugin_call.run
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_stops_loading
@@ -138,8 +138,31 @@ case_contains	docs/acceptance-cases/10_plugins.md	AI-010	cargo test -p deve_cli 
 case_contains	docs/acceptance-cases/10_plugins.md	AI-010	cargo test -p deve_cli proxy_host_owns_builtin_ai_registration_for_its_lifetime -- --nocapture
 contains	apps/cli/src/commands/serve/support.rs	serve_loader_registers_builtin_ai_without_external_plugins
 contains	apps/cli/src/commands/serve/support.rs	serve_loader_rejects_explicit_external_ai_chat_duplicate
-contains	apps/cli/src/native_runtime.rs	native_ai_disabled_omits_builtin_runtime
+contains	apps/cli/src/native_runtime/tests.rs	native_ai_disabled_omits_builtin_runtime
+contains	apps/cli/src/native_runtime/tests.rs	native_ai_settings_root_is_platform_owned_without_changing_authority_root
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	ai_env_store_rejects_app_data_parent_replacement
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	provider_key_aliases_select_exact_provider_authority
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	android_assert: app_private_files_ai_env_preserves_path_identity true
 contains	apps/cli/src/server/plugin_host/mod.rs	proxy_host_owns_builtin_ai_registration_for_its_lifetime
 contains	apps/cli/src/server/ai_chat/builtin_runtime.rs	include_str!("../../../../../plugins/ai-chat/manifest.json")
 contains	apps/cli/src/server/ai_chat/builtin_runtime.rs	include_str!("../../../../../plugins/ai-chat/main.rhai")
 contains	apps/cli/src/server/agent_bridge/policy.rs	is_native_ai_runtime_registered()
+contains	docs/acceptance-cases/10_plugins.md	case_id: AI-011
+contains	plugins/ai-chat/manifest.json	"allow_net": []
+contains	plugins/ai-chat/manifest.json	"allow_env": []
+absent	plugins/ai-chat/main.rhai	AI_API_KEY
+absent	plugins/ai-chat/main.rhai	_build_config
+contains	apps/cli/src/server/ai_chat/providers/tests.rs	openai_chat_completions_request_and_stream_exact
+contains	apps/cli/src/server/ai_chat/providers/tests.rs	openai_responses_request_and_stream_exact
+contains	apps/cli/src/server/ai_chat/providers/tests.rs	anthropic_messages_request_and_stream_exact
+contains	apps/cli/src/server/ai_chat/providers/tests.rs	provider_tool_refusal_and_unknown_content_fail_closed
+contains	apps/cli/src/server/ai_chat/mod.rs	embedded_backend_reinitializes_same_stream_handler
+contains	crates/core/src/plugin/runtime/rhai_v1.rs	external_rhai_runtime_has_no_native_ai_stream_authority
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	openai_provider_request_owns_bearer_auth
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	anthropic_provider_request_owns_exact_auth_headers
+contains	apps/cli/src/server/ai_chat/stream/tests/provider_fixture_tests.rs	truncated_provider_streams_fail_before_success_projection
+contains	apps/cli/src/server/ai_chat/stream/tests/provider_fixture_tests.rs	openai_done_without_protocol_terminal_fails_closed
+contains	apps/cli/src/server/ai_chat/providers/tests.rs	openai_responses_completion_requires_validated_response_output
+case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: truncated_provider_streams_fail_before_success_projection true
+case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: done_without_protocol_terminal_fails_closed true
+contains	apps/cli/src/server/agent_bridge/policy.rs	is_native_ai_provider_ready()

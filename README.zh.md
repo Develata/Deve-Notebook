@@ -39,7 +39,7 @@ Deve Notebook 是一个 Rust workspace，用于构建自托管的协作型 Markd
 
 - hosted multi-tenant SaaS；
 - 浏览器 offline-first full local ledger；
-- server-backed Settings API；
+- 除原生 AI provider 专用入口外的通用 server-backed Settings API；
 - 默认全文索引；
 - 高性能 graph renderer；
 - 产品内 MCP runtime；
@@ -281,6 +281,11 @@ DEVE_DOCKER_SMOKE_REQUIRED=1 bash scripts/smoke-docker-release.sh
 镜像交付单个 embedded frontend binary，并把 runtime data 放在挂载的 `/data`
 和 `/notes`。Projection root 仍通过 Projection Locator 配置；`/notes` 不是全局
 authority。
+
+登录后可通过 `AI：设置` 配置原生 AI provider；该入口只写 `/data/ai.env`。如果要由
+项目根 `.env` 管理，则设置 `AI_PROVIDER`、`AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL`
+或 `AI_MAX_TOKENS` 并重启 Compose。只要存在任一非空覆盖，应用内 provider 区即为
+只读；应用不会反向重写项目根 `.env`。
 
 ## 验证
 

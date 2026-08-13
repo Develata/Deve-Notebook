@@ -1,7 +1,7 @@
 use super::{create_static_commands, filter_commands};
 use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::Command;
-use crate::components::layout_context::SidebarControl;
+use crate::components::layout_context::{SettingsControl, SettingsSection, SidebarControl};
 use crate::i18n::Locale;
 use leptos::prelude::*;
 
@@ -200,5 +200,50 @@ fn settings_command_routes_to_settings_surface_and_closes_palette() {
 
         assert!(settings_opened.get_untracked());
         assert!(!show_palette.get_untracked());
+    });
+}
+
+#[test]
+fn ai_settings_command_focuses_provider_section_and_closes_palette() {
+    let owner = leptos::reactive::owner::Owner::new();
+
+    owner.with(|| {
+        let (show_palette, set_show_palette) = signal(true);
+        let (show_settings, set_show_settings) = signal(false);
+        let (section, set_section) = signal(SettingsSection::General);
+        let (focus_request, set_focus_request) = signal(0_u64);
+        provide_context(SettingsControl {
+            set_show: set_show_settings,
+            section,
+            set_section,
+            focus_request,
+            set_focus_request,
+        });
+        let locale = RwSignal::new(Locale::En);
+        let commands = create_static_commands(
+            Locale::En,
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+            set_show_palette,
+            locale,
+            None,
+            None,
+        );
+        let command = commands
+            .iter()
+            .find(|command| command.id == "ai.settings")
+            .expect("AI settings command");
+
+        assert_eq!(command.title, "AI: Settings");
+        assert_eq!(command.group, "AI");
+        command.action.run(());
+
+        assert!(show_settings.get_untracked());
+        assert_eq!(section.get_untracked(), SettingsSection::NativeAiProvider);
+        assert_eq!(focus_request.get_untracked(), 1);
+        assert!(!show_palette.get_untracked());
+
+        command.action.run(());
+        assert_eq!(focus_request.get_untracked(), 2);
     });
 }

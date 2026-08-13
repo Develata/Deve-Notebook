@@ -2,6 +2,7 @@
 //!   - 07_network#server-ws-runtime
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
+//!   - 15_settings#native-ai-provider-settings
 
 #[cfg(test)]
 use deve_core::native_adapter::{
@@ -26,6 +27,7 @@ pub struct ServerLaunchOptions {
     runtime_environment: RuntimeEnvironment,
     native: Option<NativeLaunchSession>,
     repo_creation_projection_base: Option<PathBuf>,
+    ai_provider_settings_data_root: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,6 +105,7 @@ impl ServerLaunchOptions {
             runtime_environment: RuntimeEnvironment::from_env(),
             native: None,
             repo_creation_projection_base: None,
+            ai_provider_settings_data_root: None,
         }
     }
 
@@ -114,6 +117,7 @@ impl ServerLaunchOptions {
             runtime_environment: RuntimeEnvironment::from_env(),
             native: None,
             repo_creation_projection_base: None,
+            ai_provider_settings_data_root: None,
         }
     }
 
@@ -128,6 +132,7 @@ impl ServerLaunchOptions {
                 auth_material: None,
             }),
             repo_creation_projection_base: None,
+            ai_provider_settings_data_root: None,
         }
     }
 
@@ -147,6 +152,7 @@ impl ServerLaunchOptions {
                 auth_material: Some(auth_material),
             }),
             repo_creation_projection_base: None,
+            ai_provider_settings_data_root: None,
         }
     }
 
@@ -171,6 +177,15 @@ impl ServerLaunchOptions {
 
     pub fn repo_creation_projection_base(&self) -> Option<&Path> {
         self.repo_creation_projection_base.as_deref()
+    }
+
+    pub(crate) fn with_ai_provider_settings_data_root(mut self, root: Option<PathBuf>) -> Self {
+        self.ai_provider_settings_data_root = root;
+        self
+    }
+
+    pub(crate) fn ai_provider_settings_data_root(&self) -> Option<&Path> {
+        self.ai_provider_settings_data_root.as_deref()
     }
 
     pub fn runtime_environment(&self) -> RuntimeEnvironment {
@@ -289,6 +304,18 @@ mod tests {
         );
         assert_eq!(launch.bind_addr(), SocketAddr::from(([0, 0, 0, 0], 3001)));
         assert_eq!(launch.native_service_summary(), None);
+    }
+
+    #[test]
+    fn launch_can_carry_platform_owned_ai_provider_settings_root() {
+        let root = std::path::PathBuf::from("/platform-private/files");
+        let launch = ServerLaunchOptions::native_loopback(3001, true)
+            .with_ai_provider_settings_data_root(Some(root.clone()));
+
+        assert_eq!(
+            launch.ai_provider_settings_data_root(),
+            Some(root.as_path())
+        );
     }
 
     #[test]

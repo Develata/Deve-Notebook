@@ -25,6 +25,32 @@ pub struct ChatControl {
     pub set_chat_visible: WriteSignal<bool>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum SettingsSection {
+    #[default]
+    General,
+    NativeAiProvider,
+}
+
+#[derive(Clone, Copy)]
+pub struct SettingsControl {
+    pub set_show: WriteSignal<bool>,
+    pub section: ReadSignal<SettingsSection>,
+    pub set_section: WriteSignal<SettingsSection>,
+    pub focus_request: ReadSignal<u64>,
+    pub set_focus_request: WriteSignal<u64>,
+}
+
+impl SettingsControl {
+    pub fn show(self, section: SettingsSection) {
+        self.set_section.set(section);
+        self.set_focus_request.update(|request| {
+            *request = request.wrapping_add(1);
+        });
+        self.set_show.set(true);
+    }
+}
+
 /// Editor tab limit control context.
 #[derive(Clone, Copy)]
 pub struct EditorTabLimitControl {

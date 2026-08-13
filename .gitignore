@@ -44,6 +44,7 @@ Thumbs.db
 deve.db
 .notegit/
 /ledger/
+/data/
 vault/
 Vault_old/
 test/

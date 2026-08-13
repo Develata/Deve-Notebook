@@ -119,6 +119,11 @@ contains	apps/cli/src/server/ws/mod.rs	async fn unauthorized_ws_response_is_stru
 contains	apps/cli/src/server/ws/auth.rs	AuthErrorCode::TokenMissing
 contains	apps/cli/src/server/setup.rs	Wildcard CORS origin is forbidden
 contains	apps/cli/src/server/setup.rs	development-only CORS allow list active
+contains	apps/cli/src/server/setup.rs	Method::PUT
+contains	apps/cli/src/server/tests/ai_settings_http_test.rs	ai_settings_put_rejects_unknown_fields
+contains	apps/cli/src/server/tests/ai_settings_http_test.rs	http://tauri.localhost.evil.example
+case_contains	docs/acceptance-cases/08_auth.md	AUTH-004	cors_assert: credentialed_native_put_preflight_allows_exact_origin_and_put true
+contains	apps/cli/src/server/tests/ai_settings_http_test.rs	native_ai_settings_put_cors_preflight_requires_exact_origin
 contains	apps/cli/src/server/auth/headers.rs	X-Content-Type-Options
 contains	apps/cli/src/server/auth/headers.rs	X-Frame-Options
 contains	apps/cli/src/server/auth/headers.rs	Content-Security-Policy

@@ -245,6 +245,9 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - production：必须白名单
 - development：可放宽到 localhost / 127.0.0.1
 - 禁止默认 `allow_origin(Any)` 进入生产
+- allow-methods 必须是当前 typed HTTP mutation surface 的显式集合：`GET`、`POST`、`PUT`、`OPTIONS`；
+  不得以 wildcard 代替。Native shell 的 `tauri.localhost -> loopback backend` PUT 必须通过同一 origin 白名单与
+  credentialed preflight，不得增加 route-local CORS 旁路。
 
 ### 6.3 CSRF
 

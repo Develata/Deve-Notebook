@@ -213,6 +213,27 @@
     - server_assert: ai_chat_plugin_not_found_absent true
     - server_assert: native_disabled_still_blocks_ai_chat_rpc true
 
+- case_id: AI-011
+  goal: Native AI 三种 provider protocol 各自使用精确 request 与 SSE adapter。
+  preconditions:
+    - Native AI runtime 已注册
+    - provider HTTP fixture 可观测 request 且不记录 secret
+  steps:
+    - run: cargo test -p deve_cli ai_chat -- --nocapture
+    - run: cargo test -p deve_core --test ai_chat_plugin_test -- --nocapture
+    - run: scripts/check-ai-baseline.sh
+  assertions:
+    - server_assert: openai_chat_completions_request_and_stream_exact true
+    - server_assert: openai_responses_request_and_stream_exact true
+    - server_assert: anthropic_messages_request_and_stream_exact true
+    - server_assert: provider_tool_or_refusal_events_fail_closed true
+    - server_assert: truncated_provider_streams_fail_before_success_projection true
+    - server_assert: done_without_protocol_terminal_fails_closed true
+    - server_assert: external_rhai_plugin_has_no_native_ai_stream_authority true
+    - server_assert: embedded_backend_reinitializes_same_stream_handler true
+    - server_assert: rhai_receives_no_provider_secret_or_network_authority true
+    - log_not_contains_any: ["fixture-secret", "Authorization: Bearer", "x-api-key"]
+
 - case_id: PLUG-001
   goal: Trusted External Agent 仅保留接口位，不要求当前 release 完整实现。
   preconditions:

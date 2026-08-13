@@ -42,7 +42,6 @@ use std::sync::{Arc, OnceLock};
 #[derive(Debug, Clone)]
 pub struct ChatStreamRequest {
     pub req_id: String,
-    pub config: Value,
     pub history: Value,
     pub tools: Option<Value>,
 }

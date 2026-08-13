@@ -4,6 +4,13 @@
 
 use crate::i18n::Locale;
 
+pub fn ai_settings(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "AI: Settings",
+        Locale::Zh => "AI：设置",
+    }
+}
+
 pub fn toggle_ai_chat(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "AI: Toggle Chat Panel",

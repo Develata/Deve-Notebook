@@ -420,6 +420,12 @@ contains	docker-compose.yml	- ./data:/data
 contains	docker-compose.yml	- ./notes:/notes
 contains	docker-compose.yml	DEVE_BIND_ADDR: 0.0.0.0:3001
 contains	docker-compose.yml	DEVE_LEDGER_DIR: /data/ledger
+contains	docker-compose.yml	AI_PROVIDER: ${AI_PROVIDER:-}
+contains	docker-compose.yml	AI_API_KEY: ${AI_API_KEY:-}
+contains	docker-compose.dev.yml	AI_PROVIDER: ${AI_PROVIDER:-}
+contains	docker-compose.dev.yml	AI_API_KEY: ${AI_API_KEY:-}
+contains	.env.example	AI: Settings
+absent	.env.example	AI_EXTRA_HEADERS
 absent	docker-compose.yml	DEVE_VAULT_PATH
 contains	docker-compose.yml	mem_limit: 512m
 contains	docker-compose.yml	http://localhost:3001/api/node/role

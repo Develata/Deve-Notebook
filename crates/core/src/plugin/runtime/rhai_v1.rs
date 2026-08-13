@@ -44,7 +44,7 @@ impl RhaiRuntime {
     /// - `manifest`: 插件清单
     /// - `_base_dir`: 插件根目录路径，用于解析非 WASM 目标的 import 语句
     pub fn new(manifest: PluginManifest, _base_dir: PathBuf) -> Self {
-        Self::new_with_module_root(manifest, Some(_base_dir))
+        Self::new_with_module_root(manifest, Some(_base_dir), false)
     }
 
     /// Create a runtime for a compile-time embedded script.
@@ -53,10 +53,21 @@ impl RhaiRuntime {
     /// `import` added later cannot silently turn the binary asset back into a
     /// runtime-directory dependency.
     pub fn new_embedded(manifest: PluginManifest) -> Self {
-        Self::new_with_module_root(manifest, None)
+        Self::new_with_module_root(manifest, None, false)
     }
 
-    fn new_with_module_root(manifest: PluginManifest, _base_dir: Option<PathBuf>) -> Self {
+    /// Creates the compile-time first-party Native AI compatibility runtime.
+    /// This is the only constructor that exposes the server-owned chat stream
+    /// bridge; filesystem-backed plugins remain default-deny.
+    pub fn new_embedded_native_ai(manifest: PluginManifest) -> Self {
+        Self::new_with_module_root(manifest, None, true)
+    }
+
+    fn new_with_module_root(
+        manifest: PluginManifest,
+        _base_dir: Option<PathBuf>,
+        allow_native_ai_stream: bool,
+    ) -> Self {
         let mut engine = Engine::new();
         engine.set_max_expr_depths(128, 128);
         engine.set_max_operations(MAX_RHAI_OPERATIONS);
@@ -70,7 +81,7 @@ impl RhaiRuntime {
         }
 
         // 注册宿主 API
-        host::register_core_api(&mut engine, &manifest);
+        host::register_core_api_with_native_ai(&mut engine, &manifest, allow_native_ai_stream);
 
         Self {
             engine,
@@ -188,6 +199,26 @@ mod tests {
             .expect_err("embedded runtime must not resolve filesystem modules");
 
         assert!(error.to_string().contains("Failed to initialize plugin"));
+    }
+
+    #[test]
+    fn external_rhai_runtime_has_no_native_ai_stream_authority() {
+        let manifest = PluginManifest {
+            id: "external-ai-probe".into(),
+            name: "External AI Probe".into(),
+            version: "0.1".into(),
+            entry: "main.rhai".into(),
+            capabilities: Default::default(),
+        };
+        let mut runtime = RhaiRuntime::new(manifest.clone(), PathBuf::from("."));
+        runtime
+            .load(manifest, r#"fn run() { ai_chat_stream("req", []) }"#)
+            .expect("unresolved host names may compile inside a function");
+
+        let error = runtime
+            .call("run", Vec::new())
+            .expect_err("external plugin must not receive Native AI stream API");
+        assert!(error.to_string().contains("Function not found"));
     }
 
     #[test]

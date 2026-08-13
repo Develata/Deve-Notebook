@@ -11,40 +11,6 @@ Focus on the current markdown note and the explicitly provided context. \
 Do not assume access to external tools unless the host explicitly adds them."
 }
 
-fn _build_config() {
-    let base_url = env("AI_BASE_URL");
-    if base_url == () || base_url == "" {
-        base_url = "https://api.openai.com/v1";
-    }
-
-    let api_key = env("AI_API_KEY");
-    if api_key == () || api_key == "" {
-        api_key = env("OPENAI_API_KEY");
-    }
-    if api_key == () || api_key == "" {
-        api_key = env("ANTHROPIC_API_KEY");
-    }
-
-    let model = env("AI_MODEL");
-    if model == () || model == "" {
-        model = "gpt-4o-mini";
-    }
-
-    let max_tokens_str = env("AI_MAX_TOKENS");
-    let max_tokens = if max_tokens_str == () || max_tokens_str == "" {
-        4096
-    } else {
-        parse_int(max_tokens_str)
-    };
-
-    #{
-        base_url: base_url,
-        api_key: api_key,
-        model: model,
-        max_tokens: max_tokens
-    }
-}
-
 fn build_system_prompt(context) {
     let system = system_prompt_base();
     if context == () {
@@ -105,20 +71,11 @@ fn append_prior_history(history, prior_history) {
 }
 
 fn chat(req_id, user_msg, context, prior_history) {
-    let config = _build_config();
-
-    if config.api_key == () || config.api_key == "" {
-        return #{
-            type: "error",
-            content: "Error: No AI API key configured. Set AI_API_KEY or OPENAI_API_KEY environment variable."
-        };
-    }
-
     let base_history = [
         #{role: "system", content: build_system_prompt(context)}
     ];
     let history = append_prior_history(base_history, prior_history);
     history.push(#{role: "user", content: user_msg});
 
-    ai_chat_stream(req_id, config, history)
+    ai_chat_stream(req_id, history)
 }

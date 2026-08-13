@@ -120,9 +120,14 @@ timeout_ms = 30000
 # DEVE_PROFILE=standard
 # DEVE_LEDGER_DIR=ledger
 # DEVE_SYNC_MODE=auto
-# AI_API_KEY=
+# AI_PROVIDER=openai-chat-completions
 # AI_BASE_URL=https://api.openai.com/v1
+# AI_API_KEY=
 # AI_MODEL=gpt-4o-mini
+# AI_MAX_TOKENS=4096
+# Migration aliases when the canonical AI_* group is absent:
+# OPENAI_API_KEY=
+# ANTHROPIC_API_KEY=
 # AGENT_CLI_PATH=
 "#;
         std::fs::write(env_path, default_env)?;
@@ -172,6 +177,12 @@ mod tests {
         assert!(config.contains("mode = \"native\""));
         assert!(config.contains("[ai.agent_bridge]"));
         assert!(config.contains("timeout_ms = 30000"));
+        let env = std::fs::read_to_string(root.join(".env")).expect("env");
+        assert!(env.contains("# AI_PROVIDER=openai-chat-completions"));
+        assert!(env.contains("# AI_BASE_URL=https://api.openai.com/v1"));
+        assert!(env.contains("# AI_API_KEY="));
+        assert!(env.contains("# AI_MODEL=gpt-4o-mini"));
+        assert!(env.contains("# AI_MAX_TOKENS=4096"));
     }
 
     #[test]

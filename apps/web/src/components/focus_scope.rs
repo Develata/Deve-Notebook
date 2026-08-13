@@ -135,6 +135,69 @@ pub(crate) fn attach_modal_focus_restore_effect(
     });
 }
 
+pub(crate) fn attach_modal_focus_restore_effect_with_selector(
+    is_open: impl Fn() -> bool + Copy + 'static,
+    initial_selector: impl Fn() -> Option<&'static str> + Copy + 'static,
+    focus_request: impl Fn() -> u64 + Copy + 'static,
+    panel_ref: NodeRef<leptos::html::Div>,
+    fallback_ref: NodeRef<leptos::html::Button>,
+) {
+    let last_open = StoredValue::new_local(false);
+    let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
+    let last_request = StoredValue::new_local(0_u64);
+
+    Effect::new(move |_| {
+        let open = is_open();
+        let request = focus_request();
+        let Some(was_open) = last_open.try_get_value() else {
+            return;
+        };
+        if last_open.try_set_value(open).is_some() {
+            return;
+        }
+
+        let Some(previous_request) = last_request.try_get_value() else {
+            return;
+        };
+        if last_request.try_set_value(request).is_some() {
+            return;
+        }
+
+        if open && (!was_open || request != previous_request) {
+            if !was_open && previous_focus.try_set_value(active_element()).is_some() {
+                return;
+            }
+            let selector = initial_selector();
+            request_animation_frame(move || {
+                let selected = selector
+                    .and_then(|selector| {
+                        panel_ref
+                            .try_get_untracked()
+                            .flatten()?
+                            .query_selector(selector)
+                            .ok()
+                            .flatten()
+                    })
+                    .and_then(|element| element.dyn_into::<HtmlElement>().ok());
+                if selected.as_ref().is_some_and(focus_element) {
+                    return;
+                }
+                if let Some(fallback) = fallback_ref.try_get_untracked().flatten() {
+                    let _ = fallback.focus();
+                }
+            });
+        } else if !open && was_open {
+            let Some(previous) = previous_focus.try_get_value() else {
+                return;
+            };
+            if previous_focus.try_set_value(None).is_some() {
+                return;
+            }
+            restore_focus_next_frame(previous);
+        }
+    });
+}
+
 pub(crate) fn attach_modal_focus_restore_effect_with_fallback(
     is_open: impl Fn() -> bool + Copy + 'static,
     initial_focus_ref: NodeRef<leptos::html::Button>,

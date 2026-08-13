@@ -9,64 +9,88 @@
 //! **Pre-condition**: 输入为有效的 JSON 字符串。
 //! **Post-condition**: 返回结构化的 SSE 事件或错误。
 
-use super::types::{ParsedSseEvent, SseResponse};
+use super::types::ParsedSseEvent;
+use serde_json::Value;
 
 /// 解析单条 SSE 消息
 pub fn parse_sse_message(data: &str) -> Result<ParsedSseEvent, String> {
-    let response: SseResponse =
-        serde_json::from_str(data).map_err(|e| format!("Invalid SSE payload: {}", e))?;
-
-    let choice = response
-        .choices
-        .first()
+    let response: Value =
+        serde_json::from_str(data).map_err(|e| format!("Invalid SSE payload: {e}"))?;
+    let choices = response
+        .get("choices")
+        .and_then(Value::as_array)
         .ok_or_else(|| "Missing choices in SSE payload".to_string())?;
-
-    // Native AI Chat 不支持工具调用；任何工具调用信号都必须优先拒绝。
-    if response.choices.iter().any(choice_has_tool_call_signal) {
+    if choices.iter().any(choice_has_tool_call_signal) {
         return Ok(ParsedSseEvent::ToolCallDelta);
     }
-
-    let Some(delta) = &choice.delta else {
-        if let Some(reason) = &choice.finish_reason {
-            return Ok(ParsedSseEvent::Finished(reason.clone()));
-        }
+    if choices.len() != 1 {
+        return Err("OpenAI Chat SSE must contain exactly one choice".to_string());
+    }
+    let choice = choices[0]
+        .as_object()
+        .ok_or_else(|| "OpenAI Chat choice must be an object".to_string())?;
+    if let Some(reason) = choice.get("finish_reason").filter(|value| !value.is_null()) {
+        return match reason.as_str() {
+            Some("stop") => Ok(ParsedSseEvent::Finished("stop".to_string())),
+            Some("tool_calls" | "function_call") => Ok(ParsedSseEvent::ToolCallDelta),
+            Some(_) => Err("OpenAI Chat finish reason is unsupported".to_string()),
+            None => Err("OpenAI Chat finish reason must be a string".to_string()),
+        };
+    }
+    let Some(delta) = choice.get("delta").filter(|value| !value.is_null()) else {
         return Ok(ParsedSseEvent::Empty);
     };
-
-    if let Some(reason) = &choice.finish_reason {
-        return Ok(ParsedSseEvent::Finished(reason.clone()));
-    }
-
-    // 处理文本内容
-    if let Some(content) = &delta.content
-        && !content.is_empty()
+    let delta = delta
+        .as_object()
+        .ok_or_else(|| "OpenAI Chat delta must be an object".to_string())?;
+    const ALLOWED_DELTA_FIELDS: [&str; 5] =
+        ["role", "content", "refusal", "function_call", "tool_calls"];
+    if delta
+        .keys()
+        .any(|key| !ALLOWED_DELTA_FIELDS.contains(&key.as_str()))
     {
-        return Ok(ParsedSseEvent::ContentDelta(content.clone()));
+        return Err("OpenAI Chat delta contains an unsupported field".to_string());
     }
-
-    Ok(ParsedSseEvent::Empty)
+    if delta.get("refusal").is_some_and(|value| !value.is_null()) {
+        return Err("OpenAI Chat refusal is unsupported".to_string());
+    }
+    if delta
+        .get("function_call")
+        .is_some_and(|value| !value.is_null())
+        || delta
+            .get("tool_calls")
+            .is_some_and(|value| !value.is_null())
+    {
+        return Ok(ParsedSseEvent::ToolCallDelta);
+    }
+    if delta
+        .get("role")
+        .filter(|value| !value.is_null())
+        .is_some_and(|role| role.as_str() != Some("assistant"))
+    {
+        return Err("OpenAI Chat delta role is unsupported".to_string());
+    }
+    match delta.get("content").filter(|value| !value.is_null()) {
+        Some(content) => content
+            .as_str()
+            .map(|content| ParsedSseEvent::ContentDelta(content.to_string()))
+            .ok_or_else(|| "OpenAI Chat content delta must be text".to_string()),
+        None => Ok(ParsedSseEvent::Empty),
+    }
 }
 
-fn choice_has_tool_call_signal(choice: &super::types::SseChoice) -> bool {
-    if matches!(
-        choice.finish_reason.as_deref(),
+fn choice_has_tool_call_signal(choice: &Value) -> bool {
+    matches!(
+        choice.get("finish_reason").and_then(Value::as_str),
         Some("tool_calls" | "function_call")
-    ) {
-        return true;
-    }
-
-    let Some(delta) = choice.delta.as_ref() else {
-        return false;
-    };
-
-    if delta.function_call.is_some() {
-        return true;
-    }
-
-    delta
-        .tool_calls
-        .as_ref()
-        .is_some_and(|tool_calls| !tool_calls.is_empty())
+    ) || choice.get("delta").is_some_and(|delta| {
+        delta
+            .get("function_call")
+            .is_some_and(|value| !value.is_null())
+            || delta
+                .get("tool_calls")
+                .is_some_and(|value| !value.is_null())
+    })
 }
 
 #[cfg(test)]
@@ -91,6 +115,16 @@ mod tests {
             ParsedSseEvent::Finished(reason) => assert_eq!(reason, "stop"),
             _ => panic!("Expected Finished"),
         }
+    }
+
+    #[test]
+    fn chat_refusal_filter_and_unknown_delta_fail_closed() {
+        assert!(parse_sse_message(r#"{"choices":[{"delta":{"refusal":"no"}}]}"#).is_err());
+        assert!(
+            parse_sse_message(r#"{"choices":[{"finish_reason":"content_filter","delta":{}}]}"#)
+                .is_err()
+        );
+        assert!(parse_sse_message(r#"{"choices":[{"delta":{"audio":{"id":"x"}}}]}"#).is_err());
     }
 
     #[test]

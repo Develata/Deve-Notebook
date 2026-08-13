@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Optional Product Layer`
 - `Status`: `Optional Product Layer`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-08-13`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
@@ -77,6 +77,27 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
     不允许以加载顺序静默覆盖。嵌入资源不得包含 API key、cookie、session 或其他 secret。
 *   backend capabilities 的 `native_available` 必须由有效配置与当前 runtime 注册结果共同决定；仅有
     `ai.native_enabled = true` 但内建注册失败时必须报告不可用，不能让 UI 进入必然失败的发送路径。
+*   Provider secret 与 provider selection 由 server-owned `NativeAiProviderSettingsRuntime` 解析并在请求
+    admission 时取得 immutable snapshot；Rhai bridge 只传 `req_id + history + tools(None)`，不得读取环境、
+    拼 provider URL、携带 API key 或拥有 network authority。
+*   Chat stream handler 是同一 server binary 的进程级基础设施：同一内建实现的重复初始化必须幂等，以支持
+    Android 同进程 embedded backend generation replacement；不同实现或外部替换仍必须 fail-closed。
+*   只有编译期内建 `ai-chat` runtime 可以注册 chat stream host API 并取得 request-local stream scope。
+    外部 Rhai plugin 即使猜中 host function 名称也必须得到 unknown-function/capability denial，不能借用 server
+    provider secret、网络出口或付费调用额度。
+*   三种 provider adapter 是同一 runtime boundary 下的 peer implementations：
+    `openai-chat-completions`、`openai-responses`、`anthropic-messages`。每个 adapter 独占 endpoint、认证、
+    request projection 和 SSE parser；不得用容错 JSON 猜测把一种协议伪装成另一种。
+*   OpenAI Responses 只接受 output text delta；function/tool call、refusal 或 response failed 必须结束请求并
+    fail-closed。Anthropic Messages 只接受 text content block；`tool_use`/`server_tool_use`、input JSON delta、
+    thinking 与 error event 不得投影为可执行工具或普通回答。未知非关键事件可以忽略，未知内容块必须
+    fail-closed。
+*   OpenAI Chat Completions 只接受 `assistant` 文本 delta 与正常 `stop`；refusal、content filter、tool/function
+    signal、未知 delta 字段或未知 finish reason 必须 fail-closed，不能把不完整/被拒绝结果伪装为成功文本。
+*   Provider stream 必须观察到所属协议的合法终态（Chat `stop`、包含 `status=completed` 与可验证 text-only
+    `output` 的 Responses `response.completed`、Anthropic
+    `message_delta.stop_reason`）后才能投影成功；`[DONE]`、EOF 或 transport `StreamEnded` 仅是 framing/连接终止，
+    不得自行制造成功终态。
 
 ### 原生模式定义
 
@@ -149,6 +170,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 ## 6. Related Configuration (本章相关配置)
 
 *   `AI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: Native AI Chat 使用的服务密钥。
+*   `AI_PROVIDER`: `openai-chat-completions` / `openai-responses` / `anthropic-messages`。
 *   `AI_BASE_URL`: Native AI Chat API 端点。
 *   `AI_MODEL`: Native AI Chat 模型名。
 *   `AI_MAX_TOKENS`: Native AI Chat 最大 token 数。

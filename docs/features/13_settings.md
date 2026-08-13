@@ -33,6 +33,11 @@
 - 最大文档标签页数是本地 UI 偏好，只限制 Markdown 文档标签页自动淘汰，不限制 Diff 标签页，也不持久化打开文档列表；该数字输入必须在 blur / Enter / change 时提交，输入两位数的中间过程不应触发临时淘汰。
 - AI Chat 面板可见性是本地 UI 偏好；关闭后应同时移除 Chat 面板和桌面 Chat 分界线，不应改变 AI 后端配置。
 - Backend section 在普通浏览器和 RemoteBrowser 中必须显示 native-only unavailable；只有 typed bundled-local capability 存在时才可校验并保存 Remote Backend。Remote URL 未经 native node-role 校验成功不能保存，校验中/失败/成功都应有可见反馈。
+- Native AI Provider section 通过 authenticated server API 展示 provider、Base URL、model、max tokens、
+  key 是否已配置及配置来源。API key 输入是 write-only password；空白保存保留旧 key，清除必须使用独立
+  显式控制。清除控制先进入可撤销的“保存时清除”状态，只有保存成功后才显示已删除，关闭 Settings 不得
+  暗示服务端 key 已改变。环境变量管理时整个 section 只读并显示“由部署环境管理”；UI-managed 保存后只
+  显示脱敏终态。
 - 切回 Local Backend 是 native-owned lifecycle 操作，不属于 Web Settings。Desktop 原生菜单/托盘保存 host-local preference 并重启壳层；Mobile 的 Android/iOS 平台原生控件交给 native coordinator 销毁远端 WebView并建立新的 embedded runtime。该操作不写浏览器 localStorage、不写 `config.toml`、不保存或复用远端 session/token。
 - Settings 模态框只保留右上角关闭按钮；底部不应再渲染大号关闭按钮。
 - 设置不应表现为“点了没反应”。
@@ -48,6 +53,7 @@
 
 - 当前阶段不要求所有工程内部参数都暴露到用户设置界面。
 - 当前阶段不允许设置页直接操控 authority 真相或绕过 runtime。
+- 当前阶段不提供 arbitrary provider headers、浏览器 secret storage 或 project-root `.env` writer。
 
 ## Chrome MCP 验收实例
 
@@ -64,6 +70,8 @@
 3. 观察界面变化。
 4. 检查 Backend section：普通浏览器应显示 native-only unavailable；native shell 中 remote URL 必须校验成功后才能保存。
 5. 检查预留项是否被明确区分。
+6. 通过 `AI: Settings` 打开同一 Settings surface；验证三种 provider 可选、key 不回显、保存反馈与
+   environment-managed 只读状态。
 
 期望结果：
 

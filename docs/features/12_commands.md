@@ -25,6 +25,8 @@
 
 - 用户可以打开命令面板，搜索并执行主要命令。
 - 命令面板应覆盖核心导航与工作流入口。
+- `AI: Settings` 使用稳定 CommandId `ai.settings`，打开并聚焦现有 Native AI Provider 设置区；它与
+  Unified Search 的 `>` 入口共享 registry metadata，不实现第二套保存逻辑。
 
 ### 2. Quick Open / Branch Switch / Sidebar Toggle
 

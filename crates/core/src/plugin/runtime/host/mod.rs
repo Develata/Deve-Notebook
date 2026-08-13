@@ -288,14 +288,20 @@ pub(crate) fn repo_manager() -> Result<Arc<RepoManager>, anyhow::Error> {
 
 /// 注册核心 API 到 Rhai 引擎。
 #[cfg(not(target_arch = "wasm32"))]
-pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
+pub(crate) fn register_core_api_with_native_ai(
+    engine: &mut Engine,
+    manifest: &PluginManifest,
+    allow_native_ai_stream: bool,
+) {
     use std::sync::Arc;
     let caps = Arc::new(manifest.capabilities.clone());
 
     fs::register_fs_api(engine, caps.clone());
     note::register_note_api(engine, caps.clone());
     git::register_git_api(engine, caps.clone());
-    chat::register_chat_api(engine, caps.clone());
+    if allow_native_ai_stream {
+        chat::register_chat_api(engine);
+    }
     util::register_util_api(engine, caps.clone());
     skill::register_skill_api(engine, caps.clone());
     search::register_search_api(engine, caps.clone());
@@ -304,9 +310,23 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
     util::register_log_api(engine);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
+    register_core_api_with_native_ai(engine, manifest, false);
+}
+
 #[cfg(target_arch = "wasm32")]
-pub fn register_core_api(engine: &mut Engine, _manifest: &PluginManifest) {
+pub(crate) fn register_core_api_with_native_ai(
+    engine: &mut Engine,
+    _manifest: &PluginManifest,
+    _allow_native_ai_stream: bool,
+) {
     util::register_log_api(engine);
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
+    register_core_api_with_native_ai(engine, manifest, false);
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

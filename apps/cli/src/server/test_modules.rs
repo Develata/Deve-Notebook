@@ -4,6 +4,8 @@
 // only the file layout is organized by feature family.
 #[path = "tests/catalog_repo_support.rs"]
 mod catalog_repo_support;
+#[path = "tests/ai_settings_http_test.rs"]
+mod ai_settings_http_test;
 #[path = "tests/docs/docs_copy_contract_test.rs"]
 mod docs_copy_contract_test;
 #[path = "tests/docs/docs_create_bootstrap_test.rs"]

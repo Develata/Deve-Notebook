@@ -1260,6 +1260,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "deve_core",
+ "dotenvy",
  "futures",
  "getrandom 0.3.4",
  "hmac",

@@ -24,6 +24,10 @@
 - Native AI 是随应用编译携带的第一方可选能力；Android/Desktop 用户不需要另行安装
   `plugins/ai-chat` 目录。
 - UI 只在配置已启用且运行时确实注册 Native AI 后显示其为可用；注册失败必须明确降级，不能在发送后才报“插件不存在”。
+- Native AI Provider 可选择 OpenAI Chat Completions、OpenAI Responses 或 Anthropic Messages；切换协议
+  不改变 Native/Trusted CLI 后端语义，也不扩大 Markdown 上下文或工具权限。
+- provider key 永不回显；未配置、被清除或 provider stream 返回工具/拒绝/error 时，Chat 必须结束
+  loading 并显示明确错误。
 
 ### 2. 当前暴露边界
 

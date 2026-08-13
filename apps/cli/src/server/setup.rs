@@ -34,7 +34,7 @@ pub(super) fn build_cors_layer(
 
     Ok(CorsLayer::new()
         .allow_origin(AllowOrigin::list(origins))
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])
         .allow_headers([
             header::ACCEPT,
             header::AUTHORIZATION,

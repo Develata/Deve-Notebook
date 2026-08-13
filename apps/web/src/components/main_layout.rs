@@ -12,7 +12,8 @@ use self::setup::{
     init_search_ui_state, init_sidebar_ui_state, watch_session_expired,
 };
 pub use crate::components::layout_context::{
-    ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl,
+    ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SettingsControl,
+    SettingsSection, SidebarControl,
 };
 use crate::components::main_layout_runtime::MainLayoutRuntime;
 use crate::components::ui_back::{UiBackCoordinator, UiBackLayer};
@@ -38,6 +39,16 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
     let search = init_search_ui_state();
     let outline = init_outline_ui_state();
     let sidebar = init_sidebar_ui_state(is_mobile);
+    let (settings_section, set_settings_section) = signal(SettingsSection::General);
+    let (settings_focus_request, set_settings_focus_request) = signal(0_u64);
+    let settings_control = SettingsControl {
+        set_show: sidebar.set_show_settings,
+        section: settings_section,
+        set_section: set_settings_section,
+        focus_request: settings_focus_request,
+        set_focus_request: set_settings_focus_request,
+    };
+    provide_context(settings_control);
     let _max_document_tabs = init_editor_tab_limit_ui_state();
     let desktop_layout = use_layout(sidebar.visible, sidebar.chat_visible);
     let stop_resize = desktop_layout.stop_resize;
@@ -45,7 +56,7 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
     let is_resizing = desktop_layout.is_resizing;
     bind_global_shortcuts(&search, &outline, &sidebar, locale);
 
-    let on_settings = Callback::new(move |_| sidebar.set_show_settings.set(true));
+    let on_settings = Callback::new(move |_| settings_control.show(SettingsSection::General));
     let on_command = toggle_search_callback(
         search.show_search,
         search.set_show_search,

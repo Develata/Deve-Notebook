@@ -126,13 +126,33 @@ contains	docs/plan/15_settings.md	source_control.git_bridge
 contains	docs/plan/15_settings.md	MUST NOT** 保存 token material
 contains	docs/plan/15_settings.md	运行模式预设: `standard` (默认), `low-spec` (低配).
 absent	docs/plan/15_settings.md	`debug` (调试)
-contains	docs/plan/15_settings.md	**Future Settings Surface**
-contains	docs/plan/15_settings.md	server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计
-contains	docs/plan/15_settings.md	启用前 **MUST** 更新本章、feature spec 与 acceptance case
+contains	docs/plan/15_settings.md	**Server-managed AI Provider Settings**
+contains	docs/plan/15_settings.md	其余 server-backed Settings API 仍属于 future surface
+contains	docs/plan/15_settings.md	除下述 Native AI provider 专用
 contains	docs/plan/15_settings.md	**Editor**
 contains	docs/plan/15_settings.md	`Cmd+Z` / `Ctrl+Z`
 contains	docs/plan/15_settings.md	`Cmd+Shift+Z` / `Ctrl+Y`
 absent	apps/cli/src/server/router.rs	/api/settings
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: SET-009
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	android_assert: app_private_files_ai_env_preserves_path_identity true
+contains	apps/cli/src/native_runtime.rs	with_ai_provider_settings_data_root(Some(ai_settings_root))
+contains	apps/cli/src/native_runtime/tests.rs	native_ai_settings_root_is_platform_owned_without_changing_authority_root
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	ai_env_store_rejects_app_data_parent_replacement
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web ai_settings -- --nocapture
+contains	docs/plan/15_settings.md	{#native-ai-provider-settings}
+contains	apps/cli/src/server/router.rs	/api/ai/settings
+contains	apps/cli/src/server/ai_chat/settings/file.rs	create_atomic_replace_temp
+contains	apps/cli/src/server/ai_chat/settings/file.rs	replace_file_atomically
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	canonical_environment_is_whole_group_authority
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	ui_replace_is_atomic_redacted_and_revision_bound
+contains	apps/cli/src/server/ai_chat/settings/tests.rs	post_replace_durability_failure_seals_runtime_until_reload
+contains	apps/cli/src/commands/init.rs	# AI_PROVIDER=openai-chat-completions
+contains	apps/cli/src/commands/init.rs	# AI_MAX_TOKENS=4096
+contains	apps/web/src/components/command_palette/registry.rs	"ai.settings"
+contains	apps/web/src/components/command_palette/registry/tests.rs	ai_settings_command_focuses_provider_section_and_closes_palette
+contains	apps/web/src/components/main_layout/setup.rs	on_cleanup(move || listener.remove())
+contains	apps/web/src/components/settings_sections/ai_provider.rs	type="password"
+absent	apps/web/src/api/ai_settings.rs	localStorage
 contains	apps/web/src/shortcuts/global.rs	Ctrl+P
 contains	apps/web/src/shortcuts/global.rs	Ctrl+Shift+P
 contains	apps/web/src/shortcuts/global.rs	Ctrl+Shift+K

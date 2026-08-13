@@ -4,12 +4,12 @@
 //!
 //! # AI Chat Streaming (Server Runtime)
 //!
-//! **功能**: OpenAI 兼容的流式聊天实现。
+//! **功能**: Server-owned Native AI provider settings 与精确多协议流式实现。
 //!
 //! **模块结构**:
-//! - `config`: 配置结构
-//! - `types`: SSE 响应数据类型
-//! - `sse_parser`: SSE 消息解析与工具调用构建
+//! - `settings`: 配置来源、脱敏 API、原子持久化与 runtime registry
+//! - `providers`: 三种 provider 的 request/SSE peer adapters
+//! - `types`: 共享流事件类型
 //! - `stream`: 流式请求执行
 //!
 //! **优化**:
@@ -17,20 +17,20 @@
 //! - 强类型 SSE 解析 (避免 serde_json::Value)
 
 mod builtin_runtime;
-mod config;
+mod providers;
+pub(crate) mod settings;
 mod sse_parser;
 mod stream;
 mod types;
 
 use anyhow::{Result, anyhow};
-use config::ChatConfig;
 use deve_core::plugin::runtime::chat_stream::{
     ChatStreamHandler, ChatStreamRequest, ChatStreamResponse, ChatStreamSink,
 };
 use deve_core::plugin::runtime::provider::register_provider;
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::sync::{
-    Arc,
+    Arc, OnceLock,
     atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use stream::execute_stream;
@@ -40,9 +40,12 @@ pub const NATIVE_AI_DISABLED_ERROR: &str = "Native AI Chat disabled by config";
 
 static NATIVE_AI_ENABLED: AtomicBool = AtomicBool::new(true);
 static NATIVE_AI_RUNTIME_REGISTRATIONS: AtomicUsize = AtomicUsize::new(0);
+static NATIVE_AI_STREAM_HANDLER_INIT: OnceLock<Result<(), String>> = OnceLock::new();
 
 pub(crate) struct NativeAiRuntimeRegistration {
     registered: bool,
+    #[cfg(test)]
+    _provider_settings: Option<settings::ProviderSettingsRegistration>,
 }
 
 impl NativeAiRuntimeRegistration {
@@ -55,7 +58,11 @@ impl NativeAiRuntimeRegistration {
         if registered {
             NATIVE_AI_RUNTIME_REGISTRATIONS.fetch_add(1, Ordering::AcqRel);
         }
-        Self { registered }
+        Self {
+            registered,
+            #[cfg(test)]
+            _provider_settings: None,
+        }
     }
 
     #[cfg(test)]
@@ -66,7 +73,12 @@ impl NativeAiRuntimeRegistration {
     #[cfg(test)]
     fn registered_for_test() -> Self {
         NATIVE_AI_RUNTIME_REGISTRATIONS.fetch_add(1, Ordering::AcqRel);
-        Self { registered: true }
+        let runtime = Arc::new(settings::NativeAiProviderSettingsRuntime::ready_for_test());
+        let registration = settings::register(runtime).expect("register test AI provider settings");
+        Self {
+            registered: true,
+            _provider_settings: Some(registration),
+        }
     }
 }
 
@@ -95,6 +107,12 @@ pub(crate) fn is_native_ai_runtime_registered() -> bool {
     NATIVE_AI_RUNTIME_REGISTRATIONS.load(Ordering::Acquire) > 0
 }
 
+pub(crate) fn is_native_ai_provider_ready() -> bool {
+    settings::current()
+        .and_then(|runtime| runtime.snapshot())
+        .is_ok_and(|snapshot| !snapshot.api_key.is_empty())
+}
+
 #[cfg(test)]
 pub(crate) fn register_native_ai_runtime_for_test() -> NativeAiRuntimeRegistration {
     NativeAiRuntimeRegistration::registered_for_test()
@@ -109,8 +127,14 @@ pub fn init_chat_stream_handler() -> Result<()> {
         tracing::warn!("{}", NATIVE_AI_DISABLED_ERROR);
         return Ok(());
     }
-    let handler = Arc::new(AiChatStreamHandler);
-    register_provider(handler)
+    NATIVE_AI_STREAM_HANDLER_INIT
+        .get_or_init(|| {
+            let handler = Arc::new(AiChatStreamHandler);
+            register_provider(handler).map_err(|error| error.to_string())
+        })
+        .as_ref()
+        .map(|_| ())
+        .map_err(|error| anyhow!(error.clone()))
 }
 
 pub fn is_native_ai_enabled() -> bool {
@@ -134,9 +158,10 @@ impl ChatStreamHandler for AiChatStreamHandler {
     ) -> Result<ChatStreamResponse> {
         reject_native_tools(&request.tools)?;
 
-        let config: ChatConfig = serde_json::from_value(request.config)
-            .map_err(|e| anyhow!("Invalid AI config: {}", e))?;
-        config.validate().map_err(|e| anyhow!("{}", e))?;
+        let config = settings::current()?.snapshot()?;
+        if config.api_key.is_empty() {
+            return Err(anyhow!("Native AI API key is not configured"));
+        }
 
         let history = request
             .history
@@ -144,21 +169,11 @@ impl ChatStreamHandler for AiChatStreamHandler {
             .ok_or_else(|| anyhow!("Chat history must be an array"))?
             .clone();
 
-        let body = json!({
-            "model": config.model.trim(),
-            "messages": history,
-            "stream": true,
-            "max_tokens": config.max_tokens,
-        });
-
         let req_id = request.req_id.clone();
-        let endpoint = config.endpoint();
-        let headers = config.headers.clone();
-        let api_key = config.api_key.trim().to_string();
+        let prepared = providers::prepare(&config, history)?;
 
-        tokio::runtime::Handle::current().block_on(async move {
-            execute_stream(&req_id, &endpoint, &api_key, &headers, body, &sink).await
-        })
+        tokio::runtime::Handle::current()
+            .block_on(async move { execute_stream(&req_id, &config, prepared, &sink).await })
     }
 }
 
@@ -173,7 +188,6 @@ mod tests {
         let sink = ChatStreamSink::new(|_| {});
         let request = ChatStreamRequest {
             req_id: "req-tools".to_string(),
-            config: json!(null),
             history: json!(null),
             tools: Some(json!([])),
         };
@@ -183,5 +197,11 @@ mod tests {
             .expect_err("native AI must fail closed when tools are supplied");
 
         assert_eq!(err.to_string(), NATIVE_AI_TOOLS_DISABLED_ERROR);
+    }
+
+    #[test]
+    fn embedded_backend_reinitializes_same_stream_handler() {
+        init_chat_stream_handler().expect("first embedded backend generation");
+        init_chat_stream_handler().expect("second embedded backend generation");
     }
 }

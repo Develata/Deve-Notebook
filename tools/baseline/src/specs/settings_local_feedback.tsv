@@ -65,6 +65,12 @@ contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: hidden_a
 contains	docs/features/13_settings.md	主题、自动换行、编辑器密度、最大文档标签页数
 contains	docs/features/13_settings.md	AI Chat 面板可见性
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: SET-007
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-settings-ai-provider="true"
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-ai-settings-readonly="true"
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-ai-settings-save="true"
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-ai-settings-clear-key="true"
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-ai-settings-clear-pending
+contains	apps/web/src/components/settings_sections/ai_provider.rs	data-deve-ai-settings-clear-notice="true"
 contains	docs/acceptance-cases/11_commands_settings.md	unsupported_key_rejected: "server.settings.api_enabled"
 contains	apps/cli/src/commands/config/tests/set.rs	"server.settings.api_enabled"
 absent	apps/cli/src/server/router.rs	/api/settings

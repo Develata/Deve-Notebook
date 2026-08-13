@@ -229,8 +229,14 @@ impl NativeEmbeddedServerRuntime {
         crate::server::ai_chat::init_from_config(&config);
         crate::server::agent_bridge::init_from_config(&config);
         let (repo, _) = init_default_native_backend(&options.app_data_dir, options.snapshot_depth)?;
+        let ai_settings_root =
+            native_ai_provider_settings_root(&options.app_data_dir, cfg!(target_os = "android"));
+        std::fs::create_dir_all(&ai_settings_root).with_context(|| {
+            format!("Failed to create native AI settings root {ai_settings_root:?}")
+        })?;
         let plugins = load_native_plugins(&options.app_data_dir, options.native_ai_enabled)?;
-        let launch = native_server_launch_options(options);
+        let launch = native_server_launch_options(options)
+            .with_ai_provider_settings_data_root(Some(ai_settings_root));
         let runtime = EmbeddedServerRuntime::initialize(
             repo,
             &launch,
@@ -295,6 +301,14 @@ fn native_server_launch_options(options: &NativeLocalBackendOptions) -> ServerLa
         None => ServerLaunchOptions::native_loopback(options.port, options.session_bound),
     };
     launch.with_repo_creation_projection_base(Some(options.app_data_dir.join("workspace")))
+}
+
+fn native_ai_provider_settings_root(app_data_dir: &Path, is_android: bool) -> PathBuf {
+    if is_android {
+        app_data_dir.join("files")
+    } else {
+        app_data_dir.to_path_buf()
+    }
 }
 
 pub fn bind_native_loopback_listener(
@@ -373,105 +387,5 @@ fn default_native_plugin_dir_candidates(app_data_dir: &Path) -> Vec<PathBuf> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        NativeLocalBackendOptions, bind_native_loopback_listener,
-        bind_native_loopback_listener_exact, init_default_native_backend, load_native_plugins,
-    };
-
-    #[test]
-    fn native_default_backend_starts_empty_without_creating_repo_authority() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let (repo, layout) =
-            init_default_native_backend(dir.path(), 8).expect("init native backend");
-
-        assert_eq!(
-            layout.app_data_dir,
-            std::fs::canonicalize(dir.path()).expect("canonical")
-        );
-        assert!(layout.ledger_dir.join("local").is_dir());
-        assert!(layout.projection_base.is_dir());
-        assert!(layout.workspace_root.is_none());
-        let summaries = repo
-            .list_cataloged_local_repo_summaries()
-            .expect("catalog listing");
-        assert!(
-            summaries.is_empty(),
-            "native startup must not invent a repo"
-        );
-        assert!(
-            std::fs::read_dir(layout.ledger_dir.join("local"))
-                .expect("local dir")
-                .all(|entry| entry
-                    .expect("entry")
-                    .path()
-                    .extension()
-                    .is_none_or(|ext| ext != "redb")),
-            "native NoScope startup must not create local Redb"
-        );
-
-        // Reopen must reuse the cataloged repo instead of creating another.
-        drop(repo);
-        let (repo, second_layout) =
-            init_default_native_backend(dir.path(), 8).expect("reopen native backend");
-        assert_eq!(second_layout.workspace_root, None);
-        assert_eq!(
-            repo.list_cataloged_local_repo_summaries()
-                .expect("catalog listing after reopen")
-                .len(),
-            0
-        );
-    }
-
-    #[test]
-    fn native_local_backend_options_default_to_local_runtime_contract() {
-        let options = NativeLocalBackendOptions::new("native-data", 39111);
-
-        assert_eq!(options.port, 39111);
-        assert_eq!(options.snapshot_depth, 100);
-        assert!(!options.session_bound);
-        assert!(options.auth_material.is_none());
-        assert!(options.prewarm_enabled);
-        assert!(!options.p2p.enabled);
-    }
-
-    #[test]
-    fn native_ai_builtin_loads_without_external_plugin_directory() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let plugins = load_native_plugins(dir.path(), true).expect("native plugins");
-
-        assert_eq!(plugins.len(), 1);
-        assert_eq!(plugins[0].manifest().id, "ai-chat");
-    }
-
-    #[test]
-    fn native_ai_disabled_omits_builtin_runtime() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let plugins = load_native_plugins(dir.path(), false).expect("native plugins");
-
-        assert!(plugins.is_empty());
-    }
-
-    #[test]
-    fn native_loopback_listener_falls_back_when_preferred_port_is_occupied() {
-        let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("occupy port");
-        let occupied_port = occupied.local_addr().expect("addr").port();
-
-        let listener =
-            bind_native_loopback_listener(Some(occupied_port)).expect("fallback listener");
-
-        assert_ne!(listener.port(), occupied_port);
-        assert!(listener.port() > 0);
-    }
-
-    #[test]
-    fn native_loopback_listener_exact_rejects_occupied_port() {
-        let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("occupy port");
-        let occupied_port = occupied.local_addr().expect("addr").port();
-
-        let error =
-            bind_native_loopback_listener_exact(occupied_port).expect_err("exact bind fails");
-
-        assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
-    }
-}
+#[path = "native_runtime/tests.rs"]
+mod tests;

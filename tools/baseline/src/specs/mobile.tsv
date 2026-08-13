@@ -1088,5 +1088,7 @@ contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBa
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	requestIsCurrent
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	WindowInsetsCompat.Type.ime()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	activity.moveTaskToBack(true)
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	android_assert: app_private_files_ai_env_preserves_path_identity true
+contains	apps/cli/src/native_runtime.rs	app_data_dir.join("files")
 absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	finish()
 absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UiBackDispatcher.kt	webView.goBack()

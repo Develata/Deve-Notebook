@@ -8,9 +8,10 @@
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。
 //! 显示版本信息和未来功能占位符（如混合模式）。
 
+use crate::components::main_layout::{SettingsControl, SettingsSection};
 use crate::components::settings_sections::{
-    AiBackendSection, AiChatVisibilitySection, AppearanceSection, EditorBasicsSection,
-    NativeBackendSection, RuntimeDiagnosticsSection, SyncModeSection,
+    AiBackendSection, AiChatVisibilitySection, AiProviderSettingsSection, AppearanceSection,
+    EditorBasicsSection, NativeBackendSection, RuntimeDiagnosticsSection, SyncModeSection,
 };
 use crate::components::settings_sections_policy::{language_button_state, reserved_setting_state};
 use crate::components::{focus_scope, icons::X};
@@ -34,9 +35,16 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let language_state = Signal::derive(move || language_button_state(locale.get()));
     let reserved_state = Signal::derive(move || reserved_setting_state(locale.get()));
+    let settings_control = expect_context::<SettingsControl>();
     let panel_ref = NodeRef::<leptos::html::Div>::new();
     let close_button_ref = NodeRef::<leptos::html::Button>::new();
-    focus_scope::attach_modal_focus_restore_effect(move || show.get(), close_button_ref);
+    focus_scope::attach_modal_focus_restore_effect_with_selector(
+        move || show.get(),
+        move || initial_settings_focus_selector(settings_control.section.get_untracked()),
+        move || settings_control.focus_request.get(),
+        panel_ref,
+        close_button_ref,
+    );
 
     view! {
         <Show when=move || show.get()>
@@ -45,6 +53,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                     node_ref=panel_ref
                     role="dialog"
                     aria-modal="true"
+                    aria-labelledby="deve-settings-title"
                     tabindex="-1"
                     class=SETTINGS_PANEL_CLASS
                     data-deve-settings-surface="modal"
@@ -58,7 +67,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                     }
                 >
                     <div class="mb-6 flex items-center justify-between gap-3">
-                        <h2 class="text-xl font-bold text-primary">{move || t::settings::title(locale.get())}</h2>
+                        <h2 id="deve-settings-title" class="text-xl font-bold text-primary">{move || t::settings::title(locale.get())}</h2>
                         <button
                             node_ref=close_button_ref
                             class=SETTINGS_ICON_BUTTON_CLASS
@@ -114,6 +123,9 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         // AI 后端设置
                         <AiBackendSection locale=locale />
 
+                        // Native AI provider server settings
+                        <AiProviderSettingsSection locale=locale />
+
                         // AI Chat 面板显示设置
                         <AiChatVisibilitySection locale=locale />
 
@@ -162,9 +174,20 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
     }
 }
 
+fn initial_settings_focus_selector(section: SettingsSection) -> Option<&'static str> {
+    match section {
+        SettingsSection::General => None,
+        SettingsSection::NativeAiProvider => Some("[data-deve-settings-ai-provider=\"true\"]"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{SETTINGS_ICON_BUTTON_CLASS, SETTINGS_OVERLAY_CLASS, SETTINGS_PANEL_CLASS};
+    use super::{
+        SETTINGS_ICON_BUTTON_CLASS, SETTINGS_OVERLAY_CLASS, SETTINGS_PANEL_CLASS,
+        initial_settings_focus_selector,
+    };
+    use crate::components::main_layout::SettingsSection;
 
     #[test]
     fn settings_modal_classes_keep_narrow_viewport_constraints() {
@@ -186,6 +209,18 @@ mod tests {
         assert_eq!(
             SETTINGS_ICON_BUTTON_CLASS.matches("min-h-[44px]").count(),
             1
+        );
+    }
+
+    #[test]
+    fn ai_settings_command_selects_provider_section_as_initial_focus() {
+        assert_eq!(
+            initial_settings_focus_selector(SettingsSection::General),
+            None
+        );
+        assert_eq!(
+            initial_settings_focus_selector(SettingsSection::NativeAiProvider),
+            Some("[data-deve-settings-ai-provider=\"true\"]")
         );
     }
 }

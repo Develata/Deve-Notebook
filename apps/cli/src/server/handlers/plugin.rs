@@ -101,10 +101,11 @@ async fn handle_plugin_call_with_plugins_and_scope(
             }
         };
 
-        let ch_for_stream = ch.clone();
-        let stream_sink = ChatStreamSink::new(move |msg| ch_for_stream.unicast(msg));
         let call_result = block_in_place(|| {
-            let _scope = ChatStreamScope::new(stream_sink);
+            let _scope = (plugin_id == "ai-chat").then(|| {
+                let ch_for_stream = ch.clone();
+                ChatStreamScope::new(ChatStreamSink::new(move |msg| ch_for_stream.unicast(msg)))
+            });
             plugin.call(&fn_name, rhai_args)
         });
 

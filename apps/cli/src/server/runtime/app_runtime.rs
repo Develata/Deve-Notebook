@@ -53,6 +53,9 @@ pub(crate) struct AppStateParts {
     pub watcher_runtime: WatcherRuntimeView,
     pub watcher_supervisor: Arc<WatcherSupervisor>,
     pub repo_creation_projection_base: Option<PathBuf>,
+    #[cfg(not(test))]
+    pub ai_provider_settings:
+        Arc<crate::server::ai_chat::settings::NativeAiProviderSettingsRuntime>,
 }
 
 pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppState>> {
@@ -130,5 +133,7 @@ pub(crate) fn build_app_state(parts: AppStateParts) -> anyhow::Result<Arc<AppSta
         repo_lifecycle_jobs,
         #[cfg(not(test))]
         repo_creation_projection_base: parts.repo_creation_projection_base.map(Arc::new),
+        #[cfg(not(test))]
+        ai_provider_settings: parts.ai_provider_settings,
     }))
 }

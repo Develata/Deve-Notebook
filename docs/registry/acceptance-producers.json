@@ -191,6 +191,54 @@
       "note": "Atomically prove the first public F4/v5 epoch, fail-closed version admission, typed nested wires, explicit debug JSON and FullPeer binary-only transport"
     },
     {
+      "producer_id": "ci.native-ai-provider-settings",
+      "evidence_ids": [
+        "test.ai-011",
+        "test.set-009"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" }, { "literal": "ai_chat" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" }, { "literal": "ai_settings" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_web" }, { "literal": "--bin" }, { "literal": "deve_web" },
+            { "literal": "ai_settings" }, { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Run exact provider request/stream adapters plus protected redacted AI settings authority and UI command contracts"
+    },
+    {
       "producer_id": "ci.projection-recovery",
       "evidence_ids": [
         "test.cli.critical-delivery-order",

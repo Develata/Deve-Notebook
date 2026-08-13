@@ -64,6 +64,7 @@ impl std::error::Error for ServerTransportServeError {}
 pub(crate) struct EmbeddedServerRuntime {
     transport: ServerTransportRuntime,
     _native_ai_registration: super::ai_chat::NativeAiRuntimeRegistration,
+    _ai_provider_settings_registration: super::ai_chat::settings::ProviderSettingsRegistration,
     background_tasks: Option<runtime::BackgroundRuntimeTasks>,
     watcher_supervisor: Option<Arc<runtime::watcher_runtime::WatcherSupervisor>>,
     repo_lifecycle_jobs: Option<Arc<runtime::repo_lifecycle_job_runtime::RepoLifecycleJobRuntime>>,
@@ -81,6 +82,18 @@ impl EmbeddedServerRuntime {
         prewarm_enabled: bool,
     ) -> anyhow::Result<Self> {
         runtime::install_repo_host_apis(&repo)?;
+        let data_root = match launch.ai_provider_settings_data_root() {
+            Some(platform_root) => platform_root,
+            None => repo
+                .ledger_dir()
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("ledger directory has no data root"))?,
+        };
+        let ai_provider_settings = Arc::new(
+            super::ai_chat::settings::NativeAiProviderSettingsRuntime::from_data_root(data_root)?,
+        );
+        let ai_provider_settings_registration =
+            super::ai_chat::settings::register(ai_provider_settings.clone())?;
         runtime::init_observability_runtime()?;
         let host_dir = runtime::prepare_host_layout(repo.as_ref())?;
         let tx = runtime::new_server_broadcast_channel();
@@ -122,6 +135,8 @@ impl EmbeddedServerRuntime {
             repo_creation_projection_base: launch
                 .repo_creation_projection_base()
                 .map(std::path::Path::to_path_buf),
+            #[cfg(not(test))]
+            ai_provider_settings,
         })?;
         let native_ai_registration =
             super::ai_chat::NativeAiRuntimeRegistration::from_plugins(&app_state.plugins);
@@ -146,6 +161,7 @@ impl EmbeddedServerRuntime {
                 p2p_inbound_token_env,
             },
             _native_ai_registration: native_ai_registration,
+            _ai_provider_settings_registration: ai_provider_settings_registration,
             background_tasks: Some(background_tasks),
             watcher_supervisor: Some(watcher_supervisor),
             repo_lifecycle_jobs: Some(repo_lifecycle_jobs),

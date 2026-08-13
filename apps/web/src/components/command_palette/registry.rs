@@ -6,7 +6,9 @@
 //! 命令面板的静态命令定义。
 
 use super::types::Command;
-use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
+use crate::components::main_layout::{
+    ChatControl, SearchControl, SettingsControl, SettingsSection, SidebarControl,
+};
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
@@ -44,6 +46,7 @@ pub fn create_static_commands(
     let search_control = use_context::<SearchControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
+    let settings_control = use_context::<SettingsControl>();
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
@@ -152,6 +155,20 @@ pub fn create_static_commands(
             )
             .with_group((t::command_palette::group_ai)(locale))
             .with_enabled_when((t::command_palette::enabled_local_ui)(locale)),
+        );
+    }
+    if let Some(settings_control) = settings_control {
+        commands.push(
+            Command::available(
+                "ai.settings",
+                (t::command_palette::ai_settings)(locale),
+                move || {
+                    settings_control.show(SettingsSection::NativeAiProvider);
+                    set_show.set(false);
+                },
+            )
+            .with_group((t::command_palette::group_ai)(locale))
+            .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
         );
     }
     commands.extend(ai_reserved_commands(locale));

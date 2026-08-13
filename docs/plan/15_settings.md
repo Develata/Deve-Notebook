@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-20`
+- `Last Review`: `2026-08-13`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -19,7 +19,8 @@
 *   **Runtime Config Contract**：`config.toml` 与环境变量共同决定服务端运行时配置；受支持键 **MUST** 可由 CLI/runtime 读取，写入入口 **MUST** 校验 key、type 与敏感字段边界。
 *   **Browser Preference Contract**：主题、布局、语言、最近命令等 UI 偏好 **MAY** 存入浏览器本地存储，但 **MUST NOT** 承载 repo authority、session secret、peer private key 或业务事实。
 *   **Native Host-local Backend Preference Contract**：Desktop/Mobile native shell 的 backend 选择只允许存入 app-private data root 下的 host-local JSON 文件。它不是 `config.toml`、server-backed Settings API、Projection Locator、ledger fact 或 browser storage。
-*   **Future Settings Surface**：server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计；启用前 **MUST** 更新本章、feature spec 与 acceptance case。
+*   **Server-managed AI Provider Settings**：Native AI provider 使用受保护的 server-backed API 与
+    `<data-root>/ai.env` 保存 host-local provider snapshot；其余 server-backed Settings API 仍属于 future surface。
 
 ## 1. Environment Variables (环境变量)
 
@@ -41,6 +42,7 @@
 | `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔)。生产环境 **MUST** 显式设置。        |
 | **AI**                           |                  |                                                                     |
 | `AI_API_KEY`                     | *(none)*         | Native AI Chat 的服务密钥。                                         |
+| `AI_PROVIDER`                    | `openai-chat-completions` | Native AI provider protocol：`openai-chat-completions`、`openai-responses` 或 `anthropic-messages`。 |
 | `AI_BASE_URL`                    | `https://api.openai.com/v1` | Native AI Chat API 端点。                               |
 | `AI_MODEL`                       | `gpt-4o-mini`    | Native AI Chat 默认模型。                                           |
 | `AI_MAX_TOKENS`                  | `4096`           | Native AI Chat 输出上限。                                           |
@@ -65,8 +67,8 @@ LocalBackend 或 NoteGit authority。
 ## 2. Configuration Settings (config.toml) {#configuration-settings}
 
 用户可配置的运行时选项存储在 `config.toml`，并可通过 `deve config print/set` 查看或更新。
-浏览器本地 UI 偏好属于前端本地状态/`localStorage` 管理边界；若引入独立设置文件
-或 server-backed Settings API，**MUST** 先更新本章和验收用例。
+浏览器本地 UI 偏好属于前端本地状态/`localStorage` 管理边界；除下述 Native AI provider 专用
+surface 外，若引入其他独立设置文件或 server-backed Settings API，**MUST** 先更新本章和验收用例。
 `deve config set` v1 只支持下表中的标量键写入；`p2p.peers[]` 这类数组配置可由
 `config.toml`、init template 或环境变量声明，但不得被标量写入口伪装成数组 writer。
 
@@ -164,6 +166,69 @@ Desktop/Mobile native shell 可以在 Settings 暴露 Backend section，但其�
 *   `ai.native_enabled = false` 时，Native AI Chat **MUST NOT** 注册 provider 或接受 `ai-chat` RPC；前端能力探测必须把 Native backend 标为不可用。
 *   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
 *   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。
+
+### 2.3.1 Native AI Provider Settings {#native-ai-provider-settings}
+
+Native AI provider configuration 是 host-local runtime state，不是 Ledger、repo、browser preference、
+plugin capability 或 chat session fact。唯一 mutation authority 为 server-owned
+`NativeAiProviderSettingsRuntime`；Web Settings 只读取脱敏 projection 并提交 typed replace intent。
+
+受支持的 provider protocol 固定为：
+
+| Provider id | Endpoint suffix | Authentication | Request / stream contract |
+| :-- | :-- | :-- | :-- |
+| openai-chat-completions | `/chat/completions` | `Authorization: Bearer` | `messages` + data-only SSE choices delta |
+| openai-responses | `/responses` | `Authorization: Bearer` | `input`/`instructions` + typed Responses SSE |
+| anthropic-messages | `/messages` | `x-api-key` + `anthropic-version: 2023-06-01` | top-level `system` + user/assistant `messages` + Messages SSE |
+
+配置解析优先级与 mutation contract：
+
+1. 进程环境（包括 project-root `.env` 在启动时投影出的环境）是最高优先级。只要任一 canonical
+   `AI_PROVIDER` / `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` / `AI_MAX_TOKENS` 非空，整组配置即为
+   `environment` managed；Settings 只读，不得以 `data/ai.env` 补齐或覆盖其中的空缺，避免混合 authority。
+2. 环境未声明 canonical AI 变量时，server 从 `<data-root>/ai.env` 读取唯一 UI-managed snapshot。
+   server/desktop 的 `data-root` 是 canonical `ledger_dir` 的父目录；Android adapter 使用平台标准、app-private
+   `<app-data>/files` 作为该设置 data-root，因为应用沙箱不得读取 `/data/user/0` 来证明其父目录身份。Android
+   adapter 不得因此放宽路径校验：`files` 与其 app-data 父目录仍必须通过同一 host path identity 校验，文件仍为
+   `<app-data>/files/ai.env`。无法证明该 data-root 或文件为普通 host-local path 时启动或保存必须 fail-closed。
+3. 两者均不存在时使用不含密钥的 defaults：provider=`openai-chat-completions`、
+   base URL=`https://api.openai.com/v1`、model=`gpt-4o-mini`、max tokens=`4096`，并报告未配置 key。
+4. `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 只作为启动迁移 alias：只有 canonical AI 变量整组缺失时才可
+   选择相应 key；alias 参与 environment managed 判定且不得被写回 `ai.env`。`OPENAI_API_KEY` 投影为
+   OpenAI Chat Completions defaults；`ANTHROPIC_API_KEY` 必须同时投影为 `anthropic-messages`、
+   `https://api.anthropic.com/v1` 与受控默认 model，绝不能把 Anthropic key 发送到 OpenAI endpoint；两种
+   alias 同时存在必须 fail-closed。
+
+`GET /api/ai/settings` 与 `PUT /api/ai/settings` 是 authenticated protected route。GET 只能返回
+`provider/base_url/model/max_tokens/key_configured/source/revision/writable`，**MUST NOT** 返回 raw key、
+header、环境值或 host path。PUT body 固定包含 `expected_revision`、非敏感字段、可选 write-only
+`api_key` 与显式 `clear_api_key`；空 key 表示保留当前 key，不等价于清除。environment managed 状态、
+revision 冲突、非法 provider/URL/model/token 上限、同时 replace+clear key、持久化失败都必须 fail-closed，
+且不得更改 runtime snapshot。
+
+Settings 的 key 清除控制必须明确表示“保存时清除”，在 PUT 成功前只属于可撤销的 pending UI intent；
+关闭 Settings 不得把 pending intent 伪装为已删除。PUT DTO 的未知字段必须拒绝，不能静默接受客户端漂移。
+
+字段预算固定为：Base URL 不超过 `2048` bytes，model 不超过 `256` bytes，API key 不超过 `8192`
+bytes 且不得含控制字符，max tokens 必须位于 `1..=131072`。
+
+`<data-root>/ai.env` 只允许以下 canonical allowlist，使用 dotenv-compatible quoting：
+`AI_PROVIDER`、`AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL`、`AI_MAX_TOKENS`。保存必须在同目录创建独占临时
+普通文件、完整写入并 sync、原子 replace、同步父目录；Unix 权限目标为 `0600`。不得重写 project-root
+`.env`、`config.toml` 或其他 secret。成功 replace 后才以 `revision + 1` 原子切换内存 snapshot；进行中请求
+保留 admission 时取得的旧 snapshot，新请求使用新 snapshot。
+
+若原子 replace 已发布但父目录 sync 失败，结果属于 durability-uncertain：不得切换内存 snapshot，也不得继续
+接受 provider 请求或后续设置写入；当前 runtime 必须 fail-closed，直到进程重启并从磁盘重新建立 snapshot。
+replace 之前的失败不得发布文件，且不应毒化仍可安全重试的 runtime。
+
+provider URL 必须是无 userinfo/query/fragment 的 absolute HTTP(S) base。`http` 只允许 loopback host；
+其他 host 必须使用 `https`。endpoint suffix 由 provider adapter 追加，用户不得把 endpoint query 当配置。
+custom headers 本轮不属于 UI-managed surface；provider authentication headers 只能由对应 adapter 构造。
+
+Docker Compose project-root `.env` 只属于 Compose interpolation/operator authority。Compose 文件必须显式
+把 canonical AI 变量传入容器；容器内 UI 仍只写已持久化 volume 下的 `/data/ai.env`，不得反向修改宿主
+project-root `.env`。环境变量变更需重启容器；UI-managed `ai.env` 保存对后续请求热生效。
 
 ## 3. Keyboard Shortcuts (快捷键) {#keyboard-shortcuts}
 
