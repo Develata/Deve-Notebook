@@ -31,7 +31,7 @@ fn plugin_error_result_ignores_text_payload() {
 async fn plugin_error_result_is_sent_as_structured_error() {
     let called = Arc::new(AtomicBool::new(false));
     let plugins: Vec<Box<dyn PluginRuntime>> = vec![Box::new(ProbePlugin::with_json_result(
-        "ai-chat",
+        "error-result-probe",
         called.clone(),
         serde_json::json!({
             "type": "error",
@@ -46,8 +46,8 @@ async fn plugin_error_result_is_sent_as_structured_error() {
         &plugins,
         &ch,
         "req-error-result".to_string(),
-        "ai-chat".to_string(),
-        "chat".to_string(),
+        "error-result-probe".to_string(),
+        "probe".to_string(),
         vec![],
     )
     .await;
