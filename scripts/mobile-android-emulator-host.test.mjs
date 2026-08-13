@@ -125,6 +125,7 @@ test("Android producer receipts bind presentation and lifecycle proof code", () 
     "scripts/mobile-android-emulator-host.test.mjs",
     "scripts/mobile-android-presentation.test.mjs",
     "scripts/lib/android-lifecycle-harness.mjs",
+    "scripts/lib/android-drawer-touch-proof.mjs",
     "scripts/lib/android-presentation-proof.mjs",
     "scripts/lib/mobile-ime-back-proof.mjs",
   ];

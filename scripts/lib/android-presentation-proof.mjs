@@ -1,8 +1,32 @@
 import assert from "node:assert/strict";
+import {
+  beginTouchDeliveryProbe,
+  classifyAndroidDrawerGestureDelivery,
+  selectNonInteractiveSwipePoints,
+  shouldRetryAndroidDrawerGestureDelivery,
+  takeTouchDeliveryProbe,
+} from "./android-drawer-touch-proof.mjs";
 
 const SAFE_FLOOR_CSS = 24;
-const ACTIVATION_OFFSET_CSS = 10;
+const ACTIVATION_OFFSET_CSS = 18;
 const SWIPE_DISTANCE_CSS = 80;
+const DRAWER_TRANSITION_SETTLE_MS = 250;
+const SWIPE_DELIVERY_TIMEOUT_MS = 4000;
+const MAX_SWIPE_DELIVERY_ATTEMPTS = 2;
+const SWIPE_Y_FRACTIONS = [0.35, 0.58, 0.76];
+
+export function drawerVisualStateMatches(state, side, open) {
+  if (!state || !["left", "right"].includes(side)) return false;
+  const geometryReady = side === "left"
+    ? (open ? Math.abs(state.left) <= 1 : state.right <= 1)
+    : (open ? Math.abs(state.right - state.viewportWidth) <= 1
+      : state.left >= state.viewportWidth - 1);
+  return state.open === String(open)
+    && state.ariaHidden === String(!open)
+    && (open ? state.pointerEvents !== "none" : state.pointerEvents === "none")
+    && state.width > 0
+    && geometryReady;
+}
 
 export async function waitForAcceptedAndroidPresentation(page, waitUntil, timeout = 10000) {
   return waitUntil(
@@ -33,6 +57,104 @@ export async function waitForAcceptedAndroidPresentation(page, waitUntil, timeou
   );
 }
 
+function readDrawerVisualState(page, side) {
+  return page.call((drawerSide) => {
+    const drawer = document.querySelector(`[data-deve-mobile-drawer="${drawerSide}"]`);
+    if (!drawer) return null;
+    const rect = drawer.getBoundingClientRect();
+    return {
+      open: drawer.getAttribute("data-deve-mobile-drawer-open"),
+      ariaHidden: drawer.getAttribute("aria-hidden"),
+      pointerEvents: getComputedStyle(drawer).pointerEvents,
+      left: rect.left,
+      right: rect.right,
+      width: rect.width,
+      viewportWidth: window.innerWidth,
+    };
+  }, side);
+}
+
+export async function waitForDrawerVisualState(page, side, open, waitUntil, timeout = 5000) {
+  let matchedSince = null;
+  await waitUntil(`${side} drawer ${open ? "open" : "closed"} visual settlement`, async () => {
+    const state = await readDrawerVisualState(page, side);
+    if (!drawerVisualStateMatches(state, side, open)) {
+      matchedSince = null;
+      return false;
+    }
+    matchedSince ??= Date.now();
+    return Date.now() - matchedSince >= DRAWER_TRANSITION_SETTLE_MS;
+  }, timeout);
+}
+
+export async function openDrawerWithObservedNativeSwipe(page, {
+  adbCommand,
+  side,
+  startPx,
+  distancePx,
+  density,
+  waitUntil,
+  testing = {},
+}) {
+  const selectPoints = testing.selectNonInteractiveSwipePoints ?? selectNonInteractiveSwipePoints;
+  const beginProbe = testing.beginTouchDeliveryProbe ?? beginTouchDeliveryProbe;
+  const takeProbe = testing.takeTouchDeliveryProbe ?? takeTouchDeliveryProbe;
+  const waitForVisualState = testing.waitForDrawerVisualState ?? waitForDrawerVisualState;
+  const direction = side === "left" ? 1 : -1;
+  await waitForVisualState(page, side, false, waitUntil);
+  let lastDelivery = "missing";
+  let lastEvents = [];
+
+  for (let attempt = 0; attempt < MAX_SWIPE_DELIVERY_ATTEMPTS; attempt += 1) {
+    const points = await selectPoints(page, startPx / density, SWIPE_Y_FRACTIONS);
+    assert.ok(points.length > 0, `${side} activation band has no non-interactive hit-tested point`);
+    const point = points[Math.min(attempt, points.length - 1)];
+    const yPx = Math.round(point.yCss * density);
+    const expectedDelivery = {
+      startXCss: startPx / density,
+      startYCss: point.yCss,
+      endXCss: (startPx + direction * distancePx) / density,
+      endYCss: point.yCss,
+      direction,
+    };
+    await beginProbe(page);
+    try {
+      adbCommand(
+        "shell", "input", "swipe",
+        String(startPx), String(yPx), String(startPx + direction * distancePx), String(yPx), "350",
+      );
+    } catch (error) {
+      await takeProbe(page).catch(() => {});
+      throw new Error(`${side} drawer ADB swipe command failed`, { cause: error });
+    }
+    try {
+      await waitForVisualState(
+        page, side, true, waitUntil, SWIPE_DELIVERY_TIMEOUT_MS,
+      );
+    } catch (error) {
+      try {
+        lastEvents = await takeProbe(page);
+      } catch (_probeError) {
+        throw error;
+      }
+      lastDelivery = classifyAndroidDrawerGestureDelivery(lastEvents, expectedDelivery);
+      if (lastDelivery === "complete") {
+        throw new Error(`${side} drawer stayed closed after complete WebView touch delivery: ${JSON.stringify(lastEvents)}`, { cause: error });
+      }
+      if (!shouldRetryAndroidDrawerGestureDelivery(lastDelivery, attempt + 1)) {
+        throw new Error(`${side} drawer swipe delivery ${lastDelivery} after bounded retry: ${JSON.stringify(lastEvents)}`, { cause: error });
+      }
+      await waitForVisualState(page, side, false, waitUntil);
+      continue;
+    }
+    lastEvents = await takeProbe(page);
+    lastDelivery = classifyAndroidDrawerGestureDelivery(lastEvents, expectedDelivery);
+    assert.equal(lastDelivery, "complete", `${side} drawer opened without a complete observed WebView touch`);
+    return { attempts: attempt + 1, targetTag: point.targetTag };
+  }
+  throw new Error(`${side} drawer swipe ended unexpectedly`);
+}
+
 export async function proveAndroidDrawerGesturesAfterReload(page, {
   adbCommand,
   adbOutput,
@@ -43,51 +165,34 @@ export async function proveAndroidDrawerGesturesAfterReload(page, {
   const pidBefore = adbOutput("shell", "pidof", appId).trim();
   assert.match(pidBefore, /^[1-9][0-9]*$/, "drawer proof requires one stable app PID");
 
-  const safeLeftCss = Math.max(
-    Math.ceil(presentation.leftPx / presentation.density),
-    SAFE_FLOOR_CSS,
-  );
-  const safeRightCss = Math.max(
-    Math.ceil(presentation.rightPx / presentation.density),
-    SAFE_FLOOR_CSS,
-  );
-  const leftStartPx = Math.round(
-    (safeLeftCss + ACTIVATION_OFFSET_CSS) * presentation.density,
-  );
-  const rightStartPx = presentation.widthPx - Math.round(
-    (safeRightCss + ACTIVATION_OFFSET_CSS) * presentation.density,
-  );
+  const safeLeftCss = Math.max(Math.ceil(presentation.leftPx / presentation.density), SAFE_FLOOR_CSS);
+  const safeRightCss = Math.max(Math.ceil(presentation.rightPx / presentation.density), SAFE_FLOOR_CSS);
+  const leftStartPx = Math.round((safeLeftCss + ACTIVATION_OFFSET_CSS) * presentation.density);
+  const rightStartPx = presentation.widthPx
+    - Math.round((safeRightCss + ACTIVATION_OFFSET_CSS) * presentation.density);
   const distancePx = Math.round(SWIPE_DISTANCE_CSS * presentation.density);
-  const viewportHeightPx = Math.round(
-    presentation.viewportHeightCss * presentation.density,
-  );
-  const y = Math.max(200, Math.round(viewportHeightPx * 0.6));
 
-  adbCommand(
-    "shell", "input", "swipe",
-    String(leftStartPx), String(y), String(leftStartPx + distancePx), String(y), "350",
-  );
-  await waitUntil("left drawer after native activation-band swipe", () => page.call(() =>
-    document.querySelector('[data-deve-mobile-drawer="left"]')
-      ?.getAttribute("data-deve-mobile-drawer-open") === "true"));
+  const left = await openDrawerWithObservedNativeSwipe(page, {
+    adbCommand, side: "left", startPx: leftStartPx, distancePx,
+    density: presentation.density, waitUntil,
+  });
   adbCommand("shell", "input", "keyevent", "4");
-  await waitUntil("left drawer closed by UI Back", () => page.call(() =>
-    document.querySelector('[data-deve-mobile-drawer="left"]')
-      ?.getAttribute("data-deve-mobile-drawer-open") === "false"));
+  await waitForDrawerVisualState(page, "left", false, waitUntil);
 
-  adbCommand(
-    "shell", "input", "swipe",
-    String(rightStartPx), String(y), String(rightStartPx - distancePx), String(y), "350",
-  );
-  await waitUntil("right drawer after native activation-band swipe", () => page.call(() =>
-    document.querySelector('[data-deve-mobile-drawer="right"]')
-      ?.getAttribute("data-deve-mobile-drawer-open") === "true"));
+  const right = await openDrawerWithObservedNativeSwipe(page, {
+    adbCommand, side: "right", startPx: rightStartPx, distancePx,
+    density: presentation.density, waitUntil,
+  });
   adbCommand("shell", "input", "keyevent", "4");
-  await waitUntil("right drawer closed by UI Back", () => page.call(() =>
-    document.querySelector('[data-deve-mobile-drawer="right"]')
-      ?.getAttribute("data-deve-mobile-drawer-open") === "false"));
+  await waitForDrawerVisualState(page, "right", false, waitUntil);
 
   const pidAfter = adbOutput("shell", "pidof", appId).trim();
   assert.equal(pidAfter, pidBefore, "native drawer gestures must keep the app PID stable");
-  return { presentation, pidStable: true, leftDrawerOpened: true, rightDrawerOpened: true };
+  return {
+    presentation,
+    pidStable: true,
+    leftDrawerOpened: true,
+    rightDrawerOpened: true,
+    deliveryAttempts: { left: left.attempts, right: right.attempts },
+  };
 }
