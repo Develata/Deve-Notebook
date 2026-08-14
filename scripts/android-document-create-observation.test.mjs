@@ -144,6 +144,48 @@ test("a concurrent non-owner cannot clean the active Create observation", async 
   });
 });
 
+test("exact Create synchronously seals after the accepted click", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        if (params.type !== "touchEnd") return;
+        exact.emitClick();
+        exact.emitClick();
+      },
+    };
+
+    const observation = await clickExactCreateDocument(page, exactPath, admittedWriterScope);
+
+    assert.equal(observation.clicked, true);
+    assert.equal(commits, 1);
+  });
+});
+
+test("exact Create synchronously seals after a blocked click", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  const wrong = createResult("notes/wrong.md", { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        if (params.type !== "touchEnd") return;
+        wrong.emitClick();
+        exact.emitClick();
+      },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /did not produce a DOM click.*"blocked":true/,
+    );
+    assert.equal(commits, 0);
+  });
+});
+
 test("touch transport lease is renewed only after touchEnd settlement begins", async () => {
   let commits = 0;
   const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });

@@ -840,8 +840,8 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	FORMAL_FEATURE_POLICY="direct-memory-shared-slots"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-guest-service-readiness.test.sh
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-app-process-readiness.test.sh
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/android-document-create-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs" "$ROOT_DIR/scripts/mobile-android-presentation.test.mjs"
 contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation exceeded the
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
@@ -882,7 +882,7 @@ contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_ca
 contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case launcher-remains 1
 contains	scripts/android-install-retry.test.sh	verify_install_startup_cleanup_case process-remains 1
 contains	scripts/android-install-retry.test.sh	verify_cleanup_status_precedence
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
+contains	scripts/lib/android-emulator-targeted-preflight.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	shell "df -k /data"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status != 0 && DIAGNOSTICS_PRINTED == 0

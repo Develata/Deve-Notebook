@@ -7,7 +7,7 @@ import {
   readExactCreateDocumentClickObservation,
 } from "./android-document-create-observation.mjs";
 
-const CREATE_CLICK_SETTLEMENT_MS = 500;
+const CREATE_CLICK_SETTLEMENT_MS = 2000;
 const CREATE_TOUCH_TRANSPORT_LEASE_MS = 5000;
 
 export {
@@ -71,9 +71,9 @@ export async function readExactCreateDocumentPointer(expectedPath) {
     : { kind: "moving", count: 1 };
 }
 
-async function waitForExactCreateDocumentClickSettlement(page, token) {
-  const attempts = 21;
+async function waitForExactCreateDocumentClickSettlement(page, token, timeoutMs) {
   const intervalMs = 25;
+  const attempts = Math.ceil(timeoutMs / intervalMs) + 1;
   let observation = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     observation = await page.call(readExactCreateDocumentClickObservation, token);
@@ -165,7 +165,11 @@ export async function clickExactCreateDocument(
     if (started?.kind !== "settling") {
       throw new Error(`Create click settlement did not start: ${JSON.stringify(started)}`);
     }
-    settlement = await waitForExactCreateDocumentClickSettlement(page, armed.token);
+    settlement = await waitForExactCreateDocumentClickSettlement(
+      page,
+      armed.token,
+      CREATE_CLICK_SETTLEMENT_MS,
+    );
   } catch (error) {
     settlementError = error;
   }

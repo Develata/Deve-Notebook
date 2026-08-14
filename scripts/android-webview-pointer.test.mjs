@@ -114,16 +114,22 @@ test("WebView point click rejects invalid initial and replacement points before 
   assert.deepEqual(sent, ["mouseMoved"]);
 });
 
-test("WebView point tap dispatches one complete native touch gesture", async () => {
+test("WebView point tap holds one bounded 50 ms contact before touchEnd", async () => {
   const sent = [];
+  const contactWaits = [];
   const page = {
     async send(method, params) {
       sent.push({ method, params });
     },
   };
 
-  await tapWebViewPoint(page, { x: 24, y: 32 });
+  await tapWebViewPoint(
+    page,
+    { x: 24, y: 32 },
+    { waitForContact: async (durationMs) => { contactWaits.push(durationMs); } },
+  );
 
+  assert.deepEqual(contactWaits, [50]);
   assert.deepEqual(sent, [
     {
       method: "Input.dispatchTouchEvent",

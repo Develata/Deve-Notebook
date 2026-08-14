@@ -32,7 +32,20 @@ export async function clickWebViewPoint(page, point, { beforePress } = {}) {
   });
 }
 
-export async function tapWebViewPoint(page, point, { beforeContact } = {}) {
+const NATIVE_TAP_CONTACT_MS = 50;
+
+function waitForNativeTapContact(durationMs) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
+}
+
+export async function tapWebViewPoint(
+  page,
+  point,
+  {
+    beforeContact,
+    waitForContact = waitForNativeTapContact,
+  } = {},
+) {
   if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) {
     throw new Error("pointer admission received an invalid initial point");
   }
@@ -52,6 +65,7 @@ export async function tapWebViewPoint(page, point, { beforeContact } = {}) {
         id: 0,
       }],
     });
+    await waitForContact(NATIVE_TAP_CONTACT_MS);
     await page.send("Input.dispatchTouchEvent", {
       type: "touchEnd",
       touchPoints: [],

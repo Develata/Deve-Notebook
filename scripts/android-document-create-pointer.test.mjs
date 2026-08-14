@@ -102,7 +102,7 @@ test("exact Create pointer sends one native gesture only after identity admissio
   );
 });
 
-test("exact Create production wiring emits the complete CDP pointer gesture", async () => {
+test("exact Create production wiring reports fixed native input phases and one gesture", async () => {
   const exact = createResult(exactPath);
   await withCreateDom([exact], exact, async () => {
     const sent = [];
@@ -110,21 +110,39 @@ test("exact Create production wiring emits the complete CDP pointer gesture", as
       async call(fn, ...args) { return fn(...args); },
       async send(method, params) {
         sent.push({ method, params });
-        if (params.type === "touchEnd") exact.emitClick();
+        if (params.type === "touchStart") {
+          exact.emitEvent("pointerdown");
+          exact.emitEvent("touchstart");
+        }
+        if (params.type === "touchEnd") {
+          exact.emitEvent("pointerup");
+          exact.emitEvent("touchend");
+          exact.emitClick();
+        }
       },
     };
 
     const observation = await clickExactCreateDocument(page, exactPath, admittedWriterScope);
 
     assert.equal(observation.clicked, true);
+    assert.deepEqual(observation.inputPhases, {
+      touchstart: true,
+      touchend: true,
+      pointerdown: true,
+      pointerup: true,
+      click: true,
+    });
     assert.deepEqual(sent.map(({ params }) => params.type), [
       "touchStart",
       "touchEnd",
     ]);
+    for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
+      assert.equal(globalThis.document.listenerCount(phase), 0);
+    }
   });
 });
 
-test("exact Create waits for a click synthesized after the touchEnd command response", async () => {
+test("exact Create waits up to the bounded settlement deadline for a delayed click", async () => {
   const exact = createResult(exactPath);
   await withCreateDom([exact], exact, async () => {
     const sent = [];
@@ -132,7 +150,7 @@ test("exact Create waits for a click synthesized after the touchEnd command resp
       async call(fn, ...args) { return fn(...args); },
       async send(_method, params) {
         sent.push(params.type);
-        if (params.type === "touchEnd") setTimeout(() => exact.emitClick(), 20);
+        if (params.type === "touchEnd") setTimeout(() => exact.emitClick(), 750);
       },
     };
 
@@ -160,6 +178,9 @@ test("exact Create click settlement timeout never retransmits the committed touc
     assert.deepEqual(sent, ["touchStart", "touchEnd"]);
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
     assert.equal(globalThis.__deveAndroidCreatePointerLane.sealed, true);
+    for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
+      assert.equal(globalThis.document.listenerCount(phase), 0);
+    }
   });
 });
 
@@ -277,7 +298,7 @@ test("lost finalize transport still expires and seals inside the WebView", async
       clickExactCreateDocument(page, exactPath, admittedWriterScope),
       /observation_cleanup=finalize never reached page/,
     );
-    await new Promise((resolve) => setTimeout(resolve, 525));
+    await new Promise((resolve) => setTimeout(resolve, 2025));
     const late = exact.emitClick();
     const second = armExactCreateDocumentClickObservation(
       exactPath,
@@ -291,6 +312,9 @@ test("lost finalize transport still expires and seals inside the WebView", async
     assert.equal(late.immediatePropagationStopped, true);
     assert.equal(commits, 0);
     assert.equal(second.kind, "sealed");
+    for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
+      assert.equal(globalThis.document.listenerCount(phase), 0);
+    }
   });
 });
 
@@ -454,6 +478,9 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
       /arm response lost; unconfirmed_arm_cleanup=.*"kind":"observed"/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
+    for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
+      assert.equal(globalThis.document.listenerCount(phase), 0);
+    }
 
     const releaseLostPage = {
       async call(fn, ...args) { return fn(...args); },

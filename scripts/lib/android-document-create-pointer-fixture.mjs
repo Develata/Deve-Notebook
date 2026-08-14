@@ -23,28 +23,33 @@ export function withCreateDom(elements, hit, run) {
     querySelectorAll: () => elements,
     elementFromPoint: (...point) => typeof hit === "function" ? hit(...point) : hit,
     addEventListener: (type, listener, options = {}) => {
-      if (type === "click") listeners.set(listener, options?.once === true);
+      if (!listeners.has(type)) listeners.set(type, new Map());
+      listeners.get(type).set(listener, options?.once === true);
     },
     removeEventListener: (type, listener) => {
-      if (type === "click") listeners.delete(listener);
+      listeners.get(type)?.delete(listener);
     },
-    emitClick(target) {
+    emitEvent(type, target) {
       const event = {
+        type,
         target,
         defaultPrevented: false,
         immediatePropagationStopped: false,
         preventDefault() { this.defaultPrevented = true; },
         stopImmediatePropagation() { this.immediatePropagationStopped = true; },
       };
-      for (const [listener, once] of [...listeners]) {
-        if (once) listeners.delete(listener);
+      const typedListeners = listeners.get(type) ?? new Map();
+      for (const [listener, once] of [...typedListeners]) {
+        if (once) typedListeners.delete(listener);
         listener(event);
         if (event.immediatePropagationStopped) break;
       }
-      if (!event.immediatePropagationStopped) target.commitClick();
+      if (type === "click" && !event.immediatePropagationStopped) target.commitClick();
       return event;
     },
-    clickListenerCount: () => listeners.size,
+    emitClick(target) { return this.emitEvent("click", target); },
+    listenerCount: (type) => listeners.get(type)?.size ?? 0,
+    clickListenerCount: () => listeners.get("click")?.size ?? 0,
   };
   return Promise.resolve(run()).finally(() => {
     for (const [name, value] of Object.entries(originals)) {
@@ -72,6 +77,7 @@ export function createResult(target, { left = 10, onCommit = () => {} } = {}) {
     contains: () => false,
     closest: () => element,
     commitClick: onCommit,
+    emitEvent: (type) => globalThis.document.emitEvent(type, element),
     emitClick: () => globalThis.document.emitClick(element),
     getLeft: () => currentLeft,
     setLeft: (nextLeft) => { currentLeft = nextLeft; },

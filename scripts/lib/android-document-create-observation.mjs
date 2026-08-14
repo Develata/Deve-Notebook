@@ -61,8 +61,16 @@ export function armExactCreateDocumentClickObservation(
     clicked: false,
     blocked: false,
     clickState: null,
+    inputPhases: {
+      touchstart: false,
+      touchend: false,
+      pointerdown: false,
+      pointerup: false,
+      click: false,
+    },
     documentRoot: document,
     listener: null,
+    phaseListeners: [],
     writerScope: readWriterScope(),
     expiresAt: Date.now() + settlementTimeoutMs,
     expiryTimer: null,
@@ -90,6 +98,35 @@ export function armExactCreateDocumentClickObservation(
       lane.documentRoot.addEventListener("click", lane.sealListener, { capture: true });
     }
   };
+  const matchesCurrentTargetAndScope = (event) => {
+    const eventTarget = event.target
+      ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+    const currentExactTargets = [...document.querySelectorAll(
+      '[data-deve-search-result-action="create-doc"]',
+    )].filter((element) =>
+      element.getAttribute("data-deve-search-result-create-target") === expectedPath);
+    return currentExactTargets.length === 1
+      && currentExactTargets[0] === eventTarget
+      && sameWriterScope(observation.writerScope, readWriterScope());
+  };
+  for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
+    const phaseListener = (event) => {
+      if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+      if (matchesCurrentTargetAndScope(event)) observation.inputPhases[phase] = true;
+    };
+    observation.phaseListeners.push({ phase, listener: phaseListener });
+    observation.documentRoot.addEventListener(phase, phaseListener, { capture: true });
+  }
+  observation.cleanup = () => {
+    observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+    for (const phaseListener of observation.phaseListeners) {
+      observation.documentRoot.removeEventListener(
+        phaseListener.phase,
+        phaseListener.listener,
+        { capture: true },
+      );
+    }
+  };
   const listener = (event) => {
     if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
     if (Date.now() >= observation.expiresAt) {
@@ -109,16 +146,19 @@ export function armExactCreateDocumentClickObservation(
       || currentExactTargets[0] !== clickTarget
       || !sameWriterScope(observation.writerScope, writerScope)) {
       observation.blocked = true;
+      sealLane();
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
     }
     observation.clicked = true;
+    observation.inputPhases.click = true;
     observation.clickState = {
       syncStatus: writerScope.syncStatus,
       repoIdPresent: Boolean(writerScope.repoIdRaw),
       scopeNonceRaw: writerScope.scopeNonceRaw,
     };
+    sealLane();
   };
   observation.listener = listener;
   globalThis.__deveAndroidCreatePointerObservation = observation;
@@ -126,13 +166,14 @@ export function armExactCreateDocumentClickObservation(
   observation.expiryTimer = setTimeout(() => {
     if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
     sealLane();
-    observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+    observation.cleanup();
     lane.finalObservation = {
       kind: "observed",
       token: observation.token,
       clicked: observation.clicked,
       blocked: observation.blocked,
       clickState: observation.clickState,
+      inputPhases: { ...observation.inputPhases },
     };
     delete globalThis.__deveAndroidCreatePointerObservation;
   }, settlementTimeoutMs);
@@ -152,6 +193,7 @@ export function readExactCreateDocumentClickObservation(token) {
     clicked: observation.clicked,
     blocked: observation.blocked,
     clickState: observation.clickState,
+    inputPhases: { ...observation.inputPhases },
   };
 }
 
@@ -177,13 +219,14 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
       };
       lane.documentRoot.addEventListener("click", lane.sealListener, { capture: true });
     }
-    observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+    observation.cleanup();
     lane.finalObservation = {
       kind: "observed",
       token: observation.token,
       clicked: observation.clicked,
       blocked: observation.blocked,
       clickState: observation.clickState,
+      inputPhases: { ...observation.inputPhases },
     };
     delete globalThis.__deveAndroidCreatePointerObservation;
   };
@@ -216,13 +259,14 @@ export function finalizeExactCreateDocumentClickObservation(token) {
       : { kind: "missing", clicked: false, laneSealed: lane?.sealed === true };
   }
   clearTimeout(observation.expiryTimer);
-  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+  observation.cleanup();
   delete globalThis.__deveAndroidCreatePointerObservation;
   return {
     kind: "observed",
     clicked: observation.clicked,
     blocked: observation.blocked,
     clickState: observation.clickState,
+    inputPhases: { ...observation.inputPhases },
     laneSealed: lane?.sealed === true,
   };
 }
@@ -234,12 +278,13 @@ export function consumeExactCreateDocumentClickObservationByPath(expectedPath, a
     return { kind: "owner-mismatch", clicked: false };
   }
   clearTimeout(observation.expiryTimer);
-  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+  observation.cleanup();
   delete globalThis.__deveAndroidCreatePointerObservation;
   return {
     kind: "observed",
     clicked: observation.clicked,
     blocked: observation.blocked,
     clickState: observation.clickState,
+    inputPhases: { ...observation.inputPhases },
   };
 }
