@@ -19,7 +19,7 @@ import {
 import { proveSameBreakpointKeyboardPresentation } from "./lib/mobile-keyboard-presentation.mjs";
 import { proveAndroidImeBackPriority } from "./lib/mobile-ime-back-proof.mjs";
 import {
-  proveAndroidDrawerGesturesAfterReload,
+  proveAndroidDrawerGesturesAfterReload, proveAndroidWorkEditDrawerGestures,
   waitForAcceptedAndroidPresentation,
 } from "./lib/android-presentation-proof.mjs";
 import { createAndroidLifecycleHarness } from "./lib/android-lifecycle-harness.mjs";
@@ -296,6 +296,7 @@ async function main() {
   await waitUntil("committed document projection restored", () => page.call((expected) =>
     window.getEditorContent?.()?.includes(expected) ?? false,
   initial));
+  Object.assign(drawerGestureProof, await proveAndroidWorkEditDrawerGestures(page, { adbCommand, adbOutput, appId, waitUntil }));
   const serviceBeforeSuspend = await nativeInvoke(page, "native_backend_get_service_state");
   assert.equal(serviceBeforeSuspend?.backend_running, true, "embedded transport must be running");
 

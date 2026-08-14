@@ -8,6 +8,11 @@
 import { ViewPlugin, Decoration, WidgetType } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
+export function listMarkProjectionKind(listMarkNode, markText) {
+    if (listMarkNode?.nextSibling?.name === "Task") return "task";
+    return /^\d+\.$/.test(markText) ? "ordered" : "unordered";
+}
+
 /**
  * 列表圆点 Widget
  */
@@ -82,7 +87,12 @@ export const listMarkerPlugin = ViewPlugin.fromClass(
                             
                             // 获取标记文本判断类型
                             const markText = view.state.doc.sliceString(node.from, node.to);
-                            const isOrdered = /^\d+\.$/.test(markText);
+                            const projectionKind = listMarkProjectionKind(node.node, markText);
+                            if (projectionKind === "task") {
+                                widgets.push(Decoration.replace({}).range(node.from, node.to));
+                                return;
+                            }
+                            const isOrdered = projectionKind === "ordered";
                             const number = isOrdered ? parseInt(markText) : 0;
                             
                             // 创建替换 Widget

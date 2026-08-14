@@ -33,14 +33,17 @@ export function shouldRetryAndroidDrawerGestureDelivery(delivery, completedAttem
   return ["missing", "cancelled"].includes(delivery) && completedAttempts < maximum;
 }
 
-export async function selectNonInteractiveSwipePoints(page, xCss, fractions) {
-  return page.call((x, candidates, blockingSelector) => candidates.flatMap((fraction) => {
+export async function selectNonInteractiveSwipePoints(
+  page, xCss, fractions, requiredClosestSelector = null,
+) {
+  return page.call((x, candidates, blockingSelector, requiredSelector) => candidates.flatMap((fraction) => {
     const y = Math.round(window.innerHeight * fraction);
     const target = document.elementFromPoint(x, y);
     const mobileRoot = target?.closest('[data-deve-layout-mode="mobile"]');
-    if (!target || !mobileRoot || target.closest(blockingSelector)) return [];
+    const requiredRoot = requiredSelector ? target?.closest(requiredSelector) : mobileRoot;
+    if (!target || !mobileRoot || !requiredRoot || target.closest(blockingSelector)) return [];
     return [{ yCss: y, targetTag: target.tagName.toLowerCase() }];
-  }), xCss, fractions, BLOCKING_SELECTOR);
+  }), xCss, fractions, BLOCKING_SELECTOR, requiredClosestSelector);
 }
 
 export async function beginTouchDeliveryProbe(page) {

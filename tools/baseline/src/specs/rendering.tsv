@@ -373,7 +373,21 @@ absent	docs/features/03_rendering.md	完整 preview mode 已实现
 absent	docs/features/03_rendering.md	完整 virtual rendering 已实现
 absent	docs/features/03_rendering.md	rendering settings 的完整 GUI 持久化已实现
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-RICH-003
+contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-RICH-004
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-004	node --test apps/web/js/extensions/inline_projection.test.mjs
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-004	ui_assert: strong_projection_class_explicit true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-004	ui_assert: strong_visual_weight_distinct_from_adjacent_text true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-004	ui_assert: markdown_font_stack_prefers_times_and_fangsong_with_serif_fallback true
+contains	apps/web/js/extensions/inline_projection.test.mjs	strong and emphasis syntax use explicit stable projection classes
+contains	apps/web/js/extensions/inline_projection.test.mjs	strong projection keeps an OEM-font-visible weight fallback
+contains	apps/web/js/extensions/inline_projection.test.mjs	Markdown content font stack prefers Times New Roman and FangSong with serif fallback
+contains	docs/registry/acceptance-matrix.tsv	case.render-rich-003-list-projection
+contains	docs/registry/acceptance-matrix.tsv	case.render-rich-004
+contains	apps/web/js/extensions/hybrid.js	inlineProjectionClassForNodeName
+contains	apps/web/style/_base.css	"Times New Roman", Times, "FangSong_GB2312"
+contains	apps/web/style/_typography.css	-webkit-text-stroke: 0.012em currentColor
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	node --test apps/web/js/extensions/mobile_task_item.test.mjs
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	node --test apps/web/js/extensions/list_marker.test.mjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_first_enter "- [ ] \n- [ ] "
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_second_enter "- [ ] \n"
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: source_after_unrelated_change_first_enter "# intro\n- [ ] \n- [ ] "
@@ -387,6 +401,11 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: t
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_without_collapsing_multiple_selections true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_intent_rejects_nonempty_or_multiple_selections true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_marker_retires_when_task_line_changes_or_is_filled true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: toolbar_task_has_checkbox_without_generic_list_bullet true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-RICH-003	ui_assert: second_enter_leaves_one_task_and_one_plain_empty_line true
+contains	apps/web/js/extensions/list_marker.test.mjs	task checkbox is the only visual marker for a task list item
+contains	apps/web/js/extensions/list_marker.js	if (projectionKind === "task") {
+contains	apps/web/js/extensions/list_marker.js	Decoration.replace({}).range(node.from, node.to)
 contains	apps/web/js/extensions/mobile_task_item.test.mjs	toolbar task Enter continues once, then the generated empty item exits immediately
 contains	apps/web/js/extensions/mobile_task_item.test.mjs	ordinary keyboard-created empty task keeps CodeMirror default Enter behavior
 contains	apps/web/js/extensions/mobile_task_item.test.mjs	unrelated changes map the exit-ready item without broadening Enter semantics

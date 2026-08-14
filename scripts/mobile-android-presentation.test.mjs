@@ -12,6 +12,7 @@ import {
   androidSafeAreaStateMatches,
   drawerVisualStateMatches,
   openDrawerWithObservedNativeSwipe,
+  parseEditorSelectionIdentity,
   waitForDrawerVisualState,
 } from "./lib/android-presentation-proof.mjs";
 
@@ -94,12 +95,17 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(presentationProof, /data-deve-mobile-drawer=/);
   assert.match(presentationProof, /side: "left"/);
   assert.match(presentationProof, /side: "right"/);
+  assert.match(localJourney, /proveAndroidWorkEditDrawerGestures/);
+  assert.match(presentationProof, /data-deve-mobile-work-edit-swipe-surface/);
+  assert.match(presentationProof, /requiredClosestSelector/);
+  assert.match(presentationProof, /workEditSelectionStable: true/);
   assert.match(touchProof, /document\.elementFromPoint\(x, y\)/);
   assert.match(touchProof, /target\.closest\(blockingSelector\)/);
   assert.match(presentationProof, /DRAWER_TRANSITION_SETTLE_MS/);
   assert.match(presentationProof, /MAX_SWIPE_DELIVERY_ATTEMPTS = 2/);
   assert.match(presentationProof, /assert\.equal\(pidAfter, pidBefore/);
   assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
+  assert.match(writableEvidence, /drawerGestureProof\.workEditSelectionStable/);
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
 });
 
@@ -147,6 +153,24 @@ test("native presentation requires a settled system-bar safe area around mobile 
   }), false);
 });
 
+test("Work Edit selection proof rejects null, malformed, and invalid identities", () => {
+  assert.deepEqual(
+    parseEditorSelectionIdentity('{"from":3,"to":7,"rangeCount":1}'),
+    { from: 3, to: 7, rangeCount: 1 },
+  );
+  for (const invalid of [
+    null,
+    "null",
+    "not-json",
+    '{"from":-1,"to":0,"rangeCount":1}',
+    '{"from":7,"to":3,"rangeCount":1}',
+    '{"from":0,"to":0,"rangeCount":0}',
+    '{"from":0.5,"to":1,"rangeCount":1}',
+  ]) {
+    assert.equal(parseEditorSelectionIdentity(invalid), null);
+  }
+});
+
 test("drawer delivery classifier binds identifier, coordinates, direction, and retry categories", () => {
   assert.equal(classifyAndroidDrawerGestureDelivery([], expectedLeftDelivery), "missing");
   assert.equal(classifyAndroidDrawerGestureDelivery([
@@ -173,9 +197,10 @@ test("drawer delivery classifier binds identifier, coordinates, direction, and r
   assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 2), false);
 });
 
-test("drawer hit testing rejects action controls but admits the editor swipe surface", async () => {
+test("drawer hit testing rejects action controls and requires the marked Work Edit surface", async () => {
   const mobileRoot = {};
-  const makePage = (blocked) => ({
+  const workEditRoot = {};
+  const makePage = (blocked, workEdit = true, editorContent = workEdit) => ({
     async call(callback, ...args) {
       const previousWindow = globalThis.window;
       const previousDocument = globalThis.document;
@@ -186,6 +211,10 @@ test("drawer hit testing rejects action controls but admits the editor swipe sur
             tagName: "DIV",
             closest(selector) {
               if (selector === '[data-deve-layout-mode="mobile"]') return mobileRoot;
+              if (selector.includes("data-deve-mobile-work-edit-swipe-surface")) {
+                if (selector.includes(".cm-content")) return editorContent ? workEditRoot : null;
+                return workEdit ? workEditRoot : null;
+              }
               return blocked && selector.includes("button") ? this : null;
             },
           };
@@ -203,6 +232,19 @@ test("drawer hit testing rejects action controls but admits the editor swipe sur
   assert.deepEqual(await selectNonInteractiveSwipePoints(makePage(false), 40, [0.5]), [
     { yCss: 500, targetTag: "div" },
   ]);
+  const required = '[data-deve-mobile-work-edit-swipe-surface="true"] .cm-content';
+  assert.deepEqual(
+    await selectNonInteractiveSwipePoints(makePage(false, false), 200, [0.5], required),
+    [],
+  );
+  assert.deepEqual(
+    await selectNonInteractiveSwipePoints(makePage(false, true, false), 200, [0.5], required),
+    [],
+  );
+  assert.deepEqual(
+    await selectNonInteractiveSwipePoints(makePage(false, true, true), 200, [0.5], required),
+    [{ yCss: 500, targetTag: "div" }],
+  );
 });
 
 test("drawer visual settlement requires marker, accessibility, hit testing, and geometry", () => {

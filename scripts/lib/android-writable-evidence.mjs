@@ -67,7 +67,10 @@ export function writeAndroidLocalBackendEvidence({
       nativeSystemGestureInsetsAcceptedAfterReload: true,
       nativeDrawerGesturesAfterReload: drawerGestureProof.leftDrawerOpened
         && drawerGestureProof.rightDrawerOpened
-        && drawerGestureProof.pidStable,
+        && drawerGestureProof.pidStable
+        && drawerGestureProof.workEditCenterLeftOpened
+        && drawerGestureProof.workEditCenterRightOpened
+        && drawerGestureProof.workEditSelectionStable,
       imeBackPreservedEditorSession: true,
       imeRetapReopenedKeyboard: true,
       keyboardPresentationMode: keyboardPresentation.presented.keyboardMode,

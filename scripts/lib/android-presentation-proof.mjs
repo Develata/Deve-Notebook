@@ -176,6 +176,7 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   distancePx,
   density,
   waitUntil,
+  requiredClosestSelector = null,
   testing = {},
 }) {
   const selectPoints = testing.selectNonInteractiveSwipePoints ?? selectNonInteractiveSwipePoints;
@@ -188,7 +189,9 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   let lastEvents = [];
 
   for (let attempt = 0; attempt < MAX_SWIPE_DELIVERY_ATTEMPTS; attempt += 1) {
-    const points = await selectPoints(page, startPx / density, SWIPE_Y_FRACTIONS);
+    const points = await selectPoints(
+      page, startPx / density, SWIPE_Y_FRACTIONS, requiredClosestSelector,
+    );
     assert.ok(points.length > 0, `${side} activation band has no non-interactive hit-tested point`);
     const point = points[Math.min(attempt, points.length - 1)];
     const yPx = Math.round(point.yCss * density);
@@ -235,6 +238,88 @@ export async function openDrawerWithObservedNativeSwipe(page, {
     return { attempts: attempt + 1, targetTag: point.targetTag };
   }
   throw new Error(`${side} drawer swipe ended unexpectedly`);
+}
+
+export function parseEditorSelectionIdentity(value) {
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed
+      || !Number.isSafeInteger(parsed.from)
+      || !Number.isSafeInteger(parsed.to)
+      || !Number.isSafeInteger(parsed.rangeCount)
+      || parsed.from < 0
+      || parsed.to < parsed.from
+      || parsed.rangeCount < 1) return null;
+    return { from: parsed.from, to: parsed.to, rangeCount: parsed.rangeCount };
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function readWorkEditSwipeState(page) {
+  const raw = await page.call(() => {
+    const surface = document.querySelector(
+      '[data-deve-mobile-work-edit-swipe-surface="true"]',
+    );
+    const selectionIdentity = globalThis.__deveWebBridge
+      ?.get?.("getEditorSelectionIdentity")?.() ?? null;
+    return surface ? selectionIdentity : null;
+  });
+  const selectionIdentity = parseEditorSelectionIdentity(raw);
+  return selectionIdentity ? { selectionIdentity } : null;
+}
+
+export async function proveAndroidWorkEditDrawerGestures(page, {
+  adbCommand,
+  adbOutput,
+  appId,
+  waitUntil,
+}) {
+  const presentation = await waitForAcceptedAndroidPresentation(page, waitUntil);
+  const before = await waitUntil(
+    "Work Edit swipe surface and editor selection",
+    () => readWorkEditSwipeState(page),
+  );
+  const pidBefore = adbOutput("shell", "pidof", appId).trim();
+  assert.match(pidBefore, /^[1-9][0-9]*$/, "Work Edit drawer proof requires one stable app PID");
+  const startPx = Math.round(presentation.widthPx / 2);
+  const distancePx = Math.round(SWIPE_DISTANCE_CSS * presentation.density);
+  const requiredClosestSelector =
+    '[data-deve-mobile-work-edit-swipe-surface="true"] .cm-content';
+
+  const left = await openDrawerWithObservedNativeSwipe(page, {
+    adbCommand, side: "left", startPx, distancePx, density: presentation.density,
+    waitUntil, requiredClosestSelector,
+  });
+  adbCommand("shell", "input", "keyevent", "4");
+  await waitForDrawerVisualState(page, "left", false, waitUntil);
+
+  const right = await openDrawerWithObservedNativeSwipe(page, {
+    adbCommand, side: "right", startPx, distancePx, density: presentation.density,
+    waitUntil, requiredClosestSelector,
+  });
+  adbCommand("shell", "input", "keyevent", "4");
+  await waitForDrawerVisualState(page, "right", false, waitUntil);
+
+  const after = await readWorkEditSwipeState(page);
+  assert.ok(after, "Work Edit swipe surface must remain mounted after drawer gestures");
+  assert.deepEqual(
+    after.selectionIdentity,
+    before.selectionIdentity,
+    "Work Edit drawer gestures must preserve the editor selection",
+  );
+  assert.equal(
+    adbOutput("shell", "pidof", appId).trim(),
+    pidBefore,
+    "Work Edit drawer gestures must keep the app PID stable",
+  );
+  return {
+    workEditCenterLeftOpened: true,
+    workEditCenterRightOpened: true,
+    workEditSelectionStable: true,
+    workEditDeliveryAttempts: { left: left.attempts, right: right.attempts },
+  };
 }
 
 export async function proveAndroidDrawerGesturesAfterReload(page, {

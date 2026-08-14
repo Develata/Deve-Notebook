@@ -15,6 +15,7 @@ contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	f
 contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	fn ngit_status_command_clears_stale_cli_notice_on_mobile()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobile-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test apps/web/js/extensions/inline_projection.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_mobile --features native-packaging android_system_gesture_insets -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_threshold_bound true
@@ -28,6 +29,11 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: right_drawer_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: vertical_and_short_gestures_leave_drawers_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: edge_button_action_not_replaced_by_drawer true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: editor_content_and_pending_unchanged true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: work_edit_center_swipes_open_expected_drawers true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: work_edit_does_not_reverse_edge_band_direction true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: work_edit_center_fails_closed_without_presentation_hint true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: dashboard_diff_ai_and_overlays_reject_center_swipe true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: editor_selection_unchanged_after_drawer_swipe true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: generation_bound_system_gesture_insets_projected true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: generation_bound_system_bar_safe_area_projected true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: mobile_header_begins_inside_status_bar_safe_area true
@@ -69,6 +75,15 @@ contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_system_gesture_insets_shift_activation_bands_inward()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_system_gesture_insets_fail_closed_until_valid_hint()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_native_zero_reported_insets_use_safe_floor()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_work_edit_center_opens_both_drawers_by_direction()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_work_edit_keeps_edge_bands_directional()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_work_edit_rejects_system_region_and_missing_presentation_hint()
+contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_center_is_rejected_outside_work_edit()
+contains	apps/web/src/components/mobile_layout/content.rs	data-deve-mobile-work-edit-swipe-surface
+contains	apps/web/src/components/mobile_layout/gesture.rs	SwipeTarget::OpenFromWorkEdit
+contains	apps/web/js/extensions/inline_projection.test.mjs	clickable editor projections opt out of Work Edit drawer swipe admission
+contains	apps/web/js/extensions/hybrid.js	attributes: { "data-no-edge-swipe": "true" }
+contains	scripts/lib/android-presentation-proof.mjs	[data-deve-mobile-work-edit-swipe-surface="true"] .cm-content
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WindowInsetsCompat.Type.systemGestures()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	activity.window.decorView
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	android_system_gesture_insets_ready
@@ -938,6 +953,13 @@ contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:proces
 contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:taskAffinity="${applicationId}.backend_recovery_restart"
 contains	apps/mobile/gen/android/app/proguard-rules.pro	class dev.deve.notebook.mobile.RecoveryAnchorActivity
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	removeUseLocalBackendControl
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	useLocalBackendControl.restoreIfDesired()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	useLocalBackendControl.attach(webView)
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UseLocalBackendControl.kt	var desired = false
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UseLocalBackendControl.kt	source.post
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UseLocalBackendControl.kt	generation == expectedGeneration
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/UseLocalBackendControl.kt	control.bringToFront()
+contains	apps/mobile/src/tauri_entry/tests/android_recovery_control.rs	fn android_backend_recovery_control_is_restored_across_activity_and_webview_lifecycle()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	scheduleBackendRecoveryColdStart
 contains	apps/mobile/src/tauri_lifecycle.rs	MobileBackendRecoveryState
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: scripts/smoke-mobile-android-remote-browser.sh
@@ -951,6 +973,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_r
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: cold-restart relaunch is a package/static contract here; this successful journey does not claim forced-restart runtime evidence
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_cold_restart_package_contract_uses_platform_task_relaunch true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_remote_to_local_retires_lifecycle_anchor_after_fresh_local_surface true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_remote_recovery_control_reprojects_after_generation_bound_webview_attach_contract true
 contains	apps/mobile/src/tauri_entry.rs	deve_mobile native shell mode=RemoteBrowser embedded_backend=absent
 contains	apps/mobile/src/embedded_backend/supervisor.rs	deve_mobile native embedded backend supervisor=started
 contains	scripts/lib/android-native-mode-evidence.mjs	requireAndroidRemoteBrowserModeEvidence
@@ -1065,6 +1088,11 @@ contains	scripts/lib/android-tools.sh	android_boot_properties_complete()
 contains	scripts/lib/android-tools.sh	if sdk="$(android_sdk_root)"; then
 contains	apps/web/js/editor_lifecycle.test.mjs	stale cleanup cannot destroy a replacement editor mount
 contains	apps/web/js/editor_lifecycle.js	destroyOwnedEditorMount
+contains	apps/web/js/editor_lifecycle.test.mjs	gesture selection token restores the exact selection once on the same editor
+contains	apps/web/js/editor_lifecycle.test.mjs	gesture selection token fails closed after editor or document replacement
+contains	apps/web/js/editor_lifecycle.js	settleGestureEditorSelection
+contains	apps/web/js/editor_lifecycle.js	view?.state?.doc !== snapshot.doc
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	on:touchstart:capture
 contains	scripts/mobile-webview-interaction.test.mjs	read-only editor focus rejects a writable CodeMirror surface
 contains	scripts/android-webview-pointer.test.mjs	WebView point tap holds one bounded 50 ms contact before touchEnd
 contains	scripts/lib/android-webview-pointer.mjs	const NATIVE_TAP_CONTACT_MS = 50

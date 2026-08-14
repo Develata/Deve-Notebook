@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-12`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -220,6 +220,11 @@ Baseline contract 的行内支持集合：
 
 ## 5. Source-First Contract
 
+Markdown 文档正文使用内容字体栈，不与应用壳层按钮/菜单字体混用：Latin 优先
+`Times New Roman`，CJK 优先 `FangSong_GB2312` / `FangSong` / `STFangsong`，不可用时回退
+`Noto Serif CJK SC` / `Source Han Serif SC` / generic `serif`。实现不得因单一平台缺少专有字体而
+阻断编辑器；未取得可再分发授权时也不得把专有 `仿宋_GB2312` 字体文件打入 Web / APK 资产。
+
 ### 5.1 Cursor Reveal
 
 - 光标进入 widget 的源码范围时，render projection **MUST** 让位给源码。
@@ -234,6 +239,10 @@ Baseline contract 的行内支持集合：
   - emphasis syntax
   - frontmatter
   - link source
+- `StrongEmphasis` / `Emphasis` 的内容区必须获得稳定、显式的 projection class；不得只依赖
+  CodeMirror 运行时生成的匿名 highlight class。`StrongEmphasis` 在普通正文中必须与相邻正文形成
+  可辨识的字重差异，即使 OEM / WebView 当前使用的系统字体没有独立 `700` 字重，也不得退化为
+  肉眼无差别的普通文本。该规则只改变视觉 projection，不得改写 `**...**` 源码或 selection。
 
 ### 5.2 Link Activation {#link-activation-gate}
 
@@ -262,6 +271,9 @@ Baseline contract 的行内支持集合：
   隐藏 Markdown 字节、browser storage 或 ledger fact 持久化。该窄状态机不得改写普通键盘输入创建的
   空列表项或全局 Markdown Enter 语义。该 intent 只接受单一空 caret；多 selection 或非空 selection
   必须 fail-closed 地退休 marker，并保留原 selection 交给既有编辑器命令处理。
+- Task item 的 `TaskMarker` checkbox 是该行 list marker 的唯一非源码视觉 projection；当语法树中的
+  `ListMark` 属于 task item 时，通用 list-marker widget 不得再叠加普通圆点。第二次 Enter 退出后必须
+  只保留上一条空任务项与一个普通空行，不得留下重复圆点、重复 checkbox 或隐藏字符。
 
 ## 6. Rendering Capabilities
 

@@ -16,12 +16,14 @@
 本功能篇只把下列用户可见行为纳入验收：
 
 - 主编辑器默认 source-first；增强渲染只能作为源码之上的视觉投影存在。
+- Markdown 正文采用论文/公文风格的内容字体栈：英文优先 Times New Roman，中文优先仿宋系列；平台缺少专有字体时使用可用的 CJK serif fallback。应用按钮、菜单等壳层字体不随之改变。
 - Markdown 显示必须区分三种模式：纯源码模式、混合模式、禁止编辑的纯 preview 模式。
 - 纯源码模式显示完整 Markdown 源码，但标题行仍保留标题字号和行高。
 - 混合模式中，鼠标指针、光标或选区所在行及其关联块显示源码；非活动区域参与渲染，可隐藏 `#` 等 Markdown 标记。
 - 混合模式中，折叠的主光标进入块级公式、Mermaid 或表格时，源码下方显示一个伴随预览；框选源码时只保留源码，多选区也只允许主光标产生一个伴随预览。
 - 纯 preview 模式是只读阅读模式，参考 Obsidian reading mode，显示渲染结果，不显示 Markdown 源码。
 - 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
+- `**strong**` 内容必须在 Android WebView 与其它端都形成可辨识的粗体；不能只依赖 OEM 字体可能不提供的匿名 `700` 字重。光标 reveal 仍只恢复标记，不得改变源码。
 - ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度；隐藏 `#` 标记时不得退回普通段落行高。
 - 空与非空 ATX 标题行（如 `#`、`# 标题`、`## 标题`、`### 标题`）在主编辑器与辅助 HTML Markdown 展示中应按 h1/h2/h3 层级保持可区分字号与高度；标题内的行内公式不应让整行回落到正文行高。
 - `# s`、`## s`、`### s` 这类标准 Markdown 标题行，在纯源码、混合与 preview 三种模式下都不得退回正文行高；混合模式 active 行显示源码时也必须保持标题层级行高。
@@ -86,6 +88,7 @@
 ### 5. 任务列表与 Frontmatter
 
 - 任务列表复选框可点击，点击结果会回写到源码。
+- 任务项只显示 checkbox，不得同时叠加普通列表圆点；移动工具栏创建任务后，第一次 Enter 继续下一任务，第二次 Enter 立即退出并留下普通空行。
 - Frontmatter 具有明显的视觉边界，但光标进入后应还原为标准 YAML 源码。
 - 细粒度操作示例：[`operations/rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md), [`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 

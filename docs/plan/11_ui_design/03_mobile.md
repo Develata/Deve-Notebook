@@ -48,7 +48,7 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 *   Mobile Settings 只允许在可信 bundled `LocalBackend` origin 使用 native backend preference bridge：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。bridge capability 必须来自 typed native bootstrap，不得由 `__TAURI_INTERNALS__` 推断。
 *   Mobile `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。启动参数/环境覆盖只用于诊断和脚本启动，不得回写 preference。
 *   Mobile Tauri bundle 必须加载 `frontendDist` 资产，并通过 native bootstrap 或 RemoteBrowser 导航决定后端；不得把主 WebView 固定到开发服务 `devUrl = http://127.0.0.1:3001`。
-*   Mobile 在 `RemoteBrowser` 失联时沿用普通浏览器锁屏/只读语义，远端 DOM 不得调用本机 IPC。Android/iOS 壳层必须提供平台原生 “Use Local Backend” 控件，且仅在 host preference 选择 `RemoteBrowser` 时显示；显式 CLI/env override 下必须隐藏并记录诊断。该控件只提交 native lifecycle intent，不得保留 Web fallback、向远端页面暴露 command handler，或把 `__TAURI_INTERNALS__` 当作 capability。
+*   Mobile 在 `RemoteBrowser` 失联时沿用普通浏览器锁屏/只读语义，远端 DOM 不得调用本机 IPC。Android/iOS 壳层必须提供平台原生 “Use Local Backend” 控件，且仅在 host preference 选择 `RemoteBrowser` 时显示；显式 CLI/env override 下必须隐藏并记录诊断。Android 控件的 desired presentation state 必须由 native adapter 以 process-local、authority-free 状态持有，并在 current Activity/WebView attach、resume 或 view reparent 后重新投影且置于 WebView 之上；Activity/WebView recreation 不得静默丢失入口。切换提交或显式隐藏时必须先退休该 desired state，避免新 surface 迟到复现旧控件。该控件只提交 native lifecycle intent，不得保留 Web fallback、向远端页面暴露 command handler，或把 `__TAURI_INTERNALS__` 当作 capability。
 *   Mobile `RemoteBrowser -> LocalBackend` 由单一 native coordinator 串行执行：先确认 preference 与远端 surface、启动隔离的 `MobileEmbeddedBackendSupervisor` 候选并取得新 bootstrap，再移除平台恢复控件并销毁远端 WebView。候选必须先关闭初次 WebView session admission；只有 coordinator 已确认新 `main` 登记、recovery anchor 退休并记录 `LocalWindowCreated` 后才可一次性打开，且 initial/resume handoff 必须共同受该门约束。独立的 native recovery transition guard 必须在最后一个 WebView 销毁期间阻止 Tauri 提前退出，但不得持有或暴露 writer/IPC authority。Android 必须把该 guard 实现为在远端退休前创建的、未导出且 capability-free 的临时 recovery Activity/WebView：它只能维持 Activity/Tauri lifecycle，不得注册 command/bootstrap plugin、保存业务状态或成为 LocalBackend surface evidence；新 bundled-local `main` Activity/WebView 创建后必须确认其已从 manager 退休。只有确认远端 WebView 已从 manager 退休后，才可持久化 `local` preference、注册 LocalBackend command/bootstrap plugin、manage 新 supervisor 并创建 bundled-local WebView。新 local runtime 必须使用新的随机 loopback endpoint、native session、repo handshake 与 `scope_nonce`，不得迁移远端 cookie、session 或 authority。
 *   coordinator 在远端 WebView 销毁前失败时必须停止候选 supervisor、保留 remote preference 与原远端 surface，并把平台控件恢复为可重试；若控件恢复或 supervisor 清理失败，必须重启进程。Activity/WebView 创建或退休一旦已派发但无法确认结果，必须视为 committed-unknown，不得恢复控件或允许同进程重试。远端 WebView 已销毁后的任一步失败都必须在 recovery anchor 仍维持 lifecycle 时先有界停止候选/已托管 supervisor，再按仍在磁盘上的 preference 重启：`local` 已提交时 cold start LocalBackend，尚未提交时 cold start RemoteBrowser。Android cold start 必须先启动未导出、无 Tauri/业务 authority 的独立进程 recovery Activity；该组件只有连续确认旧 PID 已退休后才可创建 launcher task，并必须随即退出自身进程。helper 调度确认后，旧进程必须在 failure snapshot 与有界 supervisor shutdown 已完成的边界直接退休，不能再次受普通 graceful-exit gate 阻塞。不得在旧 Tauri 进程内直接启动新的 `MainActivity`，也不得调用桌面 `current_exe` spawn 冒充 Android restart。不得依赖 best-effort preference rollback，不得留下无窗口的 active runtime，也不得重新向远端页面开放 IPC。并发点击必须 single-flight。
 *   native coordinator 必须维护 typed、process-local transition snapshot，至少记录 recovery id、远端 surface retirement、preference/plugin 注册顺序、supervisor/window ownership、active runtime owner 数和失败原因。该 snapshot 只可由 bundled-local command 读取，用于 target-host receipt；RemoteBrowser 不得注册读取命令。receipt 必须把 manager 已确认的远端 surface retirement 与 fresh `http://tauri.localhost` sync CDP target、remote/local repo scope、native session generation 及 graceful process exit 关联；已销毁 WebView 的 Chromium discovery target 可能短暂残留，其消失时机不得作为产品 lifecycle authority，且所有 lifecycle 真值都必须来自实际观测而非写死。
@@ -390,19 +390,28 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
 普通键盘输入创建的空任务项行为。
 
 ### 3.4 手势系统 (Gesture System)
-仅支持轻量级 Edge Swipe，参数定义如下：
+支持轻量级 Edge Swipe 与 Work Edit surface swipe，参数定义如下：
 *   $Zone_{app} = 20\text{ CSS px}$。普通 Web 从屏幕边缘起算；Android native 必须从
     `WindowInsets.Type.systemGestures()` 的左右系统保留区内侧起算。考虑 OEM 可能用独立系统
     Gesture Stub 拦截边缘、却把标准 Insets 错报为零，归一化安全宽度为
     $S_L = \max(\lceil I_L / density\rceil, 24\text{ CSS px})$、右侧对称；左侧激活带为
     $[S_L + 1,\ S_L + 1 + Zone_{app}]$。24 CSS px 是 Android native 的跨密度保守安全下限，
     不是设备物理像素常量；非零标准 Insets 大于该下限时必须以标准 Insets 为准。
-    应用不得在系统保留区内抢占触摸，也不得把激活带扩大到全屏。
+    应用不得在系统保留区内抢占触摸，也不得把边缘激活带扩大到全屏。
 *   $Threshold_{swipe} = 50px$ (触发滑动的最小距离)。
-*   **Direction**: 左边缘向右滑打开 Sidebar / File Tree；右边缘向左滑打开 Outline。Drawer 已打开时，反向滑动只关闭当前 Drawer，不得在同一手势中串联打开另一侧。
+*   **Direction**: 左边缘向右滑打开 Sidebar / File Tree；右边缘向左滑打开 Outline。当前 surface 为
+    Work Edit 且触点属于编辑内容 surface 时，也允许从内容区内任意非交互控件位置开始同样的单指横滑：
+    左向右打开 File Tree，右向左打开 Outline。该 content-surface admission 只属于 Work Edit，不得扩张到
+    Dashboard、Diff、AI、header、footer 或 overlay；它只能位于左右应用激活带之间，不得覆盖系统保留区或
+    改写左右激活带各自的单向语义。native presentation hint 缺失或 invalid 时，边带与 Work Edit 内容区
+    admission 必须一并 fail-closed。Drawer 已打开时，反向滑动只关闭当前 Drawer，不得在同一手势中串联打开另一侧。
 *   **Axis Lock**: 只接受单指、水平位移达到阈值且水平位移绝对值大于垂直位移绝对值的手势；短拖动、纵向滚动、斜向滚动、多指手势与取消事件不得改变 Drawer 状态。
-*   **Editor Reachability**: CodeMirror 编辑内容区可以作为边缘手势起点；手势识别只产生 typed Drawer intent，不读取、修改或提交 Markdown 内容，也不得改变 pending / writer gate / repo scope。
-*   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。识别器在手势达到阈值前不得 `preventDefault` 或触发 Drawer intent；button、link、input、select 及显式 `data-no-edge-swipe` target 必须被排除。
+*   **Editor Reachability**: Work Edit 必须投影一个明确的 swipe surface marker；只有该 marker 的后代触点可获得
+    content-surface admission。手势识别只产生 typed Drawer intent，不读取、修改或提交 Markdown 内容，也不得改变
+    selection、pending / writer gate / repo scope。单击、长按与纵向编辑滚动仍归 CodeMirror。
+*   **Interactive Safety**: Edge / Work Edit Swipe **MUST NOT** 抢占可交互控件的真实点击，例如 `File tree`、
+    `Toggle Outline`、链接、checkbox 或工具栏按钮。识别器在手势达到阈值前不得 `preventDefault` 或触发 Drawer intent；
+    button、link、input、select 及显式 `data-no-edge-swipe` target 必须被排除。
 *   **Typed Presentation Hint**: Android adapter 必须按 WebView generation 发布固定、无敏感信息的
     JavaScript wire event
     `deve-native-presentation-change { generation, epoch, widthPx, heightPx, leftPx, rightPx, density, imeVisible, imeBottomPx }`。每轮 Insets 读取必须先发送

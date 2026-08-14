@@ -201,6 +201,20 @@
   assertions:
     - ui_assert: checkbox_checked true
     - ui_assert: source_contains "- [x] task"
+    - ui_assert: task_checkbox_has_no_generic_list_bullet true
+
+- case_id: RENDER-RICH-004
+  goal: Strong emphasis 在 OEM 字体环境中仍有稳定、可辨识的粗体 projection。
+  preconditions:
+    - 文档包含 "normal **123** normal"
+  steps:
+    - run: node --test apps/web/js/extensions/inline_projection.test.mjs
+    - ui_query_dom: "strong-emphasis-content"
+  assertions:
+    - ui_assert: strong_projection_class_explicit true
+    - ui_assert: strong_visual_weight_distinct_from_adjacent_text true
+    - ui_assert: markdown_font_stack_prefers_times_and_fangsong_with_serif_fallback true
+    - ui_assert: source_equals "normal **123** normal"
 
 - case_id: RENDER-RICH-003
   goal: 移动工具栏创建的空任务项第一次 Enter 继续列表，第二次在新空项 Enter 立即退出。
@@ -209,6 +223,7 @@
     - 移动 Markdown 辅助工具栏可见
   steps:
     - run: node --test apps/web/js/extensions/mobile_task_item.test.mjs
+    - run: node --test apps/web/js/extensions/list_marker.test.mjs
     - ui_click: "mobile-toolbar-task"
     - ui_keypress: "Enter"
     - ui_keypress: "Enter"
@@ -223,6 +238,8 @@
     - ui_assert: ordinary_empty_task_keeps_codemirror_default true
     - ui_assert: toolbar_task_marker_maps_across_unrelated_transaction true
     - ui_assert: toolbar_task_marker_maps_through_transaction_filter true
+    - ui_assert: toolbar_task_has_checkbox_without_generic_list_bullet true
+    - ui_assert: second_enter_leaves_one_task_and_one_plain_empty_line true
     - ui_assert: toolbar_task_marker_retires_when_selection_leaves true
     - ui_assert: toolbar_task_marker_retires_without_collapsing_multiple_selections true
     - ui_assert: toolbar_task_intent_rejects_nonempty_or_multiple_selections true

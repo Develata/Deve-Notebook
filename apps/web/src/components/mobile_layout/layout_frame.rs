@@ -179,7 +179,7 @@ pub fn MobileLayoutFrame(
             data-deve-mobile-pending-ack-count=move || mobile_pending_ack_count.get().to_string()
             class="flex flex-col flex-1 overflow-hidden bg-sidebar"
             style="touch-action: pan-y;"
-            on:touchstart=move |ev| on_touch_start.run(ev)
+            on:touchstart:capture=move |ev| on_touch_start.run(ev)
             on:touchend=move |ev| on_touch_end.run(ev)
             on:touchcancel=move |_| on_touch_cancel.run(())
         >

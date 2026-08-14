@@ -128,6 +128,33 @@ pub fn try_get_editor_selection() -> Option<String> {
     bridge_call0("getEditorSelection").and_then(|value| value.as_string())
 }
 
+pub fn capture_mobile_gesture_editor_selection() -> Option<u64> {
+    let token = bridge_call0("captureMobileGestureEditorSelection")?.as_f64()?;
+    if !token.is_finite() || token < 1.0 || token > 9_007_199_254_740_991.0 || token.fract() != 0.0
+    {
+        return None;
+    }
+    Some(token as u64)
+}
+
+pub fn restore_mobile_gesture_editor_selection(token: u64) -> bool {
+    bridge_call1(
+        "restoreMobileGestureEditorSelection",
+        &JsValue::from_f64(token as f64),
+    )
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false)
+}
+
+pub fn retire_mobile_gesture_editor_selection(token: u64) -> bool {
+    bridge_call1(
+        "retireMobileGestureEditorSelection",
+        &JsValue::from_f64(token as f64),
+    )
+    .and_then(|value| value.as_bool())
+    .unwrap_or(false)
+}
+
 fn bridge_call0(name: &str) -> Option<JsValue> {
     let (bridge, func) = bridge_call_function()?;
     func.call1(&bridge, &JsValue::from_str(name)).ok()

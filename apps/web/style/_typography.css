@@ -127,7 +127,8 @@
 
 /* ==================== 文本样式 ==================== */
 .cm-strong {
-  font-weight: bold;
+  font-weight: 900;
+  -webkit-text-stroke: 0.012em currentColor;
 }
 
 .cm-em {

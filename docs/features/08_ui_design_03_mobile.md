@@ -16,7 +16,7 @@
 - Android edge-to-edge 壳层必须把状态栏、刘海与底部系统导航区投影为共享安全区；top bar 不得抵住或进入状态栏，bottom bar/键盘工具栏不得贴住手势条或留下异色白边。Android system bar 使用透明、无强制 contrast scrim 的 Day/Night-aware 合成，主题背景连续绘制到底部手势区；普通 Web/iOS 继续使用浏览器 safe-area，不能按设备型号写固定 padding。
 - 左/右 drawer 应可打开、关闭、切换，并且与主内容区配合清晰。
 - 左右 Drawer 的标题栏总高必须在 48px 内容区之外再包含顶部安全区，44px 关闭按钮不得因 border-box padding 被挤回状态栏；Settings 底部 Sheet 与 Command Palette 也必须同时避开 canonical top/bottom safe area。
-- 从左侧系统返回手势区的内侧向右滑应打开文件树；从右侧系统返回手势区的内侧向左滑应打开当前 Markdown 的逐级标题大纲。普通移动 Web 仍从屏幕边缘起算；若 OEM 把标准系统手势 Insets 错报为零，Android native 使用 24 CSS px 的跨密度保守安全下限。每次页面重载或远程导航都必须重新取得当代 Android presentation hint 后才开放该激活带。该手势可从编辑器边缘开始，但绝对系统边缘继续归 Android Back，短拖动、纵向滚动、多指操作和靠边按钮点击不能误开 drawer。
+- 从左侧系统返回手势区的内侧向右滑应打开文件树；从右侧系统返回手势区的内侧向左滑应打开当前 Markdown 的逐级标题大纲。当前处于 Work Edit 时，用户也可在编辑内容区中部横滑：左向右打开 Work Tree，右向左打开 Outline；该中部准入不能覆盖系统保留区、改写左右安全边带的单向语义，或扩张到 Dashboard、Diff、AI、工具栏或浮层。普通移动 Web 的边缘入口仍从屏幕边缘起算；若 OEM 把标准系统手势 Insets 错报为零，Android native 使用 24 CSS px 的跨密度保守安全下限。每次页面重载或远程导航都必须重新取得当代 Android presentation hint 后才开放边缘激活带与 Work Edit 中部准入；hint 缺失时必须一并 fail-closed。绝对系统边缘继续归 Android Back，短拖动、纵向滚动、多指操作、链接、checkbox 与按钮点击不能误开 drawer，Markdown 内容、selection 与 pending 必须保持不变。
 
 ### 2. 移动端核心面板
 
@@ -67,7 +67,7 @@
 - Mobile 可从可信 bundled `LocalBackend` Settings 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
 - RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；远端页面不注册 backend facade，也不能调用 native IPC。
-- preference-driven RemoteBrowser 必须显示 Android/iOS 平台原生 “Use Local Backend” 控件；显式 CLI/env override 必须隐藏。控件只调用 native coordinator，不进入远端 DOM，也不注册 RemoteBrowser IPC。
+- preference-driven RemoteBrowser 必须显示 Android/iOS 平台原生 “Use Local Backend” 控件；Android 在后台重进、Activity/WebView 重建或重新挂载后仍必须恢复该原生入口并保持在 WebView 之上，直到 native coordinator 明确退休它。显式 CLI/env override 必须隐藏。控件只调用 native coordinator，不进入远端 DOM，也不注册 RemoteBrowser IPC。
 - 切回 local 时必须销毁远端 WebView，启动新的 embedded supervisor，并以新的随机 endpoint、native session、repo handshake 与 scope 创建 bundled-local WebView；远端 cookie/session/authority 不得复用。
 - `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不注册 Tauri commands，也不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 主 WebView 由 native 以已校验 HTTPS `WindowConfig` 直接创建，不通过 bundled 页面或远端页面的 init-script redirect 过渡。

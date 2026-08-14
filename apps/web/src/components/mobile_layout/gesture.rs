@@ -7,11 +7,17 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::TouchEvent;
 
+use crate::editor::ffi::{
+    capture_mobile_gesture_editor_selection, restore_mobile_gesture_editor_selection,
+    retire_mobile_gesture_editor_selection,
+};
+
 const APP_EDGE_ZONE: i32 = 20;
 const ANDROID_SYSTEM_GESTURE_SAFE_FLOOR_CSS: i32 = 24;
 const SWIPE_THRESHOLD: i32 = 50;
 pub(super) const EDGE_SWIPE_BLOCKING_SELECTOR: &str =
     "button, a, input, textarea, select, summary, [role='button'], [data-no-edge-swipe]";
+const WORK_EDIT_SWIPE_SURFACE_SELECTOR: &str = "[data-deve-mobile-work-edit-swipe-surface='true']";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct TouchPoint {
@@ -52,6 +58,7 @@ pub(super) struct EdgeActivationBands {
 pub enum SwipeTarget {
     OpenLeft,
     OpenRight,
+    OpenFromWorkEdit,
     CloseLeft,
     CloseRight,
 }
@@ -60,11 +67,25 @@ pub enum SwipeTarget {
 pub(super) struct SwipeSession {
     pub target: SwipeTarget,
     start: TouchPoint,
+    editor_selection_token: Option<u64>,
 }
 
 impl SwipeSession {
     pub(super) fn new(target: SwipeTarget, start: TouchPoint) -> Self {
-        Self { target, start }
+        Self {
+            target,
+            start,
+            editor_selection_token: None,
+        }
+    }
+
+    fn preserve_editor_selection(mut self, token: u64) -> Self {
+        self.editor_selection_token = Some(token);
+        self
+    }
+
+    fn take_editor_selection_token(&mut self) -> Option<u64> {
+        self.editor_selection_token.take()
     }
 }
 
@@ -85,20 +106,29 @@ pub fn build_touch_start(
 ) -> Callback<TouchEvent> {
     Callback::new(move |ev: TouchEvent| {
         let Some(start) = first_changed_touch_point(&ev) else {
-            set_swipe_session.set(None);
+            set_swipe_session.update(clear_swipe_session);
             return;
         };
         let width = window_width().unwrap_or(0);
-        let session = resolve_swipe_start(
+        let work_edit_target = is_work_edit_target(&ev);
+        let session = resolve_swipe_start_for_surface(
             start,
             width,
             show_sidebar.get_untracked(),
             show_outline.get_untracked(),
             is_interactive_target(&ev),
+            work_edit_target,
             ev.touches().length(),
             system_gesture_insets.get_untracked(),
-        );
-        set_swipe_session.set(session);
+        )
+        .and_then(|session| {
+            if !work_edit_target {
+                return Some(session);
+            }
+            capture_mobile_gesture_editor_selection()
+                .map(|token| session.preserve_editor_selection(token))
+        });
+        set_swipe_session.update(|current| replace_swipe_session(current, session));
     })
 }
 
@@ -111,11 +141,26 @@ pub fn build_touch_end(
     set_swipe_session: WriteSignal<Option<SwipeSession>>,
 ) -> Callback<TouchEvent> {
     Callback::new(move |ev: TouchEvent| {
-        let (outcome, next_session) = resolve_touch_end_outcome(
-            swipe_session.get_untracked(),
+        let mut session = swipe_session.get_untracked();
+        let selection_token = session
+            .as_mut()
+            .and_then(SwipeSession::take_editor_selection_token);
+        let (mut outcome, next_session) = resolve_touch_end_outcome(
+            session,
             first_changed_touch_point(&ev),
             ev.touches().length(),
         );
+        if let Some(token) = selection_token {
+            let should_restore =
+                matches!(outcome, SwipeOutcome::OpenLeft | SwipeOutcome::OpenRight);
+            if should_restore {
+                if !restore_mobile_gesture_editor_selection(token) {
+                    outcome = SwipeOutcome::None;
+                }
+            } else {
+                let _ = retire_mobile_gesture_editor_selection(token);
+            }
+        }
         match outcome {
             SwipeOutcome::OpenLeft => open_left_drawer.run(()),
             SwipeOutcome::OpenRight => open_right_drawer.run(()),
@@ -136,12 +181,35 @@ fn first_changed_touch_point(ev: &TouchEvent) -> Option<TouchPoint> {
     })
 }
 
+#[cfg(test)]
 pub(super) fn resolve_swipe_start(
     start: TouchPoint,
     width: i32,
     show_sidebar: bool,
     show_outline: bool,
     interactive_target: bool,
+    touch_count: u32,
+    system_gesture_insets: Option<SystemGestureInsets>,
+) -> Option<SwipeSession> {
+    resolve_swipe_start_for_surface(
+        start,
+        width,
+        show_sidebar,
+        show_outline,
+        interactive_target,
+        false,
+        touch_count,
+        system_gesture_insets,
+    )
+}
+
+pub(super) fn resolve_swipe_start_for_surface(
+    start: TouchPoint,
+    width: i32,
+    show_sidebar: bool,
+    show_outline: bool,
+    interactive_target: bool,
+    work_edit_surface: bool,
     touch_count: u32,
     system_gesture_insets: Option<SystemGestureInsets>,
 ) -> Option<SwipeSession> {
@@ -158,6 +226,8 @@ pub(super) fn resolve_swipe_start(
             Some(SwipeTarget::OpenLeft)
         } else if (bands.right_start..=bands.right_end).contains(&start.x) {
             Some(SwipeTarget::OpenRight)
+        } else if work_edit_surface && start.x > bands.left_end && start.x < bands.right_start {
+            Some(SwipeTarget::OpenFromWorkEdit)
         } else {
             None
         }
@@ -250,6 +320,8 @@ pub(super) fn resolve_swipe_outcome(
     match session.target {
         SwipeTarget::OpenLeft if delta_x > 0 => SwipeOutcome::OpenLeft,
         SwipeTarget::OpenRight if delta_x < 0 => SwipeOutcome::OpenRight,
+        SwipeTarget::OpenFromWorkEdit if delta_x > 0 => SwipeOutcome::OpenLeft,
+        SwipeTarget::OpenFromWorkEdit if delta_x < 0 => SwipeOutcome::OpenRight,
         SwipeTarget::CloseLeft if delta_x < 0 => SwipeOutcome::CloseLeft,
         SwipeTarget::CloseRight if delta_x > 0 => SwipeOutcome::CloseRight,
         _ => SwipeOutcome::None,
@@ -257,7 +329,17 @@ pub(super) fn resolve_swipe_outcome(
 }
 
 pub(super) fn clear_swipe_session(session: &mut Option<SwipeSession>) {
-    *session = None;
+    replace_swipe_session(session, None);
+}
+
+fn replace_swipe_session(current: &mut Option<SwipeSession>, next: Option<SwipeSession>) {
+    if let Some(token) = current
+        .as_mut()
+        .and_then(SwipeSession::take_editor_selection_token)
+    {
+        let _ = retire_mobile_gesture_editor_selection(token);
+    }
+    *current = next;
 }
 
 pub(super) fn resolve_touch_end_outcome(
@@ -275,22 +357,34 @@ pub(super) fn resolve_touch_end_outcome(
 }
 
 fn is_interactive_target(ev: &TouchEvent) -> bool {
+    event_target_element(ev).is_some_and(|element| {
+        element
+            .closest(EDGE_SWIPE_BLOCKING_SELECTOR)
+            .ok()
+            .flatten()
+            .is_some()
+    })
+}
+
+fn is_work_edit_target(ev: &TouchEvent) -> bool {
+    event_target_element(ev).is_some_and(|element| {
+        element
+            .closest(WORK_EDIT_SWIPE_SURFACE_SELECTOR)
+            .ok()
+            .flatten()
+            .is_some()
+    })
+}
+
+fn event_target_element(ev: &TouchEvent) -> Option<web_sys::Element> {
     let Some(target) = ev.target() else {
-        return false;
+        return None;
     };
-    let element = target.dyn_ref::<web_sys::Element>().cloned().or_else(|| {
+    target.dyn_ref::<web_sys::Element>().cloned().or_else(|| {
         target
             .dyn_ref::<web_sys::Node>()
             .and_then(|node| node.parent_element())
-    });
-    let Some(element) = element else {
-        return false;
-    };
-    element
-        .closest(EDGE_SWIPE_BLOCKING_SELECTOR)
-        .ok()
-        .flatten()
-        .is_some()
+    })
 }
 
 pub fn window_width() -> Option<i32> {

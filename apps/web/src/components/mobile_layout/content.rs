@@ -84,6 +84,9 @@ pub fn MobileContent(
     view! {
         <div
             data-deve-native-keyboard-overlay=move || keyboard_overlay_offset.get().to_string()
+            data-deve-mobile-work-edit-swipe-surface=move || {
+                (current_editor_doc.get().is_some() && diff_content.get().is_none()).to_string()
+            }
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"
             style=move || mobile_content_keyboard_overlay_style(keyboard_overlay_offset.get())
             class:pointer-events-none=move || drawer_open.get()

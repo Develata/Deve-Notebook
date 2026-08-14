@@ -21,6 +21,7 @@ class ImageWidget extends WidgetType {
   toDOM(view) {
     let container = document.createElement("span");
     container.className = "cm-image-widget inline-block my-2";
+    container.dataset.noEdgeSwipe = "true";
     
     let img = document.createElement("img");
     img.src = this.url;

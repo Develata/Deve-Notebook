@@ -51,7 +51,10 @@ import {
 import { ctx } from "./editor_state.js";
 import {
   activateEditorMount,
+  captureGestureEditorSelection,
   destroyOwnedEditorMount,
+  retireGestureEditorSelection,
+  settleGestureEditorSelection,
 } from "./editor_lifecycle.js";
 import {
   getEditorContent,
@@ -123,6 +126,7 @@ export function initCodeMirror(element, onDelta) {
   if (!element) return;
 
   try {
+    retireGestureEditorSelection();
     return activateEditorMount(
       ctx,
       element,
@@ -182,6 +186,7 @@ export function destroyEditor(expectedHost) {
     && ctx.activeView;
   if (!ownsMount) return false;
   try {
+    retireGestureEditorSelection();
     destroyOwnedEditorMount(ctx, expectedHost);
     return true;
   } finally {
@@ -281,6 +286,18 @@ function getEditorSelectionIdentity() {
   });
 }
 
+function captureMobileGestureEditorSelection() {
+  return captureGestureEditorSelection(ctx);
+}
+
+function restoreMobileGestureEditorSelection(token) {
+  return settleGestureEditorSelection(ctx, token, true);
+}
+
+function retireMobileGestureEditorSelection(token) {
+  return settleGestureEditorSelection(ctx, token, false);
+}
+
 export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, setReadOnlyForHost, getEditorSelection, getEditorSelectionIdentity };
 export { updateGutterDiff };
 
@@ -307,6 +324,15 @@ registerBrowserBridgeGlobal("updateGutterDiff", updateGutterDiff, {
 registerBrowserBridgeGlobal("getEditorSelection", getEditorSelection, { role: "wasm-editor-selection" });
 registerBrowserBridgeGlobal("getEditorSelectionIdentity", getEditorSelectionIdentity, {
   role: "target-host-editor-selection-identity",
+});
+registerBrowserBridgeGlobal("captureMobileGestureEditorSelection", captureMobileGestureEditorSelection, {
+  role: "wasm-editor-gesture-selection-capture",
+});
+registerBrowserBridgeGlobal("restoreMobileGestureEditorSelection", restoreMobileGestureEditorSelection, {
+  role: "wasm-editor-gesture-selection-restore",
+});
+registerBrowserBridgeGlobal("retireMobileGestureEditorSelection", retireMobileGestureEditorSelection, {
+  role: "wasm-editor-gesture-selection-retire",
 });
 registerBrowserBridgeGlobal("mobileInsertText", mobileInsertText, {
   runtime: "widget_bridge_runtime",

@@ -61,7 +61,8 @@ html[data-deve-theme-pref] .cm-editor .cm-lineNumbers .cm-activeLineGutter {
 
 /* ==================== 编辑器内容区域 ==================== */
 .cm-content {
-  font-family: "Inter", sans-serif;
+  font-family: "Times New Roman", Times, "FangSong_GB2312", FangSong, "仿宋",
+    STFangsong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
   font-size: 16px;
   line-height: 1.6;              /* 全局行高 */
   padding: 2rem;                 /* 内容内边距 */

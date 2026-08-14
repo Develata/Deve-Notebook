@@ -3,6 +3,12 @@ import { syntaxTree } from "@codemirror/language";
 import { findFrontmatterRange } from "./utils.js";
 import { renderRangeIndexField } from "./render_range_index.js";
 
+export function inlineProjectionClassForNodeName(nodeName) {
+  if (nodeName === "StrongEmphasis") return "cm-strong";
+  if (nodeName === "Emphasis") return "cm-em";
+  return null;
+}
+
 /**
  * Hybrid Plugin (混合插件)
  * 
@@ -121,6 +127,13 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // 避免 Frontmatter 内部的 key: value 被识别为 Setext Heading 的一部分并被隐藏/错误处理
             if (fm && node.from >= fm.from && node.to <= fm.to) return;
 
+            const inlineProjectionClass = inlineProjectionClassForNodeName(node.name);
+            if (inlineProjectionClass) {
+              widgets.push(
+                Decoration.mark({ class: inlineProjectionClass }).range(node.from, node.to)
+              );
+            }
+
             // ---------------------------------------------------------
             // 2. Syntax Hiding (Hiding Marks and Syntax when not active)
             // ---------------------------------------------------------
@@ -176,7 +189,10 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // Explicit Styling for Links
             if (node.name === "Link") {
                 // Keep the base styling (color/underline) for the whole link range
-                widgets.push(Decoration.mark({ class: "cm-link" }).range(node.from, node.to));
+                widgets.push(Decoration.mark({
+                    class: "cm-link",
+                    attributes: { "data-no-edge-swipe": "true" },
+                }).range(node.from, node.to));
             }
             if (node.name === "URL") {
                  // Hybrid Logic for URL: Hide if cursor is OUTSIDE the Link

@@ -111,6 +111,7 @@ export class MermaidWidget extends WidgetType {
   toDOM(view) {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-render-widget-shell cm-mermaid-widget";
+    if (this.mode === "replace") wrapper.dataset.noEdgeSwipe = "true";
     if (this.mode === "companion") {
       wrapper.classList.add("cm-active-preview");
       wrapper.dataset.deveActivePreview = "mermaid";

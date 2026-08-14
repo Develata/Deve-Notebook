@@ -1,6 +1,7 @@
 use super::*;
 
 mod android_presentation;
+mod android_recovery_control;
 
 #[test]
 fn mobile_tauri_runtime_surface_is_shell_only() {
