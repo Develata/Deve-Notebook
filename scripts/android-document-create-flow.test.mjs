@@ -7,10 +7,10 @@ import {
   readAndroidDocumentCreateSurface,
   readAndroidMobileLayout,
   readAndroidSearchVisible,
-  readExactCreateDocumentPointer,
   readExactCreatedEditorAdmission,
 } from "./lib/android-document-create-flow.mjs";
 import { clickAndroidNewDocumentActionWhenAdmitted } from "./lib/android-document-search-admission.mjs";
+import { readExactCreateDocumentPointer } from "./lib/android-document-create-touch.mjs";
 
 const exactPath = "notes/exact.md";
 const exactDocId = "00000000-0000-0000-0000-000000000007";
@@ -109,8 +109,10 @@ function documentCreateHarness({
     assert.equal(selector, "[data-deve-search-input=true]");
     state.query = value;
   };
-  const clickCreate = async (_page, path) => {
+  const expectedWriterScope = { repoId: "repo-1", scopeNonce: 7 };
+  const clickCreate = async (_page, path, writerScope) => {
     assert.equal(path, exactPath);
+    assert.deepEqual(writerScope, expectedWriterScope);
     state.createClicks += 1;
     if (acknowledgeCreate) {
       state.searchVisible = false;
@@ -146,6 +148,7 @@ function documentCreateHarness({
       clickExactOpen,
       openSidebar,
       closeSidebar,
+      expectedWriterScope,
     },
   };
 }

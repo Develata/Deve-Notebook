@@ -31,6 +31,11 @@ const hostSource = readFileSync(
 test("Android RemoteBrowser smoke proves business flow, zero IPC, and native local recovery", () => {
   assert.match(browserSource, /loginAndroidRemote/);
   assert.match(browserSource, /createAndroidDocument/);
+  const businessFlowSource = readFileSync(
+    new URL("./lib/android-business-flow.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(businessFlowSource, /waitForCurrentStableAndroidRepoScope\(page, waitUntil\)/);
   assert.match(browserSource, /commitAndroidChange/);
   assert.match(browserSource, /exerciseAndroidLastRepoRemoval/);
   assert.match(browserSource, /repoRemovalNoScope/);

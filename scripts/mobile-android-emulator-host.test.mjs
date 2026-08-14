@@ -125,11 +125,29 @@ test("Android producer receipts bind presentation and lifecycle proof code", () 
     "scripts/mobile-android-emulator-host.test.mjs",
     "scripts/mobile-android-presentation.test.mjs",
     "scripts/lib/android-lifecycle-harness.mjs",
+    "scripts/android-lifecycle-harness.test.mjs",
     "scripts/lib/android-drawer-touch-proof.mjs",
     "scripts/lib/android-presentation-proof.mjs",
     "scripts/lib/mobile-ime-back-proof.mjs",
+    "scripts/lib/mobile-editor-session-observation.mjs",
+    "scripts/mobile-editor-session-observation.test.mjs",
+    "scripts/lib/mobile-keyboard-presentation.mjs",
+    "scripts/mobile-keyboard-presentation.test.mjs",
+    "scripts/lib/android-ime-test-session.sh",
+    "scripts/android-ime-test-session.test.sh",
+    "scripts/lib/android-package-session.sh",
+    "scripts/android-package-session.test.sh",
+    "scripts/lib/android-emulator-targeted-preflight.sh",
+    "scripts/lib/android-remote-auth-flow.mjs",
+    "scripts/lib/android-document-create-pointer-fixture.mjs",
+    "scripts/android-document-create-observation.test.mjs",
+    "scripts/lib/android-document-create-observation.mjs",
+    "scripts/lib/android-document-create-touch.mjs",
+    "scripts/lib/android-business-flow-removal-fixture.mjs",
   ];
   assert.ok(local && remote);
+  assert.equal(local.environment.DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE, "0");
+  assert.equal(remote.environment.DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE, "0");
   for (const artifact of common) {
     assert.ok(local.artifacts.includes(artifact), `local receipt must bind ${artifact}`);
     assert.ok(remote.artifacts.includes(artifact), `remote receipt must bind ${artifact}`);

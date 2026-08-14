@@ -1,11 +1,20 @@
 import assert from "node:assert/strict";
 import {
+  closeMobileSidebar,
   openMobileSidebarView,
   readPendingAckCount,
   typeEditor,
 } from "./mobile-webview-interaction.mjs";
 import { commitSourceControlChange } from "./mobile-source-control-interaction.mjs";
 import { createAndSelectAndroidDocument } from "./android-document-create-flow.mjs";
+
+export {
+  fillRemoteLoginCredentials,
+  loginAndroidRemote,
+  readRemoteEntryState,
+  readRemoteReadyState,
+  submitRemoteLogin,
+} from "./android-remote-auth-flow.mjs";
 
 export async function dispatchWebViewText(page, value) {
   if (!/^[A-Za-z0-9 _-]+$/.test(value)) {
@@ -117,123 +126,18 @@ export async function waitForWritableEditor(
     (await page.call(readAdmission, expectedDocId)).writable, timeout);
 }
 
-export function readRemoteEntryState(expectedOrigin) {
-  let requiredOrigin;
-  try {
-    requiredOrigin = new URL(expectedOrigin).origin;
-  } catch {
-    return { kind: "invalid-origin" };
-  }
-  if (location.origin !== requiredOrigin) return { kind: "unexpected-origin" };
-  const status = document.querySelector("[data-deve-sync-status]")
-    ?.getAttribute("data-deve-sync-status");
-  if (status === "ready") return { kind: "ready" };
-  const username = globalThis.__deveVisibleElement("#login-username");
-  const password = globalThis.__deveVisibleElement("#login-password");
-  const submit = globalThis.__deveVisibleElement('button[type="submit"]');
-  return username && password && submit && !submit.disabled
-    ? { kind: "login" }
-    : null;
-}
-
-export function fillRemoteLoginCredentials(expectedOrigin, username, password) {
-  let requiredOrigin;
-  try {
-    requiredOrigin = new URL(expectedOrigin).origin;
-  } catch {
-    return { kind: "invalid-origin" };
-  }
-  if (location.origin !== requiredOrigin) return { kind: "unexpected-origin" };
-  const usernameInput = globalThis.__deveVisibleElement("#login-username");
-  const passwordInput = globalThis.__deveVisibleElement("#login-password");
-  if (!(usernameInput instanceof HTMLInputElement)
-    || !(passwordInput instanceof HTMLInputElement)) {
-    return { kind: "login-unavailable" };
-  }
-  for (const [element, value] of [[usernameInput, username], [passwordInput, password]]) {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(element, value);
-    element.dispatchEvent(new InputEvent("input", {
-      bubbles: true,
-      inputType: "insertText",
-      data: value,
-    }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-  return { kind: "credentials-filled" };
-}
-
-export function submitRemoteLogin(expectedOrigin) {
-  let requiredOrigin;
-  try {
-    requiredOrigin = new URL(expectedOrigin).origin;
-  } catch {
-    return { kind: "invalid-origin" };
-  }
-  if (location.origin !== requiredOrigin) return { kind: "unexpected-origin" };
-  const submit = globalThis.__deveVisibleElement('button[type="submit"]');
-  if (!submit || submit.disabled) return { kind: "login-unavailable" };
-  submit.click();
-  return { kind: "submitted" };
-}
-
-export function readRemoteReadyState(expectedOrigin) {
-  let requiredOrigin;
-  try {
-    requiredOrigin = new URL(expectedOrigin).origin;
-  } catch {
-    return { kind: "invalid-origin" };
-  }
-  if (location.origin !== requiredOrigin) return { kind: "unexpected-origin" };
-  return document.querySelector("[data-deve-sync-status]")
-    ?.getAttribute("data-deve-sync-status") === "ready"
-    ? { kind: "ready" }
-    : null;
-}
-
-export async function loginAndroidRemote(
-  page,
-  expectedOrigin,
-  username,
-  password,
-  waitUntil,
-) {
-  const entry = await waitUntil("remote Android entry state", () =>
-    page.call(readRemoteEntryState, expectedOrigin), 60000);
-  if (entry.kind === "unexpected-origin" || entry.kind === "invalid-origin") {
-    throw new Error(`remote Android entry rejected: ${entry.kind}`);
-  }
-  if (entry.kind === "login") {
-    const filled = await page.call(
-      fillRemoteLoginCredentials,
-      expectedOrigin,
-      username,
-      password,
-    );
-    if (filled.kind !== "credentials-filled") {
-      throw new Error(`remote Android credentials rejected: ${filled.kind}`);
-    }
-    const submitted = await page.call(submitRemoteLogin, expectedOrigin);
-    if (submitted.kind !== "submitted") {
-      throw new Error(`remote Android login submit rejected: ${submitted.kind}`);
-    }
-  }
-  const ready = await waitUntil("remote Android ready", () =>
-    page.call(readRemoteReadyState, expectedOrigin), 60000);
-  if (ready.kind !== "ready") {
-    throw new Error(`remote Android ready rejected: ${ready.kind}`);
-  }
-}
-
 export async function createAndroidDocument(
   page,
   path,
   content,
   { waitUntil, inputEditorText },
 ) {
+  const expectedWriterScope = await waitForCurrentStableAndroidRepoScope(page, waitUntil);
   const selected = await createAndSelectAndroidDocument(page, path, {
     waitUntil,
     click: clickVisible,
     fill: fillVisible,
+    expectedWriterScope,
   });
   await waitForWritableEditor(page, waitUntil, 30000, selected.docId);
   await waitUntil("editor bridge", () => page.call(() =>
@@ -247,6 +151,29 @@ export async function createAndroidDocument(
   );
   await waitUntil("Android edit ack", async () => (await readPendingAckCount(page)) === 0);
   return observedContent;
+}
+
+export async function waitForCurrentStableAndroidRepoScope(
+  page,
+  waitUntil,
+  { quietMs = 1000, now = () => globalThis.performance.now() } = {},
+) {
+  const current = await waitUntil("current Android repo writer scope", async () => {
+    const observed = await readRepoScope(page);
+    return observed.status === "ready"
+      && typeof observed.repoId === "string"
+      && observed.repoId.length > 0
+      && Number.isInteger(observed.scopeNonce)
+      && observed.scopeNonce > 0
+      ? observed
+      : null;
+  }, 30000);
+  return waitForStableAndroidRepoScope(page, waitUntil, {
+    expectedRepoId: current.repoId,
+    minimumScopeNonce: current.scopeNonce,
+    quietMs,
+    now,
+  });
 }
 
 export function commitAndroidChange(page, message, { waitUntil, delay }) {
@@ -390,6 +317,7 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
       .length, name);
   assert.equal(aliases, 1, "first Create must publish the backend-owned display alias");
   await clickVisible(page, "[data-deve-repo-switcher-backdrop]");
+  await closeMobileSidebar(page, { click: clickVisible, waitUntil });
   const created = await waitForStableAndroidRepoScope(page, waitUntil, {
     expectedRepoId: firstReady.repoId,
     minimumScopeNonce: firstReady.scopeNonce,
@@ -481,6 +409,7 @@ export async function exerciseAndroidLastRepoRemoval(
     document.querySelectorAll("[data-deve-repo-switcher-item]").length);
   assert.equal(remaining, 0, "Android NoScope must expose no local repo rows");
   await clickVisible(page, "[data-deve-repo-switcher-backdrop]");
+  await closeMobileSidebar(page, { click: clickVisible, waitUntil });
   return {
     alias: row.alias,
     removedRepoId: before.repoId,

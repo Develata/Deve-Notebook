@@ -26,3 +26,57 @@ export function writeAndroidWritableEvidence({
   mkdirSync(dirname(evidencePath), { recursive: true });
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
 }
+
+export function writeAndroidLocalBackendEvidence({
+  evidencePath,
+  targetFactsPath,
+  identityCapability,
+  firstRepo,
+  drawerGestureProof,
+  keyboardPresentation,
+  testImeService,
+  repoLifecycle,
+  rootBackProof,
+}) {
+  writeAndroidWritableEvidence({
+    evidencePath,
+    targetFactsPath,
+    producer: "smoke-mobile-android-lifecycle",
+    mode: "local-backend",
+    webcrypto: identityCapability,
+    repoLifecycle,
+    journey: {
+      loginOrNativeSession: true,
+      bootstrapUnbound: {
+        syncStatus: firstRepo.initial.status,
+        repoIdEmpty: firstRepo.initial.repoIdRaw === "",
+        scopeNonce: firstRepo.initial.scopeNonce,
+        defaultRepoAbsent: firstRepo.defaultRepoAbsent,
+      },
+      firstCreate: {
+        writerReady: firstRepo.created.status === "ready",
+        repoIdBound: Boolean(firstRepo.created.repoId),
+        scopeNonce: firstRepo.created.scopeNonce,
+        aliasCount: firstRepo.aliasCount,
+      },
+      edit: true,
+      commitHistory: true,
+      backgroundResume: true,
+      staleScopeRejected: true,
+      pendingPreserved: true,
+      nativeSystemGestureInsetsAcceptedAfterReload: true,
+      nativeDrawerGesturesAfterReload: drawerGestureProof.leftDrawerOpened
+        && drawerGestureProof.rightDrawerOpened
+        && drawerGestureProof.pidStable,
+      imeBackPreservedEditorSession: true,
+      imeRetapReopenedKeyboard: true,
+      keyboardPresentationMode: keyboardPresentation.presented.keyboardMode,
+      keyboardTestImeService: testImeService,
+      repoRemovalNoScope: repoLifecycle.noScope,
+      rootBackBackgroundsTaskWithStablePid: rootBackProof.rootBackBackgrounded
+        && rootBackProof.pidStable
+        && rootBackProof.reentryReady,
+      writableLifecycleComplete: true,
+    },
+  });
+}

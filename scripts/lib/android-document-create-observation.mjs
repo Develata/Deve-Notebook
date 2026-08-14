@@ -1,0 +1,245 @@
+export function armExactCreateDocumentClickObservation(
+  expectedPath,
+  point,
+  attemptNonce,
+  settlementTimeoutMs = 500,
+  expectedWriterScope = null,
+) {
+  const readWriterScope = () => {
+    const status = document.querySelector("[data-deve-sync-status]");
+    return {
+      syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
+      repoIdRaw: status?.getAttribute("data-deve-repo-id") ?? null,
+      scopeNonceRaw: status?.getAttribute("data-deve-scope-nonce") ?? null,
+    };
+  };
+  const sameWriterScope = (left, right) => left.syncStatus === right.syncStatus
+    && left.repoIdRaw === right.repoIdRaw
+    && left.scopeNonceRaw === right.scopeNonceRaw;
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    return { kind: "changed" };
+  }
+  if (typeof attemptNonce !== "string" || attemptNonce.length === 0) {
+    return { kind: "attempt-invalid" };
+  }
+  if (!Number.isFinite(settlementTimeoutMs) || settlementTimeoutMs <= 0) {
+    return { kind: "timeout-invalid" };
+  }
+  if (!expectedWriterScope
+    || typeof expectedWriterScope.repoId !== "string"
+    || expectedWriterScope.repoId.length === 0
+    || !Number.isSafeInteger(expectedWriterScope.scopeNonce)
+    || expectedWriterScope.scopeNonce <= 0) {
+    return { kind: "expected-writer-scope-invalid" };
+  }
+  if (globalThis.__deveAndroidCreatePointerObservation) return { kind: "active" };
+  const existingLane = globalThis.__deveAndroidCreatePointerLane;
+  const lane = existingLane ?? {
+    documentRoot: document,
+    nextToken: 1,
+    sealed: false,
+    sealListener: null,
+  };
+  if (lane.documentRoot !== document) return { kind: "document-mismatch" };
+  if (lane.sealed) return { kind: "sealed" };
+  globalThis.__deveAndroidCreatePointerLane = lane;
+  const hit = document.elementFromPoint(point.x, point.y);
+  const target = hit?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+  const exactTargets = [...document.querySelectorAll(
+    '[data-deve-search-result-action="create-doc"]',
+  )].filter((element) =>
+    element.getAttribute("data-deve-search-result-create-target") === expectedPath);
+  if (exactTargets.length !== 1 || exactTargets[0] !== target) {
+    return { kind: "changed" };
+  }
+  const token = lane.nextToken;
+  lane.nextToken += 1;
+  const observation = {
+    token,
+    attemptNonce,
+    expectedPath,
+    clicked: false,
+    blocked: false,
+    clickState: null,
+    documentRoot: document,
+    listener: null,
+    writerScope: readWriterScope(),
+    expiresAt: Date.now() + settlementTimeoutMs,
+    expiryTimer: null,
+  };
+  if (observation.writerScope.syncStatus !== "ready"
+    || typeof observation.writerScope.repoIdRaw !== "string"
+    || observation.writerScope.repoIdRaw.length === 0
+    || !/^[1-9][0-9]*$/.test(observation.writerScope.scopeNonceRaw ?? "")) {
+    return { kind: "writer-scope-invalid" };
+  }
+  if (observation.writerScope.repoIdRaw !== expectedWriterScope.repoId
+    || observation.writerScope.scopeNonceRaw !== String(expectedWriterScope.scopeNonce)) {
+    return { kind: "writer-scope-changed" };
+  }
+  const sealLane = () => {
+    lane.sealed = true;
+    if (!lane.sealListener) {
+      lane.sealListener = (event) => {
+        const target = event.target
+          ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+        if (!target) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      lane.documentRoot.addEventListener("click", lane.sealListener, { capture: true });
+    }
+  };
+  const listener = (event) => {
+    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    if (Date.now() >= observation.expiresAt) {
+      sealLane();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    const clickTarget = event.target
+      ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+    const currentExactTargets = [...document.querySelectorAll(
+      '[data-deve-search-result-action="create-doc"]',
+    )].filter((element) =>
+      element.getAttribute("data-deve-search-result-create-target") === expectedPath);
+    const writerScope = readWriterScope();
+    if (currentExactTargets.length !== 1
+      || currentExactTargets[0] !== clickTarget
+      || !sameWriterScope(observation.writerScope, writerScope)) {
+      observation.blocked = true;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    observation.clicked = true;
+    observation.clickState = {
+      syncStatus: writerScope.syncStatus,
+      repoIdPresent: Boolean(writerScope.repoIdRaw),
+      scopeNonceRaw: writerScope.scopeNonceRaw,
+    };
+  };
+  observation.listener = listener;
+  globalThis.__deveAndroidCreatePointerObservation = observation;
+  document.addEventListener("click", listener, { capture: true, once: true });
+  observation.expiryTimer = setTimeout(() => {
+    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    sealLane();
+    observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+    lane.finalObservation = {
+      kind: "observed",
+      token: observation.token,
+      clicked: observation.clicked,
+      blocked: observation.blocked,
+      clickState: observation.clickState,
+    };
+    delete globalThis.__deveAndroidCreatePointerObservation;
+  }, settlementTimeoutMs);
+  return { kind: "armed", token };
+}
+
+export function readExactCreateDocumentClickObservation(token) {
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (!observation || observation.token !== token) {
+    const finalObservation = globalThis.__deveAndroidCreatePointerLane?.finalObservation;
+    return finalObservation?.token === token
+      ? { ...finalObservation }
+      : { kind: "missing", clicked: false };
+  }
+  return {
+    kind: "observed",
+    clicked: observation.clicked,
+    blocked: observation.blocked,
+    clickState: observation.clickState,
+  };
+}
+
+export function beginExactCreateDocumentClickSettlement(token, settlementTimeoutMs) {
+  if (!Number.isFinite(settlementTimeoutMs) || settlementTimeoutMs <= 0) {
+    return { kind: "timeout-invalid" };
+  }
+  const lane = globalThis.__deveAndroidCreatePointerLane;
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (lane?.documentRoot !== document || !observation || observation.token !== token) {
+    return { kind: "missing" };
+  }
+  const expire = () => {
+    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    lane.sealed = true;
+    if (!lane.sealListener) {
+      lane.sealListener = (event) => {
+        const target = event.target
+          ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+        if (!target) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      lane.documentRoot.addEventListener("click", lane.sealListener, { capture: true });
+    }
+    observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+    lane.finalObservation = {
+      kind: "observed",
+      token: observation.token,
+      clicked: observation.clicked,
+      blocked: observation.blocked,
+      clickState: observation.clickState,
+    };
+    delete globalThis.__deveAndroidCreatePointerObservation;
+  };
+  clearTimeout(observation.expiryTimer);
+  observation.expiresAt = Date.now() + settlementTimeoutMs;
+  observation.expiryTimer = setTimeout(expire, settlementTimeoutMs);
+  return { kind: "settling", token };
+}
+
+export function finalizeExactCreateDocumentClickObservation(token) {
+  const lane = globalThis.__deveAndroidCreatePointerLane;
+  if (lane?.documentRoot === document) {
+    lane.sealed = true;
+    if (!lane.sealListener) {
+      lane.sealListener = (event) => {
+        const target = event.target
+          ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
+        if (!target) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      lane.documentRoot.addEventListener("click", lane.sealListener, { capture: true });
+    }
+  }
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (!observation || observation.token !== token) {
+    const finalObservation = lane?.finalObservation;
+    return finalObservation?.token === token
+      ? { ...finalObservation, laneSealed: lane?.sealed === true }
+      : { kind: "missing", clicked: false, laneSealed: lane?.sealed === true };
+  }
+  clearTimeout(observation.expiryTimer);
+  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+  delete globalThis.__deveAndroidCreatePointerObservation;
+  return {
+    kind: "observed",
+    clicked: observation.clicked,
+    blocked: observation.blocked,
+    clickState: observation.clickState,
+    laneSealed: lane?.sealed === true,
+  };
+}
+
+export function consumeExactCreateDocumentClickObservationByPath(expectedPath, attemptNonce) {
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (!observation) return { kind: "missing", clicked: false };
+  if (observation.expectedPath !== expectedPath || observation.attemptNonce !== attemptNonce) {
+    return { kind: "owner-mismatch", clicked: false };
+  }
+  clearTimeout(observation.expiryTimer);
+  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
+  delete globalThis.__deveAndroidCreatePointerObservation;
+  return {
+    kind: "observed",
+    clicked: observation.clicked,
+    blocked: observation.blocked,
+    clickState: observation.clickState,
+  };
+}

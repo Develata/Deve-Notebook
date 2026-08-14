@@ -270,7 +270,18 @@ function getEditorSelection() {
   return JSON.stringify({ from: main.from, to: main.to, text });
 }
 
-export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, setReadOnlyForHost, getEditorSelection };
+function getEditorSelectionIdentity() {
+  const view = ctx.activeView;
+  if (!view) return JSON.stringify(null);
+  const main = view.state.selection.main;
+  return JSON.stringify({
+    from: main.from,
+    to: main.to,
+    rangeCount: view.state.selection.ranges.length,
+  });
+}
+
+export { getEditorContent, applyRemoteContent, applyRemoteOp, applyRemoteOpsBatch, scrollGlobal, setReadOnly, setReadOnlyForHost, getEditorSelection, getEditorSelectionIdentity };
 export { updateGutterDiff };
 
 // --- 暴露到全局作用域供 WASM 调用 ---
@@ -294,6 +305,9 @@ registerBrowserBridgeGlobal("updateGutterDiff", updateGutterDiff, {
   role: "wasm-editor-diff-projection",
 });
 registerBrowserBridgeGlobal("getEditorSelection", getEditorSelection, { role: "wasm-editor-selection" });
+registerBrowserBridgeGlobal("getEditorSelectionIdentity", getEditorSelectionIdentity, {
+  role: "target-host-editor-selection-identity",
+});
 registerBrowserBridgeGlobal("mobileInsertText", mobileInsertText, {
   runtime: "widget_bridge_runtime",
   role: "wasm-editor-mobile-input",

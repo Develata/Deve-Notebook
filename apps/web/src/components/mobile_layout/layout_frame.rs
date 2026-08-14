@@ -33,25 +33,25 @@ use leptos::ev::TouchEvent;
 use leptos::prelude::*;
 
 pub(crate) fn mobile_bottom_bar_visible(
-    keyboard_offset: i32,
+    keyboard_visible: bool,
     chat_expanded: bool,
     surface_switcher_sheet_visible: bool,
 ) -> bool {
-    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_sheet_visible
+    !keyboard_visible && !chat_expanded && !surface_switcher_sheet_visible
 }
 
 pub(crate) fn mobile_accessory_toolbar_visible(
     has_doc: bool,
     diff_open: bool,
     drawer_open: bool,
-    keyboard_offset: i32,
+    keyboard_visible: bool,
     chat_expanded: bool,
     surface_switcher_sheet_visible: bool,
 ) -> bool {
     has_doc
         && !diff_open
         && !drawer_open
-        && keyboard_offset > 0
+        && keyboard_visible
         && !chat_expanded
         && !surface_switcher_sheet_visible
 }
@@ -79,6 +79,9 @@ pub fn MobileLayoutFrame(
     set_show_outline: WriteSignal<bool>,
     drawer_open: Signal<bool>,
     keyboard_offset: ReadSignal<i32>,
+    keyboard_presentation_source: ReadSignal<
+        super::keyboard_presentation::KeyboardPresentationSource,
+    >,
     chat_expanded: ReadSignal<bool>,
     set_chat_expanded: WriteSignal<bool>,
     on_home: Callback<()>,
@@ -137,6 +140,7 @@ pub fn MobileLayoutFrame(
             surface_switcher_has_tabs.get(),
         )
     });
+    let keyboard_visible = Signal::derive(move || keyboard_presentation_source.get().is_visible());
     let pending_branch_switch = editor.pending_branch_switch;
     let pending_repo_switch = scope.pending_repo_switch;
     collapse_surface_switcher_on_runtime_transition(
@@ -166,6 +170,12 @@ pub fn MobileLayoutFrame(
             data-deve-native-presentation=move || {
                 if native_presentation_ready.get() { "ready" } else { "pending" }
             }
+            data-deve-keyboard-presentation=move || {
+                keyboard_presentation_source.get().as_dom_value()
+            }
+            data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
+            data-deve-repo-id=move || scope.current_repo_id.get().unwrap_or_default()
+            data-deve-scope-nonce=move || scope.current_scope_nonce.get().to_string()
             data-deve-mobile-pending-ack-count=move || mobile_pending_ack_count.get().to_string()
             class="flex flex-col flex-1 overflow-hidden bg-sidebar"
             style="touch-action: pan-y;"
@@ -200,6 +210,13 @@ pub fn MobileLayoutFrame(
             <MobileContent
                 drawer_open=drawer_open
                 current_editor_doc=current_editor_doc
+                keyboard_overlay_offset=Signal::derive(move || {
+                    if keyboard_presentation_source.get().uses_native_overlay() {
+                        keyboard_offset.get()
+                    } else {
+                        0
+                    }
+                })
             />
 
             <Show when=move || current_doc.get().is_some() && diff_content.get().is_none() && !show_sidebar.get()>
@@ -248,7 +265,7 @@ pub fn MobileLayoutFrame(
                         current_doc.get().is_some(),
                         diff_content.get().is_some(),
                         drawer_open.get(),
-                        keyboard_offset.get(),
+                        keyboard_visible.get(),
                         chat_expanded.get(),
                         surface_switcher_sheet_visible.get(),
                     )
@@ -257,6 +274,7 @@ pub fn MobileLayoutFrame(
 
             <MobileChatSheet
                 keyboard_offset=keyboard_offset
+                keyboard_visible=keyboard_visible
                 drawer_open=drawer_open
                 diff_open=Signal::derive(move || diff_content.get().is_some())
                 surface_switcher_sheet_visible=surface_switcher_sheet_visible
@@ -266,7 +284,7 @@ pub fn MobileLayoutFrame(
 
             <Show when=move || {
                 mobile_bottom_bar_visible(
-                    keyboard_offset.get(),
+                    keyboard_visible.get(),
                     chat_expanded.get(),
                     surface_switcher_sheet_visible.get(),
                 )

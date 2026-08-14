@@ -7,6 +7,8 @@ ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-lifecycle-smoke"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
 source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
 source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
+source "$ROOT_DIR/scripts/lib/android-ime-test-session.sh"
+source "$ROOT_DIR/scripts/lib/android-package-session.sh"
 
 REQUIRED="${DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED:-0}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
@@ -18,7 +20,10 @@ NODE_SCRIPT="${DEVE_MOBILE_ANDROID_LIFECYCLE_NODE_SCRIPT:-$ROOT_DIR/scripts/smok
 EXPECT_WRITABLE="${DEVE_MOBILE_ANDROID_EXPECT_WRITABLE:-1}"
 TARGET_FACTS_PATH="${DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH:-}"
 EVIDENCE_PATH="${DEVE_MOBILE_ANDROID_LOCAL_EVIDENCE_PATH:-${DEVE_MOBILE_ANDROID_EVIDENCE_PATH:-}}"
+TEST_IME_SERVICE="${DEVE_MOBILE_ANDROID_TEST_IME_SERVICE:-}"
+PRESERVE_PACKAGE="${DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE:-0}"
 TARGET_FACTS_TEMP=0
+PRESERVED_PACKAGE_SESSION_STARTED=0
 
 fail() {
   echo "mobile-android-lifecycle-smoke: $*" >&2
@@ -67,15 +72,36 @@ adb_cleanup_cmd() {
   timeout 10 "$(adb_bin)" "${args[@]}" "$@" >/dev/null 2>&1 || true
 }
 
+adb_cleanup_raw() {
+  local args=()
+  [[ -z "$SERIAL" ]] || args=(-s "$SERIAL")
+  timeout 10 "$(adb_bin)" "${args[@]}" "$@"
+}
+
 cleanup() {
+  local primary_status=$?
+  local cleanup_status=0
+  local final_status=0
+  set +e
+  if ! android_ime_test_restore adb_cleanup_raw; then
+    cleanup_status=1
+  fi
   if [[ -n "${FORWARD_PORT:-}" ]]; then
     adb_cleanup_cmd forward --remove "tcp:$FORWARD_PORT"
   fi
   adb_cleanup_cmd shell am force-stop "$APP_ID"
-  adb_cleanup_cmd uninstall "$APP_ID"
+  if [[ "$PRESERVE_PACKAGE" == "0" || "$PRESERVED_PACKAGE_SESSION_STARTED" == "1" ]]; then
+    if ! android_package_session_cleanup "$PRESERVE_PACKAGE" adb_cleanup_raw "$APP_ID"; then
+      cleanup_status=1
+    fi
+  fi
   if [[ "$TARGET_FACTS_TEMP" == "1" ]]; then
     rm -f "$TARGET_FACTS_PATH"
   fi
+  trap - EXIT
+  android_package_session_final_status "$primary_status" "$cleanup_status"
+  final_status=$?
+  exit "$final_status"
 }
 
 find_webview_socket() {
@@ -140,6 +166,10 @@ command -v timeout >/dev/null 2>&1 || fail "timeout is required"
 [[ -f "$ROOT_DIR/$APK_PATH" || -f "$APK_PATH" ]] || fail "debug APK not found: $APK_PATH"
 [[ -f "$NODE_SCRIPT" ]] || fail "lifecycle harness not found: $NODE_SCRIPT"
 [[ -f "$ROOT_DIR/$APK_PATH" ]] && APK_PATH="$ROOT_DIR/$APK_PATH"
+android_package_session_validate_mode "$PRESERVE_PACKAGE" \
+  || fail "invalid DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE"
+android_package_session_validate_receipt_boundary "$PRESERVE_PACKAGE" "$EVIDENCE_PATH" \
+  || fail "Android package session cannot enter the formal evidence channel"
 GLOBAL_DEADLINE=$((SECONDS + TIMEOUT_SECS))
 
 if [[ -z "$TARGET_FACTS_PATH" ]]; then
@@ -150,6 +180,16 @@ fi
 trap cleanup EXIT
 adb_cmd start-server >/dev/null
 adb_cmd wait-for-device
+android_package_session_prepare "$PRESERVE_PACKAGE" adb_cmd "$APP_ID" \
+  || fail "Android package session admission failed"
+if [[ "$PRESERVE_PACKAGE" == "1" ]]; then
+  PRESERVED_PACKAGE_SESSION_STARTED=1
+fi
+if [[ -n "$TEST_IME_SERVICE" ]]; then
+  android_ime_test_begin adb_cmd "$TEST_IME_SERVICE" \
+    || fail "Android test IME selection failed closed"
+  echo "mobile-android-lifecycle-smoke: test_ime_service=$TEST_IME_SERVICE"
+fi
 SDK_RAW="$(adb_cmd shell getprop ro.build.version.sdk | tr -d '\r')"
 WEBVIEW_CMD_RAW="$(adb_cmd shell cmd webviewupdate getCurrentWebViewPackage 2>&1 | tr -d '\r' || true)"
 WEBVIEW_DUMPSYS_RAW="$(adb_cmd shell dumpsys webviewupdate 2>&1 | tr -d '\r' || true)"
@@ -228,6 +268,7 @@ DEVE_MOBILE_ANDROID_APP_ID="$APP_ID" \
 DEVE_MOBILE_ANDROID_EXPECT_WRITABLE="$EXPECT_WRITABLE" \
 DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH="$TARGET_FACTS_PATH" \
 DEVE_MOBILE_ANDROID_EVIDENCE_PATH="$EVIDENCE_PATH" \
+DEVE_MOBILE_ANDROID_TEST_IME_SERVICE="$ANDROID_IME_TEST_SELECTED_SERVICE" \
 DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS="$(($(remaining_seconds) * 1000))" \
 timeout "$(remaining_seconds)" node "$NODE_SCRIPT"
 NODE_STATUS=$?

@@ -19,6 +19,7 @@ mod gesture;
 #[cfg(test)]
 mod gesture_test;
 mod header;
+mod keyboard_presentation;
 mod layout_backdrop;
 mod layout_banner;
 mod layout_frame;
@@ -70,7 +71,10 @@ pub fn MobileLayout(
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());
     let (swipe_session, set_swipe_session) = signal(None::<gesture::SwipeSession>);
     let (system_gesture_insets, set_system_gesture_insets) = signal(None);
+    let (native_ime_presentation, set_native_ime_presentation) = signal(None);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
+    let (keyboard_presentation_source, set_keyboard_presentation_source) =
+        signal(keyboard_presentation::KeyboardPresentationSource::Hidden);
     let (chat_expanded, set_chat_expanded) = signal(false);
     let source_control_context = use_context::<SourceControlContext>();
     let source_control_for_drawer = source_control_context.clone();
@@ -142,8 +146,12 @@ pub fn MobileLayout(
     });
 
     apply_body_scroll_lock(drawer_open);
-    apply_visual_viewport_offset(set_keyboard_offset);
-    apply_android_presentation_insets(set_system_gesture_insets);
+    apply_android_presentation_insets(set_system_gesture_insets, set_native_ime_presentation);
+    apply_visual_viewport_offset(
+        native_ime_presentation,
+        set_keyboard_offset,
+        set_keyboard_presentation_source,
+    );
 
     Effect::new(move |_| {
         clear_mobile_source_control_notice_for_active_view(
@@ -180,6 +188,7 @@ pub fn MobileLayout(
                     .is_some_and(gesture::SystemGestureInsets::is_native)
             })
             keyboard_offset=keyboard_offset
+            keyboard_presentation_source=keyboard_presentation_source
             chat_expanded=chat_expanded
             set_chat_expanded=set_chat_expanded
             on_home=on_home

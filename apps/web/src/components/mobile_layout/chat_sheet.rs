@@ -15,13 +15,13 @@ pub(crate) fn should_show_mobile_chat_sheet(
     diff_open: bool,
     surface_switcher_sheet_visible: bool,
     expanded: bool,
-    keyboard_offset: i32,
+    keyboard_visible: bool,
 ) -> bool {
     visible
         && !drawer_open
         && !diff_open
         && !surface_switcher_sheet_visible
-        && (expanded || keyboard_offset <= 0)
+        && (expanded || !keyboard_visible)
 }
 
 pub(crate) fn mobile_chat_runtime_conflict_should_close(
@@ -77,6 +77,7 @@ pub(crate) fn mobile_chat_after_close() -> bool {
 #[component]
 pub fn MobileChatSheet(
     keyboard_offset: ReadSignal<i32>,
+    keyboard_visible: Signal<bool>,
     drawer_open: Signal<bool>,
     diff_open: Signal<bool>,
     surface_switcher_sheet_visible: Signal<bool>,
@@ -113,7 +114,7 @@ pub fn MobileChatSheet(
                 diff_open.get(),
                 surface_switcher_sheet_visible.get(),
                 expanded.get(),
-                keyboard_offset.get(),
+                keyboard_visible.get(),
             )
         }>
             <div

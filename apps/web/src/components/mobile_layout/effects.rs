@@ -10,6 +10,11 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::closure::Closure;
 
+use super::keyboard_presentation::{
+    KeyboardPresentationResolver, KeyboardPresentationSource, ViewportObservation,
+};
+use super::native_presentation::NativeImePresentation;
+
 pub fn apply_body_scroll_lock(drawer_open: Signal<bool>) {
     Effect::new(move |_| {
         let open = drawer_open.get();
@@ -25,53 +30,53 @@ pub fn apply_body_scroll_lock(drawer_open: Signal<bool>) {
     });
 }
 
-pub(super) fn visual_viewport_keyboard_offset(
-    inner_height: f64,
-    viewport_height: f64,
-    offset_top: f64,
-) -> i32 {
-    if viewport_height <= 0.0 || inner_height <= 0.0 {
-        return 0;
-    }
-    (inner_height - (viewport_height + offset_top))
-        .max(0.0)
-        .round() as i32
-}
-
-pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
+pub fn apply_visual_viewport_offset(
+    native_ime: ReadSignal<Option<NativeImePresentation>>,
+    set_keyboard_offset: WriteSignal<i32>,
+    set_keyboard_source: WriteSignal<KeyboardPresentationSource>,
+) {
+    let resolver = std::rc::Rc::new(std::cell::RefCell::new(
+        KeyboardPresentationResolver::default(),
+    ));
+    let update_resolver = resolver.clone();
     let update_offset: std::rc::Rc<dyn Fn()> = std::rc::Rc::new(move || {
-        let Some(window) = web_sys::window() else {
-            set_keyboard_offset.set(0);
-            return;
-        };
-        let viewport = match Reflect::get(window.as_ref(), &JsValue::from_str("visualViewport")) {
-            Ok(v) if !v.is_null() && !v.is_undefined() => v,
-            _ => {
-                set_keyboard_offset.set(0);
-                return;
+        let viewport = web_sys::window().and_then(|window| {
+            let viewport = Reflect::get(window.as_ref(), &JsValue::from_str("visualViewport"))
+                .ok()
+                .filter(|value| !value.is_null() && !value.is_undefined())?;
+            let height = Reflect::get(&viewport, &JsValue::from_str("height"))
+                .ok()
+                .and_then(|value| value.as_f64())?;
+            let offset_top = Reflect::get(&viewport, &JsValue::from_str("offsetTop"))
+                .ok()
+                .and_then(|value| value.as_f64())
+                .unwrap_or_default();
+            let inner_height = window.inner_height().ok()?.as_f64()?;
+            let width = window.inner_width().ok()?.as_f64()?;
+            if !width.is_finite() || width <= 0.0 || width > i32::MAX as f64 {
+                return None;
             }
-        };
-        let height = Reflect::get(&viewport, &JsValue::from_str("height"))
-            .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-        let offset_top = Reflect::get(&viewport, &JsValue::from_str("offsetTop"))
-            .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-        if height <= 0.0 {
-            set_keyboard_offset.set(0);
-            return;
-        }
-        let inner_h = window
-            .inner_height()
-            .ok()
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-        set_keyboard_offset.set(visual_viewport_keyboard_offset(inner_h, height, offset_top));
+            Some(ViewportObservation {
+                width: width.round() as i32,
+                inner_height,
+                viewport_height: height,
+                offset_top,
+            })
+        });
+        let presentation = update_resolver
+            .borrow_mut()
+            .resolve(viewport, native_ime.get_untracked());
+        set_keyboard_offset.set(presentation.offset);
+        set_keyboard_source.set(presentation.source);
     });
 
     update_offset();
+
+    let update_for_native = update_offset.clone();
+    Effect::new(move |_| {
+        let _ = native_ime.get();
+        update_for_native();
+    });
 
     if let Some(window) = web_sys::window() {
         let Ok(viewport) = Reflect::get(window.as_ref(), &JsValue::from_str("visualViewport"))
@@ -141,23 +146,5 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
             let _ = scroll_stored;
             let _ = viewport_stored;
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::visual_viewport_keyboard_offset;
-
-    #[test]
-    fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap() {
-        assert_eq!(visual_viewport_keyboard_offset(812.0, 500.0, 0.0), 312);
-        assert_eq!(visual_viewport_keyboard_offset(812.0, 500.0, 12.4), 300);
-    }
-
-    #[test]
-    fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap() {
-        assert_eq!(visual_viewport_keyboard_offset(812.0, 812.0, 0.0), 0);
-        assert_eq!(visual_viewport_keyboard_offset(812.0, 900.0, 0.0), 0);
-        assert_eq!(visual_viewport_keyboard_offset(812.0, 0.0, 0.0), 0);
     }
 }

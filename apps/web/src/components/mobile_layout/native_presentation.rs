@@ -22,8 +22,52 @@ struct PresentationOrder {
     epoch: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct NativeImePresentation {
+    generation: u64,
+    visible: bool,
+    bottom_css_px: i32,
+}
+
+impl NativeImePresentation {
+    pub(super) fn usable_offset(self) -> i32 {
+        if self.visible {
+            self.bottom_css_px.max(0)
+        } else {
+            0
+        }
+    }
+
+    pub(super) fn generation(self) -> u64 {
+        self.generation
+    }
+
+    pub(super) fn is_visible(self) -> bool {
+        self.visible
+    }
+
+    #[cfg(test)]
+    pub(super) fn from_generation_and_usable_offset_for_test(
+        generation: u64,
+        bottom_css_px: i32,
+    ) -> Self {
+        Self {
+            generation,
+            visible: bottom_css_px > 0,
+            bottom_css_px: bottom_css_px.max(0),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct AndroidPresentation {
+    gesture_insets: SystemGestureInsets,
+    ime: NativeImePresentation,
+}
+
 pub(super) fn apply_android_presentation_insets(
     set_system_gesture_insets: WriteSignal<Option<SystemGestureInsets>>,
+    set_native_ime_presentation: WriteSignal<Option<NativeImePresentation>>,
 ) {
     let Some(window) = web_sys::window() else {
         return;
@@ -38,6 +82,7 @@ pub(super) fn apply_android_presentation_insets(
                         *current = None;
                     }
                 });
+                set_native_ime_presentation.set(None);
                 return false;
             };
             if order < apply_order.get() {
@@ -46,12 +91,15 @@ pub(super) fn apply_android_presentation_insets(
             apply_order.set(order);
             if js_string_field(detail, "kind").as_deref() == Some("system-gesture-insets-pending") {
                 set_system_gesture_insets.set(None);
+                set_native_ime_presentation.set(None);
                 return true;
             }
-            let insets = window_width()
-                .and_then(|viewport_width| parse_android_presentation(detail, viewport_width));
-            set_system_gesture_insets.set(insets);
-            insets.is_some()
+            let presentation = window_width().and_then(|viewport_width| {
+                parse_android_presentation(detail, order, viewport_width)
+            });
+            set_system_gesture_insets.set(presentation.map(|value| value.gesture_insets));
+            set_native_ime_presentation.set(presentation.map(|value| value.ime));
+            presentation.is_some()
         });
 
     let apply_event_detail = apply_detail.clone();
@@ -116,20 +164,61 @@ fn initial_presentation_fallback(native_document_marker_seen: bool) -> Option<Sy
 
 fn parse_android_presentation(
     detail: &JsValue,
+    order: PresentationOrder,
     viewport_width: i32,
-) -> Option<SystemGestureInsets> {
+) -> Option<AndroidPresentation> {
     if js_string_field(detail, "kind").as_deref() != Some("system-gesture-insets") {
         return None;
     }
-    let generation = parse_presentation_order(detail)?.generation;
-    normalize_native_gesture_insets(
-        generation,
+    let density = js_number_field(detail, "density")?;
+    let gesture_insets = normalize_native_gesture_insets(
+        order.generation,
         js_number_field(detail, "widthPx")?,
         js_number_field(detail, "leftPx")?,
         js_number_field(detail, "rightPx")?,
-        js_number_field(detail, "density")?,
+        density,
         viewport_width,
-    )
+    )?;
+    let ime = normalize_native_ime_presentation(
+        order.generation,
+        js_bool_field(detail, "imeVisible")?,
+        js_number_field(detail, "imeBottomPx")?,
+        js_number_field(detail, "heightPx")?,
+        density,
+    )?;
+    Some(AndroidPresentation {
+        gesture_insets,
+        ime,
+    })
+}
+
+fn normalize_native_ime_presentation(
+    generation: u64,
+    visible: bool,
+    bottom_px: f64,
+    height_px: f64,
+    density: f64,
+) -> Option<NativeImePresentation> {
+    if !bottom_px.is_finite()
+        || !height_px.is_finite()
+        || !density.is_finite()
+        || bottom_px < 0.0
+        || height_px <= 0.0
+        || bottom_px > height_px
+        || density <= 0.0
+    {
+        return None;
+    }
+    let bottom_css_px = if visible && bottom_px > 1.0 {
+        (bottom_px / density).round().clamp(0.0, i32::MAX as f64) as i32
+    } else {
+        0
+    };
+    Some(NativeImePresentation {
+        generation,
+        visible,
+        bottom_css_px,
+    })
 }
 
 fn parse_presentation_order(detail: &JsValue) -> Option<PresentationOrder> {
@@ -151,6 +240,12 @@ fn js_number_field(value: &JsValue, key: &str) -> Option<f64> {
     Reflect::get(value, &JsValue::from_str(key))
         .ok()
         .and_then(|field| field.as_f64())
+}
+
+fn js_bool_field(value: &JsValue, key: &str) -> Option<bool> {
+    Reflect::get(value, &JsValue::from_str(key))
+        .ok()
+        .and_then(|field| field.as_bool())
 }
 
 fn js_string_field(value: &JsValue, key: &str) -> Option<String> {
@@ -190,5 +285,27 @@ mod tests {
                 epoch: 99,
             } < current
         );
+    }
+
+    #[test]
+    fn mobile_toolbar_keyboard_native_ime_inset_normalizes_physical_pixels() {
+        let presentation = normalize_native_ime_presentation(4, true, 929.0, 2400.0, 2.75)
+            .expect("valid current-generation IME geometry");
+        assert_eq!(presentation.usable_offset(), 338);
+        assert_eq!(presentation.generation(), 4);
+    }
+
+    #[test]
+    fn mobile_toolbar_keyboard_one_pixel_overlay_geometry_fails_closed() {
+        let presentation = normalize_native_ime_presentation(4, true, 1.0, 2400.0, 2.75)
+            .expect("one-pixel overlay remains a valid but unusable observation");
+        assert_eq!(presentation.usable_offset(), 0);
+        assert_eq!(
+            normalize_native_ime_presentation(4, false, 929.0, 2400.0, 2.75)
+                .expect("hidden IME geometry")
+                .usable_offset(),
+            0
+        );
+        assert!(normalize_native_ime_presentation(4, true, 2401.0, 2400.0, 2.75).is_none());
     }
 }

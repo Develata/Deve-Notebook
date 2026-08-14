@@ -1,4 +1,7 @@
-import { tapWebViewPoint } from "./android-webview-pointer.mjs";
+import {
+  clickExactCreateDocument,
+  readExactCreateDocumentPointer,
+} from "./android-document-create-touch.mjs";
 import { clickAndroidNewDocumentActionWhenAdmitted } from "./android-document-search-admission.mjs";
 import {
   closeMobileSidebar,
@@ -11,215 +14,6 @@ export function readAndroidMobileLayout() {
 
 export function readAndroidSearchVisible() {
   return Boolean(globalThis.__deveVisibleElement("[data-deve-search-input=true]"));
-}
-
-export async function readExactCreateDocumentPointer(expectedPath) {
-  const observe = () => {
-    const candidates = [...document.querySelectorAll(
-      '[data-deve-search-result-action="create-doc"]',
-    )].filter((element) => {
-      if (element.getAttribute("data-deve-search-result-create-target") !== expectedPath) {
-        return false;
-      }
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== "none"
-        && style.visibility !== "hidden"
-        && rect.width > 0
-        && rect.height > 0
-        && rect.right > 0
-        && rect.bottom > 0
-        && rect.left < window.innerWidth
-        && rect.top < window.innerHeight;
-    });
-    if (candidates.length !== 1) {
-      return { kind: "not-unique", count: candidates.length };
-    }
-    const element = candidates[0];
-    const rect = element.getBoundingClientRect();
-    const point = {
-      x: rect.left + Math.min(24, rect.width / 2),
-      y: rect.top + Math.min(24, rect.height / 2),
-    };
-    const hit = document.elementFromPoint(point.x, point.y);
-    if (!hit || (hit !== element && !element.contains(hit))) {
-      return { kind: "occluded", count: 1 };
-    }
-    return {
-      kind: "observed",
-      count: 1,
-      element,
-      point,
-      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-    };
-  };
-  const before = observe();
-  if (before.kind !== "observed") return before;
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  const after = observe();
-  if (after.kind !== "observed") return after;
-  const stable = before.element === after.element
-    && Math.abs(before.rect.left - after.rect.left) < 0.5
-    && Math.abs(before.rect.top - after.rect.top) < 0.5
-    && Math.abs(before.rect.width - after.rect.width) < 0.5
-    && Math.abs(before.rect.height - after.rect.height) < 0.5;
-  return stable
-    ? { kind: "ready", count: 1, point: after.point }
-    : { kind: "moving", count: 1 };
-}
-
-export function armExactCreateDocumentClickObservation(expectedPath, point) {
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    return { kind: "changed" };
-  }
-  const hit = document.elementFromPoint(point.x, point.y);
-  const target = hit?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
-  const exactTargets = [...document.querySelectorAll(
-    '[data-deve-search-result-action="create-doc"]',
-  )].filter((element) =>
-    element.getAttribute("data-deve-search-result-create-target") === expectedPath);
-  if (exactTargets.length !== 1 || exactTargets[0] !== target) {
-    return { kind: "changed" };
-  }
-  const previous = globalThis.__deveAndroidCreatePointerObservation;
-  const token = Number.isSafeInteger(previous?.token) ? previous.token + 1 : 1;
-  const observation = {
-    token,
-    expectedPath,
-    clicked: false,
-    blocked: false,
-    clickState: null,
-    documentRoot: document,
-    listener: null,
-  };
-  const listener = (event) => {
-    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
-    const clickTarget = event.target
-      ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
-    const currentExactTargets = [...document.querySelectorAll(
-      '[data-deve-search-result-action="create-doc"]',
-    )].filter((element) =>
-      element.getAttribute("data-deve-search-result-create-target") === expectedPath);
-    if (currentExactTargets.length !== 1 || currentExactTargets[0] !== clickTarget) {
-      observation.blocked = true;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
-    const status = document.querySelector("[data-deve-sync-status]");
-    observation.clicked = true;
-    observation.clickState = {
-      syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
-      repoIdPresent: Boolean(status?.getAttribute("data-deve-repo-id")),
-      scopeNonceRaw: status?.getAttribute("data-deve-scope-nonce") ?? null,
-    };
-  };
-  observation.listener = listener;
-  globalThis.__deveAndroidCreatePointerObservation = observation;
-  document.addEventListener("click", listener, { capture: true, once: true });
-  return { kind: "armed", token };
-}
-
-export function consumeExactCreateDocumentClickObservation(token) {
-  const observation = globalThis.__deveAndroidCreatePointerObservation;
-  if (!observation || observation.token !== token) return { kind: "missing", clicked: false };
-  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
-  delete globalThis.__deveAndroidCreatePointerObservation;
-  return {
-    kind: "observed",
-    clicked: observation.clicked,
-    blocked: observation.blocked,
-    clickState: observation.clickState,
-  };
-}
-
-export function consumeExactCreateDocumentClickObservationByPath(expectedPath) {
-  const observation = globalThis.__deveAndroidCreatePointerObservation;
-  if (!observation) return { kind: "missing", clicked: false };
-  if (observation.expectedPath !== expectedPath) {
-    return { kind: "path-mismatch", clicked: false };
-  }
-  observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
-  delete globalThis.__deveAndroidCreatePointerObservation;
-  return {
-    kind: "observed",
-    clicked: observation.clicked,
-    blocked: observation.blocked,
-    clickState: observation.clickState,
-  };
-}
-
-export async function clickExactCreateDocument(page, path, tap = tapWebViewPoint) {
-  const target = await page.call(readExactCreateDocumentPointer, path);
-  if (target?.kind !== "ready" || target.count !== 1 || !target.point) {
-    throw new Error(`exact Create target is not stable and visible: ${JSON.stringify(target)}`);
-  }
-  let armed = null;
-  let pointerError = null;
-  try {
-    await tap(page, target.point, {
-      beforeContact: async () => {
-        const refreshed = await page.call(readExactCreateDocumentPointer, path);
-        if (refreshed?.kind !== "ready" || refreshed.count !== 1 || !refreshed.point) {
-          throw new Error(
-            `exact Create target was not stable before native touch contact: ${JSON.stringify(refreshed)}`,
-          );
-        }
-        armed = await page.call(
-          armExactCreateDocumentClickObservation,
-          path,
-          refreshed.point,
-        );
-        if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token)) {
-          throw new Error("exact Create target changed before native touch contact");
-        }
-        return refreshed.point;
-      },
-    });
-  } catch (error) {
-    pointerError = error;
-  }
-  if (armed?.kind !== "armed") {
-    let cleanup;
-    try {
-      cleanup = await page.call(
-        consumeExactCreateDocumentClickObservationByPath,
-        path,
-      );
-    } catch (cleanupError) {
-      throw new Error(
-        `${pointerError?.message ?? "Create pointer arm was not acknowledged"}; `
-          + `unconfirmed_arm_cleanup=${cleanupError.message}`,
-      );
-    }
-    if (pointerError) {
-      throw new Error(
-        `${pointerError.message}; unconfirmed_arm_cleanup=${JSON.stringify(cleanup)}`,
-      );
-    }
-    throw new Error("Create pointer driver skipped before-contact identity admission");
-  }
-  let observation;
-  try {
-    observation = await page.call(
-      consumeExactCreateDocumentClickObservation,
-      armed.token,
-    );
-  } catch (cleanupError) {
-    throw new Error(
-      `${pointerError?.message ?? "Create pointer observation cleanup failed"}; `
-        + `observation_cleanup=${cleanupError.message}`,
-    );
-  }
-  if (pointerError) {
-    throw new Error(
-      `${pointerError.message}; click_observation=${JSON.stringify(observation)}`,
-    );
-  }
-  if (observation?.kind !== "observed" || observation.clicked !== true) {
-    throw new Error(`exact Create pointer did not produce a DOM click: ${JSON.stringify(observation)}`);
-  }
-  return observation;
 }
 
 export function readAndroidDocumentCreateSurface(expectedPath, expectedDocId = null) {
@@ -394,8 +188,12 @@ export async function createAndSelectAndroidDocument(
     clickExactOpen = clickExactCreatedDocument,
     openSidebar = openMobileSidebarView,
     closeSidebar = closeMobileSidebar,
+    expectedWriterScope,
   },
 ) {
+  if (!expectedWriterScope) {
+    throw new Error("Android document Create requires an admitted writer scope");
+  }
   const mobile = await page.call(readAndroidMobileLayout);
   const searchOptions = { waitUntil, click, openSidebar };
   await openAndroidDocumentSearch(page, path, mobile, "create", searchOptions);
@@ -408,7 +206,7 @@ export async function createAndSelectAndroidDocument(
     },
     10000,
   ).catch((error) => throwDocumentCreateFailure(page, path, "create_identity", error));
-  const pointerObservation = await clickCreate(page, path).catch(
+  const pointerObservation = await clickCreate(page, path, expectedWriterScope).catch(
     (error) => throwDocumentCreateFailure(page, path, "create_pointer", error),
   );
   await waitUntil(

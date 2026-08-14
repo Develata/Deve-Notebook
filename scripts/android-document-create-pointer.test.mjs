@@ -3,86 +3,21 @@ import test from "node:test";
 
 import {
   armExactCreateDocumentClickObservation,
+  beginExactCreateDocumentClickSettlement,
   clickExactCreateDocument,
-  consumeExactCreateDocumentClickObservation,
   consumeExactCreateDocumentClickObservationByPath,
+  finalizeExactCreateDocumentClickObservation,
+  readExactCreateDocumentClickObservation,
   readExactCreateDocumentPointer,
-} from "./lib/android-document-create-flow.mjs";
+} from "./lib/android-document-create-touch.mjs";
 import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
+import {
+  createResult,
+  withCreateDom,
+} from "./lib/android-document-create-pointer-fixture.mjs";
 
 const exactPath = "notes/exact.md";
-
-function withCreateDom(elements, hit, run) {
-  const originals = {
-    document: globalThis.document,
-    getComputedStyle: globalThis.getComputedStyle,
-    window: globalThis.window,
-    requestAnimationFrame: globalThis.requestAnimationFrame,
-    observation: globalThis.__deveAndroidCreatePointerObservation,
-  };
-  const listeners = new Set();
-  globalThis.getComputedStyle = () => ({ display: "block", visibility: "visible" });
-  globalThis.window = { innerWidth: 400, innerHeight: 800 };
-  globalThis.requestAnimationFrame = (callback) => setImmediate(callback);
-  globalThis.document = {
-    querySelector: () => null,
-    querySelectorAll: () => elements,
-    elementFromPoint: (...point) => typeof hit === "function" ? hit(...point) : hit,
-    addEventListener: (type, listener) => {
-      if (type === "click") listeners.add(listener);
-    },
-    removeEventListener: (type, listener) => {
-      if (type === "click") listeners.delete(listener);
-    },
-    emitClick(target) {
-      const event = {
-        target,
-        defaultPrevented: false,
-        immediatePropagationStopped: false,
-        preventDefault() { this.defaultPrevented = true; },
-        stopImmediatePropagation() { this.immediatePropagationStopped = true; },
-      };
-      for (const listener of [...listeners]) {
-        listeners.delete(listener);
-        listener(event);
-        if (event.immediatePropagationStopped) break;
-      }
-      // Product Create is an event listener, not a browser default action.
-      // Only propagation blocking can prevent the wrong typed intent.
-      if (!event.immediatePropagationStopped) target.commitClick();
-      return event;
-    },
-  };
-  return Promise.resolve(run()).finally(() => {
-    for (const [name, value] of Object.entries(originals)) {
-      const target = name === "observation" ? "__deveAndroidCreatePointerObservation" : name;
-      if (value === undefined) delete globalThis[target];
-      else globalThis[target] = value;
-    }
-  });
-}
-
-function createResult(target, { left = 10, onCommit = () => {} } = {}) {
-  let currentLeft = left;
-  const element = {
-    getAttribute: (name) => name === "data-deve-search-result-create-target" ? target : null,
-    getBoundingClientRect: () => ({
-      left: currentLeft,
-      top: 20,
-      right: currentLeft + 100,
-      bottom: 64,
-      width: 100,
-      height: 44,
-    }),
-    contains: () => false,
-    closest: () => element,
-    commitClick: onCommit,
-    emitClick: () => globalThis.document.emitClick(element),
-    getLeft: () => currentLeft,
-    setLeft: (nextLeft) => { currentLeft = nextLeft; },
-  };
-  return element;
-}
+const admittedWriterScope = { repoId: "repo-1", scopeNonce: 7 };
 
 test("exact Create pointer ignores a stale result and requires a stable hit-tested target", async () => {
   const stale = createResult("Untitled.md");
@@ -118,15 +53,27 @@ test("exact Create pointer sends one native gesture only after identity admissio
         assert.equal(path, exactPath);
         return { kind: "armed", token: 7 };
       }
-      assert.equal(fn, consumeExactCreateDocumentClickObservation);
+      if (fn === readExactCreateDocumentClickObservation) {
+        assert.equal(path, 7);
+        return { kind: "observed", clicked: true, blocked: false, clickState: null };
+      }
+      if (fn === beginExactCreateDocumentClickSettlement) {
+        return { kind: "settling", token: 7 };
+      }
+      assert.equal(fn, finalizeExactCreateDocumentClickObservation);
       assert.equal(path, 7);
       return { kind: "observed", clicked: true, clickState: null };
     },
   };
   const taps = [];
-  await clickExactCreateDocument(page, exactPath, async (tapPage, point, { beforeContact }) => {
+  await clickExactCreateDocument(
+    page,
+    exactPath,
+    admittedWriterScope,
+    async (tapPage, point, { beforeContact }) => {
     taps.push({ tapPage, point, contactPoint: await beforeContact() });
-  });
+    },
+  );
   assert.deepEqual(taps, [{
     tapPage: page,
     point: { x: 17, y: 23 },
@@ -148,6 +95,7 @@ test("exact Create pointer sends one native gesture only after identity admissio
     clickExactCreateDocument(
       changedPage,
       exactPath,
+      admittedWriterScope,
       async (_tapPage, _point, { beforeContact }) => beforeContact(),
     ),
     /changed before native touch contact/,
@@ -166,13 +114,229 @@ test("exact Create production wiring emits the complete CDP pointer gesture", as
       },
     };
 
-    const observation = await clickExactCreateDocument(page, exactPath);
+    const observation = await clickExactCreateDocument(page, exactPath, admittedWriterScope);
 
     assert.equal(observation.clicked, true);
     assert.deepEqual(sent.map(({ params }) => params.type), [
       "touchStart",
       "touchEnd",
     ]);
+  });
+});
+
+test("exact Create waits for a click synthesized after the touchEnd command response", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    const sent = [];
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        sent.push(params.type);
+        if (params.type === "touchEnd") setTimeout(() => exact.emitClick(), 20);
+      },
+    };
+
+    const observation = await clickExactCreateDocument(page, exactPath, admittedWriterScope);
+
+    assert.equal(observation.clicked, true);
+    assert.deepEqual(sent, ["touchStart", "touchEnd"]);
+  });
+});
+
+test("exact Create click settlement timeout never retransmits the committed touch", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    const sent = [];
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) { sent.push(params.type); },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /click settlement timed out/,
+    );
+
+    assert.deepEqual(sent, ["touchStart", "touchEnd"]);
+    assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
+    assert.equal(globalThis.__deveAndroidCreatePointerLane.sealed, true);
+  });
+});
+
+test("committed-unknown Create seals the document lane against a late click and retry", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const sent = [];
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) { sent.push(params.type); },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /settlement timed out/,
+    );
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /changed before native touch contact.*sealed/,
+    );
+    const late = exact.emitClick();
+
+    assert.deepEqual(sent, ["touchStart", "touchEnd"]);
+    assert.equal(late.immediatePropagationStopped, true);
+    assert.equal(commits, 0);
+    assert.equal(globalThis.document.clickListenerCount(), 1);
+  });
+});
+
+test("final atomic observation accepts a click arriving after the last poll", async () => {
+  const calls = [];
+  const page = {
+    async call(fn) {
+      calls.push(fn);
+      if (fn === readExactCreateDocumentPointer) {
+        return { kind: "ready", count: 1, point: { x: 17, y: 23 } };
+      }
+      if (fn === armExactCreateDocumentClickObservation) return { kind: "armed", token: 7 };
+      if (fn === readExactCreateDocumentClickObservation) {
+        return { kind: "observed", clicked: false, blocked: false, clickState: null };
+      }
+      if (fn === beginExactCreateDocumentClickSettlement) {
+        return { kind: "settling", token: 7 };
+      }
+      if (fn === finalizeExactCreateDocumentClickObservation) {
+        return { kind: "observed", clicked: true, blocked: false, clickState: null };
+      }
+      throw new Error(`unexpected page function: ${fn.name}`);
+    },
+  };
+
+  const observation = await clickExactCreateDocument(
+    page,
+    exactPath,
+    admittedWriterScope,
+    async (_page, _point, { beforeContact }) => beforeContact(),
+  );
+
+  assert.equal(observation.clicked, true);
+  assert.equal(calls.filter((fn) => fn === finalizeExactCreateDocumentClickObservation).length, 1);
+});
+
+test("page-side expiry seals a Create when finalize never reaches the WebView", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const armed = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "lost-finalize",
+      10,
+      admittedWriterScope,
+    );
+    assert.equal(armed.kind, "armed");
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    const late = exact.emitClick();
+    const state = readExactCreateDocumentClickObservation(armed.token);
+    const second = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "second-attempt",
+      10,
+      admittedWriterScope,
+    );
+
+    assert.equal(late.immediatePropagationStopped, true);
+    assert.equal(commits, 0);
+    assert.equal(state.kind, "observed");
+    assert.equal(state.clicked, false);
+    assert.equal(second.kind, "sealed");
+  });
+});
+
+test("lost finalize transport still expires and seals inside the WebView", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const sent = [];
+    const page = {
+      async call(fn, ...args) {
+        if (fn === readExactCreateDocumentClickObservation) {
+          throw new Error("settlement transport lost");
+        }
+        if (fn === finalizeExactCreateDocumentClickObservation) {
+          throw new Error("finalize never reached page");
+        }
+        return fn(...args);
+      },
+      async send(_method, params) { sent.push(params.type); },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /observation_cleanup=finalize never reached page/,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 525));
+    const late = exact.emitClick();
+    const second = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "after-lost-finalize",
+      10,
+      admittedWriterScope,
+    );
+
+    assert.deepEqual(sent, ["touchStart", "touchEnd"]);
+    assert.equal(late.immediatePropagationStopped, true);
+    assert.equal(commits, 0);
+    assert.equal(second.kind, "sealed");
+  });
+});
+
+test("Create observation rejects an invalid writer scope before contact", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    globalThis.document.querySelector = () => ({
+      getAttribute(name) {
+        if (name === "data-deve-sync-status") return "ready";
+        if (name === "data-deve-repo-id") return "repo-1";
+        if (name === "data-deve-scope-nonce") return "0";
+        return null;
+      },
+    });
+    const result = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "invalid-writer",
+      500,
+      admittedWriterScope,
+    );
+    assert.equal(result.kind, "writer-scope-invalid");
+    assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
+  });
+});
+
+test("Create observation rejects a scope switch after quiet admission but before arm", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    globalThis.document.querySelector = () => ({
+      getAttribute(name) {
+        if (name === "data-deve-sync-status") return "ready";
+        if (name === "data-deve-repo-id") return "repo-2";
+        if (name === "data-deve-scope-nonce") return "8";
+        return null;
+      },
+    });
+    const result = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "scope-switched",
+      500,
+      admittedWriterScope,
+    );
+    assert.equal(result.kind, "writer-scope-changed");
+    assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
   });
 });
 
@@ -195,6 +359,7 @@ test("exact Create accepts a same-path remount before touch and contacts its new
       await clickExactCreateDocument(
         page,
         exactPath,
+        admittedWriterScope,
         async (tapPage, _point, { beforeContact }) => {
           elements[0] = createResult(exactPath, {
             left: 110,
@@ -229,10 +394,39 @@ test("exact Create capture guard blocks a different target after admission", asy
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath),
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
       /did not produce a DOM click.*"blocked":true/,
     );
     assert.equal(wrongCommits, 0);
+  });
+});
+
+test("exact Create capture guard blocks writer scope drift after admission", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    let scopeNonce = "7";
+    globalThis.document.querySelector = () => ({
+      getAttribute(name) {
+        if (name === "data-deve-sync-status") return "ready";
+        if (name === "data-deve-repo-id") return "repo-1";
+        if (name === "data-deve-scope-nonce") return scopeNonce;
+        return null;
+      },
+    });
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        if (params.type === "touchStart") scopeNonce = "8";
+        if (params.type === "touchEnd") exact.emitClick();
+      },
+    };
+
+    await assert.rejects(
+      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      /did not produce a DOM click.*"blocked":true/,
+    );
+    assert.equal(commits, 0);
   });
 });
 
@@ -254,6 +448,7 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
       clickExactCreateDocument(
         armLostPage,
         exactPath,
+        admittedWriterScope,
         async (_page, _point, { beforeContact }) => beforeContact(),
       ),
       /arm response lost; unconfirmed_arm_cleanup=.*"kind":"observed"/,
@@ -269,7 +464,7 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
       },
     };
     await assert.rejects(
-      clickExactCreateDocument(releaseLostPage, exactPath),
+      clickExactCreateDocument(releaseLostPage, exactPath, admittedWriterScope),
       /release response lost; touch_cancel=confirmed; click_observation=.*"clicked":true/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);

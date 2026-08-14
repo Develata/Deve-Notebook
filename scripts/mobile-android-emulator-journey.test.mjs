@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const orchestrator = read("./check-mobile-android-emulator-install-startup-smoke.sh");
+const targetedPreflight = read("./lib/android-emulator-targeted-preflight.sh");
 const installSmoke = read("./check-mobile-android-install-startup-smoke.sh");
 const installRetryTest = read("./android-install-retry.test.sh");
 const installRetryLib = read("./lib/android-install-retry.sh");
@@ -39,7 +40,10 @@ test("emulator orchestrator owns both local and remote target lifecycles", () =>
   assert.match(orchestrator, /DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096/);
   assert.match(orchestrator, /disk\.dataPartition\.size=%sM/);
   assert.doesNotMatch(orchestrator, /^\s*-partition-size /m);
-  assert.match(orchestrator, /EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192/);
+  assert.match(
+    targetedPreflight,
+    /EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192/,
+  );
   assert.match(orchestrator, /shell "df -k \/data"/);
   assert.doesNotMatch(orchestrator, /shell df -k \/data/);
   assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-capacity\.sh"/);
@@ -111,9 +115,9 @@ test("both Android writable journeys remove the last repo through backend previe
   assert.match(businessFlow, /noScope\.scopeNonce > before\.scopeNonce/);
   assert.match(localJourney, /exerciseAndroidLastRepoRemoval/);
   assert.match(remoteJourney, /exerciseAndroidLastRepoRemoval/);
-  assert.match(localJourney, /repoRemovalNoScope/);
+  assert.match(writableEvidence, /repoRemovalNoScope/);
   assert.match(remoteJourney, /repoRemovalNoScope/);
-  assert.match(localJourney, /repoLifecycle,\s*journey:/);
+  assert.match(writableEvidence, /repoLifecycle,\s*journey:/);
   assert.match(remoteJourney, /journey,\s*repoLifecycle,/);
   assert.match(writableEvidence, /if \(repoLifecycle\) evidence\.repoLifecycle = repoLifecycle/);
 });
@@ -283,7 +287,9 @@ test("local lifecycle smoke fails closed with bounded WebView-socket diagnostics
 
 test("local lifecycle proves root Back backgrounds and rebinds the same app process", () => {
   assert.match(localJourney, /proveAndroidRootBackBackground\(appId/);
-  assert.match(localJourney, /rootBackBackgroundsTaskWithStablePid/);
+  assert.match(localJourney, /root Back proof requires every owned UI surface to be settled closed/);
+  assert.match(localJourney, /writeAndroidLocalBackendEvidence/);
+  assert.match(writableEvidence, /rootBackBackgroundsTaskWithStablePid/);
   assert.match(localJourney, /data-deve-native-presentation/);
   assert.match(localJourney, /waitForAndroidRootReentry/);
   assert.match(lifecycleHarness, /root Back lifecycle rebind/);
@@ -291,6 +297,12 @@ test("local lifecycle proves root Back backgrounds and rebinds the same app proc
   assert.match(lifecycleHarness, /projection\.bootstrapSessionBound/);
   assert.match(lifecycleHarness, /projection\.nativeSessionInstalled/);
   assert.match(lifecycleHarness, /presentation\.epoch > presentationBeforeRootBack\.epoch/);
+  assert.equal(
+    (businessFlow.match(/await closeMobileSidebar\(page, \{ click: clickVisible, waitUntil \}\);/gu)
+      ?? []).length,
+    2,
+    "repo switcher journeys must retire the mobile drawer they use before later root Back proof",
+  );
 });
 
 test("Android APK install retries only after stable package/settings admission", () => {

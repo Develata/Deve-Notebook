@@ -65,6 +65,9 @@ contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/Nati
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	widthPx:
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	leftPx:
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	rightPx:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	heightPx:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	imeVisible:
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	imeBottomPx:
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	source.isFocusableInTouchMode = true
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	source.requestFocus()
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	android_webview_input_focus_unavailable
@@ -75,9 +78,16 @@ contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/Nati
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	ViewCompat.setOnApplyWindowInsetsListener(observer)
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-presentation.test.mjs
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-emulator-host.test.mjs
-contains	scripts/smoke-mobile-android-lifecycle.mjs	rootBackBackgroundsTaskWithStablePid
+contains	scripts/lib/android-writable-evidence.mjs	rootBackBackgroundsTaskWithStablePid
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	document.elementFromPoint($xCss, $yCss)
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	.show(WindowInsetsCompat.Type.ime())
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:windowSoftInputMode="adjustResize"
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	ViewCompat.setOnApplyWindowInsetsListener(source)
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	android_webview_ime_insets_applied
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	android_webview_ime_overlay_or_unavailable
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	PresentationGeometryRead.ImeOverlayOrUnavailable
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	ViewCompat.requestApplyInsets(source)
+absent	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	setOnApplyWindowInsetsListener
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer="left"
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-drawer="right"
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer-open=move || open.get().to_string()
@@ -95,11 +105,22 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: scripts/check-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_web mobile_toolbar_keyboard -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_mobile --features native-packaging android_back_dispatch -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_mobile --features native-packaging android_webview_input_focus -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_mobile --features native-packaging android_system_gesture_insets -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: node --test scripts/mobile-webview-interaction.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: node --test scripts/mobile-editor-session-observation.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: node --test scripts/mobile-keyboard-presentation.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: bash scripts/android-ime-test-session.test.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: bash scripts/android-package-session.test.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ambiguous_test_ime_selection_still_restores_exact_prior_ime true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: unverified_prior_ime_restore_is_a_recovery_blocker true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_focus_editor: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_wait_keyboard: true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: android_activity_uses_adjust_resize_for_ime_visual_viewport true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: current_webview_receives_unmodified_ime_insets_without_native_padding true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_measure: "mobile_toolbar_history_actions"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_visual_viewport_offset_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_visual_viewport_precedes_native_ime_fallback true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_current_native_ime_inset_fallback_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_dom_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_history_actions_front_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_visible true
@@ -108,28 +129,66 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoi
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: same_breakpoint_keyboard_resize_does_not_resend_open_doc true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: mobile_toolbar_history_actions_visible_at_390px true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ime_back_dismisses_keyboard_before_ui_back true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: formal_package_uninstall_failure_blocks_success_receipt true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: physical_overlay_mode_rejects_formal_evidence_path true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: ime_visibility_unavailable_does_not_dispatch_ui_back true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ime_back_preserves_editor_host_and_open_request true
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: retap_same_editor_reopens_ime true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: ime_back_preserves_selection_identity_after_settlement true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: retap_same_editor_reopens_ime_without_replacing_load_session_even_if_caret_moves true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: foreground_reentry_restores_webview_native_input_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: current_generation_presentation_carries_ime_visible_and_bottom true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: usable_native_ime_inset_positions_toolbar_when_visual_viewport_is_unchanged true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: native_ime_fallback_does_not_double_visual_viewport_overlap true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: native_ime_fallback_rejected_when_viewport_shrinks_from_same_generation_hidden_baseline true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: adjust_resize_zero_overlap_keeps_toolbar_visible_with_zero_extra_offset true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: keyboard_presentation_preserves_doc_repo_scope_selection_and_webview_generation true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: one_px_or_invalid_ime_geometry_logs_overlay_or_unavailable_without_fabricating_height true
 contains	docs/plan/11_ui_design/03_mobile.md	必须使用 `visualViewport` API 监听键盘高度变化
-contains	apps/web/src/components/mobile_layout/effects.rs	visual_viewport_keyboard_offset(
-contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()
-contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	visual_viewport_keyboard_offset(
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_visual_viewport_precedes_native_ime_fallback()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_uses_current_native_ime_fallback_without_viewport_overlap()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_adjust_resize_never_reuses_root_inset_as_overlay()
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_native_fallback_requires_same_width_generation_hidden_baseline()
 contains	apps/web/src/components/mobile_layout/native_presentation.rs	pub(super) fn apply_android_presentation_insets(
+contains	apps/web/src/components/mobile_layout/native_presentation.rs	fn mobile_toolbar_keyboard_one_pixel_overlay_geometry_fails_closed()
 contains	apps/web/src/components/mobile_layout/native_presentation.rs	__DEVE_ANDROID_PRESENTATION_PENDING__
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation=move ||
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-keyboard-presentation=move ||
+contains	apps/web/src/components/mobile_layout/content.rs	data-deve-native-keyboard-overlay=move ||
+contains	apps/web/src/components/mobile_layout/content.rs	fn mobile_toolbar_keyboard_native_overlay_shrinks_editor_presentation_only()
 contains	scripts/lib/mobile-ime-back-proof.mjs	export async function proveAndroidImeBackPriority(
-contains	scripts/lib/mobile-webview-interaction.mjs	const top = Math.max(0, rect.top, codeHostRect.top, hostRect.top);
+contains	scripts/lib/mobile-editor-session-observation.mjs	const top = Math.max(viewportTop, rect.top, codeHostRect.top, hostRect.top);
+contains	scripts/lib/mobile-editor-session-observation.mjs	getEditorSelectionIdentity
+contains	scripts/lib/mobile-editor-session-observation.mjs	export function sameEditorSelectionIdentity(before, after)
+contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("getEditorSelectionIdentity"
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TEST_IME_SERVICE
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_ime_test_begin adb_cmd "$TEST_IME_SERVICE"
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_ime_test_restore adb_cleanup_raw
+contains	scripts/lib/android-ime-test-session.sh	ANDROID_IME_TEST_RESTORE_REQUIRED=1
+contains	scripts/lib/android-ime-test-session.sh	recovery blocker: original IME restore verification failed
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-ime-test-session.test.sh
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_package_session_prepare "$PRESERVE_PACKAGE" adb_cmd "$APP_ID"
+contains	scripts/smoke-mobile-android-lifecycle.sh	android_package_session_cleanup "$PRESERVE_PACKAGE" adb_cleanup_raw "$APP_ID"
+contains	scripts/lib/android-package-session.sh	preserve mode requires the exact package to be installed
+contains	scripts/lib/android-package-session.sh	preserved_package_cleared=true
+contains	scripts/lib/android-package-session.sh	formal_package_uninstalled=true
+contains	scripts/lib/android-package-session.sh	preserve mode cannot write formal evidence
+contains	scripts/android-package-session.test.sh	cleanup failure overwrote the primary failure
+contains	scripts/android-package-session.test.sh	formal mode swallowed an uninstall failure
+contains	scripts/android-package-session.test.sh	preserve mode entered the formal evidence channel
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-package-session.test.sh
 contains	scripts/lib/android-lifecycle-harness.mjs	export function createAndroidLifecycleHarness(
 contains	scripts/lib/android-lifecycle-harness.mjs	"shell", "input", "tap",
-contains	scripts/smoke-mobile-android-lifecycle.mjs	imeBackPreservedEditorSession: true
+contains	scripts/lib/android-writable-evidence.mjs	imeBackPreservedEditorSession: true
 contains	scripts/lib/android-drawer-touch-proof.mjs	export function classifyAndroidDrawerGestureDelivery(
 contains	scripts/lib/android-drawer-touch-proof.mjs	document.elementFromPoint(x, y)
 contains	scripts/lib/android-presentation-proof.mjs	export async function proveAndroidDrawerGesturesAfterReload(
 contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-presentation
 contains	scripts/mobile-android-presentation.test.mjs	native presentation is re-admitted after same-WebView reload before drawer gestures
-contains	scripts/smoke-mobile-android-lifecycle.mjs	nativeDrawerGesturesAfterReload:
+contains	scripts/lib/android-writable-evidence.mjs	nativeDrawerGesturesAfterReload:
 contains	scripts/smoke-mobile-android-remote-browser.mjs	nativeSystemGestureInsetsAcceptedAfterReload: true
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar="accessory"
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
@@ -813,7 +872,11 @@ contains	scripts/lib/android-business-flow.mjs	./android-document-create-flow.mj
 contains	scripts/lib/android-business-flow.mjs	await createAndSelectAndroidDocument(page, path
 contains	scripts/lib/android-document-create-flow.mjs	create document action acknowledgement
 contains	scripts/lib/android-document-create-flow.mjs	exact created document projection
-contains	scripts/lib/android-document-create-flow.mjs	data-deve-search-result-create-target
+contains	scripts/lib/android-document-create-flow.mjs	./android-document-create-touch.mjs
+contains	scripts/lib/android-document-create-touch.mjs	./android-document-create-observation.mjs
+contains	scripts/lib/android-document-create-touch.mjs	data-deve-search-result-create-target
+contains	scripts/lib/android-document-create-observation.mjs	data-deve-search-result-create-target
+contains	scripts/android-document-create-pointer.test.mjs	./lib/android-document-create-pointer-fixture.mjs
 contains	scripts/lib/android-document-search-admission.mjs	clickAndroidNewDocumentActionWhenAdmitted
 contains	scripts/lib/mobile-webview-interaction.mjs	expectedDocId
 contains	apps/web/src/components/search_box/result_item.rs	data-deve-search-result-create-target
@@ -905,12 +968,12 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	SYSTEM_T
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/android-document-create-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
 contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation exceeded the
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
 contains	scripts/android-app-process-observation.test.mjs	Android graceful exit rejects a sample that returns after its deadline
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp-client.mjs"
@@ -921,7 +984,7 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	-memory 
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_RAM_MB="${DEVE_MOBILE_ANDROID_EMULATOR_RAM_MB:-4096}"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	disk.dataPartition.size=%sM
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB="${DEVE_MOBILE_ANDROID_EMULATOR_PARTITION_MB:-4096}"
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
+contains	scripts/lib/android-emulator-targeted-preflight.sh	EMULATOR_PARTITION_MB >= 2048 && EMULATOR_PARTITION_MB <= 8192
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	minimum_total_kib=$(( EMULATOR_PARTITION_MB * 1024 * 3 / 4 ))
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	available_kib >= 1048576
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	status != 0 && DIAGNOSTICS_PRINTED == 0
@@ -1004,10 +1067,23 @@ contains	scripts/android-document-create-flow.test.mjs	Android document create r
 contains	scripts/android-document-create-pointer.test.mjs	exact Create pointer ignores a stale result and requires a stable hit-tested target
 contains	scripts/android-document-create-pointer.test.mjs	changed before native touch contact
 contains	scripts/android-document-create-pointer.test.mjs	exact Create production wiring emits the complete CDP pointer gesture
+contains	scripts/android-document-create-pointer.test.mjs	exact Create waits for a click synthesized after the touchEnd command response
+contains	scripts/android-document-create-pointer.test.mjs	exact Create click settlement timeout never retransmits the committed touch
+contains	scripts/android-document-create-pointer.test.mjs	committed-unknown Create seals the document lane against a late click and retry
+contains	scripts/android-document-create-pointer.test.mjs	final atomic observation accepts a click arriving after the last poll
+contains	scripts/android-document-create-observation.test.mjs	observation functions execute in an isolated CDP serialization realm
+contains	scripts/android-document-create-observation.test.mjs	a concurrent non-owner cannot clean the active Create observation
+contains	scripts/android-document-create-observation.test.mjs	touch transport lease is renewed only after touchEnd settlement begins
+contains	scripts/android-document-create-pointer.test.mjs	page-side expiry seals a Create when finalize never reaches the WebView
+contains	scripts/android-document-create-pointer.test.mjs	lost finalize transport still expires and seals inside the WebView
+contains	scripts/android-document-create-pointer.test.mjs	Create observation rejects an invalid writer scope before contact
+contains	scripts/android-document-create-pointer.test.mjs	Create observation rejects a scope switch after quiet admission but before arm
+contains	docs/acceptance-cases/07_storage_repo.md	android_first_create_single_touch_waits_for_same_token_click_settlement_and_seals_committed_unknown true
 contains	scripts/android-document-create-pointer.test.mjs	exact Create cleans a committed-unknown arm and release observation
 contains	scripts/android-document-create-flow.test.mjs	exact OpenDoc selection returns one typed doc identity atomically
 contains	scripts/android-business-flow.test.mjs	Android repo writer admission resets its quiet window after a scope change
-contains	scripts/android-business-flow.test.mjs	Android last-repo removal waits through snapshot loading for the expected writer scope
+contains	scripts/android-business-flow.test.mjs	Android document Create admission requires a valid stable current writer scope
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal closes the mobile drawer after snapshot-gated removal
 contains	scripts/android-business-flow.test.mjs	Android last-repo removal keeps every intent closed while snapshot loading persists
 contains	scripts/android-business-flow.test.mjs	Android last-repo removal revalidates scope before preview intent
 contains	scripts/android-business-flow.test.mjs	Android last-repo removal revalidates exact scope before execute intent
@@ -1022,6 +1098,7 @@ contains	scripts/android-webview-pointer.test.mjs	WebView point tap contacts a c
 contains	scripts/android-webview-pointer.test.mjs	WebView point tap rejects invalid initial and replacement points before contact
 contains	scripts/android-document-create-pointer.test.mjs	exact Create accepts a same-path remount before touch and contacts its new point
 contains	scripts/android-document-create-pointer.test.mjs	exact Create capture guard blocks a different target after admission
+contains	scripts/android-document-create-pointer.test.mjs	exact Create capture guard blocks writer scope drift after admission
 contains	scripts/android-webview-cdp.test.mjs	stable discovery retires a target that navigates away before accepting its replacement
 contains	scripts/android-webview-cdp.test.mjs	stable discovery reconnects a transiently blank snapshot for the same target
 contains	scripts/android-webview-cdp.test.mjs	renderer generation lease cannot be renewed by reconnecting the same target
@@ -1033,7 +1110,35 @@ contains	scripts/android-webview-cdp.test.mjs	stable discovery failure preserves
 contains	scripts/smoke-mobile-android-lifecycle.mjs	suspended editor must reject writes
 contains	scripts/lib/mobile-source-control-interaction.mjs	commit visible in history
 contains	scripts/smoke-mobile-android-lifecycle.mjs	buffered outbound write before suspend
-contains	scripts/lib/mobile-webview-interaction.mjs	same-breakpoint Android keyboard resize
+contains	scripts/lib/mobile-keyboard-presentation.mjs	same-breakpoint Android keyboard presentation
+contains	scripts/mobile-keyboard-presentation.test.mjs	keyboard presentation accepts current native inset when visual viewport is unchanged
+contains	scripts/mobile-keyboard-presentation.test.mjs	keyboard presentation keeps visual viewport primary when native inset is also available
+contains	scripts/mobile-keyboard-presentation.test.mjs	adjustResize viewport shrink is visible with zero additional overlay offset
+contains	scripts/mobile-keyboard-presentation.test.mjs	native fallback is rejected after viewport already shrank from hidden baseline
+contains	scripts/mobile-keyboard-presentation.test.mjs	native fallback is rejected after even a small viewport shrink
+contains	scripts/mobile-keyboard-presentation.test.mjs	Android Back waits through transient selection drift and retap may move the caret
+contains	scripts/mobile-keyboard-presentation.test.mjs	Android Back rejects persistent selection drift at the proof boundary
+contains	scripts/mobile-keyboard-presentation.test.mjs	keyboard presentation rejects selection drift without a user touch
+contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_recent_hidden_viewport_retires_same_width_historic_maximum()
+contains	scripts/lib/mobile-keyboard-presentation.mjs	export async function proveSameBreakpointKeyboardPresentation(
+contains	scripts/lib/mobile-keyboard-presentation.mjs	export function keyboardPresentationIsVisible(
+contains	docs/registry/acceptance-producers.json	scripts/lib/mobile-keyboard-presentation.mjs
+contains	docs/registry/acceptance-producers.json	scripts/lib/mobile-editor-session-observation.mjs
+contains	docs/registry/acceptance-producers.json	scripts/mobile-editor-session-observation.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/mobile-keyboard-presentation.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/lib/android-package-session.sh
+contains	docs/registry/acceptance-producers.json	scripts/android-package-session.test.sh
+contains	docs/registry/acceptance-producers.json	"DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE": "0"
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/mobile-keyboard-presentation.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/mobile-editor-session-observation.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/mobile-editor-session-observation.test.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-ime-test-session.sh
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-ime-test-session.test.sh
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-package-session.sh
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-package-session.test.sh
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-emulator-targeted-preflight.sh
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-remote-auth-flow.mjs
+contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TEST_IME_SERVICE="$ANDROID_IME_TEST_SELECTED_SERVICE"
 contains	scripts/lib/mobile-webview-interaction.mjs	android_pending_ack_marker_invalid
 contains	scripts/lib/websocket-delivery-gate.mjs	WebSocket.prototype.send = function gatedSend
 contains	apps/web/src/runtime/domain/scope.rs	RestoreSession
@@ -1043,6 +1148,7 @@ contains	scripts/check-mobile-android-shell-package-build.sh	RUST_TOOLCHAIN="${D
 contains	scripts/check-mobile-android-shell-package-build.sh	CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
 contains	scripts/smoke-mobile-android-lifecycle.sh	deve_mobile LocalBackend clean shutdown complete
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh
+contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE=1
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-GEN-005
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	cargo test -p deve_web action_visibility -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-GEN-005	ui_assert: explorer_create_visible_without_hover true
@@ -1077,6 +1183,24 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: ime_visib
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: activity_backgrounds_only_after_matching_unhandled_ack true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: stale_ack_and_timeout_do_not_background_or_exit_activity true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: root_back_keeps_pid_and_reentry_completes_lifecycle_rebind true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: target_host_root_back_does_not_repeat_back_to_hide_surface_leaks true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	run: node --test scripts/android-lifecycle-harness.test.mjs
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: unknown_resumed_activity_projection_fails_closed true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: resumed_activity_package_prefix_collision_fails_closed true
+contains	scripts/smoke-mobile-android-lifecycle.mjs	root Back proof requires every owned UI surface to be settled closed
+contains	scripts/lib/android-business-flow.mjs	await closeMobileSidebar(page, { click: clickVisible, waitUntil });
+contains	scripts/android-business-flow.test.mjs	Android last-repo removal closes the mobile drawer after snapshot-gated removal
+contains	scripts/lib/android-business-flow-removal-fixture.mjs	drawerCloseCount
+contains	docs/registry/acceptance-producers.json	scripts/lib/android-business-flow-removal-fixture.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-business-flow-removal-fixture.mjs
+contains	scripts/lib/android-lifecycle-harness.mjs	classifyAndroidActivityResumed
+contains	scripts/android-lifecycle-harness.test.mjs	HyperOS topResumedActivity
+contains	scripts/android-lifecycle-harness.test.mjs	fails closed when admitted keys conflict
+contains	scripts/android-lifecycle-harness.test.mjs	fails closed on package prefix collisions
+contains	scripts/android-lifecycle-harness.test.mjs	ResumedActivity: null
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-lifecycle-harness.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/android-lifecycle-harness.test.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-lifecycle-harness.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: webview_go_back_not_used true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	ui_assert: left_drawer_more_first_back_keeps_drawer_open true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	android_wait_root_surface: true

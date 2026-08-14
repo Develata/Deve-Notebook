@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-13`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -95,6 +95,7 @@ MobileColdStart
 *   Android 正式支持与可写 evidence baseline 是 Android 10 / API 29+ 且当前 WebView provider major 137+。该版本基线只决定 support/receipt 资格，不得替代真实 capability probe，也不得在前端解析 UA 或硬编码 OS gate。
 *   Android 可写 target-host gate 必须在业务步骤前记录 API level、WebView provider package/version、AVD/system-image 或真实设备标识，并执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。只有版本基线与 probe 同时满足才可生成 writable receipt；不满足时必须输出结构化 blocker、证明编辑器保持只读并停止可写业务步骤。
 *   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式、有界 RAM 和 `2048..8192 MiB` 的受控 writable data partition request（默认 `4096 MiB`）启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后，仍须在同一 boot deadline 内通过短时有界、只读 probe 确认 package manager 返回包含且仅包含规范 `package:<name>` 行（其中恰有一个 `package:android`），且 `settings get global device_provisioned` 返回规范 `0` / `1`，并要求两项 guest service 在至少 `10s` 的连续稳定窗口内保持 ready，再在安装前 fail-closed 解析 `/data` 容量，证明总容量不低于 request 的四分之三且可用空间至少 `1024 MiB`。稳定窗口内任一已准入的 package/settings bootstrap 暂态必须清零连续窗口并重新计时；未知错误、混合输出、timeout、中断或 process guard failure 必须立即传播，不得被后续成功 probe 覆盖；owned-emulator process guard 必须在最终准入前再次通过。APK install 若命中已准入的 package-service bootstrap/race signature，下一次 install attempt 前必须在同一 absolute install deadline 内重新完成同一连续稳定准入；每个带 timeout kill grace 的 probe 必须从剩余 deadline 预留该 grace，只有 bootstrap 恢复链中的精确 provider-race signature 可进入下一轮重新准入，首次出现、混合输出、未知错误或超时仍立即 fail-closed。缺失 `settings` service、system provider 尚未安装、非规范输出、单次 probe 超时或总 deadline 到期都不得准入 APK 安装；不得增加 install attempt 或用固定 sleep 代替 condition-based readiness。不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
+*   Android target-host 的首次文档 Create 证据必须把 quiet window 准入得到的精确 `repo_id + scope_nonce` 作为不可变期望值贯穿到 arm，并只在精确 path、唯一稳定 target 与 `ready + 非空 repo_id + 正整数 scope_nonce` 完全匹配时派发一次完整 native touch。`touchEnd` 命令完成不等价于浏览器已同步合成 `click`；harness 必须绑定本次 arm token，在不重发 Create 的前提下有界等待同一 click settlement，并以最终原子读取与 observer 清理的结果作结算。arm 时先安装页面侧 touch-transport lease，`touchEnd` 返回后再切换为 click-settlement deadline；二者到期都必须自行 expiry/seal，使宿主 finalize 在执行前断连时仍能阻断迟到 click。该 Create lane 在本次 document lifecycle 中是 single-use：成功后结束；错误 target、writer scope 变化、missing observation、driver error、cleanup error 或 settlement timeout 一旦进入 committed-unknown，必须封存并阻断后续迟到 click，只有新的页面 generation 才能重新准入，不得用第二次 Create 掩盖 committed-unknown。
 *   Android emulator binary identity probe 必须有独立的单调时间与输出字节上限，只接受 canonical
     `Android emulator version <version> (build_id <id>)` banner 的逐字段匹配；单独出现 version/build
     token、空输出、超时或超限输出都必须 fail-closed。若 emulator wrapper 在输出完整 canonical banner
@@ -303,8 +304,51 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 | Cmd+Z | Cmd+Shift+Z | Indent | `#` | `-` | `[ ]` | `**` | `_` | \` |
 
 **Technical Constraint**:
-必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
+必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡；
+该浏览器标准信号是所有 Web surface 的首选输入。bundled Android 必须按同一 viewport 宽度与同一 WebView
+presentation generation 保存最近一次由 native `imeVisible = false` 准入的稳定隐藏态 viewport 高度；同宽度窗口永久
+变矮或变高后必须以最近值替换历史值，不得永久保留最大高度。当前 viewport 相对该基线
+已经收缩时，即使 `innerHeight - visualViewport.height = 0`，也必须把键盘归类为 resize presentation，额外 bottom
+offset 保持为 `0`；只有 current-generation snapshot 可用、当前 overlap 为 `0`、隐藏态基线存在且 viewport 相对
+基线未收缩时，Web 才允许使用同一 snapshot 的 native IME bottom inset 作为 overlay 显示回退。宽度或 generation
+变化必须撤销旧基线并在新的隐藏态重建；两路高度不得相加或重复施加 padding。键盘是否可见与是否需要额外
+offset 是两个不同 presentation 事实，禁止用伪造的 `1px` offset 驱动 Toolbar 可见性。
+Android `MainActivity` **MUST** 在 manifest 明确声明 `android:windowSoftInputMode="adjustResize"`；不得依赖
+`adjustUnspecified` 让系统在 resize、pan 或 overlay 之间猜测。该 platform contract 请求平台优先把 IME overlap
+投影为缩小后的 WebView/`visualViewport`；但 OEM WebView 即使收到有效 root IME Insets 也可能不缩小
+`visualViewport`，因此不能把 resize 当成唯一可用的 presentation 证据。它不授予 DOM focus、editor writer 或
+lifecycle authority。
+由于 edge-to-edge/custom WebView layout 可能让 WebView 的默认 overlap bounds check 把 IME Insets 归零，Android
+presentation adapter **MUST** 是当前生成壳中 current-generation Wry WebView
+`OnApplyWindowInsetsListener` 单一槽的唯一 owner，并原样返回未修改的 `WindowInsetsCompat`，不得 consume、zero 或
+同时施加 native padding；当前生成的 Wry bridge 不得再占用该槽，若未来生成代码新增 owner，静态合同门必须
+fail-closed，不能以覆盖未知 listener 的方式继续打包。attach 后必须请求一次 Insets dispatch，detach/replacement
+只清理本 adapter 独占的 listener。adapter 必须把 decor-root 的 `imeVisible / imeBottomPx` 与
+`systemGestures` 一并写入既有 `(generation, epoch)` presentation snapshot；每个新 epoch 仍先发布 pending 使旧
+gesture/IME geometry 同时失效，只有 current valid snapshot 才可重新准入。该 listener 只承载 presentation 输入，
+不改变 DOM/editor 或业务 authority。Insets
+dispatch 必须输出固定、无敏感信息的 `android_webview_ime_insets_applied` checkpoint；只允许记录 current WebView
+generation、IME visible、WebView/decor-root bottom inset 与 WebView height 等 presentation geometry，不得记录输入内容、selection、session
+或 endpoint。`imeVisible = true` 但 `imeBottomPx <= 1`、数值非有限或几何越界时，native fallback 必须保持为 `0`，
+输出固定 `android_webview_ime_overlay_or_unavailable`，并允许用户再次轻触编辑器重试；不得根据输入法名称、屏幕比例
+或固定常量伪造键盘高度。native geometry 读取必须区分 `Ready / ImeOverlayOrUnavailable / Unavailable`；IME 可见但
+bottom 为 `0/1px`、越过 decor-root 高度或 density/geometry 无效时，每个 publish epoch 至多输出一次专用诊断，
+不得只落入通用 gesture unavailable。usable native fallback 只允许调整 editor 可视区域、Accessory Toolbar 与同一移动壳层的
+底部 presentation；不得改变 Markdown、selection、OpenDoc、writer/session/scope、lifecycle 或 foreground authority。
 软键盘引发的 viewport resize 在宽度仍处于同一 responsive breakpoint 时 **MUST NOT** 重建 MobileLayout 或 Editor；breakpoint 状态只允许在实际跨越阈值时更新，当前 editor mount、projection load session 与键盘焦点必须保持不变。
+target-host 证据必须把 editor load session 身份与 selection 身份分开比较：真实轻触建立 input connection 可以按用户触点移动
+caret，因此不得把该预期变化误报为 session replacement；IME Back、presentation 更新等不应移动 caret 的阶段仍必须以独立
+selection predicate 精确绑定 `from / to / rangeCount`。不含用户触摸的 IME Back 隐藏态只有在 load session 与 selection
+同时恢复到稳定匹配后才可准入，不得先接受第一个 hidden presentation frame 再把过渡态误报为 replacement；随后为重新建立
+input connection 发出的真实轻触只绑定 load session，允许 caret 按该触点移动。
+Android 正式 target-host/emulator receipt 必须继续以默认 package session 在退出时卸载精确应用包，保证跨运行隔离；
+uninstall 也必须返回唯一规范 `Success`，不得吞掉命令失败或异常输出后生成成功 receipt。
+本地物理设备诊断可显式设置 `DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE=1` 选择覆盖更新：该模式只有在精确包已安装时才准入，
+使后续 `adb install -r` 不触发 fresh-install 授权，并在每次已准入退出时先停止应用、再以 `pm clear` 清除测试数据但保留包。
+保留模式只用于本地快速定位，不得生成或替代正式 receipt；`pm clear` 必须返回唯一规范 `Success`，否则固定分类并 fail-closed。
+两个正式 Android producer 必须把 preserve mode 显式钉死为 `0`；若本地 preserve mode 同时收到任何 formal evidence/claims
+输出路径，package session 必须在安装和设备状态变更前拒绝运行，不能让宿主继承环境污染正式证据。
+当业务 journey 与任一模式的 package 清理同时失败时必须保留业务失败为主状态；只有业务成功而清理失败时，清理失败才成为最终 blocker。
 Android adapter 必须在 WebView attach 与 Activity 重新取得 window focus 时恢复 current-generation Wry WebView
 的 native View focus，使后续真实编辑器触摸能够建立受系统服务的 input connection；该操作不得改变 DOM selection、
 主动弹出 IME 或绕过 editor readonly/writer gate。不得用 JavaScript 定时重复 `focus()` / `showSoftInput()` 掩盖
@@ -344,7 +388,7 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
 *   **Interactive Safety**: Edge Swipe **MUST NOT** 抢占靠边可交互控件的真实点击，例如 `File tree`、`Toggle Outline` 等按钮。识别器在手势达到阈值前不得 `preventDefault` 或触发 Drawer intent；button、link、input、select 及显式 `data-no-edge-swipe` target 必须被排除。
 *   **Typed Presentation Hint**: Android adapter 必须按 WebView generation 发布固定、无敏感信息的
     JavaScript wire event
-    `deve-native-presentation-change { generation, epoch, widthPx, leftPx, rightPx, density }`。每轮 Insets 读取必须先发送
+    `deve-native-presentation-change { generation, epoch, widthPx, heightPx, leftPx, rightPx, density, imeVisible, imeBottomPx }`。每轮 Insets 读取必须先发送
     同 order 的 `system-gesture-insets-pending` 撤销旧激活带；Web 必须校验 generation/epoch、有限数值与几何边界后
     换算为 CSS px；bundled native 在首个有效 hint 前及任何 current pending/invalid hint 后 fail-closed，不得退回
     与系统 Back 重叠的绝对边缘。该 hint 只选择 presentation geometry，不授予 endpoint、session、writer 或
@@ -356,8 +400,9 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     的消息必须丢弃。普通 Web 未看到 marker 时立即使用普通边缘语义；任何 native marker 或 event 都只允许
     valid hint 解锁激活带，invalid/missing hint 必须保持 fail-closed。delivery 重试耗尽必须输出固定、无敏感信息的
     `android_system_gesture_insets_unavailable`，等待下一个 document/focus/layout/Insets 生命周期入口重试。
-    Insets 观察必须由 adapter 自有、零尺寸且不接收触摸的 observer 承载，不得覆盖 Wry/WebView 既有 listener；
-    不得用永久轮询代替 document 生命周期。
+    系统 Insets 变化的独立 lifecycle trigger 必须由 adapter 自有、零尺寸且不接收触摸的 sibling observer 承载；
+    该 observer 与前述 adapter 独占的 WebView IME passthrough listener 是两个不同职责，不得覆盖或替代 source slot，
+    也不得用永久轮询代替 document 生命周期。
 
 ## 4. Visual Adaptations
 
@@ -459,6 +504,13 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
     document pending-edit guard。typed `Unhandled` ack 只把 root task 移到后台，Activity/PID 不得由该路径
     主动结束；重新进入后仍必须完成 native lifecycle rebind。不得直接调用 `WebView.goBack()`，也不得在 ack
     超时后猜测退出或后台化。
+*   Android target-host 的 root Back 证据必须先显式关闭并等待本场景打开的 repo switcher、菜单、dialog 与左右
+    Drawer 全部收敛，再发送唯一一次用于证明 `Unhandled -> background` 的 Back；不得用连续 Back 掩盖测试编排
+    泄漏的 presentation surface，也不得把“关闭 Drawer”的 handled transition 冒充 root background。
+*   target-host 对 Activity 前后台的读取必须识别 AOSP `mResumedActivity` 以及 Android 15/OEM 可能投影的
+    `topResumedActivity` / `ResumedActivity` 规范记录，并按精确 package component 分类；不存在任何已批准 key、
+    已批准 key 无法解析唯一规范 component、多个 key 的 component 冲突、package 前缀碰撞或输出异常时必须返回
+    unavailable 并阻断证据，不能把未知格式当作已退后台，也不能从冲突样本中任选一个状态。
 
 ## 7. Performance & Size
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。

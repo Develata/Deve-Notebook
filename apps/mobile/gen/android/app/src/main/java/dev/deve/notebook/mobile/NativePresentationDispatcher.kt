@@ -31,6 +31,31 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     val ALLOWED_ORIGINS = setOf("*")
   }
 
+  private data class PresentationGeometry(
+    val widthPx: Int,
+    val heightPx: Int,
+    val leftPx: Int,
+    val rightPx: Int,
+    val density: Double,
+    val imeVisible: Boolean,
+    val imeBottomPx: Int,
+  )
+
+  private sealed class PresentationGeometryRead {
+    data class Ready(val geometry: PresentationGeometry) : PresentationGeometryRead()
+    data object ImeOverlayOrUnavailable : PresentationGeometryRead()
+    data object Unavailable : PresentationGeometryRead()
+  }
+
+  private data class ImeCheckpoint(
+    val generation: Long,
+    val webViewVisible: Boolean,
+    val webViewBottomPx: Int,
+    val rootVisible: Boolean,
+    val rootBottomPx: Int,
+    val webViewHeightPx: Int,
+  )
+
   private var webView: WebView? = null
   private var webViewGeneration = 0L
   private var publishEpoch = 0L
@@ -42,6 +67,9 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
   private var documentBridgeInstalled = false
   private var readyLoggedGeneration: Long? = null
   private var unavailableLoggedEpoch: Long? = null
+  private var imeOverlayLoggedEpoch: Long? = null
+  private var lastObservedGeometry: PresentationGeometryRead? = null
+  private var lastImeCheckpoint: ImeCheckpoint? = null
 
   fun attach(webView: WebView) {
     detachSource()
@@ -53,6 +81,7 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     }
     layoutListener = listener
     webView.addOnLayoutChangeListener(listener)
+    installWebViewInsetsListener(webView)
     installInsetsObserver(webView)
     beginPublish()
   }
@@ -73,6 +102,7 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     pendingPublish = null
     layoutListener?.let { source?.removeOnLayoutChangeListener(it) }
     layoutListener = null
+    source?.let { ViewCompat.setOnApplyWindowInsetsListener(it, null) }
     insetsObserver?.let { observer ->
       ViewCompat.setOnApplyWindowInsetsListener(observer, null)
       insetsObserverRoot?.removeView(observer)
@@ -93,6 +123,9 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
       }
     }
     documentBridgeInstalled = false
+    lastObservedGeometry = null
+    lastImeCheckpoint = null
+    imeOverlayLoggedEpoch = null
   }
 
   private fun installDocumentLifecycleBridge(source: WebView) {
@@ -180,21 +213,23 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     val runnable = Runnable {
       if (!isCurrent(source, generation, epoch)) return@Runnable
       pendingPublish = null
-      val widthPx = source.width
-      val density = activity.resources.displayMetrics.density.toDouble()
-      val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
-      val gestures = rootInsets?.getInsets(WindowInsetsCompat.Type.systemGestures())
-      if (widthPx <= 0 || !density.isFinite() || density <= 0.0 || gestures == null) {
-        schedulePublish(source, generation, epoch, attempt + 1)
-        return@Runnable
+      val geometry = when (val read = readPresentationGeometry(source)) {
+        is PresentationGeometryRead.Ready -> read.geometry
+        PresentationGeometryRead.ImeOverlayOrUnavailable -> {
+          logImeOverlayOrUnavailable(epoch)
+          schedulePublish(source, generation, epoch, attempt + 1)
+          return@Runnable
+        }
+        PresentationGeometryRead.Unavailable -> {
+          schedulePublish(source, generation, epoch, attempt + 1)
+          return@Runnable
+        }
       }
+      lastObservedGeometry = PresentationGeometryRead.Ready(geometry)
       val script = presentationScript(
         generation = generation,
         epoch = epoch,
-        widthPx = widthPx,
-        leftPx = gestures.left,
-        rightPx = gestures.right,
-        density = density,
+        geometry = geometry,
       )
       try {
         source.evaluateJavascript(script) { rawAck ->
@@ -235,6 +270,88 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     )
   }
 
+  private fun installWebViewInsetsListener(source: WebView) {
+    ViewCompat.setOnApplyWindowInsetsListener(source) { view, insets ->
+      if (webView === source) {
+        logImeCheckpoint(view, insets)
+        publishIfGeometryChanged(source)
+      }
+      insets
+    }
+    ViewCompat.requestApplyInsets(source)
+  }
+
+  private fun logImeCheckpoint(view: View, insets: WindowInsetsCompat) {
+    val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
+    val checkpoint = ImeCheckpoint(
+      generation = webViewGeneration,
+      webViewVisible = insets.isVisible(WindowInsetsCompat.Type.ime()),
+      webViewBottomPx = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom,
+      rootVisible = rootInsets?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+      rootBottomPx = rootInsets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0,
+      webViewHeightPx = view.height,
+    )
+    if (checkpoint == lastImeCheckpoint) return
+    lastImeCheckpoint = checkpoint
+    Log.i(
+      LOG_TAG,
+      "deve_mobile presentation checkpoint: android_webview_ime_insets_applied " +
+        "generation=${checkpoint.generation} visible=${checkpoint.webViewVisible} " +
+        "bottom_px=${checkpoint.webViewBottomPx} root_visible=${checkpoint.rootVisible} " +
+        "root_bottom_px=${checkpoint.rootBottomPx} webview_height_px=${checkpoint.webViewHeightPx}",
+    )
+  }
+
+  private fun logImeOverlayOrUnavailable(epoch: Long) {
+    if (imeOverlayLoggedEpoch == epoch) return
+    imeOverlayLoggedEpoch = epoch
+    Log.w(
+      LOG_TAG,
+      "deve_mobile presentation checkpoint: android_webview_ime_overlay_or_unavailable",
+    )
+  }
+
+  private fun publishIfGeometryChanged(source: WebView) {
+    val geometry = readPresentationGeometry(source)
+    if (geometry != lastObservedGeometry) {
+      lastObservedGeometry = geometry
+      beginPublish()
+    }
+  }
+
+  private fun readPresentationGeometry(source: WebView): PresentationGeometryRead {
+    val widthPx = source.width
+    val heightPx = activity.window.decorView.height
+    val density = activity.resources.displayMetrics.density.toDouble()
+    val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
+      ?: return PresentationGeometryRead.Unavailable
+    val gestures = rootInsets.getInsets(WindowInsetsCompat.Type.systemGestures())
+    val imeBottomPx = rootInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+    val imeVisible = rootInsets.isVisible(WindowInsetsCompat.Type.ime())
+    val baseGeometryValid =
+      widthPx > 0 && heightPx > 0 && density.isFinite() && density > 0.0
+    val imeGeometryValid =
+      imeBottomPx >= 0 && imeBottomPx <= heightPx && (!imeVisible || imeBottomPx > 1)
+    if (imeVisible && (!baseGeometryValid || !imeGeometryValid)) {
+      return PresentationGeometryRead.ImeOverlayOrUnavailable
+    }
+    if (
+      !baseGeometryValid ||
+      gestures.left < 0 || gestures.right < 0 || imeBottomPx < 0 || imeBottomPx > heightPx
+    ) return PresentationGeometryRead.Unavailable
+    return PresentationGeometryRead.Ready(
+      PresentationGeometry(
+        widthPx = widthPx,
+        heightPx = heightPx,
+        leftPx = gestures.left,
+        rightPx = gestures.right,
+        density = density,
+        imeVisible = imeVisible,
+        imeBottomPx = imeBottomPx,
+      ),
+    )
+  }
+
   private fun installInsetsObserver(source: WebView) {
     val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
     val observer = View(activity).apply {
@@ -243,7 +360,7 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
       importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     ViewCompat.setOnApplyWindowInsetsListener(observer) { _, insets ->
-      if (webView === source) beginPublish()
+      if (webView === source) publishIfGeometryChanged(source)
       insets
     }
     root.addView(observer, FrameLayout.LayoutParams(0, 0))
@@ -269,20 +386,20 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
   private fun presentationScript(
     generation: Long,
     epoch: Long,
-    widthPx: Int,
-    leftPx: Int,
-    rightPx: Int,
-    density: Double,
+    geometry: PresentationGeometry,
   ): String = """
     (() => {
       const snapshot = Object.freeze({
         kind: "system-gesture-insets",
         generation: $generation,
         epoch: $epoch,
-        widthPx: $widthPx,
-        leftPx: $leftPx,
-        rightPx: $rightPx,
-        density: $density
+        widthPx: ${geometry.widthPx},
+        heightPx: ${geometry.heightPx},
+        leftPx: ${geometry.leftPx},
+        rightPx: ${geometry.rightPx},
+        density: ${geometry.density},
+        imeVisible: ${geometry.imeVisible},
+        imeBottomPx: ${geometry.imeBottomPx}
       });
       window.__DEVE_ANDROID_PRESENTATION__ = snapshot;
       const detail = { ...snapshot, listenerSeen: false };

@@ -17,6 +17,10 @@ use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
+pub(super) fn mobile_content_keyboard_overlay_style(offset: i32) -> String {
+    format!("padding-bottom: {}px;", offset.max(0))
+}
+
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum MobileContentSurface {
@@ -41,6 +45,7 @@ pub(crate) fn mobile_content_surface_after_diff_close(
 pub fn MobileContent(
     drawer_open: Signal<bool>,
     current_editor_doc: Signal<Option<DocId>>,
+    keyboard_overlay_offset: Signal<i32>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let rendering = expect_context::<RenderingClient>();
@@ -78,7 +83,9 @@ pub fn MobileContent(
     });
     view! {
         <div
+            data-deve-native-keyboard-overlay=move || keyboard_overlay_offset.get().to_string()
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"
+            style=move || mobile_content_keyboard_overlay_style(keyboard_overlay_offset.get())
             class:pointer-events-none=move || drawer_open.get()
             class:opacity-80=move || drawer_open.get()
         >
@@ -129,7 +136,22 @@ pub fn MobileContent(
 
 #[cfg(test)]
 mod tests {
-    use super::{MobileContentSurface, mobile_content_surface_after_diff_close};
+    use super::{
+        MobileContentSurface, mobile_content_keyboard_overlay_style,
+        mobile_content_surface_after_diff_close,
+    };
+
+    #[test]
+    fn mobile_toolbar_keyboard_native_overlay_shrinks_editor_presentation_only() {
+        assert_eq!(
+            mobile_content_keyboard_overlay_style(338),
+            "padding-bottom: 338px;"
+        );
+        assert_eq!(
+            mobile_content_keyboard_overlay_style(-1),
+            "padding-bottom: 0px;"
+        );
+    }
 
     #[test]
     fn mobile_diff_close_returns_to_editor_surface() {

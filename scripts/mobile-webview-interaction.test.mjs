@@ -4,16 +4,21 @@ import test from "node:test";
 import {
   editorFocusMatchesMode,
   parsePendingAckCount,
-  readEditorMountObservation,
   readSourceControlCommitState,
-  sameEditorLoadSession,
   sourceControlCommitAcknowledged,
   sourceControlCommitReady,
   typeAndroidEditorText,
   typeAndroidTextField,
 } from "./lib/mobile-webview-interaction.mjs";
 import { focusEditor } from "./lib/mobile-webview-interaction.mjs";
-import { proveAndroidImeBackPriority } from "./lib/mobile-ime-back-proof.mjs";
+
+const SESSION_IDENTITY = Object.freeze({
+  docId: "doc-1",
+  repoId: "repo-1",
+  scopeNonce: "9",
+  presentationGeneration: 3,
+  selectionIdentity: { from: 5, to: 5, rangeCount: 1 },
+});
 
 test("writable editor focus requires a contenteditable CodeMirror surface", () => {
   assert.equal(editorFocusMatchesMode("true", true), true);
@@ -35,100 +40,6 @@ test("pending acknowledgement count fails closed on missing or invalid markers",
   for (const invalid of [null, undefined, "", "01", "-1", "1.5", "NaN"]) {
     assert.throws(() => parsePendingAckCount(invalid), /android_pending_ack_marker_invalid/);
   }
-});
-
-test("editor load-session comparison requires the same host and OpenDoc request", () => {
-  const before = { hostId: 7, openRequestId: "11" };
-  assert.equal(sameEditorLoadSession(before, { hostId: 7, openRequestId: "11" }), true);
-  assert.equal(sameEditorLoadSession(before, { hostId: 8, openRequestId: "11" }), false);
-  assert.equal(sameEditorLoadSession(before, { hostId: 7, openRequestId: "12" }), false);
-  assert.equal(sameEditorLoadSession(before, { hostId: null, openRequestId: "11" }), false);
-});
-
-test("Android Back dismisses IME without replacing the editor session and IME can reopen", async () => {
-  const base = {
-    hostId: 7,
-    openRequestId: "11",
-    point: { x: 24, y: 32 },
-    activeEditor: true,
-    bridgeReady: true,
-    activeHostMatchesVisible: true,
-    innerHeight: 800,
-  };
-  const observations = [
-    { ...base, visualViewportHeight: 500 },
-    { ...base, visualViewportHeight: 800 },
-    { ...base, visualViewportHeight: 500 },
-  ];
-  const order = [];
-  const waitUntil = async (label, predicate) => {
-    order.push(label);
-    const value = await predicate();
-    assert.ok(value, `${label} must succeed`);
-    return value;
-  };
-
-  const proof = await proveAndroidImeBackPriority({}, {
-    waitUntil,
-    platformBack: async () => order.push("platform-back"),
-    activateKeyboard: async (point) => {
-      assert.deepEqual(point, base.point);
-      order.push("activate-keyboard");
-    },
-    observeEditor: async () => observations.shift(),
-  });
-
-  assert.equal(sameEditorLoadSession(proof.before, proof.hidden), true);
-  assert.equal(sameEditorLoadSession(proof.hidden, proof.reopened), true);
-  assert.deepEqual(order, [
-    "Android IME-visible editor session",
-    "platform-back",
-    "Android IME-only back dismissal",
-    "activate-keyboard",
-    "Android IME reopened on the same editor",
-  ]);
-});
-
-test("editor observation clamps native tap to the visible host intersection", async () => {
-  const page = {
-    call: async (fn, expectedDocId) => {
-      const previous = globalThis.document;
-      const previousWindow = globalThis.window;
-      const rect = (left, top, right, bottom) => ({
-        left, top, right, bottom, width: right - left, height: bottom - top,
-      });
-      const editor = { getBoundingClientRect: () => rect(30, -7000, 390, 900) };
-      const codeHost = {
-        getBoundingClientRect: () => rect(20, 140, 392, 900),
-        querySelectorAll: () => [editor],
-      };
-      const host = {
-        getBoundingClientRect: () => rect(0, 120, 392, 900),
-        getAttribute: (key) => key === "data-deve-editor-doc-id" ? expectedDocId : "1",
-        querySelectorAll: () => [codeHost],
-      };
-      globalThis.window = {
-        innerWidth: 392,
-        innerHeight: 872,
-        devicePixelRatio: 2.75,
-        visualViewport: { height: 500 },
-        __deveWebBridge: undefined,
-      };
-      globalThis.document = {
-        activeElement: editor,
-        querySelectorAll: () => [host],
-      };
-      globalThis.getComputedStyle = () => ({ display: "block", visibility: "visible" });
-      try {
-        return fn(expectedDocId);
-      } finally {
-        globalThis.document = previous;
-        globalThis.window = previousWindow;
-      }
-    },
-  };
-  const observed = await readEditorMountObservation(page, "doc-1");
-  assert.deepEqual(observed.point, { x: 54, y: 164, devicePixelRatio: 2.75 });
 });
 
 test("editor focus targets the CodeMirror surface without a desktop pointer event", async () => {
@@ -259,6 +170,8 @@ test("Android editor input binds expected doc-id through native input connection
   };
 
   const observation = {
+    ...SESSION_IDENTITY,
+    docId: expectedDocId,
     hostId: 7,
     openRequestId: "11",
     point,
@@ -266,6 +179,7 @@ test("Android editor input binds expected doc-id through native input connection
     activeHostMatchesVisible: true,
     activeEditor: true,
   };
+  let observationCount = 0;
 
   await typeAndroidEditorText(page, "Android input", {
     tap: async (_page, observedPoint) => {
@@ -280,7 +194,13 @@ test("Android editor input binds expected doc-id through native input connection
     },
     observeEditor: async (_page, requiredDocId) => {
       assert.equal(requiredDocId, expectedDocId);
-      return observation;
+      observationCount += 1;
+      return observationCount === 1
+        ? observation
+        : {
+            ...observation,
+            selectionIdentity: { from: 6, to: 6, rangeCount: 1 },
+          };
     },
     inputText: async (value) => order.push(`input:${value}`),
     expectedDocId,
@@ -320,6 +240,7 @@ test("Android editor input fails closed after bounded focus retries", async () =
   };
 
   const observation = {
+    ...SESSION_IDENTITY,
     hostId: 7,
     openRequestId: "11",
     point,
@@ -354,6 +275,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
   const newPoint = { x: 48, y: 64 };
   const observations = [
     {
+      ...SESSION_IDENTITY,
       hostId: 7,
       openRequestId: "11",
       point: oldPoint,
@@ -361,6 +283,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       activeHostMatchesVisible: true,
     },
     {
+      ...SESSION_IDENTITY,
       hostId: 8,
       openRequestId: "12",
       point: newPoint,
@@ -369,6 +292,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       activeEditor: true,
     },
     {
+      ...SESSION_IDENTITY,
       hostId: 8,
       openRequestId: "12",
       point: newPoint,
@@ -377,6 +301,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       activeEditor: true,
     },
     {
+      ...SESSION_IDENTITY,
       hostId: 8,
       openRequestId: "12",
       point: newPoint,
@@ -385,6 +310,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       activeEditor: true,
     },
     {
+      ...SESSION_IDENTITY,
       hostId: 8,
       openRequestId: "12",
       point: newPoint,
@@ -393,6 +319,7 @@ test("Android editor input reacquires a remounted editor before typing once", as
       activeEditor: true,
     },
     {
+      ...SESSION_IDENTITY,
       hostId: 8,
       openRequestId: "12",
       point: newPoint,

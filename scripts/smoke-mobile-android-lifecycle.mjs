@@ -3,7 +3,7 @@ import {
   proveAndroidReadonlyMutationRejected,
   verifyAndroidIdentityCapability,
 } from "./lib/android-identity-capability.mjs";
-import { writeAndroidWritableEvidence } from "./lib/android-writable-evidence.mjs";
+import { writeAndroidLocalBackendEvidence } from "./lib/android-writable-evidence.mjs";
 import {
   findStableAppPage,
   isExpectedCdpTargetRetirement,
@@ -12,11 +12,11 @@ import {
 import {
   focusAndroidEditorInputConnection,
   focusEditor,
-  proveSameBreakpointKeyboardResize,
   readPendingAckCount,
   typeAndroidEditorText,
   typeEditor,
 } from "./lib/mobile-webview-interaction.mjs";
+import { proveSameBreakpointKeyboardPresentation } from "./lib/mobile-keyboard-presentation.mjs";
 import { proveAndroidImeBackPriority } from "./lib/mobile-ime-back-proof.mjs";
 import {
   proveAndroidDrawerGesturesAfterReload,
@@ -37,7 +37,6 @@ import {
   installWebSocketDeliveryGate,
   pauseWebSocketDelivery,
 } from "./lib/websocket-delivery-gate.mjs";
-
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_LIFECYCLE_TIMEOUT_MS ?? "90000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
 const adb = process.env.DEVE_MOBILE_ANDROID_ADB_BIN;
@@ -46,6 +45,7 @@ const appId = process.env.DEVE_MOBILE_ANDROID_APP_ID ?? "dev.deve.notebook.mobil
 const expectWritable = process.env.DEVE_MOBILE_ANDROID_EXPECT_WRITABLE !== "0";
 const targetFactsPath = process.env.DEVE_MOBILE_ANDROID_TARGET_FACTS_PATH;
 const evidencePath = process.env.DEVE_MOBILE_ANDROID_EVIDENCE_PATH;
+const testImeService = process.env.DEVE_MOBILE_ANDROID_TEST_IME_SERVICE ?? null;
 const {
   remainingMs,
   delay,
@@ -56,8 +56,8 @@ const {
   tapAndroidEditor: focusWebViewEditorAtPoint,
   proveAndroidRootBackBackground,
   waitForAndroidRootReentry,
+  readAndroidUiBackSurfaceObservation,
 } = createAndroidLifecycleHarness({ timeoutMs, adb, serial });
-
 async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
     delay,
@@ -66,7 +66,6 @@ async function inputAndroidEditorText(content, _point, page, expectedDocId = nul
     expectedDocId,
   });
 }
-
 async function waitForWritableEditor(page, expectedDocIdOrTimeout = null, timeout = 30000) {
   const expectedDocId = typeof expectedDocIdOrTimeout === "string"
     ? expectedDocIdOrTimeout
@@ -302,12 +301,12 @@ async function main() {
 
   const pendingText = `-pending-across-restart-${stamp}`;
   adbCommand("shell", "input", "keyevent", "111");
-  const keyboardResize = await proveSameBreakpointKeyboardResize(page, {
+  const keyboardPresentation = await proveSameBreakpointKeyboardPresentation(page, {
     waitUntil,
     activateKeyboard: focusWebViewEditorAtPoint,
   });
   console.log(
-    `mobile-android-lifecycle: keyboard resize ${JSON.stringify(keyboardResize)}`,
+    `mobile-android-lifecycle: keyboard presentation ${JSON.stringify(keyboardPresentation)}`,
   );
   const imeBackPriority = await proveAndroidImeBackPriority(page, {
     waitUntil,
@@ -432,6 +431,24 @@ async function main() {
     minimumScopeNonce: firstRepo.created.scopeNonce,
   });
   const presentationBeforeRootBack = await waitForAcceptedAndroidPresentation(page, waitUntil);
+  const rootSurfaceBefore = await readAndroidUiBackSurfaceObservation(page);
+  console.log(
+    `mobile-android-lifecycle: root Back surface ${JSON.stringify(rootSurfaceBefore)}`,
+  );
+  assert.deepEqual(rootSurfaceBefore, {
+    editorVisible: false,
+    repoSwitcherVisible: false,
+    repoRemovalDialogVisible: false,
+    settingsVisible: false,
+    searchVisible: false,
+    mobileMoreMenuVisible: false,
+    sourceControlMenuVisible: false,
+    surfaceSwitcherVisible: false,
+    chatExpanded: false,
+    leftDrawerOpen: false,
+    rightDrawerOpen: false,
+    visibleDialogCount: 0,
+  }, "Android root Back proof requires every owned UI surface to be settled closed");
   const rootBackProof = await proveAndroidRootBackBackground(appId, () =>
     waitForAndroidRootReentry(async () => {
       const [state, projection, presentation] = await Promise.all([
@@ -445,52 +462,34 @@ async function main() {
         }),
       ]);
       return { state, projection, presentation };
-    }, presentationBeforeRootBack));
-  writeAndroidWritableEvidence({
+    }, presentationBeforeRootBack)).catch(async (error) => {
+    const rootSurfaceAfter = await readAndroidUiBackSurfaceObservation(page).catch(
+      (observationError) => ({ observationError: observationError.message }),
+    );
+    throw new Error(
+      `${error.message}; rootBack=${JSON.stringify({
+        before: rootSurfaceBefore,
+        after: rootSurfaceAfter,
+      })}`,
+      { cause: error },
+    );
+  });
+  writeAndroidLocalBackendEvidence({
     evidencePath,
     targetFactsPath,
-    producer: "smoke-mobile-android-lifecycle",
-    mode: "local-backend",
-    webcrypto: identityCapability,
+    identityCapability,
+    firstRepo,
+    drawerGestureProof,
+    keyboardPresentation,
+    testImeService,
     repoLifecycle,
-    journey: {
-      loginOrNativeSession: true,
-      bootstrapUnbound: {
-        syncStatus: firstRepo.initial.status,
-        repoIdEmpty: firstRepo.initial.repoIdRaw === "",
-        scopeNonce: firstRepo.initial.scopeNonce,
-        defaultRepoAbsent: firstRepo.defaultRepoAbsent,
-      },
-      firstCreate: {
-        writerReady: firstRepo.created.status === "ready",
-        repoIdBound: Boolean(firstRepo.created.repoId),
-        scopeNonce: firstRepo.created.scopeNonce,
-        aliasCount: firstRepo.aliasCount,
-      },
-      edit: true,
-      commitHistory: true,
-      backgroundResume: true,
-      staleScopeRejected: true,
-      pendingPreserved: true,
-      nativeSystemGestureInsetsAcceptedAfterReload: true,
-      nativeDrawerGesturesAfterReload: drawerGestureProof.leftDrawerOpened
-        && drawerGestureProof.rightDrawerOpened
-        && drawerGestureProof.pidStable,
-      imeBackPreservedEditorSession: true,
-      imeRetapReopenedKeyboard: true,
-      repoRemovalNoScope: repoLifecycle.noScope,
-      rootBackBackgroundsTaskWithStablePid: rootBackProof.rootBackBackgrounded
-        && rootBackProof.pidStable
-        && rootBackProof.reentryReady,
-      writableLifecycleComplete: true,
-    },
+    rootBackProof,
   });
 
   console.log("mobile-android-lifecycle: requesting graceful native exit");
   await requestGracefulNativeExit(page);
   console.log("mobile-android-lifecycle: ok");
 }
-
 main().then(
   () => process.exit(0),
   (error) => {

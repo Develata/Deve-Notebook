@@ -293,11 +293,12 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
+    - run: node --test scripts/android-document-create-pointer.test.mjs
     - receipt: `repo-lifecycle.process-linux` 在 Linux exact HEAD 原子执行 removal runtime、真实 `deve` preview/apply/repair 子进程、20/21/22 映射、lost-response replay、secondary preservation 与 last-repo NoScope
     - receipt: `repo-lifecycle.process-windows` 在 Windows exact HEAD 执行同一命令组并产生独立 evidence ID，不与 Linux receipt 形成双重身份
     - receipt: `docker.multiclient-product` 通过真实 candidate image 浏览器 journey 证明 backend preview、initiator/observer finalization、last-repo NoScope、restart 后 first-create 与 workspace/Git preservation
     - receipt: `desktop.local-backend` 与 `desktop.remote-browser` 分别通过安装后的 Windows WebView typed claims 证明 last-repo removal/NoScope，并由各自 host harness 证明 sidecar/recovery cleanup
-    - receipt: `android.local-backend` 与 `android.remote-browser` 分别通过 target-qualified WebView typed claims 证明 last-repo removal/NoScope，并保留已有 restart/recovery/no-orphan 证据
+    - receipt: `android.local-backend` 与 `android.remote-browser` 分别通过 target-qualified WebView typed claims 证明 last-repo removal/NoScope，并保留已有 restart/recovery/no-orphan 证据；首次 Create 把 quiet window 准入的精确 writer scope 绑定到 arm，仅派发一次 native touch，区分 touch-transport lease 与 touchEnd 后 click-settlement deadline，并以同一 token 原子完成结算；本 document 的 single-use Create lane 随后封存，不能重发 Create，也不能让超时后的迟到 click 命中下一轮 observation
     - run: cargo test -p deve_core --lib local_authority_runtime_retires_bootstrap_and_secondary_with_identical_semantics -- --nocapture
     - run: cargo test -p deve_cli --test zero_repo_server_runtime_test -- --nocapture
     - run: cargo test -p deve_cli --lib zero_repo_host_starts_no_scope_and_creates_from_configured_base -- --nocapture
@@ -343,6 +344,7 @@
     - chrome_mcp: 在 failure fixture 中分别执行 create/remove 与 alias store failure，观察最终 scope/list/display publication
   assertions:
     - ui_assert: repo_switcher_create_button_visible true
+    - native_assert: android_first_create_single_touch_waits_for_same_token_click_settlement_and_seals_committed_unknown true
     - ui_assert: repo_row_more_menu_contains_alias_and_remove true
     - ui_assert: alias_change_preserves_repo_id_scope_and_workspace true
     - ui_assert: removed_repo_hidden_from_normal_list true

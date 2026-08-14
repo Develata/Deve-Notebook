@@ -1302,6 +1302,22 @@ With an already booted emulator and built debug APK, run the narrower gate:
 DEVE_MOBILE_ANDROID_SERIAL=emulator-5554 DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 scripts/smoke-mobile-android-lifecycle.sh
 ```
 
+On a physical device whose OEM requires confirmation for every fresh install,
+approve one initial installation, then opt in to the local-only overlay-update
+session. The package must already be installed; every admitted exit restores
+the prior IME, stops the app, and requires canonical `pm clear` success while
+leaving the package installed for the next `adb install -r`. This mode is a
+diagnostic convenience and cannot produce or replace the formal emulator
+receipt:
+
+```bash
+DEVE_MOBILE_ANDROID_SERIAL=<physical-serial> \
+DEVE_MOBILE_ANDROID_LIFECYCLE_SMOKE_REQUIRED=1 \
+DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE=1 \
+DEVE_MOBILE_ANDROID_TEST_IME_SERVICE=<installed-ime-component> \
+scripts/smoke-mobile-android-lifecycle.sh
+```
+
 Capture an AOSP 124/133-style read-only negative receipt by selecting the
 explicit negative mode. This mode succeeds only when the real Ed25519 probe is
 unavailable and the product visibly remains read-only; it cannot satisfy the

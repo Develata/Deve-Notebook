@@ -11,7 +11,7 @@ use super::{
 #[test]
 fn expanded_chat_stays_visible_when_keyboard_is_open() {
     assert!(should_show_mobile_chat_sheet(
-        true, false, false, false, true, 280
+        true, false, false, false, true, true
     ));
     let style = mobile_chat_sheet_style(true, 280);
     assert!(style.contains("padding-top: env(safe-area-inset-top);"));
@@ -21,7 +21,7 @@ fn expanded_chat_stays_visible_when_keyboard_is_open() {
 #[test]
 fn mobile_chat_keyboard_sheet_stays_above_keyboard() {
     assert!(should_show_mobile_chat_sheet(
-        true, false, false, false, true, 320
+        true, false, false, false, true, true
     ));
     assert!(mobile_chat_sheet_style(true, 320).contains("bottom: 320px;"));
 }
@@ -29,44 +29,44 @@ fn mobile_chat_keyboard_sheet_stays_above_keyboard() {
 #[test]
 fn collapsed_chip_hides_when_keyboard_is_open() {
     assert!(!should_show_mobile_chat_sheet(
-        true, false, false, false, false, 280
+        true, false, false, false, false, true
     ));
 }
 
 #[test]
 fn drawer_and_diff_still_hide_mobile_chat() {
     assert!(!should_show_mobile_chat_sheet(
-        true, true, false, false, true, 0
+        true, true, false, false, true, false
     ));
     assert!(!should_show_mobile_chat_sheet(
-        true, false, true, false, true, 0
+        true, false, true, false, true, false
     ));
 }
 
 #[test]
 fn mobile_diff_hides_chat_chip_and_expanded_chat() {
     assert!(!should_show_mobile_chat_sheet(
-        true, false, true, false, false, 0
+        true, false, true, false, false, false
     ));
     assert!(!should_show_mobile_chat_sheet(
-        true, false, true, false, true, 0
+        true, false, true, false, true, false
     ));
 }
 
 #[test]
 fn mobile_surface_switcher_hides_chat_sheet() {
     assert!(!should_show_mobile_chat_sheet(
-        true, false, false, true, false, 0
+        true, false, false, true, false, false
     ));
     assert!(!should_show_mobile_chat_sheet(
-        true, false, false, true, true, 0
+        true, false, false, true, true, false
     ));
 }
 
 #[test]
 fn collapsed_chip_uses_footer_offset_when_keyboard_is_closed() {
     assert!(should_show_mobile_chat_sheet(
-        true, false, false, false, false, 0
+        true, false, false, false, false, false
     ));
     assert_eq!(
         mobile_chat_sheet_style(false, 0),

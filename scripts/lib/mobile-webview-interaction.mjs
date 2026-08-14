@@ -1,4 +1,15 @@
 import { clickWebViewPoint } from "./android-webview-pointer.mjs";
+import {
+  readEditorMountObservation,
+  sameEditorLoadSession,
+  sameEditorSelectionIdentity,
+} from "./mobile-editor-session-observation.mjs";
+
+export {
+  readEditorMountObservation,
+  sameEditorLoadSession,
+  sameEditorSelectionIdentity,
+};
 
 export function editorFocusMatchesMode(contentEditable, writable, activeEditor = true) {
   if (!activeEditor) return false;
@@ -53,114 +64,6 @@ export function sourceControlCommitAcknowledged(state) {
   return state?.confirmedCount === 0 && state.message === "";
 }
 
-export async function readEditorMountObservation(page, expectedDocId = null) {
-  return page.call((requiredDocId) => {
-    const isVisible = (element) => {
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== "none"
-        && style.visibility !== "hidden"
-        && rect.width > 0
-        && rect.height > 0;
-    };
-    const visibleHosts = [...document.querySelectorAll("[data-deve-editor-host=true]")]
-      .filter(isVisible);
-    const candidates = requiredDocId === null
-      ? visibleHosts
-      : visibleHosts.filter((candidate) =>
-        candidate.getAttribute("data-deve-editor-doc-id") === requiredDocId);
-    const host = candidates.length === 1
-      && (requiredDocId === null || visibleHosts.length === 1)
-      ? candidates[0]
-      : null;
-    const codeHost = host
-      ? [...host.querySelectorAll("[data-deve-editor-codemirror-host=true]")].find(isVisible)
-      : null;
-    const editor = codeHost
-      ? [...codeHost.querySelectorAll(".cm-content")].find(isVisible)
-      : null;
-    const bootstrap = globalThis.__deveWebBridge?.get?.("__deveEditorBootstrap");
-    const registry = globalThis.__deveSmokeEditorHostRegistry ??= {
-      ids: new WeakMap(),
-      nextId: 1,
-    };
-    let hostId = null;
-    if (host) {
-      hostId = registry.ids.get(host) ?? registry.nextId++;
-      registry.ids.set(host, hostId);
-    }
-    const rect = editor?.getBoundingClientRect();
-    const codeHostRect = codeHost?.getBoundingClientRect();
-    const hostRect = host?.getBoundingClientRect();
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const point = rect && codeHostRect && hostRect
-      ? (() => {
-          const left = Math.max(0, rect.left, codeHostRect.left, hostRect.left);
-          const right = Math.min(window.innerWidth, rect.right, codeHostRect.right, hostRect.right);
-          const top = Math.max(0, rect.top, codeHostRect.top, hostRect.top);
-          const bottom = Math.min(viewportHeight, rect.bottom, codeHostRect.bottom, hostRect.bottom);
-          return right > left && bottom > top
-            ? {
-                x: left + Math.min(24, (right - left) / 2),
-                y: top + Math.min(24, (bottom - top) / 2),
-                devicePixelRatio: window.devicePixelRatio || 1,
-              }
-            : null;
-        })()
-      : null;
-    return {
-      hostId,
-      docId: host?.getAttribute("data-deve-editor-doc-id") ?? null,
-      visibleHostCount: visibleHosts.length,
-      openRequestId: host?.getAttribute("data-deve-editor-open-request-id") ?? null,
-      point,
-      viewportWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-      visualViewportHeight: viewportHeight,
-      activeEditor: document.activeElement?.classList?.contains("cm-content") ?? false,
-      bridgeReady: bootstrap?.editorBridgeReady === true,
-      activeHostMatchesVisible: bootstrap?.activeHost === codeHost,
-    };
-  }, expectedDocId);
-}
-
-export function sameEditorLoadSession(before, after) {
-  return before?.hostId != null
-    && before.hostId === after?.hostId
-    && before.openRequestId != null
-    && before.openRequestId === after?.openRequestId;
-}
-
-export async function proveSameBreakpointKeyboardResize(
-  page,
-  { waitUntil, activateKeyboard, maxViewportWidth = 768, minHeightDelta = 80 },
-) {
-  const baseline = await waitUntil("Android keyboard hidden baseline", async () => {
-    const observation = await readEditorMountObservation(page);
-    return observation.innerHeight - observation.visualViewportHeight < minHeightDelta
-      ? observation
-      : null;
-  }, 10000);
-  const point = await focusEditor(page, { requireFocused: false });
-  await activateKeyboard(point, page);
-  const resized = await waitUntil("same-breakpoint Android keyboard resize", async () => {
-    const observation = await readEditorMountObservation(page);
-    return observation.activeEditor
-      && observation.bridgeReady
-      && observation.activeHostMatchesVisible
-      && observation.visualViewportHeight < baseline.visualViewportHeight - minHeightDelta
-      ? observation
-      : null;
-  }, 10000);
-  if (!sameEditorLoadSession(baseline, resized)) {
-    throw new Error("same-breakpoint keyboard resize replaced editor host or OpenDoc request");
-  }
-  if (baseline.viewportWidth > maxViewportWidth || resized.viewportWidth > maxViewportWidth) {
-    throw new Error("keyboard resize crossed the expected mobile breakpoint");
-  }
-  return { baseline, resized };
-}
-
 export async function focusEditor(
   page,
   { writable = true, requireFocused = true, expectedDocId = null } = {},
@@ -202,9 +105,19 @@ export async function focusEditor(
     selection?.removeAllRanges();
     selection?.addRange(range);
     const rect = editor.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportRight = viewportLeft + (viewport?.width ?? window.innerWidth);
+    const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
+    const left = Math.max(rect.left, viewportLeft);
+    const right = Math.min(rect.right, viewportRight);
+    const top = Math.max(rect.top, viewportTop);
+    const bottom = Math.min(rect.bottom, viewportBottom);
+    if (right <= left || bottom <= top) return null;
     return {
-      x: rect.left + Math.min(24, rect.width / 2),
-      y: rect.top + Math.min(24, rect.height / 2),
+      x: left + Math.min(24, (right - left) / 2),
+      y: top + Math.min(24, (bottom - top) / 2),
       devicePixelRatio: window.devicePixelRatio || 1,
       rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
     };
