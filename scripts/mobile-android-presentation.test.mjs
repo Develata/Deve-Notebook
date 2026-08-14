@@ -17,6 +17,7 @@ import {
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const localJourney = read("./smoke-mobile-android-lifecycle.mjs");
 const remoteJourney = read("./smoke-mobile-android-remote-browser.mjs");
+const writableEvidence = read("./lib/android-writable-evidence.mjs");
 const presentationProof = read("./lib/android-presentation-proof.mjs");
 const touchProof = read("./lib/android-drawer-touch-proof.mjs");
 const nativeDispatcher = read("../apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt");
@@ -94,7 +95,7 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(presentationProof, /DRAWER_TRANSITION_SETTLE_MS/);
   assert.match(presentationProof, /MAX_SWIPE_DELIVERY_ATTEMPTS = 2/);
   assert.match(presentationProof, /assert\.equal\(pidAfter, pidBefore/);
-  assert.match(localJourney, /nativeDrawerGesturesAfterReload:/);
+  assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
 });
 
