@@ -51,7 +51,8 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                     aria-modal="true"
                     aria-label=move || command_palette_dialog_label(locale.get())
                     tabindex="-1"
-                    class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
+                    class="absolute left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100"
+                    style="top: calc(0.5rem + var(--deve-safe-area-top)); max-height: min(60vh, calc(100dvh - var(--deve-safe-area-top) - var(--deve-safe-area-bottom) - 1rem));"
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
                     on:keydown={
                         let handle_keydown = handle_keydown.clone();

@@ -13,7 +13,9 @@
 ### 1. Top Bar 与 Drawer
 
 - 用户应能通过 top bar 打开文件树或命令入口。
+- Android edge-to-edge 壳层必须把状态栏、刘海与底部系统导航区投影为共享安全区；top bar 不得抵住或进入状态栏，bottom bar/键盘工具栏不得贴住手势条或留下异色白边。Android system bar 使用透明、无强制 contrast scrim 的 Day/Night-aware 合成，主题背景连续绘制到底部手势区；普通 Web/iOS 继续使用浏览器 safe-area，不能按设备型号写固定 padding。
 - 左/右 drawer 应可打开、关闭、切换，并且与主内容区配合清晰。
+- 左右 Drawer 的标题栏总高必须在 48px 内容区之外再包含顶部安全区，44px 关闭按钮不得因 border-box padding 被挤回状态栏；Settings 底部 Sheet 与 Command Palette 也必须同时避开 canonical top/bottom safe area。
 - 从左侧系统返回手势区的内侧向右滑应打开文件树；从右侧系统返回手势区的内侧向左滑应打开当前 Markdown 的逐级标题大纲。普通移动 Web 仍从屏幕边缘起算；若 OEM 把标准系统手势 Insets 错报为零，Android native 使用 24 CSS px 的跨密度保守安全下限。每次页面重载或远程导航都必须重新取得当代 Android presentation hint 后才开放该激活带。该手势可从编辑器边缘开始，但绝对系统边缘继续归 Android Back，短拖动、纵向滚动、多指操作和靠边按钮点击不能误开 drawer。
 
 ### 2. 移动端核心面板
@@ -48,6 +50,7 @@
 ### 4. 搜索与 Sheet
 
 - Search / Command 入口在移动端应以适合窄屏的方式呈现。
+- Settings、Search 与 Command 等移动 Sheet 的可见面板必须位于状态栏下方，末端内容与控件必须位于底部系统导航区上方。
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 - Sheet 打开时不得自动聚焦输入框或弹出软键盘；初始焦点进入面板或 44×44 的 `×` 关闭按钮。
 - 用户可通过 `×`、外部点击、上滑或系统返回关闭最上层 surface。
@@ -140,11 +143,13 @@
 1. 观察 top bar、bottom bar、内容区。
 2. 尝试打开搜索或命令入口。
 3. 观察只读、连接、状态栏信息是否仍可见。
+4. 在 Android edge-to-edge 壳层记录状态栏/导航栏 Insets 与页面 canonical safe-area computed style。
 
 期望结果：
 
 - 移动端壳层服务于同一套核心工作流。
 - 关键状态与命令入口不会因为窄屏而丢失。
+- top bar 位于状态栏安全区内侧，bottom bar 与浮动控件位于系统导航区内侧；系统栏下方延续当前主题背景，不出现异色白边。
 
 ### MOBILE-UI-03: Mobile 多文件与 Diff 切换
 

@@ -29,7 +29,7 @@ pub(super) fn panel_style(
                 "transform 200ms ease-out"
             };
             format!(
-                "padding-top: env(safe-area-inset-top); transform: translateY({}px); transition: {};",
+                "padding-top: var(--deve-safe-area-top); transform: translateY({}px); transition: {};",
                 sheet_drag_offset, transition
             )
         }
@@ -87,7 +87,7 @@ mod tests {
     fn mobile_search_sheet_drag_style_moves_upward() {
         assert_eq!(
             panel_style(SearchUiMode::Sheet, -64, true),
-            "padding-top: env(safe-area-inset-top); transform: translateY(-64px); transition: none;"
+            "padding-top: var(--deve-safe-area-top); transform: translateY(-64px); transition: none;"
         );
         assert!(panel_style(SearchUiMode::Overlay, -64, true).is_empty());
     }

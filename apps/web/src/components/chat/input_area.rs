@@ -16,7 +16,7 @@ pub(crate) fn mobile_chat_input_area_class(mobile: bool) -> &'static str {
 
 pub(crate) fn mobile_chat_input_area_style(mobile: bool) -> &'static str {
     if mobile {
-        "padding-bottom: calc(8px + env(safe-area-inset-bottom));"
+        "padding-bottom: calc(8px + var(--deve-safe-area-bottom));"
     } else {
         ""
     }
@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn mobile_chat_keyboard_input_area_uses_safe_area_padding() {
         assert!(mobile_chat_input_area_class(true).contains("p-2"));
-        assert!(mobile_chat_input_area_style(true).contains("safe-area-inset-bottom"));
+        assert!(mobile_chat_input_area_style(true).contains("--deve-safe-area-bottom"));
         assert_eq!(mobile_chat_input_area_style(false), "");
     }
 

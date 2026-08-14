@@ -24,7 +24,7 @@ pub(super) fn toolbar_button_type() -> &'static str {
 
 pub(super) fn mobile_toolbar_style(keyboard_offset: i32) -> String {
     format!(
-        "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",
+        "bottom: calc({}px + {}px + var(--deve-safe-area-bottom));",
         keyboard_offset, FOOTER_HEIGHT_PX
     )
 }
@@ -208,7 +208,7 @@ mod tests {
     fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard() {
         assert_eq!(
             mobile_toolbar_style(312),
-            "bottom: calc(312px + 0px + env(safe-area-inset-bottom));"
+            "bottom: calc(312px + 0px + var(--deve-safe-area-bottom));"
         );
     }
 

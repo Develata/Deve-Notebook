@@ -37,9 +37,9 @@ pub fn OutlineToggleButton(
             class=move || outline_toggle_button_class(show_outline.get())
             style=move || {
                 if show_outline.get() {
-                    "top: calc(env(safe-area-inset-top) + 54px); right: calc(min(78vw, 320px) - 8px);"
+                    "top: calc(var(--deve-safe-area-top) + 54px); right: calc(min(78vw, 320px) - 8px);"
                 } else {
-                    "top: calc(env(safe-area-inset-top) + 54px); right: 10px;"
+                    "top: calc(var(--deve-safe-area-top) + 54px); right: 10px;"
                 }
             }
             title=move || t::header::toggle_outline(locale.get())

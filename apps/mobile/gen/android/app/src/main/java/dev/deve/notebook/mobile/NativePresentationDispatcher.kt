@@ -36,6 +36,8 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     val heightPx: Int,
     val leftPx: Int,
     val rightPx: Int,
+    val safeTopPx: Int,
+    val safeBottomPx: Int,
     val density: Double,
     val imeVisible: Boolean,
     val imeBottomPx: Int,
@@ -326,6 +328,9 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     val rootInsets = ViewCompat.getRootWindowInsets(activity.window.decorView)
       ?: return PresentationGeometryRead.Unavailable
     val gestures = rootInsets.getInsets(WindowInsetsCompat.Type.systemGestures())
+    val safeArea = rootInsets.getInsets(
+      WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+    )
     val imeBottomPx = rootInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
     val imeVisible = rootInsets.isVisible(WindowInsetsCompat.Type.ime())
     val baseGeometryValid =
@@ -337,7 +342,10 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
     }
     if (
       !baseGeometryValid ||
-      gestures.left < 0 || gestures.right < 0 || imeBottomPx < 0 || imeBottomPx > heightPx
+      gestures.left < 0 || gestures.right < 0 ||
+      safeArea.top < 0 || safeArea.bottom < 0 ||
+      safeArea.top.toLong() + safeArea.bottom.toLong() > heightPx.toLong() ||
+      imeBottomPx < 0 || imeBottomPx > heightPx
     ) return PresentationGeometryRead.Unavailable
     return PresentationGeometryRead.Ready(
       PresentationGeometry(
@@ -345,6 +353,8 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
         heightPx = heightPx,
         leftPx = gestures.left,
         rightPx = gestures.right,
+        safeTopPx = safeArea.top,
+        safeBottomPx = safeArea.bottom,
         density = density,
         imeVisible = imeVisible,
         imeBottomPx = imeBottomPx,
@@ -397,6 +407,8 @@ internal class NativePresentationDispatcher(private val activity: MainActivity) 
         heightPx: ${geometry.heightPx},
         leftPx: ${geometry.leftPx},
         rightPx: ${geometry.rightPx},
+        safeTopPx: ${geometry.safeTopPx},
+        safeBottomPx: ${geometry.safeBottomPx},
         density: ${geometry.density},
         imeVisible: ${geometry.imeVisible},
         imeBottomPx: ${geometry.imeBottomPx}

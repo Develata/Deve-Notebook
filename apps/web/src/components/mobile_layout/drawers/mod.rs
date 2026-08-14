@@ -66,13 +66,28 @@ pub(super) fn drawer_aria_hidden(open: bool) -> &'static str {
     if open { "false" } else { "true" }
 }
 
+pub(super) fn drawer_header_class() -> &'static str {
+    "px-3 shrink-0 flex items-center justify-between border-b border-default text-sm font-semibold"
+}
+
+pub(super) fn drawer_header_style() -> &'static str {
+    "min-height: calc(3rem + var(--deve-safe-area-top)); padding-top: var(--deve-safe-area-top);"
+}
+
 #[cfg(test)]
 mod tests {
-    use super::drawer_aria_hidden;
+    use super::{drawer_aria_hidden, drawer_header_class, drawer_header_style};
 
     #[test]
     fn mobile_drawer_closed_state_a11y_bound() {
         assert_eq!(drawer_aria_hidden(false), "true");
         assert_eq!(drawer_aria_hidden(true), "false");
+    }
+
+    #[test]
+    fn mobile_drawer_header_preserves_content_height_below_safe_area() {
+        assert!(!drawer_header_class().contains("h-12"));
+        assert!(drawer_header_style().contains("3rem + var(--deve-safe-area-top)"));
+        assert!(drawer_header_style().contains("padding-top: var(--deve-safe-area-top)"));
     }
 }

@@ -29,6 +29,20 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: vertical_and_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: edge_button_action_not_replaced_by_drawer true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: editor_content_and_pending_unchanged true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: generation_bound_system_gesture_insets_projected true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: generation_bound_system_bar_safe_area_projected true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: mobile_header_begins_inside_status_bar_safe_area true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: mobile_footer_ends_inside_navigation_bar_safe_area true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: mobile_drawer_close_controls_begin_inside_status_bar_safe_area true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: system_bar_regions_match_current_theme_background true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: system_bar_contrast_scrim_does_not_create_bottom_white_edge true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cargo test -p deve_web mobile_safe_area -- --nocapture
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	window.isNavigationBarContrastEnforced = false
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WindowInsetsCompat.Type.systemBars()
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	WindowInsetsCompat.Type.displayCutout()
+contains	apps/web/style/tailwind.css	--deve-safe-area-top
+contains	apps/web/style/tailwind.css	--deve-safe-area-bottom
+contains	apps/web/src/components/mobile_layout/native_presentation.rs	data-deve-native-safe-area
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: zero_reported_insets_use_24css_safe_floor true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activation_bands_begin_inside_system_gesture_insets true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
@@ -152,7 +166,7 @@ contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobil
 contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_adjust_resize_never_reuses_root_inset_as_overlay()
 contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	fn mobile_toolbar_keyboard_native_fallback_requires_same_width_generation_hidden_baseline()
 contains	apps/web/src/components/mobile_layout/native_presentation.rs	pub(super) fn apply_android_presentation_insets(
-contains	apps/web/src/components/mobile_layout/native_presentation.rs	fn mobile_toolbar_keyboard_one_pixel_overlay_geometry_fails_closed()
+contains	apps/web/src/components/mobile_layout/native_presentation/tests.rs	fn mobile_toolbar_keyboard_one_pixel_overlay_geometry_fails_closed()
 contains	apps/web/src/components/mobile_layout/native_presentation.rs	__DEVE_ANDROID_PRESENTATION_PENDING__
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation=move ||
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-keyboard-presentation=move ||
@@ -188,6 +202,9 @@ contains	scripts/lib/android-drawer-touch-proof.mjs	document.elementFromPoint(x,
 contains	scripts/lib/android-presentation-proof.mjs	export async function proveAndroidDrawerGesturesAfterReload(
 contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-presentation
 contains	scripts/mobile-android-presentation.test.mjs	native presentation is re-admitted after same-WebView reload before drawer gestures
+contains	scripts/mobile-android-presentation.test.mjs	native presentation requires a settled system-bar safe area around mobile chrome
+contains	scripts/lib/android-presentation-proof.mjs	androidSafeAreaStateMatches
+contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-safe-area
 contains	scripts/lib/android-writable-evidence.mjs	nativeDrawerGesturesAfterReload:
 contains	scripts/smoke-mobile-android-remote-browser.mjs	nativeSystemGestureInsetsAcceptedAfterReload: true
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar="accessory"

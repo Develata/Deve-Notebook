@@ -6,6 +6,8 @@ use crate::components::icons::X;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+use super::super::{drawer_header_class, drawer_header_style};
+
 pub(super) fn drawer_close_button_class() -> &'static str {
     "h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
 }
@@ -18,8 +20,8 @@ pub(super) fn LeftDrawerHeader(
 ) -> impl IntoView {
     view! {
         <div
-            class="h-12 px-3 flex items-center justify-between border-b border-default text-sm font-semibold"
-            style="padding-top: env(safe-area-inset-top);"
+            class=drawer_header_class()
+            style=drawer_header_style()
         >
             <span class="text-primary flex items-center gap-1">{move || title.get()}</span>
             <button

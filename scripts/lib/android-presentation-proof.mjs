@@ -25,36 +25,111 @@ export function drawerVisualStateMatches(state, side, open) {
     && state.ariaHidden === String(!open)
     && (open ? state.pointerEvents !== "none" : state.pointerEvents === "none")
     && state.width > 0
-    && geometryReady;
+    && geometryReady
+    && (!open || (
+      Number.isFinite(state.safeTopCss)
+      && Number.isFinite(state.closeControlTop)
+      && state.closeControlTop + 0.5 >= state.safeTopCss
+    ));
+}
+
+export function androidSafeAreaStateMatches(state) {
+  const value = state?.presentation;
+  if (!state?.accepted
+    || !state?.safeAreaReady
+    || value?.kind !== "system-gesture-insets"
+    || !Number.isSafeInteger(value.generation)
+    || value.generation <= 0
+    || !Number.isSafeInteger(value.epoch)
+    || value.epoch <= 0
+    || !Number.isFinite(value.widthPx)
+    || !Number.isFinite(value.heightPx)
+    || !Number.isFinite(value.leftPx)
+    || !Number.isFinite(value.rightPx)
+    || !Number.isFinite(value.safeTopPx)
+    || !Number.isFinite(value.safeBottomPx)
+    || !Number.isFinite(value.density)
+    || value.widthPx <= 0
+    || value.heightPx <= 0
+    || value.leftPx < 0
+    || value.rightPx < 0
+    || value.safeTopPx < 0
+    || value.safeBottomPx < 0
+    || value.safeTopPx + value.safeBottomPx > value.heightPx
+    || value.density <= 0
+    || !Number.isFinite(state.viewportWidth)
+    || !Number.isFinite(state.viewportHeight)
+    || Math.abs((value.widthPx / value.density) - state.viewportWidth) > 2) return false;
+  const expectedTopCss = Math.ceil(value.safeTopPx / value.density);
+  const expectedBottomCss = Math.ceil(value.safeBottomPx / value.density);
+  return Number.isFinite(state.safeTopCss)
+    && Number.isFinite(state.safeBottomCss)
+    && state.safeTopCss + 0.5 >= expectedTopCss
+    && state.safeBottomCss + 0.5 >= expectedBottomCss
+    && Number.isFinite(state.headerTop)
+    && Math.abs(state.headerTop) <= 1
+    && Number.isFinite(state.headerControlTop)
+    && state.headerControlTop + 0.5 >= state.safeTopCss
+    && Number.isFinite(state.footerBottom)
+    && Math.abs(state.footerBottom - state.viewportHeight) <= 1
+    && Number.isFinite(state.footerPaddingBottom)
+    && state.footerPaddingBottom + 0.5 >= state.safeBottomCss
+    && Number.isFinite(state.bottomControlBottom)
+    && state.bottomControlBottom <= state.viewportHeight - state.safeBottomCss + 1
+    && typeof state.headerBackground === "string"
+    && state.headerBackground !== "rgba(0, 0, 0, 0)"
+    && state.headerBackground === state.footerBackground;
 }
 
 export async function waitForAcceptedAndroidPresentation(page, waitUntil, timeout = 10000) {
-  return waitUntil(
-    "Web-accepted generation-bound Android system gesture insets",
-    () => page.call(() => {
+  const state = await waitUntil(
+    "Web-accepted generation-bound Android presentation and safe area",
+    async () => {
+      const state = await page.call(() => {
       const value = window.__DEVE_ANDROID_PRESENTATION__;
       const accepted = document.querySelector('[data-deve-layout-mode="mobile"]')
         ?.getAttribute("data-deve-native-presentation") === "ready";
-      if (!accepted
-        || value?.kind !== "system-gesture-insets"
-        || !Number.isSafeInteger(value.generation)
-        || value.generation <= 0
-        || !Number.isSafeInteger(value.epoch)
-        || value.epoch <= 0
-        || !Number.isFinite(value.widthPx)
-        || !Number.isFinite(value.leftPx)
-        || !Number.isFinite(value.rightPx)
-        || !Number.isFinite(value.density)
-        || value.widthPx <= 0
-        || value.leftPx < 0
-        || value.rightPx < 0
-        || value.density <= 0) return null;
-      const projectedWidth = value.widthPx / value.density;
-      if (Math.abs(projectedWidth - window.innerWidth) > 2) return null;
-      return { ...value, viewportHeightCss: window.innerHeight };
-    }),
+      const root = document.documentElement;
+      const probe = document.createElement("div");
+      probe.style.cssText = "position:fixed;visibility:hidden;padding-top:var(--deve-safe-area-top);padding-bottom:var(--deve-safe-area-bottom)";
+      document.body.appendChild(probe);
+      const probeStyle = getComputedStyle(probe);
+      const safeTopCss = Number.parseFloat(probeStyle.paddingTop);
+      const safeBottomCss = Number.parseFloat(probeStyle.paddingBottom);
+      probe.remove();
+      const header = document.querySelector('[data-deve-mobile-header="topbar"]');
+      const headerControl = header?.querySelector('[data-deve-mobile-touch-target="topbar_buttons"]');
+      const footer = document.querySelector("[data-deve-mobile-bottom-bar]");
+      const bottomControl = footer?.querySelector('[data-deve-mobile-touch-target="bottom_bar_toggle"]');
+      const headerStyle = header ? getComputedStyle(header) : null;
+      const footerStyle = footer ? getComputedStyle(footer) : null;
+      return {
+        presentation: value ? { ...value } : null,
+        accepted,
+        safeAreaReady: root.getAttribute("data-deve-native-safe-area") === "ready",
+        safeTopCss,
+        safeBottomCss,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        headerTop: header?.getBoundingClientRect().top ?? null,
+        headerControlTop: headerControl?.getBoundingClientRect().top ?? null,
+        footerBottom: footer?.getBoundingClientRect().bottom ?? null,
+        footerPaddingBottom: footerStyle ? Number.parseFloat(footerStyle.paddingBottom) : null,
+        bottomControlBottom: bottomControl?.getBoundingClientRect().bottom ?? null,
+        headerBackground: headerStyle?.backgroundColor ?? null,
+        footerBackground: footerStyle?.backgroundColor ?? null,
+      };
+    });
+      return androidSafeAreaStateMatches(state) ? state : null;
+    },
     timeout,
   );
+  return {
+    ...state.presentation,
+    safeAreaTopCss: state.safeTopCss,
+    safeAreaBottomCss: state.safeBottomCss,
+    viewportHeightCss: state.viewportHeight,
+  };
 }
 
 function readDrawerVisualState(page, side) {
@@ -62,6 +137,11 @@ function readDrawerVisualState(page, side) {
     const drawer = document.querySelector(`[data-deve-mobile-drawer="${drawerSide}"]`);
     if (!drawer) return null;
     const rect = drawer.getBoundingClientRect();
+    const closeControl = drawer.querySelector('[data-deve-mobile-touch-target="drawer_close_buttons"]');
+    const mobileHeader = document.querySelector('[data-deve-mobile-header="topbar"]');
+    const safeTopCss = mobileHeader
+      ? Number.parseFloat(getComputedStyle(mobileHeader).paddingTop)
+      : Number.NaN;
     return {
       open: drawer.getAttribute("data-deve-mobile-drawer-open"),
       ariaHidden: drawer.getAttribute("aria-hidden"),
@@ -70,6 +150,8 @@ function readDrawerVisualState(page, side) {
       right: rect.right,
       width: rect.width,
       viewportWidth: window.innerWidth,
+      safeTopCss,
+      closeControlTop: closeControl?.getBoundingClientRect().top ?? null,
     };
   }, side);
 }

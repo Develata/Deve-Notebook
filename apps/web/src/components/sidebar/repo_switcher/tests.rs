@@ -182,7 +182,7 @@ fn removal_dialog_is_a_single_typed_backend_projection() {
     assert!(source.contains("role=\"dialog\""));
     assert!(source.contains("aria-modal=\"true\""));
     assert!(source.contains("min-h-[44px]"));
-    assert!(source.contains("safe-area-inset-bottom"));
+    assert!(source.contains("--deve-safe-area-bottom"));
     assert!(source.contains("attach_modal_focus_restore_effect_with_fallback"));
     assert!(source.contains("preview.deleted"));
     assert!(source.contains("preview.preserved"));

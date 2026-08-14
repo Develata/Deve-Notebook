@@ -9,7 +9,7 @@ use crate::editor::ffi::scroll_global;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-use super::{drawer_aria_hidden, drawer_class};
+use super::{drawer_aria_hidden, drawer_class, drawer_header_class, drawer_header_style};
 
 pub(super) fn drawer_close_button_class() -> &'static str {
     "h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
@@ -33,8 +33,8 @@ pub fn RightDrawer(
             <Show when=move || open.get()>
                 <div class="flex flex-col h-full">
                     <div
-                        class="h-12 px-3 flex items-center justify-between border-b border-default text-sm font-semibold"
-                        style="padding-top: env(safe-area-inset-top);"
+                        class=drawer_header_class()
+                        style=drawer_header_style()
                     >
                         <span class="text-primary flex items-center gap-1">
                             {move || t::sidebar::outline(locale.get())}
@@ -52,7 +52,7 @@ pub fn RightDrawer(
 
                     <div
                         class="flex-1 overflow-y-auto px-2 pb-3"
-                        style="padding-bottom: env(safe-area-inset-bottom);"
+                        style="padding-bottom: var(--deve-safe-area-bottom);"
                     >
                         {move || {
                             if let Some(content) = content_signal {

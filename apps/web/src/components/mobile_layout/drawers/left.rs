@@ -85,7 +85,7 @@ pub fn LeftDrawer(
 
                     <div
                         class="flex-1 overflow-hidden px-2 pb-3"
-                        style="padding-bottom: env(safe-area-inset-bottom);"
+                        style="padding-bottom: var(--deve-safe-area-bottom);"
                         data-deve-mobile-drawer-content=move || left_drawer_content_marker(open.get())
                     >
                         <div class="h-full overflow-y-auto">

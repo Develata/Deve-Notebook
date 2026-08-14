@@ -145,7 +145,7 @@ pub fn MobileSurfaceSwitcher(
                 role="dialog"
                 aria-modal="true"
                 class="fixed inset-x-0 bottom-0 z-[var(--z-modal)] max-h-[72vh] overflow-hidden rounded-t-lg border border-default bg-panel shadow-lg"
-                style="padding-bottom: env(safe-area-inset-bottom);"
+                style="padding-bottom: var(--deve-safe-area-bottom);"
                 aria-label=move || t::common::switch_open_tabs(locale.get())
                 on:keydown=move |ev| {
                     if ev.key() == "Escape" {

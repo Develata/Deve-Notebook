@@ -10,10 +10,22 @@ fn android_system_gesture_insets_are_generation_bound_presentation_only_hints() 
     let presentation = include_str!(
         "../../../gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt"
     );
+    let light_theme = include_str!("../../../gen/android/app/src/main/res/values/themes.xml");
+    let dark_theme = include_str!("../../../gen/android/app/src/main/res/values-night/themes.xml");
 
     assert!(activity.contains("nativePresentationDispatcher.attach(webView)"));
     assert!(activity.contains("nativePresentationDispatcher.onWindowFocusChanged(hasFocus)"));
     assert!(activity.contains("nativePresentationDispatcher.detach()"));
+    assert!(activity.contains("SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)"));
+    assert!(activity.contains("window.isNavigationBarContrastEnforced = false"));
+    for theme in [light_theme, dark_theme] {
+        assert!(theme.contains("android:statusBarColor\">@android:color/transparent"));
+        assert!(theme.contains("android:navigationBarColor\">@android:color/transparent"));
+        assert!(theme.contains("android:enforceStatusBarContrast"));
+        assert!(theme.contains("android:enforceNavigationBarContrast"));
+    }
+    assert!(light_theme.contains("android:windowLightNavigationBar\">true"));
+    assert!(dark_theme.contains("android:windowLightNavigationBar\">false"));
     assert!(presentation.contains("WindowInsetsCompat.Type.systemGestures()"));
     assert!(presentation.contains("activity.window.decorView"));
     assert!(presentation.contains("deve-native-presentation-change"));
@@ -33,6 +45,8 @@ fn android_system_gesture_insets_are_generation_bound_presentation_only_hints() 
     assert!(presentation.contains("heightPx: ${geometry.heightPx}"));
     assert!(presentation.contains("leftPx: ${geometry.leftPx}"));
     assert!(presentation.contains("rightPx: ${geometry.rightPx}"));
+    assert!(presentation.contains("safeTopPx: ${geometry.safeTopPx}"));
+    assert!(presentation.contains("safeBottomPx: ${geometry.safeBottomPx}"));
     assert!(presentation.contains("imeVisible: ${geometry.imeVisible}"));
     assert!(presentation.contains("imeBottomPx: ${geometry.imeBottomPx}"));
     assert!(presentation.contains("webViewGeneration"));
@@ -48,6 +62,8 @@ fn android_system_gesture_insets_are_generation_bound_presentation_only_hints() 
     );
     assert!(presentation.contains("ViewCompat.requestApplyInsets(source)"));
     assert!(presentation.contains("WindowInsetsCompat.Type.ime()"));
+    assert!(presentation.contains("WindowInsetsCompat.Type.systemBars()"));
+    assert!(presentation.contains("WindowInsetsCompat.Type.displayCutout()"));
     assert!(presentation.contains("PresentationGeometryRead.ImeOverlayOrUnavailable"));
     assert!(presentation.contains("android_webview_ime_insets_applied"));
     assert!(presentation.contains("android_webview_ime_overlay_or_unavailable"));

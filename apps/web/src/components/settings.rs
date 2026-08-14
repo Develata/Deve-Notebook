@@ -23,7 +23,8 @@ const SETTINGS_OVERLAY_CLASS: &str = concat!(
     "bg-black/50 backdrop-blur-sm transition-opacity sm:items-center sm:p-4"
 );
 const SETTINGS_PANEL_CLASS: &str = concat!(
-    "bg-panel w-full max-h-[100dvh] overflow-y-auto rounded-t-xl p-4 shadow-2xl ",
+    "bg-panel w-full max-h-[calc(100dvh-var(--deve-safe-area-top))] overflow-y-auto rounded-t-xl ",
+    "px-4 pt-[calc(1rem+var(--deve-safe-area-top))] pb-[calc(1rem+var(--deve-safe-area-bottom))] shadow-2xl ",
     "transform transition-all scale-100 opacity-100 sm:max-w-2xl sm:max-h-[88vh] ",
     "sm:rounded-xl sm:p-6"
 );
@@ -194,8 +195,11 @@ mod tests {
         assert!(SETTINGS_OVERLAY_CLASS.contains("items-end"));
         assert!(SETTINGS_OVERLAY_CLASS.contains("sm:items-center"));
         assert!(SETTINGS_PANEL_CLASS.contains("w-full"));
-        assert!(SETTINGS_PANEL_CLASS.contains("max-h-[100dvh]"));
+        assert!(SETTINGS_PANEL_CLASS.contains("max-h-[calc(100dvh-var(--deve-safe-area-top))]"));
+        assert!(SETTINGS_PANEL_CLASS.contains("pt-[calc(1rem+var(--deve-safe-area-top))]"));
+        assert!(SETTINGS_PANEL_CLASS.contains("pb-[calc(1rem+var(--deve-safe-area-bottom))]"));
         assert!(SETTINGS_PANEL_CLASS.contains("sm:max-w-2xl"));
+        assert!(SETTINGS_PANEL_CLASS.contains("sm:max-h-[88vh]"));
     }
 
     #[test]

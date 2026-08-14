@@ -27,8 +27,9 @@ pub fn MobileHeader(
     let show_logout = SessionPresentationPolicy::current().show_logout();
     view! {
         <div
+            data-deve-mobile-header="topbar"
             class="flex items-center justify-between px-2 py-1 bg-panel border-b border-default"
-            style="padding-top: env(safe-area-inset-top);"
+            style="padding-top: var(--deve-safe-area-top);"
         >
             <button
                 type="button"

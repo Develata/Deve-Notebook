@@ -9,6 +9,7 @@ import {
   takeTouchDeliveryProbe,
 } from "./lib/android-drawer-touch-proof.mjs";
 import {
+  androidSafeAreaStateMatches,
   drawerVisualStateMatches,
   openDrawerWithObservedNativeSwipe,
   waitForDrawerVisualState,
@@ -87,6 +88,9 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.ok(localReload >= 0 && localReload < localProof);
   assert.ok(remoteReload >= 0 && remoteReload < remoteProof);
   assert.match(presentationProof, /data-deve-native-presentation/);
+  assert.match(presentationProof, /data-deve-native-safe-area/);
+  assert.match(presentationProof, /safeTopPx/);
+  assert.match(presentationProof, /safeBottomPx/);
   assert.match(presentationProof, /data-deve-mobile-drawer=/);
   assert.match(presentationProof, /side: "left"/);
   assert.match(presentationProof, /side: "right"/);
@@ -97,6 +101,50 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(presentationProof, /assert\.equal\(pidAfter, pidBefore/);
   assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
+});
+
+test("native presentation requires a settled system-bar safe area around mobile chrome", () => {
+  const valid = {
+    presentation: {
+      kind: "system-gesture-insets",
+      generation: 2,
+      epoch: 9,
+      widthPx: 1080,
+      heightPx: 2400,
+      leftPx: 62,
+      rightPx: 62,
+      safeTopPx: 94,
+      safeBottomPx: 68,
+      density: 2.75,
+    },
+    accepted: true,
+    safeAreaReady: true,
+    safeTopCss: 35,
+    safeBottomCss: 25,
+    viewportWidth: 1080 / 2.75,
+    viewportHeight: 2400 / 2.75,
+    headerTop: 0,
+    headerControlTop: 36,
+    footerBottom: 2400 / 2.75,
+    footerPaddingBottom: 25,
+    bottomControlBottom: (2400 / 2.75) - 26,
+    headerBackground: "rgb(239, 236, 227)",
+    footerBackground: "rgb(239, 236, 227)",
+  };
+  assert.equal(androidSafeAreaStateMatches(valid), true);
+  assert.equal(androidSafeAreaStateMatches({ ...valid, safeAreaReady: false }), false);
+  assert.equal(androidSafeAreaStateMatches({ ...valid, safeTopCss: 0 }), false);
+  assert.equal(androidSafeAreaStateMatches({ ...valid, headerTop: 35 }), false);
+  assert.equal(androidSafeAreaStateMatches({ ...valid, headerControlTop: 20 }), false);
+  assert.equal(androidSafeAreaStateMatches({ ...valid, footerPaddingBottom: 0 }), false);
+  assert.equal(androidSafeAreaStateMatches({
+    ...valid,
+    bottomControlBottom: valid.viewportHeight - valid.safeBottomCss + 8,
+  }), false);
+  assert.equal(androidSafeAreaStateMatches({
+    ...valid,
+    presentation: { ...valid.presentation, safeTopPx: 2350, safeBottomPx: 68 },
+  }), false);
 });
 
 test("drawer delivery classifier binds identifier, coordinates, direction, and retry categories", () => {
@@ -158,9 +206,9 @@ test("drawer hit testing rejects action controls but admits the editor swipe sur
 });
 
 test("drawer visual settlement requires marker, accessibility, hit testing, and geometry", () => {
-  const leftOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400 };
+  const leftOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
   const leftClosed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: -320, right: 0, width: 320, viewportWidth: 400 };
-  const rightOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 80, right: 400, width: 320, viewportWidth: 400 };
+  const rightOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 80, right: 400, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
   const rightClosed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: 400, right: 720, width: 320, viewportWidth: 400 };
   assert.equal(drawerVisualStateMatches(leftOpen, "left", true), true);
   assert.equal(drawerVisualStateMatches(leftClosed, "left", false), true);
@@ -169,10 +217,11 @@ test("drawer visual settlement requires marker, accessibility, hit testing, and 
   assert.equal(drawerVisualStateMatches({ ...leftOpen, ariaHidden: "true" }, "left", true), false);
   assert.equal(drawerVisualStateMatches({ ...leftClosed, right: 40 }, "left", false), false);
   assert.equal(drawerVisualStateMatches({ ...rightOpen, pointerEvents: "none" }, "right", true), false);
+  assert.equal(drawerVisualStateMatches({ ...leftOpen, closeControlTop: 20 }, "left", true), false);
 });
 
 test("drawer visual settlement rejects a transient open state", async () => {
-  const stableOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400 };
+  const stableOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
   const closed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: -320, right: 0, width: 320, viewportWidth: 400 };
   const originalNow = Date.now;
   let now = 0;
@@ -187,9 +236,13 @@ test("drawer visual settlement rejects a transient open state", async () => {
         const previousGetComputedStyle = globalThis.getComputedStyle;
         const previousWindow = globalThis.window;
         globalThis.window = { innerWidth: state.viewportWidth };
-        globalThis.getComputedStyle = () => ({ pointerEvents: state.pointerEvents });
+        const header = {};
+        globalThis.getComputedStyle = (node) => node === header
+          ? { paddingTop: `${state.safeTopCss ?? 0}px` }
+          : { pointerEvents: state.pointerEvents };
         globalThis.document = {
           querySelector(selector) {
+            if (selector.includes("data-deve-mobile-header")) return header;
             if (!selector.includes(side)) return null;
             return {
               getAttribute(name) {
@@ -197,6 +250,11 @@ test("drawer visual settlement rejects a transient open state", async () => {
               },
               getBoundingClientRect() {
                 return { left: state.left, right: state.right, width: state.width };
+              },
+              querySelector() {
+                return state.closeControlTop == null ? null : {
+                  getBoundingClientRect: () => ({ top: state.closeControlTop }),
+                };
               },
             };
           },
@@ -228,11 +286,17 @@ test("drawer visual settlement rejects a transient open state", async () => {
       const previousGetComputedStyle = globalThis.getComputedStyle;
       const previousWindow = globalThis.window;
       globalThis.window = { innerWidth: stableOpen.viewportWidth };
-      globalThis.getComputedStyle = () => ({ pointerEvents: stableOpen.pointerEvents });
+      const header = {};
+      globalThis.getComputedStyle = (node) => node === header
+        ? { paddingTop: `${stableOpen.safeTopCss}px` }
+        : { pointerEvents: stableOpen.pointerEvents };
       globalThis.document = {
-        querySelector: () => ({
+        querySelector: (selector) => selector.includes("data-deve-mobile-header") ? header : ({
           getAttribute: (name) => name === "data-deve-mobile-drawer-open" ? stableOpen.open : stableOpen.ariaHidden,
           getBoundingClientRect: () => ({ left: stableOpen.left, right: stableOpen.right, width: stableOpen.width }),
+          querySelector: () => ({
+            getBoundingClientRect: () => ({ top: stableOpen.closeControlTop }),
+          }),
         }),
       };
       try {

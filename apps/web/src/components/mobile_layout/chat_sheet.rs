@@ -38,11 +38,11 @@ pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> S
     if expanded {
         if keyboard_offset > 0 {
             format!(
-                "padding-top: env(safe-area-inset-top); bottom: {}px;",
+                "padding-top: var(--deve-safe-area-top); bottom: {}px;",
                 keyboard_offset
             )
         } else {
-            "padding-top: env(safe-area-inset-top);".to_string()
+            "padding-top: var(--deve-safe-area-top);".to_string()
         }
     } else {
         let base = if keyboard_offset > 0 {
@@ -50,7 +50,7 @@ pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> S
         } else {
             58
         };
-        format!("bottom: calc({}px + env(safe-area-inset-bottom));", base)
+        format!("bottom: calc({}px + var(--deve-safe-area-bottom));", base)
     }
 }
 

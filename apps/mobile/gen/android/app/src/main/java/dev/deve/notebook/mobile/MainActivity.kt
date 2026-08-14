@@ -1,5 +1,7 @@
 package dev.deve.notebook.mobile
 
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -9,6 +11,7 @@ import android.webkit.CookieManager
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.FrameLayout
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -29,8 +32,14 @@ class MainActivity : TauriActivity() {
   private val webViewInputCoordinator = WebViewInputCoordinator(this)
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+    )
     super.onCreate(savedInstanceState)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      window.isNavigationBarContrastEnforced = false
+    }
     uiBackDispatcher.install()
   }
 

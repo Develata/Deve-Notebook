@@ -44,7 +44,7 @@ pub fn ChatHeader(
         } else {
             "h-9 flex items-center px-4 border-b border-default bg-panel"
         } style=move || if mobile {
-            "padding-top: env(safe-area-inset-top); height: calc(48px + env(safe-area-inset-top));"
+            "padding-top: var(--deve-safe-area-top); height: calc(48px + var(--deve-safe-area-top));"
         } else {
             ""
         }>

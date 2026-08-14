@@ -14,7 +14,7 @@ fn expanded_chat_stays_visible_when_keyboard_is_open() {
         true, false, false, false, true, true
     ));
     let style = mobile_chat_sheet_style(true, 280);
-    assert!(style.contains("padding-top: env(safe-area-inset-top);"));
+    assert!(style.contains("padding-top: var(--deve-safe-area-top);"));
     assert!(style.contains("bottom: 280px;"));
 }
 
@@ -70,7 +70,7 @@ fn collapsed_chip_uses_footer_offset_when_keyboard_is_closed() {
     ));
     assert_eq!(
         mobile_chat_sheet_style(false, 0),
-        "bottom: calc(58px + env(safe-area-inset-bottom));"
+        "bottom: calc(58px + var(--deve-safe-area-bottom));"
     );
 }
 
@@ -79,7 +79,7 @@ fn mobile_chat_page_expands_to_fullscreen() {
     assert_eq!(mobile_chat_page_mode(true), "fullscreen");
     assert!(mobile_chat_sheet_class(true).contains("fixed inset-0"));
     assert!(mobile_chat_sheet_class(true).contains("z-[var(--z-overlay)]"));
-    assert!(mobile_chat_sheet_style(true, 0).contains("safe-area-inset-top"));
+    assert!(mobile_chat_sheet_style(true, 0).contains("--deve-safe-area-top"));
 }
 
 #[test]

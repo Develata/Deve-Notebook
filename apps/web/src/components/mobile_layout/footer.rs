@@ -109,7 +109,7 @@ pub fn MobileFooter(pending_ack_count: Memo<usize>) -> impl IntoView {
             data-deve-mobile-bottom-bar=move || bottom_bar_state_attrs(read_footer_signal(expanded, false)).0
             data-deve-mobile-bottom-bar-lines=move || bottom_bar_state_attrs(read_footer_signal(expanded, false)).1
             class=footer_class
-            style="padding-bottom: env(safe-area-inset-bottom);"
+            style="padding-bottom: var(--deve-safe-area-bottom);"
         >
             <FooterSummaryRow
                 locale=locale

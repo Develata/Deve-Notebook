@@ -277,6 +277,23 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 *   `padding-top: env(safe-area-inset-top)`
 *   `padding-bottom: env(safe-area-inset-bottom)`
 
+共享 Web 壳必须把上述平台值收敛为 `--deve-safe-area-top` / `--deve-safe-area-bottom`
+两个 canonical CSS 变量；普通 Web/iOS 由 `env(safe-area-inset-*)` 提供默认值。bundled Android 在
+edge-to-edge WebView 中不得假设 CSS `env()` 非零：current-generation native presentation adapter
+必须从未消费的 root `systemBars + displayCutout` Insets 读取物理 top/bottom，随既有
+`(generation, epoch)` snapshot 投影，Web 按同一 snapshot density 归一化为 CSS px，并把 canonical
+变量取为 Web `env()` 与已准入 Android 值的较大者。所有 top bar、bottom bar、Drawer、Sheet、浮动按钮
+与键盘工具栏必须只消费 canonical 变量，禁止各自读取 Android Insets、写固定机型 padding，或同时施加
+native View padding。字段缺失、非有限、负数、越界或 top+bottom 超过当前 decor height 时必须拒绝整份
+ready snapshot；同 document 的 pending/迟到事件不得把最近一次 current-generation 安全区降为 `0`，
+replacement/unmount 必须清理旧 native CSS override。该 presentation 只影响布局，不授予 DOM、editor、
+session、writer、scope 或 lifecycle authority。
+
+bundled Android window 的 status/navigation bar 必须使用透明 edge-to-edge scrim，并在 API 29+
+关闭系统强制 navigation/status contrast overlay，使 Web 当前主题背景可以连续绘制到系统栏合成区；系统栏
+图标明暗仍须跟随 Day/Night theme。不得用固定白色、固定深色或设备专用颜色掩盖 Web 安全区错误，普通
+Web/iOS 不受该 native window 配置影响。
+
 ## 3. Interaction Design {#mobile-interaction-design}
 
 ### 3.1 导航策略 (Navigation)

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --deve-native-safe-area-top: 0px;
+  --deve-native-safe-area-bottom: 0px;
+  --deve-safe-area-top: max(env(safe-area-inset-top, 0px), var(--deve-native-safe-area-top));
+  --deve-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--deve-native-safe-area-bottom));
+}
+
 /* Global Scrollbar Styling (全局滚动条样式 - Visual Polish) */
 ::-webkit-scrollbar {
   width: 10px;

@@ -149,7 +149,7 @@ pub(super) fn RepoRemovalDialog(
                         </Show>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-3 border-t border-default px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:grid-cols-2 sm:px-6 sm:pb-4">
+                    <div class="grid grid-cols-1 gap-3 border-t border-default px-5 pt-4 pb-[max(1rem,var(--deve-safe-area-bottom))] sm:grid-cols-2 sm:px-6 sm:pb-4">
                         <button
                             node_ref=cancel_button_ref
                             type="button"
